@@ -60,13 +60,16 @@ export const addonDetails: AddonDetail[] = [
   {
     name: 'Comet',
     id: 'comet',
-    requiresService: true,
+    requiresService: false,
     supportedServices: [
+      'torbox',
+      'easydebrid',
       'realdebrid',
+      'debridlink',
       'alldebrid',
       'premiumize',
-      'debridlink',
-      'torbox',
+      'offcloud',
+      'pikpak',
     ],
     options: [
       {
@@ -77,11 +80,14 @@ export const addonDetails: AddonDetail[] = [
           'Prioritise a specific debrid service when fetching streams. This option is useful when you want to use a specific debrid service for fetching streams. By default, the addon will make a separate request for each debrid service. I highly recommend provding a value for this option as it will speed up the fetching process and remove redundant results.',
         type: 'select',
         options: [
+          { value: 'torbox', label: 'Torbox' },
+          { value: 'easydebrid', label: 'EasyDebrid' },
           { value: 'realdebrid', label: 'Real Debrid' },
+          { value: 'debridlink', label: 'Debrid Link' },
           { value: 'alldebrid', label: 'All Debrid' },
           { value: 'premiumize', label: 'Premiumize' },
-          { value: 'debridlink', label: 'Debrid Link' },
-          { value: 'torbox', label: 'Torbox' },
+          { value: 'offcloud', label: 'Offcloud' },
+          { value: 'pikpak', label: 'PikPak' },
         ],
       },
       {
