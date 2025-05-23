@@ -15,12 +15,13 @@ jobs:
       actions: write
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - name: Release
         id: release
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger Docker Image Publish
         if: ${{ steps.release.outputs['release_created'] }}
