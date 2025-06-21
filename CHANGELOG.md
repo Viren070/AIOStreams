@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.2.0](https://github.com/Viren070/AIOStreams/compare/v2.1.0...v2.2.0) (2025-06-21)
+
+
+### Features
+
+* add 'not' function to BaseConditionParser for filtering streams ([44d2c4c](https://github.com/Viren070/AIOStreams/commit/44d2c4c8708dae8c07370b16d6ca5e7750369ddb))
+* add logging for include details/reasons during filtering ([9de901d](https://github.com/Viren070/AIOStreams/commit/9de901d22b6e3c8ae515f41fccb63447283492b8))
+* add regexMatchedInRange function to BaseConditionParser ([cc2f5f7](https://github.com/Viren070/AIOStreams/commit/cc2f5f7608f8dbd3f9d52031e0e6da377d9031b0))
+* add support for required and preferred filter conditions ([d9281bd](https://github.com/Viren070/AIOStreams/commit/d9281bd978f186a50f04ead98c6fcca41bb32bfb))
+* apply filter conditions last ([41d507a](https://github.com/Viren070/AIOStreams/commit/41d507a679af598fbfb4e9391688f1dc70613a5c))
+* improve condition parser functions to support multiple parameters ([110146c](https://github.com/Viren070/AIOStreams/commit/110146c088ceebc1472eb8f5442d966faabb0278))
+* support multiple regex names in regexMatched function ([455f430](https://github.com/Viren070/AIOStreams/commit/455f4307fdee14098c9b3766322dd47682e7d270))
+* use title modifier for title in light gdrive formatter ([e542989](https://github.com/Viren070/AIOStreams/commit/e542989038ad253a098cce41e9480a2927c7514a))
+
+
+### Bug Fixes
+
+* allow empty regex names in ParsedStreamSchema and AIOStream ([cf39cdf](https://github.com/Viren070/AIOStreams/commit/cf39cdfee14d41bb67e9a8bff2d720e7d33cffc5))
+* fallback to parent get filename method when filename not found in description for mediafusion ([cfb5977](https://github.com/Viren070/AIOStreams/commit/cfb59771fc9bc23b3b982bfbfce75436ca4f37fa))
+* fallback to using parsed properties from folder when undefined in file and correctly merge array properties ([8eb9b7a](https://github.com/Viren070/AIOStreams/commit/8eb9b7a92efbbf76991d532b828ab48070f13b6d))
+* filter out uuid in filtered export ([bd21b36](https://github.com/Viren070/AIOStreams/commit/bd21b364d27cbcc72a464c14eb372ffbd8e33a51))
+* **formatters:** make title modifier return consistent cases with each word titled ([3e6b45a](https://github.com/Viren070/AIOStreams/commit/3e6b45a554bdc15c473e64bc22cee5d0b8c7de7f))
+* handle invalid addon password error separately for catalog API to be more clear ([a2275cc](https://github.com/Viren070/AIOStreams/commit/a2275cce1bcdf37ba7dd65016a544b222e8ee3a4))
+* ignore port in host check ([e73be92](https://github.com/Viren070/AIOStreams/commit/e73be9298d82dbb2a9b492cb636c5bd5d82fd1e0))
+* normalize case sensitivity in condition parser filters for resolutions, qualities, encodes, types, visualTags, audioTags, audioChannels, and languages ([87d2ffb](https://github.com/Viren070/AIOStreams/commit/87d2ffba7f8b8fc3e7ce70372e4f4932aa86bbc5))
+* only form keyword patterns when length of array is greater than 0 ([9136694](https://github.com/Viren070/AIOStreams/commit/91366943bb813fd99cd6c4775952c8bc5af9d54f))
+* update credentials field to allow empty strings ([c006321](https://github.com/Viren070/AIOStreams/commit/c00632146d4980ec5a640b54eeb3bbd63f999189))
+
 ## [2.1.0](https://github.com/Viren070/AIOStreams/compare/v2.0.1...v2.1.0) (2025-06-20)
 
 
