@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.6.0](https://github.com/Viren070/AIOStreams/compare/v2.5.1...v2.6.0) (2025-07-05)
+
+
+### Features
+
+* add statistic stream options to see statistics in stremio ([261b878](https://github.com/Viren070/AIOStreams/commit/261b87872a2882886ec26970614a504dc2f7cd97))
+
+
+### Bug Fixes
+
+* forward manifest parsing errors ([9748ecb](https://github.com/Viren070/AIOStreams/commit/9748ecb576320db85c3a5c81a9d67e8f80dd5a4c))
+
 ## [2.5.1](https://github.com/Viren070/AIOStreams/compare/v2.5.0...v2.5.1) (2025-07-04)
 
 
