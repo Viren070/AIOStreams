@@ -3,7 +3,7 @@ name: Sync Fork and Deploy to Heroku
 on:
   # Runs once a day at 6:00 AM UTC. You can change the schedule.
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '1 5 * * *'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -35,4 +35,4 @@ jobs:
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          heroku_email: "user@example.com" # Can be any email
+          heroku_email: "basargobul@gmail.com" # Can be any email
