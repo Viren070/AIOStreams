@@ -1,0 +1,15 @@
+{
+    "id": "org.aiostreams.addon",
+    "version": "2.5.0",
+    "name": "AIOStreams",
+    "description": "A Stremio addon that provides multiple sources for movies and series.",
+    "resources": [
+        "catalog",
+        "stream"
+    ],
+    "types": [
+        "movie",
+        "series"
+    ],
+    "catalogs": []
+}
