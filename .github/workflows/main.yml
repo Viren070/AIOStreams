@@ -1,0 +1,38 @@
+name: Sync Fork and Deploy to Heroku
+
+on:
+  # Runs once a day at 6:00 AM UTC. You can change the schedule.
+  schedule:
+    - cron: '0 6 * * *'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out your fork
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          # We need a personal access token to be able to push changes back to the fork
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Sync your fork with the original repository
+      - name: Sync Fork with Original Repo
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git remote add upstream https://github.com/Viren070/AIOStreams.git
+          git fetch upstream
+          git checkout ${{ github.ref_name }}
+          git reset --hard upstream/main
+          git push origin ${{ github.ref_name }} --force
+
+      # 3. Deploy the updated code to Heroku
+      - name: Deploy to Heroku
+        uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          heroku_email: "user@example.com" # Can be any email
