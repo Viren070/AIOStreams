@@ -6,10 +6,17 @@
     "resources": [
         "catalog",
         "stream"
+        "subtitles"
+        "meta"
+        "addon_catalog"
+
+
     ],
     "types": [
         "movie",
         "series"
+        "music"
+        "tv"
     ],
     "catalogs": []
 }
