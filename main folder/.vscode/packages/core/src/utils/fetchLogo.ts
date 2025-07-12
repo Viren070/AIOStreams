@@ -14,15 +14,28 @@ type LogoApiResponse = {
 export async function fetchLogoForItem(id: string, type: string): Promise<string | null> {
   try {
     const tmdb = new TMDBMetadata();
-    const meta = await tmdb.getMetadata(id, type === 'movie' ? 'movie' : 'series');
     let tmdbId: string | undefined = undefined;
-    if (id.startsWith('tmdb:') || id.startsWith('tmdb-')) {
-      tmdbId = id.replace(/^tmdb[:\-]/, '');
-    } else if (meta && meta.titles && meta.titles.length > 0) {
-      tmdbId = id;
+    let endpointType = '';
+    if (type === 'collection') {
+      // TMDB collections endpoint
+      endpointType = 'collection';
+      if (id.startsWith('tmdb:') || id.startsWith('tmdb-')) {
+        tmdbId = id.replace(/^tmdb[:\-]/, '');
+      } else {
+        tmdbId = id;
+      }
+    } else {
+      // movie or series
+      endpointType = type === 'movie' ? 'movie' : 'tv';
+      const meta = await tmdb.getMetadata(id, endpointType);
+      if (id.startsWith('tmdb:') || id.startsWith('tmdb-')) {
+        tmdbId = id.replace(/^tmdb[:\-]/, '');
+      } else if (meta && meta.titles && meta.titles.length > 0) {
+        tmdbId = id;
+      }
     }
     if (!tmdbId) return null;
-    const url = `https://api.themoviedb.org/3/${type === 'movie' ? 'movie' : 'tv'}/${tmdbId}/images`;
+    const url = `https://api.themoviedb.org/3/${endpointType}/${tmdbId}/images`;
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${Env.TMDB_ACCESS_TOKEN}` },
       signal: AbortSignal.timeout(10000),
