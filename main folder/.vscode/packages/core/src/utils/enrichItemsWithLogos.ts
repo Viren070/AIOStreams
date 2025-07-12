@@ -10,7 +10,11 @@ export async function enrichItemsWithLogos(items: any[]): Promise<any[]> {
   return Promise.all(
     items.map(async (item) => {
       const typeForLogo = item.type === 'collection' ? 'collection' : item.type;
-      const logo = await fetchLogoForItem(item.id, typeForLogo);
+      let logo = await fetchLogoForItem(item.id, typeForLogo);
+      // Force fallback for collections if logo is missing
+      if (typeForLogo === 'collection' && (!logo || logo === '')) {
+        logo = 'https://static.strem.io/catimg/collection-default.png';
+      }
       return { ...item, logo: logo || null };
     })
   );

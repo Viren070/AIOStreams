@@ -59,7 +59,11 @@ export async function fetchLogoForItem(id: string, type: string): Promise<string
 
     // Debug log
     // eslint-disable-next-line no-console
-    console.log(`[fetchLogoForItem] type=${type} tmdbId=${tmdbId} imdbId=${imdbId} tvdbId=${tvdbId}`);
+    if (type === 'collection') {
+      console.log(`[fetchLogoForItem][COLLECTION] id=${id} tmdbId=${tmdbId}`);
+    } else {
+      console.log(`[fetchLogoForItem] type=${type} tmdbId=${tmdbId} imdbId=${imdbId} tvdbId=${tvdbId}`);
+    }
 
     // Try fanart.tv first for all types
     let fanartUrl = '';
@@ -101,6 +105,8 @@ export async function fetchLogoForItem(id: string, type: string): Promise<string
               const logo = pickLogo(fanartData.movielogo);
               if (logo && logo.url) return logo.url;
             }
+            // Extra debug for collections
+            console.log('[fetchLogoForItem][COLLECTION] fanartData:', JSON.stringify(fanartData));
           }
           // Movies: hdmovielogo, movielogo
           if (type === 'movie') {
@@ -131,13 +137,25 @@ export async function fetchLogoForItem(id: string, type: string): Promise<string
     }
 
     // Fallback to TMDB
-    if (!tmdbId) return null;
+    if (!tmdbId) {
+      if (type === 'collection') {
+        // Force fallback logo for collections if no TMDB id
+        return 'https://static.strem.io/catimg/collection-default.png';
+      }
+      return null;
+    }
     const url = `https://api.themoviedb.org/3/${endpointType}/${tmdbId}/images`;
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${Env.TMDB_ACCESS_TOKEN}` },
       signal: AbortSignal.timeout(10000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      if (type === 'collection') {
+        // Force fallback logo for collections if TMDB fails
+        return 'https://static.strem.io/catimg/collection-default.png';
+      }
+      return null;
+    }
     const data: LogoApiResponse = await response.json();
     if (data.logos && Array.isArray(data.logos) && data.logos.length > 0) {
       // Prioritize Turkish, then English, then any
@@ -147,6 +165,10 @@ export async function fetchLogoForItem(id: string, type: string): Promise<string
       if (logo && logo.file_path) {
         return `https://image.tmdb.org/t/p/original${logo.file_path}`;
       }
+    }
+    if (type === 'collection') {
+      // Final fallback for collections
+      return 'https://static.strem.io/catimg/collection-default.png';
     }
     return null;
   } catch (e) {
