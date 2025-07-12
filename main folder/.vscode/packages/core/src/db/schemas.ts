@@ -586,7 +586,7 @@ export const MetaPreviewSchema = z
     //@deprecated
     cast: z.array(z.string()).or(z.null()).optional(),
     // background: z.string().min(1).optional(),
-    // logo: z.string().min(1).optional(),
+    logo: z.string().or(z.null()).optional(),
     description: z.string().or(z.null()).optional(),
     trailers: z.array(TrailerSchema).or(z.null()).optional(),
     links: z.array(MetaLinkSchema).or(z.null()).optional(),

@@ -139,7 +139,7 @@ export class AIOStreams {
           r.name === 'stream' &&
           r.types.includes(type) &&
           (r.idPrefixes
-            ? r.idPrefixes?.some((prefix) => id.startsWith(prefix))
+            ? r.idPrefixes?.some((prefix: string) => id.startsWith(prefix))
             : true) // if no id prefixes are defined, assume it supports all IDs
       );
       if (resource) {
@@ -189,7 +189,7 @@ export class AIOStreams {
       .map((stream) => {
         if (stream.parsedFile?.visualTags?.includes('HDR+DV')) {
           stream.parsedFile.visualTags = stream.parsedFile.visualTags.filter(
-            (tag) => tag !== 'HDR+DV'
+            (tag: string) => tag !== 'HDR+DV'
           );
         }
         return stream;
@@ -229,7 +229,8 @@ export class AIOStreams {
         precache = true;
       }
       if (precache) {
-        setImmediate(() => {
+        // Use globalThis.setImmediate for Node.js compatibility
+        (globalThis as any).setImmediate(() => {
           this.precacheNextEpisode(type, id).catch((error) => {
             logger.error('Error during precaching:', {
               error: error instanceof Error ? error.message : String(error),
@@ -305,7 +306,7 @@ export class AIOStreams {
     let modification;
     if (this.userData.catalogModifications) {
       modification = this.userData.catalogModifications.find(
-        (mod) =>
+        (mod: any) =>
           mod.id === id && (mod.type === type || mod.overrideType === type)
       );
     }
@@ -343,6 +344,18 @@ export class AIOStreams {
       };
     }
 
+    // Inject logo property for each catalog item
+    const { fetchLogoForItem } = await import('./utils/fetchLogo');
+    catalog = await Promise.all(
+      catalog.map(async (item) => {
+        if (!item.logo) {
+          const logo = await fetchLogoForItem(item.id, item.type);
+          return { ...item, logo };
+        }
+        return item;
+      })
+    );
+
     logger.info(
       `Received catalog ${actualCatalogId} of type ${type} from ${addon.name} in ${getTimeTakenSincePoint(start)}`
     );
@@ -372,7 +385,7 @@ export class AIOStreams {
       }
       if (modification.rpdb && this.userData.rpdbApiKey) {
         const rpdb = new RPDB(this.userData.rpdbApiKey);
-        catalog = catalog.map((item) => {
+        catalog = catalog.map((item: any) => {
           const posterUrl = rpdb.getPosterUrl(
             type,
             (item as any).imdb_id || item.id
@@ -386,9 +399,9 @@ export class AIOStreams {
     }
 
     if (this.userData.enhancePosters) {
-      catalog = catalog.map((item) => {
+      catalog = catalog.map((item: any) => {
         if (Math.random() < 0.2) {
-          item.poster = Buffer.from(
+          item.poster = (globalThis as any).Buffer.from(
             constants.DEFAULT_POSTERS[
               Math.floor(Math.random() * constants.DEFAULT_POSTERS.length)
             ],
@@ -428,7 +441,7 @@ export class AIOStreams {
         (r) =>
           r.name === 'meta' &&
           r.types.includes(type) &&
-          r.idPrefixes?.some((prefix) => id.startsWith(prefix))
+          r.idPrefixes?.some((prefix: string) => id.startsWith(prefix))
       );
 
       if (resource) {
@@ -560,7 +573,7 @@ export class AIOStreams {
           r.name === 'subtitles' &&
           r.types.includes(type) &&
           (r.idPrefixes
-            ? r.idPrefixes.some((prefix) => id.startsWith(prefix))
+            ? r.idPrefixes.some((prefix: string) => id.startsWith(prefix))
             : true)
       );
       if (resource) {
@@ -667,7 +680,7 @@ export class AIOStreams {
       return;
     }
 
-    for (const preset of this.userData.presets.filter((p) => p.enabled)) {
+    for (const preset of this.userData.presets.filter((p: any) => p.enabled)) {
       const addons = await PresetManager.fromId(preset.type).generateAddons(
         this.userData,
         preset.options
@@ -718,7 +731,7 @@ export class AIOStreams {
       if (!manifest) continue;
 
       // Convert string resources to StrictManifestResource objects
-      const addonResources = manifest.resources.map((resource) => {
+      const addonResources = manifest.resources.map((resource: any) => {
         if (typeof resource === 'string') {
           return {
             name: resource as Resource,
@@ -812,7 +825,7 @@ export class AIOStreams {
         (addon.resources && addon.resources.includes('catalog'))
       ) {
         this.finalCatalogs.push(
-          ...manifest.catalogs.map((catalog) => ({
+          ...manifest.catalogs.map((catalog: any) => ({
             ...catalog,
             id: `${addon.instanceId}.${catalog.id}`,
           }))
@@ -822,7 +835,7 @@ export class AIOStreams {
       // add all addon catalogs, prefixing id with index
       if (manifest.addonCatalogs) {
         this.finalAddonCatalogs!.push(
-          ...(manifest.addonCatalogs || []).map((catalog) => ({
+          ...(manifest.addonCatalogs || []).map((catalog: any) => ({
             ...catalog,
             id: `${addon.instanceId}.${catalog.id}`,
           }))
@@ -834,7 +847,7 @@ export class AIOStreams {
 
     logger.verbose(
       `Parsed all catalogs and determined the following catalogs: ${JSON.stringify(
-        this.finalCatalogs.map((c) => ({
+        this.finalCatalogs.map((c: any) => ({
           id: c.id,
           name: c.name,
           type: c.type,
@@ -844,7 +857,7 @@ export class AIOStreams {
 
     logger.verbose(
       `Parsed all addon catalogs and determined the following catalogs: ${JSON.stringify(
-        this.finalAddonCatalogs?.map((c) => ({
+        this.finalAddonCatalogs?.map((c: any) => ({
           id: c.id,
           name: c.name,
           type: c.type,
@@ -865,12 +878,12 @@ export class AIOStreams {
     if (this.userData.catalogModifications) {
       this.finalCatalogs = this.finalCatalogs
         // Sort catalogs based on catalogModifications order, with non-modified catalogs at the end
-        .sort((a, b) => {
+        .sort((a: any, b: any) => {
           const aModIndex = this.userData.catalogModifications!.findIndex(
-            (mod) => mod.id === a.id && mod.type === a.type
+            (mod: any) => mod.id === a.id && mod.type === a.type
           );
           const bModIndex = this.userData.catalogModifications!.findIndex(
-            (mod) => mod.id === b.id && mod.type === b.type
+            (mod: any) => mod.id === b.id && mod.type === b.type
           );
 
           // If neither catalog is in modifications, maintain original order
@@ -888,16 +901,16 @@ export class AIOStreams {
           return aModIndex - bModIndex;
         })
         // filter out any catalogs that are disabled
-        .filter((catalog) => {
+        .filter((catalog: any) => {
           const modification = this.userData.catalogModifications!.find(
-            (mod) => mod.id === catalog.id && mod.type === catalog.type
+            (mod: any) => mod.id === catalog.id && mod.type === catalog.type
           );
           return modification?.enabled !== false; // only if explicity disabled i.e. enabled is true or undefined
         })
         // rename any catalogs if necessary and apply the onlyOnDiscover modification
-        .map((catalog) => {
+        .map((catalog: any) => {
           const modification = this.userData.catalogModifications!.find(
-            (mod) => mod.id === catalog.id && mod.type === catalog.type
+            (mod: any) => mod.id === catalog.id && mod.type === catalog.type
           );
           if (modification?.name) {
             catalog.name = modification.name;
@@ -910,7 +923,7 @@ export class AIOStreams {
             // the catalog does not have genres. In which case we add a new genre extra with only one option 'None'
             // and set isRequired to true
 
-            const genreExtra = catalog.extra?.find((e) => e.name === 'genre');
+            const genreExtra = catalog.extra?.find((e: any) => e.name === 'genre');
             if (genreExtra) {
               if (!genreExtra.isRequired) {
                 // if catalog supports a no genre option, we add none to the top so it is still accessible
@@ -931,7 +944,7 @@ export class AIOStreams {
             catalog.type = modification.overrideType;
           }
           if (modification?.disableSearch) {
-            catalog.extra = catalog.extra?.filter((e) => e.name !== 'search');
+            catalog.extra = catalog.extra?.filter((e: any) => e.name !== 'search');
           }
           return catalog;
         });
@@ -1075,7 +1088,7 @@ export class AIOStreams {
           stream.filename = undefined;
           stream.parsedFile = undefined;
           stream.type = 'youtube';
-          stream.ytId = Buffer.from(constants.DEFAULT_YT_ID, 'base64').toString(
+          stream.ytId = (globalThis as any).Buffer.from(constants.DEFAULT_YT_ID, 'base64').toString(
             'utf-8'
           );
           stream.message =
