@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.5](https://github.com/Viren070/AIOStreams/compare/v2.5.4...v2.5.5) (2025-07-12)
+
+
+### Bug Fixes
+
+* **debridio-tv:** update channel list ([67509a4](https://github.com/Viren070/AIOStreams/commit/67509a43def9e01250beaa62bddb6207d399b5be))
+
 ## [2.5.4](https://github.com/Viren070/AIOStreams/compare/v2.5.3...v2.5.4) (2025-07-12)
 
 
