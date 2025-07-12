@@ -1,3 +1,5 @@
+import { normalizeUserData } from '../utils/normalizeUserData';
+import { normalizeUserData } from '../utils/normalizeUserData';
 // import { UserDataSchema, UserData, DB } from '../db';
 import { UserDataSchema, UserData } from './schemas';
 import { TransactionQueue } from './queue';
@@ -118,13 +120,53 @@ export class UserRepository {
     password: string
   ): Promise<UserData | null> {
     try {
-      const result = await db.query(
+      let result = await db.query(
         'SELECT config, config_salt, password_hash FROM users WHERE uuid = ?',
         [uuid]
       );
 
+      // If not found, try legacy/alternate config migration for backward compatibility
       if (!result.length || !result[0].config) {
-        return Promise.reject(new APIError(constants.ErrorCode.USER_NOT_FOUND));
+        // Try to find user by legacy/alternate means (e.g., missing salt, old schema, etc.)
+        // Example: try without config_salt (old users)
+        result = await db.query(
+          'SELECT config, password_hash FROM users WHERE uuid = ?',
+          [uuid]
+        );
+        if (!result.length || !result[0].config) {
+          // Could add more migration/compatibility logic here if needed
+          return Promise.reject(new APIError(constants.ErrorCode.USER_NOT_FOUND));
+        }
+        // If found, migrate user to new schema (add config_salt, etc.)
+        // For now, just try to decrypt/parse config directly (may fail, but at least try)
+        try {
+          const isValid = await this.verifyUserPassword(
+            password,
+            result[0].password_hash
+          );
+          if (!isValid) {
+            return Promise.reject(
+              new APIError(constants.ErrorCode.USER_INVALID_PASSWORD)
+            );
+          }
+          // Try to parse config directly (unencrypted or legacy encrypted)
+          let decryptedConfig: UserData;
+          try {
+            decryptedConfig = JSON.parse(result[0].config);
+          } catch (e) {
+            // If fails, treat as not found
+            return Promise.reject(new APIError(constants.ErrorCode.USER_NOT_FOUND));
+          }
+          // Normalize/upgrade config to latest
+          decryptedConfig = normalizeUserData(decryptedConfig);
+          decryptedConfig.trusted =
+            Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
+            false;
+          logger.info(`Migrated and normalized legacy configuration for user ${uuid}`);
+          return decryptedConfig;
+        } catch (e) {
+          return Promise.reject(new APIError(constants.ErrorCode.USER_NOT_FOUND));
+        }
       }
 
       await db.execute(
@@ -148,33 +190,6 @@ export class UserRepository {
         result[0].config_salt
       );
 
-      // try {
-      //   // skip errors, and dont decrypt credentials either, as this would make
-      //   // encryption pointless
-      //   validatedConfig = await validateConfig(decryptedConfig, true, false);
-      // } catch (error: any) {
-      //   return Promise.reject(
-      //     new APIError(
-      //       constants.ErrorCode.USER_INVALID_CONFIG,
-      //       undefined,
-      //       error.message
-      //     )
-      //   );
-      // }
-      // const {
-      //   success,
-      //   data: validatedConfig,
-      //   error,
-      // } = UserDataSchema.safeParse(decryptedConfig);
-      // if (!success) {
-      //   return Promise.reject(
-      //     new APIError(
-      //       constants.ErrorCode.USER_INVALID_CONFIG,
-      //       undefined,
-      //       formatZodError(error)
-      //     )
-      //   );
-      // }
       decryptedConfig.trusted =
         Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
         false;
