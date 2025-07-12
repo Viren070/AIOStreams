@@ -16,6 +16,8 @@ import {
   CatalogExtras,
 } from './utils';
 import { Wrapper } from './wrapper';
+import { fetchTmdbTrailer } from './utils/tmdbTrailers';
+import { searchYoutubeTrailer } from './utils/youtubeSearchTrailer';
 import { PresetManager } from './presets';
 import {
   AddonCatalog,
@@ -513,6 +515,46 @@ export class AIOStreams {
           addonName: candidate.addon.name,
           addonInstanceId: candidate.instanceId,
         });
+
+        // Robust trailer injection for TMDB
+        // Only for TMDB-based addons (by name or manifestUrl)
+        const isTmdb = candidate.addon.name?.toLowerCase().includes('tmdb') || candidate.addon.manifestUrl?.toLowerCase().includes('tmdb');
+        if (isTmdb && (type === 'movie' || type === 'series' || type === 'tv')) {
+          // Only add if not already present
+          if (!meta.trailers || !Array.isArray(meta.trailers) || meta.trailers.length === 0) {
+            // Try to extract TMDB id
+            let tmdbId: string | undefined;
+            if (id.startsWith('tmdb:') || id.startsWith('tmdb-')) {
+              tmdbId = id.replace(/^tmdb[:\-]/, '');
+            } else {
+              tmdbId = id;
+            }
+            // For series, use 'tv' endpoint
+            const tmdbType = type === 'movie' ? 'movie' : 'tv';
+            let trailerUrl: string | null = null;
+            if (tmdbId) {
+              trailerUrl = await fetchTmdbTrailer(tmdbId, tmdbType as 'movie' | 'tv');
+            }
+            // Fallback: YouTube search by title/year
+            if (!trailerUrl && meta.name) {
+              // Try to get year if available
+              let year: string | undefined = undefined;
+              if (meta.releaseInfo && typeof meta.releaseInfo === 'string') {
+                const match = meta.releaseInfo.match(/\d{4}/);
+                if (match) year = match[0];
+              }
+              trailerUrl = await searchYoutubeTrailer(meta.name, year);
+            }
+            if (trailerUrl) {
+              meta.trailers = [
+                {
+                  source: trailerUrl,
+                  type: 'Trailer',
+                },
+              ];
+            }
+          }
+        }
 
         return {
           success: true,
