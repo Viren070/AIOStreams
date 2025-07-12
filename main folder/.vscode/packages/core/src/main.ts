@@ -346,22 +346,9 @@ export class AIOStreams {
       };
     }
 
-    // Inject logo property for each catalog item
-    const { fetchLogoForItem } = await import('./utils/fetchLogo');
-    catalog = await Promise.all(
-      catalog.map(async (item) => {
-        // Always fetch and inject logo for collections, or if logo is missing/empty
-        const typeForLogo = item.type === 'collection' ? 'collection' : item.type;
-        if (
-          typeForLogo === 'collection' ||
-          !item.logo || item.logo === '' || item.logo === null
-        ) {
-          const logo = await fetchLogoForItem(item.id, typeForLogo);
-          return { ...item, logo };
-        }
-        return item;
-      })
-    );
+    // Enrich all catalog items with logo property using batch utility
+    const { enrichItemsWithLogos } = await import('./utils/enrichItemsWithLogos');
+    catalog = await enrichItemsWithLogos(catalog);
 
     logger.info(
       `Received catalog ${actualCatalogId} of type ${type} from ${addon.name} in ${getTimeTakenSincePoint(start)}`
