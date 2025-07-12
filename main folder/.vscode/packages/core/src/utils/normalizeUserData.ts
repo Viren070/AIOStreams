@@ -1,6 +1,13 @@
+
 import { UserData } from '../db/schemas';
-// You may want to import the latest default config from a shared location if available
-import { DefaultUserData } from '../../../../frontend/src/context/userData';
+
+// Define a backend default config here (replace with your actual default config structure)
+const DefaultUserData: { [key: string]: any } = {
+  // Example defaults, replace with real fields as needed
+  language: 'en',
+  theme: 'dark',
+  // ...add all required default fields for your app...
+};
 
 /**
  * Deep merge two objects, giving priority to the first argument's values.

@@ -1,5 +1,4 @@
 import { normalizeUserData } from '../utils/normalizeUserData';
-import { normalizeUserData } from '../utils/normalizeUserData';
 // import { UserDataSchema, UserData, DB } from '../db';
 import { UserDataSchema, UserData } from './schemas';
 import { TransactionQueue } from './queue';
