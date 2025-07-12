@@ -1045,6 +1045,9 @@ export const Env = cleanEnv(process.env, {
   }),
 
   TMDB_COLLECTIONS_URL: url({
+    default: 'https://61ab9c85a149-tmdb-collections.baby-beamup.club',
+    desc: 'Default TMDB Collections URL',
+  }),
   FANART_API_KEY: str({
     default: undefined,
     desc: 'API key for fanart.tv',
@@ -1052,9 +1055,6 @@ export const Env = cleanEnv(process.env, {
   YOUTUBE_API_KEY: str({
     default: undefined,
     desc: 'API key for YouTube Data API',
-  }),
-    default: 'https://61ab9c85a149-tmdb-collections.baby-beamup.club',
-    desc: 'Default TMDB Collections URL',
   }),
   DEFAULT_TMDB_COLLECTIONS_TIMEOUT: num({
     default: undefined,
