@@ -22,7 +22,8 @@
     "super-regex": "^1.0.0",
     "undici": "^7.2.3",
     "winston": "^3.17.0",
-    "zod": "^3.24.4"
+    "zod": "^3.24.4",
+    "googleapis": "^133.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
