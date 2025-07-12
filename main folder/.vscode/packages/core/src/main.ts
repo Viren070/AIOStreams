@@ -505,6 +505,12 @@ export class AIOStreams {
           addonName: candidate.addon.name,
           addonInstanceId: candidate.instanceId,
         });
+        // Robust logo injection for meta (detail) pages
+        if (meta && (!meta.logo || meta.logo === '' || meta.logo === null)) {
+          const { fetchLogoForItem } = await import('./utils/fetchLogo');
+          const typeForLogo = meta.type === 'collection' ? 'collection' : meta.type;
+          meta.logo = await fetchLogoForItem(meta.id, typeForLogo);
+        }
 
         // Robust trailer injection for TMDB
         // Only for TMDB-based addons (by name or manifestUrl)
