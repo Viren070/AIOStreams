@@ -350,9 +350,12 @@ export class AIOStreams {
     const { fetchLogoForItem } = await import('./utils/fetchLogo');
     catalog = await Promise.all(
       catalog.map(async (item) => {
-        // Support logo fetching for collections as well
+        // Always fetch and inject logo for collections, or if logo is missing/empty
         const typeForLogo = item.type === 'collection' ? 'collection' : item.type;
-        if (!item.logo) {
+        if (
+          typeForLogo === 'collection' ||
+          !item.logo || item.logo === '' || item.logo === null
+        ) {
           const logo = await fetchLogoForItem(item.id, typeForLogo);
           return { ...item, logo };
         }
