@@ -506,10 +506,22 @@ export class AIOStreams {
           addonInstanceId: candidate.instanceId,
         });
         // Robust logo injection for meta (detail) pages
-        if (meta && (!meta.logo || meta.logo === '' || meta.logo === null)) {
+        if (meta) {
           const { fetchLogoForItem } = await import('./utils/fetchLogo');
-          const typeForLogo = meta.type === 'collection' ? 'collection' : meta.type;
-          meta.logo = await fetchLogoForItem(meta.id, typeForLogo);
+          // Normalize type for logo fetching
+          let typeForLogo = undefined;
+          if (meta.type && ['movie','series','tv','collection'].includes(meta.type)) {
+            typeForLogo = meta.type;
+          } else if (type && ['movie','series','tv','collection'].includes(type)) {
+            typeForLogo = type;
+          } else if (meta.id && meta.id.startsWith('tmdb:')) {
+            // Guess from id
+            typeForLogo = 'movie';
+          } else {
+            typeForLogo = 'movie'; // fallback
+          }
+          const logo = await fetchLogoForItem(meta.id, typeForLogo);
+          meta.logo = logo || null;
         }
 
         // Robust trailer injection for TMDB
