@@ -329,28 +329,63 @@ export class AIOStreams {
     let catalog;
     try {
       // Check if this is a TMDB calendar request
-      if (actualCatalogId.startsWith('tmdb.calendar-')) {
-        const { fetchTmdbUpcomingMovies, fetchTmdbOnTheAir, fetchTmdbAiringToday } = await import('./utils/tmdbCalendar');
-        const page = parsedExtras.skip ? Math.floor(parsedExtras.skip / 20) + 1 : 1;
-        const search = parsedExtras.search;
-        const genre = parsedExtras.genre;
+      if (actualCatalogId === 'tmdb.calendar' || actualCatalogId.startsWith('tmdb.calendar-')) {
+        const { fetchCalendarData } = await import('./utils/tmdbCalendar');
         
-        switch (actualCatalogId) {
-          case 'tmdb.calendar-upcoming':
-            catalog = await fetchTmdbUpcomingMovies(page, search, genre);
-            break;
-          case 'tmdb.calendar-on-the-air':
-            catalog = await fetchTmdbOnTheAir(page, search, genre);
-            break;
-          case 'tmdb.calendar-airing-today':
-            catalog = await fetchTmdbAiringToday(page, search, genre);
-            break;
-          default:
-            catalog = await new Wrapper(addon).getCatalog(
-              type,
-              actualCatalogId,
-              extrasString
+        // Handle new calendar implementation
+        if (actualCatalogId === 'tmdb.calendar') {
+          // Parse year/month from extra parameters
+          const year = parsedExtras.year ? parseInt(parsedExtras.year) : undefined;
+          const month = parsedExtras.month ? parseInt(parsedExtras.month) : undefined;
+          const search = parsedExtras.search || undefined;
+          const enableNotifications = parsedExtras.notifications === 'true';
+          
+          // Get calendar data organized by date
+          const calendarData = await fetchCalendarData(year, month, undefined, enableNotifications);
+          
+          // Transform calendar data to catalog format
+          let catalogItems = calendarData.items.map(item => ({
+            ...item.metaItem,
+            // Add calendar-specific metadata
+            releaseDate: item.video?.released || item.metaItem.releaseInfo,
+            calendarDay: item.date.day,
+            calendarMonth: item.date.month,
+            calendarYear: item.date.year,
+          }));
+          
+          // Apply search filter if provided
+          if (search) {
+            catalogItems = catalogItems.filter(item =>
+              item.name.toLowerCase().includes(search.toLowerCase()) ||
+              (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
             );
+          }
+          
+          catalog = catalogItems;
+        } else {
+          // Legacy calendar endpoints for backward compatibility
+          const { fetchTmdbUpcomingMovies, fetchTmdbOnTheAir, fetchTmdbAiringToday } = await import('./utils/tmdbCalendar');
+          const page = parsedExtras.skip ? Math.floor(parsedExtras.skip / 20) + 1 : 1;
+          const search = parsedExtras.search;
+          const genre = parsedExtras.genre;
+          
+          switch (actualCatalogId) {
+            case 'tmdb.calendar-upcoming':
+              catalog = await fetchTmdbUpcomingMovies(page, search, genre);
+              break;
+            case 'tmdb.calendar-on-the-air':
+              catalog = await fetchTmdbOnTheAir(page, search, genre);
+              break;
+            case 'tmdb.calendar-airing-today':
+              catalog = await fetchTmdbAiringToday(page, search, genre);
+              break;
+            default:
+              catalog = await new Wrapper(addon).getCatalog(
+                type,
+                actualCatalogId,
+                extrasString
+              );
+          }
         }
       } else {
         catalog = await new Wrapper(addon).getCatalog(

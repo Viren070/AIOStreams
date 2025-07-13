@@ -2,6 +2,7 @@ import manifest from './manifest';
 import stream from './stream';
 import meta from './meta';
 import catalog from './catalog';
+import calendar from './calendar';
 import subtitle from './subtitle';
 import addonCatalog from './addonCatalog';
 import configure from './configure';
@@ -12,6 +13,7 @@ export {
   stream,
   meta,
   catalog,
+  calendar,
   subtitle,
   addonCatalog,
   configure,

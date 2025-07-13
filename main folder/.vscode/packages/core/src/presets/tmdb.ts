@@ -2,6 +2,28 @@ import { Preset, baseOptions } from './preset';
 import { constants, Env, FULL_LANGUAGE_MAPPING } from '../utils';
 import { Addon, Option, UserData } from '../db';
 
+/**
+ * Generate year options for calendar (current year and next 2 years)
+ */
+function generateYearOptions(): string[] {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = currentYear - 1; i <= currentYear + 2; i++) {
+    years.push(i.toString());
+  }
+  return years;
+}
+
+/**
+ * Generate month options for calendar
+ */
+function generateMonthOptions(): string[] {
+  return [
+    '1', '2', '3', '4', '5', '6', 
+    '7', '8', '9', '10', '11', '12'
+  ];
+}
+
 export class TMDBAddonPreset extends Preset {
   static override get METADATA() {
     const supportedResources = [
@@ -153,21 +175,9 @@ export class TMDBAddonPreset extends Preset {
             showInHome: true,
           },
           {
-            id: 'tmdb.calendar-upcoming',
-            type: 'movie',
+            id: 'tmdb.calendar',
+            type: 'other',
             name: 'Calendar',
-            showInHome: true,
-          },
-          {
-            id: 'tmdb.calendar-on-the-air',
-            type: 'series',
-            name: 'Calendar',
-            showInHome: true,
-          },
-          {
-            id: 'tmdb.calendar-airing-today',
-            type: 'series',
-            name: 'Airing Today',
             showInHome: true,
           },
         ],

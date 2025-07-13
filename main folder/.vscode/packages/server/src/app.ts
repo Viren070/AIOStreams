@@ -17,6 +17,7 @@ import {
   addonCatalog,
   alias,
 } from './routes/stremio';
+import calendar from './routes/stremio/calendar';
 
 import {
   ipMiddleware,
@@ -81,6 +82,7 @@ stremioAuthRouter.use('/configure.txt', staticRateLimiter, (req, res) => {
 });
 stremioAuthRouter.use('/meta', meta);
 stremioAuthRouter.use('/catalog', catalog);
+stremioAuthRouter.use('/calendar', calendar);
 stremioAuthRouter.use('/subtitles', subtitle);
 stremioAuthRouter.use('/addon_catalog', addonCatalog);
 
