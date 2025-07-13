@@ -329,24 +329,28 @@ export class AIOStreams {
     let catalog;
     try {
       // Check if this is a TMDB calendar request
-      const isTmdbAddon = addon.name?.toLowerCase().includes('tmdb') || addon.manifestUrl?.toLowerCase().includes('tmdb');
-      if (isTmdbAddon && actualCatalogId.includes('calendar')) {
+      if (actualCatalogId.startsWith('tmdb.calendar-')) {
         const { fetchTmdbUpcomingMovies, fetchTmdbOnTheAir, fetchTmdbAiringToday } = await import('./utils/tmdbCalendar');
         const page = parsedExtras.skip ? Math.floor(parsedExtras.skip / 20) + 1 : 1;
+        const search = parsedExtras.search;
+        const genre = parsedExtras.genre;
         
-        if (actualCatalogId.includes('upcoming') && type === 'movie') {
-          catalog = await fetchTmdbUpcomingMovies(page);
-        } else if (actualCatalogId.includes('on-the-air') && (type === 'series' || type === 'tv')) {
-          catalog = await fetchTmdbOnTheAir(page);
-        } else if (actualCatalogId.includes('airing-today') && (type === 'series' || type === 'tv')) {
-          catalog = await fetchTmdbAiringToday(page);
-        } else {
-          // Fallback to regular catalog
-          catalog = await new Wrapper(addon).getCatalog(
-            type,
-            actualCatalogId,
-            extrasString
-          );
+        switch (actualCatalogId) {
+          case 'tmdb.calendar-upcoming':
+            catalog = await fetchTmdbUpcomingMovies(page, search, genre);
+            break;
+          case 'tmdb.calendar-on-the-air':
+            catalog = await fetchTmdbOnTheAir(page, search, genre);
+            break;
+          case 'tmdb.calendar-airing-today':
+            catalog = await fetchTmdbAiringToday(page, search, genre);
+            break;
+          default:
+            catalog = await new Wrapper(addon).getCatalog(
+              type,
+              actualCatalogId,
+              extrasString
+            );
         }
       } else {
         catalog = await new Wrapper(addon).getCatalog(
