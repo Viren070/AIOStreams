@@ -328,11 +328,33 @@ export class AIOStreams {
     // get the catalog from the addon
     let catalog;
     try {
-      catalog = await new Wrapper(addon).getCatalog(
-        type,
-        actualCatalogId,
-        extrasString
-      );
+      // Check if this is a TMDB calendar request
+      const isTmdbAddon = addon.name?.toLowerCase().includes('tmdb') || addon.manifestUrl?.toLowerCase().includes('tmdb');
+      if (isTmdbAddon && actualCatalogId.includes('calendar')) {
+        const { fetchTmdbUpcomingMovies, fetchTmdbOnTheAir, fetchTmdbAiringToday } = await import('./utils/tmdbCalendar');
+        const page = parsedExtras.skip ? Math.floor(parsedExtras.skip / 20) + 1 : 1;
+        
+        if (actualCatalogId.includes('upcoming') && type === 'movie') {
+          catalog = await fetchTmdbUpcomingMovies(page);
+        } else if (actualCatalogId.includes('on-the-air') && (type === 'series' || type === 'tv')) {
+          catalog = await fetchTmdbOnTheAir(page);
+        } else if (actualCatalogId.includes('airing-today') && (type === 'series' || type === 'tv')) {
+          catalog = await fetchTmdbAiringToday(page);
+        } else {
+          // Fallback to regular catalog
+          catalog = await new Wrapper(addon).getCatalog(
+            type,
+            actualCatalogId,
+            extrasString
+          );
+        }
+      } else {
+        catalog = await new Wrapper(addon).getCatalog(
+          type,
+          actualCatalogId,
+          extrasString
+        );
+      }
     } catch (error) {
       return {
         success: false,

@@ -152,6 +152,24 @@ export class TMDBAddonPreset extends Preset {
             name: 'Trending',
             showInHome: true,
           },
+          {
+            id: 'tmdb.calendar-upcoming',
+            type: 'movie',
+            name: 'Calendar',
+            showInHome: true,
+          },
+          {
+            id: 'tmdb.calendar-on-the-air',
+            type: 'series',
+            name: 'Calendar',
+            showInHome: true,
+          },
+          {
+            id: 'tmdb.calendar-airing-today',
+            type: 'series',
+            name: 'Airing Today',
+            showInHome: true,
+          },
         ],
         ageRating: options.ageRating,
       });
