@@ -15,10 +15,13 @@
     "start:dev": "cd .vscode && npm run start:dev",
     "start:addon:dev": "npm run start:dev",
     "start:frontend:dev": "cd .vscode && npm run start:frontend:dev",
-    "heroku-postbuild": "cd .vscode && npm install && npm run build"
+    "heroku-postbuild": "cd .vscode && npm install --include=dev && npm run build"
   },
   "author": "Viren070",
   "license": "MIT",
+  "dependencies": {
+    "typescript": "^5.5.3"
+  },
   "engines": {
     "node": ">=20.0.0"
   }
