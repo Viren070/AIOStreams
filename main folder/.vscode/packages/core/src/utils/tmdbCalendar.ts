@@ -255,9 +255,9 @@ async function fetchTmdbUpcoming(type: 'movie' | 'tv', year: number, month: numb
   
   let url = '';
   if (type === 'movie') {
-    url = `https://api.themoviedb.org/3/discover/movie?primary_release_date.gte=${startDate}&primary_release_date.lte=${endDate}&sort_by=release_date.asc`;
+    url = `https://api.themoviedb.org/3/discover/movie?primary_release_date.gte=${startDate}&primary_release_date.lte=${endDate}&sort_by=release_date.asc&language=tr-TR`;
   } else {
-    url = `https://api.themoviedb.org/3/discover/tv?first_air_date.gte=${startDate}&first_air_date.lte=${endDate}&sort_by=first_air_date.asc`;
+    url = `https://api.themoviedb.org/3/discover/tv?first_air_date.gte=${startDate}&first_air_date.lte=${endDate}&sort_by=first_air_date.asc&language=tr-TR`;
   }
 
   const response = await fetch(url, {
@@ -381,10 +381,10 @@ async function applyNotificationSettings(items: CalendarItem[]): Promise<Calenda
  */
 export async function fetchTmdbUpcomingMovies(page: number = 1, search?: string, genre?: string): Promise<any[]> {
   try {
-    let url = `https://api.themoviedb.org/3/movie/upcoming?page=${page}&language=en-US&region=US`;
+    let url = `https://api.themoviedb.org/3/movie/upcoming?page=${page}&language=tr-TR&region=TR`;
     
     if (search) {
-      url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(search)}&page=${page}&language=en-US`;
+      url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(search)}&page=${page}&language=tr-TR`;
     }
     
     const response = await fetch(url, {
@@ -428,10 +428,10 @@ export async function fetchTmdbUpcomingMovies(page: number = 1, search?: string,
  */
 export async function fetchTmdbOnTheAir(page: number = 1, search?: string, genre?: string): Promise<any[]> {
   try {
-    let url = `https://api.themoviedb.org/3/tv/on_the_air?page=${page}&language=en-US`;
+    let url = `https://api.themoviedb.org/3/tv/on_the_air?page=${page}&language=tr-TR`;
     
     if (search) {
-      url = `https://api.themoviedb.org/3/search/tv?query=${encodeURIComponent(search)}&page=${page}&language=en-US`;
+      url = `https://api.themoviedb.org/3/search/tv?query=${encodeURIComponent(search)}&page=${page}&language=tr-TR`;
     }
     
     const response = await fetch(url, {
@@ -475,10 +475,10 @@ export async function fetchTmdbOnTheAir(page: number = 1, search?: string, genre
  */
 export async function fetchTmdbAiringToday(page: number = 1, search?: string, genre?: string): Promise<any[]> {
   try {
-    let url = `https://api.themoviedb.org/3/tv/airing_today?page=${page}&language=en-US`;
+    let url = `https://api.themoviedb.org/3/tv/airing_today?page=${page}&language=tr-TR`;
     
     if (search) {
-      url = `https://api.themoviedb.org/3/search/tv?query=${encodeURIComponent(search)}&page=${page}&language=en-US`;
+      url = `https://api.themoviedb.org/3/search/tv?query=${encodeURIComponent(search)}&page=${page}&language=tr-TR`;
     }
     
     const response = await fetch(url, {

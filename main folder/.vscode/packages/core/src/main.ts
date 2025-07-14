@@ -329,7 +329,9 @@ export class AIOStreams {
     let catalog;
     try {
       // Check if this is a TMDB calendar request
-      if (actualCatalogId === 'tmdb.calendar' || actualCatalogId.startsWith('tmdb.calendar-')) {
+      const isTmdbAddon = addon.name?.toLowerCase().includes('tmdb') || addon.manifestUrl?.toLowerCase().includes('tmdb');
+      
+      if (isTmdbAddon && (actualCatalogId === 'tmdb.calendar' || actualCatalogId.startsWith('tmdb.calendar-') || actualCatalogId.includes('calendar'))) {
         const { fetchCalendarData } = await import('./utils/tmdbCalendar');
         
         // Handle new calendar implementation
@@ -371,12 +373,18 @@ export class AIOStreams {
           
           switch (actualCatalogId) {
             case 'tmdb.calendar-upcoming':
+            case 'calendar-upcoming':
+            case 'upcoming':
               catalog = await fetchTmdbUpcomingMovies(page, search, genre);
               break;
             case 'tmdb.calendar-on-the-air':
+            case 'calendar-on-the-air':
+            case 'on-the-air':
               catalog = await fetchTmdbOnTheAir(page, search, genre);
               break;
             case 'tmdb.calendar-airing-today':
+            case 'calendar-airing-today':
+            case 'airing-today':
               catalog = await fetchTmdbAiringToday(page, search, genre);
               break;
             default:
