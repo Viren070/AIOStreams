@@ -136,6 +136,70 @@ export async function fetchLogoForItem(id: string, type: string): Promise<string
       }
     }
 
+    // Special fallback for collections: try to use the logo of the latest movie in the collection
+    if (type === 'collection' && tmdbId) {
+      try {
+        // Get collection details from TMDB to find the latest movie
+        const collectionUrl = `https://api.themoviedb.org/3/collection/${tmdbId}`;
+        const collectionRes = await fetch(collectionUrl, {
+          headers: { Authorization: `Bearer ${Env.TMDB_ACCESS_TOKEN}` },
+          signal: AbortSignal.timeout(7000),
+        });
+        
+        if (collectionRes.ok) {
+          const collectionData = await collectionRes.json();
+          if (collectionData.parts && Array.isArray(collectionData.parts) && collectionData.parts.length > 0) {
+            // Sort by release date to get the latest movie
+            const sortedParts = collectionData.parts
+              .filter((part: any) => part.release_date)
+              .sort((a: any, b: any) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime());
+            
+            if (sortedParts.length > 0) {
+              const latestMovie = sortedParts[0];
+              console.log(`[fetchLogoForItem][COLLECTION] Trying latest movie fallback: ${latestMovie.title} (${latestMovie.id})`);
+              
+              // Try to get logo for the latest movie using fanart.tv
+              const movieFanartUrl = `https://webservice.fanart.tv/v3/movies/${latestMovie.id}?api_key=${Env.FANART_API_KEY || '6e0b6b6e7c1b9b6e7b6e7b6e'}`;
+              const movieFanartRes = await fetch(movieFanartUrl, { signal: AbortSignal.timeout(7000) });
+              
+              if (movieFanartRes.ok) {
+                const movieFanartData = await movieFanartRes.json();
+                
+                // Helper to pick logo by language priority
+                function pickLogo(arr: any[]): any | null {
+                  if (!Array.isArray(arr) || arr.length === 0) return null;
+                  return (
+                    arr.find((l: any) => l.lang === 'tr') ||
+                    arr.find((l: any) => l.lang === 'en') ||
+                    arr[0]
+                  );
+                }
+                
+                // Try hdmovielogo first, then movielogo
+                if (movieFanartData.hdmovielogo && Array.isArray(movieFanartData.hdmovielogo) && movieFanartData.hdmovielogo.length > 0) {
+                  const logo = pickLogo(movieFanartData.hdmovielogo);
+                  if (logo && logo.url) {
+                    console.log(`[fetchLogoForItem][COLLECTION] Found logo from latest movie hdmovielogo: ${logo.url}`);
+                    return logo.url;
+                  }
+                }
+                if (movieFanartData.movielogo && Array.isArray(movieFanartData.movielogo) && movieFanartData.movielogo.length > 0) {
+                  const logo = pickLogo(movieFanartData.movielogo);
+                  if (logo && logo.url) {
+                    console.log(`[fetchLogoForItem][COLLECTION] Found logo from latest movie movielogo: ${logo.url}`);
+                    return logo.url;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`[fetchLogoForItem][COLLECTION] Error in latest movie fallback: ${e}`);
+        // Continue to regular TMDB fallback
+      }
+    }
+
     // Fallback to TMDB
     if (!tmdbId) {
       if (type === 'collection') {
