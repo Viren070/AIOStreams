@@ -1,0 +1,25 @@
+{
+  "name": "aiostreams",
+  "version": "2.5.1",
+  "description": "AIOStreams consolidates multiple Stremio addons and debrid services into a single, easily configurable addon. It allows highly customisable filtering, sorting, and formatting of results and supports proxying all your streams through MediaFlow Proxy or StremThru for improved compatibility and IP restriction bypassing.",
+  "main": ".vscode/packages/server/dist/server.js",
+  "scripts": {
+    "test": "cd .vscode && npm run test",
+    "release": "commit-and-tag-version",
+    "format": "cd .vscode && npm run format",
+    "metadata": "cd .vscode && npm run metadata",
+    "build": "cd .vscode && npm run build",
+    "build:watch": "cd .vscode && npm run build:watch",
+    "start": "node .vscode/packages/server/dist/server.js",
+    "start:addon": "npm run start",
+    "start:dev": "cd .vscode && npm run start:dev",
+    "start:addon:dev": "npm run start:dev",
+    "start:frontend:dev": "cd .vscode && npm run start:frontend:dev",
+    "heroku-postbuild": "cd .vscode && npm install && npm run build"
+  },
+  "author": "Viren070",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
