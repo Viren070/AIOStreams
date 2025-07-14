@@ -356,7 +356,7 @@ export class AIOStreams {
           // Apply search filter if provided
           if (search) {
             catalogItems = catalogItems.filter(item =>
-              item.name.toLowerCase().includes(search.toLowerCase()) ||
+              (item.name && item.name.toLowerCase().includes(search.toLowerCase())) ||
               (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
             );
           }

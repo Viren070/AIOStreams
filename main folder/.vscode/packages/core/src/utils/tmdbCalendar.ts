@@ -114,7 +114,7 @@ async function getLibraryCalendarItems(
       if (!meta) continue;
 
       // Check if item has videos for this month
-      if (meta.videos) {
+      if (meta.videos && Array.isArray(meta.videos)) {
         for (const video of meta.videos) {
           if (video.released) {
             const releaseDate = new Date(video.released);

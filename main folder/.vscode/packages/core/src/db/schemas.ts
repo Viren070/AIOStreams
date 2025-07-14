@@ -635,7 +635,7 @@ export const AddonCatalogResponseSchema = z.object({
 export type AddonCatalogResponse = z.infer<typeof AddonCatalogResponseSchema>;
 export type AddonCatalog = z.infer<typeof AddonCatalogSchema>;
 
-export const ExtrasTypesSchema = z.enum(['skip', 'genre', 'search']);
+export const ExtrasTypesSchema = z.enum(['skip', 'genre', 'search', 'year', 'month', 'notifications']);
 
 const ExtraSkipSchema = z.object({
   skip: z.coerce.number(),
@@ -646,10 +646,22 @@ const ExtraGenreSchema = z.object({
 const ExtraSearchSchema = z.object({
   search: z.string(),
 });
+const ExtraYearSchema = z.object({
+  year: z.coerce.number(),
+});
+const ExtraMonthSchema = z.object({
+  month: z.coerce.number(),
+});
+const ExtraNotificationsSchema = z.object({
+  notifications: z.string(),
+});
 export const ExtrasSchema = z.union([
   ExtraSkipSchema,
   ExtraGenreSchema,
   ExtraSearchSchema,
+  ExtraYearSchema,
+  ExtraMonthSchema,
+  ExtraNotificationsSchema,
 ]);
 export type Extras = z.infer<typeof ExtrasSchema>;
 
