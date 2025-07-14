@@ -335,8 +335,8 @@ export class AIOStreams {
         // Handle new calendar implementation
         if (actualCatalogId === 'tmdb.calendar') {
           // Parse year/month from extra parameters
-          const year = parsedExtras.year ? parseInt(parsedExtras.year) : undefined;
-          const month = parsedExtras.month ? parseInt(parsedExtras.month) : undefined;
+          const year = parsedExtras.year || undefined;
+          const month = parsedExtras.month || undefined;
           const search = parsedExtras.search || undefined;
           const enableNotifications = parsedExtras.notifications === 'true';
           
