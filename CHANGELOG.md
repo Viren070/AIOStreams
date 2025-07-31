@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.3](https://github.com/Viren070/AIOStreams/compare/v2.8.2...v2.8.3) (2025-07-31)
+
+
+### Bug Fixes
+
+* correctly handle server side forcing of deprecated public proxy URLs ([1cdb0f3](https://github.com/Viren070/AIOStreams/commit/1cdb0f376efc72cf49d0842fd2f7725e353468a9))
+
 ## [2.8.2](https://github.com/Viren070/AIOStreams/compare/v2.8.1...v2.8.2) (2025-07-30)
 
 
