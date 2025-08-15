@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.1](https://github.com/Viren070/AIOStreams/compare/v2.9.0...v2.9.1) (2025-08-15)
+
+
+### Bug Fixes
+
+* correctly handle undefined/0 year tolerance during year matching ([967af82](https://github.com/Viren070/AIOStreams/commit/967af824489333965a3c3f1e833df69f578ff80e))
+* fetch metadata if year matching is enabled too and apply request types and addon ([98fd9d3](https://github.com/Viren070/AIOStreams/commit/98fd9d3fae3417da002c7e77df71850a299fde38))
+
 ## [2.9.0](https://github.com/Viren070/AIOStreams/compare/v2.8.2...v2.9.0) (2025-08-15)
 
 
