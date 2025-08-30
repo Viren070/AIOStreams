@@ -1,5 +1,5 @@
 import { UserData } from '../db';
-import { BaseFormatter, FormatterConfig } from './base';
+import { BaseFormatter } from './base';
 
 export class TorrentioFormatter extends BaseFormatter {
   constructor(userData: UserData) {
@@ -14,7 +14,7 @@ export class TorrentioFormatter extends BaseFormatter {
 {stream.folderName::exists["{stream.folderName}"||""]}
 {stream.filename::exists["{stream.filename}"||""]}
 {stream.size::>0["💾{stream.size::bytes2} "||""]}{stream.folderSize::>0["/ 💾{stream.folderSize::bytes2}"||""]}{stream.seeders::>=0["👤{stream.seeders} "||""]}{stream.age::exists["📅{stream.age} "||""]}{stream.indexer::exists["⚙️{stream.indexer}"||""]}
-{stream.languageEmojis::exists["{stream.languageEmojis::join( / ')}"||""]}
+{stream.languageEmojis::exists["{stream.languageEmojis::join(' / ')}"||""]}
 `,
       },
       userData
