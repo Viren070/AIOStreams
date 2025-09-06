@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.13.0](https://github.com/Viren070/AIOStreams/compare/v2.12.2...v2.13.0) (2025-09-06)
+
+
+### Features
+
+* **core/formatters:** improve and refactor base formatter ([224810d](https://github.com/Viren070/AIOStreams/commit/224810dcc3854363d053eee1b712e7c0ee5b4e4c))
+
+
+### Bug Fixes
+
+* **core/formatters:** ensure null values trigger the false check case in conditional modifiers ([#348](https://github.com/Viren070/AIOStreams/issues/348)) ([dae054f](https://github.com/Viren070/AIOStreams/commit/dae054fd6b58e673b7814271acc01ceced983cac))
+
 ## [2.12.2](https://github.com/Viren070/AIOStreams/compare/v2.12.1...v2.12.2) (2025-09-02)
 
 
