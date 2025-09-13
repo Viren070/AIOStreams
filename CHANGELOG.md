@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.13.0](https://github.com/Viren070/AIOStreams/compare/v2.12.2...v2.13.0) (2025-09-13)
+
+
+### Features
+
+* add ability to customise group behaviour ([8dc85ba](https://github.com/Viren070/AIOStreams/commit/8dc85ba5941fcd36b0206987009bba2527a5000f))
+* **core/formatters:** allow multiple sequential modifiers ([#368](https://github.com/Viren070/AIOStreams/issues/368)) ([ab5de5c](https://github.com/Viren070/AIOStreams/commit/ab5de5ce04b2c267dd4be41cf442874a46260012))
+* **core/formatters:** improve and refactor base formatter ([224810d](https://github.com/Viren070/AIOStreams/commit/224810dcc3854363d053eee1b712e7c0ee5b4e4c))
+* **frontend:** persist user data to local storage ([#353](https://github.com/Viren070/AIOStreams/issues/353)) ([213d3cf](https://github.com/Viren070/AIOStreams/commit/213d3cf700c8a201caeca624b6679bfb28da5290))
+* increase manifest cache and allow bypassing cache/longer timeouts when necessary ([f37249c](https://github.com/Viren070/AIOStreams/commit/f37249c4d4947b4b1bef80b0d08e9ca7dc54125a))
+* stuff ([54573b5](https://github.com/Viren070/AIOStreams/commit/54573b571bf4901a7f3e373cca01fc0425656e01))
+
+
+### Bug Fixes
+
+* **core/formatters:** ensure null values trigger the false check case in conditional modifiers ([#348](https://github.com/Viren070/AIOStreams/issues/348)) ([dae054f](https://github.com/Viren070/AIOStreams/commit/dae054fd6b58e673b7814271acc01ceced983cac))
+* **core/formatters:** update Conditional check to properly typecheck ([#361](https://github.com/Viren070/AIOStreams/issues/361)) ([9a305ea](https://github.com/Viren070/AIOStreams/commit/9a305ea6ee9486949e1ac594c39db4efc685e831))
+* **core/formatters:** Update Multiple Modifiers Feature to properly parse modifiers, check_tf, etc... ([#369](https://github.com/Viren070/AIOStreams/issues/369)) ([36fdeb4](https://github.com/Viren070/AIOStreams/commit/36fdeb467287408f292dc91d06f7fda009666386))
+* default skip failed addons to true by explicitly checking for false ([4b06825](https://github.com/Viren070/AIOStreams/commit/4b068255c95e6d0fc60219eac62d1f868a9fc4c8))
+* use copy of applyMigrations function to avoid go-ptt import path ([ee79578](https://github.com/Viren070/AIOStreams/commit/ee79578730b6d25a50e2f77ede7736ccac69d8cc))
+
 ## [2.12.2](https://github.com/Viren070/AIOStreams/compare/v2.12.1...v2.12.2) (2025-09-02)
 
 
