@@ -337,60 +337,15 @@ export class AIOStreams {
       catalog = catalog.reverse();
     }
 
-    const rpdbApiKey =
-      modification?.rpdb && this.userData.rpdbApiKey
-        ? this.userData.rpdbApiKey
-        : undefined;
-    const rpdbApi = rpdbApiKey ? new RPDB(rpdbApiKey) : undefined;
-
-    catalog = await Promise.all(
-      catalog.map(async (item) => {
-        // Apply RPDB poster modification
-        if (rpdbApiKey && item.poster) {
-          let posterUrl = item.poster;
-          if (posterUrl.includes('api.ratingposterdb.com')) {
-            // already a RPDB poster, do nothing
-          } else if (
-            this.userData.rpdbUseRedirectApi !== false &&
-            Env.BASE_URL
-          ) {
-            const id = (item as any).imdb_id || item.id;
-            const url = new URL(Env.BASE_URL);
-            url.pathname = '/api/v1/rpdb';
-            url.searchParams.set('id', id);
-            url.searchParams.set('type', type);
-            url.searchParams.set('fallback', item.poster);
-            url.searchParams.set('apiKey', rpdbApiKey);
-            posterUrl = url.toString();
-          } else {
-            const rpdbPosterUrl = await rpdbApi!.getPosterUrl(
-              type,
-              (item as any).imdb_id || item.id,
-              false
-            );
-            if (rpdbPosterUrl) {
-              posterUrl = rpdbPosterUrl;
-            }
-          }
-
-          item.poster = posterUrl;
-        }
-
-        // Apply poster enhancement
-        if (this.userData.enhancePosters && Math.random() < 0.2) {
-          item.poster = Buffer.from(
-            constants.DEFAULT_POSTERS[
-              Math.floor(Math.random() * constants.DEFAULT_POSTERS.length)
-            ],
-            'base64'
-          ).toString('utf-8');
-        }
-
-        if (item.links) {
-          item.links = this.convertDiscoverDeepLinks(item.links);
-        }
-        return item;
-      })
+    await Promise.all(
+      catalog.map(async (item) =>
+        this.updatePosterAndLinks(item, {
+          id,
+          type,
+          addon,
+          itemType: 'catalog',
+        })
+      )
     );
 
     return { success: true, data: catalog, errors: [] };
@@ -487,7 +442,6 @@ export class AIOStreams {
           addonName: candidate.addon.name,
           addonInstanceId: candidate.instanceId,
         });
-        meta.links = this.convertDiscoverDeepLinks(meta.links);
 
         if (meta.videos) {
           meta.videos = await Promise.all(
@@ -505,6 +459,14 @@ export class AIOStreams {
             })
           );
         }
+
+        await this.updatePosterAndLinks(meta, {
+          id,
+          type,
+          addon: candidate.addon,
+          itemType: 'meta',
+        });
+
         return {
           success: true,
           data: meta,
@@ -688,6 +650,7 @@ export class AIOStreams {
               ...a.preset,
               id: preset.instanceId,
             },
+            rpdb: preset.options.rpdb,
             // if no identifier is present, we can assume that the preset can only generate one addon at a time and so no
             // unique identifier is needed as the preset instance id is enough to identify the addon
             instanceId: `${preset.instanceId}${getSimpleTextHash(`${a.identifier ?? ''}`).slice(0, 4)}`,
@@ -1410,6 +1373,88 @@ export class AIOStreams {
       logger.error(`Error pinging url of first uncached stream`, {
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+  }
+
+  private async updatePosterAndLinks(
+    item: MetaPreview,
+    options: {
+      addon: Addon;
+      type: string;
+      id: string;
+      itemType: 'meta' | 'catalog';
+    }
+  ): Promise<void> {
+    let { addon, type, id, itemType } = options;
+    let shouldGetPosterFromRPDB = false;
+
+    if (itemType === 'catalog') {
+      let modification;
+
+      if (this.userData.catalogModifications) {
+        modification = this.userData.catalogModifications.find(
+          (mod) =>
+            mod.id === id && (mod.type === type || mod.overrideType === type)
+        );
+      }
+
+      if (modification?.overrideType) {
+        // reset the type from the request (which is the overridden type) to the actual type
+        type = modification.type;
+      }
+
+      shouldGetPosterFromRPDB = !!modification?.rpdb;
+    } else if (itemType === 'meta') {
+      shouldGetPosterFromRPDB = !!addon.rpdb;
+    }
+
+    const rpdbApiKey =
+      shouldGetPosterFromRPDB && this.userData.rpdbApiKey
+        ? this.userData.rpdbApiKey
+        : undefined;
+
+    const rpdbApi = rpdbApiKey ? new RPDB(rpdbApiKey) : undefined;
+
+    // Apply RPDB poster modification
+    if (rpdbApiKey && item.poster) {
+      let posterUrl = item.poster;
+      if (posterUrl.includes('api.ratingposterdb.com')) {
+        // already a RPDB poster, do nothing
+      } else if (this.userData.rpdbUseRedirectApi !== false && Env.BASE_URL) {
+        const id = (item as any).imdb_id || item.id;
+        const url = new URL(Env.BASE_URL);
+        url.pathname = '/api/v1/rpdb';
+        url.searchParams.set('id', id);
+        url.searchParams.set('type', type);
+        url.searchParams.set('fallback', item.poster);
+        url.searchParams.set('apiKey', rpdbApiKey);
+        posterUrl = url.toString();
+      } else {
+        const rpdbPosterUrl = await rpdbApi!.getPosterUrl(
+          type,
+          (item as any).imdb_id || item.id,
+          false
+        );
+        if (rpdbPosterUrl) {
+          posterUrl = rpdbPosterUrl;
+        }
+      }
+
+      item.poster = posterUrl;
+    }
+
+    // Apply poster enhancement
+    if (this.userData.enhancePosters && Math.random() < 0.2) {
+      item.poster = Buffer.from(
+        constants.DEFAULT_POSTERS[
+          Math.floor(Math.random() * constants.DEFAULT_POSTERS.length)
+        ],
+        'base64'
+      ).toString('utf-8');
+    }
+
+    if (item.links) {
+      item.links = this.convertDiscoverDeepLinks(item.links);
     }
   }
 }

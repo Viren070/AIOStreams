@@ -62,6 +62,17 @@ export const baseOptions = (
     ];
     urlOption.showInNoobMode = true;
   }
+
+  const rpdbOption: Option = {
+    id: 'rpdb',
+    name: 'RPDB',
+    description:
+      'Replace movie/show metadata posters with RPDB posters when supported. This will only affect the posters in your library / continue watching.',
+    type: 'boolean',
+    required: false,
+    default: false,
+  };
+
   return [
     {
       id: 'name',
@@ -97,6 +108,7 @@ export const baseOptions = (
         value: resource,
       })),
     },
+    ...(resources.includes('meta') ? [rpdbOption] : []),
     urlOption,
   ];
 };

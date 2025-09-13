@@ -79,6 +79,15 @@ export class CustomPreset extends Preset {
           value: resource,
         })),
       },
+      {
+        id: 'rpdb',
+        name: 'RPDB',
+        description:
+          'Replace movie/show metadata posters with RPDB posters when supported. This will only affect the posters in your library / continue watching.',
+        type: 'boolean',
+        required: false,
+        default: false,
+      },
     ];
 
     return {
