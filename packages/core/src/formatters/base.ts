@@ -190,7 +190,31 @@ const modifiers = {
   ...numberModifiers,
   ...arrayModifiers,
   ...conditionalModifiers.exact,
-  // ...conditionalModifiers.prefix,
+  ...conditionalModifiers.prefix,
+}
+
+const comparatorKeyToFuncs = {
+  "and": [
+    (v1: boolean, v2: boolean) => v1 && v2
+  ],
+  "or": [
+    (v1: boolean, v2: boolean) => v1 || v2
+  ],
+  "xor": [
+    (v1: boolean, v2: boolean) => v1 != v2
+  ],
+  "equal": [
+    (v1: boolean, v2: boolean) => v1 == v2
+  ],
+  "left": [
+    (v1: any, v2: any) => v1
+  ],
+  "right": [
+    (v1: any, v2: any) => v2
+  ],
+  // "xor": [
+  //   (v1: boolean, v2: boolean) => v1 == v2
+  // ]
 }
 
 const debugModifierToolReplacement = `
@@ -391,16 +415,9 @@ export abstract class BaseFormatter {
     };
   }
 
-  // Build the modifier regex pattern from modifier keys
-  protected buildModifierRegexPattern(): string {
-    const validModifiers = Object.keys(modifiers)
-      .map(key => key.replace(/[\(\)\'\"\$\^\~\=\>\<]/g, '\\$&'));
-    return `::(${validModifiers.join('|')})`;
-  }
-
-  protected buildRegexExpression(): RegExp {
+  /* --- START RegEx pattern helper functions --- */
+  protected buildVariableRegexPattern(): string {
     // Dynamically build the `variable` regex pattern from ParseValue keys
-    // Futureproof: if we add new keys to ParseValue interface, we must add them here too
     const hardcodedParseValueKeysForRegexMatching = this.convertStreamToParseValue({} as ParsedStream);
     const validVariables: (keyof ParseValue)[] = Object.keys(hardcodedParseValueKeysForRegexMatching) as (keyof ParseValue)[];
     // Get all valid properties (subkeys) from ParseValue structure
@@ -409,25 +426,44 @@ export abstract class BaseFormatter {
       if (section && typeof section === 'object' && section !== null) {
         return Object.keys(section);
       }
-      return [];
+      return []; // @flatMap
     });
-    const variable = `(?<variableName>${validVariables.join('|')})\\.(?<propertyName>${validProperties.join('|')})`;
-
-    const singleValidModifier = this.buildModifierRegexPattern();
-    
+    return `(?<variableName>${validVariables.join('|')})\\.(?<propertyName>${validProperties.join('|')})`;
+  }
+  protected buildModifierRegexPattern(): string {
+    const validModifiers = Object.keys(modifiers)
+      .map(key => key.replace(/[\(\)\'\"\$\^\~\=\>\<]/g, '\\$&'));
+    return `::(${validModifiers.join('|')})`;
+  }
+  protected buildComparatorRegexPattern(): string {
+    const comparatorKeys = Object.keys(comparatorKeyToFuncs)
+    return `::(${comparatorKeys.join("|")})::`
+  }
+  protected buildTZLocaleRegexPattern(): string {
+    // TZ Locale pattern (e.g. 'UTC', 'GMT', 'EST', 'PST', 'en-US', 'en-GB', 'Europe/London', 'America/New_York')
+    return `::(?<mod_tzlocale>[A-Za-z]{2,3}(?:-[A-Z]{2})?|[A-Za-z]+?/[A-Za-z_]+?)`;
+  }
+  protected buildCheckRegexPattern(): string {
     // Build the conditional check pattern separately
     // Use [^"]* to capture anything except quotes, making it non-greedy
     const checkTrue = `"(?<mod_check_true>[^"]*)"`;
     const checkFalse = `"(?<mod_check_false>[^"]*)"`;
-    const checkTF = `\\[(?<mod_check>${checkTrue}\\|\\|${checkFalse})\\]`;
+    return `\\[(?<mod_check>${checkTrue}\\|\\|${checkFalse})\\]`;
+  }
+  protected buildRegexExpression(): RegExp {
+    const variable = this.buildVariableRegexPattern().replace("\?\<variableName\>", "").replace("\?\<propertyName\>", "");
+    const singleValidModifier = this.buildModifierRegexPattern();
+    const comparator = this.buildComparatorRegexPattern();
+    const modTZLocale = this.buildTZLocaleRegexPattern();
+    const checkTF = this.buildCheckRegexPattern();
+    
 
-    // TZ Locale pattern (e.g. 'UTC', 'GMT', 'EST', 'PST', 'en-US', 'en-GB', 'Europe/London', 'America/New_York')
-    const modTZLocale = `::(?<mod_tzlocale>[A-Za-z]{2,3}(?:-[A-Z]{2})?|[A-Za-z]+?/[A-Za-z_]+?)`;
-
-    const regexPattern = `\\{${variable}(?<modifiers>(${singleValidModifier})+)?(${modTZLocale})?(${checkTF})?\\}`;
+    const variableAndModifiers = `${variable}(${singleValidModifier})*`;
+    const regexPattern = `\\{${variableAndModifiers}(${comparator}${variableAndModifiers})*(?<suffix_tzlocale>${modTZLocale})?(?<suffix_check>${checkTF})?\\}`;
     
     return new RegExp(regexPattern, 'gi')
   }
+  /* --- END RegEx pattern helper functions --- */
 
   protected parseString(str: string, value: ParseValue): string | null {
     if (!str) return null;
@@ -447,56 +483,59 @@ export abstract class BaseFormatter {
 
     while (matches = re.exec(str)) {
       if (!matches.groups) continue;
-
       const index = matches.index as number;
 
-      // Validate - variableName (exists in value)
-      const variableDict = value[matches.groups.variableName as keyof ParseValue];
-      if (!variableDict) {
-        str = this.replaceCharsFromString(
-          str,
-          '{unknown_variableName}',
-          index,
-          re.lastIndex
-        );
-        re.lastIndex = index;
-        continue;
-      }
+      let properlyHandledSuffix = (matches.groups.suffix_tzlocale ?? "") + (matches.groups.suffix_check ?? "");
 
-      // Validate - property: variableDict[propertyName]
-      const property = variableDict[matches.groups.propertyName as keyof typeof variableDict];
-      if (property === undefined) {
-        str = this.replaceCharsFromString(
-          str,
-          '{unknown_propertyName}',
-          index,
-          re.lastIndex
-        );
-        re.lastIndex = index;
-        continue;
-      }
+      // unhandledStr looks like variableName.propertyName(::<modifier|comparator>)*
+      let unhandledStr = matches[0].substring(1, matches[0].length - 1 - properlyHandledSuffix.length);
 
-      // Validate and Process - Modifier(s)
-      if (matches.groups.modifiers) {
-        let result = this.applyModifiers(matches.groups, property, value);
-        // handle unknown modifier result
-        if (result === undefined) {
-          result = `{unknown_modifier(${matches.groups.modifiers})}`;
-          if (['string', 'number', 'boolean', 'object', 'array'].includes(typeof property)) {
-            result = `{unknown_${typeof property}_modifier(${matches.groups.modifiers})}`;
-          }
+      const splitOnComparators = unhandledStr.split(RegExp(this.buildComparatorRegexPattern(), 'gi'));
+      let results: ParsedResult[] = splitOnComparators.filter((_, i) => i % 2 == 0)
+        .map(baseString => // baseString looks like variableName.propertyName(::<modifier>)*
+          this.parseBaseString(baseString, value, {
+            mod_tzlocale: matches?.groups?.suffix_tzlocale ?? undefined
+          })
+        );
+      let foundComparators: (keyof typeof comparatorKeyToFuncs)[] = splitOnComparators.filter((_, i) => i % 2 != 0)
+        .map(c => c as keyof typeof comparatorKeyToFuncs);
+      
+      // add initial comparator for reduce to work even without a user-specified comparator
+      foundComparators = ["left", ...foundComparators];
+      results = [results[0], ...results];
+      const result = results.reduce((prev, cur, i) => {
+        if (prev.error !== undefined) return prev
+        if (cur.error !== undefined) return cur
+
+        // the comparator key between prev and cur
+        const compareKey = foundComparators[i - 1] as keyof typeof comparatorKeyToFuncs;
+        const comparatorFunctions = comparatorKeyToFuncs[compareKey];
+        for (const fn of comparatorFunctions) {
+          try {
+            const r = fn(prev.result, cur.result);
+            if (r !== undefined) return { result: r };
+          } catch { continue; }
         }
-        str = this.replaceCharsFromString(
-          str,
-          result,
-          index,
-          re.lastIndex
-        );
-        re.lastIndex = index;
-        continue;
-      }
+        return { error: `{unknown_comparison_modifier(<${typeof prev.result}>::${compareKey}::<${typeof cur.result}>)}` };
+      });
 
-      str = this.replaceCharsFromString(str, property, index, re.lastIndex);
+      let [check_true, check_false] = [matches.groups.mod_check_true ?? "", matches.groups.mod_check_false ?? ""];
+
+      let replaceString: string;
+      if (result.error) replaceString = result.error;
+      else if (typeof result.result == "boolean") {
+
+        if (value) {
+          check_true = this.parseString(check_true, value) || check_true;
+          check_false = this.parseString(check_false, value) || check_false;
+        }
+        replaceString = (typeof check_true !== 'string' || typeof check_false !== 'string')
+          ? `{unknown_conditional_modifier_check_true_or_false(${check_true},${check_false})}`
+          : (result.result ? check_true : check_false);
+      } else {
+        replaceString = result.result?.toString();
+      }
+      str = this.replaceCharsFromString(str, replaceString, index, re.lastIndex);
       re.lastIndex = index;
     }
 
@@ -510,48 +549,53 @@ export abstract class BaseFormatter {
       .replace(/\{tools.newLine\}/g, '\n');
   }
 
-  protected applyModifiers(
-    groups: {[key: string]: string},
-    input: any,
-    parseValue: ParseValue,
-  ): string | undefined {
-    const singleModTerminator = '((::)|($))'; // :: if there's multiple modifiers or $ for the end of the string
-    const singleValidModRe = new RegExp(this.buildModifierRegexPattern() + singleModTerminator, 'gi');
-    
-    let result = input as any;
-    // iterate over modifiers in order of appearance
-    for (const modMatch of [...groups.modifiers.matchAll(singleValidModRe)].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))) {
-      if (result === undefined) break;
-      result = this.applySingleModifier(
-        modMatch[1], // First capture group (the modifier name)
-        result,
-        groups.mod_tzlocale ?? "",
-      );
-    }
+  protected parseBaseString(
+    baseString: string, // string to parse, e.g. "<variableName>.<propertyName>(::<modifier>)*"
+    value: ParseValue,
+    parsedGroups: {
+      mod_tzlocale: string | undefined,
+    },
+  ): ParsedResult {
+    const variable = this.buildVariableRegexPattern();
+    const singleValidModifier = this.buildModifierRegexPattern();
+    const baseRegexEx = new RegExp(`${variable}(${singleValidModifier})*`, 'gi');
+    let groups = baseRegexEx.exec(baseString)!.groups!;
 
-    // handle unknown modifier result
-    switch (typeof result) {
-      case 'undefined': return undefined;
-      case 'boolean':
-        let check_true = groups.mod_check_true ?? "";
-        let check_false = groups.mod_check_false ?? "";
-        if (typeof check_true !== 'string' || typeof check_false !== 'string')
-          return `{unknown_conditional_modifier_check_true_or_false}`;
-        
-        if (parseValue) {
-          check_true = this.parseString(check_true, parseValue) || check_true;
-          check_false = this.parseString(check_false, parseValue) || check_false;
+      // variableName (exists in value)
+    const variableName = groups.variableName;
+    const variableDict = value[variableName as keyof ParseValue];
+    if (!variableDict) return { error: `{unknown_variableName(${variableName})}` };
+
+    // property: variableDict[propertyName]
+    const propertyName = groups.propertyName;
+    const property = variableDict?.[propertyName as keyof typeof variableDict];
+    if (property === undefined) return { error: `{unknown_propertyName(${variableName}.${propertyName})}` };
+
+    let result = property as any;
+    // Validate and Process - Modifier(s)
+    const allModifiers = baseString.substring((`${variableName}.${propertyName}`).length);
+    if (allModifiers.length) {
+      const singleModTerminator = '((::)|($))'; // :: if there's multiple modifiers or $ for the end of the string
+      const singleValidModRe = new RegExp(this.buildModifierRegexPattern() + singleModTerminator, 'gi');
+      
+      const sortedModMatches = [...allModifiers.matchAll(singleValidModRe)].sort((a, b) => (a.index ?? 0) - (b.index ?? 0)).map(regExpExecArray => regExpExecArray[1] /* First capture group, aka the modifier name */ );
+      for (const lastModMatched of sortedModMatches) {
+        result = this.applySingleModifier(result, lastModMatched, parsedGroups);
+        if (result === undefined) {
+          const errorStringInternal = (["string", "number", "boolean", "object"].includes(typeof result) ? `unknown_${typeof result}_modifier` : `unknown_modifier`);
+          return { error: `{${errorStringInternal}(${lastModMatched!!})}` };
         }
-        return result ? check_true : check_false;
-      default:
-        return result;
+      }
     }
+    return { result: result };
   }
 
   protected applySingleModifier(
-    mod: string,
     input: any,
-    tzlocale?: string,
+    mod: string,
+    parsedGroups: {
+      mod_tzlocale: string | undefined,
+    },
   ): string | boolean | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
@@ -641,3 +685,8 @@ export abstract class BaseFormatter {
     return str.slice(0, start) + replace + str.slice(end);
   }
 }
+
+type ParsedResult = {
+  result?: any,
+  error?: string | undefined;
+};
