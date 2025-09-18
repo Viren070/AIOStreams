@@ -310,82 +310,74 @@ export abstract class BaseFormatter {
     return parseValue;
   }
 
-
   protected async compileTemplate(str: string): Promise<CompiledParseFunction> {
-    const re = this.regexBuilder.buildRegexExpression();
-    let matches: RegExpExecArray | null;
-
     let compiledMatchTemplateFns: CompiledVariableWInsertFn[] = [];
+    
+    // go through the string manually to find all valid variables (allows infinitely nested variables)
+    const re = this.regexBuilder.buildRegexExpression();
+    let leftBracketIndices: number[] = [];
+    let i = -1;
+    // todo navigate to start/ends of variables via .indexOf("{") and/or .lastIndexOf("}")
+    while (++i < str.length) {
+      if (!["{", "}"].includes(str[i])) continue;
 
-    // Iterate through all {...} matches
-    while (matches = re.exec(str)) {
-      if (!matches.groups) continue;
-      const index = matches.index as number;
+      if (str[i] === '{') {
+        leftBracketIndices.push(i);
+        continue;
+      }
 
-      // looks like variableType.propertyName(::<modifier|comparator>)* (no timezone or check)
-      let matchWithoutSuffix = matches[0].substring(1, (matches[0].length-1) - (matches.groups.suffix ?? "").length);
+      // str[i] === '}'
+      const leftBracketIndex = leftBracketIndices.pop();
+        // found `{` without a matching `}` -> ignore as it's not a valid variable
+      if (leftBracketIndex === undefined) continue;
+      // else, `{...}` found 
+      const potentialVariable = str.slice(leftBracketIndex, i + 1);
+      const matches = potentialVariable.match(re);
+      if (!matches?.groups) continue;
+      // potential variable IS a valid variable
+      let variable = potentialVariable.slice(1, -1);
 
-      // Split {<var1_with_modifiers>>::<comparator1>::<var2_with_modifiers>>...} into variableWithModifiers array and comparators array
-      const splitOnComparators = matchWithoutSuffix.split(RegExp(this.regexBuilder.buildComparatorRegexPattern(), 'gi'));
-      const variableWithModifiers = splitOnComparators.filter((_, i) => i % 2 == 0);
-      const comparators = splitOnComparators.filter((_, i) => i % 2 != 0);
-      const foundComparators = comparators.map(c => c as keyof typeof ComparatorConstants.comparatorKeyToFuncs);
-      let precompiledResolvedVariableFns: CompiledModifiedVariableFn[] = variableWithModifiers
-        .map(baseString => this.parseModifiedVariable(baseString, {
-            mod_tzlocale: matches?.groups?.mod_tzlocale ?? undefined
-          })
-        );
+      // determine if any variables were within this nested variable, if so, replace
+      const nestedVariablesWIndices = compiledMatchTemplateFns.filter(fn => leftBracketIndex < fn.insertIndex && fn.insertIndex < i);
+      // update compiledMatchTemplateFns by removing the nested variables
+      compiledMatchTemplateFns = compiledMatchTemplateFns.filter(fn => !nestedVariablesWIndices.includes(fn));
       
-      // COMPARATOR logic: compare all ResolvedVariables against each other to make one ResolvedVariable (as precompiled wrapper function (parseValue) => ResolvedVariable)
-      let precompiledResolvedVariableFn = (parseValue: ParseValue): ResolvedVariable => {
-        if (precompiledResolvedVariableFns.length == 1) return precompiledResolvedVariableFns[0](parseValue);
+      const getResolvedVariable = (parseValue: ParseValue) => {
+        // TODO: make mod_chuck only resolve values inside the check IF the current value is trye
+        // make checkTrue/checkFalse into parseValue functions as well
+        nestedVariablesWIndices
+          .map(({ resultFn, insertIndex }) => {
+            const resolved = resultFn(parseValue);
+            return { resolved: resolved.error ?? resolved.result?.toString() ?? '', insertIndex: insertIndex };
+          })
+          .forEach(({ resolved, insertIndex }) => {
+            const offset = insertIndex - leftBracketIndex;
+            variable = variable.slice(0, offset) + resolved + variable.slice(offset);
+          });
+        
+        // create mod_check from the potential variable
+        let mod_check: { mod_check_true: string, mod_check_false: string } | undefined = undefined;
+        if (matches.groups!.mod_check) {
+          const [mod_check_start, mod_check_end] = [variable.indexOf('["')+2, variable.lastIndexOf('"]')];
+          const [mod_check_true, mod_check_false] = variable.slice(mod_check_start, mod_check_end).split('"||"');
+          mod_check = { mod_check_true: mod_check_true ?? '', mod_check_false: mod_check_false ?? '' }
+          variable = variable.slice(0, mod_check_start);
+          // console.log("Sending in mod_check: ", mod_check);
+        }
+        
+        console.log("Sending in variable: ", variable);
+        return this.parseVariable(variable, mod_check)(parseValue);
+      }
+      compiledMatchTemplateFns.push({ resultFn: getResolvedVariable, insertIndex: leftBracketIndex });
+      str = str.slice(0, leftBracketIndex) + str.slice(i + 1);
+      i = leftBracketIndex-1;
+    }
 
-        const resolvedVariablesWithContext = precompiledResolvedVariableFns.map(fn => fn(parseValue));
-        const reducedResolvedVarWContext = resolvedVariablesWithContext.reduce((prev, cur, i) => {
-          if (prev.error !== undefined) return prev;
-          if (cur.error !== undefined) return cur;
-          // the comparator key between prev and cur (from splitOnComparators)
-          const compareKey = foundComparators[i - 1] as keyof typeof ComparatorConstants.comparatorKeyToFuncs;
-          const comparatorFn = ComparatorConstants.comparatorKeyToFuncs[compareKey];
-          // const combinedContext = [...prev.context, ...cur.context];
-          
-          try {
-            const result = comparatorFn(prev.result, cur.result);
-            const finalResult = { result: result };
-            return finalResult;  // { resolvedVariable: finalResult, context: combinedContext };
-          } catch (e) {
-            const errorResult = { error: `{unable_to_compare(<${prev.result}>::${compareKey}::<${cur.result}>, ${e})}` };
-            return errorResult;  // { resolvedVariable: errorResult, context: combinedContext };
-          }
-        });
-        return reducedResolvedVarWContext;
-      }; // end of COMPARATOR logic
-
-
-      // CHECK TRUE/FALSE logic: compile the true/false templates and apply them to the resolved variable
-      if (matches.groups.mod_check !== undefined) {
-        const check_trueFn = await this.compileTemplate(matches?.groups?.mod_check_true ?? "");
-        const check_falseFn = await this.compileTemplate(matches?.groups?.mod_check_false ?? "");
-
-        const _compiledResolvedVariableFn = precompiledResolvedVariableFn;
-        precompiledResolvedVariableFn = (parseValue: ParseValue): ResolvedVariable => {
-          const resolved = _compiledResolvedVariableFn(parseValue);
-          if (![true, false].includes(resolved.result)) {
-            return { error: `{cannot_coerce_boolean_for_check_from(${resolved.result})}` };
-          }
-          return { result: (resolved.result ? check_trueFn(parseValue) : check_falseFn(parseValue)) };
-        };
-      } // end of CHECK TRUE/FALSE logic
-
-      str = str.slice(0, index) + str.slice(re.lastIndex);
-      re.lastIndex = index;
-      compiledMatchTemplateFns.push({ resultFn: precompiledResolvedVariableFn, insertIndex: index });
-    } // end of while loop
-
+    // parse the potential variable into (parseValue) => ResolvedVariable
     return (parseValue: ParseValue) => {
       let resultStr = str;
       
-      // Sort by startIndex to process in reverse order
+      // Sort by insertIndex to process in reverse order
       for (const { resultFn, insertIndex } of compiledMatchTemplateFns.sort((a, b) => b.insertIndex - a.insertIndex)) {
         const resolvedResult = resultFn(parseValue);
         const replacement = resolvedResult.error ?? resolvedResult.result?.toString() ?? '';
@@ -403,6 +395,63 @@ export abstract class BaseFormatter {
     }
   }
 
+
+  /**
+   * @param modifiedVariable - allowed variable string: `{<var>(::<modifier>)*(::<comparator>::<var>::<modifier>)*(tz)?([true||false])?}`
+   * @param mod_check - the check suffix (e.g. `["<true_case>||<false_case>"]`)
+   * @returns (parseValue) => ResolvedVariable
+   */
+  protected parseVariable(modifiedVariable: string, mod_check?: { mod_check_true: string, mod_check_false: string }): (parseValue: ParseValue) => ResolvedVariable {
+    // Split <var1_with_modifiers>>::<comparator1>::<var2_with_modifiers>>... into variableWithModifiers array and comparators array
+    const splitOnComparators = modifiedVariable.split(RegExp(this.regexBuilder.buildComparatorRegexPattern(), 'gi'));
+    const variableWithModifiers = splitOnComparators.filter((_, i) => i % 2 == 0);
+    const comparators = splitOnComparators.filter((_, i) => i % 2 != 0);
+    const foundComparators = comparators.map(c => c as keyof typeof ComparatorConstants.comparatorKeyToFuncs);
+    let precompiledResolvedVariableFns: CompiledModifiedVariableFn[] = variableWithModifiers
+      .map(baseString => this.parseModifiedVariable(baseString)
+      );
+    
+    // COMPARATOR logic: compare all ResolvedVariables against each other to make one ResolvedVariable (as precompiled wrapper function (parseValue) => ResolvedVariable)
+    let precompiledResolvedVariableFn = (parseValue: ParseValue): ResolvedVariable => {
+      if (precompiledResolvedVariableFns.length == 1) return precompiledResolvedVariableFns[0](parseValue);
+
+      const resolvedVariablesWithContext = precompiledResolvedVariableFns.map(fn => fn(parseValue));
+      const reducedResolvedVarWContext = resolvedVariablesWithContext.reduce((prev, cur, i) => {
+        if (prev.error !== undefined) return prev;
+        if (cur.error !== undefined) return cur;
+        // the comparator key between prev and cur (from splitOnComparators)
+        const compareKey = foundComparators[i - 1] as keyof typeof ComparatorConstants.comparatorKeyToFuncs;
+        const comparatorFn = ComparatorConstants.comparatorKeyToFuncs[compareKey];
+        // const combinedContext = [...prev.context, ...cur.context];
+        
+        try {
+          const result = comparatorFn(prev.result, cur.result);
+          const finalResult = { result: result };
+          return finalResult;  // { resolvedVariable: finalResult, context: combinedContext };
+        } catch (e) {
+          const errorResult = { error: `{unable_to_compare(<${prev.result}>::${compareKey}::<${cur.result}>, ${e})}` };
+          return errorResult;  // { resolvedVariable: errorResult, context: combinedContext };
+        }
+      });
+      return reducedResolvedVarWContext;
+    }; // end of COMPARATOR logic
+
+
+    // CHECK TRUE/FALSE logic: compile the true/false templates and apply them to the resolved variable
+    if (mod_check !== undefined) {
+      const _compiledResolvedVariableFn = precompiledResolvedVariableFn;
+      precompiledResolvedVariableFn = (parseValue: ParseValue): ResolvedVariable => {
+        const resolved = _compiledResolvedVariableFn(parseValue);
+        if (![true, false].includes(resolved.result)) {
+          return { error: `{cannot_coerce_boolean_for_check_from(${resolved.result})}` };
+        }
+        return { result: (resolved.result ? mod_check.mod_check_true : mod_check.mod_check_false) };
+      };
+    } // end of CHECK TRUE/FALSE logic
+
+    return precompiledResolvedVariableFn;
+  }
+
   /**
    * @param baseString - string to parse, e.g. `<variableType>.<propertyName>(::<modifier>)*`
    * @param value - ParseValue object
@@ -412,9 +461,6 @@ export abstract class BaseFormatter {
    */
   protected parseModifiedVariable(
     baseString: string,
-    fullStringModifiers: {
-      mod_tzlocale: string | undefined,
-    },
   ): CompiledModifiedVariableFn {
     // get variableType and propertyName from baseString without regex
     const variableType = baseString.split('.')[0];
@@ -431,6 +477,11 @@ export abstract class BaseFormatter {
 
     return (parseValue: ParseValue) => {
       // PARSE VARIABLE logic
+      console.log("--------------------------------");
+      console.log("parseValue", parseValue);
+      console.log("variableType", variableType);
+      console.log("propertyName", propertyName);
+      console.log("--------------------------------");
       const variableDict = parseValue[variableType as keyof ParseValue];
       if (!variableDict) return { error: `{unknown_variableType(${variableType})}` }; // should never happen
       const property = variableDict![propertyName as keyof typeof variableDict] as any;
@@ -440,7 +491,7 @@ export abstract class BaseFormatter {
       // APPLY MULTIPLE MODIFIERS logic
       let result = property;
       for (const lastModMatched of sortedModMatches) {
-        result = this.applySingleModifier(result, lastModMatched, fullStringModifiers);
+        result = this.applySingleModifier(result, lastModMatched);
         if (result === undefined) {
           let getErrorResult = () => {
             switch (typeof property) {
@@ -462,15 +513,11 @@ export abstract class BaseFormatter {
   /**
    * @param variable - the variable to apply the modifier to (e.g. `123`, `"TorBox"`, `["English", "Italian"]`, etc.)
    * @param mod - the modifier to apply
-   * @param fullStringModifiers - modifiers that are applied to the entire string (e.g. `::<tzLocale>`)
    * @returns `{ result: <resolved modified variable> }` or `{ error: "<errorMessage>" }`
    */
   protected applySingleModifier(
     variable: any,
     mod: string,
-    fullStringModifiers: {
-      mod_tzlocale: string | undefined,
-    },
   ): string | boolean | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
@@ -604,15 +651,6 @@ class BaseFormatterRegexBuilder {
     return `::(${comparatorKeys.join("|")})::`
   }
   /**
-   * RegEx Capture Pattern: `::<tzLocale>`
-   * 
-   * (with named capture group `tzLocale`)
-   */
-  public buildTZLocaleRegexPattern(): string {
-    // TZ Locale pattern (e.g. 'UTC', 'GMT', 'EST', 'PST', 'en-US', 'en-GB', 'Europe/London', 'America/New_York')
-    return `::(?<mod_tzlocale>[A-Za-z]{2,3}(?:-[A-Z]{2})?|[A-Za-z]+?/[A-Za-z_]+?)`;
-  }
-  /**
    * RegEx Capture Pattern: `["<check_true>||<check_false>"]`
    * 
    * (with named capture group `<mod_check_true>` and `<mod_check_false>` and `mod_check`=`"<check_true>||<check_false>"`)
@@ -631,13 +669,12 @@ class BaseFormatterRegexBuilder {
     const variable = this.buildVariableRegexPattern();
     const modifier = this.buildModifierRegexPattern();
     const comparator = this.buildComparatorRegexPattern();
-    const modTZLocale = this.buildTZLocaleRegexPattern();
     const checkTF = this.buildCheckRegexPattern();
     
     const variableAndModifiers = `${variable}(${modifier})*`;
-    const regexPattern = `\\{${variableAndModifiers}(${comparator}${variableAndModifiers})*(?<suffix>(${modTZLocale})?(${checkTF})?)\\}`;
+    const regexPattern = `\\{${variableAndModifiers}(${comparator}${variableAndModifiers})*(${checkTF})?\\}`;
     
-    return new RegExp(regexPattern, 'gi');
+    return new RegExp(`^${regexPattern}$`, 'i');
   }
 }
 
