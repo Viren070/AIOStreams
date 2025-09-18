@@ -1,9 +1,10 @@
-import { AUDIO_TAGS, QUALITIES, RESOLUTIONS } from '../utils/constants';
-import { VISUAL_TAGS } from '../utils/constants';
-import { ENCODES } from '../utils/constants';
-import { LANGUAGES } from '../utils/constants';
-import { AUDIO_CHANNELS } from '../utils/constants';
-import { FakeVisualTag } from '../utils/constants';
+// import { AUDIO_TAGS, QUALITIES, RESOLUTIONS } from '../utils/constants';
+// import { VISUAL_TAGS } from '../utils/constants';
+// import { ENCODES } from '../utils/constants';
+// import { LANGUAGES } from '../utils/constants';
+// import { AUDIO_CHANNELS } from '../utils/constants';
+// import { FakeVisualTag } from '../utils/constants';
+import { constants } from '../utils/index.js';
 const createRegex = (pattern: string): RegExp =>
   new RegExp(`(?<![^\\s\\[(_\\-.,])(${pattern})(?=[\\s\\)\\]_.\\-,]|$)`, 'i');
 
@@ -11,19 +12,31 @@ const createLanguageRegex = (pattern: string): RegExp =>
   createRegex(`${pattern}(?![ .\\-_]?sub(title)?s?)`);
 
 type PARSE_REGEX = {
-  resolutions: Omit<Record<(typeof RESOLUTIONS)[number], RegExp>, 'Unknown'>;
-  qualities: Omit<Record<(typeof QUALITIES)[number], RegExp>, 'Unknown'>;
-  visualTags: Omit<
-    Record<(typeof VISUAL_TAGS)[number], RegExp>,
-    'Unknown' | FakeVisualTag
-  >;
-  audioTags: Omit<Record<(typeof AUDIO_TAGS)[number], RegExp>, 'Unknown'>;
-  audioChannels: Omit<
-    Record<(typeof AUDIO_CHANNELS)[number], RegExp>,
+  resolutions: Omit<
+    Record<(typeof constants.RESOLUTIONS)[number], RegExp>,
     'Unknown'
   >;
-  languages: Omit<Record<(typeof LANGUAGES)[number], RegExp>, 'Unknown'>;
-  encodes: Omit<Record<(typeof ENCODES)[number], RegExp>, 'Unknown'>;
+  qualities: Omit<
+    Record<(typeof constants.QUALITIES)[number], RegExp>,
+    'Unknown'
+  >;
+  visualTags: Omit<
+    Record<(typeof constants.VISUAL_TAGS)[number], RegExp>,
+    'Unknown' | constants.FakeVisualTag
+  >;
+  audioTags: Omit<
+    Record<(typeof constants.AUDIO_TAGS)[number], RegExp>,
+    'Unknown'
+  >;
+  audioChannels: Omit<
+    Record<(typeof constants.AUDIO_CHANNELS)[number], RegExp>,
+    'Unknown'
+  >;
+  languages: Omit<
+    Record<(typeof constants.LANGUAGES)[number], RegExp>,
+    'Unknown'
+  >;
+  encodes: Omit<Record<(typeof constants.ENCODES)[number], RegExp>, 'Unknown'>;
   releaseGroup: RegExp;
 };
 

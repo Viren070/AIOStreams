@@ -1,4 +1,4 @@
-import { ParsedStream, UserData } from '../db/schemas';
+import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
   FeatureControl,
@@ -6,19 +6,18 @@ import {
   constants,
   AnimeDatabase,
   IdParser,
-} from '../utils';
-import { TYPES } from '../utils/constants';
-import { compileRegex } from '../utils/regex';
-import { formRegexFromKeywords } from '../utils/regex';
-import { safeRegexTest } from '../utils/regex';
-import { StreamType } from '../utils/constants';
-import { StreamSelector } from '../parser/streamExpression';
-import StreamUtils from './utils';
-import { MetadataService } from '../metadata/service';
-import { Metadata } from '../metadata/utils';
-import { titleMatch } from '../parser/utils';
+  compileRegex,
+  formRegexFromKeywords,
+  safeRegexTest,
+} from '../utils/index.js';
+import { StreamType } from '../utils/constants.js';
+import { StreamSelector } from '../parser/streamExpression.js';
+import StreamUtils from './utils.js';
+import { MetadataService } from '../metadata/service.js';
+import { Metadata } from '../metadata/utils.js';
+import { titleMatch } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
-import { calculateAbsoluteEpisode } from '../builtins/utils/general';
+import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
 
 const logger = createLogger('filterer');
 
@@ -113,7 +112,7 @@ class StreamFilterer {
       (this.userData.titleMatching?.enabled ||
         this.userData.yearMatching?.enabled ||
         this.userData.seasonEpisodeMatching?.enabled) &&
-      TYPES.includes(type as any)
+      constants.TYPES.includes(type as any)
     ) {
       try {
         if (!parsedId) {

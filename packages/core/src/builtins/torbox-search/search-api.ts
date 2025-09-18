@@ -1,14 +1,17 @@
 import { fetch, RequestInit, Response } from 'undici';
 import { z } from 'zod';
-import { TorBoxApiResponseSchema, TorBoxSearchApiDataSchema } from './schemas';
+import {
+  TorBoxApiResponseSchema,
+  TorBoxSearchApiDataSchema,
+} from './schemas.js';
 import {
   createLogger,
   DistributedLock,
   Env,
   formatZodError,
   maskSensitiveInfo,
-} from '../../utils';
-import { IdType } from '../../utils/id-parser';
+} from '../../utils/index.js';
+import { IdType } from '../../utils/id-parser.js';
 
 type TorboxSuccessResponse<T> = {
   success: true;

@@ -1,9 +1,9 @@
 import z from 'zod';
-import { UserData } from '../db/schemas';
-import { Env } from './env';
-import { makeRequest } from './http';
-import { createLogger } from './logger';
-import { Cache } from './cache';
+import { UserData } from '../db/schemas.js';
+import { Env } from './env.js';
+import { makeRequest } from './http.js';
+import { createLogger } from './logger.js';
+import { Cache } from './cache.js';
 
 const DEFAULT_REASON = 'Disabled by owner of the instance';
 

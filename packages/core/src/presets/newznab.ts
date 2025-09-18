@@ -1,7 +1,7 @@
-import { Addon, Option, Stream, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { Env, RESOURCES, ServiceId, constants } from '../utils';
-import { BuiltinAddonPreset } from './builtin';
+import { Addon, Option, Stream, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { Env, RESOURCES, ServiceId, constants } from '../utils/index.js';
+import { BuiltinAddonPreset } from './builtin.js';
 
 export class NewznabPreset extends BuiltinAddonPreset {
   static override get METADATA() {
@@ -146,3 +146,5 @@ export class NewznabPreset extends BuiltinAddonPreset {
     return `${this.METADATA.URL}/${configString}/manifest.json`;
   }
 }
+
+

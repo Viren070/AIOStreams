@@ -1,8 +1,8 @@
-import { Addon, Option, UserData, Resource, ParsedStream, Stream } from '../db';
-import { baseOptions, Preset } from './preset';
-import { Env } from '../utils';
-import { constants, ServiceId } from '../utils';
-import { StreamParser } from '../parser';
+import { Addon, Option, UserData, Resource, ParsedStream, Stream } from '../db/index.js';
+import { baseOptions, Preset } from './preset.js';
+import { Env } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
 
 class OrionStreamParser extends StreamParser {
   protected override raiseErrorIfNecessary(
@@ -188,3 +188,5 @@ export class OrionPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
+
+

@@ -1,5 +1,5 @@
-import { ParsedStream, UserData } from '../db/schemas';
-import { createLogger, getTimeTakenSincePoint } from '../utils';
+import { ParsedStream, UserData } from '../db/schemas.js';
+import { createLogger, getTimeTakenSincePoint } from '../utils/index.js';
 
 const logger = createLogger('limiter');
 

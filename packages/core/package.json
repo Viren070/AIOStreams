@@ -2,6 +2,7 @@
   "name": "@aiostreams/core",
   "version": "0.0.0",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch",
@@ -19,6 +20,8 @@
     "fuzzball": "^2.2.3",
     "go-ptt": "^0.4.0",
     "moment-timezone": "^0.5.48",
+    "p-limit": "^7.1.1",
+    "parse-torrent": "^11.0.18",
     "parse-torrent-title": "github:TheBeastLT/parse-torrent-title",
     "pg": "^8.16.0",
     "redis": "^5.8.2",
@@ -35,6 +38,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/bytes": "^3.1.5",
     "@types/node": "^20.14.10",
+    "@types/parse-torrent": "^5.8.7",
     "@types/pg": "^8.15.2",
     "@types/xml2js": "^0.4.14"
   }

@@ -1,18 +1,15 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { createResponse } from '../../utils/responses';
+import { Router, Request, Response } from 'express';
+import { createResponse } from '../../utils/responses.js';
 import {
   createLogger,
-  UserData,
   UserDataSchema,
   formatZodError,
-} from '@aiostreams/core';
-import {
   createFormatter,
   ParsedStreamSchema,
   APIError,
+  constants,
 } from '@aiostreams/core';
-import * as constants from '@aiostreams/core';
-import { formatApiRateLimiter } from '../../middlewares/ratelimit';
+import { formatApiRateLimiter } from '../../middlewares/ratelimit.js';
 
 const router: Router = Router();
 

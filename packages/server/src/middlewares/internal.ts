@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createResponse } from '../utils/responses';
+import { createResponse } from '../utils/responses.js';
 import { constants, Env } from '@aiostreams/core';
 
 export const internalMiddleware = (

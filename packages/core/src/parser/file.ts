@@ -1,6 +1,6 @@
-import { PARSE_REGEX } from './regex';
-import { ParsedFile } from '../db/schemas';
-import ptt from './ptt';
+import { PARSE_REGEX } from './regex.js';
+import { ParsedFile } from '../db/schemas.js';
+import ptt from './ptt.js';
 
 function matchPattern(
   filename: string,

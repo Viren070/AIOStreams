@@ -1,7 +1,7 @@
-import { PresetMetadata } from '../db';
-import { EasynewsPreset } from './easynews';
-import { constants, Env } from '../utils';
-import { baseOptions } from './preset';
+import { PresetMetadata } from '../db/index.js';
+import { EasynewsPreset } from './easynews.js';
+import { constants, Env } from '../utils/index.js';
+import { baseOptions } from './preset.js';
 
 export class EasynewsPlusPreset extends EasynewsPreset {
   static override get METADATA(): PresetMetadata {

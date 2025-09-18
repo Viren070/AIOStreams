@@ -1,9 +1,9 @@
-import { Cache } from './cache';
-import { makeRequest } from './http';
-import { RPDBIsValidResponse } from '../db/schemas';
-import { Env } from './env';
-import { IdParser } from './id-parser';
-import { AnimeDatabase } from './anime-database';
+import { Cache } from './cache.js';
+import { makeRequest } from './http.js';
+import { RPDBIsValidResponse } from '../db/schemas.js';
+import { Env } from './env.js';
+import { IdParser } from './id-parser.js';
+import { AnimeDatabase } from './anime-database.js';
 
 const apiKeyValidationCache = Cache.getInstance<string, boolean>('rpdbApiKey');
 const posterCheckCache = Cache.getInstance<string, string>('rpdbPosterCheck');

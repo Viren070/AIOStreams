@@ -1,15 +1,14 @@
-import { TABLES } from './schemas';
-import { createLogger } from '../utils';
-import { parseConnectionURI, adaptQuery, ConnectionURI } from './utils';
-
-const logger = createLogger('database');
-
 import { Pool, Client, QueryResult } from 'pg';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { URL } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { TABLES } from './schemas.js';
+import { createLogger } from '../utils/index.js';
+import { parseConnectionURI, adaptQuery, ConnectionURI } from './utils.js';
+
+const logger = createLogger('database');
 
 type QueryResultRow = Record<string, any>;
 

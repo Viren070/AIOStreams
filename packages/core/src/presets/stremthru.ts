@@ -1,7 +1,7 @@
-import { Option, ParsedStream, Stream, UserData } from '../db';
-import { StreamParser } from '../parser';
-import { constants, ServiceId } from '../utils';
-import { Preset } from './preset';
+import { Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { StreamParser } from '../parser/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { Preset } from './preset.js';
 
 export const stremthruSpecialCases: Partial<
   Record<ServiceId, (credentials: any) => any>
@@ -76,3 +76,5 @@ export class StremThruPreset extends Preset {
 
 export type StremThruServiceId =
   (typeof StremThruPreset.supportedServices)[number];
+
+

@@ -1,6 +1,6 @@
-import { Addon, Option, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { Env, RESOURCES } from '../utils';
+import { Addon, Option, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { Env, RESOURCES } from '../utils/index.js';
 
 export class CustomPreset extends Preset {
   static override get METADATA() {
@@ -143,3 +143,5 @@ export class CustomPreset extends Preset {
     };
   }
 }
+
+

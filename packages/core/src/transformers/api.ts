@@ -1,5 +1,5 @@
-import { ParsedStream, Resource, Subtitle, UserData } from '../db';
-import { AIOStreamsResponse } from '../main';
+import { ParsedStream, Resource, Subtitle, UserData } from '../db/index.js';
+import { AIOStreamsResponse } from '../main.js';
 
 export interface ApiSearchResponseData {
   results: ApiSearchResult[];

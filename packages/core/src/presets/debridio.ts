@@ -1,4 +1,4 @@
-import { Option } from '../db';
+import { Option } from '../db/index.js';
 
 export const debridioSocialOption: Option = {
   id: 'socials',
@@ -17,3 +17,5 @@ export const debridioApiKeyOption: Option = {
 };
 
 export const debridioLogo = 'https://cdn.lb.debridio.com/site/logo.png';
+
+

@@ -1,18 +1,23 @@
-import { BaseDebridAddon, BaseDebridConfigSchema } from '../base/debrid';
+import { BaseDebridAddon, BaseDebridConfigSchema } from '../base/debrid.js';
 import { z } from 'zod';
-import { createLogger, Env, getTimeTakenSincePoint } from '../../utils';
+import {
+  createLogger,
+  Env,
+  getTimeTakenSincePoint,
+} from '../../utils/index.js';
 import ProwlarrApi, {
   ProwlarrApiIndexer,
   ProwlarrApiSearchItem,
   ProwlarrApiError,
-} from './api';
-import { ParsedId } from '../../utils/id-parser';
-import { SearchMetadata } from '../base/debrid';
-import { Torrent, NZB, UnprocessedTorrent } from '../../debrid';
+  ProwlarrApiTagItem,
+} from './api.js';
+import { ParsedId } from '../../utils/id-parser.js';
+import { SearchMetadata } from '../base/debrid.js';
+import { Torrent, NZB, UnprocessedTorrent } from '../../debrid/index.js';
 import {
   extractInfoHashFromMagnet,
   extractTrackersFromMagnet,
-} from '../utils/debrid';
+} from '../utils/debrid.js';
 
 export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
   url: z.string(),
@@ -48,6 +53,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     metadata: SearchMetadata
   ): Promise<UnprocessedTorrent[]> {
     let availableIndexers: ProwlarrApiIndexer[] = [];
+    let aiostreamsTagId: number | undefined;
     try {
       const { data } = await this.api.indexers();
       availableIndexers = data;
@@ -59,14 +65,24 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       }
       throw new Error(`Failed to get Prowlarr indexers: ${error}`);
     }
+    try {
+      const { data } = await this.api.tags();
+      aiostreamsTagId = data.find(
+        (tag) => tag.label.toLowerCase() === 'aiostreams'
+      )?.id;
+    } catch (error) {
+      logger.warn(`Failed to get Prowlarr tags: ${error}`);
+    }
     const chosenIndexerIds = availableIndexers
       .filter(
         (indexer) =>
           indexer.enable &&
-          (!this.indexers.length ||
-            this.indexers.includes(indexer.name.toLowerCase()) ||
-            this.indexers.includes(indexer.definitionName.toLowerCase()) ||
-            this.indexers.includes(indexer.sortName.toLowerCase()))
+          ((!this.indexers.length && !aiostreamsTagId) ||
+            (aiostreamsTagId && indexer.tags.includes(aiostreamsTagId)) ||
+            (this.indexers.length &&
+              (this.indexers.includes(indexer.name.toLowerCase()) ||
+                this.indexers.includes(indexer.definitionName.toLowerCase()) ||
+                this.indexers.includes(indexer.sortName.toLowerCase()))))
       )
       .map((indexer) => indexer.id);
 
@@ -117,16 +133,16 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     for (const result of results) {
       const magnetUrl = result.guid.includes('magnet:')
         ? result.guid
-        : result.magnetUrl;
+        : undefined;
       const downloadUrl = result.magnetUrl?.startsWith('http')
         ? result.magnetUrl
         : result.downloadUrl;
       const infoHash =
         result.infoHash ||
         (magnetUrl ? extractInfoHashFromMagnet(magnetUrl) : undefined);
-      if (!infoHash) continue;
-      if (seenTorrents.has(infoHash)) continue;
-      seenTorrents.add(infoHash);
+      if (!infoHash && !downloadUrl) continue;
+      if (seenTorrents.has(infoHash ?? downloadUrl!)) continue;
+      seenTorrents.add(infoHash ?? downloadUrl!);
 
       torrents.push({
         hash: infoHash,

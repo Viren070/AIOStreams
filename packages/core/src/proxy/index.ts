@@ -1,12 +1,12 @@
-export * from './base';
-export * from './mediaflow';
-export * from './stremthru';
+export * from './base.js';
+export * from './mediaflow.js';
+export * from './stremthru.js';
 
-import { constants } from '../utils';
-import { BaseProxy } from './base';
-import { MediaFlowProxy } from './mediaflow';
-import { StremThruProxy } from './stremthru';
-import { StreamProxyConfig } from '../db';
+import { constants } from '../utils/index.js';
+import { BaseProxy } from './base.js';
+import { MediaFlowProxy } from './mediaflow.js';
+import { StremThruProxy } from './stremthru.js';
+import { StreamProxyConfig } from '../db/schemas.js';
 
 export function createProxy(config: StreamProxyConfig): BaseProxy {
   switch (config.id) {

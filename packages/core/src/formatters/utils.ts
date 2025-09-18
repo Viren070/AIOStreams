@@ -1,4 +1,4 @@
-import { FULL_LANGUAGE_MAPPING } from '../utils';
+import { FULL_LANGUAGE_MAPPING } from '../utils/languages.js';
 
 export function formatBytes(bytes: number, k: 1024 | 1000): string {
   if (bytes === 0) return '0 B';

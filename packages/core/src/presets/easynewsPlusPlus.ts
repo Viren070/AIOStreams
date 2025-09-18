@@ -1,8 +1,8 @@
-import { ParsedStream, PresetMetadata, Stream } from '../db';
-import { EasynewsPreset, EasynewsParser } from './easynews';
-import { constants, Env } from '../utils';
-import { baseOptions } from './preset';
-import { StreamParser } from '../parser';
+import { ParsedStream, PresetMetadata, Stream } from '../db/index.js';
+import { EasynewsPreset, EasynewsParser } from './easynews.js';
+import { constants, Env } from '../utils/index.js';
+import { baseOptions } from './preset.js';
+import { StreamParser } from '../parser/index.js';
 
 class EasynewsPlusPlusParser extends EasynewsParser {
   protected override get ageRegex(): RegExp {

@@ -5,15 +5,15 @@ import {
   ParsedStream,
   Stream,
   UserData,
-} from '../db';
-import { CacheKeyRequestOptions, Preset, baseOptions } from './preset';
-import { constants, Env } from '../utils';
+} from '../db/index.js';
+import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
+import { constants, Env } from '../utils/index.js';
 import {
   debridioSocialOption,
   debridioApiKeyOption,
   debridioLogo,
-} from './debridio';
-import { FileParser, StreamParser } from '../parser';
+} from './debridio.js';
+import { FileParser, StreamParser } from '../parser/index.js';
 
 class DebridioTvStreamParser extends StreamParser {
   protected override getParsedFile(

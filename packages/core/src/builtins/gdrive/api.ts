@@ -1,11 +1,11 @@
-import { Cache, createLogger, Env, makeRequest } from '../../utils';
+import { Cache, createLogger, Env, makeRequest } from '../../utils/index.js';
 import {
   GDriveFile,
   GDriveFileGetResponseSchema,
   GDriveFileQueryResponseSchema,
   RefreshTokenResponse,
   RefreshTokenResponseSchema,
-} from './schemas';
+} from './schemas.js';
 
 const accessTokenCache = Cache.getInstance<string, string>(
   'gdrive-access-token'

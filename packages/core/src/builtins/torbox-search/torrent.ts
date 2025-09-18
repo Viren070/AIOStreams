@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { TorBoxSearchApiDataSchema } from './schemas';
+import { TorBoxSearchApiDataSchema } from './schemas.js';
 import {
   extractInfoHashFromMagnet,
   extractTrackersFromMagnet,
-} from '../utils/debrid';
+} from '../utils/debrid.js';
 
 export interface Torrent {
   hash: string;

@@ -1,16 +1,21 @@
 import { StremThru, StremThruError } from 'stremthru';
-import { Env, ServiceId, createLogger, getSimpleTextHash } from '../utils';
-import { selectFileInTorrentOrNZB, Torrent } from './utils';
+import {
+  Env,
+  ServiceId,
+  createLogger,
+  getSimpleTextHash,
+  Cache,
+} from '../utils/index.js';
+import { selectFileInTorrentOrNZB, Torrent } from './utils.js';
 import {
   DebridService,
   DebridServiceConfig,
   DebridDownload,
   PlaybackInfo,
   DebridError,
-} from './base';
-import { Cache } from '../utils';
-import { StremThruServiceId } from '../presets/stremthru';
-import { PTT } from '../parser';
+} from './base.js';
+import { StremThruServiceId } from '../presets/stremthru.js';
+import { PTT } from '../parser/index.js';
 import { ParseResult } from 'go-ptt';
 
 const logger = createLogger('debrid:stremthru');

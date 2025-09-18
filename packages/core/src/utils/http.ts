@@ -1,7 +1,10 @@
-import { Cache } from './cache';
-import { HEADERS_FOR_IP_FORWARDING, INTERNAL_SECRET_HEADER } from './constants';
-import { Env } from './env';
-import { createLogger, maskSensitiveInfo } from './logger';
+import {
+  Cache,
+  HEADERS_FOR_IP_FORWARDING,
+  INTERNAL_SECRET_HEADER,
+  Env,
+  maskSensitiveInfo,
+} from './index.js';
 import {
   BodyInit,
   Dispatcher,
@@ -12,6 +15,7 @@ import {
   RequestInit,
 } from 'undici';
 import { socksDispatcher } from 'fetch-socks';
+import { createLogger } from './logger.js';
 
 const logger = createLogger('http');
 const urlCount = Cache.getInstance<string, number>(

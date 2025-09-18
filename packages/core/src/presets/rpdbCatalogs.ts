@@ -1,6 +1,6 @@
-import { Addon, Option, UserData } from '../db';
-import { CacheKeyRequestOptions, Preset, baseOptions } from './preset';
-import { constants, Env } from '../utils';
+import { Addon, Option, UserData } from '../db/index.js';
+import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
+import { constants, Env } from '../utils/index.js';
 
 export class RpdbCatalogsPreset extends Preset {
   private static catalogs = [
@@ -109,3 +109,5 @@ export class RpdbCatalogsPreset extends Preset {
     return cacheKey;
   }
 }
+
+

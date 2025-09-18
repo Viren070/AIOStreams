@@ -1,8 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { AIOStreams, SubtitleResponse } from '@aiostreams/core';
-import { createLogger } from '@aiostreams/core';
-import { StremioTransformer } from '@aiostreams/core';
-import { stremioSubtitleRateLimiter } from '../../middlewares/ratelimit';
+import {
+  AIOStreams,
+  SubtitleResponse,
+  createLogger,
+  StremioTransformer,
+} from '@aiostreams/core';
+import { stremioSubtitleRateLimiter } from '../../middlewares/ratelimit.js';
 
 const logger = createLogger('server');
 const router: Router = Router();

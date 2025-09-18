@@ -1,6 +1,6 @@
-import { Addon, Preset } from '../db/schemas';
-import { parseConnectionURI } from '../db/utils';
-import { Env } from './env';
+import { Addon, Preset } from '../db/schemas.js';
+import { parseConnectionURI } from '../db/utils.js';
+import { Env } from './env.js';
 import path from 'path';
 
 export function getAddonName(addon: Addon | Preset): string {

@@ -1,9 +1,16 @@
-import { Addon, Option, UserData, Resource, Stream, ParsedStream } from '../db';
-import { baseOptions, Preset } from './preset';
-import { Env } from '../utils';
-import { constants, ServiceId } from '../utils';
-import { StreamParser } from '../parser';
-import { StremThruPreset, StremThruStreamParser } from './stremthru';
+import {
+  Addon,
+  Option,
+  UserData,
+  Resource,
+  Stream,
+  ParsedStream,
+} from '../db/index.js';
+import { baseOptions, Preset } from './preset.js';
+import { Env } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
+import { StremThruPreset, StremThruStreamParser } from './stremthru.js';
 
 class StremthruStoreStreamParser extends StremThruStreamParser {
   protected override applyUrlModifications(
@@ -180,3 +187,5 @@ export class StremthruStorePreset extends StremThruPreset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
+
+

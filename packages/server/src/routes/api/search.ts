@@ -11,11 +11,12 @@ import {
   validateConfig,
   isEncrypted,
   decryptString,
+  createLogger,
+  ApiTransformer,
+  ApiSearchResponseData,
 } from '@aiostreams/core';
-import { streamApiRateLimiter } from '../../middlewares/ratelimit';
-import { createLogger } from '@aiostreams/core';
-import { ApiTransformer, ApiSearchResponseData } from '@aiostreams/core';
-import { ApiResponse, createResponse } from '../../utils/responses';
+import { streamApiRateLimiter } from '../../middlewares/ratelimit.js';
+import { ApiResponse, createResponse } from '../../utils/responses.js';
 import { z, ZodError } from 'zod';
 const router: Router = Router();
 

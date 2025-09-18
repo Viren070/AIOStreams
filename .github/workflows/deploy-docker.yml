@@ -91,7 +91,7 @@ jobs:
 
       - name: Generate metadata
         run: |
-          node scripts/generateMetadata.js --channel=${{env.CHANNEL}}
+          node scripts/generateMetadata.cjs --channel=${{env.CHANNEL}}
 
       - name: Build & Push
         uses: docker/build-push-action@v6

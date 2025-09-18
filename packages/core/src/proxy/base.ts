@@ -1,5 +1,5 @@
-import { StreamProxyConfig } from '../db';
-import { Cache, createLogger, maskSensitiveInfo, Env } from '../utils';
+import { StreamProxyConfig } from '../db/schemas.js';
+import { Cache, createLogger, maskSensitiveInfo, Env } from '../utils/index.js';
 
 const logger = createLogger('proxy');
 const cache = Cache.getInstance<string, string>('publicIp');

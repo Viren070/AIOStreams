@@ -1,5 +1,5 @@
-import { createLogger } from '../utils';
-import { DB } from './db';
+import { createLogger } from '../utils/index.js';
+import { DB } from './db.js';
 
 const logger = createLogger('db');
 const db = DB.getInstance();

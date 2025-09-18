@@ -7,7 +7,7 @@ import {
   ParsedId,
   formatZodError,
   Env,
-} from '../utils';
+} from '../utils/index.js';
 
 const traktAliasCache = Cache.getInstance<string, string[]>('trakt-aliases');
 const TRAKT_ALIAS_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days

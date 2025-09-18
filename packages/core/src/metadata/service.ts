@@ -1,12 +1,12 @@
-import { DistributedLock } from '../utils/distributed-lock';
-import { Metadata } from './utils';
-import { TMDBMetadata } from './tmdb';
-import { getTraktAliases } from './trakt';
-import { IMDBMetadata } from './imdb';
-import { createLogger, getTimeTakenSincePoint } from '../utils/logger';
-import { TYPES } from '../utils/constants';
-import { AnimeDatabase, ParsedId } from '../utils';
-import { Meta } from '../db/schemas';
+import { DistributedLock } from '../utils/distributed-lock.js';
+import { Metadata } from './utils.js';
+import { TMDBMetadata } from './tmdb.js';
+import { getTraktAliases } from './trakt.js';
+import { IMDBMetadata } from './imdb.js';
+import { createLogger, getTimeTakenSincePoint } from '../utils/logger.js';
+import { TYPES } from '../utils/constants.js';
+import { AnimeDatabase, ParsedId } from '../utils/index.js';
+import { Meta } from '../db/schemas.js';
 
 const logger = createLogger('metadata-service');
 

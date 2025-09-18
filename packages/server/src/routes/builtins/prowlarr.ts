@@ -1,6 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { AIOStreams, AIOStreamResponse, ProwlarrAddon } from '@aiostreams/core';
-import { stremioStreamRateLimiter } from '../../middlewares/ratelimit';
+import { ProwlarrAddon } from '@aiostreams/core';
 import { createLogger } from '@aiostreams/core';
 const router: Router = Router();
 

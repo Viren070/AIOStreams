@@ -8,7 +8,7 @@ import {
 import { StatusResponse } from '@aiostreams/core';
 import { encryptString } from '@aiostreams/core';
 import { FeatureControl } from '@aiostreams/core';
-import { createResponse } from '../../utils/responses';
+import { createResponse } from '../../utils/responses.js';
 
 const router: Router = Router();
 

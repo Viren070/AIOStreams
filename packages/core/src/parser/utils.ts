@@ -1,5 +1,5 @@
 import { extract, FuzzballExtractOptions } from 'fuzzball';
-import { createLogger } from '../utils';
+import { createLogger } from '../utils/index.js';
 
 const logger = createLogger('parser');
 

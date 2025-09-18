@@ -2,6 +2,7 @@
   "name": "@aiostreams/server",
   "version": "0.0.0",
   "main": "dist/server.js",
+  "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch",

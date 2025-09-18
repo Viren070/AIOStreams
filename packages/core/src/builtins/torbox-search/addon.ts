@@ -1,18 +1,21 @@
 import { z } from 'zod';
-import { Manifest, Stream } from '../../db';
+import { Manifest, Stream } from '../../db/index.js';
 import {
   AnimeDatabase,
   createLogger,
   formatZodError,
   getTimeTakenSincePoint,
-} from '../../utils';
-import { TorBoxSearchAddonUserDataSchema } from './schemas';
+} from '../../utils/index.js';
+import { TorBoxSearchAddonUserDataSchema } from './schemas.js';
 import { TorboxApi } from '@torbox/torbox-api';
-import TorboxSearchApi from './search-api';
-import { IdParser } from '../../utils/id-parser';
-import { TorrentSourceHandler, UsenetSourceHandler } from './source-handlers';
-import { TorBoxSearchAddonError } from './errors';
-import { supportedIdTypes } from './search-api';
+import TorboxSearchApi from './search-api.js';
+import { IdParser } from '../../utils/id-parser.js';
+import {
+  TorrentSourceHandler,
+  UsenetSourceHandler,
+} from './source-handlers.js';
+import { TorBoxSearchAddonError } from './errors.js';
+import { supportedIdTypes } from './search-api.js';
 
 const logger = createLogger('torbox-search');
 

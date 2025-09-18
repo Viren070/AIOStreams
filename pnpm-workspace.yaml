@@ -14,3 +14,6 @@ onlyBuiltDependencies:
   - unrs-resolver
   - utf-8-validate
   - utp-native
+
+patchedDependencies:
+  go-ptt@0.4.0: patches/go-ptt@0.4.0.patch

@@ -1,6 +1,6 @@
-import { ParsedStream, UserData } from '../db/schemas';
-import { createLogger } from '../utils';
-import { createProxy } from '../proxy';
+import { ParsedStream, UserData } from '../db/schemas.js';
+import { createLogger } from '../utils/index.js';
+import { createProxy } from '../proxy/index.js';
 
 const logger = createLogger('proxy');
 

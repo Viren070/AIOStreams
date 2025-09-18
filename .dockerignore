@@ -1,7 +1,7 @@
-node_modules/
-dist/
-data/
+**/node_modules/
+**/dist
+**/out
+**/.next
+**/data
+.env
 .git
-.gitignore
-*.md
-

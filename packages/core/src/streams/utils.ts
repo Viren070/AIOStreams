@@ -1,4 +1,4 @@
-import { ParsedStream } from '../db/schemas';
+import { ParsedStream } from '../db/schemas.js';
 
 class StreamUtils {
   public static createDownloadableStream(stream: ParsedStream): ParsedStream {

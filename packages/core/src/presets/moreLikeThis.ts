@@ -1,13 +1,13 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
 import {
   Cache,
   constants,
   Env,
   getSimpleTextHash,
   makeRequest,
-} from '../utils';
-import { StreamParser } from '../parser';
+} from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
 
 const moreLikeThisManifests = Cache.getInstance<string, string>(
   'moreLikeThisManifests'
@@ -504,3 +504,5 @@ export class MoreLikeThisPreset extends Preset {
     }
   }
 }
+
+

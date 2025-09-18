@@ -1,13 +1,13 @@
-export * from './base';
-export * from './utils';
-export * from './stremthru';
-export * from './torbox';
+export * from './base.js';
+export * from './utils.js';
+export * from './stremthru.js';
+export * from './torbox.js';
 
-import { ServiceId } from '../utils';
-import { DebridService, DebridServiceConfig } from './base';
-import { StremThruInterface } from './stremthru';
-import { TorboxDebridService } from './torbox';
-import { StremThruPreset } from '../presets/stremthru';
+import { ServiceId } from '../utils/index.js';
+import { DebridService, DebridServiceConfig } from './base.js';
+import { StremThruInterface } from './stremthru.js';
+import { TorboxDebridService } from './torbox.js';
+import { StremThruPreset } from '../presets/stremthru.js';
 
 export function getDebridService(
   serviceName: ServiceId,

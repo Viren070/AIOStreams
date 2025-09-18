@@ -26,7 +26,7 @@ import {
   SubtitleResponseSchema,
   SubtitleSchema,
   ParsedMetaSchema,
-} from './db/schemas';
+} from './db/schemas.js';
 import {
   Cache,
   makeRequest,
@@ -39,9 +39,9 @@ import {
   Env,
   getTimeTakenSincePoint,
   RequestOptions,
-} from './utils';
-import { Preset, PresetManager } from './presets';
-import { StreamParser } from './parser';
+} from './utils/index.js';
+import { Preset, PresetManager } from './presets/index.js';
+import { StreamParser } from './parser/index.js';
 import { z } from 'zod';
 
 const logger = createLogger('wrappers');

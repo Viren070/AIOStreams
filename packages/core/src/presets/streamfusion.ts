@@ -1,7 +1,7 @@
-import { Addon, Option, UserData, Resource } from '../db';
-import { baseOptions, Preset } from './preset';
-import { Env } from '../utils';
-import { constants, ServiceId } from '../utils';
+import { Addon, Option, UserData, Resource } from '../db/index.js';
+import { baseOptions, Preset } from './preset.js';
+import { Env } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
 
 export class StreamFusionPreset extends Preset {
   static override get METADATA() {
@@ -275,3 +275,5 @@ export class StreamFusionPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
+
+

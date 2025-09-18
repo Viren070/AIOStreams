@@ -1,9 +1,9 @@
 // stremio://new-who.onrender.com/manifest.json
 
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { constants, Env } from '../utils';
-import { StreamParser } from '../parser';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { constants, Env } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
 
 class DoctorWhoUniverseStreamParser extends StreamParser {
   protected override getMessage(
@@ -92,3 +92,5 @@ export class DoctorWhoUniversePreset extends Preset {
     };
   }
 }
+
+

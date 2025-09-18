@@ -6,8 +6,8 @@ import {
   encryptString,
   UserRepository,
 } from '@aiostreams/core';
-import { userApiRateLimiter } from '../../middlewares/ratelimit';
-import { createResponse } from '../../utils/responses';
+import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
+import { createResponse } from '../../utils/responses.js';
 const router: Router = Router();
 
 const logger = createLogger('server');

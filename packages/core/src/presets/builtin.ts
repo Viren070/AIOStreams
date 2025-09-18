@@ -1,8 +1,8 @@
-import { ParsedStream, Stream, UserData } from '../db';
-import { StreamParser } from '../parser';
-import { ServiceId } from '../utils/constants';
-import { Preset } from './preset';
-import { stremthruSpecialCases } from './stremthru';
+import { ParsedStream, Stream, UserData } from '../db/index.js';
+import { StreamParser } from '../parser/index.js';
+import { ServiceId } from '../utils/constants.js';
+import { Preset } from './preset.js';
+import { stremthruSpecialCases } from './stremthru.js';
 
 export class BuiltinStreamParser extends StreamParser {
   override getFolder(stream: Stream): string | undefined {
@@ -68,3 +68,5 @@ export class BuiltinAddonPreset extends Preset {
     });
   }
 }
+
+

@@ -1,16 +1,16 @@
-import { Addon, ParsedStream, UserData } from '../db/schemas';
+import { Addon, ParsedStream, UserData } from '../db/schemas.js';
 import {
   AnimeDatabase,
   constants,
   createLogger,
+  getAddonName,
   getTimeTakenSincePoint,
-} from '../utils';
-import { Wrapper } from '../wrapper';
-import { GroupConditionEvaluator } from '../parser/streamExpression';
-import { getAddonName } from '../utils/general';
-import StreamFilter from './filterer';
-import StreamPrecompute from './precomputer';
-import StreamDeduplicator from './deduplicator';
+} from '../utils/index.js';
+import { Wrapper } from '../wrapper.js';
+import { GroupConditionEvaluator } from '../parser/streamExpression.js';
+import StreamFilter from './filterer.js';
+import StreamPrecompute from './precomputer.js';
+import StreamDeduplicator from './deduplicator.js';
 
 const logger = createLogger('fetcher');
 

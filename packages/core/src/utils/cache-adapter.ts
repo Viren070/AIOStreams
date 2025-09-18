@@ -1,7 +1,6 @@
-import { createLogger } from './logger';
-import { Env } from './env';
 import { RedisClientType } from 'redis';
-import { REDIS_PREFIX } from './constants';
+import { REDIS_PREFIX, Env } from './index.js';
+import { createLogger } from './logger.js';
 
 const logger = createLogger('cache');
 

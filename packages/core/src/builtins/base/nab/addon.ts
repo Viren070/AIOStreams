@@ -1,13 +1,13 @@
 import { z } from 'zod';
-import { ParsedId } from '../../../utils/id-parser';
-import { getTimeTakenSincePoint } from '../../../utils';
+import { ParsedId } from '../../../utils/id-parser.js';
+import { getTimeTakenSincePoint } from '../../../utils/index.js';
 import { Logger } from 'winston';
 import {
   BaseDebridAddon,
   BaseDebridConfigSchema,
   SearchMetadata,
-} from '../debrid';
-import { BaseNabApi, Capabilities, SearchResultItem } from './api';
+} from '../debrid.js';
+import { BaseNabApi, Capabilities, SearchResultItem } from './api.js';
 
 export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   url: z.string(),
@@ -58,6 +58,13 @@ export abstract class BaseNabAddon<
     queryParams.limit = capabilities.limits?.max?.toString() ?? '10000';
 
     if (this.userData.forceQuerySearch) {
+    } else if (
+      // prefer tvdb ID over imdb ID for series
+      parsedId.mediaType === 'series' &&
+      searchCapabilities.supportedParams.includes('tvdbid') &&
+      metadata.tvdbId
+    ) {
+      queryParams.tvdbid = metadata.tvdbId;
     } else if (
       searchCapabilities.supportedParams.includes('imdbid') &&
       metadata.imdbId

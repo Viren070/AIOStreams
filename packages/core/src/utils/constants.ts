@@ -1,4 +1,4 @@
-import { Option } from '../db/schemas';
+import { Option } from '../db/schemas.js';
 
 export enum ErrorCode {
   // User API

@@ -1,18 +1,29 @@
-import { Manifest, Meta, MetaPreview, Stream, Subtitle } from '../../db';
-import { AnimeDatabase, Env, ExtrasParser, createLogger } from '../../utils';
+import {
+  Manifest,
+  Meta,
+  MetaPreview,
+  Stream,
+  Subtitle,
+} from '../../db/index.js';
+import {
+  AnimeDatabase,
+  Env,
+  ExtrasParser,
+  createLogger,
+} from '../../utils/index.js';
 import {
   GDriveAPI,
   GoogleOAuth,
   GoogleOAuthError,
   GoogleOAuthErrorCode,
-} from './api';
-import { GDriveFile, UserData } from './schemas';
-import { IMDBMetadata } from '../../metadata/imdb';
-import { TMDBMetadata } from '../../metadata/tmdb';
-import { formatBytes, formatDuration } from '../../formatters';
-import { IdParser, ParsedId } from '../../utils/id-parser';
-import { IdType } from '../../utils/id-parser';
-import { getTraktAliases } from '../../metadata/trakt';
+} from './api.js';
+import { GDriveFile, UserData } from './schemas.js';
+import { IMDBMetadata } from '../../metadata/imdb.js';
+import { TMDBMetadata } from '../../metadata/tmdb.js';
+import { formatBytes, formatDuration } from '../../formatters/index.js';
+import { IdParser, ParsedId } from '../../utils/id-parser.js';
+import { IdType } from '../../utils/id-parser.js';
+import { getTraktAliases } from '../../metadata/trakt.js';
 
 const logger = createLogger('gdrive');
 

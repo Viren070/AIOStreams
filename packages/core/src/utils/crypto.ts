@@ -8,8 +8,8 @@ import {
 } from 'crypto';
 import { genSalt, hash, compare } from 'bcrypt';
 import { deflateSync, inflateSync } from 'zlib';
-import { Env } from './env';
-import { createLogger } from './logger';
+import { Env } from './index.js';
+import { createLogger } from './logger.js';
 
 const logger = createLogger('crypto');
 

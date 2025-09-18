@@ -1,8 +1,8 @@
-import { Addon, Option, UserData, Resource, Stream, ParsedStream } from '../db';
-import { Preset, baseOptions } from './preset';
-import { Env, SERVICE_DETAILS } from '../utils';
-import { constants, ServiceId } from '../utils';
-import { FileParser, StreamParser } from '../parser';
+import { Addon, Option, UserData, Resource, Stream, ParsedStream } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { FileParser, StreamParser } from '../parser/index.js';
 
 class NuvioStreamsStreamParser extends StreamParser {
   parse(stream: Stream): ParsedStream {
@@ -273,3 +273,5 @@ export class NuvioStreamsPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
+
+

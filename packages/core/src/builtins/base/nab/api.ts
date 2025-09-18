@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { fetch } from 'undici';
 import {
   Cache,
   DistributedLock,
@@ -7,7 +6,8 @@ import {
   formatZodError,
   getTimeTakenSincePoint,
   createLogger,
-} from '../../../utils';
+  makeRequest,
+} from '../../../utils/index.js';
 import { Parser } from 'xml2js';
 import { Logger } from 'winston';
 
@@ -225,9 +225,9 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   public async getCapabilities(): Promise<Capabilities> {
     const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps`;
     return this.capabilitiesCache.wrap(
-      () => this.request('caps', CapabilitiesSchema),
+      () => this.request('caps', CapabilitiesSchema, undefined, 3000),
       cacheKey,
-      Env.BUILTIN_TORZNAB_CAPABILITIES_CACHE_TTL
+      Env.BUILTIN_NAB_CAPABILITIES_CACHE_TTL
     );
   }
 
@@ -239,7 +239,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     return this.searchCache.wrap(
       () => this.request(searchFunction, this.SearchResultSchema, params),
       cacheKey,
-      Env.BUILTIN_TORZNAB_SEARCH_CACHE_TTL
+      Env.BUILTIN_NAB_SEARCH_CACHE_TTL
     );
   }
 
@@ -253,13 +253,17 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private async request<T>(
     func: string,
     schema: z.ZodSchema<T>,
-    params: Record<string, string | number | boolean> = {}
+    params: Record<string, string | number | boolean> = {},
+    timeout?: number
   ): Promise<T> {
     const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}`;
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
-      () => this._request(func, schema, params),
-      { timeout: 30000, ttl: 32000 }
+      () => this._request(func, schema, params, timeout),
+      {
+        timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
+        ttl: (timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT) + 1000,
+      }
     );
     return result;
   }
@@ -267,7 +271,8 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private async _request<T>(
     func: string,
     schema: z.ZodSchema<T>,
-    params: Record<string, string | number | boolean> = {}
+    params: Record<string, string | number | boolean> = {},
+    timeout?: number
   ): Promise<T> {
     const start = Date.now();
     const url = new URL(`${this.baseUrl}${this.apiPath}`);
@@ -284,12 +289,19 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     this.logger.info(`Making ${this.namespace} request to: ${urlString}`);
 
     try {
-      const response = await fetch(urlString, {
+      const response = await makeRequest(urlString, {
         method: 'GET',
         headers: this.getHeaders(),
+        timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
       });
       const data = await response.text();
-      const result = await this.xmlParser.parseStringPromise(data);
+      let result: any;
+      try {
+        result = await this.xmlParser.parseStringPromise(data);
+      } catch (error) {
+        this.logger.verbose(`Unexpected XML response: ${data}`);
+        throw error;
+      }
       this.xmlParser.reset();
 
       if (result.error) {

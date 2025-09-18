@@ -1,12 +1,14 @@
 import { isMatch } from 'super-regex';
-import { ParsedStream, UserData } from '../db/schemas';
-import { createLogger, FeatureControl, getTimeTakenSincePoint } from '../utils';
+import { ParsedStream, UserData } from '../db/schemas.js';
 import {
+  createLogger,
+  FeatureControl,
+  getTimeTakenSincePoint,
   formRegexFromKeywords,
   compileRegex,
   parseRegex,
-} from '../utils/regex';
-import { StreamSelector } from '../parser/streamExpression';
+} from '../utils/index.js';
+import { StreamSelector } from '../parser/streamExpression.js';
 
 const logger = createLogger('precomputer');
 

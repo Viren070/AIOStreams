@@ -1,5 +1,5 @@
 import { URL } from 'url';
-import { createLogger } from '../utils/logger';
+import { createLogger } from '../utils/logger.js';
 import path from 'path';
 
 type BaseConnectionURI = {

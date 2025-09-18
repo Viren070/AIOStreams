@@ -1,10 +1,7 @@
 import { z } from 'zod';
-import { constants, createLogger } from '../utils';
-
-import { BuiltinServiceId } from '../utils';
-import { DebridFile, DebridDownload } from './base';
-import { PTT } from '../parser';
-import { normaliseTitle, titleMatch } from '../parser/utils';
+import { constants, createLogger, BuiltinServiceId } from '../utils/index.js';
+import { DebridFile, DebridDownload } from './base.js';
+import { normaliseTitle, titleMatch } from '../parser/utils.js';
 
 const logger = createLogger('debrid');
 

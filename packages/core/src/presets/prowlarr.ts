@@ -1,8 +1,8 @@
-import { Addon, Option, Stream, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { Env, RESOURCES, ServiceId, constants } from '../utils';
-import { StremThruPreset } from './stremthru';
-import { BuiltinAddonPreset } from './builtin';
+import { Addon, Option, Stream, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { Env, RESOURCES, ServiceId, constants } from '../utils/index.js';
+import { StremThruPreset } from './stremthru.js';
+import { BuiltinAddonPreset } from './builtin.js';
 
 export class ProwlarrPreset extends BuiltinAddonPreset {
   static override get METADATA() {
@@ -41,6 +41,40 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
         })),
         default: undefined,
         emptyIsUndefined: true,
+      },
+      ...(Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY
+        ? [
+            {
+              id: 'notRequiredNote',
+              name: '',
+              description:
+                'This instance has a preconfigured Prowlarr instance. You do not need to set the Prowlarr URL and API Key below. ',
+              type: 'alert',
+              intent: 'info',
+            } as const,
+          ]
+        : []),
+      {
+        id: 'prowlarrUrl',
+        name: 'Prowlarr URL',
+        description: 'The URL of the Prowlarr instance',
+        type: 'url',
+        required: !Env.BUILTIN_PROWLARR_URL || !Env.BUILTIN_PROWLARR_API_KEY,
+      },
+      {
+        id: 'prowlarrApiKey',
+        name: 'Prowlarr API Key',
+        description: 'The API key for the Prowlarr instance',
+        type: 'password',
+        required: !Env.BUILTIN_PROWLARR_URL || !Env.BUILTIN_PROWLARR_API_KEY,
+      },
+      {
+        id: 'indexerLimitNote',
+        name: '',
+        description:
+          'To limit the indexers to use, you can add a tag with the name "aiostreams" to the indexers you want to use.',
+        type: 'alert',
+        intent: 'info',
       },
     ];
 
@@ -117,9 +151,24 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
+    let prowlarrUrl = undefined;
+    let prowlarrApiKey = undefined;
+
+    if (options.prowlarrUrl || options.prowlarrApiKey) {
+      prowlarrUrl = options.prowlarrUrl;
+      prowlarrApiKey = options.prowlarrApiKey;
+    } else {
+      prowlarrUrl = Env.BUILTIN_PROWLARR_URL;
+      prowlarrApiKey = Env.BUILTIN_PROWLARR_API_KEY;
+    }
+
+    if (!prowlarrUrl || !prowlarrApiKey) {
+      throw new Error('Prowlarr URL and API Key are required');
+    }
+
     const config = {
-      url: Env.BUILTIN_PROWLARR_URL,
-      apiKey: Env.BUILTIN_PROWLARR_API_KEY,
+      url: prowlarrUrl,
+      apiKey: prowlarrApiKey,
       indexers: Env.BUILTIN_PROWLARR_INDEXERS || [],
       tmdbAccessToken: userData.tmdbAccessToken,
       tmdbApiKey: userData.tmdbApiKey,

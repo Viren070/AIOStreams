@@ -1,7 +1,9 @@
-import { ParsedStream, SortCriterion, UserData } from '../db/schemas';
-import { createLogger, getTimeTakenSincePoint } from '../utils';
-import { VISUAL_TAGS } from '../utils/constants';
-import { AUDIO_TAGS } from '../utils/constants';
+import { ParsedStream, SortCriterion, UserData } from '../db/schemas.js';
+import {
+  createLogger,
+  getTimeTakenSincePoint,
+  constants,
+} from '../utils/index.js';
 
 const logger = createLogger('sorter');
 
@@ -213,7 +215,7 @@ class StreamSorter {
           let minIndex = userData.preferredVisualTags?.length;
 
           for (const tag of effectiveVisualTags) {
-            if (VISUAL_TAGS.includes(tag as any)) {
+            if (constants.VISUAL_TAGS.includes(tag as any)) {
               const idx = userData.preferredVisualTags?.indexOf(tag as any);
               if (idx !== undefined && idx !== -1 && idx < minIndex) {
                 minIndex = idx;
@@ -241,7 +243,7 @@ class StreamSorter {
           let minAudioIndex = userData.preferredAudioTags.length;
 
           for (const tag of effectiveAudioTags) {
-            if (AUDIO_TAGS.includes(tag as any)) {
+            if (constants.AUDIO_TAGS.includes(tag as any)) {
               const idx = userData.preferredAudioTags?.indexOf(tag as any);
               if (idx !== undefined && idx !== -1 && idx < minAudioIndex) {
                 minAudioIndex = idx;

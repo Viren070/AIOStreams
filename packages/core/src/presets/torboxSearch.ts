@@ -1,9 +1,16 @@
-import { Addon, Option, UserData, Resource, Stream, ParsedStream } from '../db';
-import { baseOptions } from './preset';
-import { Env, SERVICE_DETAILS } from '../utils';
-import { constants, ServiceId } from '../utils';
-import { StreamParser } from '../parser';
-import { StremThruPreset } from './stremthru';
+import {
+  Addon,
+  Option,
+  UserData,
+  Resource,
+  Stream,
+  ParsedStream,
+} from '../db/index.js';
+import { baseOptions } from './preset.js';
+import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
+import { StremThruPreset } from './stremthru.js';
 
 export class TorboxSearchParser extends StreamParser {
   override getFolder(stream: Stream): string | undefined {

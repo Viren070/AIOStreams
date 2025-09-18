@@ -1,9 +1,9 @@
 // stremio://new-who.onrender.com/manifest.json
 
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { constants, Env, ServiceId } from '../utils';
-import { StremThruPreset } from './stremthru';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { constants, Env, ServiceId } from '../utils/index.js';
+import { StremThruPreset } from './stremthru.js';
 
 export class FKStreamPreset extends StremThruPreset {
   static override get METADATA() {

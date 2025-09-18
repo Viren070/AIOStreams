@@ -1,8 +1,7 @@
 import { z } from 'zod';
-import { Cache, makeRequest, Env, TYPES } from '../utils';
-import { Wrapper } from '../wrapper';
-import { Metadata } from './utils';
-import { Meta, MetaSchema } from '../db';
+import { Cache, makeRequest, Env, TYPES } from '../utils/index.js';
+import { Metadata } from './utils.js';
+import { Meta, MetaSchema } from '../db/schemas.js';
 
 const IMDBSuggestionSchema = z.object({
   d: z.array(

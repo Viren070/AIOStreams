@@ -1,6 +1,6 @@
-import { Addon, Option, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { constants, Env } from '../utils';
+import { Addon, Option, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { constants, Env } from '../utils/index.js';
 
 export class AnimeKitsuPreset extends Preset {
   static override get METADATA() {
@@ -76,3 +76,5 @@ export class AnimeKitsuPreset extends Preset {
     };
   }
 }
+
+

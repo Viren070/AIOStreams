@@ -1,4 +1,4 @@
-import { constants, Env } from '..';
+import { constants, Env } from '../index.js';
 import {
   Meta,
   MetaPreview,
@@ -16,10 +16,10 @@ import {
   CatalogResponse,
   StreamResponse,
   ParsedMeta,
-} from '../db';
-import { createFormatter } from '../formatters';
-import { AIOStreamsError, AIOStreamsResponse } from '../main';
-import { createLogger, getTimeTakenSincePoint } from '../utils';
+} from '../db/index.js';
+import { createFormatter } from '../formatters/index.js';
+import { AIOStreamsError, AIOStreamsResponse } from '../main.js';
+import { createLogger, getTimeTakenSincePoint } from '../utils/index.js';
 
 type ErrorOptions = {
   errorTitle?: string;

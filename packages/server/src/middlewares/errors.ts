@@ -5,7 +5,7 @@ import {
   constants,
   StremioTransformer,
 } from '@aiostreams/core';
-import { createResponse } from '../utils/responses';
+import { createResponse } from '../utils/responses.js';
 
 const logger = createLogger('server');
 

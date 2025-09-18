@@ -6,7 +6,7 @@ import {
   Env,
   getSimpleTextHash,
   getTimeTakenSincePoint,
-} from '../utils';
+} from '../utils/index.js';
 
 const logger = createLogger('parser');
 

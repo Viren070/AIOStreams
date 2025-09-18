@@ -1,5 +1,5 @@
-import { UserData } from '../db';
-import { BaseFormatter, FormatterConfig } from './base';
+import { UserData } from '../db/schemas.js';
+import { BaseFormatter, FormatterConfig } from './base.js';
 
 export class CustomFormatter extends BaseFormatter {
   constructor(

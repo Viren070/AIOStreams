@@ -1,10 +1,8 @@
-import { createLogger } from './logger';
-import { DB } from '../db/db';
-import { Cache } from './cache';
+import { DB } from '../db/db.js';
 import { RedisClientType } from 'redis';
-import { Env } from './env';
-import { REDIS_PREFIX } from './constants';
-import { TransactionQueue } from '../db/queue';
+import { TransactionQueue } from '../db/queue.js';
+import { Cache, Env, REDIS_PREFIX } from './index.js';
+import { createLogger } from './logger.js';
 
 const logger = createLogger('distributed-lock');
 const lockPrefix = `${REDIS_PREFIX}lock:`;

@@ -1,9 +1,9 @@
-import { Addon, Option, UserData, Resource } from '../db';
-import { baseOptions, Preset } from './preset';
-import { Env } from '../utils';
-import { constants, ServiceId } from '../utils';
-import { StreamParser } from '../parser';
-import { StremThruPreset } from './stremthru';
+import { Addon, Option, UserData, Resource } from '../db/index.js';
+import { baseOptions, Preset } from './preset.js';
+import { Env } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
+import { StremThruPreset } from './stremthru.js';
 
 class CometStreamParser extends StreamParser {
   get errorRegexes(): { pattern: RegExp; message: string }[] | undefined {
@@ -224,3 +224,5 @@ export class CometPreset extends StremThruPreset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
+
+

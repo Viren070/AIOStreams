@@ -1,5 +1,5 @@
-import { UserData } from '../db';
-import { BaseFormatter } from './base';
+import { UserData } from '../db/schemas.js';
+import { BaseFormatter } from './base.js';
 
 export class TorrentioFormatter extends BaseFormatter {
   constructor(userData: UserData) {

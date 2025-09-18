@@ -4,9 +4,9 @@ import {
   constants,
   createLogger,
   formatZodError,
+  RPDB,
 } from '@aiostreams/core';
-import { RPDB } from '@aiostreams/core';
-import { createResponse } from '../../utils/responses';
+import { createResponse } from '../../utils/responses.js';
 import { z } from 'zod';
 
 const router: Router = Router();

@@ -1,6 +1,6 @@
 import { Headers } from 'undici';
-import { Env, Cache, TYPES, makeRequest } from '../utils';
-import { Metadata } from './utils';
+import { Env, Cache, TYPES, makeRequest } from '../utils/index.js';
+import { Metadata } from './utils.js';
 import { z } from 'zod';
 
 export type ExternalIdType = 'imdb' | 'tmdb' | 'tvdb';

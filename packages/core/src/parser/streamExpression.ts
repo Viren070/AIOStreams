@@ -1,5 +1,9 @@
 import { Parser } from 'expr-eval';
-import { ParsedStream, ParsedStreams, ParsedStreamSchema } from '../db';
+import {
+  ParsedStream,
+  ParsedStreams,
+  ParsedStreamSchema,
+} from '../db/schemas.js';
 import bytes from 'bytes';
 
 export abstract class StreamExpressionEngine {

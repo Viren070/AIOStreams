@@ -1,6 +1,6 @@
 import winston from 'winston';
 import moment from 'moment-timezone';
-import { Env } from './env';
+import { Env } from './env.js';
 
 // Map log levels to their full names
 const levelMap: { [key: string]: string } = {

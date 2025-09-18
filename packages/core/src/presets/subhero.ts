@@ -1,6 +1,6 @@
-import { Addon, Option, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { Env, FULL_LANGUAGE_MAPPING, SUBTITLES_RESOURCE } from '../utils';
+import { Addon, Option, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { Env, FULL_LANGUAGE_MAPPING, SUBTITLES_RESOURCE } from '../utils/index.js';
 
 export class SubHeroPreset extends Preset {
   static override get METADATA() {
@@ -157,3 +157,5 @@ export class SubHeroPreset extends Preset {
     return `${host}/${config}/manifest.json`;
   }
 }
+
+

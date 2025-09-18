@@ -1,13 +1,19 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { z, ZodError } from 'zod';
-import { getDataFolder } from './general';
-import { makeRequest } from './http';
-import { createLogger, getTimeTakenSincePoint } from './logger';
-import { IdParser, IdType, ID_TYPES } from './id-parser';
-import { formatZodError } from './config';
-import { DistributedLock, Env } from '.';
+import {
+  getDataFolder,
+  makeRequest,
+  getTimeTakenSincePoint,
+  IdParser,
+  IdType,
+  ID_TYPES,
+  formatZodError,
+  DistributedLock,
+  Env,
+} from './index.js';
 import { createWriteStream } from 'fs';
+import { createLogger } from './logger.js';
 
 const logger = createLogger('anime-database');
 

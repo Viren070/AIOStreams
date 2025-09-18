@@ -1,10 +1,10 @@
-import { ParsedStream, UserData } from '../db/schemas';
+import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
   getTimeTakenSincePoint,
   DSU,
   getSimpleTextHash,
-} from '../utils';
+} from '../utils/index.js';
 
 const logger = createLogger('deduplicator');
 

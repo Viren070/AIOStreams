@@ -1,10 +1,9 @@
-import { createLogger } from './logger';
-import { Env } from './env';
 import {
   CacheBackend,
   MemoryCacheBackend,
   RedisCacheBackend,
-} from './cache-adapter';
+} from './cache-adapter.js';
+import { createLogger, Env } from './index.js';
 import { createClient, RedisClientType } from 'redis';
 
 const logger = createLogger('cache');

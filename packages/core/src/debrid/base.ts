@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import { constants, ServiceId } from '../utils';
-import { ErrorType, StremThruError } from 'stremthru';
-// type ErrorCode = "BAD_GATEWAY" | "BAD_REQUEST" | "CONFLICT" | "FORBIDDEN" | "GONE" | "INTERNAL_SERVER_ERROR" | "METHOD_NOT_ALLOWED" | "NOT_FOUND" | "NOT_IMPLEMENTED" | "PAYMENT_REQUIRED" | "PROXY_AUTHENTICATION_REQUIRED" | "SERVICE_UNAVAILABLE" | "STORE_LIMIT_EXCEEDED" | "STORE_MAGNET_INVALID" | "TOO_MANY_REQUESTS" | "UNAUTHORIZED" | "UNAVAILABLE_FOR_LEGAL_REASONS" | "UNKNOWN" | "UNPROCESSABLE_ENTITY" | "UNSUPPORTED_MEDIA_TYPE";
-
-StremThruError;
+import { constants, ServiceId } from '../utils/index.js';
 
 type DebridErrorCode =
   | 'BAD_GATEWAY'

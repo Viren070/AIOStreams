@@ -5,7 +5,7 @@ import {
   Env,
   formatZodError,
   makeRequest,
-} from '../../utils';
+} from '../../utils/index.js';
 import z from 'zod';
 
 interface ResponseMeta {
@@ -40,6 +40,12 @@ const ProwlarrErrorSchema = z.object({
   description: z.string(),
 });
 
+const ProwlarrApiTagItemSchema = z.object({
+  label: z.string(),
+  id: z.number(),
+});
+const ProwlarrApiTagsListSchema = z.array(ProwlarrApiTagItemSchema);
+export type ProwlarrApiTagItem = z.infer<typeof ProwlarrApiTagItemSchema>;
 // minimise schema to only include the fields we need
 const ProwlarrApiIndexerSchema = z.object({
   id: z.number(),
@@ -47,6 +53,7 @@ const ProwlarrApiIndexerSchema = z.object({
   sortName: z.string(),
   definitionName: z.string(),
   enable: z.boolean(),
+  tags: z.array(z.number()),
 });
 
 export type ProwlarrApiIndexer = z.infer<typeof ProwlarrApiIndexerSchema>;
@@ -92,11 +99,15 @@ class ProwlarrApi {
     ProwlarrApiIndexer[]
   >('prowlarr-api:indexers');
 
+  private readonly tagsCache = Cache.getInstance<string, ProwlarrApiTagItem[]>(
+    'prowlarr-api:tags'
+  );
+
   #headers: Record<string, string>;
   #timeout: number;
 
   constructor(config: ProwlarrConfig) {
-    this.baseUrl = config.baseUrl;
+    this.baseUrl = config.baseUrl.replace(/\/$/, '');
     this.apiKey = config.apiKey;
     this.#headers = {
       'Content-Type': 'application/json',
@@ -106,6 +117,19 @@ class ProwlarrApi {
     this.#timeout = config.timeout;
   }
 
+  async tags(): Promise<ProwlarrApiResponse<ProwlarrApiTagItem[]>> {
+    return this.tagsCache.wrap(
+      () =>
+        this.request<ProwlarrApiTagItem[]>(
+          'tag',
+          {},
+          ProwlarrApiTagsListSchema
+        ),
+      `${this.baseUrl}:tag`,
+      Env.BUILTIN_PROWLARR_INDEXERS_CACHE_TTL
+    );
+  }
+
   async indexers(): Promise<ProwlarrApiResponse<ProwlarrApiIndexer[]>> {
     return this.indexersCache.wrap(
       () =>
@@ -113,7 +137,7 @@ class ProwlarrApi {
           'indexer',
           {},
           ProwlarrApiIndexersListSchema,
-          1000
+          3000
         ),
       `${this.baseUrl}:indexer`,
       Env.BUILTIN_PROWLARR_INDEXERS_CACHE_TTL

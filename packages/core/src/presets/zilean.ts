@@ -1,8 +1,8 @@
-import { Option, UserData } from '../db';
-import { Env, constants } from '../utils';
-import { baseOptions } from './preset';
-import { StremThruPreset } from './stremthru';
-import { TorznabPreset } from './torznab';
+import { Option, UserData } from '../db/index.js';
+import { Env, constants } from '../utils/index.js';
+import { baseOptions } from './preset.js';
+import { StremThruPreset } from './stremthru.js';
+import { TorznabPreset } from './torznab.js';
 
 export class ZileanPreset extends TorznabPreset {
   static override get METADATA() {
@@ -75,3 +75,5 @@ export class ZileanPreset extends TorznabPreset {
     return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
   }
 }
+
+

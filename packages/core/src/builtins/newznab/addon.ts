@@ -1,15 +1,15 @@
 import { z } from 'zod';
-import { ParsedId } from '../../utils/id-parser';
-import { constants, createLogger } from '../../utils';
-import { Torrent, NZB } from '../../debrid';
-import { SearchMetadata } from '../base/debrid';
+import { ParsedId } from '../../utils/id-parser.js';
+import { constants, createLogger } from '../../utils/index.js';
+import { Torrent, NZB } from '../../debrid/index.js';
+import { SearchMetadata } from '../base/debrid.js';
 import { createHash } from 'crypto';
-import { BaseNabApi, SearchResultItem } from '../base/nab/api';
+import { BaseNabApi, SearchResultItem } from '../base/nab/api.js';
 import {
   BaseNabAddon,
   NabAddonConfigSchema,
   NabAddonConfig,
-} from '../base/nab/addon';
+} from '../base/nab/addon.js';
 
 const logger = createLogger('newznab');
 
@@ -68,6 +68,7 @@ export class NewznabAddon extends BaseNabAddon<NabAddonConfig, NewznabApi> {
         nzb: nzbUrl,
         age: `${age}d`,
         title: result.title,
+        indexer: result.newznab?.hydraIndexerName?.toString() ?? undefined,
         size:
           result.size ??
           (result.newznab?.size ? Number(result.newznab.size) : 0),

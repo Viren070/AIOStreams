@@ -1,22 +1,19 @@
-// import { UserDataSchema, UserData, DB } from '../db';
-import { UserDataSchema, UserData } from './schemas';
-import { TransactionQueue } from './queue';
-import { DB } from './db';
+import { UserData } from './schemas.js';
+import { TransactionQueue } from './queue.js';
+import { DB } from './db.js';
 import {
   decryptString,
   deriveKey,
   encryptString,
   generateUUID,
   getTextHash,
-  maskSensitiveInfo,
   createLogger,
   constants,
   Env,
   verifyHash,
   validateConfig,
-  formatZodError,
   applyMigrations,
-} from '../utils';
+} from '../utils/index.js';
 
 const APIError = constants.APIError;
 const logger = createLogger('users');

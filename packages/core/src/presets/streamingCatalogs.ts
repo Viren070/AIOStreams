@@ -1,6 +1,6 @@
-import { Addon, Option, UserData } from '../db';
-import { CacheKeyRequestOptions, Preset, baseOptions } from './preset';
-import { constants, Env } from '../utils';
+import { Addon, Option, UserData } from '../db/index.js';
+import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
+import { constants, Env } from '../utils/index.js';
 
 export class StreamingCatalogsPreset extends Preset {
   // amp,atp,hbm,sst,vil,cpd,nlz,blv,zee,hay,clv,gop,hst,cru,mgl,cts,hlu,pmp,pcp,dnp,nfk,nfx
@@ -220,3 +220,5 @@ export class StreamingCatalogsPreset extends Preset {
     return cacheKey;
   }
 }
+
+

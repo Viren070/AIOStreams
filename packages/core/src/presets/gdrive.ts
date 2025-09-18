@@ -1,5 +1,5 @@
-import { baseOptions, Preset } from './preset';
-import { constants, Env } from '../utils';
+import { baseOptions, Preset } from './preset.js';
+import { constants, Env } from '../utils/index.js';
 import {
   PresetMetadata,
   Option,
@@ -7,10 +7,10 @@ import {
   UserData,
   ParsedStream,
   Stream,
-} from '../db';
-import { StreamParser } from '../parser';
-import { GDriveAPI } from '../builtins/gdrive';
-import { GoogleOAuth } from '../builtins/gdrive/api';
+} from '../db/index.js';
+import { StreamParser } from '../parser/index.js';
+import { GDriveAPI } from '../builtins/gdrive/index.js';
+import { GoogleOAuth } from '../builtins/gdrive/api.js';
 
 export class GDriveParser extends StreamParser {
   protected override raiseErrorIfNecessary(

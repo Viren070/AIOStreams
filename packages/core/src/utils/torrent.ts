@@ -1,11 +1,15 @@
-import { Torrent, UnprocessedTorrent, DebridFile } from '../debrid';
+import { Torrent, UnprocessedTorrent, DebridFile } from '../debrid/index.js';
 import {
   extractInfoHashFromMagnet,
   extractTrackersFromMagnet,
-} from '../builtins/utils/debrid';
-import { createLogger } from './logger';
-import { Cache } from './cache';
-import { makeRequest } from './http';
+} from '../builtins/utils/debrid.js';
+import { createLogger } from './logger.js';
+import { Cache } from './cache.js';
+// import { makeRequest } from './http.js';
+import { fetch } from 'undici';
+import parseTorrent from 'parse-torrent';
+import { Env } from './env.js';
+import { getTimeTakenSincePoint } from './index.js';
 
 const logger = createLogger('torrent');
 
@@ -52,16 +56,8 @@ export class TorrentClient {
 
     try {
       const metadata = await this.#fetchMetadata(torrent);
-      if (metadata && torrent.downloadUrl) {
-        await this.#metadataCache.set(
-          torrent.downloadUrl,
-          metadata,
-          5 * 60 * 1000
-        );
-      }
       return metadata;
     } catch (error) {
-      logger.error(`Failed to fetch metadata for torrent: ${error}`);
       if (torrent.hash) {
         // If we have a hash but metadata fetch failed, return basic info
         return {
@@ -81,32 +77,85 @@ export class TorrentClient {
       throw new Error('Download URL must be provided');
     }
 
-    const response = await makeRequest(torrent.downloadUrl, {
-      timeout: 500,
-      rawOptions: {
+    try {
+      const start = Date.now();
+      const response = await fetch(torrent.downloadUrl!, {
+        signal: AbortSignal.timeout(Env.BUILTIN_GET_TORRENT_TIMEOUT),
         redirect: 'manual',
-      },
-    });
+      });
 
-    // Handle redirects
-    if (response.status === 302 || response.status === 301) {
-      const redirectUrl = response.headers.get('Location');
-      if (!redirectUrl) {
-        throw new Error('Redirect location not found');
-      }
+      let metadata: TorrentMetadata;
 
-      if (redirectUrl.startsWith('magnet:')) {
+      // Handle redirects
+      if (response.status === 302 || response.status === 301) {
+        const redirectUrl = response.headers.get('Location');
+        if (!redirectUrl) {
+          throw new Error('Redirect location not found');
+        }
+
         const hash = extractInfoHashFromMagnet(redirectUrl);
         const sources = extractTrackersFromMagnet(redirectUrl);
         if (!hash) throw new Error('Invalid magnet URL');
-        return {
+
+        logger.debug(`Got info from magnet redirect`, {
+          hash,
+          sources,
+          time: getTimeTakenSincePoint(start),
+        });
+        metadata = {
           hash,
           files: [],
           sources,
         };
-      }
-    }
+      } else {
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch metadata for torrent: ${response.status} ${response.statusText}`
+          );
+        }
 
-    throw new Error('Unsupported torrent');
+        const bytes = await response.arrayBuffer();
+        const parsedTorrent = parseTorrent(new Uint8Array(bytes));
+        const sources = Array.from(
+          new Set([
+            ...(parsedTorrent.announce || []),
+            ...(torrent.sources || []),
+          ])
+        );
+
+        logger.debug(`Got info from downloaded torrent.`, {
+          hash: parsedTorrent.infoHash,
+          sources,
+          time: getTimeTakenSincePoint(start),
+        });
+
+        metadata = {
+          hash: parsedTorrent.infoHash,
+          files: (parsedTorrent.files || []).map((file, index) => ({
+            size: file.length,
+            id: index,
+            name: file.name,
+          })),
+          sources,
+        };
+      }
+
+      // Cache the result
+      if (torrent.downloadUrl) {
+        await this.#metadataCache.set(
+          torrent.downloadUrl,
+          metadata,
+          Env.BUILTIN_TORRENT_METADATA_CACHE_TTL
+        );
+      }
+
+      return metadata;
+    } catch (error) {
+      // if (error instanceof Error && error.name === 'TimeoutError') {
+      //   throw new Error('Timeout fetching metadata for torrent');
+      // }
+      logger.warn(`Failed to get magnet from ${torrent.downloadUrl}: ${error}`);
+      throw error;
+    }
   }
 }

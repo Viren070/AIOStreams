@@ -4,24 +4,13 @@ import {
   constants,
   createLogger,
   formatZodError,
-} from '@aiostreams/core';
-import {
   DebridError,
   PlaybackInfoSchema,
   getDebridService,
   ServiceAuthSchema,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
-import {
-  STATIC_DOWNLOAD_FAILED,
-  STATIC_DOWNLOADING,
-  STATIC_UNAVAILABLE_FOR_LEGAL_REASONS,
-  STATIC_CONTENT_PROXY_LIMIT_REACHED,
-  STATIC_INTERNAL_SERVER_ERROR,
-  STATIC_FORBIDDEN,
-  STATIC_UNAUTHORIZED,
-  STATIC_NO_MATCHING_FILE,
-} from '../../app';
+import { StaticFiles } from '../../app.js';
 const router: Router = Router();
 const logger = createLogger('server');
 
@@ -64,31 +53,31 @@ router.get(
       try {
         streamUrl = await debridInterface.resolve(playbackInfo, filename);
       } catch (error: any) {
-        let staticFile: string = STATIC_INTERNAL_SERVER_ERROR;
+        let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;
         if (error instanceof DebridError) {
           logger.error(
             `Got Debrid error during debrid resolve: ${error.code}: ${error.message}`
           );
           switch (error.code) {
             case 'UNAVAILABLE_FOR_LEGAL_REASONS':
-              staticFile = STATIC_UNAVAILABLE_FOR_LEGAL_REASONS;
+              staticFile = StaticFiles.UNAVAILABLE_FOR_LEGAL_REASONS;
               break;
             case 'STORE_LIMIT_EXCEEDED':
-              staticFile = STATIC_CONTENT_PROXY_LIMIT_REACHED;
+              staticFile = StaticFiles.CONTENT_PROXY_LIMIT_REACHED;
               break;
             case 'FORBIDDEN':
-              staticFile = STATIC_FORBIDDEN;
+              staticFile = StaticFiles.FORBIDDEN;
               break;
             case 'UNAUTHORIZED':
-              staticFile = STATIC_UNAUTHORIZED;
+              staticFile = StaticFiles.UNAUTHORIZED;
               break;
             case 'UNPROCESSABLE_ENTITY':
             case 'UNSUPPORTED_MEDIA_TYPE':
             case 'STORE_MAGNET_INVALID':
-              staticFile = STATIC_DOWNLOAD_FAILED;
+              staticFile = StaticFiles.DOWNLOAD_FAILED;
               break;
             case 'NO_MATCHING_FILE':
-              staticFile = STATIC_NO_MATCHING_FILE;
+              staticFile = StaticFiles.NO_MATCHING_FILE;
               break;
             default:
               break;
@@ -104,7 +93,7 @@ router.get(
       }
 
       if (!streamUrl) {
-        res.status(302).redirect(`/static/${STATIC_DOWNLOADING}`);
+        res.status(302).redirect(`/static/${StaticFiles.DOWNLOADING}`);
         return;
       }
 

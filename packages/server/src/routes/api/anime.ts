@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { createResponse } from '../../utils/responses';
+import { createResponse } from '../../utils/responses.js';
 import {
   APIError,
   constants,
@@ -10,7 +10,8 @@ import {
   ID_TYPES,
 } from '@aiostreams/core';
 import { z, ZodError } from 'zod';
-import { animeApiRateLimiter } from '../../middlewares/ratelimit';
+import { animeApiRateLimiter } from '../../middlewares/ratelimit.js';
+
 const router: Router = Router();
 const logger = createLogger('server');
 

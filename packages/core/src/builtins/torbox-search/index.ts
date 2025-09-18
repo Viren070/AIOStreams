@@ -1,2 +1,2 @@
-export * from './addon';
-export * from './errors';
+export * from './addon.js';
+export * from './errors.js';

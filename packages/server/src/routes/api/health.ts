@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { createResponse } from '../../utils/responses';
+import { createResponse } from '../../utils/responses.js';
 import {
   APIError,
   constants,

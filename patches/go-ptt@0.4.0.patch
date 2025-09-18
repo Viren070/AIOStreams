@@ -1,0 +1,22 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 3c5817fa8a4eced1839031b0bc4e03381a214cd7..ff7d97e7b83e1ddde582e04744d61edfc9218de4 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs	
+@@ -4,6 +4,8 @@ import { rm } from 'node:fs/promises';
+ import { resolve } from 'node:path';
+ import { setTimeout } from 'node:timers/promises';
+ import { BinaryWriter, BinaryReader } from '@bufbuild/protobuf/wire';
++import { fileURLToPath } from 'url';
++import path from 'path';
+ 
+ function createBaseParseRequest() {
+   return { torrent_titles: [], normalize: false };
+@@ -975,6 +977,8 @@ function isSet(value) {
+   return value !== null && value !== void 0;
+ }
+ 
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = path.dirname(__filename);
+ const BIN_PATH = `${resolve(__dirname, "../bin/ptt")}${process.platform === "win32" ? ".exe" : ""}`;
+ class PTTServer {
+   network;

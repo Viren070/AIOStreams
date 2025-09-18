@@ -1,5 +1,5 @@
-import { Addon, Option, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
+import { Addon, Option, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
 import {
   Cache,
   constants,
@@ -7,7 +7,7 @@ import {
   formatZodError,
   getSimpleTextHash,
   makeRequest,
-} from '../utils';
+} from '../utils/index.js';
 import { z } from 'zod';
 import { FormData } from 'undici';
 
@@ -330,3 +330,5 @@ export class AICompanionPreset extends Preset {
     }
   }
 }
+
+

@@ -3,13 +3,12 @@ import {
   createLogger,
   APIError,
   constants,
-  Env,
   decryptString,
   validateConfig,
   Resource,
+  StremioTransformer,
+  UserRepository,
 } from '@aiostreams/core';
-import { UserDataSchema, UserRepository, UserData } from '@aiostreams/core';
-import { StremioTransformer } from '@aiostreams/core';
 
 const logger = createLogger('server');
 

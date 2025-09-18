@@ -1,5 +1,5 @@
 import { number, z } from 'zod';
-import { Stream } from '../../db';
+import { Stream } from '../../db/index.js';
 import {
   AnimeDatabase,
   Cache,
@@ -7,25 +7,25 @@ import {
   SERVICE_DETAILS,
   createLogger,
   getTimeTakenSincePoint,
-} from '../../utils';
+} from '../../utils/index.js';
 // import { DebridService, DebridFile } from './debrid-service';
-import { ParsedId } from '../../utils/id-parser';
-import { TorBoxSearchAddonUserDataSchema } from './schemas';
+import { ParsedId } from '../../utils/id-parser.js';
+import { TorBoxSearchAddonUserDataSchema } from './schemas.js';
 import TorboxSearchApi, {
   TorboxSearchApiError,
   TorboxSearchApiIdType,
-} from './search-api';
-import { Torrent, convertDataToTorrents } from './torrent';
-import { TMDBMetadata } from '../../metadata/tmdb';
-import { calculateAbsoluteEpisode } from '../utils/general';
+} from './search-api.js';
+import { Torrent, convertDataToTorrents } from './torrent.js';
+import { TMDBMetadata } from '../../metadata/tmdb.js';
+import { calculateAbsoluteEpisode } from '../utils/general.js';
 import { TorboxApi } from '@torbox/torbox-api';
-import { processNZBs, processTorrents } from '../utils/debrid';
+import { processNZBs, processTorrents } from '../utils/debrid.js';
 import {
   NZBWithSelectedFile,
   TorrentWithSelectedFile,
-} from '../../debrid/utils';
-import { DebridFile, PlaybackInfo } from '../../debrid';
-import { getTraktAliases } from '../../metadata/trakt';
+} from '../../debrid/utils.js';
+import { DebridFile, PlaybackInfo } from '../../debrid/index.js';
+import { getTraktAliases } from '../../metadata/trakt.js';
 
 const logger = createLogger('torbox-search');
 

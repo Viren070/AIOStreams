@@ -1,7 +1,7 @@
 import { isMatch } from 'super-regex';
-import { Cache } from './cache';
-import { getSimpleTextHash } from './crypto';
-import { createLogger } from './logger';
+import { Cache } from './cache.js';
+import { getSimpleTextHash } from './crypto.js';
+import { createLogger } from './logger.js';
 
 const DEFAULT_TIMEOUT = 1000; // 1 second timeout
 const regexCache = Cache.getInstance<string, RegExp>('regexCache', 1_000, true);

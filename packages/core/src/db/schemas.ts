@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import * as constants from '../utils/constants';
+import * as constants from '../utils/constants.js';
 
 const ServiceIds = z.enum(constants.SERVICES);
 

@@ -5,10 +5,10 @@ import {
   ParsedFile,
   Stream,
   UserData,
-} from '../db';
-import { Preset, baseOptions } from './preset';
-import { constants, Env, LIVE_STREAM_TYPE } from '../utils';
-import { FileParser, StreamParser } from '../parser';
+} from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { constants, Env, LIVE_STREAM_TYPE } from '../utils/index.js';
+import { FileParser, StreamParser } from '../parser/index.js';
 
 class USATvStreamParser extends StreamParser {
   protected override getParsedFile(
@@ -116,3 +116,5 @@ export class USATVPreset extends Preset {
     };
   }
 }
+
+

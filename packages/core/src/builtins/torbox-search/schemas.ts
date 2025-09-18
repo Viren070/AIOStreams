@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BuiltinDebridServices } from '../../debrid/utils';
+import { BuiltinDebridServices } from '../../debrid/utils.js';
 
 const TorBoxApiErrorResponseSchema = z.object({
   success: z.literal(false),

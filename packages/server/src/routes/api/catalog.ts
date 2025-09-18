@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { createResponse } from '../../utils/responses';
+import { createResponse } from '../../utils/responses.js';
+import { catalogApiRateLimiter } from '../../middlewares/ratelimit.js';
 import {
   createLogger,
   UserData,
@@ -9,7 +10,7 @@ import {
   APIError,
   constants,
 } from '@aiostreams/core';
-import { catalogApiRateLimiter } from '../../middlewares/ratelimit';
+
 const router: Router = Router();
 
 const logger = createLogger('server');

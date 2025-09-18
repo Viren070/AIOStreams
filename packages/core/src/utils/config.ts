@@ -6,23 +6,28 @@ import {
   Option,
   StreamProxyConfig,
   Group,
-} from '../db/schemas';
-import { AIOStreams } from '../main';
-import { Preset, PresetManager } from '../presets';
-import { createProxy } from '../proxy';
-import { constants } from '.';
-import { TMDBMetadata } from '../metadata/tmdb';
-import { isEncrypted, decryptString, encryptString } from './crypto';
-import { Env } from './env';
-import { createLogger, maskSensitiveInfo } from './logger';
+} from '../db/schemas.js';
+import { AIOStreams } from '../main.js';
+import { Preset, PresetManager } from '../presets/index.js';
+import { createProxy } from '../proxy/index.js';
+import { TMDBMetadata } from '../metadata/tmdb.js';
+import {
+  isEncrypted,
+  decryptString,
+  encryptString,
+  Env,
+  maskSensitiveInfo,
+  RPDB,
+  FeatureControl,
+  compileRegex,
+  constants,
+} from './index.js';
 import { ZodError } from 'zod';
 import {
   GroupConditionEvaluator,
   StreamSelector,
-} from '../parser/streamExpression';
-import { RPDB } from './rpdb';
-import { FeatureControl } from './feature';
-import { compileRegex } from './regex';
+} from '../parser/streamExpression.js';
+import { createLogger } from './logger.js';
 
 const logger = createLogger('core');
 

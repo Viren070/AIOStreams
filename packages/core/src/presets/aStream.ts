@@ -5,10 +5,15 @@ import {
   ParsedFile,
   Stream,
   UserData,
-} from '../db';
-import { Preset, baseOptions } from './preset';
-import { constants, Env, HTTP_STREAM_TYPE, LIVE_STREAM_TYPE } from '../utils';
-import { FileParser, StreamParser } from '../parser';
+} from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import {
+  constants,
+  Env,
+  HTTP_STREAM_TYPE,
+  LIVE_STREAM_TYPE,
+} from '../utils/index.js';
+import { FileParser, StreamParser } from '../parser/index.js';
 
 class AStreamStreamParser extends StreamParser {
   protected override getParsedFile(

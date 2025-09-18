@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
+      './ptt.js': './ptt',
+      './regex.js': './regex',
     };
     return config;
   },

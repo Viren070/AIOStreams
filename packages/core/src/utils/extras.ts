@@ -1,4 +1,4 @@
-import { Extras, ExtrasSchema } from '../db/schemas';
+import { Extras, ExtrasSchema } from '../db/schemas.js';
 
 export class ExtrasParser {
   private extras: Partial<Extras>;

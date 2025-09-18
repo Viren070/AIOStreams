@@ -1,7 +1,7 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { constants, Env, FULL_LANGUAGE_MAPPING } from '../utils';
-import { StreamParser } from '../parser';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { constants, Env, FULL_LANGUAGE_MAPPING } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
 
 class TmdbCollectionsStreamParser extends StreamParser {
   protected override getFilename(
@@ -912,3 +912,5 @@ export class TmdbCollectionsPreset extends Preset {
     return `${url}/${config}/manifest.json`;
   }
 }
+
+

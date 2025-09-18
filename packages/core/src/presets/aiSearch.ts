@@ -1,6 +1,6 @@
-import { Addon, Option, UserData } from '../db';
-import { Preset, baseOptions } from './preset';
-import { Cache, constants, Env, makeRequest } from '../utils';
+import { Addon, Option, UserData } from '../db/index.js';
+import { Preset, baseOptions } from './preset.js';
+import { Cache, constants, Env, makeRequest } from '../utils/index.js';
 import { z } from 'zod';
 
 const configCache = Cache.getInstance<string, string>('ai-search-config');
@@ -306,3 +306,5 @@ export class AISearchPreset extends Preset {
     }
   }
 }
+
+

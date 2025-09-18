@@ -1,2 +1,2 @@
-export * from './addon';
-export * from './api';
+export * from './addon.js';
+export * from './api.js';

@@ -1,11 +1,11 @@
-import manifest from './manifest';
-import stream from './stream';
-import meta from './meta';
-import catalog from './catalog';
-import subtitle from './subtitle';
-import addonCatalog from './addonCatalog';
-import configure from './configure';
-import alias from './alias';
+import manifest from './manifest.js';
+import stream from './stream.js';
+import meta from './meta.js';
+import catalog from './catalog.js';
+import subtitle from './subtitle.js';
+import addonCatalog from './addonCatalog.js';
+import configure from './configure.js';
+import alias from './alias.js';
 
 export {
   manifest,

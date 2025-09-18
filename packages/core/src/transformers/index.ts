@@ -1,2 +1,2 @@
-export * from './stremio';
-export * from './api';
+export * from './stremio.js';
+export * from './api.js';

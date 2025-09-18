@@ -4,7 +4,7 @@ import {
   Resource,
   StrictManifestResource,
   UserData,
-} from './db';
+} from './db/index.js';
 import {
   constants,
   createLogger,
@@ -16,9 +16,9 @@ import {
   ExtrasParser,
   makeUrlLogSafe,
   AnimeDatabase,
-} from './utils';
-import { Wrapper } from './wrapper';
-import { PresetManager } from './presets';
+} from './utils/index.js';
+import { Wrapper } from './wrapper.js';
+import { PresetManager } from './presets/index.js';
 import {
   AddonCatalog,
   Meta,
@@ -27,12 +27,12 @@ import {
   ParsedStream,
   Preset,
   Subtitle,
-} from './db/schemas';
-import { createProxy } from './proxy';
-import { RPDB } from './utils/rpdb';
-import { FeatureControl } from './utils/feature';
-import Proxifier from './streams/proxifier';
-import StreamLimiter from './streams/limiter';
+} from './db/schemas.js';
+import { createProxy } from './proxy/index.js';
+import { RPDB } from './utils/rpdb.js';
+import { FeatureControl } from './utils/feature.js';
+import Proxifier from './streams/proxifier.js';
+import StreamLimiter from './streams/limiter.js';
 import {
   StreamFetcher as Fetcher,
   StreamFilterer as Filterer,
@@ -40,10 +40,10 @@ import {
   StreamDeduplicator as Deduplicator,
   StreamPrecomputer as Precomputer,
   StreamUtils,
-} from './streams';
-import { getAddonName } from './utils/general';
-import { TMDBMetadata } from './metadata/tmdb';
-import { Metadata } from './metadata/utils';
+} from './streams/index.js';
+import { getAddonName } from './utils/general.js';
+import { TMDBMetadata } from './metadata/tmdb.js';
+import { Metadata } from './metadata/utils.js';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
