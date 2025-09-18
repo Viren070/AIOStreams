@@ -1,15 +1,14 @@
-import { ParsedStream, UserData } from '../db';
-// import { constants, Env, createLogger } from '../utils';
-import * as constants from '../utils/constants';
-import { createLogger } from '../utils/logger';
+import { ParsedStream, UserData } from '../db/schemas.js';
+import * as constants from '../utils/constants.js';
+import { createLogger } from '../utils/logger.js';
 import {
   formatBytes,
   formatDuration,
   languageToCode,
   languageToEmoji,
   makeSmall,
-} from './utils';
-import { Env } from '../utils/env';
+} from './utils.js';
+import { Env } from '../utils/env.js';
 
 const logger = createLogger('formatter');
 
@@ -126,7 +125,6 @@ export abstract class BaseFormatter {
   private regexBuilder: BaseFormatterRegexBuilder;
   private precompiledNameFunction: CompiledParseFunction | null = null;
   private precompiledDescriptionFunction: CompiledParseFunction | null = null;
-  private variableCache = new Map<string, ResolvedVariable>(); // future: add context & cache into precompiled functions
   
   private _compilationPromise: Promise<void>;
   
@@ -158,16 +156,6 @@ export abstract class BaseFormatter {
     return {
       name: this.precompiledNameFunction(parseValue),
       description: this.precompiledDescriptionFunction(parseValue),
-    };
-  }
-
-  /**
-   * Get cache statistics for debugging/monitoring.
-   */
-  public getCacheStats(): { size: number; keys: string[] } {
-    return {
-      size: this.variableCache.size,
-      keys: Array.from(this.variableCache.keys())
     };
   }
 
@@ -311,6 +299,7 @@ export abstract class BaseFormatter {
   }
 
   protected async compileTemplate(str: string): Promise<CompiledParseFunction> {
+    if (!str) return () => '';
     let compiledMatchTemplateFns: CompiledVariableWInsertFn[] = [];
     
     // go through the string manually to find all valid variables (allows infinitely nested variables)
@@ -415,25 +404,24 @@ export abstract class BaseFormatter {
     let precompiledResolvedVariableFn = (parseValue: ParseValue): ResolvedVariable => {
       if (precompiledResolvedVariableFns.length == 1) return precompiledResolvedVariableFns[0](parseValue);
 
-      const resolvedVariablesWithContext = precompiledResolvedVariableFns.map(fn => fn(parseValue));
-      const reducedResolvedVarWContext = resolvedVariablesWithContext.reduce((prev, cur, i) => {
+      const resolvedVariables = precompiledResolvedVariableFns.map(fn => fn(parseValue));
+      const reducedResolvedVariable = resolvedVariables.reduce((prev, cur, i) => {
         if (prev.error !== undefined) return prev;
         if (cur.error !== undefined) return cur;
         // the comparator key between prev and cur (from splitOnComparators)
         const compareKey = foundComparators[i - 1] as keyof typeof ComparatorConstants.comparatorKeyToFuncs;
         const comparatorFn = ComparatorConstants.comparatorKeyToFuncs[compareKey];
-        // const combinedContext = [...prev.context, ...cur.context];
         
         try {
           const result = comparatorFn(prev.result, cur.result);
           const finalResult = { result: result };
-          return finalResult;  // { resolvedVariable: finalResult, context: combinedContext };
+          return finalResult;
         } catch (e) {
           const errorResult = { error: `{unable_to_compare(<${prev.result}>::${compareKey}::<${cur.result}>, ${e})}` };
-          return errorResult;  // { resolvedVariable: errorResult, context: combinedContext };
+          return errorResult;
         }
       });
-      return reducedResolvedVarWContext;
+      return reducedResolvedVariable;
     }; // end of COMPARATOR logic
 
 
