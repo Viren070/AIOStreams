@@ -133,5 +133,3 @@ export class MarvelPreset extends Preset {
     return cacheKey;
   }
 }
-
-

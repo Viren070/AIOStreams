@@ -75,5 +75,3 @@ export class ZileanPreset extends TorznabPreset {
     return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
   }
 }
-
-

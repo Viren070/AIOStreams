@@ -391,5 +391,3 @@ export class TMDBAddonPreset extends Preset {
     return cacheKey;
   }
 }
-
-

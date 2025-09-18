@@ -270,5 +270,3 @@ export class StremthruTorzPreset extends StremThruPreset {
     return this.getServiceCredential(serviceId, userData);
   }
 }
-
-

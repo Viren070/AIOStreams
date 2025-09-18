@@ -268,5 +268,3 @@ export class WebStreamrPreset extends Preset {
     return `${url}${config ? '/' + config : ''}/manifest.json`;
   }
 }
-
-

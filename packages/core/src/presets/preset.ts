@@ -274,5 +274,3 @@ export abstract class Preset {
     return apiKey;
   }
 }
-
-

@@ -504,5 +504,3 @@ export class MoreLikeThisPreset extends Preset {
     }
   }
 }
-
-

@@ -524,5 +524,3 @@ export class MediaFusionPreset extends Preset {
     return encodedUserData;
   }
 }
-
-

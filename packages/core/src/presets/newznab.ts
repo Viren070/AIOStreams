@@ -146,5 +146,3 @@ export class NewznabPreset extends BuiltinAddonPreset {
     return `${this.METADATA.URL}/${configString}/manifest.json`;
   }
 }
-
-

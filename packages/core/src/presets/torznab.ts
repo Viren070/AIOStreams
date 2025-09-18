@@ -162,5 +162,3 @@ export class TorznabPreset extends BuiltinAddonPreset {
     return `${this.METADATA.URL}/${configString}/manifest.json`;
   }
 }
-
-

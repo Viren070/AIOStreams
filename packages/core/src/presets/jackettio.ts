@@ -195,5 +195,3 @@ export class JackettioPreset extends StremThruPreset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

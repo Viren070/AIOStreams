@@ -112,5 +112,3 @@ export class ContentDeepDivePreset extends Preset {
     return `${url}/manifest.json`;
   }
 }
-
-

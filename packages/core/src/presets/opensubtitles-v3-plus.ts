@@ -220,5 +220,3 @@ export class OpenSubtitlesV3PlusPreset extends Preset {
     return `${host}/${config}/manifest.json`;
   }
 }
-
-

@@ -912,5 +912,3 @@ export class TmdbCollectionsPreset extends Preset {
     return `${url}/${config}/manifest.json`;
   }
 }
-
-

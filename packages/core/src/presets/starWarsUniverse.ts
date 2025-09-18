@@ -161,5 +161,3 @@ export class StarWarsUniversePreset extends Preset {
     return cacheKey;
   }
 }
-
-

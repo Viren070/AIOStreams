@@ -436,5 +436,3 @@ export class AIOSubtitlePreset extends Preset {
     return `${host}/stremio/${configString}/manifest.json`;
   }
 }
-
-

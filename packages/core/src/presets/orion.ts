@@ -1,4 +1,11 @@
-import { Addon, Option, UserData, Resource, ParsedStream, Stream } from '../db/index.js';
+import {
+  Addon,
+  Option,
+  UserData,
+  Resource,
+  ParsedStream,
+  Stream,
+} from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
@@ -188,5 +195,3 @@ export class OrionPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

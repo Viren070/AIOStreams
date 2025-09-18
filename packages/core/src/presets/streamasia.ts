@@ -1,4 +1,11 @@
-import { Addon, Option, UserData, Resource, Stream, ParsedStream } from '../db/index.js';
+import {
+  Addon,
+  Option,
+  UserData,
+  Resource,
+  Stream,
+  ParsedStream,
+} from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { createLogger, Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
@@ -445,5 +452,3 @@ there is no need to provide these details here.
     return encodedUserData;
   }
 }
-
-

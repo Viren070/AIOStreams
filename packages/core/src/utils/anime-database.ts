@@ -1,6 +1,5 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { z, ZodError } from 'zod';
 import {
   getDataFolder,
   makeRequest,
@@ -8,7 +7,6 @@ import {
   IdParser,
   IdType,
   ID_TYPES,
-  formatZodError,
   DistributedLock,
   Env,
 } from './index.js';
@@ -126,37 +124,196 @@ const extractIdFromUrl: {
   },
 };
 
-// --- Zod Schemas and Types ---
+// --- Types and Interfaces ---
 
-const AnimeType = z.enum(['TV', 'SPECIAL', 'OVA', 'MOVIE', 'ONA', 'UNKNOWN']);
-const AnimeStatus = z.enum([
-  'CURRENT',
-  'FINISHED',
-  'UPCOMING',
-  'UNKNOWN',
-  'ONGOING',
-]);
-const AnimeSeason = z.enum(['WINTER', 'SPRING', 'SUMMER', 'FALL', 'UNDEFINED']);
-// Schema for Fribb's Mappings
-const MappingEntrySchema = z
-  .object({
-    'anime-planet_id': z.union([z.string(), z.number()]).optional(),
-    animecountdown_id: z.number().optional(),
-    anidb_id: z.number().optional(),
-    anilist_id: z.number().optional(),
-    anisearch_id: z.number().optional(),
-    imdb_id: z.string().optional().nullable(),
-    kitsu_id: z.number().optional(),
-    livechart_id: z.number().optional(),
-    mal_id: z.number().optional(),
-    'notify.moe_id': z.string().optional(),
-    simkl_id: z.number().optional(),
-    themoviedb_id: z.coerce.number().optional(),
-    thetvdb_id: z.number().optional().nullable(),
-    trakt_id: z.number().optional(),
-    type: AnimeType,
-  })
-  .transform((data) => ({
+enum AnimeType {
+  TV = 'TV',
+  SPECIAL = 'SPECIAL',
+  OVA = 'OVA',
+  MOVIE = 'MOVIE',
+  ONA = 'ONA',
+  UNKNOWN = 'UNKNOWN',
+}
+
+enum AnimeStatus {
+  CURRENT = 'CURRENT',
+  FINISHED = 'FINISHED',
+  UPCOMING = 'UPCOMING',
+  UNKNOWN = 'UNKNOWN',
+  ONGOING = 'ONGOING',
+}
+
+enum AnimeSeason {
+  WINTER = 'WINTER',
+  SPRING = 'SPRING',
+  SUMMER = 'SUMMER',
+  FALL = 'FALL',
+  UNDEFINED = 'UNDEFINED',
+}
+// Interfaces and Types
+interface MappingEntry {
+  animePlanetId?: string | number;
+  animecountdownId?: number;
+  anidbId?: number;
+  anilistId?: number;
+  anisearchId?: number;
+  imdbId?: string | null;
+  kitsuId?: number;
+  livechartId?: number;
+  malId?: number;
+  notifyMoeId?: string;
+  simklId?: number;
+  themoviedbId?: number;
+  thetvdbId?: number | null;
+  traktId?: number;
+  type: AnimeType;
+}
+
+interface ManamiEntry {
+  sources: string[];
+  title: string;
+  type: AnimeType;
+  episodes: number;
+  status: AnimeStatus;
+  animeSeason: {
+    season: AnimeSeason;
+    year: number | null;
+  };
+  picture: string | null;
+  thumbnail: string | null;
+  duration: {
+    value: number;
+    unit: 'SECONDS';
+  } | null;
+  score: {
+    arithmeticGeometricMean: number;
+    arithmeticMean: number;
+    median: number;
+  } | null;
+  synonyms: string[];
+  studios: string[];
+  producers: string[];
+  relatedAnime: string[];
+  tags: string[];
+}
+
+interface MinimisedManamiEntry {
+  title: string;
+  animeSeason: {
+    season: AnimeSeason;
+    year: number | null;
+  };
+  synonyms: string[];
+}
+
+interface KitsuEntry {
+  fanartLogoId?: number;
+  tvdbId?: number;
+  imdbId?: string;
+  title?: string;
+  fromSeason?: number;
+  fromEpisode?: number;
+}
+
+interface ExtendedAnitraktMovieEntry {
+  myanimelist: {
+    title: string;
+    id: number;
+  };
+  trakt: {
+    title: string;
+    id: number;
+    slug: string;
+    type: 'movies';
+  };
+  releaseYear: number;
+  externals: {
+    tmdb?: number | null;
+    imdb?: string | null;
+    letterboxd?: {
+      slug: string | null;
+      lid: string | null;
+      uid: number | null;
+    } | null;
+  };
+}
+
+interface ExtendedAnitraktTvEntry {
+  myanimelist: {
+    title: string;
+    id: number;
+  };
+  trakt: {
+    title: string;
+    id: number;
+    slug: string;
+    type: 'shows';
+    isSplitCour: boolean;
+    season: {
+      id: number;
+      number: number;
+      externals: {
+        tvdb: number | null;
+        tmdb: number | null;
+        imdb?: string | null;
+      };
+    } | null;
+  };
+  releaseYear: number;
+  externals: {
+    tvdb?: number | null;
+    tmdb?: number | null;
+    imdb?: string | null;
+  };
+}
+
+interface AnimeEntry {
+  mappings?: Record<string, string | number | null | undefined>;
+  imdb?: {
+    fromImdbSeason?: number;
+    fromImdbEpisode?: number;
+    title?: string;
+  } | null;
+  fanart?: {
+    logoId: number;
+  } | null;
+  trakt?: {
+    title: string;
+    slug: string;
+    isSplitCour?: boolean;
+    season?: {
+      id: number;
+      number: number;
+      externals: {
+        tvdb: number | null;
+        tmdb: number | null;
+        imdb?: string | null;
+      };
+    } | null;
+  } | null;
+  title?: string;
+  animeSeason?: {
+    season: AnimeSeason;
+    year: number | null;
+  };
+  synonyms?: string[];
+}
+
+// Validation functions
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validateMappingEntry(data: any): MappingEntry | null {
+  if (!data || typeof data !== 'object') return null;
+
+  // Transform raw data to match our interface
+  const entry: MappingEntry = {
     animePlanetId: data['anime-planet_id'],
     animecountdownId: data['animecountdown_id'],
     anidbId: data['anidb_id'],
@@ -168,140 +325,153 @@ const MappingEntrySchema = z
     malId: data['mal_id'],
     notifyMoeId: data['notify.moe_id'],
     simklId: data['simkl_id'],
-    themoviedbId: data['themoviedb_id'],
+    themoviedbId:
+      typeof data['themoviedb_id'] === 'string'
+        ? parseInt(data['themoviedb_id'])
+        : data['themoviedb_id'],
     thetvdbId: data['thetvdb_id'],
     traktId: data['trakt_id'],
     type: data['type'],
-  }));
-type MappingEntry = z.infer<typeof MappingEntrySchema>;
+  };
 
-// Schema for Manami's Database
-const ManamiEntrySchema = z.object({
-  sources: z.array(z.url()),
-  title: z.string(),
-  type: AnimeType,
-  episodes: z.number(),
-  status: AnimeStatus,
-  animeSeason: z.object({
-    season: AnimeSeason,
-    year: z.number().nullable(),
-  }),
-  picture: z.url().nullable(),
-  thumbnail: z.url().nullable(),
-  duration: z
-    .object({
-      value: z.number(),
-      unit: z.enum(['SECONDS']),
-    })
-    .nullable(),
-  score: z
-    .object({
-      arithmeticGeometricMean: z.number(),
-      arithmeticMean: z.number(),
-      median: z.number(),
-    })
-    .nullable(),
-  synonyms: z.array(z.string()),
-  studios: z.array(z.string()),
-  producers: z.array(z.string()),
-  relatedAnime: z.array(z.url()),
-  tags: z.array(z.string()),
-});
-type ManamiEntry = z.infer<typeof ManamiEntrySchema>;
+  // Validate type
+  if (!Object.values(AnimeType).includes(entry.type)) {
+    return null;
+  }
 
-const MinimisedManamiEntrySchema = ManamiEntrySchema.pick({
-  title: true,
-  animeSeason: true,
-  synonyms: true,
-});
-type MinimisedManamiEntry = z.infer<typeof MinimisedManamiEntrySchema>;
+  return entry;
+}
 
-const KitsuEntrySchema = z
-  .object({
-    fanartLogoId: z.coerce.number().optional(),
-    tvdb_id: z.coerce.number().optional(),
-    imdb_id: z.string().optional(),
-    title: z.string().optional(),
-    fromSeason: z.number().optional(),
-    fromEpisode: z.number().optional(),
-  })
-  .transform((data) => ({
-    fanartLogoId: data.fanartLogoId,
-    tvdbId: data.tvdb_id,
+function validateManamiEntry(data: any): ManamiEntry | null {
+  if (!data || typeof data !== 'object') return null;
+
+  // Basic type checks
+  if (!Array.isArray(data.sources) || !data.sources.every(isValidUrl))
+    return null;
+  if (typeof data.title !== 'string') return null;
+  if (!Object.values(AnimeType).includes(data.type)) return null;
+  if (typeof data.episodes !== 'number') return null;
+  if (!Object.values(AnimeStatus).includes(data.status)) return null;
+
+  // Validate animeSeason
+  if (
+    !data.animeSeason ||
+    !Object.values(AnimeSeason).includes(data.animeSeason.season) ||
+    (data.animeSeason.year !== null &&
+      typeof data.animeSeason.year !== 'number')
+  ) {
+    return null;
+  }
+
+  // Validate arrays
+  if (
+    !Array.isArray(data.synonyms) ||
+    !data.synonyms.every((s: unknown) => typeof s === 'string')
+  )
+    return null;
+  if (
+    !Array.isArray(data.studios) ||
+    !data.studios.every((s: unknown) => typeof s === 'string')
+  )
+    return null;
+  if (
+    !Array.isArray(data.producers) ||
+    !data.producers.every((s: unknown) => typeof s === 'string')
+  )
+    return null;
+  if (
+    !Array.isArray(data.relatedAnime) ||
+    !data.relatedAnime.every((s: unknown) => isValidUrl(s as string))
+  )
+    return null;
+  if (
+    !Array.isArray(data.tags) ||
+    !data.tags.every((s: unknown) => typeof s === 'string')
+  )
+    return null;
+
+  return data as ManamiEntry;
+}
+
+function validateKitsuEntry(data: any): KitsuEntry | null {
+  if (!data || typeof data !== 'object') return null;
+
+  const entry: KitsuEntry = {
+    fanartLogoId:
+      typeof data.fanartLogoId === 'string'
+        ? parseInt(data.fanartLogoId)
+        : data.fanartLogoId,
+    tvdbId:
+      typeof data.tvdb_id === 'string' ? parseInt(data.tvdb_id) : data.tvdb_id,
     imdbId: data.imdb_id,
     title: data.title,
     fromSeason: data.fromSeason,
     fromEpisode: data.fromEpisode,
-  }));
-type KitsuEntry = z.infer<typeof KitsuEntrySchema>;
+  };
 
-const ExtendedAnitraktMovieEntrySchema = z
-  .object({
-    myanimelist: z.object({
-      title: z.string(),
-      id: z.number(),
-    }),
-    trakt: z.object({
-      title: z.string(),
-      id: z.number(),
-      slug: z.string(),
-      type: z.literal('movies'),
-    }),
-    release_year: z.number(),
-    externals: z.object({
-      tmdb: z.number().optional().nullable(),
-      imdb: z.string().optional().nullable(),
-      letterboxd: z
-        .object({
-          slug: z.string().nullable(),
-          lid: z.string().nullable(),
-          uid: z.number().nullable(),
-        })
-        .nullable(),
-    }),
-  })
-  .transform((data) => ({
+  // All fields are optional, just validate types
+  if (
+    entry.fanartLogoId !== undefined &&
+    typeof entry.fanartLogoId !== 'number'
+  )
+    return null;
+  if (entry.tvdbId !== undefined && typeof entry.tvdbId !== 'number')
+    return null;
+  if (entry.imdbId !== undefined && typeof entry.imdbId !== 'string')
+    return null;
+  if (entry.title !== undefined && typeof entry.title !== 'string') return null;
+  if (entry.fromSeason !== undefined && typeof entry.fromSeason !== 'number')
+    return null;
+  if (entry.fromEpisode !== undefined && typeof entry.fromEpisode !== 'number')
+    return null;
+
+  return entry;
+}
+
+function validateExtendedAnitraktMovieEntry(
+  data: any
+): ExtendedAnitraktMovieEntry | null {
+  if (!data || typeof data !== 'object') return null;
+
+  // Validate required nested objects
+  if (!data.myanimelist?.title || typeof data.myanimelist.id !== 'number')
+    return null;
+  if (
+    !data.trakt?.title ||
+    typeof data.trakt.id !== 'number' ||
+    typeof data.trakt.slug !== 'string' ||
+    data.trakt.type !== 'movies'
+  )
+    return null;
+  if (typeof data.release_year !== 'number') return null;
+
+  return {
     myanimelist: data.myanimelist,
     trakt: data.trakt,
     releaseYear: data.release_year,
     externals: data.externals,
-  }));
-type ExtendedAnitraktMovieEntry = z.infer<
-  typeof ExtendedAnitraktMovieEntrySchema
->;
+  };
+}
 
-const ExtendedAnitraktTvEntrySchema = z
-  .object({
-    myanimelist: z.object({
-      title: z.string(),
-      id: z.number(),
-    }),
-    trakt: z.object({
-      title: z.string(),
-      id: z.number(),
-      slug: z.string(),
-      type: z.literal('shows'),
-      is_split_cour: z.boolean(),
-      season: z
-        .object({
-          id: z.number(),
-          number: z.number(),
-          externals: z.object({
-            tvdb: z.number().nullable(),
-            tmdb: z.number().nullable(),
-            imdb: z.string().optional().nullable(),
-          }),
-        })
-        .nullable(),
-    }),
-    release_year: z.number(),
-    externals: z.object({
-      tvdb: z.number().optional().nullable(),
-      tmdb: z.number().optional().nullable(),
-      imdb: z.string().optional().nullable(),
-    }),
-  })
-  .transform((data) => ({
+function validateExtendedAnitraktTvEntry(
+  data: any
+): ExtendedAnitraktTvEntry | null {
+  if (!data || typeof data !== 'object') return null;
+
+  // Validate required nested objects
+  if (!data.myanimelist?.title || typeof data.myanimelist.id !== 'number')
+    return null;
+  if (
+    !data.trakt?.title ||
+    typeof data.trakt.id !== 'number' ||
+    typeof data.trakt.slug !== 'string' ||
+    data.trakt.type !== 'shows' ||
+    typeof data.trakt.is_split_cour !== 'boolean'
+  )
+    return null;
+  if (typeof data.release_year !== 'number') return null;
+
+  return {
     myanimelist: data.myanimelist,
     trakt: {
       title: data.trakt.title,
@@ -313,61 +483,8 @@ const ExtendedAnitraktTvEntrySchema = z
     },
     releaseYear: data.release_year,
     externals: data.externals,
-  }));
-
-type ExtendedAnitraktTvEntry = z.infer<typeof ExtendedAnitraktTvEntrySchema>;
-
-const AnimeEntrySchema = z
-  .object({
-    mappings: z
-      .record(
-        z.string(),
-        z.union([z.string(), z.number(), z.null(), z.undefined()])
-      )
-      .optional(),
-    imdb: z
-      .object({
-        fromImdbSeason: z.number().optional(),
-        fromImdbEpisode: z.number().optional(),
-        title: z.string().optional(),
-      })
-      .nullable(),
-    fanart: z
-      .object({
-        logoId: z.number(),
-      })
-      .nullable(),
-    trakt: z
-      .object({
-        title: z.string(),
-        slug: z.string(),
-        isSplitCour: z.boolean().optional(),
-        season: z
-          .object({
-            id: z.number(),
-            number: z.number(),
-            externals: z.object({
-              tvdb: z.number().nullable(),
-              tmdb: z.number().nullable(),
-              imdb: z.string().nullable().optional(),
-            }),
-          })
-          .nullable()
-          .optional(),
-      })
-      .nullable(),
-    title: z.string().optional(),
-    animeSeason: z
-      .object({
-        season: AnimeSeason,
-        year: z.number().nullable(),
-      })
-      .optional(),
-    synonyms: z.array(z.string()).optional(),
-  })
-  .nullable();
-
-type AnimeEntry = z.infer<typeof AnimeEntrySchema>;
+  };
+}
 
 type MappingIdMap = Map<IdType, Map<string | number, MappingEntry>>;
 type ManamiIdMap = Map<
@@ -430,11 +547,9 @@ export class AnimeDatabase {
     }
 
     logger.info('Starting initial refresh of all anime data sources...');
-    // Perform initial fetch for all datasets concurrently
-    const refreshPromises = Object.values(DATA_SOURCES).map((dataSource) =>
-      this.refreshDataSource(dataSource)
-    );
-    await Promise.all(refreshPromises);
+    for (const dataSource of Object.values(DATA_SOURCES)) {
+      await this.refreshDataSource(dataSource);
+    }
 
     this.setupAllRefreshIntervals();
     this.isInitialised = true;
@@ -451,7 +566,10 @@ export class AnimeDatabase {
     return false;
   }
 
-  public getEntryById(idType: IdType, idValue: string | number): AnimeEntry {
+  public getEntryById(
+    idType: IdType,
+    idValue: string | number
+  ): AnimeEntry | null {
     const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
       map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
 
@@ -600,6 +718,7 @@ export class AnimeDatabase {
           logger.info(`[${source.name}] Source is up to date.`);
         }
         await this[source.loader]();
+        break;
       } catch (error) {
         logger.error(
           `[${source.name}] Failed to refresh: ${error}. Will retry ${attempt === 0 ? '1 more time' : 'on next refresh interval'}.`
@@ -622,7 +741,7 @@ export class AnimeDatabase {
         DATA_SOURCES.fribbMappings.name + ' data must be an array'
       );
 
-    const validEntries = this.validateEntries(data, MappingEntrySchema);
+    const validEntries = this.validateEntries(data, validateMappingEntry);
 
     const newMappingsById: MappingIdMap = new Map();
 
@@ -657,7 +776,7 @@ export class AnimeDatabase {
     if (!Array.isArray(data.data))
       throw new Error(DATA_SOURCES.manami.name + ' data must be an array');
 
-    const validEntries = this.validateEntries(data.data, ManamiEntrySchema);
+    const validEntries = this.validateEntries(data.data, validateManamiEntry);
 
     const newManamiById: ManamiIdMap = new Map();
     const idTypes = Object.keys(extractIdFromUrl) as Exclude<
@@ -716,15 +835,15 @@ export class AnimeDatabase {
 
     const data = JSON.parse(fileContents);
 
-    // Validate each entry using the schema
+    // Validate each entry
     this.dataStore.kitsuById = new Map();
     for (const [kitsuId, kitsuEntry] of Object.entries(data)) {
-      const parsed = KitsuEntrySchema.safeParse(kitsuEntry);
-      if (parsed.success) {
-        this.dataStore.kitsuById.set(Number(kitsuId), parsed.data);
+      const validated = validateKitsuEntry(kitsuEntry);
+      if (validated !== null) {
+        this.dataStore.kitsuById.set(Number(kitsuId), validated);
       } else {
         logger.warn(
-          `[${DATA_SOURCES.kitsuImdb.name}] Skipping invalid entry for kitsuId ${kitsuId}: ${formatZodError(parsed.error)}`
+          `[${DATA_SOURCES.kitsuImdb.name}] Skipping invalid entry for kitsuId ${kitsuId}`
         );
       }
     }
@@ -749,7 +868,7 @@ export class AnimeDatabase {
 
     const validEntries = this.validateEntries(
       data,
-      ExtendedAnitraktMovieEntrySchema
+      validateExtendedAnitraktMovieEntry
     );
 
     const newExtendedAnitraktMoviesById: ExtendedAnitraktMoviesIdMap =
@@ -778,7 +897,7 @@ export class AnimeDatabase {
 
     const validEntries = this.validateEntries(
       data,
-      ExtendedAnitraktTvEntrySchema
+      validateExtendedAnitraktTvEntry
     );
 
     const newExtendedAnitraktTvById: ExtendedAnitraktTvIdMap = new Map();
@@ -794,18 +913,19 @@ export class AnimeDatabase {
 
   // --- Generic File and Network Helpers ---
 
-  private validateEntries<T extends z.ZodTypeAny>(
+  private validateEntries<T>(
     entries: unknown[],
-    schema: T
-  ): z.infer<T>[] {
-    const validEntries: z.infer<T>[] = [];
+    validator: (data: any) => T | null
+  ): T[] {
+    const validEntries: T[] = [];
     for (const entry of entries) {
-      const parsed = schema.safeParse(entry);
-      if (parsed.success) {
-        validEntries.push(parsed.data);
+      const validated = validator(entry);
+      if (validated !== null) {
+        validEntries.push(validated);
       } else {
-        logger.warn(`Skipping invalid entry: ${formatZodError(parsed.error)}`);
-        logger.verbose(`Invalid entry: ${JSON.stringify(entry, null, 2)}`);
+        logger.warn(
+          `Skipping invalid entry: ${JSON.stringify(entry, null, 2)}`
+        );
       }
     }
     return validEntries;

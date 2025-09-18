@@ -224,5 +224,3 @@ export class CometPreset extends StremThruPreset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

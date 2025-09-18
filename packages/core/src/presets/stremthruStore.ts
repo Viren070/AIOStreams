@@ -187,5 +187,3 @@ export class StremthruStorePreset extends StremThruPreset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

@@ -184,5 +184,3 @@ export class SubDLPreset extends Preset {
     return `${host}/${config}/manifest.json`;
   }
 }
-
-

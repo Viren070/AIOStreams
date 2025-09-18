@@ -306,5 +306,3 @@ export class AISearchPreset extends Preset {
     }
   }
 }
-
-

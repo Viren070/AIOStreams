@@ -58,5 +58,3 @@ export class OpenSubtitlesPreset extends Preset {
     };
   }
 }
-
-

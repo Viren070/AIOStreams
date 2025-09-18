@@ -1,4 +1,11 @@
-import { Addon, Option, UserData, Resource, Stream, ParsedStream } from '../db/index.js';
+import {
+  Addon,
+  Option,
+  UserData,
+  Resource,
+  Stream,
+  ParsedStream,
+} from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { Env, SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
@@ -310,5 +317,3 @@ export class TorrentioPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

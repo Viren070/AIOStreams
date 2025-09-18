@@ -60,5 +60,3 @@ export class TorrentCatalogsPreset extends Preset {
     };
   }
 }
-
-

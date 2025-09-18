@@ -143,5 +143,3 @@ export class CustomPreset extends Preset {
     };
   }
 }
-
-

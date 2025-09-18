@@ -33,7 +33,7 @@ function convertStremThruError(error: StremThruError): DebridError {
 
 export class StremThruInterface implements DebridService {
   private readonly stremthru: StremThru;
-  private static playbackLinkCache = Cache.getInstance<string, string>(
+  private static playbackLinkCache = Cache.getInstance<string, string | null>(
     'st:link'
   );
   private static checkCache = Cache.getInstance<string, DebridDownload>(
@@ -197,9 +197,9 @@ export class StremThruInterface implements DebridService {
       magnet += `&tr=${playbackInfo.sources.join('&tr=')}`;
     }
 
-    if (cachedLink) {
+    if (cachedLink !== undefined) {
       logger.debug(`Using cached link for ${hash}`);
-      return cachedLink;
+      return cachedLink ?? undefined;
     }
 
     logger.debug(`Adding magnet to ${this.serviceName} for ${magnet}`);
@@ -212,6 +212,8 @@ export class StremThruInterface implements DebridService {
     });
 
     if (magnetDownload.status !== 'downloaded') {
+      // temporarily cache the null value for 1m
+      StremThruInterface.playbackLinkCache.set(cacheKey, null, 60);
       return undefined;
     }
 

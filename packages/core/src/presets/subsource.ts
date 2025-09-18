@@ -224,5 +224,3 @@ export class SubSourcePreset extends Preset {
     return `${host}/${config}/manifest.json`;
   }
 }
-
-

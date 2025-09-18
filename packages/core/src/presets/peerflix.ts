@@ -181,5 +181,3 @@ export class PeerflixPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

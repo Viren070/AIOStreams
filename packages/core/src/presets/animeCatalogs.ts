@@ -319,4 +319,3 @@ export class AnimeCatalogsPreset extends Preset {
     return cacheKey;
   }
 }
-

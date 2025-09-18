@@ -46,7 +46,9 @@ export class StremioTransformer {
   private async convertParsedStreamToStream(
     stream: ParsedStream,
     formatter: {
-      format: (stream: ParsedStream) => Promise<{ name: string; description: string }>;
+      format: (
+        stream: ParsedStream
+      ) => Promise<{ name: string; description: string }>;
     },
     index: number,
     provideStreamData: boolean
@@ -327,7 +329,9 @@ export class StremioTransformer {
 
     // Create formatter for stream conversion if needed
     let formatter: {
-      format: (stream: ParsedStream) => Promise<{ name: string; description: string }>;
+      format: (
+        stream: ParsedStream
+      ) => Promise<{ name: string; description: string }>;
     } | null = null;
     if (
       meta.videos?.some((video) => video.streams && video.streams.length > 0)

@@ -151,5 +151,3 @@ export class DebridioPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

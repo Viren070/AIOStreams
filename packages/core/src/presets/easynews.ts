@@ -115,5 +115,3 @@ export class EasynewsPreset extends Preset {
     return `${url}/${this.generateConfig(easynewsCredentials, options)}/manifest.json`;
   }
 }
-
-

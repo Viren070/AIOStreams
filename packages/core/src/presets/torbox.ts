@@ -1,4 +1,10 @@
-import { Addon, Option, UserData, Resource, ParsedStream } from '../db/index.js';
+import {
+  Addon,
+  Option,
+  UserData,
+  Resource,
+  ParsedStream,
+} from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
@@ -167,5 +173,3 @@ export class TorboxAddonPreset extends Preset {
     return `${url}/${torboxApiKey}/manifest.json`;
   }
 }
-
-

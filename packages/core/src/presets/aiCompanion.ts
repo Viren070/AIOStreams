@@ -330,5 +330,3 @@ export class AICompanionPreset extends Preset {
     }
   }
 }
-
-

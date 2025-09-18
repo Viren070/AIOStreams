@@ -109,5 +109,3 @@ export class RpdbCatalogsPreset extends Preset {
     return cacheKey;
   }
 }
-
-

@@ -275,5 +275,3 @@ export class StreamFusionPreset extends Preset {
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;
   }
 }
-
-

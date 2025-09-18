@@ -116,5 +116,3 @@ export class USATVPreset extends Preset {
     };
   }
 }
-
-

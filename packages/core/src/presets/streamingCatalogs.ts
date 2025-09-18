@@ -220,5 +220,3 @@ export class StreamingCatalogsPreset extends Preset {
     return cacheKey;
   }
 }
-
-

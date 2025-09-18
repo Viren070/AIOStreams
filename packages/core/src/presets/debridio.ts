@@ -17,5 +17,3 @@ export const debridioApiKeyOption: Option = {
 };
 
 export const debridioLogo = 'https://cdn.lb.debridio.com/site/logo.png';
-
-
