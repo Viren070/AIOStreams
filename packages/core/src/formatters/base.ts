@@ -317,7 +317,7 @@ export abstract class BaseFormatter {
     // go through the string manually to find all valid variables (allows infinitely nested variables)
     const re = this.regexBuilder.buildRegexExpression();
     let leftBracketIndices: number[] = [];
-    let i = -1;
+    let i = str.indexOf("{") - 1;
     // todo navigate to start/ends of variables via .indexOf("{") and/or .lastIndexOf("}")
     while (++i < str.length) {
       if (!['{', '}'].includes(str[i])) continue;
@@ -340,11 +340,12 @@ export abstract class BaseFormatter {
 			// create a non-whitespaced placeholder for anything that allows whitespace
 			// replace all whitespace
 			// replace all placeholders with the original value (that allows whitespace)
-			const hardcodedModifiersForRegexMatching = Object.keys(ModifierConstants.hardcodedModifiersForRegexMatching);
-			const splitVariable = variable.split(new RegExp("(::|\\[)"));
+			const splitVariable = variable.split(new RegExp(this.regexBuilder.buildModifierRegexPattern()));
 
 			// TODO: replace hardcodedModifiersForRegexMatching and check TF with placeholders
 			// replace spaces in checkTF manually
+
+
 
 
       // determine if any variables were within this nested variable, if so, replace
@@ -354,7 +355,26 @@ export abstract class BaseFormatter {
       // update compiledMatchTemplateFns by removing the nested variables
       compiledMatchTemplateFns = compiledMatchTemplateFns.filter(
         (fn) => !nestedVariablesWIndices.includes(fn)
-      );
+			);
+			
+			// create mod_check from the potential variable
+			let mod_check:
+				| { mod_check_true: string; mod_check_false: string }
+				| undefined = undefined;
+			if (matches.groups!.mod_check) {
+				const [mod_check_start, mod_check_end] = [
+					variable.lastIndexOf('["') + 2,
+					variable.lastIndexOf('"]'),
+				];
+				const [mod_check_true, mod_check_false] = variable
+					.slice(mod_check_start, mod_check_end)
+					.split('"||"');
+				mod_check = {
+					mod_check_true: mod_check_true,
+					mod_check_false: mod_check_false,
+				};
+				variable = variable.slice(0, mod_check_start);
+			}
 
       const getResolvedVariable = (parseValue: ParseValue) => {
         // TODO: make mod_chuck only resolve values inside the check IF the current value is trye
@@ -373,27 +393,8 @@ export abstract class BaseFormatter {
               variable.slice(0, offset) + resolved + variable.slice(offset);
           });
 
-        // create mod_check from the potential variable
-        let mod_check:
-          | { mod_check_true: string; mod_check_false: string }
-          | undefined = undefined;
-        if (matches.groups!.mod_check) {
-          const [mod_check_start, mod_check_end] = [
-            variable.indexOf('["') + 2,
-            variable.lastIndexOf('"]'),
-          ];
-          const [mod_check_true, mod_check_false] = variable
-            .slice(mod_check_start, mod_check_end)
-            .split('"||"');
-          mod_check = {
-            mod_check_true: mod_check_true,
-            mod_check_false: mod_check_false,
-          };
-          variable = variable.slice(0, mod_check_start);
-        }
-
         console.log('Sending in variable: ', variable);
-        return this.parseVariable(variable, mod_check)(parseValue);
+        return this.parseVariable(variable, mod_check, { })(parseValue);
       };
       compiledMatchTemplateFns.push({
         resultFn: getResolvedVariable,
@@ -438,7 +439,8 @@ export abstract class BaseFormatter {
    */
   protected parseVariable(
     modifiedVariable: string,
-    mod_check?: { mod_check_true: string; mod_check_false: string }
+		mod_check: { mod_check_true: string; mod_check_false: string } | undefined,
+		fullStringModifiers: FullStringModifiers,
   ): (parseValue: ParseValue) => ResolvedVariable {
     // Split <var1_with_modifiers>>::<comparator1>::<var2_with_modifiers>>... into variableWithModifiers array and comparators array
     const splitOnComparators = modifiedVariable.split(
@@ -453,7 +455,7 @@ export abstract class BaseFormatter {
     );
     let precompiledResolvedVariableFns: CompiledModifiedVariableFn[] =
       variableWithModifiers.map((baseString) =>
-        this.parseModifiedVariable(baseString)
+        this.parseModifiedVariable(baseString, fullStringModifiers)
       );
 
     // COMPARATOR logic: compare all ResolvedVariables against each other to make one ResolvedVariable (as precompiled wrapper function (parseValue) => ResolvedVariable)
@@ -523,7 +525,8 @@ export abstract class BaseFormatter {
    * @returns (parseValue) => `{ result: <resolved modified variable> }` or `{ error: "<errorMessage>" }`
    */
   protected parseModifiedVariable(
-    baseString: string
+		baseString: string,
+		fullStringModifiers: FullStringModifiers,
   ): CompiledModifiedVariableFn {
     // get variableType and propertyName from baseString without regex
     const variableType = baseString.split('.')[0];
@@ -568,7 +571,7 @@ export abstract class BaseFormatter {
       // APPLY MULTIPLE MODIFIERS logic
       let result = property;
       for (const lastModMatched of sortedModMatches) {
-        result = this.applySingleModifier(result, lastModMatched);
+        result = this.applySingleModifier(result, lastModMatched, fullStringModifiers);
         if (result === undefined) {
           let getErrorResult = () => {
             switch (typeof property) {
@@ -610,7 +613,8 @@ export abstract class BaseFormatter {
    */
   protected applySingleModifier(
     variable: any,
-    mod: string
+		mod: string,
+		fullStringModifiers: FullStringModifiers,
   ): string | boolean | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
@@ -684,7 +688,23 @@ export abstract class BaseFormatter {
       if (mod in ModifierConstants.stringModifiers)
         return ModifierConstants.stringModifiers[
           mod as keyof typeof ModifierConstants.stringModifiers
-        ](variable);
+				](variable);
+			
+      // handle hardcoded modifiers here
+      switch (true) {
+        case mod.startsWith('replace(') && mod.endsWith(')'): {
+					const findStartChar = mod.charAt(8); // either " or '
+					const findEndChar = mod.charAt(mod.length - 2); // either " or '
+
+					// Extract the separator from replace(['"]...<matching'">, ['"]...<matching'">)
+					const content = _mod.substring(9, _mod.length - 2);
+
+					// split on findStartChar<whitespace?>,<whitespace?>findEndChar
+					const [key, replaceKey, shouldBeUndefined] = content.split(new RegExp(`${findStartChar}\\s*,\\s*${findEndChar}`))
+
+					if (!shouldBeUndefined && key && replaceKey) return variable.replaceAll(key, replaceKey);
+        }
+      }
     }
 
     // --- ARRAY MODIFIERS ---
@@ -775,6 +795,15 @@ class BaseFormatterRegexBuilder {
     return `::(${comparatorKeys.join('|')})::`;
   }
   /**
+   * RegEx Capture Pattern: `::<tzLocale>`
+   *
+   * (with named capture group `tzLocale`)
+   */
+  public buildTZLocaleRegexPattern(): string {
+    // TZ Locale pattern (e.g. 'UTC', 'GMT', 'EST', 'PST', 'en-US', 'en-GB', 'Europe/London', 'America/New_York')
+    return `::(?<mod_tzlocale>[A-Za-z]{2,3}(?:-[A-Z]{2})?|[A-Za-z]+?/[A-Za-z_]+?)`;
+  }
+  /**
    * RegEx Capture Pattern: `["<check_true>||<check_false>"]`
    *
    * (with named capture group `<mod_check_true>` and `<mod_check_false>` and `mod_check`=`"<check_true>||<check_false>"`)
@@ -793,10 +822,11 @@ class BaseFormatterRegexBuilder {
     const variable = this.buildVariableRegexPattern();
     const modifier = this.buildModifierRegexPattern();
     const comparator = this.buildComparatorRegexPattern();
+    const modTZLocale = this.buildTZLocaleRegexPattern();
     const checkTF = this.buildCheckRegexPattern();
 
     const variableAndModifiers = `${variable}(${modifier})*`;
-    const regexPattern = `\\{${variableAndModifiers}(${comparator}${variableAndModifiers})*(${checkTF})?\\}`;
+    const regexPattern = `\\{${variableAndModifiers}(${comparator}${variableAndModifiers})*(?<suffix>(${modTZLocale})?(${checkTF})?)\\}`;
 
     return new RegExp(`^${regexPattern}$`, 'i');
   }
@@ -805,6 +835,9 @@ class BaseFormatterRegexBuilder {
 /**
  * Static Constants
  */
+type FullStringModifiers = {
+  mod_tzlocale?: string;
+};
 class ModifierConstants {
   static stringModifiers = {
     upper: (value: string) => value.toUpperCase(),
@@ -877,6 +910,10 @@ class ModifierConstants {
   };
 
   static hardcodedModifiersForRegexMatching = {
+		"replace('.*?'\\s*?,\\s*?'.*?')": null,
+		"replace(\".*?\"\\s*?,\\s*?'.*?')": null,
+		"replace('.*?'\\s*?,\\s*?\".*?\")": null,
+		'replace(".*?"\\s*?,\\s*?\".*?\")': null,
     "join('.*?')": null,
     'join(".*?")': null,
     '$.*?': null,
