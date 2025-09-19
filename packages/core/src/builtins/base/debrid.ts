@@ -27,6 +27,7 @@ import { TitleMetadata } from '../torbox-search/source-handlers.js';
 import { MetadataService } from '../../metadata/service.js';
 import { Logger } from 'winston';
 import pLimit from 'p-limit';
+import { cleanTitle } from '../../parser/utils.js';
 
 export interface SearchMetadata extends TitleMetadata {
   primaryTitle?: string;
@@ -112,6 +113,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     let searchMetadata: SearchMetadata;
     try {
       searchMetadata = await this._getSearchMetadata(parsedId, type);
+      if (searchMetadata.primaryTitle) {
+        searchMetadata.primaryTitle = cleanTitle(searchMetadata.primaryTitle);
+        this.logger.debug(
+          `Cleaned primary title for ${id}: ${searchMetadata.primaryTitle}`
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to get search metadata for ${id}: ${error}`);
       return [

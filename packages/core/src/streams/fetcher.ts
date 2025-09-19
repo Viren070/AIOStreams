@@ -19,10 +19,14 @@ class StreamFetcher {
   private filter: StreamFilter;
   private precompute: StreamPrecompute;
   private deduplicate: StreamDeduplicator;
-  constructor(userData: UserData) {
+  constructor(
+    userData: UserData,
+    filter: StreamFilter,
+    precompute: StreamPrecompute
+  ) {
     this.userData = userData;
-    this.filter = new StreamFilter(userData);
-    this.precompute = new StreamPrecompute(userData);
+    this.filter = filter;
+    this.precompute = precompute;
     this.deduplicate = new StreamDeduplicator(userData);
   }
 
@@ -153,7 +157,7 @@ class StreamFetcher {
       const filteredStreams = await this.deduplicate.deduplicate(
         await this.filter.filter(groupStreams, type, id)
       );
-      await this.precompute.precompute(filteredStreams);
+      await this.precompute.precompute(filteredStreams, type, id);
 
       logger.info(
         `Finished fetching from group in ${getTimeTakenSincePoint(groupStart)}`

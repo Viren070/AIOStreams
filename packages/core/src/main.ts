@@ -103,11 +103,11 @@ export class AIOStreams {
     this.options = options;
     this.proxifier = new Proxifier(userData);
     this.limiter = new StreamLimiter(userData);
-    this.fetcher = new Fetcher(userData);
     this.filterer = new Filterer(userData);
+    this.precomputer = new Precomputer(userData);
+    this.fetcher = new Fetcher(userData, this.filterer, this.precomputer);
     this.deduplicator = new Deduplicator(userData);
     this.sorter = new Sorter(userData);
-    this.precomputer = new Precomputer(userData);
   }
 
   private setUserData(userData: UserData) {
@@ -213,6 +213,49 @@ export class AIOStreams {
               id,
             });
           });
+        });
+      }
+    }
+
+    const { filterDetails, includedDetails } =
+      this.filterer.getFormattedFilterDetails();
+
+    // append formatted filter statistics to the statistics array
+    // Helper to split details array into groups by 📌
+    function splitByPin(details: string[]): string[][] {
+      const groups: string[][] = [];
+      let currentGroup: string[] = [];
+      for (const line of details) {
+        if (line.trim().startsWith('📌')) {
+          if (currentGroup.length > 0) {
+            groups.push(currentGroup);
+          }
+          currentGroup = [line];
+        } else {
+          currentGroup.push(line);
+        }
+      }
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+      }
+      return groups;
+    }
+
+    if (filterDetails.length > 0) {
+      const removalGroups = splitByPin(filterDetails);
+      for (const group of removalGroups) {
+        statistics.push({
+          title: '🔍 Removal Reasons',
+          description: group.join('\n').trim(),
+        });
+      }
+    }
+    if (includedDetails.length > 0) {
+      const includedGroups = splitByPin(includedDetails);
+      for (const group of includedGroups) {
+        statistics.push({
+          title: '🔍 Included Reasons',
+          description: group.join('\n').trim(),
         });
       }
     }
@@ -1257,7 +1300,7 @@ export class AIOStreams {
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
 
     if (isMeta) {
-      await this.precomputer.precompute(processedStreams);
+      await this.precomputer.precompute(processedStreams, type, id);
     }
 
     let finalStreams = this.applyModifications(
@@ -1268,7 +1311,9 @@ export class AIOStreams {
               processedStreams,
               AnimeDatabase.getInstance().isAnime(id) ? 'anime' : type
             )
-          )
+          ),
+          type,
+          id
         )
       )
     ).map((stream) => {

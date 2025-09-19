@@ -7,6 +7,7 @@ import {
   formRegexFromKeywords,
   compileRegex,
   parseRegex,
+  AnimeDatabase,
 } from '../utils/index.js';
 import { StreamSelector } from '../parser/streamExpression.js';
 
@@ -19,7 +20,11 @@ class StreamPrecomputer {
     this.userData = userData;
   }
 
-  public async precompute(streams: ParsedStream[]) {
+  public async precompute(streams: ParsedStream[], type: string, id: string) {
+    let queryType = type;
+    if (AnimeDatabase.getInstance().isAnime(id)) {
+      queryType = 'anime';
+    }
     const preferredRegexPatterns =
       (await FeatureControl.isRegexAllowed(
         this.userData,
@@ -108,7 +113,7 @@ class StreamPrecomputer {
     }
 
     if (this.userData.preferredStreamExpressions?.length) {
-      const selector = new StreamSelector();
+      const selector = new StreamSelector(queryType);
       const streamToConditionIndex = new Map<string, number>();
 
       // Go through each preferred filter condition, from highest to lowest priority.

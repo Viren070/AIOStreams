@@ -294,25 +294,32 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         headers: this.getHeaders(),
         timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
       });
+
       const data = await response.text();
-      let result: any;
+
+      let result: any | null = null;
+      let parseError: Error | null = null;
       try {
         result = await this.xmlParser.parseStringPromise(data);
       } catch (error) {
-        this.logger.verbose(`Unexpected XML response: ${data}`);
-        throw error;
+        parseError = error as Error;
       }
       this.xmlParser.reset();
 
-      if (result.error) {
+      if (result && result.error) {
         const code = parseInt(result.error.$.code, 10);
         const description = result.error.$.description;
         throw new NabApiError(code, description);
       }
 
       if (!response.ok) {
+        throw new Error(`${response.status} - ${response.statusText}`);
+      }
+
+      if (parseError || !result) {
+        this.logger.error(`Unexpected XML response: ${data}`);
         throw new Error(
-          `${response.status} - ${response.statusText}${data ? `: ${data}` : ''}`
+          `Failed to parse XML response: ${parseError?.message ?? 'Unknown error'}`
         );
       }
 
