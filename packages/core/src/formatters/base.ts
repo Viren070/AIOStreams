@@ -135,10 +135,8 @@ export abstract class BaseFormatter {
     this.config = config;
     this.userData = userData;
 
-    const hardcodedParseValueKeysForRegexMatching =
-      this.convertStreamToParseValue({} as ParsedStream);
     this.regexBuilder = new BaseFormatterRegexBuilder(
-      hardcodedParseValueKeysForRegexMatching
+      this.convertStreamToParseValue({} as ParsedStream)
     );
 
     // Start template compilation asynchronously in the background
@@ -335,10 +333,19 @@ export abstract class BaseFormatter {
       if (leftBracketIndex === undefined) continue;
       // else, `{...}` found
       const potentialVariable = str.slice(leftBracketIndex, i + 1);
-      const matches = potentialVariable.match(re);
+      const matches = potentialVariable.replace(/\s+/g, '').match(re);
       if (!matches?.groups) continue;
-      // potential variable IS a valid variable
-      let variable = potentialVariable.slice(1, -1);
+      // potential variable IS a valid variable (though, it may have whitespace in it)
+			let variable = potentialVariable.slice(1, -1).trim();
+			// create a non-whitespaced placeholder for anything that allows whitespace
+			// replace all whitespace
+			// replace all placeholders with the original value (that allows whitespace)
+			const hardcodedModifiersForRegexMatching = Object.keys(ModifierConstants.hardcodedModifiersForRegexMatching);
+			const splitVariable = variable.split(new RegExp("(::|\\[)"));
+
+			// TODO: replace hardcodedModifiersForRegexMatching and check TF with placeholders
+			// replace spaces in checkTF manually
+
 
       // determine if any variables were within this nested variable, if so, replace
       const nestedVariablesWIndices = compiledMatchTemplateFns.filter(
@@ -379,11 +386,10 @@ export abstract class BaseFormatter {
             .slice(mod_check_start, mod_check_end)
             .split('"||"');
           mod_check = {
-            mod_check_true: mod_check_true ?? '',
-            mod_check_false: mod_check_false ?? '',
+            mod_check_true: mod_check_true,
+            mod_check_false: mod_check_false,
           };
           variable = variable.slice(0, mod_check_start);
-          // console.log("Sending in mod_check: ", mod_check);
         }
 
         console.log('Sending in variable: ', variable);
