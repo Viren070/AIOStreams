@@ -374,6 +374,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'TMDB API Key. Used for fetching metadata for the strict title matching option.',
   }),
+  TVDB_API_KEY: str({
+    default: undefined,
+    desc: 'TVDB API Key. Used for fetching metadata.',
+  }),
   TRAKT_CLIENT_ID: str({
     default: undefined,
     desc: 'Trakt Client ID. Used for fetching Trakt aliases.',

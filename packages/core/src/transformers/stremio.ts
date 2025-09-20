@@ -243,8 +243,8 @@ export class StremioTransformer {
       );
     }
 
-    if (this.userData.showStatistics) {
-      let position = this.userData.statisticsPosition || 'bottom';
+    if (this.userData.statistics?.enabled) {
+      let position = this.userData.statistics?.position || 'bottom';
       let statisticStreams = statistics.map((statistic) => ({
         name: statistic.title,
         description: statistic.description,

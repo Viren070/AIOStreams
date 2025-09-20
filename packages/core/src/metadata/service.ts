@@ -5,14 +5,16 @@ import { getTraktAliases } from './trakt.js';
 import { IMDBMetadata } from './imdb.js';
 import { createLogger, getTimeTakenSincePoint } from '../utils/logger.js';
 import { TYPES } from '../utils/constants.js';
-import { AnimeDatabase, ParsedId } from '../utils/index.js';
+import { AnimeDatabase, IdParser, ParsedId } from '../utils/index.js';
 import { Meta } from '../db/schemas.js';
+import { TVDBMetadata } from './tvdb.js';
 
 const logger = createLogger('metadata-service');
 
 export interface MetadataServiceConfig {
   tmdbAccessToken?: string;
   tmdbApiKey?: string;
+  tvdbApiKey?: string;
 }
 
 export class MetadataService {
@@ -48,18 +50,22 @@ export class MetadataService {
           id.value
         );
 
-        const tmdbId =
+        let tmdbId: number | null =
           id.type === 'themoviedbId'
-            ? id.value.toString()
-            : (animeEntry?.mappings?.themoviedbId?.toString() ?? null);
-        const imdbId =
+            ? Number(id.value)
+            : animeEntry?.mappings?.themoviedbId
+              ? Number(animeEntry.mappings.themoviedbId)
+              : null;
+        const imdbId: string | null =
           id.type === 'imdbId'
             ? id.value.toString()
             : (animeEntry?.mappings?.imdbId?.toString() ?? null);
-        const tvdbId =
+        let tvdbId: number | null =
           id.type === 'thetvdbId'
-            ? id.value.toString()
-            : (animeEntry?.mappings?.thetvdbId?.toString() ?? null);
+            ? Number(id.value)
+            : animeEntry?.mappings?.thetvdbId
+              ? Number(animeEntry.mappings.thetvdbId)
+              : null;
 
         if (animeEntry) {
           if (animeEntry.imdb?.title) titles.push(animeEntry.imdb.title);
@@ -73,17 +79,38 @@ export class MetadataService {
         const promises = [];
 
         // TMDB metadata
-
-        if (tmdbId || imdbId || tvdbId) {
-          let id = tmdbId
-            ? `tmdb:${tmdbId}`
-            : (imdbId ?? (tvdbId ? `tvdb:${tvdbId}` : null));
+        const idForTmdb = tmdbId
+          ? `tmdb:${tmdbId}`
+          : (imdbId ?? (tvdbId ? `tvdb:${tvdbId}` : null));
+        const parsedIdForTmdb = idForTmdb
+          ? IdParser.parse(idForTmdb, type)
+          : null;
+        if (parsedIdForTmdb) {
           promises.push(
             (async () => {
               return new TMDBMetadata({
                 accessToken: this.config.tmdbAccessToken,
                 apiKey: this.config.tmdbApiKey,
-              }).getMetadata(id!, type);
+              }).getMetadata(parsedIdForTmdb);
+            })()
+          );
+        } else {
+          promises.push(Promise.resolve(undefined));
+        }
+
+        // TVDB metadata
+        const idForTvdb = tvdbId
+          ? `tvdb:${tvdbId}`
+          : (imdbId ?? (tmdbId ? `tmdb:${tmdbId}` : null));
+        const parsedIdForTvdb = idForTvdb
+          ? IdParser.parse(idForTvdb, type)
+          : null;
+        if (parsedIdForTvdb) {
+          promises.push(
+            (async () => {
+              return new TVDBMetadata({
+                apiKey: this.config.tvdbApiKey,
+              }).getMetadata(parsedIdForTvdb);
             })()
           );
         } else {
@@ -105,17 +132,18 @@ export class MetadataService {
         }
 
         // Execute all promises in parallel
-        const [tmdbResult, traktResult, imdbResult] = (await Promise.allSettled(
-          promises
-        )) as [
-          PromiseSettledResult<Metadata | undefined>,
-          PromiseSettledResult<string[] | undefined>,
-          PromiseSettledResult<Meta | undefined>,
-        ];
+        const [tmdbResult, tvdbResult, traktResult, imdbResult] =
+          (await Promise.allSettled(promises)) as [
+            PromiseSettledResult<(Metadata & { tmdbId: string }) | undefined>,
+            PromiseSettledResult<(Metadata & { tvdbId: number }) | undefined>,
+            PromiseSettledResult<string[] | undefined>,
+            PromiseSettledResult<Meta | undefined>,
+          ];
 
         // Process TMDB results
         if (tmdbResult.status === 'fulfilled' && tmdbResult.value) {
           const tmdbMetadata = tmdbResult.value;
+          logger.debug(`TMDB metadata: ${JSON.stringify(tmdbMetadata)}`);
           if (tmdbMetadata.title) titles.unshift(tmdbMetadata.title);
           if (tmdbMetadata.titles) titles.push(...tmdbMetadata.titles);
           if (!year && tmdbMetadata.year) year = tmdbMetadata.year;
@@ -124,12 +152,26 @@ export class MetadataService {
             seasons = tmdbMetadata.seasons.sort(
               (a, b) => a.season_number - b.season_number
             );
+          tmdbId = tmdbMetadata.tmdbId;
         } else if (tmdbResult.status === 'rejected') {
           logger.warn(
             `Failed to fetch TMDB metadata for ${id.fullId}: ${tmdbResult.reason}`
           );
         }
 
+        // Process TVDB results
+        if (tvdbResult.status === 'fulfilled' && tvdbResult.value) {
+          const tvdbMetadata = tvdbResult.value;
+          if (tvdbMetadata.title) titles.unshift(tvdbMetadata.title);
+          if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
+          if (!year && tvdbMetadata.year) year = tvdbMetadata.year;
+          if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
+          tvdbId = tvdbMetadata.tvdbId;
+        } else if (tvdbResult.status === 'rejected') {
+          logger.warn(
+            `Failed to fetch TVDB metadata for ${id.fullId}: ${tvdbResult.reason}`
+          );
+        }
         // Process Trakt results
         if (traktResult.status === 'fulfilled' && traktResult.value) {
           titles.push(...traktResult.value);
@@ -231,6 +273,8 @@ export class MetadataService {
           year,
           yearEnd,
           seasons,
+          tmdbId,
+          tvdbId,
         };
       },
       {

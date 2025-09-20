@@ -54,14 +54,9 @@ export class AnimeToshoPreset extends TorznabPreset {
     const animetoshoUrl = this.METADATA.URL;
 
     const config = {
+      ...this.getBaseConfig(userData, services),
       url: animetoshoUrl,
       apiPath: '/api',
-      tmdbAccessToken: userData.tmdbAccessToken,
-      tmdbApiKey: userData.tmdbApiKey,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
     };
 
     const configString = this.base64EncodeJSON(config);

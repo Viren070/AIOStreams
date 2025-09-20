@@ -311,6 +311,22 @@ export abstract class BaseFormatter {
   }
 
   protected async compileTemplate(str: string): Promise<CompiledParseFunction> {
+    const compiledHelper = await this.compileTemplateHelper(str);
+    return (parseValue: ParseValue) => {
+      const resultStr = compiledHelper(parseValue);
+      return resultStr
+        .replace(/\\n/g, '\n')
+        .split('\n')
+        .filter(
+          (line) => line.trim() !== '' && !line.includes('{tools.removeLine}')
+        )
+        .join('\n')
+        .replace(/\{tools.newLine\}/g, '\n');
+    }
+  }
+
+
+  protected async compileTemplateHelper(str: string): Promise<CompiledParseFunction> {
     if (!str) return () => '';
     let compiledMatchTemplateFns: CompiledVariableWInsertFn[] = [];
 
@@ -420,15 +436,7 @@ export abstract class BaseFormatter {
           replacement +
           resultStr.slice(insertIndex);
       }
-
       return resultStr
-        .replace(/\\n/g, '\n')
-        .split('\n')
-        .filter(
-          (line) => line.trim() !== '' && !line.includes('{tools.removeLine}')
-        )
-        .join('\n')
-        .replace(/\{tools.newLine\}/g, '\n');
     };
   }
 

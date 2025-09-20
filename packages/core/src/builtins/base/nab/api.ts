@@ -87,6 +87,17 @@ const createTorznabItemSchema = () =>
         .array(z.union([z.string(), z.object({ _: z.string() })]))
         .transform((arr) => (typeof arr[0] === 'string' ? arr[0] : arr[0]._)),
       pubDate: z.array(z.string()).transform((arr) => arr[0]),
+      jackettindexer: z
+        .array(
+          z.object({
+            _: z.string(),
+            $: z.object({ id: z.string() }),
+          })
+        )
+        .optional()
+        .transform((arr) =>
+          arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
+        ),
       size: z
         .array(z.string())
         .optional()
@@ -114,6 +125,7 @@ const createTorznabItemSchema = () =>
       link: item.link,
       guid: item.guid,
       pubDate: item.pubDate,
+      jackettindexer: item.jackettindexer,
       size: item.size,
       enclosure: item.enclosure,
       torznab: item['torznab:attr'],

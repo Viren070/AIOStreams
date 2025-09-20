@@ -230,10 +230,7 @@ export class GDriveAddon {
         const tmdbMetadata = new TMDBMetadata({
           accessToken: this.userData.tmdbReadAccessToken,
         });
-        const metadata = await tmdbMetadata.getMetadata(
-          parsedId.value.toString(),
-          type as any
-        );
+        const metadata = await tmdbMetadata.getMetadata(parsedId);
         titles = metadata.titles ?? [metadata.title];
         year = Number(metadata.year);
         if (parsedId.type === 'imdbId') {

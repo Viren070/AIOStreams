@@ -61,14 +61,9 @@ export class ZileanPreset extends TorznabPreset {
     const zileanUrl = (options.url || this.METADATA.URL).replace(/\/$/, '');
 
     const config = {
+      ...this.getBaseConfig(userData, services),
       url: `${zileanUrl}/torznab`,
       apiPath: '/api',
-      tmdbAccessToken: userData.tmdbAccessToken,
-      tmdbApiKey: userData.tmdbApiKey,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
     };
 
     const configString = this.base64EncodeJSON(config);

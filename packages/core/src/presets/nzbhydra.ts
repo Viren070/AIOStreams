@@ -94,16 +94,11 @@ export class NZBHydraPreset extends NewznabPreset {
     }
 
     const config = {
+      ...this.getBaseConfig(userData, services),
       url: nzbhydraUrl,
       apiPath: options.apiPath,
       apiKey: nzbhydraApiKey,
-      tmdbAccessToken: userData.tmdbAccessToken,
-      tmdbApiKey: userData.tmdbApiKey,
       forceQuerySearch: true,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
     };
 
     const configString = this.base64EncodeJSON(config);

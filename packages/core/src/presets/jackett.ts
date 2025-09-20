@@ -103,15 +103,10 @@ export class JackettPreset extends TorznabPreset {
     }
 
     const config = {
+      ...this.getBaseConfig(userData, services),
       url: `${jackettUrl.replace(/\/$/, '')}/api/v2.0/results/all/torznab`,
       apiPath: '/api',
       apiKey: jackettApiKey,
-      tmdbAccessToken: userData.tmdbAccessToken,
-      tmdbApiKey: userData.tmdbApiKey,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
       forceQuerySearch: true,
     };
 

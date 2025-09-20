@@ -67,4 +67,16 @@ export class BuiltinAddonPreset extends Preset {
       ...specialCases,
     });
   }
+
+  protected static getBaseConfig(userData: UserData, services: ServiceId[]) {
+    return {
+      tmdbAccessToken: userData.tmdbAccessToken,
+      tmdbApiKey: userData.tmdbApiKey,
+      tvdbApiKey: userData.tvdbApiKey,
+      services: services.map((service) => ({
+        id: service,
+        credential: this.getServiceCredential(service, userData),
+      })),
+    };
+  }
 }

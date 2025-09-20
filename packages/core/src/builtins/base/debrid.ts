@@ -33,14 +33,15 @@ export interface SearchMetadata extends TitleMetadata {
   primaryTitle?: string;
   year?: number;
   imdbId?: string | null;
-  tmdbId?: string | null;
-  tvdbId?: string | null;
+  tmdbId?: number | null;
+  tvdbId?: number | null;
 }
 
 export const BaseDebridConfigSchema = z.object({
   services: BuiltinDebridServices,
   tmdbApiKey: z.string().optional(),
   tmdbReadAccessToken: z.string().optional(),
+  tvdbApiKey: z.string().optional(),
 });
 export type BaseDebridConfig = z.infer<typeof BaseDebridConfigSchema>;
 
@@ -269,6 +270,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const metadata = await new MetadataService({
       tmdbAccessToken: this.userData.tmdbReadAccessToken,
       tmdbApiKey: this.userData.tmdbApiKey,
+      tvdbApiKey: this.userData.tvdbApiKey,
     }).getMetadata(parsedId, type === 'movie' ? 'movie' : 'series');
 
     // Calculate absolute episode if needed
@@ -288,19 +290,19 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       );
     }
 
-    // Map IDs
+    // // Map IDs
     const imdbId =
       parsedId.type === 'imdbId'
         ? parsedId.value.toString()
-        : (animeEntry?.mappings?.imdbId?.toString() ?? null);
-    const tmdbId =
-      parsedId.type === 'themoviedbId'
-        ? parsedId.value.toString()
-        : (animeEntry?.mappings?.themoviedbId?.toString() ?? null);
-    const tvdbId =
-      parsedId.type === 'thetvdbId'
-        ? parsedId.value.toString()
-        : (animeEntry?.mappings?.thetvdbId?.toString() ?? null);
+        : animeEntry?.mappings?.imdbId?.toString();
+    // const tmdbId =
+    //   parsedId.type === 'themoviedbId'
+    //     ? parsedId.value.toString()
+    //     : (animeEntry?.mappings?.themoviedbId?.toString() ?? null);
+    // const tvdbId =
+    //   parsedId.type === 'thetvdbId'
+    //     ? parsedId.value.toString()
+    //     : (animeEntry?.mappings?.thetvdbId?.toString() ?? null);
 
     const searchMetadata: SearchMetadata = {
       primaryTitle: metadata.title,
@@ -310,8 +312,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       absoluteEpisode,
       year: metadata.year,
       imdbId,
-      tmdbId,
-      tvdbId,
+      tmdbId: metadata.tmdbId ?? null,
+      tvdbId: metadata.tvdbId ?? null,
     };
 
     this.logger.debug(

@@ -20,6 +20,10 @@ import { CopyIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { NumberInput } from '../ui/number-input';
 import { PageControls } from '../shared/page-controls';
+import { Tooltip } from '../ui/tooltip';
+import { FaFileImport, FaFileExport } from 'react-icons/fa';
+import { IconButton } from '../ui/button';
+import { ImportModal } from '../shared/import-modal';
 const formatterChoices = Object.values(constants.FORMATTER_DETAILS);
 
 // Remove the throttle utility and replace with FormatQueue
@@ -95,12 +99,45 @@ function FormatterPreviewBox({
 
 function Content() {
   const { userData, setUserData } = useUserData();
+  const importModalDisclosure = useDisclosure(false);
 
   const [formattedStream, setFormattedStream] = useState<{
     name: string;
     description: string;
   } | null>(null);
   const [isFormatting, setIsFormatting] = useState(false);
+
+  const handleImport = (data: any) => {
+    if (typeof data.name === 'string' && typeof data.description === 'string') {
+      handleFormatterChange(
+        constants.CUSTOM_FORMATTER,
+        data.name,
+        data.description
+      );
+      toast.success('Formatter imported successfully');
+    } else {
+      toast.error('Invalid formatter format');
+    }
+  };
+
+  const handleExport = () => {
+    const data = {
+      name: userData.formatter.definition?.name || '',
+      description: userData.formatter.definition?.description || '',
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'custom-formatter.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Formatter exported successfully');
+  };
 
   // Create format queue ref to persist between renders
   const formatQueueRef = React.useRef<FormatQueue>(new FormatQueue(200));
@@ -345,7 +382,37 @@ function Content() {
                 placeholder="Enter a template for the stream description"
               />
             </div>
-            <SnippetsButton />
+            <div className="flex gap-2 items-center">
+              <SnippetsButton />
+              <div className="ml-auto flex gap-2">
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      rounded
+                      size="sm"
+                      intent="primary-subtle"
+                      icon={<FaFileImport />}
+                      onClick={importModalDisclosure.open}
+                    />
+                  }
+                >
+                  Import
+                </Tooltip>
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      rounded
+                      size="sm"
+                      intent="primary-subtle"
+                      icon={<FaFileExport />}
+                      onClick={handleExport}
+                    />
+                  }
+                >
+                  Export
+                </Tooltip>
+              </div>
+            </div>
           </div>
         </SettingsCard>
       )}
@@ -502,6 +569,12 @@ function Content() {
           </div>
         </div>
       </SettingsCard>
+
+      <ImportModal
+        open={importModalDisclosure.isOpen}
+        onOpenChange={importModalDisclosure.toggle}
+        onImport={handleImport}
+      />
     </>
   );
 }

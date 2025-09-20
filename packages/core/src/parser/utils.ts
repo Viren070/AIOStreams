@@ -39,6 +39,7 @@ export function normaliseTitle(title: string) {
 export function cleanTitle(title: string) {
   return title
     .normalize('NFD')
+    .replace(/-/g, ' ')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\p{L}\p{N}\s]/gu, '')
     .replace(/\s+/g, ' ')

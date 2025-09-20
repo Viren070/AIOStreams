@@ -39,6 +39,11 @@ export interface ParsedId {
   mediaType: string;
   season?: string;
   episode?: string;
+  generator: (
+    value: string | number,
+    season?: string,
+    episode?: string
+  ) => string;
 }
 
 interface IdParserDefinition {
@@ -51,6 +56,11 @@ interface IdParserDefinition {
   // - episode: the episode number (optional)
   regex: RegExp;
   format: (id: string) => string | number;
+  generator: (
+    value: string | number,
+    season?: string,
+    episode?: string
+  ) => string;
 }
 
 export class IdParser {
@@ -61,6 +71,7 @@ export class IdParser {
       prefixes: ['tt', 'imdb'],
       regex: /^(?:tt|imdb)[:-]?(?<id>\d+)(?::(?<season>\d+):(?<episode>\d+))?$/,
       format: (id) => `tt${id}`,
+      generator: (value, season, episode) => `${value}:${season}:${episode}`,
     },
     {
       type: 'malId',
@@ -68,6 +79,7 @@ export class IdParser {
       prefixes: ['mal'],
       regex: /^mal[:-]?(?<id>\d+)(?::(?<episode>\d+))?$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `mal:${value}:${episode}`,
     },
     {
       type: 'thetvdbId',
@@ -75,6 +87,8 @@ export class IdParser {
       prefixes: ['tvdb'],
       regex: /^tvdb[:-]?(?<id>\d+)(?::(?<season>\d+):(?<episode>\d+))?$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) =>
+        `tvdb:${value}:${season}:${episode}`,
     },
     {
       type: 'themoviedbId',
@@ -82,6 +96,8 @@ export class IdParser {
       prefixes: ['tmdb'],
       regex: /^tmdb[:-]?(?<id>\d+)(?::(?<season>\d+):(?<episode>\d+))?$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) =>
+        `tmdb:${value}:${season}:${episode}`,
     },
     {
       type: 'kitsuId',
@@ -89,6 +105,7 @@ export class IdParser {
       prefixes: ['kitsu'],
       regex: /^kitsu[:-]?(?<id>\d+)(?::(?<episode>\d+))?$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `kitsu:${value}:${episode}`,
     },
     {
       type: 'anilistId',
@@ -96,6 +113,7 @@ export class IdParser {
       prefixes: ['anilist'],
       regex: /^anilist[:-]?(?<id>\d+)(?::(?<episode>\d+))?$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `anilist:${value}:${episode}`,
     },
     {
       type: 'anidbId',
@@ -103,6 +121,7 @@ export class IdParser {
       prefixes: ['anidb', 'anidb_id', 'anidbid'],
       regex: /^(?:anidb|anidb_id|anidbid)[:-]?(?<id>\d+)(?::(?<episode>\d+))?$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `anidb:${value}:${episode}`,
     },
     {
       type: 'animePlanetId',
@@ -110,6 +129,7 @@ export class IdParser {
       prefixes: ['animeplanet', 'ap'],
       regex: /^(?:animeplanet|ap)[:-]?(?<id>\d+)$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `animeplanet:${value}:${episode}`,
     },
     {
       type: 'animecountdownId',
@@ -117,6 +137,7 @@ export class IdParser {
       prefixes: ['acd'],
       regex: /^acd[:-]?(?<id>\d+)$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `acd:${value}:${episode}`,
     },
     {
       type: 'anisearchId',
@@ -124,6 +145,7 @@ export class IdParser {
       prefixes: ['anisearch'],
       regex: /^anisearch[:-]?(?<id>\d+)$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `anisearch:${value}:${episode}`,
     },
     {
       type: 'notifyMoeId',
@@ -131,6 +153,7 @@ export class IdParser {
       prefixes: ['notifymoe', 'nm'],
       regex: /^(?:notifymoe|nm)[:-]?(?<id>[a-zA-Z0-9]+)$/,
       format: (id) => id,
+      generator: (value, season, episode) => `notifymoe:${value}:${episode}`,
     },
     {
       type: 'simklId',
@@ -138,6 +161,7 @@ export class IdParser {
       prefixes: ['simkl'],
       regex: /^simkl[:-]?(?<id>\d+)$/,
       format: (id) => Number(id),
+      generator: (value, season, episode) => `simkl:${value}:${episode}`,
     },
   ];
 
@@ -160,6 +184,7 @@ export class IdParser {
           fullId: stremioId,
           externalType: parser.externalType,
           mediaType,
+          generator: parser.generator,
         };
 
         if (season) parsedId.season = season;

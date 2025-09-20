@@ -130,16 +130,11 @@ export class NewznabPreset extends BuiltinAddonPreset {
     options: Record<string, any>
   ) {
     const config = {
+      ...this.getBaseConfig(userData, services),
       url: options.newznabUrl,
       apiPath: options.apiPath,
       apiKey: options.apiKey,
-      tmdbAccessToken: userData.tmdbAccessToken,
-      tmdbApiKey: userData.tmdbApiKey,
       forceQuerySearch: options.forceQuerySearch ?? false,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
     };
 
     const configString = this.base64EncodeJSON(config);

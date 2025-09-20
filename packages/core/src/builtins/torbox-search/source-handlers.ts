@@ -9,7 +9,7 @@ import {
   getTimeTakenSincePoint,
 } from '../../utils/index.js';
 // import { DebridService, DebridFile } from './debrid-service';
-import { ParsedId } from '../../utils/id-parser.js';
+import { IdParser, ParsedId } from '../../utils/id-parser.js';
 import { TorBoxSearchAddonUserDataSchema } from './schemas.js';
 import TorboxSearchApi, {
   TorboxSearchApiError,
@@ -165,17 +165,23 @@ abstract class SourceHandler {
       parsedId.type,
       parsedId.value
     );
-    const tmdbId = animeEntry?.mappings?.themoviedbId ?? tmdb_id;
+    const tmdbId =
+      animeEntry?.mappings?.themoviedbId || tmdb_id
+        ? IdParser.parse(
+            `tmdb:${animeEntry?.mappings?.themoviedbId || tmdb_id}`,
+            'series'
+          )
+        : null;
 
     const traktAliases = await getTraktAliases(parsedId);
 
     // For anime sources, fetch additional season info from TMDB
-    if (animeEntry && parsedId.season && parsedId.episode) {
+    if (animeEntry && parsedId.season && parsedId.episode && tmdbId) {
       const seasonFetchStart = Date.now();
       try {
         const tmdbMetadata = await new TMDBMetadata({
           accessToken: tmdbAccessToken,
-        }).getMetadata(`tmdb:${tmdbId}`, 'series');
+        }).getMetadata(tmdbId);
 
         const seasons = tmdbMetadata?.seasons?.map(
           ({ season_number, episode_count }) => ({

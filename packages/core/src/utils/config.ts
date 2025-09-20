@@ -28,6 +28,7 @@ import {
   StreamSelector,
 } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
+import { TVDBMetadata } from '../metadata/tvdb.js';
 
 const logger = createLogger('core');
 
@@ -418,6 +419,20 @@ export async function validateConfig(
     }
   }
 
+  if (config.tvdbApiKey) {
+    try {
+      const tvdb = new TVDBMetadata({
+        apiKey: config.tvdbApiKey,
+      });
+      await tvdb.validateApiKey();
+    } catch (error) {
+      if (!options?.skipErrorsFromAddonsOrProxies) {
+        throw new Error(`Invalid TVDB API key: ${error}`);
+      }
+      logger.warn(`Invalid TVDB API key: ${error}`);
+    }
+  }
+
   if (FeatureControl.disabledServices.size > 0) {
     for (const service of config.services ?? []) {
       if (FeatureControl.disabledServices.has(service.id)) {
@@ -507,6 +522,16 @@ export function applyMigrations(config: any): UserData {
       groupings: config.groups,
       behaviour: 'parallel',
     };
+  }
+
+  if (config.showStatistics || config.statisticsPosition) {
+    config.statistics = {
+      enabled: config.showStatistics ?? false,
+      position: config.statisticsPosition ?? 'bottom',
+      statsToShow: ['addon', 'filter'],
+    };
+    delete config.showStatistics;
+    delete config.statisticsPosition;
   }
   return config;
 }

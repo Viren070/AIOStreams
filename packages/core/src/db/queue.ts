@@ -1,7 +1,5 @@
-import { createLogger } from '../utils/index.js';
 import { DB } from './db.js';
 
-const logger = createLogger('db');
 const db = DB.getInstance();
 
 interface QueuedOperation<T> {
@@ -48,7 +46,6 @@ export class TransactionQueue {
       const result = await operation();
       resolve(result);
     } catch (error) {
-      logger.error('Error processing queued operation:', error);
       reject(error);
     } finally {
       this.processing = false;

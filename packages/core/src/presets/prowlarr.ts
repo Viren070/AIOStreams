@@ -167,15 +167,10 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
     }
 
     const config = {
+      ...this.getBaseConfig(userData, services),
       url: prowlarrUrl,
       apiKey: prowlarrApiKey,
       indexers: Env.BUILTIN_PROWLARR_INDEXERS || [],
-      tmdbAccessToken: userData.tmdbAccessToken,
-      tmdbApiKey: userData.tmdbApiKey,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
     };
 
     const configString = this.base64EncodeJSON(config);

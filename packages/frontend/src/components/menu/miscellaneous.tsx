@@ -197,27 +197,52 @@ function Content() {
             <Switch
               label="Enable"
               side="right"
-              value={userData.showStatistics}
+              value={userData.statistics?.enabled}
               onValueChange={(value) => {
                 setUserData((prev) => ({
                   ...prev,
-                  showStatistics: value,
+                  statistics: {
+                    ...prev.statistics,
+                    enabled: value,
+                  },
                 }));
               }}
             />
             <Select
               label="Statistics Position"
               help="Whether to show the statistic streams at the top or bottom of the stream list."
-              disabled={!userData.showStatistics}
+              disabled={!userData.statistics?.enabled}
               options={[
                 { label: 'Top', value: 'top' },
                 { label: 'Bottom', value: 'bottom' },
               ]}
-              value={userData.statisticsPosition || 'bottom'}
+              value={userData.statistics?.position || 'bottom'}
               onValueChange={(value) => {
                 setUserData((prev) => ({
                   ...prev,
-                  statisticsPosition: value as 'top' | 'bottom',
+                  statistics: {
+                    ...prev.statistics,
+                    position: value as 'top' | 'bottom',
+                  },
+                }));
+              }}
+            />
+            <Combobox
+              label="Statistics to Show"
+              options={['addon', 'filter'].map((statistic) => ({
+                label: statistic,
+                value: statistic,
+              }))}
+              emptyMessage="No statistics to show"
+              multiple
+              value={userData.statistics?.statsToShow}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  statistics: {
+                    ...prev.statistics,
+                    statsToShow: value as ('addon' | 'filter')[],
+                  },
                 }));
               }}
             />

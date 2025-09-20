@@ -49,7 +49,8 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
     for (const result of results) {
       const infoHash = this.extractInfoHash(result);
       const downloadUrl = result.enclosure.find(
-        (e: any) => e.type === 'application/x-bittorrent'
+        (e: any) =>
+          e.type === 'application/x-bittorrent' && !e.url.includes('magnet:')
       )?.url;
 
       if (!infoHash && !downloadUrl) continue;
@@ -67,6 +68,7 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
           ![-1, 999].includes(result.torznab.seeders)
             ? result.torznab.seeders
             : undefined,
+        indexer: result.jackettindexer?.name ?? undefined,
         title: result.title,
         size: result.size ?? 0,
         type: 'torrent',

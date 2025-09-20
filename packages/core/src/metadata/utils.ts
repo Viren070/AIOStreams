@@ -7,4 +7,6 @@ export interface Metadata {
     season_number: number;
     episode_count: number;
   }[];
+  tmdbId?: number | null;
+  tvdbId?: number | null;
 }

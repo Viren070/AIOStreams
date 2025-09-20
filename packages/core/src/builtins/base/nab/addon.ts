@@ -64,7 +64,7 @@ export abstract class BaseNabAddon<
       searchCapabilities.supportedParams.includes('tvdbid') &&
       metadata.tvdbId
     ) {
-      queryParams.tvdbid = metadata.tvdbId;
+      queryParams.tvdbid = metadata.tvdbId.toString();
     } else if (
       searchCapabilities.supportedParams.includes('imdbid') &&
       metadata.imdbId
@@ -74,12 +74,12 @@ export abstract class BaseNabAddon<
       searchCapabilities.supportedParams.includes('tmdbid') &&
       metadata.tmdbId
     )
-      queryParams.tmdbid = metadata.tmdbId;
+      queryParams.tmdbid = metadata.tmdbId.toString();
     else if (
       searchCapabilities.supportedParams.includes('tvdbid') &&
       metadata.tvdbId
     )
-      queryParams.tvdbid = metadata.tvdbId;
+      queryParams.tvdbid = metadata.tvdbId.toString();
 
     if (
       !this.userData.forceQuerySearch &&

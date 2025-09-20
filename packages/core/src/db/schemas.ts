@@ -410,10 +410,18 @@ export const UserDataSchema = z.object({
   size: SizeFilterOptions.optional(),
   hideErrors: z.boolean().optional(),
   hideErrorsForResources: z.array(ResourceSchema).optional(),
-  showStatistics: z.boolean().optional(),
-  statisticsPosition: z.enum(['top', 'bottom']).optional(),
+  // showStatistics: z.boolean().optional(),
+  // statisticsPosition: z.enum(['top', 'bottom']).optional(),
+  statistics: z
+    .object({
+      enabled: z.boolean().optional(),
+      position: z.enum(['top', 'bottom']).optional(),
+      statsToShow: z.array(z.enum(['addon', 'filter'])).optional(),
+    })
+    .optional(),
   tmdbAccessToken: z.string().optional(),
   tmdbApiKey: z.string().optional(),
+  tvdbApiKey: z.string().optional(),
   yearMatching: z
     .object({
       enabled: z.boolean().optional(),
