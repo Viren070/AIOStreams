@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.14.0](https://github.com/Viren070/AIOStreams/compare/v2.13.3...v2.14.0) (2025-09-27)
+
+
+### Features
+
+* add dynamic fetching strategy with redesigned strategy card and fix parallel groups ([48dbadd](https://github.com/Viren070/AIOStreams/commit/48dbaddf67acd3c028f0218e7e61ba74ffcb71c7)), closes [#410](https://github.com/Viren070/AIOStreams/issues/410)
+* allow limiting certain addons to specific media types ([59e611a](https://github.com/Viren070/AIOStreams/commit/59e611aebbac7e3ac5b8f5773b74f208598d9c09))
+* **builtins:** add support for using alternative titles in scraping ([4f4b044](https://github.com/Viren070/AIOStreams/commit/4f4b04495b0d31b9292efe8598465356b160c8ad))
+* make redis store optional for rate limiting ([b47c293](https://github.com/Viren070/AIOStreams/commit/b47c293fd3e8a715277a2b8876a60de6a5c116ee))
+
+
+### Bug Fixes
+
+* cache adjustments ([8772ab7](https://github.com/Viren070/AIOStreams/commit/8772ab706e5d15dc067db70bf2c622559e2952c6))
+* improve releaseGroup regex ([#403](https://github.com/Viren070/AIOStreams/issues/403)) ([2c9c887](https://github.com/Viren070/AIOStreams/commit/2c9c887fae4662189e3bce8b07cbf5ef3158e280))
+* increase max length of group and dynamic addon fetching condition to 1500 ([f965b44](https://github.com/Viren070/AIOStreams/commit/f965b448d0d8fa420724aa09c2e4fc0d916a0973))
+
 ## [2.13.3](https://github.com/Viren070/AIOStreams/compare/v2.13.2...v2.13.3) (2025-09-26)
 
 
