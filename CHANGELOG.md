@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.14.3](https://github.com/Viren070/AIOStreams/compare/v2.14.2...v2.14.3) (2025-10-04)
+
+
+### Bug Fixes
+
+* improve regex parser ([#419](https://github.com/Viren070/AIOStreams/issues/419)) ([e67d286](https://github.com/Viren070/AIOStreams/commit/e67d2866ffbe56a97434bc4877553ce0191224d9))
+* set default value of store to undefined ([2d488c1](https://github.com/Viren070/AIOStreams/commit/2d488c15994b3ed6708deb9b7fa391e53bcebee2))
+
+
+### Performance Improvements
+
+* improve playback link generation and cache writes ([7770bb1](https://github.com/Viren070/AIOStreams/commit/7770bb18d51bd9840ea34d60891536bfd878d43f))
+
 ## [2.14.2](https://github.com/Viren070/AIOStreams/compare/v2.14.1...v2.14.2) (2025-10-02)
 
 
