@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.15.5](https://github.com/Viren070/AIOStreams/compare/v2.15.4...v2.15.5) (2025-10-18)
+
+
+### Features
+
+* add "Are You Still there?" workaround ([#431](https://github.com/Viren070/AIOStreams/issues/431)) ([5ddd111](https://github.com/Viren070/AIOStreams/commit/5ddd111ec04238f9b97a695252d406aee8214e36))
+* add exclude season packs option ([4c7b28d](https://github.com/Viren070/AIOStreams/commit/4c7b28d7448f3f129cd8eecd9b0f677f0f60d87a))
+* add template system ([#438](https://github.com/Viren070/AIOStreams/issues/438)) ([481338a](https://github.com/Viren070/AIOStreams/commit/481338afa3f3b3d633950838f0382133c43aa2b2))
+* filter out movie results with season/episode info ([d475ae6](https://github.com/Viren070/AIOStreams/commit/d475ae6ea22d019380ec0adc2e61f72d8c7bb369))
+
+
+### Bug Fixes
+
+* **debrid:** use toUrlSafeBase64 for encoding fileInfo in playback URL ([69d24f2](https://github.com/Viren070/AIOStreams/commit/69d24f287655f5f9bbbdd9176a2bf014ba4d268c)), closes [#433](https://github.com/Viren070/AIOStreams/issues/433)
+* **proxy:** make proxied nzb URLs static ([f8847bf](https://github.com/Viren070/AIOStreams/commit/f8847bfd195a679a03b31ae36f04693de64ac23f))
+* use esm import paths ([a2f46a6](https://github.com/Viren070/AIOStreams/commit/a2f46a6c6e9dec7b49f45d47af00d6b4b3900f45))
+
 ## [2.15.4](https://github.com/Viren070/AIOStreams/compare/v2.15.3...v2.15.4) (2025-10-13)
 
 
