@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.16.3](https://github.com/Viren070/AIOStreams/compare/v2.16.2...v2.16.3) (2025-10-25)
+
+
+### Features
+
+* remove background processing ([26d1181](https://github.com/Viren070/AIOStreams/commit/26d1181627060f3b704427a7fe4cbd6ff015c376))
+
+
+### Bug Fixes
+
+* improve processing of torrents and nzbs ([099cd62](https://github.com/Viren070/AIOStreams/commit/099cd62ca82ef2468e524685509845cce93f3055))
+
 ## [2.16.2](https://github.com/Viren070/AIOStreams/compare/v2.16.1...v2.16.2) (2025-10-25)
 
 
