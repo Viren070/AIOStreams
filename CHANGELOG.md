@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.6](https://github.com/Viren070/AIOStreams/compare/v2.16.5...v2.16.6) (2025-10-31)
+
+
+### Bug Fixes
+
+* increase timeout on tmdb validation and improve error messages ([5e34d55](https://github.com/Viren070/AIOStreams/commit/5e34d551a5fe737e125b49ad26ebf8058b119c33))
+
 ## [2.16.5](https://github.com/Viren070/AIOStreams/compare/v2.16.4...v2.16.5) (2025-10-29)
 
 
