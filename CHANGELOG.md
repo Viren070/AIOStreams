@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.16.7](https://github.com/Viren070/AIOStreams/compare/v2.16.6...v2.16.7) (2025-11-02)
+
+
+### Features
+
+* add `episodes` to formatter ([a3c7288](https://github.com/Viren070/AIOStreams/commit/a3c7288b982b5196ec68b6640e30f067d7958c14))
+* add `extension` attribute ([551a46f](https://github.com/Viren070/AIOStreams/commit/551a46f07134abcb32476522c3ef738e8581c51b))
+* add `network`, `container`, `edition`, `remastered`, `repack`, `uncensored`, `unrated`, `upscaled`,  attributes to formatter ([b1dba0d](https://github.com/Viren070/AIOStreams/commit/b1dba0d24be9c28c3c1598fd2497689c795b2b9a))
+* assume season is 1 in strict mode for season/episode matching when episode is present ([e464f7d](https://github.com/Viren070/AIOStreams/commit/e464f7d3e437476ffd44ac010e5b728be3131f59))
+* **formatter:** add `formattedSeason` and `formattedEpisode` attributes ([e464f7d](https://github.com/Viren070/AIOStreams/commit/e464f7d3e437476ffd44ac010e5b728be3131f59))
+* handle multi-season/episode files in season/episode matching ([e464f7d](https://github.com/Viren070/AIOStreams/commit/e464f7d3e437476ffd44ac010e5b728be3131f59))
+
+
+### Bug Fixes
+
+* always use tcp ([87667f1](https://github.com/Viren070/AIOStreams/commit/87667f16dbf44b374fc19198b03761b8ce7455c3))
+* correctly handle empty languages for key value in sorter ([3989dde](https://github.com/Viren070/AIOStreams/commit/3989dde254be32f207d9ec9a9bdd00f9e5a66bcf))
+* **debrid:** handle undefined files from stremthru in addMagnet ([cc243ed](https://github.com/Viren070/AIOStreams/commit/cc243edb1296f1a497c59e33c9f7331d152b7182))
+* **formatter:** update light gdrive and prism formats to correctly display multi-season / episode files ([f1b8a7b](https://github.com/Viren070/AIOStreams/commit/f1b8a7b2fa75d78388da06f9543a379d4b803ba7))
+* **parser/regex:** correctly escape slashes, and match bd for bluray ([c50611d](https://github.com/Viren070/AIOStreams/commit/c50611d88e25db20923b2b4db3a9ffdfb58747f7))
+* **presets/streamfusion:** simplify config and allow disabling torrent providers ([76ddf4a](https://github.com/Viren070/AIOStreams/commit/76ddf4a725c2bad4f3d5709a15c322d739bb1169))
+* **proxy:** filter out old connections ([950c3d0](https://github.com/Viren070/AIOStreams/commit/950c3d0680764f8e5c50396a354d56e0d8c39a2d))
+* update deps ([a7cf7d1](https://github.com/Viren070/AIOStreams/commit/a7cf7d1e6f2f57e213a4cf96757e72d99b006e10))
+
 ## [2.16.6](https://github.com/Viren070/AIOStreams/compare/v2.16.5...v2.16.6) (2025-10-31)
 
 
