@@ -690,6 +690,18 @@ export abstract class BaseFormatter {
           if (!shouldBeUndefined && key && replaceKey)
             return variable.replaceAll(key, replaceKey);
         }
+        case mod.startsWith('truncate(') && mod.endsWith(')'):
+          {
+            // Extract N from truncate(N)
+            const inside = _mod.substring('truncate('.length, _mod.length - 1);
+            const n = parseInt(inside, 10);
+            if (!isNaN(n) && n >= 0) {
+              if (variable.length > n) {
+                return variable.slice(0, n) + '…';
+              }
+              return variable;
+            }
+          }
       }
     }
 
@@ -902,6 +914,7 @@ class ModifierConstants {
     'replace(".*?"\\s*?,\\s*?\".*?\")': null,
     "join('.*?')": null,
     'join(".*?")': null,
+    'truncate(\\d+)': null,
     '$.*?': null,
     '^.*?': null,
     '~.*?': null,
