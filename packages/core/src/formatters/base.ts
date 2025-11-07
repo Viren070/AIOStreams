@@ -700,7 +700,9 @@ export abstract class BaseFormatter {
           const n = parseInt(inside, 10);
           if (!isNaN(n) && n >= 0) {
             if (variable.length > n) {
-              return variable.slice(0, n) + '…';
+              // Truncate to N characters and remove trailing whitespace
+              const truncated = variable.slice(0, n).replace(/\s+$/, '');
+              return truncated + '…';
             }
             return variable;
           }
