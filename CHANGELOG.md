@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.17.0](https://github.com/Viren070/AIOStreams/compare/v2.16.7...v2.17.0) (2025-11-08)
+
+
+### Features
+
+* add age as filter menu, SEL function, and sort criteria ([1be0a5d](https://github.com/Viren070/AIOStreams/commit/1be0a5d9df473536a9d935b1c0ab941f643eaaa6))
+* add previous type as suffix to queryType e.g. `anime.series` and migrate existing SEL ([a034bea](https://github.com/Viren070/AIOStreams/commit/a034bea2d9fa6b627e2ba39ecc154ac48fdd287d))
+* allow logging in with aliases ([0eb7de4](https://github.com/Viren070/AIOStreams/commit/0eb7de41f30b94f286f943c146cbbf3531584514))
+* **altmount:** add integration ([9ba07ae](https://github.com/Viren070/AIOStreams/commit/9ba07aef449bcd3e2bef17fd1d8ccd7dfc956391))
+* **core/formatter:** add `seasonPack` attribute to `stream` ([b45e03c](https://github.com/Viren070/AIOStreams/commit/b45e03c3e25258a27dc4474006314a0a83b7dbb0))
+* **core/formatter:** Add truncate(N) modifier ([#470](https://github.com/Viren070/AIOStreams/issues/470)) ([a951b9f](https://github.com/Viren070/AIOStreams/commit/a951b9f1590eb343b8f95af94582590fd581ef78))
+* **debrid:** don't make proxy required and add public URL field for nzbdav/altmount ([d71d53c](https://github.com/Viren070/AIOStreams/commit/d71d53cc273a29c449edcc63b470f1ac991652fc))
+* make exclude season packs option hidden ([8c39421](https://github.com/Viren070/AIOStreams/commit/8c394216765ae2bfbcd506d882d2f1881ed077b7))
+* **nzbdav:** add initial integration ([1afc44a](https://github.com/Viren070/AIOStreams/commit/1afc44a752a0d0cb9314d78ca9e172b47d883a69))
+* **presets/usenet-streamer:** add preset ([344c902](https://github.com/Viren070/AIOStreams/commit/344c902b38c4e0a9ed03f8803edcde5974b06d9e))
+* **prowlarr:** add usenet support ([ffcff0c](https://github.com/Viren070/AIOStreams/commit/ffcff0c0f72d2048baeaaa735e4c88b0acafa660))
+
+
+### Bug Fixes
+
+* add back auth to nzbdav/altmount urls and restrict to built-in proxy ([b106cfd](https://github.com/Viren070/AIOStreams/commit/b106cfdc003566139be938cb7f3563ec5b665a7d))
+* add CORS middleware to debrid and proxy routes ([ff8593c](https://github.com/Viren070/AIOStreams/commit/ff8593c8856b273b8bcd5cda6c2a965985bb56bc))
+* allow redirects and remove auth from webdav url ([d4fcc50](https://github.com/Viren070/AIOStreams/commit/d4fcc501edf4719996e884789972b0b14b80fecb))
+* **builtins:** ensure hash is in lowercase ([078ef3c](https://github.com/Viren070/AIOStreams/commit/078ef3c49d3769d155f2c9c8c41bb082b7e14fd2))
+* **core/formatter:** handle semi-colons in english_name when converting to code ([5d2aef8](https://github.com/Viren070/AIOStreams/commit/5d2aef8cace6b677165489be75d201547de98b3a))
+* **core/formatter:** remove trailing whitespace before truncating ([#476](https://github.com/Viren070/AIOStreams/issues/476)) ([dd7b723](https://github.com/Viren070/AIOStreams/commit/dd7b723aac9b0f4eeb1d8120c9d332cd2dcdff42))
+* **debrid:** add auth for nzbdav/altmount via proxyHeaders ([b94ad20](https://github.com/Viren070/AIOStreams/commit/b94ad204d7b9d8c8ac995b6d0a5ee07a3c6b3e82))
+* **debrid:** allow null value for storage in slot schema ([2c4ea05](https://github.com/Viren070/AIOStreams/commit/2c4ea0510e94ac0db4dc12565929bbb309c12d60))
+* **debrid:** ensure cache is committed before returning playback link ([71b5d34](https://github.com/Viren070/AIOStreams/commit/71b5d34a255d5925237f4b3fd3c2ea650accb5e4))
+* **debrid:** handle missing appropriate service for result type ([9693da8](https://github.com/Viren070/AIOStreams/commit/9693da8bc5265a8d3eb325d99f7d1751150df0bd))
+* **frontend:** only show string based credential inputs in template loader ([a43fbec](https://github.com/Viren070/AIOStreams/commit/a43fbec0d95137a465dc3895586ea11b7fc8d99a))
+* **metadata:** adjust schemas ([4a4aa40](https://github.com/Viren070/AIOStreams/commit/4a4aa403403abb0438ca556426a61807c8e66973))
+* normalise headers to lowercase when proxifying streams ([15f3a9f](https://github.com/Viren070/AIOStreams/commit/15f3a9fde0126fd379f50707e5051220da91ed88))
+* **nzbdav:** gracefully handle invalid proxy auth / other proxy errors ([ea9c4b9](https://github.com/Viren070/AIOStreams/commit/ea9c4b934053d0ac6fe0e2b69e68f9765821b4c7))
+* **nzbdav:** improve error handling for NzbDAV API responses ([115fb45](https://github.com/Viren070/AIOStreams/commit/115fb45dbb4f57ce35a0e1efdcf93f4601abcaa6))
+* **presets/usenet-streamer:** parse indexer ([88f14f5](https://github.com/Viren070/AIOStreams/commit/88f14f52fe24c98a36a39c998042622291e5f163))
+* **prowlarr:** consolidate supported services in ProwlarrPreset ([3084e1f](https://github.com/Viren070/AIOStreams/commit/3084e1fd2e740095a509d2985328049745afb057))
+* **proxifier:** remove auth in URLs when proxying ([b40c448](https://github.com/Viren070/AIOStreams/commit/b40c448b5c1bf288fe64a36feb45f9e2725ed06b))
+* **proxy:** convert auth in URL to basic auth header ([45a3c00](https://github.com/Viren070/AIOStreams/commit/45a3c00db0e4722b252414fcec1ec2f5dce17bb9))
+* update credential validation to respect required status ([9f16926](https://github.com/Viren070/AIOStreams/commit/9f16926850ca977169dd639cc3600da3a7b3f57a))
+* update import path for CORS middleware ([7e84a49](https://github.com/Viren070/AIOStreams/commit/7e84a4909ed6b0d59f80d323d57833c0af223910))
+* **wrapper:** pass through query params for resource requests ([ca1a825](https://github.com/Viren070/AIOStreams/commit/ca1a8252efcd2ce79be43cac2b64e2b4ed8555b8))
+
 ## [2.16.7](https://github.com/Viren070/AIOStreams/compare/v2.16.6...v2.16.7) (2025-11-02)
 
 
