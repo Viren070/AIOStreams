@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.17.1](https://github.com/Viren070/AIOStreams/compare/v2.17.0...v2.17.1) (2025-11-10)
+
+
+### Features
+
+* **builtin:** provide age in hours ([ed9a3f1](https://github.com/Viren070/AIOStreams/commit/ed9a3f14a69759a0465a9d044efcc872384ce9c6))
+* **core/formatter:** add `ageHours` attribute to `stream` variable ([c590e91](https://github.com/Viren070/AIOStreams/commit/c590e918a865a8eddac6320577ed824438e4c4d0))
+* **core/formatter:** implement short circuit for comparators ([5b16957](https://github.com/Viren070/AIOStreams/commit/5b16957411e232ce05e71bf014807f8c4788580d))
+* make webdav credentials optional for nzbdav ([2ba2677](https://github.com/Viren070/AIOStreams/commit/2ba267746614f5dc750d2775f7eae991aeedcab9)), closes [#480](https://github.com/Viren070/AIOStreams/issues/480)
+
+
+### Bug Fixes
+
+* **builtins/torbox-search:** handle when age is string obtained via cache ([285d14f](https://github.com/Viren070/AIOStreams/commit/285d14ff212cada30ffa0bc738867122a9cbe2ad))
+* **core/formatter:** ensure boolean attributes in stream variable ([dc9c7da](https://github.com/Viren070/AIOStreams/commit/dc9c7dae3612dbf4b67038915eb00ce383e73461))
+* **core/formatter:** handle null property when getting error message ([32bbbd4](https://github.com/Viren070/AIOStreams/commit/32bbbd4bbc13b8694d6b0e92945b006d9423461d))
+* **core/formatter:** only short-circuit when remaining operators are the same ([8184442](https://github.com/Viren070/AIOStreams/commit/8184442cce38319e52998480a7aa33cdea87a336))
+* **debrid:** validate aiostreamsAuth during nzb check ([8f29d01](https://github.com/Viren070/AIOStreams/commit/8f29d017ba81cfd0ef60cb71e34767eea21cccaa))
+* immediately throw if error during stat check is a 401 ([40e2893](https://github.com/Viren070/AIOStreams/commit/40e2893df502b84c2c663598a15deec97a32e3a1))
+* **presets/usenet-streamer:** add bmc link ([daa31b7](https://github.com/Viren070/AIOStreams/commit/daa31b76d70fff0466c80a969f475c9628ca3904))
+* **sel:** allow nzbdav and altmount in service function ([06c0f33](https://github.com/Viren070/AIOStreams/commit/06c0f33365b19a9e4cb2660bed5a419a3b126501))
+
 ## [2.17.0](https://github.com/Viren070/AIOStreams/compare/v2.16.7...v2.17.0) (2025-11-08)
 
 
