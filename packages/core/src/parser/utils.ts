@@ -84,7 +84,11 @@ export function normaliseTitle(title: string) {
 }
 
 export function cleanTitle(title: string) {
-  let cleaned = title.normalize('NFD');
+  const umlautMap: Record<string,string> = {
+    'Ä':'Ae','ä':'ae','Ö':'Oe','ö':'oe','Ü':'Ue','ü':'ue','ß':'ss'
+  };
+  // replace German umlauts with ASCII equivalents, then normalize to NFD
+  let cleaned = title.replace(/[ÄäÖöÜüß]/g, c => umlautMap[c]).normalize('NFD');
 
   for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-']) {
     cleaned = cleaned.replaceAll(char, ' ');
