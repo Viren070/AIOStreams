@@ -1597,7 +1597,12 @@ class StreamFilterer {
         : undefined;
 
       let minMax: [number | undefined, number | undefined] | undefined;
-      if (type === 'movie') {
+      if (isAnime) {
+        // Prioritize anime-specific size filter
+        minMax =
+          normaliseSizeRange(resolution?.anime) ||
+          normaliseSizeRange(global?.anime);
+      } else if (type === 'movie') {
         minMax =
           normaliseSizeRange(resolution?.movies) ||
           normaliseSizeRange(global?.movies);
