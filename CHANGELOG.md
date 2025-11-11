@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.17.2](https://github.com/Viren070/AIOStreams/compare/v2.17.1...v2.17.2) (2025-11-11)
+
+
+### Bug Fixes
+
+* adjust scoring for file selection and add .iso as a valid video file extension ([2d918bc](https://github.com/Viren070/AIOStreams/commit/2d918bcf781115d174b758454cf034eb33f4059c))
+* **builtins/prowlarr:** set limit value ([fc5674d](https://github.com/Viren070/AIOStreams/commit/fc5674d6b64061478ada8a2792cc281bf3ca604d))
+
 ## [2.17.1](https://github.com/Viren070/AIOStreams/compare/v2.17.0...v2.17.1) (2025-11-10)
 
 
