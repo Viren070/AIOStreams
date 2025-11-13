@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.3](https://github.com/Viren070/AIOStreams/compare/v2.17.2...v2.17.3) (2025-11-13)
+
+
+### Bug Fixes
+
+* replace umlaut characters with ASCII equivalents in cleanTitle ([#481](https://github.com/Viren070/AIOStreams/issues/481)) ([2b33aba](https://github.com/Viren070/AIOStreams/commit/2b33abab2612028b216ceb96f68e0bf09c60ef4f))
+
 ## [2.17.2](https://github.com/Viren070/AIOStreams/compare/v2.17.1...v2.17.2) (2025-11-11)
 
 
