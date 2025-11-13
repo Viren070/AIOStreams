@@ -1,6 +1,6 @@
 import { Headers } from 'undici';
 import { Env, Cache, makeRequest, ParsedId, IdType } from '../utils/index.js';
-import { Metadata } from './utils.js';
+import { Metadata, TitleWithLanguage } from './utils.js';
 import { z } from 'zod';
 
 export type TMDBIdType = 'imdb_id' | 'tmdb_id' | 'tvdb_id';
@@ -219,7 +219,7 @@ export class TMDBMetadata {
   private async fetchAlternativeTitles(
     url: URL,
     mediaType: string
-  ): Promise<string[]> {
+  ): Promise<{ titles: string[]; titlesWithLanguages: any[] }> {
     const response = await makeRequest(url.toString(), {
       timeout: 5000,
       headers: this.getHeaders(),
@@ -235,17 +235,20 @@ export class TMDBMetadata {
 
     if (mediaType === 'movie') {
       const data = MovieAlternativeTitlesSchema.parse(json);
-      return data.titles.map((title) => title.title);
+      const titles = data.titles.map((title) => title.title);
+      // Alternative titles don't have language info, so we return empty array
+      return { titles, titlesWithLanguages: [] };
     } else {
       const data = TVAlternativeTitlesSchema.parse(json);
-      return data.results.map((title) => title.title);
+      const titles = data.results.map((title) => title.title);
+      return { titles, titlesWithLanguages: [] };
     }
   }
 
   private async fetchTranslatedTitles(
     url: URL,
     mediaType: string
-  ): Promise<string[]> {
+  ): Promise<{ titles: string[]; titlesWithLanguages: TitleWithLanguage[] }> {
     const response = await makeRequest(url.toString(), {
       timeout: 5000,
       headers: this.getHeaders(),
@@ -256,18 +259,38 @@ export class TMDBMetadata {
     }
 
     const json = await response.json();
+    const titlesWithLanguages: TitleWithLanguage[] = [];
+    const titles: string[] = [];
 
     if (mediaType === 'movie') {
       const data = MovieTranslationsSchema.parse(json);
-      return data.translations
-        .map((translation) => translation.data.name)
-        .filter(Boolean);
+      data.translations.forEach((translation) => {
+        if (translation.data.name) {
+          titles.push(translation.data.name);
+          titlesWithLanguages.push({
+            title: translation.data.name,
+            iso_639_1: translation.iso_639_1,
+            iso_3166_1: translation.iso_3166_1,
+            english_name: translation.english_name,
+          });
+        }
+      });
     } else {
       const data = TVTranslationsSchema.parse(json);
-      return data.translations
-        .map((translation) => translation.data.title)
-        .filter(Boolean);
+      data.translations.forEach((translation) => {
+        if (translation.data.title) {
+          titles.push(translation.data.title);
+          titlesWithLanguages.push({
+            title: translation.data.title,
+            iso_639_1: translation.iso_639_1,
+            iso_3166_1: translation.iso_3166_1,
+            english_name: translation.english_name,
+          });
+        }
+      });
     }
+
+    return { titles, titlesWithLanguages };
   }
 
   public async getMetadata(parsedId: ParsedId): Promise<Metadata> {
@@ -371,12 +394,16 @@ export class TMDBMetadata {
       this.fetchTranslatedTitles(translatedTitlesUrl, parsedId.mediaType),
     ]);
 
+    const allTitlesWithLanguages: TitleWithLanguage[] = [];
+
     if (altTitlesResult.status === 'fulfilled') {
-      allTitles.push(...altTitlesResult.value);
+      allTitles.push(...altTitlesResult.value.titles);
+      allTitlesWithLanguages.push(...altTitlesResult.value.titlesWithLanguages);
     }
 
     if (translationsResult.status === 'fulfilled') {
-      allTitles.push(...translationsResult.value);
+      allTitles.push(...translationsResult.value.titles);
+      allTitlesWithLanguages.push(...translationsResult.value.titlesWithLanguages);
     }
 
     // If both requests failed, we should throw an error
@@ -393,6 +420,7 @@ export class TMDBMetadata {
     const metadata: Metadata = {
       title: primaryTitle,
       titles: uniqueTitles,
+      titlesWithLanguages: allTitlesWithLanguages,
       releaseDate: releaseDate,
       year: Number(year),
       yearEnd: yearEnd ? Number(yearEnd) : undefined,

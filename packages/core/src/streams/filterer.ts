@@ -367,6 +367,44 @@ class StreamFilterer {
       }
     }
 
+    // Infer languages from TMDB metadata for streams with unknown languages
+    if (requestedMetadata?.titlesWithLanguages && requestedMetadata.titlesWithLanguages.length > 0) {
+      logger.debug(`Applying language inference from TMDB metadata for ${streams.length} streams`);
+      const { inferLanguageFromTitle } = await import('../utils/languages.js');
+      let inferredCount = 0;
+      
+      for (const stream of streams) {
+        if (!stream.parsedFile || !stream.filename) {
+          continue;
+        }
+        
+        // Check if stream has no languages or only Unknown language
+        const currentLanguages = stream.parsedFile.languages || [];
+        const hasUnknownLanguage = currentLanguages.length === 0 || 
+          (currentLanguages.length === 1 && currentLanguages[0] === 'Unknown');
+        
+        if (hasUnknownLanguage) {
+          const inferredLanguages = inferLanguageFromTitle(
+            stream.filename,
+            requestedMetadata.titlesWithLanguages,
+            currentLanguages
+          );
+          
+          if (inferredLanguages.length > 0) {
+            stream.parsedFile.languages = inferredLanguages;
+            inferredCount++;
+            logger.debug(
+              `Inferred language for stream "${stream.filename}": ${inferredLanguages.join(', ')}`
+            );
+          }
+        }
+      }
+      
+      if (inferredCount > 0) {
+        logger.info(`Inferred languages for ${inferredCount} streams from TMDB metadata`);
+      }
+    }
+
     const normaliseTitle = (title: string) => {
       return title
         .normalize('NFD')

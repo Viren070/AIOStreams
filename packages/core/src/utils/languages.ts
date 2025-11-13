@@ -1995,3 +1995,109 @@ export const FULL_LANGUAGE_MAPPING = [
     name: 'Asturianu',
   },
 ];
+
+/**
+ * Normalizes a title for comparison
+ */
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Infers the language(s) of a stream based on its filename and title translations from TMDB
+ *
+ * @param filename - The filename to analyze
+ * @param titlesWithLanguages - Array of title/language pairs from TMDB
+ * @param existingLanguages - Any languages already detected from the filename
+ * @returns Array of inferred language names, or empty array if inference is not possible
+ */
+export function inferLanguageFromTitle(
+  filename: string,
+  titlesWithLanguages: Array<{
+    title: string;
+    iso_639_1: string;
+    iso_3166_1?: string;
+    english_name: string;
+  }>,
+  existingLanguages: string[] = []
+): string[] {
+  // If explicit language tags exist, prioritize them
+  if (existingLanguages.length > 0 && !existingLanguages.includes('Unknown')) {
+    return existingLanguages;
+  }
+
+  if (!titlesWithLanguages || titlesWithLanguages.length === 0) {
+    return [];
+  }
+
+  const normalizedFilename = normalizeTitle(filename);
+
+  const matchingTitles = titlesWithLanguages.filter((item) => {
+    const normalizedTitle = normalizeTitle(item.title);
+    return normalizedFilename.includes(normalizedTitle);
+  });
+
+  if (matchingTitles.length === 0) {
+    return [];
+  }
+
+  // Group matches by base language code
+  const languageGroups = new Map<string, Set<string>>();
+
+  for (const match of matchingTitles) {
+    const langCode = match.iso_639_1;
+    if (!languageGroups.has(langCode)) {
+      languageGroups.set(langCode, new Set());
+    }
+
+    if (match.iso_3166_1) {
+      languageGroups.get(langCode)!.add(match.iso_3166_1);
+    }
+  }
+
+  const baseLanguageCodes = Array.from(languageGroups.keys());
+
+  // Handle multi-title filenames with different languages
+  // If multiple distinct titles are present in different languages, mark as Multi
+  if (baseLanguageCodes.length > 1) {
+    const uniqueTitles = new Set(
+      matchingTitles.map((m) => normalizeTitle(m.title))
+    );
+    // If we have multiple different titles (not just the same title translated), it's Multi
+    if (uniqueTitles.size > 1) {
+      return ['Multi'];
+    }
+    // If same title appears in multiple languages (ambiguous), keep as Unknown
+    return [];
+  }
+
+  //  Handle regional variants and single language
+
+  if (baseLanguageCodes.length === 1) {
+    const langCode = baseLanguageCodes[0];
+
+    // Map ISO 639-1 code to the language name
+    const languageEntry =
+      FULL_LANGUAGE_MAPPING.find(
+        (lang) => lang.iso_639_1 === langCode && lang.flag_priority
+      ) || FULL_LANGUAGE_MAPPING.find((lang) => lang.iso_639_1 === langCode);
+
+    if (languageEntry) {
+      const languageName = (
+        languageEntry.internal_english_name || languageEntry.english_name
+      )
+        ?.split('(')?.[0]
+        ?.trim();
+
+      if (languageName) {
+        return [languageName];
+      }
+    }
+  }
+
+  return [];
+}
