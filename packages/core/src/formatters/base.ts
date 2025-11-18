@@ -589,7 +589,8 @@ export abstract class BaseFormatter {
         result = this.applySingleModifier(
           result,
           lastModMatched,
-          fullStringModifiers
+          fullStringModifiers,
+          parseValue
         );
         if (result === undefined) {
           let getErrorResult = () => {
@@ -631,7 +632,8 @@ export abstract class BaseFormatter {
     mod: string,
     fullStringModifiers: {
       mod_tzlocale: string | undefined;
-    }
+    },
+    parseValue: ParseValue
   ): any {
     const _mod = mod;
     mod = mod.toLowerCase();
@@ -791,6 +793,30 @@ export abstract class BaseFormatter {
           // Extract the separator from join('separator') or join("separator")
           const separator = _mod.substring(6, _mod.length - 2);
           return variable.join(separator);
+        }
+        case mod.startsWith('merge(') && mod.endsWith(')'): {
+          // Extract the variable path from merge('variablePath') or merge("variablePath")
+          // The variable path is expected to be wrapped in { } like {stream.audioChannels}
+          // But the user input in the modifier string is like ::merge('{stream.audioChannels}')
+          // So we need to extract the string inside the quotes
+          const content = _mod.substring(7, _mod.length - 2); // remove merge(' and ')
+          
+          // The content should be something like {stream.audioChannels}
+          // We need to strip the { and } to get stream.audioChannels
+          if (content.startsWith('{') && content.endsWith('}')) {
+             const variablePath = content.substring(1, content.length - 1);
+             const [variableType, propertyName] = variablePath.split('.');
+             
+             if (variableType && propertyName && parseValue[variableType as keyof ParseValue]) {
+                 const variableDict = parseValue[variableType as keyof ParseValue];
+                 const property = variableDict![propertyName as keyof typeof variableDict] as any;
+                 
+                 if (Array.isArray(property)) {
+                     return [...variable, ...property];
+                 }
+             }
+          }
+          return variable;
         }
       }
     }
@@ -1000,6 +1026,8 @@ class ModifierConstants {
     'slice(\\s*\\d+\\s*,\\s*\\d+\\s*)': null,
     'sort(asc)': null,
     'sort(desc)': null,
+    "merge('.*?')": null,
+    'merge(".*?")': null,
     '$.*?': null,
     '^.*?': null,
     '~.*?': null,
