@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.17.3](https://github.com/Viren070/AIOStreams/compare/v2.17.2...v2.17.3) (2025-11-18)
+
+
+### Features
+
+* add memory lock ([e1a24dc](https://github.com/Viren070/AIOStreams/commit/e1a24dc392a87dcd4d7361fae4bb1f5cd370fa63))
+* **frontend:** redesign marketplace ([94e747d](https://github.com/Viren070/AIOStreams/commit/94e747d0a78f16d4db30be1c12fc59236ff8a0d8))
+* **metadata:** fetch from imdb suggestion data ([98c398b](https://github.com/Viren070/AIOStreams/commit/98c398ba4673e8ab9158ee825b48221c13fedf0a))
+* **presets/*znab:** add search mode option with Both and remove force query search. ([78124bd](https://github.com/Viren070/AIOStreams/commit/78124bd802f101fa6dc16d9db8372c1a6d386ba6))
+
+
+### Bug Fixes
+
+* **frontend:** adjust layout for StaticTabs to fix issues on smaller screens ([90a83ed](https://github.com/Viren070/AIOStreams/commit/90a83ed06c374e6c6aa03b746315bd475cdc037d))
+* **frontend:** adjust logo for installed addon card ([7cd5f11](https://github.com/Viren070/AIOStreams/commit/7cd5f116b8297b2d540660f125e30efc2adcfb10))
+* **frontend:** ensure description is always rendered with MarkdownLite ([b4de155](https://github.com/Viren070/AIOStreams/commit/b4de1559820a22a3c92f48faa6fceb8f7d5e2a97))
+* **frontend:** marketplace adjustments ([ca7c49b](https://github.com/Viren070/AIOStreams/commit/ca7c49b3b1f3aee084af1cc0e9fc24c2bb7e0c46))
+* **frontend:** update label from 'Meta & Catalogues' to 'Metadata & Catalogs' ([da4d282](https://github.com/Viren070/AIOStreams/commit/da4d282dd38d728a3eda19b31b18e34be3923107))
+* lower timeout for imdb data ([6b47487](https://github.com/Viren070/AIOStreams/commit/6b47487636ea18b7cd77be244ff8d889317cbc0c))
+* **metadata/tmdb:** always check title and name in translation data ([c8af6c6](https://github.com/Viren070/AIOStreams/commit/c8af6c682f49e804d63dc58a03effcec8f2ad13e))
+* parse fileIdx to prevent deduplication of different files within same torrent ([bec118c](https://github.com/Viren070/AIOStreams/commit/bec118c8c66bb54060b4bb89e354d1a27e6d27b6))
+* **presets/usenet-streamer:** parse instant and triage status info ([1b4835d](https://github.com/Viren070/AIOStreams/commit/1b4835d25a7d1170cb30deec036a8f1e803ca6ad))
+* **presets:** add missing constraints to timeout options ([a22bc9d](https://github.com/Viren070/AIOStreams/commit/a22bc9d836552b6d955d9427af75cef9de10e8e7))
+* prevent duration being incorrectly parsed for builtin addons ([14fc584](https://github.com/Viren070/AIOStreams/commit/14fc584b2b88b852885e26632b936770e4409a81))
+* replace umlaut characters with ASCII equivalents in cleanTitle ([#481](https://github.com/Viren070/AIOStreams/issues/481)) ([2b33aba](https://github.com/Viren070/AIOStreams/commit/2b33abab2612028b216ceb96f68e0bf09c60ef4f))
+* update newznab url list ([e10702e](https://github.com/Viren070/AIOStreams/commit/e10702e9f8e5060866b7f8e931e3c4173e7b8b9e))
+* use memory lock for metadata ([97f61ea](https://github.com/Viren070/AIOStreams/commit/97f61ea3224f4550e17b669e1565ca93d3b326e0))
+* use select-with-custom for newznab url and hide some options in simple mode ([b01f135](https://github.com/Viren070/AIOStreams/commit/b01f135cff406227569af7bd2d3e5304a65882e5))
+
 ## [2.17.2](https://github.com/Viren070/AIOStreams/compare/v2.17.1...v2.17.2) (2025-11-11)
 
 
