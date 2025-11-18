@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.4](https://github.com/Viren070/AIOStreams/compare/v2.17.3...v2.17.4) (2025-11-18)
+
+
+### Bug Fixes
+
+* **presets/newznab:** use correct url for usenet crawler ([04e7554](https://github.com/Viren070/AIOStreams/commit/04e7554349bbc0462cc11ef370908f019bd1dfcc))
+
 ## [2.17.3](https://github.com/Viren070/AIOStreams/compare/v2.17.2...v2.17.3) (2025-11-18)
 
 
