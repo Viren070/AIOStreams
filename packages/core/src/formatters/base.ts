@@ -764,6 +764,29 @@ export abstract class BaseFormatter {
           }
           return variable;
         }
+        case mod.startsWith('sort(') && mod.endsWith(')'): {
+          const direction = _mod
+            .substring(5, _mod.length - 1)
+            .trim()
+            .toLowerCase();
+
+          if (direction !== 'asc' && direction !== 'desc') {
+            return undefined;
+          }
+
+          const isDesc = direction === 'desc';
+
+          return [...variable].sort((a, b) => {
+            if (typeof a === 'number' && typeof b === 'number') {
+              return isDesc ? b - a : a - b;
+            }
+            const strA = String(a);
+            const strB = String(b);
+            return isDesc
+              ? strB.localeCompare(strA, undefined, { numeric: true })
+              : strA.localeCompare(strB, undefined, { numeric: true });
+          });
+        }
         case mod.startsWith('join(') && mod.endsWith(')'): {
           // Extract the separator from join('separator') or join("separator")
           const separator = _mod.substring(6, _mod.length - 2);
@@ -912,7 +935,15 @@ class ModifierConstants {
         value,
         Math.floor(Math.random() * value.length)
       ),
-    sort: (value: string[]) => [...value].sort(),
+    sort: (value: any[]) =>
+      [...value].sort((a, b) => {
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b;
+        }
+        const strA = String(a);
+        const strB = String(b);
+        return strA.localeCompare(strB, undefined, { numeric: true });
+      }),
     reverse: (value: string[]) => [...value].reverse(),
   };
 
@@ -967,6 +998,8 @@ class ModifierConstants {
     'truncate(\\d+)': null,
     'slice(\\s*\\d+\\s*)': null,
     'slice(\\s*\\d+\\s*,\\s*\\d+\\s*)': null,
+    'sort(asc)': null,
+    'sort(desc)': null,
     '$.*?': null,
     '^.*?': null,
     '~.*?': null,
