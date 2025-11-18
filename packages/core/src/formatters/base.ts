@@ -632,7 +632,7 @@ export abstract class BaseFormatter {
     fullStringModifiers: {
       mod_tzlocale: string | undefined;
     }
-  ): string | boolean | undefined {
+  ): any {
     const _mod = mod;
     mod = mod.toLowerCase();
 
@@ -745,10 +745,25 @@ export abstract class BaseFormatter {
       if (mod in ModifierConstants.arrayModifiers)
         return ModifierConstants.arrayModifiers[
           mod as keyof typeof ModifierConstants.arrayModifiers
-        ](variable)?.toString();
+        ](variable);
 
       // handle hardcoded modifiers here
       switch (true) {
+        case mod.startsWith('slice(') && mod.endsWith(')'): {
+          // Extract the start and end indices from slice(start, end)
+          const args = _mod
+            .substring(6, _mod.length -1)
+            .split(',')
+            .map((arg) => parseInt(arg.trim(), 10));
+
+          const start = args[0];
+          const end = args.length > 1 ? args[1] : undefined;
+          
+          if (!isNaN(start)) {
+            return variable.slice(start, end);
+          }
+          return variable;
+        }
         case mod.startsWith('join(') && mod.endsWith(')'): {
           // Extract the separator from join('separator') or join("separator")
           const separator = _mod.substring(6, _mod.length - 2);
@@ -950,6 +965,8 @@ class ModifierConstants {
     "join('.*?')": null,
     'join(".*?")': null,
     'truncate(\\d+)': null,
+    'slice(\\s*\\d+\\s*)': null,
+    'slice(\\s*\\d+\\s*,\\s*\\d+\\s*)': null,
     '$.*?': null,
     '^.*?': null,
     '~.*?': null,
