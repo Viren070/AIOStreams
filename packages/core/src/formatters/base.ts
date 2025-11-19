@@ -634,7 +634,7 @@ export abstract class BaseFormatter {
       mod_tzlocale: string | undefined;
     },
     parseValue: ParseValue
-  ): any {
+  ): string | boolean | any[] | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
 
