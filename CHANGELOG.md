@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.5](https://github.com/Viren070/AIOStreams/compare/v2.17.4...v2.17.5) (2025-11-19)
+
+
+### Bug Fixes
+
+* **presets/newznab:** remove trailing space in Tabula Rasa URL ([#494](https://github.com/Viren070/AIOStreams/issues/494)) ([394b76b](https://github.com/Viren070/AIOStreams/commit/394b76b5b275fa23c45f8f043854a2c7bac70609))
+
 ## [2.17.4](https://github.com/Viren070/AIOStreams/compare/v2.17.3...v2.17.4) (2025-11-18)
 
 
