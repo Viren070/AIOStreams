@@ -43,7 +43,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
           { label: 'SceneNZBs', value: 'https://scenenzbs.com' },
           {
             label: 'Tabula Rasa',
-            value: 'https://www.tabula-rasa.pw/api/v1/  ',
+            value: 'https://www.tabula-rasa.pw/api/v1/',
           },
           {
             label: 'TorBox Search',
