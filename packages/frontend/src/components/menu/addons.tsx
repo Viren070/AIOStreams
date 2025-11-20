@@ -1079,7 +1079,7 @@ function AddonCard({ preset, onAdd }: { preset: any; onAdd: () => void }) {
               <Button
                 size="md"
                 className="w-full"
-                intent="primary"
+                intent="primary-subtle"
                 onClick={onAdd}
               >
                 Configure
