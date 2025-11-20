@@ -695,7 +695,8 @@ export const ParsedStreamSchema = z.object({
       infoHash: z.string().min(1).optional(),
       fileIdx: z.number().optional(),
       seeders: z.number().optional(),
-      sources: z.array(z.string().min(1)).optional(), // array of tracker urls and DHT nodes
+      sources: z.array(z.string().min(1)).optional(),
+      private: z.boolean().optional(),
     })
     .optional(),
   countryWhitelist: z.array(z.string().length(3)).optional(),
@@ -899,7 +900,8 @@ export const AIOStream = StreamSchema.extend({
           infoHash: z.string().min(1).optional(),
           fileIdx: z.number().optional(),
           seeders: z.number().optional(),
-          sources: z.array(z.string().min(1)).optional(), // array of tracker urls and DHT nodes
+          sources: z.array(z.string().min(1)).optional(),
+          private: z.boolean().optional(),
         })
         .optional(),
       duration: z.number().optional(),
