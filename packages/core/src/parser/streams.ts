@@ -137,6 +137,7 @@ class StreamParser {
       sources: stream.sources ?? undefined,
       fileIdx:
         stream.fileIdx ?? this.getFileIdx(stream, parsedStream) ?? undefined,
+      private: this.isPrivate(stream, parsedStream),
     };
 
     return parsedStream;
@@ -324,6 +325,13 @@ class StreamParser {
    */
 
   protected isProxied(stream: Stream): boolean {
+    return false;
+  }
+
+  protected isPrivate(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): boolean | undefined {
     return false;
   }
 
