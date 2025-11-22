@@ -39,7 +39,7 @@ export class UsenetStreamerParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    const status = stream.description?.match(/(✅|⚠️|🚫)/g)?.[0];
+    const status = stream.description?.match(/(🧝|✅|⚠️|🚫)/g)?.[0];
     if (status) return `NZB Health: ${status}`;
   }
 
