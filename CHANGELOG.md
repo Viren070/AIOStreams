@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.17.6](https://github.com/Viren070/AIOStreams/compare/v2.17.5...v2.17.6) (2025-11-23)
+
+
+### Features
+
+* add `private` sort criterion ([f04072b](https://github.com/Viren070/AIOStreams/commit/f04072b33903ed42af3941e066430a388941d803))
+* add private torrent detection for stremthru torz  ([#499](https://github.com/Viren070/AIOStreams/issues/499)) ([32d2119](https://github.com/Viren070/AIOStreams/commit/32d21193b1d35a5fb31504cf45a706b4d620029d))
+* **frontend/formatter:** add private switch to preview ([4bc2a88](https://github.com/Viren070/AIOStreams/commit/4bc2a88f9bc4971b3d60e9efe6ddc0b693e94106))
+* **nab:** add pagination handling ([af79a18](https://github.com/Viren070/AIOStreams/commit/af79a18c6ae384d3e882ab96f27365c2f6500497)), closes [#489](https://github.com/Viren070/AIOStreams/issues/489)
+* **parser:** use parsed languages from parse-torrent-title ([24d36a8](https://github.com/Viren070/AIOStreams/commit/24d36a8ae3e9876563f9eac6e8ef6fe5df899811))
+
+
+### Bug Fixes
+
+* add file store to handle long nzb urls ([4961014](https://github.com/Viren070/AIOStreams/commit/49610148cade3b69112a154d481ac266f8cdec1a))
+* **frontend/services:** store modal values in local state ([abd802c](https://github.com/Viren070/AIOStreams/commit/abd802cc7449fbf7c9e4cf2cac4a28a13e86df81)), closes [#503](https://github.com/Viren070/AIOStreams/issues/503)
+* **frontend:** make switch size responsive ([78eb16c](https://github.com/Viren070/AIOStreams/commit/78eb16c50ee389cb552cb0c4940db1d46d6ae29c))
+* **frontend:** move addon modal outside of animate presence ([b925e04](https://github.com/Viren070/AIOStreams/commit/b925e04650ee156fe44738dc1954824d9adf1daf))
+* **metadata:** add placeholder promise when imdbId is missing ([f607131](https://github.com/Viren070/AIOStreams/commit/f607131d339382091c64b534a108748c6a7ae05c)), closes [#497](https://github.com/Viren070/AIOStreams/issues/497)
+* only allow absolute episode match when seasons has 1 or is empty ([3be5261](https://github.com/Viren070/AIOStreams/commit/3be526172d68a6bb8d04875bb711f1bd1a2345c0))
+* only block proxying of nzbdav/altmount streams via built-in addons ([57bded3](https://github.com/Viren070/AIOStreams/commit/57bded3414ee1bbc1493060471c2b36f2870d3a1))
+* only infer proxied attribute for nzbdav/altmount with built-in addons ([cf43d7f](https://github.com/Viren070/AIOStreams/commit/cf43d7f0a607284d364688c0e22d1167cc44176a))
+* only use file info store when length exceeds certain amount ([6a5d38a](https://github.com/Viren070/AIOStreams/commit/6a5d38a797bf067002f2996c1d5f31330b73ce05))
+* **presets/aiostreams:** allow leaving name empty ([c00ad25](https://github.com/Viren070/AIOStreams/commit/c00ad259fc1fd3953070f369f9649a2663f161cd)), closes [#491](https://github.com/Viren070/AIOStreams/issues/491)
+* **presets/usenet-streamer:** add elf emoji to nzb status regex ([#504](https://github.com/Viren070/AIOStreams/issues/504)) ([dbe86ed](https://github.com/Viren070/AIOStreams/commit/dbe86edc92fc057536d2ef1e0c72707827eda72b))
+* use shared normaliseTitle in filterer ([2e739bc](https://github.com/Viren070/AIOStreams/commit/2e739bc2775ef0db073484b58013c0b89ad04ea3))
+
 ## [2.17.5](https://github.com/Viren070/AIOStreams/compare/v2.17.4...v2.17.5) (2025-11-19)
 
 
