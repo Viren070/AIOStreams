@@ -361,6 +361,7 @@ export const UserDataSchema = z.object({
   requiredAgeRange: z.tuple([z.number().min(0), z.number().min(0)]).optional(),
   ageRangeTypes: z.array(z.enum(['usenet', 'debrid', 'p2p'])).optional(),
   digitalReleaseFilter: z.boolean().optional(),
+  enableSeadex: z.boolean().optional(),
   excludeSeasonPacks: z.boolean().optional(),
   excludeCached: z.boolean().optional(),
   excludeCachedFromAddons: z.array(z.string().min(1)).optional(),

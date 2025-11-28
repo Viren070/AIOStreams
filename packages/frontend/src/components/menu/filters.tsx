@@ -2826,6 +2826,22 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
+                <SettingsCard
+                  title="SeaDex Integration"
+                  description="Fetch SeaDex data (releases.moe) for anime to identify best quality releases."
+                >
+                  <Switch
+                    label="Enable"
+                    side="right"
+                    value={userData.enableSeadex}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        enableSeadex: value,
+                      }));
+                    }}
+                  />
+                </SettingsCard>
                 {/* Only show this setting if its enabled, otherwise hide it. */}
                 {mode === 'pro' && userData.excludeSeasonPacks && (
                   <SettingsCard

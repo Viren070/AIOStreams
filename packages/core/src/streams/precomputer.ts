@@ -47,7 +47,7 @@ class StreamPrecomputer {
     id: string,
     isAnime: boolean
   ) {
-    if (!isAnime) {
+    if (!isAnime || !this.userData.enableSeadex) {
       return;
     }
 
