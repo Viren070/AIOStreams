@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.18.0](https://github.com/Viren070/AIOStreams/compare/v2.17.6...v2.18.0) (2025-11-28)
+
+
+### Features
+
+* add check owned option ([5434da5](https://github.com/Viren070/AIOStreams/commit/5434da5777c45a7c06e77ea3d9d70d6bd4da0bdc))
+* allow excluding addons from deduplication ([44be565](https://github.com/Viren070/AIOStreams/commit/44be5657cb35f56e28ecf19c53a2566149adeb1a))
+* allow providing nntp servers in stremio nntp service ([e92d68e](https://github.com/Viren070/AIOStreams/commit/e92d68e92528c28ab9997667328fefe7752222ef))
+* **api/search:** add format param for name/description fields ([c0a6921](https://github.com/Viren070/AIOStreams/commit/c0a69215b1ba0d147ced321eaeb081c41a54a79a))
+* **builtins:** search with background refresh ([ece56a2](https://github.com/Viren070/AIOStreams/commit/ece56a2da8647c362a1f3de6fe1792eede183c8e))
+* **presets/aiostreams:** add custom addon options (library, passthrough etc.) ([c6d79c4](https://github.com/Viren070/AIOStreams/commit/c6d79c4898d08b1afc895d1c49a468467ff78ac4))
+* **presets/nekoBt:** add preset ([e96fb95](https://github.com/Viren070/AIOStreams/commit/e96fb95151676aae073c77d2c34901dea88c37bc))
+* **sel:** add message function ([6cd7fb5](https://github.com/Viren070/AIOStreams/commit/6cd7fb58aaa35521702d132456e44ab3b30e3693))
+* **sel:** enable division and multiplication ([550d8d7](https://github.com/Viren070/AIOStreams/commit/550d8d77fbe129171695795fb29879cf55879947))
+* support nzbUrl and archive url fields ([e92d68e](https://github.com/Viren070/AIOStreams/commit/e92d68e92528c28ab9997667328fefe7752222ef))
+* update builtin addons to support stremio nntp ([e92d68e](https://github.com/Viren070/AIOStreams/commit/e92d68e92528c28ab9997667328fefe7752222ef))
+
+
+### Bug Fixes
+
+* add | as separator ([dd89372](https://github.com/Viren070/AIOStreams/commit/dd893725f1672b45b460c98d2182c02da83844a2))
+* add CORS middleware to static file route ([5e6e134](https://github.com/Viren070/AIOStreams/commit/5e6e1340ad6a920ae3958f6591d71b1f41fe8c8d))
+* **builtins/nab:** handle no title and empty channel ([7b77640](https://github.com/Viren070/AIOStreams/commit/7b776405e17cce39313cbdcf7253db504286ad2b))
+* **debrid/usenet-stream:** use transformed params and dont set default start or limit ([d74c840](https://github.com/Viren070/AIOStreams/commit/d74c840a7753490b261bf1304280bd5071d3528d))
+* filter out nzbs with failed status ([174e813](https://github.com/Viren070/AIOStreams/commit/174e81312769fd9dbd6ffe0b47ea64c282e4e5ef))
+* **frontend:** filter out stremio-usenet and archive stream type in type select ([3c535ed](https://github.com/Viren070/AIOStreams/commit/3c535ed4f60c5421b8467711b4fb5f3ec4d7c6fe))
+* pass intent field in service credentials ([47d7eb0](https://github.com/Viren070/AIOStreams/commit/47d7eb097f16e970750be23056e010d43b1f1cda))
+* **presets/nzbhydra:** use value of checkOwned option ([c1b5c3c](https://github.com/Viren070/AIOStreams/commit/c1b5c3c4e71d9aad06503f5facc1282b7b0e4033))
+* **presets/prowlarr:** add stremio nntp as supported service ([96e7c56](https://github.com/Viren070/AIOStreams/commit/96e7c566b629a5a15a9fda227a1a9d6211b640c7))
+* remove min character requirement in addon name in catalog modification ([fd7c6d1](https://github.com/Viren070/AIOStreams/commit/fd7c6d1b673d08b88235fff50f8f8697dfb625a6))
+* **sel:** add stremio_nntp as valid service ([0ba11b1](https://github.com/Viren070/AIOStreams/commit/0ba11b17dd8f37bede8670c7cbabd8e1b090c8d2))
+* **sel:** correct filter function syntax for stream message comparison ([86ae86a](https://github.com/Viren070/AIOStreams/commit/86ae86a2728c0c134539716aaf1050e72fddffde))
+
 ## [2.17.6](https://github.com/Viren070/AIOStreams/compare/v2.17.5...v2.17.6) (2025-11-23)
 
 
