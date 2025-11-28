@@ -491,6 +491,25 @@ export abstract class StreamExpressionEngine {
       return streams.filter((stream) => stream.library);
     };
 
+    this.parser.functions.seadex = function (
+      streams: ParsedStream[],
+      filterType?: string
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+
+      const filter = filterType?.toLowerCase() || 'all';
+
+      if (filter === 'best') {
+        // Only return SeaDex "best" releases
+        return streams.filter((stream) => stream.seadex?.isBest === true);
+      }
+
+      // Return all SeaDex releases (best or regular)
+      return streams.filter((stream) => stream.seadex?.isSeadex === true);
+    };
+
     this.parser.functions.count = function (streams: ParsedStream[]) {
       if (!Array.isArray(streams)) {
         throw new Error(

@@ -860,6 +860,7 @@ const SORT_CRITERIA = [
   'library',
   'keyword',
   'streamExpressionMatched',
+  'seadex',
 ] as const;
 
 export const MIN_SIZE = 0;
@@ -1037,6 +1038,16 @@ export const SORT_CRITERIA_DETAILS: Record<
       'Streams that do not match your stream expressions are preferred while the ones that do are ranked by the order of your stream expressions',
     descendingDescription:
       'Streams that match your stream expressions are preferred and ranked by the order of your stream expressions',
+  },
+  seadex: {
+    name: 'SeaDex',
+    defaultDirection: 'desc',
+    description:
+      'Whether the stream is a SeaDex release (curated best anime releases from releases.moe)',
+    ascendingDescription:
+      'Non-SeaDex releases are preferred over SeaDex releases',
+    descendingDescription:
+      'SeaDex Best releases are preferred, then other SeaDex releases, then non-SeaDex releases',
   },
 } as const;
 

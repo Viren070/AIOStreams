@@ -299,6 +299,19 @@ class StreamSorter {
           );
           return multiplier * -(index === -1 ? Infinity : index);
         }
+        case 'seadex': {
+          // SeaDex sorting: Best (2) > On SeaDex (1) > Not on SeaDex (0)
+          if (!stream.seadex) {
+            return multiplier * 0;
+          }
+          if (stream.seadex.isBest) {
+            return multiplier * 2;
+          }
+          if (stream.seadex.isSeadex) {
+            return multiplier * 1;
+          }
+          return multiplier * 0;
+        }
         default:
           return 0;
       }

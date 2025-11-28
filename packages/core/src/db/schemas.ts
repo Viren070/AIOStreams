@@ -715,6 +715,12 @@ export const ParsedStreamSchema = z.object({
     .optional(),
   duration: z.number().optional(),
   library: z.boolean().optional(),
+  seadex: z
+    .object({
+      isBest: z.boolean(),
+      isSeadex: z.boolean(),
+    })
+    .optional(),
   url: z.string().optional(),
   ytId: z.string().min(1).optional(),
   externalUrl: z.string().min(1).optional(),
