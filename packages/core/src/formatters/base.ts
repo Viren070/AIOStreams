@@ -96,6 +96,7 @@ export interface ParseValue {
     seasonEpisode: string[] | null;
     seasonPack: boolean;
     seeders: number | null;
+    private: boolean;
     age: string | null;
     ageHours: number | null;
     duration: number | null;
@@ -298,6 +299,7 @@ export abstract class BaseFormatter {
         audioChannels: stream.parsedFile?.audioChannels || null,
         indexer: stream.indexer || null,
         seeders: stream.torrent?.seeders ?? null,
+        private: stream.torrent?.private ?? false,
         year: stream.parsedFile?.year || null,
         type: stream.type || null,
         title: stream.parsedFile?.title || null,

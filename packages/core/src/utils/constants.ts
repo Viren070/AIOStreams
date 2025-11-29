@@ -205,6 +205,7 @@ const SEEDR_SERVICE = 'seedr';
 const EASYNEWS_SERVICE = 'easynews';
 const NZBDAV_SERVICE = 'nzbdav';
 const ALTMOUNT_SERVICE = 'altmount';
+const STREMIO_NNTP_SERVICE = 'stremio_nntp';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -221,6 +222,7 @@ const SERVICES = [
   EASYNEWS_SERVICE,
   NZBDAV_SERVICE,
   ALTMOUNT_SERVICE,
+  STREMIO_NNTP_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -235,6 +237,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   OFFCLOUD_SERVICE,
   NZBDAV_SERVICE,
   ALTMOUNT_SERVICE,
+  STREMIO_NNTP_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -386,6 +389,30 @@ const SERVICE_DETAILS: Record<
       },
     ],
   },
+  [STREMIO_NNTP_SERVICE]: {
+    id: STREMIO_NNTP_SERVICE,
+    name: 'Stremio NNTP',
+    shortName: 'SN',
+    knownNames: ['SN', 'Stremio NNTP', 'StremioNntp', 'Stremio-NNTP'],
+    signUpText:
+      "Stream usenet directly from your provider via Stremio's NNTP client.",
+    credentials: [
+      {
+        id: 'note',
+        name: '',
+        description: `This is a new Stremio feature that allows Stremio to connect directly to Usenet NNTP servers you provide. It is currently [only supported on Stremio V5 Desktop](https://blog.stremio.com/stremio-new-stream-sources-usenet-rar-zip-ftp-and-more/).`,
+        type: 'alert',
+        intent: 'warning',
+      },
+      {
+        id: 'servers',
+        name: 'NNTP Servers',
+        description: 'Provide your Usenet NNTP server addresses',
+        type: 'custom-nntp-servers',
+        required: true,
+      },
+    ],
+  },
   [NZBDAV_SERVICE]: {
     id: NZBDAV_SERVICE,
     name: 'NzbDAV',
@@ -431,7 +458,7 @@ const SERVICE_DETAILS: Record<
         description:
           'Your Nzb DAV WebDAV Username. Found in the WebDAV section in settings.',
         type: 'string',
-        required: true,
+        required: false,
       },
       {
         id: 'password',
@@ -439,7 +466,7 @@ const SERVICE_DETAILS: Record<
         description:
           'Your NzbDAV WebDAV Password. Found in the WebDAV section in settings.',
         type: 'password',
-        required: true,
+        required: false,
       },
       {
         id: 'aiostreamsAuth',
@@ -853,6 +880,7 @@ const SORT_CRITERIA = [
   'size',
   'service',
   'seeders',
+  'private',
   'age',
   'addon',
   'regexPatterns',
@@ -982,6 +1010,15 @@ export const SORT_CRITERIA_DETAILS: Record<
     ascendingDescription: 'Streams with fewer seeders are preferred',
     descendingDescription: 'Streams with more seeders are preferred',
   },
+  private: {
+    name: 'Private',
+    description: 'Whether the stream is from a private tracker or not',
+    defaultDirection: 'desc',
+    ascendingDescription:
+      'Streams that are not from private trackers are preferred',
+    descendingDescription:
+      'Streams that are from private trackers are preferred',
+  },
   age: {
     name: 'Age',
     description: 'Sort by the age of the stream',
@@ -1055,6 +1092,8 @@ const SORT_DIRECTIONS = ['asc', 'desc'] as const;
 
 export const P2P_STREAM_TYPE = 'p2p' as const;
 export const LIVE_STREAM_TYPE = 'live' as const;
+export const STREMIO_USENET_STREAM_TYPE = 'stremio-usenet' as const;
+export const ARCHIVE_STREAM_TYPE = 'archive' as const;
 export const USENET_STREAM_TYPE = 'usenet' as const;
 export const DEBRID_STREAM_TYPE = 'debrid' as const;
 export const HTTP_STREAM_TYPE = 'http' as const;
@@ -1066,6 +1105,8 @@ export const STATISTIC_STREAM_TYPE = 'statistic' as const;
 const STREAM_TYPES = [
   P2P_STREAM_TYPE,
   LIVE_STREAM_TYPE,
+  STREMIO_USENET_STREAM_TYPE,
+  ARCHIVE_STREAM_TYPE,
   USENET_STREAM_TYPE,
   DEBRID_STREAM_TYPE,
   HTTP_STREAM_TYPE,
@@ -1120,6 +1161,24 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   [META_RESOURCE]: 'Metadata',
   [ADDON_CATALOG_RESOURCE]: 'Addon Catalog',
 };
+
+// export const PRESET_CATEGORY_STREAMS = 'streams' as const;
+// econst PRESET_CATEGORY_SUBTITLES = 'subtitles' as const;
+// const PRESET_CATEGORY_META_CATALOGS = 'meta_catalogs' as const;
+// const PRESET_CATEGORY_MISC = 'misc' as const;
+export enum PresetCategory {
+  STREAMS = 'streams',
+  SUBTITLES = 'subtitles',
+  META_CATALOGS = 'meta_catalogs',
+  MISC = 'misc',
+}
+
+export const PRESET_CATEGORIES = [
+  PresetCategory.STREAMS,
+  PresetCategory.SUBTITLES,
+  PresetCategory.META_CATALOGS,
+  PresetCategory.MISC,
+] as const;
 
 const LANGUAGES = [
   'English',
@@ -1239,6 +1298,7 @@ export {
   SEEDR_SERVICE,
   NZBDAV_SERVICE,
   ALTMOUNT_SERVICE,
+  STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   SERVICE_DETAILS,
   TOP_LEVEL_OPTION_DETAILS,

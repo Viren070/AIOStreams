@@ -2,6 +2,7 @@ import {
   ParsedFileSchema,
   ParsedStream,
   Resource,
+  SourceSchema,
   SubtitleSchema,
   UserData,
 } from '../db/index.js';
@@ -27,6 +28,11 @@ const SearchApiResultSchema = z.object({
   externalUrl: z.string().nullable(),
   fileIdx: z.number().nullable(),
   url: z.string().nullable(),
+  nzbUrl: z.string().nullable(),
+  rarUrls: z.array(SourceSchema).nullable(),
+  '7zipUrls': z.array(SourceSchema).nullable(),
+  tarUrls: z.array(SourceSchema).nullable(),
+  tgzUrls: z.array(SourceSchema).nullable(),
   proxied: z.boolean(),
   filename: z.string().nullable(),
   folderName: z.string().nullable(),
@@ -64,9 +70,14 @@ export class ApiTransformer {
     const { data, errors } = response;
     let filteredCount = 0;
     const results: SearchApiResult[] = data.streams
-      .map((stream) => ({
+      .map((stream: ParsedStream) => ({
         infoHash: stream.torrent?.infoHash ?? null,
         url: stream.url ?? null,
+        nzbUrl: stream.nzbUrl ?? null,
+        rarUrls: stream.rarUrls ?? null,
+        '7zipUrls': stream['7zipUrls'] ?? null,
+        tarUrls: stream.tarUrls ?? null,
+        tgzUrls: stream.tgzUrls ?? null,
         seeders: stream.torrent?.seeders ?? null,
         age: stream.age ?? null,
         sources: stream.torrent?.sources ?? null,

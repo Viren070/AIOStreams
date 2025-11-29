@@ -153,6 +153,8 @@ class StreamSorter {
           return multiplier * (stream.size ?? 0);
         case 'seeders':
           return multiplier * (stream.torrent?.seeders ?? 0);
+        case 'private':
+          return multiplier * (stream.torrent?.private ? 1 : 0);
         case 'age':
           return multiplier * (stream.age ?? 0);
         case 'encode': {

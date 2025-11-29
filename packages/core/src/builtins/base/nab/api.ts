@@ -10,6 +10,7 @@ import {
 } from '../../../utils/index.js';
 import { Parser } from 'xml2js';
 import { Logger } from 'winston';
+import { searchWithBackgroundRefresh } from '../../utils/general.js';
 
 // --- Generic Custom Error ---
 export class NabApiError extends Error {
@@ -55,7 +56,9 @@ const NabCapsSearchingSchema = z
 const CapabilitiesSchema = z
   .object({
     caps: z.object({
-      server: z.array(z.object({ $: z.object({ title: z.string() }) })),
+      server: z.array(
+        z.object({ $: z.object({ title: z.string().optional() }) })
+      ),
       limits: z
         .array(
           z.object({
@@ -178,6 +181,19 @@ const createNewznabItemSchema = () =>
       newznab: item['newznab:attr'],
     }));
 
+// schema for response attributes (offset, total only)
+const ResponseAttributeSchema = z
+  .object({
+    $: z.object({
+      offset: convertString.optional(),
+      total: convertString.optional(),
+    }),
+  })
+  .transform((obj) => ({
+    offset: obj.$.offset as number | undefined,
+    total: obj.$.total as number | undefined,
+  }));
+
 // Type definitions for search result items
 export type TorznabSearchResultItem = z.infer<
   ReturnType<typeof createTorznabItemSchema>
@@ -190,12 +206,24 @@ export type NewznabSearchResultItem = z.infer<
 export type SearchResultItem<T extends 'torznab' | 'newznab'> =
   T extends 'torznab' ? TorznabSearchResultItem : NewznabSearchResultItem;
 
+export type SearchResponse<T extends 'torznab' | 'newznab'> = {
+  offset?: number;
+  total?: number;
+  results: SearchResultItem<T>[];
+};
+
+type RawSearchResponse = {
+  offset?: number;
+  total?: number;
+  results: (TorznabSearchResultItem | NewznabSearchResultItem)[];
+};
+
 // --- API Client Class ---
 export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private readonly xmlParser: Parser;
   private readonly capabilitiesCache: Cache<string, Capabilities>;
-  private readonly searchCache: Cache<string, SearchResultItem<N>[]>;
-  private readonly SearchResultSchema: z.ZodType<any[]>;
+  private readonly searchCache: Cache<string, SearchResponse<N>>;
+  private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
   private readonly logger: Logger;
 
   constructor(
@@ -210,7 +238,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     this.apiPath = this.removeTrailingSlash(apiPath);
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
-    this.searchCache = Cache.getInstance(`${namespace}:api:search`);
+    this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
 
     // Create the appropriate schema based on namespace
     if (namespace === 'torznab') {
@@ -218,25 +246,77 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         .object({
           rss: z.object({
             channel: z.array(
-              z.object({
-                item: z.array(createTorznabItemSchema()).optional().default([]),
-              })
+              z.union([
+                z.literal(''),
+                z.object({
+                  item: z
+                    .array(createTorznabItemSchema())
+                    .optional()
+                    .default([]),
+                  'torznab:response': z
+                    .array(ResponseAttributeSchema)
+                    .optional(),
+                  'newznab:response': z
+                    .array(ResponseAttributeSchema)
+                    .optional(),
+                  response: z.array(ResponseAttributeSchema).optional(),
+                }),
+              ])
             ),
           }),
         })
-        .transform((data) => data.rss.channel[0].item);
+        .transform((data) => {
+          const channel = data.rss.channel[0];
+          const response =
+            channel === ''
+              ? undefined
+              : (channel['torznab:response']?.[0] ??
+                channel['newznab:response']?.[0] ??
+                channel.response?.[0]);
+          return {
+            offset: response?.offset,
+            total: response?.total,
+            results: channel === '' ? [] : channel.item,
+          };
+        });
     } else {
       this.SearchResultSchema = z
         .object({
           rss: z.object({
             channel: z.array(
-              z.object({
-                item: z.array(createNewznabItemSchema()).optional().default([]),
-              })
+              z.union([
+                z.literal(''),
+                z.object({
+                  item: z
+                    .array(createNewznabItemSchema())
+                    .optional()
+                    .default([]),
+                  'torznab:response': z
+                    .array(ResponseAttributeSchema)
+                    .optional(),
+                  'newznab:response': z
+                    .array(ResponseAttributeSchema)
+                    .optional(),
+                  response: z.array(ResponseAttributeSchema).optional(),
+                }),
+              ])
             ),
           }),
         })
-        .transform((data) => data.rss.channel[0].item);
+        .transform((data) => {
+          const channel = data.rss.channel[0];
+          const response =
+            channel === ''
+              ? undefined
+              : (channel['torznab:response']?.[0] ??
+                channel['newznab:response']?.[0] ??
+                channel.response?.[0]);
+          return {
+            offset: response?.offset,
+            total: response?.total,
+            results: channel === '' ? [] : channel.item,
+          };
+        });
     }
   }
 
@@ -252,13 +332,23 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   public async search(
     searchFunction: string = 'search',
     params: Record<string, string | number | boolean> = {}
-  ): Promise<SearchResultItem<N>[]> {
+  ): Promise<SearchResponse<N>> {
     const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}`;
-    return this.searchCache.wrap(
-      () => this.request(searchFunction, this.SearchResultSchema, params),
-      cacheKey,
-      Env.BUILTIN_NAB_SEARCH_CACHE_TTL
-    );
+
+    return searchWithBackgroundRefresh({
+      searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
+      searchCacheKey: cacheKey,
+      bgCacheKey: `nab:${cacheKey}`,
+      cacheTTL: Env.BUILTIN_NAB_SEARCH_CACHE_TTL,
+      fetchFn: () =>
+        this.request(
+          searchFunction,
+          this.SearchResultSchema,
+          params
+        ) as Promise<SearchResponse<N>>,
+      isEmptyResult: (result) => result.results.length === 0,
+      logger: this.logger,
+    });
   }
 
   private removeTrailingSlash = (path: string) =>

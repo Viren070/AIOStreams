@@ -22,6 +22,11 @@ export class KnabenPreset extends TorznabPreset {
         type: 'number',
         required: true,
         default: Env.BUILTIN_DEFAULT_KNABEN_TIMEOUT || Env.DEFAULT_TIMEOUT,
+        constraints: {
+          min: Env.MIN_TIMEOUT,
+          max: Env.MAX_TIMEOUT,
+          forceInUi: false,
+        },
       },
       {
         id: 'services',

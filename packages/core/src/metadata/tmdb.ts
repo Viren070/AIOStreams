@@ -65,30 +65,17 @@ const TVAlternativeTitlesSchema = z.object({
   ),
 });
 
-const BaseTranslationsSchema = z.object({
-  iso_3166_1: z.string(),
-  iso_639_1: z.string(),
-  name: z.string(),
-  english_name: z.string(),
-});
-
-const TVTranslationsSchema = z.object({
+const TranslationsSchema = z.object({
   id: z.number(),
   translations: z.array(
-    BaseTranslationsSchema.extend({
+    z.object({
+      iso_3166_1: z.string(),
+      iso_639_1: z.string(),
+      name: z.string(),
+      english_name: z.string(),
       data: z.object({
-        title: z.string(),
-      }),
-    })
-  ),
-});
-
-const MovieTranslationsSchema = z.object({
-  id: z.number(),
-  translations: z.array(
-    BaseTranslationsSchema.extend({
-      data: z.object({
-        name: z.string(),
+        title: z.string().optional(),
+        name: z.string().optional(),
       }),
     })
   ),
@@ -256,18 +243,10 @@ export class TMDBMetadata {
     }
 
     const json = await response.json();
-
-    if (mediaType === 'movie') {
-      const data = MovieTranslationsSchema.parse(json);
-      return data.translations
-        .map((translation) => translation.data.name)
-        .filter(Boolean);
-    } else {
-      const data = TVTranslationsSchema.parse(json);
-      return data.translations
-        .map((translation) => translation.data.title)
-        .filter(Boolean);
-    }
+    const data = TranslationsSchema.parse(json);
+    return data.translations
+      .map((translation) => translation.data.title || translation.data.name)
+      .filter((s): s is string => Boolean(s));
   }
 
   public async getMetadata(parsedId: ParsedId): Promise<Metadata> {

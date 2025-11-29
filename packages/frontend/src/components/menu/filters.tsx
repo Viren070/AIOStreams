@@ -2616,6 +2616,7 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
+
                 {mode === 'pro' && (
                   <>
                     <SettingsCard
@@ -2758,6 +2759,30 @@ function Content() {
                           label: key,
                           value: key,
                         }))}
+                      />
+
+                      <Combobox
+                        help="Addons selected here will always have their results kept during deduplication."
+                        label="Addon Exclusions"
+                        value={userData.deduplicator?.excludeAddons ?? []}
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            deduplicator: {
+                              ...prev.deduplicator,
+                              excludeAddons: value,
+                            },
+                          }));
+                        }}
+                        options={userData.presets.map((preset) => ({
+                          label: preset.options.name || preset.type,
+                          value: preset.instanceId,
+                          textValue: preset.options.name,
+                        }))}
+                        emptyMessage="You haven't installed any addons..."
+                        placeholder="Select addons..."
+                        multiple
+                        disabled={userData.deduplicator?.enabled === false}
                       />
 
                       <Select

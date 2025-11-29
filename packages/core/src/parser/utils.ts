@@ -36,7 +36,7 @@ export function preprocessTitle(
   let preprocessedTitle = parsedTitle;
 
   const separatorPatterns = [
-    /\s*\/\s*/,
+    /\s*[\/\|]\s*/,
     /[\s\.\-\(]+a[\s\.]?k[\s\.]?a[\s\.\)\-]+/i,
     /\s*\(([^)]+)\)$/,
   ];
@@ -54,7 +54,7 @@ export function preprocessTitle(
         if (parts.length > 1 && parts[0]?.trim()) {
           const originalTitle = preprocessedTitle;
           preprocessedTitle = parts[0].trim();
-          logger.debug(
+          logger.silly(
             `Updated title from "${originalTitle}" to "${preprocessedTitle}"`
           );
           break;
@@ -84,7 +84,19 @@ export function normaliseTitle(title: string) {
 }
 
 export function cleanTitle(title: string) {
-  let cleaned = title.normalize('NFD');
+  const umlautMap: Record<string, string> = {
+    Ä: 'Ae',
+    ä: 'ae',
+    Ö: 'Oe',
+    ö: 'oe',
+    Ü: 'Ue',
+    ü: 'ue',
+    ß: 'ss',
+  };
+  // replace German umlauts with ASCII equivalents, then normalize to NFD
+  let cleaned = title
+    .replace(/[ÄäÖöÜüß]/g, (c) => umlautMap[c])
+    .normalize('NFD');
 
   for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-']) {
     cleaned = cleaned.replaceAll(char, ' ');

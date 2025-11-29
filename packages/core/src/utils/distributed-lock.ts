@@ -11,6 +11,7 @@ export interface LockOptions {
   timeout?: number;
   ttl?: number;
   retryInterval?: number;
+  type?: 'memory' | 'sql' | 'redis';
 }
 
 export interface LockResult<T> {
@@ -29,6 +30,21 @@ export class DistributedLock {
   private subRedis: RedisClientType | null = null;
   private initialised = false;
   private initialisePromise: Promise<void> | null = null;
+
+  // In-memory lock storage
+  private memoryLocks: Map<
+    string,
+    {
+      owner: string;
+      expiresAt: number;
+      result?: any;
+      error?: Error;
+      waiters: Array<{
+        resolve: (result: any) => void;
+        reject: (error: Error) => void;
+      }>;
+    }
+  > = new Map();
 
   private constructor() {}
 
@@ -65,7 +81,12 @@ export class DistributedLock {
     options: LockOptions = {}
   ): Promise<LockResult<T>> {
     await this.initialise();
-    return this.redis
+
+    if (options.type === 'memory') {
+      return this.withMemoryLock(key, fn, options);
+    }
+
+    return this.redis && options.type !== 'sql'
       ? this.withRedisLock(key, fn, options)
       : this.withSqlLock(key, fn, options);
   }
@@ -161,6 +182,118 @@ export class DistributedLock {
         .catch((err) => {
           reject(err);
         });
+    });
+  }
+
+  private async withMemoryLock<T>(
+    key: string,
+    fn: () => Promise<T>,
+    options: LockOptions
+  ): Promise<LockResult<T>> {
+    const { timeout = 30000, ttl = 60000 } = options;
+    const owner = Math.random().toString(36).substring(2);
+
+    // Clean up expired locks
+    const now = Date.now();
+    for (const [lockKey, lock] of this.memoryLocks.entries()) {
+      if (lock.expiresAt < now) {
+        this.memoryLocks.delete(lockKey);
+      }
+    }
+
+    const existingLock = this.memoryLocks.get(key);
+
+    // Try to acquire the lock
+    if (!existingLock || existingLock.expiresAt < now) {
+      logger.debug(`Memory lock acquired for key: ${key}`);
+
+      const lock: {
+        owner: string;
+        expiresAt: number;
+        result?: T;
+        error?: Error;
+        waiters: Array<{
+          resolve: (result: any) => void;
+          reject: (error: Error) => void;
+        }>;
+      } = {
+        owner,
+        expiresAt: now + ttl,
+        waiters: [],
+      };
+      this.memoryLocks.set(key, lock);
+
+      let result: T;
+      try {
+        result = await fn();
+        lock.result = result;
+        lock.waiters.forEach(({ resolve }) =>
+          resolve({ result, cached: true })
+        );
+        lock.waiters = [];
+      } catch (e: any) {
+        lock.error = e instanceof Error ? e : new Error(String(e));
+
+        lock.waiters.forEach(({ reject }) => reject(lock.error!));
+        lock.waiters = [];
+
+        throw e;
+      } finally {
+        setTimeout(() => {
+          logger.debug(`Releasing memory lock for key: ${key}`);
+          this.memoryLocks.delete(key);
+        }, 2000);
+      }
+
+      return { result, cached: false };
+    }
+
+    // Wait for the lock holder to finish
+    return new Promise<LockResult<T>>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        const errorMessage = `Timed out waiting for memory lock on key: ${key}`;
+        logger.error(errorMessage);
+
+        // Remove this waiter from the list
+        const lock = this.memoryLocks.get(key);
+        if (lock) {
+          const waiterIndex = lock.waiters.findIndex(
+            (w) => w.resolve === waiterResolve
+          );
+          if (waiterIndex > -1) {
+            lock.waiters.splice(waiterIndex, 1);
+          }
+        }
+
+        reject(new Error(errorMessage));
+      }, timeout);
+
+      const waiterResolve = (lockResult: LockResult<T>) => {
+        clearTimeout(timeoutId);
+        logger.debug(
+          `Received cached result for key: ${key} from memory lock.`
+        );
+        resolve(lockResult);
+      };
+
+      const waiterReject = (error: Error) => {
+        clearTimeout(timeoutId);
+        logger.warn(
+          `Received error result for key: ${key} from memory lock holder.`
+        );
+        reject(error);
+      };
+
+      if (existingLock.result !== undefined) {
+        waiterResolve({ result: existingLock.result, cached: true });
+      } else if (existingLock.error) {
+        waiterReject(existingLock.error);
+      } else {
+        existingLock.waiters.push({
+          resolve: waiterResolve,
+          reject: waiterReject,
+        });
+      }
     });
   }
 

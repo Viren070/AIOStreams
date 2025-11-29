@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
       fs: false,
       './ptt.js': './ptt',
       './regex.js': './regex',
+      '../utils/languages.js': '../utils/languages',
+      '../utils/constants.js': '../utils/constants',
     };
     return config;
   },

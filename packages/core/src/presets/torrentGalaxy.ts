@@ -23,6 +23,11 @@ export class TorrentGalaxyPreset extends TorznabPreset {
         required: true,
         default:
           Env.BUILTIN_DEFAULT_TORRENT_GALAXY_TIMEOUT || Env.DEFAULT_TIMEOUT,
+        constraints: {
+          min: Env.MIN_TIMEOUT,
+          max: Env.MAX_TIMEOUT,
+          forceInUi: false,
+        },
       },
       {
         id: 'services',

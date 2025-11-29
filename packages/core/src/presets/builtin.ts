@@ -6,7 +6,10 @@ import { Preset } from './preset.js';
 import { stremthruSpecialCases } from './stremthru.js';
 
 export class BuiltinStreamParser extends StreamParser {
-  override getFolder(stream: Stream): string | undefined {
+  protected getFolder(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
     if (!stream.description) {
       return undefined;
     }
@@ -27,6 +30,22 @@ export class BuiltinStreamParser extends StreamParser {
     }
     return undefined;
   }
+
+  protected getService(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): ParsedStream['service'] | undefined {
+    const service = this.parseServiceData(stream.name || '');
+    if (
+      service &&
+      (service.id === constants.NZBDAV_SERVICE ||
+        service.id === constants.ALTMOUNT_SERVICE)
+    ) {
+      currentParsedStream.proxied = !stream.behaviorHints?.proxyHeaders;
+    }
+    return service;
+  }
+
   protected parseServiceData(
     string: string
   ): ParsedStream['service'] | undefined {
@@ -44,14 +63,20 @@ export class BuiltinStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
-    return stream.age as number | undefined;
+    if (typeof stream.age === 'number') {
+      currentParsedStream.duration = undefined;
+      return stream.age;
+    }
   }
+
   protected getStreamType(
     stream: Stream,
     service: ParsedStream['service'],
     currentParsedStream: ParsedStream
   ): ParsedStream['type'] {
-    return (stream as any).type === 'usenet' ? 'usenet' : 'debrid';
+    return stream.type === 'torrent'
+      ? 'debrid'
+      : (stream.type as 'usenet' | 'stremio-usenet');
   }
 }
 
@@ -79,6 +104,8 @@ export class BuiltinAddonPreset extends Preset {
             aiostreamsAuth: credentials.aiostreamsAuth,
           })
         ),
+      [constants.STREMIO_NNTP_SERVICE]: (credentials: any) =>
+        credentials.servers, // this will be a base64 encoded json string of the nntp server config { username, password, host, port, useSsl, connections }[]
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>

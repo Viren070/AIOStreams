@@ -2,6 +2,7 @@ import { Cache } from '../../utils/cache.js';
 import { Env } from '../../utils/env.js';
 import { formatZodError, makeRequest } from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
+import { searchWithBackgroundRefresh } from '../utils/general.js';
 
 import { z } from 'zod';
 
@@ -102,9 +103,10 @@ const API_VERSION = '1';
 class KnabenAPI {
   private headers: Record<string, string>;
 
-  private readonly searchCache = Cache.getInstance<string, any>(
-    'knaben:search'
-  );
+  private readonly searchCache = Cache.getInstance<
+    string,
+    KnabenSearchResponse
+  >('knaben:search');
 
   constructor() {
     this.headers = {
@@ -117,18 +119,23 @@ class KnabenAPI {
 
   async search(options: KnabenSearchOptions): Promise<KnabenSearchResponse> {
     const body = KnabenSearchOptionsRequest.parse(options);
+    const cacheKey = JSON.stringify(options);
 
-    return this.searchCache.wrap(
-      () =>
+    return searchWithBackgroundRefresh({
+      searchCache: this.searchCache,
+      searchCacheKey: cacheKey,
+      bgCacheKey: `knaben:${cacheKey}`,
+      cacheTTL: Env.BUILTIN_KNABEN_SEARCH_CACHE_TTL,
+      fetchFn: () =>
         this.request<KnabenSearchResponse>('', {
           schema: KnabenSearchResponse,
           method: 'POST',
           timeout: Env.BUILTIN_KNABEN_SEARCH_TIMEOUT,
           body,
         }),
-      `knaben:search:${JSON.stringify(options)}`,
-      Env.BUILTIN_KNABEN_SEARCH_CACHE_TTL
-    );
+      isEmptyResult: (result) => result.hits.length === 0,
+      logger,
+    });
   }
 
   private async request<T>(

@@ -3,7 +3,7 @@ import {
   UsenetStreamService,
   UsenetStreamServiceConfig,
 } from './usenet-stream-base.js';
-import { DebridServiceConfig } from './base.js';
+import { DebridServiceConfig, PlaybackInfo } from './base.js';
 import { ServiceId, createLogger, fromUrlSafeBase64 } from '../utils/index.js';
 import { basename } from 'path';
 
@@ -39,6 +39,7 @@ export class AltmountService extends UsenetStreamService {
       webdavPassword: parsedConfig.webdavPassword,
       apiUrl: `${parsedConfig.altmountUrl}/sabnzbd/api`,
       apiKey: parsedConfig.altmountApiKey,
+      aiostreamsAuth: parsedConfig.aiostreamsAuth,
     };
 
     super(config, auth, 'altmount');
@@ -48,7 +49,10 @@ export class AltmountService extends UsenetStreamService {
     return '/complete';
   }
 
-  protected getExpectedFolderName(nzbUrl: string, filename: string): string {
+  protected getExpectedFolderName(
+    nzb: PlaybackInfo & { type: 'usenet' }
+  ): string {
+    const nzbUrl = nzb.nzb;
     // Altmount uses basename of the NZB URL
     return nzbUrl.endsWith('.nzb')
       ? basename(nzbUrl, '.nzb')

@@ -32,6 +32,7 @@ import {
 import { DebridFile, FileInfo, PlaybackInfo } from '../../debrid/index.js';
 import { getTraktAliases } from '../../metadata/trakt.js';
 import { formatHours } from '../../formatters/utils.js';
+import { parseAgeString } from '../../parser/utils.js';
 
 const logger = createLogger('torbox-search');
 
@@ -123,11 +124,18 @@ abstract class SourceHandler {
         : '⏳'
       : '';
 
-    const name = `[${shortCode} ${cacheIndicator}${torrentOrNzb.service?.owned ? ' ☁️' : ''}] TorBox Search`;
+    const age =
+      typeof torrentOrNzb.age === 'number'
+        ? torrentOrNzb.age
+        : typeof torrentOrNzb.age === 'string'
+          ? parseAgeString(torrentOrNzb.age)
+          : undefined;
+
+    const name = `[${shortCode} ${cacheIndicator}${torrentOrNzb.service?.library ? ' ☁️' : ''}] TorBox Search`;
     const description = `${torrentOrNzb.title}\n${torrentOrNzb.file.name}\n${
       torrentOrNzb.indexer ? `🔍 ${torrentOrNzb.indexer}` : ''
     } ${'seeders' in torrentOrNzb && torrentOrNzb.seeders ? `👤 ${torrentOrNzb.seeders}` : ''} ${
-      torrentOrNzb.age ? `🕒 ${formatHours(torrentOrNzb.age)}` : ''
+      age ? `🕒 ${formatHours(age)}` : ''
     }`;
 
     return {
@@ -143,7 +151,7 @@ abstract class SourceHandler {
       name,
       description,
       type: torrentOrNzb.type,
-      age: torrentOrNzb.age,
+      age: age,
       infoHash: torrentOrNzb.hash,
       fileIdx: torrentOrNzb.file.index,
       behaviorHints: {
@@ -339,7 +347,7 @@ export class TorrentSourceHandler extends SourceHandler {
     );
 
     results.forEach((result) => {
-      result.service!.owned =
+      result.service!.library =
         fetchResult.torrents.find((torrent) => torrent.hash === result.hash)
           ?.owned ?? false;
     });
@@ -578,7 +586,7 @@ export class UsenetSourceHandler extends SourceHandler {
     );
 
     results.forEach((result) => {
-      result.service!.owned =
+      result.service!.library =
         nzbs.find((nzb) => nzb.hash === result.hash)?.owned ?? false;
     });
 

@@ -64,10 +64,16 @@ export class TorboxDebridService implements DebridService {
     return this.stremthru.generateTorrentLink(link, clientIp);
   }
 
-  public async checkNzbs(hashes: string[]): Promise<DebridDownload[]> {
+  public async checkNzbs(
+    nzbs: { name?: string; hash?: string }[]
+  ): Promise<DebridDownload[]> {
+    nzbs = nzbs.filter((nzb) => nzb.hash);
+    if (nzbs.length === 0) {
+      return [];
+    }
     const cachedResults: DebridDownload[] = [];
     const hashesToCheck: string[] = [];
-    for (const hash of hashes) {
+    for (const { hash } of nzbs as { hash: string }[]) {
       const cacheKey = getSimpleTextHash(hash);
       const cached =
         await TorboxDebridService.instantAvailabilityCache.get(cacheKey);

@@ -91,6 +91,7 @@ export class AnimeToshoPreset extends TorznabPreset {
       ...this.getBaseConfig(userData, services),
       url: animetoshoUrl,
       apiPath: '/api',
+      paginate: false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

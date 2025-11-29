@@ -178,7 +178,7 @@ app.get(
   }
 );
 
-app.get('/static/*any', (req, res, next) => {
+app.get('/static/*any', corsMiddleware, (req, res, next) => {
   const filePath = path.resolve(
     staticRoot,
     req.path.replace(/^\/static\//, '')

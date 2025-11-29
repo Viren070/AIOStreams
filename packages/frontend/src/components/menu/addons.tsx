@@ -7,6 +7,7 @@ import { SettingsCard } from '../shared/settings-card';
 import { Button, IconButton } from '../ui/button';
 import { Modal } from '../ui/modal';
 import { Switch } from '../ui/switch';
+import { Card } from '../ui/card';
 import {
   DndContext,
   useSensor,
@@ -26,6 +27,8 @@ import { PlusIcon, SearchIcon, FilterIcon } from 'lucide-react';
 import TemplateOption from '../shared/template-option';
 import * as constants from '../../../../core/src/utils/constants';
 import { TextInput } from '../ui/text-input';
+import { MdSubtitles, MdOutlineDataset } from 'react-icons/md';
+import { RiFolderDownloadFill } from 'react-icons/ri';
 
 import { Popover } from '../ui/popover';
 import { BiEdit, BiTrash } from 'react-icons/bi';
@@ -110,11 +113,11 @@ function Content() {
   const [page, setPage] = useState<'installed' | 'marketplace'>('installed');
   const [search, setSearch] = useState('');
   // Filter states
-  const [serviceFilters, setServiceFilters] = useState<string[]>([]);
-  const [streamTypeFilters, setStreamTypeFilters] = useState<
-    constants.StreamType[]
-  >([]);
-  const [resourceFilters, setResourceFilters] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<
+    constants.PresetCategory | 'all'
+  >('all');
+  const [serviceFilter, setServiceFilter] = useState<string>('all');
+  const [streamTypeFilter, setStreamTypeFilter] = useState<string>('all');
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
@@ -127,33 +130,35 @@ function Content() {
   // Filtering and search for marketplace
   const filteredPresets = useMemo(() => {
     if (!status?.settings?.presets) return [];
-    return status.settings.presets.filter((preset) => {
-      if (preset.ID === 'custom') return true;
-      const matchesService =
-        serviceFilters.length === 0 ||
-        (preset.SUPPORTED_SERVICES &&
-          serviceFilters.every((s) => preset.SUPPORTED_SERVICES.includes(s)));
-      const matchesStreamType =
-        streamTypeFilters.length === 0 ||
-        (preset.SUPPORTED_STREAM_TYPES &&
-          streamTypeFilters.every((t) =>
-            preset.SUPPORTED_STREAM_TYPES.includes(t)
-          ));
-      const matchesResource =
-        resourceFilters.length === 0 ||
-        (preset.SUPPORTED_RESOURCES &&
-          resourceFilters.every((r) =>
-            preset.SUPPORTED_RESOURCES.includes(r as Resource)
-          ));
-      const matchesSearch =
-        !search ||
-        preset.NAME.toLowerCase().includes(search.toLowerCase()) ||
-        preset.DESCRIPTION.toLowerCase().includes(search.toLowerCase());
-      return (
-        matchesService && matchesStreamType && matchesResource && matchesSearch
+    let filtered = [...status.settings.presets];
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(
+        (n) =>
+          (n.CATEGORY || constants.PresetCategory.STREAMS) === categoryFilter
       );
-    });
-  }, [status, search, serviceFilters, streamTypeFilters, resourceFilters]);
+    }
+    if (serviceFilter !== 'all') {
+      filtered = filtered.filter(
+        (n) =>
+          n.SUPPORTED_SERVICES && n.SUPPORTED_SERVICES.includes(serviceFilter)
+      );
+    }
+    if (streamTypeFilter !== 'all') {
+      filtered = filtered.filter(
+        (n) =>
+          n.SUPPORTED_STREAM_TYPES &&
+          n.SUPPORTED_STREAM_TYPES.includes(streamTypeFilter as any)
+      );
+    }
+    if (search) {
+      filtered = filtered.filter(
+        (n) =>
+          n.NAME.toLowerCase().includes(search.toLowerCase()) ||
+          n.DESCRIPTION.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    return filtered;
+  }, [status, search, categoryFilter, serviceFilter, streamTypeFilter]);
 
   // My Addons (user's enabled/added presets)
 
@@ -247,19 +252,30 @@ function Content() {
     setIsDragging(true);
   }
 
-  // Service, stream type, and resource options
+  // Service, stream type options
   const serviceOptions = Object.values(constants.SERVICE_DETAILS).map(
     (service) => ({ label: service.name, value: service.id })
   );
+  const typeLabelMap: Record<string, string> = {
+    p2p: 'P2P',
+    http: 'HTTP',
+    usenet: 'Usenet',
+    debrid: 'Debrid',
+    live: 'Live',
+  };
   const streamTypeOptions = (constants.STREAM_TYPES || [])
-    .filter((type) => type !== 'error')
-    .map((type: string) => ({ label: type, value: type }));
-  const resourceOptions = (constants.RESOURCES || []).map((res: string) => ({
-    label: res,
-    value: res,
-  }));
-  const activeFilterCount =
-    serviceFilters.length + streamTypeFilters.length + resourceFilters.length;
+    .filter(
+      (type) =>
+        ![
+          'error',
+          'statistic',
+          'external',
+          'youtube',
+          'stremio-usenet',
+          'archive',
+        ].includes(type)
+    )
+    .map((type: string) => ({ label: typeLabelMap[type], value: type }));
 
   // DND-kit setup
   const sensors = useSensors(
@@ -298,6 +314,24 @@ function Content() {
       document.removeEventListener('touchend', handleDragEnd);
     };
   }, [isDragging]);
+
+  // Group presets by category
+  const streamPresets = filteredPresets.filter(
+    (n) => n.CATEGORY === constants.PresetCategory.STREAMS || !n.CATEGORY
+  );
+  const subtitlePresets = filteredPresets.filter(
+    (n) => n.CATEGORY === constants.PresetCategory.SUBTITLES
+  );
+  const metaCatalogPresets = filteredPresets.filter(
+    (n) => n.CATEGORY === constants.PresetCategory.META_CATALOGS
+  );
+  const miscPresets = filteredPresets.filter(
+    (n) => n.CATEGORY === constants.PresetCategory.MISC
+  );
+
+  const addonGridClassName =
+    'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 5xl:grid-cols-6 6xl:grid-cols-7 7xl:grid-cols-8 gap-4';
+
   return (
     <>
       {/* <div className="flex items-center w-full">
@@ -308,9 +342,9 @@ function Content() {
         <div className="flex flex-1"></div>
       </div> */}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <StaticTabs
-          className="h-10 w-fit border rounded-full"
+          className="h-10 w-fit max-w-full border rounded-full"
           triggerClass="px-4 py-1 text-md"
           items={[
             {
@@ -445,7 +479,7 @@ function Content() {
               },
             }}
             key="marketplace"
-            className="pt-0 space-y-8 relative z-[4]"
+            className="pt-0 space-y-6 relative z-[4]"
           >
             <div>
               <h2>Marketplace</h2>
@@ -453,68 +487,168 @@ function Content() {
                 Browse and install addons from the marketplace.
               </p>
             </div>
-            <div className="bg-[--card] border border-[--border] rounded-xl p-4 mb-6 shadow-sm">
-              <div className="flex justify-center mb-4">
-                <div className="w-full sm:w-[500px] flex gap-2">
-                  <TextInput
-                    value={search}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSearch(e.target.value)
-                    }
-                    placeholder="Search addons..."
-                    className="flex-1"
-                    leftIcon={<SearchIcon className="w-4 h-4" />}
-                  />
-                  <AddonFilterPopover
-                    serviceOptions={serviceOptions}
-                    streamTypeOptions={streamTypeOptions}
-                    resourceOptions={resourceOptions}
-                    serviceFilters={serviceFilters}
-                    setServiceFilters={setServiceFilters}
-                    streamTypeFilters={streamTypeFilters}
-                    setStreamTypeFilters={setStreamTypeFilters}
-                    resourceFilters={resourceFilters}
-                    setResourceFilters={setResourceFilters}
-                  >
-                    <IconButton
-                      icon={<FilterIcon className="w-5 h-5" />}
-                      intent={
-                        activeFilterCount > 0 ? 'primary' : 'primary-outline'
-                      }
-                      aria-label="Filters"
-                    />
-                  </AddonFilterPopover>
-                </div>
+
+            {/* Category tabs */}
+            <StaticTabs
+              className="h-10 w-fit max-w-full border rounded-full"
+              triggerClass="px-4 py-1 text-sm"
+              items={[
+                {
+                  name: 'All',
+                  isCurrent: categoryFilter === 'all',
+                  onClick: () => setCategoryFilter('all'),
+                },
+                {
+                  name: 'Streams',
+                  isCurrent:
+                    categoryFilter === constants.PresetCategory.STREAMS,
+                  onClick: () =>
+                    setCategoryFilter(constants.PresetCategory.STREAMS),
+                },
+                {
+                  name: 'Subtitles',
+                  isCurrent:
+                    categoryFilter === constants.PresetCategory.SUBTITLES,
+                  onClick: () =>
+                    setCategoryFilter(constants.PresetCategory.SUBTITLES),
+                },
+                {
+                  name: 'Metadata & Catalogs',
+                  isCurrent:
+                    categoryFilter === constants.PresetCategory.META_CATALOGS,
+                  onClick: () =>
+                    setCategoryFilter(constants.PresetCategory.META_CATALOGS),
+                },
+                {
+                  name: 'Miscellaneous',
+                  isCurrent: categoryFilter === constants.PresetCategory.MISC,
+                  onClick: () =>
+                    setCategoryFilter(constants.PresetCategory.MISC),
+                },
+              ]}
+            />
+
+            {/* Filters and search row */}
+            <div className="flex flex-col lg:flex-row gap-2">
+              <div className="flex gap-2 flex-1 lg:flex-none">
+                <Select
+                  value={serviceFilter}
+                  onValueChange={setServiceFilter}
+                  options={[
+                    { label: 'All Services', value: 'all' },
+                    ...serviceOptions,
+                  ]}
+                  fieldClass="lg:w-[200px]"
+                />
+                <Select
+                  value={streamTypeFilter}
+                  onValueChange={setStreamTypeFilter}
+                  options={[
+                    { label: 'All Types', value: 'all' },
+                    ...streamTypeOptions,
+                  ]}
+                  fieldClass="lg:w-[200px]"
+                />
               </div>
-              {/* Scrollable Addon Cards Grid */}
-              <div className="h-[calc(100vh-300px)] overflow-y-auto pr-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredPresets.map((preset: any) => {
-                    // Always allow adding, never show edit
-                    return (
-                      <AddonCard
-                        key={preset.ID}
-                        preset={preset}
-                        isAdded={false}
-                        onAdd={() => handleAddPreset(preset)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
+              <TextInput
+                value={search}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setSearch(e.target.value)
+                }
+                placeholder="Search addons..."
+                className="flex-1"
+                leftIcon={<SearchIcon className="w-4 h-4" />}
+              />
             </div>
+
+            {/* Addon cards by category */}
+            {filteredPresets.length === 0 && (
+              <Card className="p-8 text-center">
+                <p className="text-[--muted]">
+                  No addons found matching your criteria.
+                </p>
+              </Card>
+            )}
+
+            {!!streamPresets?.length && (
+              <Card className="p-4 space-y-6">
+                <h3 className="flex gap-3 items-center">
+                  <RiFolderDownloadFill /> Streams
+                </h3>
+                <div className={addonGridClassName}>
+                  {streamPresets.map((preset: any) => (
+                    <AddonCard
+                      key={preset.ID}
+                      preset={preset}
+                      onAdd={() => handleAddPreset(preset)}
+                    />
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {!!subtitlePresets?.length && (
+              <Card className="p-4 space-y-6">
+                <h3 className="flex gap-3 items-center">
+                  <MdSubtitles /> Subtitles
+                </h3>
+                <div className={addonGridClassName}>
+                  {subtitlePresets.map((preset: any) => (
+                    <AddonCard
+                      key={preset.ID}
+                      preset={preset}
+                      onAdd={() => handleAddPreset(preset)}
+                    />
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {!!metaCatalogPresets?.length && (
+              <Card className="p-4 space-y-6">
+                <h3 className="flex gap-3 items-center">
+                  <MdOutlineDataset /> Metadata & Catalogs
+                </h3>
+                <div className={addonGridClassName}>
+                  {metaCatalogPresets.map((preset: any) => (
+                    <AddonCard
+                      key={preset.ID}
+                      preset={preset}
+                      onAdd={() => handleAddPreset(preset)}
+                    />
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {!!miscPresets?.length && (
+              <Card className="p-4 space-y-6">
+                <h3 className="flex gap-3 items-center">
+                  <LuSettings /> Miscellaneous
+                </h3>
+                <div className={addonGridClassName}>
+                  {miscPresets.map((preset: any) => (
+                    <AddonCard
+                      key={preset.ID}
+                      preset={preset}
+                      onAdd={() => handleAddPreset(preset)}
+                    />
+                  ))}
+                </div>
+              </Card>
+            )}
           </PageWrapper>
         )}
-        {/* Add/Edit Addon Modal (ensure both tabs can use it)*/}
-        <AddonModal
-          open={modalOpen}
-          onOpenChange={setModalOpen}
-          mode={modalMode}
-          presetMetadata={modalPreset}
-          initialValues={modalInitialValues as any}
-          onSubmit={handleModalSubmit}
-        />
       </AnimatePresence>
+      {/* Add/Edit Addon Modal (ensure both tabs can use it)*/}
+      <AddonModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        mode={modalMode}
+        presetMetadata={modalPreset}
+        initialValues={modalInitialValues as any}
+        onSubmit={handleModalSubmit}
+      />
     </>
   );
 }
@@ -701,15 +835,23 @@ function SortableAddonItem({
         />
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           <div className="relative flex-shrink-0 h-8 w-8 hidden sm:block">
-            {!logo ? (
-              <IoExtensionPuzzle className="w-full h-full object-contain" />
-            ) : (
+            {logo ? (
               <Image
                 src={logo}
                 alt={presetMetadata.NAME}
                 fill
                 className="w-full h-full object-contain rounded-md"
               />
+            ) : presetMetadata.ID === 'custom' ? (
+              <PlusIcon className="w-full h-full object-contain text-[--brand]" />
+            ) : preset.options.name?.trim()?.[0] ? (
+              <div className="w-full h-full flex items-center justify-center rounded-md bg-gray-950">
+                <p className="text-lg font-bold">
+                  {preset.options.name?.trim()?.[0]?.toUpperCase() || '?'}
+                </p>
+              </div>
+            ) : (
+              <IoExtensionPuzzle className="w-full h-full object-contain text-[--brand]" />
             )}
           </div>
 
@@ -720,9 +862,9 @@ function SortableAddonItem({
 
         <div className="flex items-center gap-1 sm:gap-2">
           <Switch
-            value={!!preset.enabled}
+            value={preset.enabled ?? false}
             onValueChange={onToggleEnabled}
-            size="sm"
+            className="h-5 w-9 md:h-6 md:w-11"
           />
           {isConfigurable && (
             <IconButton
@@ -826,124 +968,165 @@ function SortableAddonItem({
 }
 
 // AddonCard component
-function AddonCard({
-  preset,
-  isAdded,
-  onAdd,
-}: {
-  preset: any;
-  isAdded: boolean;
-  onAdd: () => void;
-}) {
+function AddonCard({ preset, onAdd }: { preset: any; onAdd: () => void }) {
+  const [showBuiltinModal, setShowBuiltinModal] = useState(false);
+
   return (
-    <div className="flex flex-col min-h-72 h-auto bg-[--background] border border-[--border] rounded-lg shadow-sm p-4 relative overflow-hidden">
-      {/* Built-in ribbon */}
-      {preset.BUILTIN && (
-        <div className="absolute -left-[30px] top-[20px] bg-[rgb(var(--color-brand-500))] text-white text-xs font-semibold py-1 w-[120px] text-center transform -rotate-45 shadow-md">
-          Built-in
-        </div>
-      )}
-      {/* Top: Logo + Name/Description */}
-      <div className="flex gap-4 items-start">
-        {preset.ID === 'custom' ? (
-          <div className="w-28 h-28 min-w-[7rem] min-h-[7rem] flex items-center justify-center rounded-lg bg-gray-900 text-[--brand] text-4xl">
-            <PlusIcon className="w-12 h-12" />
-          </div>
-        ) : preset.LOGO ? (
-          <img
-            src={preset.LOGO}
-            alt={preset.NAME}
-            className="w-28 h-28 min-w-[7rem] min-h-[7rem] object-contain rounded-lg bg-gray-800"
-          />
-        ) : (
-          <div className="w-28 h-28 min-w-[7rem] min-h-[7rem] flex items-center justify-center rounded-lg bg-gray-900 text-[--brand] text-4xl">
-            <IoExtensionPuzzle className="w-15 h-15" />
+    <>
+      <div className="border border-[rgb(255_255_255_/_5%)] relative overflow-hidden bg-gray-900/70 rounded-xl p-3 flex flex-col h-full">
+        {/* Built-in ribbon - top-right */}
+        {preset.BUILTIN && (
+          <div
+            className="absolute -right-[30px] top-[20px] bg-[rgb(var(--color-brand-500))] text-white text-xs font-semibold py-1 w-[120px] text-center transform rotate-45 shadow-md z-[2] cursor-pointer hover:bg-[rgb(var(--color-brand-600))] transition-colors"
+            onClick={() => setShowBuiltinModal(true)}
+            title="Click to learn more about built-in addons"
+          >
+            Built-in
           </div>
         )}
-        <div className="flex flex-col min-w-0 flex-1">
-          <div className="font-bold text-lg mb-1 truncate">{preset.NAME}</div>
-          <div className="text-sm text-muted-foreground mb-2 line-clamp-3 whitespace-pre-line">
-            <MarkdownLite>{preset.DESCRIPTION}</MarkdownLite>
+
+        <div className="z-[1] relative flex flex-col flex-1 gap-3">
+          {/* Logo and Name */}
+          <div className="flex gap-3 pr-16">
+            {preset.ID === 'custom' ? (
+              <div className="relative rounded-md size-12 bg-gray-950 overflow-hidden flex items-center justify-center">
+                <PlusIcon className="w-6 h-6 text-[--brand]" />
+              </div>
+            ) : preset.LOGO ? (
+              <div className="relative rounded-md size-12 bg-gray-900 overflow-hidden">
+                <img
+                  src={preset.LOGO}
+                  alt={preset.NAME}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="relative rounded-md size-12 bg-gray-950 overflow-hidden flex items-center justify-center">
+                <p className="text-2xl font-bold">
+                  {preset.NAME[0].toUpperCase()}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <p className="font-semibold line-clamp-1">{preset.NAME}</p>
+              <p className="text-xs line-clamp-1 tracking-wide opacity-30">
+                {preset.ID}
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
-      {/* Tags Section */}
-      <div className="flex flex-col gap-1 mt-2">
-        <div className="flex flex-wrap gap-1 items-center min-h-[1.5rem]">
-          {preset.SUPPORTED_SERVICES?.length > 0 && (
-            <span className="font-semibold text-xs text-[--muted] mr-1">
-              Services:
-            </span>
+
+          {/* Description */}
+          {preset.DESCRIPTION && (
+            <Popover
+              trigger={
+                <p className="text-sm text-[--muted] line-clamp-2 cursor-pointer">
+                  <MarkdownLite>{preset.DESCRIPTION}</MarkdownLite>
+                </p>
+              }
+            >
+              <p className="text-sm">
+                <MarkdownLite>{preset.DESCRIPTION}</MarkdownLite>
+              </p>
+            </Popover>
           )}
-          {preset.SUPPORTED_SERVICES?.map((sid: string) => {
-            const service =
-              constants.SERVICE_DETAILS[
-                sid as keyof typeof constants.SERVICE_DETAILS
-              ];
-            return (
-              <Tooltip
-                key={sid}
-                side="top"
-                trigger={
-                  <span className="bg-gray-800 text-xs px-2 py-0.5 rounded text-[--brand] font-mono">
-                    {service?.shortName || sid}
-                  </span>
-                }
-              >
-                <span className="bg-gray-800 text-xs px-2 py-0.5 rounded text-[--brand] font-mono">
+
+          <div className="flex flex-wrap gap-1.5">
+            {preset.SUPPORTED_SERVICES?.map((sid: string) => {
+              const service =
+                constants.SERVICE_DETAILS[
+                  sid as keyof typeof constants.SERVICE_DETAILS
+                ];
+              return (
+                <Tooltip
+                  key={sid}
+                  side="top"
+                  trigger={
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-[--brand]/10 text-[--brand] border border-[--brand]/20">
+                      {service?.shortName || sid}
+                    </span>
+                  }
+                >
                   {service?.name || sid}
-                </span>
-              </Tooltip>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap gap-1 items-center min-h-[1.5rem]">
-          {preset.SUPPORTED_RESOURCES?.length > 0 && (
-            <span className="font-semibold text-xs text-[--muted] mr-1">
-              Resources:
-            </span>
+                </Tooltip>
+              );
+            })}
+            {preset.SUPPORTED_RESOURCES?.map((res: string) => (
+              <span
+                key={res}
+                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20"
+              >
+                {res}
+              </span>
+            ))}
+            {preset.SUPPORTED_STREAM_TYPES?.map((type: string) => (
+              <span
+                key={type}
+                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20"
+              >
+                {type}
+              </span>
+            ))}
+          </div>
+
+          {/* Spacer to push button to bottom */}
+          <div className="flex-1"></div>
+
+          {preset.DISABLED ? (
+            <div className="mt-auto">
+              <Alert
+                intent="alert"
+                className="w-full overflow-x-auto whitespace-nowrap"
+                description={
+                  <MarkdownLite>{preset.DISABLED.reason}</MarkdownLite>
+                }
+              />
+            </div>
+          ) : (
+            <div className="mt-auto">
+              <Button
+                size="md"
+                className="w-full"
+                intent="primary-subtle"
+                onClick={onAdd}
+              >
+                Configure
+              </Button>
+            </div>
           )}
-          {preset.SUPPORTED_RESOURCES?.map((res: string) => (
-            <span
-              key={res}
-              className="bg-gray-800 text-xs px-2 py-0.5 rounded text-blue-400 font-mono"
-            >
-              {res}
-            </span>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-1 items-center min-h-[1.5rem]">
-          {preset.SUPPORTED_STREAM_TYPES?.length > 0 && (
-            <span className="font-semibold text-xs text-[--muted] mr-1">
-              Stream Types:
-            </span>
-          )}
-          {preset.SUPPORTED_STREAM_TYPES?.map((type: string) => (
-            <span
-              key={type}
-              className="bg-gray-800 text-xs px-2 py-0.5 rounded text-green-400 font-mono"
-            >
-              {type}
-            </span>
-          ))}
         </div>
       </div>
-      {preset.DISABLED ? (
-        <div className="mt-auto pt-3 flex items-end">
-          <Alert
-            intent="alert"
-            className="w-full overflow-x-auto whitespace-nowrap"
-            description={<MarkdownLite>{preset.DISABLED.reason}</MarkdownLite>}
-          />
+
+      <Modal
+        open={showBuiltinModal}
+        onOpenChange={setShowBuiltinModal}
+        title="What are Built-in Addons?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm leading-relaxed">
+            Built-in addons are addons whose code lives directly inside
+            AIOStreams. You still install and configure them from the
+            marketplace just like any other addon (such as Comet or Torrentio),
+            but they run locally on this AIOStreams instance.
+          </p>
+          <div className="bg-[--subtle] rounded-lg p-3 space-y-2">
+            <p className="text-sm font-medium">Why does this matter?</p>
+            <ul className="text-sm text-[--muted] space-y-1.5 list-disc list-inside">
+              <li>Not affected by rate limits from other addon servers</li>
+              <li>Faster response times since there's no network delay</li>
+              <li>
+                Exclusive to AIOStreams and can't be installed directly to
+                Stremio
+              </li>
+            </ul>
+          </div>
+          <p className="text-xs text-[--muted] italic">
+            Think of it like having the addon server built into AIOStreams
+            itself!
+          </p>
         </div>
-      ) : (
-        <div className="mt-auto pt-3 flex items-end">
-          <Button size="md" className="w-full" onClick={onAdd}>
-            Configure
-          </Button>
-        </div>
-      )}
-    </div>
+      </Modal>
+    </>
   );
 }
 
@@ -1079,110 +1262,6 @@ function AddonModal({
         </Button>
       </form>
     </Modal>
-  );
-}
-
-function AddonFilterPopover({
-  serviceOptions,
-  streamTypeOptions,
-  resourceOptions,
-  serviceFilters,
-  setServiceFilters,
-  streamTypeFilters,
-  setStreamTypeFilters,
-  resourceFilters,
-  setResourceFilters,
-  children,
-}: any) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      trigger={children}
-      modal={false}
-      className="p-4 max-w-full w-full"
-    >
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div className="flex flex-col max-h-60 overflow-y-auto">
-            <div className="mb-2 font-semibold text-sm text-muted-foreground">
-              Services
-            </div>
-            {serviceOptions.map((opt: any) => (
-              <div
-                key={opt.value}
-                className="flex items-center gap-2 mb-2 last:mb-0"
-              >
-                <Switch
-                  value={serviceFilters.includes(opt.value)}
-                  onValueChange={(checked: boolean) => {
-                    setServiceFilters((prev: string[]) =>
-                      checked
-                        ? [...prev, opt.value]
-                        : prev.filter((v) => v !== opt.value)
-                    );
-                  }}
-                  size="sm"
-                />
-                <span className="text-xs">{opt.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col max-h-60 overflow-y-auto">
-            <div className="mb-2 font-semibold text-sm text-muted-foreground">
-              Stream Types
-            </div>
-            {streamTypeOptions.map((opt: any) => (
-              <div
-                key={opt.value}
-                className="flex items-center gap-2 mb-2 last:mb-0"
-              >
-                <Switch
-                  value={streamTypeFilters.includes(opt.value)}
-                  onValueChange={(checked: boolean) => {
-                    setStreamTypeFilters((prev: string[]) =>
-                      checked
-                        ? [...prev, opt.value]
-                        : prev.filter((v) => v !== opt.value)
-                    );
-                  }}
-                  size="sm"
-                />
-                <span className="text-xs">{opt.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col max-h-60 overflow-y-auto">
-            <div className="mb-2 font-semibold text-sm text-muted-foreground">
-              Resources
-            </div>
-            {resourceOptions.map((opt: any) => (
-              <div
-                key={opt.value}
-                className="flex items-center gap-2 mb-2 last:mb-0"
-              >
-                <Switch
-                  value={resourceFilters.includes(opt.value)}
-                  onValueChange={(checked: boolean) => {
-                    setResourceFilters((prev: string[]) =>
-                      checked
-                        ? [...prev, opt.value]
-                        : prev.filter((v) => v !== opt.value)
-                    );
-                  }}
-                  size="sm"
-                />
-                <span className="text-xs">{opt.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <Button className="w-full mt-2" onClick={() => setOpen(false)}>
-          Done
-        </Button>
-      </div>
-    </Popover>
   );
 }
 

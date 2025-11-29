@@ -22,6 +22,11 @@ export class BitmagnetPreset extends TorznabPreset {
         type: 'number',
         required: true,
         default: Env.BUILTIN_DEFAULT_BITMAGNET_TIMEOUT || Env.DEFAULT_TIMEOUT,
+        constraints: {
+          min: Env.MIN_TIMEOUT,
+          max: Env.MAX_TIMEOUT,
+          forceInUi: false,
+        },
       },
       {
         id: 'mediaTypes',
@@ -52,6 +57,24 @@ export class BitmagnetPreset extends TorznabPreset {
         })),
         default: undefined,
         emptyIsUndefined: true,
+      },
+      {
+        id: 'useMultipleInstances',
+        name: 'Use Multiple Instances',
+        description:
+          'Torznab supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'paginate',
+        name: 'Paginate Results',
+        description:
+          'Whether to paginate through all available results when searching. Enabling this can provide more results at the cost of increased search time and more requests.',
+        type: 'boolean',
+        default: false,
+        required: false,
       },
     ];
 
@@ -92,6 +115,7 @@ export class BitmagnetPreset extends TorznabPreset {
       url: `${Env.BUILTIN_BITMAGNET_URL.replace(/\/$/, '')}/torznab`,
       apiPath: '/api',
       forceQuerySearch: true,
+      paginate: options.paginate ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

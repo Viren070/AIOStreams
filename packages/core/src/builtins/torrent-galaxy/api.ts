@@ -2,6 +2,7 @@ import { Cache } from '../../utils/cache.js';
 import { Env } from '../../utils/env.js';
 import { formatZodError, makeRequest } from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
+import { searchWithBackgroundRefresh } from '../utils/general.js';
 
 import { z } from 'zod';
 
@@ -75,9 +76,10 @@ const API_BASE_URL = Env.BUILTIN_TORRENT_GALAXY_URL;
 class TorrentGalaxyAPI {
   private headers: Record<string, string>;
 
-  private readonly searchCache = Cache.getInstance<string, any>(
-    'torrent-galaxy:search'
-  );
+  private readonly searchCache = Cache.getInstance<
+    string,
+    TorrentGalaxySearchResponse
+  >('torrent-galaxy:search');
 
   constructor() {
     this.headers = {
@@ -95,8 +97,13 @@ class TorrentGalaxyAPI {
     if (options.page) {
       queryParams.set('page', options.page.toString());
     }
-    return this.searchCache.wrap(
-      () =>
+    const cacheKey = JSON.stringify(options);
+    return searchWithBackgroundRefresh({
+      searchCache: this.searchCache,
+      searchCacheKey: cacheKey,
+      bgCacheKey: `tgx:${cacheKey}`,
+      cacheTTL: Env.BUILTIN_TORRENT_GALAXY_SEARCH_CACHE_TTL,
+      fetchFn: () =>
         this.request<TorrentGalaxySearchResponse>(
           `/get-posts/keywords:${encodeURIComponent(options.query)}:format:json`,
           {
@@ -105,9 +112,9 @@ class TorrentGalaxyAPI {
             queryParams,
           }
         ),
-      `${JSON.stringify(options)}`,
-      Env.BUILTIN_TORRENT_GALAXY_SEARCH_CACHE_TTL
-    );
+      isEmptyResult: (result) => result.results.length === 0,
+      logger,
+    });
   }
 
   private async request<T>(

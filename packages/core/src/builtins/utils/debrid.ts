@@ -226,7 +226,7 @@ async function processTorrentsForDebridService(
         service: {
           id: service.id,
           cached: magnetCheckResult?.status === 'cached',
-          owned: false,
+          library: magnetCheckResult?.library === true,
         },
       });
     }
@@ -235,6 +235,8 @@ async function processTorrentsForDebridService(
   logger.debug(`Finished processing of torrents`, {
     service: service.id,
     torrents: torrents.length,
+    validTorrents: validTorrents.length,
+    finalTorrents: results.length,
     totalTime: getTimeTakenSincePoint(processingStart),
     parseTime,
   });
@@ -329,7 +331,8 @@ export async function processNZBs(
   debridServices: BuiltinDebridServices,
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  checkOwned: boolean = true
 ): Promise<{
   results: NZBWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -347,7 +350,8 @@ export async function processNZBs(
         service,
         stremioId,
         metadata,
-        clientIp
+        clientIp,
+        checkOwned
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
@@ -375,7 +379,8 @@ async function processNZBsForDebridService(
   service: BuiltinDebridServices[number],
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  checkOwned: boolean = true
 ): Promise<NZBWithSelectedFile[]> {
   const startTime = Date.now();
   const debridService = getDebridService(
@@ -391,7 +396,8 @@ async function processNZBsForDebridService(
   const results: NZBWithSelectedFile[] = [];
 
   const nzbCheckResults = await debridService.checkNzbs(
-    nzbs.map((nzb) => nzb.hash)
+    nzbs.map((nzb) => ({ name: nzb.title, hash: nzb.hash })),
+    checkOwned
   );
 
   logger.debug(`Retrieved NZB status from debrid`, {
@@ -413,13 +419,20 @@ async function processNZBsForDebridService(
   // Filter NZBs that pass validation checks
   const validNZBs: {
     nzb: NZB;
-    nzbCheckResult: any;
+    nzbCheckResult: DebridDownload | undefined;
     parsedTitle: ParsedResult;
   }[] = [];
   for (const nzb of nzbs) {
     const nzbCheckResult = nzbCheckResults.find(
       (result) => result.hash === nzb.hash
     );
+    if (nzbCheckResult?.status === 'failed') {
+      logger.debug(`Skipping NZB as its status is failed`, {
+        service: service.id,
+        nzb: nzb.title,
+      });
+      continue;
+    }
     const parsedNzb = parsedTitlesMap.get(nzb.title ?? '');
     if (metadata && parsedNzb) {
       if (isSeasonWrong(parsedNzb, metadata)) {
@@ -471,15 +484,19 @@ async function processNZBsForDebridService(
         service: {
           id: service.id,
           cached: nzbCheckResult?.status === 'cached',
-          owned: false,
+          library: nzbCheckResult?.library === true,
         },
       });
     }
   }
 
-  logger.debug(
-    `Processed ${nzbs.length} NZBs for ${service.id} in ${getTimeTakenSincePoint(processingStart)}`
-  );
+  logger.debug(`Finished processing of NZBs`, {
+    service: service.id,
+    nzbs: nzbs.length,
+    validNzbs: validNZBs.length,
+    finalNzbs: results.length,
+    totalTime: getTimeTakenSincePoint(processingStart),
+  });
 
   return results;
 }

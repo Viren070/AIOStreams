@@ -86,6 +86,7 @@ export type DebridFile = z.infer<typeof DebridFileSchema>;
 
 export interface DebridDownload {
   id: string | number;
+  library?: boolean;
   hash?: string;
   name?: string;
   size?: number;
@@ -174,7 +175,10 @@ export interface DebridService {
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
 
   // Usenet specific methods
-  checkNzbs?(nzbs: string[]): Promise<DebridDownload[]>;
+  checkNzbs?(
+    nzbs: { name?: string; hash?: string }[],
+    checkOwned?: boolean
+  ): Promise<DebridDownload[]>;
   listNzbs?(id?: string): Promise<DebridDownload[]>;
   addNzb?(nzb: string, name: string): Promise<DebridDownload>;
   generateUsenetLink?(

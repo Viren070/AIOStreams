@@ -72,7 +72,7 @@ export interface TorrentWithSelectedFile extends Torrent {
   service?: {
     id: BuiltinServiceId;
     cached: boolean;
-    owned: boolean;
+    library: boolean;
   };
 }
 
@@ -81,7 +81,7 @@ export interface NZBWithSelectedFile extends NZB {
   service?: {
     id: BuiltinServiceId;
     cached: boolean;
-    owned: boolean;
+    library: boolean;
   };
 }
 
@@ -208,6 +208,15 @@ export async function selectFileInTorrentOrNZB(
     if (!parsed) {
       logger.warn(`Parsed file not found for ${file.name}`);
       continue;
+    }
+
+    if (
+      file.name &&
+      ['sample', 'trailer', 'preview'].some((keyword) =>
+        file.name!.toLowerCase().includes(keyword)
+      )
+    ) {
+      score -= 500;
     }
 
     // Base score from video file status (highest priority)
@@ -353,6 +362,7 @@ export function isVideoFile(file: DebridFile): boolean {
     '.flv',
     '.gif',
     '.gifv',
+    '.iso',
     '.m2v',
     '.m4p',
     '.m4v',
@@ -453,6 +463,19 @@ export const metadataStore = () => {
   return Cache.getInstance<string, TitleMetadata>(prefix, 1_000_000_000, store);
 };
 
+export const fileInfoStore = () => {
+  const prefix = 'fis';
+  let store: 'redis' | 'sql' | 'memory' | undefined;
+  if (Env.BUILTIN_DEBRID_FILEINFO_STORE === true) {
+    store = Env.REDIS_URI ? 'redis' : 'sql';
+  } else if (!Env.BUILTIN_DEBRID_FILEINFO_STORE) {
+    return undefined;
+  } else {
+    store = Env.BUILTIN_DEBRID_FILEINFO_STORE;
+  }
+  return Cache.getInstance<string, FileInfo>(prefix, 1_000_000_000, store);
+};
+
 // export function generatePlaybackUrl(
 //   storeAuth: ServiceAuth,
 //   playbackInfo: MinimisedPlaybackInfo,
@@ -474,5 +497,15 @@ export function generatePlaybackUrl(
   title?: string,
   filename?: string
 ): string {
-  return `${Env.BASE_URL}/api/v1/debrid/playback/${encryptedStoreAuth}/${toUrlSafeBase64(JSON.stringify(fileInfo))}/${metadataId}/${encodeURIComponent(filename ?? title ?? 'unknown')}`;
+  const fileInfoCache = fileInfoStore();
+  let fileInfoStr: string = toUrlSafeBase64(JSON.stringify(fileInfo));
+  if (fileInfoCache && fileInfoStr.length > 500) {
+    fileInfoStr = getSimpleTextHash(JSON.stringify(fileInfo));
+    fileInfoCache.set(
+      fileInfoStr,
+      fileInfo,
+      Env.BUILTIN_PLAYBACK_LINK_VALIDITY
+    );
+  }
+  return `${Env.BASE_URL}/api/v1/debrid/playback/${encryptedStoreAuth}/${fileInfoStr}/${metadataId}/${encodeURIComponent(filename ?? title ?? 'unknown')}`;
 }
