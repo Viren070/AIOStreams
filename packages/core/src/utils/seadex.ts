@@ -1,5 +1,7 @@
 import { createLogger } from './logger.js';
 import { Cache } from './cache.js';
+import { makeRequest } from './http.js';
+import { Env } from './env.js';
 
 const logger = createLogger('seadex');
 
@@ -62,13 +64,13 @@ export class SeaDexApi {
 
       logger.debug(`Fetching SeaDex data for AniList ID ${anilistId}`);
 
-      const response = await fetch(url, {
+      const response = await makeRequest(url, {
         method: 'GET',
+        timeout: 10000,
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'AIOStreams',
+          'User-Agent': Env.DEFAULT_USER_AGENT,
         },
-        signal: AbortSignal.timeout(10000),
       });
 
       if (!response.ok) {
