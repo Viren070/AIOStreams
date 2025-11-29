@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.18.1](https://github.com/Viren070/AIOStreams/compare/v2.18.0...v2.18.1) (2025-11-29)
+
+
+### Bug Fixes
+
+* **presets/usenet-streamer:** correctly identify type and service ([58caf63](https://github.com/Viren070/AIOStreams/commit/58caf63d134feddb15e0c0fe2d350be66da652b1))
+* remove length requirement on addonName ([2e7622e](https://github.com/Viren070/AIOStreams/commit/2e7622e1b24f88194445e470850d5416d82b3a08))
+
 ## [2.18.0](https://github.com/Viren070/AIOStreams/compare/v2.17.6...v2.18.0) (2025-11-28)
 
 
