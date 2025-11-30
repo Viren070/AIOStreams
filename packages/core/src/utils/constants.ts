@@ -1084,7 +1084,7 @@ export const SORT_CRITERIA_DETAILS: Record<
     ascendingDescription:
       'Non-SeaDex releases are preferred over SeaDex releases',
     descendingDescription:
-      'SeaDex Best releases are preferred, then other SeaDex releases, then non-SeaDex releases',
+      'SeaDex Best releases are preferred, then hash-verified SeaDex releases, then group-matched releases, then non-SeaDex releases',
   },
 } as const;
 

@@ -106,6 +106,7 @@ export interface ParseValue {
     proxied: boolean;
     seadex: boolean;
     seadexBest: boolean;
+    seadexGroup: boolean;
   };
   service?: {
     id: string | null;
@@ -328,6 +329,7 @@ export abstract class BaseFormatter {
         extension: stream.parsedFile?.extension || null,
         seadex: (stream.seadex?.isSeadex && !stream.seadex?.isBest) ?? false,
         seadexBest: stream.seadex?.isBest ?? false,
+        seadexGroup: stream.seadex?.isGroup ?? false,
       },
       addon: {
         name: stream.addon?.name || null,

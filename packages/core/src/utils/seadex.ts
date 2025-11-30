@@ -19,11 +19,14 @@ const seadexCache = Cache.getInstance<string, SeaDexResult>(
 export interface SeaDexResult {
   bestHashes: Set<string>;
   allHashes: Set<string>;
+  bestGroups: Set<string>;
+  allGroups: Set<string>;
 }
 
 interface SeaDexTorrent {
   infoHash: string;
   isBest: boolean;
+  releaseGroup?: string;
 }
 
 interface SeaDexEntry {
@@ -77,7 +80,12 @@ export class SeaDexApi {
         logger.warn(
           `SeaDex API returned ${response.status} for AniList ID ${anilistId}`
         );
-        return { bestHashes: new Set(), allHashes: new Set() };
+        return {
+          bestHashes: new Set(),
+          allHashes: new Set(),
+          bestGroups: new Set(),
+          allGroups: new Set(),
+        };
       }
 
       const data = (await response.json()) as SeaDexResponse;
@@ -88,6 +96,8 @@ export class SeaDexApi {
         const emptyResult: SeaDexResult = {
           bestHashes: new Set(),
           allHashes: new Set(),
+          bestGroups: new Set(),
+          allGroups: new Set(),
         };
         await seadexCache.set(cacheKey, emptyResult, SEADEX_CACHE_TTL);
         return emptyResult;
@@ -95,6 +105,8 @@ export class SeaDexApi {
 
       const bestHashes = new Set<string>();
       const allHashes = new Set<string>();
+      const bestGroups = new Set<string>();
+      const allGroups = new Set<string>();
 
       for (const item of items) {
         const trsArray = item.expand?.trs;
@@ -114,13 +126,24 @@ export class SeaDexApi {
             bestHashes.add(infoHash);
           }
         }
+
+        // Collect release groups
+        for (const torrent of trsArray) {
+          const releaseGroup = torrent.releaseGroup?.toLowerCase();
+          if (!releaseGroup) continue;
+
+          allGroups.add(releaseGroup);
+          if (torrent.isBest) {
+            bestGroups.add(releaseGroup);
+          }
+        }
       }
 
       logger.info(
-        `Found ${bestHashes.size} best and ${allHashes.size} total SeaDex hashes for AniList ID ${anilistId}`
+        `Found ${bestHashes.size} best hashes, ${allHashes.size} total hashes, ${bestGroups.size} best groups, ${allGroups.size} total groups for AniList ID ${anilistId}`
       );
 
-      const result: SeaDexResult = { bestHashes, allHashes };
+      const result: SeaDexResult = { bestHashes, allHashes, bestGroups, allGroups };
       await seadexCache.set(cacheKey, result, SEADEX_CACHE_TTL);
       return result;
     } catch (error) {
@@ -131,6 +154,8 @@ export class SeaDexApi {
       return {
         bestHashes: new Set(),
         allHashes: new Set(),
+        bestGroups: new Set(),
+        allGroups: new Set(),
       };
     }
   }
