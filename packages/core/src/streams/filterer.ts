@@ -1597,17 +1597,16 @@ class StreamFilterer {
         : undefined;
 
       let minMax: [number | undefined, number | undefined] | undefined;
-      if (isAnime) {
-        // Prioritize anime-specific size filter
-        minMax =
-          normaliseSizeRange(resolution?.anime) ||
-          normaliseSizeRange(global?.anime);
-      } else if (type === 'movie') {
+      if (type === 'movie') {
         minMax =
           normaliseSizeRange(resolution?.movies) ||
           normaliseSizeRange(global?.movies);
       } else {
         minMax =
+          (isAnime
+            ? normaliseSizeRange(resolution?.anime) ||
+              normaliseSizeRange(global?.anime)
+            : undefined) ||
           normaliseSizeRange(resolution?.series) ||
           normaliseSizeRange(global?.series);
       }

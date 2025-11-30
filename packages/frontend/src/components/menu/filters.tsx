@@ -2358,17 +2358,17 @@ function Content() {
               <HeadingWithPageControls heading="Size" />
               <div className="mb-4">
                 <p className="text-sm text-[--muted]">
-                  Set minimum and maximum size limits for movies, series, and anime. You
+                  Set minimum and maximum size limits for movies, series, and anime series. You
                   can set a global limit, and also choose to set specific limits
                   for each resolution. For a given stream, only one set of size
                   filters would be used. A resolution specific limit takes
-                  priority.
+                  priority. Anime series limits take precedence over regular series limits.
                 </p>
               </div>
               <div className="space-y-4">
                 <SettingsCard
                   title="Global"
-                  description="Apply size filters for movies, series, and anime"
+                  description="Apply size filters for movies, series, and anime series"
                 >
                   <SizeRangeSlider
                     label="Global Size Limits"
@@ -3673,9 +3673,9 @@ function SizeRangeSlider({
         </div>
       </div>
 
-      {/* Anime Slider */}
+      {/* Anime Series Slider */}
       <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Anime</h5>
+        <h5 className="text-sm font-medium text-[--muted]">Anime Series</h5>
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 min-w-0">
             <Slider
@@ -3691,7 +3691,7 @@ function SizeRangeSlider({
                 onAnimeChange([newValue[0], newValue[1]])
               }
               minStepsBetweenThumbs={1}
-              label="Anime Size Range"
+              label="Anime Series Size Range"
               help={help}
             />
             <div className="flex justify-between mt-1 text-xs text-[--muted]">
