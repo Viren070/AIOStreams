@@ -21,13 +21,13 @@
         <img src="https://img.shields.io/github/v/release/viren070/aiostreams?style=for-the-badge&logo=github" alt="Latest Release">
     </a>
     <a href="https://github.com/Viren070/AIOStreams/stargazers">
-        <img src="https://img.shields.io/github/stars/Viren070/AIOStreams?style=for-the-badge&logo=github" alt="GitHub Stars">
+        <img src="https://img.shields.io/github/stars/Viren070/AIOStreams?style=for-the-badge&logo=github " alt="GitHub Stars">
     </a>
     <a href="https://hub.docker.com/r/viren070/aiostreams">
-        <img src="https://img.shields.io/docker/pulls/viren070/aiostreams?style=for-the-badge&logo=docker" alt="Docker Pulls">
+        <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry-stats.viren070.me%2Fapi%2Fdh%3Aviren070%2Faiostreams%2Cghcr%3Aviren070%2Faiostreams%2Faiostreams&query=%24.total_downloads_formatted&logo=docker&label=pulls&style=for-the-badge" alt="Docker Pulls">
     </a>
     <a href="https://discord.viren070.me">
-        <img src="https://img.shields.io/badge/Discord-Join_Chat-7289DA?logo=discord&logoColor=white&style=for-the-badge" alt="Discord Server">
+        <img src="https://img.shields.io/discord/1225024298490662974?style=for-the-badge&logo=discord&color=7289DA" alt="Discord Server">
     </a>
 </p>
 

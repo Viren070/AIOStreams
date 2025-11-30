@@ -21,6 +21,24 @@ export class TorrentioParser extends StreamParser {
     return folderName;
   }
 
+  protected override getFileIdx(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): number | undefined {
+    // url path format /resolve/{service}/{serviceKey}/{hash}/{name}/{fileIdx}/{filename}
+    if (!stream.url) return undefined;
+    try {
+      const url = new URL(stream.url);
+      const parts = url.pathname.split('/');
+      if (parts.length === 8) {
+        const fileIdx = parseInt(parts[6], 10);
+        if (!isNaN(fileIdx)) {
+          return fileIdx;
+        }
+      }
+    } catch {}
+  }
+
   protected override getLanguages(
     stream: Stream,
     currentParsedStream: ParsedStream

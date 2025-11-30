@@ -22,40 +22,6 @@ export class CustomPreset extends Preset {
         required: true,
       },
       {
-        id: 'libraryAddon',
-        name: 'Library Addon',
-        description:
-          'Whether to mark this addon as a library addon. This will result in all streams from this addon being marked as library streams.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        id: 'formatPassthrough',
-        name: 'Format Passthrough',
-        description:
-          'Whether to pass through the stream formatting. This means your formatting will not be applied and original stream formatting is retained.',
-        type: 'boolean',
-      },
-      {
-        id: 'resultPassthrough',
-        name: 'Result Passthrough',
-        description:
-          'If enabled, all results from this addon will never be filtered out and always included in the final stream list.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        id: 'forceToTop',
-        name: 'Force to Top',
-        description:
-          'Whether to force results from this addon to be pushed to the top of the stream list.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
         id: 'timeout',
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
@@ -105,6 +71,40 @@ export class CustomPreset extends Preset {
           },
         ],
       },
+      {
+        id: 'libraryAddon',
+        name: 'Library Addon',
+        description:
+          'Whether to mark this addon as a library addon. This will result in all streams from this addon being marked as library streams.',
+        type: 'boolean',
+        required: false,
+        default: false,
+      },
+      {
+        id: 'formatPassthrough',
+        name: 'Format Passthrough',
+        description:
+          'Whether to pass through the stream formatting. This means your formatting will not be applied and original stream formatting is retained.',
+        type: 'boolean',
+      },
+      {
+        id: 'resultPassthrough',
+        name: 'Result Passthrough',
+        description:
+          'If enabled, all results from this addon will never be filtered out and always included in the final stream list.',
+        type: 'boolean',
+        required: false,
+        default: false,
+      },
+      {
+        id: 'forceToTop',
+        name: 'Force to Top',
+        description:
+          'Whether to force results from this addon to be pushed to the top of the stream list.',
+        type: 'boolean',
+        required: false,
+        default: false,
+      },
     ];
 
     return {
@@ -119,6 +119,7 @@ export class CustomPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: [],
+      CATEGORY: constants.PresetCategory.MISC,
     };
   }
 

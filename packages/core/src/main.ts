@@ -1094,6 +1094,63 @@ export class AIOStreams {
     return this.addons.find((a) => a.instanceId === instanceId);
   }
 
+  public async shouldStopAutoPlay(type: string, id: string): Promise<boolean> {
+    if (
+      !this.userData.areYouStillThere?.enabled ||
+      !this.userData.uuid ||
+      type !== 'series'
+    ) {
+      return false;
+    }
+    logger.info(`Determining if autoplay should be stopped`, {
+      type,
+      id,
+      uuid: this.userData.uuid,
+    });
+    // Decide whether to disable autoplay (suppress bingeGroup) per user+show
+    let disableAutoplay = false;
+
+    const cfg = this.userData.areYouStillThere;
+    const threshold = cfg.episodesBeforeCheck ?? 3;
+    const cooldownMs = (cfg.cooldownMinutes ?? 60) * 60 * 1000;
+    const cache = Cache.getInstance<string, { count: number; lastAt: number }>(
+      'ays',
+      10000,
+      Env.REDIS_URI ? undefined : 'sql'
+    );
+    const parsed = IdParser.parse(id, type);
+    const baseSeriesKey = parsed
+      ? `${parsed.type}:${parsed.value}`
+      : id.split(':')[0] || id;
+    const key = `${this.userData.uuid}:${baseSeriesKey}`;
+    logger.debug(`Formed AYS cache key: ${key}`);
+    const now = Date.now();
+    const prev = (await cache.get(key)) || { count: 0, lastAt: 0 };
+    const withinWindow = now - prev.lastAt <= cooldownMs;
+    const nextCount = withinWindow ? prev.count + 1 : 1;
+    if (nextCount >= threshold) {
+      // Trigger: disable autoplay for this response and reset counter
+      disableAutoplay = true;
+      await cache.set(
+        key,
+        { count: 0, lastAt: now },
+        Math.ceil(cooldownMs / 1000)
+      );
+    } else {
+      await cache.set(
+        key,
+        { count: nextCount, lastAt: now },
+        Math.ceil(cooldownMs / 1000)
+      );
+    }
+    logger.info(`Autoplay disable check result`, {
+      disableAutoplay,
+      count: nextCount,
+      withinWindow,
+    });
+    return disableAutoplay;
+  }
+
   private async getProxyIp() {
     let userIp = this.userData.ip;
     const PRIVATE_IP_REGEX =

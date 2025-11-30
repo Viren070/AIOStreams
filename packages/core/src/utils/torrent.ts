@@ -23,7 +23,9 @@ interface TorrentMetadata {
 
 export class TorrentClient {
   static readonly #metadataCache = Cache.getInstance<string, TorrentMetadata>(
-    'torrent-metadata'
+    'torrent-metadata',
+    undefined,
+    Env.REDIS_URI ? 'redis' : 'sql'
   );
 
   // Track in-progress fetches to avoid duplicate requests

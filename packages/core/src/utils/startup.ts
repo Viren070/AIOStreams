@@ -574,6 +574,7 @@ const logStartupInfo = () => {
       formatDurationAsText(Env.BUILTIN_NAB_CAPABILITIES_CACHE_TTL),
       '       '
     );
+    logKeyValue('Max Pages:', Env.BUILTIN_NAB_MAX_PAGES.toString(), '       ');
 
     // Bitmagnet
     logKeyValue(

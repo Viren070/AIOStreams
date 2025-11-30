@@ -42,6 +42,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
             constants.TORBOX_SERVICE,
             constants.NZBDAV_SERVICE,
             constants.ALTMOUNT_SERVICE,
+            constants.STREMIO_NNTP_SERVICE,
           ].includes(s.id)
       )
     ) {

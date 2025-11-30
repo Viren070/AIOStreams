@@ -8,6 +8,8 @@ import {
   compileRegex,
   parseRegex,
   AnimeDatabase,
+  IdParser,
+  SeaDexApi,
 } from '../utils/index.js';
 import { StreamSelector } from '../parser/streamExpression.js';
 
@@ -21,10 +23,107 @@ class StreamPrecomputer {
   }
 
   public async precompute(streams: ParsedStream[], type: string, id: string) {
+    const start = Date.now();
+    const isAnime = AnimeDatabase.getInstance().isAnime(id);
     let queryType = type;
-    if (AnimeDatabase.getInstance().isAnime(id)) {
+    if (isAnime) {
       queryType = `anime.${type}`;
     }
+
+    await this.precomputeSeaDex(streams, id, isAnime);
+    await this.precomputePreferredMatches(streams, queryType);
+
+    logger.info(
+      `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
+    );
+  }
+
+  /**
+   * Precompute SeaDex status for anime streams
+   * Tags streams with seadex.isBest and seadex.isSeadex based on infoHash matching
+   */
+  private async precomputeSeaDex(
+    streams: ParsedStream[],
+    id: string,
+    isAnime: boolean
+  ) {
+    if (!isAnime || !this.userData.enableSeadex) {
+      return;
+    }
+
+    const parsedId = IdParser.parse(id, 'unknown');
+    if (!parsedId) {
+      return;
+    }
+    const animeDb = AnimeDatabase.getInstance();
+    const entry = animeDb.getEntryById(parsedId.type, parsedId.value);
+    const anilistIdRaw = entry?.mappings?.anilistId;
+
+    if (!anilistIdRaw) {
+      logger.debug(
+        `No AniList ID found for ${parsedId.type}:${parsedId.value}, skipping SeaDex lookup`
+      );
+      return;
+    }
+
+    const anilistId =
+      typeof anilistIdRaw === 'string'
+        ? parseInt(anilistIdRaw, 10)
+        : anilistIdRaw;
+    if (isNaN(anilistId)) {
+      logger.debug(
+        `Invalid AniList ID ${anilistIdRaw}, skipping SeaDex lookup`
+      );
+      return;
+    }
+    const seadexResult = await SeaDexApi.getInfoHashesForAnime(anilistId);
+
+    if (
+      seadexResult.bestHashes.size === 0 &&
+      seadexResult.allHashes.size === 0
+    ) {
+      logger.debug(`No SeaDex releases found for AniList ID ${anilistId}`);
+      return;
+    }
+    let seadexBestCount = 0;
+    let seadexCount = 0;
+
+    for (const stream of streams) {
+      const infoHash = stream.torrent?.infoHash?.toLowerCase();
+      if (!infoHash) {
+        continue;
+      }
+
+      const isBest = seadexResult.bestHashes.has(infoHash);
+      const isSeadex = seadexResult.allHashes.has(infoHash);
+
+      if (isSeadex) {
+        stream.seadex = {
+          isBest,
+          isSeadex: true,
+        };
+
+        if (isBest) {
+          seadexBestCount++;
+        }
+        seadexCount++;
+      }
+    }
+
+    if (seadexCount > 0) {
+      logger.info(
+        `Tagged ${seadexCount} streams as SeaDex releases (${seadexBestCount} best) for AniList ID ${anilistId}`
+      );
+    }
+  }
+
+  /**
+   * Precompute preferred regex, keyword, and stream expression matches
+   */
+  private async precomputePreferredMatches(
+    streams: ParsedStream[],
+    queryType: string
+  ) {
     const preferredRegexPatterns =
       (await FeatureControl.isRegexAllowed(
         this.userData,
@@ -45,10 +144,15 @@ class StreamPrecomputer {
     const preferredKeywordsPatterns = this.userData.preferredKeywords
       ? await formRegexFromKeywords(this.userData.preferredKeywords)
       : undefined;
-    if (!preferredRegexPatterns && !preferredKeywordsPatterns) {
+
+    if (
+      !preferredRegexPatterns &&
+      !preferredKeywordsPatterns &&
+      !this.userData.preferredStreamExpressions?.length
+    ) {
       return;
     }
-    const start = Date.now();
+
     if (preferredKeywordsPatterns) {
       streams.forEach((stream) => {
         stream.keywordMatched =
@@ -154,9 +258,6 @@ class StreamPrecomputer {
         stream.streamExpressionMatched = streamToConditionIndex.get(stream.id);
       }
     }
-    logger.info(
-      `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
-    );
   }
 }
 

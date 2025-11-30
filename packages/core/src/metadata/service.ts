@@ -130,23 +130,28 @@ export class MetadataService {
 
             // IMDb metadata
             if (imdbId) {
-              promises.push(new IMDBMetadata().getCinemetaData(imdbId, type));
+              const imdbMetadata = new IMDBMetadata();
+              promises.push(imdbMetadata.getCinemetaData(imdbId, type));
+              promises.push(imdbMetadata.getImdbSuggestionData(imdbId, type));
             } else {
+              promises.push(Promise.resolve(undefined));
               promises.push(Promise.resolve(undefined));
             }
 
             // Execute all promises in parallel
-            const [tmdbResult, tvdbResult, traktResult, imdbResult] =
-              (await Promise.allSettled(promises)) as [
-                PromiseSettledResult<
-                  (Metadata & { tmdbId: string }) | undefined
-                >,
-                PromiseSettledResult<
-                  (Metadata & { tvdbId: number }) | undefined
-                >,
-                PromiseSettledResult<string[] | undefined>,
-                PromiseSettledResult<Meta | undefined>,
-              ];
+            const [
+              tmdbResult,
+              tvdbResult,
+              traktResult,
+              imdbResult,
+              imdbSuggestionResult,
+            ] = (await Promise.allSettled(promises)) as [
+              PromiseSettledResult<(Metadata & { tmdbId: string }) | undefined>,
+              PromiseSettledResult<(Metadata & { tvdbId: number }) | undefined>,
+              PromiseSettledResult<string[] | undefined>,
+              PromiseSettledResult<Meta | undefined>,
+              PromiseSettledResult<Metadata | undefined>,
+            ];
 
             // Process TMDB results
             if (tmdbResult.status === 'fulfilled' && tmdbResult.value) {
@@ -262,6 +267,19 @@ export class MetadataService {
               );
             }
 
+            if (
+              imdbSuggestionResult.status === 'fulfilled' &&
+              imdbSuggestionResult.value
+            ) {
+              const imdbSuggestionData = imdbSuggestionResult.value;
+              if (imdbSuggestionData.title)
+                titles.unshift(imdbSuggestionData.title);
+              if (imdbSuggestionData.year && !year)
+                year = imdbSuggestionData.year;
+              if (imdbSuggestionData.yearEnd && !yearEnd)
+                yearEnd = imdbSuggestionData.yearEnd;
+            }
+
             // Deduplicate titles, lowercase all before deduplication
             const uniqueTitles = [
               ...new Set(titles.map((title) => title.toLowerCase())),
@@ -298,6 +316,7 @@ export class MetadataService {
             timeout: 10000,
             ttl: 12000,
             retryInterval: 100,
+            type: 'memory',
           }
         );
 

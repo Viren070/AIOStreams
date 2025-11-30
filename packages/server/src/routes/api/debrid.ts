@@ -14,9 +14,11 @@ import {
   ServiceAuth,
   decryptString,
   metadataStore,
+  fileInfoStore,
   TitleMetadata,
   FileInfoSchema,
   getSimpleTextHash,
+  FileInfo,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import { StaticFiles } from '../../app.js';
@@ -53,9 +55,18 @@ router.get(
         );
       }
 
-      const fileInfo = FileInfoSchema.parse(
-        JSON.parse(fromUrlSafeBase64(encodedFileInfo))
-      );
+      let fileInfo: FileInfo | undefined;
+
+      try {
+        fileInfo = FileInfoSchema.parse(
+          JSON.parse(fromUrlSafeBase64(encodedFileInfo))
+        );
+      } catch (error: any) {
+        fileInfo = await fileInfoStore()?.get(encodedFileInfo);
+        if (!fileInfo) {
+          throw error;
+        }
+      }
 
       const decryptedStoreAuth = decryptString(encryptedStoreAuth);
       if (!decryptedStoreAuth.success) {

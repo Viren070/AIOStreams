@@ -183,13 +183,13 @@ function Content() {
                     ? 'stremthru:8080'
                     : 'mediaflow-proxy:8888'
                   : 'mediaflow-proxy:8888'}
-                as the URL above but then using https://
+                 as the URL above but then using https://
                 {userData.proxy?.id
                   ? userData.proxy.id === 'stremthru'
                     ? 'stremthru.yourdomain.com'
                     : 'mediaflow-proxy.yourdomain.com'
                   : 'mediaflow-proxy.yourdomain.com'}
-                as the public URL.
+                 as the public URL.
               </p>
             </div>
           )}

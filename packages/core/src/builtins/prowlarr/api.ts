@@ -1,12 +1,14 @@
 import { fetch } from 'undici';
 import {
   Cache,
+  createLogger,
   DistributedLock,
   Env,
   formatZodError,
   makeRequest,
 } from '../../utils/index.js';
 import z from 'zod';
+import { searchWithBackgroundRefresh } from '../utils/general.js';
 
 interface ResponseMeta {
   headers: Record<string, string>;
@@ -80,6 +82,8 @@ const ProwlarrApiSearchItemSchema = z.object({
 
 const ProwlarrApiSearchSchema = z.array(ProwlarrApiSearchItemSchema);
 
+const logger = createLogger('prowlarr');
+
 export type ProwlarrApiSearchItem = z.infer<typeof ProwlarrApiSearchItemSchema>;
 
 class ProwlarrApi {
@@ -90,7 +94,7 @@ class ProwlarrApi {
 
   private readonly searchCache = Cache.getInstance<
     string,
-    ProwlarrApiSearchItem[]
+    ProwlarrApiResponse<ProwlarrApiSearchItem[]>
   >('prowlarr-api:search');
 
   private readonly indexersCache = Cache.getInstance<
@@ -156,8 +160,14 @@ class ProwlarrApi {
     limit?: number;
     offset?: number;
   }): Promise<ProwlarrApiResponse<ProwlarrApiSearchItem[]>> {
-    return this.searchCache.wrap(
-      () =>
+    const cacheKey = `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${limit}:${offset}`;
+
+    return searchWithBackgroundRefresh({
+      searchCache: this.searchCache,
+      searchCacheKey: cacheKey,
+      bgCacheKey: `prowlarr:${cacheKey}`,
+      cacheTTL: Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL,
+      fetchFn: () =>
         this.request<ProwlarrApiSearchItem[]>(
           'search',
           {
@@ -169,9 +179,9 @@ class ProwlarrApi {
           },
           ProwlarrApiSearchSchema
         ),
-      `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${limit}:${offset}`,
-      Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL
-    );
+      isEmptyResult: (result) => result.data.length === 0,
+      logger,
+    });
   }
 
   private getPath(endpoint: string) {

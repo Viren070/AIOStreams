@@ -96,6 +96,7 @@ export interface ParseValue {
     seasonEpisode: string[] | null;
     seasonPack: boolean;
     seeders: number | null;
+    private: boolean;
     age: string | null;
     ageHours: number | null;
     duration: number | null;
@@ -103,6 +104,8 @@ export interface ParseValue {
     type: string | null;
     message: string | null;
     proxied: boolean;
+    seadex: boolean;
+    seadexBest: boolean;
   };
   service?: {
     id: string | null;
@@ -296,6 +299,7 @@ export abstract class BaseFormatter {
         audioChannels: stream.parsedFile?.audioChannels || null,
         indexer: stream.indexer || null,
         seeders: stream.torrent?.seeders ?? null,
+        private: stream.torrent?.private ?? false,
         year: stream.parsedFile?.year || null,
         type: stream.type || null,
         title: stream.parsedFile?.title || null,
@@ -322,6 +326,8 @@ export abstract class BaseFormatter {
         network: stream.parsedFile?.network || null,
         container: stream.parsedFile?.container || null,
         extension: stream.parsedFile?.extension || null,
+        seadex: (stream.seadex?.isSeadex && !stream.seadex?.isBest) ?? false,
+        seadexBest: stream.seadex?.isBest ?? false,
       },
       addon: {
         name: stream.addon?.name || null,

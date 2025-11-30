@@ -267,6 +267,20 @@ const urlMappings = makeValidator<Record<string, string>>((x) => {
   return mappings;
 });
 
+const boolOrChoice = <T extends string>(choices: T[]) =>
+  makeValidator<boolean | T>((input: string) => {
+    input = input.trim();
+    if (['true', 'false', '1', '0'].includes(input.toLowerCase())) {
+      return input.toLowerCase() === 'true' || input === '1';
+    }
+    if (choices.includes(input as T)) {
+      return input as T;
+    }
+    throw new EnvError(
+      `Invalid value: ${input}. Must be true, false or one of: ${choices.join(', ')}`
+    );
+  });
+
 export const Env = cleanEnv(process.env, {
   VERSION: readonly({
     default: metadata?.version || 'unknown',
@@ -1636,10 +1650,18 @@ export const Env = cleanEnv(process.env, {
     default: 60 * 60, // 1 hour
     desc: 'Builtin Debrid playback link cache TTL',
   }),
+  BUILTIN_DEBRID_LIBRARY_CACHE_TTL: num({
+    default: 60 * 5, // 5 minutes
+    desc: 'Builtin Debrid NZB list cache TTL',
+  }),
   BUILTIN_DEBRID_METADATA_STORE: str({
     choices: ['redis', 'sql', 'memory'],
     default: undefined,
     desc: 'Builtin Debrid metadata store',
+  }),
+  BUILTIN_DEBRID_FILEINFO_STORE: boolOrChoice(['redis', 'sql', 'memory'])({
+    default: false,
+    desc: 'Builtin Debrid fileinfo store',
   }),
   BUILTIN_PLAYBACK_LINK_VALIDITY: num({
     default: 1 * 24 * 60 * 60, // 1 day
@@ -1673,6 +1695,10 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_TORRENT_METADATA_CACHE_TTL: num({
     default: 7 * 24 * 60 * 60, // 7 days
     desc: 'Builtin Torrent metadata cache TTL',
+  }),
+  BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL: num({
+    default: 1 * 24 * 60 * 60, // 1 day
+    desc: 'Minimum interval between background refreshes for built-in addon search caches. Triggered during normal searches.',
   }),
 
   BUILTIN_GDRIVE_CLIENT_ID: str({
@@ -1733,6 +1759,10 @@ export const Env = cleanEnv(process.env, {
     default: 14 * 24 * 60 * 60, // 14 days
     desc: 'Builtin Torznab/Newznab Capabilities cache TTL',
   }),
+  BUILTIN_NAB_MAX_PAGES: num({
+    default: 5,
+    desc: 'Maximum number of pages to fetch from Torznab/Newznab indexers during pagination',
+  }),
 
   BUILTIN_ZILEAN_URL: url({
     default: 'https://zilean.elfhosted.com',
@@ -1750,6 +1780,15 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_DEFAULT_ANIMETOSHO_TIMEOUT: num({
     default: undefined,
     desc: 'Builtin AnimeTosho timeout',
+  }),
+
+  BUILTIN_NEKOBT_URL: url({
+    default: 'https://nekobt.to/api/torznab',
+    desc: 'Builtin NekoBT URL',
+  }),
+  BUILTIN_DEFAULT_NEKOBT_TIMEOUT: num({
+    default: undefined,
+    desc: 'Builtin NekoBT timeout',
   }),
 
   BUILTIN_BITMAGNET_URL: url({

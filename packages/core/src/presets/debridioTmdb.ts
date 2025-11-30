@@ -249,6 +249,7 @@ export class DebridioTmdbPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,
+      CATEGORY: constants.PresetCategory.META_CATALOGS,
     };
   }
 

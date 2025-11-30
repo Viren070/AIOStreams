@@ -83,7 +83,7 @@ export class IMDBMetadata {
     }
   }
 
-  private async getImdbSuggestionData(
+  public async getImdbSuggestionData(
     id: string,
     type: string
   ): Promise<Metadata> {
@@ -95,7 +95,7 @@ export class IMDBMetadata {
 
     const url = `${this.IMDB_SUGGESTION_API}${id}.json`;
     const response = await makeRequest(url, {
-      timeout: 10000,
+      timeout: 5000,
       headers: {
         'Content-Type': 'application/json',
       },

@@ -16,16 +16,36 @@ export class UsenetStreamerParser extends StreamParser {
     service: ParsedStream['service'],
     currentParsedStream: ParsedStream
   ): ParsedStream['type'] {
-    return constants.USENET_STREAM_TYPE;
+    return stream.nzbUrl
+      ? constants.STREMIO_USENET_STREAM_TYPE
+      : constants.USENET_STREAM_TYPE;
   }
 
-  protected override parseServiceData(
-    string: string
+  protected getService(
+    stream: Stream,
+    currentParsedStream: ParsedStream
   ): ParsedStream['service'] | undefined {
     return {
-      id: constants.NZBDAV_SERVICE,
+      id: stream.nzbUrl
+        ? constants.STREMIO_NNTP_SERVICE
+        : constants.NZBDAV_SERVICE,
       cached: true,
     };
+  }
+
+  protected getInLibrary(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): boolean {
+    return stream.description?.includes('⚡ Instant') ?? false;
+  }
+
+  protected getMessage(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    const status = stream.description?.match(/(🧝|✅|⚠️|🚫)/g)?.[0];
+    if (status) return `NZB Health: ${status}`;
   }
 
   protected getIndexer(
@@ -42,7 +62,10 @@ export class UsenetStreamerPreset extends Preset {
   }
 
   static override get METADATA(): PresetMetadata {
-    const supportedServices = [constants.NZBDAV_SERVICE];
+    const supportedServices = [
+      constants.NZBDAV_SERVICE,
+      constants.STREMIO_NNTP_SERVICE,
+    ];
     const supportedResources = [constants.STREAM_RESOURCE];
 
     const options: Option[] = [

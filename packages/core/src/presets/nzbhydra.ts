@@ -10,6 +10,7 @@ export class NZBHydraPreset extends NewznabPreset {
       constants.TORBOX_SERVICE,
       constants.NZBDAV_SERVICE,
       constants.ALTMOUNT_SERVICE,
+      constants.STREMIO_NNTP_SERVICE,
     ] as ServiceId[];
     const options: Option[] = [
       {
@@ -91,14 +92,38 @@ export class NZBHydraPreset extends NewznabPreset {
         required: !Env.BUILTIN_NZBHYDRA_URL || !Env.BUILTIN_NZBHYDRA_API_KEY,
       },
       {
-        id: 'forceQuerySearch',
-        name: 'Force Query Search',
-        description: 'Force the addon to use the query search parameter',
-        type: 'boolean',
+        id: 'searchMode',
+        name: 'Search Mode',
+        description:
+          'The search mode to use when querying the Torznab endpoint. **Note**: `Both` will result in two addons being created, one for each search mode.',
+        type: 'select',
         required: false,
-        default: true,
+        showInSimpleMode: false,
+        default: 'query',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Forced Query', value: 'query' },
+          { label: 'Both', value: 'both' },
+        ],
       },
-
+      {
+        id: 'paginate',
+        name: 'Paginate Results',
+        description:
+          'Enabling this option will make the addon paginate through all available results to provide a more comprehensive set of results. Enabling this can increase the time taken to return results, some endpoints may not support pagination, and this will also increase the number of requests.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'checkOwned',
+        name: 'Check Owned NZBs',
+        description:
+          'When searching for NZBs, check if the NZB is already owned (in your library) and mark it as such if so. Note: only applies to nzbDAV/Altmount.',
+        type: 'boolean',
+        default: true,
+        showInSimpleMode: false,
+      },
       {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
@@ -152,6 +177,9 @@ export class NZBHydraPreset extends NewznabPreset {
       apiPath: options.apiPath,
       apiKey: nzbhydraApiKey,
       forceQuerySearch: options.forceQuerySearch ?? true,
+      forceInitialLimit: 10000,
+      checkOwned: options.checkOwned ?? true,
+      paginate: false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

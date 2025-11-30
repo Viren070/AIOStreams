@@ -158,6 +158,34 @@ export class StremioTransformer {
       ytId: stream.type === 'youtube' ? stream.ytId : undefined,
       externalUrl: stream.type === 'external' ? stream.externalUrl : undefined,
       sources: stream.type === 'p2p' ? stream.torrent?.sources : undefined,
+      nzbUrl:
+        stream.type === constants.STREMIO_USENET_STREAM_TYPE
+          ? stream.nzbUrl
+          : undefined,
+      servers:
+        stream.type === constants.STREMIO_USENET_STREAM_TYPE
+          ? stream.servers
+          : undefined,
+      rarUrls:
+        stream.type === constants.ARCHIVE_STREAM_TYPE
+          ? stream.rarUrls
+          : undefined,
+      zipUrls:
+        stream.type === constants.ARCHIVE_STREAM_TYPE
+          ? stream.zipUrls
+          : undefined,
+      '7zipUrls':
+        stream.type === constants.ARCHIVE_STREAM_TYPE
+          ? stream['7zipUrls']
+          : undefined,
+      tgzUrls:
+        stream.type === constants.ARCHIVE_STREAM_TYPE
+          ? stream.tgzUrls
+          : undefined,
+      tarUrls:
+        stream.type === constants.ARCHIVE_STREAM_TYPE
+          ? stream.tarUrls
+          : undefined,
       subtitles: stream.subtitles,
       behaviorHints: {
         countryWhitelist: stream.countryWhitelist,

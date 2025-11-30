@@ -1,6 +1,11 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, RESOURCES, SUBTITLES_RESOURCE } from '../utils/index.js';
+import {
+  constants,
+  Env,
+  RESOURCES,
+  SUBTITLES_RESOURCE,
+} from '../utils/index.js';
 
 export class SubSourcePreset extends Preset {
   static override get METADATA() {
@@ -200,6 +205,7 @@ export class SubSourcePreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,
+      CATEGORY: constants.PresetCategory.SUBTITLES,
     };
   }
 

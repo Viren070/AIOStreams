@@ -20,9 +20,9 @@ export abstract class StreamExpressionEngine {
         add: true,
         concatenate: false,
         conditional: true,
-        divide: false,
+        divide: true,
         factorial: false,
-        multiply: false,
+        multiply: true,
         power: false,
         remainder: false,
         subtract: true,
@@ -416,6 +416,7 @@ export abstract class StreamExpressionEngine {
             'easynews',
             'nzbdav',
             'altmount',
+            'stremio_nntp',
             'easydebrid',
             'debrider',
           ].includes(s)
@@ -489,6 +490,49 @@ export abstract class StreamExpressionEngine {
         throw new Error('Your streams input must be an array of streams');
       }
       return streams.filter((stream) => stream.library);
+    };
+
+    this.parser.functions.seadex = function (
+      streams: ParsedStream[],
+      filterType?: string
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+
+      const filter = filterType?.toLowerCase() || 'all';
+
+      if (filter === 'best') {
+        // Only return SeaDex "best" releases
+        return streams.filter((stream) => stream.seadex?.isBest === true);
+      }
+
+      // Return all SeaDex releases (best or regular)
+      return streams.filter((stream) => stream.seadex?.isSeadex === true);
+    };
+
+    this.parser.functions.message = function (
+      streams: ParsedStream[],
+      mode: 'exact' | 'includes',
+      ...messages: string[]
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        messages.length === 0 ||
+        messages.some((m) => typeof m !== 'string')
+      ) {
+        throw new Error(
+          'You must provide one or more message string parameters'
+        );
+      } else if (mode !== 'exact' && mode !== 'includes') {
+        throw new Error("Mode must be either 'exact' or 'includes'");
+      }
+      return streams.filter((stream) =>
+        mode == 'exact'
+          ? messages.includes(stream.message || '')
+          : messages.some((m) => (stream.message || '').includes(m))
+      );
     };
 
     this.parser.functions.count = function (streams: ParsedStream[]) {

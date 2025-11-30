@@ -161,6 +161,7 @@ function Content() {
   const [type, setType] =
     useState<(typeof constants.STREAM_TYPES)[number]>('debrid');
   const [library, setLibrary] = useState(false);
+  const [privateTorrent, setPrivateTorrent] = useState(false);
   const [duration, setDuration] = useState<number | undefined>(9120000); // 2h 32m in milliseconds
   const [fileSize, setFileSize] = useState<number | undefined>(62500000000); // 58.2 GB in bytes
   const [folderSize, setFolderSize] = useState<number | undefined>(
@@ -246,6 +247,7 @@ function Content() {
         torrent: {
           infoHash: type === 'p2p' ? '1234567890' : undefined,
           seeders,
+          private: privateTorrent,
         },
         service:
           providerId === 'none'
@@ -282,6 +284,7 @@ function Content() {
     isCached,
     type,
     library,
+    privateTorrent,
     duration,
     fileSize,
     folderSize,
@@ -305,6 +308,7 @@ function Content() {
     isCached,
     type,
     library,
+    privateTorrent,
     duration,
     fileSize,
     folderSize,
@@ -583,6 +587,11 @@ function Content() {
               label={<span className="truncate block">Library</span>}
               value={library}
               onValueChange={setLibrary}
+            />
+            <Switch
+              label={<span className="truncate block">Private</span>}
+              value={privateTorrent}
+              onValueChange={setPrivateTorrent}
             />
             <Switch
               label={<span className="truncate block">Proxied</span>}

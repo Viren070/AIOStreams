@@ -57,6 +57,7 @@ export class DoctorWhoUniversePreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,
+      CATEGORY: constants.PresetCategory.STREAMS,
     };
   }
 

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   AIOStreamResponse,
@@ -15,6 +15,7 @@ import {
   ApiTransformer,
   SearchApiResponseData,
   SearchApiResultField,
+  StremioTransformer,
 } from '@aiostreams/core';
 import { streamApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { ApiResponse, createResponse } from '../../utils/responses.js';
@@ -28,6 +29,7 @@ router.use(streamApiRateLimiter);
 const SearchApiRequestSchema = z.object({
   type: z.string(),
   id: z.string(),
+  format: z.coerce.boolean().optional().default(false),
   requiredFields: z
     .union([z.array(SearchApiResultField), SearchApiResultField])
     .optional()
@@ -45,10 +47,10 @@ router.get(
   async (
     req: Request,
     res: Response<ApiResponse<SearchApiResponseData>>,
-    next
+    next: NextFunction
   ) => {
     try {
-      const { type, id, requiredFields } = SearchApiRequestSchema.parse(
+      const { type, id, requiredFields, format } = SearchApiRequestSchema.parse(
         req.query
       );
       let encodedUserData: string | undefined = z
@@ -62,7 +64,7 @@ router.get(
 
       if (!encodedUserData && !auth) {
         throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
+          constants.ErrorCode.UNAUTHORIZED,
           undefined,
           `At least one of AIOStreams-User-Data or Authorization headers must be present`
         );
@@ -172,16 +174,38 @@ router.get(
         );
       }
       const transformer = new ApiTransformer(userData);
+      const stremioTransformer = format
+        ? new StremioTransformer(userData)
+        : null;
+      const response = await (
+        await new AIOStreams(userData).initialise()
+      ).getStreams(id, type);
+
+      const stremioData = await stremioTransformer?.transformStreams(response);
+      const stremioStreams = stremioData?.streams.filter(
+        (stream) =>
+          !['statistic', 'error'].includes(stream.streamData?.type || '')
+      );
+
+      const apiData = await transformer.transformStreams(
+        response,
+        requiredFields
+      );
+      if (stremioStreams && format) {
+        apiData.results = apiData.results.map((result, index) => {
+          const stream = stremioStreams[index];
+          return {
+            ...result,
+            name: stream?.name,
+            description: stream?.description,
+          };
+        });
+      }
 
       res.status(200).json(
         createResponse<SearchApiResponseData>({
           success: true,
-          data: await transformer.transformStreams(
-            await (
-              await new AIOStreams(userData).initialise()
-            ).getStreams(id, type),
-            requiredFields
-          ),
+          data: apiData,
         })
       );
     } catch (error) {

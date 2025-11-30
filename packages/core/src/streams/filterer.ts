@@ -15,7 +15,11 @@ import { StreamSelector } from '../parser/streamExpression.js';
 import StreamUtils from './utils.js';
 import { MetadataService } from '../metadata/service.js';
 import { Metadata } from '../metadata/utils.js';
-import { preprocessTitle, titleMatch } from '../parser/utils.js';
+import {
+  normaliseTitle,
+  preprocessTitle,
+  titleMatch,
+} from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
 import { formatBytes } from '../formatters/utils.js';
@@ -301,6 +305,7 @@ class StreamFilterer {
             ).toString();
           }
         }
+        const metadataStart = Date.now();
         requestedMetadata = await new MetadataService({
           tmdbAccessToken: this.userData.tmdbAccessToken,
           tmdbApiKey: this.userData.tmdbApiKey,
@@ -359,21 +364,17 @@ class StreamFilterer {
         if (yearWithinTitle) {
           yearWithinTitleRegex = new RegExp(`${yearWithinTitle[0]}`, 'g');
         }
-        logger.info(`Fetched metadata for ${id}`, requestedMetadata);
+        logger.info(`Fetched metadata`, {
+          id,
+          time: getTimeTakenSincePoint(metadataStart),
+          ...requestedMetadata,
+        });
       } catch (error) {
         logger.warn(
           `Error fetching titles for ${id}, title/year matching will not be performed: ${error}`
         );
       }
     }
-
-    const normaliseTitle = (title: string) => {
-      return title
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\p{L}\p{N}+]/gu, '')
-        .toLowerCase();
-    };
 
     const applyDigitalReleaseFilter = () => {
       logger.debug(`Applying digital release filter for ${id}`, {
@@ -682,42 +683,44 @@ class StreamFilterer {
           seasons = [1];
         }
       }
+
       if (
         requestedSeason &&
         seasons &&
         seasons.length > 0 &&
         !seasons.includes(requestedSeason)
       ) {
-        // If absolute episode matches, and parsed season is 1, allow even if season is incorrect
         if (
-          seasons?.[0] === 1 &&
+          seasons[0] === 1 &&
           stream.parsedFile?.episodes?.length &&
           requestedMetadata?.absoluteEpisode &&
           stream.parsedFile?.episodes?.includes(
             requestedMetadata.absoluteEpisode
           )
         ) {
-          // allow
+          // allow if absolute episode matches AND season is 1
         } else {
           return false;
         }
       }
 
-      // is the present episode incorrect (does not match either the requested episode or absolute episode if present)
       if (
         requestedEpisode &&
         stream.parsedFile?.episodes?.length &&
-        !stream.parsedFile?.episodes?.includes(requestedEpisode) &&
-        (requestedMetadata?.absoluteEpisode
-          ? !stream.parsedFile?.episodes?.includes(
-              requestedMetadata.absoluteEpisode
-            )
-          : true)
+        !stream.parsedFile?.episodes?.includes(requestedEpisode)
       ) {
-        return false;
+        if (
+          requestedMetadata?.absoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.absoluteEpisode
+          ) &&
+          (!seasons?.length || seasons[0] === 1)
+        ) {
+          // allow if absolute episode matches AND (no season OR season is 1)
+        } else {
+          return false;
+        }
       }
-
-      // if episode is present, but season is not
 
       return true;
     };
