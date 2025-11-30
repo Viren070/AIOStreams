@@ -918,7 +918,7 @@ class StreamFilterer {
     const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
       const file = stream.parsedFile;
 
-      if (stream.addon.resultPassthrough) {
+      if (stream.addon.resultPassthrough || stream.passthrough) {
         this.incrementIncludedReason('passthrough', stream.addon.name);
         return true;
       }
@@ -1706,7 +1706,7 @@ class StreamFilterer {
     }
 
     const passthroughStreams = streams
-      .filter((stream) => stream.addon.resultPassthrough)
+      .filter((stream) => stream.addon.resultPassthrough || stream.passthrough)
       .map((stream) => stream.id);
     if (
       this.userData.excludedStreamExpressions &&

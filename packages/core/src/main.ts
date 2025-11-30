@@ -1365,13 +1365,16 @@ export class AIOStreams {
     let processedStreams = streams;
 
     if (isMeta) {
+      // Run SeaDex precompute before filter so seadex() works in Included SEL
+      await this.precomputer.precomputeSeaDexOnly(processedStreams, id);
       processedStreams = await this.filterer.filter(processedStreams, type, id);
     }
 
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
 
     if (isMeta) {
-      await this.precomputer.precompute(processedStreams, type, id);
+      // Run preferred matching after filter
+      await this.precomputer.precomputePreferred(processedStreams, type, id);
     }
 
     let finalStreams = this.applyModifications(
