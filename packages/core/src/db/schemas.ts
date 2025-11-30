@@ -751,6 +751,7 @@ export const ParsedStreamSchema = z.object({
     .object({
       isBest: z.boolean(),
       isSeadex: z.boolean(),
+      isGroup: z.boolean(),
     })
     .optional(),
   url: z.string().optional(),

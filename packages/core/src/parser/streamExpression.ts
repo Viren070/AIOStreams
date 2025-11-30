@@ -503,12 +503,25 @@ export abstract class StreamExpressionEngine {
       const filter = filterType?.toLowerCase() || 'all';
 
       if (filter === 'best') {
-        // Only return SeaDex "best" releases
+        // Only return SeaDex "best" releases (hash verified)
         return streams.filter((stream) => stream.seadex?.isBest === true);
       }
 
-      // Return all SeaDex releases (best or regular)
-      return streams.filter((stream) => stream.seadex?.isSeadex === true);
+      if (filter === 'hash') {
+        return streams.filter((stream) => stream.seadex?.isSeadex === true);
+      }
+
+      if (filter === 'group') {
+        return streams.filter((stream) => stream.seadex?.isGroup === true);
+      }
+
+      // Return all SeaDex releases
+      return streams.filter(
+        (stream) =>
+          stream.seadex?.isBest === true ||
+          stream.seadex?.isSeadex === true ||
+          stream.seadex?.isGroup === true
+      );
     };
 
     this.parser.functions.message = function (
