@@ -45,6 +45,7 @@ import {
   LuSettings,
   LuExternalLink,
   LuCircleCheck,
+  LuMerge,
 } from 'react-icons/lu';
 import {
   TbSearch,
@@ -94,6 +95,18 @@ interface CatalogModification {
   searchable?: boolean;
   addonName?: string;
   disableSearch?: boolean;
+}
+
+interface MergedCatalog {
+  id: string;
+  name: string;
+  type: string;
+  catalogIds: string[];
+  enabled?: boolean;
+  rpdb?: boolean;
+  shuffle?: boolean;
+  persistShuffleFor?: number;
+  dedupe?: 'none' | 'id' | 'title';
 }
 
 export function AddonsMenu() {
@@ -461,6 +474,8 @@ function Content() {
             </SettingsCard>
 
             {userData.presets.length > 0 && <CatalogSettingsCard />}
+
+            {userData.presets.length > 0 && <MergedCatalogsCard />}
 
             {userData.presets.length > 0 && mode === 'pro' && (
               <AddonFetchingBehaviorCard />
@@ -1749,6 +1764,640 @@ function CatalogSettingsCard() {
             </SortableContext>
           </DndContext>
         )}
+    </SettingsCard>
+  );
+}
+
+function MergedCatalogsCard() {
+  const { userData, setUserData } = useUserData();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingMergedCatalog, setEditingMergedCatalog] =
+    useState<MergedCatalog | null>(null);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('movie');
+  const [selectedCatalogs, setSelectedCatalogs] = useState<string[]>([]);
+  const [dedupe, setDedupe] = useState<'none' | 'id' | 'title'>('id');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [expandedAddons, setExpandedAddons] = useState<Set<string>>(new Set());
+  const [catalogSort, setCatalogSort] = useState<'name' | 'type'>('name');
+
+  const mergedCatalogs = userData.mergedCatalogs || [];
+
+  const capitalise = (str: string | undefined) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  const allCatalogs = (userData.catalogModifications || [])
+    .map((c) => ({
+      value: `${c.id}-${c.type}`,
+      name: c.name || c.id,
+      catalogType: c.type,
+      addonName: c.addonName || 'Unknown Addon',
+      isDisabled: c.enabled === false,
+    }));
+
+  const availableCatalogs = allCatalogs.filter((c) => !c.isDisabled);
+
+  const catalogsByAddon = allCatalogs.reduce(
+    (acc, catalog) => {
+      if (!acc[catalog.addonName]) {
+        acc[catalog.addonName] = [];
+      }
+      acc[catalog.addonName].push(catalog);
+      return acc;
+    },
+    {} as Record<string, typeof allCatalogs>
+  );
+
+  const filteredCatalogsByAddon = Object.entries(catalogsByAddon).reduce(
+    (acc, [addonName, catalogs]) => {
+      const filtered = catalogs.filter(
+        (c) =>
+          c.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+          c.addonName.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+          c.catalogType.toLowerCase().includes(catalogSearch.toLowerCase())
+      );
+      if (filtered.length > 0) {
+        const sorted = [...filtered].sort((a, b) => {
+          if (catalogSort === 'name') {
+            return a.name.localeCompare(b.name);
+          } else {
+            return a.catalogType.localeCompare(b.catalogType);
+          }
+        });
+        acc[addonName] = sorted;
+      }
+      return acc;
+    },
+    {} as Record<string, typeof allCatalogs>
+  );
+
+  const toggleAddonExpanded = (addonName: string) => {
+    setExpandedAddons((prev) => {
+      const next = new Set(prev);
+      if (next.has(addonName)) {
+        next.delete(addonName);
+      } else {
+        next.add(addonName);
+      }
+      return next;
+    });
+  };
+
+  const getSelectedCountForAddon = (addonName: string) => {
+    const catalogs = catalogsByAddon[addonName] || [];
+    return catalogs.filter((c) => selectedCatalogs.includes(c.value)).length;
+  };
+
+  const getCatalogDisplayName = (catalogId: string) => {
+    const catalog = availableCatalogs.find((c) => c.value === catalogId);
+    return catalog ? `${catalog.name} - ${capitalise(catalog.catalogType)}` : catalogId;
+  };
+
+  const toggleCatalog = (catalogValue: string) => {
+    setSelectedCatalogs((prev) =>
+      prev.includes(catalogValue)
+        ? prev.filter((c) => c !== catalogValue)
+        : [...prev, catalogValue]
+    );
+  };
+
+  const catalogTypes = [
+    { value: 'movie', label: 'Movie' },
+    { value: 'series', label: 'Series' },
+    { value: 'anime', label: 'Anime' },
+    { value: 'tv', label: 'TV' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  const openAddModal = () => {
+    setEditingMergedCatalog(null);
+    setName('');
+    setType('movie');
+    setSelectedCatalogs([]);
+    setDedupe('id');
+    setCatalogSearch('');
+    setExpandedAddons(new Set());
+    setCatalogSort('name');
+    setModalOpen(true);
+  };
+
+  const openEditModal = (mergedCatalog: MergedCatalog) => {
+    setEditingMergedCatalog(mergedCatalog);
+    setName(mergedCatalog.name);
+    setType(mergedCatalog.type);
+    setSelectedCatalogs(mergedCatalog.catalogIds);
+    setDedupe(mergedCatalog.dedupe ?? 'id');
+    setCatalogSearch('');
+    setExpandedAddons(new Set());
+    setCatalogSort('name');
+    setModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    if (selectedCatalogs.length < 2) {
+      toast.error('Select at least 2 catalogs to merge');
+      return;
+    }
+
+    if (editingMergedCatalog) {
+      setUserData((prev) => ({
+        ...prev,
+        mergedCatalogs: (prev.mergedCatalogs || []).map((mc) =>
+          mc.id === editingMergedCatalog.id
+            ? {
+                ...mc,
+                name: name.trim(),
+                type,
+                catalogIds: selectedCatalogs,
+                dedupe,
+              }
+            : mc
+        ),
+      }));
+      toast.success('Merged catalog updated');
+    } else {
+      const newId = `merged-${Date.now()}`;
+      setUserData((prev) => ({
+        ...prev,
+        mergedCatalogs: [
+          ...(prev.mergedCatalogs || []),
+          {
+            id: newId,
+            name: name.trim(),
+            type,
+            catalogIds: selectedCatalogs,
+            enabled: true,
+            rpdb: !!prev.rpdbApiKey,
+            dedupe,
+          },
+        ],
+      }));
+      toast.success('Merged catalog created');
+    }
+    setModalOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      mergedCatalogs: (prev.mergedCatalogs || []).filter((mc) => mc.id !== id),
+    }));
+    toast.success('Merged catalog deleted');
+  };
+
+  const toggleEnabled = (id: string, enabled: boolean) => {
+    setUserData((prev) => ({
+      ...prev,
+      mergedCatalogs: (prev.mergedCatalogs || []).map((mc) =>
+        mc.id === id ? { ...mc, enabled } : mc
+      ),
+    }));
+  };
+
+  return (
+    <SettingsCard
+      title="Merged Catalogs"
+      description="Combine multiple catalogs into a single merged catalog. Useful for creating custom collections from different sources."
+      action={
+        <IconButton
+          size="sm"
+          intent="primary-subtle"
+          icon={<FaPlus />}
+          rounded
+          onClick={openAddModal}
+        />
+      }
+    >
+      {mergedCatalogs.length === 0 && (
+        <p className="text-[--muted] text-base text-center my-8">
+          No merged catalogs yet. Click the + button to create one.
+        </p>
+      )}
+
+      {mergedCatalogs.length > 0 && (
+        <ul className="space-y-2">
+          {mergedCatalogs.map((mc) => (
+            <li key={mc.id}>
+              <div className="relative px-4 py-3 bg-[var(--background)] rounded-[--radius-md] border overflow-hidden">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--subtle)] flex-shrink-0">
+                      <LuMerge className="text-xl" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm md:text-base font-medium truncate">
+                        {mc.name}
+                      </h3>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        {capitalise(mc.type)} • {mc.catalogIds.length} catalogs
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <IconButton
+                      className="h-8 w-8"
+                      icon={<BiEdit />}
+                      intent="primary-subtle"
+                      rounded
+                      onClick={() => openEditModal(mc)}
+                    />
+                    <IconButton
+                      className="h-8 w-8"
+                      icon={<BiTrash />}
+                      intent="alert-subtle"
+                      rounded
+                      onClick={() => handleDelete(mc.id)}
+                    />
+                    <Switch
+                      value={mc.enabled ?? true}
+                      onValueChange={(enabled) => toggleEnabled(mc.id, enabled)}
+                    />
+                  </div>
+                </div>
+
+                {/* Settings accordion */}
+                <Accordion type="single" collapsible className="mt-2">
+                  <AccordionItem value="settings">
+                    <AccordionTrigger>
+                      <div className="flex items-center justify-center md:justify-between w-full">
+                        <h4 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide hidden md:block">
+                          Settings & Included Catalogs
+                        </h4>
+                        <div className="flex items-center gap-2 mr-2">
+                          <Tooltip
+                            trigger={
+                              <IconButton
+                                className="text-lg h-8 w-8"
+                                icon={
+                                  mc.shuffle ? <FaShuffle /> : <FaArrowRightLong />
+                                }
+                                intent="primary-subtle"
+                                rounded
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUserData((prev) => ({
+                                    ...prev,
+                                    mergedCatalogs: (
+                                      prev.mergedCatalogs || []
+                                    ).map((m) =>
+                                      m.id === mc.id
+                                        ? { ...m, shuffle: !m.shuffle }
+                                        : m
+                                    ),
+                                  }));
+                                }}
+                              />
+                            }
+                          >
+                            {mc.shuffle ? 'Shuffle' : 'Default Order'}
+                          </Tooltip>
+                          <Tooltip
+                            trigger={
+                              <IconButton
+                                className="text-lg h-8 w-8"
+                                icon={
+                                  mc.rpdb ? <PiStarFill /> : <PiStarBold />
+                                }
+                                intent="primary-subtle"
+                                rounded
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUserData((prev) => ({
+                                    ...prev,
+                                    mergedCatalogs: (
+                                      prev.mergedCatalogs || []
+                                    ).map((m) =>
+                                      m.id === mc.id ? { ...m, rpdb: !m.rpdb } : m
+                                    ),
+                                  }));
+                                }}
+                              />
+                            }
+                          >
+                            RPDB
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        <Switch
+                          label="Shuffle"
+                          help="Randomize the order of items from different catalogs"
+                          side="right"
+                          value={mc.shuffle ?? false}
+                          onValueChange={(shuffle) => {
+                            setUserData((prev) => ({
+                              ...prev,
+                              mergedCatalogs: (prev.mergedCatalogs || []).map(
+                                (m) =>
+                                  m.id === mc.id ? { ...m, shuffle } : m
+                              ),
+                            }));
+                          }}
+                        />
+
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 -mx-2 px-2 hover:bg-[var(--subtle-highlight)] rounded-md">
+                          <div className="flex-1 py-2">
+                            <label className="text-sm font-medium">
+                              Persist Shuffle For
+                            </label>
+                            <p className="text-xs text-[--muted]">
+                              Hours to keep shuffled order before re-shuffling.
+                              Defaults to 0 (shuffle every request).
+                            </p>
+                          </div>
+                          <div className="w-full md:w-32 py-2">
+                            <NumberInput
+                              value={mc.persistShuffleFor ?? 0}
+                              min={0}
+                              step={1}
+                              max={24}
+                              onValueChange={(value) => {
+                                setUserData((prev) => ({
+                                  ...prev,
+                                  mergedCatalogs: (
+                                    prev.mergedCatalogs || []
+                                  ).map((m) =>
+                                    m.id === mc.id
+                                      ? { ...m, persistShuffleFor: value }
+                                      : m
+                                  ),
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <Switch
+                          label="RPDB"
+                          help="Replace posters with RPDB posters when supported"
+                          side="right"
+                          value={mc.rpdb ?? false}
+                          onValueChange={(rpdb) => {
+                            setUserData((prev) => ({
+                              ...prev,
+                              mergedCatalogs: (prev.mergedCatalogs || []).map(
+                                (m) => (m.id === mc.id ? { ...m, rpdb } : m)
+                              ),
+                            }));
+                          }}
+                        />
+
+                        <Select
+                          label="Deduplication"
+                          help="Method to remove duplicate items"
+                          options={[
+                            { value: 'none', label: 'None' },
+                            { value: 'id', label: 'By ID' },
+                            { value: 'title', label: 'By Title' },
+                          ]}
+                          value={mc.dedupe ?? 'id'}
+                          onValueChange={(dedupe) => {
+                            setUserData((prev) => ({
+                              ...prev,
+                              mergedCatalogs: (prev.mergedCatalogs || []).map(
+                                (m) => (m.id === mc.id ? { ...m, dedupe: dedupe as 'none' | 'id' | 'title' } : m)
+                              ),
+                            }));
+                          }}
+                        />
+
+                        {/* Included catalogs list */}
+                        <div className="pt-2 border-t">
+                          <h5 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">
+                            Included Catalogs ({mc.catalogIds.length})
+                          </h5>
+                          <div className="flex flex-wrap gap-1.5">
+                            {mc.catalogIds.map((catalogId) => {
+                              const catalog = allCatalogs.find(
+                                (c) => c.value === catalogId
+                              );
+                              return (
+                                <span
+                                  key={catalogId}
+                                  className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-[var(--subtle)] border border-[var(--border)] text-[var(--muted-foreground)] ${catalog?.isDisabled ? 'opacity-60' : ''}`}
+                                >
+                                  <span className="font-medium text-[var(--foreground)]">
+                                    {catalog?.name || catalogId}
+                                  </span>
+                                  {catalog?.isDisabled && (
+                                    <span className="text-[10px] px-1 py-0.5 rounded bg-[var(--alert-subtle)] text-[var(--alert)]">
+                                      Disabled
+                                    </span>
+                                  )}
+                                  {catalog && (
+                                    <span className="text-[10px] px-1 py-0.5 rounded bg-[var(--brand-subtle)] text-[var(--brand)]">
+                                      {capitalise(catalog.catalogType)}
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Add/Edit Modal */}
+      <Modal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        title={
+          editingMergedCatalog ? 'Edit Merged Catalog' : 'Create Merged Catalog'
+        }
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+        >
+          <TextInput
+            label="Name"
+            placeholder="e.g., My Combined Movies"
+            value={name}
+            onValueChange={setName}
+          />
+
+          <Select
+            label="Type"
+            options={catalogTypes}
+            value={type}
+            onValueChange={setType}
+          />
+
+          {/* Advanced Catalog Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Catalogs to Merge</label>
+              <span className="text-xs text-[--muted]">
+                {selectedCatalogs.length} selected
+              </span>
+            </div>
+
+            {/* Search and Sort */}
+            <div className="flex gap-2 items-stretch">
+              <div className="flex-1">
+                <TextInput
+                  placeholder="Search catalogs..."
+                  value={catalogSearch}
+                  onValueChange={setCatalogSearch}
+                />
+              </div>
+              <div className="w-28">
+                <Select
+                  options={[
+                    { value: 'name', label: 'Name' },
+                    { value: 'type', label: 'Type' },
+                  ]}
+                  value={catalogSort}
+                  onValueChange={(v) => setCatalogSort(v as 'name' | 'type')}
+                />
+              </div>
+            </div>
+
+            {/* Catalog list with collapsible addons */}
+            <div className="border rounded-[--radius-md] h-64 overflow-y-auto">
+              {Object.keys(filteredCatalogsByAddon).length === 0 ? (
+                <p className="text-sm text-[--muted] text-center py-8">
+                  {catalogSearch ? 'No catalogs match your search' : 'No catalogs available'}
+                </p>
+              ) : (
+                Object.entries(filteredCatalogsByAddon).map(([addonName, catalogs]) => {
+                  const isExpanded = expandedAddons.has(addonName);
+                  const selectedCount = getSelectedCountForAddon(addonName);
+                  return (
+                    <div key={addonName} className="border-b last:border-b-0">
+                      {/* Addon header - clickable to expand/collapse */}
+                      <div
+                        onClick={() => toggleAddonExpanded(addonName)}
+                        className="px-3 py-2 bg-[var(--subtle)] cursor-pointer hover:bg-[var(--subtle-highlight)] flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">
+                            {addonName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[var(--muted-foreground)]">
+                            {catalogs.length} catalog{catalogs.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Catalogs in this addon - shown only when expanded */}
+                      {isExpanded && catalogs.map((catalog) => {
+                        const isSelected = selectedCatalogs.includes(catalog.value);
+                        return (
+                          <div
+                            key={catalog.value}
+                            onClick={() => toggleCatalog(catalog.value)}
+                            className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-[var(--brand-subtle)] hover:bg-[var(--brand-subtle)]'
+                                : 'hover:bg-[var(--subtle-highlight)]'
+                            } ${catalog.isDisabled ? 'opacity-60' : ''}`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                isSelected
+                                  ? 'bg-[var(--brand)] border-[var(--brand)]'
+                                  : 'border-[var(--muted)]'
+                              }`}
+                            >
+                              {isSelected && (
+                                <svg
+                                  className="w-3 h-3 text-white"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={3}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-sm font-medium truncate block ${catalog.isDisabled ? 'text-[var(--muted-foreground)]' : ''}`}>
+                                {catalog.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {catalog.isDisabled && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--alert-subtle)] text-[var(--alert)]">
+                                  Disabled
+                                </span>
+                              )}
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--subtle)] text-[var(--muted-foreground)]">
+                                {capitalise(catalog.catalogType)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Selected catalogs preview */}
+            {selectedCatalogs.length > 0 && (
+              <div className="text-xs text-[--muted]">
+                Selected: {selectedCatalogs.slice(0, 3).map((id) => {
+                  const cat = allCatalogs.find((c) => c.value === id);
+                  return cat?.name || id;
+                }).join(', ')}
+                {selectedCatalogs.length > 3 && ` +${selectedCatalogs.length - 3} more`}
+              </div>
+            )}
+          </div>
+
+          <Select
+            label="Deduplication"
+            help="Method to remove duplicate items that appear in multiple catalogs"
+            options={[
+              { value: 'none', label: 'None - Keep all items' },
+              { value: 'id', label: 'By ID - Remove items with same ID' },
+              { value: 'title', label: 'By Title - Remove items with same title' },
+            ]}
+            value={dedupe}
+            onValueChange={(v) => setDedupe(v as 'none' | 'id' | 'title')}
+          />
+
+          <Button className="w-full" type="submit">
+            {editingMergedCatalog ? 'Save Changes' : 'Create Merged Catalog'}
+          </Button>
+        </form>
+      </Modal>
     </SettingsCard>
   );
 }

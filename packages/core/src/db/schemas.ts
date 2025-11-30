@@ -300,6 +300,18 @@ const CatalogModification = z.object({
   addonName: z.string().optional(), // the name of the addon that provides the catalog
 });
 
+const MergedCatalog = z.object({
+  id: z.string().min(1), // unique id for the merged catalog
+  name: z.string().min(1), // name of the merged catalog
+  type: z.string().min(1), // the type of the merged catalog (movie, series, etc.)
+  catalogIds: z.array(z.string().min(1)), // array of catalog ids to merge (format: "catalogId-catalogType")
+  enabled: z.boolean().optional(), // enable or disable the merged catalog
+  rpdb: z.boolean().optional(), // use rpdb for posters if supported
+  shuffle: z.boolean().optional(), // shuffle the merged catalog
+  persistShuffleFor: z.number().min(0).max(24).optional(), // persist the shuffle for a given amount of time (in hours)
+  dedupe: z.enum(['none', 'id', 'title']).optional(), // deduplication method: none, by id, or by title
+});
+
 export const CacheAndPlaySchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -509,6 +521,7 @@ export const UserDataSchema = z.object({
   services: ServiceList.optional(),
   presets: PresetList,
   catalogModifications: z.array(CatalogModification).optional(),
+  mergedCatalogs: z.array(MergedCatalog).optional(),
   externalDownloads: z.boolean().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
 });
