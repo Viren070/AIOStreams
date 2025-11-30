@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.19.0](https://github.com/Viren070/AIOStreams/compare/v2.18.1...v2.19.0) (2025-11-30)
+
+
+### Features
+
+* add SeaDex preference support for anime streams ([#512](https://github.com/Viren070/AIOStreams/issues/512)) ([b4b6929](https://github.com/Viren070/AIOStreams/commit/b4b69291e601452799393fa57ced497bbe133ecc))
+* add separate size filter for anime content ([#483](https://github.com/Viren070/AIOStreams/issues/483)) ([ff168cf](https://github.com/Viren070/AIOStreams/commit/ff168cf25594a5729a12b72583d8aebb033bc9fd))
+
+
+### Bug Fixes
+
+* **frontend:** added missing space to proxy url ([#515](https://github.com/Viren070/AIOStreams/issues/515)) ([1e06ad9](https://github.com/Viren070/AIOStreams/commit/1e06ad987af8a9cd656fdea62560c9be7f81c743))
+
 ## [2.18.1](https://github.com/Viren070/AIOStreams/compare/v2.18.0...v2.18.1) (2025-11-29)
 
 
