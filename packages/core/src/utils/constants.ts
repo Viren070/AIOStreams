@@ -1082,7 +1082,7 @@ export const SORT_CRITERIA_DETAILS: Record<
     description:
       'Whether the stream is a SeaDex release (curated best anime releases from releases.moe)',
     ascendingDescription:
-      'Non-SeaDex releases are preferred over SeaDex releases',
+      'Streams that are not listed on SeaDex are preferred',
     descendingDescription:
       'SeaDex Best releases are preferred, then hash-verified SeaDex releases, then group-matched releases, then non-SeaDex releases',
   },
