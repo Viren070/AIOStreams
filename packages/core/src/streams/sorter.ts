@@ -4,6 +4,7 @@ import {
   getTimeTakenSincePoint,
   constants,
 } from '../utils/index.js';
+import { getLanguageFromIsoCode } from '../metadata/utils.js';
 
 const logger = createLogger('sorter');
 
@@ -16,12 +17,25 @@ class StreamSorter {
 
   public async sort(
     allStreams: ParsedStream[],
-    type: string
+    type: string,
+    originalLanguageCode?: string
   ): Promise<ParsedStream[]> {
     const forcedToTopStreams = allStreams.filter(
       (stream) => stream.addon.forceToTop
     );
     const streams = allStreams.filter((stream) => !stream.addon.forceToTop);
+
+    // Resolve "Original" in preferredLanguages to actual language name
+    const effectiveUserData = { ...this.userData };
+    if (originalLanguageCode && this.userData.preferredLanguages?.includes('Original')) {
+      const resolvedLanguage = getLanguageFromIsoCode(originalLanguageCode);
+      if (resolvedLanguage) {
+        effectiveUserData.preferredLanguages = this.userData.preferredLanguages.map(lang =>
+          lang === 'Original' ? resolvedLanguage as typeof constants.LANGUAGES[number] : lang
+        );
+        logger.debug(`Resolved "Original" to "${resolvedLanguage}" for sorting`);
+      }
+    }
 
     let primarySortCriteria = this.userData.sortCriteria.global;
     let cachedSortCriteria = this.userData.sortCriteria.cached;
@@ -85,8 +99,8 @@ class StreamSorter {
 
       // sort the 2 lists separately, and put them after the other, depending on the direction of cached
       const cachedSorted = cachedStreams.slice().sort((a, b) => {
-        const aKey = this.dynamicSortKey(a, cachedSortCriteria, type);
-        const bKey = this.dynamicSortKey(b, cachedSortCriteria, type);
+        const aKey = this.dynamicSortKey(a, cachedSortCriteria, type, effectiveUserData);
+        const bKey = this.dynamicSortKey(b, cachedSortCriteria, type, effectiveUserData);
         for (let i = 0; i < aKey.length; i++) {
           if (aKey[i] < bKey[i]) return -1;
           if (aKey[i] > bKey[i]) return 1;
@@ -95,8 +109,8 @@ class StreamSorter {
       });
 
       const uncachedSorted = uncachedStreams.slice().sort((a, b) => {
-        const aKey = this.dynamicSortKey(a, uncachedSortCriteria, type);
-        const bKey = this.dynamicSortKey(b, uncachedSortCriteria, type);
+        const aKey = this.dynamicSortKey(a, uncachedSortCriteria, type, effectiveUserData);
+        const bKey = this.dynamicSortKey(b, uncachedSortCriteria, type, effectiveUserData);
         for (let i = 0; i < aKey.length; i++) {
           if (aKey[i] < bKey[i]) return -1;
           if (aKey[i] > bKey[i]) return 1;
@@ -114,8 +128,8 @@ class StreamSorter {
         `using sort criteria: ${JSON.stringify(primarySortCriteria)}`
       );
       sortedStreams = streams.slice().sort((a, b) => {
-        const aKey = this.dynamicSortKey(a, primarySortCriteria, type);
-        const bKey = this.dynamicSortKey(b, primarySortCriteria, type);
+        const aKey = this.dynamicSortKey(a, primarySortCriteria, type, effectiveUserData);
+        const bKey = this.dynamicSortKey(b, primarySortCriteria, type, effectiveUserData);
 
         for (let i = 0; i < aKey.length; i++) {
           if (aKey[i] < bKey[i]) return -1;
@@ -138,7 +152,8 @@ class StreamSorter {
   private dynamicSortKey(
     stream: ParsedStream,
     sortCriteria: SortCriterion[],
-    type: string
+    type: string,
+    userData: UserData
   ): any[] {
     function keyValue(sortCriterion: SortCriterion, userData: UserData) {
       const { key, direction } = sortCriterion;
@@ -321,7 +336,7 @@ class StreamSorter {
 
     return (
       sortCriteria.map((sortCriterion) =>
-        keyValue(sortCriterion, this.userData)
+        keyValue(sortCriterion, userData)
       ) ?? []
     );
   }

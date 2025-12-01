@@ -47,6 +47,7 @@ export class MetadataService {
                   episode_count: number;
                 }[]
               | undefined;
+            let originalLanguage: string | undefined;
 
             // Check anime database first
             const animeEntry = AnimeDatabase.getInstance().getEntryById(
@@ -167,6 +168,8 @@ export class MetadataService {
                 seasons = tmdbMetadata.seasons.sort(
                   (a, b) => a.season_number - b.season_number
                 );
+              if (tmdbMetadata.originalLanguage)
+                originalLanguage = tmdbMetadata.originalLanguage;
               tmdbId = tmdbMetadata.tmdbId;
             } else if (tmdbResult.status === 'rejected') {
               logger.warn(
@@ -310,6 +313,7 @@ export class MetadataService {
               releaseDate,
               tmdbId,
               tvdbId,
+              originalLanguage,
             };
           },
           {

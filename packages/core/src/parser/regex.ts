@@ -34,7 +34,7 @@ type PARSE_REGEX = {
   >;
   languages: Omit<
     Record<(typeof constants.LANGUAGES)[number], RegExp>,
-    'Unknown'
+    'Unknown' | 'Original'
   >;
   encodes: Omit<Record<(typeof constants.ENCODES)[number], RegExp>, 'Unknown'>;
   releaseGroup: RegExp;

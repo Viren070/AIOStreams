@@ -195,7 +195,24 @@ export class AIOStreams {
       }))
     );
 
-    let finalStreams = await this._processStreams(streams, type, id);
+    // Fetch metadata to get original language if "Original" is in preferred languages
+    let originalLanguageCode: string | undefined;
+    if (this.userData.preferredLanguages?.includes('Original')) {
+      const parsedId = IdParser.parse(id, type);
+      if (parsedId) {
+        try {
+          const metadata = await this.getMetadata(parsedId);
+          originalLanguageCode = metadata?.originalLanguage;
+          if (originalLanguageCode) {
+            logger.debug(`Fetched original language "${originalLanguageCode}" for ${id}`);
+          }
+        } catch (error) {
+          logger.warn(`Failed to fetch metadata for original language resolution: ${error}`);
+        }
+      }
+    }
+
+    let finalStreams = await this._processStreams(streams, type, id, originalLanguageCode);
 
     // if this.userData.precacheNextEpisode is true, start a new thread to request the next episode, check if
     // all provider streams are uncached, and only if so, then send a request to the first uncached stream in the list.
@@ -556,6 +573,7 @@ export class AIOStreams {
                 video.streams,
                 type,
                 id,
+                undefined, // originalLanguageCode not available for meta
                 true
               );
               return video;
@@ -1360,6 +1378,7 @@ export class AIOStreams {
     streams: ParsedStream[],
     type: string,
     id: string,
+    originalLanguageCode?: string,
     isMeta: boolean = false
   ): Promise<ParsedStream[]> {
     let processedStreams = streams;
@@ -1380,7 +1399,8 @@ export class AIOStreams {
           await this.limiter.limit(
             await this.sorter.sort(
               processedStreams,
-              AnimeDatabase.getInstance().isAnime(id) ? 'anime' : type
+              AnimeDatabase.getInstance().isAnime(id) ? 'anime' : type,
+              originalLanguageCode
             )
           ),
           type,
