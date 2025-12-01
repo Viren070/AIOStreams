@@ -3,6 +3,16 @@ import { createLogger } from '../utils/index.js';
 
 const logger = createLogger('parser');
 
+const umlautMap: Record<string, string> = {
+  Ä: 'Ae',
+  ä: 'ae',
+  Ö: 'Oe',
+  ö: 'oe',
+  Ü: 'Ue',
+  ü: 'ue',
+  ß: 'ss',
+};
+
 export function titleMatch(
   parsedTitle: string,
   titles: string[],
@@ -76,6 +86,7 @@ export function preprocessTitle(
 
 export function normaliseTitle(title: string) {
   return title
+    .replace(/[ÄäÖöÜüß]/g, (c) => umlautMap[c])
     .replace(/&/g, 'and')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -84,15 +95,6 @@ export function normaliseTitle(title: string) {
 }
 
 export function cleanTitle(title: string) {
-  const umlautMap: Record<string, string> = {
-    Ä: 'Ae',
-    ä: 'ae',
-    Ö: 'Oe',
-    ö: 'oe',
-    Ü: 'Ue',
-    ü: 'ue',
-    ß: 'ss',
-  };
   // replace German umlauts with ASCII equivalents, then normalize to NFD
   let cleaned = title
     .replace(/[ÄäÖöÜüß]/g, (c) => umlautMap[c])
