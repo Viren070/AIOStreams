@@ -302,17 +302,14 @@ class StreamSorter {
           return multiplier * -(index === -1 ? Infinity : index);
         }
         case 'seadex': {
-          // SeaDex sorting: Best (3) > On SeaDex (2) > Group match (1) > Not on SeaDex (0)
+          // SeaDex sorting: Best (2) > On SeaDex (1) > Not on SeaDex (0)
           if (!stream.seadex) {
             return multiplier * 0;
           }
           if (stream.seadex.isBest) {
-            return multiplier * 3;
-          }
-          if (stream.seadex.isSeadex) {
             return multiplier * 2;
           }
-          if (stream.seadex.isGroup) {
+          if (stream.seadex.isSeadex) {
             return multiplier * 1;
           }
           return multiplier * 0;

@@ -23,6 +23,11 @@ export interface SeaDexResult {
   allGroups: Set<string>;
 }
 
+export interface SeaDexTagResult {
+  isBest: boolean;
+  isSeadex: boolean;
+}
+
 interface SeaDexTorrent {
   infoHash: string;
   isBest: boolean;
@@ -143,7 +148,12 @@ export class SeaDexApi {
         `Found ${bestHashes.size} best hashes, ${allHashes.size} total hashes, ${bestGroups.size} best groups, ${allGroups.size} total groups for AniList ID ${anilistId}`
       );
 
-      const result: SeaDexResult = { bestHashes, allHashes, bestGroups, allGroups };
+      const result: SeaDexResult = {
+        bestHashes,
+        allHashes,
+        bestGroups,
+        allGroups,
+      };
       await seadexCache.set(cacheKey, result, SEADEX_CACHE_TTL);
       return result;
     } catch (error) {
