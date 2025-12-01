@@ -1084,7 +1084,7 @@ export const SORT_CRITERIA_DETAILS: Record<
     ascendingDescription:
       'Streams that are not listed on SeaDex are preferred',
     descendingDescription:
-      'SeaDex Best releases are preferred, then hash-verified SeaDex releases, then group-matched releases, then non-SeaDex releases',
+      'Streams that are marked as the Best release on SeaDex are preferred, followed by the Alternative release',
   },
 } as const;
 
