@@ -142,7 +142,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'searchMode',
         name: 'Search Mode',
         description:
-          'The search mode to use when querying the Torznab endpoint. **Note**: `Both` will result in two addons being created, one for each search mode.',
+          'The search mode to use when querying the Newznab endpoint. **Note**: `Both` will result in two addons being created, one for each search mode.',
         type: 'select',
         required: false,
         default: 'auto',
