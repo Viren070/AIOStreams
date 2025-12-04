@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.19.0](https://github.com/Viren070/AIOStreams/compare/v2.18.1...v2.19.0) (2025-12-04)
+
+
+### Features
+
+* add SeaDex preference support for anime streams ([#512](https://github.com/Viren070/AIOStreams/issues/512)) ([b4b6929](https://github.com/Viren070/AIOStreams/commit/b4b69291e601452799393fa57ced497bbe133ecc))
+* add separate size filter for anime content ([#483](https://github.com/Viren070/AIOStreams/issues/483)) ([ff168cf](https://github.com/Viren070/AIOStreams/commit/ff168cf25594a5729a12b72583d8aebb033bc9fd))
+* **seadex:** add release group fallback matching ([#521](https://github.com/Viren070/AIOStreams/issues/521)) ([7ed51bc](https://github.com/Viren070/AIOStreams/commit/7ed51bc6f08c6f3cf7395f3a53c60ae39d441ada))
+
+
+### Bug Fixes
+
+* **frontend:** added missing space to proxy url ([#515](https://github.com/Viren070/AIOStreams/issues/515)) ([1e06ad9](https://github.com/Viren070/AIOStreams/commit/1e06ad987af8a9cd656fdea62560c9be7f81c743))
+* **parser:** replace German umlauts with ASCII equivalents in normaliseTitle ([#525](https://github.com/Viren070/AIOStreams/issues/525)) ([f7c1124](https://github.com/Viren070/AIOStreams/commit/f7c1124ebccef46e70ea63c7c430e359604ad63f))
+* **seadex:** prevent matching by release group when there are streams matched by hash ([#534](https://github.com/Viren070/AIOStreams/issues/534)) ([3b3ec2b](https://github.com/Viren070/AIOStreams/commit/3b3ec2ba1e716d173244e4b30e6c160a7b2fa07f))
+
 ## [2.18.1](https://github.com/Viren070/AIOStreams/compare/v2.18.0...v2.18.1) (2025-11-29)
 
 
