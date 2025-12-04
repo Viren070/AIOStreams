@@ -181,10 +181,15 @@ class StreamFetcher {
         .flatMap((r) => r.statistic)
         .filter((s) => s !== undefined);
 
+      // Run SeaDex precompute BEFORE filter so seadex() works in Included SEL
+      await this.precompute.precomputeSeaDexOnly(groupStreams, id);
+
       const filteredStreams = await this.deduplicate.deduplicate(
         await this.filter.filter(groupStreams, type, id)
       );
-      await this.precompute.precompute(filteredStreams, type, id);
+
+      // Run preferred matching AFTER filter
+      await this.precompute.precomputePreferred(filteredStreams, type, id);
 
       logger.info(
         `Finished fetching from group in ${getTimeTakenSincePoint(groupStart)}`

@@ -535,6 +535,16 @@ export abstract class StreamExpressionEngine {
       );
     };
 
+    this.parser.functions.passthrough = function (streams: ParsedStream[]) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+      for (const stream of streams) {
+        stream.passthrough = true;
+      }
+      return streams;
+    };
+
     this.parser.functions.count = function (streams: ParsedStream[]) {
       if (!Array.isArray(streams)) {
         throw new Error(
