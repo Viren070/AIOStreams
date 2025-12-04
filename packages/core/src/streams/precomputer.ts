@@ -91,11 +91,12 @@ class StreamPrecomputer {
     let seadexBestCount = 0;
     let seadexCount = 0;
     let seadexGroupFallbackCount = 0;
+    let anyHashMatched = false;
 
+    // First pass: try hash matching for all streams
     for (const stream of streams) {
       const infoHash = stream.torrent?.infoHash?.toLowerCase();
 
-      // First try hash matching
       if (infoHash) {
         const isBest = seadexResult.bestHashes.has(infoHash);
         const isSeadex = seadexResult.allHashes.has(infoHash);
@@ -110,26 +111,35 @@ class StreamPrecomputer {
             seadexBestCount++;
           }
           seadexCount++;
-          continue;
+          anyHashMatched = true;
         }
       }
+    }
 
-      // Fallback to release group matching
-      const releaseGroup = stream.parsedFile?.releaseGroup?.toLowerCase();
-      if (releaseGroup) {
-        const isBestGroup = seadexResult.bestGroups.has(releaseGroup);
-        const isSeadexGroup = seadexResult.allGroups.has(releaseGroup);
+    // Second pass: fallback to release group matching ONLY if no hash matched
+    if (!anyHashMatched) {
+      for (const stream of streams) {
+        // Skip streams already tagged
+        if (stream.seadex) {
+          continue;
+        }
 
-        if (isBestGroup || isSeadexGroup) {
-          stream.seadex = {
-            isBest: isBestGroup,
-            isSeadex: true,
-          };
-          if (isBestGroup) {
-            seadexBestCount++;
+        const releaseGroup = stream.parsedFile?.releaseGroup?.toLowerCase();
+        if (releaseGroup) {
+          const isBestGroup = seadexResult.bestGroups.has(releaseGroup);
+          const isSeadexGroup = seadexResult.allGroups.has(releaseGroup);
+
+          if (isBestGroup || isSeadexGroup) {
+            stream.seadex = {
+              isBest: isBestGroup,
+              isSeadex: true,
+            };
+            if (isBestGroup) {
+              seadexBestCount++;
+            }
+            seadexCount++;
+            seadexGroupFallbackCount++;
           }
-          seadexCount++;
-          seadexGroupFallbackCount++;
         }
       }
     }
