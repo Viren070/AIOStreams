@@ -297,6 +297,8 @@ export class TMDBMetadata {
     let imdbId: string | undefined =
       parsedId.type === 'imdbId' ? parsedId.value.toString() : undefined;
 
+    let originalLanguage: string | undefined;
+
     if (parsedId.mediaType === 'movie') {
       const movieData = MovieDetailsSchema.parse(detailsJson);
       primaryTitle =
@@ -307,6 +309,7 @@ export class TMDBMetadata {
         allTitles.push(movieData.original_title);
       }
       releaseDate = movieData.release_date;
+      originalLanguage = movieData.original_language;
     } else {
       const tvData = TVDetailsSchema.parse(detailsJson);
       primaryTitle =
@@ -321,6 +324,7 @@ export class TMDBMetadata {
         ? this.parseReleaseDate(tvData.last_air_date)
         : undefined;
       seasons = tvData.seasons;
+      originalLanguage = tvData.original_language;
     }
 
     allTitles.push(primaryTitle);
@@ -378,6 +382,7 @@ export class TMDBMetadata {
       seasons,
       tmdbId: Number(tmdbId),
       tvdbId: null,
+      originalLanguage,
     };
     // Cache the result
     TMDBMetadata.metadataCache.set(cacheKey, metadata, TITLE_CACHE_TTL);
