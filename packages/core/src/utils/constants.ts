@@ -844,6 +844,7 @@ const AUDIO_TAGS = [
   'Atmos',
   'DD+',
   'DD',
+  'DTS-X',
   'DTS-HD MA',
   'DTS-HD',
   'DTS-ES',
