@@ -560,7 +560,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         queries.push(query.replace(titlePlaceholder, title));
       });
     };
-    if (parsedId.mediaType === 'movie' || !addSeasonEpisode) {
+    if (parsedId.mediaType === 'movie') {
       addQuery(
         `${titlePlaceholder}${metadata.year && addYear ? ` ${metadata.year}` : ''}`
       );
