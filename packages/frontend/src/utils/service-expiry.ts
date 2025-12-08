@@ -33,14 +33,20 @@ export type CachedExpiryMap = Partial<Record<ServiceId, CachedExpiryEntry>>;
 
 export const TRACKED_SERVICE_IDS: ServiceId[] = [
   'realdebrid',
-  'alldebrid',
-  'premiumize',
   'debridlink',
+  'premiumize',
+  'alldebrid',
   'torbox',
+  'easydebrid',
+  'debrider',
+  'putio',
+  'pikpak',
+  'offcloud',
+  'seedr',
   'easynews',
   'nzbdav',
-  'stremio_nntp',
   'altmount',
+  'stremio_nntp',
 ];
 
 export function isTrackedService(serviceId: ServiceId): boolean {

@@ -113,10 +113,7 @@ export function useServiceExpiry(
     }
 
     if (!canServiceAutoFetch(serviceId)) {
-      setState({
-        status: 'error',
-        error: `${serviceName} does not support automatic expiry detection. Switch to Manual or hide the badge.`,
-      });
+      setState({ status: 'disabled' });
       return;
     }
 
