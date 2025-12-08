@@ -65,13 +65,14 @@ export function ServicesMenu() {
 
 function Content() {
   const { status } = useStatus();
-  if (!status) return null;
   const { setUserData, userData } = useUserData();
   const { setSelectedMenu, nextMenu, previousMenu } = useMenu();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalService, setModalService] = useState<ServiceId | null>(null);
   const [modalValues, setModalValues] = useState<Record<string, any>>({});
   const [isDragging, setIsDragging] = useState(false);
+
+  if (!status) return null;
 
   // DND logic
   function handleDragEnd(event: any) {
