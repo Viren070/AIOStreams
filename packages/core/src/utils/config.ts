@@ -926,6 +926,47 @@ function validateOption(
     }
   }
 
+  if (option.type === 'date') {
+    if (typeof value !== 'string') {
+      throw new Error(
+        `Option ${option.id} must be a string (date), got ${typeof value}`
+      );
+    }
+    // Validate ISO date format YYYY-MM-DD
+    if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      throw new Error(
+        `Option ${option.id} must be a valid date in YYYY-MM-DD format, got ${value}`
+      );
+    }
+  }
+
+  if (option.type === 'service-tag') {
+    if (typeof value !== 'object' || value === null) {
+      throw new Error(
+        `Option ${option.id} must be an object, got ${typeof value}`
+      );
+    }
+    if (typeof value.type !== 'string') {
+      throw new Error(
+        `Option ${option.id}.type must be a string, got ${typeof value.type}`
+      );
+    }
+    if (
+      value.expiryDate !== undefined &&
+      typeof value.expiryDate !== 'string'
+    ) {
+      throw new Error(
+        `Option ${option.id}.expiryDate must be a string if provided, got ${typeof value.expiryDate}`
+      );
+    }
+    // Validate expiry date format if present
+    if (value.expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(value.expiryDate)) {
+      throw new Error(
+        `Option ${option.id}.expiryDate must be a valid date in YYYY-MM-DD format, got ${value.expiryDate}`
+      );
+    }
+  }
+
   return value;
 }
 
