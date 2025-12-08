@@ -560,11 +560,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         queries.push(query.replace(titlePlaceholder, title));
       });
     };
-    if (parsedId.mediaType === 'movie') {
+    if (parsedId.mediaType === 'movie' && addYear) {
       addQuery(
-        `${titlePlaceholder}${metadata.year && addYear ? ` ${metadata.year}` : ''}`
+        `${titlePlaceholder}${metadata.year ? ` ${metadata.year}` : ''}`
       );
-    } else {
+    } else if (parsedId.mediaType === 'series' && addSeasonEpisode) {
       if (
         parsedId.season &&
         (parsedId.episode ? Number(parsedId.episode) < 100 : true)
@@ -587,6 +587,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`
         );
       }
+    } else {
+      addQuery(`${titlePlaceholder}`);
     }
     return queries;
   }
