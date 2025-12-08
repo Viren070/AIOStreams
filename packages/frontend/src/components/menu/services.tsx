@@ -675,7 +675,7 @@ function ServiceModal({
                   placeholder="YYYY-MM-DD"
                   value={manualExpiryInput}
                   onValueChange={setManualExpiryInput}
-                  inputMode="numeric"
+                  inputMode="text"
                 />
                 <div className="flex flex-wrap items-center gap-2">
                   <ServiceExpiryDatePicker
