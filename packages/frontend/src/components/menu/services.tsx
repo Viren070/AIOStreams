@@ -1,5 +1,13 @@
 'use client';
 import { useStatus } from '@/context/status';
+import { useServiceExpiry } from '@/hooks/useServiceExpiry';
+import {
+  canServiceAutoFetch,
+  getExpiryPreference,
+  isTrackedService,
+  setExpiryPreference,
+  type ExpiryMode,
+} from '@/utils/service-expiry';
 import { PageWrapper } from '../shared/page-wrapper';
 import {
   // SERVICE_DETAILS,
@@ -35,7 +43,10 @@ import { PageControls } from '../shared/page-controls';
 import { SettingsCard } from '../shared/settings-card';
 import { TextInput } from '../ui/text-input';
 import { PasswordInput } from '../ui/password-input';
+import { Select } from '../ui/select';
 import { StatusResponse, UserData } from '@aiostreams/core';
+import { ServiceExpiryBadge } from './service-expiry-badge';
+import { ServiceExpiryDatePicker } from './service-expiry-date-picker';
 export function ServicesMenu() {
   return (
     <>
@@ -490,6 +501,17 @@ function SortableServiceItem({
   const disableEdit = meta.credentials.every((cred) => {
     return cred.forced;
   });
+  const expiry = useServiceExpiry({
+    serviceId: service.id,
+    serviceName: meta?.name || service.id,
+    credentials: service.credentials,
+  });
+  const serviceTitle =
+    expiry.status === 'error'
+      ? `${meta?.name || service.id}: ${expiry.error}`
+      : expiry.status === 'disabled'
+        ? `${meta?.name || service.id}: Expiry badge hidden`
+        : undefined;
   return (
     <li ref={setNodeRef} style={style}>
       <div className="px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border flex gap-3 relative">
@@ -499,9 +521,20 @@ function SortableServiceItem({
           {...listeners}
         />
         <div className="flex-1 flex flex-col justify-center min-w-0">
-          <span className="font-mono text-base truncate">
-            {meta?.name || service.id}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-mono text-base truncate" title={serviceTitle}>
+              {meta?.name || service.id}
+            </span>
+            {expiry.status === 'success' &&
+              expiry.badgeText &&
+              expiry.badgeColors && (
+                <ServiceExpiryBadge
+                  text={expiry.badgeText}
+                  colors={expiry.badgeColors}
+                  title={expiry.tooltip}
+                />
+              )}
+          </div>
           <span className="text-sm text-[--muted] font-normal italic break-words">
             <MarkdownLite>{meta?.signUpText}</MarkdownLite>
           </span>
@@ -540,17 +573,36 @@ function ServiceModal({
 }) {
   const { status } = useStatus();
   const [localValues, setLocalValues] = useState<Record<string, any>>({});
+  const [expiryMode, setExpiryMode] = useState<ExpiryMode>('auto');
+  const [manualExpiryInput, setManualExpiryInput] = useState('');
+  const [manualExpiryUpdatedAt, setManualExpiryUpdatedAt] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
-    if (open) {
-      setLocalValues(values);
+    if (!open) return;
+    setLocalValues(values);
+    if (!serviceId) {
+      setExpiryMode('auto');
+      setManualExpiryInput('');
+      setManualExpiryUpdatedAt(null);
+      return;
     }
-  }, [open, values]);
+    const preference = getExpiryPreference(serviceId);
+    const supportsAuto = canServiceAutoFetch(serviceId);
+    const resolvedMode =
+      preference.mode === 'auto' && !supportsAuto ? 'manual' : preference.mode;
+    setExpiryMode(resolvedMode);
+    setManualExpiryInput(preference.date ?? '');
+    setManualExpiryUpdatedAt(preference.updatedAt ?? null);
+  }, [open, serviceId, values]);
 
   if (!status) return null;
   if (!serviceId) return null;
   const meta = status.settings.services[serviceId]!;
   const credentials = meta.credentials || [];
+  const allowExpiryControls = isTrackedService(serviceId);
+  const autoSupported = canServiceAutoFetch(serviceId);
 
   const handleCredentialChange = (optId: string, newValue: any) => {
     setLocalValues((prev) => ({
@@ -569,6 +621,20 @@ function ServiceModal({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
+          if (allowExpiryControls) {
+            const trimmed = manualExpiryInput.trim();
+            if (expiryMode === 'auto') {
+              setExpiryPreference(serviceId, null);
+            } else if (expiryMode === 'hidden') {
+              setExpiryPreference(serviceId, { mode: 'hidden' });
+            } else {
+              setExpiryPreference(serviceId, {
+                mode: 'manual',
+                date: trimmed ? trimmed : undefined,
+              });
+              setManualExpiryUpdatedAt(trimmed ? Date.now() : null);
+            }
+          }
           onSubmit(localValues);
         }}
       >
@@ -583,6 +649,65 @@ function ServiceModal({
             onChange={(v) => handleCredentialChange(opt.id, v || undefined)}
           />
         ))}
+        {allowExpiryControls && (
+          <div className="space-y-2">
+            <Select
+              label="Expiry Badge Mode"
+              value={expiryMode}
+              onValueChange={(mode) =>
+                setExpiryMode((mode as ExpiryMode) || 'auto')
+              }
+              options={[
+                {
+                  value: 'auto',
+                  label: 'Auto fetch from provider',
+                  disabled: !autoSupported,
+                },
+                { value: 'manual', label: 'Manual date' },
+                { value: 'hidden', label: 'Hide badge' },
+              ]}
+            />
+            {expiryMode === 'manual' && (
+              <div className="space-y-2">
+                <TextInput
+                  label="Manual Expiry Date"
+                  placeholder="YYYY-MM-DD"
+                  value={manualExpiryInput}
+                  onValueChange={setManualExpiryInput}
+                  inputMode="numeric"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <ServiceExpiryDatePicker
+                    value={manualExpiryInput}
+                    onSelect={setManualExpiryInput}
+                    onClear={() => setManualExpiryInput('')}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    intent="gray-outline"
+                    onClick={() => setManualExpiryInput('')}
+                    disabled={!manualExpiryInput}
+                  >
+                    Clear Date
+                  </Button>
+                </div>
+                <p className="text-xs text-[--muted]">
+                  {manualExpiryUpdatedAt
+                    ? `Last saved ${new Date(
+                        manualExpiryUpdatedAt
+                      ).toLocaleString()}.`
+                    : 'Pick a date or type it above to show the badge.'}
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-[--muted]">
+              {autoSupported
+                ? 'Auto fetch uses your service credentials to refresh the badge. Manual mode lets you control the date yourself, while Hide turns the badge off.'
+                : 'This service cannot fetch expiry automatically. Use Manual to enter a date or choose Hide to remove the badge.'}
+            </p>
+          </div>
+        )}
         <div className="flex gap-2">
           <Button
             type="button"
