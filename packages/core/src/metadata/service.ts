@@ -5,7 +5,7 @@ import { getTraktAliases } from './trakt.js';
 import { IMDBMetadata } from './imdb.js';
 import { createLogger, getTimeTakenSincePoint } from '../utils/logger.js';
 import { TYPES } from '../utils/constants.js';
-import { AnimeDatabase, IdParser, ParsedId } from '../utils/index.js';
+import { AnimeDatabase, IdParser, ParsedId, Env } from '../utils/index.js';
 import { withRetry } from '../utils/general.js';
 import { Meta } from '../db/schemas.js';
 import { TVDBMetadata } from './tvdb.js';
@@ -122,7 +122,7 @@ export class MetadataService {
             }
 
             // Trakt aliases
-            if (imdbId) {
+            if (imdbId && Env.FETCH_TRAKT_ALIASES) {
               promises.push(getTraktAliases(id));
             } else {
               promises.push(Promise.resolve(undefined));

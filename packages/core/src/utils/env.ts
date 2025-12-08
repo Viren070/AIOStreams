@@ -430,6 +430,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Trakt Client ID. Used for fetching Trakt aliases.',
   }),
+  FETCH_TRAKT_ALIASES: bool({
+    default: true,
+    desc: 'Fetch Trakt aliases. Defaults to true.',
+  }),
   PROVIDE_STREAM_DATA: boolOrList<boolean | string[] | undefined>({
     default: undefined,
     desc: 'Provide stream data to the client in stream responses. Required for users to wrap this addon within another AIOStreams instance.',
