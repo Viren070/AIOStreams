@@ -588,7 +588,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         );
       }
     } else {
-      addQuery(`${titlePlaceholder}`);
+      addQuery(titlePlaceholder);
     }
     return queries;
   }
