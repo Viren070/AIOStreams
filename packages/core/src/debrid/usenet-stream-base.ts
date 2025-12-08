@@ -728,7 +728,7 @@ export abstract class UsenetStreamService implements DebridService {
       nzbUrl: maskSensitiveInfo(nzb),
     });
 
-    const category = metadata?.season || metadata?.episode ? 'TV' : 'Movies';
+    const category = metadata?.season || metadata?.episode ? 'TV' : 'movies';
     const expectedFolderName = this.getExpectedFolderName(playbackInfo);
 
     // Check if content already exists at the expected path
