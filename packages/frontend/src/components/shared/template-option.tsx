@@ -14,6 +14,13 @@ import { IconButton } from '../ui/button';
 import { FaKey, FaChevronUp, FaChevronDown, FaArrowLeft } from 'react-icons/fa';
 import { Modal } from '../ui/modal';
 import { FaPlus, FaServer, FaTrashCan } from 'react-icons/fa6';
+import { ServiceExpiryBadge } from '../ui/badge';
+import { ServiceExpiryDatePicker } from '../menu/service-expiry-date-picker';
+import {
+  DEFAULT_USER_TAG,
+  USER_TAG_OPTIONS,
+  UserTagType,
+} from '../menu/user-addon-metadata';
 // this component, accepts an option and returns a component that renders the option.
 // string - TextInput
 // number - NumberInput
@@ -402,6 +409,113 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
           onChange={onChange}
           disabled={isDisabled}
         />
+      );
+    }
+    case 'date':
+      return (
+        <div>
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-sm">{name}</span>
+            <ServiceExpiryDatePicker
+              value={forcedValue ?? value ?? defaultValue}
+              onSelect={(date: string) =>
+                onChange(emptyIsUndefined ? date || undefined : date)
+              }
+              onClear={() => onChange(undefined)}
+            />
+          </div>
+          {description && (
+            <div className="text-xs text-[--muted] mt-1">
+              <MarkdownLite>{description}</MarkdownLite>
+            </div>
+          )}
+        </div>
+      );
+    case 'service-tag': {
+      const currentValue = (forcedValue ??
+        value ??
+        defaultValue ??
+        DEFAULT_USER_TAG) as {
+        type: UserTagType;
+        expiryDate?: string;
+      };
+      const tagType = (currentValue?.type || 'none') as UserTagType;
+      const expiryDate = currentValue?.expiryDate || '';
+
+      const baseOptions =
+        option.options?.map((opt) => ({
+          label: opt.label,
+          value: opt.value,
+        })) ?? USER_TAG_OPTIONS.map((opt) => ({ ...opt }));
+
+      const tagOptions = [...baseOptions];
+      const ensureLabel = (val: string) =>
+        val
+          .toString()
+          .replace(/[_-]+/g, ' ')
+          .split(' ')
+          .filter(Boolean)
+          .map((word) =>
+            word[0] ? word[0].toUpperCase() + word.slice(1) : word
+          )
+          .join(' ');
+
+      if (
+        typeof tagType === 'string' &&
+        tagType &&
+        !tagOptions.some((opt) => opt.value === tagType)
+      ) {
+        tagOptions.push({
+          value: tagType,
+          label: ensureLabel(tagType),
+        });
+      }
+
+      const handleTagTypeChange = (newType: string) => {
+        onChange({
+          type: newType,
+          expiryDate: newType === 'expires' ? expiryDate : '',
+        });
+      };
+
+      const handleExpiryDateChange = (newDate: string) => {
+        onChange({
+          type: tagType,
+          expiryDate: newDate,
+        });
+      };
+
+      return (
+        <div className="space-y-3">
+          <Select
+            label={name}
+            value={tagType}
+            onValueChange={handleTagTypeChange}
+            options={tagOptions}
+            disabled={isDisabled}
+          />
+          {tagType === 'expires' && (
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-sm">Expiry Date</span>
+              <ServiceExpiryDatePicker
+                value={expiryDate}
+                onSelect={handleExpiryDateChange}
+                onClear={() => handleExpiryDateChange('')}
+              />
+            </div>
+          )}
+          {tagType !== 'none' && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[--muted]">Preview:</span>
+              <ServiceExpiryBadge tagType={tagType} expiryDate={expiryDate} />
+            </div>
+          )}
+          {description && (
+            <div className="text-xs text-[--muted] mt-1">
+              <MarkdownLite>{description}</MarkdownLite>
+            </div>
+          )}
+        </div>
       );
     }
     default:

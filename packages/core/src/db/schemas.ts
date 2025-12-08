@@ -195,6 +195,8 @@ const OptionDefinition = z.object({
     'socials',
     'oauth',
     'custom-nntp-servers',
+    'date',
+    'service-tag',
   ]),
   oauth: z
     .object({
