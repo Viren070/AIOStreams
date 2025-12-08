@@ -927,15 +927,16 @@ function validateOption(
   }
 
   if (option.type === 'date') {
-    if (typeof value !== 'string') {
+    if (typeof value !== 'string' || value === '') {
       throw new Error(
-        `Option ${option.id} must be a string (date), got ${typeof value}`
+        `Option ${option.id} must be a non-empty string (date), got ${typeof value === 'string' ? 'empty string' : typeof value}`
       );
     }
-    // Validate ISO date format YYYY-MM-DD
-    if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    // Validate ISO date format using Zod's z.iso.date()
+    const dateResult = z.iso.date().safeParse(value);
+    if (!dateResult.success) {
       throw new Error(
-        `Option ${option.id} must be a valid date in YYYY-MM-DD format, got ${value}`
+        `Option ${option.id} must be a valid ISO date (YYYY-MM-DD), got ${value}`
       );
     }
   }
@@ -959,11 +960,14 @@ function validateOption(
         `Option ${option.id}.expiryDate must be a string if provided, got ${typeof value.expiryDate}`
       );
     }
-    // Validate expiry date format if present
-    if (value.expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(value.expiryDate)) {
-      throw new Error(
-        `Option ${option.id}.expiryDate must be a valid date in YYYY-MM-DD format, got ${value.expiryDate}`
-      );
+    // Validate expiry date format using Zod's z.iso.date() if present
+    if (value.expiryDate) {
+      const expiryDateResult = z.iso.date().safeParse(value.expiryDate);
+      if (!expiryDateResult.success) {
+        throw new Error(
+          `Option ${option.id}.expiryDate must be a valid ISO date (YYYY-MM-DD), got ${value.expiryDate}`
+        );
+      }
     }
   }
 
