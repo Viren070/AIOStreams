@@ -13,12 +13,21 @@ import {
   verifyHash,
   validateConfig,
   applyMigrations,
+  Cache,
 } from '../utils/index.js';
 
 const APIError = constants.APIError;
 const logger = createLogger('users');
 const db = DB.getInstance();
 const txQueue = TransactionQueue.getInstance();
+const userCache = Cache.getInstance<string, CachedUserRecord>('user-config');
+const USER_CACHE_TTL_SECONDS = 300;
+
+interface CachedUserRecord {
+  encryptedConfig: string;
+  configSalt: string;
+  passwordHash: string;
+}
 
 export class UserRepository {
   static async createUser(
@@ -90,6 +99,7 @@ export class UserRepository {
         );
         await tx.commit();
         committed = true;
+        await this.invalidateUserCache(uuid);
         logger.info(`Created a new user with UUID: ${uuid}`);
         return { uuid, encryptedPassword };
       } catch (error) {
@@ -129,6 +139,12 @@ export class UserRepository {
     password: string
   ): Promise<UserData | null> {
     try {
+      const cachedUser = await this.getCachedUser(uuid, password);
+      if (cachedUser) {
+        logger.info(`Retrieved configuration for user ${uuid}`);
+        return cachedUser;
+      }
+
       const result = await db.query(
         'SELECT config, config_salt, password_hash FROM users WHERE uuid = ?',
         [uuid]
@@ -140,10 +156,13 @@ export class UserRepository {
         );
       }
 
-      await db.execute(
-        'UPDATE users SET accessed_at = CURRENT_TIMESTAMP WHERE uuid = ?',
-        [uuid]
-      );
+      const touchedRows = await this.updateAccessedAt(uuid);
+      if (!touchedRows) {
+        await this.invalidateUserCache(uuid);
+        return Promise.reject(
+          new APIError(constants.ErrorCode.USER_INVALID_DETAILS)
+        );
+      }
 
       const isValid = await this.verifyUserPassword(
         password,
@@ -160,40 +179,14 @@ export class UserRepository {
         password,
         result[0].config_salt
       );
-
-      // try {
-      //   // skip errors, and dont decrypt credentials either, as this would make
-      //   // encryption pointless
-      //   validatedConfig = await validateConfig(decryptedConfig, true, false);
-      // } catch (error: any) {
-      //   return Promise.reject(
-      //     new APIError(
-      //       constants.ErrorCode.USER_INVALID_CONFIG,
-      //       undefined,
-      //       error.message
-      //     )
-      //   );
-      // }
-      // const {
-      //   success,
-      //   data: validatedConfig,
-      //   error,
-      // } = UserDataSchema.safeParse(decryptedConfig);
-      // if (!success) {
-      //   return Promise.reject(
-      //     new APIError(
-      //       constants.ErrorCode.USER_INVALID_CONFIG,
-      //       undefined,
-      //       formatZodError(error)
-      //     )
-      //   );
-      // }
-      decryptedConfig.trusted =
-        Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
-        false;
-      decryptedConfig.ip = undefined;
+      const userData = this.prepareUserData(decryptedConfig, uuid);
+      await this.cacheUserRecord(uuid, {
+        encryptedConfig: result[0].config,
+        configSalt: result[0].config_salt,
+        passwordHash: result[0].password_hash,
+      });
       logger.info(`Retrieved configuration for user ${uuid}`);
-      return applyMigrations(decryptedConfig);
+      return userData;
     } catch (error) {
       logger.error(
         `Error retrieving user ${uuid}: ${error instanceof Error ? error.message : String(error)}`
@@ -268,6 +261,7 @@ export class UserRepository {
         );
         await tx.commit();
         committed = true;
+        await this.invalidateUserCache(uuid);
         logger.info(`Updated user ${uuid} with an updated configuration`);
       } catch (error) {
         logger.error(
@@ -320,6 +314,7 @@ export class UserRepository {
 
         await tx.commit();
         committed = true;
+        await this.invalidateUserCache(uuid);
         logger.info(`Deleted user ${uuid}`);
       } catch (error) {
         logger.error(
@@ -355,6 +350,98 @@ export class UserRepository {
       logger.error('Failed to prune users:', error);
       return Promise.reject(new APIError(constants.ErrorCode.DATABASE_ERROR));
     }
+  }
+
+  private static getCacheKey(uuid: string): string {
+    return `user:${uuid}`;
+  }
+
+  private static async getCachedUser(
+    uuid: string,
+    password: string
+  ): Promise<UserData | null> {
+    let cached: CachedUserRecord | undefined;
+    try {
+      cached = await userCache.get(this.getCacheKey(uuid));
+    } catch (error: any) {
+      logger.warn(
+        `Failed to read user cache for ${uuid}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+
+    if (!cached) {
+      return null;
+    }
+
+    const touchedRows = await this.updateAccessedAt(uuid);
+    if (!touchedRows) {
+      await this.invalidateUserCache(uuid);
+      return null;
+    }
+
+    const isValid = await this.verifyUserPassword(
+      password,
+      cached.passwordHash
+    );
+    if (!isValid) {
+      throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+    }
+
+    const decryptedConfig = await this.decryptConfig(
+      cached.encryptedConfig,
+      password,
+      cached.configSalt
+    );
+    return this.prepareUserData(decryptedConfig, uuid);
+  }
+
+  private static async cacheUserRecord(
+    uuid: string,
+    record: CachedUserRecord
+  ): Promise<void> {
+    try {
+      await userCache.set(this.getCacheKey(uuid), record, USER_CACHE_TTL_SECONDS);
+    } catch (error: any) {
+      logger.warn(
+        `Failed to cache user ${uuid}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private static async invalidateUserCache(uuid: string): Promise<void> {
+    try {
+      await userCache.delete(this.getCacheKey(uuid));
+    } catch (error: any) {
+      logger.warn(
+        `Failed to invalidate cache for user ${uuid}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private static async updateAccessedAt(uuid: string): Promise<number> {
+    const result = await db.execute(
+      'UPDATE users SET accessed_at = CURRENT_TIMESTAMP WHERE uuid = ?',
+      [uuid]
+    );
+    return db.getRowsAffected(result);
+  }
+
+  private static prepareUserData(
+    config: UserData,
+    uuid: string
+  ): UserData {
+    config.trusted =
+      Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
+      false;
+    config.ip = undefined;
+    return applyMigrations(config);
   }
 
   private static async verifyUserPassword(
