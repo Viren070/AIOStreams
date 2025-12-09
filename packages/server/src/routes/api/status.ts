@@ -13,7 +13,10 @@ import { createResponse } from '../../utils/responses.js';
 const router: Router = Router();
 
 const statusInfo = async (): Promise<StatusResponse> => {
-  const userCount = await UserRepository.getUserCount();
+  const shouldExposeUsers = Env.EXPOSE_USER_COUNT;
+  const userCount = shouldExposeUsers
+    ? await UserRepository.getUserCount()
+    : null;
 
   let forcedPublicProxyUrl = Env.FORCE_PROXY_PUBLIC_URL;
   if (Env.FORCE_PUBLIC_PROXY_HOST) {
@@ -26,7 +29,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
     commit: Env.GIT_COMMIT,
     buildTime: Env.BUILD_TIME,
     commitTime: Env.BUILD_COMMIT_TIME,
-    users: Env.EXPOSE_USER_COUNT ? userCount : null,
+    users: shouldExposeUsers ? userCount : null,
     settings: {
       baseUrl: Env.BASE_URL,
       addonName: Env.ADDON_NAME,
