@@ -31,7 +31,8 @@ export const NewznabAddonConfigSchema = NabAddonConfigSchema.extend({
   healthProxyEndpoint: z.string().optional(),
   healthProxyPath: z.string().optional(),
   healthProxyTarget: z.string().optional(),
-  healthProxyBackbone: z.string().optional(),
+  healthProxyBackbone: z.array(z.string().min(1)).optional(),
+  healthProxyProviderHost: z.string().optional(),
   healthProxyShowUnknown: z.boolean().optional(),
   healthProxySingleIp: z.boolean().optional(),
 });
@@ -96,41 +97,57 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     const target = this.userData.healthProxyTarget?.trim() || this.userData.url;
     extraParams.target = target;
 
-    const setStringParam = (key: string, value?: string) => {
-      if (value && value.trim().length > 0) {
-        extraParams[key] = value.trim();
-      }
-    };
     const setBooleanParam = (key: string, value?: boolean) => {
       if (typeof value === 'boolean') {
         extraParams[key] = value ? '1' : '0';
       }
     };
-    const setCsvParam = (key: string, value?: string) => {
-      if (!value) return;
-      const parts = value
-        .split(',')
-        .map((part) => part.trim())
-        .filter((part) => part.length > 0);
-      if (parts.length > 0) {
-        extraParams[key] = parts.join(',');
-      }
-    };
 
-    setCsvParam('provider_host', Env.ZYCLOPS_PROVIDER_HOST);
-    setCsvParam('backbone', this.userData.healthProxyBackbone);
-    setBooleanParam('show_unknown', this.userData.healthProxyShowUnknown);
-    setBooleanParam('single_ip', this.userData.healthProxySingleIp);
+    const selectedBackbones = (this.userData.healthProxyBackbone || [])
+      .map((backbone) => backbone?.trim())
+      .filter((backbone): backbone is string => Boolean(backbone));
+    const userProviderHosts = (this.userData.healthProxyProviderHost || '')
+      .split(',')
+      .map((host) => host.trim())
+      .filter((host) => host.length > 0);
 
-    if (!extraParams.provider_host) {
-      this.logger.warn(
-        'Health proxy is enabled but provider_host is missing; health annotations may not match your indexer.'
+    const hasBackbone = selectedBackbones.length > 0;
+    let providerHosts: string[] = [];
+
+    if (userProviderHosts.length > 0) {
+      providerHosts = userProviderHosts;
+    } else if (!hasBackbone && Env.ZYCLOPS_PROVIDER_HOST?.trim()) {
+      providerHosts = [Env.ZYCLOPS_PROVIDER_HOST.trim()];
+    }
+
+    const hasProviderHost = providerHosts.length > 0;
+
+    if (hasBackbone && hasProviderHost && userProviderHosts.length > 0) {
+      throw new Error(
+        'Crowdsourced health checks only accept one identifier. Choose either a backbone selection or a provider host.'
       );
     }
+
+    if (!hasBackbone && !hasProviderHost) {
+      throw new Error(
+        'Crowdsourced health checks require either a backbone selection or a provider host to be configured.'
+      );
+    }
+
+    if (hasBackbone) {
+      extraParams.backbone = selectedBackbones.join(',');
+    } else if (hasProviderHost) {
+      extraParams.provider_host = providerHosts.join(',');
+    }
+
+    setBooleanParam('show_unknown', this.userData.healthProxyShowUnknown);
+    setBooleanParam('single_ip', this.userData.healthProxySingleIp);
 
     this.logger.info('Routing Newznab traffic through health proxy', {
       endpoint,
       target,
+      mode: hasBackbone ? 'backbone' : 'provider_host',
+      identifier: hasBackbone ? selectedBackbones : providerHosts,
     });
 
     return {

@@ -3,6 +3,17 @@ import { Preset, baseOptions } from './preset.js';
 import { Env, RESOURCES, ServiceId, constants } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 
+const ZYCLOPS_BACKBONE_OPTIONS = [
+  { value: 'usenetexpress', label: 'UsenetExpress' },
+  { value: 'abavia', label: 'Abavia' },
+  { value: 'eweka-internet-services', label: 'Eweka Internet Services' },
+  { value: 'base-ip', label: 'Base IP' },
+  { value: 'netnews', label: 'NetNews' },
+  { value: 'uzo-reto', label: 'Uzo Reto' },
+  { value: 'omicron', label: 'Omicron' },
+  { value: 'giganews', label: 'Giganews' },
+] as const;
+
 class NewznabStreamParser extends BuiltinStreamParser {
   protected override getMessage(
     stream: Stream,
@@ -202,9 +213,9 @@ export class NewznabPreset extends BuiltinAddonPreset {
       },
       {
         id: 'healthProxySection',
-        name: 'Zyclops Health Proxy',
+        name: '🧝 Zyclops Health Proxy',
         description:
-          'Route searches through the Zyclops crowdsourced health layer to filter unhealthy releases. Enable the toggle below to activate it; the following settings only matter once health checks are on.',
+          "Route searches through ElfHosted's Zyclops crowdsourced health layer to return only known-healthy releases ([learn more](https://zyclops.elfhosted.com)). Enable the toggle below to activate it; the following settings only matter once health checks are on.",
         type: 'alert',
         intent: 'info-basic',
         showInSimpleMode: false,
@@ -213,7 +224,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyEnabled',
         name: 'Crowdsourced Health Checks (Zyclops)',
         description:
-          'Enable Zyclops health filtering. ⚠️ Shares your indexer URL/API key with the proxy and submits the newest untested NZB to enrich the shared database. All NZBs in that database are searchable via NewzNab on private ElfHosted instances ([learn more](https://zyclops.elfhosted.com)). Settings below only apply when this is enabled.',
+          'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the shared database. All NZBs in that database are searchable via NewzNab on private ElfHosted instances. Settings below only apply when this is enabled.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
@@ -221,9 +232,20 @@ export class NewznabPreset extends BuiltinAddonPreset {
       },
       {
         id: 'healthProxyBackbone',
-        name: 'Backbone',
+        name: 'Backbones',
         description:
-          'Optional backbone identifier used by the proxy when aggregating health stats. Provide a comma-separated list to declare multiple backbones. Only used when health checks are enabled.',
+          'Select one or more backbone networks. Leave empty to identify your upstream with a Provider Host instead. Exactly one of Backbones or Provider Host must be configured when Zyclops health checks are enabled.',
+        type: 'multi-select',
+        required: false,
+        showInSimpleMode: false,
+        default: [],
+        options: [...ZYCLOPS_BACKBONE_OPTIONS],
+      },
+      {
+        id: 'healthProxyProviderHost',
+        name: 'Provider Host',
+        description:
+          'Enter the hostname(s) that best match your upstream provider, separated by commas if you have multiple. Leave blank when selecting backbones. Exactly one of Backbones or Provider Host must be configured when Zyclops health checks are enabled.',
         type: 'string',
         required: false,
         showInSimpleMode: false,
@@ -366,6 +388,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       healthProxyPath: options.healthProxyPath,
       healthProxyTarget: options.healthProxyTarget || options.newznabUrl,
       healthProxyBackbone: options.healthProxyBackbone,
+      healthProxyProviderHost: options.healthProxyProviderHost,
       healthProxyShowUnknown: options.healthProxyShowUnknown,
       healthProxySingleIp: options.healthProxySingleIp,
     };
