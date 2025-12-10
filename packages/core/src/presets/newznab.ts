@@ -179,6 +179,43 @@ export class NewznabPreset extends BuiltinAddonPreset {
         default: false,
         showInSimpleMode: false,
       },
+      {
+        id: 'healthProxyEnabled',
+        name: 'Crowdsourced Health Checks (Zyclops)',
+        description:
+          'Route all Newznab requests through the Zyclops proxy so results can be filtered by shared health data. ⚠️ Each search requires your indexer URL and API key, and anonymously shares one NZB per search with ElfHosted, augmenting the health database for future searches (learn more: https://zyclops.elfhosted.com). The health database is also searchable via NewzNab on private ElfHosted instances',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+        intent: 'warning',
+      },
+      {
+        id: 'healthProxyBackbone',
+        name: 'Backbone',
+        description:
+          'Optional backbone identifier used by the proxy when aggregating health stats. Provide a comma-separated list to declare multiple backbones.',
+        type: 'string',
+        required: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'healthProxyShowUnknown',
+        name: 'Show Unknown Releases',
+        description:
+          'If enabled, upstream results without a cached health state will still be returned (the proxy defaults to hiding them).',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'healthProxySingleIp',
+        name: 'Single-IP Downloads',
+        description:
+          'When enabled, NZB downloads are proxied through the health service so only its IP touches the upstream indexer.',
+        type: 'boolean',
+        default: true,
+        showInSimpleMode: false,
+      },
     ];
 
     return {
@@ -227,8 +264,20 @@ export class NewznabPreset extends BuiltinAddonPreset {
       const modifiedOptions = { ...options, forceQuerySearch };
       
       return options.useMultipleInstances
-        ? usableServices.map(service => this.generateAddon(userData, modifiedOptions, [service.id]))
-        : [this.generateAddon(userData, modifiedOptions, usableServices.map(service => service.id))];
+        ? usableServices.map(
+            (service: NonNullable<UserData['services']>[number]) =>
+              this.generateAddon(userData, modifiedOptions, [service.id])
+          )
+        : [
+            this.generateAddon(
+              userData,
+              modifiedOptions,
+              usableServices.map(
+                (service: NonNullable<UserData['services']>[number]) =>
+                  service.id
+              )
+            ),
+          ];
     });
   }
 
@@ -282,6 +331,13 @@ export class NewznabPreset extends BuiltinAddonPreset {
       proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
+      healthProxyEnabled: options.healthProxyEnabled ?? false,
+      healthProxyEndpoint: options.healthProxyEndpoint,
+      healthProxyPath: options.healthProxyPath,
+      healthProxyTarget: options.healthProxyTarget || options.newznabUrl,
+      healthProxyBackbone: options.healthProxyBackbone,
+      healthProxyShowUnknown: options.healthProxyShowUnknown,
+      healthProxySingleIp: options.healthProxySingleIp,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
