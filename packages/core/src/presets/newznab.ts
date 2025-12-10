@@ -224,7 +224,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyEnabled',
         name: 'Crowdsourced Health Checks (Zyclops)',
         description:
-          'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the shared database. All NZBs in that database are searchable via NewzNab on private ElfHosted instances. Settings below only apply when this is enabled.',
+          'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. The health database is directly searchable via Newznab on private ElfHosted instances only. Settings below only apply when this is enabled.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
