@@ -15,15 +15,33 @@ import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 const logger = createLogger('newznab');
 
 class NewznabApi extends BaseNabApi<'newznab'> {
-  constructor(baseUrl: string, apiKey?: string, apiPath?: string) {
-    super('newznab', logger, baseUrl, apiKey, apiPath);
+  constructor(
+    baseUrl: string,
+    apiKey?: string,
+    apiPath?: string,
+    extraParams?: Record<string, string | number | boolean>
+  ) {
+    super('newznab', logger, baseUrl, apiKey, apiPath, extraParams);
   }
 }
 
 export const NewznabAddonConfigSchema = NabAddonConfigSchema.extend({
   proxyAuth: z.string().optional(),
+  healthProxyEnabled: z.boolean().optional(),
+  healthProxyEndpoint: z.string().optional(),
+  healthProxyPath: z.string().optional(),
+  healthProxyTarget: z.string().optional(),
+  healthProxyBackbone: z.string().optional(),
+  healthProxyShowUnknown: z.boolean().optional(),
+  healthProxySingleIp: z.boolean().optional(),
 });
 export type NewznabAddonConfig = z.infer<typeof NewznabAddonConfigSchema>;
+
+interface HealthProxyConfig {
+  endpoint: string;
+  path: string;
+  extraParams: Record<string, string | number | boolean>;
+}
 
 // Addon class
 export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
@@ -37,7 +55,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
 
     if (
       userData.services.some(
-        (s) =>
+        (s: NonNullable<NewznabAddonConfig['services']>[number]) =>
           ![
             constants.TORBOX_SERVICE,
             constants.NZBDAV_SERVICE,
@@ -50,11 +68,76 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         'The Newznab addon only supports TorBox and NZB DAV services'
       );
     }
+    const healthProxyConfig = this.buildHealthProxyConfig();
     this.api = new NewznabApi(
-      this.userData.url,
+      healthProxyConfig?.endpoint ?? this.userData.url,
       this.userData.apiKey,
-      this.userData.apiPath
+      healthProxyConfig?.path ?? this.userData.apiPath,
+      healthProxyConfig?.extraParams
     );
+  }
+
+  private buildHealthProxyConfig(): HealthProxyConfig | undefined {
+    if (!this.userData.healthProxyEnabled) {
+      return undefined;
+    }
+
+    const endpoint = this.userData.healthProxyEndpoint?.trim();
+    if (!endpoint) {
+      this.logger.warn(
+        'Crowdsourced health checks are enabled for Newznab but no proxy endpoint was provided.'
+      );
+      return undefined;
+    }
+
+    const path = (this.userData.healthProxyPath || '/api').trim() || '/api';
+    const extraParams: Record<string, string | number | boolean> = {};
+
+    const target = this.userData.healthProxyTarget?.trim() || this.userData.url;
+    extraParams.target = target;
+
+    const setStringParam = (key: string, value?: string) => {
+      if (value && value.trim().length > 0) {
+        extraParams[key] = value.trim();
+      }
+    };
+    const setBooleanParam = (key: string, value?: boolean) => {
+      if (typeof value === 'boolean') {
+        extraParams[key] = value ? '1' : '0';
+      }
+    };
+    const setCsvParam = (key: string, value?: string) => {
+      if (!value) return;
+      const parts = value
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+      if (parts.length > 0) {
+        extraParams[key] = parts.join(',');
+      }
+    };
+
+    setCsvParam('provider_host', Env.ZYCLOPS_PROVIDER_HOST);
+    setCsvParam('backbone', this.userData.healthProxyBackbone);
+    setBooleanParam('show_unknown', this.userData.healthProxyShowUnknown);
+    setBooleanParam('single_ip', this.userData.healthProxySingleIp);
+
+    if (!extraParams.provider_host) {
+      this.logger.warn(
+        'Health proxy is enabled but provider_host is missing; health annotations may not match your indexer.'
+      );
+    }
+
+    this.logger.info('Routing Newznab traffic through health proxy', {
+      endpoint,
+      target,
+    });
+
+    return {
+      endpoint: endpoint.replace(/\/$/, ''),
+      path,
+      extraParams,
+    };
   }
 
   protected async _searchNzbs(
