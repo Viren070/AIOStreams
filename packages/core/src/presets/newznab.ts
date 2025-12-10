@@ -180,10 +180,19 @@ export class NewznabPreset extends BuiltinAddonPreset {
         showInSimpleMode: false,
       },
       {
+        id: 'healthProxySection',
+        name: 'Zyclops Health Proxy',
+        description:
+          'Route searches through the Zyclops crowdsourced health layer to filter unhealthy releases. Enable the toggle below to activate it; the following settings only matter once health checks are on.',
+        type: 'alert',
+        intent: 'info-basic',
+        showInSimpleMode: false,
+      },
+      {
         id: 'healthProxyEnabled',
         name: 'Crowdsourced Health Checks (Zyclops)',
         description:
-          'Route all Newznab requests through the Zyclops proxy so results can be filtered by shared health data. ⚠️ Each search requires your indexer URL and API key, and anonymously shares one NZB per search with ElfHosted, augmenting the health database for future searches (learn more: https://zyclops.elfhosted.com). The health database is also searchable via NewzNab on private ElfHosted instances',
+          'Enable Zyclops health filtering. ⚠️ Shares your indexer URL/API key with the proxy and submits the newest untested NZB to enrich the shared database. All NZBs in that database are searchable via NewzNab on private ElfHosted instances ([learn more](https://zyclops.elfhosted.com)). Settings below only apply when this is enabled.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
@@ -193,7 +202,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyBackbone',
         name: 'Backbone',
         description:
-          'Optional backbone identifier used by the proxy when aggregating health stats. Provide a comma-separated list to declare multiple backbones.',
+          'Optional backbone identifier used by the proxy when aggregating health stats. Provide a comma-separated list to declare multiple backbones. Only used when health checks are enabled.',
         type: 'string',
         required: false,
         showInSimpleMode: false,
@@ -202,7 +211,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyShowUnknown',
         name: 'Show Unknown Releases',
         description:
-          'If enabled, upstream results without a cached health state will still be returned (the proxy defaults to hiding them).',
+          'If enabled, upstream results without a cached health state will still be returned (the proxy defaults to hiding them). Only used when health checks are enabled.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
@@ -211,7 +220,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxySingleIp',
         name: 'Single-IP Downloads',
         description:
-          'When enabled, NZB downloads are proxied through the health service so only its IP touches the upstream indexer.',
+          'When enabled, NZB downloads are proxied through the health service so only its IP touches the upstream indexer. Only used when health checks are enabled.',
         type: 'boolean',
         default: true,
         showInSimpleMode: false,
