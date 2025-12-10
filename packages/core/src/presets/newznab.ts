@@ -1,9 +1,30 @@
-import { Addon, Option, Stream, UserData } from '../db/index.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { Env, RESOURCES, ServiceId, constants } from '../utils/index.js';
-import { BuiltinAddonPreset } from './builtin.js';
+import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
+
+class NewznabStreamParser extends BuiltinStreamParser {
+  protected override getMessage(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    const healthChecksEnabled = Boolean(
+      this.addon?.preset?.options?.healthProxyEnabled
+    );
+    if (!healthChecksEnabled) {
+      return undefined;
+    }
+
+    const status = stream.description?.match(/🧝/u)?.[0];
+    return status ? `NZB Health: ${status}` : undefined;
+  }
+}
 
 export class NewznabPreset extends BuiltinAddonPreset {
+  static override getParser() {
+    return NewznabStreamParser;
+  }
+
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
     const supportedServices = [
