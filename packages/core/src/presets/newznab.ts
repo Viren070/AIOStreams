@@ -215,7 +215,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxySection',
         name: '🧝 Zyclops Health Proxy',
         description:
-          "Route searches through ElfHosted's Zyclops crowdsourced health layer to return only known-healthy releases ([learn more](https://zyclops.elfhosted.com)). Enable the toggle below to activate it; the following settings only matter once health checks are on.",
+          'Route searches through ElfHosted\'s Zyclops "magic" crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)). Enable the toggle below to activate it; the following settings only matter once health checks are on.',
         type: 'alert',
         intent: 'info-basic',
         showInSimpleMode: false,
