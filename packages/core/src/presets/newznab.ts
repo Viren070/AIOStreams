@@ -405,6 +405,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
+    const healthProxyEnabled = options.healthProxyEnabled === true;
     const resolvedHealthProxyEndpoint =
       (typeof options.healthProxyEndpoint === 'string'
         ? options.healthProxyEndpoint.trim()
@@ -433,7 +434,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         ? `${sanitizedNewznabUrl}${normalizedApiPath}`
         : undefined);
 
-    const config = {
+    const config: Record<string, any> = {
       ...this.getBaseConfig(userData, services),
       checkOwned: options.checkOwned ?? true,
       url: options.newznabUrl,
@@ -442,18 +443,23 @@ export class NewznabPreset extends BuiltinAddonPreset {
       proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
-      healthProxyEnabled: options.healthProxyEnabled ?? false,
-      healthProxyEndpoint: resolvedHealthProxyEndpoint,
-      healthProxyPath: resolvedHealthProxyPath,
-      healthProxyTarget:
-        resolvedHealthProxyTarget ||
-        options.healthProxyTarget ||
-        options.newznabUrl,
-      healthProxyBackbone: options.healthProxyBackbone,
-      healthProxyProviderHost: options.healthProxyProviderHost,
-      healthProxyShowUnknown: options.healthProxyShowUnknown,
-      healthProxySingleIp: options.healthProxySingleIp,
     };
+
+    if (healthProxyEnabled) {
+      Object.assign(config, {
+        healthProxyEnabled: true,
+        healthProxyEndpoint: resolvedHealthProxyEndpoint,
+        healthProxyPath: resolvedHealthProxyPath,
+        healthProxyTarget:
+          resolvedHealthProxyTarget ||
+          options.healthProxyTarget ||
+          options.newznabUrl,
+        healthProxyBackbone: options.healthProxyBackbone,
+        healthProxyProviderHost: options.healthProxyProviderHost,
+        healthProxyShowUnknown: options.healthProxyShowUnknown,
+        healthProxySingleIp: options.healthProxySingleIp,
+      });
+    }
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
     return `${this.METADATA.URL}/${configString}/manifest.json`;
