@@ -87,8 +87,10 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     }
 
     const endpointInput =
-      this.userData.healthProxyEndpoint ?? DEFAULT_HEALTH_PROXY_ENDPOINT;
-    const endpoint = endpointInput.trim() || DEFAULT_HEALTH_PROXY_ENDPOINT;
+      typeof this.userData.healthProxyEndpoint === 'string'
+        ? this.userData.healthProxyEndpoint.trim()
+        : '';
+    const endpoint = endpointInput || DEFAULT_HEALTH_PROXY_ENDPOINT;
     if (!endpoint) {
       this.logger.warn(
         'Crowdsourced health checks are enabled for Newznab but no proxy endpoint was provided.'
@@ -97,8 +99,10 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     }
 
     const pathInput =
-      this.userData.healthProxyPath ?? DEFAULT_HEALTH_PROXY_PATH;
-    const path = pathInput.trim() || DEFAULT_HEALTH_PROXY_PATH;
+      typeof this.userData.healthProxyPath === 'string'
+        ? this.userData.healthProxyPath.trim()
+        : '';
+    const path = pathInput || DEFAULT_HEALTH_PROXY_PATH;
     const extraParams: Record<string, string | number | boolean> = {};
 
     const target = this.userData.healthProxyTarget?.trim() || this.userData.url;
