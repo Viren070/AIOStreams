@@ -404,6 +404,15 @@ export class NewznabPreset extends BuiltinAddonPreset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
+    const resolvedHealthProxyEndpoint =
+      (typeof options.healthProxyEndpoint === 'string'
+        ? options.healthProxyEndpoint.trim()
+        : '') || DEFAULT_ZYCLOPS_HEALTH_PROXY_ENDPOINT;
+    const resolvedHealthProxyPath =
+      (typeof options.healthProxyPath === 'string'
+        ? options.healthProxyPath.trim()
+        : '') || DEFAULT_ZYCLOPS_HEALTH_PROXY_PATH;
+
     const config = {
       ...this.getBaseConfig(userData, services),
       checkOwned: options.checkOwned ?? true,
@@ -414,10 +423,8 @@ export class NewznabPreset extends BuiltinAddonPreset {
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
       healthProxyEnabled: options.healthProxyEnabled ?? false,
-      healthProxyEndpoint:
-        options.healthProxyEndpoint ?? DEFAULT_ZYCLOPS_HEALTH_PROXY_ENDPOINT,
-      healthProxyPath:
-        options.healthProxyPath ?? DEFAULT_ZYCLOPS_HEALTH_PROXY_PATH,
+      healthProxyEndpoint: resolvedHealthProxyEndpoint,
+      healthProxyPath: resolvedHealthProxyPath,
       healthProxyTarget: options.healthProxyTarget || options.newznabUrl,
       healthProxyBackbone: options.healthProxyBackbone,
       healthProxyProviderHost: options.healthProxyProviderHost,
