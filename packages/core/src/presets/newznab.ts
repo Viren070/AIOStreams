@@ -412,6 +412,25 @@ export class NewznabPreset extends BuiltinAddonPreset {
       (typeof options.healthProxyPath === 'string'
         ? options.healthProxyPath.trim()
         : '') || DEFAULT_ZYCLOPS_HEALTH_PROXY_PATH;
+    const sanitizedNewznabUrl =
+      typeof options.newznabUrl === 'string'
+        ? options.newznabUrl.trim().replace(/\/+$/, '')
+        : '';
+    const sanitizedApiPathRaw =
+      typeof options.apiPath === 'string' ? options.apiPath.trim() : '';
+    const sanitizedApiPathNoTrailing = sanitizedApiPathRaw.replace(/\/+$/, '');
+    const normalizedApiPath = sanitizedApiPathNoTrailing
+      ? sanitizedApiPathNoTrailing.startsWith('/')
+        ? sanitizedApiPathNoTrailing
+        : `/${sanitizedApiPathNoTrailing}`
+      : DEFAULT_ZYCLOPS_HEALTH_PROXY_PATH;
+    const resolvedHealthProxyTarget =
+      (typeof options.healthProxyTarget === 'string'
+        ? options.healthProxyTarget.trim()
+        : '') ||
+      (sanitizedNewznabUrl
+        ? `${sanitizedNewznabUrl}${normalizedApiPath}`
+        : undefined);
 
     const config = {
       ...this.getBaseConfig(userData, services),
@@ -425,7 +444,10 @@ export class NewznabPreset extends BuiltinAddonPreset {
       healthProxyEnabled: options.healthProxyEnabled ?? false,
       healthProxyEndpoint: resolvedHealthProxyEndpoint,
       healthProxyPath: resolvedHealthProxyPath,
-      healthProxyTarget: options.healthProxyTarget || options.newznabUrl,
+      healthProxyTarget:
+        resolvedHealthProxyTarget ||
+        options.healthProxyTarget ||
+        options.newznabUrl,
       healthProxyBackbone: options.healthProxyBackbone,
       healthProxyProviderHost: options.healthProxyProviderHost,
       healthProxyShowUnknown: options.healthProxyShowUnknown,
