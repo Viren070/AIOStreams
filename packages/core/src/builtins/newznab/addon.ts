@@ -105,7 +105,30 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     const path = pathInput || DEFAULT_HEALTH_PROXY_PATH;
     const extraParams: Record<string, string | number | boolean> = {};
 
-    const target = this.userData.healthProxyTarget?.trim() || this.userData.url;
+    const resolveApiPath = (value?: string) => {
+      const raw = typeof value === 'string' ? value.trim() : '';
+      const withoutTrailing = raw.replace(/\/+$/, '');
+      if (!withoutTrailing) {
+        return '/api';
+      }
+      return withoutTrailing.startsWith('/')
+        ? withoutTrailing
+        : `/${withoutTrailing}`;
+    };
+
+    const upstreamBase =
+      typeof this.userData.url === 'string'
+        ? this.userData.url.trim().replace(/\/+$/, '')
+        : '';
+    const upstreamApiPath = resolveApiPath(this.userData.apiPath);
+    const fallbackTarget = upstreamBase
+      ? `${upstreamBase}${upstreamApiPath}`
+      : this.userData.url;
+
+    const target =
+      (typeof this.userData.healthProxyTarget === 'string'
+        ? this.userData.healthProxyTarget.trim()
+        : '') || fallbackTarget;
     extraParams.target = target;
 
     const setBooleanParam = (key: string, value?: boolean) => {
