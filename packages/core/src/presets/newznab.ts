@@ -215,7 +215,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxySection',
         name: '🧝 Zyclops Health Proxy',
         description:
-          'Route searches through ElfHosted\'s Zyclops "magic" 🔮 crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)). Enable the toggle below to activate it; the following settings only matter once health checks are on.',
+          'Route searches through ElfHosted\'s Zyclops "magic" 🔮 crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)).\n\nEnable the toggle below to activate it; the following settings only matter once health checks are on.',
         type: 'alert',
         intent: 'info-basic',
         showInSimpleMode: false,
@@ -224,7 +224,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyEnabled',
         name: 'Crowdsourced Health Checks (Zyclops)',
         description:
-          'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. The health database is directly searchable via Newznab on private ElfHosted instances only. Settings below only apply when this is enabled.',
+          'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. Many indexers prohibit this (*some prohibit Stremio altogether!*), proceed at **your own risk**. The health database is further directly searchable via Newznab on private ElfHosted instances only.',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
@@ -234,7 +234,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyBackbone',
         name: 'Backbones',
         description:
-          'Select one or more backbone networks. Leave empty to identify your upstream with a Provider Host instead. Exactly one of Backbones or Provider Host must be configured when Zyclops health checks are enabled.',
+          'Select one or more backbone networks. Leave empty to identify your upstream with a Provider Host instead. Exactly one of backbones or provider hosts must be configured',
         type: 'multi-select',
         required: false,
         showInSimpleMode: false,
@@ -245,7 +245,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyProviderHost',
         name: 'Provider Host',
         description:
-          'Enter the hostname(s) that best match your upstream provider, separated by commas if you have multiple. Leave blank when selecting backbones. Exactly one of Backbones or Provider Host must be configured when Zyclops health checks are enabled.',
+          'Enter the hostname(s) that best match your upstream provider, separated by commas if you have multiple. Leave blank when selecting backbones. Exactly one of backbones or provider hosts must be configured',
         type: 'string',
         required: false,
         showInSimpleMode: false,
@@ -254,16 +254,16 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxyShowUnknown',
         name: 'Show Unknown Releases',
         description:
-          'If enabled, upstream results without a cached health state will still be returned (the proxy defaults to hiding them). Only used when health checks are enabled.',
+          'If enabled, upstream results without a cached health state will still be returned (*the proxy defaults to hiding them*). Incompatible with single IP mode (*below*).',
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
       },
       {
         id: 'healthProxySingleIp',
-        name: 'Single-IP Downloads',
+        name: 'Single-IP Mode',
         description:
-          'When enabled, NZB downloads are proxied through the health service so only its IP touches the upstream indexer. Only used when health checks are enabled.',
+          'When enabled, NZB searches/downloads are proxied through the health service so only its IP touches the upstream indexer.',
         type: 'boolean',
         default: true,
         showInSimpleMode: false,
