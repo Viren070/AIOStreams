@@ -379,9 +379,9 @@ export const Env = cleanEnv(process.env, {
     default: randomBytes(32).toString('hex'),
     desc: 'Internal secret for the addon, used for internal communication between built-in addons and the server',
   }),
-  ZYCLOPS_PROVIDER_HOST: str({
+  HEALTH_PROXY_ENDPOINT: str({
     default: 'https://zyclops.elfhosted.com',
-    desc: 'Identifier sent to the Zyclops health proxy as the provider_host parameter.',
+    desc: 'Base URL of the Zyclops health proxy endpoint used by the Newznab preset.',
   }),
   ADDON_NAME: str({
     default: 'AIOStreams',

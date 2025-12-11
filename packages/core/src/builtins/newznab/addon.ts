@@ -13,6 +13,9 @@ import {
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 
 const logger = createLogger('newznab');
+const DEFAULT_HEALTH_PROXY_ENDPOINT =
+  Env.HEALTH_PROXY_ENDPOINT?.trim() || 'https://zyclops.elfhosted.com';
+const DEFAULT_HEALTH_PROXY_PATH = '/api';
 
 class NewznabApi extends BaseNabApi<'newznab'> {
   constructor(
@@ -83,7 +86,9 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       return undefined;
     }
 
-    const endpoint = this.userData.healthProxyEndpoint?.trim();
+    const endpointInput =
+      this.userData.healthProxyEndpoint ?? DEFAULT_HEALTH_PROXY_ENDPOINT;
+    const endpoint = endpointInput.trim() || DEFAULT_HEALTH_PROXY_ENDPOINT;
     if (!endpoint) {
       this.logger.warn(
         'Crowdsourced health checks are enabled for Newznab but no proxy endpoint was provided.'
@@ -91,7 +96,9 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       return undefined;
     }
 
-    const path = (this.userData.healthProxyPath || '/api').trim() || '/api';
+    const pathInput =
+      this.userData.healthProxyPath ?? DEFAULT_HEALTH_PROXY_PATH;
+    const path = pathInput.trim() || DEFAULT_HEALTH_PROXY_PATH;
     const extraParams: Record<string, string | number | boolean> = {};
 
     const target = this.userData.healthProxyTarget?.trim() || this.userData.url;
@@ -116,8 +123,6 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
 
     if (userProviderHosts.length > 0) {
       providerHosts = userProviderHosts;
-    } else if (!hasBackbone && Env.ZYCLOPS_PROVIDER_HOST?.trim()) {
-      providerHosts = [Env.ZYCLOPS_PROVIDER_HOST.trim()];
     }
 
     const hasProviderHost = providerHosts.length > 0;

@@ -14,6 +14,10 @@ const ZYCLOPS_BACKBONE_OPTIONS = [
   { value: 'giganews', label: 'Giganews' },
 ] as const;
 
+const DEFAULT_ZYCLOPS_HEALTH_PROXY_ENDPOINT =
+  Env.HEALTH_PROXY_ENDPOINT?.trim() || 'https://zyclops.elfhosted.com';
+const DEFAULT_ZYCLOPS_HEALTH_PROXY_PATH = '/api';
+
 class NewznabStreamParser extends BuiltinStreamParser {
   protected override getMessage(
     stream: Stream,
@@ -410,8 +414,10 @@ export class NewznabPreset extends BuiltinAddonPreset {
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
       healthProxyEnabled: options.healthProxyEnabled ?? false,
-      healthProxyEndpoint: options.healthProxyEndpoint,
-      healthProxyPath: options.healthProxyPath,
+      healthProxyEndpoint:
+        options.healthProxyEndpoint ?? DEFAULT_ZYCLOPS_HEALTH_PROXY_ENDPOINT,
+      healthProxyPath:
+        options.healthProxyPath ?? DEFAULT_ZYCLOPS_HEALTH_PROXY_PATH,
       healthProxyTarget: options.healthProxyTarget || options.newznabUrl,
       healthProxyBackbone: options.healthProxyBackbone,
       healthProxyProviderHost: options.healthProxyProviderHost,
