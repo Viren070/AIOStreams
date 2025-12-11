@@ -215,7 +215,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'healthProxySection',
         name: '🧝 Zyclops Health Proxy',
         description:
-          'Route searches through ElfHosted\'s Zyclops "magic" crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)). Enable the toggle below to activate it; the following settings only matter once health checks are on.',
+          'Route searches through ElfHosted\'s Zyclops "magic" 🔮 crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)). Enable the toggle below to activate it; the following settings only matter once health checks are on.',
         type: 'alert',
         intent: 'info-basic',
         showInSimpleMode: false,
@@ -290,6 +290,32 @@ export class NewznabPreset extends BuiltinAddonPreset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<Addon[]> {
+    if (options.healthProxyEnabled) {
+      const backbonesSelected = Array.isArray(options.healthProxyBackbone)
+        ? options.healthProxyBackbone.filter((value: string) => value?.trim())
+            .length > 0
+        : false;
+      const providerHostSpecified =
+        typeof options.healthProxyProviderHost === 'string'
+          ? options.healthProxyProviderHost
+              .split(',')
+              .map((value: string) => value.trim())
+              .filter((value: string) => value.length > 0).length > 0
+          : false;
+
+      if (backbonesSelected && providerHostSpecified) {
+        throw new Error(
+          'Zyclops health checks accept only one identifier. Choose either Backbones or Provider Host, not both.'
+        );
+      }
+
+      if (!backbonesSelected && !providerHostSpecified) {
+        throw new Error(
+          'Zyclops health checks require either a Backbone selection or a Provider Host when enabled.'
+        );
+      }
+    }
+
     const usableServices = this.getUsableServices(userData, options.services);
     if (!usableServices || usableServices.length === 0) {
       throw new Error(
