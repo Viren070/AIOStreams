@@ -926,6 +926,51 @@ function validateOption(
     }
   }
 
+  if (option.type === 'date') {
+    if (typeof value !== 'string' || value === '') {
+      throw new Error(
+        `Option ${option.id} must be a non-empty string (date), got ${typeof value === 'string' ? 'empty string' : typeof value}`
+      );
+    }
+    // Validate ISO date format using Zod's z.iso.date()
+    const dateResult = z.iso.date().safeParse(value);
+    if (!dateResult.success) {
+      throw new Error(
+        `Option ${option.id} must be a valid ISO date (YYYY-MM-DD), got ${value}`
+      );
+    }
+  }
+
+  if (option.type === 'service-tag') {
+    if (typeof value !== 'object' || value === null) {
+      throw new Error(
+        `Option ${option.id} must be an object, got ${typeof value}`
+      );
+    }
+    if (typeof value.type !== 'string') {
+      throw new Error(
+        `Option ${option.id}.type must be a string, got ${typeof value.type}`
+      );
+    }
+    if (
+      value.expiryDate !== undefined &&
+      typeof value.expiryDate !== 'string'
+    ) {
+      throw new Error(
+        `Option ${option.id}.expiryDate must be a string if provided, got ${typeof value.expiryDate}`
+      );
+    }
+    // Validate expiry date format using Zod's z.iso.date() if present
+    if (value.expiryDate) {
+      const expiryDateResult = z.iso.date().safeParse(value.expiryDate);
+      if (!expiryDateResult.success) {
+        throw new Error(
+          `Option ${option.id}.expiryDate must be a valid ISO date (YYYY-MM-DD), got ${value.expiryDate}`
+        );
+      }
+    }
+  }
+
   return value;
 }
 
