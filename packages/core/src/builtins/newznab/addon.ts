@@ -13,17 +13,39 @@ import {
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 
 const logger = createLogger('newznab');
+const DEFAULT_HEALTH_PROXY_ENDPOINT =
+  Env.HEALTH_PROXY_ENDPOINT?.trim() || 'https://zyclops.elfhosted.com';
+const DEFAULT_HEALTH_PROXY_PATH = '/api';
 
 class NewznabApi extends BaseNabApi<'newznab'> {
-  constructor(baseUrl: string, apiKey?: string, apiPath?: string) {
-    super('newznab', logger, baseUrl, apiKey, apiPath);
+  constructor(
+    baseUrl: string,
+    apiKey?: string,
+    apiPath?: string,
+    extraParams?: Record<string, string | number | boolean>
+  ) {
+    super('newznab', logger, baseUrl, apiKey, apiPath, extraParams);
   }
 }
 
 export const NewznabAddonConfigSchema = NabAddonConfigSchema.extend({
   proxyAuth: z.string().optional(),
+  healthProxyEnabled: z.boolean().optional(),
+  healthProxyEndpoint: z.string().optional(),
+  healthProxyPath: z.string().optional(),
+  healthProxyTarget: z.string().optional(),
+  healthProxyBackbone: z.array(z.string().min(1)).optional(),
+  healthProxyProviderHost: z.string().optional(),
+  healthProxyShowUnknown: z.boolean().optional(),
+  healthProxySingleIp: z.boolean().optional(),
 });
 export type NewznabAddonConfig = z.infer<typeof NewznabAddonConfigSchema>;
+
+interface HealthProxyConfig {
+  endpoint: string;
+  path: string;
+  extraParams: Record<string, string | number | boolean>;
+}
 
 // Addon class
 export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
@@ -37,7 +59,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
 
     if (
       userData.services.some(
-        (s) =>
+        (s: NonNullable<NewznabAddonConfig['services']>[number]) =>
           ![
             constants.TORBOX_SERVICE,
             constants.NZBDAV_SERVICE,
@@ -50,11 +72,121 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         'The Newznab addon only supports TorBox and NZB DAV services'
       );
     }
+    const healthProxyConfig = this.buildHealthProxyConfig();
     this.api = new NewznabApi(
-      this.userData.url,
+      healthProxyConfig?.endpoint ?? this.userData.url,
       this.userData.apiKey,
-      this.userData.apiPath
+      healthProxyConfig?.path ?? this.userData.apiPath,
+      healthProxyConfig?.extraParams
     );
+  }
+
+  private buildHealthProxyConfig(): HealthProxyConfig | undefined {
+    if (!this.userData.healthProxyEnabled) {
+      return undefined;
+    }
+
+    const endpointInput =
+      typeof this.userData.healthProxyEndpoint === 'string'
+        ? this.userData.healthProxyEndpoint.trim()
+        : '';
+    const endpoint = endpointInput || DEFAULT_HEALTH_PROXY_ENDPOINT;
+    if (!endpoint) {
+      this.logger.warn(
+        'Crowdsourced health checks are enabled for Newznab but no proxy endpoint was provided.'
+      );
+      return undefined;
+    }
+
+    const pathInput =
+      typeof this.userData.healthProxyPath === 'string'
+        ? this.userData.healthProxyPath.trim()
+        : '';
+    const path = pathInput || DEFAULT_HEALTH_PROXY_PATH;
+    const extraParams: Record<string, string | number | boolean> = {};
+
+    const resolveApiPath = (value?: string) => {
+      const raw = typeof value === 'string' ? value.trim() : '';
+      const withoutTrailing = raw.replace(/\/+$/, '');
+      if (!withoutTrailing) {
+        return '/api';
+      }
+      return withoutTrailing.startsWith('/')
+        ? withoutTrailing
+        : `/${withoutTrailing}`;
+    };
+
+    const upstreamBase =
+      typeof this.userData.url === 'string'
+        ? this.userData.url.trim().replace(/\/+$/, '')
+        : '';
+    const upstreamApiPath = resolveApiPath(this.userData.apiPath);
+    const fallbackTarget = upstreamBase
+      ? `${upstreamBase}${upstreamApiPath}`
+      : this.userData.url;
+
+    const target =
+      (typeof this.userData.healthProxyTarget === 'string'
+        ? this.userData.healthProxyTarget.trim()
+        : '') || fallbackTarget;
+    extraParams.target = target;
+
+    const setBooleanParam = (key: string, value?: boolean) => {
+      if (typeof value === 'boolean') {
+        extraParams[key] = value ? '1' : '0';
+      }
+    };
+
+    const selectedBackbones = (this.userData.healthProxyBackbone || [])
+      .map((backbone) => backbone?.trim())
+      .filter((backbone): backbone is string => Boolean(backbone));
+    const userProviderHosts = (this.userData.healthProxyProviderHost || '')
+      .split(',')
+      .map((host) => host.trim())
+      .filter((host) => host.length > 0);
+
+    const hasBackbone = selectedBackbones.length > 0;
+    let providerHosts: string[] = [];
+
+    if (userProviderHosts.length > 0) {
+      providerHosts = userProviderHosts;
+    }
+
+    const hasProviderHost = providerHosts.length > 0;
+
+    if (hasBackbone && hasProviderHost && userProviderHosts.length > 0) {
+      throw new Error(
+        'Crowdsourced health checks only accept one identifier. Choose either a backbone selection or a provider host.'
+      );
+    }
+
+    if (!hasBackbone && !hasProviderHost) {
+      throw new Error(
+        'Crowdsourced health checks require either a backbone selection or a provider host to be configured.'
+      );
+    }
+
+    if (hasBackbone) {
+      extraParams.backbone = selectedBackbones.join(',');
+    } else if (hasProviderHost) {
+      extraParams.provider_host = providerHosts.join(',');
+    }
+
+    setBooleanParam('show_unknown', this.userData.healthProxyShowUnknown);
+    setBooleanParam('single_ip', this.userData.healthProxySingleIp);
+
+    this.logger.info('Routing Newznab traffic through health proxy', {
+      endpoint,
+      target,
+      mode: hasBackbone ? 'backbone' : 'provider_host',
+      identifier: hasBackbone ? selectedBackbones : providerHosts,
+    });
+
+    return {
+      endpoint: endpoint.replace(/\/$/, ''),
+      path,
+      extraParams,
+    };
   }
 
   protected async _searchNzbs(
