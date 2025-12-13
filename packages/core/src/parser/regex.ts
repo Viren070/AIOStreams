@@ -99,10 +99,11 @@ export const PARSE_REGEX: PARSE_REGEX = {
     DD: createRegex(
       '(d(olby)?[ .\\-_]?d(igital)?(?:[ .\\-_]?(5[ .\\-_]?1|7[ .\\-_]?1|2[ .\\-_]?0?))?)|(?<!e[ .\\-_]?)ac[ .\\-_]?3'
     ),
+    'DTS-X': createRegex('dts[ .\\-_]?:?x'),
     'DTS-HD MA': createRegex('dts[ .\\-_]?hd[ .\\-_]?ma'),
     'DTS-HD': createRegex('dts[ .\\-_]?hd(?![ .\\-_]?ma)'),
     'DTS-ES': createRegex('dts[ .\\-_]?es'),
-    DTS: createRegex('dts(?![ .\\-_]?hd[ .\\-_]?ma|[ .\\-_]?hd|[ .\\-_]?es)'),
+    DTS: createRegex('dts(?![ .\\-_]?:?x|[ .\\-_]?hd[ .\\-_]?ma|[ .\\-_]?hd|[ .\\-_]?es)'),
     TrueHD: createRegex('true[ .\\-_]?hd'),
     OPUS: createRegex('opus'),
     AAC: createRegex('q?aac(?:[ .\\-_]?2)?'),
