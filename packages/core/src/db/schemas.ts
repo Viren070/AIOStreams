@@ -751,6 +751,7 @@ export const ParsedStreamSchema = z.object({
       isSeadex: z.boolean(),
     })
     .optional(),
+  passthrough: z.boolean().optional(),
   url: z.string().optional(),
   nzbUrl: z.string().optional(),
   servers: z.array(z.string().min(1)).optional(),

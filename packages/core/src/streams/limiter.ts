@@ -55,7 +55,7 @@ class StreamLimiter {
         return;
       }
       // if stream is passthrough, skip
-      if (stream.addon.resultPassthrough) return;
+      if (stream.addon.resultPassthrough || stream.passthrough) return;
 
       // Check indexer limit
       if (indexer && stream.indexer) {
