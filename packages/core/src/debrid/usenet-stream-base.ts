@@ -609,18 +609,28 @@ export abstract class UsenetStreamService implements DebridService {
         });
 
         
-        // const path = `${this.getContentPathPrefix()}/${UsenetStreamService.AIOSTREAMS_CATEGORY}`;
-        const path = `${this.getContentPathPrefix()}/Movies`;
-        const contents = (await this.webdavClient.getDirectoryContents(
-          path
-        )) as FileStat[];
-        const nzbs = contents.map((item, index) => ({
+        // Construct paths
+        const moviesPath = `${this.getContentPathPrefix()}/Movies`;
+        const tvPath = `${this.getContentPathPrefix()}/TV`;
+        
+        // Fetch both directories in parallel
+        const [moviesContents, tvContents] = await Promise.all([
+          this.webdavClient.getDirectoryContents(moviesPath),
+          this.webdavClient.getDirectoryContents(tvPath),
+        ]);
+        
+        // Combine the results
+        const combinedContents = [...(moviesContents as FileStat[]), ...(tvContents as FileStat[])];
+        
+        // Map to NZB objects
+        const nzbs = combinedContents.map((item, index) => ({
           id: index,
           status: 'cached' as const,
           hash: item.basename,
           size: item.size,
           files: [],
         }));
+
         this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
           count: nzbs.length,
           time: getTimeTakenSincePoint(start),
