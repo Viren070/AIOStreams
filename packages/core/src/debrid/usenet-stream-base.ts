@@ -603,9 +603,9 @@ export abstract class UsenetStreamService implements DebridService {
 
 
         
-        const category = metadata?.season || metadata?.episode ? 'TV' : 'Movies';
+        const category = StreamType ? 'TV' : 'Movies';
         this.serviceLogger.debug(`DEBUG cat`, {
-          category: category,
+          StreamType: category,
         });
 
         
