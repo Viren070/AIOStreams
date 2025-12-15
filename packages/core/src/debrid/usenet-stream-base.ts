@@ -601,14 +601,6 @@ export abstract class UsenetStreamService implements DebridService {
           return cachedNzbs;
         }
 
-
-        
-        const category = StreamType ? 'TV' : 'Movies';
-        this.serviceLogger.debug(`DEBUG cat`, {
-          StreamType: category,
-        });
-
-        
         // Construct paths
         const moviesPath = `${this.getContentPathPrefix()}/Movies`;
         const tvPath = `${this.getContentPathPrefix()}/TV`;
