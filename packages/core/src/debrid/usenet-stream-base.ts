@@ -623,7 +623,7 @@ export abstract class UsenetStreamService implements DebridService {
           files: [],
         }));
 
-        this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
+        this.serviceLogger.info(`Listed NZBs from WebDAV`, {
           count: nzbs.length,
           time: getTimeTakenSincePoint(start),
         });
