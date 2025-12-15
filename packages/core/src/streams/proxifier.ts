@@ -68,7 +68,8 @@ class Proxifier {
   }
 
   public async proxify(
-    streams: ParsedStream[]
+    streams: ParsedStream[],
+    metaId?: string
   ): Promise<{ streams: ParsedStream[]; error?: string }> {
     if (!this.userData.proxy?.enabled) {
       return { streams };
@@ -127,10 +128,12 @@ class Proxifier {
               parsedUrl.password = '';
               url = parsedUrl.toString();
             }
+
             return {
               url,
               filename: stream.filename,
               headers,
+              metaId,
             };
           })
         )

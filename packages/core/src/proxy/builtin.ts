@@ -130,6 +130,7 @@ export class BuiltinProxy extends BaseProxy {
         requestHeaders: stream.headers?.request,
         responseHeaders: stream.headers?.response,
         type: 'nzb',
+        metaId: stream.metaId,
       });
 
       if (stream.type !== 'nzb' && isPublicProxy) {
@@ -169,6 +170,9 @@ interface ConnectionRecord {
   lastSeen: number; // Last activity time
   count: number; // Total number of requests (including seeks)
   requestIds: string[]; // List of active request IDs
+  metaId?: string;
+  bytesRead?: number;
+  contentLength?: number;
 }
 
 interface UserStats {
@@ -303,7 +307,8 @@ export class BuiltinProxyStats {
     url: string,
     timestamp: number,
     requestId: string,
-    filename?: string
+    filename?: string,
+    metaId?: string
   ) {
     const connectionKey = `${ip}:${url}`;
     const now = Date.now();
@@ -319,6 +324,9 @@ export class BuiltinProxyStats {
       existing.lastSeen = now;
       existing.count += 1;
       existing.requestIds = existing.requestIds ?? [];
+      if (!existing.metaId && metaId) {
+        existing.metaId = metaId;
+      }
       if (!existing.requestIds.includes(requestId)) {
         existing.requestIds.push(requestId);
       }
@@ -337,6 +345,9 @@ export class BuiltinProxyStats {
         record.lastSeen = now;
         record.count += 1;
         record.requestIds = [requestId];
+        if (!record.metaId && metaId) {
+          record.metaId = metaId;
+        }
         activeConnections.push(record);
 
         // Update history cache
@@ -356,6 +367,9 @@ export class BuiltinProxyStats {
           lastSeen: now,
           count: 1,
           requestIds: [requestId],
+          metaId,
+          bytesRead: 0,
+          contentLength: 0,
         });
       }
     }
@@ -367,6 +381,37 @@ export class BuiltinProxyStats {
       24 * 60 * 60,
       true
     );
+  }
+
+  public async updateConnectionProgress(
+    user: string,
+    ip: string,
+    url: string,
+    bytesRead: number,
+    contentLength?: number
+  ) {
+    const activeConnections = await this.getActiveConnections(user);
+    const connectionKey = `${ip}:${url}`;
+
+    const connectionIndex = activeConnections.findIndex(
+      (conn) => `${conn.ip}:${conn.url}` === connectionKey
+    );
+
+    if (connectionIndex >= 0) {
+      const connection = activeConnections[connectionIndex];
+      connection.lastSeen = Date.now();
+      connection.bytesRead = (connection.bytesRead || 0) + bytesRead;
+      if (contentLength) {
+        connection.contentLength = contentLength;
+      }
+
+      await this.activeConnections.set(
+        user,
+        this.encryptConnectionRecords(activeConnections),
+        24 * 60 * 60,
+        true
+      );
+    }
   }
 
   public async endConnection(

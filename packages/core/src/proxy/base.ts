@@ -15,6 +15,7 @@ export interface ProxyStream {
   url: string;
   filename?: string;
   type?: 'nzb' | 'stream';
+  metaId?: string;
   headers?: {
     request?: Record<string, string>;
     response?: Record<string, string>;
