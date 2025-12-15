@@ -602,30 +602,33 @@ export abstract class UsenetStreamService implements DebridService {
         }
 
         // const path = `${this.getContentPathPrefix()}/${UsenetStreamService.AIOSTREAMS_CATEGORY}`;
-        // const contents = (await this.webdavClient.getDirectoryContents(
-        //   path
-        // )) as FileStat[];
-        // const nzbs = contents.map((item, index) => ({
-        //   id: index,
-        //   status: 'cached' as const,
-        //   hash: item.basename,
-        //   size: item.size,
-        //   files: [],
-        // }));
-        // this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
-        //   count: nzbs.length,
-        //   time: getTimeTakenSincePoint(start),
-        // });
-        const history = await this.api.history();
-        const nzbs: DebridDownload[] = history.slots.map((slot, index) => ({
+        const path = `${this.getContentPathPrefix()}/Movies`;
+        const contents = (await this.webdavClient.getDirectoryContents(
+          path
+        )) as FileStat[];
+        const nzbs = contents.map((item, index) => ({
           id: index,
-          status: slot.status !== 'failed' ? 'cached' : 'failed',
-          name: slot.name,
+          status: 'cached' as const,
+          hash: item.basename,
+          size: item.size,
+          files: [],
         }));
-        this.serviceLogger.debug(`Listed NZBs from history`, {
+        this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
           count: nzbs.length,
           time: getTimeTakenSincePoint(start),
         });
+        
+        // const history = await this.api.history();
+        // const nzbs: DebridDownload[] = history.slots.map((slot, index) => ({
+        //   id: index,
+        //   status: slot.status !== 'failed' ? 'cached' : 'failed',
+        //   name: slot.name,
+        // }));
+        // this.serviceLogger.debug(`Listed NZBs from history`, {
+        //   count: nzbs.length,
+        //   time: getTimeTakenSincePoint(start),
+        // });
+        
         await UsenetStreamService.libraryCache.set(
           cacheKey,
           nzbs,
@@ -675,7 +678,7 @@ export abstract class UsenetStreamService implements DebridService {
     // All NZBs are "cached" since it's streaming-based
     return nzbs.map(({ hash: h, name: n }, index) => {
       const libraryNzb = libraryNzbs.find(
-        (nzb) => nzb.name === n || nzb.name === h
+        (nzb) => nzb.name === n || nzb.name === h || nzb.hash === n
       );
       return {
         id: index,
