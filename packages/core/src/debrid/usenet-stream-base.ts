@@ -601,6 +601,14 @@ export abstract class UsenetStreamService implements DebridService {
           return cachedNzbs;
         }
 
+
+        
+        const category = metadata?.season || metadata?.episode ? 'TV' : 'Movies';
+        this.serviceLogger.debug(`DEBUG cat`, {
+          category: category,
+        });
+
+        
         // const path = `${this.getContentPathPrefix()}/${UsenetStreamService.AIOSTREAMS_CATEGORY}`;
         const path = `${this.getContentPathPrefix()}/Movies`;
         const contents = (await this.webdavClient.getDirectoryContents(
