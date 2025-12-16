@@ -301,57 +301,101 @@ function Content() {
       </div>
 
       <SettingsCard
-        title="RPDB"
-        description="Provide your RPDB API key if you want catalogs of supported types to use posters from RPDB"
+        title="Poster Service"
+        description="Select a poster service to use for catalogs that support it."
       >
-        <PasswordInput
-          autoComplete="new-password"
-          label="RPDB API Key"
-          help={
-            <span>
-              Get your API Key from{' '}
-              <a
-                href="https://ratingposterdb.com/api-key/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[--brand] hover:underline"
-              >
-                here
-              </a>
-            </span>
-          }
-          value={userData.rpdbApiKey}
-          onValueChange={(v) => {
+        <TemplateOption
+          option={{
+            id: 'posterService',
+            name: 'Poster Service',
+            description: 'Select a poster service',
+            type: 'select',
+            options: [
+              { label: 'RPDB', value: 'rpdb' },
+              { label: 'Top Poster', value: 'top-poster' },
+            ],
+            default: 'rpdb',
+          }}
+          value={userData.posterService}
+          onChange={(v) => {
             setUserData((prev) => ({
               ...prev,
-              rpdbApiKey: v,
+              posterService: v,
             }));
           }}
         />
 
+        {userData.posterService === 'rpdb' && (
+          <PasswordInput
+            autoComplete="new-password"
+            label="RPDB API Key"
+            help={
+              <span>
+                Get your API Key from{' '}
+                <a
+                  href="https://ratingposterdb.com/api-key/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  here
+                </a>
+              </span>
+            }
+            value={userData.rpdbApiKey}
+            onValueChange={(v) => {
+              setUserData((prev) => ({
+                ...prev,
+                rpdbApiKey: v,
+              }));
+            }}
+          />
+        )}
+        {userData.posterService === 'top-poster' && (
+          <PasswordInput
+            autoComplete="new-password"
+            label="Top Poster API Key"
+            help={
+              <span>
+                Get your API Key from{' '}
+                <a
+                  href="https://api.top-streaming.stream/user/register"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  here
+                </a>
+              </span>
+            }
+            value={userData.topPosterApiKey}
+            onValueChange={(v) => {
+              setUserData((prev) => ({
+                ...prev,
+                topPosterApiKey: v,
+              }));
+            }}
+          />
+        )}
+
         <Switch
-          label="Use Redirect API"
+          label="Use Poster Redirect API"
           side="right"
-          disabled={!userData.rpdbApiKey || !status.settings.baseUrl}
+          disabled={!userData.rpdbApiKey && !userData.topPosterApiKey}
           help={
             <span>
               If enabled, poster URLs will first contact AIOStreams and then be
-              redirected to RPDB. This allows fallback posters to be used if the
-              RPDB API is down or does not have a poster for that item. It can
-              however cause a minimal slowdown due to having to contact
-              AIOStreams first. This setting requires the <code>BASE_URL</code>{' '}
-              environment variable to be set.
+              redirected to the selected poster service. This allows fallback
+              posters to be used if the selected poster service is down or does
+              not have a poster for that item. It can however cause a minimal
+              slowdown due to having to contact AIOStreams first.
             </span>
           }
-          value={
-            userData.rpdbUseRedirectApi !== undefined
-              ? userData.rpdbUseRedirectApi
-              : !!status.settings.baseUrl
-          }
+          value={userData.usePosterRedirectApi || false}
           onValueChange={(v) => {
             setUserData((prev) => ({
               ...prev,
-              rpdbUseRedirectApi: v,
+              usePosterRedirectApi: v,
             }));
           }}
         />

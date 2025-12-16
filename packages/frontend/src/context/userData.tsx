@@ -143,6 +143,14 @@ export function applyMigrations(config: any): UserData {
     }));
   }
 
+  if (
+    config.rpdbUseRedirectApi !== undefined &&
+    config.usePosterRedirectApi === undefined
+  ) {
+    config.usePosterRedirectApi = config.rpdbUseRedirectApi;
+    delete config.rpdbUseRedirectApi;
+  }
+
   return config;
 }
 const DefaultUserData: UserData = {

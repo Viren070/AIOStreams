@@ -1560,7 +1560,9 @@ function CatalogSettingsCard() {
                 type: catalog.type,
                 enabled: true,
                 shuffle: false,
-                rpdb: userData.rpdbApiKey ? true : false,
+                usePosterService: !!(
+                  userData.rpdbApiKey || userData.topPosterApiKey
+                ),
                 hideable: catalog.hideable,
                 searchable: catalog.searchable,
                 addonName: catalog.addonName,
@@ -2717,7 +2719,13 @@ function SortableCatalogItem({
                       trigger={
                         <IconButton
                           className="text-2xl h-10 w-10"
-                          icon={catalog.rpdb ? <PiStarFill /> : <PiStarBold />}
+                          icon={
+                            catalog.usePosterService ? (
+                              <PiStarFill />
+                            ) : (
+                              <PiStarBold />
+                            )
+                          }
                           intent="primary-subtle"
                           rounded
                           onClick={(e) => {
@@ -2727,7 +2735,10 @@ function SortableCatalogItem({
                               catalogModifications:
                                 prev.catalogModifications?.map((c) =>
                                   c.id === catalog.id && c.type === catalog.type
-                                    ? { ...c, rpdb: !c.rpdb }
+                                    ? {
+                                        ...c,
+                                        usePosterService: !c.usePosterService,
+                                      }
                                     : c
                                 ),
                             }));
@@ -2735,7 +2746,7 @@ function SortableCatalogItem({
                         />
                       }
                     >
-                      RPDB
+                      Poster Services
                     </Tooltip>
 
                     {catalog.hideable && (
@@ -2921,17 +2932,17 @@ function SortableCatalogItem({
                     </div>
 
                     <Switch
-                      label="RPDB"
-                      help="Replace movie/show posters with RPDB posters when supported"
+                      label="Poster Services"
+                      help="Replace movie/show posters with posters from poster services (RPDB or Top Poster) when supported"
                       side="right"
-                      value={catalog.rpdb ?? false}
-                      onValueChange={(rpdb) => {
+                      value={catalog.usePosterService ?? false}
+                      onValueChange={(usePosterService) => {
                         setUserData((prev) => ({
                           ...prev,
                           catalogModifications: prev.catalogModifications?.map(
                             (c) =>
                               c.id === catalog.id && c.type === catalog.type
-                                ? { ...c, rpdb }
+                                ? { ...c, usePosterService }
                                 : c
                           ),
                         }));

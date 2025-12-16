@@ -32,6 +32,7 @@ import {
   Subtitle,
 } from './db/schemas.js';
 import { createProxy } from './proxy/index.js';
+import { TopPoster } from './utils/top-poster.js';
 import { RPDB } from './utils/rpdb.js';
 import { FeatureControl } from './utils/feature.js';
 import Proxifier from './streams/proxifier.js';
@@ -459,9 +460,13 @@ export class AIOStreams {
       catalog = catalog.reverse();
     }
 
-    // Apply poster modifications (RPDB only if modification has rpdb enabled)
-    const applyRpdb = modification?.rpdb === true;
-    catalog = await this.applyPosterModifications(catalog, type, applyRpdb);
+    // Apply poster modifications (usePosterService only if modification has usePosterService enabled)
+    const applyPosterService = modification?.usePosterService === true;
+    catalog = await this.applyPosterModifications(
+      catalog,
+      type,
+      applyPosterService
+    );
 
     return catalog;
   }
@@ -915,37 +920,53 @@ export class AIOStreams {
   private async applyPosterModifications(
     items: MetaPreview[],
     type: string,
-    applyRpdb: boolean = true
+    applyPosterService: boolean = true
   ): Promise<MetaPreview[]> {
-    const rpdbApiKey = applyRpdb ? this.userData.rpdbApiKey : undefined;
-    const rpdbApi = rpdbApiKey ? new RPDB(rpdbApiKey) : undefined;
+    const posterService = applyPosterService
+      ? this.userData.posterService ||
+        (this.userData.rpdbApiKey ? 'rpdb' : undefined)
+      : undefined;
+    const posterApiKey =
+      posterService === 'rpdb'
+        ? this.userData.rpdbApiKey
+        : posterService === 'top-poster'
+          ? this.userData.topPosterApiKey
+          : undefined;
+    const posterApi = posterApiKey
+      ? posterService === 'rpdb'
+        ? new RPDB(posterApiKey)
+        : posterService === 'top-poster'
+          ? new TopPoster(posterApiKey)
+          : undefined
+      : undefined;
 
     return Promise.all(
       items.map(async (item) => {
-        if (rpdbApiKey && item.poster) {
+        if (posterApi && item.poster) {
           let posterUrl = item.poster;
-          if (posterUrl.includes('api.ratingposterdb.com')) {
-            // already a RPDB poster
-          } else if (
-            this.userData.rpdbUseRedirectApi !== false &&
-            Env.BASE_URL
+          if (
+            posterUrl.includes('api.ratingposterdb.com') ||
+            posterUrl.includes('api.top-streaming.stream')
           ) {
+            // already a poster from a poster service, do nothing.
+          } else if (this.userData.usePosterRedirectApi) {
             const itemId = (item as any).imdb_id || item.id;
             const url = new URL(Env.BASE_URL);
-            url.pathname = '/api/v1/rpdb';
+            url.pathname =
+              posterService === 'rpdb' ? '/api/v1/rpdb' : '/api/v1/top-poster';
             url.searchParams.set('id', itemId);
             url.searchParams.set('type', type);
             url.searchParams.set('fallback', item.poster);
-            url.searchParams.set('apiKey', rpdbApiKey);
+            url.searchParams.set('apiKey', posterApiKey!);
             posterUrl = url.toString();
-          } else if (rpdbApi) {
-            const rpdbPosterUrl = await rpdbApi.getPosterUrl(
+          } else if (posterApi) {
+            const servicePosterUrl = await posterApi.getPosterUrl(
               type,
               (item as any).imdb_id || item.id,
               false
             );
-            if (rpdbPosterUrl) {
-              posterUrl = rpdbPosterUrl;
+            if (servicePosterUrl) {
+              posterUrl = servicePosterUrl;
             }
           }
           item.poster = posterUrl;

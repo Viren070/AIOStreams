@@ -13,6 +13,7 @@ export * from './dsu.js';
 export * from './startup.js';
 export * from './extras.js';
 export * from './rpdb.js';
+export * from './top-poster.js';
 export * from './distributed-lock.js';
 export * from './id-parser.js';
 export * from './anime-database.js';

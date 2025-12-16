@@ -659,6 +659,15 @@ export function applyMigrations(config: any): UserData {
     }));
   }
 
+  // migrate rpdbUseRedirectApi to usePosterRedirectApi
+  if (
+    config.rpdbUseRedirectApi !== undefined &&
+    config.usePosterRedirectApi === undefined
+  ) {
+    config.usePosterRedirectApi = config.rpdbUseRedirectApi;
+    delete config.rpdbUseRedirectApi;
+  }
+
   return config;
 }
 

@@ -6,6 +6,7 @@ import {
   formatApi,
   catalogApi,
   rpdbApi,
+  topPosterApi,
   gdriveApi,
   debridApi,
   searchApi,
@@ -95,6 +96,7 @@ apiRouter.use('/status', statusApi);
 apiRouter.use('/format', formatApi);
 apiRouter.use('/catalogs', catalogApi);
 apiRouter.use('/rpdb', rpdbApi);
+apiRouter.use('/top-poster', topPosterApi);
 apiRouter.use('/oauth/exchange/gdrive', gdriveApi);
 apiRouter.use('/debrid', debridApi);
 if (Env.ENABLE_SEARCH_API) {
