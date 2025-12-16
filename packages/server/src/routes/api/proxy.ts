@@ -25,6 +25,40 @@ const router: Router = Router();
 const proxyStats = new BuiltinProxyStats();
 const PROGRESS_UPDATE_INTERVAL_MS = 5000;
 
+type AllUserStats = Awaited<
+  ReturnType<(typeof proxyStats)['getAllUserStats']>
+>;
+type UserStats = AllUserStats extends Map<string, infer U> ? U : never;
+type ConnectionRecord = UserStats extends { active: Array<infer C> }
+  ? C
+  : never;
+
+const mapConnectionToStats = (conn: ConnectionRecord) => {
+  const progress =
+    conn.contentLength && conn.contentLength > 0
+      ? Math.max(
+          1,
+          parseFloat(
+            ((((conn.bytesRead || 0) / conn.contentLength) * 100).toFixed(1))
+          )
+        )
+      : 0;
+
+  return {
+    ip: conn.ip,
+    url: conn.url,
+    filename: conn.filename ?? null,
+    timestamp: new Date(conn.timestamp).toISOString(),
+    lastSeen: new Date(conn.lastSeen).toISOString(),
+    count: conn.count,
+    requestIds: conn.requestIds,
+    metaId: conn.metaId ?? null,
+    relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
+    relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
+    progress,
+  };
+};
+
 function sanitiseHeaderValue(value: string): string {
   return value.replace(/[^\t\x20-\x7e]/g, '');
 }
@@ -149,61 +183,8 @@ router.get(
           Array.from(allUserStats.entries()).map(([user, userStats]) => [
             user,
             {
-              active: userStats.active.map((conn) => {
-                const progress =
-                  conn.contentLength && conn.contentLength > 0
-                    ? Math.max(
-                        1,
-                        parseFloat(
-                          (
-                            ((conn.bytesRead || 0) / conn.contentLength) *
-                            100
-                          ).toFixed(1)
-                        )
-                      )
-                    : 0;
-
-                return {
-                  ip: conn.ip,
-                  url: conn.url,
-                  filename: conn.filename ?? null,
-                  timestamp: new Date(conn.timestamp).toISOString(),
-                  lastSeen: new Date(conn.lastSeen).toISOString(),
-                  count: conn.count,
-                  requestIds: conn.requestIds,
-                  metaId: conn.metaId ?? null,
-                  relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-                  relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
-                  progress,
-                };
-              }),
-              history: userStats.history.map((conn) => {
-                const progress =
-                  conn.contentLength && conn.contentLength > 0
-                    ? Math.max(
-                        1,
-                        parseFloat(
-                          (
-                            ((conn.bytesRead || 0) / conn.contentLength) *
-                            100
-                          ).toFixed(1)
-                        )
-                      )
-                    : 0;
-                return {
-                  ip: conn.ip,
-                  url: conn.url,
-                  filename: conn.filename ?? null,
-                  timestamp: new Date(conn.timestamp).toISOString(),
-                  lastSeen: new Date(conn.lastSeen).toISOString(),
-                  count: conn.count,
-                  requestIds: conn.requestIds,
-                  metaId: conn.metaId ?? null,
-                  relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-                  relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
-                  progress,
-                };
-              }),
+              active: userStats.active.map(mapConnectionToStats),
+              history: userStats.history.map(mapConnectionToStats),
             },
           ])
         ),
@@ -562,7 +543,7 @@ router.all(
               : 0;
           const progressDelta = progress - lastProgressSent;
           
-          // update in reasonable intervalls
+          // update in reasonable intervals
           const shouldFlush =
             pendingBytes > 0 &&
             ((contentLength > 0 && progressDelta >= 2) ||
@@ -582,7 +563,14 @@ router.all(
                 bytesToPersist,
                 contentLength
               )
-              .catch(() => {});
+              .catch((err) => {
+                logger.debug(
+                  `[${requestId}] Failed to update connection progress`,
+                  {
+                    error: err instanceof Error ? err.message : String(err),
+                  }
+                );
+              });
           }
 
           callback(null, chunk);
@@ -597,6 +585,14 @@ router.all(
                 pendingBytes,
                 contentLength
               )
+              .catch((err) => {
+                logger.debug(
+                  `[${requestId}] Failed to update connection progress`,
+                  {
+                    error: err instanceof Error ? err.message : String(err),
+                  }
+                );
+              })
               .finally(() => callback());
           } else {
             callback();
