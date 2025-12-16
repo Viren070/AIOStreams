@@ -401,8 +401,11 @@ export class BuiltinProxyStats {
       const connection = activeConnections[connectionIndex];
       connection.lastSeen = Date.now();
       connection.bytesRead = (connection.bytesRead || 0) + bytesRead;
-      if (contentLength) {
-        connection.contentLength = contentLength;
+      if (contentLength && contentLength > 0) {
+        connection.contentLength = Math.max(
+          connection.contentLength || 0,
+          contentLength
+        );
       }
 
       await this.activeConnections.set(

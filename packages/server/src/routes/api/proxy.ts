@@ -34,15 +34,14 @@ type ConnectionRecord = UserStats extends { active: Array<infer C> }
   : never;
 
 const mapConnectionToStats = (conn: ConnectionRecord) => {
-  const progress =
-    conn.contentLength && conn.contentLength > 0
-      ? Math.max(
-          1,
-          parseFloat(
-            ((((conn.bytesRead || 0) / conn.contentLength) * 100).toFixed(1))
-          )
-        )
-      : 0;
+  let progress = 0;
+  if (conn.contentLength && conn.contentLength > 0) {
+    const percent = ((conn.bytesRead || 0) / conn.contentLength) * 100;
+    if (percent > 0) {
+      const roundedPercent = parseFloat(percent.toFixed(1));
+      progress = Math.min(100, Math.max(1, roundedPercent));
+    }
+  }
 
   return {
     ip: conn.ip,
@@ -58,6 +57,37 @@ const mapConnectionToStats = (conn: ConnectionRecord) => {
     progress,
   };
 };
+
+function getFirstHeaderValue(
+  value: string | string[] | number | undefined
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) return value[0];
+  if (typeof value === 'number') return String(value);
+  return value;
+}
+
+function getTotalContentLengthFromHeaders(
+  headers: Record<string, string | string[] | number | undefined>
+): number | undefined {
+  const contentRange = getFirstHeaderValue(headers['content-range']);
+  if (contentRange) {
+    // Example: "bytes 0-1023/2048"
+    const match = /^bytes\s+\d+-\d+\/(\d+|\*)$/i.exec(contentRange.trim());
+    if (match && match[1] !== '*') {
+      const total = Number(match[1]);
+      if (Number.isFinite(total) && total > 0) return total;
+    }
+  }
+
+  const contentLength = getFirstHeaderValue(headers['content-length']);
+  if (contentLength) {
+    const parsed = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return undefined;
+}
 
 function sanitiseHeaderValue(value: string): string {
   return value.replace(/[^\t\x20-\x7e]/g, '');
@@ -480,21 +510,15 @@ router.all(
         return;
       }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
-      const contentLengthHeader = upstreamResponse.headers['content-length']
-        ? Array.isArray(upstreamResponse.headers['content-length'])
-          ? upstreamResponse.headers['content-length'][0]
-          : upstreamResponse.headers['content-length']
-        : undefined;
-      const contentLength = contentLengthHeader
-        ? parseInt(contentLengthHeader, 10)
-        : 0;
+      const totalContentLength =
+        getTotalContentLengthFromHeaders(upstreamResponse.headers) ?? 0;
       if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
         // size check
         if (Env.NZB_PROXY_MAX_SIZE > 0) {
           const maxSize = Env.NZB_PROXY_MAX_SIZE;
-          if (maxSize > 0 && contentLength > maxSize) {
+          if (maxSize > 0 && totalContentLength > maxSize) {
             logger.warn(`[${requestId}] Public NZB proxy size limit exceeded`, {
-              contentLength,
+              contentLength: totalContentLength,
               maxSize,
             });
             next(
@@ -538,15 +562,15 @@ router.all(
 
           const now = Date.now();
           const progress =
-            contentLength > 0
-              ? Math.max(1, (totalBytesRead / contentLength) * 100)
+            totalContentLength > 0
+              ? Math.max(1, (totalBytesRead / totalContentLength) * 100)
               : 0;
           const progressDelta = progress - lastProgressSent;
           
           // update in reasonable intervals
           const shouldFlush =
             pendingBytes > 0 &&
-            ((contentLength > 0 && progressDelta >= 2) ||
+            ((totalContentLength > 0 && progressDelta >= 2) ||
               now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL_MS);
 
           if (shouldFlush && auth && clientIp && data) {
@@ -561,7 +585,7 @@ router.all(
                 clientIp,
                 data.url,
                 bytesToPersist,
-                contentLength
+                totalContentLength
               )
               .catch((err) => {
                 logger.debug(
@@ -583,7 +607,7 @@ router.all(
                 clientIp,
                 data.url,
                 pendingBytes,
-                contentLength
+                totalContentLength
               )
               .catch((err) => {
                 logger.debug(
