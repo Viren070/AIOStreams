@@ -838,6 +838,7 @@ const VISUAL_TAGS = [
   'HDR10',
   'DV',
   'HDR',
+  'HLG',
   '10bit',
   '3D',
   'IMAX',
