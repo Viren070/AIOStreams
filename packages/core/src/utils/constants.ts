@@ -857,6 +857,19 @@ const AUDIO_TAGS = [
 
 const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
 
+// Passthrough stages that can be selectively bypassed
+const PASSTHROUGH_STAGES = [
+  'filter', // bypass main filtering (shouldKeepStream)
+  'dedup', // bypass deduplication
+  'limit', // bypass result limiting
+  'excluded', // bypass excluded stream expressions
+  'required', // bypass required stream expressions
+  'title', // bypass title matching
+  'year', // bypass year matching
+  'episode', // bypass season/episode matching
+  'digitalRelease', // bypass early digital release filter
+] as const;
+
 const ENCODES = [
   'AV1',
   'HEVC',
@@ -1275,6 +1288,7 @@ export {
   AUDIO_TAGS,
   AUDIO_CHANNELS,
   ENCODES,
+  PASSTHROUGH_STAGES,
   SORT_CRITERIA,
   SORT_DIRECTIONS,
   STREAM_TYPES,

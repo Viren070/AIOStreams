@@ -15,6 +15,19 @@ const AudioChannels = z.enum(constants.AUDIO_CHANNELS);
 
 const Encodes = z.enum(constants.ENCODES);
 
+const PassthroughStages = z.enum(constants.PASSTHROUGH_STAGES);
+
+// Passthrough can be:
+// - true: bypass all stages (backward compatible)
+// - array of stages: bypass only specified stages
+const PassthroughSchema = z.union([
+  z.literal(true),
+  z.array(PassthroughStages).min(1),
+]);
+
+export type PassthroughValue = z.infer<typeof PassthroughSchema>;
+export type PassthroughStage = z.infer<typeof PassthroughStages>;
+
 // const SortCriteria = z.enum(constants.SORT_CRITERIA);
 
 // const SortDirections = z.enum(constants.SORT_DIRECTIONS);
@@ -751,7 +764,7 @@ export const ParsedStreamSchema = z.object({
       isSeadex: z.boolean(),
     })
     .optional(),
-  passthrough: z.boolean().optional(),
+  passthrough: PassthroughSchema.optional(),
   url: z.string().optional(),
   nzbUrl: z.string().optional(),
   servers: z.array(z.string().min(1)).optional(),

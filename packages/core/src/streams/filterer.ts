@@ -12,7 +12,7 @@ import {
 } from '../utils/index.js';
 import { StreamType } from '../utils/constants.js';
 import { StreamSelector } from '../parser/streamExpression.js';
-import StreamUtils from './utils.js';
+import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import { MetadataService } from '../metadata/service.js';
 import { Metadata } from '../metadata/utils.js';
 import {
@@ -726,16 +726,32 @@ class StreamFilterer {
     };
 
     // Early digital release filter check - if it returns false, filter out all streams
+    // except those with passthrough for 'digitalRelease' stage
     if (!applyDigitalReleaseFilter()) {
-      // Set the count to total streams since ALL streams are filtered out
-      this.filterStatistics.removed.noDigitalRelease.total = streams.length;
-      this.filterStatistics.removed.noDigitalRelease.details[
-        'No digital release available'
-      ] = streams.length;
+      const passthroughDigitalRelease = streams.filter((stream) =>
+        shouldPassthroughStage(stream, 'digitalRelease')
+      );
+      const filteredCount = streams.length - passthroughDigitalRelease.length;
+      if (filteredCount > 0) {
+        this.filterStatistics.removed.noDigitalRelease.total = filteredCount;
+        this.filterStatistics.removed.noDigitalRelease.details[
+          'No digital release available'
+        ] = filteredCount;
+      }
+      if (passthroughDigitalRelease.length > 0) {
+        this.incrementIncludedReason(
+          'passthrough',
+          `digitalRelease (${passthroughDigitalRelease.length})`
+        );
+      }
 
-      const finalStreams: ParsedStream[] = [];
-      this.generateFilterSummary(streams, finalStreams, start);
-      return finalStreams;
+      if (passthroughDigitalRelease.length === 0) {
+        const finalStreams: ParsedStream[] = [];
+        this.generateFilterSummary(streams, finalStreams, start);
+        return finalStreams;
+      }
+      // Continue with only passthrough streams
+      streams = passthroughDigitalRelease;
     }
 
     const excludedRegexPatterns =
@@ -918,7 +934,7 @@ class StreamFilterer {
     const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
       const file = stream.parsedFile;
 
-      if (stream.addon.resultPassthrough || stream.passthrough) {
+      if (shouldPassthroughStage(stream, 'filter')) {
         this.incrementIncludedReason('passthrough', stream.addon.name);
         return true;
       }
@@ -1554,7 +1570,7 @@ class StreamFilterer {
         }
       }
 
-      if (!performTitleMatch(stream)) {
+      if (!shouldPassthroughStage(stream, 'title') && !performTitleMatch(stream)) {
         this.incrementRemovalReason(
           'titleMatching',
           `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
@@ -1562,7 +1578,7 @@ class StreamFilterer {
         return false;
       }
 
-      if (!performYearMatch(stream)) {
+      if (!shouldPassthroughStage(stream, 'year') && !performYearMatch(stream)) {
         this.incrementRemovalReason(
           'yearMatching',
           `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
@@ -1570,7 +1586,7 @@ class StreamFilterer {
         return false;
       }
 
-      if (!performSeasonEpisodeMatch(stream)) {
+      if (!shouldPassthroughStage(stream, 'episode') && !performSeasonEpisodeMatch(stream)) {
         const pad = (n: number) => n.toString().padStart(2, '0');
         const s = stream.parsedFile?.seasons;
         const e = stream.parsedFile?.episodes;
@@ -1705,9 +1721,16 @@ class StreamFilterer {
       queryType = `anime.${queryType}`;
     }
 
-    const passthroughStreams = streams
-      .filter((stream) => stream.addon.resultPassthrough || stream.passthrough)
+    // Get streams that passthrough excluded SEL
+    const excludedPassthroughStreams = streams
+      .filter((stream) => shouldPassthroughStage(stream, 'excluded'))
       .map((stream) => stream.id);
+
+    // Get streams that passthrough required SEL
+    const requiredPassthroughStreams = streams
+      .filter((stream) => shouldPassthroughStage(stream, 'required'))
+      .map((stream) => stream.id);
+
     if (
       this.userData.excludedStreamExpressions &&
       this.userData.excludedStreamExpressions.length > 0
@@ -1723,10 +1746,10 @@ class StreamFilterer {
             expression
           );
 
-          // Track these stream objects for removal
+          // Track these stream objects for removal (except passthrough streams)
           selectedStreams.forEach(
             (stream) =>
-              !passthroughStreams.includes(stream.id) &&
+              !excludedPassthroughStreams.includes(stream.id) &&
               streamsToRemove.add(stream.id)
           );
 
@@ -1763,7 +1786,7 @@ class StreamFilterer {
     ) {
       const selector = new StreamSelector(queryType);
       const streamsToKeep = new Set<string>(); // Track actual stream objects to be removed
-      passthroughStreams.forEach((stream) => streamsToKeep.add(stream));
+      requiredPassthroughStreams.forEach((stream) => streamsToKeep.add(stream));
 
       for (const expression of this.userData.requiredStreamExpressions) {
         try {
@@ -1795,7 +1818,7 @@ class StreamFilterer {
       }
 
       logger.verbose(
-        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${passthroughStreams.length} passthrough streams)`
+        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${requiredPassthroughStreams.length} passthrough streams)`
       );
       // remove all streams that are not in the streamsToKeep set
       streams = streams.filter((stream) => streamsToKeep.has(stream.id));
