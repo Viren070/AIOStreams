@@ -65,6 +65,7 @@ export interface NZB extends BaseFile {
   type: 'usenet';
   hash: string;
   nzb: string;
+  zyclopsHealth?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {
