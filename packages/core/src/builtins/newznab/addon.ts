@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { ParsedId } from '../../utils/id-parser.js';
 import { constants, createLogger, Env } from '../../utils/index.js';
-import { Torrent, NZB } from '../../debrid/index.js';
+import {
+  Torrent,
+  NZB,
+  NZBWithSelectedFile,
+  TorrentWithSelectedFile,
+} from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
 import { createHash } from 'crypto';
 import { BaseNabApi, SearchResultItem } from '../base/nab/api.js';
@@ -11,6 +16,8 @@ import {
   NabAddonConfig,
 } from '../base/nab/addon.js';
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
+import type { BuiltinServiceId } from '../../utils/index.js';
+import type { Stream } from '../../db/index.js';
 
 const logger = createLogger('newznab');
 const DEFAULT_HEALTH_PROXY_ENDPOINT =
@@ -203,6 +210,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       if (seenNzbs.has(nzbUrl)) continue;
       seenNzbs.add(nzbUrl);
 
+      const zyclopsHealth = result.newznab?.zyclopsHealth?.toString();
       const md5 =
         result.newznab?.infohash?.toString() ||
         createHash('md5').update(nzbUrl).digest('hex');
@@ -211,7 +219,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           (1000 * 60 * 60)
       );
 
-      nzbs.push({
+      const nzb: NZB = {
         confirmed: meta.searchType === 'id',
         hash: md5,
         nzb: nzbUrl,
@@ -222,7 +230,13 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           result.size ??
           (result.newznab?.size ? Number(result.newznab.size) : 0),
         type: 'usenet',
-      });
+      };
+
+      if (zyclopsHealth) {
+        nzb.zyclopsHealth = zyclopsHealth;
+      }
+
+      nzbs.push(nzb);
     }
 
     if (this.userData.proxyAuth || Env.NZB_PROXY_PUBLIC_ENABLED) {
@@ -269,6 +283,29 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     metadata: SearchMetadata
   ): Promise<Torrent[]> {
     return [];
+  }
+
+  protected override _createStream(
+    torrentOrNzb: TorrentWithSelectedFile | NZBWithSelectedFile,
+    metadataId: string,
+    encryptedStoreAuths: Record<BuiltinServiceId, string | string[]>
+  ): Stream {
+    const stream = super._createStream(
+      torrentOrNzb,
+      metadataId,
+      encryptedStoreAuths
+    );
+
+    if (
+      torrentOrNzb.type === 'usenet' &&
+      'zyclopsHealth' in torrentOrNzb &&
+      torrentOrNzb.zyclopsHealth
+    ) {
+      (stream as Record<string, unknown>).zyclopsHealth =
+        torrentOrNzb.zyclopsHealth;
+    }
+
+    return stream;
   }
 
   private getNzbUrl(result: any): string | undefined {

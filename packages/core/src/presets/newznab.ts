@@ -30,8 +30,66 @@ class NewznabStreamParser extends BuiltinStreamParser {
       return undefined;
     }
 
-    const status = stream.description?.match(/🧝/u)?.[0];
-    return status ? `NZB Health: ${status}` : undefined;
+    const zyclopsHealth = (stream as { zyclopsHealth?: string }).zyclopsHealth;
+    const emojiFromAttr = this.getEmojiForHealth(zyclopsHealth);
+    if (emojiFromAttr) {
+      return `NZB Health: ${emojiFromAttr}`;
+    }
+
+    if (zyclopsHealth?.trim()) {
+      return `NZB Health: ${zyclopsHealth.trim()}`;
+    }
+
+    return undefined;
+  }
+
+  private getEmojiForHealth(value?: string): string | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+
+    if (normalized.includes('healthy')) {
+      return '🧝';
+    }
+    if (
+      normalized.includes('good') ||
+      normalized.includes('pass') ||
+      normalized.includes('ok') ||
+      normalized.includes('success')
+    ) {
+      return '✅';
+    }
+    if (
+      normalized.includes('warn') ||
+      normalized.includes('caution') ||
+      normalized.includes('degrad') ||
+      normalized.includes('single')
+    ) {
+      return '⚠️';
+    }
+    if (
+      normalized.includes('fail') ||
+      normalized.includes('bad') ||
+      normalized.includes('block') ||
+      normalized.includes('dead') ||
+      normalized.includes('unhealthy')
+    ) {
+      return '🚫';
+    }
+    if (
+      normalized.includes('unknown') ||
+      normalized.includes('untested') ||
+      normalized.includes('pending')
+    ) {
+      return '❔';
+    }
+
+    return undefined;
   }
 }
 
