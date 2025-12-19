@@ -104,9 +104,13 @@ class FileParser {
       }
     };
 
+    let filenameForLangParsing = filename;
+    if (parsed.group?.toLowerCase() === 'ind') {
+      filenameForLangParsing = filenameForLangParsing.replace(/ind/i, '');
+    }
     const languages = [
       ...new Set([
-        ...matchMultiplePatterns(filename, PARSE_REGEX.languages),
+        ...matchMultiplePatterns(filenameForLangParsing, PARSE_REGEX.languages),
         ...(parsed.languages || [])
           .map(mapParsedLanguageToKnown)
           .filter((lang): lang is string => !!lang),

@@ -40,8 +40,8 @@ class StreamFetcher {
   ): Promise<{
     streams: ParsedStream[];
     errors: {
-      title: string;
-      description: string;
+      title?: string;
+      description?: string;
     }[];
     statistics: {
       title: string;

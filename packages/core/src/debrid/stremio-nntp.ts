@@ -1,11 +1,3 @@
-// Credit goes to Sanket9225 for the idea and inspiration
-// https://github.com/Sanket9225/UsenetStreamer/blob/master/server.js
-
-import { z } from 'zod';
-import {
-  UsenetStreamService,
-  UsenetStreamServiceConfig,
-} from './usenet-stream-base.js';
 import {
   DebridDownload,
   DebridService,

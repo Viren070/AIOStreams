@@ -67,9 +67,11 @@ class Proxifier {
     return false;
   }
 
-  public async proxify(streams: ParsedStream[]): Promise<ParsedStream[]> {
+  public async proxify(
+    streams: ParsedStream[]
+  ): Promise<{ streams: ParsedStream[]; error?: string }> {
     if (!this.userData.proxy?.enabled) {
-      return streams;
+      return { streams };
     }
 
     const streamsToProxy = streams
@@ -77,7 +79,7 @@ class Proxifier {
       .filter(({ stream }) => stream.url && this.shouldProxyStream(stream));
 
     if (streamsToProxy.length === 0) {
-      return streams;
+      return { streams };
     }
 
     const normaliseHeaders = (
@@ -134,13 +136,15 @@ class Proxifier {
         )
       : [];
 
-    logger.info(`Generated ${(proxiedUrls || []).length} proxied URLs`);
+    const count =
+      proxiedUrls && !('error' in proxiedUrls) ? proxiedUrls.length : 0;
+    logger.info(`Generated ${count} proxied URLs`);
 
     const removeIndexes = new Set<number>();
 
     streamsToProxy.forEach(({ stream, index }, i) => {
-      const proxiedUrl = proxiedUrls?.[i];
-      if (proxiedUrl) {
+      if (proxiedUrls && !('error' in proxiedUrls)) {
+        const proxiedUrl = proxiedUrls?.[i];
         stream.url = proxiedUrl;
         stream.proxied = true;
         // proxy will handle request headers, can be removed here
@@ -157,7 +161,11 @@ class Proxifier {
       streams = streams.filter((_, index) => !removeIndexes.has(index));
     }
 
-    return streams;
+    return {
+      streams,
+      error:
+        proxiedUrls && 'error' in proxiedUrls ? proxiedUrls.error : undefined,
+    };
   }
 }
 

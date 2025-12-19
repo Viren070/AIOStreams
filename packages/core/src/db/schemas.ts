@@ -932,6 +932,12 @@ export const AIOStream = StreamSchema.extend({
         .optional(),
       keywordMatched: z.boolean().optional(),
       streamExpressionMatched: z.number().optional(),
+      seadex: z
+        .object({
+          isBest: z.boolean(),
+          isSeadex: z.boolean(),
+        })
+        .optional(),
       size: z.number().optional(),
       folderSize: z.number().optional(),
       type: StreamTypes.optional(),

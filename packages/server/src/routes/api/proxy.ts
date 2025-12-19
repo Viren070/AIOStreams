@@ -15,6 +15,8 @@ import { request, Dispatcher } from 'undici';
 import { pipeline } from 'stream/promises';
 import { createProxy, BuiltinProxyStats, BuiltinProxy } from '@aiostreams/core';
 import { corsMiddleware } from '../../middlewares/cors.js';
+import { StaticFiles } from '../../app.js';
+import { Transform } from 'stream';
 
 const logger = createLogger('server');
 const router: Router = Router();
@@ -94,6 +96,7 @@ const ProxyAuthSchema = z.object({
 const ProxyDataSchema = z.object({
   url: z.url(),
   filename: z.string().optional(),
+  type: z.enum(['nzb', 'stream']).optional(),
   // These are optional, as we'll be forwarding client headers
   requestHeaders: z.record(z.string(), z.string()).optional(),
   responseHeaders: z.record(z.string(), z.string()).optional(),
@@ -252,8 +255,10 @@ router.all(
       auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
 
       if (
-        !Env.AIOSTREAMS_AUTH?.has(auth.username) ||
-        Env.AIOSTREAMS_AUTH?.get(auth.username) !== auth.password
+        (!Env.AIOSTREAMS_AUTH?.has(auth.username) ||
+          Env.AIOSTREAMS_AUTH?.get(auth.username) !== auth.password) &&
+        (auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME ||
+          !Env.NZB_PROXY_PUBLIC_ENABLED)
       ) {
         logger.warn(`[${requestId}] Authentication failed`, {
           username: auth.username,
@@ -273,6 +278,11 @@ router.all(
         req.requestIp || req.ip || req.socket.remoteAddress || 'unknown';
       const timestamp = Date.now();
 
+      const connectionLimit =
+        Env.AIOSTREAMS_AUTH_CONNECTIONS_LIMIT?.get(auth.username) ??
+        Env.AIOSTREAMS_AUTH_CONNECTIONS_LIMIT?.get('*') ??
+        0;
+
       // prepare and execute upstream request
       const clientHeaders = copyHeaders(req.headers);
 
@@ -280,7 +290,55 @@ router.all(
         req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH';
       const isGetRequest = req.method === 'GET';
 
+      let sizeLimiter;
+      let bytesRead = 0;
+      if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
+        if (Env.NZB_PROXY_MAX_SIZE > 0) {
+          sizeLimiter = new Transform({
+            transform(chunk, encoding, callback) {
+              bytesRead += chunk.length;
+
+              if (bytesRead > Env.NZB_PROXY_MAX_SIZE) {
+                callback(new Error('Content too large'));
+              } else {
+                callback(null, chunk);
+              }
+            },
+          });
+        }
+        if (data.type !== 'nzb') {
+          logger.warn(
+            `[${requestId}] Public NZB proxy can only be used for NZB files`,
+            { dataType: data.type }
+          );
+          next(
+            new APIError(
+              constants.ErrorCode.FORBIDDEN,
+              undefined,
+              'Public NZB proxy can only be used for NZB files'
+            )
+          );
+          return;
+        }
+      }
+
       if (isGetRequest) {
+        if (connectionLimit > 0) {
+          const activeConnections = await proxyStats.getActiveConnections(
+            auth.username
+          );
+          if (activeConnections.length >= connectionLimit) {
+            logger.warn(`[${requestId}] Connection limit reached`, {
+              username: auth.username,
+              clientIp,
+              connectionLimit,
+            });
+            res
+              .status(302)
+              .redirect(`/static/${StaticFiles.CONTENT_PROXY_LIMIT_REACHED}`);
+            return;
+          }
+        }
         proxyStats
           .addConnection(
             auth.username,
@@ -397,6 +455,35 @@ router.all(
       }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
 
+      if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
+        // size check
+        if (Env.NZB_PROXY_MAX_SIZE > 0) {
+          const contentLengthHeader = upstreamResponse.headers['content-length']
+            ? Array.isArray(upstreamResponse.headers['content-length'])
+              ? upstreamResponse.headers['content-length'][0]
+              : upstreamResponse.headers['content-length']
+            : undefined;
+          const contentLength = contentLengthHeader
+            ? parseInt(contentLengthHeader, 10)
+            : 0;
+          const maxSize = Env.NZB_PROXY_MAX_SIZE;
+          if (maxSize > 0 && contentLength > maxSize) {
+            logger.warn(`[${requestId}] Public NZB proxy size limit exceeded`, {
+              contentLength,
+              maxSize,
+            });
+            next(
+              new APIError(
+                constants.ErrorCode.FORBIDDEN,
+                undefined,
+                'Content size exceeds public NZB proxy limit'
+              )
+            );
+            return;
+          }
+        }
+      }
+
       // forward upstream response to client
       res.set(sanitiseHeaders(upstreamResponse.headers));
       if (data.responseHeaders) {
@@ -410,14 +497,18 @@ router.all(
         upstreamDuration,
         contentType: upstreamResponse.headers['content-type'],
         contentLength: upstreamResponse.headers['content-length'],
-        range: upstreamResponse.headers['range'],
+        contentRange: upstreamResponse.headers['content-range'],
         targetUrl: currentUrl,
       });
 
       if (req.method === 'HEAD') {
         res.end();
       } else {
-        await pipeline(upstreamResponse.body, res);
+        if (sizeLimiter) {
+          await pipeline(upstreamResponse.body, sizeLimiter, res);
+        } else {
+          await pipeline(upstreamResponse.body, res);
+        }
       }
 
       logger.debug(`[${requestId}] Proxy connection closed`, {

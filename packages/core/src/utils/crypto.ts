@@ -28,7 +28,7 @@ export const decompressData = (data: Buffer): string => {
 const encryptData = (
   secretKey: Buffer,
   data: Buffer
-): { iv: string; data: string } => {
+): { i: string; d: string } => {
   // Then encrypt the compressed data
   const iv = randomBytes(16);
   const cipher = createCipheriv('aes-256-cbc', secretKey, iv);
@@ -36,8 +36,8 @@ const encryptData = (
   const encryptedData = Buffer.concat([cipher.update(data), cipher.final()]);
 
   return {
-    iv: iv.toString('base64'),
-    data: encryptedData.toString('base64'),
+    i: iv.toString('base64'),
+    d: encryptedData.toString('base64'),
   };
 };
 
@@ -75,7 +75,7 @@ export function isEncrypted(data: string): boolean {
   try {
     // parse the data as json
     const json = JSON.parse(fromUrlSafeBase64(data));
-    return json.type === 'aioEncrypt';
+    return ['aioEncrypt', 'a'].includes(json.type || json.t);
   } catch (error) {
     return false;
   }
@@ -94,12 +94,10 @@ export function encryptString(data: string, secretKey?: Buffer): Response {
   }
   try {
     const compressed = compressData(data);
-    const { iv, data: encrypted } = encryptData(secretKey, compressed);
+    const { i, d: e } = encryptData(secretKey, compressed);
     return {
       success: true,
-      data: toUrlSafeBase64(
-        JSON.stringify({ iv, encrypted, type: 'aioEncrypt' })
-      ),
+      data: toUrlSafeBase64(JSON.stringify({ i, e, t: 'a' })),
       error: null,
     };
   } catch (error: any) {
@@ -127,8 +125,8 @@ export function decryptString(data: string, secretKey?: Buffer): Response {
       throw new Error('The data was not in an expected encrypted format');
     }
     const json = JSON.parse(fromUrlSafeBase64(data));
-    const iv = Buffer.from(json.iv, 'base64');
-    const encrypted = Buffer.from(json.encrypted, 'base64');
+    const iv = Buffer.from(json.iv || json.i, 'base64');
+    const encrypted = Buffer.from(json.encrypted || json.e, 'base64');
     const decrypted = decryptData(secretKey, encrypted, iv);
     const decompressed = decompressData(decrypted);
     return {

@@ -67,6 +67,7 @@ import { SootioPreset } from './sootio.js';
 import { TorrentGalaxyPreset } from './torrentGalaxy.js';
 import { UsenetStreamerPreset } from './usenetStreamer.js';
 import { NekoBtPreset } from './nekoBt.js';
+import { EasynewsSearchPreset } from './easynewsSearch.js';
 
 let PRESET_LIST: string[] = [
   'custom',
@@ -101,6 +102,7 @@ let PRESET_LIST: string[] = [
   'easynews',
   'easynewsPlus',
   'easynewsPlusPlus',
+  'easynews-search',
   'usenet-streamer',
   'dmm-cast',
   'nuvio-streams',
@@ -288,6 +290,8 @@ export class PresetManager {
         return TorrentGalaxyPreset;
       case 'usenet-streamer':
         return UsenetStreamerPreset;
+      case 'easynews-search':
+        return EasynewsSearchPreset;
       default:
         throw new Error(`Preset ${id} not found`);
     }

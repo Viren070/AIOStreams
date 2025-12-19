@@ -43,6 +43,7 @@ interface BaseFile {
   indexer?: string;
   seeders?: number;
   age?: number;
+  duration?: number; // duration in seconds
 }
 
 export interface Torrent extends BaseFile {
@@ -66,6 +67,7 @@ export interface NZB extends BaseFile {
   hash: string;
   nzb: string;
   zyclopsHealth?: string;
+  easynewsUrl?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {
@@ -348,53 +350,53 @@ export async function selectFileInTorrentOrNZB(
   return bestMatch.file;
 }
 
-export function isVideoFile(file: DebridFile): boolean {
-  const videoExtensions = [
-    '.3g2',
-    '.3gp',
-    '.amv',
-    '.asf',
-    '.avi',
-    '.drc',
-    '.f4a',
-    '.f4b',
-    '.f4p',
-    '.f4v',
-    '.flv',
-    '.gif',
-    '.gifv',
-    '.iso',
-    '.m2v',
-    '.m4p',
-    '.m4v',
-    '.mkv',
-    '.mov',
-    '.mp2',
-    '.mp4',
-    '.mpg',
-    '.mpeg',
-    '.mpv',
-    '.mng',
-    '.mpe',
-    '.mxf',
-    '.nsv',
-    '.ogg',
-    '.ogv',
-    '.qt',
-    '.rm',
-    '.rmvb',
-    '.roq',
-    '.svi',
-    '.webm',
-    '.wmv',
-    '.yuv',
-    '.m3u8',
-    '.m2ts',
-  ];
+export const VIDEO_FILE_EXTENSIONS = [
+  '.3g2',
+  '.3gp',
+  '.amv',
+  '.asf',
+  '.avi',
+  '.drc',
+  '.f4a',
+  '.f4b',
+  '.f4p',
+  '.f4v',
+  '.flv',
+  '.gif',
+  '.gifv',
+  '.iso',
+  '.m2v',
+  '.m4p',
+  '.m4v',
+  '.mkv',
+  '.mov',
+  '.mp2',
+  '.mp4',
+  '.mpg',
+  '.mpeg',
+  '.mpv',
+  '.mng',
+  '.mpe',
+  '.mxf',
+  '.nsv',
+  '.ogg',
+  '.ogv',
+  '.qt',
+  '.rm',
+  '.rmvb',
+  '.roq',
+  '.svi',
+  '.webm',
+  '.wmv',
+  '.yuv',
+  '.m3u8',
+  '.m2ts',
+];
 
+export function isVideoFile(file: DebridFile): boolean {
   return (
     file.mimeType?.includes('video') ||
-    videoExtensions.some((ext) => file.name?.endsWith(ext) ?? false)
+    VIDEO_FILE_EXTENSIONS.some((ext) => file.name?.endsWith(ext) ?? false)
   );
 }
 

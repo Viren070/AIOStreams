@@ -7,7 +7,7 @@ import {
   FULL_LANGUAGE_MAPPING,
 } from '../utils/index.js';
 import FileParser from './file.js';
-import { parseAgeString } from './utils.js';
+import { parseAgeString, parseDuration } from './utils.js';
 const logger = createLogger('parser');
 
 class StreamParser {
@@ -391,23 +391,7 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
-    // Regular expression to match different formats of time durations
-    const regex =
-      /(?<![^\s\[(_\-,.])(?:(\d+)h[:\s]?(\d+)m[:\s]?(\d+)s|(\d+)h[:\s]?(\d+)m|(\d+)h|(\d+)m|(\d+)s)(?=[\s\)\]_.\-,]|$)/gi;
-
-    const match = regex.exec(stream.description || stream.title || '');
-    if (!match) {
-      return 0;
-    }
-
-    const hours = parseInt(match[1] || match[4] || match[6] || '0', 10);
-    const minutes = parseInt(match[2] || match[5] || match[7] || '0', 10);
-    const seconds = parseInt(match[3] || match[8] || '0', 10);
-
-    // Convert to milliseconds
-    const totalMilliseconds = (hours * 3600 + minutes * 60 + seconds) * 1000;
-
-    return totalMilliseconds;
+    return parseDuration(stream.description || '');
   }
 
   protected getStreamType(

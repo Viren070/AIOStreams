@@ -119,6 +119,13 @@ export class StremthruStorePreset extends StremThruPreset {
         type: 'boolean',
       },
       {
+        id: 'usenet',
+        name: 'Usenet',
+        description: 'Toggle Usenet functionality in catalogs and streams',
+        type: 'boolean',
+        default: false,
+      },
+      {
         id: 'socials',
         name: '',
         description: '',
@@ -218,6 +225,7 @@ export class StremthruStorePreset extends StremThruPreset {
       hide_catalog: false,
       hide_stream: false,
       webdl: options.webDl ?? false,
+      usenet: options.usenet ?? false,
     });
 
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;

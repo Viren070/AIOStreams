@@ -35,7 +35,9 @@ export class BuiltinStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): ParsedStream['service'] | undefined {
-    const service = this.parseServiceData(stream.name || '');
+    const service = this.parseServiceData(
+      stream.name?.replace('Easynews', '') || ''
+    );
     if (
       service &&
       (service.id === constants.NZBDAV_SERVICE ||
@@ -106,6 +108,13 @@ export class BuiltinAddonPreset extends Preset {
         ),
       [constants.STREMIO_NNTP_SERVICE]: (credentials: any) =>
         credentials.servers, // this will be a base64 encoded json string of the nntp server config { username, password, host, port, useSsl, connections }[]
+      [constants.EASYNEWS_SERVICE]: (credentials: any) =>
+        toUrlSafeBase64(
+          JSON.stringify({
+            username: credentials.username,
+            password: credentials.password,
+          })
+        ),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>

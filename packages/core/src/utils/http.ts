@@ -123,16 +123,34 @@ export async function makeRequest(url: string, options: RequestOptions) {
       urlObj.toString()
     )} with forwarded ip ${maskSensitiveInfo(options.forwardIp ?? 'none')} and headers ${maskSensitiveInfo(JSON.stringify(Object.fromEntries(headers)))}`
   );
-  let response = fetch(urlObj.toString(), {
-    ...options.rawOptions,
-    method: options.method,
-    body: options.body,
-    headers: headers,
-    dispatcher: useProxy
-      ? getProxyAgent(Env.ADDON_PROXY![proxyIndex])
-      : undefined,
-    signal: AbortSignal.timeout(options.timeout),
-  });
+  let response;
+  try {
+    response = await fetch(urlObj.toString(), {
+      ...options.rawOptions,
+      method: options.method,
+      body: options.body,
+      headers: headers,
+      dispatcher: useProxy
+        ? getProxyAgent(Env.ADDON_PROXY![proxyIndex])
+        : undefined,
+      signal: AbortSignal.timeout(options.timeout),
+    });
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      err.name === 'TypeError' &&
+      err.message === 'fetch failed' &&
+      err.cause
+    ) {
+      let logParams: [string, Record<string, any>] = [
+        'Fetch failed due to network error',
+        err.cause,
+      ];
+      delete logParams[1].stack;
+      logger.error(...logParams);
+    }
+    throw err;
+  }
 
   return response;
 }

@@ -14,6 +14,7 @@ const cache = Cache.getInstance<string, string>('publicIp');
 export interface ProxyStream {
   url: string;
   filename?: string;
+  type?: 'nzb' | 'stream';
   headers?: {
     request?: Record<string, string>;
     response?: Record<string, string>;
@@ -137,7 +138,7 @@ export abstract class BaseProxy {
   public async generateUrls(
     streams: ProxyStream[],
     encrypt?: boolean
-  ): Promise<string[] | null> {
+  ): Promise<string[] | { error: string } | null> {
     if (!streams.length) {
       return [];
     }
@@ -179,7 +180,7 @@ export abstract class BaseProxy {
             )
           : undefined
       );
-      return null;
+      return { error: error instanceof Error ? error.message : String(error) };
     }
   }
 }

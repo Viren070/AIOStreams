@@ -287,8 +287,9 @@ export class UserRepository {
 
   static async getUserCount(): Promise<number> {
     try {
-      const result = await db.query('SELECT * FROM users');
-      return result.length;
+      const result = await db.query('SELECT COUNT(*) as count FROM users');
+      const count = Number(result[0]?.count || 0);
+      return Number.isNaN(count) ? 0 : count;
     } catch (error) {
       logger.error(`Error getting user count: ${error}`);
       return Promise.reject(new APIError(constants.ErrorCode.DATABASE_ERROR));

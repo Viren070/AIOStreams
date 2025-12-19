@@ -124,6 +124,12 @@ const staticRateLimiter = createRateLimiter(
   'static'
 );
 
+const easynewsNzbRateLimiter = createRateLimiter(
+  Env.EASYNEWS_NZB_RATE_LIMIT_WINDOW * 1000,
+  Env.EASYNEWS_NZB_RATE_LIMIT_MAX_REQUESTS,
+  'easynews-nzb'
+);
+
 export {
   userApiRateLimiter,
   streamApiRateLimiter,
@@ -136,4 +142,5 @@ export {
   stremioSubtitleRateLimiter,
   stremioMetaRateLimiter,
   staticRateLimiter,
+  easynewsNzbRateLimiter,
 };

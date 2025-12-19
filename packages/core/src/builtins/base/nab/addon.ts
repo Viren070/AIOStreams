@@ -42,6 +42,7 @@ export abstract class BaseNabAddon<
     results: SearchResultItem<A['namespace']>[];
     meta: SearchResultMetadata;
   }> {
+    const forceIncludeSeasonEpInParams = ['StremThru'];
     const start = Date.now();
     const queryParams: Record<string, string> = {};
     const queryLimit = createQueryLimit();
@@ -102,14 +103,20 @@ export abstract class BaseNabAddon<
       queryParams.tvdbid = metadata.tvdbId.toString();
 
     if (
-      !this.userData.forceQuerySearch &&
-      searchCapabilities.supportedParams.includes('season') &&
+      ((!this.userData.forceQuerySearch &&
+        searchCapabilities.supportedParams.includes('season')) ||
+        forceIncludeSeasonEpInParams.includes(
+          capabilities.server.title || ''
+        )) &&
       parsedId.season
     )
       queryParams.season = parsedId.season.toString();
     if (
-      !this.userData.forceQuerySearch &&
-      searchCapabilities.supportedParams.includes('ep') &&
+      ((!this.userData.forceQuerySearch &&
+        searchCapabilities.supportedParams.includes('ep')) ||
+        forceIncludeSeasonEpInParams.includes(
+          capabilities.server.title || ''
+        )) &&
       parsedId.episode
     )
       queryParams.ep = parsedId.episode.toString();
@@ -133,7 +140,12 @@ export abstract class BaseNabAddon<
         // add year if it is not already in the query params
         addYear: !queryParams.year,
         // add season and episode if they are not already in the query params
-        addSeasonEpisode: !queryParams.season && !queryParams.ep,
+        // some endpoints won't return results with season/ep in query
+        addSeasonEpisode: forceIncludeSeasonEpInParams.includes(
+          capabilities.server.title || ''
+        )
+          ? false
+          : !queryParams.season && !queryParams.ep,
         useAllTitles: useAllTitles(this.userData.url),
       });
       searchType = 'query';

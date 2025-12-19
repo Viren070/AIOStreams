@@ -31,6 +31,7 @@ import {
   prowlarr,
   knaben,
   torrentGalaxy,
+  easynews,
 } from './routes/builtins/index.js';
 import {
   ipMiddleware,
@@ -140,6 +141,7 @@ builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
+builtinsRouter.use('/easynews', easynews);
 app.use('/builtins', builtinsRouter);
 
 app.get('/logo.png', staticRateLimiter, (req, res, next) => {

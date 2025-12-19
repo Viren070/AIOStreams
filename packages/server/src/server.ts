@@ -14,7 +14,10 @@ import {
   AnimeDatabase,
   ProwlarrAddon,
   TemplateManager,
+  maskSensitiveInfo,
+  constants,
 } from '@aiostreams/core';
+import { randomBytes } from 'crypto';
 
 const logger = createLogger('server');
 
@@ -67,6 +70,22 @@ async function initialiseTemplates() {
   }
 }
 
+function initialiseAuth() {
+  if (Env.NZB_PROXY_PUBLIC_ENABLED) {
+    Env.AIOSTREAMS_AUTH.set(
+      constants.PUBLIC_NZB_PROXY_USERNAME,
+      Env.AIOSTREAMS_AUTH.get(constants.PUBLIC_NZB_PROXY_USERNAME) ||
+        randomBytes(32).toString('hex')
+    );
+    logger.info('AIOStreams Public NZB Proxy is enabled.', {
+      username: constants.PUBLIC_NZB_PROXY_USERNAME,
+      password: maskSensitiveInfo(
+        Env.AIOSTREAMS_AUTH.get(constants.PUBLIC_NZB_PROXY_USERNAME) || ''
+      ),
+    });
+  }
+}
+
 async function start() {
   try {
     logStartupInfo();
@@ -79,6 +98,7 @@ async function start() {
     if (Env.PRUNE_MAX_DAYS >= 0) {
       startAutoPrune();
     }
+    initialiseAuth();
     const server = app.listen(Env.PORT, (error) => {
       if (error) {
         logger.error('Failed to start server:', error);

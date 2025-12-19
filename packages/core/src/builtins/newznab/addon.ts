@@ -239,27 +239,36 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       nzbs.push(nzb);
     }
 
-    if (this.userData.proxyAuth) {
+    if (this.userData.proxyAuth || Env.NZB_PROXY_PUBLIC_ENABLED) {
+      const auth = this.userData.proxyAuth
+        ? this.userData.proxyAuth
+        : `${constants.PUBLIC_NZB_PROXY_USERNAME}:${Env.AIOSTREAMS_AUTH.get(
+            constants.PUBLIC_NZB_PROXY_USERNAME
+          )}`;
       try {
-        BuiltinProxy.validateAuth(this.userData.proxyAuth);
+        BuiltinProxy.validateAuth(auth);
       } catch (error) {
         throw new Error('Invalid AIOStreams Proxy Auth Credentials');
       }
       const proxy = createProxy({
         id: constants.BUILTIN_SERVICE,
         url: Env.BASE_URL,
-        credentials: this.userData.proxyAuth,
+        credentials: auth,
       });
-      const urlsToProxy = nzbs.map((nzb) => nzb.nzb);
+      const nzbsToProxy = nzbs.map((nzb) => ({
+        url: nzb.nzb,
+        filename: nzb.title,
+      }));
       const proxiedUrls = await proxy.generateUrls(
-        urlsToProxy.map((url) => ({
+        nzbsToProxy.map(({ url, filename }) => ({
           url,
-          filename: url.split('/').pop(),
+          filename: filename || url.split('/').pop(),
+          type: 'nzb',
         })),
         false // don't encrypt NZB URLs to make sure the URLs stay the same.
       );
-      if (!proxiedUrls) {
-        throw new Error('Failed to proxy NZBs');
+      if (!proxiedUrls || 'error' in proxiedUrls) {
+        throw new Error('Failed to proxy NZBs: ' + proxiedUrls?.error || '');
       }
       for (let i = 0; i < nzbs.length; i++) {
         nzbs[i].nzb = proxiedUrls[i];

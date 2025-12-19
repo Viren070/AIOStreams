@@ -17,5 +17,10 @@ export {
   ProwlarrAddon,
   KnabenAddon,
   TorrentGalaxyAddon,
+  EasynewsSearchAddon,
+  EasynewsAuthSchema,
+  EasynewsNzbParamsSchema,
+  EasynewsApi,
+  EasynewsNzbParams,
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';

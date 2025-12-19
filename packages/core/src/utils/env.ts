@@ -17,6 +17,7 @@ import {
 import * as constants from './constants.js';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
+import bytes from 'bytes';
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -154,6 +155,14 @@ const url = makeValidator((x) => {
   return removeTrailingSlash(x);
 });
 
+const size = makeValidator<number>((input: string) => {
+  const parsed = bytes.parse(input);
+  if (!parsed || Number.isNaN(parsed) || parsed < 0) {
+    throw new EnvError(`Invalid size input: "${input}"`);
+  }
+  return parsed;
+});
+
 export const forcedPort = makeValidator<string>((input: string) => {
   if (input === '') {
     return '';
@@ -228,6 +237,31 @@ const proxyAuth = makeValidator((x) => {
     userMap.set(username, password);
   });
   return userMap;
+});
+
+const connectionLimits = makeValidator((x) => {
+  if (typeof x !== 'string') {
+    throw new EnvError('Connection limits must be a string');
+  }
+  // comma separated list of username:limit where limit is a number
+  const limitMap: Map<string, number> = new Map();
+  x.split(',').forEach((x) => {
+    const [username, limitStr] = x.split(':');
+    if (!username || !limitStr) {
+      throw new EnvError(
+        'Connection limits must be a comma separated list of username:limit pairs'
+      );
+    }
+    const limit = Number(limitStr);
+    if (limit === -1)
+      if (Number.isNaN(limit) || limit < 0 || !Number.isInteger(limit)) {
+        throw new EnvError(
+          'Connection limit must be a positive integer or 0 for unlimited'
+        );
+      }
+    limitMap.set(username, limit);
+  });
+  return limitMap;
 });
 
 const boolOrList = makeValidator((x) => {
@@ -1638,12 +1672,38 @@ export const Env = cleanEnv(process.env, {
   }),
 
   AIOSTREAMS_AUTH: proxyAuth({
-    default: undefined,
+    default: new Map<string, string>(),
     desc: 'Authorisation credentials for this AIOStreams instance',
   }),
   AIOSTREAMS_AUTH_ADMINS: commaSeparated({
     default: undefined,
     desc: 'Comma separated list of admin usernames. If not set, all users are admins.',
+  }),
+  AIOSTREAMS_AUTH_CONNECTIONS_LIMIT: connectionLimits({
+    default: undefined,
+    desc: 'Connection limits for authenticated users',
+  }),
+
+  // NZB Proxy Settings (shared by generic and Easynews NZB proxying)
+  NZB_PROXY_PUBLIC_ENABLED: bool({
+    default: false,
+    desc: 'Whether to enable the public/generic NZB proxy (disabled by default for security)',
+  }),
+  NZB_PROXY_EASYNEWS_ENABLED: bool({
+    default: false,
+    desc: 'Whether to enable the Easynews NZB proxy endpoint (enabled by default)',
+  }),
+  NZB_PROXY_MAX_SIZE: size({
+    default: 20 * 1000 * 1000, // 20MB
+    desc: 'Maximum size of NZBs that can be proxied',
+  }),
+  NZB_PROXY_RATE_LIMIT_WINDOW: num({
+    default: 3600,
+    desc: 'NZB proxy rate limit window in seconds',
+  }),
+  NZB_PROXY_RATE_LIMIT_PER_USER: num({
+    default: 100,
+    desc: 'Maximum number of NZB proxy requests per user per window',
   }),
 
   BUILTIN_STREMTHRU_URL: url({
@@ -1668,7 +1728,7 @@ export const Env = cleanEnv(process.env, {
     desc: 'Builtin Debrid metadata store',
   }),
   BUILTIN_DEBRID_FILEINFO_STORE: boolOrChoice(['redis', 'sql', 'memory'])({
-    default: false,
+    default: true,
     desc: 'Builtin Debrid fileinfo store',
   }),
   BUILTIN_PLAYBACK_LINK_VALIDITY: num({
@@ -1876,6 +1936,20 @@ export const Env = cleanEnv(process.env, {
     desc: 'Builtin Knaben Search cache TTL',
   }),
 
+  // Easynews settings
+  BUILTIN_EASYNEWS_SEARCH_TIMEOUT: num({
+    default: 30000, // 30 seconds
+    desc: 'Builtin Easynews Search timeout',
+  }),
+  BUILTIN_EASYNEWS_SEARCH_CACHE_TTL: num({
+    default: 3600, // 1 hour - shorter TTL since Easynews content changes more frequently
+    desc: 'Builtin Easynews Search cache TTL',
+  }),
+  BUILTIN_EASYNEWS_SEARCH_MAX_PAGES: num({
+    default: 5,
+    desc: 'Maximum number of pages to fetch when paginating Easynews search results',
+  }),
+
   BUILTIN_TORRENT_GALAXY_URL: url({
     default: 'https://torrentgalaxy.space',
     desc: 'Builtin Torrent Galaxy URL',
@@ -1990,12 +2064,12 @@ export const Env = cleanEnv(process.env, {
     default: 15, // allow 100 requests per IP per minute
     desc: 'Maximum number of requests allowed per IP within the time window',
   }),
-  GDRIVE_STREAM_RATE_LIMIT_WINDOW: num({
-    default: 5, // 1 minute
-    desc: 'Time window for Google Drive stream rate limiting in seconds',
+  EASYNEWS_NZB_RATE_LIMIT_WINDOW: num({
+    default: 60,
+    desc: 'Time window for Easynews NZB rate limiting in seconds',
   }),
-  GDRIVE_STREAM_RATE_LIMIT_MAX_REQUESTS: num({
-    default: 10, // allow 100 requests per IP per minute
-    desc: 'Maximum number of requests allowed per IP within the time window',
+  EASYNEWS_NZB_RATE_LIMIT_MAX_REQUESTS: num({
+    default: 15,
+    desc: 'Maximum number of Easynews NZB requests allowed per IP within the time window',
   }),
 });

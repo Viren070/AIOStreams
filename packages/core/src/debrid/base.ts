@@ -134,6 +134,7 @@ const TorrentPlaybackInfoSchema =
 
 const UsenetInfoSchema = BaseFileInfoSchema.extend({
   hash: z.string(),
+  easynewsUrl: z.string().optional(),
   nzb: z.string(),
   type: z.literal('usenet'),
 });

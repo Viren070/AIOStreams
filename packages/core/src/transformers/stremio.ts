@@ -221,6 +221,8 @@ export class StremioTransformer {
             message: stream.message,
             regexMatched: stream.regexMatched,
             keywordMatched: stream.keywordMatched,
+            streamExpressionMatched: stream.streamExpressionMatched,
+            seadex: stream.seadex,
             id: stream.id,
           }
         : undefined,

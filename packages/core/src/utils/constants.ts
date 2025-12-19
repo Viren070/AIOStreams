@@ -22,6 +22,7 @@ export enum ErrorCode {
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
   BAD_REQUEST = 'BAD_REQUEST',
   UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
 }
 
 interface ErrorDetails {
@@ -94,6 +95,10 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
     statusCode: 401,
     message: 'Unauthorized',
   },
+  [ErrorCode.FORBIDDEN]: {
+    statusCode: 403,
+    message: 'Forbidden',
+  },
 };
 
 export class APIError extends Error {
@@ -120,6 +125,8 @@ export const INTERNAL_SECRET_HEADER = Buffer.from(
   'WC1BSU9TdHJlYW1zLUludGVybmFsLVNlY3JldA==',
   'base64'
 ).toString('utf8');
+
+export const PUBLIC_NZB_PROXY_USERNAME = 'public_nzb_proxy_user';
 
 const API_VERSION = 1;
 
@@ -238,6 +245,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   NZBDAV_SERVICE,
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
+  EASYNEWS_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -1081,8 +1089,7 @@ export const SORT_CRITERIA_DETAILS: Record<
     defaultDirection: 'desc',
     description:
       'Whether the stream is a SeaDex release (curated best anime releases from releases.moe)',
-    ascendingDescription:
-      'Streams that are not listed on SeaDex are preferred',
+    ascendingDescription: 'Streams that are not listed on SeaDex are preferred',
     descendingDescription:
       'Streams that are marked as the Best release on SeaDex are preferred, followed by the Alternative release',
   },

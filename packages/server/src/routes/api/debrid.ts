@@ -107,6 +107,7 @@ router.get(
               metadata: metadata,
               hash: fileInfo.hash,
               nzb: fileInfo.nzb,
+              easynewsUrl: fileInfo.easynewsUrl,
               index: fileInfo.index,
               filename: filename,
             };

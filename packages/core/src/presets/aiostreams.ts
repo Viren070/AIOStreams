@@ -70,6 +70,7 @@ class AIOStreamsStreamParser extends StreamParser {
       keywordMatched: aioStream.streamData?.keywordMatched,
       streamExpressionMatched: aioStream.streamData?.streamExpressionMatched,
       regexMatched: aioStream.streamData?.regexMatched,
+      seadex: aioStream.streamData?.seadex,
       originalName: aioStream.name ?? undefined,
       originalDescription: (aioStream.description || stream.title) ?? undefined,
     };
