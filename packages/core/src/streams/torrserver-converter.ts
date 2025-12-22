@@ -1,11 +1,8 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
-import { createLogger, ServiceId } from '../utils/index.js'; // Removed 'constants'
+import { createLogger, ServiceId, TORRSERVER_SERVICE } from '../utils/index.js';
 import { TorrServerConfig } from '../debrid/torrserver.js';
 
 const logger = createLogger('torrserver-converter');
-
-// Define constant locally to avoid missing export issues in main repo
-const TORRSERVER_SERVICE_ID = 'torrserver';
 
 class TorrServerConverter {
   private userData: UserData;
@@ -21,7 +18,7 @@ class TorrServerConverter {
   private initializeTorrServer() {
     // Check if TorrServer is configured in services
     const torrServerService = this.userData.services?.find(
-      (s) => s.id === TORRSERVER_SERVICE_ID && s.enabled !== false
+      (s) => s.id === TORRSERVER_SERVICE && s.enabled !== false
     );
 
     if (torrServerService) {
@@ -78,7 +75,7 @@ class TorrServerConverter {
         if (stream.torrent.fileIdx !== undefined) {
           streamUrlObj.searchParams.set(
             'index',
-            String(stream.torrent.fileIdx)
+            String(stream.torrent.fileIdx + 1)
           );
         } else {
              // If no index is provided in P2P stream, default to 1 (usually main file)
@@ -97,7 +94,7 @@ class TorrServerConverter {
           url: torrServerUrl,
           type: 'debrid' as const,
           service: {
-            id: TORRSERVER_SERVICE_ID as ServiceId,
+            id: TORRSERVER_SERVICE as ServiceId,
             cached: true, // Mark as cached so AIOStreams treats it as instant play
           },
         };
