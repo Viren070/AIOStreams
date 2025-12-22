@@ -735,7 +735,7 @@ const SERVICE_DETAILS: Record<
         id: 'torrserverAuth',
         name: 'Basic Auth Token (Optional)',
         description:
-          'If your TorrServer requires authentication, provide the Base64-encoded Basic auth token (username:password)',
+         'If your TorrServer requires authentication, provide either username:password (will be Base64-encoded automatically) or a plain API key (will be passed as query parameter)',
         type: 'password',
         required: false,
       },
