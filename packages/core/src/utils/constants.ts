@@ -213,6 +213,7 @@ const EASYNEWS_SERVICE = 'easynews';
 const NZBDAV_SERVICE = 'nzbdav';
 const ALTMOUNT_SERVICE = 'altmount';
 const STREMIO_NNTP_SERVICE = 'stremio_nntp';
+const TORRSERVER_SERVICE = 'torrserver';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -230,6 +231,7 @@ const SERVICES = [
   NZBDAV_SERVICE,
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
+  TORRSERVER_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -246,6 +248,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
+  TORRSERVER_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -709,6 +712,32 @@ const SERVICE_DETAILS: Record<
           'Please authorise at MediaFusion and copy the token into here.',
         type: 'password',
         required: true,
+      },
+    ],
+  },
+  [TORRSERVER_SERVICE]: {
+    id: TORRSERVER_SERVICE,
+    name: 'TorrServer',
+    shortName: 'TS',
+    knownNames: ['TS', 'TorrServer', 'Torrserver'],
+    signUpText:
+      'TorrServer is a self-hosted torrent streaming server. [Learn more](https://github.com/YouROK/TorrServer)',
+    credentials: [
+      {
+        id: 'torrserverUrl',
+        name: 'TorrServer URL',
+        description:
+          'The base URL of your TorrServer instance. E.g., http://torrserver:8090',
+        type: 'string',
+        required: true,
+      },
+      {
+        id: 'torrserverAuth',
+        name: 'Basic Auth Token (Optional)',
+        description:
+          'If your TorrServer requires authentication, provide the Base64-encoded Basic auth token (username:password)',
+        type: 'password',
+        required: false,
       },
     ],
   },
@@ -1307,6 +1336,7 @@ export {
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
+  TORRSERVER_SERVICE,
   SERVICE_DETAILS,
   TOP_LEVEL_OPTION_DETAILS,
   HEADERS_FOR_IP_FORWARDING,
