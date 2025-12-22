@@ -13,7 +13,7 @@ import {
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
 import { pipeline } from 'stream/promises';
-import { createProxy, BuiltinProxyStats, BuiltinProxy } from '@aiostreams/core';
+import { BuiltinProxyStats, BuiltinProxy } from '@aiostreams/core';
 import { corsMiddleware } from '../../middlewares/cors.js';
 import { StaticFiles } from '../../app.js';
 import { Transform } from 'stream';
@@ -23,6 +23,71 @@ const router: Router = Router();
 
 // Create a singleton instance of BuiltinProxyStats
 const proxyStats = new BuiltinProxyStats();
+const PROGRESS_UPDATE_INTERVAL_MS = 5000;
+
+type AllUserStats = Awaited<
+  ReturnType<(typeof proxyStats)['getAllUserStats']>
+>;
+type UserStats = AllUserStats extends Map<string, infer U> ? U : never;
+type ConnectionRecord = UserStats extends { active: Array<infer C> }
+  ? C
+  : never;
+
+const mapConnectionToStats = (conn: ConnectionRecord) => {
+  let progress = 0;
+  if (conn.contentLength && conn.contentLength > 0) {
+    const percent = ((conn.bytesRead || 0) / conn.contentLength) * 100;
+    if (percent > 0) {
+      const roundedPercent = parseFloat(percent.toFixed(1));
+      progress = Math.min(100, Math.max(1, roundedPercent));
+    }
+  }
+
+  return {
+    ip: conn.ip,
+    url: conn.url,
+    filename: conn.filename ?? null,
+    timestamp: new Date(conn.timestamp).toISOString(),
+    lastSeen: new Date(conn.lastSeen).toISOString(),
+    count: conn.count,
+    requestIds: conn.requestIds,
+    metaId: conn.metaId ?? null,
+    relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
+    relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
+    progress,
+  };
+};
+
+function getFirstHeaderValue(
+  value: string | string[] | number | undefined
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) return value[0];
+  if (typeof value === 'number') return String(value);
+  return value;
+}
+
+function getTotalContentLengthFromHeaders(
+  headers: Record<string, string | string[] | number | undefined>
+): number | undefined {
+  const contentRange = getFirstHeaderValue(headers['content-range']);
+  if (contentRange) {
+    // Example: "bytes 0-1023/2048"
+    const match = /^bytes\s+\d+-\d+\/(\d+|\*)$/i.exec(contentRange.trim());
+    if (match && match[1] !== '*') {
+      const total = Number(match[1]);
+      if (Number.isFinite(total) && total > 0) return total;
+    }
+  }
+
+  const contentLength = getFirstHeaderValue(headers['content-length']);
+  if (contentLength) {
+    const parsed = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return undefined;
+}
 
 function sanitiseHeaderValue(value: string): string {
   return value.replace(/[^\t\x20-\x7e]/g, '');
@@ -100,7 +165,9 @@ const ProxyDataSchema = z.object({
   // These are optional, as we'll be forwarding client headers
   requestHeaders: z.record(z.string(), z.string()).optional(),
   responseHeaders: z.record(z.string(), z.string()).optional(),
+  metaId: z.string().optional(),
 });
+
 
 router.use(corsMiddleware);
 
@@ -146,20 +213,8 @@ router.get(
           Array.from(allUserStats.entries()).map(([user, userStats]) => [
             user,
             {
-              active: userStats.active.map((conn) => ({
-                ...conn,
-                timestamp: new Date(conn.timestamp).toISOString(),
-                lastSeen: new Date(conn.lastSeen).toISOString(),
-                relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-                relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
-              })),
-              history: userStats.history.map((conn) => ({
-                ...conn,
-                timestamp: new Date(conn.timestamp).toISOString(),
-                lastSeen: new Date(conn.lastSeen).toISOString(),
-                relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-                relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
-              })),
+              active: userStats.active.map(mapConnectionToStats),
+              history: userStats.history.map(mapConnectionToStats),
             },
           ])
         ),
@@ -346,7 +401,8 @@ router.all(
             data.url,
             timestamp,
             requestId,
-            filename
+            filename,
+            data.metaId
           )
           .catch((error) =>
             logger.warn(`[${requestId}] Failed to add connection to stats`, {
@@ -454,22 +510,15 @@ router.all(
         return;
       }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
-
+      const totalContentLength =
+        getTotalContentLengthFromHeaders(upstreamResponse.headers) ?? 0;
       if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
         // size check
         if (Env.NZB_PROXY_MAX_SIZE > 0) {
-          const contentLengthHeader = upstreamResponse.headers['content-length']
-            ? Array.isArray(upstreamResponse.headers['content-length'])
-              ? upstreamResponse.headers['content-length'][0]
-              : upstreamResponse.headers['content-length']
-            : undefined;
-          const contentLength = contentLengthHeader
-            ? parseInt(contentLengthHeader, 10)
-            : 0;
           const maxSize = Env.NZB_PROXY_MAX_SIZE;
-          if (maxSize > 0 && contentLength > maxSize) {
+          if (maxSize > 0 && totalContentLength > maxSize) {
             logger.warn(`[${requestId}] Public NZB proxy size limit exceeded`, {
-              contentLength,
+              contentLength: totalContentLength,
               maxSize,
             });
             next(
@@ -501,13 +550,92 @@ router.all(
         targetUrl: currentUrl,
       });
 
+      let totalBytesRead = 0;
+      let pendingBytes = 0;
+      let lastProgressSent = 0;
+      let lastProgressUpdate = Date.now();
+
+      const progressTracker = new Transform({
+        transform(chunk, encoding, callback) {
+          totalBytesRead += chunk.length;
+          pendingBytes += chunk.length;
+
+          const now = Date.now();
+          const progress =
+            totalContentLength > 0
+              ? Math.max(1, (totalBytesRead / totalContentLength) * 100)
+              : 0;
+          const progressDelta = progress - lastProgressSent;
+          
+          // update in reasonable intervals
+          const shouldFlush =
+            pendingBytes > 0 &&
+            ((totalContentLength > 0 && progressDelta >= 2) ||
+              now - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL_MS);
+
+          if (shouldFlush && auth && clientIp && data) {
+            const bytesToPersist = pendingBytes;
+            pendingBytes = 0;
+            lastProgressSent = progress;
+            lastProgressUpdate = now;
+
+            proxyStats
+              .updateConnectionProgress(
+                auth.username,
+                clientIp,
+                data.url,
+                bytesToPersist,
+                totalContentLength
+              )
+              .catch((err) => {
+                logger.debug(
+                  `[${requestId}] Failed to update connection progress`,
+                  {
+                    error: err instanceof Error ? err.message : String(err),
+                  }
+                );
+              });
+          }
+
+          callback(null, chunk);
+        },
+        flush(callback) {
+          if (auth && clientIp && data && pendingBytes > 0) {
+            proxyStats
+              .updateConnectionProgress(
+                auth.username,
+                clientIp,
+                data.url,
+                pendingBytes,
+                totalContentLength
+              )
+              .catch((err) => {
+                logger.debug(
+                  `[${requestId}] Failed to update connection progress`,
+                  {
+                    error: err instanceof Error ? err.message : String(err),
+                  }
+                );
+              })
+              .finally(() => callback());
+          } else {
+            callback();
+          }
+        },
+      });
+
       if (req.method === 'HEAD') {
         res.end();
       } else {
         if (sizeLimiter) {
-          await pipeline(upstreamResponse.body, sizeLimiter, res);
+          await pipeline(
+            upstreamResponse.body,
+            sizeLimiter,
+            progressTracker,
+            res
+          );
         } else {
-          await pipeline(upstreamResponse.body, res);
+          await pipeline(upstreamResponse.body, progressTracker, res);
         }
       }
 

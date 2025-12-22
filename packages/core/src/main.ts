@@ -1393,7 +1393,7 @@ export class AIOStreams {
     );
 
     const { streams: proxiedStreams, error } =
-      await this.proxifier.proxify(finalStreams);
+      await this.proxifier.proxify(finalStreams, id);
 
     if (error) {
       errors.push({
