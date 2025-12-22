@@ -70,7 +70,7 @@ class TorrServerConverter {
         const streamUrlObj = new URL('/stream', this.torrServerUrl!); // Non-null assertion safe due to check above
         streamUrlObj.searchParams.set('link', magnet);
         streamUrlObj.searchParams.set('play', '1'); // Auto play
-        streamUrlObj.searchParams.set('save', 'true'); 
+        streamUrlObj.searchParams.set('save', 'true');
 
         if (stream.torrent.fileIdx !== undefined) {
           streamUrlObj.searchParams.set(
@@ -78,8 +78,8 @@ class TorrServerConverter {
             String(stream.torrent.fileIdx + 1)
           );
         } else {
-             // If no index is provided in P2P stream, default to 1 (usually main file)
-             streamUrlObj.searchParams.set('index', '1');
+          // If no index is provided in P2P stream, default to 1 (usually main file)
+          streamUrlObj.searchParams.set('index', '1');
         }
 
         // IMPORTANT: Append API Key to the playback URL if configured
