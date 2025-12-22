@@ -24,6 +24,7 @@ const logger = createLogger('debrid:torrserver');
 const TORRSERVER_ADD_DELAY_MS = 1000;
 const TORRSERVER_MAX_POLL_ATTEMPTS = 15;
 const TORRSERVER_POLL_INTERVAL_MS = 1000; // Poll faster for responsiveness
+const TORRSERVER_RESOLVE_LOCK_TIMEOUT_MS = 30000; // Timeout and TTL for resolve lock
 
 export const TorrServerConfig = z.object({
   torrserverUrl: z
@@ -302,8 +303,8 @@ export class TorrServerDebridService implements DebridService {
       `torrserver:resolve:${playbackInfo.hash}:${this.config.clientIp}`,
       () => this._resolve(playbackInfo, filename, cacheAndPlay),
       {
-        timeout: 30000,
-        ttl: 10000,
+        timeout: TORRSERVER_RESOLVE_LOCK_TIMEOUT_MS,
+        ttl: TORRSERVER_RESOLVE_LOCK_TIMEOUT_MS,
       }
     );
     return result;
