@@ -98,15 +98,9 @@ export class TorrServerDebridService implements DebridService {
       };
 
       // Add Auth headers for API control
-      if (this.torrserverAuth) {
-        // Check if auth looks like Basic Auth (contains :) or just an API Key
-        if (this.torrserverAuth.includes(':')) {
-           headers['Authorization'] = `Basic ${Buffer.from(this.torrserverAuth).toString('base64')}`;
-        } else {
-           // Assume API Key passed in header or usually query param, 
-           // but generic Basic auth header usually works for simple setups
-           headers['Authorization'] = `Basic ${this.torrserverAuth}`;
-        }
+      if (this.torrserverAuth && this.torrserverAuth.includes(':')) {
+        // Only set Basic auth header for username:password format
+        headers['Authorization'] = `Basic ${Buffer.from(this.torrserverAuth).toString('base64')}`;
       }
 
       // Append API Key to URL if it's not Basic Auth style
