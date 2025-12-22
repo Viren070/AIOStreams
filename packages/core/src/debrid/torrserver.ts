@@ -67,7 +67,17 @@ export class TorrServerDebridService implements DebridService {
   readonly serviceName: ServiceId = 'torrserver' as ServiceId;
 
   constructor(private readonly config: DebridServiceConfig) {
-    const parsedConfig = TorrServerConfig.parse(JSON.parse(config.token));
+    let tokenData: any;
+    try {
+      tokenData = JSON.parse(config.token);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `Invalid TorrServer token JSON: ${errorMessage}`
+      );
+    }
+
+    const parsedConfig = TorrServerConfig.parse(tokenData);
 
     this.torrserverUrl = parsedConfig.torrserverUrl;
     this.torrserverAuth = parsedConfig.torrserverAuth;
@@ -120,13 +130,13 @@ export class TorrServerDebridService implements DebridService {
       // Add Auth headers for API control
       if (this.torrserverAuth && this.torrserverAuth.includes(':')) {
         // Only set Basic auth header for username:password format
-        headers['Authorization'] = `Basic ${Buffer.from(this.torrserverAuth).toString('base64')}`;
+        headers['Authorization'] =
+          `Basic ${Buffer.from(this.torrserverAuth).toString('base64')}`;
       }
 
       // Append API Key to URL if it's not Basic Auth style
       const fetchUrl = new URL(url);
       this.addApiKeyToUrl(fetchUrl);
-
 
       const response = await fetch(fetchUrl.toString(), {
         method,
@@ -154,11 +164,12 @@ export class TorrServerDebridService implements DebridService {
   public async listMagnets(): Promise<DebridDownload[]> {
     try {
       // POST usually works better for /torrents/list in some versions, but GET /torrents is standard
-      const response =
-        await this.torrserverRequest<any>('/torrents');
-      
+      const response = await this.torrserverRequest<any>('/torrents');
+
       // Handle response structure which might vary slightly
-      const torrents = Array.isArray(response) ? response : (response.torrents || []);
+      const torrents = Array.isArray(response)
+        ? response
+        : response.torrents || [];
 
       return (
         torrents.map((torrent: TorrServerTorrent) => ({
@@ -187,7 +198,7 @@ export class TorrServerDebridService implements DebridService {
       case 2: // Seeding/Up
         // IMPORTANT: We treat downloading (1) as 'cached' because TorrServer allows streaming while downloading.
         // If we return 'downloading', AIOStreams might wait for 100% completion.
-        return 'cached'; 
+        return 'cached';
       default:
         return 'unknown';
     }
@@ -204,7 +215,7 @@ export class TorrServerDebridService implements DebridService {
     for (const magnet of magnets) {
       const hash = this.extractHashFromMagnet(magnet);
       if (!hash) continue;
-      
+
       results.push({
         id: hash,
         hash,
@@ -252,12 +263,12 @@ export class TorrServerDebridService implements DebridService {
 
       // Even if not found immediately (rare race condition), return a dummy valid object
       if (!torrent) {
-         return {
-             id: hash,
-             hash: hash,
-             status: 'cached',
-             files: []
-         }
+        return {
+          id: hash,
+          hash: hash,
+          status: 'cached',
+          files: [],
+        };
       }
 
       return torrent;
@@ -307,9 +318,10 @@ export class TorrServerDebridService implements DebridService {
 
     const { hash, metadata } = playbackInfo;
     const cacheKey = `torrserver:resolve:${hash}:${filename}`;
-    
+
     // Check Cache first
-    const cachedLink = await TorrServerDebridService.playbackLinkCache.get(cacheKey);
+    const cachedLink =
+      await TorrServerDebridService.playbackLinkCache.get(cacheKey);
     if (cachedLink) return cachedLink;
 
     let magnet = `magnet:?xt=urn:btih:${hash}`;
@@ -322,43 +334,54 @@ export class TorrServerDebridService implements DebridService {
 
     // Poll until files are populated
     for (let i = 0; i < TORRSERVER_MAX_POLL_ATTEMPTS; i++) {
-        if (magnetDownload.files && magnetDownload.files.length > 0) break;
-        
-        await new Promise((resolve) => setTimeout(resolve, TORRSERVER_POLL_INTERVAL_MS));
-        const list = await this.listMagnets();
-        const found = list.find(t => t.hash === hash);
-        if (found) magnetDownload = found;
+      if (magnetDownload.files && magnetDownload.files.length > 0) break;
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, TORRSERVER_POLL_INTERVAL_MS)
+      );
+      const list = await this.listMagnets();
+      const found = list.find((t) => t.hash === hash);
+      if (found) magnetDownload = found;
     }
 
     if (!magnetDownload.files?.length) {
-       // Fallback: If we can't get file list, we can't select file index.
-       // However, we can try to return a link without index and let TorrServer guess/play first file
-       logger.warn(`No files found for ${hash}, trying blind stream`);
+      // Fallback: If we can't get file list, we can't select file index.
+      // However, we can try to return a link without index and let TorrServer guess/play first file
+      logger.warn(`No files found for ${hash}, trying blind stream`);
     }
 
     // Select file logic
     const parsedFiles = new Map<string, any>();
     if (magnetDownload.files) {
-        for (const file of magnetDownload.files) {
-            if (!file.name) continue;
-            const parsed = parseTorrentTitle(file.name);
-            parsedFiles.set(file.name, {
-                title: parsed?.title,
-                seasons: parsed?.seasons,
-                episodes: parsed?.episodes,
-                year: parsed?.year,
-            });
+      for (const file of magnetDownload.files) {
+        if (!file.name) continue;
+        try {
+          const parsed = parseTorrentTitle(file.name);
+          parsedFiles.set(file.name, {
+            title: parsed?.title,
+            seasons: parsed?.seasons,
+            episodes: parsed?.episodes,
+            year: parsed?.year,
+          });
+        } catch (err) {
+          logger.debug(
+            `Failed to parse torrent title for file: ${file.name}`,
+            err
+          );
+          // Continue processing other files; treat this file as unparsed
+          continue;
         }
+      }
     }
 
     const selectedFile = await selectFileInTorrentOrNZB(
       {
-          type: 'torrent',
-          hash,
-          title: magnetDownload.name || filename,
-          size: magnetDownload.size || 0,
-          seeders: 1,
-          sources: [],
+        type: 'torrent',
+        hash,
+        title: magnetDownload.name || filename,
+        size: magnetDownload.size || 0,
+        seeders: 1,
+        sources: [],
       },
       magnetDownload,
       parsedFiles,
@@ -376,9 +399,9 @@ export class TorrServerDebridService implements DebridService {
     streamUrlObj.searchParams.set('save', 'true'); // Save to DB
 
     if (selectedFile) {
-        streamUrlObj.searchParams.set('index', String(selectedFile.index));
+      streamUrlObj.searchParams.set('index', String(selectedFile.index));
     } else {
-        streamUrlObj.searchParams.set('index', '1'); // Default to 1 if selection failed
+      streamUrlObj.searchParams.set('index', '0'); // Default to 0 for 0-based indexing
     }
 
     // AUTH HANDLING FOR STREAM LINK - supports both API keys and Basic auth
