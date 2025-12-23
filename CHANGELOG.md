@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.19.0](https://github.com/Viren070/AIOStreams/compare/v2.18.1...v2.19.0) (2025-12-17)
+
+
+### Features
+
+* add easynews search built-in addon ([7c5ea8a](https://github.com/Viren070/AIOStreams/commit/7c5ea8a58c61dd8cc5f80031cb2769e8c9ede728))
+* add SeaDex preference support for anime streams ([#512](https://github.com/Viren070/AIOStreams/issues/512)) ([b4b6929](https://github.com/Viren070/AIOStreams/commit/b4b69291e601452799393fa57ced497bbe133ecc))
+* add separate size filter for anime content ([#483](https://github.com/Viren070/AIOStreams/issues/483)) ([ff168cf](https://github.com/Viren070/AIOStreams/commit/ff168cf25594a5729a12b72583d8aebb033bc9fd))
+* **metadata:** add FETCH_TRAKT_ALIASES env var to toggle Trakt alias fetching ([#543](https://github.com/Viren070/AIOStreams/issues/543)) ([a40bcc5](https://github.com/Viren070/AIOStreams/commit/a40bcc5844f56f810848f1da569ee0caad13dd36))
+* **presets/stremthru-store:** add usenet option ([7c5ea8a](https://github.com/Viren070/AIOStreams/commit/7c5ea8a58c61dd8cc5f80031cb2769e8c9ede728))
+* **proxy:** add connections limit, closes [#457](https://github.com/Viren070/AIOStreams/issues/457) ([7c5ea8a](https://github.com/Viren070/AIOStreams/commit/7c5ea8a58c61dd8cc5f80031cb2769e8c9ede728))
+* **seadex:** add release group fallback matching ([#521](https://github.com/Viren070/AIOStreams/issues/521)) ([7ed51bc](https://github.com/Viren070/AIOStreams/commit/7ed51bc6f08c6f3cf7395f3a53c60ae39d441ada))
+
+
+### Bug Fixes
+
+* Avoid expensive user count when not exposing users anyway ([#547](https://github.com/Viren070/AIOStreams/issues/547)) ([1165371](https://github.com/Viren070/AIOStreams/commit/11653713c29b414383b5d16fecadc18c220eaf96))
+* **builtins/easnews-search:** validate aiostreamsAuth if provided ([309928d](https://github.com/Viren070/AIOStreams/commit/309928de2cbdf07f4485f49d98421ac8ccf6cd9f))
+* **builtins/easynews-search:** update nzb route to include filename ([c0a222f](https://github.com/Viren070/AIOStreams/commit/c0a222f19a5ab709b54e4726343ea5e17638f863))
+* **builtins/newznab:** use available filename for proxied urls ([9e14ab2](https://github.com/Viren070/AIOStreams/commit/9e14ab27b94933ddf3c8a5acba6dbab68e82654b))
+* **builtins:** add year only for movies in debrid addons search ([#539](https://github.com/Viren070/AIOStreams/issues/539)) ([36b5358](https://github.com/Viren070/AIOStreams/commit/36b5358623b3efaffd5dfaf0e5756ca102f7c059))
+* **debrid:** capitalize TV category name for Usenet streams ([#538](https://github.com/Viren070/AIOStreams/issues/538)) ([d5f5611](https://github.com/Viren070/AIOStreams/commit/d5f561123f048f5161373df55a6fef1e85a4adac))
+* force include season/ep in params for certain indexers ([1137195](https://github.com/Viren070/AIOStreams/commit/11371958f2ececa4103cd5947e901026154d3021))
+* **frontend:** added missing space to proxy url ([#515](https://github.com/Viren070/AIOStreams/issues/515)) ([1e06ad9](https://github.com/Viren070/AIOStreams/commit/1e06ad987af8a9cd656fdea62560c9be7f81c743))
+* improve logging for fetch failed errors ([b0950fe](https://github.com/Viren070/AIOStreams/commit/b0950fe9e04f009d69a029a553582507e4111723))
+* optimise getUserCount by only using count, cherry picked from [#548](https://github.com/Viren070/AIOStreams/issues/548) ([7c5ea8a](https://github.com/Viren070/AIOStreams/commit/7c5ea8a58c61dd8cc5f80031cb2769e8c9ede728))
+* **parser:** remove ind from filename before lang parsing if group, closes [#530](https://github.com/Viren070/AIOStreams/issues/530) ([7c5ea8a](https://github.com/Viren070/AIOStreams/commit/7c5ea8a58c61dd8cc5f80031cb2769e8c9ede728))
+* **parser:** replace German umlauts with ASCII equivalents in normaliseTitle ([#525](https://github.com/Viren070/AIOStreams/issues/525)) ([f7c1124](https://github.com/Viren070/AIOStreams/commit/f7c1124ebccef46e70ea63c7c430e359604ad63f))
+* passthrough precomputed seadex and stream expression matched from wrapped aiostreams ([eb704a4](https://github.com/Viren070/AIOStreams/commit/eb704a42c86af9705359f099d4c50ca54933225d))
+* **seadex:** prevent matching by release group when there are streams matched by hash ([#534](https://github.com/Viren070/AIOStreams/issues/534)) ([3b3ec2b](https://github.com/Viren070/AIOStreams/commit/3b3ec2ba1e716d173244e4b30e6c160a7b2fa07f))
+
 ## [2.18.1](https://github.com/Viren070/AIOStreams/compare/v2.18.0...v2.18.1) (2025-11-29)
 
 
