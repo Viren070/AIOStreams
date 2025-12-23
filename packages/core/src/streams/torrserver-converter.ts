@@ -72,7 +72,7 @@ class TorrServerConverter {
         !stream.externalUrl
       ) {
         const infoHash = stream.torrent.infoHash;
-        const magnet = this.buildMagnetLink(
+        const magnet = TorrServerConverter.buildMagnetLink(
           infoHash,
           stream.torrent.sources || []
         );
@@ -123,7 +123,7 @@ class TorrServerConverter {
     return convertedStreams;
   }
 
-  private buildMagnetLink(infoHash: string, trackers: string[]): string {
+  private static buildMagnetLink(infoHash: string, trackers: string[]): string {
     let magnet = `magnet:?xt=urn:btih:${infoHash}`;
     if (trackers && trackers.length > 0) {
       const encodedTrackers = trackers.map((t) => encodeURIComponent(t));
