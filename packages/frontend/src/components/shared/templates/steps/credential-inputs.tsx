@@ -5,7 +5,8 @@ import { Alert } from '../../../ui/alert';
 import { TextInput } from '../../../ui/text-input';
 import { PasswordInput } from '../../../ui/password-input';
 import MarkdownLite from '../../markdown-lite';
-import { ProcessedTemplate } from '@/lib/templates/types';
+import { ProcessedTemplate, TemplateInput } from '@/lib/templates/types';
+import { NNTPServersInput } from '../../template-option';
 
 interface TemplateCredentialInputsStepProps {
   processedTemplate: ProcessedTemplate;
@@ -40,31 +41,21 @@ export function TemplateCredentialInputsStep({
           </div>
         ) : (
           processedTemplate.inputs.map((input) => {
-            const props = {
-              label: input.label,
-              value: inputValues[input.key] || '',
-              placeholder: `Enter ${input.label}...`,
-              onValueChange: (newValue: string) => {
-                onInputValuesChange((prev) => ({
-                  ...prev,
-                  [input.key]: newValue,
-                }));
-              },
-              required: input.required,
-            };
             return (
-              <React.Fragment key={input.key}>
-                {input.type === 'string' ? (
-                  <TextInput {...props} />
-                ) : (
-                  <PasswordInput {...props} />
-                )}
-                {input.description && (
-                  <MarkdownLite className="text-xs text-[--muted] mt-1">
-                    {input.description}
-                  </MarkdownLite>
-                )}
-              </React.Fragment>
+              <InputRenderer
+                key={input.key}
+                type={input.type}
+                value={inputValues[input.key] || ''}
+                onValueChange={(newValue) => {
+                  onInputValuesChange((prev) => ({
+                    ...prev,
+                    [input.key]: newValue,
+                  }));
+                }}
+                label={input.label}
+                description={input.description}
+                required={input.required}
+              />
             );
           })
         )}
@@ -87,5 +78,58 @@ export function TemplateCredentialInputsStep({
         </Button>
       </div>
     </>
+  );
+}
+
+interface InputRendererProps {
+  type: TemplateInput['type'];
+  key: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  label: string;
+  description?: string;
+  required?: boolean;
+  placeholder?: string;
+}
+
+function InputRenderer({
+  type,
+  key,
+  value,
+  onValueChange,
+  label,
+  description,
+  placeholder,
+}: InputRendererProps) {
+  return (
+    <React.Fragment key={key}>
+      {type === 'string' ? (
+        <TextInput
+          value={value}
+          onValueChange={onValueChange}
+          label={label}
+          placeholder={placeholder}
+        />
+      ) : type === 'password' ? (
+        <PasswordInput
+          value={value}
+          onValueChange={onValueChange}
+          label={label}
+          placeholder={placeholder}
+        />
+      ) : type === 'custom-nntp-servers' ? (
+        <NNTPServersInput
+          name={label}
+          description={description}
+          value={value || undefined}
+          onChange={(newValue) => onValueChange(newValue || '')}
+        />
+      ) : null}
+      {description && type !== 'custom-nntp-servers' && (
+        <MarkdownLite className="text-xs text-[--muted] mt-1">
+          {description}
+        </MarkdownLite>
+      )}
+    </React.Fragment>
   );
 }

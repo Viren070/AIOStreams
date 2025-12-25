@@ -2,7 +2,12 @@ import { Template, StatusResponse, Option } from '@aiostreams/core';
 import { toast } from 'sonner';
 import { asConfigArray, evaluateTemplateCondition } from './conditionals';
 import * as constants from '@aiostreams/core/src/utils/constants';
-import { ProcessedTemplate, TemplateInput } from '../types';
+import {
+  ALLOWED_INPUT_TYPES,
+  AllowedInputType,
+  ProcessedTemplate,
+  TemplateInput,
+} from '../types';
 import { Mode } from '@/context/mode';
 
 /** Detect if a value is a placeholder string in the template. */
@@ -228,14 +233,16 @@ export const addServiceInputs = (
     if (!serviceMeta?.credentials) return;
 
     serviceMeta.credentials
-      .filter((cred) => cred.type == 'string' || cred.type == 'password')
+      .filter((cred): cred is Option & { type: AllowedInputType } =>
+        ALLOWED_INPUT_TYPES.includes(cred.type as any)
+      )
       .forEach((cred) => {
         serviceInputs.push({
           key: `service_${serviceId}_${cred.id}`,
           path: `services.${serviceId}.${cred.id}`,
           label: `${serviceMeta.name} - ${cred.name || cred.id}`,
           description: cred.description,
-          type: 'password',
+          type: cred.type,
           required: cred.required ?? true,
           value:
             userData?.services?.find((s: any) => s.id === serviceId)
