@@ -985,7 +985,9 @@ export function ConfigTemplatesModal({
             type:
               cred.type === 'custom-nntp-servers'
                 ? 'custom-nntp-servers'
-                : 'password',
+                : cred.type === 'password'
+                  ? 'password'
+                  : 'string',
             required: cred.required ?? true,
             value:
               userData?.services?.find((s: any) => s.id === serviceId)
