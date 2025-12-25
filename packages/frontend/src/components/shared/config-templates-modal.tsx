@@ -1191,7 +1191,7 @@ export function ConfigTemplatesModal({
         }
       });
 
-      // select and enable all servers (hopefully doesth break anything)
+      // Enable selected services and disable others
       if (selectedServices.length > 0) {
         if (!migratedData.services) {
           migratedData.services = [];
@@ -1213,9 +1213,12 @@ export function ConfigTemplatesModal({
           }
         });
 
-        migratedData.services = services.filter((s: any) =>
-          selectedServices.includes(s.id)
-        );
+        // Disable services that weren't selected
+        services.forEach((service: any) => {
+          if (!selectedServices.includes(service.id)) {
+            service.enabled = false;
+          }
+        });
       }
 
       setUserData((prev) => ({
