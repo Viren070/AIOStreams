@@ -24,6 +24,10 @@ import {
   alias,
 } from './routes/stremio/index.js';
 import {
+  manifest as chillLinkManifest,
+  streams as chillLinkStreams,
+} from './routes/chilllink/index.js';
+import {
   gdrive,
   torboxSearch,
   torznab,
@@ -131,6 +135,14 @@ stremioAuthRouter.use('/addon_catalog', addonCatalog);
 
 app.use('/stremio', stremioRouter); // For public routes
 app.use('/stremio/:uuid/:encryptedPassword', stremioAuthRouter); // For authenticated routes
+
+const chillLinkRouter = express.Router({ mergeParams: true });
+chillLinkRouter.use(corsMiddleware);
+chillLinkRouter.use(userDataMiddleware);
+chillLinkRouter.use('/manifest', chillLinkManifest);
+chillLinkRouter.use('/streams', chillLinkStreams);
+
+app.use('/chilllink/:uuid/:encryptedPassword', chillLinkRouter);
 
 const builtinsRouter = express.Router();
 builtinsRouter.use(internalMiddleware);
