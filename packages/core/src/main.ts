@@ -49,6 +49,10 @@ import { Metadata } from './metadata/utils.js';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
+const mergedCatalogCache = Cache.getInstance<string, MetaPreview[]>(
+  'merged_catalog',
+  Env.CATALOG_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+);
 const precacheCache = Cache.getInstance<string, boolean>(
   'precache',
   undefined,
@@ -294,9 +298,14 @@ export class AIOStreams {
     id: string,
     extras?: string
   ): Promise<AIOStreamsResponse<MetaPreview[]>> {
+    logger.info(`Handling catalog request`, { type, id, extras });
+
+    if (id.startsWith('merged-')) {
+      return this.getMergedCatalog(type, id, extras);
+    }
+
     // step 1
     // get the addon index from the id
-    logger.info(`Handling catalog request`, { type, id, extras });
     const start = Date.now();
     const addonInstanceId = id.split('.', 2)[0];
     const addon = this.getAddon(addonInstanceId);
@@ -453,6 +462,163 @@ export class AIOStreams {
     );
 
     return { success: true, data: catalog, errors: [] };
+  }
+
+  private async getMergedCatalog(
+    type: string,
+    id: string,
+    extras?: string
+  ): Promise<AIOStreamsResponse<MetaPreview[]>> {
+    const start = Date.now();
+    const mergedCatalog = this.userData.mergedCatalogs?.find(
+      (mc) => mc.id === id
+    );
+
+    if (!mergedCatalog) {
+      logger.error(`Merged catalog ${id} not found`);
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `Merged catalog ${id} not found`,
+            description: 'Try reinstalling the addon.',
+          },
+        ],
+      };
+    }
+
+    if (mergedCatalog.type !== type) {
+      logger.error(`Merged catalog ${id} type mismatch: expected ${mergedCatalog.type}, got ${type}`);
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `Type mismatch for merged catalog ${id}`,
+            description: `Expected ${mergedCatalog.type}, got ${type}`,
+          },
+        ],
+      };
+    }
+
+    const parsedExtras = new ExtrasParser(extras);
+    const skip = parsedExtras.skip || 0;
+    const pageSize = 50;
+    const isSearchRequest = extras?.includes('search');
+    const cacheKey = `merged-${id}-${type}-${this.userData.uuid}`;
+
+    if (!isSearchRequest && Env.CATALOG_CACHE_TTL !== -1) {
+      const cached = await mergedCatalogCache.get(cacheKey);
+      if (cached) {
+        const sliced = cached.slice(skip, skip + pageSize);
+        logger.info(`Returning cached merged catalog ${mergedCatalog.name} items ${skip}-${skip + sliced.length} of ${cached.length} total (${getTimeTakenSincePoint(start)})`);
+        return { success: true, data: sliced, errors: [] };
+      }
+    }
+
+    logger.info(`Fetching merged catalog ${mergedCatalog.name} from ${mergedCatalog.catalogIds.length} sources`);
+
+    const pagesToFetch = 3;
+    const catalogPromises = mergedCatalog.catalogIds.flatMap((catalogId) => {
+      const lastDashIndex = catalogId.lastIndexOf('-');
+      const actualCatalogId = catalogId.substring(0, lastDashIndex);
+      const catalogType = catalogId.substring(lastDashIndex + 1);
+
+      return Array.from({ length: pagesToFetch }, (_, pageIndex) => {
+        const pageSkip = pageIndex * 20;
+        const pageExtras = pageSkip > 0 ? `skip=${pageSkip}` : undefined;
+        
+        return this.getCatalog(catalogType, actualCatalogId, pageExtras)
+          .then((result) => {
+            if (result.success) {
+              return result.data;
+            }
+            logger.warn(`Failed to fetch source catalog ${actualCatalogId} page ${pageIndex}: ${result.errors.map(e => e.title).join(', ')}`);
+            return [];
+          })
+          .catch((error) => {
+            logger.warn(`Error fetching source catalog ${actualCatalogId} page ${pageIndex}:`, error);
+            return [];
+          });
+      });
+    });
+
+    const catalogResults = await Promise.all(catalogPromises);
+    let mergedResults: MetaPreview[] = catalogResults.flat();
+
+    if (mergedCatalog.dedupe && mergedCatalog.dedupe !== 'none') {
+      const seen = new Set<string>();
+      mergedResults = mergedResults.filter((item) => {
+        const key = mergedCatalog.dedupe === 'id' 
+          ? item.id 
+          : (item.name || item.id).toLowerCase();
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+    }
+
+    if (mergedCatalog.shuffle && !isSearchRequest) {
+      const shuffleCacheKey = `shuffle-merged-${id}-${this.userData.uuid}`;
+      const cachedShuffle = await shuffleCache.get(shuffleCacheKey);
+      if (cachedShuffle) {
+        mergedResults = cachedShuffle;
+      } else {
+        for (let i = mergedResults.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [mergedResults[i], mergedResults[j]] = [mergedResults[j], mergedResults[i]];
+        }
+        if (mergedCatalog.persistShuffleFor) {
+          await shuffleCache.set(
+            shuffleCacheKey,
+            mergedResults,
+            mergedCatalog.persistShuffleFor * 3600
+          );
+        }
+      }
+    }
+
+    if (mergedCatalog.rpdb && this.userData.rpdbApiKey) {
+      const rpdbApi = new RPDB(this.userData.rpdbApiKey);
+      mergedResults = await Promise.all(
+        mergedResults.map(async (item) => {
+          if (item.poster && !item.poster.includes('api.ratingposterdb.com')) {
+            if (this.userData.rpdbUseRedirectApi !== false && Env.BASE_URL) {
+              const itemId = (item as any).imdb_id || item.id;
+              const url = new URL(Env.BASE_URL);
+              url.pathname = '/api/v1/rpdb';
+              url.searchParams.set('id', itemId);
+              url.searchParams.set('type', type);
+              url.searchParams.set('fallback', item.poster);
+              url.searchParams.set('apiKey', this.userData.rpdbApiKey!);
+              item.poster = url.toString();
+            } else {
+              const rpdbPosterUrl = await rpdbApi.getPosterUrl(
+                type,
+                (item as any).imdb_id || item.id,
+                false
+              );
+              if (rpdbPosterUrl) {
+                item.poster = rpdbPosterUrl;
+              }
+            }
+          }
+          return item;
+        })
+      );
+    }
+
+    if (!isSearchRequest && Env.CATALOG_CACHE_TTL !== -1) {
+      await mergedCatalogCache.set(cacheKey, mergedResults, Env.CATALOG_CACHE_TTL);
+    }
+
+    const sliced = mergedResults.slice(skip, skip + pageSize);
+    logger.info(`Merged catalog ${mergedCatalog.name} fetched ${mergedResults.length} total items, returning ${skip}-${skip + sliced.length} in ${getTimeTakenSincePoint(start)}`);
+
+    return { success: true, data: sliced, errors: [] };
   }
 
   public async getMeta(
@@ -1081,7 +1247,16 @@ export class AIOStreams {
 
   public getCatalogs(): Manifest['catalogs'] {
     this.checkInitialised();
-    return this.finalCatalogs;
+    // Add merged catalogs to the list with pagination support
+    const mergedCatalogs: Manifest['catalogs'] = (this.userData.mergedCatalogs || [])
+      .filter((mc) => mc.enabled !== false)
+      .map((mc) => ({
+        id: mc.id,
+        name: mc.name,
+        type: mc.type,
+        extra: [{ name: 'skip' }], // Enable pagination
+      }));
+    return [...this.finalCatalogs, ...mergedCatalogs];
   }
 
   public getAddonCatalogs(): Manifest['addonCatalogs'] {
