@@ -1,5 +1,11 @@
 'use client';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { PageWrapper } from '../shared/page-wrapper';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -78,6 +84,15 @@ import { NumberInput } from '../ui/number-input';
 import { useDisclosure } from '@/hooks/disclosure';
 import { useMode } from '@/context/mode';
 import { Select } from '../ui/select';
+import { ServiceExpiryBadge } from '../ui/badge';
+import {
+  DEFAULT_USER_TAG,
+  UserAddonCategory,
+  UserTagType,
+  getUserCategoryMetadata,
+  getUserCategoryOptions,
+  getUserTagOptions,
+} from './user-addon-metadata';
 
 interface CatalogModification {
   id: string;
@@ -414,45 +429,75 @@ function Content() {
                           </div>
                         </li>
                       ) : (
-                        userData.presets.map((preset) => {
-                          const presetMetadata = status?.settings?.presets.find(
-                            (p: any) => p.ID === preset.type
-                          );
-                          return (
-                            <SortableAddonItem
-                              key={getPresetUniqueKey(preset)}
-                              preset={preset}
-                              presetMetadata={presetMetadata}
-                              onEdit={() => {
-                                setModalPreset(presetMetadata);
-                                setModalInitialValues({
-                                  options: { ...preset.options },
-                                });
-                                setModalMode('edit');
-                                setEditingAddonId(preset.instanceId);
-                                setModalOpen(true);
-                              }}
-                              onRemove={() => {
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  presets: prev.presets.filter(
-                                    (a) => a.instanceId !== preset.instanceId
-                                  ),
-                                }));
-                              }}
-                              onToggleEnabled={(v: boolean) => {
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  presets: prev.presets.map((p) =>
-                                    p.instanceId === preset.instanceId
-                                      ? { ...p, enabled: v }
-                                      : p
-                                  ),
-                                }));
-                              }}
-                            />
-                          );
-                        })
+                        (() => {
+                          // Group addons by user category and render with headers
+                          let lastCategory: UserAddonCategory | undefined =
+                            undefined;
+                          return userData.presets.map((preset) => {
+                            const presetMetadata =
+                              status?.settings?.presets.find(
+                                (p: any) => p.ID === preset.type
+                              );
+                            const userCategory = preset.options
+                              ?.userCategory as UserAddonCategory | undefined;
+                            const categoryMeta =
+                              getUserCategoryMetadata(userCategory);
+                            const showHeader =
+                              !!userCategory && userCategory !== lastCategory;
+                            const categoryLabel = categoryMeta?.label;
+                            const categoryColor = categoryMeta?.color;
+                            if (userCategory) {
+                              lastCategory = userCategory;
+                            }
+                            return (
+                              <React.Fragment key={getPresetUniqueKey(preset)}>
+                                {showHeader && (
+                                  <li
+                                    className="pt-4 pb-1 px-1 font-semibold text-sm uppercase tracking-wider"
+                                    style={{
+                                      color: categoryColor,
+                                      borderBottom: `2px solid ${categoryColor}22`,
+                                    }}
+                                  >
+                                    {categoryLabel}
+                                  </li>
+                                )}
+                                <SortableAddonItem
+                                  preset={preset}
+                                  presetMetadata={presetMetadata}
+                                  onEdit={() => {
+                                    setModalPreset(presetMetadata);
+                                    setModalInitialValues({
+                                      options: { ...preset.options },
+                                    });
+                                    setModalMode('edit');
+                                    setEditingAddonId(preset.instanceId);
+                                    setModalOpen(true);
+                                  }}
+                                  onRemove={() => {
+                                    setUserData((prev) => ({
+                                      ...prev,
+                                      presets: prev.presets.filter(
+                                        (a) =>
+                                          a.instanceId !== preset.instanceId
+                                      ),
+                                    }));
+                                  }}
+                                  onToggleEnabled={(v: boolean) => {
+                                    setUserData((prev) => ({
+                                      ...prev,
+                                      presets: prev.presets.map((p) =>
+                                        p.instanceId === preset.instanceId
+                                          ? { ...p, enabled: v }
+                                          : p
+                                      ),
+                                    }));
+                                  }}
+                                />
+                              </React.Fragment>
+                            );
+                          });
+                        })()
                       )}
                     </ul>
                   </div>
@@ -825,9 +870,29 @@ function SortableAddonItem({
     );
   };
 
+  // Get the user category color for the left border
+  const userCategory = preset.options?.userCategory as
+    | UserAddonCategory
+    | undefined;
+  const categoryColor = userCategory
+    ? getUserCategoryMetadata(userCategory)?.color
+    : undefined;
+
+  // Get the user tag info for the badge
+  const userTag = preset.options?.userTag;
+  const tagType = (userTag?.type || 'none') as UserTagType;
+  const expiryDate = userTag?.expiryDate || '';
+
   return (
     <li ref={setNodeRef} style={style}>
-      <div className="px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border flex gap-2 sm:gap-3 relative">
+      <div
+        className="px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border flex gap-2 sm:gap-3 relative"
+        style={
+          categoryColor
+            ? { borderLeftWidth: '4px', borderLeftColor: categoryColor }
+            : undefined
+        }
+      >
         <div
           className="rounded-full w-6 h-auto bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight] cursor-move flex-shrink-0"
           {...attributes}
@@ -855,9 +920,18 @@ function SortableAddonItem({
             )}
           </div>
 
-          <p className="text-base line-clamp-1 truncate block">
-            {preset.options.name}
-          </p>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <p className="text-base line-clamp-1 truncate block">
+              {preset.options.name}
+            </p>
+            {tagType !== 'none' && (
+              <ServiceExpiryBadge
+                tagType={tagType}
+                expiryDate={expiryDate}
+                className="flex-shrink-0 hidden md:inline-flex"
+              />
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
@@ -1146,25 +1220,144 @@ function AddonModal({
   onSubmit: (values: Record<string, any>) => void;
 }) {
   const { mode: configMode } = useMode();
-  const [values, setValues] = useState<Record<string, any>>(initialValues);
+
+  const normalizeValues = useCallback(
+    (incoming?: Record<string, any>) => ({
+      ...(incoming ?? {}),
+      options: { ...((incoming?.options as Record<string, any>) ?? {}) },
+    }),
+    []
+  );
+
+  const [values, setValues] = useState<Record<string, any>>(() =>
+    normalizeValues(initialValues)
+  );
   useEffect(() => {
     if (open) {
-      setValues(initialValues);
+      setValues(normalizeValues(initialValues));
     } else {
       // when closing, delay the reset to allow the animation to finish
       // so that the user doesn't see the values being reset
       setTimeout(() => {
-        setValues(initialValues);
+        setValues(normalizeValues(initialValues));
       }, 150);
     }
-  }, [open, initialValues]);
+  }, [open, initialValues, normalizeValues]);
   let dynamicOptions: Option[] = presetMetadata?.OPTIONS || [];
+
+  const currentCategoryValue = (values.options?.userCategory ??
+    initialValues.options?.userCategory) as string | undefined;
+  const currentTagType = (values.options?.userTag?.type ??
+    initialValues.options?.userTag?.type) as string | undefined;
+
+  const categoryOptions = getUserCategoryOptions(currentCategoryValue);
+  const tagOptions = getUserTagOptions(currentTagType);
+
+  // Inject userCategory and userTag options if they're not already present
+  const hasUserCategory = dynamicOptions.some(
+    (opt) => opt.id === 'userCategory'
+  );
+  const hasUserTag = dynamicOptions.some((opt) => opt.id === 'userTag');
+
+  useEffect(() => {
+    setValues((prev) => {
+      const nextOptions = { ...(prev.options ?? {}) };
+      let changed = false;
+      if (!('userTag' in nextOptions)) {
+        nextOptions.userTag = DEFAULT_USER_TAG;
+        changed = true;
+      }
+      if (!('userCategory' in nextOptions) && currentCategoryValue) {
+        nextOptions.userCategory = currentCategoryValue;
+        changed = true;
+      }
+      return changed ? { ...prev, options: nextOptions } : prev;
+    });
+  }, [currentCategoryValue]);
+
+  if (!hasUserCategory || !hasUserTag) {
+    const userOptionsToAdd: Option[] = [];
+    if (!hasUserCategory) {
+      userOptionsToAdd.push({
+        id: 'userCategory',
+        name: 'Category',
+        description:
+          'Assign a category to this addon for visual grouping in the addon list',
+        type: 'select',
+        required: false,
+        showInSimpleMode: true,
+        default: undefined,
+        options: categoryOptions.map((cat) => ({
+          label: cat.label,
+          value: cat.value,
+        })),
+      });
+    }
+    if (!hasUserTag) {
+      userOptionsToAdd.push({
+        id: 'userTag',
+        name: 'Service Tag',
+        description:
+          'Add a tag to this addon (e.g., subscription status, expiry date)',
+        type: 'service-tag',
+        required: false,
+        showInSimpleMode: true,
+        default: DEFAULT_USER_TAG,
+        options: tagOptions.map((tag) => ({
+          label: tag.label,
+          value: tag.value,
+        })),
+      });
+    }
+    dynamicOptions = [...dynamicOptions, ...userOptionsToAdd];
+  }
+
+  // Ensure existing options carry forward any custom values
+  dynamicOptions = dynamicOptions.map((opt) => {
+    if (opt.id === 'userCategory') {
+      return {
+        ...opt,
+        type: 'select',
+        options: categoryOptions.map((cat) => ({
+          label: cat.label,
+          value: cat.value,
+        })),
+      };
+    }
+    if (opt.id === 'userTag') {
+      return {
+        ...opt,
+        type: 'service-tag',
+        default: opt.default ?? DEFAULT_USER_TAG,
+        options: tagOptions.map((tag) => ({
+          label: tag.label,
+          value: tag.value,
+        })),
+      };
+    }
+    return opt;
+  });
+
   if (configMode === 'noob') {
     dynamicOptions = dynamicOptions.filter((opt: any) => {
       if (opt?.showInSimpleMode === false) return false;
       return true;
     });
   }
+
+  // Sort options so userCategory and userTag are always at the end
+  dynamicOptions = [...dynamicOptions].sort((a, b) => {
+    const userOptionsIds = ['userCategory', 'userTag'];
+    const aIsUserOption = userOptionsIds.includes(a.id);
+    const bIsUserOption = userOptionsIds.includes(b.id);
+    if (aIsUserOption && !bIsUserOption) return 1;
+    if (!aIsUserOption && bIsUserOption) return -1;
+    if (aIsUserOption && bIsUserOption) {
+      // Keep userCategory before userTag
+      return userOptionsIds.indexOf(a.id) - userOptionsIds.indexOf(b.id);
+    }
+    return 0;
+  });
 
   // Check if all required fields are filled
   const allRequiredFilled = dynamicOptions.every((opt: any) => {
@@ -1220,7 +1413,21 @@ function AddonModal({
       }
     }
     if (allRequiredFilled) {
-      onSubmit(values);
+      const mergedOptions = { ...(values.options ?? {}) };
+      dynamicOptions.forEach((opt) => {
+        if (mergedOptions[opt.id] === undefined) {
+          if (opt.id === 'userTag') {
+            mergedOptions[opt.id] = DEFAULT_USER_TAG;
+          } else if (opt.default !== undefined) {
+            mergedOptions[opt.id] = opt.default;
+          }
+        }
+      });
+
+      onSubmit({
+        ...values,
+        options: mergedOptions,
+      });
     } else {
       toast.error('Please fill in all required fields');
     }
