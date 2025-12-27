@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.20.0](https://github.com/Viren070/AIOStreams/compare/v2.19.0...v2.20.0) (2025-12-27)
+
+
+### Features
+
+* add DTS-X audio tag support which was previously being misclassified  ([#523](https://github.com/Viren070/AIOStreams/issues/523)) ([8c4485a](https://github.com/Viren070/AIOStreams/commit/8c4485a019f37f863230147f863ba298c404e6f3))
+* add HLG visual tag support ([#562](https://github.com/Viren070/AIOStreams/issues/562)) ([ac3bba7](https://github.com/Viren070/AIOStreams/commit/ac3bba7bf457e996c1fa9c5d8d733a0e2827cd9c))
+* add passthrough() SEL function ([#522](https://github.com/Viren070/AIOStreams/issues/522)) ([7ea0cbb](https://github.com/Viren070/AIOStreams/commit/7ea0cbb4192e1bfeb4289694d88146987c74da63))
+* **builtins/nab:** add specific env var for user agent ([c3c3184](https://github.com/Viren070/AIOStreams/commit/c3c31843911a3c82aa44e4aa84c7292db985e478))
+
+
+### Bug Fixes
+
+* add missing NextFunction type to request handler ([3374950](https://github.com/Viren070/AIOStreams/commit/337495002fe547f1fd0985fd7116190e721a9aee))
+* always provide stream data in meta endpoint ([1d317a0](https://github.com/Viren070/AIOStreams/commit/1d317a05b5297dd1d1d48c63119ab227f6f6b072))
+* **constants:** update default auto play attributes ([689b8a2](https://github.com/Viren070/AIOStreams/commit/689b8a2dc3d40faaab2c113305c31d5c335dd6f2))
+* **frontend:** provide textinput with manifest URL ([b0b5515](https://github.com/Viren070/AIOStreams/commit/b0b5515297d15c84e7d561c4068da001ca7f66a3)), closes [#517](https://github.com/Viren070/AIOStreams/issues/517)
+* **parser/regex:** handle optional `a` after ddp for atmos([#561](https://github.com/Viren070/AIOStreams/issues/561)) ([a501b13](https://github.com/Viren070/AIOStreams/commit/a501b13d17389eba2f4a39e14bf5e30af6ab3b20))
+* **parser:** dont use country handler ([304b032](https://github.com/Viren070/AIOStreams/commit/304b032de9e35c35e1a7980b26f14ff8dc89626c))
+* **proxy:** handle errors safely ([dec001e](https://github.com/Viren070/AIOStreams/commit/dec001edeb5af72499b244f4e2f4369e173df4e0))
+
 ## [2.19.0](https://github.com/Viren070/AIOStreams/compare/v2.18.1...v2.19.0) (2025-12-17)
 
 
