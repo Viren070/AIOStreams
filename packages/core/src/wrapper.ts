@@ -213,7 +213,7 @@ export class Wrapper {
       { type, id },
       this.addon.timeout,
       validator,
-      Env.STREAM_CACHE_TTL != -1 ? streamsCache : undefined,
+      Env.STREAM_CACHE_TTL != -1 && !this.addon.library ? streamsCache : undefined,
       Env.STREAM_CACHE_TTL,
       this.preset.getCacheKey({
         resource: 'stream',
