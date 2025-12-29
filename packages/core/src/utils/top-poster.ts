@@ -13,31 +13,53 @@ const posterCheckCache = Cache.getInstance<string, string>('topPosterCheck');
 export class TopPoster {
   private readonly apiKey: string;
   constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    this.apiKey = apiKey.trim();
     if (!this.apiKey) {
       throw new Error('Top Poster API key is not set');
     }
   }
+
   public async validateApiKey(): Promise<boolean> {
     const cached = await apiKeyValidationCache.get(this.apiKey);
-    if (cached) {
+    if (cached !== undefined) {
       return cached;
     }
 
-    const response = await makeRequest(
-      `https://api.top-streaming.stream/auth/verify/${this.apiKey}`,
-      {
-        timeout: 10000,
-        ignoreRecursion: true,
-      }
-    );
+    let response;
+    try {
+      response = await makeRequest(
+        `https://api.top-streaming.stream/auth/verify/${this.apiKey}`,
+        {
+          timeout: 10000,
+          ignoreRecursion: true,
+        }
+      );
+    } catch (error: any) {
+      // Differentiate network errors from API errors
+      throw new Error(`Failed to connect to Top Poster API: ${error.message}`);
+    }
+
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid Top Poster API key');
+      } else if (response.status === 429) {
+        throw new Error('Top Poster API rate limit exceeded');
+      } else {
+        throw new Error(
+          `Top Poster API returned an unexpected status: ${response.status} - ${response.statusText}`
+        );
+      }
+    }
+
+    let data;
+    try {
+      data = TopPosterIsValidResponse.parse(await response.json());
+    } catch (error: any) {
       throw new Error(
-        `Invalid Top Poster API key: ${response.status} - ${response.statusText}`
+        `Top Poster API returned malformed JSON: ${error.message}`
       );
     }
 
-    const data = TopPosterIsValidResponse.parse(await response.json());
     if (!data.valid) {
       throw new Error('Invalid Top Poster API key');
     }
@@ -60,8 +82,8 @@ export class TopPoster {
     const parsedId = IdParser.parse(id, type);
     if (!parsedId) return null;
 
-    let idType: 'tmdb' | 'imdb' | 'tvdb';
-    let idValue: string;
+    let idType: 'tmdb' | 'imdb' | 'tvdb' | null = null;
+    let idValue: string | null = null;
 
     switch (parsedId.type) {
       case 'themoviedbId':
@@ -100,7 +122,6 @@ export class TopPoster {
         break;
       }
     }
-    // @ts-ignore
     if (!idType || !idValue) return null;
     return { idType, idValue };
   }
@@ -115,7 +136,7 @@ export class TopPoster {
 
     const cacheKey = `${type}-${id}-${this.apiKey}`;
     const cached = await posterCheckCache.get(cacheKey);
-    if (cached) {
+    if (cached !== undefined) {
       return cached;
     }
 
