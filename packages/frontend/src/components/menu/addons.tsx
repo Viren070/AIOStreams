@@ -1914,18 +1914,6 @@ function MergedCatalogsCard() {
     });
   };
 
-  const getSelectedCountForAddon = (addonName: string) => {
-    const catalogs = catalogsByAddon[addonName] || [];
-    return catalogs.filter((c) => selectedCatalogs.includes(c.value)).length;
-  };
-
-  const getCatalogDisplayName = (catalogId: string) => {
-    const catalog = availableCatalogs.find((c) => c.value === catalogId);
-    return catalog
-      ? `${catalog.name} - ${capitalise(catalog.catalogType)}`
-      : catalogId;
-  };
-
   const toggleCatalog = (catalogValue: string) => {
     setSelectedCatalogs((prev) =>
       prev.includes(catalogValue)
@@ -1980,7 +1968,7 @@ function MergedCatalogsCard() {
                 name: name.trim(),
                 type: type.trim(),
                 catalogIds: selectedCatalogs,
-                deduplicatationMethods:
+                deduplicationMethods:
                   dedupeMethods.length > 0 ? dedupeMethods : undefined,
               }
             : mc
@@ -1999,7 +1987,7 @@ function MergedCatalogsCard() {
             type: type.trim(),
             catalogIds: selectedCatalogs,
             enabled: true,
-            deduplicatationMethods:
+            deduplicationMethods:
               dedupeMethods.length > 0 ? dedupeMethods : undefined,
           },
         ],
@@ -2197,7 +2185,6 @@ function MergedCatalogsCard() {
                 Object.entries(filteredCatalogsByAddon).map(
                   ([addonName, catalogs]) => {
                     const isExpanded = expandedAddons.has(addonName);
-                    const selectedCount = getSelectedCountForAddon(addonName);
                     return (
                       <div key={addonName} className="border-b last:border-b-0">
                         {/* Addon header - clickable to expand/collapse */}
