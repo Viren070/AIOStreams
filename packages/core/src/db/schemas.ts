@@ -304,12 +304,9 @@ const MergedCatalog = z.object({
   id: z.string().min(1), // unique id for the merged catalog
   name: z.string().min(1), // name of the merged catalog
   type: z.string().min(1), // the type of the merged catalog (movie, series, etc.)
-  catalogIds: z.array(z.string().min(1)), // array of catalog ids to merge (format: "catalogId-catalogType")
+  catalogIds: z.array(z.string().min(1)), // array of catalog ids to merge (format: "id=encode(id)&type=encode(type)") // encoded to handle incorrect splitting
   enabled: z.boolean().optional(), // enable or disable the merged catalog
-  rpdb: z.boolean().optional(), // use rpdb for posters if supported
-  shuffle: z.boolean().optional(), // shuffle the merged catalog
-  persistShuffleFor: z.number().min(0).max(24).optional(), // persist the shuffle for a given amount of time (in hours)
-  dedupe: z.enum(['none', 'id', 'title']).optional(), // deduplication method: none, by id, or by title
+  deduplicatationMethods: z.array(z.enum(['id', 'title'])).optional(), // deduplication methods to apply in order
 });
 
 export const CacheAndPlaySchema = z
