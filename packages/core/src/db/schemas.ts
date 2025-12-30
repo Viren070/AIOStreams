@@ -306,7 +306,7 @@ const MergedCatalog = z.object({
   type: z.string().min(1), // the type of the merged catalog (movie, series, etc.)
   catalogIds: z.array(z.string().min(1)), // array of catalog ids to merge (format: "id=encode(id)&type=encode(type)") // encoded to handle incorrect splitting
   enabled: z.boolean().optional(), // enable or disable the merged catalog
-  deduplicatationMethods: z.array(z.enum(['id', 'title'])).optional(), // deduplication methods to apply in order
+  deduplicationMethods: z.array(z.enum(['id', 'title'])).optional(), // deduplication methods to apply in order
 });
 
 export const CacheAndPlaySchema = z

@@ -370,7 +370,7 @@ export class AIOStreams {
   ): Promise<AIOStreamsResponse<MetaPreview[]>> {
     logger.info(`Handling catalog request`, { type, id, extras });
 
-    if (id.startsWith('merged-')) {
+    if (id.startsWith('aiostreams.merged.')) {
       return this.getMergedCatalog(type, id, extras);
     }
 
@@ -605,7 +605,7 @@ export class AIOStreams {
     // Deduplicate the collected items
     allItems = this.deduplicateMergedCatalog(
       allItems,
-      mergedCatalog.deduplicatationMethods
+      mergedCatalog.deduplicationMethods
     );
 
     // Check if all source catalogs have shuffle enabled - if so, shuffle this page's items
@@ -1289,6 +1289,42 @@ export class AIOStreams {
       }
     }
 
+    // Build set of source catalog IDs that are part of enabled merged catalogs
+    // This is done BEFORE overrideType is applied so we use the original catalog types
+    const catalogsInMergedCatalogs = new Set<string>();
+    if (this.userData.mergedCatalogs?.length) {
+      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
+        (mc) => mc.enabled !== false
+      );
+      for (const mc of enabledMergedCatalogs) {
+        for (const encodedCatalogId of mc.catalogIds) {
+          const params = new URLSearchParams(encodedCatalogId);
+          const catalogId = params.get('id');
+          const catalogType = params.get('type');
+          if (catalogId && catalogType) {
+            catalogsInMergedCatalogs.add(`${catalogId}-${catalogType}`);
+          }
+        }
+      }
+    }
+
+    // Add enabled merged catalogs to finalCatalogs BEFORE sorting
+    // so they participate in the natural catalogModifications-based sort
+    if (this.userData.mergedCatalogs?.length) {
+      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
+        (mc) => mc.enabled !== false
+      );
+      for (const mc of enabledMergedCatalogs) {
+        const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
+        this.finalCatalogs.push({
+          id: mc.id,
+          name: mc.name,
+          type: mc.type,
+          extra: mergedExtras.length > 0 ? mergedExtras : undefined,
+        });
+      }
+    }
+
     if (this.userData.catalogModifications) {
       this.finalCatalogs = this.finalCatalogs
         // Sort catalogs based on catalogModifications order, with non-modified catalogs at the end
@@ -1314,12 +1350,29 @@ export class AIOStreams {
           // If both are in modifications, sort by their order in modifications
           return aModIndex - bModIndex;
         })
-        // filter out any catalogs that are disabled
+        // filter out any catalogs that are disabled OR are source catalogs of enabled merged catalogs
         .filter((catalog) => {
+          // Don't filter out merged catalogs themselves
+          if (catalog.id.startsWith('aiostreams.merged.')) {
+            const modification = this.userData.catalogModifications!.find(
+              (mod) => mod.id === catalog.id && mod.type === catalog.type
+            );
+            return modification?.enabled !== false;
+          }
+
+          // Check if this catalog is a source of an enabled merged catalog
+          const key = `${catalog.id}-${catalog.type}`;
+          if (catalogsInMergedCatalogs.has(key)) {
+            logger.debug(
+              `Filtering out catalog ${catalog.id} of type ${catalog.type} as it is part of an enabled merged catalog`
+            );
+            return false;
+          }
+
           const modification = this.userData.catalogModifications!.find(
             (mod) => mod.id === catalog.id && mod.type === catalog.type
           );
-          return modification?.enabled !== false; // only if explicity disabled i.e. enabled is true or undefined
+          return modification?.enabled !== false; // only if explicitly disabled i.e. enabled is true or undefined
         })
         // rename any catalogs if necessary and apply the onlyOnDiscover modification
         .map((catalog) => {
@@ -1365,92 +1418,6 @@ export class AIOStreams {
           }
           return catalog;
         });
-
-      // Insert merged catalogs at correct positions based on catalogModifications order
-      if (this.userData.mergedCatalogs?.length) {
-        const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
-          (mc) => mc.enabled !== false
-        );
-
-        for (const mc of enabledMergedCatalogs) {
-          // Find the position in catalogModifications for this merged catalog
-          const modIndex = this.userData.catalogModifications!.findIndex(
-            (mod) => mod.id === mc.id && mod.type === mc.type
-          );
-
-          if (modIndex === -1) {
-            // Merged catalog not in catalogModifications - add to end
-            const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
-            this.finalCatalogs.push({
-              id: mc.id,
-              name: mc.name,
-              type: mc.type,
-              extra: mergedExtras.length > 0 ? mergedExtras : undefined,
-            });
-          } else {
-            // Find the correct position: after the last catalog with a lower mod index
-            // and before the first catalog with a higher mod index
-            const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
-            const mergedCatalog = {
-              id: mc.id,
-              name: mc.name,
-              type: mc.type,
-              extra: mergedExtras.length > 0 ? mergedExtras : undefined,
-            };
-
-            let insertIndex = this.finalCatalogs.length;
-            for (let i = 0; i < this.finalCatalogs.length; i++) {
-              const catModIndex = this.userData.catalogModifications!.findIndex(
-                (mod) =>
-                  mod.id === this.finalCatalogs[i].id &&
-                  mod.type === this.finalCatalogs[i].type
-              );
-              if (catModIndex === -1 || catModIndex > modIndex) {
-                insertIndex = i;
-                break;
-              }
-            }
-            this.finalCatalogs.splice(insertIndex, 0, mergedCatalog);
-          }
-        }
-      }
-    }
-
-    // Filter out standalone catalogs that are part of an enabled merged catalog
-    if (this.userData.mergedCatalogs?.length) {
-      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
-        (mc) => mc.enabled !== false
-      );
-
-      // Build a set of catalog IDs that are part of enabled merged catalogs
-      const catalogsInMergedCatalogs = new Set<string>();
-      for (const mc of enabledMergedCatalogs) {
-        for (const encodedCatalogId of mc.catalogIds) {
-          const params = new URLSearchParams(encodedCatalogId);
-          const catalogId = params.get('id');
-          const catalogType = params.get('type');
-          if (catalogId && catalogType) {
-            catalogsInMergedCatalogs.add(`${catalogId}-${catalogType}`);
-          }
-        }
-      }
-
-      if (catalogsInMergedCatalogs.size > 0) {
-        this.finalCatalogs = this.finalCatalogs.filter((catalog) => {
-          // Don't filter out merged catalogs themselves
-          if (catalog.id.startsWith('merged-')) {
-            return true;
-          }
-          const key = `${catalog.id}-${catalog.type}`;
-          const isInMergedCatalog = catalogsInMergedCatalogs.has(key);
-          if (isInMergedCatalog) {
-            logger.debug(
-              `Filtering out catalog ${catalog.id} of type ${catalog.type} as it is part of an enabled merged catalog`
-            );
-          }
-          return !isInMergedCatalog;
-        });
-      }
     }
   }
 

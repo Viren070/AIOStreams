@@ -103,7 +103,7 @@ interface MergedCatalog {
   type: string;
   catalogIds: string[];
   enabled?: boolean;
-  deduplicatationMethods?: ('id' | 'title')[];
+  deduplicationMethods?: ('id' | 'title')[];
 }
 
 export function AddonsMenu() {
@@ -1556,15 +1556,13 @@ function CatalogSettingsCard() {
 
           // Build set of merged catalog IDs to preserve them during filtering
           const mergedCatalogIds = new Set(
-            (prev.mergedCatalogs || [])
-              .filter((mc) => mc.enabled !== false)
-              .map((mc) => `${mc.id}-${mc.type}`)
+            (prev.mergedCatalogs || []).map((mc) => `${mc.id}-${mc.type}`)
           );
 
           // first we need to handle existing modifications, to ensure that they keep their order
           const modifications = existingMods.map((eMod) => {
             // Skip merged catalogs - they don't come from the API
-            if (eMod.id.startsWith('merged-')) {
+            if (eMod.id.startsWith('aiostreams.merged.')) {
               return eMod;
             }
             const nMod = response.data!.find(
@@ -1611,7 +1609,7 @@ function CatalogSettingsCard() {
                   type: mc.type,
                   enabled: true,
                   hideable: true,
-                  searchable: true, // Merged catalogs support search if any source does
+                  searchable: true,
                   addonName: 'Merged Catalog',
                 });
               }
@@ -1817,7 +1815,7 @@ function CatalogSettingsCard() {
                               ),
                           };
                           // If this is a merged catalog, also update mergedCatalogs state
-                          if (catalog.id.startsWith('merged-')) {
+                          if (catalog.id.startsWith('aiostreams.merged.')) {
                             newState.mergedCatalogs = prev.mergedCatalogs?.map(
                               (mc) =>
                                 mc.id === catalog.id ? { ...mc, enabled } : mc
@@ -1860,7 +1858,7 @@ function MergedCatalogsCard() {
   };
 
   const allCatalogs = (userData.catalogModifications || [])
-    .filter((c) => !c.id.startsWith('merged-')) // Exclude merged catalogs from being selected as sources
+    .filter((c) => !c.id.startsWith('aiostreams.merged.')) // Exclude merged catalogs from being selected as sources
     .map((c) => ({
       value: `id=${encodeURIComponent(c.id)}&type=${encodeURIComponent(c.type)}`,
       name: c.name || c.id,
@@ -1952,7 +1950,7 @@ function MergedCatalogsCard() {
     setName(mergedCatalog.name);
     setType(mergedCatalog.type);
     setSelectedCatalogs(mergedCatalog.catalogIds);
-    setDedupeMethods(mergedCatalog.deduplicatationMethods ?? ['id']);
+    setDedupeMethods(mergedCatalog.deduplicationMethods ?? ['id']);
     setCatalogSearch('');
     setExpandedAddons(new Set());
     setModalOpen(true);
@@ -1990,7 +1988,7 @@ function MergedCatalogsCard() {
       }));
       toast.success('Merged catalog updated');
     } else {
-      const newId = `merged-${Date.now()}`;
+      const newId = `aiostreams.merged.${Date.now()}`;
       setUserData((prev) => ({
         ...prev,
         mergedCatalogs: [
@@ -2368,7 +2366,7 @@ function SortableCatalogItem({
   const { setUserData } = useUserData();
 
   // Check if this is a merged catalog
-  const isMergedCatalog = catalog.id.startsWith('merged-');
+  const isMergedCatalog = catalog.id.startsWith('aiostreams.merged.');
 
   const style = {
     transform: CSS.Transform.toString(transform),
