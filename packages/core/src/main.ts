@@ -1520,7 +1520,7 @@ export class AIOStreams {
 
       // isRequired is true only if ALL source catalogs that have this extra have it as required
       // If not all catalogs have this extra, it's effectively not required since some don't need it
-      if (data.appearances === sourceCatalogCount && data.allRequired) {
+      if (data.allRequired) {
         extra.isRequired = true;
       }
 
