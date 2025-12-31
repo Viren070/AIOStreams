@@ -1200,6 +1200,19 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default Debridio Watchtower user agent',
   }),
 
+  DEBRIDIO_IC4A_URL: url({
+    default: 'https://ic4a.lb.debridio.com',
+    desc: 'Debridio IC4A URL',
+  }),
+  DEFAULT_DEBRIDIO_IC4A_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Debridio IC4A timeout',
+  }),
+  DEFAULT_DEBRIDIO_IC4A_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Debridio IC4A user agent',
+  }),
+
   // StremThru Store settings
   STREMTHRU_STORE_URL: urlOrUrlList({
     default: ['https://stremthru.13377001.xyz/stremio/store'],
