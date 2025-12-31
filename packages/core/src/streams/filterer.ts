@@ -421,8 +421,8 @@ class StreamFilterer {
       if (
         filterRequestTypes &&
         filterRequestTypes.length > 0 &&
-        (!filterRequestTypes.includes(type) ||
-          (isAnime && !filterRequestTypes.includes('anime')))
+        ((isAnime && !filterRequestTypes.includes('anime')) ||
+          (!isAnime && !filterRequestTypes.includes(type)))
       ) {
         logger.debug(
           `[DigitalReleaseFilter] Skipping for type "${type}"${isAnime ? ' (anime)' : ''} (not in requestTypes: ${filterRequestTypes.join(', ')})`
