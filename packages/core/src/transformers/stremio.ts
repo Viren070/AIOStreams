@@ -247,9 +247,33 @@ export class StremioTransformer {
         .map((type) => type.trim())
         .filter(Boolean)
     );
+    const filteredOutCounts: Record<string, number> = {};
     const filteredStreams = disabledStreamTypes.size
-      ? streams.filter((stream) => !disabledStreamTypes.has(stream.type))
+      ? streams.filter((stream) => {
+          if (disabledStreamTypes.has(stream.type)) {
+            filteredOutCounts[stream.type] =
+              (filteredOutCounts[stream.type] || 0) + 1;
+            return false;
+          }
+          return true;
+        })
       : streams;
+    const disabledStreamTypeTotal = Object.values(filteredOutCounts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+    const statisticsList = [...statistics];
+    if (this.userData.statistics?.enabled && disabledStreamTypeTotal > 0) {
+      statisticsList.push({
+        title: '🚫 Disabled Stream Types',
+        description: [
+          'Streams of these types were removed by the operator:',
+          ...Object.entries(filteredOutCounts).map(
+            ([type, count]) => `• ${type} (${count})`
+          ),
+        ].join('\n'),
+      });
+    }
     const { provideStreamData, disableAutoplay } = options ?? {};
 
     let transformedStreams: AIOStream[] = [];
@@ -268,8 +292,12 @@ export class StremioTransformer {
       )
     );
 
+    const filteredSummary =
+      disabledStreamTypeTotal > 0
+        ? ` (filtered ${disabledStreamTypeTotal} disabled stream${disabledStreamTypeTotal === 1 ? '' : 's'})`
+        : '';
     logger.info(
-      `Transformed ${filteredStreams.length} streams using ${this.userData.formatter.id} formatter in ${getTimeTakenSincePoint(start)}`
+      `Transformed ${filteredStreams.length} streams using ${this.userData.formatter.id} formatter in ${getTimeTakenSincePoint(start)}${filteredSummary}`
     );
 
     // add errors to the end (if this.userData.hideErrors is false  or the resource is not in this.userData.hideErrorsForResources)
@@ -286,7 +314,7 @@ export class StremioTransformer {
 
     if (this.userData.statistics?.enabled) {
       let position = this.userData.statistics?.position || 'bottom';
-      let statisticStreams = statistics.map((statistic) => ({
+      let statisticStreams = statisticsList.map((statistic) => ({
         name: statistic.title,
         description: statistic.description,
         externalUrl: 'https://github.com/Viren070/AIOStreams',
