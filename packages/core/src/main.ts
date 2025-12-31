@@ -815,8 +815,8 @@ export class AIOStreams {
         // Merge all and sort by IMDB rating (descending)
         const allItems = itemsBySource.flat();
         return allItems.sort((a, b) => {
-          const ratingA = parseInt(a.imdbRating?.toString() ?? '0');
-          const ratingB = parseInt(b.imdbRating?.toString() ?? '0');
+          const ratingA = parseFloat(a.imdbRating?.toString() ?? '0');
+          const ratingB = parseFloat(b.imdbRating?.toString() ?? '0');
           if (isNaN(ratingA) && isNaN(ratingB)) return 0;
           if (isNaN(ratingA)) return 1;
           if (isNaN(ratingB)) return -1;
