@@ -502,13 +502,23 @@ export class AIOStreams {
 
     const parsedExtras = new ExtrasParser(extras);
     const requestedSkip = parsedExtras.skip || 0;
-    const isSearchRequest = extras?.includes('search');
+    const isSearchRequest = !!parsedExtras.search;
+    const requestedGenre = parsedExtras.genre;
 
-    // Build base cache key from extras (excluding skip - we'll append skip separately)
+    // Build base cache key from extras (excluding skip) and merged catalog config
     const extrasForCacheKey = new ExtrasParser(extras);
     extrasForCacheKey.skip = undefined;
     const extrasCacheKeyPart = extrasForCacheKey.toString();
-    const baseCacheKey = `${id}-${this.userData.uuid}${extrasCacheKeyPart ? `-${extrasCacheKeyPart}` : ''}`;
+
+    // Include a hash of the merged catalog config in the cache key
+    const configHash = getSimpleTextHash(
+      JSON.stringify({
+        catalogIds: mergedCatalog.catalogIds,
+        deduplicationMethods: mergedCatalog.deduplicationMethods,
+        mergeMethod: mergedCatalog.mergeMethod,
+      })
+    );
+    const baseCacheKey = `${id}-${this.userData.uuid}-${configHash}${extrasCacheKeyPart ? `-${extrasCacheKeyPart}` : ''}`;
     const skipCacheKey = `${baseCacheKey}-skip=${requestedSkip}`;
 
     let skipState: MergedCatalogSkipState | undefined;
@@ -544,16 +554,103 @@ export class AIOStreams {
         const catalogId = params.get('id');
         const catalogType = params.get('type');
         if (!catalogId || !catalogType) {
-          return { encodedCatalogId, items: [], fetched: 0, success: false };
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: false,
+            skipped: false,
+          };
         }
 
         const addonInstanceId = catalogId.split('.', 2)[0];
         const actualCatalogId = catalogId.split('.').slice(1).join('.');
+
+        // Smart filtering: check if this source supports the requested extras
+        const catalogExtras = this.getCatalogExtras(
+          addonInstanceId,
+          actualCatalogId,
+          catalogType
+        );
+
+        // If search is requested but catalog doesn't support search, skip it
+        if (
+          isSearchRequest &&
+          !catalogExtras?.some((e) => e.name === 'search')
+        ) {
+          logger.debug(
+            `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support search`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: true,
+            skipped: true,
+          };
+        }
+
+        // If genre is requested, check if catalog supports it and has the genre option
+        if (requestedGenre && requestedGenre !== 'None') {
+          const genreExtra = catalogExtras?.find((e) => e.name === 'genre');
+          if (!genreExtra) {
+            logger.debug(
+              `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support genre extra`
+            );
+            return {
+              encodedCatalogId,
+              items: [],
+              fetched: 0,
+              success: true,
+              skipped: true,
+            };
+          }
+          // If the genre extra has specific options, check if the requested genre is available
+          if (genreExtra.options && genreExtra.options.length > 0) {
+            const hasGenre = genreExtra.options.some(
+              (opt) => opt === requestedGenre || opt === null // null can mean "all genres"
+            );
+            if (!hasGenre) {
+              logger.debug(
+                `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't have genre "${requestedGenre}"`
+              );
+              return {
+                encodedCatalogId,
+                items: [],
+                fetched: 0,
+                success: true,
+                skipped: true,
+              };
+            }
+          }
+        }
+
         const sourceSkip = skipState!.sourceSkips[encodedCatalogId] || 0;
+        const supportsSkip = catalogExtras?.some((e) => e.name === 'skip');
+
+        // If this catalog doesn't support skip and we've already fetched from it once,
+        // mark it as exhausted to prevent returning the same items repeatedly
+        if (!supportsSkip && sourceSkip > 0) {
+          logger.debug(
+            `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support skip and already fetched (exhausted)`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: true,
+            skipped: true,
+          };
+        }
 
         // Build source extras - copy all extras and set the appropriate skip for this source
+        // Only include skip if the catalog supports it
         const sourceExtras = new ExtrasParser(extras);
-        sourceExtras.skip = sourceSkip > 0 ? sourceSkip : undefined;
+        if (supportsSkip) {
+          sourceExtras.skip = sourceSkip > 0 ? sourceSkip : undefined;
+        } else {
+          sourceExtras.skip = undefined; // Don't send skip to catalogs that don't support it
+        }
 
         logger.debug('Fetching merged catalog source', {
           encodedCatalogId,
@@ -577,7 +674,13 @@ export class AIOStreams {
                 : 'Unknown error'
             }`
           );
-          return { encodedCatalogId, items: [], fetched: 0, success: false };
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: false,
+            skipped: false,
+          };
         }
 
         // Apply catalog modifications (shuffle, reverse, RPDB) to each source's items
@@ -594,6 +697,7 @@ export class AIOStreams {
           items: modifiedItems,
           fetched: result.items.length, // Use original count for skip tracking
           success: true,
+          skipped: false,
         };
       }
     );
@@ -607,9 +711,12 @@ export class AIOStreams {
 
     const fetchResults = await Promise.all(fetchPromises);
 
-    // Check if ALL sources failed
-    const allFailed = fetchResults.every((r) => !r.success);
-    if (allFailed && mergedCatalog.catalogIds.length > 0) {
+    // Check if ALL non-skipped sources failed
+    const nonSkippedResults = fetchResults.filter((r) => !r.skipped);
+    const allFailed =
+      nonSkippedResults.length > 0 &&
+      nonSkippedResults.every((r) => !r.success);
+    if (allFailed) {
       logger.error(
         `All sources failed for merged catalog ${mergedCatalog.name}`
       );
@@ -628,7 +735,10 @@ export class AIOStreams {
 
     // Collect items per source for merge method processing
     const itemsBySource: MetaPreview[][] = [];
-    for (const { encodedCatalogId, items, fetched } of fetchResults) {
+    for (const { encodedCatalogId, items, fetched, skipped } of fetchResults) {
+      // Don't update skip tracking for skipped sources - they weren't queried
+      if (skipped) continue;
+
       // Update next skip for this source (current skip + items returned)
       nextSourceSkips[encodedCatalogId] =
         (skipState.sourceSkips[encodedCatalogId] || 0) + fetched;
@@ -751,6 +861,24 @@ export class AIOStreams {
     // Handle string formats: "2020" or "2020-2024"
     const match = String(releaseInfo).match(/^(\d{4})/);
     return match ? parseInt(match[1], 10) : 0;
+  }
+
+  /**
+   * Gets the extras configuration for a specific catalog from an addon's manifest.
+   * Used to determine what extras (search, genre, etc.) a catalog supports.
+   */
+  private getCatalogExtras(
+    addonInstanceId: string,
+    catalogId: string,
+    catalogType: string
+  ): Manifest['catalogs'][number]['extra'] | undefined {
+    const manifest = this.manifests[addonInstanceId];
+    if (!manifest) return undefined;
+
+    const catalog = manifest.catalogs?.find(
+      (c) => c.id === catalogId && c.type === catalogType
+    );
+    return catalog?.extra;
   }
 
   /**
@@ -1616,7 +1744,7 @@ export class AIOStreams {
 
       // isRequired is true only if ALL source catalogs that have this extra have it as required
       // If not all catalogs have this extra, it's effectively not required since some don't need it
-      if (data.allRequired) {
+      if (data.appearances === sourceCatalogCount && data.allRequired) {
         extra.isRequired = true;
       }
 

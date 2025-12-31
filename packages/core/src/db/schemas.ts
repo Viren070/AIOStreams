@@ -1084,6 +1084,9 @@ const StatusResponseSchema = z.object({
         credentials: z.array(OptionDefinition),
       })
     ),
+    limits: z.object({
+      maxMergedCatalogSources: z.number(),
+    }),
   }),
 });
 

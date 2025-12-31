@@ -655,6 +655,10 @@ export const Env = cleanEnv(process.env, {
     default: 20,
     desc: 'Max number of groups',
   }),
+  MAX_MERGED_CATALOG_SOURCES: num({
+    default: 10,
+    desc: 'Max number of source catalogs in a single merged catalog',
+  }),
 
   ALLOWED_REGEX_PATTERNS: json<string[]>({
     default: [],

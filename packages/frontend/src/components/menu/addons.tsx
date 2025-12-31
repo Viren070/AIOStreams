@@ -1845,6 +1845,9 @@ function CatalogSettingsCard() {
 
 function MergedCatalogsCard() {
   const { userData, setUserData } = useUserData();
+  const { status } = useStatus();
+  const maxMergedCatalogSources =
+    status?.settings?.limits?.maxMergedCatalogSources ?? 10;
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMergedCatalog, setEditingMergedCatalog] =
     useState<MergedCatalog | null>(null);
@@ -1924,11 +1927,19 @@ function MergedCatalogsCard() {
   };
 
   const toggleCatalog = (catalogValue: string) => {
-    setSelectedCatalogs((prev) =>
-      prev.includes(catalogValue)
-        ? prev.filter((c) => c !== catalogValue)
-        : [...prev, catalogValue]
-    );
+    setSelectedCatalogs((prev) => {
+      if (prev.includes(catalogValue)) {
+        return prev.filter((c) => c !== catalogValue);
+      }
+      // Prevent adding more than the limit
+      if (prev.length >= maxMergedCatalogSources) {
+        toast.error(
+          `Maximum ${maxMergedCatalogSources} source catalogs allowed`
+        );
+        return prev;
+      }
+      return [...prev, catalogValue];
+    });
   };
 
   const openAddModal = () => {
@@ -1966,6 +1977,12 @@ function MergedCatalogsCard() {
     }
     if (selectedCatalogs.length < 2) {
       toast.error('Select at least 2 catalogs to merge');
+      return;
+    }
+    if (selectedCatalogs.length > maxMergedCatalogSources) {
+      toast.error(
+        `Maximum ${maxMergedCatalogSources} source catalogs allowed per merged catalog`
+      );
       return;
     }
 
@@ -2299,7 +2316,7 @@ function MergedCatalogsCard() {
             {/* Selected catalogs preview */}
             {selectedCatalogs.length > 0 && (
               <div className="text-xs text-[--muted]">
-                Selected:{' '}
+                Selected ({selectedCatalogs.length}/{maxMergedCatalogSources}):{' '}
                 {selectedCatalogs
                   .slice(0, 3)
                   .map((id) => {

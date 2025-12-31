@@ -96,6 +96,9 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : preset.DISABLED,
       })),
       services: getEnvironmentServiceDetails(),
+      limits: {
+        maxMergedCatalogSources: Env.MAX_MERGED_CATALOG_SOURCES,
+      },
     },
   };
 };

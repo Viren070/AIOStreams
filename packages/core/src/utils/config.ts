@@ -321,6 +321,18 @@ export async function validateConfig(
       );
     }
   }
+
+  // validate merged catalogs source limits
+  if (config.mergedCatalogs) {
+    for (const mergedCatalog of config.mergedCatalogs) {
+      if (mergedCatalog.catalogIds.length > Env.MAX_MERGED_CATALOG_SOURCES) {
+        throw new Error(
+          `Merged catalog "${mergedCatalog.name}" has ${mergedCatalog.catalogIds.length} source catalogs, but the maximum is ${Env.MAX_MERGED_CATALOG_SOURCES}`
+        );
+      }
+    }
+  }
+
   // now, validate preset options and service credentials.
 
   if (config.presets) {
