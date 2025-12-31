@@ -26,6 +26,16 @@ export function applyMigrations(config: any): UserData {
         break;
     }
   }
+
+  if (typeof config.digitalReleaseFilter === 'boolean') {
+    const oldValue = config.digitalReleaseFilter;
+    config.digitalReleaseFilter = {
+      enabled: oldValue,
+      tolerance: 1,
+      requestTypes: ['movie', 'series', 'anime'],
+      addons: [],
+    };
+  }
   if (config.titleMatching?.matchYear) {
     config.yearMatching = {
       enabled: true,
