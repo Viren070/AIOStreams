@@ -361,6 +361,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Comma separated list of disabled services in format of service:reason',
   }),
+  DISABLED_STREAM_TYPES: str({
+    default: undefined,
+    desc: 'Comma separated list of stream types that should never be returned to clients (e.g., p2p,http,live).',
+  }),
   REGEX_FILTER_ACCESS: str({
     default: 'trusted',
     desc: 'Who can use regex filters',
