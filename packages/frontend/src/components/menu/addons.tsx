@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { MergedCatalog } from '@aiostreams/core';
 import { PageWrapper } from '../shared/page-wrapper';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -95,22 +96,6 @@ interface CatalogModification {
   searchable?: boolean;
   addonName?: string;
   disableSearch?: boolean;
-}
-
-interface MergedCatalog {
-  id: string;
-  name: string;
-  type: string;
-  catalogIds: string[];
-  enabled?: boolean;
-  deduplicationMethods?: ('id' | 'title')[];
-  mergeMethod?:
-    | 'sequential'
-    | 'interleave'
-    | 'shuffle'
-    | 'imdbRating'
-    | 'releaseDateAsc'
-    | 'releaseDateDesc';
 }
 
 export function AddonsMenu() {
@@ -1879,8 +1864,6 @@ function MergedCatalogsCard() {
       isDisabled: c.enabled === false,
     }));
 
-  const availableCatalogs = allCatalogs.filter((c) => !c.isDisabled);
-
   const catalogsByAddon = allCatalogs.reduce(
     (acc, catalog) => {
       if (!acc[catalog.addonName]) {
@@ -2033,15 +2016,6 @@ function MergedCatalogsCard() {
       mergedCatalogs: (prev.mergedCatalogs || []).filter((mc) => mc.id !== id),
     }));
     toast.success('Merged catalog deleted');
-  };
-
-  const toggleEnabled = (id: string, enabled: boolean) => {
-    setUserData((prev) => ({
-      ...prev,
-      mergedCatalogs: (prev.mergedCatalogs || []).map((mc) =>
-        mc.id === id ? { ...mc, enabled } : mc
-      ),
-    }));
   };
 
   return (

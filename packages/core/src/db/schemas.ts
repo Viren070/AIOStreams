@@ -319,6 +319,8 @@ const MergedCatalog = z.object({
     .optional(), // defaults to 'sequential' if not specified
 });
 
+export type MergedCatalog = z.infer<typeof MergedCatalog>;
+
 export const CacheAndPlaySchema = z
   .object({
     enabled: z.boolean().optional(),

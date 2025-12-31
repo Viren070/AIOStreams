@@ -23,6 +23,7 @@ import { Wrapper } from './wrapper.js';
 import { PresetManager } from './presets/index.js';
 import {
   AddonCatalog,
+  MergedCatalog,
   Meta,
   MetaPreview,
   ParsedMeta,
@@ -787,15 +788,18 @@ export class AIOStreams {
    */
   private applyMergeMethod(
     itemsBySource: MetaPreview[][],
-    method?: string
+    method?: MergedCatalog['mergeMethod']
   ): MetaPreview[] {
     const mergeMethod = method || 'sequential';
 
     switch (mergeMethod) {
-      case 'roundRobin': {
+      case 'interleave': {
         // Interleave: take 1st from each source, then 2nd from each, etc.
         const result: MetaPreview[] = [];
-        const maxLength = Math.max(...itemsBySource.map((arr) => arr.length));
+        const maxLength = Math.max(
+          0,
+          ...itemsBySource.map((arr) => arr.length)
+        );
         for (let i = 0; i < maxLength; i++) {
           for (const sourceItems of itemsBySource) {
             if (i < sourceItems.length) {
@@ -808,7 +812,11 @@ export class AIOStreams {
 
       case 'shuffle': {
         const allItems = itemsBySource.flat();
-        return allItems.sort(() => Math.random() - 0.5);
+        for (let i = allItems.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [allItems[i], allItems[j]] = [allItems[j], allItems[i]];
+        }
+        return allItems;
       }
 
       case 'imdbRating': {
