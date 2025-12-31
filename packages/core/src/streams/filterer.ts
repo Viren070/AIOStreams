@@ -403,7 +403,7 @@ class StreamFilterer {
 
     const applyDigitalReleaseFilter = () => {
       const digitalReleaseFilterConfig = this.userData.digitalReleaseFilter;
-      logger.info(`[DigitalReleaseFilter] Checking filter for ${id}`, {
+      logger.debug(`[DigitalReleaseFilter] Checking filter for ${id}`, {
         enabled: digitalReleaseFilterConfig?.enabled,
         tolerance: digitalReleaseFilterConfig?.tolerance,
         requestTypes: digitalReleaseFilterConfig?.requestTypes,
@@ -417,28 +417,28 @@ class StreamFilterer {
         return true;
       }
 
-      // Check if this request type should use the digital release filter
       const filterRequestTypes = digitalReleaseFilterConfig.requestTypes;
       if (
         filterRequestTypes &&
         filterRequestTypes.length > 0 &&
-        !filterRequestTypes.includes(type)
+        (!filterRequestTypes.includes(type) ||
+          (isAnime && !filterRequestTypes.includes('anime')))
       ) {
-        logger.info(
-          `[DigitalReleaseFilter] Skipping for type "${type}" (not in requestTypes: ${filterRequestTypes.join(', ')})`
+        logger.debug(
+          `[DigitalReleaseFilter] Skipping for type "${type}"${isAnime ? ' (anime)' : ''} (not in requestTypes: ${filterRequestTypes.join(', ')})`
         );
         return true;
       }
 
       if (!['movie', 'series', 'anime'].includes(type)) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Skipping for unsupported type "${type}"`
         );
         return true;
       }
 
       if (!requestedMetadata?.releaseDate) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] No release date found, allowing streams`
         );
         return true;
@@ -446,7 +446,7 @@ class StreamFilterer {
 
       const releaseDate = new Date(requestedMetadata.releaseDate);
       if (isNaN(releaseDate.getTime())) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Invalid release date "${requestedMetadata.releaseDate}", allowing streams`
         );
         return true;
@@ -457,14 +457,10 @@ class StreamFilterer {
         (today.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      logger.info(
-        `[DigitalReleaseFilter] Days since release: ${daysSinceRelease} (released: ${requestedMetadata.releaseDate})`
-      );
-
-      // Check tolerance: if release is within X days of current date, ignore the filter
+      // Check tolerance: if release is within X days of current date, ignore filter
       const tolerance = digitalReleaseFilterConfig.tolerance ?? 0;
       if (daysSinceRelease >= 0 && daysSinceRelease <= tolerance) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Within tolerance! ${daysSinceRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
           { title: requestedMetadata?.title }
         );
@@ -484,7 +480,7 @@ class StreamFilterer {
         const dateToCheck = episodeAirDate || requestedMetadata?.releaseDate;
 
         if (!dateToCheck) {
-          logger.info(
+          logger.debug(
             `[DigitalReleaseFilter] No episode or series air date found, allowing streams due to lack of data`
           );
           return true;
@@ -492,7 +488,7 @@ class StreamFilterer {
 
         const episodeReleaseDate = new Date(dateToCheck);
         if (isNaN(episodeReleaseDate.getTime())) {
-          logger.info(
+          logger.debug(
             `[DigitalReleaseFilter] Invalid episode/series date "${dateToCheck}", allowing streams`
           );
           return true;
@@ -503,13 +499,13 @@ class StreamFilterer {
             (1000 * 60 * 60 * 24)
         );
 
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Days since episode aired: ${daysSinceEpisode} (aired: ${dateToCheck})`
         );
 
         const daysFromAirDate = Math.abs(daysSinceEpisode);
         if (daysFromAirDate <= tolerance) {
-          logger.info(
+          logger.debug(
             `[DigitalReleaseFilter] Episode within tolerance! ${daysFromAirDate} days <= ${tolerance} days tolerance. ALLOWING streams.`,
             {
               title: requestedMetadata?.title,
@@ -531,21 +527,21 @@ class StreamFilterer {
           return false;
         }
 
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Episode has aired, allowing streams`
         );
         return true;
       }
 
       if (daysSinceRelease > 365) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Movie is over 1 year old, probably has digital release. Allowing streams.`
         );
         return true;
       }
 
       if (!releaseDates || releaseDates.length === 0) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] No TMDB release dates found, allowing streams due to lack of data`
         );
         return true;
@@ -559,7 +555,7 @@ class StreamFilterer {
         (rd) => new Date(rd.release_date) <= today
       );
 
-      logger.info(
+      logger.debug(
         `[DigitalReleaseFilter] Found ${digitalReleaseDates.length} digital release dates from TMDB`,
         {
           digitalReleaseDates: digitalReleaseDates.map((rd) => ({
@@ -571,7 +567,7 @@ class StreamFilterer {
       );
 
       if (hasDigitalRelease) {
-        logger.info(
+        logger.debug(
           `[DigitalReleaseFilter] Digital release found! Allowing streams.`
         );
         return true;
