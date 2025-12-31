@@ -273,9 +273,11 @@ class StreamFilterer {
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
     let releaseDates: ReleaseDate[] | undefined;
+    let episodeAirDate: string | undefined;
     if (
       (this.userData.titleMatching?.enabled ||
-        (this.userData.digitalReleaseFilter && type === 'movie') ||
+        (this.userData.digitalReleaseFilter?.enabled &&
+          ['movie', 'series', 'anime'].includes(type)) ||
         this.userData.yearMatching?.enabled ||
         this.userData.seasonEpisodeMatching?.enabled) &&
       constants.TYPES.includes(type as any)
@@ -342,19 +344,42 @@ class StreamFilterer {
         }
 
         if (
-          this.userData.digitalReleaseFilter &&
-          requestedMetadata.tmdbId &&
-          type === 'movie'
+          this.userData.digitalReleaseFilter?.enabled &&
+          requestedMetadata.tmdbId
         ) {
-          try {
-            releaseDates = await new TMDBMetadata({
-              accessToken: this.userData.tmdbAccessToken,
-              apiKey: this.userData.tmdbApiKey,
-            }).getReleaseDates(requestedMetadata.tmdbId);
-          } catch (error) {
-            logger.warn(
-              `Error fetching release dates for ${id} (tmdb: ${requestedMetadata.tmdbId}): ${error}`
-            );
+          if (type === 'movie') {
+            try {
+              releaseDates = await new TMDBMetadata({
+                accessToken: this.userData.tmdbAccessToken,
+                apiKey: this.userData.tmdbApiKey,
+              }).getReleaseDates(requestedMetadata.tmdbId);
+            } catch (error) {
+              logger.warn(
+                `Error fetching release dates for ${id} (tmdb: ${requestedMetadata.tmdbId}): ${error}`
+              );
+            }
+          } else if (
+            (type === 'series' || type === 'anime') &&
+            parsedId.season &&
+            parsedId.episode
+          ) {
+            try {
+              episodeAirDate = await new TMDBMetadata({
+                accessToken: this.userData.tmdbAccessToken,
+                apiKey: this.userData.tmdbApiKey,
+              }).getEpisodeAirDate(
+                requestedMetadata.tmdbId,
+                Number(parsedId.season),
+                Number(parsedId.episode)
+              );
+              logger.debug(
+                `Fetched episode air date for ${id}: ${episodeAirDate}`
+              );
+            } catch (error) {
+              logger.warn(
+                `Error fetching episode air date for ${id} (tmdb: ${requestedMetadata.tmdbId}, S${parsedId.season}E${parsedId.episode}): ${error}`
+              );
+            }
           }
         }
 
@@ -377,30 +402,53 @@ class StreamFilterer {
     }
 
     const applyDigitalReleaseFilter = () => {
-      logger.debug(`Applying digital release filter for ${id}`, {
+      const digitalReleaseFilterConfig = this.userData.digitalReleaseFilter;
+      logger.info(`[DigitalReleaseFilter] Checking filter for ${id}`, {
+        enabled: digitalReleaseFilterConfig?.enabled,
+        tolerance: digitalReleaseFilterConfig?.tolerance,
+        requestTypes: digitalReleaseFilterConfig?.requestTypes,
+        addons: digitalReleaseFilterConfig?.addons,
+        contentType: type,
         releaseDate: requestedMetadata?.releaseDate,
-        type,
         tmdbId: requestedMetadata?.tmdbId,
-        digitalReleaseFilter: this.userData.digitalReleaseFilter,
-        releaseDates: releaseDates?.length,
+        releaseDatesCount: releaseDates?.length ?? 0,
       });
-      if (!this.userData.digitalReleaseFilter) {
+      if (!digitalReleaseFilterConfig?.enabled) {
         return true;
       }
 
-      if (type !== 'movie') {
-        // only appply digital release filter to movies
+      // Check if this request type should use the digital release filter
+      const filterRequestTypes = digitalReleaseFilterConfig.requestTypes;
+      if (
+        filterRequestTypes &&
+        filterRequestTypes.length > 0 &&
+        !filterRequestTypes.includes(type)
+      ) {
+        logger.info(
+          `[DigitalReleaseFilter] Skipping for type "${type}" (not in requestTypes: ${filterRequestTypes.join(', ')})`
+        );
+        return true;
+      }
+
+      if (!['movie', 'series', 'anime'].includes(type)) {
+        logger.info(
+          `[DigitalReleaseFilter] Skipping for unsupported type "${type}"`
+        );
         return true;
       }
 
       if (!requestedMetadata?.releaseDate) {
-        // if no release date is present, keep due to lack of data
+        logger.info(
+          `[DigitalReleaseFilter] No release date found, allowing streams`
+        );
         return true;
       }
 
       const releaseDate = new Date(requestedMetadata.releaseDate);
       if (isNaN(releaseDate.getTime())) {
-        // if the release date is invalid, keep due to lack of data
+        logger.info(
+          `[DigitalReleaseFilter] Invalid release date "${requestedMetadata.releaseDate}", allowing streams`
+        );
         return true;
       }
       const today = new Date();
@@ -409,46 +457,129 @@ class StreamFilterer {
         (today.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
+      logger.info(
+        `[DigitalReleaseFilter] Days since release: ${daysSinceRelease} (released: ${requestedMetadata.releaseDate})`
+      );
+
+      // Check tolerance: if release is within X days of current date, ignore the filter
+      const tolerance = digitalReleaseFilterConfig.tolerance ?? 0;
+      if (daysSinceRelease >= 0 && daysSinceRelease <= tolerance) {
+        logger.info(
+          `[DigitalReleaseFilter] Within tolerance! ${daysSinceRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
+          { title: requestedMetadata?.title }
+        );
+        return true;
+      }
+
       if (daysSinceRelease < 0) {
-        // a movie released in the future is not digitaly released yet.
-        logger.debug(
-          `Filtering out all results as movie is not digitally released yet`,
-          {
-            title: requestedMetadata?.title,
-            daysSinceRelease,
-          }
+        logger.info(
+          `[DigitalReleaseFilter] BLOCKING - Content releases in ${Math.abs(daysSinceRelease)} days (future release)`,
+          { title: requestedMetadata?.title, type }
         );
         return false;
       }
 
+      if (type === 'series' || type === 'anime') {
+        // Use episode air date if we have it, else just use season releaseDate
+        const dateToCheck = episodeAirDate || requestedMetadata?.releaseDate;
+
+        if (!dateToCheck) {
+          logger.info(
+            `[DigitalReleaseFilter] No episode or series air date found, allowing streams due to lack of data`
+          );
+          return true;
+        }
+
+        const episodeReleaseDate = new Date(dateToCheck);
+        if (isNaN(episodeReleaseDate.getTime())) {
+          logger.info(
+            `[DigitalReleaseFilter] Invalid episode/series date "${dateToCheck}", allowing streams`
+          );
+          return true;
+        }
+
+        const daysSinceEpisode = Math.floor(
+          (today.getTime() - episodeReleaseDate.getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        logger.info(
+          `[DigitalReleaseFilter] Days since episode aired: ${daysSinceEpisode} (aired: ${dateToCheck})`
+        );
+
+        const daysFromAirDate = Math.abs(daysSinceEpisode);
+        if (daysFromAirDate <= tolerance) {
+          logger.info(
+            `[DigitalReleaseFilter] Episode within tolerance! ${daysFromAirDate} days <= ${tolerance} days tolerance. ALLOWING streams.`,
+            {
+              title: requestedMetadata?.title,
+              episode: `${parsedId?.season}:${parsedId?.episode}`,
+              future: daysSinceEpisode < 0,
+            }
+          );
+          return true;
+        }
+
+        if (daysSinceEpisode < 0) {
+          logger.info(
+            `[DigitalReleaseFilter] BLOCKING - Episode airs in ${Math.abs(daysSinceEpisode)} days (future release)`,
+            {
+              title: requestedMetadata?.title,
+              episode: `${parsedId?.season}:${parsedId?.episode}`,
+            }
+          );
+          return false;
+        }
+
+        logger.info(
+          `[DigitalReleaseFilter] Episode has aired, allowing streams`
+        );
+        return true;
+      }
+
       if (daysSinceRelease > 365) {
-        // a movie released more than a year ago is likely to have a digital release.
+        logger.info(
+          `[DigitalReleaseFilter] Movie is over 1 year old, probably has digital release. Allowing streams.`
+        );
         return true;
       }
 
       if (!releaseDates || releaseDates.length === 0) {
-        // if release dates couldn't be fetched for a recent movie, keep due to lack of data
+        logger.info(
+          `[DigitalReleaseFilter] No TMDB release dates found, allowing streams due to lack of data`
+        );
         return true;
       }
 
       // check if at least one of the release dates is in the past and return true if so
-      const hasDigitalRelease = releaseDates.some(
-        (releaseDate) =>
-          releaseDate.type >= 4 &&
-          releaseDate.type <= 6 &&
-          new Date(releaseDate.release_date) <= today
+      const digitalReleaseDates = releaseDates.filter(
+        (rd) => rd.type >= 4 && rd.type <= 6
+      );
+      const hasDigitalRelease = digitalReleaseDates.some(
+        (rd) => new Date(rd.release_date) <= today
+      );
+
+      logger.info(
+        `[DigitalReleaseFilter] Found ${digitalReleaseDates.length} digital release dates from TMDB`,
+        {
+          digitalReleaseDates: digitalReleaseDates.map((rd) => ({
+            date: rd.release_date,
+            type: rd.type,
+          })),
+          hasDigitalRelease,
+        }
       );
 
       if (hasDigitalRelease) {
+        logger.info(
+          `[DigitalReleaseFilter] Digital release found! Allowing streams.`
+        );
         return true;
       }
 
-      logger.debug(
-        `Filtering out all results as no digital release was found`,
-        {
-          title: requestedMetadata?.title,
-          daysSinceRelease,
-        }
+      logger.info(
+        `[DigitalReleaseFilter] BLOCKING - No digital release found for "${requestedMetadata?.title}"`,
+        { daysSinceRelease }
       );
       return false;
     };
@@ -733,12 +864,27 @@ class StreamFilterer {
       );
     }
 
-    // Early digital release filter check - if it returns false, filter out all streams
-    // except those with passthrough for 'digitalRelease' stage
+    // Early digital release filter check - if it returns false, filter out streams
+    // except those with passthrough for 'digitalRelease' stage or those from addons not in the filter list
     if (!applyDigitalReleaseFilter()) {
-      const passthroughDigitalRelease = streams.filter((stream) =>
-        shouldPassthroughStage(stream, 'digitalRelease')
-      );
+      const digitalReleaseFilterAddons =
+        this.userData.digitalReleaseFilter?.addons;
+      const passthroughDigitalRelease = streams.filter((stream) => {
+        // Check if stream has passthrough for this stage
+        if (shouldPassthroughStage(stream, 'digitalRelease')) {
+          return true;
+        }
+        // If addons filter is set and stream is not from a filtered addon, bypass
+        if (
+          digitalReleaseFilterAddons &&
+          digitalReleaseFilterAddons.length > 0 &&
+          stream.addon.instanceId &&
+          !digitalReleaseFilterAddons.includes(stream.addon.instanceId)
+        ) {
+          return true;
+        }
+        return false;
+      });
       const filteredCount = streams.length - passthroughDigitalRelease.length;
       if (filteredCount > 0) {
         this.filterStatistics.removed.noDigitalRelease.total = filteredCount;

@@ -427,7 +427,7 @@ export async function validateConfig(
   const needTmdb =
     config.titleMatching?.enabled ||
     config.yearMatching?.enabled ||
-    config.digitalReleaseFilter;
+    config.digitalReleaseFilter?.enabled;
 
   if (needTmdb && !tmdbAuth) {
     throw new Error(

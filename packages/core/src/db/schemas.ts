@@ -397,7 +397,14 @@ export const UserDataSchema = z.object({
   includeAgeRange: z.tuple([z.number().min(0), z.number().min(0)]).optional(),
   requiredAgeRange: z.tuple([z.number().min(0), z.number().min(0)]).optional(),
   ageRangeTypes: z.array(z.enum(['usenet', 'debrid', 'p2p'])).optional(),
-  digitalReleaseFilter: z.boolean().optional(),
+  digitalReleaseFilter: z
+    .object({
+      enabled: z.boolean().optional(),
+      tolerance: z.number().min(0).max(365).optional(),
+      requestTypes: z.array(z.string()).optional(),
+      addons: z.array(z.string()).optional(),
+    })
+    .optional(),
   enableSeadex: z.boolean().optional(),
   excludeSeasonPacks: z.boolean().optional(),
   excludeCached: z.boolean().optional(),
