@@ -725,6 +725,14 @@ class StreamFilterer {
       return true;
     };
 
+    const includedStreamsByExpression =
+      await this.applyIncludedStreamExpressions(streams, type, id);
+    if (includedStreamsByExpression.length > 0) {
+      logger.info(
+        `${includedStreamsByExpression.length} streams were included by stream expressions`
+      );
+    }
+
     // Early digital release filter check - if it returns false, filter out all streams
     // except those with passthrough for 'digitalRelease' stage
     if (!applyDigitalReleaseFilter()) {
@@ -1658,14 +1666,6 @@ class StreamFilterer {
 
       return true;
     };
-
-    const includedStreamsByExpression =
-      await this.applyIncludedStreamExpressions(streams, type, id);
-    if (includedStreamsByExpression.length > 0) {
-      logger.info(
-        `${includedStreamsByExpression.length} streams were included by stream expressions`
-      );
-    }
 
     // Separate included streams by whether they have passthrough flags
     const includedWithPassthrough = includedStreamsByExpression.filter(
