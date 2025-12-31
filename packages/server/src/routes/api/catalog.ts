@@ -45,6 +45,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return;
     }
     validatedUserData.catalogModifications = undefined;
+    // The frontend should only see the individual catalogs that can be used to create merged catalogs
+    validatedUserData.mergedCatalogs = undefined;
     const aio = new AIOStreams(validatedUserData);
     await aio.initialise();
     // return minimal catalog data

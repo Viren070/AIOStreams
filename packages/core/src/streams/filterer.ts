@@ -725,6 +725,14 @@ class StreamFilterer {
       return true;
     };
 
+    const includedStreamsByExpression =
+      await this.applyIncludedStreamExpressions(streams, type, id);
+    if (includedStreamsByExpression.length > 0) {
+      logger.info(
+        `${includedStreamsByExpression.length} streams were included by stream expressions`
+      );
+    }
+
     // Early digital release filter check - if it returns false, filter out all streams
     // except those with passthrough for 'digitalRelease' stage
     if (!applyDigitalReleaseFilter()) {
@@ -1570,7 +1578,10 @@ class StreamFilterer {
         }
       }
 
-      if (!shouldPassthroughStage(stream, 'title') && !performTitleMatch(stream)) {
+      if (
+        !shouldPassthroughStage(stream, 'title') &&
+        !performTitleMatch(stream)
+      ) {
         this.incrementRemovalReason(
           'titleMatching',
           `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
@@ -1578,7 +1589,10 @@ class StreamFilterer {
         return false;
       }
 
-      if (!shouldPassthroughStage(stream, 'year') && !performYearMatch(stream)) {
+      if (
+        !shouldPassthroughStage(stream, 'year') &&
+        !performYearMatch(stream)
+      ) {
         this.incrementRemovalReason(
           'yearMatching',
           `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
@@ -1586,7 +1600,10 @@ class StreamFilterer {
         return false;
       }
 
-      if (!shouldPassthroughStage(stream, 'episode') && !performSeasonEpisodeMatch(stream)) {
+      if (
+        !shouldPassthroughStage(stream, 'episode') &&
+        !performSeasonEpisodeMatch(stream)
+      ) {
         const pad = (n: number) => n.toString().padStart(2, '0');
         const s = stream.parsedFile?.seasons;
         const e = stream.parsedFile?.episodes;
@@ -1650,16 +1667,38 @@ class StreamFilterer {
       return true;
     };
 
-    const includedStreamsByExpression =
-      await this.applyIncludedStreamExpressions(streams, type, id);
-    if (includedStreamsByExpression.length > 0) {
+    // Separate included streams by whether they have passthrough flags
+    const includedWithPassthrough = includedStreamsByExpression.filter(
+      (stream) => stream.passthrough !== undefined
+    );
+    const includedWithoutPassthrough = includedStreamsByExpression.filter(
+      (stream) => stream.passthrough === undefined
+    );
+
+    if (includedWithoutPassthrough.length > 0) {
       logger.info(
-        `${includedStreamsByExpression.length} streams were included by stream expressions`
+        `${includedWithoutPassthrough.length} included streams (no passthrough) will skip filtering entirely`
       );
     }
 
+    if (includedWithPassthrough.length > 0) {
+      logger.info(
+        `${includedWithPassthrough.length} included streams have passthrough flags and will go through filtering`
+      );
+
+      for (const stream of includedWithPassthrough) {
+        const stages = Array.isArray(stream.passthrough)
+          ? stream.passthrough.join(', ')
+          : 'all';
+        logger.debug(
+          `Stream "${stream.filename || stream.id}" passthrough stages: [${stages}]`
+        );
+      }
+    }
+
+    // Only exclude streams without passthrough from filtering
     const filterableStreams = streams.filter(
-      (stream) => !includedStreamsByExpression.some((s) => s.id === stream.id)
+      (stream) => !includedWithoutPassthrough.some((s) => s.id === stream.id)
     );
 
     const filterResults = await Promise.all(
@@ -1671,7 +1710,7 @@ class StreamFilterer {
     );
 
     const finalStreams = StreamUtils.mergeStreams([
-      ...includedStreamsByExpression,
+      ...includedWithoutPassthrough,
       ...filteredStreams,
     ]);
 

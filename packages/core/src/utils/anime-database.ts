@@ -361,6 +361,7 @@ function validateManamiEntry(data: any): ManamiEntry | null {
     !data.animeSeason ||
     !Object.values(AnimeSeason).includes(data.animeSeason.season) ||
     (data.animeSeason.year !== null &&
+      data.animeSeason.year !== undefined &&
       typeof data.animeSeason.year !== 'number')
   ) {
     return null;

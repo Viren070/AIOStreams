@@ -300,6 +300,27 @@ const CatalogModification = z.object({
   addonName: z.string().optional(), // the name of the addon that provides the catalog
 });
 
+const MergedCatalog = z.object({
+  id: z.string().min(1), // unique id for the merged catalog
+  name: z.string().min(1), // name of the merged catalog
+  type: z.string().min(1), // the type of the merged catalog (movie, series, etc.)
+  catalogIds: z.array(z.string().min(1)), // array of catalog ids to merge (format: "id=encode(id)&type=encode(type)") // encoded to handle incorrect splitting
+  enabled: z.boolean().optional(), // enable or disable the merged catalog
+  deduplicationMethods: z.array(z.enum(['id', 'title'])).optional(), // deduplication methods to apply in order
+  mergeMethod: z
+    .enum([
+      'sequential', // merge in order of catalogIds array
+      'interleave', // interleave: 1st from each, then 2nd from each, etc.
+      'shuffle', // shuffle the merged results
+      'imdbRating', // sort by IMDB rating (descending)
+      'releaseDateAsc', // sort by release date (oldest first)
+      'releaseDateDesc', // sort by release date (newest first)
+    ])
+    .optional(), // defaults to 'sequential' if not specified
+});
+
+export type MergedCatalog = z.infer<typeof MergedCatalog>;
+
 export const CacheAndPlaySchema = z
   .object({
     enabled: z.boolean().optional(),
@@ -509,6 +530,7 @@ export const UserDataSchema = z.object({
   services: ServiceList.optional(),
   presets: PresetList,
   catalogModifications: z.array(CatalogModification).optional(),
+  mergedCatalogs: z.array(MergedCatalog).optional(),
   externalDownloads: z.boolean().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
 });
@@ -1064,6 +1086,9 @@ const StatusResponseSchema = z.object({
         credentials: z.array(OptionDefinition),
       })
     ),
+    limits: z.object({
+      maxMergedCatalogSources: z.number(),
+    }),
   }),
 });
 
