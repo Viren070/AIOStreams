@@ -459,6 +459,8 @@ class StreamFilterer {
 
       // Check tolerance: if release is within X days of current date, ignore filter
       const tolerance = digitalReleaseFilterConfig.tolerance ?? 0;
+      const daysFromRelease = Math.abs(daysSinceRelease);
+
       if (daysSinceRelease >= 0 && daysSinceRelease <= tolerance) {
         logger.debug(
           `[DigitalReleaseFilter] Within tolerance! ${daysSinceRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
@@ -469,7 +471,7 @@ class StreamFilterer {
 
       if (daysSinceRelease < 0) {
         logger.info(
-          `[DigitalReleaseFilter] BLOCKING - Content releases in ${Math.abs(daysSinceRelease)} days (future release)`,
+          `[DigitalReleaseFilter] BLOCKING - Content releases in ${daysFromRelease} days (future release)`,
           { title: requestedMetadata?.title, type }
         );
         return false;
@@ -874,8 +876,8 @@ class StreamFilterer {
         if (
           digitalReleaseFilterAddons &&
           digitalReleaseFilterAddons.length > 0 &&
-          stream.addon.instanceId &&
-          !digitalReleaseFilterAddons.includes(stream.addon.instanceId)
+          stream.addon.preset.id &&
+          !digitalReleaseFilterAddons.includes(stream.addon.preset.id)
         ) {
           return true;
         }
