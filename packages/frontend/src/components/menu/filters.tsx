@@ -1675,6 +1675,7 @@ function Content() {
                     side="right"
                     help="Filter out streams for movies that don't have a year specified."
                     moreHelp="Disabling this will allow streams without a year to be included in the results."
+                    disabled={!userData.yearMatching?.enabled}
                     value={userData.yearMatching?.strict ?? true}
                     onValueChange={(value) => {
                       setUserData((prev) => ({
@@ -1775,7 +1776,7 @@ function Content() {
                     label="Strict"
                     side="right"
                     help="Filter out streams for series that don't have any season or episode specified."
-                    moreHelp="Without this enabled, only streams with present but incorrect season or episode will be filtered out."
+                    moreHelp="Disabling this will allow streams without a season or episode to be included in the results."
                     disabled={!userData.seasonEpisodeMatching?.enabled}
                     value={userData.seasonEpisodeMatching?.strict ?? false}
                     onValueChange={(value) => {
@@ -2358,11 +2359,12 @@ function Content() {
               <HeadingWithPageControls heading="Size" />
               <div className="mb-4">
                 <p className="text-sm text-[--muted]">
-                  Set minimum and maximum size limits for movies, series, and anime series. You
-                  can set a global limit, and also choose to set specific limits
-                  for each resolution. For a given stream, only one set of size
-                  filters would be used. A resolution specific limit takes
-                  priority. Anime series limits take precedence over regular series limits.
+                  Set minimum and maximum size limits for movies, series, and
+                  anime series. You can set a global limit, and also choose to
+                  set specific limits for each resolution. For a given stream,
+                  only one set of size filters would be used. A resolution
+                  specific limit takes priority. Anime series limits take
+                  precedence over regular series limits.
                 </p>
               </div>
               <div className="space-y-4">
