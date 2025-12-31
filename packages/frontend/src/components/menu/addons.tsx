@@ -104,6 +104,13 @@ interface MergedCatalog {
   catalogIds: string[];
   enabled?: boolean;
   deduplicationMethods?: ('id' | 'title')[];
+  mergeMethod?:
+    | 'sequential'
+    | 'interleave'
+    | 'shuffle'
+    | 'imdbRating'
+    | 'releaseDateAsc'
+    | 'releaseDateDesc';
 }
 
 export function AddonsMenu() {
@@ -1658,7 +1665,7 @@ function CatalogSettingsCard() {
       // Trigger refresh when merged catalog count changes (added or deleted)
       fetchCatalogs(true);
     }
-  }, [userData.mergedCatalogs?.length]);
+  }, [userData.mergedCatalogs?.length, fetchCatalogs]);
 
   const capitalise = (str: string | undefined) => {
     if (!str) return '';
@@ -1847,6 +1854,8 @@ function MergedCatalogsCard() {
   const [dedupeMethods, setDedupeMethods] = useState<('id' | 'title')[]>([
     'id',
   ]);
+  const [mergeMethod, setMergeMethod] =
+    useState<MergedCatalog['mergeMethod']>('sequential');
   const [catalogSearch, setCatalogSearch] = useState('');
   const [expandedAddons, setExpandedAddons] = useState<Set<string>>(new Set());
 
@@ -1928,6 +1937,7 @@ function MergedCatalogsCard() {
     setType('movie');
     setSelectedCatalogs([]);
     setDedupeMethods(['id']);
+    setMergeMethod('sequential');
     setCatalogSearch('');
     setExpandedAddons(new Set());
     setModalOpen(true);
@@ -1939,6 +1949,7 @@ function MergedCatalogsCard() {
     setType(mergedCatalog.type);
     setSelectedCatalogs(mergedCatalog.catalogIds);
     setDedupeMethods(mergedCatalog.deduplicationMethods ?? ['id']);
+    setMergeMethod(mergedCatalog.mergeMethod ?? 'sequential');
     setCatalogSearch('');
     setExpandedAddons(new Set());
     setModalOpen(true);
@@ -1970,6 +1981,7 @@ function MergedCatalogsCard() {
                 catalogIds: selectedCatalogs,
                 deduplicationMethods:
                   dedupeMethods.length > 0 ? dedupeMethods : undefined,
+                mergeMethod: mergeMethod ?? 'sequential',
               }
             : mc
         ),
@@ -1989,6 +2001,7 @@ function MergedCatalogsCard() {
             enabled: true,
             deduplicationMethods:
               dedupeMethods.length > 0 ? dedupeMethods : undefined,
+            mergeMethod: mergeMethod ?? 'sequential',
           },
         ],
       }));
@@ -2316,6 +2329,57 @@ function MergedCatalogsCard() {
             placeholder="None - Keep all items"
             emptyMessage="No deduplication methods available"
           />
+
+          <Select
+            label="Merge Method"
+            help="How to combine results from the source catalogs."
+            options={[
+              {
+                value: 'sequential',
+                label: 'Sequential',
+              },
+              {
+                value: 'interleave',
+                label: 'Interleave',
+              },
+              {
+                value: 'shuffle',
+                label: 'Shuffle',
+              },
+              {
+                value: 'imdbRating',
+                label: 'IMDb Rating',
+              },
+              {
+                value: 'releaseDateDesc',
+                label: 'Release Date (Newest)',
+              },
+              {
+                value: 'releaseDateAsc',
+                label: 'Release Date (Oldest)',
+              },
+            ]}
+            value={mergeMethod ?? 'sequential'}
+            onValueChange={(v) =>
+              setMergeMethod(v as MergedCatalog['mergeMethod'])
+            }
+          />
+
+          {(mergeMethod === 'imdbRating' ||
+            mergeMethod === 'releaseDateDesc' ||
+            mergeMethod === 'releaseDateAsc') && (
+            <Alert
+              intent="alert"
+              description="Sorting is applied per page only. Items are sorted within each page of results, not globally across all pages. A lower-rated item from page 1 may still appear before a higher-rated item from page 2."
+            />
+          )}
+
+          {mergeMethod === 'shuffle' && (
+            <Alert
+              intent="alert"
+              description="Shuffling is applied per page only. Items are shuffled within each page of results, not globally across all pages."
+            />
+          )}
 
           <Button className="w-full" type="submit">
             {editingMergedCatalog ? 'Save Changes' : 'Create Merged Catalog'}

@@ -307,6 +307,16 @@ const MergedCatalog = z.object({
   catalogIds: z.array(z.string().min(1)), // array of catalog ids to merge (format: "id=encode(id)&type=encode(type)") // encoded to handle incorrect splitting
   enabled: z.boolean().optional(), // enable or disable the merged catalog
   deduplicationMethods: z.array(z.enum(['id', 'title'])).optional(), // deduplication methods to apply in order
+  mergeMethod: z
+    .enum([
+      'sequential', // merge in order of catalogIds array
+      'interleave', // interleave: 1st from each, then 2nd from each, etc.
+      'shuffle', // shuffle the merged results
+      'imdbRating', // sort by IMDB rating (descending)
+      'releaseDateAsc', // sort by release date (oldest first)
+      'releaseDateDesc', // sort by release date (newest first)
+    ])
+    .optional(), // defaults to 'sequential' if not specified
 });
 
 export const CacheAndPlaySchema = z

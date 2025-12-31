@@ -411,16 +411,17 @@ export class AIOStreams {
 
   /**
    * Applies catalog modifications like shuffle, reverse, RPDB posters, etc.
-   * Used by getCatalog for standalone catalogs.
+   * Used by getCatalog for standalone catalogs and getMergedCatalog for source catalogs.
    */
   private async applyCatalogModifications(
     items: MetaPreview[],
     catalogId: string,
     type: string,
-    extras?: string
+    extras?: string,
+    isSearchRequest?: boolean
   ): Promise<MetaPreview[]> {
     let catalog = [...items];
-    const isSearchRequest = extras?.includes('search');
+    const isSearch = isSearchRequest ?? extras?.includes('search');
 
     const modification = this.userData.catalogModifications?.find(
       (mod) =>
@@ -428,7 +429,7 @@ export class AIOStreams {
     );
 
     // Apply shuffle if enabled (not for search requests)
-    if (modification?.shuffle && !isSearchRequest) {
+    if (modification?.shuffle && !isSearch) {
       const actualCatalogId = catalogId.split('.').slice(1).join('.');
       // Use extras as part of cache key so different extras get different shuffle
       const cacheKey = `${type}-${actualCatalogId}-${extras || ''}-${this.userData.uuid}`;
@@ -448,7 +449,7 @@ export class AIOStreams {
           );
         }
       }
-    } else if (modification?.reverse && !isSearchRequest) {
+    } else if (modification?.reverse && !isSearch) {
       catalog = catalog.reverse();
     }
 
@@ -501,6 +502,7 @@ export class AIOStreams {
 
     const parsedExtras = new ExtrasParser(extras);
     const requestedSkip = parsedExtras.skip || 0;
+    const isSearchRequest = extras?.includes('search');
 
     // Build base cache key from extras (excluding skip - we'll append skip separately)
     const extrasForCacheKey = new ExtrasParser(extras);
@@ -542,7 +544,7 @@ export class AIOStreams {
         const catalogId = params.get('id');
         const catalogType = params.get('type');
         if (!catalogId || !catalogType) {
-          return { encodedCatalogId, items: [], fetched: 0 };
+          return { encodedCatalogId, items: [], fetched: 0, success: false };
         }
 
         const addonInstanceId = catalogId.split('.', 2)[0];
@@ -575,10 +577,24 @@ export class AIOStreams {
                 : 'Unknown error'
             }`
           );
+          return { encodedCatalogId, items: [], fetched: 0, success: false };
         }
 
-        const items = result.success ? result.items : [];
-        return { encodedCatalogId, items, fetched: items.length };
+        // Apply catalog modifications (shuffle, reverse, RPDB) to each source's items
+        const modifiedItems = await this.applyCatalogModifications(
+          result.items,
+          catalogId,
+          catalogType,
+          sourceExtras.toString() || undefined,
+          isSearchRequest
+        );
+
+        return {
+          encodedCatalogId,
+          items: modifiedItems,
+          fetched: result.items.length, // Use original count for skip tracking
+          success: true,
+        };
       }
     );
 
@@ -591,50 +607,49 @@ export class AIOStreams {
 
     const fetchResults = await Promise.all(fetchPromises);
 
-    let allItems: MetaPreview[] = [];
+    // Check if ALL sources failed
+    const allFailed = fetchResults.every((r) => !r.success);
+    if (allFailed && mergedCatalog.catalogIds.length > 0) {
+      logger.error(
+        `All sources failed for merged catalog ${mergedCatalog.name}`
+      );
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `All sources failed for merged catalog ${mergedCatalog.name}`,
+            description:
+              'Unable to fetch items from any source catalog. Please try again later.',
+          },
+        ],
+      };
+    }
+
+    // Collect items per source for merge method processing
+    const itemsBySource: MetaPreview[][] = [];
     for (const { encodedCatalogId, items, fetched } of fetchResults) {
       // Update next skip for this source (current skip + items returned)
       nextSourceSkips[encodedCatalogId] =
         (skipState.sourceSkips[encodedCatalogId] || 0) + fetched;
-      allItems.push(...items);
+      itemsBySource.push(items);
     }
+
+    // Apply merge method
+    let allItems: MetaPreview[] = this.applyMergeMethod(
+      itemsBySource,
+      mergedCatalog.mergeMethod
+    );
 
     logger.debug(
       `Merged catalog ${mergedCatalog.name} collected ${allItems.length} items before deduplication`
     );
+
     // Deduplicate the collected items
     allItems = this.deduplicateMergedCatalog(
       allItems,
       mergedCatalog.deduplicationMethods
     );
-
-    // Check if all source catalogs have shuffle enabled - if so, shuffle this page's items
-    // const allSourcesHaveShuffle = mergedCatalog.catalogIds.every(
-    //   (encodedCatalogId) => {
-    //     const params = new URLSearchParams(encodedCatalogId);
-    //     const catalogId = params.get('id');
-    //     const catalogType = params.get('type');
-    //     if (!catalogId || !catalogType) return false;
-
-    //     const modification = this.userData.catalogModifications?.find(
-    //       (mod) => mod.id === catalogId && mod.type === catalogType
-    //     );
-    //     return modification?.shuffle === true;
-    //   }
-    // );
-
-    // if (allSourcesHaveShuffle && allItems.length > 0) {
-    //   // Shuffle this page's items
-    //   // Note: We can't do a true full-catalog shuffle with pagination since we don't have all items upfront.
-    //   // Instead, we shuffle each page's items as they come in.
-    //   for (let i = allItems.length - 1; i > 0; i--) {
-    //     const j = Math.floor(Math.random() * (i + 1));
-    //     [allItems[i], allItems[j]] = [allItems[j], allItems[i]];
-    //   }
-    // }
-
-    // Apply poster modifications (RPDB if user has it configured globally)
-    allItems = await this.applyPosterModifications(allItems, type);
 
     // Calculate the next skip value (current skip + items we're returning)
     const nextSkip = requestedSkip + allItems.length;
@@ -655,6 +670,87 @@ export class AIOStreams {
     );
 
     return { success: true, data: allItems, errors: [] };
+  }
+
+  /**
+   * Applies merge method to combine items from multiple source catalogs.
+   */
+  private applyMergeMethod(
+    itemsBySource: MetaPreview[][],
+    method?: string
+  ): MetaPreview[] {
+    const mergeMethod = method || 'sequential';
+
+    switch (mergeMethod) {
+      case 'roundRobin': {
+        // Interleave: take 1st from each source, then 2nd from each, etc.
+        const result: MetaPreview[] = [];
+        const maxLength = Math.max(...itemsBySource.map((arr) => arr.length));
+        for (let i = 0; i < maxLength; i++) {
+          for (const sourceItems of itemsBySource) {
+            if (i < sourceItems.length) {
+              result.push(sourceItems[i]);
+            }
+          }
+        }
+        return result;
+      }
+
+      case 'shuffle': {
+        const allItems = itemsBySource.flat();
+        return allItems.sort(() => Math.random() - 0.5);
+      }
+
+      case 'imdbRating': {
+        // Merge all and sort by IMDB rating (descending)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const ratingA = parseInt(a.imdbRating?.toString() ?? '0');
+          const ratingB = parseInt(b.imdbRating?.toString() ?? '0');
+          if (isNaN(ratingA) && isNaN(ratingB)) return 0;
+          if (isNaN(ratingA)) return 1;
+          if (isNaN(ratingB)) return -1;
+          return ratingB - ratingA;
+        });
+      }
+
+      case 'releaseDateAsc': {
+        // Merge all and sort by release date (oldest first)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const yearA = this.extractYear(a.releaseInfo);
+          const yearB = this.extractYear(b.releaseInfo);
+          return yearA - yearB;
+        });
+      }
+
+      case 'releaseDateDesc': {
+        // Merge all and sort by release date (newest first)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const yearA = this.extractYear(a.releaseInfo);
+          const yearB = this.extractYear(b.releaseInfo);
+          return yearB - yearA;
+        });
+      }
+
+      case 'sequential':
+      default:
+        // Just concatenate in order of catalogIds
+        return itemsBySource.flat();
+    }
+  }
+
+  /**
+   * Extracts a year from releaseInfo which can be a number (year) or string (year or year-year range).
+   * For ranges like "2020-2024", returns the first year.
+   */
+  private extractYear(releaseInfo: number | string | undefined | null): number {
+    if (releaseInfo === undefined || releaseInfo === null) return 0;
+    if (typeof releaseInfo === 'number') return releaseInfo;
+    // Handle string formats: "2020" or "2020-2024"
+    const match = String(releaseInfo).match(/^(\d{4})/);
+    return match ? parseInt(match[1], 10) : 0;
   }
 
   /**
