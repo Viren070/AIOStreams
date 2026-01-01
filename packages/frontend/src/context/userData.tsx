@@ -31,7 +31,7 @@ export function applyMigrations(config: any): UserData {
     const oldValue = config.digitalReleaseFilter;
     config.digitalReleaseFilter = {
       enabled: oldValue,
-      tolerance: 1,
+      tolerance: 0,
       requestTypes: ['movie', 'series', 'anime'],
       addons: [],
     };
