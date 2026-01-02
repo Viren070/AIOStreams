@@ -55,8 +55,8 @@ export class ChillLinkTransformer {
     const formatter = createFormatter(this.userData);
 
     const results = await Promise.all(
-      data.streams.map(async (stream, index) =>
-        this.convertParsedStreamToStream(stream, formatter, index, {})
+      data.streams.map(async (stream) =>
+        this.convertParsedStreamToStream(stream, formatter)
       )
     );
 
@@ -87,9 +87,7 @@ export class ChillLinkTransformer {
       format: (
         stream: ParsedStream
       ) => Promise<{ name: string; description: string }>;
-    },
-    index: number,
-    options?: { disableAutoplay?: boolean; provideStreamData?: boolean }
+    }
   ): Promise<ChillLinkSource | null> {
     const { name, description } = stream.addon.formatPassthrough
       ? {

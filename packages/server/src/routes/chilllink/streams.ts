@@ -70,11 +70,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         `Unexpected error during stream retrieval: ${errorMessage}`,
         error
       );
-      res.status(200).json(
-        ChillLinkTransformer.createErrorStream({
-          errorDescription: errorMessage,
-        })
-      );
+      res.status(200).json({
+        sources: [
+          ChillLinkTransformer.createErrorStream({
+            errorDescription: errorMessage,
+          }),
+        ],
+      });
       return;
     }
     next(error);

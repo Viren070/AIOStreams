@@ -503,7 +503,7 @@ function Content() {
                   <Select
                     options={[
                       { label: 'Stremio', value: 'stremio' },
-                      { label: 'Chill Link', value: 'chilllink' },
+                      { label: 'ChillLink', value: 'chilllink' },
                     ]}
                     value={installProtocol}
                     onValueChange={setInstallProtocol}
@@ -514,7 +514,7 @@ function Content() {
               <Modal
                 open={installModal.isOpen}
                 onOpenChange={installModal.toggle}
-                title={`Install to ${installProtocol === 'stremio' ? 'Stremio' : 'Chill Link'}`}
+                title={`Install to ${installProtocol === 'stremio' ? 'Stremio' : 'Chillio'}`}
                 description="Install your addon"
               >
                 <div className="flex flex-col gap-4">

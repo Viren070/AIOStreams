@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   APIError,
@@ -12,8 +12,6 @@ import { stremioManifestRateLimiter } from '../../middlewares/ratelimit.js';
 
 const logger = createLogger('server');
 const router: Router = Router();
-
-export default router;
 
 router.use(stremioManifestRateLimiter);
 
@@ -31,7 +29,7 @@ interface ChillLinkManifest {
 const manifest = async (config?: UserData): Promise<ChillLinkManifest> => {
   let addonId = Env.ADDON_ID;
   if (config) {
-    addonId = addonId += `.${config.uuid?.substring(0, 12)}`;
+    addonId += `.${config.uuid?.substring(0, 12)}`;
   }
   let resources: Manifest['resources'] = [];
   if (config) {
@@ -61,7 +59,11 @@ const manifest = async (config?: UserData): Promise<ChillLinkManifest> => {
 
 router.get(
   '/',
-  async (req: Request, res: Response<ChillLinkManifest>, next) => {
+  async (
+    req: Request,
+    res: Response<ChillLinkManifest>,
+    next: NextFunction
+  ) => {
     logger.debug('Manifest request received', { userData: req.userData });
     try {
       res.status(200).json(await manifest(req.userData));
@@ -71,3 +73,5 @@ router.get(
     }
   }
 );
+
+export default router;
