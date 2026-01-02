@@ -20,9 +20,6 @@ import type { BuiltinServiceId } from '../../utils/index.js';
 import type { Stream } from '../../db/index.js';
 
 const logger = createLogger('newznab');
-const DEFAULT_HEALTH_PROXY_ENDPOINT =
-  Env.HEALTH_PROXY_ENDPOINT?.trim() || 'https://zyclops.elfhosted.com';
-const DEFAULT_HEALTH_PROXY_PATH = '/api';
 
 class NewznabApi extends BaseNabApi<'newznab'> {
   constructor(
@@ -37,14 +34,15 @@ class NewznabApi extends BaseNabApi<'newznab'> {
 
 export const NewznabAddonConfigSchema = NabAddonConfigSchema.extend({
   proxyAuth: z.string().optional(),
-  healthProxyEnabled: z.boolean().optional(),
-  healthProxyEndpoint: z.string().optional(),
-  healthProxyPath: z.string().optional(),
-  healthProxyTarget: z.string().optional(),
-  healthProxyBackbone: z.array(z.string().min(1)).optional(),
-  healthProxyProviderHost: z.string().optional(),
-  healthProxyShowUnknown: z.boolean().optional(),
-  healthProxySingleIp: z.boolean().optional(),
+  zyclopsHealthProxy: z
+    .object({
+      enabled: z.boolean().optional(),
+      backbones: z.array(z.string().min(1)).optional(),
+      providerHosts: z.array(z.string().min(1)).optional(),
+      showUnknown: z.boolean().optional(),
+      singleIp: z.boolean().optional(),
+    })
+    .optional(),
 });
 export type NewznabAddonConfig = z.infer<typeof NewznabAddonConfigSchema>;
 
@@ -79,118 +77,79 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         'The Newznab addon only supports TorBox and NZB DAV services'
       );
     }
-    const healthProxyConfig = this.buildHealthProxyConfig();
+    const zyclopsHealthProxyConfig = this.buildZyclopsHealthProxyConfig();
     this.api = new NewznabApi(
-      healthProxyConfig?.endpoint ?? this.userData.url,
+      zyclopsHealthProxyConfig?.endpoint ?? this.userData.url,
       this.userData.apiKey,
-      healthProxyConfig?.path ?? this.userData.apiPath,
-      healthProxyConfig?.extraParams
+      zyclopsHealthProxyConfig?.path ?? this.userData.apiPath,
+      zyclopsHealthProxyConfig?.extraParams
     );
   }
 
-  private buildHealthProxyConfig(): HealthProxyConfig | undefined {
-    if (!this.userData.healthProxyEnabled) {
+  private buildZyclopsHealthProxyConfig(): HealthProxyConfig | undefined {
+    if (!this.userData.zyclopsHealthProxy?.enabled) {
       return undefined;
     }
 
-    const endpointInput =
-      typeof this.userData.healthProxyEndpoint === 'string'
-        ? this.userData.healthProxyEndpoint.trim()
-        : '';
-    const endpoint = endpointInput || DEFAULT_HEALTH_PROXY_ENDPOINT;
-    if (!endpoint) {
-      this.logger.warn(
-        'Crowdsourced health checks are enabled for Newznab but no proxy endpoint was provided.'
-      );
-      return undefined;
-    }
-
-    const pathInput =
-      typeof this.userData.healthProxyPath === 'string'
-        ? this.userData.healthProxyPath.trim()
-        : '';
-    const path = pathInput || DEFAULT_HEALTH_PROXY_PATH;
+    const endpoint = Env.ZYCLOPS_HEALTH_PROXY_ENDPOINT;
+    const path = '/api';
     const extraParams: Record<string, string | number | boolean> = {};
 
-    const resolveApiPath = (value?: string) => {
-      const raw = typeof value === 'string' ? value.trim() : '';
-      const withoutTrailing = raw.replace(/\/+$/, '');
-      if (!withoutTrailing) {
-        return '/api';
-      }
-      return withoutTrailing.startsWith('/')
-        ? withoutTrailing
-        : `/${withoutTrailing}`;
-    };
-
-    const upstreamBase =
-      typeof this.userData.url === 'string'
-        ? this.userData.url.trim().replace(/\/+$/, '')
-        : '';
-    const upstreamApiPath = resolveApiPath(this.userData.apiPath);
-    const fallbackTarget = upstreamBase
+    const upstreamBase = this.userData.url.trim().replace(/\/+$/, '');
+    const upstreamApiPath = this.userData.apiPath?.startsWith('/')
+      ? this.userData.apiPath
+      : `/${this.userData.apiPath || 'api'}`;
+    const target = upstreamBase
       ? `${upstreamBase}${upstreamApiPath}`
       : this.userData.url;
 
-    const target =
-      (typeof this.userData.healthProxyTarget === 'string'
-        ? this.userData.healthProxyTarget.trim()
-        : '') || fallbackTarget;
     extraParams.target = target;
 
-    const setBooleanParam = (key: string, value?: boolean) => {
-      if (typeof value === 'boolean') {
-        extraParams[key] = value ? '1' : '0';
-      }
-    };
+    const selectedBackbones = (
+      this.userData.zyclopsHealthProxy.backbones || []
+    ).map((backbone) => backbone?.trim());
 
-    const selectedBackbones = (this.userData.healthProxyBackbone || [])
-      .map((backbone) => backbone?.trim())
-      .filter((backbone): backbone is string => Boolean(backbone));
-    const userProviderHosts = (this.userData.healthProxyProviderHost || '')
-      .split(',')
-      .map((host) => host.trim())
-      .filter((host) => host.length > 0);
-
-    const hasBackbone = selectedBackbones.length > 0;
     let providerHosts: string[] = [];
 
-    if (userProviderHosts.length > 0) {
-      providerHosts = userProviderHosts;
+    if (this.userData.zyclopsHealthProxy?.providerHosts?.length) {
+      providerHosts = this.userData.zyclopsHealthProxy.providerHosts;
     }
 
-    const hasProviderHost = providerHosts.length > 0;
-
-    if (hasBackbone && hasProviderHost && userProviderHosts.length > 0) {
+    if (selectedBackbones.length > 0 && providerHosts.length > 0) {
       throw new Error(
         'Crowdsourced health checks only accept one identifier. Choose either a backbone selection or a provider host.'
       );
     }
 
-    if (!hasBackbone && !hasProviderHost) {
+    if (!selectedBackbones.length && !providerHosts.length) {
       throw new Error(
         'Crowdsourced health checks require either a backbone selection or a provider host to be configured.'
       );
     }
 
-    if (hasBackbone) {
+    if (selectedBackbones.length > 0) {
       extraParams.backbone = selectedBackbones.join(',');
-    } else if (hasProviderHost) {
+    } else if (providerHosts.length > 0) {
       extraParams.provider_host = providerHosts.join(',');
     }
 
-    setBooleanParam('show_unknown', this.userData.healthProxyShowUnknown);
-    setBooleanParam('single_ip', this.userData.healthProxySingleIp);
+    extraParams.show_unknown = this.userData.zyclopsHealthProxy.showUnknown
+      ? '1'
+      : '0';
+    extraParams.single_ip = this.userData.zyclopsHealthProxy.singleIp
+      ? '1'
+      : '0';
 
-    this.logger.info('Routing Newznab traffic through health proxy', {
+    this.logger.debug('Routing Newznab traffic through health proxy', {
       endpoint,
       target,
-      mode: hasBackbone ? 'backbone' : 'provider_host',
-      identifier: hasBackbone ? selectedBackbones : providerHosts,
+      mode: selectedBackbones.length > 0 ? 'backbone' : 'provider_host',
+      identifier:
+        selectedBackbones.length > 0 ? selectedBackbones : providerHosts,
     });
 
     return {
-      endpoint: endpoint.replace(/\/$/, ''),
+      endpoint,
       path,
       extraParams,
     };

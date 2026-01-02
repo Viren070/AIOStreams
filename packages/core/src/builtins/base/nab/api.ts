@@ -225,7 +225,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private readonly searchCache: Cache<string, SearchResponse<N>>;
   private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
   private readonly logger: Logger;
-  private readonly extraParams: Record<string, string>;
+  private readonly params: Record<string, string>;
 
   constructor(
     public readonly namespace: N,
@@ -233,13 +233,13 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     private readonly baseUrl: string,
     private readonly apiKey?: string,
     private readonly apiPath: string = '/api',
-    extraParams: Record<string, string | number | boolean> = {}
+    params: Record<string, string | number | boolean> = {}
   ) {
     this.logger = logger;
     this.baseUrl = this.removeTrailingSlash(baseUrl);
     this.apiPath = this.removeTrailingSlash(apiPath);
-    this.extraParams = Object.fromEntries(
-      Object.entries(extraParams).map(([key, value]) => [key, String(value)])
+    this.params = Object.fromEntries(
+      Object.entries(params).map(([key, value]) => [key, String(value)])
     );
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
@@ -326,7 +326,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   }
 
   public async getCapabilities(): Promise<Capabilities> {
-    const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps&extras=${JSON.stringify(this.extraParams)}`;
+    const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps&${JSON.stringify(this.params)}`;
     return this.capabilitiesCache.wrap(
       () => this.request('caps', CapabilitiesSchema, undefined, 3000),
       cacheKey,
@@ -338,7 +338,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     searchFunction: string = 'search',
     params: Record<string, string | number | boolean> = {}
   ): Promise<SearchResponse<N>> {
-    const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}&extras=${JSON.stringify(this.extraParams)}`;
+    const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
 
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
@@ -369,7 +369,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     params: Record<string, string | number | boolean> = {},
     timeout?: number
   ): Promise<T> {
-    const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}&extras=${JSON.stringify(this.extraParams)}`;
+    const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
       () => this._request(func, schema, params, timeout),
@@ -395,7 +395,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         Object.entries(params).map(([k, v]) => [k, String(v)])
       ),
     });
-    for (const [key, value] of Object.entries(this.extraParams)) {
+    for (const [key, value] of Object.entries(this.params)) {
       if (!searchParams.has(key)) {
         searchParams.set(key, value);
       }

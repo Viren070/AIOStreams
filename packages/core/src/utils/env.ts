@@ -379,10 +379,6 @@ export const Env = cleanEnv(process.env, {
     default: randomBytes(32).toString('hex'),
     desc: 'Internal secret for the addon, used for internal communication between built-in addons and the server',
   }),
-  HEALTH_PROXY_ENDPOINT: str({
-    default: 'https://zyclops.elfhosted.com',
-    desc: 'Base URL of the Zyclops health proxy endpoint used by the Newznab preset.',
-  }),
   ADDON_NAME: str({
     default: 'AIOStreams',
     desc: 'Name of the addon',
@@ -483,6 +479,10 @@ export const Env = cleanEnv(process.env, {
   ENABLE_SEARCH_API: bool({
     default: true,
     desc: 'Enable the search API. If true, the search API will be enabled.',
+  }),
+  ZYCLOPS_HEALTH_PROXY_ENDPOINT: url({
+    default: 'https://zyclops.elfhosted.com',
+    desc: 'Base URL of the Zyclops health proxy endpoint used by the Newznab preset.',
   }),
   ANIME_DB_LEVEL_OF_DETAIL: str({
     default: 'required',
