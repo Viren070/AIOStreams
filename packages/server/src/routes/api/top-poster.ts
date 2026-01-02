@@ -39,17 +39,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     const { id, type, fallback, apiKey, season, episode } = data;
     const topPoster = new TopPoster(apiKey);
-    let posterUrl: string | null;
-    if (season && episode) {
-      posterUrl = await topPoster.getEpisodeThumbnailUrl(
-        type,
-        id,
-        season,
-        episode
-      );
-    } else {
-      posterUrl = await topPoster.getPosterUrl(type, id);
-    }
+    let posterUrl: string | null = await topPoster.getPosterUrl(type, id);
+
     posterUrl = posterUrl || fallback || null;
 
     if (!posterUrl) {
