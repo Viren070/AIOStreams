@@ -90,6 +90,9 @@ export const PARSE_REGEX: PARSE_REGEX = {
     SDR: createRegex('sdr'),
     'H-OU': createRegex('h?(alf)?[ .\\-_]?(ou|over[ .\\-_]?under)'),
     'H-SBS': createRegex('h?(alf)?[ .\\-_]?(sbs|side[ .\\-_]?by[ .\\-_]?side)'),
+    'DV+HDR': createRegex('dv[\\+]?hdr'),
+    'DV+HDR10': createRegex('dv[\\+]?hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
+    'DV+HDR10+': createRegex('dv[\\+]?hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
   },
   audioTags: {
     Atmos: createRegex('atmos'),
@@ -141,7 +144,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     Portuguese: createLanguageRegex('portuguese|por'),
     Spanish: createLanguageRegex('spanish|spa|esp'),
     French: createLanguageRegex('french|fra|fr|vf|vff|vfi|vf2|vfq|truefrench'),
-    German: createLanguageRegex('deu(tsch)?(land)?|ger(man)?'),
+    German: createLanguageRegex('deu(tsch)?|ger(man)?'),
     Italian: createLanguageRegex('italian|ita'),
     Korean: createLanguageRegex('korean|kor'),
     Hindi: createLanguageRegex('hindi|hin'),
