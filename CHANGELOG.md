@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.20.2](https://github.com/Viren070/AIOStreams/compare/v2.20.1...v2.20.2) (2026-01-03)
+
+
+### Bug Fixes
+
+* fix digital release ([#600](https://github.com/Viren070/AIOStreams/issues/600)) ([de956de](https://github.com/Viren070/AIOStreams/commit/de956deb9472f5a85be660030199d6fac72b36de))
+* update default zilean URL ([67f9062](https://github.com/Viren070/AIOStreams/commit/67f906289a09e947946f02cf3aab8ed55ab2e208))
+
 ## [2.20.1](https://github.com/Viren070/AIOStreams/compare/v2.20.0...v2.20.1) (2026-01-03)
 
 
