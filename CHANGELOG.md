@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.1](https://github.com/Viren070/AIOStreams/compare/v2.20.0...v2.20.1) (2026-01-03)
+
+
+### Bug Fixes
+
+* allow only on discover modification application when no extras are present ([694ca3f](https://github.com/Viren070/AIOStreams/commit/694ca3f137b89dcbfc917384825afbce74dc4ecf))
+
 ## [2.20.0](https://github.com/Viren070/AIOStreams/compare/v2.19.0...v2.20.0) (2026-01-02)
 
 
