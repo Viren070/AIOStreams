@@ -113,13 +113,13 @@ export const PARSE_REGEX: PARSE_REGEX = {
   audioChannels: {
     '2.0': createRegex('(d(olby)?[ .\\-_]?d(igital)?)?2[ .\\-_]?0(ch)?'),
     '5.1': createRegex(
-      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?(p(lus)?|\\+)?)?5[ .\\-_]?1(ch)?'
+      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?((p(lus)?|\\+)a?)?)?5[ .\\-_]?1(ch)?'
     ),
     '6.1': createRegex(
-      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?(p(lus)?|\\+)?)?6[ .\\-_]?1(ch)?'
+      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?((p(lus)?|\\+)a?)?)?6[ .\\-_]?1(ch)?'
     ),
     '7.1': createRegex(
-      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?(p(lus)?|\\+)?)?7[ .\\-_]?1(ch)?'
+      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?((p(lus)?|\\+)a?)?)?7[ .\\-_]?1(ch)?'
     ),
   },
   encodes: {
