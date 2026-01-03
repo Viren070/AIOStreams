@@ -93,7 +93,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     'H-SBS': createRegex('h?(alf)?[ .\\-_]?(sbs|side[ .\\-_]?by[ .\\-_]?side)'),
     'DV+HDR': createRegex('dv[\\+]?hdr'),
     'DV+HDR10': createRegex('dv[\\+]?hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
-    'DV+HDR10+': createRegex('dv[\\+]?hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
+    'DV+HDR10Plus': createRegex('dv[\\+]?hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
   },
   audioTags: {
     Atmos: createRegex('atmos|ddpa\\d?'),
