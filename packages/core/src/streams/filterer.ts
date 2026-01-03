@@ -461,10 +461,10 @@ class StreamFilterer {
       const tolerance = digitalReleaseFilterConfig.tolerance ?? 0;
       const daysFromRelease = Math.abs(daysSinceRelease);
 
-      if (daysSinceRelease >= 0 && daysSinceRelease <= tolerance) {
+      if (daysFromRelease <= tolerance) {
         logger.debug(
-          `[DigitalReleaseFilter] Within tolerance! ${daysSinceRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
-          { title: requestedMetadata?.title }
+          `[DigitalReleaseFilter] Within tolerance! ${daysFromRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
+          { title: requestedMetadata?.title, future: daysSinceRelease < 0 }
         );
         return true;
       }
