@@ -217,7 +217,12 @@
     "requiredEncodes": [],
     "preferredEncodes": [],
     "seederRangeTypes": [],
-    "digitalReleaseFilter": true,
+    "digitalReleaseFilter": {
+      "enabled": true,
+      "tolerance": 0,
+      "requestTypes": [],
+      "addons": []
+    },
     "excludeCachedFromAddons": [],
     "excludeCachedFromServices": [],
     "excludeCachedFromStreamTypes": [],

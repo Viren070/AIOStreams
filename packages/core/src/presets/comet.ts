@@ -137,7 +137,7 @@ export class CometPreset extends StremThruPreset {
     return {
       ID: 'comet',
       NAME: 'Comet',
-      LOGO: 'https://i.imgur.com/jmVoVMu.jpeg',
+      LOGO: 'https://i.ibb.co/LVGNJ0s/icon.jpg',
       URL: Env.COMET_URL[0],
       TIMEOUT: Env.DEFAULT_COMET_TIMEOUT || Env.DEFAULT_TIMEOUT,
       USER_AGENT: Env.DEFAULT_COMET_USER_AGENT || Env.DEFAULT_USER_AGENT,

@@ -22,17 +22,29 @@ class StreamPrecomputer {
     this.userData = userData;
   }
 
-  public async precompute(streams: ParsedStream[], type: string, id: string) {
+  /**
+   * Precompute SeaDex only - runs BEFORE filtering so seadex() works in Included SEL
+   */
+  public async precomputeSeaDexOnly(streams: ParsedStream[], id: string) {
+    const isAnime = AnimeDatabase.getInstance().isAnime(id);
+    await this.precomputeSeaDex(streams, id, isAnime);
+  }
+
+  /**
+   * Precompute preferred matches - runs AFTER filtering on fewer streams
+   */
+  public async precomputePreferred(
+    streams: ParsedStream[],
+    type: string,
+    id: string
+  ) {
     const start = Date.now();
     const isAnime = AnimeDatabase.getInstance().isAnime(id);
     let queryType = type;
     if (isAnime) {
       queryType = `anime.${type}`;
     }
-
-    await this.precomputeSeaDex(streams, id, isAnime);
     await this.precomputePreferredMatches(streams, queryType);
-
     logger.info(
       `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
     );

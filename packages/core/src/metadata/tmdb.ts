@@ -111,6 +111,16 @@ const ReleaseDatesResponseSchema = z.object({
   ),
 });
 
+const TVEpisodeDetailsSchema = z.object({
+  id: z.number(),
+  air_date: z.string().nullable().optional(),
+  episode_number: z.number(),
+  name: z.string(),
+  overview: z.string().optional(),
+  season_number: z.number(),
+  still_path: z.string().nullable().optional(),
+});
+
 const IdTypeMap: Partial<Record<IdType, TMDBIdType>> = {
   imdbId: 'imdb_id',
   thetvdbId: 'tvdb_id',
@@ -403,6 +413,30 @@ export class TMDBMetadata {
     const json = await response.json();
     const data = ReleaseDatesResponseSchema.parse(json);
     return data.results.flatMap((result) => result.release_dates);
+  }
+
+  public async getEpisodeAirDate(
+    tmdbId: number,
+    seasonNumber: number,
+    episodeNumber: number
+  ): Promise<string | undefined> {
+    const url = new URL(
+      API_BASE_URL +
+        `/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`
+    );
+    this.addSearchParams(url);
+    const response = await makeRequest(url.toString(), {
+      timeout: 5000,
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch episode details: ${response.statusText}`
+      );
+    }
+    const json = await response.json();
+    const episodeData = TVEpisodeDetailsSchema.parse(json);
+    return episodeData.air_date ?? undefined;
   }
 
   public async validateAuthorisation() {

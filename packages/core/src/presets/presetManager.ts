@@ -28,6 +28,7 @@ import { StarWarsUniversePreset } from './starWarsUniverse.js';
 import { DebridioTvdbPreset } from './debridioTvdb.js';
 import { DcUniversePreset } from './dcUniverse.js';
 import { DebridioTvPreset } from './debridioTv.js';
+import { DebridioIC4APreset } from './debridioIc4a.js';
 import { TorrentCatalogsPreset } from './torrentCatalogs.js';
 import { StreamingCatalogsPreset } from './streamingCatalogs.js';
 import { AnimeCatalogsPreset } from './animeCatalogs.js';
@@ -116,6 +117,7 @@ let PRESET_LIST: string[] = [
   'tmdb-addon',
   'debridio-tmdb',
   'debridio-tvdb',
+  'debridio-ic4a',
   'streaming-catalogs',
   'anime-catalogs',
   'torrent-catalogs',
@@ -192,6 +194,8 @@ export class PresetManager {
         return DebridioTmdbPreset;
       case 'debridio-tvdb':
         return DebridioTvdbPreset;
+      case 'debridio-ic4a':
+        return DebridioIC4APreset;
       case 'aiostreams':
         return AIOStreamsPreset;
       case 'opensubtitles':

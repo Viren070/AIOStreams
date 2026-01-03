@@ -83,6 +83,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     'HDR10+': createRegex('hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
     HDR10: createRegex('hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
     HDR: createRegex('hdr(?![ .\\-_]?10)(?![ .\\-_]?(?:\\+|p(lus)?))'),
+    HLG: createRegex('hlg'),
     DV: createRegex('do?(lby)?[ .\\-_]?vi?(sion)?(?:[ .\\-_]?atmos)?|dv'),
     '3D': createRegex('(bd)?(3|three)[ .\\-_]?(d(imension)?(al)?)'),
     IMAX: createRegex('imax'),
@@ -95,17 +96,18 @@ export const PARSE_REGEX: PARSE_REGEX = {
     'DV+HDR10Plus': createRegex('dv[\\+]?hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
   },
   audioTags: {
-    Atmos: createRegex('atmos'),
+    Atmos: createRegex('atmos|ddpa\\d?'),
     'DD+': createRegex(
-      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?(p(lus)?|\\+)(?:[ .\\-_]?(2[ .\\-_]?0|5[ .\\-_]?1|7[ .\\-_]?1))?)|e[ .\\-_]?ac[ .\\-_]?3'
+      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?((p(lus)?|\\+)a?)(?:[ .\\-_]?(2[ .\\-_]?0|5[ .\\-_]?1|7[ .\\-_]?1))?)|e[ .\\-_]?ac[ .\\-_]?3'
     ),
     DD: createRegex(
       '(d(olby)?[ .\\-_]?d(igital)?(?:[ .\\-_]?(5[ .\\-_]?1|7[ .\\-_]?1|2[ .\\-_]?0?))?)|(?<!e[ .\\-_]?)ac[ .\\-_]?3'
     ),
+    'DTS:X': createRegex('dts[ .\\-:_]?x'),
     'DTS-HD MA': createRegex('dts[ .\\-_]?hd[ .\\-_]?ma'),
     'DTS-HD': createRegex('dts[ .\\-_]?hd(?![ .\\-_]?ma)'),
     'DTS-ES': createRegex('dts[ .\\-_]?es'),
-    DTS: createRegex('dts(?![ .\\-_]?hd[ .\\-_]?ma|[ .\\-_]?hd|[ .\\-_]?es)'),
+    DTS: createRegex('dts(?![ .\\-:_]?(x(?=[\\s\\)\\]_.\\-,]|$)|hd[ .\\-_]?(ma)?|es))'),
     TrueHD: createRegex('true[ .\\-_]?hd'),
     OPUS: createRegex('opus'),
     AAC: createRegex('q?aac(?:[ .\\-_]?2)?'),

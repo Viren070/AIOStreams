@@ -183,17 +183,17 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
                 }
               }}
             >
-              {uuid && password ? 'Log Out' : 'Log In'}
+              {uuid && password ? 'Sign Out' : 'Sign In'}
             </Button>
           </div>
 
           {/* Large logo left */}
-          <div className="flex-shrink-0 flex justify-center md:justify-start w-full md:w-auto">
+          <div className="flex-shrink-0 flex justify-center md:justify-start w-full md:w-auto p-2">
             <Image
               src={userData.addonLogo || '/logo.png'}
               alt="Logo"
-              width={140}
-              height={112}
+              width={128}
+              height={128}
               className="rounded-lg shadow-lg"
             />
           </div>

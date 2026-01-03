@@ -715,7 +715,11 @@ const SERVICE_DETAILS: Record<
 };
 
 const TOP_LEVEL_OPTION_DETAILS: Record<
-  'tmdbApiKey' | 'tmdbAccessToken' | 'rpdbApiKey' | 'tvdbApiKey',
+  | 'tmdbApiKey'
+  | 'tmdbAccessToken'
+  | 'rpdbApiKey'
+  | 'tvdbApiKey'
+  | 'topPosterApiKey',
   {
     name: string;
     description: string;
@@ -735,6 +739,11 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     name: 'RPDB API Key',
     description:
       'Get your free API key from [here](https://ratingposterdb.com/api-key/) for posters with ratings.',
+  },
+  topPosterApiKey: {
+    name: 'Top Poster API Key',
+    description:
+      'Get your free API key from [here](https://api.top-streaming.stream/user/register) for posters with ratings.',
   },
   tvdbApiKey: {
     name: 'TVDB API Key',
@@ -765,11 +774,8 @@ export const AUTO_PLAY_ATTRIBUTES = [
   'size',
 ] as const;
 
-const NON_DEFAULT_AUTO_PLAY_ATTRIBUTES = ['infoHash', 'size', 'type', 'addon'];
-
-export const DEFAULT_AUTO_PLAY_ATTRIBUTES = AUTO_PLAY_ATTRIBUTES.filter(
-  (attribute) => !NON_DEFAULT_AUTO_PLAY_ATTRIBUTES.includes(attribute)
-);
+export const DEFAULT_AUTO_PLAY_ATTRIBUTES: (typeof AUTO_PLAY_ATTRIBUTES)[number][] =
+  ['resolution', 'quality', 'releaseGroup'] as const;
 
 export const AUTO_PLAY_METHODS = [
   'matchingFile',
@@ -841,6 +847,7 @@ const VISUAL_TAGS = [
   'HDR10',
   'DV',
   'HDR',
+  'HLG',
   '10bit',
   '3D',
   'IMAX',
@@ -855,6 +862,7 @@ const AUDIO_TAGS = [
   'Atmos',
   'DD+',
   'DD',
+  'DTS:X',
   'DTS-HD MA',
   'DTS-HD',
   'DTS-ES',
@@ -867,6 +875,19 @@ const AUDIO_TAGS = [
 ] as const;
 
 const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
+
+// Passthrough stages that can be selectively bypassed
+const PASSTHROUGH_STAGES = [
+  'filter', // bypass main filtering (shouldKeepStream)
+  'dedup', // bypass deduplication
+  'limit', // bypass result limiting
+  'excluded', // bypass excluded stream expressions
+  'required', // bypass required stream expressions
+  'title', // bypass title matching
+  'year', // bypass year matching
+  'episode', // bypass season/episode matching
+  'digitalRelease', // bypass early digital release filter
+] as const;
 
 const ENCODES = [
   'AV1',
@@ -1285,6 +1306,7 @@ export {
   AUDIO_TAGS,
   AUDIO_CHANNELS,
   ENCODES,
+  PASSTHROUGH_STAGES,
   SORT_CRITERIA,
   SORT_DIRECTIONS,
   STREAM_TYPES,

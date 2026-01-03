@@ -6,6 +6,7 @@ import {
   formatApi,
   catalogApi,
   rpdbApi,
+  topPosterApi,
   gdriveApi,
   debridApi,
   searchApi,
@@ -23,6 +24,10 @@ import {
   addonCatalog,
   alias,
 } from './routes/stremio/index.js';
+import {
+  manifest as chillLinkManifest,
+  streams as chillLinkStreams,
+} from './routes/chilllink/index.js';
 import {
   gdrive,
   torboxSearch,
@@ -91,6 +96,7 @@ apiRouter.use('/status', statusApi);
 apiRouter.use('/format', formatApi);
 apiRouter.use('/catalogs', catalogApi);
 apiRouter.use('/rpdb', rpdbApi);
+apiRouter.use('/top-poster', topPosterApi);
 apiRouter.use('/oauth/exchange/gdrive', gdriveApi);
 apiRouter.use('/debrid', debridApi);
 if (Env.ENABLE_SEARCH_API) {
@@ -131,6 +137,14 @@ stremioAuthRouter.use('/addon_catalog', addonCatalog);
 
 app.use('/stremio', stremioRouter); // For public routes
 app.use('/stremio/:uuid/:encryptedPassword', stremioAuthRouter); // For authenticated routes
+
+const chillLinkRouter = express.Router({ mergeParams: true });
+chillLinkRouter.use(corsMiddleware);
+chillLinkRouter.use(userDataMiddleware);
+chillLinkRouter.use('/manifest', chillLinkManifest);
+chillLinkRouter.use('/streams', chillLinkStreams);
+
+app.use('/chilllink/:uuid/:encryptedPassword', chillLinkRouter);
 
 const builtinsRouter = express.Router();
 builtinsRouter.use(internalMiddleware);

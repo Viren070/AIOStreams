@@ -1,5 +1,6 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import { createLogger, getTimeTakenSincePoint } from '../utils/index.js';
+import { shouldPassthroughStage } from './utils.js';
 
 const logger = createLogger('limiter');
 
@@ -54,8 +55,8 @@ class StreamLimiter {
         indexesToRemove.add(index);
         return;
       }
-      // if stream is passthrough, skip
-      if (stream.addon.resultPassthrough) return;
+      // if stream is passthrough, skip limiting for this stream
+      if (shouldPassthroughStage(stream, 'limit')) return;
 
       // Check indexer limit
       if (indexer && stream.indexer) {

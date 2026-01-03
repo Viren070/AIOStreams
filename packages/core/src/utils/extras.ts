@@ -50,6 +50,10 @@ export class ExtrasParser {
     this.extras = { ...this.extras, skip: value };
   }
 
+  public has(key: keyof Extras): boolean {
+    return key in this.extras && this.extras[key] !== undefined;
+  }
+
   public toString(): string {
     return Object.entries(this.extras)
       .filter(([_, value]) => value !== undefined)

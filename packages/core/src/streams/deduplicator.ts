@@ -5,7 +5,7 @@ import {
   DSU,
   getSimpleTextHash,
 } from '../utils/index.js';
-import StreamUtils from './utils.js';
+import StreamUtils, { shouldPassthroughStage } from './utils.js';
 
 const logger = createLogger('deduplicator');
 
@@ -147,7 +147,7 @@ class StreamDeduplicator {
         ) {
           type = stream.service.cached ? 'cached' : 'uncached';
         }
-        if (stream.addon.resultPassthrough) {
+        if (shouldPassthroughStage(stream, 'dedup')) {
           // ensure that passthrough streams are not deduplicated by adding each to a separate group
           type = `passthrough-${Math.random()}`;
         }

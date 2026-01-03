@@ -51,8 +51,7 @@ export class StremioTransformer {
       ) => Promise<{ name: string; description: string }>;
     },
     index: number,
-    provideStreamData: boolean,
-    options?: { disableAutoplay?: boolean }
+    options?: { disableAutoplay?: boolean; provideStreamData?: boolean }
   ): Promise<AIOStream> {
     const { name, description } = stream.addon.formatPassthrough
       ? {
@@ -202,7 +201,7 @@ export class StremioTransformer {
         videoSize: stream.size,
         filename: stream.filename,
       },
-      streamData: provideStreamData
+      streamData: options?.provideStreamData
         ? {
             type: stream.type,
             proxied: stream.proxied,
@@ -249,13 +248,10 @@ export class StremioTransformer {
 
     transformedStreams = await Promise.all(
       streams.map((stream: ParsedStream, index: number) =>
-        this.convertParsedStreamToStream(
-          stream,
-          formatter,
-          index,
-          provideStreamData ?? false,
-          { disableAutoplay: disableAutoplay ?? false }
-        )
+        this.convertParsedStreamToStream(stream, formatter, index, {
+          disableAutoplay: disableAutoplay ?? false,
+          provideStreamData: provideStreamData ?? false,
+        })
       )
     );
 
@@ -377,13 +373,10 @@ export class StremioTransformer {
         if (video.streams && video.streams.length > 0) {
           const transformedStreams = await Promise.all(
             video.streams.map((stream, index) =>
-              this.convertParsedStreamToStream(
-                stream,
-                formatter!,
-                index,
-                provideStreamData ?? false,
-                { disableAutoplay: disableAutoplay ?? false }
-              )
+              this.convertParsedStreamToStream(stream, formatter!, index, {
+                disableAutoplay: disableAutoplay ?? false,
+                provideStreamData: provideStreamData ?? false,
+              })
             )
           );
           video.streams = transformedStreams as unknown as ParsedStream[];

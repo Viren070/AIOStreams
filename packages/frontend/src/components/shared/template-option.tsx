@@ -11,9 +11,17 @@ import { SocialIcon } from './social-icon';
 import { PasswordInput } from '../ui/password-input';
 import { Button } from '../ui/button';
 import { IconButton } from '../ui/button';
-import { FaKey, FaChevronUp, FaChevronDown, FaArrowLeft } from 'react-icons/fa';
+import {
+  FaKey,
+  FaChevronUp,
+  FaChevronDown,
+  FaArrowLeft,
+  FaGear,
+  FaPlus,
+  FaServer,
+  FaTrashCan,
+} from 'react-icons/fa6';
 import { Modal } from '../ui/modal';
-import { FaPlus, FaServer, FaTrashCan } from 'react-icons/fa6';
 // this component, accepts an option and returns a component that renders the option.
 // string - TextInput
 // number - NumberInput
@@ -390,6 +398,93 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
               )}
             </div>
           </div>
+        </div>
+      );
+    }
+    case 'subsection': {
+      const [modalOpen, setModalOpen] = useState(false);
+      const subOptions = (option.subOptions ?? []) as Option[];
+      const currentValue = (forcedValue ??
+        value ??
+        defaultValue ??
+        {}) as Record<string, any>;
+
+      // Local state for editing within the modal
+      const [localValue, setLocalValue] =
+        useState<Record<string, any>>(currentValue);
+
+      // Reset local state when modal opens
+      const handleOpenModal = () => {
+        setLocalValue(currentValue);
+        setModalOpen(true);
+      };
+
+      const handleLocalChange = (subOptionId: string, subValue: any) => {
+        setLocalValue((prev) => ({
+          ...prev,
+          [subOptionId]: subValue,
+        }));
+      };
+
+      const handleSave = () => {
+        onChange(localValue);
+        setModalOpen(false);
+      };
+
+      const handleCancel = () => {
+        setLocalValue(currentValue);
+        setModalOpen(false);
+      };
+
+      return (
+        <div>
+          <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+            <div className="flex-1">
+              <h4 className="font-medium mb-1">{name}</h4>
+              {description && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <MarkdownLite>{description}</MarkdownLite>
+                </p>
+              )}
+            </div>
+            <IconButton
+              icon={<FaGear />}
+              intent="primary-outline"
+              onClick={handleOpenModal}
+              // className="shrink-0"
+              disabled={isDisabled}
+              title={`Configure ${name}`}
+            />
+          </div>
+          <Modal
+            open={modalOpen}
+            onOpenChange={(open) => !open && handleCancel()}
+            title={name}
+          >
+            <div className="space-y-4">
+              {subOptions.map(
+                (subOption: Option): React.JSX.Element => (
+                  <TemplateOption
+                    key={subOption.id}
+                    option={subOption}
+                    value={localValue[subOption.id]}
+                    onChange={(subValue) =>
+                      handleLocalChange(subOption.id, subValue)
+                    }
+                    disabled={isDisabled}
+                  />
+                )
+              )}
+              <Button
+                type="button"
+                intent="primary"
+                className="w-full"
+                onClick={handleSave}
+              >
+                Save
+              </Button>
+            </div>
+          </Modal>
         </div>
       );
     }

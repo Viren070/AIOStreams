@@ -21,6 +21,8 @@ import {
   BiServer,
   BiSmile,
   BiHeart,
+  BiLogOutCircle,
+  BiLogInCircle,
 } from 'react-icons/bi';
 import { useRouter, usePathname } from 'next/navigation';
 import { useDisclosure } from '@/hooks/disclosure';
@@ -226,7 +228,7 @@ export function MainSidebar() {
                     : user.userData.addonLogo || '/logo.png'
                 }
                 alt="logo"
-                className="max-w-[90px] max-h-[60px] object-contain"
+                className="max-w-[90px] max-h-[60px] object-contain p-4"
               />
             </div>
             {status?.settings.alternateDesign === false && (
@@ -251,7 +253,7 @@ export function MainSidebar() {
           />
         </div>
 
-        <div className="p-4">
+        <div className="p-4 gap-2 flex flex-col">
           <Tooltip
             side="right"
             trigger={
@@ -273,6 +275,47 @@ export function MainSidebar() {
           >
             Donate
           </Tooltip>
+          {/** show a log out button when the user is logged in */}
+
+          {selectedMenu !== 'about' && (
+            <div className="hidden lg:block">
+              <Tooltip
+                side="right"
+                trigger={
+                  <Button
+                    intent="primary-outline"
+                    size="md"
+                    iconClass="text-3xl"
+                    className="w-full "
+                    iconSpacing="0"
+                    // leftIcon={<BiLogOutCircle />}
+                    leftIcon={
+                      user.uuid && user.password ? (
+                        <BiLogOutCircle />
+                      ) : (
+                        <BiLogInCircle />
+                      )
+                    }
+                    hideTextOnLargeScreen
+                    onClick={() => {
+                      // confirmClearConfig.open();
+                      if (user.uuid && user.password) {
+                        confirmClearConfig.open();
+                      } else {
+                        signInModal.open();
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2 ml-2">
+                      {user.uuid && user.password ? 'Sign Out' : 'Sign In'}
+                    </div>
+                  </Button>
+                }
+              >
+                {user.uuid && user.password ? 'Sign Out' : 'Sign In'}
+              </Tooltip>
+            </div>
+          )}
         </div>
       </AppSidebar>
 
