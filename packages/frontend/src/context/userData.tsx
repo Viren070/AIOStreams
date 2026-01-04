@@ -26,6 +26,16 @@ export function applyMigrations(config: any): UserData {
         break;
     }
   }
+
+  if (typeof config.digitalReleaseFilter === 'boolean') {
+    const oldValue = config.digitalReleaseFilter;
+    config.digitalReleaseFilter = {
+      enabled: oldValue,
+      tolerance: 0,
+      requestTypes: ['movie', 'series', 'anime'],
+      addons: [],
+    };
+  }
   if (config.titleMatching?.matchYear) {
     config.yearMatching = {
       enabled: true,
@@ -131,6 +141,24 @@ export function applyMigrations(config: any): UserData {
       ...group,
       condition: migrateAnimeQueryTypeInExpression(group.condition),
     }));
+  }
+
+  if (
+    config.rpdbUseRedirectApi !== undefined &&
+    config.usePosterRedirectApi === undefined
+  ) {
+    config.usePosterRedirectApi = config.rpdbUseRedirectApi;
+    delete config.rpdbUseRedirectApi;
+  }
+
+  // migrate 'rpdb' to 'usePosterService' in all catalog modifications
+  if (Array.isArray(config.catalogModifications)) {
+    for (const mod of config.catalogModifications) {
+      if (mod.usePosterService === undefined && mod.rpdb === true) {
+        mod.usePosterService = true;
+      }
+      delete mod.rpdb;
+    }
   }
 
   return config;

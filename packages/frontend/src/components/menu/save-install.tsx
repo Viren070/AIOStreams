@@ -24,6 +24,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../ui/accordion';
+import { Select } from '@/components/ui/select';
 import { PasswordInput } from '../ui/password-input';
 import { useMenu } from '@/context/menu';
 import {
@@ -105,6 +106,7 @@ function Content() {
   const importMenuModal = useDisclosure(false);
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
     React.useState(false);
+  const [installProtocol, setInstallProtocol] = React.useState('stremio');
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
     description: `Are you sure you want to reset your configuration? This will clear all your settings${uuid ? ` but keep your user account` : ''}. This action cannot be undone.`,
@@ -307,12 +309,22 @@ function Content() {
       ? `${baseUrl}/stremio/${uuid}/${encryptedPassword}/manifest.json`
       : `${baseUrl}/stremio/u/${uuid}/manifest.json`
     : '';
+  const chillLinkUrl = uuid
+    ? `${baseUrl}/chilllink/${uuid}/${encryptedPassword}`
+    : '';
   const encodedManifest = encodeURIComponent(manifestUrl);
 
   const copyManifestUrl = async () => {
     await copyToClipboard(manifestUrl, {
       successMessage: 'Manifest URL copied to clipboard',
       errorMessage: 'Failed to copy manifest URL',
+    });
+  };
+
+  const copyChillLinkUrl = async () => {
+    await copyToClipboard(chillLinkUrl, {
+      successMessage: 'ChillLink URL copied to clipboard',
+      errorMessage: 'Failed to copy ChillLink URL',
     });
   };
 
@@ -483,46 +495,81 @@ function Content() {
               title="Install"
               description="Install your addon using your preferred method. There usually isn't a need to reinstall the addon after updating your configuration above, unless you use catalogs and you've changed the order of them or the addons that provide them"
             >
-              <Button intent="white" rounded onClick={installModal.open}>
-                Install
-              </Button>
+              <div className="flex justify-between items-center">
+                <Button intent="white" rounded onClick={installModal.open}>
+                  Install
+                </Button>
+                <div className="w-40">
+                  <Select
+                    options={[
+                      { label: 'Stremio', value: 'stremio' },
+                      { label: 'ChillLink', value: 'chilllink' },
+                    ]}
+                    value={installProtocol}
+                    onValueChange={setInstallProtocol}
+                  />
+                </div>
+              </div>
 
               <Modal
                 open={installModal.isOpen}
                 onOpenChange={installModal.toggle}
-                title="Install"
+                title={`Install to ${installProtocol === 'stremio' ? 'Stremio' : 'Chillio'}`}
                 description="Install your addon"
               >
                 <div className="flex flex-col gap-4">
-                  <Button
-                    onClick={() =>
-                      window.open(
-                        `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
-                      )
-                    }
-                    intent="primary"
-                    className="w-full"
-                  >
-                    Stremio
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      window.open(
-                        `https://web.stremio.com/#/addons?addon=${encodedManifest}`
-                      )
-                    }
-                    intent="primary"
-                    className="w-full"
-                  >
-                    Stremio Web
-                  </Button>
-                  <Button
-                    onClick={copyManifestUrl}
-                    intent="primary"
-                    className="w-full"
-                  >
-                    Copy URL
-                  </Button>
+                  {installProtocol === 'stremio' && (
+                    <>
+                      <Button
+                        onClick={() =>
+                          window.open(
+                            `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
+                          )
+                        }
+                        intent="primary"
+                        className="w-full"
+                      >
+                        Stremio
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          window.open(
+                            `https://web.stremio.com/#/addons?addon=${encodedManifest}`
+                          )
+                        }
+                        intent="primary"
+                        className="w-full"
+                      >
+                        Stremio Web
+                      </Button>
+                    </>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-2">
+                    <TextInput
+                      type="text"
+                      readOnly
+                      value={
+                        installProtocol === 'stremio'
+                          ? manifestUrl
+                          : chillLinkUrl
+                      }
+                      className="flex-1 rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      onClick={(e) => e.currentTarget.select()}
+                    />
+                    <Button
+                      onClick={
+                        installProtocol === 'stremio'
+                          ? copyManifestUrl
+                          : copyChillLinkUrl
+                      }
+                      intent="primary"
+                      className="shrink-0 px-3"
+                      aria-label="Copy URL"
+                    >
+                      <CopyIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </Modal>
             </SettingsCard>

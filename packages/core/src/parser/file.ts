@@ -1,6 +1,6 @@
 import { PARSE_REGEX } from './regex.js';
 import { ParsedFile } from '../db/schemas.js';
-import { parseTorrentTitle } from '@viren070/parse-torrent-title';
+import { Parser, handlers } from '@viren070/parse-torrent-title';
 import { FULL_LANGUAGE_MAPPING } from '../utils/languages.js';
 import { LANGUAGES } from '../utils/constants.js';
 
@@ -63,8 +63,12 @@ export function convertLangCodeToName(code: string): string | undefined {
 }
 
 class FileParser {
+  private static parser = new Parser().addHandlers(
+    handlers.filter((handler) => handler.field !== 'country')
+  );
+
   static parse(filename: string): ParsedFile {
-    const parsed = parseTorrentTitle(filename);
+    const parsed = this.parser.parse(filename);
     if (
       ['vinland', 'furiosaamadmax', 'horizonanamerican'].includes(
         (parsed.title || '')

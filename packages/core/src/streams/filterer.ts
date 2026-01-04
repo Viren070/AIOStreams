@@ -12,7 +12,7 @@ import {
 } from '../utils/index.js';
 import { StreamType } from '../utils/constants.js';
 import { StreamSelector } from '../parser/streamExpression.js';
-import StreamUtils from './utils.js';
+import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import { MetadataService } from '../metadata/service.js';
 import { Metadata } from '../metadata/utils.js';
 import {
@@ -273,9 +273,11 @@ class StreamFilterer {
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
     let releaseDates: ReleaseDate[] | undefined;
+    let episodeAirDate: string | undefined;
     if (
       (this.userData.titleMatching?.enabled ||
-        (this.userData.digitalReleaseFilter && type === 'movie') ||
+        (this.userData.digitalReleaseFilter?.enabled &&
+          ['movie', 'series', 'anime'].includes(type)) ||
         this.userData.yearMatching?.enabled ||
         this.userData.seasonEpisodeMatching?.enabled) &&
       constants.TYPES.includes(type as any)
@@ -342,19 +344,42 @@ class StreamFilterer {
         }
 
         if (
-          this.userData.digitalReleaseFilter &&
-          requestedMetadata.tmdbId &&
-          type === 'movie'
+          this.userData.digitalReleaseFilter?.enabled &&
+          requestedMetadata.tmdbId
         ) {
-          try {
-            releaseDates = await new TMDBMetadata({
-              accessToken: this.userData.tmdbAccessToken,
-              apiKey: this.userData.tmdbApiKey,
-            }).getReleaseDates(requestedMetadata.tmdbId);
-          } catch (error) {
-            logger.warn(
-              `Error fetching release dates for ${id} (tmdb: ${requestedMetadata.tmdbId}): ${error}`
-            );
+          if (type === 'movie') {
+            try {
+              releaseDates = await new TMDBMetadata({
+                accessToken: this.userData.tmdbAccessToken,
+                apiKey: this.userData.tmdbApiKey,
+              }).getReleaseDates(requestedMetadata.tmdbId);
+            } catch (error) {
+              logger.warn(
+                `Error fetching release dates for ${id} (tmdb: ${requestedMetadata.tmdbId}): ${error}`
+              );
+            }
+          } else if (
+            (type === 'series' || type === 'anime') &&
+            parsedId.season &&
+            parsedId.episode
+          ) {
+            try {
+              episodeAirDate = await new TMDBMetadata({
+                accessToken: this.userData.tmdbAccessToken,
+                apiKey: this.userData.tmdbApiKey,
+              }).getEpisodeAirDate(
+                requestedMetadata.tmdbId,
+                Number(parsedId.season),
+                Number(parsedId.episode)
+              );
+              logger.debug(
+                `Fetched episode air date for ${id}: ${episodeAirDate}`
+              );
+            } catch (error) {
+              logger.warn(
+                `Error fetching episode air date for ${id} (tmdb: ${requestedMetadata.tmdbId}, S${parsedId.season}E${parsedId.episode}): ${error}`
+              );
+            }
           }
         }
 
@@ -377,30 +402,53 @@ class StreamFilterer {
     }
 
     const applyDigitalReleaseFilter = () => {
-      logger.debug(`Applying digital release filter for ${id}`, {
+      const digitalReleaseFilterConfig = this.userData.digitalReleaseFilter;
+      logger.debug(`[DigitalReleaseFilter] Checking filter for ${id}`, {
+        enabled: digitalReleaseFilterConfig?.enabled,
+        tolerance: digitalReleaseFilterConfig?.tolerance,
+        requestTypes: digitalReleaseFilterConfig?.requestTypes,
+        addons: digitalReleaseFilterConfig?.addons,
+        contentType: type,
         releaseDate: requestedMetadata?.releaseDate,
-        type,
         tmdbId: requestedMetadata?.tmdbId,
-        digitalReleaseFilter: this.userData.digitalReleaseFilter,
-        releaseDates: releaseDates?.length,
+        releaseDatesCount: releaseDates?.length ?? 0,
       });
-      if (!this.userData.digitalReleaseFilter) {
+      if (!digitalReleaseFilterConfig?.enabled) {
         return true;
       }
 
-      if (type !== 'movie') {
-        // only appply digital release filter to movies
+      const filterRequestTypes = digitalReleaseFilterConfig.requestTypes;
+      if (
+        filterRequestTypes &&
+        filterRequestTypes.length > 0 &&
+        ((isAnime && !filterRequestTypes.includes('anime')) ||
+          (!isAnime && !filterRequestTypes.includes(type)))
+      ) {
+        logger.debug(
+          `[DigitalReleaseFilter] Skipping for type "${type}"${isAnime ? ' (anime)' : ''} (not in requestTypes: ${filterRequestTypes.join(', ')})`
+        );
+        return true;
+      }
+
+      if (!['movie', 'series', 'anime'].includes(type)) {
+        logger.debug(
+          `[DigitalReleaseFilter] Skipping for unsupported type "${type}"`
+        );
         return true;
       }
 
       if (!requestedMetadata?.releaseDate) {
-        // if no release date is present, keep due to lack of data
+        logger.debug(
+          `[DigitalReleaseFilter] No release date found, allowing streams`
+        );
         return true;
       }
 
       const releaseDate = new Date(requestedMetadata.releaseDate);
       if (isNaN(releaseDate.getTime())) {
-        // if the release date is invalid, keep due to lack of data
+        logger.debug(
+          `[DigitalReleaseFilter] Invalid release date "${requestedMetadata.releaseDate}", allowing streams`
+        );
         return true;
       }
       const today = new Date();
@@ -409,46 +457,127 @@ class StreamFilterer {
         (today.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      if (daysSinceRelease < 0) {
-        // a movie released in the future is not digitaly released yet.
+      // Check tolerance: if release is within X days of current date, ignore filter
+      const tolerance = digitalReleaseFilterConfig.tolerance ?? 0;
+      const daysFromRelease = Math.abs(daysSinceRelease);
+
+      if (daysFromRelease <= tolerance) {
         logger.debug(
-          `Filtering out all results as movie is not digitally released yet`,
-          {
-            title: requestedMetadata?.title,
-            daysSinceRelease,
-          }
+          `[DigitalReleaseFilter] Within tolerance! ${daysFromRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
+          { title: requestedMetadata?.title, future: daysSinceRelease < 0 }
+        );
+        return true;
+      }
+
+      if (daysSinceRelease < 0) {
+        logger.info(
+          `[DigitalReleaseFilter] BLOCKING - Content releases in ${daysFromRelease} days (future release)`,
+          { title: requestedMetadata?.title, type }
         );
         return false;
       }
 
+      if (type === 'series' || type === 'anime') {
+        // Use episode air date if we have it, else just use season releaseDate
+        const dateToCheck = episodeAirDate || requestedMetadata?.releaseDate;
+
+        if (!dateToCheck) {
+          logger.debug(
+            `[DigitalReleaseFilter] No episode or series air date found, allowing streams due to lack of data`
+          );
+          return true;
+        }
+
+        const episodeReleaseDate = new Date(dateToCheck);
+        if (isNaN(episodeReleaseDate.getTime())) {
+          logger.debug(
+            `[DigitalReleaseFilter] Invalid episode/series date "${dateToCheck}", allowing streams`
+          );
+          return true;
+        }
+
+        const daysSinceEpisode = Math.floor(
+          (today.getTime() - episodeReleaseDate.getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        logger.debug(
+          `[DigitalReleaseFilter] Days since episode aired: ${daysSinceEpisode} (aired: ${dateToCheck})`
+        );
+
+        const daysFromAirDate = Math.abs(daysSinceEpisode);
+        if (daysFromAirDate <= tolerance) {
+          logger.debug(
+            `[DigitalReleaseFilter] Episode within tolerance! ${daysFromAirDate} days <= ${tolerance} days tolerance. ALLOWING streams.`,
+            {
+              title: requestedMetadata?.title,
+              episode: `${parsedId?.season}:${parsedId?.episode}`,
+              future: daysSinceEpisode < 0,
+            }
+          );
+          return true;
+        }
+
+        if (daysSinceEpisode < 0) {
+          logger.info(
+            `[DigitalReleaseFilter] BLOCKING - Episode airs in ${Math.abs(daysSinceEpisode)} days (future release)`,
+            {
+              title: requestedMetadata?.title,
+              episode: `${parsedId?.season}:${parsedId?.episode}`,
+            }
+          );
+          return false;
+        }
+
+        logger.debug(
+          `[DigitalReleaseFilter] Episode has aired, allowing streams`
+        );
+        return true;
+      }
+
       if (daysSinceRelease > 365) {
-        // a movie released more than a year ago is likely to have a digital release.
+        logger.debug(
+          `[DigitalReleaseFilter] Movie is over 1 year old, probably has digital release. Allowing streams.`
+        );
         return true;
       }
 
       if (!releaseDates || releaseDates.length === 0) {
-        // if release dates couldn't be fetched for a recent movie, keep due to lack of data
+        logger.debug(
+          `[DigitalReleaseFilter] No TMDB release dates found, allowing streams due to lack of data`
+        );
         return true;
       }
 
       // check if at least one of the release dates is in the past and return true if so
-      const hasDigitalRelease = releaseDates.some(
-        (releaseDate) =>
-          releaseDate.type >= 4 &&
-          releaseDate.type <= 6 &&
-          new Date(releaseDate.release_date) <= today
+      const digitalReleaseDates = releaseDates.filter(
+        (rd) => rd.type >= 4 && rd.type <= 6
+      );
+      const hasDigitalRelease = digitalReleaseDates.some(
+        (rd) => new Date(rd.release_date) <= today
+      );
+
+      logger.debug(
+        `[DigitalReleaseFilter] Found ${digitalReleaseDates.length} digital release dates from TMDB`,
+        {
+          digitalReleaseDates: digitalReleaseDates.map((rd) => ({
+            date: rd.release_date,
+            type: rd.type,
+          })),
+          hasDigitalRelease,
+        }
       );
 
       if (hasDigitalRelease) {
+        logger.debug(
+          `[DigitalReleaseFilter] Digital release found! Allowing streams.`
+        );
         return true;
       }
 
-      logger.debug(
-        `Filtering out all results as no digital release was found`,
-        {
-          title: requestedMetadata?.title,
-          daysSinceRelease,
-        }
+      logger.info(
+        `[DigitalReleaseFilter] BLOCKING - No digital release found for "${requestedMetadata?.title}"`,
+        { daysSinceRelease }
       );
       return false;
     };
@@ -725,17 +854,56 @@ class StreamFilterer {
       return true;
     };
 
-    // Early digital release filter check - if it returns false, filter out all streams
-    if (!applyDigitalReleaseFilter()) {
-      // Set the count to total streams since ALL streams are filtered out
-      this.filterStatistics.removed.noDigitalRelease.total = streams.length;
-      this.filterStatistics.removed.noDigitalRelease.details[
-        'No digital release available'
-      ] = streams.length;
+    const includedStreamsByExpression =
+      await this.applyIncludedStreamExpressions(streams, type, id);
+    if (includedStreamsByExpression.length > 0) {
+      logger.info(
+        `${includedStreamsByExpression.length} streams were included by stream expressions`
+      );
+    }
 
-      const finalStreams: ParsedStream[] = [];
-      this.generateFilterSummary(streams, finalStreams, start);
-      return finalStreams;
+    // Early digital release filter check - if it returns false, filter out streams
+    // except those with passthrough for 'digitalRelease' stage or those from addons not in the filter list
+    if (!applyDigitalReleaseFilter()) {
+      const digitalReleaseFilterAddons =
+        this.userData.digitalReleaseFilter?.addons;
+      const passthroughDigitalRelease = streams.filter((stream) => {
+        // Check if stream has passthrough for this stage
+        if (shouldPassthroughStage(stream, 'digitalRelease')) {
+          return true;
+        }
+        // If addons filter is set and stream is not from a filtered addon, bypass
+        if (
+          digitalReleaseFilterAddons &&
+          digitalReleaseFilterAddons.length > 0 &&
+          stream.addon.preset.id &&
+          !digitalReleaseFilterAddons.includes(stream.addon.preset.id)
+        ) {
+          return true;
+        }
+        return false;
+      });
+      const filteredCount = streams.length - passthroughDigitalRelease.length;
+      if (filteredCount > 0) {
+        this.filterStatistics.removed.noDigitalRelease.total = filteredCount;
+        this.filterStatistics.removed.noDigitalRelease.details[
+          'No digital release available'
+        ] = filteredCount;
+      }
+      if (passthroughDigitalRelease.length > 0) {
+        this.incrementIncludedReason(
+          'passthrough',
+          `digitalRelease (${passthroughDigitalRelease.length})`
+        );
+      }
+
+      if (passthroughDigitalRelease.length === 0) {
+        const finalStreams: ParsedStream[] = [];
+        this.generateFilterSummary(streams, finalStreams, start);
+        return finalStreams;
+      }
+      // Continue with only passthrough streams
+      streams = passthroughDigitalRelease;
     }
 
     const excludedRegexPatterns =
@@ -918,7 +1086,7 @@ class StreamFilterer {
     const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
       const file = stream.parsedFile;
 
-      if (stream.addon.resultPassthrough) {
+      if (shouldPassthroughStage(stream, 'filter')) {
         this.incrementIncludedReason('passthrough', stream.addon.name);
         return true;
       }
@@ -1554,7 +1722,10 @@ class StreamFilterer {
         }
       }
 
-      if (!performTitleMatch(stream)) {
+      if (
+        !shouldPassthroughStage(stream, 'title') &&
+        !performTitleMatch(stream)
+      ) {
         this.incrementRemovalReason(
           'titleMatching',
           `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
@@ -1562,7 +1733,10 @@ class StreamFilterer {
         return false;
       }
 
-      if (!performYearMatch(stream)) {
+      if (
+        !shouldPassthroughStage(stream, 'year') &&
+        !performYearMatch(stream)
+      ) {
         this.incrementRemovalReason(
           'yearMatching',
           `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
@@ -1570,7 +1744,10 @@ class StreamFilterer {
         return false;
       }
 
-      if (!performSeasonEpisodeMatch(stream)) {
+      if (
+        !shouldPassthroughStage(stream, 'episode') &&
+        !performSeasonEpisodeMatch(stream)
+      ) {
         const pad = (n: number) => n.toString().padStart(2, '0');
         const s = stream.parsedFile?.seasons;
         const e = stream.parsedFile?.episodes;
@@ -1634,16 +1811,38 @@ class StreamFilterer {
       return true;
     };
 
-    const includedStreamsByExpression =
-      await this.applyIncludedStreamExpressions(streams, type, id);
-    if (includedStreamsByExpression.length > 0) {
+    // Separate included streams by whether they have passthrough flags
+    const includedWithPassthrough = includedStreamsByExpression.filter(
+      (stream) => stream.passthrough !== undefined
+    );
+    const includedWithoutPassthrough = includedStreamsByExpression.filter(
+      (stream) => stream.passthrough === undefined
+    );
+
+    if (includedWithoutPassthrough.length > 0) {
       logger.info(
-        `${includedStreamsByExpression.length} streams were included by stream expressions`
+        `${includedWithoutPassthrough.length} included streams (no passthrough) will skip filtering entirely`
       );
     }
 
+    if (includedWithPassthrough.length > 0) {
+      logger.info(
+        `${includedWithPassthrough.length} included streams have passthrough flags and will go through filtering`
+      );
+
+      for (const stream of includedWithPassthrough) {
+        const stages = Array.isArray(stream.passthrough)
+          ? stream.passthrough.join(', ')
+          : 'all';
+        logger.debug(
+          `Stream "${stream.filename || stream.id}" passthrough stages: [${stages}]`
+        );
+      }
+    }
+
+    // Only exclude streams without passthrough from filtering
     const filterableStreams = streams.filter(
-      (stream) => !includedStreamsByExpression.some((s) => s.id === stream.id)
+      (stream) => !includedWithoutPassthrough.some((s) => s.id === stream.id)
     );
 
     const filterResults = await Promise.all(
@@ -1655,7 +1854,7 @@ class StreamFilterer {
     );
 
     const finalStreams = StreamUtils.mergeStreams([
-      ...includedStreamsByExpression,
+      ...includedWithoutPassthrough,
       ...filteredStreams,
     ]);
 
@@ -1705,9 +1904,16 @@ class StreamFilterer {
       queryType = `anime.${queryType}`;
     }
 
-    const passthroughStreams = streams
-      .filter((stream) => stream.addon.resultPassthrough)
+    // Get streams that passthrough excluded SEL
+    const excludedPassthroughStreams = streams
+      .filter((stream) => shouldPassthroughStage(stream, 'excluded'))
       .map((stream) => stream.id);
+
+    // Get streams that passthrough required SEL
+    const requiredPassthroughStreams = streams
+      .filter((stream) => shouldPassthroughStage(stream, 'required'))
+      .map((stream) => stream.id);
+
     if (
       this.userData.excludedStreamExpressions &&
       this.userData.excludedStreamExpressions.length > 0
@@ -1723,10 +1929,10 @@ class StreamFilterer {
             expression
           );
 
-          // Track these stream objects for removal
+          // Track these stream objects for removal (except passthrough streams)
           selectedStreams.forEach(
             (stream) =>
-              !passthroughStreams.includes(stream.id) &&
+              !excludedPassthroughStreams.includes(stream.id) &&
               streamsToRemove.add(stream.id)
           );
 
@@ -1763,7 +1969,7 @@ class StreamFilterer {
     ) {
       const selector = new StreamSelector(queryType);
       const streamsToKeep = new Set<string>(); // Track actual stream objects to be removed
-      passthroughStreams.forEach((stream) => streamsToKeep.add(stream));
+      requiredPassthroughStreams.forEach((stream) => streamsToKeep.add(stream));
 
       for (const expression of this.userData.requiredStreamExpressions) {
         try {
@@ -1795,7 +2001,7 @@ class StreamFilterer {
       }
 
       logger.verbose(
-        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${passthroughStreams.length} passthrough streams)`
+        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${requiredPassthroughStreams.length} passthrough streams)`
       );
       // remove all streams that are not in the streamsToKeep set
       streams = streams.filter((stream) => streamsToKeep.has(stream.id));

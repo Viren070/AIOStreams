@@ -3,10 +3,12 @@ import {
   ParsedStream,
   ParsedStreams,
   ParsedStreamSchema,
+  PassthroughStage,
 } from '../db/schemas.js';
 import bytes from 'bytes';
 import { formatZodError } from '../utils/config.js';
 import { ZodError } from 'zod';
+import { PASSTHROUGH_STAGES } from '../utils/constants.js';
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
@@ -533,6 +535,46 @@ export abstract class StreamExpressionEngine {
           ? messages.includes(stream.message || '')
           : messages.some((m) => (stream.message || '').includes(m))
       );
+    };
+
+    this.parser.functions.passthrough = function (
+      streams: ParsedStream[],
+      ...stages: string[]
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+
+      // Validate stages if provided
+      if (stages.length > 0) {
+        const validStages = PASSTHROUGH_STAGES as readonly string[];
+        const invalidStages = stages.filter((s) => !validStages.includes(s));
+        if (invalidStages.length > 0) {
+          throw new Error(
+            `Invalid passthrough stage(s): ${invalidStages.join(', ')}. Valid stages are: ${PASSTHROUGH_STAGES.join(', ')}`
+          );
+        }
+      }
+
+      for (const stream of streams) {
+        if (stages.length === 0) {
+          // No stages specified = passthrough all
+          stream.passthrough = true;
+        } else {
+          // Merge with existing passthrough stages if any
+          const existingStages: PassthroughStage[] = Array.isArray(
+            stream.passthrough
+          )
+            ? stream.passthrough
+            : [];
+          const newStages = new Set([
+            ...existingStages,
+            ...(stages as PassthroughStage[]),
+          ]);
+          stream.passthrough = Array.from(newStages) as PassthroughStage[];
+        }
+      }
+      return streams;
     };
 
     this.parser.functions.count = function (streams: ParsedStream[]) {

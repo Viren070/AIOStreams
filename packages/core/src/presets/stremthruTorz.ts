@@ -54,7 +54,7 @@ export class StremthruTorzPreset extends StremThruPreset {
       ...baseOptions(
         'StremThru Torz',
         supportedResources,
-        Env.DEFAULT_STREMTHRU_STORE_TIMEOUT,
+        Env.DEFAULT_STREMTHRU_TORZ_TIMEOUT,
         Env.STREMTHRU_TORZ_URL
       ),
       {

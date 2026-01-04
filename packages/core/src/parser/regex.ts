@@ -80,10 +80,11 @@ export const PARSE_REGEX: PARSE_REGEX = {
   },
   visualTags: {
     '10bit': createRegex('10[ .\\-_]?bit'),
-    'HDR10+': createRegex('hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
-    HDR10: createRegex('hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
-    HDR: createRegex('hdr(?![ .\\-_]?10)(?![ .\\-_]?(?:\\+|p(lus)?))'),
-    DV: createRegex('do?(lby)?[ .\\-_]?vi?(sion)?(?:[ .\\-_]?atmos)?|dv'),
+    'HDR10+': createRegex('(dv[\\+\\-]?)?hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
+    HDR10: createRegex('(dv[\\+\\-]?)?hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
+    HDR: createRegex('(dv[\\+\\-]?)?hdr(?![ .\\-_]?10)(?![ .\\-_]?(?:\\+|p(lus)?))'),
+    HLG: createRegex('hlg'),
+    DV: createRegex('d(o)?(lby)?[ .\\-_]?v(i)?(sion)?(?:[ .\\-_]?atmos)?|dv|dv[\\+\\-]?hdr[ .\\-_]?(10)?[ .\\-_]?(p(lus)?|[+])?'),
     '3D': createRegex('(bd)?(3|three)[ .\\-_]?(d(imension)?(al)?)'),
     IMAX: createRegex('imax'),
     AI: createRegex('ai[ .\\-_]?(upscale|enhanced|remaster)?'),
@@ -92,17 +93,18 @@ export const PARSE_REGEX: PARSE_REGEX = {
     'H-SBS': createRegex('h?(alf)?[ .\\-_]?(sbs|side[ .\\-_]?by[ .\\-_]?side)'),
   },
   audioTags: {
-    Atmos: createRegex('atmos'),
+    Atmos: createRegex('atmos|ddpa\\d?'),
     'DD+': createRegex(
-      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?(p(lus)?|\\+)(?:[ .\\-_]?(2[ .\\-_]?0|5[ .\\-_]?1|7[ .\\-_]?1))?)|e[ .\\-_]?ac[ .\\-_]?3'
+      '(d(olby)?[ .\\-_]?d(igital)?[ .\\-_]?((p(lus)?|\\+)a?)(?:[ .\\-_]?(2[ .\\-_]?0|5[ .\\-_]?1|7[ .\\-_]?1))?)|e[ .\\-_]?ac[ .\\-_]?3'
     ),
     DD: createRegex(
       '(d(olby)?[ .\\-_]?d(igital)?(?:[ .\\-_]?(5[ .\\-_]?1|7[ .\\-_]?1|2[ .\\-_]?0?))?)|(?<!e[ .\\-_]?)ac[ .\\-_]?3'
     ),
+    'DTS:X': createRegex('dts[ .\\-:_]?x'),
     'DTS-HD MA': createRegex('dts[ .\\-_]?hd[ .\\-_]?ma'),
     'DTS-HD': createRegex('dts[ .\\-_]?hd(?![ .\\-_]?ma)'),
     'DTS-ES': createRegex('dts[ .\\-_]?es'),
-    DTS: createRegex('dts(?![ .\\-_]?hd[ .\\-_]?ma|[ .\\-_]?hd|[ .\\-_]?es)'),
+    DTS: createRegex('dts(?![ .\\-:_]?(x(?=[\\s\\)\\]_.\\-,]|$)|hd[ .\\-_]?(ma)?|es))'),
     TrueHD: createRegex('true[ .\\-_]?hd'),
     OPUS: createRegex('opus'),
     AAC: createRegex('q?aac(?:[ .\\-_]?2)?'),
@@ -141,7 +143,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     Portuguese: createLanguageRegex('portuguese|por'),
     Spanish: createLanguageRegex('spanish|spa|esp'),
     French: createLanguageRegex('french|fra|fr|vf|vff|vfi|vf2|vfq|truefrench'),
-    German: createLanguageRegex('deu(tsch)?(land)?|ger(man)?'),
+    German: createLanguageRegex('deu(tsch)?|ger(man)?'),
     Italian: createLanguageRegex('italian|ita'),
     Korean: createLanguageRegex('korean|kor'),
     Hindi: createLanguageRegex('hindi|hin'),

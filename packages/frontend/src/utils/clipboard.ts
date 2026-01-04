@@ -14,6 +14,7 @@ export async function copyToClipboard(text: string, options: CopyOptions = {}) {
   } = options;
 
   try {
+    console.log('Attempting to copy to clipboard:', text);
     if (typeof navigator === 'undefined') {
       throw new Error('Navigator is not available');
     }
@@ -23,6 +24,8 @@ export async function copyToClipboard(text: string, options: CopyOptions = {}) {
       toast.success(successMessage, description ? { description } : undefined);
       return { success: true as const };
     }
+
+    console.warn('Clipboard API not available, falling back to execCommand');
 
     // Fallback for environments where Clipboard API is unavailable (e.g., http:, some iframes)
     const textarea = document.createElement('textarea');
@@ -35,6 +38,7 @@ export async function copyToClipboard(text: string, options: CopyOptions = {}) {
     textarea.select();
 
     const successful = document.execCommand('copy');
+    console.log('execCommand copy result:', successful);
     document.body.removeChild(textarea);
 
     if (!successful) {
@@ -44,6 +48,7 @@ export async function copyToClipboard(text: string, options: CopyOptions = {}) {
     toast.success(successMessage, description ? { description } : undefined);
     return { success: true as const };
   } catch (error) {
+    console.error('Error copying to clipboard:', error);
     toast.error(errorMessage);
     return { success: false as const, error: error as unknown };
   }

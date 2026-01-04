@@ -864,6 +864,7 @@ export function ConfigTemplatesModal({
       'tmdbAccessToken',
       'tvdbApiKey',
       'rpdbApiKey',
+      'topPosterApiKey'
     ] as const;
 
     topLevelFields.forEach((field) => {

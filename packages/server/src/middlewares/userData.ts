@@ -14,7 +14,13 @@ import {
 const logger = createLogger('server');
 
 // Valid resources that require authentication
-const VALID_RESOURCES = [...constants.RESOURCES, 'manifest.json', 'configure'];
+const VALID_RESOURCES = [
+  ...constants.RESOURCES,
+  'manifest.json',
+  'configure',
+  'manifest',
+  'streams',
+];
 
 export const userDataMiddleware = async (
   req: Request,

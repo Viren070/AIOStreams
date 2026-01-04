@@ -404,7 +404,7 @@ router.all(
         logger.debug(`[${requestId}] Making upstream request`, {
           username: auth.username,
           method: method,
-          proxied: useProxy
+          tunneled: useProxy
             ? `true${proxyIndex > 1 ? ` (${proxyIndex + 1})` : ''}`
             : 'false',
           range: headers['range'],
@@ -504,10 +504,21 @@ router.all(
       if (req.method === 'HEAD') {
         res.end();
       } else {
-        if (sizeLimiter) {
-          await pipeline(upstreamResponse.body, sizeLimiter, res);
+        // Check if streams are still writable before piping
+        if (upstreamResponse.body.destroyed || res.destroyed) {
+          logger.debug(
+            `[${requestId}] Stream already destroyed, skipping pipe`,
+            {
+              upstreamDestroyed: upstreamResponse.body.destroyed,
+              resDestroyed: res.destroyed,
+            }
+          );
         } else {
-          await pipeline(upstreamResponse.body, res);
+          if (sizeLimiter) {
+            await pipeline(upstreamResponse.body, sizeLimiter, res);
+          } else {
+            await pipeline(upstreamResponse.body, res);
+          }
         }
       }
 
@@ -517,15 +528,32 @@ router.all(
     } catch (error) {
       const totalDuration = Date.now() - startTime;
 
-      if (upstreamResponse) {
+      if (upstreamResponse && !upstreamResponse.body.destroyed) {
+        upstreamResponse.body.on('error', (err) => {
+          logger.warn(
+            `[${requestId}] Failed to destroy upstream response body`,
+            {
+              error: err instanceof Error ? err.message : String(err),
+            }
+          );
+        });
         upstreamResponse.body.destroy();
       }
 
-      if (
-        (error as NodeJS.ErrnoException)?.code !== 'ERR_STREAM_PREMATURE_CLOSE'
-      ) {
+      const errorCode = (error as NodeJS.ErrnoException)?.code;
+      const isClientDisconnect =
+        errorCode === 'ERR_STREAM_PREMATURE_CLOSE' ||
+        errorCode === 'ERR_STREAM_UNABLE_TO_PIPE' ||
+        errorCode === 'ECONNRESET' ||
+        errorCode === 'EPIPE' ||
+        errorCode === 'ERR_STREAM_DESTROYED' ||
+        (error as Error)?.message?.includes('aborted') ||
+        (error as Error)?.message?.includes('destroyed');
+
+      if (!isClientDisconnect) {
         logger.error(`[${requestId}] Proxy request failed`, {
           error: error instanceof Error ? error.message : String(error),
+          errorCode,
           durationMs: totalDuration,
           contentLength: upstreamResponse?.headers['content-length'],
           upstreamStatusCode: upstreamResponse?.statusCode,
@@ -540,7 +568,8 @@ router.all(
           );
         }
       } else {
-        logger.debug(`[${requestId}] Client disconnected (premature close)`, {
+        logger.debug(`[${requestId}] Client disconnected`, {
+          errorCode,
           durationMs: totalDuration,
         });
       }
