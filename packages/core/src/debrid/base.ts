@@ -121,6 +121,7 @@ const BasePlaybackInfoSchema = z.object({
 const BaseFileInfoSchema = z.object({
   index: z.number().optional(),
   cacheAndPlay: z.boolean().optional(),
+  cleanupAfterResolve: z.boolean().optional(),
 });
 
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
@@ -187,6 +188,8 @@ export interface DebridService {
     fileId?: string,
     clientIp?: string
   ): Promise<string>;
+  removeMagnet?(magnetId: string): Promise<void>;
+  removeNzb?(nzbId: string): Promise<void>;
 
   // Service info
   readonly serviceName: ServiceId;
@@ -196,4 +199,5 @@ export interface DebridService {
 export type DebridServiceConfig = {
   token: string;
   clientIp?: string;
+  cleanupAfterResolve?: boolean;
 };

@@ -286,6 +286,39 @@ function Content() {
         )}
         {mode === 'pro' && (
           <SettingsCard
+            title="Cleanup After Resolve"
+            description={
+              <div className="space-y-2">
+                <p>
+                  When enabled, debrid services will automatically remove the
+                  magnet/NZB from your debrid dashboard after generating a
+                  playback link. This prevents watched items from cluttering
+                  your debrid service&apos;s library.
+                </p>
+                <Alert intent="info-basic">
+                  <p className="text-sm">
+                    This feature only works for built-in addons and supported
+                    debrid services.
+                  </p>
+                </Alert>
+              </div>
+            }
+          >
+            <Switch
+              label="Enable"
+              side="right"
+              value={userData.cleanupAfterResolve}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  cleanupAfterResolve: value,
+                }));
+              }}
+            />
+          </SettingsCard>
+        )}
+        {mode === 'pro' && (
+          <SettingsCard
             title="External Downloads"
             description="Adds a stream that automatically opens the stream in your browser below every stream for easier downloading"
           >

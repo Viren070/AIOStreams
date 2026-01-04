@@ -67,6 +67,21 @@ export class StremThruInterface implements DebridService {
     return result.data.items;
   }
 
+  public async removeMagnet(magnetId: string): Promise<void> {
+    try {
+      await this.stremthru.store.removeMagnet(magnetId);
+      logger.debug(`Removed magnet ${magnetId} from ${this.serviceName}`);
+    } catch (error) {
+      if (error instanceof StremThruError) {
+        logger.warn(
+          `Failed to remove magnet ${magnetId} from ${this.serviceName}: ${error.message}`
+        );
+        throw convertStremThruError(error);
+      }
+      throw error;
+    }
+  }
+
   public async checkMagnets(
     magnets: string[],
     sid?: string
@@ -360,6 +375,18 @@ export class StremThruInterface implements DebridService {
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
       true
     );
+
+    if (this.config.cleanupAfterResolve && magnetDownload.id) {
+      this.removeMagnet(magnetDownload.id.toString()).catch((err) => {
+        logger.warn(
+          `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`
+        );
+      });
+    } else {
+      logger.debug(
+        `Cleanup after resolve: ${this.config.cleanupAfterResolve ? 'enabled but no magnet ID' : 'disabled'}`
+      );
+    }
 
     return playbackLink;
   }

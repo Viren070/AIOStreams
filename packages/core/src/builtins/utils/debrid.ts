@@ -60,7 +60,8 @@ export async function processTorrents(
   debridServices: BuiltinDebridServices,
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  cleanupAfterResolve?: boolean
 ): Promise<{
   results: TorrentWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -79,7 +80,8 @@ export async function processTorrents(
         service,
         stremioId,
         metadata,
-        clientIp
+        clientIp,
+        cleanupAfterResolve
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
@@ -110,13 +112,15 @@ async function processTorrentsForDebridService(
   service: BuiltinDebridServices[number],
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  cleanupAfterResolve?: boolean
 ): Promise<TorrentWithSelectedFile[]> {
   const startTime = Date.now();
   const debridService = getDebridService(
     service.id,
     service.credential,
-    clientIp
+    clientIp,
+    cleanupAfterResolve
   );
 
   const results: TorrentWithSelectedFile[] = [];

@@ -115,7 +115,8 @@ router.get(
       const debridInterface = getDebridService(
         storeAuth.id,
         storeAuth.credential,
-        req.userIp
+        req.userIp,
+        fileInfo.cleanupAfterResolve
       );
 
       let streamUrl: string | undefined;

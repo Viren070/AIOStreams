@@ -550,6 +550,8 @@ export const UserDataSchema = z.object({
   mergedCatalogs: z.array(MergedCatalog).optional(),
   externalDownloads: z.boolean().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
+
+  cleanupAfterResolve: z.boolean().optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;
