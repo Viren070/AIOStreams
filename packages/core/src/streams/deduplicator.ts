@@ -57,6 +57,19 @@ class StreamDeduplicator {
 
     // Process ALL streams (including excluded ones) for deduplication grouping
     for (const stream of streams) {
+
+      // FIX dedup mixing cached and uncached with a "cache-class" prefix
+      const cacheClass =
+        (stream.type === 'debrid' ||
+          stream.type === 'usenet' ||
+          stream.type === 'stremio-usenet') &&
+        stream.service
+          ? stream.service.cached
+            ? 'cached'
+            : 'uncached'
+          : 'other';
+
+      
       // Create a unique key based on the selected deduplication methods
       dsu.makeSet(stream.id);
       const currentStreamKeyStrings: string[] = [];
@@ -70,7 +83,8 @@ class StreamDeduplicator {
           .replace(/[^\p{L}\p{N}+]/gu, '')
           .replace(/\s+/g, '')
           .toLowerCase();
-        currentStreamKeyStrings.push(`filename:${normalisedFilename}`);
+        // FIX dedup mixing cached and uncached with a "cache-class" prefix
+        currentStreamKeyStrings.push(`filename:${cacheClass}:${normalisedFilename}`);
       }
 
       // Some addons provide fileIdx (to distinguish multiple files
@@ -78,9 +92,8 @@ class StreamDeduplicator {
       // where addons that provide fileIdx will not deduplicate properly with those that don't
       // via infoHash alone.
       if (deduplicationKeys.includes('infoHash') && stream.torrent?.infoHash) {
-        currentStreamKeyStrings.push(
-          `infoHash:${stream.torrent.infoHash}${stream.torrent.fileIdx ?? 0}`
-        );
+        // FIX dedup mixing cached and uncached with a "cache-class" prefix
+        currentStreamKeyStrings.push(`infoHash:${cacheClass}:${stream.torrent.infoHash}${stream.torrent.fileIdx ?? 0}`);
       }
 
       if (deduplicationKeys.includes('smartDetect')) {
@@ -92,7 +105,8 @@ class StreamDeduplicator {
         const hash = getSimpleTextHash(
           `${roundedSize}${stream.parsedFile?.resolution}${stream.parsedFile?.quality}${stream.parsedFile?.visualTags}${stream.parsedFile?.audioTags}${stream.parsedFile?.languages}${stream.parsedFile?.encode}`
         );
-        currentStreamKeyStrings.push(`smartDetect:${hash}`);
+        // FIX dedup mixing cached and uncached with a "cache-class" prefix
+        currentStreamKeyStrings.push(`smartDetect:${cacheClass}:${hash}`);
       }
 
       if (currentStreamKeyStrings.length > 0) {
