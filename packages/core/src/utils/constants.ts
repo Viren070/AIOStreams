@@ -840,9 +840,6 @@ export type FakeVisualTag = (typeof FAKE_VISUAL_TAGS)[number];
 
 const VISUAL_TAGS = [
   ...FAKE_VISUAL_TAGS,
-  'DV+HDR',
-  'DV+HDR10',
-  'DV+HDR10Plus',
   'HDR10+',
   'HDR10',
   'DV',
