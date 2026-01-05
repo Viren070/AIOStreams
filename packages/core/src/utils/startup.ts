@@ -968,23 +968,6 @@ const logStartupInfo = () => {
       );
     }
 
-    // Debridio IC4A
-    logKeyValue('Debridio IC4A:', Env.DEBRIDIO_IC4A_URL);
-    if (Env.DEFAULT_DEBRIDIO_IC4A_TIMEOUT) {
-      logKeyValue(
-        '  Timeout:',
-        formatMilliseconds(Env.DEFAULT_DEBRIDIO_IC4A_TIMEOUT),
-        '     '
-      );
-    }
-    if (Env.DEFAULT_DEBRIDIO_IC4A_USER_AGENT) {
-      logKeyValue(
-        '  User Agent:',
-        Env.DEFAULT_DEBRIDIO_IC4A_USER_AGENT,
-        '     '
-      );
-    }
-
     // StremThru Store
     logKeyValue('StremThru Store:', Env.STREMTHRU_STORE_URL.join(', '));
     if (Env.DEFAULT_STREMTHRU_STORE_TIMEOUT) {
