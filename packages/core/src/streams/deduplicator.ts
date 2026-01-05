@@ -59,6 +59,13 @@ class StreamDeduplicator {
     for (const stream of streams) {
       // Create a unique key based on the selected deduplication methods
       dsu.makeSet(stream.id);
+      
+        // ## start change
+        // Map stream ID → stream for quick access to inLibrary status
+        // (move this here if idToStreamMap was not declared before)
+        const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
+        // ## end change
+      
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
@@ -100,6 +107,17 @@ class StreamDeduplicator {
           if (!keyToStreamIds.has(key)) {
             keyToStreamIds.set(key, []);
           }
+
+          // ## start change
+          const existingStreamIds = keyToStreamIds.get(key)!;
+    
+          // Only group streams with the same inLibrary status
+          const hasConflict = existingStreamIds.some(
+            (id) => idToStreamMap.get(id)?.inLibrary !== stream.inLibrary
+          );
+          if (hasConflict) continue;
+          // ## end change
+          
           keyToStreamIds.get(key)!.push(stream.id);
         }
       }
