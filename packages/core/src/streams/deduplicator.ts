@@ -62,14 +62,8 @@ class StreamDeduplicator {
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
-
-        // FIX
         let streamType = stream.type as string;
-        streamType = "undefined"
-        if (stream.service) {
-          streamType = stream.service.cached ? 'cached' : 'uncached';
-        }
-        
+        streamType = stream.service.cached ? 'cached' : 'uncached';
         let normalisedFilename = stream.filename
           .replace(
             /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
@@ -78,8 +72,6 @@ class StreamDeduplicator {
           .replace(/[^\p{L}\p{N}+]/gu, '')
           .replace(/\s+/g, '')
           .toLowerCase();
-
-        // FIX
         currentStreamKeyStrings.push(`filename:${streamType}:${normalisedFilename}`);
       }
 
