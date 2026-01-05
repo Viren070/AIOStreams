@@ -59,6 +59,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
             label: 'AnimeTosho',
             value: 'https://feed.animetosho.org/',
           },
+          { label: 'ClubNZB', value: 'https://clubnzb.com/' },
           { label: 'DOGnzb', value: 'https://api.dognzb.cr/' },
           { label: 'DrunkenSlug', value: 'https://drunkenslug.com/' },
           { label: 'Miatrix', value: 'https://www.miatrix.com' },
