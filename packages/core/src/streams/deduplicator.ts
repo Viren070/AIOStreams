@@ -113,7 +113,7 @@ class StreamDeduplicator {
     
           // Only group streams with the same inLibrary status
           const hasConflict = existingStreamIds.some(
-            (id) => idToStreamMap.get(id)?.inLibrary !== stream.inLibrary
+            (id) => idToStreamMap.get(id)?.library !== stream.library
           );
           if (hasConflict) continue;
           // ## end change
