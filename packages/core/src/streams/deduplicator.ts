@@ -61,7 +61,7 @@ class StreamDeduplicator {
       dsu.makeSet(stream.id);
       
         // ## start change
-        // Map stream ID → stream for quick access to inLibrary status
+        // Map stream ID → stream for quick access to library status
         // (move this here if idToStreamMap was not declared before)
         const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
         // ## end change
@@ -111,7 +111,7 @@ class StreamDeduplicator {
           // ## start change
           const existingStreamIds = keyToStreamIds.get(key)!;
     
-          // Only group streams with the same inLibrary status
+          // Only group streams with the same library status
           const hasConflict = existingStreamIds.some(
             (id) => idToStreamMap.get(id)?.library !== stream.library
           );
