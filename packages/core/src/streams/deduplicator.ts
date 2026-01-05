@@ -60,11 +60,11 @@ class StreamDeduplicator {
       // Create a unique key based on the selected deduplication methods
       dsu.makeSet(stream.id);
       
-        // ## start change
-        // Map stream ID → stream for quick access to library status
+// ## start change
+        // Map stream ID -> stream for quick access to library status
         // (move this here if idToStreamMap was not declared before)
         const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
-        // ## end change
+// ## end change
       
       const currentStreamKeyStrings: string[] = [];
 
@@ -108,7 +108,7 @@ class StreamDeduplicator {
             keyToStreamIds.set(key, []);
           }
 
-          // ## start change
+// ## start change
           const existingStreamIds = keyToStreamIds.get(key)!;
     
           // Only group streams with the same library status
@@ -116,7 +116,7 @@ class StreamDeduplicator {
             (id) => idToStreamMap.get(id)?.library !== stream.library
           );
           if (hasConflict) continue;
-          // ## end change
+// ## end change
           
           keyToStreamIds.get(key)!.push(stream.id);
         }
@@ -153,9 +153,39 @@ class StreamDeduplicator {
     }
 
     for (const group of finalDuplicateGroupsMap.values()) {
+      
+// ## start change
+      const libraryStreams = group.filter(s => s.library);
+      const nonLibraryStreams = group.filter(s => !s.library);
+  
+      // Deduplicate library streams to a single result
+      if (libraryStreams.length > 0) {
+        const selectedLibraryStream = libraryStreams.sort((a, b) => {
+          let aServiceIdx = this.userData.services?.filter(s => s.enabled).findIndex(s => s.id === a.service?.id) ?? 0;
+          let bServiceIdx = this.userData.services?.filter(s => s.enabled).findIndex(s => s.id === b.service?.id) ?? 0;
+          aServiceIdx = aServiceIdx === -1 ? Infinity : aServiceIdx;
+          bServiceIdx = bServiceIdx === -1 ? Infinity : bServiceIdx;
+          if (aServiceIdx !== bServiceIdx) return aServiceIdx - bServiceIdx;
+  
+          const aAddonIdx = this.userData.presets.findIndex(p => p.instanceId === a.addon.preset.id);
+          const bAddonIdx = this.userData.presets.findIndex(p => p.instanceId === b.addon.preset.id);
+          if (aAddonIdx !== bAddonIdx) return aAddonIdx - bAddonIdx;
+  
+          let aTypeIdx = this.userData.preferredStreamTypes?.findIndex(t => t === a.type) ?? 0;
+          let bTypeIdx = this.userData.preferredStreamTypes?.findIndex(t => t === b.type) ?? 0;
+          aTypeIdx = aTypeIdx === -1 ? Infinity : aTypeIdx;
+          bTypeIdx = bTypeIdx === -1 ? Infinity : bTypeIdx;
+          if (aTypeIdx !== bTypeIdx) return aTypeIdx - bTypeIdx;
+  
+          return 0;
+        })[0];
+        processedStreams.add(selectedLibraryStream);
+      }
+      
       // Group streams by type
       const streamsByType = new Map<string, ParsedStream[]>();
-      for (const stream of group) {
+      for (const stream of nonLibraryStreams) {
+// ## end change
         let type = stream.type as string;
         if (
           (type === 'debrid' ||
