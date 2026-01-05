@@ -39,8 +39,6 @@ class StreamDeduplicator {
       external: deduplicator.external || 'disabled',
     };
 
-    // Group streams by their deduplication keys
-    // const streamGroups = new Map<string, ParsedStream[]>();
     const dsu = new DSU<string>();
     const keyToStreamIds = new Map<string, string[]>();
 
@@ -55,17 +53,15 @@ class StreamDeduplicator {
       }
     }
 
+// ## start change
+    // Map stream ID -> stream for quick access to library status
+    const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
+// ## end change
+
     // Process ALL streams (including excluded ones) for deduplication grouping
     for (const stream of streams) {
-      // Create a unique key based on the selected deduplication methods
       dsu.makeSet(stream.id);
-      
-// ## start change
-        // Map stream ID -> stream for quick access to library status
-        // (move this here if idToStreamMap was not declared before)
-        const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
-// ## end change
-      
+
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
@@ -80,10 +76,6 @@ class StreamDeduplicator {
         currentStreamKeyStrings.push(`filename:${normalisedFilename}`);
       }
 
-      // Some addons provide fileIdx (to distinguish multiple files
-      // within a single torrent), while others don't. This creates an unavoidable trade-off
-      // where addons that provide fileIdx will not deduplicate properly with those that don't
-      // via infoHash alone.
       if (deduplicationKeys.includes('infoHash') && stream.torrent?.infoHash) {
         currentStreamKeyStrings.push(
           `infoHash:${stream.torrent.infoHash}${stream.torrent.fileIdx ?? 0}`
@@ -91,8 +83,6 @@ class StreamDeduplicator {
       }
 
       if (deduplicationKeys.includes('smartDetect')) {
-        // generate a hash using many different attributes
-        // round size to nearest 100MB for some margin of error
         const roundedSize = stream.size
           ? Math.round(stream.size / 100000000) * 100000000
           : undefined;
@@ -110,20 +100,17 @@ class StreamDeduplicator {
 
 // ## start change
           const existingStreamIds = keyToStreamIds.get(key)!;
-    
-          // Only group streams with the same library status
           const hasConflict = existingStreamIds.some(
             (id) => idToStreamMap.get(id)?.library !== stream.library
           );
           if (hasConflict) continue;
 // ## end change
-          
+
           keyToStreamIds.get(key)!.push(stream.id);
         }
       }
     }
 
-    // Perform union operations based on shared keys
     for (const streamIdsSharingCommonKey of keyToStreamIds.values()) {
       if (streamIdsSharingCommonKey.length > 1) {
         const firstStreamId = streamIdsSharingCommonKey[0];
@@ -132,10 +119,8 @@ class StreamDeduplicator {
         }
       }
     }
-    // Group actual stream objects by their DSU representative ID
-    const idToStreamMap = new Map(streams.map((s) => [s.id, s])); // For quick lookup
-    const finalDuplicateGroupsMap = new Map<string, ParsedStream[]>(); // Maps representative ID to stream objects
 
+    const finalDuplicateGroupsMap = new Map<string, ParsedStream[]>();
     for (const stream of streams) {
       const representativeId = dsu.find(stream.id);
       if (!finalDuplicateGroupsMap.has(representativeId)) {
@@ -153,12 +138,11 @@ class StreamDeduplicator {
     }
 
     for (const group of finalDuplicateGroupsMap.values()) {
-      
+
 // ## start change
       const libraryStreams = group.filter(s => s.library);
       const nonLibraryStreams = group.filter(s => !s.library);
-  
-      // Deduplicate library streams to a single result
+
       if (libraryStreams.length > 0) {
         const selectedLibraryStream = libraryStreams.sort((a, b) => {
           let aServiceIdx = this.userData.services?.filter(s => s.enabled).findIndex(s => s.id === a.service?.id) ?? 0;
@@ -166,23 +150,22 @@ class StreamDeduplicator {
           aServiceIdx = aServiceIdx === -1 ? Infinity : aServiceIdx;
           bServiceIdx = bServiceIdx === -1 ? Infinity : bServiceIdx;
           if (aServiceIdx !== bServiceIdx) return aServiceIdx - bServiceIdx;
-  
+
           const aAddonIdx = this.userData.presets.findIndex(p => p.instanceId === a.addon.preset.id);
           const bAddonIdx = this.userData.presets.findIndex(p => p.instanceId === b.addon.preset.id);
           if (aAddonIdx !== bAddonIdx) return aAddonIdx - bAddonIdx;
-  
+
           let aTypeIdx = this.userData.preferredStreamTypes?.findIndex(t => t === a.type) ?? 0;
           let bTypeIdx = this.userData.preferredStreamTypes?.findIndex(t => t === b.type) ?? 0;
           aTypeIdx = aTypeIdx === -1 ? Infinity : aTypeIdx;
           bTypeIdx = bTypeIdx === -1 ? Infinity : bTypeIdx;
           if (aTypeIdx !== bTypeIdx) return aTypeIdx - bTypeIdx;
-  
+
           return 0;
         })[0];
         processedStreams.add(selectedLibraryStream);
       }
-      
-      // Group streams by type
+
       const streamsByType = new Map<string, ParsedStream[]>();
       for (const stream of nonLibraryStreams) {
 // ## end change
@@ -196,7 +179,6 @@ class StreamDeduplicator {
           type = stream.service.cached ? 'cached' : 'uncached';
         }
         if (shouldPassthroughStage(stream, 'dedup')) {
-          // ensure that passthrough streams are not deduplicated by adding each to a separate group
           type = `passthrough-${Math.random()}`;
         }
         const typeGroup = streamsByType.get(type) || [];
