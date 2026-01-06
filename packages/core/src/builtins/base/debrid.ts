@@ -255,8 +255,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         torrentServices,
         id,
         searchMetadata,
-        this.clientIp,
-        this.userData.autoRemoveDownloads
+        this.clientIp
       ),
       processNZBs(
         nzbResults,
