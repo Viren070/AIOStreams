@@ -551,7 +551,7 @@ export const UserDataSchema = z.object({
   externalDownloads: z.boolean().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
 
-  cleanupAfterResolve: z.boolean().optional(),
+  autoRemoveDownloads: z.boolean().optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;

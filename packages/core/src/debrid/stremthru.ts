@@ -219,11 +219,18 @@ export class StremThruInterface implements DebridService {
   public async resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { result } = await DistributedLock.getInstance().withLock(
       `stremthru:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${this.config.clientIp}:${this.config.serviceName}:${this.config.token}`,
-      () => this._resolve(playbackInfo, filename, cacheAndPlay),
+      () =>
+        this._resolve(
+          playbackInfo,
+          filename,
+          cacheAndPlay,
+          autoRemoveDownloads
+        ),
       {
         timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
         ttl: 10000,
@@ -235,7 +242,8 @@ export class StremThruInterface implements DebridService {
   private async _resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'usenet') {
       throw new DebridError('StremThru does not support usenet operations', {
@@ -376,7 +384,7 @@ export class StremThruInterface implements DebridService {
       true
     );
 
-    if (this.config.cleanupAfterResolve && magnetDownload.id) {
+    if (autoRemoveDownloads && magnetDownload.id) {
       this.removeMagnet(magnetDownload.id.toString()).catch((err) => {
         logger.warn(
           `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`
@@ -384,7 +392,7 @@ export class StremThruInterface implements DebridService {
       });
     } else {
       logger.debug(
-        `Cleanup after resolve: ${this.config.cleanupAfterResolve ? 'enabled but no magnet ID' : 'disabled'}`
+        `Cleanup after resolve: ${autoRemoveDownloads ? 'enabled but no magnet ID' : 'disabled'}`
       );
     }
 

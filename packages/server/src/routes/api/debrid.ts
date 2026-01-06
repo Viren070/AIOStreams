@@ -115,8 +115,7 @@ router.get(
       const debridInterface = getDebridService(
         storeAuth.id,
         storeAuth.credential,
-        req.userIp,
-        fileInfo.cleanupAfterResolve
+        req.userIp
       );
 
       let streamUrl: string | undefined;
@@ -124,7 +123,8 @@ router.get(
         streamUrl = await debridInterface.resolve(
           playbackInfo,
           filename,
-          fileInfo.cacheAndPlay ?? false
+          fileInfo.cacheAndPlay ?? false,
+          fileInfo.autoRemoveDownloads
         );
       } catch (error: any) {
         let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;

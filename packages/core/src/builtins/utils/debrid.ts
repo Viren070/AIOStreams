@@ -61,7 +61,7 @@ export async function processTorrents(
   stremioId: string,
   metadata?: Metadata,
   clientIp?: string,
-  cleanupAfterResolve?: boolean
+  autoRemoveDownloads?: boolean
 ): Promise<{
   results: TorrentWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -81,7 +81,7 @@ export async function processTorrents(
         stremioId,
         metadata,
         clientIp,
-        cleanupAfterResolve
+        autoRemoveDownloads
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
@@ -113,14 +113,13 @@ async function processTorrentsForDebridService(
   stremioId: string,
   metadata?: Metadata,
   clientIp?: string,
-  cleanupAfterResolve?: boolean
+  autoRemoveDownloads?: boolean
 ): Promise<TorrentWithSelectedFile[]> {
   const startTime = Date.now();
   const debridService = getDebridService(
     service.id,
     service.credential,
-    clientIp,
-    cleanupAfterResolve
+    clientIp
   );
 
   const results: TorrentWithSelectedFile[] = [];
@@ -336,7 +335,7 @@ export async function processNZBs(
   stremioId: string,
   metadata?: Metadata,
   clientIp?: string,
-  checkOwned: boolean = true
+  autoRemoveDownloads?: boolean
 ): Promise<{
   results: NZBWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -355,7 +354,7 @@ export async function processNZBs(
         stremioId,
         metadata,
         clientIp,
-        checkOwned
+        autoRemoveDownloads
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
@@ -384,7 +383,7 @@ async function processNZBsForDebridService(
   stremioId: string,
   metadata?: Metadata,
   clientIp?: string,
-  checkOwned: boolean = true
+  autoRemoveDownloads?: boolean
 ): Promise<NZBWithSelectedFile[]> {
   const startTime = Date.now();
   const debridService = getDebridService(
@@ -401,7 +400,7 @@ async function processNZBsForDebridService(
 
   const nzbCheckResults = await debridService.checkNzbs(
     nzbs.map((nzb) => ({ name: nzb.title, hash: nzb.hash })),
-    checkOwned
+    true
   );
 
   logger.debug(`Retrieved NZB status from debrid`, {

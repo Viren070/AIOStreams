@@ -18,13 +18,11 @@ import { EasynewsService } from './easynews.js';
 export function getDebridService(
   serviceName: ServiceId,
   token: string,
-  clientIp?: string,
-  cleanupAfterResolve?: boolean
+  clientIp?: string
 ): DebridService {
   const config: DebridServiceConfig = {
     token,
     clientIp,
-    cleanupAfterResolve,
   };
 
   switch (serviceName) {

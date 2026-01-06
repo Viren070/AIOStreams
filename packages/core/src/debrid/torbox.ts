@@ -307,14 +307,26 @@ export class TorboxDebridService implements DebridService {
   public async resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'torrent') {
-      return this.stremthru.resolve(playbackInfo, filename, cacheAndPlay);
+      return this.stremthru.resolve(
+        playbackInfo,
+        filename,
+        cacheAndPlay,
+        autoRemoveDownloads
+      );
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `torbox:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${this.config.clientIp}:${this.config.token}`,
-      () => this._resolve(playbackInfo, filename, cacheAndPlay),
+      `torbox:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${autoRemoveDownloads}:${this.config.clientIp}:${this.config.token}`,
+      () =>
+        this._resolve(
+          playbackInfo,
+          filename,
+          cacheAndPlay,
+          autoRemoveDownloads
+        ),
       {
         timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
         ttl: 10000,
@@ -326,7 +338,8 @@ export class TorboxDebridService implements DebridService {
   private async _resolve(
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
     const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
@@ -464,7 +477,7 @@ export class TorboxDebridService implements DebridService {
       true
     );
 
-    if (this.config.cleanupAfterResolve && usenetDownload.id) {
+    if (autoRemoveDownloads && usenetDownload.id) {
       this.removeNzb(usenetDownload.id.toString()).catch((err) => {
         logger.warn(
           `Failed to cleanup usenet download ${usenetDownload.id} after resolve: ${err.message}`

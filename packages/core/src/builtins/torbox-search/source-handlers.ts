@@ -59,7 +59,7 @@ abstract class SourceHandler {
     protected searchApi: TorboxSearchApi,
     protected readonly searchUserEngines: boolean,
     protected readonly cacheAndPlay: CacheAndPlay,
-    protected readonly cleanupAfterResolve?: boolean
+    protected readonly autoRemoveDownloads?: boolean
   ) {
     this.useCache =
       !this.searchUserEngines ||
@@ -102,7 +102,7 @@ abstract class SourceHandler {
             cacheAndPlay:
               this.cacheAndPlay?.enabled &&
               this.cacheAndPlay?.streamTypes?.includes('torrent'),
-            cleanupAfterResolve: this.cleanupAfterResolve,
+            autoRemoveDownloads: this.autoRemoveDownloads,
           }
         : {
             type: 'usenet',
@@ -112,7 +112,7 @@ abstract class SourceHandler {
             cacheAndPlay:
               this.cacheAndPlay?.enabled &&
               this.cacheAndPlay?.streamTypes?.includes('usenet'),
-            cleanupAfterResolve: this.cleanupAfterResolve,
+            autoRemoveDownloads: this.autoRemoveDownloads,
           }
       : undefined;
 
@@ -281,10 +281,10 @@ export class TorrentSourceHandler extends SourceHandler {
     services: z.infer<typeof TorBoxSearchAddonUserDataSchema>['services'],
     searchUserEngines: boolean,
     cacheAndPlay: CacheAndPlay,
-    cleanupAfterResolve?: boolean,
+    autoRemoveDownloads?: boolean,
     clientIp?: string
   ) {
-    super(searchApi, searchUserEngines, cacheAndPlay, cleanupAfterResolve);
+    super(searchApi, searchUserEngines, cacheAndPlay, autoRemoveDownloads);
     this.services = services;
     this.clientIp = clientIp;
   }
@@ -469,10 +469,10 @@ export class UsenetSourceHandler extends SourceHandler {
     searchUserEngines: boolean,
     services: z.infer<typeof TorBoxSearchAddonUserDataSchema>['services'],
     cacheAndPlay: CacheAndPlay,
-    cleanupAfterResolve?: boolean,
+    autoRemoveDownloads?: boolean,
     clientIp?: string
   ) {
-    super(searchApi, searchUserEngines, cacheAndPlay, cleanupAfterResolve);
+    super(searchApi, searchUserEngines, cacheAndPlay, autoRemoveDownloads);
     this.torboxApi = torboxApi;
     this.services = services.filter((service) => service.id === 'torbox');
     this.clientIp = clientIp;

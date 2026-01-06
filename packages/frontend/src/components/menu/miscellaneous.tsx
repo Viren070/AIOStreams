@@ -307,11 +307,11 @@ function Content() {
             <Switch
               label="Enable"
               side="right"
-              value={userData.cleanupAfterResolve}
+              value={userData.autoRemoveDownloads}
               onValueChange={(value) => {
                 setUserData((prev) => ({
                   ...prev,
-                  cleanupAfterResolve: value,
+                  autoRemoveDownloads: value,
                 }));
               }}
             />
