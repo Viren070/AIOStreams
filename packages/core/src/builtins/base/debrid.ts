@@ -264,7 +264,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ),
         id,
         searchMetadata,
-        this.clientIp
+        this.clientIp,
+        this.userData.checkOwned
       ),
     ]);
 

@@ -331,7 +331,8 @@ export async function processNZBs(
   debridServices: BuiltinDebridServices,
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  checkOwned: boolean = true
 ): Promise<{
   results: NZBWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -349,7 +350,8 @@ export async function processNZBs(
         service,
         stremioId,
         metadata,
-        clientIp
+        clientIp,
+        checkOwned
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
@@ -377,7 +379,8 @@ async function processNZBsForDebridService(
   service: BuiltinDebridServices[number],
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  checkOwned: boolean = true
 ): Promise<NZBWithSelectedFile[]> {
   const startTime = Date.now();
   const debridService = getDebridService(
@@ -394,7 +397,7 @@ async function processNZBsForDebridService(
 
   const nzbCheckResults = await debridService.checkNzbs(
     nzbs.map((nzb) => ({ name: nzb.title, hash: nzb.hash })),
-    true
+    checkOwned
   );
 
   logger.debug(`Retrieved NZB status from debrid`, {
