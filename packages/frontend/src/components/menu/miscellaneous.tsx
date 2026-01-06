@@ -290,7 +290,7 @@ function Content() {
             description={
               <div className="space-y-2">
                 <p>
-                  When enabled, debrid services will automatically remove the
+                  When enabled, AIOStreams will automatically remove the
                   magnet/NZB from your debrid dashboard after generating a
                   playback link. This prevents watched items from cluttering
                   your debrid service&apos;s library.
