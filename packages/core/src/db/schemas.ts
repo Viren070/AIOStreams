@@ -119,6 +119,13 @@ export type Resource = z.infer<typeof ResourceSchema>;
 
 const ResourceList = z.array(ResourceSchema);
 
+const ForceToTopSchema = z.union([
+  z.boolean(),
+  z.enum(['streams', 'catalogs', 'both', 'none']),
+]);
+
+export type ForceToTopSetting = z.infer<typeof ForceToTopSchema>;
+
 const AddonSchema = z.object({
   instanceId: z.string().min(1).optional(), // uniquely identifies the addon in a given list of addons
   preset: z.object({
@@ -137,7 +144,7 @@ const AddonSchema = z.object({
   library: z.boolean().optional(),
   formatPassthrough: z.boolean().optional(),
   resultPassthrough: z.boolean().optional(),
-  forceToTop: z.boolean().optional(),
+  forceToTop: ForceToTopSchema.optional(),
   headers: z.record(z.string().min(1), z.string().min(1)).optional(),
   ip: z.union([z.ipv4(), z.ipv6()]).optional(),
 });

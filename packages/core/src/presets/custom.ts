@@ -3,6 +3,8 @@ import { Preset, baseOptions } from './preset.js';
 import { Env, RESOURCES } from '../utils/index.js';
 import { constants } from '../utils/index.js';
 
+type ForceToTopOption = 'streams' | 'catalogs' | 'both' | 'none';
+
 export class CustomPreset extends Preset {
   static override get METADATA() {
     const options: Option[] = [
@@ -100,10 +102,16 @@ export class CustomPreset extends Preset {
         id: 'forceToTop',
         name: 'Force to Top',
         description:
-          'Whether to force results from this addon to be pushed to the top of the stream list.',
-        type: 'boolean',
+          'Choose whether streams and/or catalogs from this addon should be pinned to the top.',
+        type: 'select',
         required: false,
-        default: false,
+        default: 'none',
+        options: [
+          { label: 'Neither', value: 'none' },
+          { label: 'Streams only', value: 'streams' },
+          { label: 'Catalogs only', value: 'catalogs' },
+          { label: 'Streams and catalogs', value: 'both' },
+        ],
       },
     ];
 
@@ -148,6 +156,8 @@ export class CustomPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
+    const forceToTop = this.normalizeForceToTop(options.forceToTop);
+
     return {
       name: options.name || this.METADATA.NAME,
       manifestUrl: options.manifestUrl,
@@ -164,10 +174,28 @@ export class CustomPreset extends Preset {
       formatPassthrough:
         options.formatPassthrough ?? options.streamPassthrough ?? false,
       resultPassthrough: options.resultPassthrough ?? false,
-      forceToTop: options.forceToTop ?? false,
+      forceToTop,
       headers: {
         'User-Agent': this.METADATA.USER_AGENT,
       },
     };
+  }
+
+  private static normalizeForceToTop(
+    forceToTop: any
+  ): ForceToTopOption {
+    if (forceToTop === 'streams' || forceToTop === 'catalogs') {
+      return forceToTop;
+    }
+    if (forceToTop === 'both') {
+      return 'both';
+    }
+    if (forceToTop === 'none' || forceToTop === false || forceToTop === undefined) {
+      return 'none';
+    }
+    if (forceToTop === true) {
+      return 'streams';
+    }
+    return 'none';
   }
 }

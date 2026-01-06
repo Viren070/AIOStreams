@@ -91,6 +91,7 @@ export class AIOStreams {
   private finalResources: StrictManifestResource[] = [];
   private finalCatalogs: Manifest['catalogs'] = [];
   private finalAddonCatalogs: Manifest['addonCatalogs'] = [];
+  private catalogsForcedToTop: Set<string> = new Set();
   private isInitialised: boolean = false;
   private addons: Addon[] = [];
   private proxifier: Proxifier;
@@ -1408,6 +1409,7 @@ export class AIOStreams {
   }
 
   private async fetchResources() {
+    this.catalogsForcedToTop.clear();
     for (const [instanceId, manifest] of Object.entries(this.manifests)) {
       if (!manifest) continue;
 
@@ -1457,6 +1459,10 @@ export class AIOStreams {
         logger.error(`Addon with instanceId ${instanceId} not found`);
         continue;
       }
+
+      const shouldForceCatalogs = this.shouldForceCatalogsToTop(
+        addon.forceToTop
+      );
 
       // Filter and merge resources
       for (const resource of addonResources) {
@@ -1536,22 +1542,40 @@ export class AIOStreams {
         !addon.resources?.length ||
         (addon.resources && addon.resources.includes('catalog'))
       ) {
-        this.finalCatalogs.push(
-          ...manifest.catalogs.map((catalog) => ({
+        const catalogsToAdd = manifest.catalogs.map((catalog) => {
+          const catalogWithId = {
             ...catalog,
             id: `${addon.instanceId}.${catalog.id}`,
-          }))
-        );
+          };
+          if (shouldForceCatalogs) {
+            this.catalogsForcedToTop.add(
+              this.getCatalogForceKey(catalogWithId)
+            );
+          }
+          return catalogWithId;
+        });
+
+        this.finalCatalogs.push(...catalogsToAdd);
       }
 
       // add all addon catalogs, prefixing id with index
       if (manifest.addonCatalogs) {
-        this.finalAddonCatalogs!.push(
-          ...(manifest.addonCatalogs || []).map((catalog) => ({
-            ...catalog,
-            id: `${addon.instanceId}.${catalog.id}`,
-          }))
+        const addonCatalogsToAdd = (manifest.addonCatalogs || []).map(
+          (catalog) => {
+            const catalogWithId = {
+              ...catalog,
+              id: `${addon.instanceId}.${catalog.id}`,
+            };
+            if (shouldForceCatalogs) {
+              this.catalogsForcedToTop.add(
+                this.getCatalogForceKey(catalogWithId)
+              );
+            }
+            return catalogWithId;
+          }
         );
+
+        this.finalAddonCatalogs!.push(...addonCatalogsToAdd);
       }
 
       this.supportedResources[instanceId] = addonResources;
@@ -1634,10 +1658,27 @@ export class AIOStreams {
       }
     }
 
+    if (this.catalogsForcedToTop.size > 0) {
+      const forcedCatalogs = this.finalCatalogs.filter((catalog) =>
+        this.isCatalogForcedToTop(catalog)
+      );
+      const remainingCatalogs = this.finalCatalogs.filter(
+        (catalog) => !this.isCatalogForcedToTop(catalog)
+      );
+      this.finalCatalogs = [...forcedCatalogs, ...remainingCatalogs];
+    }
+
     if (this.userData.catalogModifications) {
       this.finalCatalogs = this.finalCatalogs
         // Sort catalogs based on catalogModifications order, with non-modified catalogs at the end
         .sort((a, b) => {
+          const aForced = this.isCatalogForcedToTop(a);
+          const bForced = this.isCatalogForcedToTop(b);
+
+          if (aForced !== bForced) {
+            return aForced ? -1 : 1;
+          }
+
           const aModIndex = this.userData.catalogModifications!.findIndex(
             (mod) => mod.id === a.id && mod.type === a.type
           );
@@ -1869,6 +1910,18 @@ export class AIOStreams {
     }
 
     return mergedExtras;
+  }
+
+  private getCatalogForceKey(catalog: { id: string; type: string }): string {
+    return `${catalog.id}::${catalog.type}`;
+  }
+
+  private isCatalogForcedToTop(catalog: { id: string; type: string }): boolean {
+    return this.catalogsForcedToTop.has(this.getCatalogForceKey(catalog));
+  }
+
+  private shouldForceCatalogsToTop(forceToTop: Addon['forceToTop']): boolean {
+    return forceToTop === 'catalogs' || forceToTop === 'both';
   }
 
   public getResources(): StrictManifestResource[] {
