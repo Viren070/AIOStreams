@@ -265,8 +265,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ),
         id,
         searchMetadata,
-        this.clientIp,
-        this.userData.autoRemoveDownloads
+        this.clientIp
       ),
     ]);
 
