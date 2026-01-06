@@ -286,7 +286,7 @@ function Content() {
         )}
         {mode === 'pro' && (
           <SettingsCard
-            title="Cleanup After Resolve"
+            title="Auto remove Downloads"
             description={
               <div className="space-y-2">
                 <p>
