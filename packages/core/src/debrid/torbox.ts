@@ -61,9 +61,7 @@ export class TorboxDebridService implements DebridService {
       });
       logger.debug(`Removed usenet download ${nzbId} from Torbox`);
     } catch (error: any) {
-      logger.warn(
-        `Failed to remove usenet download ${nzbId} from Torbox: ${error.message}`
-      );
+
       throw new DebridError(
         `Failed to remove usenet download: ${error.message}`,
         {

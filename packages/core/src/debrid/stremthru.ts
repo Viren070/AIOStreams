@@ -73,9 +73,7 @@ export class StremThruInterface implements DebridService {
       logger.debug(`Removed magnet ${magnetId} from ${this.serviceName}`);
     } catch (error) {
       if (error instanceof StremThruError) {
-        logger.warn(
-          `Failed to remove magnet ${magnetId} from ${this.serviceName}: ${error.message}`
-        );
+
         throw convertStremThruError(error);
       }
       throw error;
@@ -223,7 +221,7 @@ export class StremThruInterface implements DebridService {
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { result } = await DistributedLock.getInstance().withLock(
-      `stremthru:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${this.config.clientIp}:${this.config.serviceName}:${this.config.token}`,
+      `stremthru:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${autoRemoveDownloads}:${this.config.clientIp}:${this.config.serviceName}:${this.config.token}`,
       () =>
         this._resolve(
           playbackInfo,
@@ -390,10 +388,7 @@ export class StremThruInterface implements DebridService {
           `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`
         );
       });
-    } else {
-      logger.debug(
-        `Cleanup after resolve: ${autoRemoveDownloads ? 'enabled but no magnet ID' : 'disabled'}`
-      );
+
     }
 
     return playbackLink;
