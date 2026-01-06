@@ -330,6 +330,7 @@ const MergedCatalog = z.object({
       'releaseDateDesc', // sort by release date (newest first)
     ])
     .optional(), // defaults to 'sequential' if not specified
+  forceToTop: z.boolean().optional(), // push this merged catalog above others when true
 });
 
 export type MergedCatalog = z.infer<typeof MergedCatalog>;

@@ -1649,36 +1649,27 @@ export class AIOStreams {
       );
       for (const mc of enabledMergedCatalogs) {
         const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
-        this.finalCatalogs.push({
+        const mergedCatalog = {
           id: mc.id,
           name: mc.name,
           type: mc.type,
           extra: mergedExtras.length > 0 ? mergedExtras : undefined,
-        });
-      }
-    }
+        };
 
-    if (this.catalogsForcedToTop.size > 0) {
-      const forcedCatalogs = this.finalCatalogs.filter((catalog) =>
-        this.isCatalogForcedToTop(catalog)
-      );
-      const remainingCatalogs = this.finalCatalogs.filter(
-        (catalog) => !this.isCatalogForcedToTop(catalog)
-      );
-      this.finalCatalogs = [...forcedCatalogs, ...remainingCatalogs];
+        if (mc.forceToTop) {
+          this.catalogsForcedToTop.add(
+            this.getCatalogForceKey({ id: mc.id, type: mc.type })
+          );
+        }
+
+        this.finalCatalogs.push(mergedCatalog);
+      }
     }
 
     if (this.userData.catalogModifications) {
       this.finalCatalogs = this.finalCatalogs
         // Sort catalogs based on catalogModifications order, with non-modified catalogs at the end
         .sort((a, b) => {
-          const aForced = this.isCatalogForcedToTop(a);
-          const bForced = this.isCatalogForcedToTop(b);
-
-          if (aForced !== bForced) {
-            return aForced ? -1 : 1;
-          }
-
           const aModIndex = this.userData.catalogModifications!.findIndex(
             (mod) => mod.id === a.id && mod.type === a.type
           );
@@ -1732,7 +1723,6 @@ export class AIOStreams {
           if (modification?.name) {
             catalog.name = modification.name;
           }
-
           // checking that no extras are required already
           // if its a non genre extra, then its just not possible as it would lead to having 2 required extras.
           // if it is the genre extra that is required, then there isnt a need to apply the modification as its already only on discover
@@ -1790,6 +1780,31 @@ export class AIOStreams {
           }
           return catalog;
         });
+    }
+
+    // Move forced-to-top catalogs (including merged) ahead while keeping the
+    // previously determined relative order.
+    if (this.catalogsForcedToTop.size > 0) {
+      const forcedCatalogs = this.finalCatalogs.filter((catalog) =>
+        this.isCatalogForcedToTop(catalog)
+      );
+      const remainingCatalogs = this.finalCatalogs.filter(
+        (catalog) => !this.isCatalogForcedToTop(catalog)
+      );
+      this.finalCatalogs = [...forcedCatalogs, ...remainingCatalogs];
+    }
+
+    if (this.catalogsForcedToTop.size > 0 && this.finalAddonCatalogs?.length) {
+      const forcedAddonCatalogs = this.finalAddonCatalogs.filter((catalog) =>
+        this.isCatalogForcedToTop(catalog)
+      );
+      const remainingAddonCatalogs = this.finalAddonCatalogs.filter(
+        (catalog) => !this.isCatalogForcedToTop(catalog)
+      );
+      this.finalAddonCatalogs = [
+        ...forcedAddonCatalogs,
+        ...remainingAddonCatalogs,
+      ];
     }
   }
 

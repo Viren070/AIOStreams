@@ -1809,6 +1809,7 @@ function MergedCatalogsCard() {
   ]);
   const [mergeMethod, setMergeMethod] =
     useState<MergedCatalog['mergeMethod']>('sequential');
+  const [forceToTop, setForceToTop] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [expandedAddons, setExpandedAddons] = useState<Set<string>>(new Set());
   const [pendingDeleteMergedCatalogId, setPendingDeleteMergedCatalogId] =
@@ -1922,6 +1923,7 @@ function MergedCatalogsCard() {
     setSelectedCatalogs([]);
     setDedupeMethods(['id']);
     setMergeMethod('sequential');
+    setForceToTop(false);
     setCatalogSearch('');
     setExpandedAddons(new Set());
     setModalOpen(true);
@@ -1934,6 +1936,7 @@ function MergedCatalogsCard() {
     setSelectedCatalogs(mergedCatalog.catalogIds);
     setDedupeMethods(mergedCatalog.deduplicationMethods ?? ['id']);
     setMergeMethod(mergedCatalog.mergeMethod ?? 'sequential');
+    setForceToTop(mergedCatalog.forceToTop ?? false);
     setCatalogSearch('');
     setExpandedAddons(new Set());
     setModalOpen(true);
@@ -1982,6 +1985,7 @@ function MergedCatalogsCard() {
                 deduplicationMethods:
                   dedupeMethods.length > 0 ? dedupeMethods : undefined,
                 mergeMethod: mergeMethod ?? 'sequential',
+                forceToTop,
               }
             : mc
         ),
@@ -2002,6 +2006,7 @@ function MergedCatalogsCard() {
             deduplicationMethods:
               dedupeMethods.length > 0 ? dedupeMethods : undefined,
             mergeMethod: mergeMethod ?? 'sequential',
+            forceToTop,
           },
         ],
       }));
@@ -2439,6 +2444,16 @@ function MergedCatalogsCard() {
               setMergeMethod(v as MergedCatalog['mergeMethod'])
             }
           />
+
+          <div className="flex items-center justify-between rounded-[--radius-md] border px-3 py-2">
+            <div>
+              <p className="text-sm font-medium">Force to Top</p>
+              <p className="text-xs text-[--muted]">
+                Pin this merged catalog above others in the catalog list.
+              </p>
+            </div>
+            <Switch value={forceToTop} onValueChange={setForceToTop} />
+          </div>
 
           {(mergeMethod === 'imdbRating' ||
             mergeMethod === 'releaseDateDesc' ||
