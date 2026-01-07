@@ -307,7 +307,7 @@ function Content() {
             <Switch
               label="Enable"
               side="right"
-              value={userData.autoRemoveDownloads}
+              value={userData.autoRemoveDownloads ?? false}
               onValueChange={(value) => {
                 setUserData((prev) => ({
                   ...prev,
