@@ -54,35 +54,26 @@ export class TorboxDebridService implements DebridService {
   }
 
   public async removeNzb(nzbId: string): Promise<void> {
-    const result = await this.torboxApi.usenet.controlUsenetDownload(
-      this.apiVersion,
-      {
+    try {
+      await this.torboxApi.usenet.controlUsenetDownload(this.apiVersion, {
         usenet_id: parseInt(nzbId, 10),
         operation: 'delete',
-      }
-    );
+      });
+      logger.debug(`Removed usenet download ${nzbId} from Torbox`);
+    } catch (error: any) {
 
-    const { status, statusText, headers } = result.metadata;
-    const data = result.data as unknown as
-      | { success?: boolean; error?: string; detail?: string }
-      | undefined;
-
-    if (status >= 400 || data?.success === false || data?.error) {
       throw new DebridError(
-        `Failed to remove usenet download: ${data?.error || data?.detail || statusText || 'Unknown error'}`,
+        `Failed to remove usenet download: ${error.message}`,
         {
-          statusCode: status,
-          statusText: statusText,
+          statusCode: error.statusCode ?? 500,
+          statusText: error.statusText ?? 'Unknown error',
           code: 'UNKNOWN',
-          headers: headers,
-          body: data,
-          cause: data,
+          headers: {},
+          body: error,
           type: 'api_error',
         }
       );
     }
-
-    logger.debug(`Removed usenet download ${nzbId} from Torbox`);
   }
 
   public async checkMagnets(magnets: string[], sid?: string) {
