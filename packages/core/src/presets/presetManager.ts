@@ -69,6 +69,7 @@ import { TorrentGalaxyPreset } from './torrentGalaxy.js';
 import { UsenetStreamerPreset } from './usenetStreamer.js';
 import { NekoBtPreset } from './nekoBt.js';
 import { EasynewsSearchPreset } from './easynewsSearch.js';
+import { SeaDexPreset } from './seadex.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -86,6 +87,7 @@ let PRESET_LIST: string[] = [
   'knaben',
   'torrent-galaxy',
   'bitmagnet',
+  'seadex',
   'animetosho',
   'neko-bt',
   'prowlarr',
@@ -289,6 +291,8 @@ export class PresetManager {
         return KnabenPreset;
       case 'bitmagnet':
         return BitmagnetPreset;
+      case 'seadex':
+        return SeaDexPreset;
       case 'sootio':
         return SootioPreset;
       case 'torrent-galaxy':

@@ -42,6 +42,7 @@ interface BaseFile {
   index?: number;
   indexer?: string;
   seeders?: number;
+  group?: string;
   age?: number;
   duration?: number; // duration in seconds
 }

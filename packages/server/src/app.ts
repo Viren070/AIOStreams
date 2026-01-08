@@ -36,6 +36,7 @@ import {
   prowlarr,
   knaben,
   torrentGalaxy,
+  seadex,
   easynews,
 } from './routes/builtins/index.js';
 import {
@@ -155,6 +156,7 @@ builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
+builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
 app.use('/builtins', builtinsRouter);
 

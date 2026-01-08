@@ -80,6 +80,15 @@ export class BuiltinStreamParser extends StreamParser {
       ? 'debrid'
       : (stream.type as 'usenet' | 'stremio-usenet');
   }
+
+  protected getReleaseGroup(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    return stream.description?.match(
+      this.getRegexForTextAfterEmojis(['🏷️'])
+    )?.[1];
+  }
 }
 
 export class BuiltinAddonPreset extends Preset {
