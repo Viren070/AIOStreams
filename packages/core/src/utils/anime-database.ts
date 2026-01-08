@@ -31,7 +31,7 @@ const DATA_SOURCES = {
   },
   manami: {
     name: 'Manami DB',
-    url: 'https://github.com/manami-project/anime-offline-database/releases/download/latest/anime-offline-database.json',
+    url: 'https://github.com/manami-project/anime-offline-database/releases/download/latest/anime-offline-database-minified.json',
     filePath: path.join(ANIME_DATABASE_PATH, 'manami-db.json'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'manami-db.etag'),
     loader: 'loadManamiDb',
@@ -361,6 +361,7 @@ function validateManamiEntry(data: any): ManamiEntry | null {
     !data.animeSeason ||
     !Object.values(AnimeSeason).includes(data.animeSeason.season) ||
     (data.animeSeason.year !== null &&
+      data.animeSeason.year !== undefined &&
       typeof data.animeSeason.year !== 'number')
   ) {
     return null;
@@ -552,7 +553,11 @@ export class AnimeDatabase {
 
     logger.info('Starting initial refresh of all anime data sources...');
     for (const dataSource of Object.values(DATA_SOURCES)) {
-      await this.refreshDataSource(dataSource);
+      try {
+        await this.refreshDataSource(dataSource);
+      } catch (error) {
+        logger.error(`Failed to refresh data source ${dataSource}: ${error}`);
+      }
     }
 
     this.setupAllRefreshIntervals();

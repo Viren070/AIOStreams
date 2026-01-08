@@ -189,6 +189,24 @@ const userAgent = makeValidator((x) => {
   return x.replace(/{version}/g, metadata?.version || 'unknown');
 });
 
+const userAgentMappings = makeValidator<Map<string, string>>((x) => {
+  if (typeof x !== 'string') {
+    throw new EnvError('User agent mappings must be a string');
+  }
+  const mappings = new Map<string, string>();
+  x.split(',').forEach((x) => {
+    const [key, value] = x.split(':');
+    if (!key || !value) {
+      throw new EnvError('User agent mappings must be in the format key:value');
+    }
+    mappings.set(
+      key,
+      value.replace(/{version}/g, metadata?.version || 'unknown')
+    );
+  });
+  return mappings;
+});
+
 // comma separated list of alias:uuid
 const aliasedUUIDs = makeExactValidator((x) => {
   try {
@@ -480,6 +498,10 @@ export const Env = cleanEnv(process.env, {
     default: true,
     desc: 'Enable the search API. If true, the search API will be enabled.',
   }),
+  ZYCLOPS_HEALTH_PROXY_ENDPOINT: url({
+    default: 'https://zyclops.elfhosted.com',
+    desc: 'Base URL of the Zyclops health proxy endpoint used by the Newznab preset.',
+  }),
   ANIME_DB_LEVEL_OF_DETAIL: str({
     default: 'required',
     desc: 'Detail level for the anime database. none: no anime database, required: only load the required databases, full: load all data',
@@ -566,8 +588,8 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default user agent for the addon',
   }),
 
-  HOSTNAME_USER_AGENT_OVERRIDES: str({
-    default: '*.strem.fun:Stremio',
+  HOSTNAME_USER_AGENT_OVERRIDES: userAgentMappings({
+    default: undefined,
     desc: 'Comma separated list of hostname:useragent pairs. Takes priority over any other user agent settings.',
   }),
 
@@ -654,6 +676,10 @@ export const Env = cleanEnv(process.env, {
   MAX_GROUPS: num({
     default: 20,
     desc: 'Max number of groups',
+  }),
+  MAX_MERGED_CATALOG_SOURCES: num({
+    default: 10,
+    desc: 'Max number of source catalogs in a single merged catalog',
   }),
 
   ALLOWED_REGEX_PATTERNS: json<string[]>({
@@ -1198,6 +1224,19 @@ export const Env = cleanEnv(process.env, {
   DEFAULT_DEBRIDIO_WATCHTOWER_USER_AGENT: userAgent({
     default: undefined,
     desc: 'Default Debridio Watchtower user agent',
+  }),
+
+  DEBRIDIO_IC4A_URL: url({
+    default: 'https://ic4a.lb.debridio.com',
+    desc: 'Debridio IC4A URL',
+  }),
+  DEFAULT_DEBRIDIO_IC4A_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Debridio IC4A timeout',
+  }),
+  DEFAULT_DEBRIDIO_IC4A_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Debridio IC4A user agent',
   }),
 
   // StremThru Store settings
@@ -1833,7 +1872,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   BUILTIN_ZILEAN_URL: url({
-    default: 'https://zilean.elfhosted.com',
+    default: 'https://zileanfortheweebs.midnightignite.me',
     desc: 'Builtin Zilean URL',
   }),
   BUILTIN_DEFAULT_ZILEAN_TIMEOUT: num({

@@ -251,9 +251,11 @@ export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS
               ? encryptString(getServiceCredentialForced(service.id, cred.id)!)
                   .data
               : null,
-            constraints: {
-              min: 1,
-            },
+            constraints: cred.required
+              ? {
+                  min: 1,
+                }
+              : undefined,
           })),
         },
       ])
@@ -321,6 +323,18 @@ export async function validateConfig(
       );
     }
   }
+
+  // validate merged catalogs source limits
+  if (config.mergedCatalogs) {
+    for (const mergedCatalog of config.mergedCatalogs) {
+      if (mergedCatalog.catalogIds.length > Env.MAX_MERGED_CATALOG_SOURCES) {
+        throw new Error(
+          `Merged catalog "${mergedCatalog.name}" has ${mergedCatalog.catalogIds.length} source catalogs, but the maximum is ${Env.MAX_MERGED_CATALOG_SOURCES}`
+        );
+      }
+    }
+  }
+
   // now, validate preset options and service credentials.
 
   if (config.presets) {
@@ -415,7 +429,7 @@ export async function validateConfig(
   const needTmdb =
     config.titleMatching?.enabled ||
     config.yearMatching?.enabled ||
-    config.digitalReleaseFilter;
+    config.digitalReleaseFilter?.enabled;
 
   if (needTmdb && !tmdbAuth) {
     throw new Error(
@@ -526,6 +540,16 @@ export function applyMigrations(config: any): UserData {
         break;
     }
   }
+
+  if (typeof config.digitalReleaseFilter === 'boolean') {
+    const oldValue = config.digitalReleaseFilter;
+    config.digitalReleaseFilter = {
+      enabled: oldValue,
+      tolerance: 1,
+      requestTypes: ['movie', 'series', 'anime'],
+      addons: [],
+    };
+  }
   if (config.titleMatching?.matchYear) {
     config.yearMatching = {
       enabled: true,
@@ -635,6 +659,25 @@ export function applyMigrations(config: any): UserData {
       ...group,
       condition: migrateAnimeQueryTypeInExpression(group.condition),
     }));
+  }
+
+  // migrate rpdbUseRedirectApi to usePosterRedirectApi
+  if (
+    config.rpdbUseRedirectApi !== undefined &&
+    config.usePosterRedirectApi === undefined
+  ) {
+    config.usePosterRedirectApi = config.rpdbUseRedirectApi;
+    delete config.rpdbUseRedirectApi;
+  }
+
+  // migrate 'rpdb' to 'usePosterService' in all catalog modifications
+  if (Array.isArray(config.catalogModifications)) {
+    for (const mod of config.catalogModifications) {
+      if (mod.usePosterService === undefined && mod.rpdb === true) {
+        mod.usePosterService = true;
+      }
+      delete mod.rpdb;
+    }
   }
 
   return config;
@@ -769,7 +812,7 @@ function validatePreset(preset: PresetObject) {
 
   if (presetMeta.DISABLED) {
     throw new Error(
-      `Addon '${presetMeta.NAME}' is disabled: ${presetMeta.DISABLED.reason}`
+      `${presetMeta.NAME} has been ${presetMeta.DISABLED.removed ? 'removed' : 'disabled'}: ${presetMeta.DISABLED.reason}`
     );
   }
 
@@ -829,6 +872,29 @@ function validateOption(
   if (value === undefined) {
     if (option.required) {
       throw new Error(`Option ${option.id} is required, got ${value}`);
+    }
+    return value;
+  }
+  if (option.type === 'subsection') {
+    for (const subOption of option.subOptions ?? []) {
+      // for subsection, the value must be an object
+      if (typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error(
+          `The value for subsection option '${option.name}' must be an object, got ${Array.isArray(value) ? 'array' : typeof value}`
+        );
+      }
+      const subValue = value[subOption.id];
+      try {
+        value[subOption.id] = validateOption(
+          subOption,
+          subValue,
+          decryptValues
+        );
+      } catch (error) {
+        throw new Error(
+          `The value for sub-option '${subOption.name}' in subsection option '${option.name}' is invalid: ${error}`
+        );
+      }
     }
     return value;
   }

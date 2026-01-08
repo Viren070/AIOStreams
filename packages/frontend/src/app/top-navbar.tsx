@@ -7,7 +7,7 @@ import { cn } from '@/components/ui/core/styling';
 import React from 'react';
 import { PageControls } from '@/components/shared/page-controls';
 import { useMenu } from '@/context/menu';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/disclosure';
 import { DonationModal } from '@/components/shared/donation-modal';
 import { BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
@@ -66,8 +66,31 @@ export function TopNavbar(props: TopNavbarProps) {
               className="flex flex-1"
             ></div>
             {selectedMenu !== 'about' ? (
-              <div className="block lg:hidden">
-                <PageControls />
+              <div className="flex items-center gap-2 lg:hidden">
+                <PageControls
+                  middleContent={
+                    <IconButton
+                      icon={
+                        uuid && password ? (
+                          <BiLogOutCircle />
+                        ) : (
+                          <BiLogInCircle />
+                        )
+                      }
+                      intent="white-outline"
+                      rounded
+                      // className="hidden sm:inline-flex"
+                      size="md"
+                      onClick={() => {
+                        if (uuid && password) {
+                          confirmClearConfig.open();
+                        } else {
+                          signInModal.open();
+                        }
+                      }}
+                    />
+                  }
+                />
               </div>
             ) : (
               <div className="block lg:hidden absolute top-0 right-4">
@@ -86,7 +109,7 @@ export function TopNavbar(props: TopNavbarProps) {
                     }
                   }}
                 >
-                  {uuid && password ? 'Log Out' : 'Log In'}
+                  {uuid && password ? 'Sign Out' : 'Sign In'}
                 </Button>
               </div>
             )}

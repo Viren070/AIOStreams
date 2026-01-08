@@ -42,6 +42,7 @@ interface BaseFile {
   index?: number;
   indexer?: string;
   seeders?: number;
+  group?: string;
   age?: number;
   duration?: number; // duration in seconds
 }
@@ -67,6 +68,7 @@ export interface NZB extends BaseFile {
   hash: string;
   nzb: string;
   easynewsUrl?: string;
+  zyclopsHealth?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {

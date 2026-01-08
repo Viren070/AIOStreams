@@ -1,8 +1,13 @@
 import { Button } from '../ui/button';
 import { useMenu } from '@/context/menu';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
+import React from 'react';
 
-export function PageControls() {
+interface PageControlsProps {
+  middleContent?: React.ReactNode;
+}
+
+export function PageControls({ middleContent }: PageControlsProps) {
   const {
     setSelectedMenu,
     selectedMenu,
@@ -13,7 +18,7 @@ export function PageControls() {
   } = useMenu();
 
   return (
-    <div className="flex flex-1 gap-4">
+    <div className="flex flex-1 gap-2 items-center">
       <Button
         leftIcon={<FaArrowLeft />}
         intent="white"
@@ -43,6 +48,7 @@ export function PageControls() {
       >
         Previous
       </Button>
+      {middleContent}
       <Button
         rightIcon={<FaArrowRight />}
         intent="white"

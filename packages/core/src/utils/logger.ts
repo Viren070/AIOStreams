@@ -50,6 +50,7 @@ const moduleMap: { [key: string]: string } = {
   templates: '📄  TEMPLATES',
   nzbdav: '📂  NZBDAV',
   altmount: '📂  ALTMOUNT',
+  seadex: '🌊  SEADEX',
 };
 
 // Define colors for each log level using full names

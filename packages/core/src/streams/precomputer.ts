@@ -9,7 +9,7 @@ import {
   parseRegex,
   AnimeDatabase,
   IdParser,
-  SeaDexApi,
+  getSeaDexInfoHashes,
 } from '../utils/index.js';
 import { StreamSelector } from '../parser/streamExpression.js';
 
@@ -89,7 +89,7 @@ class StreamPrecomputer {
       );
       return;
     }
-    const seadexResult = await SeaDexApi.getInfoHashesForAnime(anilistId);
+    const seadexResult = await getSeaDexInfoHashes(anilistId);
 
     if (
       seadexResult.bestHashes.size === 0 &&

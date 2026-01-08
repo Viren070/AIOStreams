@@ -17,6 +17,7 @@ export {
   ProwlarrAddon,
   KnabenAddon,
   TorrentGalaxyAddon,
+  SeaDexAddon,
   EasynewsSearchAddon,
   EasynewsAuthSchema,
   EasynewsNzbParamsSchema,

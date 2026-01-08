@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.20.1](https://github.com/Viren070/AIOStreams/compare/v2.20.0...v2.20.1) (2026-01-03)
+
+
+### Bug Fixes
+
+* allow only on discover modification application when no extras are present ([694ca3f](https://github.com/Viren070/AIOStreams/commit/694ca3f137b89dcbfc917384825afbce74dc4ecf))
+
+## [2.20.0](https://github.com/Viren070/AIOStreams/compare/v2.19.0...v2.20.0) (2026-01-02)
+
+
+### Features
+
+* add 'Use Poster Service for Library/Continue Watching' option ([bbe9ed8](https://github.com/Viren070/AIOStreams/commit/bbe9ed86d79e4d803f3cb8fe3f55a659416a0b25)), closes [#566](https://github.com/Viren070/AIOStreams/issues/566)
+* add DTS-X audio tag support which was previously being misclassified  ([#523](https://github.com/Viren070/AIOStreams/issues/523)) ([8c4485a](https://github.com/Viren070/AIOStreams/commit/8c4485a019f37f863230147f863ba298c404e6f3))
+* add HLG visual tag support ([#562](https://github.com/Viren070/AIOStreams/issues/562)) ([ac3bba7](https://github.com/Viren070/AIOStreams/commit/ac3bba7bf457e996c1fa9c5d8d733a0e2827cd9c))
+* add merged catalogs ([#520](https://github.com/Viren070/AIOStreams/issues/520)) ([8dc730a](https://github.com/Viren070/AIOStreams/commit/8dc730a7467c4ed9e78096a758f1f3e697f60214))
+* add only on searh catalog modifier ([ab4691d](https://github.com/Viren070/AIOStreams/commit/ab4691dafde47758c7fc58f6c4807d53da805564))
+* add passthrough() SEL function ([#522](https://github.com/Viren070/AIOStreams/issues/522)) ([7ea0cbb](https://github.com/Viren070/AIOStreams/commit/7ea0cbb4192e1bfeb4289694d88146987c74da63))
+* adjustments to merged catalogs ([47d2ba4](https://github.com/Viren070/AIOStreams/commit/47d2ba48dcc75875bbdb0e214cc98e3a7c2caac3))
+* allow removing catalogs from merged catalogs via quick access close icon ([ab4691d](https://github.com/Viren070/AIOStreams/commit/ab4691dafde47758c7fc58f6c4807d53da805564))
+* apply digital release filter to series, add more filtering options ([#590](https://github.com/Viren070/AIOStreams/issues/590)) ([22ec202](https://github.com/Viren070/AIOStreams/commit/22ec202068389bef59575a5208a171741c80f06d))
+* **builtins/nab:** add specific env var for user agent ([c3c3184](https://github.com/Viren070/AIOStreams/commit/c3c31843911a3c82aa44e4aa84c7292db985e478))
+* **chilllink:** initial protocol support ([#586](https://github.com/Viren070/AIOStreams/issues/586)) ([cba790c](https://github.com/Viren070/AIOStreams/commit/cba790cfaf22c41e07b61157a97d72ae7bdafda8))
+* **frontend:** make sign out / log in always visible ([6a3aaa9](https://github.com/Viren070/AIOStreams/commit/6a3aaa91883293578a3090382e220d62c0decb1d))
+* implement top poster api option ([#583](https://github.com/Viren070/AIOStreams/issues/583)) ([fd62d9b](https://github.com/Viren070/AIOStreams/commit/fd62d9b23873b8d5f47f274b9f4c7bb7b3c94fe0))
+* **newznab:** Add crowdsourced health check support via Zyclops ([#552](https://github.com/Viren070/AIOStreams/issues/552)) ([285cf11](https://github.com/Viren070/AIOStreams/commit/285cf110de833724da029c9b8a7f6efe4e48901c))
+* **presets/debridio-ic4a:** add initial preset ([#591](https://github.com/Viren070/AIOStreams/issues/591)) ([4c5bc93](https://github.com/Viren070/AIOStreams/commit/4c5bc93bb784de74543de418f8344cfd533658d9))
+* support sub section template option ([99090fe](https://github.com/Viren070/AIOStreams/commit/99090feeaffce540c4e1d70231f52ddbaed4d3a6))
+* use logo without background ([81cc5ee](https://github.com/Viren070/AIOStreams/commit/81cc5ee37e280cd72ad98e56e05b03f4e686f675))
+
+
+### Bug Fixes
+
+* add missing NextFunction type to request handler ([3374950](https://github.com/Viren070/AIOStreams/commit/337495002fe547f1fd0985fd7116190e721a9aee))
+* add Teaser as valid type for trailer ([094d029](https://github.com/Viren070/AIOStreams/commit/094d02999c26129167f3b469d4cc6d61ea1324aa))
+* always provide stream data in meta endpoint ([1d317a0](https://github.com/Viren070/AIOStreams/commit/1d317a05b5297dd1d1d48c63119ab227f6f6b072))
+* **anime-db:** add error handling for data source refresh in AnimeDatabase ([6eab1ca](https://github.com/Viren070/AIOStreams/commit/6eab1ca3e0a5dc39ceba00ff8c90f6a5fc149b4c))
+* **anime-db:** allow undefined year ([e4b591d](https://github.com/Viren070/AIOStreams/commit/e4b591df228ecf42f272fee2f8619dabee754f8f))
+* **anime-db:** update manami db url ([68e2755](https://github.com/Viren070/AIOStreams/commit/68e27555cb1c7a70a98527d9ca4185c9c9c79de0))
+* avoid re-parsing extras causing double encoding ([d7ee994](https://github.com/Viren070/AIOStreams/commit/d7ee9947c287766a3b299149a2c208d978591d21))
+* Change included SEL behaviour so it respects passthrough flags ([#577](https://github.com/Viren070/AIOStreams/issues/577)) ([29d2fa9](https://github.com/Viren070/AIOStreams/commit/29d2fa912159bf4fd210b62ad4e1bd7ce523c1d2))
+* check imdb_id when deduplicating merged catalogs and refactor ([878254c](https://github.com/Viren070/AIOStreams/commit/878254c12e7ef01a3fff75191b2e76e57c569b45))
+* **constants:** update default auto play attributes ([689b8a2](https://github.com/Viren070/AIOStreams/commit/689b8a2dc3d40faaab2c113305c31d5c335dd6f2))
+* **frontend:** add pading ([dae366c](https://github.com/Viren070/AIOStreams/commit/dae366c11ce0f87e2cd8387590965e5fb3d169f0))
+* **frontend:** disable strict if yearMatching is disabled, improve descriptions ([#589](https://github.com/Viren070/AIOStreams/issues/589)) ([7bdfa82](https://github.com/Viren070/AIOStreams/commit/7bdfa82f8d4f2dac52c69cc321c18cadec6b21a2))
+* **frontend:** provide textinput with manifest URL ([b0b5515](https://github.com/Viren070/AIOStreams/commit/b0b5515297d15c84e7d561c4068da001ca7f66a3)), closes [#517](https://github.com/Viren070/AIOStreams/issues/517)
+* only set length requirement when cred is required ([7ee8342](https://github.com/Viren070/AIOStreams/commit/7ee834221d46cd6219d62a95b09f00d773c3c6d9))
+* **parser/regex:** handle optional `a` after ddp for atmos([#561](https://github.com/Viren070/AIOStreams/issues/561)) ([a501b13](https://github.com/Viren070/AIOStreams/commit/a501b13d17389eba2f4a39e14bf5e30af6ab3b20))
+* **parser:** dont use country handler ([304b032](https://github.com/Viren070/AIOStreams/commit/304b032de9e35c35e1a7980b26f14ff8dc89626c))
+* **presets/comet:** update logo URL ([6b6f747](https://github.com/Viren070/AIOStreams/commit/6b6f747538b438fd83cfba8f9171111bf19817ae))
+* **presets/nuviostreams:** correct label casing and add VixSrc entry to nuivo streams ([#592](https://github.com/Viren070/AIOStreams/issues/592)) ([395d65f](https://github.com/Viren070/AIOStreams/commit/395d65fa5fa93df77907c718a8061ed2231b28a8))
+* **presets/stremthru-torz:** use correct default timeout env variable ([#579](https://github.com/Viren070/AIOStreams/issues/579)) ([56dc39f](https://github.com/Viren070/AIOStreams/commit/56dc39f42021b0b904ee18d5f25fe0fe8f6230de))
+* **proxy:** handle errors safely ([dec001e](https://github.com/Viren070/AIOStreams/commit/dec001edeb5af72499b244f4e2f4369e173df4e0))
+* skip catalog if requires extra that is not available ([403ca3e](https://github.com/Viren070/AIOStreams/commit/403ca3e1b57e043de923f685ceeef5a50d3be20e))
+
 ## [2.19.0](https://github.com/Viren070/AIOStreams/compare/v2.18.1...v2.19.0) (2025-12-17)
 
 

@@ -11,7 +11,7 @@
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {
     "@torbox/torbox-api": "github:viren070/torbox-sdk-js#dist",
-    "@viren070/parse-torrent-title": "^0.5.1",
+    "@viren070/parse-torrent-title": "^0.5.2",
     "bcrypt": "^6.0.0",
     "bytes": "^3.1.2",
     "dotenv": "^16.4.7",

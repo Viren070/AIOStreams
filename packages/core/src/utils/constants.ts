@@ -715,7 +715,11 @@ const SERVICE_DETAILS: Record<
 };
 
 const TOP_LEVEL_OPTION_DETAILS: Record<
-  'tmdbApiKey' | 'tmdbAccessToken' | 'rpdbApiKey' | 'tvdbApiKey',
+  | 'tmdbApiKey'
+  | 'tmdbAccessToken'
+  | 'rpdbApiKey'
+  | 'tvdbApiKey'
+  | 'topPosterApiKey',
   {
     name: string;
     description: string;
@@ -735,6 +739,11 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     name: 'RPDB API Key',
     description:
       'Get your free API key from [here](https://ratingposterdb.com/api-key/) for posters with ratings.',
+  },
+  topPosterApiKey: {
+    name: 'Top Poster API Key',
+    description:
+      'Get your free API key from [here](https://api.top-streaming.stream/user/register) for posters with ratings.',
   },
   tvdbApiKey: {
     name: 'TVDB API Key',

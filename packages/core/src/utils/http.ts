@@ -246,7 +246,7 @@ export function shouldProxy(url: URL): {
   return { useProxy, proxyIndex };
 }
 
-function domainHasUserAgent(url: URL) {
+export function domainHasUserAgent(url: URL) {
   let userAgent: string | undefined;
   let hostname = url.hostname;
 
@@ -254,12 +254,8 @@ function domainHasUserAgent(url: URL) {
     return undefined;
   }
 
-  for (const rule of Env.HOSTNAME_USER_AGENT_OVERRIDES.split(',')) {
-    const [ruleHostname, ruleUserAgent] = rule.split(':');
-    if (!ruleUserAgent) {
-      logger.error(`Invalid user agent config: ${rule}`);
-      continue;
-    }
+  const mappings = Array.from(Env.HOSTNAME_USER_AGENT_OVERRIDES.entries());
+  for (const [ruleHostname, ruleUserAgent] of mappings) {
     if (ruleHostname === '*') {
       userAgent = ruleUserAgent;
     } else if (ruleHostname.startsWith('*')) {

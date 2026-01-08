@@ -6,6 +6,7 @@ import {
   formatApi,
   catalogApi,
   rpdbApi,
+  topPosterApi,
   gdriveApi,
   debridApi,
   searchApi,
@@ -35,6 +36,7 @@ import {
   prowlarr,
   knaben,
   torrentGalaxy,
+  seadex,
   easynews,
 } from './routes/builtins/index.js';
 import {
@@ -95,6 +97,7 @@ apiRouter.use('/status', statusApi);
 apiRouter.use('/format', formatApi);
 apiRouter.use('/catalogs', catalogApi);
 apiRouter.use('/rpdb', rpdbApi);
+apiRouter.use('/top-poster', topPosterApi);
 apiRouter.use('/oauth/exchange/gdrive', gdriveApi);
 apiRouter.use('/debrid', debridApi);
 if (Env.ENABLE_SEARCH_API) {
@@ -153,6 +156,7 @@ builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
+builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
 app.use('/builtins', builtinsRouter);
 

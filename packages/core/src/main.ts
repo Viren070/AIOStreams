@@ -23,6 +23,7 @@ import { Wrapper } from './wrapper.js';
 import { PresetManager } from './presets/index.js';
 import {
   AddonCatalog,
+  MergedCatalog,
   Meta,
   MetaPreview,
   ParsedMeta,
@@ -31,6 +32,7 @@ import {
   Subtitle,
 } from './db/schemas.js';
 import { createProxy } from './proxy/index.js';
+import { TopPoster } from './utils/top-poster.js';
 import { RPDB } from './utils/rpdb.js';
 import { FeatureControl } from './utils/feature.js';
 import Proxifier from './streams/proxifier.js';
@@ -49,6 +51,14 @@ import { Metadata } from './metadata/utils.js';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
+
+type MergedCatalogSkipState = {
+  sourceSkips: Record<string, number>; // What skip to send to each upstream source
+};
+const mergedCatalogCache = Cache.getInstance<string, MergedCatalogSkipState>(
+  'merged_catalog'
+);
+
 const precacheCache = Cache.getInstance<string, boolean>(
   'precache',
   undefined,
@@ -289,91 +299,177 @@ export class AIOStreams {
     };
   }
 
+  /**
+   * Fetches raw catalog items from a specific addon without applying any modifications.
+   * Returns the raw items from the upstream addon.
+   */
+  private async fetchRawCatalogItems(
+    addonInstanceId: string,
+    catalogId: string,
+    type: string,
+    parsedExtras?: ExtrasParser
+  ): Promise<{
+    success: boolean;
+    items: MetaPreview[];
+    error?: { title: string; description: string };
+  }> {
+    const addon = this.getAddon(addonInstanceId);
+
+    if (!addon) {
+      const initError = (
+        this.addonInitialisationErrors as { addon: Preset; error: string }[]
+      ).find((e) => addonInstanceId.startsWith(e.addon.instanceId || ''));
+      if (initError) {
+        return {
+          success: false,
+          items: [],
+          error: {
+            title: `[❌] ${initError.error}`,
+            description: `Addon ${addonInstanceId} failed to initialise. Try reinstalling/disabling/uninstalling the addon.`,
+          },
+        };
+      }
+      return {
+        success: false,
+        items: [],
+        error: {
+          title: `Addon ${addonInstanceId} not found. Try reinstalling the addon.`,
+          description: 'Addon not found',
+        },
+      };
+    }
+
+    // Check for type override in modifications
+    let actualType = type;
+    const modification = this.userData.catalogModifications?.find(
+      (mod) =>
+        mod.id === `${addonInstanceId}.${catalogId}` &&
+        (mod.type === type || mod.overrideType === type)
+    );
+    if (modification?.overrideType) {
+      actualType = modification.type;
+    }
+
+    if (parsedExtras?.genre === 'None') {
+      parsedExtras.genre = undefined;
+    }
+    const extrasString = parsedExtras?.toString();
+
+    try {
+      const start = Date.now();
+      const catalog = await new Wrapper(addon).getCatalog(
+        actualType,
+        catalogId,
+        extrasString
+      );
+      logger.info(
+        `Received catalog ${catalogId} of type ${actualType} from ${addon.name} in ${getTimeTakenSincePoint(start)}`
+      );
+      return { success: true, items: catalog };
+    } catch (error) {
+      return {
+        success: false,
+        items: [],
+        error: {
+          title: `[❌] ${addon.name}`,
+          description: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+  }
+
   public async getCatalog(
     type: string,
     id: string,
     extras?: string
   ): Promise<AIOStreamsResponse<MetaPreview[]>> {
-    // step 1
-    // get the addon index from the id
     logger.info(`Handling catalog request`, { type, id, extras });
-    const start = Date.now();
+
+    if (id.startsWith('aiostreams.merged.')) {
+      return this.getMergedCatalog(type, id, extras);
+    }
+
+    // Get the addon instance id and actual catalog id from the id
     const addonInstanceId = id.split('.', 2)[0];
-    const addon = this.getAddon(addonInstanceId);
-    if (!addon) {
-      logger.error(`Addon ${addonInstanceId} not found`);
-      return {
-        success: false,
-        data: [],
-        errors: [
-          {
-            title: `Addon ${addonInstanceId} not found. Try reinstalling the addon.`,
-            description: 'Addon not found',
-          },
-        ],
-      };
-    }
-
-    // step 2
-    // get the actual catalog id from the id
     const actualCatalogId = id.split('.').slice(1).join('.');
-    let modification;
-    if (this.userData.catalogModifications) {
-      modification = this.userData.catalogModifications.find(
-        (mod) =>
-          mod.id === id && (mod.type === type || mod.overrideType === type)
-      );
-    }
-    if (modification?.overrideType) {
-      // reset the type from the request (which is the overriden type) to the actual type
-      type = modification.type;
-    }
-    const parsedExtras = new ExtrasParser(extras);
-    logger.debug(`Parsed extras: ${JSON.stringify(parsedExtras)}`);
-    if (parsedExtras.genre === 'None') {
-      logger.debug(`Genre extra is None, removing genre extra`);
-      parsedExtras.genre = undefined;
-    }
-    const extrasString = parsedExtras.toString();
 
-    // step 3
-    // get the catalog from the addon
-    let catalog;
-    try {
-      catalog = await new Wrapper(addon).getCatalog(
-        type,
-        actualCatalogId,
-        extrasString
-      );
-    } catch (error) {
+    const parsedExtras = new ExtrasParser(extras);
+
+    // Fetch raw catalog items
+    const result = await this.fetchRawCatalogItems(
+      addonInstanceId,
+      actualCatalogId,
+      type,
+      parsedExtras
+    );
+
+    if (!result.success) {
+      // If there's a skip in extras, return empty on error (pagination end)
       if (extras && extras.includes('skip')) {
-        return {
-          success: true,
-          data: [],
-          errors: [],
-        };
+        return { success: true, data: [], errors: [] };
       }
       return {
         success: false,
         data: [],
-        errors: [
-          {
-            title: `[❌] ${addon.name}`,
-            description: error instanceof Error ? error.message : String(error),
-          },
-        ],
+        errors: result.error ? [result.error] : [],
       };
     }
 
-    logger.info(
-      `Received catalog ${actualCatalogId} of type ${type} from ${addon.name} in ${getTimeTakenSincePoint(start)}`
+    // // Use extras as part of cache key so different extras get different shuffle
+    const shuffleCacheKey = `${type}-${actualCatalogId}-${parsedExtras?.toString() || ''}-${this.userData.uuid}`;
+
+    // Apply catalog modifications (shuffle, reverse, RPDB, etc.)
+    const catalog = await this.applyCatalogModifications(
+      result.items,
+      id,
+      type,
+      parsedExtras,
+      shuffleCacheKey
     );
 
-    // apply catalog modifications
-    if (modification?.shuffle && !(extras && extras.includes('search'))) {
-      // shuffle the catalog array if it is not a search
-      const cacheKey = `shuffle-${type}-${actualCatalogId}-${extras}-${this.userData.uuid}`;
-      const cachedShuffle = await shuffleCache.get(cacheKey);
+    return { success: true, data: catalog, errors: [] };
+  }
+
+  /**
+   * Applies catalog modifications like shuffle, reverse, RPDB posters, etc.
+   * Used by getCatalog for standalone catalogs and getMergedCatalog for source catalogs.
+   */
+  private async applyCatalogModifications(
+    items: MetaPreview[],
+    catalogId: string,
+    type: string,
+    parsedExtras?: ExtrasParser,
+    shuffleCacheKey?: string
+  ): Promise<MetaPreview[]> {
+    let catalog = [...items];
+    const isSearch = parsedExtras?.search;
+
+    const modification = this.userData.catalogModifications?.find(
+      (mod) =>
+        mod.id === catalogId && (mod.type === type || mod.overrideType === type)
+    );
+    const applyShuffle = modification?.shuffle && !isSearch && shuffleCacheKey;
+    const applyReverse = !applyShuffle && modification?.reverse && !isSearch;
+
+    logger.debug(`Applying catalog modifications`, {
+      catalogId,
+      type,
+      modificationFound: !!modification,
+      posterService:
+        modification?.usePosterService === true &&
+        this.userData.posterService !== 'none'
+          ? this.userData.posterService
+          : false,
+      shuffle: !!applyShuffle,
+      reverse: !!applyReverse,
+    });
+
+    // Apply shuffle if enabled (not for search requests)
+    if (applyShuffle) {
+      // const actualCatalogId = catalogId.split('.').slice(1).join('.');
+      // // Use extras as part of cache key so different extras get different shuffle
+      // const cacheKey = `${type}-${actualCatalogId}-${parsedExtras?.toString() || ''}-${this.userData.uuid}`;
+      const cachedShuffle = await shuffleCache.get(shuffleCacheKey);
       if (cachedShuffle) {
         catalog = cachedShuffle;
       } else {
@@ -383,59 +479,528 @@ export class AIOStreams {
         }
         if (modification.persistShuffleFor) {
           await shuffleCache.set(
-            cacheKey,
+            shuffleCacheKey,
             catalog,
             modification.persistShuffleFor * 3600
           );
         }
       }
-    } else if (
-      modification?.reverse &&
-      !(extras && extras.includes('search'))
-    ) {
+    } else if (applyReverse) {
       catalog = catalog.reverse();
     }
 
-    const rpdbApiKey =
-      modification?.rpdb && this.userData.rpdbApiKey
-        ? this.userData.rpdbApiKey
-        : undefined;
-    const rpdbApi = rpdbApiKey ? new RPDB(rpdbApiKey) : undefined;
+    // Apply poster modifications (usePosterService only if modification has usePosterService enabled)
+    const applyPosterService = modification?.usePosterService === true;
+    catalog = await this.applyPosterModifications(
+      catalog,
+      type,
+      applyPosterService
+    );
 
-    catalog = await Promise.all(
-      catalog.map(async (item) => {
-        // Apply RPDB poster modification
-        if (rpdbApiKey && item.poster) {
+    return catalog;
+  }
+
+  private async getMergedCatalog(
+    type: string,
+    id: string,
+    extras?: string
+  ): Promise<AIOStreamsResponse<MetaPreview[]>> {
+    const start = Date.now();
+    const mergedCatalog = this.userData.mergedCatalogs?.find(
+      (mc) => mc.id === id
+    );
+
+    if (!mergedCatalog) {
+      logger.error(`Merged catalog ${id} not found`);
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `Merged catalog ${id} not found`,
+            description: 'Try reinstalling the addon.',
+          },
+        ],
+      };
+    }
+
+    if (mergedCatalog.type !== type) {
+      logger.error(
+        `Merged catalog ${id} type mismatch: expected ${mergedCatalog.type}, got ${type}`
+      );
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `Type mismatch for merged catalog ${id}`,
+            description: `Expected ${mergedCatalog.type}, got ${type}`,
+          },
+        ],
+      };
+    }
+
+    const parsedExtras = new ExtrasParser(extras);
+    const requestedSkip = parsedExtras.skip || 0;
+    const isSearchRequest = !!parsedExtras.search;
+    const requestedGenre = parsedExtras.genre;
+
+    // Build base cache key from extras (excluding skip) and merged catalog config
+    const extrasForCacheKey = new ExtrasParser(extras);
+    extrasForCacheKey.skip = undefined;
+    const extrasCacheKeyPart = extrasForCacheKey.toString();
+
+    // Include a hash of the merged catalog config in the cache key
+    const configHash = getSimpleTextHash(
+      JSON.stringify({
+        catalogIds: mergedCatalog.catalogIds,
+        deduplicationMethods: mergedCatalog.deduplicationMethods,
+        mergeMethod: mergedCatalog.mergeMethod,
+      })
+    );
+    const baseCacheKey = `${id}-${this.userData.uuid}-${configHash}${extrasCacheKeyPart ? `-${extrasCacheKeyPart}` : ''}`;
+    const skipCacheKey = `${baseCacheKey}-skip=${requestedSkip}`;
+
+    let skipState: MergedCatalogSkipState | undefined;
+
+    if (requestedSkip === 0) {
+      // For skip=0, always start fresh with all sources at skip=0
+      skipState = { sourceSkips: {} };
+      for (const encodedCatalogId of mergedCatalog.catalogIds) {
+        skipState.sourceSkips[encodedCatalogId] = 0;
+      }
+    } else {
+      skipState = await mergedCatalogCache.get(skipCacheKey);
+      if (!skipState) {
+        // No cached state for this skip value - either cache expired or invalid skip
+        // Return empty to signal end of pagination
+        logger.warn(
+          `No cached state for merged catalog ${id} at skip=${requestedSkip}. ` +
+            `Cache may have expired or skip value is invalid.`
+        );
+        return { success: true, data: [], errors: [] };
+      }
+    }
+
+    // Track next skip values for each source (to store for the next page)
+    const nextSourceSkips: Record<string, number> = {
+      ...skipState.sourceSkips,
+    };
+
+    const fetchPromises = mergedCatalog.catalogIds.map(
+      async (encodedCatalogId: string) => {
+        logger.debug(`Handling merged catalog source`, { encodedCatalogId });
+        const params = new URLSearchParams(encodedCatalogId);
+        const catalogId = params.get('id');
+        const catalogType = params.get('type');
+        if (!catalogId || !catalogType) {
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: false,
+            skipped: false,
+          };
+        }
+
+        const addonInstanceId = catalogId.split('.', 2)[0];
+        const actualCatalogId = catalogId.split('.').slice(1).join('.');
+
+        // Smart filtering: check if this source supports the requested extras
+        const catalogExtras = this.getCatalogExtras(
+          addonInstanceId,
+          actualCatalogId,
+          catalogType
+        );
+
+        // If search is requested but catalog doesn't support search, skip it
+        if (
+          isSearchRequest &&
+          !catalogExtras?.some((e) => e.name === 'search')
+        ) {
+          logger.debug(
+            `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support search`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: true,
+            skipped: true,
+          };
+        }
+
+        // If genre is requested, check if catalog supports it and has the genre option
+        if (requestedGenre && requestedGenre !== 'None') {
+          const genreExtra = catalogExtras?.find((e) => e.name === 'genre');
+          if (!genreExtra) {
+            logger.debug(
+              `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support genre extra`
+            );
+            return {
+              encodedCatalogId,
+              items: [],
+              fetched: 0,
+              success: true,
+              skipped: true,
+            };
+          }
+          // If the genre extra has specific options, check if the requested genre is available
+          if (genreExtra.options && genreExtra.options.length > 0) {
+            const hasGenre = genreExtra.options.some(
+              (opt) => opt === requestedGenre || opt === null // null can mean "all genres"
+            );
+            if (!hasGenre) {
+              logger.debug(
+                `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't have genre "${requestedGenre}"`
+              );
+              return {
+                encodedCatalogId,
+                items: [],
+                fetched: 0,
+                success: true,
+                skipped: true,
+              };
+            }
+          }
+        }
+
+        const sourceSkip = skipState!.sourceSkips[encodedCatalogId] || 0;
+        const supportsSkip = catalogExtras?.some((e) => e.name === 'skip');
+
+        // If this catalog doesn't support skip and we've already fetched from it once,
+        // mark it as exhausted to prevent returning the same items repeatedly
+        if (!supportsSkip && sourceSkip > 0) {
+          logger.debug(
+            `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support skip and already fetched (exhausted)`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: true,
+            skipped: true,
+          };
+        }
+
+        // Build source extras - copy all extras and set the appropriate skip for this source
+        // Only include skip if the catalog supports it
+        const sourceExtras = new ExtrasParser(extras);
+        if (supportsSkip) {
+          sourceExtras.skip = sourceSkip > 0 ? sourceSkip : undefined;
+        } else {
+          sourceExtras.skip = undefined; // Don't send skip to catalogs that don't support it
+        }
+
+        // now check whether the catalog requires an extra but we dont have it - in which case we skip it
+        const requiredExtras = catalogExtras?.filter((e) => e.isRequired);
+        if (requiredExtras && requiredExtras.length > 0) {
+          for (const reqExtra of requiredExtras) {
+            if (!sourceExtras.has(reqExtra.name)) {
+              logger.debug(
+                `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: missing required extra "${reqExtra.name}"`
+              );
+              return {
+                encodedCatalogId,
+                items: [],
+                fetched: 0,
+                success: true,
+                skipped: true,
+              };
+            }
+          }
+        }
+
+        logger.debug('Fetching merged catalog source', {
+          encodedCatalogId,
+          addonInstanceId,
+          catalogType,
+          constructedExtras: sourceExtras.toString(),
+        });
+
+        const result = await this.fetchRawCatalogItems(
+          addonInstanceId,
+          actualCatalogId,
+          catalogType,
+          sourceExtras
+        );
+
+        if (!result.success) {
+          logger.warn(
+            `Failed to fetch source catalog ${encodedCatalogId} for merged catalog ${mergedCatalog.name} at skip=${requestedSkip}: ${
+              result.error
+                ? maskSensitiveInfo(result.error.description || '')
+                : 'Unknown error'
+            }`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: false,
+            skipped: false,
+          };
+        }
+
+        return {
+          encodedCatalogId,
+          items: result.items,
+          fetched: result.items.length,
+          success: true,
+          skipped: false,
+        };
+      }
+    );
+
+    logger.debug(
+      `Fetching merged catalog ${mergedCatalog.name} at skip=${requestedSkip}`,
+      {
+        upstreamAddons: fetchPromises.length,
+      }
+    );
+
+    const fetchResults = await Promise.all(fetchPromises);
+
+    // Check if ALL non-skipped sources failed
+    const nonSkippedResults = fetchResults.filter((r) => !r.skipped);
+    const allFailed =
+      nonSkippedResults.length > 0 &&
+      nonSkippedResults.every((r) => !r.success);
+    if (allFailed) {
+      logger.error(
+        `All sources failed for merged catalog ${mergedCatalog.name}`
+      );
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `All sources failed for merged catalog ${mergedCatalog.name}`,
+            description:
+              'Unable to fetch items from any source catalog. Please try again later.',
+          },
+        ],
+      };
+    }
+
+    // Collect items per source for merge method processing
+    const itemsBySource: MetaPreview[][] = [];
+    for (const { encodedCatalogId, items, fetched, skipped } of fetchResults) {
+      // Don't update skip tracking for skipped sources - they weren't queried
+      if (skipped) continue;
+
+      // Update next skip for this source (current skip + items returned)
+      nextSourceSkips[encodedCatalogId] =
+        (skipState.sourceSkips[encodedCatalogId] || 0) + fetched;
+      itemsBySource.push(items);
+    }
+
+    // Apply merge method
+    let allItems: MetaPreview[] = this.applyMergeMethod(
+      itemsBySource,
+      mergedCatalog.mergeMethod
+    );
+
+    logger.debug(
+      `Merged catalog ${mergedCatalog.name} collected ${allItems.length} items before deduplication`
+    );
+
+    // Deduplicate the collected items
+    allItems = this.deduplicateMergedCatalog(
+      allItems,
+      mergedCatalog.deduplicationMethods
+    );
+
+    const shuffleCacheKey = `${baseCacheKey}-skip=${requestedSkip}-shuffle`;
+
+    // Apply catalog modifications (shuffle, reverse, RPDB) to the merged catalog
+    allItems = await this.applyCatalogModifications(
+      allItems,
+      id,
+      type,
+      parsedExtras,
+      shuffleCacheKey
+    );
+
+    // Calculate the next skip value (current skip + items we're returning)
+    const nextSkip = requestedSkip + allItems.length;
+
+    // Cache the state for the next page (keyed by the next skip value)
+    // This creates a chain: skip=0 stores state for skip=35, skip=35 stores state for skip=73, etc.
+    if (allItems.length > 0) {
+      const nextSkipCacheKey = `${baseCacheKey}-skip=${nextSkip}`;
+      await mergedCatalogCache.set(
+        nextSkipCacheKey,
+        { sourceSkips: nextSourceSkips },
+        3600 // 1 hour expiry, this should be fine
+      );
+    }
+
+    logger.info(
+      `Merged catalog ${mergedCatalog.name} fetched ${allItems.length} items at skip=${requestedSkip}, next skip=${nextSkip} in ${getTimeTakenSincePoint(start)}`
+    );
+
+    return { success: true, data: allItems, errors: [] };
+  }
+
+  /**
+   * Applies merge method to combine items from multiple source catalogs.
+   */
+  private applyMergeMethod(
+    itemsBySource: MetaPreview[][],
+    method?: MergedCatalog['mergeMethod']
+  ): MetaPreview[] {
+    const mergeMethod = method || 'sequential';
+
+    switch (mergeMethod) {
+      case 'interleave': {
+        // Interleave: take 1st from each source, then 2nd from each, etc.
+        const result: MetaPreview[] = [];
+        const maxLength = Math.max(
+          0,
+          ...itemsBySource.map((arr) => arr.length)
+        );
+        for (let i = 0; i < maxLength; i++) {
+          for (const sourceItems of itemsBySource) {
+            if (i < sourceItems.length) {
+              result.push(sourceItems[i]);
+            }
+          }
+        }
+        return result;
+      }
+
+      case 'imdbRating': {
+        // Merge all and sort by IMDB rating (descending)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const ratingA = parseFloat(a.imdbRating?.toString() ?? '0');
+          const ratingB = parseFloat(b.imdbRating?.toString() ?? '0');
+          if (isNaN(ratingA) && isNaN(ratingB)) return 0;
+          if (isNaN(ratingA)) return 1;
+          if (isNaN(ratingB)) return -1;
+          return ratingB - ratingA;
+        });
+      }
+
+      case 'releaseDateAsc': {
+        // Merge all and sort by release date (oldest first)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const yearA = this.extractYear(a.releaseInfo);
+          const yearB = this.extractYear(b.releaseInfo);
+          return yearA - yearB;
+        });
+      }
+
+      case 'releaseDateDesc': {
+        // Merge all and sort by release date (newest first)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const yearA = this.extractYear(a.releaseInfo);
+          const yearB = this.extractYear(b.releaseInfo);
+          return yearB - yearA;
+        });
+      }
+
+      case 'sequential':
+      default:
+        // Just concatenate in order of catalogIds
+        return itemsBySource.flat();
+    }
+  }
+
+  /**
+   * Extracts a year from releaseInfo which can be a number (year) or string (year or year-year range).
+   * For ranges like "2020-2024", returns the first year.
+   */
+  private extractYear(releaseInfo: number | string | undefined | null): number {
+    if (releaseInfo === undefined || releaseInfo === null) return 0;
+    if (typeof releaseInfo === 'number') return releaseInfo;
+    // Handle string formats: "2020" or "2020-2024"
+    const match = String(releaseInfo).match(/^(\d{4})/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  /**
+   * Gets the extras configuration for a specific catalog from an addon's manifest.
+   * Used to determine what extras (search, genre, etc.) a catalog supports.
+   */
+  private getCatalogExtras(
+    addonInstanceId: string,
+    catalogId: string,
+    catalogType: string
+  ): Manifest['catalogs'][number]['extra'] | undefined {
+    const manifest = this.manifests[addonInstanceId];
+    if (!manifest) return undefined;
+
+    const catalog = manifest.catalogs?.find(
+      (c) => c.id === catalogId && c.type === catalogType
+    );
+    return catalog?.extra;
+  }
+
+  /**
+   * Applies poster modifications to catalog items.
+   * @param items - The catalog items to modify
+   * @param type - The catalog type (movie, series, etc.)
+   * @param applyRpdb - Whether to apply RPDB poster modifications (requires user to have API key configured)
+   */
+  private async applyPosterModifications(
+    items: MetaPreview[],
+    type: string,
+    applyPosterService: boolean = true
+  ): Promise<MetaPreview[]> {
+    const posterService = applyPosterService
+      ? this.userData.posterService ||
+        (this.userData.rpdbApiKey ? 'rpdb' : undefined)
+      : undefined;
+    const posterApiKey =
+      posterService === 'rpdb'
+        ? this.userData.rpdbApiKey
+        : posterService === 'top-poster'
+          ? this.userData.topPosterApiKey
+          : undefined;
+    const posterApi = posterApiKey
+      ? posterService === 'rpdb'
+        ? new RPDB(posterApiKey)
+        : posterService === 'top-poster'
+          ? new TopPoster(posterApiKey)
+          : undefined
+      : undefined;
+
+    return Promise.all(
+      items.map(async (item) => {
+        if (posterApi && item.poster) {
           let posterUrl = item.poster;
-          if (posterUrl.includes('api.ratingposterdb.com')) {
-            // already a RPDB poster, do nothing
-          } else if (
-            this.userData.rpdbUseRedirectApi !== false &&
-            Env.BASE_URL
+          if (
+            posterUrl.includes('api.ratingposterdb.com') ||
+            posterUrl.includes('api.top-streaming.stream')
           ) {
-            const id = (item as any).imdb_id || item.id;
+            // already a poster from a poster service, do nothing.
+          } else if (this.userData.usePosterRedirectApi) {
+            const itemId = (item as any).imdb_id || item.id;
             const url = new URL(Env.BASE_URL);
-            url.pathname = '/api/v1/rpdb';
-            url.searchParams.set('id', id);
+            url.pathname =
+              posterService === 'rpdb' ? '/api/v1/rpdb' : '/api/v1/top-poster';
+            url.searchParams.set('id', itemId);
             url.searchParams.set('type', type);
             url.searchParams.set('fallback', item.poster);
-            url.searchParams.set('apiKey', rpdbApiKey);
+            url.searchParams.set('apiKey', posterApiKey!);
             posterUrl = url.toString();
-          } else {
-            const rpdbPosterUrl = await rpdbApi!.getPosterUrl(
+          } else if (posterApi) {
+            const servicePosterUrl = await posterApi.getPosterUrl(
               type,
               (item as any).imdb_id || item.id,
               false
             );
-            if (rpdbPosterUrl) {
-              posterUrl = rpdbPosterUrl;
+            if (servicePosterUrl) {
+              posterUrl = servicePosterUrl;
             }
           }
-
           item.poster = posterUrl;
         }
 
-        // Apply poster enhancement
         if (this.userData.enhancePosters && Math.random() < 0.2) {
           item.poster = Buffer.from(
             constants.DEFAULT_POSTERS[
@@ -451,8 +1016,36 @@ export class AIOStreams {
         return item;
       })
     );
+  }
 
-    return { success: true, data: catalog, errors: [] };
+  private deduplicateMergedCatalog(
+    items: MetaPreview[],
+    methods?: ('id' | 'title')[]
+  ): MetaPreview[] {
+    if (!methods || methods.length === 0) {
+      return items;
+    }
+
+    const seenIds = new Set<string>();
+    const seenTitles = new Set<string>();
+
+    return items.filter((item) => {
+      const itemIds = [item.id, (item as any).imdb_id].filter(Boolean);
+      const title = (item.name || item.id).toLowerCase();
+
+      const isDuplicateById =
+        methods.includes('id') && itemIds.some((id) => seenIds.has(id));
+      const isDuplicateByTitle =
+        methods.includes('title') && seenTitles.has(title);
+
+      if (isDuplicateById || isDuplicateByTitle) {
+        return false;
+      }
+
+      itemIds.forEach((id) => seenIds.add(id));
+      seenTitles.add(title);
+      return true;
+    });
   }
 
   public async getMeta(
@@ -546,7 +1139,11 @@ export class AIOStreams {
           addonName: candidate.addon.name,
           addonInstanceId: candidate.instanceId,
         });
-        meta.links = this.convertDiscoverDeepLinks(meta.links);
+        if (this.userData.usePosterServiceForMeta) {
+          await this.applyPosterModifications([meta], type, true);
+        } else {
+          meta.links = this.convertDiscoverDeepLinks(meta.links);
+        }
 
         if (meta.videos) {
           meta.videos = await Promise.all(
@@ -733,7 +1330,13 @@ export class AIOStreams {
 
     for (const preset of this.userData.presets.filter((p) => p.enabled)) {
       try {
-        const addons = await PresetManager.fromId(preset.type).generateAddons(
+        const Preset = PresetManager.fromId(preset.type);
+        if (Preset.METADATA.DISABLED) {
+          throw new Error(
+            `${Preset.METADATA.NAME} has been ${Preset.METADATA.DISABLED.removed ? 'removed' : 'disabled'}: ${Preset.METADATA.DISABLED.reason}`
+          );
+        }
+        const addons = await Preset.generateAddons(
           this.userData,
           preset.options
         );
@@ -995,6 +1598,42 @@ export class AIOStreams {
       }
     }
 
+    // Build set of source catalog IDs that are part of enabled merged catalogs
+    // This is done BEFORE overrideType is applied so we use the original catalog types
+    const catalogsInMergedCatalogs = new Set<string>();
+    if (this.userData.mergedCatalogs?.length) {
+      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
+        (mc) => mc.enabled !== false
+      );
+      for (const mc of enabledMergedCatalogs) {
+        for (const encodedCatalogId of mc.catalogIds) {
+          const params = new URLSearchParams(encodedCatalogId);
+          const catalogId = params.get('id');
+          const catalogType = params.get('type');
+          if (catalogId && catalogType) {
+            catalogsInMergedCatalogs.add(`${catalogId}-${catalogType}`);
+          }
+        }
+      }
+    }
+
+    // Add enabled merged catalogs to finalCatalogs BEFORE sorting
+    // so they participate in the natural catalogModifications-based sort
+    if (this.userData.mergedCatalogs?.length) {
+      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
+        (mc) => mc.enabled !== false
+      );
+      for (const mc of enabledMergedCatalogs) {
+        const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
+        this.finalCatalogs.push({
+          id: mc.id,
+          name: mc.name,
+          type: mc.type,
+          extra: mergedExtras.length > 0 ? mergedExtras : undefined,
+        });
+      }
+    }
+
     if (this.userData.catalogModifications) {
       this.finalCatalogs = this.finalCatalogs
         // Sort catalogs based on catalogModifications order, with non-modified catalogs at the end
@@ -1020,12 +1659,29 @@ export class AIOStreams {
           // If both are in modifications, sort by their order in modifications
           return aModIndex - bModIndex;
         })
-        // filter out any catalogs that are disabled
+        // filter out any catalogs that are disabled OR are source catalogs of enabled merged catalogs
         .filter((catalog) => {
+          // Don't filter out merged catalogs themselves
+          if (catalog.id.startsWith('aiostreams.merged.')) {
+            const modification = this.userData.catalogModifications!.find(
+              (mod) => mod.id === catalog.id && mod.type === catalog.type
+            );
+            return modification?.enabled !== false;
+          }
+
+          // Check if this catalog is a source of an enabled merged catalog
+          const key = `${catalog.id}-${catalog.type}`;
+          if (catalogsInMergedCatalogs.has(key)) {
+            logger.debug(
+              `Filtering out catalog ${catalog.id} of type ${catalog.type} as it is part of an enabled merged catalog`
+            );
+            return false;
+          }
+
           const modification = this.userData.catalogModifications!.find(
             (mod) => mod.id === catalog.id && mod.type === catalog.type
           );
-          return modification?.enabled !== false; // only if explicity disabled i.e. enabled is true or undefined
+          return modification?.enabled !== false; // only if explicitly disabled i.e. enabled is true or undefined
         })
         // rename any catalogs if necessary and apply the onlyOnDiscover modification
         .map((catalog) => {
@@ -1035,7 +1691,24 @@ export class AIOStreams {
           if (modification?.name) {
             catalog.name = modification.name;
           }
-          if (modification?.onlyOnDiscover) {
+
+          // checking that no extras are required already
+          // if its a non genre extra, then its just not possible as it would lead to having 2 required extras.
+          // if it is the genre extra that is required, then there isnt a need to apply the modification as its already only on discover
+          // if there are no extras, we can also apply the modification
+          const canApplyOnlyOnDiscover = catalog.extra
+            ? catalog.extra.every((e) => !e.isRequired)
+            : true;
+          // checking that a search extra exists and is not required already
+          const canApplyOnlyOnSearch = catalog.extra?.some(
+            (e) => e.name === 'search' && !e.isRequired
+          );
+          // we can only disable search if the search extra is not required. if it is required, disabling can lead to unexpected behavior
+          const canDisableSearch = catalog.extra?.some(
+            (e) => e.name === 'search' && !e.isRequired
+          );
+
+          if (modification?.onlyOnDiscover && canApplyOnlyOnDiscover) {
             // A few cases
             // the catalog already has genres. In which case we set isRequired for the genre extra to true
             // and also add a new genre with name 'None' to the top - if isRequried was previously false.
@@ -1062,16 +1735,140 @@ export class AIOStreams {
                 isRequired: true,
               });
             }
+          } else if (modification?.onlyOnSearch && canApplyOnlyOnSearch) {
+            const searchExtra = catalog.extra?.find((e) => e.name === 'search');
+            if (searchExtra) {
+              searchExtra.isRequired = true;
+            }
           }
           if (modification?.overrideType !== undefined) {
             catalog.type = modification.overrideType;
           }
-          if (modification?.disableSearch) {
+          if (modification?.disableSearch && canDisableSearch) {
             catalog.extra = catalog.extra?.filter((e) => e.name !== 'search');
           }
           return catalog;
         });
     }
+  }
+
+  /**
+   * Builds the extras array for a merged catalog by analyzing the source catalogs' manifest definitions.
+   * - Only adds an extra (like skip, search, genre) if at least one source catalog supports it
+   * - Merges options arrays (e.g., genre options) from all sources
+   * - Sets isRequired to true only if ALL sources have isRequired=true for that extra
+   */
+  private buildMergedCatalogExtras(catalogIds: string[]): Array<{
+    name: string;
+    isRequired?: boolean;
+    options?: (string | null)[] | null;
+    optionsLimit?: number;
+  }> {
+    // Track extras by name: { appearances: number, allRequired: boolean, options: Set, optionsLimit: max }
+    const extrasMap = new Map<
+      string,
+      {
+        appearances: number;
+        allRequired: boolean;
+        options: Set<string | null>;
+        optionsLimit?: number;
+      }
+    >();
+
+    let sourceCatalogCount = 0;
+
+    for (const encodedCatalogId of catalogIds) {
+      const params = new URLSearchParams(encodedCatalogId);
+      const catalogId = params.get('id');
+      const catalogType = params.get('type');
+      if (!catalogId || !catalogType) continue;
+
+      // Parse the catalog ID to get addon instance ID and actual catalog ID
+      const addonInstanceId = catalogId.split('.', 2)[0];
+      const actualCatalogId = catalogId.split('.').slice(1).join('.');
+
+      // Get the manifest for this addon
+      const manifest = this.manifests[addonInstanceId];
+      if (!manifest) continue;
+
+      // Find the catalog definition in the manifest
+      const catalogDef = manifest.catalogs.find(
+        (c) => c.id === actualCatalogId && c.type === catalogType
+      );
+      if (!catalogDef) continue;
+
+      sourceCatalogCount++;
+
+      // Process each extra from this catalog
+      if (catalogDef.extra) {
+        for (const extra of catalogDef.extra) {
+          const existing = extrasMap.get(extra.name);
+          if (existing) {
+            existing.appearances++;
+            // allRequired stays true only if this one is also required
+            existing.allRequired =
+              existing.allRequired && extra.isRequired === true;
+            // Merge options
+            if (extra.options) {
+              for (const opt of extra.options) {
+                existing.options.add(opt);
+              }
+            }
+            // Take the maximum optionsLimit
+            if (extra.optionsLimit !== undefined) {
+              existing.optionsLimit = Math.max(
+                existing.optionsLimit ?? 0,
+                extra.optionsLimit
+              );
+            }
+          } else {
+            extrasMap.set(extra.name, {
+              appearances: 1,
+              allRequired: extra.isRequired === true,
+              options: new Set(extra.options ?? []),
+              optionsLimit: extra.optionsLimit,
+            });
+          }
+        }
+      }
+    }
+
+    // Build the final extras array
+    const mergedExtras: Array<{
+      name: string;
+      isRequired?: boolean;
+      options?: (string | null)[] | null;
+      optionsLimit?: number;
+    }> = [];
+
+    for (const [name, data] of extrasMap) {
+      const extra: {
+        name: string;
+        isRequired?: boolean;
+        options?: (string | null)[] | null;
+        optionsLimit?: number;
+      } = { name };
+
+      // isRequired is true only if ALL source catalogs that have this extra have it as required
+      // If not all catalogs have this extra, it's effectively not required since some don't need it
+      if (data.appearances === sourceCatalogCount && data.allRequired) {
+        extra.isRequired = true;
+      }
+
+      // Include options if any were collected
+      if (data.options.size > 0) {
+        extra.options = Array.from(data.options);
+      }
+
+      // Include optionsLimit if set
+      if (data.optionsLimit !== undefined) {
+        extra.optionsLimit = data.optionsLimit;
+      }
+
+      mergedExtras.push(extra);
+    }
+
+    return mergedExtras;
   }
 
   public getResources(): StrictManifestResource[] {

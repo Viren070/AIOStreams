@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { getDataFolder } from './general.js';
 import { Template, TemplateSchema } from '../db/schemas.js';
 import { ZodError } from 'zod';
-import { formatZodError } from './config.js';
+import { formatZodError, applyMigrations } from './config.js';
 import { FeatureControl } from './feature.js';
 import { createLogger } from './logger.js';
 
@@ -84,9 +84,12 @@ export class TemplateManager {
       const filePath = path.join(dirPath, file);
       try {
         if (file.endsWith('.json')) {
-          const template = TemplateSchema.parse(
-            JSON.parse(fs.readFileSync(filePath, 'utf8'))
-          );
+          const rawTemplate = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          // Apply migrations to the config before parsing
+          if (rawTemplate.config) {
+            rawTemplate.config = applyMigrations(rawTemplate.config);
+          }
+          const template = TemplateSchema.parse(rawTemplate);
           templateList.push({
             ...template,
             metadata: {

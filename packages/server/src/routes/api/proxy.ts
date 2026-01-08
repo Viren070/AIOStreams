@@ -4,6 +4,7 @@ import {
   constants,
   createLogger,
   decryptString,
+  domainHasUserAgent,
   Env,
   fromUrlSafeBase64,
   getProxyAgent,
@@ -390,6 +391,10 @@ router.all(
             ([key, value]) => [key.toLowerCase(), value]
           )
         );
+        const domainUserAgent = domainHasUserAgent(urlObj);
+        if (domainUserAgent) {
+          headers['user-agent'] = domainUserAgent;
+        }
         if (urlObj.username && urlObj.password) {
           const basicAuth = Buffer.from(
             `${decodeURIComponent(urlObj.username)}:${decodeURIComponent(
@@ -404,7 +409,7 @@ router.all(
         logger.debug(`[${requestId}] Making upstream request`, {
           username: auth.username,
           method: method,
-          proxied: useProxy
+          tunneled: useProxy
             ? `true${proxyIndex > 1 ? ` (${proxyIndex + 1})` : ''}`
             : 'false',
           range: headers['range'],
