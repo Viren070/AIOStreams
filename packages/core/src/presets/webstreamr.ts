@@ -140,7 +140,7 @@ export class WebStreamrPreset extends Preset {
         value: 'fr',
       },
       {
-        label: 'Hindi 🇮🇳',
+        label: '🇮🇳 Hindi',
         value: 'hi',
       },
       {
