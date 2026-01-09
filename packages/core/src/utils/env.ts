@@ -1307,7 +1307,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   SOOTIO_URL: urlOrUrlList({
-    default: ['https://sootio.elfhosted.com'],
+    default: ['https://sooti.info'],
     desc: 'Sootio URL',
   }),
   DEFAULT_SOOTIO_TIMEOUT: num({
