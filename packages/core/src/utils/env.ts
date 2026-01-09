@@ -972,7 +972,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   COMET_URL: urlOrUrlList({
-    default: ['https://comet.elfhosted.com'],
+    default: ['https://comet.feels.legal'],
     desc: 'Comet URL',
   }),
   FORCE_COMET_HOSTNAME: host({
