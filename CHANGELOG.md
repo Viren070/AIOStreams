@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.21.1](https://github.com/Viren070/AIOStreams/compare/v2.21.0...v2.21.1) (2026-01-11)
+
+
+### Bug Fixes
+
+* **anime-database:** enrich mappings where possible ([f31b701](https://github.com/Viren070/AIOStreams/commit/f31b7019612fa5867c35ab1eb6c8375ced13c48b))
+* **builtins:** prefer size from debrid ([b3470d6](https://github.com/Viren070/AIOStreams/commit/b3470d6816949772c5f92c227acc91dedc9d490f))
+* **env:** handle commas within user agent in hostname mapping ([b20c226](https://github.com/Viren070/AIOStreams/commit/b20c2260c0e56c075299b17412f64ea69f3347a2)), closes [#623](https://github.com/Viren070/AIOStreams/issues/623)
+* handle many entries for one id, fallback to synonym matching ([2feed67](https://github.com/Viren070/AIOStreams/commit/2feed6791908ec6e1a652e43c21cd30ae802f3be))
+* prefer exact episode matches to batches ([86b771f](https://github.com/Viren070/AIOStreams/commit/86b771f8787cf21f647163519f24401413f1de14))
+* **seadex:** pass season/episode to get correct mapping ([9cc333a](https://github.com/Viren070/AIOStreams/commit/9cc333a0c1763db47a4787a00ed5dac1b068374b))
+* **usenet-stream:** add nzb url to lock key ([a1dcd52](https://github.com/Viren070/AIOStreams/commit/a1dcd52592d15423a42703cd629327007d68a4b2))
+
 ## [2.21.0](https://github.com/Viren070/AIOStreams/compare/v2.20.1...v2.21.0) (2026-01-09)
 
 
