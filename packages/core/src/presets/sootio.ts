@@ -278,10 +278,17 @@ export class SootioPreset extends Preset {
           : []),
         options.httpProviders && options.httpProviders.length > 0
           ? {
-              provider: 'httpstreaming',
-              http4khdhub: options.httpProviders.includes('http4khdhub'),
-              httpStremsrc: options.httpProviders.includes('httpStremsrc'),
-              httpUHDMovies: options.httpProviders.includes('httpUHDMovies'),
+            provider: 'httpstreaming',
+            http4khdhub: options.httpProviders.includes('http4khdhub'),
+            httpHDHub4u: options.httpProviders.includes('httpHDHub4u'),
+            httpUHDMovies: options.httpProviders.includes('httpUHDMovies'),
+            httpMoviesDrive: options.httpProviders.includes('httpMoviesDrive'),
+            httpMKVCinemas: options.httpProviders.includes('httpMKVCinemas'),
+            httpMkvDrama: options.httpProviders.includes('httpMkvDrama'),
+            httpMalluMv: options.httpProviders.includes('httpMalluMv'),
+            httpCineDoze: options.httpProviders.includes('httpCineDoze'),
+            httpVixSrc: options.httpProviders.includes('httpVixSrc'),
+            httpNetflixMirror: options.httpProviders.includes('httpNetflixMirror'),
             }
           : undefined,
       ].filter((item) => item !== undefined),
