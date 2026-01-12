@@ -34,7 +34,7 @@ export class AltmountService extends UsenetStreamService {
 
     const auth: UsenetStreamServiceConfig = {
       webdavUrl: `${parsedConfig.altmountUrl}/webdav/`,
-      publicWebdavUrl: `${parsedConfig.publicAltmountUrl ?? parsedConfig.altmountUrl}/webdav/`,
+      publicWebdavUrl: `${parsedConfig.publicAltmountUrl || parsedConfig.altmountUrl}/webdav/`,
       webdavUser: parsedConfig.webdavUser,
       webdavPassword: parsedConfig.webdavPassword,
       apiUrl: `${parsedConfig.altmountUrl}/sabnzbd/api`,

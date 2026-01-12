@@ -36,11 +36,13 @@ export async function getTraktAliases(
   // need imdb id, trakt id requires authentication.
   let imdbId = parsedId.type === 'imdbId' ? parsedId.value : null;
   // try to get imdb ID from anime database
-  const animeEntry = AnimeDatabase.getInstance().getEntryById(
-    parsedId.type,
-    parsedId.value
-  );
-  imdbId = imdbId ?? animeEntry?.mappings?.imdbId?.toString() ?? null;
+  if (!imdbId) {
+    const animeEntry = AnimeDatabase.getInstance().getEntryById(
+      parsedId.type,
+      parsedId.value
+    );
+    imdbId = animeEntry?.mappings?.imdbId?.toString() ?? null;
+  }
   if (!imdbId) {
     return null;
   }

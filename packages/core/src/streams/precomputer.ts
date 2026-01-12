@@ -9,7 +9,7 @@ import {
   parseRegex,
   AnimeDatabase,
   IdParser,
-  SeaDexApi,
+  getSeaDexInfoHashes,
 } from '../utils/index.js';
 import { StreamSelector } from '../parser/streamExpression.js';
 
@@ -69,7 +69,12 @@ class StreamPrecomputer {
       return;
     }
     const animeDb = AnimeDatabase.getInstance();
-    const entry = animeDb.getEntryById(parsedId.type, parsedId.value);
+    const entry = animeDb.getEntryById(
+      parsedId.type,
+      parsedId.value,
+      parsedId.season ? Number(parsedId.season) : undefined,
+      parsedId.episode ? Number(parsedId.episode) : undefined
+    );
     const anilistIdRaw = entry?.mappings?.anilistId;
 
     if (!anilistIdRaw) {
@@ -89,7 +94,7 @@ class StreamPrecomputer {
       );
       return;
     }
-    const seadexResult = await SeaDexApi.getInfoHashesForAnime(anilistId);
+    const seadexResult = await getSeaDexInfoHashes(anilistId);
 
     if (
       seadexResult.bestHashes.size === 0 &&

@@ -115,7 +115,9 @@ function Content() {
   // Filtering and search for marketplace
   const filteredPresets = useMemo(() => {
     if (!status?.settings?.presets) return [];
-    let filtered = [...status.settings.presets];
+    let filtered = [
+      ...status.settings.presets.filter((n) => !n.DISABLED?.removed),
+    ];
     if (categoryFilter !== 'all') {
       filtered = filtered.filter(
         (n) =>

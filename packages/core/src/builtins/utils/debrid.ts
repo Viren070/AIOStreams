@@ -155,12 +155,14 @@ async function processTorrentsForDebridService(
     const magnetCheckResult = magnetCheckResults.find(
       (result) => result.hash === torrent.hash
     );
-    const parsedTorrent = parsedTitlesMap.get(torrent.title ?? '');
+    const parsedTorrent = parsedTitlesMap.get(
+      torrent.title ?? magnetCheckResult?.name ?? ''
+    );
 
     if (metadata && parsedTorrent) {
       const preprocessedTitle = preprocessTitle(
         parsedTorrent.title ?? '',
-        torrent.title ?? '',
+        torrent.title ?? magnetCheckResult?.name ?? '',
         metadata.titles
       );
       if (
@@ -222,6 +224,8 @@ async function processTorrentsForDebridService(
     if (file) {
       results.push({
         ...torrent,
+        title: torrent.title ?? magnetCheckResult?.name,
+        size: magnetCheckResult?.size || torrent.size,
         file,
         service: {
           id: service.id,

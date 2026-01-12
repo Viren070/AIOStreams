@@ -36,6 +36,7 @@ import { SettingsCard } from '../shared/settings-card';
 import { TextInput } from '../ui/text-input';
 import { PasswordInput } from '../ui/password-input';
 import { StatusResponse, UserData } from '@aiostreams/core';
+import { Select } from '../ui/select';
 export function ServicesMenu() {
   return (
     <>
@@ -304,53 +305,50 @@ function Content() {
         title="Poster Service"
         description="Select a poster service to use for catalogs that support it."
       >
-        <TemplateOption
-          option={{
-            id: 'posterService',
-            name: 'Poster Service',
-            description: 'Select a poster service',
-            type: 'select',
-            options: [
-              { label: 'RPDB', value: 'rpdb' },
-              { label: 'Top Poster', value: 'top-poster' },
-            ],
-            default: 'rpdb',
-          }}
-          value={userData.posterService}
-          onChange={(v) => {
+        <Select
+          label="Poster Service"
+          options={[
+            { label: 'None', value: 'none' },
+            { label: 'RPDB', value: 'rpdb' },
+            { label: 'Top Poster', value: 'top-poster' },
+          ]}
+          value={userData.posterService || 'rpdb'}
+          onValueChange={(v) => {
             setUserData((prev) => ({
               ...prev,
-              posterService: v,
+              posterService: v as 'rpdb' | 'top-poster' | 'none',
             }));
           }}
+          defaultValue="rpdb"
         />
 
-        {userData.posterService === 'rpdb' && (
-          <PasswordInput
-            autoComplete="new-password"
-            label="RPDB API Key"
-            help={
-              <span>
-                Get your API Key from{' '}
-                <a
-                  href="https://ratingposterdb.com/api-key/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[--brand] hover:underline"
-                >
-                  here
-                </a>
-              </span>
-            }
-            value={userData.rpdbApiKey}
-            onValueChange={(v) => {
-              setUserData((prev) => ({
-                ...prev,
-                rpdbApiKey: v,
-              }));
-            }}
-          />
-        )}
+        {!userData.posterService ||
+          (userData.posterService === 'rpdb' && (
+            <PasswordInput
+              autoComplete="new-password"
+              label="RPDB API Key"
+              help={
+                <span>
+                  Get your API Key from{' '}
+                  <a
+                    href="https://ratingposterdb.com/api-key/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[--brand] hover:underline"
+                  >
+                    here
+                  </a>
+                </span>
+              }
+              value={userData.rpdbApiKey}
+              onValueChange={(v) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  rpdbApiKey: v,
+                }));
+              }}
+            />
+          ))}
         {userData.posterService === 'top-poster' && (
           <PasswordInput
             autoComplete="new-password"
@@ -388,7 +386,10 @@ function Content() {
               usePosterServiceForMeta: v,
             }));
           }}
-          disabled={!userData.rpdbApiKey && !userData.topPosterApiKey}
+          disabled={
+            userData.posterService === 'none' ||
+            (!userData.rpdbApiKey && !userData.topPosterApiKey)
+          }
           help={
             <span>
               If enabled, AIOStreams will use the selected poster service to
@@ -401,7 +402,10 @@ function Content() {
         <Switch
           label="Use Poster Redirect API"
           side="right"
-          disabled={!userData.rpdbApiKey && !userData.topPosterApiKey}
+          disabled={
+            userData.posterService === 'none' ||
+            (!userData.rpdbApiKey && !userData.topPosterApiKey)
+          }
           help={
             <span>
               If enabled, poster URLs will first contact AIOStreams and then be

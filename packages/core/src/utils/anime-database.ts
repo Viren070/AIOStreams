@@ -491,7 +491,7 @@ function validateExtendedAnitraktTvEntry(
   };
 }
 
-type MappingIdMap = Map<IdType, Map<string | number, MappingEntry>>;
+type MappingIdMap = Map<IdType, Map<string | number, MappingEntry[]>>;
 type ManamiIdMap = Map<
   IdType,
   Map<string | number, ManamiEntry | MinimisedManamiEntry>
@@ -569,7 +569,15 @@ export class AnimeDatabase {
 
   public isAnime(id: string): boolean {
     const parsedId = IdParser.parse(id, 'unknown');
-    if (parsedId && this.getEntryById(parsedId.type, parsedId.value) !== null) {
+    if (
+      parsedId &&
+      this.getEntryById(
+        parsedId.type,
+        parsedId.value,
+        parsedId.season ? Number(parsedId.season) : undefined,
+        parsedId.episode ? Number(parsedId.episode) : undefined
+      ) !== null
+    ) {
       return true;
     }
     return false;
@@ -577,30 +585,27 @@ export class AnimeDatabase {
 
   public getEntryById(
     idType: IdType,
-    idValue: string | number
+    idValue: string | number,
+    season?: number,
+    episode?: number
   ): AnimeEntry | null {
     const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
       map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
 
-    let mappings = getFromMap(
+    let mappingsList = getFromMap(
       this.dataStore.fribbMappingsById.get(idType),
       idValue
     );
-    let details = getFromMap(this.dataStore.manamiById.get(idType), idValue);
 
-    // If no direct match for details, try finding via mappings
-    if (!details && mappings) {
-      logger.debug('No direct match for details, searching via mappings...');
-      for (const [type, id] of Object.entries(mappings)) {
-        if (id && type !== idType) {
-          details = getFromMap(
-            this.dataStore.manamiById.get(type as IdType),
-            id
-          );
-          if (details) break;
-        }
-      }
-    }
+    mappingsList = this.filterMappingsBySeasonType(mappingsList, season);
+
+    const { mappings, details } = this.selectBestMappingAndDetails(
+      mappingsList,
+      idType,
+      idValue,
+      season,
+      episode
+    );
 
     const malId =
       mappings?.malId ?? (idType === 'malId' ? Number(idValue) : null);
@@ -625,7 +630,164 @@ export class AnimeDatabase {
       return null;
     }
 
-    // Merge data from all sources
+    return this.buildAnimeEntry(
+      mappings,
+      details,
+      kitsuEntry ?? null,
+      tvAnitraktEntry ?? null,
+      movieAnitraktEntry ?? null
+    );
+  }
+
+  private filterMappingsBySeasonType(
+    mappingsList: MappingEntry[] | undefined,
+    season?: number
+  ): MappingEntry[] | undefined {
+    if (!mappingsList) return mappingsList;
+
+    const seasonFiltered = mappingsList.filter((entry) => {
+      if (entry.type === AnimeType.UNKNOWN) return true;
+      if (season === undefined) return entry.type === AnimeType.MOVIE;
+      if (season === 0)
+        return [AnimeType.SPECIAL, AnimeType.OVA, AnimeType.ONA].includes(
+          entry.type
+        );
+      return entry.type === AnimeType.TV;
+    });
+
+    return seasonFiltered.length > 0 ? seasonFiltered : mappingsList;
+  }
+
+  private findManamiDetailsFromMapping(
+    mapping: MappingEntry
+  ): MinimisedManamiEntry | undefined {
+    const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
+      map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
+
+    // Try all available ID types in the mapping
+    for (const [type, id] of Object.entries(mapping)) {
+      if (!id) continue;
+      const details = getFromMap(
+        this.dataStore.manamiById.get(type as IdType),
+        id
+      );
+      if (details) return details;
+    }
+    return undefined;
+  }
+
+  private selectBestMappingAndDetails(
+    mappingsList: MappingEntry[] | undefined,
+    idType: IdType,
+    idValue: string | number,
+    season?: number,
+    episode?: number
+  ): { mappings?: MappingEntry; details?: MinimisedManamiEntry } {
+    const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
+      map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
+
+    if (!mappingsList?.length) {
+      return {};
+    }
+
+    if (mappingsList.length === 1) {
+      return {
+        mappings: mappingsList[0],
+        details: this.findManamiDetailsFromMapping(mappingsList[0]),
+      };
+    }
+
+    if (season !== undefined && episode !== undefined) {
+      const match = this.findBestMatchForSeasonEpisode(
+        mappingsList,
+        season,
+        episode,
+        idType,
+        idValue
+      );
+      if (match.mappings) return match;
+    }
+
+    logger.debug(
+      'No detailed match found, defaulting to first mapping entry...'
+    );
+    const mappings = mappingsList[0];
+
+    return { mappings, details: this.findManamiDetailsFromMapping(mappings) };
+  }
+
+  private findBestMatchForSeasonEpisode(
+    mappingsList: MappingEntry[],
+    season: number,
+    episode: number,
+    idType: IdType,
+    idValue: string | number
+  ): { mappings?: MappingEntry; details?: MinimisedManamiEntry } {
+    const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
+      map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
+
+    logger.debug(
+      `Multiple mapping entries found for ${idType}:${idValue}, attempting to find matching details...`,
+      { mappingsList: mappingsList.map((m) => m.kitsuId) }
+    );
+
+    let bestKitsuMatch: { mapping: MappingEntry; fromEpisode: number } | null =
+      null;
+
+    for (const mappingEntry of mappingsList) {
+      if (mappingEntry.kitsuId) {
+        const kitsuEntry = this.dataStore.kitsuById.get(mappingEntry.kitsuId);
+        if (kitsuEntry?.fromSeason === season) {
+          const fromEpisode = kitsuEntry.fromEpisode ?? 1;
+
+          if (episode >= fromEpisode) {
+            // Keep track of the best match (highest fromEpisode that's still <= episode)
+            if (!bestKitsuMatch || fromEpisode > bestKitsuMatch.fromEpisode) {
+              bestKitsuMatch = { mapping: mappingEntry, fromEpisode };
+            }
+          }
+        }
+      }
+    }
+
+    if (bestKitsuMatch) {
+      logger.debug(
+        `Matched season and episode on kitsuId:${bestKitsuMatch.mapping.kitsuId} (fromEpisode: ${bestKitsuMatch.fromEpisode})`
+      );
+      return {
+        mappings: bestKitsuMatch.mapping,
+        details: this.findManamiDetailsFromMapping(bestKitsuMatch.mapping),
+      };
+    }
+
+    // Try synonym matching
+    const seasonRegex = new RegExp(`season[\\s_-]*${season}`, 'i');
+    for (const mappingEntry of mappingsList) {
+      for (const [type, id] of Object.entries(mappingEntry)) {
+        if (!id) continue;
+        const potentialDetails = getFromMap(
+          this.dataStore.manamiById.get(type as IdType),
+          id
+        );
+        if (!potentialDetails) continue;
+        if (potentialDetails?.synonyms.some((syn) => seasonRegex.test(syn))) {
+          logger.debug(`Matched season regex on synonym for ${type}:${id}`);
+          return { mappings: mappingEntry, details: potentialDetails };
+        }
+        break;
+      }
+    }
+
+    return {};
+  }
+
+  private buildAnimeEntry(
+    mappings: MappingEntry | undefined,
+    details: MinimisedManamiEntry | undefined,
+    kitsuEntry: KitsuEntry | null,
+    tvAnitraktEntry: ExtendedAnitraktTvEntry | null,
+    movieAnitraktEntry: ExtendedAnitraktMovieEntry | null
+  ): AnimeEntry {
     const finalMappings = {
       ...mappings,
       imdbId:
@@ -633,8 +795,8 @@ export class AnimeDatabase {
         kitsuEntry?.imdbId ??
         movieAnitraktEntry?.externals?.imdb ??
         tvAnitraktEntry?.externals?.imdb,
-      kitsuId: mappings?.kitsuId ?? kitsuId,
-      malId: mappings?.malId ?? malId,
+      kitsuId: mappings?.kitsuId,
+      malId: mappings?.malId,
       themoviedbId:
         mappings?.themoviedbId ??
         movieAnitraktEntry?.externals?.tmdb ??
@@ -776,7 +938,9 @@ export class AnimeDatabase {
         if (idValue !== undefined && idValue !== null) {
           const existingEntry = newMappingsById.get(idType)?.get(idValue);
           if (!existingEntry) {
-            newMappingsById.get(idType)?.set(idValue, entry);
+            newMappingsById.get(idType)?.set(idValue, [entry]);
+          } else {
+            existingEntry.push(entry);
           }
         }
       }
@@ -856,20 +1020,54 @@ export class AnimeDatabase {
 
     const data = JSON.parse(fileContents);
 
-    // Validate each entry
+    // Validate and store kitsu entries
     this.dataStore.kitsuById = new Map();
+    let enrichedCount = 0;
+
     for (const [kitsuId, kitsuEntry] of Object.entries(data)) {
       const validated = validateKitsuEntry(kitsuEntry);
       if (validated !== null) {
         this.dataStore.kitsuById.set(Number(kitsuId), validated);
+
+        // Enrich Fribb mappings with IMDB ID if available and not already present
+        if (validated.imdbId) {
+          const kitsuMappings = this.dataStore.fribbMappingsById
+            .get('kitsuId')
+            ?.get(Number(kitsuId));
+
+          if (kitsuMappings && kitsuMappings.length > 0) {
+            for (const mapping of kitsuMappings) {
+              if (!mapping.imdbId) {
+                mapping.imdbId = validated.imdbId;
+
+                const imdbMap = this.dataStore.fribbMappingsById.get('imdbId');
+                if (!imdbMap) continue;
+                const existingImdbMappings =
+                  imdbMap.get(validated.imdbId) || [];
+
+                if (
+                  !existingImdbMappings.some(
+                    (m) => m.kitsuId === Number(kitsuId)
+                  )
+                ) {
+                  existingImdbMappings.push(mapping);
+                  imdbMap.set(validated.imdbId, existingImdbMappings);
+                  this.dataStore.fribbMappingsById.set('imdbId', imdbMap);
+                  enrichedCount++;
+                }
+              }
+            }
+          }
+        }
       } else {
         logger.warn(
           `[${DATA_SOURCES.kitsuImdb.name}] Skipping invalid entry for kitsuId ${kitsuId}`
         );
       }
     }
+
     logger.info(
-      `[${DATA_SOURCES.kitsuImdb.name}] Loaded and indexed ${this.dataStore.kitsuById.size} valid entries in ${getTimeTakenSincePoint(start)}`
+      `[${DATA_SOURCES.kitsuImdb.name}] Loaded ${this.dataStore.kitsuById.size} kitsu entries and enriched ${enrichedCount} Fribb mappings with IMDB IDs in ${getTimeTakenSincePoint(start)}`
     );
   }
 

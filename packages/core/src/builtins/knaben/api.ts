@@ -1,6 +1,10 @@
 import { Cache } from '../../utils/cache.js';
 import { Env } from '../../utils/env.js';
-import { formatZodError, makeRequest } from '../../utils/index.js';
+import {
+  formatZodError,
+  makeRequest,
+  DistributedLock,
+} from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 
@@ -139,6 +143,33 @@ class KnabenAPI {
   }
 
   private async request<T>(
+    endpoint: string,
+    options: {
+      schema: z.ZodSchema<T>;
+      body?: unknown;
+      method?: string;
+      timeout?: number;
+    }
+  ): Promise<T> {
+    let path = `/v${API_VERSION}`;
+    if (endpoint) {
+      path += `/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
+    }
+    const url = new URL(path, API_BASE_URL);
+
+    const lockKey = `${url.toString()}:${JSON.stringify(options.body)}`;
+    const { result } = await DistributedLock.getInstance().withLock(
+      lockKey,
+      () => this._request(endpoint, options),
+      {
+        timeout: options.timeout ?? Env.MAX_TIMEOUT,
+        ttl: (options.timeout ?? Env.MAX_TIMEOUT) + 1000,
+      }
+    );
+    return result;
+  }
+
+  private async _request<T>(
     endpoint: string,
     options: {
       schema: z.ZodSchema<T>;

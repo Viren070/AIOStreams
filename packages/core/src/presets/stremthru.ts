@@ -39,14 +39,6 @@ export class StremThruStreamParser extends StreamParser {
       stream.description ?? '',
       /📦\s*(\d+(\.\d+)?)\s?(KB|MB|GB|TB)/i
     );
-    if (folderSize && currentParsedStream.size) {
-      if (
-        Math.abs(folderSize - currentParsedStream.size) <=
-        currentParsedStream.size * 0.05
-      ) {
-        return undefined;
-      }
-    }
     return folderSize;
   }
 }

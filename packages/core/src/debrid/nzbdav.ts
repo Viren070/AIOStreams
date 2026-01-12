@@ -36,7 +36,7 @@ export class NzbDAVService extends UsenetStreamService {
 
     const auth: UsenetStreamServiceConfig = {
       webdavUrl: `${parsedConfig.nzbdavUrl}/`,
-      publicWebdavUrl: `${parsedConfig.publicNzbdavUrl ?? parsedConfig.nzbdavUrl}/`,
+      publicWebdavUrl: `${parsedConfig.publicNzbdavUrl || parsedConfig.nzbdavUrl}/`,
       webdavUser: parsedConfig.webdavUser,
       webdavPassword: parsedConfig.webdavPassword,
       apiUrl: `${parsedConfig.nzbdavUrl}/api`,

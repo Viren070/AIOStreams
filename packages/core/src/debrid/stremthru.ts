@@ -67,6 +67,19 @@ export class StremThruInterface implements DebridService {
     return result.data.items;
   }
 
+  public async removeMagnet(magnetId: string): Promise<void> {
+    try {
+      await this.stremthru.store.removeMagnet(magnetId);
+      logger.debug(`Removed magnet ${magnetId} from ${this.serviceName}`);
+    } catch (error) {
+      if (error instanceof StremThruError) {
+
+        throw convertStremThruError(error);
+      }
+      throw error;
+    }
+  }
+
   public async checkMagnets(
     magnets: string[],
     sid?: string
@@ -204,11 +217,18 @@ export class StremThruInterface implements DebridService {
   public async resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { result } = await DistributedLock.getInstance().withLock(
-      `stremthru:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${this.config.clientIp}:${this.config.serviceName}:${this.config.token}`,
-      () => this._resolve(playbackInfo, filename, cacheAndPlay),
+      `stremthru:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${autoRemoveDownloads}:${this.config.clientIp}:${this.config.serviceName}:${this.config.token}`,
+      () =>
+        this._resolve(
+          playbackInfo,
+          filename,
+          cacheAndPlay,
+          autoRemoveDownloads
+        ),
       {
         timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
         ttl: 10000,
@@ -220,7 +240,8 @@ export class StremThruInterface implements DebridService {
   private async _resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'usenet') {
       throw new DebridError('StremThru does not support usenet operations', {
@@ -360,6 +381,15 @@ export class StremThruInterface implements DebridService {
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
       true
     );
+
+    if (autoRemoveDownloads && magnetDownload.id) {
+      this.removeMagnet(magnetDownload.id.toString()).catch((err) => {
+        logger.warn(
+          `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`
+        );
+      });
+
+    }
 
     return playbackLink;
   }

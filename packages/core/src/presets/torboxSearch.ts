@@ -276,6 +276,7 @@ export class TorBoxSearchPreset extends StremThruPreset {
         credential: this.getServiceCredential(service, userData),
       })),
       cacheAndPlay: userData.cacheAndPlay,
+      autoRemoveDownloads: userData.autoRemoveDownloads,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

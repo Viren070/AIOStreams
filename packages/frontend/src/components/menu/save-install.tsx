@@ -248,6 +248,7 @@ function Content() {
       tmdbApiKey: undefined,
       tvdbApiKey: undefined,
       rpdbApiKey: undefined,
+      topPosterApiKey: undefined,
       services: clonedData?.services?.map((service) => ({
         ...service,
         credentials: {},

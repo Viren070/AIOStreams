@@ -51,7 +51,9 @@ export class MetadataService {
             // Check anime database first
             const animeEntry = AnimeDatabase.getInstance().getEntryById(
               id.type,
-              id.value
+              id.value,
+              id.season ? Number(id.season) : undefined,
+              id.episode ? Number(id.episode) : undefined
             );
 
             let tmdbId: number | null =

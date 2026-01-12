@@ -49,6 +49,33 @@ export class TorboxDebridService implements DebridService {
     return this.stremthru.listMagnets();
   }
 
+  public async removeMagnet(magnetId: string): Promise<void> {
+    return this.stremthru.removeMagnet(magnetId);
+  }
+
+  public async removeNzb(nzbId: string): Promise<void> {
+    try {
+      await this.torboxApi.usenet.controlUsenetDownload(this.apiVersion, {
+        usenet_id: parseInt(nzbId, 10),
+        operation: 'delete',
+      });
+      logger.debug(`Removed usenet download ${nzbId} from Torbox`);
+    } catch (error: any) {
+
+      throw new DebridError(
+        `Failed to remove usenet download: ${error.message}`,
+        {
+          statusCode: error.statusCode ?? 500,
+          statusText: error.statusText ?? 'Unknown error',
+          code: 'UNKNOWN',
+          headers: {},
+          body: error,
+          type: 'api_error',
+        }
+      );
+    }
+  }
+
   public async checkMagnets(magnets: string[], sid?: string) {
     return this.stremthru.checkMagnets(magnets, sid);
   }
@@ -278,14 +305,26 @@ export class TorboxDebridService implements DebridService {
   public async resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'torrent') {
-      return this.stremthru.resolve(playbackInfo, filename, cacheAndPlay);
+      return this.stremthru.resolve(
+        playbackInfo,
+        filename,
+        cacheAndPlay,
+        autoRemoveDownloads
+      );
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `torbox:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${this.config.clientIp}:${this.config.token}`,
-      () => this._resolve(playbackInfo, filename, cacheAndPlay),
+      `torbox:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${autoRemoveDownloads}:${this.config.clientIp}:${this.config.token}`,
+      () =>
+        this._resolve(
+          playbackInfo,
+          filename,
+          cacheAndPlay,
+          autoRemoveDownloads
+        ),
       {
         timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
         ttl: 10000,
@@ -297,7 +336,8 @@ export class TorboxDebridService implements DebridService {
   private async _resolve(
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
     const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
@@ -434,6 +474,14 @@ export class TorboxDebridService implements DebridService {
       Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL,
       true
     );
+
+    if (autoRemoveDownloads && usenetDownload.id) {
+      this.removeNzb(usenetDownload.id.toString()).catch((err) => {
+        logger.warn(
+          `Failed to cleanup usenet download ${usenetDownload.id} after resolve: ${err.message}`
+        );
+      });
+    }
 
     return playbackLink;
   }

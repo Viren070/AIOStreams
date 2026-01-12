@@ -314,7 +314,21 @@ export class AIOStreams {
     error?: { title: string; description: string };
   }> {
     const addon = this.getAddon(addonInstanceId);
+
     if (!addon) {
+      const initError = (
+        this.addonInitialisationErrors as { addon: Preset; error: string }[]
+      ).find((e) => addonInstanceId.startsWith(e.addon.instanceId || ''));
+      if (initError) {
+        return {
+          success: false,
+          items: [],
+          error: {
+            title: `[❌] ${initError.error}`,
+            description: `Addon ${addonInstanceId} failed to initialise. Try reinstalling/disabling/uninstalling the addon.`,
+          },
+        };
+      }
       return {
         success: false,
         items: [],
@@ -434,9 +448,24 @@ export class AIOStreams {
       (mod) =>
         mod.id === catalogId && (mod.type === type || mod.overrideType === type)
     );
+    const applyShuffle = modification?.shuffle && !isSearch && shuffleCacheKey;
+    const applyReverse = !applyShuffle && modification?.reverse && !isSearch;
+
+    logger.debug(`Applying catalog modifications`, {
+      catalogId,
+      type,
+      modificationFound: !!modification,
+      posterService:
+        modification?.usePosterService === true &&
+        this.userData.posterService !== 'none'
+          ? this.userData.posterService
+          : false,
+      shuffle: !!applyShuffle,
+      reverse: !!applyReverse,
+    });
 
     // Apply shuffle if enabled (not for search requests)
-    if (modification?.shuffle && !isSearch && shuffleCacheKey) {
+    if (applyShuffle) {
       // const actualCatalogId = catalogId.split('.').slice(1).join('.');
       // // Use extras as part of cache key so different extras get different shuffle
       // const cacheKey = `${type}-${actualCatalogId}-${parsedExtras?.toString() || ''}-${this.userData.uuid}`;
@@ -456,7 +485,7 @@ export class AIOStreams {
           );
         }
       }
-    } else if (modification?.reverse && !isSearch) {
+    } else if (applyReverse) {
       catalog = catalog.reverse();
     }
 
@@ -1301,7 +1330,13 @@ export class AIOStreams {
 
     for (const preset of this.userData.presets.filter((p) => p.enabled)) {
       try {
-        const addons = await PresetManager.fromId(preset.type).generateAddons(
+        const Preset = PresetManager.fromId(preset.type);
+        if (Preset.METADATA.DISABLED) {
+          throw new Error(
+            `${Preset.METADATA.NAME} has been ${Preset.METADATA.DISABLED.removed ? 'removed' : 'disabled'}: ${Preset.METADATA.DISABLED.reason}`
+          );
+        }
+        const addons = await Preset.generateAddons(
           this.userData,
           preset.options
         );

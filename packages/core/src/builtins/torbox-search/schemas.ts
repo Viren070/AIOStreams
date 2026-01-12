@@ -93,4 +93,5 @@ export const TorBoxSearchAddonUserDataSchema = z.object({
     'At least one service must be configured'
   ),
   cacheAndPlay: CacheAndPlaySchema.optional(),
+  autoRemoveDownloads: z.boolean().optional(),
 });

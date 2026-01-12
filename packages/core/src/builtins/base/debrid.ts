@@ -62,6 +62,7 @@ export const BaseDebridConfigSchema = z.object({
   tmdbReadAccessToken: z.string().optional(),
   tvdbApiKey: z.string().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
+  autoRemoveDownloads: z.boolean().optional(),
   checkOwned: z.boolean().optional().default(true),
 });
 export type BaseDebridConfig = z.infer<typeof BaseDebridConfigSchema>;
@@ -622,14 +623,33 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
 
     const animeEntry = AnimeDatabase.getInstance().getEntryById(
       parsedId.type,
-      parsedId.value
+      parsedId.value,
+      parsedId.season ? Number(parsedId.season) : undefined,
+      parsedId.episode ? Number(parsedId.episode) : undefined
     );
+
+    const getSeasonFromSynonyms = (synonyms: string[]): string | undefined => {
+      const seasonRegex = /(?:season|s)\s(\d+)/i;
+      for (const synonym of synonyms) {
+        const match = synonym.match(seasonRegex);
+        if (match) {
+          this.logger.debug(
+            `Extracted season from synonym "${synonym}" for ${animeEntry?.title} (${parsedId.fullId}): ${match[1]}`
+          );
+          return match[1].toString().trim();
+        }
+      }
+      return undefined;
+    };
 
     // Update season from anime entry if available
     if (animeEntry && !parsedId.season) {
       parsedId.season =
         animeEntry.imdb?.fromImdbSeason?.toString() ??
-        animeEntry.trakt?.season?.number?.toString();
+        animeEntry.trakt?.season?.number?.toString() ??
+        (animeEntry.synonyms
+          ? getSeasonFromSynonyms(animeEntry.synonyms)
+          : undefined);
       if (
         animeEntry.imdb?.fromImdbEpisode &&
         animeEntry.imdb?.fromImdbEpisode !== 1 &&
@@ -740,6 +760,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             cacheAndPlay:
               this.userData.cacheAndPlay?.enabled &&
               this.userData.cacheAndPlay?.streamTypes?.includes('torrent'),
+            autoRemoveDownloads: this.userData.autoRemoveDownloads,
           }
         : {
             type: 'usenet',
@@ -753,6 +774,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             cacheAndPlay:
               this.userData.cacheAndPlay?.enabled &&
               this.userData.cacheAndPlay?.streamTypes?.includes('usenet'),
+            autoRemoveDownloads: this.userData.autoRemoveDownloads,
           }
       : undefined;
 
@@ -768,11 +790,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       : '';
 
     const name = `[${shortCode} ${cacheIndicator}${torrentOrNzb.service?.library ? ' ☁️' : ''}] ${this.name}`;
-    const description = `${torrentOrNzb.title}\n${torrentOrNzb.file.name}\n${
+    const description = `${torrentOrNzb.title ? torrentOrNzb.title : ''}\n${torrentOrNzb.file.name ? torrentOrNzb.file.name : ''}\n${
       torrentOrNzb.indexer ? `🔍 ${torrentOrNzb.indexer}` : ''
     } ${'seeders' in torrentOrNzb && torrentOrNzb.seeders ? `👤 ${torrentOrNzb.seeders}` : ''} ${
       torrentOrNzb.age ? `🕒 ${formatHours(torrentOrNzb.age)}` : ''
-    }`;
+    } ${torrentOrNzb.group ? `\n🏷️ ${torrentOrNzb.group}` : ''}`;
 
     return {
       url:
@@ -803,6 +825,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       behaviorHints: {
         videoSize: torrentOrNzb.file.size,
         filename: torrentOrNzb.file.name,
+        folderSize: torrentOrNzb.size,
       },
     };
   }

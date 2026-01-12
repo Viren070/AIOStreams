@@ -42,6 +42,7 @@ interface BaseFile {
   index?: number;
   indexer?: string;
   seeders?: number;
+  group?: string;
   age?: number;
   duration?: number; // duration in seconds
 }
@@ -246,7 +247,13 @@ export async function selectFileInTorrentOrNZB(
     }
 
     if (parsed && !isEpisodeWrong(parsed, metadata)) {
-      score += 500;
+      const parsedEpisodesCount = parsed.episodes?.length || 0;
+      // prefer exact episode matches to batch matches
+      if (parsedEpisodesCount > 1) {
+        score += 250;
+      } else {
+        score += 750;
+      }
     }
     if (
       !parsed?.episodes?.length &&

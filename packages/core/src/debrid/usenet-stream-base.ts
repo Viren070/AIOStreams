@@ -709,7 +709,7 @@ export abstract class UsenetStreamService implements DebridService {
       throw new Error('Unsupported operation');
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `${this.serviceName}:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${this.config.clientIp}:${this.config.token}`,
+      `${this.serviceName}:resolve:${playbackInfo.hash}:${playbackInfo.nzb}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${this.config.clientIp}:${this.config.token}`,
       () => this._resolve(playbackInfo, filename),
       {
         timeout: 120000,

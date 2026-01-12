@@ -58,7 +58,8 @@ abstract class SourceHandler {
   constructor(
     protected searchApi: TorboxSearchApi,
     protected readonly searchUserEngines: boolean,
-    protected readonly cacheAndPlay: CacheAndPlay
+    protected readonly cacheAndPlay: CacheAndPlay,
+    protected readonly autoRemoveDownloads?: boolean
   ) {
     this.useCache =
       !this.searchUserEngines ||
@@ -101,6 +102,7 @@ abstract class SourceHandler {
             cacheAndPlay:
               this.cacheAndPlay?.enabled &&
               this.cacheAndPlay?.streamTypes?.includes('torrent'),
+            autoRemoveDownloads: this.autoRemoveDownloads,
           }
         : {
             type: 'usenet',
@@ -110,6 +112,7 @@ abstract class SourceHandler {
             cacheAndPlay:
               this.cacheAndPlay?.enabled &&
               this.cacheAndPlay?.streamTypes?.includes('usenet'),
+            autoRemoveDownloads: this.autoRemoveDownloads,
           }
       : undefined;
 
@@ -278,9 +281,10 @@ export class TorrentSourceHandler extends SourceHandler {
     services: z.infer<typeof TorBoxSearchAddonUserDataSchema>['services'],
     searchUserEngines: boolean,
     cacheAndPlay: CacheAndPlay,
+    autoRemoveDownloads?: boolean,
     clientIp?: string
   ) {
-    super(searchApi, searchUserEngines, cacheAndPlay);
+    super(searchApi, searchUserEngines, cacheAndPlay, autoRemoveDownloads);
     this.services = services;
     this.clientIp = clientIp;
   }
@@ -465,9 +469,10 @@ export class UsenetSourceHandler extends SourceHandler {
     searchUserEngines: boolean,
     services: z.infer<typeof TorBoxSearchAddonUserDataSchema>['services'],
     cacheAndPlay: CacheAndPlay,
+    autoRemoveDownloads?: boolean,
     clientIp?: string
   ) {
-    super(searchApi, searchUserEngines, cacheAndPlay);
+    super(searchApi, searchUserEngines, cacheAndPlay, autoRemoveDownloads);
     this.torboxApi = torboxApi;
     this.services = services.filter((service) => service.id === 'torbox');
     this.clientIp = clientIp;

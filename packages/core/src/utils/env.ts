@@ -189,6 +189,43 @@ const userAgent = makeValidator((x) => {
   return x.replace(/{version}/g, metadata?.version || 'unknown');
 });
 
+const userAgentMappings = makeValidator<Map<string, string>>((x) => {
+  if (typeof x !== 'string') {
+    throw new EnvError('User agent mappings must be a string');
+  }
+  const mappings = new Map<string, string>();
+
+  const regex = /([a-zA-Z0-9.-]+):([^,]*(?:,[^a-zA-Z0-9.-][^,]*)*)/g;
+
+  let match;
+  let hasMatches = false;
+
+  while ((match = regex.exec(x)) !== null) {
+    hasMatches = true;
+    const hostname = match[1].trim();
+    const userAgent = match[2].trim();
+
+    if (!hostname || !userAgent) {
+      throw new EnvError(
+        `User agent mappings must be in the format hostname:useragent (got "${match[0]}")`
+      );
+    }
+
+    mappings.set(
+      hostname,
+      userAgent.replace(/{version}/g, metadata?.version || 'unknown')
+    );
+  }
+
+  if (!hasMatches) {
+    throw new EnvError(
+      'User agent mappings must be in the format hostname:useragent,hostname:useragent,...'
+    );
+  }
+
+  return mappings;
+});
+
 // comma separated list of alias:uuid
 const aliasedUUIDs = makeExactValidator((x) => {
   try {
@@ -570,8 +607,8 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default user agent for the addon',
   }),
 
-  HOSTNAME_USER_AGENT_OVERRIDES: str({
-    default: '*.strem.fun:Stremio',
+  HOSTNAME_USER_AGENT_OVERRIDES: userAgentMappings({
+    default: undefined,
     desc: 'Comma separated list of hostname:useragent pairs. Takes priority over any other user agent settings.',
   }),
 
@@ -954,7 +991,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   COMET_URL: urlOrUrlList({
-    default: ['https://comet.elfhosted.com'],
+    default: ['https://comet.feels.legal'],
     desc: 'Comet URL',
   }),
   FORCE_COMET_HOSTNAME: host({
@@ -1289,7 +1326,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   SOOTIO_URL: urlOrUrlList({
-    default: ['https://sootio.elfhosted.com'],
+    default: ['https://sooti.info'],
     desc: 'Sootio URL',
   }),
   DEFAULT_SOOTIO_TIMEOUT: num({
@@ -1878,6 +1915,15 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_DEFAULT_NEKOBT_TIMEOUT: num({
     default: undefined,
     desc: 'Builtin NekoBT timeout',
+  }),
+
+  BUILTIN_SEADEX_URL: url({
+    default: 'https://releases.moe',
+    desc: 'Builtin SeaDex URL',
+  }),
+  BUILTIN_SEADEX_ENTRY_CACHE_TTL: num({
+    default: 24 * 60 * 60, // 24 hours
+    desc: 'Builtin SeaDex entry cache TTL',
   }),
 
   BUILTIN_BITMAGNET_URL: url({

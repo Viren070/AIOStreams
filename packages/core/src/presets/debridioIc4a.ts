@@ -3,6 +3,7 @@ import {
   Option,
   ParsedFile,
   ParsedStream,
+  PresetMetadata,
   Stream,
   UserData,
 } from '../db/index.js';
@@ -57,7 +58,7 @@ export class DebridioIC4APreset extends Preset {
     return DebridioIC4AStreamParser;
   }
 
-  static override get METADATA() {
+  static override get METADATA(): PresetMetadata {
     const supportedResources = [
       constants.CATALOG_RESOURCE,
       constants.META_RESOURCE,
@@ -102,7 +103,8 @@ export class DebridioIC4APreset extends Preset {
       {
         id: 'server',
         name: 'Select Server',
-        description: 'Choose the server closest to your location for better performance.',
+        description:
+          'Choose the server closest to your location for better performance.',
         type: 'select',
         required: true,
         options: server,
@@ -135,12 +137,19 @@ export class DebridioIC4APreset extends Preset {
       LOGO: debridioLogo,
       URL: Env.DEBRIDIO_IC4A_URL,
       TIMEOUT: Env.DEFAULT_DEBRIDIO_IC4A_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_DEBRIDIO_IC4A_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      USER_AGENT:
+        Env.DEFAULT_DEBRIDIO_IC4A_USER_AGENT || Env.DEFAULT_USER_AGENT,
       SUPPORTED_SERVICES: [],
-      DESCRIPTION: 'IPTV backed livestreams from around the world. Provided by Debridio.',
+      DESCRIPTION:
+        'IPTV backed livestreams from around the world. Provided by Debridio.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.LIVE_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason: 'Deprecated by Debridio',
+        disabled: true,
+        removed: true,
+      },
     };
   }
 

@@ -65,6 +65,19 @@ export class DistributedLock {
       if (Env.REDIS_URI) {
         this.redis = Cache.getRedisClient();
         this.subRedis = this.redis.duplicate();
+
+        this.subRedis.on('error', (err: any) => {
+          logger.error(`Redis subscriber client error: ${err.message || err}`);
+        });
+
+        this.subRedis.on('reconnecting', () => {
+          logger.warn('Redis subscriber client reconnecting');
+        });
+
+        this.subRedis.on('end', () => {
+          logger.warn('Redis subscriber connection closed');
+        });
+
         await this.subRedis.connect();
         logger.debug('DistributedLock initialised with Redis backend.');
       } else {

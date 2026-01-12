@@ -123,6 +123,15 @@ class StreamParser {
     }
     parsedStream.size = this.getSize(stream, parsedStream);
     parsedStream.folderSize = this.getFolderSize(stream, parsedStream);
+    if (
+      parsedStream.size &&
+      parsedStream.folderSize &&
+      Math.abs(parsedStream.size - parsedStream.folderSize) /
+        parsedStream.size <
+        0.05
+    ) {
+      parsedStream.folderSize = undefined;
+    }
     parsedStream.indexer = this.getIndexer(stream, parsedStream);
     parsedStream.service = this.getService(stream, parsedStream);
     parsedStream.duration = this.getDuration(stream, parsedStream);
@@ -254,7 +263,24 @@ class StreamParser {
         return match[1];
       }
     }
+    if (typeof stream.behaviorHints?.folderName === 'string') {
+      return stream.behaviorHints.folderName;
+    }
     return undefined;
+  }
+
+  protected getResolution(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    return undefined; //
+  }
+
+  protected getReleaseGroup(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    return undefined; //
   }
 
   protected getSize(
@@ -289,6 +315,15 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
+    if (
+      (stream.behaviorHints?.folderSize !== undefined &&
+        typeof stream.behaviorHints?.folderSize === 'number') ||
+      typeof stream.behaviorHints?.folderSize === 'string'
+    ) {
+      return (
+        bytes.parse(stream.behaviorHints?.folderSize.toString()) ?? undefined
+      );
+    }
     return undefined;
   }
 
@@ -464,10 +499,16 @@ class StreamParser {
       year: fileParsed?.year || folderParsed?.year,
       seasons: arrayFallback(fileParsed?.seasons, folderParsed?.seasons),
       episodes: arrayFallback(fileParsed?.episodes, folderParsed?.episodes),
-      resolution: fileParsed?.resolution || folderParsed?.resolution,
+      resolution:
+        this.getResolution(stream, parsedStream) ||
+        fileParsed?.resolution ||
+        folderParsed?.resolution,
       quality: fileParsed?.quality || folderParsed?.quality,
       encode: fileParsed?.encode || folderParsed?.encode,
-      releaseGroup: fileParsed?.releaseGroup || folderParsed?.releaseGroup,
+      releaseGroup:
+        this.getReleaseGroup(stream, parsedStream) ||
+        fileParsed?.releaseGroup ||
+        folderParsed?.releaseGroup,
       edition: fileParsed?.edition || folderParsed?.edition,
       remastered: fileParsed?.remastered || folderParsed?.remastered,
       repack: fileParsed?.repack || folderParsed?.repack,

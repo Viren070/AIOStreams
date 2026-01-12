@@ -20,15 +20,26 @@ router.use(animeApiRateLimiter);
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   let idType: IdType;
   let idValue: string | number;
+  let season: number | undefined;
+  let episode: number | undefined;
   try {
-    const { idType: idTypeParam, idValue: idValueParam } = z
+    const {
+      idType: idTypeParam,
+      idValue: idValueParam,
+      season: seasonParam,
+      episode: episodeParam,
+    } = z
       .object({
         idType: z.enum(ID_TYPES),
         idValue: z.union([z.string(), z.number()]),
+        season: z.coerce.number().optional(),
+        episode: z.coerce.number().optional(),
       })
       .parse(req.query);
     idType = idTypeParam;
     idValue = idValueParam;
+    season = seasonParam;
+    episode = episodeParam;
   } catch (error: any) {
     if (error instanceof ZodError) {
       next(
@@ -46,7 +57,9 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const mappingEntry = AnimeDatabase.getInstance().getEntryById(
       idType,
-      idValue
+      idValue,
+      season,
+      episode
     );
     res
       .status(200)

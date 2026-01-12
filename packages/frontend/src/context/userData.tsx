@@ -225,6 +225,7 @@ const DefaultUserData: UserData = {
       },
     ],
   },
+  posterService: 'rpdb',
   deduplicator: {
     enabled: true,
     keys: ['filename', 'infoHash'],
