@@ -401,6 +401,8 @@ export class Wrapper {
       bypassCache,
     } = options;
 
+    let doBackground = Env.BACKGROUND_RESOURCE_REQUESTS_ENABLED && cacher;
+
     if (cacher && !bypassCache) {
       const cached = await cacher.get(cacheKey);
       if (cached) {
@@ -423,7 +425,11 @@ export class Wrapper {
 
     const requestPromise = processRequest();
 
-    const timeoutPromise = new Promise<T>((_, reject) =>
+    if (!doBackground) {
+      return await requestPromise;
+    }
+
+    const timeoutPromise: Promise<T> = new Promise<T>((_, reject) =>
       setTimeout(
         () =>
           reject(

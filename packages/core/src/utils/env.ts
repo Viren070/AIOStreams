@@ -748,6 +748,10 @@ export const Env = cleanEnv(process.env, {
     desc: 'Increased timeout for manifest requests',
   }),
 
+  BACKGROUND_RESOURCE_REQUESTS_ENABLED: bool({
+    default: true,
+    desc: 'Enable background resource requests',
+  }),
   BACKGROUND_RESOURCE_REQUEST_TIMEOUT: num({
     default: undefined,
     desc: 'Timeout for background resource requests, uses your maximum timeout if not set',
