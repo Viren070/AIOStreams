@@ -470,6 +470,7 @@ export class Wrapper {
     const { type, id, extras } = params;
     const url = this.buildResourceUrl(resource, type, id, extras);
     const effectiveCacheKey = cacheKey || url;
+    let doBackground = Env.BACKGROUND_RESOURCE_REQUESTS_ENABLED && cacher;
 
     logger.info(
       `Fetching ${resource} of type ${type} with id ${id} and extras ${extras} (${makeUrlLogSafe(url)})`,
@@ -480,10 +481,11 @@ export class Wrapper {
 
     const requestFn = async (): Promise<T> => {
       try {
-        const backgroundTimeout =
-          Env.BACKGROUND_RESOURCE_REQUEST_TIMEOUT ?? Env.MAX_TIMEOUT;
+        const timeout = doBackground
+          ? (Env.BACKGROUND_RESOURCE_REQUEST_TIMEOUT ?? Env.MAX_TIMEOUT)
+          : this.addon.timeout;
         const res = await makeRequest(url, {
-          timeout: backgroundTimeout,
+          timeout: timeout,
           headers: this.addon.headers,
           forwardIp: this.addon.ip,
         });
