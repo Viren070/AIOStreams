@@ -40,16 +40,7 @@ class StreamDeduplicator {
     };
 
     const dsu = new DSU<string>();
-// ## start change
-    // Union all library streams so only one survives in DSU
-    const libraryStreams = streams.filter(s => s.library);
-    if (libraryStreams.length > 1) {
-      const firstId = libraryStreams[0].id;
-      for (let i = 1; i < libraryStreams.length; i++) {
-        dsu.union(firstId, libraryStreams[i].id);
-      }
-    }
-// ## end change
+
     const keyToStreamIds = new Map<string, string[]>();
 
     const excludedStreamIds = new Set<string>();
@@ -64,10 +55,15 @@ class StreamDeduplicator {
     }
 
 // ## start change
-    // Map stream ID -> stream for quick access to library status
+// Map stream ID -> stream for quick access to library status
     const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
 // ## end change
 
+// ## START change 2
+// Ensure normalisedFilename is always in scope
+      let normalisedFilename: string | undefined;
+// ## END change 2
+    
     // Process ALL streams (including excluded ones) for deduplication grouping
     for (const stream of streams) {
       dsu.makeSet(stream.id);
@@ -75,7 +71,7 @@ class StreamDeduplicator {
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
-        let normalisedFilename = stream.filename
+        normalisedFilename = stream.filename
           .replace(
             /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
             ''
@@ -102,6 +98,15 @@ class StreamDeduplicator {
         currentStreamKeyStrings.push(`smartDetect:${hash}`);
       }
 
+
+// ## START change 1
+// Library-only deduplication key so library streams dedupe among themselves
+// without affecting non-library streams
+      if (stream.library && normalisedFilename) {
+        currentStreamKeyStrings.push(`library:${normalisedFilename}`);
+      }
+// ## END change 1
+      
       if (currentStreamKeyStrings.length > 0) {
         for (const key of currentStreamKeyStrings) {
           if (!keyToStreamIds.has(key)) {
