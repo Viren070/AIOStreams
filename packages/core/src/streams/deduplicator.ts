@@ -40,16 +40,7 @@ class StreamDeduplicator {
     };
 
     const dsu = new DSU<string>();
-// ## start change
-    // Union all library streams so only one survives in DSU
-    const libraryStreams = streams.filter(s => s.library);
-    if (libraryStreams.length > 1) {
-      const firstId = libraryStreams[0].id;
-      for (let i = 1; i < libraryStreams.length; i++) {
-        dsu.union(firstId, libraryStreams[i].id);
-      }
-    }
-// ## end change
+
     const keyToStreamIds = new Map<string, string[]>();
 
     const excludedStreamIds = new Set<string>();
