@@ -55,10 +55,15 @@ class StreamDeduplicator {
     }
 
 // ## start change
-    // Map stream ID -> stream for quick access to library status
+// Map stream ID -> stream for quick access to library status
     const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
 // ## end change
 
+// ## START change 2
+// Ensure normalisedFilename is always in scope
+      let normalisedFilename: string | undefined;
+// ## END change 2
+    
     // Process ALL streams (including excluded ones) for deduplication grouping
     for (const stream of streams) {
       dsu.makeSet(stream.id);
@@ -66,7 +71,7 @@ class StreamDeduplicator {
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
-        let normalisedFilename = stream.filename
+        normalisedFilename = stream.filename
           .replace(
             /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
             ''
