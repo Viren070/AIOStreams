@@ -93,6 +93,15 @@ class StreamDeduplicator {
         currentStreamKeyStrings.push(`smartDetect:${hash}`);
       }
 
+
+// ## START change 1
+// Library-only deduplication key so library streams dedupe among themselves
+// without affecting non-library streams
+      if (stream.library && normalisedFilename) {
+        currentStreamKeyStrings.push(`library:${normalisedFilename}`);
+      }
+// ## END change 1
+      
       if (currentStreamKeyStrings.length > 0) {
         for (const key of currentStreamKeyStrings) {
           if (!keyToStreamIds.has(key)) {
