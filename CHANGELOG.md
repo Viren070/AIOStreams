@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.21.3](https://github.com/Viren070/AIOStreams/compare/v2.21.2...v2.21.3) (2026-01-15)
+
+
+### Bug Fixes
+
+* **presets/sootio:** ensure httpProviders only added if defined, remove scraper options ([73894a4](https://github.com/Viren070/AIOStreams/commit/73894a46c0dbbb92d546dadb9fcc3fdad5516710))
+
 ## [2.21.2](https://github.com/Viren070/AIOStreams/compare/v2.21.1...v2.21.2) (2026-01-15)
 
 
