@@ -47,6 +47,7 @@ import {
 } from './streams/index.js';
 import { getAddonName } from './utils/general.js';
 import { TMDBMetadata } from './metadata/tmdb.js';
+import { MetadataService } from './metadata/service.js';
 import { Metadata } from './metadata/utils.js';
 const logger = createLogger('core');
 
@@ -183,6 +184,22 @@ export class AIOStreams {
         supportedAddons: supportedAddons.map((a) => a.name),
       }
     );
+
+    // Fetch metadata for the stream and attach it to the addons
+    const parsedId = IdParser.parse(id, type);
+    if (parsedId) {
+      const metadataService = new MetadataService({
+        tmdbAccessToken: this.userData.tmdbAccessToken,
+        tmdbApiKey: this.userData.tmdbApiKey,
+        tvdbApiKey: this.userData.tvdbApiKey,
+      });
+      const metadata = await metadataService.getMetadata(parsedId, type as any);
+      if (metadata) {
+        supportedAddons.forEach((addon) => {
+          addon.metadata = metadata;
+        });
+      }
+    }
 
     const {
       streams,

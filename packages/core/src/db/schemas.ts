@@ -103,6 +103,11 @@ const SizeFilterOptions = z.object({
   resolution: z.partialRecord(Resolutions, SizeFilter).optional(),
 });
 
+const BitrateFilterOptions = z.object({
+  global: SizeFilter.optional(),
+  resolution: z.partialRecord(Resolutions, SizeFilter).optional(),
+});
+
 const ServiceSchema = z.object({
   id: ServiceIds,
   enabled: z.boolean().optional(),
@@ -140,6 +145,11 @@ const AddonSchema = z.object({
   forceToTop: z.boolean().optional(),
   headers: z.record(z.string().min(1), z.string().min(1)).optional(),
   ip: z.union([z.ipv4(), z.ipv6()]).optional(),
+  metadata: z
+    .object({
+      runtime: z.number().optional(),
+    })
+    .optional(),
 });
 
 // preset objects are transformed into addons by a preset transformer.
@@ -485,6 +495,7 @@ export const UserDataSchema = z.object({
   proxy: StreamProxyConfig.optional(),
   resultLimits: ResultLimitOptions.optional(),
   size: SizeFilterOptions.optional(),
+  bitrate: BitrateFilterOptions.optional(),
   hideErrors: z.boolean().optional(),
   hideErrorsForResources: z.array(ResourceSchema).optional(),
   // showStatistics: z.boolean().optional(),
@@ -796,6 +807,7 @@ export const ParsedStreamSchema = z.object({
     })
     .optional(),
   duration: z.number().optional(),
+  bitrate: z.number().optional(),
   library: z.boolean().optional(),
   seadex: z
     .object({

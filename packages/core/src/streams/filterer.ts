@@ -68,6 +68,7 @@ export interface FilterStatistics {
     excludedFilterCondition: Reason;
     requiredFilterCondition: Reason;
     size: Reason;
+    bitrate: Reason;
   };
   included: {
     passthrough: Reason;
@@ -80,6 +81,7 @@ export interface FilterStatistics {
     language: Reason;
     streamType: Reason;
     size: Reason;
+    bitrate: Reason;
     seeder: Reason;
     age: Reason;
     regex: Reason;
@@ -130,6 +132,7 @@ class StreamFilterer {
         excludedFilterCondition: { total: 0, details: {} },
         requiredFilterCondition: { total: 0, details: {} },
         size: { total: 0, details: {} },
+        bitrate: { total: 0, details: {} },
       },
       included: {
         passthrough: { total: 0, details: {} },
@@ -142,6 +145,7 @@ class StreamFilterer {
         language: { total: 0, details: {} },
         streamType: { total: 0, details: {} },
         size: { total: 0, details: {} },
+        bitrate: { total: 0, details: {} },
         seeder: { total: 0, details: {} },
         age: { total: 0, details: {} },
         regex: { total: 0, details: {} },
@@ -1053,6 +1057,18 @@ class StreamFilterer {
       });
     };
 
+    const normaliseBitrateRange = (
+      bitrateRange: [number, number] | undefined
+    ) => {
+      // Bitrate is usually in bps, but users might configure it differently.
+      // Assuming schemas/frontend handle units, here we'll assume the range is in bps.
+      // If we want a default max, 1Gbps (10^9) is likely safe to not rule out any streams (including ones in folders)
+      return normaliseRange(bitrateRange, {
+        min: 0,
+        max: 1_000_000_000,
+      });
+    };
+
     const getStreamType = (
       stream: ParsedStream
     ): 'p2p' | 'cached' | 'uncached' | undefined => {
@@ -1307,6 +1323,9 @@ class StreamFilterer {
         }
       }
 
+      // Bitrate Inclusion (if needed - currently no 'includedBitrateRange' in schema but preparing)
+      // If we added includedBitrateRange later, it would go here.
+
       if (this.userData.excludedStreamTypes?.includes(stream.type)) {
         // Track stream type exclusions
         this.incrementRemovalReason('excludedStreamType', stream.type);
@@ -1523,6 +1542,49 @@ class StreamFilterer {
           file?.languages.length ? file.languages.join(', ') : 'Unknown'
         );
         return false;
+      }
+
+
+
+      // Bitrate Filtering
+      const bitrateRange =
+        (this.userData.bitrate?.resolution as any)?.[
+          file?.resolution || 'Unknown'
+        ] || this.userData.bitrate?.global;
+
+      if (bitrateRange) {
+        // Handle tuple format from schema: movies/series/anime keys which contain the tuple
+        let range: [number, number] | undefined;
+        if (type === 'movie') range = bitrateRange.movies;
+        if (type === 'series') range = bitrateRange.series;
+        if (type === 'anime') range = bitrateRange.anime;
+
+        const normalisedBitrateRange = normaliseBitrateRange(range);
+
+        if (normalisedBitrateRange) {
+          const streamBitrate = stream.bitrate ?? 0;
+          if (
+            normalisedBitrateRange[0] !== undefined &&
+            streamBitrate < normalisedBitrateRange[0]
+          ) {
+            this.incrementRemovalReason(
+              'bitrate',
+              `<${formatBytes(normalisedBitrateRange[0] / 8, 1024, true)}/s` 
+            );
+            return false;
+          }
+          if (
+            normalisedBitrateRange[1] !== undefined &&
+            normalisedBitrateRange[1] !== constants.MAX_BITRATE &&
+            streamBitrate > normalisedBitrateRange[1]
+          ) {
+            this.incrementRemovalReason(
+              'bitrate',
+              `>${formatBytes(normalisedBitrateRange[1] / 8, 1024, true)}/s`
+            );
+            return false;
+          }
+        }
       }
 
       // uncached

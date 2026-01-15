@@ -135,6 +135,7 @@ class StreamParser {
     parsedStream.indexer = this.getIndexer(stream, parsedStream);
     parsedStream.service = this.getService(stream, parsedStream);
     parsedStream.duration = this.getDuration(stream, parsedStream);
+    parsedStream.bitrate = this.getBitrate(stream, parsedStream);
     parsedStream.type = this.getStreamType(
       stream,
       parsedStream.service,
@@ -427,6 +428,26 @@ class StreamParser {
     currentParsedStream: ParsedStream
   ): number | undefined {
     return parseDuration(stream.description || '');
+  }
+
+  protected getBitrate(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): number | undefined {
+    // try to get from regex first
+    // then calculate from size and duration
+    if (
+      currentParsedStream.size &&
+      (currentParsedStream.duration || this.addon.metadata?.runtime)
+    ) {
+      const sizeBits = currentParsedStream.size * 8;
+      const durationSeconds =
+        currentParsedStream.duration || (this.addon.metadata?.runtime ?? 0) * 60;
+      if (durationSeconds > 0) {
+        return Math.round(sizeBits / durationSeconds);
+      }
+    }
+    return undefined;
   }
 
   protected getStreamType(

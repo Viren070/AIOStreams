@@ -41,6 +41,7 @@ export class MetadataService {
             let releaseDate: string | undefined;
             let year: number | undefined;
             let yearEnd: number | undefined;
+            let runtime: number | undefined;
             let seasons:
               | {
                   season_number: number;
@@ -169,6 +170,7 @@ export class MetadataService {
                 seasons = tmdbMetadata.seasons.sort(
                   (a, b) => a.season_number - b.season_number
                 );
+              if (tmdbMetadata.runtime) runtime = tmdbMetadata.runtime;
               tmdbId = tmdbMetadata.tmdbId;
             } else if (tmdbResult.status === 'rejected') {
               logger.warn(
@@ -183,6 +185,7 @@ export class MetadataService {
               if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
               if (tvdbMetadata.year) year = tvdbMetadata.year;
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
+              if (tvdbMetadata.runtime && !runtime) runtime = tvdbMetadata.runtime;
               tvdbId = tvdbMetadata.tvdbId;
             } else if (tvdbResult.status === 'rejected') {
               logger.warn(
@@ -312,6 +315,7 @@ export class MetadataService {
               releaseDate,
               tmdbId,
               tvdbId,
+              runtime,
             };
           },
           {
