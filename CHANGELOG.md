@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.21.2](https://github.com/Viren070/AIOStreams/compare/v2.21.1...v2.21.2) (2026-01-15)
+
+
+### Bug Fixes
+
+* allow setting user agent to false to disable it, disable by default for newznab ([9f88bc6](https://github.com/Viren070/AIOStreams/commit/9f88bc6875c35105688054e637ea309c75f61ed1))
+* **presets/sootio:** add indexer option, easynews support, and correctly handle multiple services ([afc4523](https://github.com/Viren070/AIOStreams/commit/afc4523b02a202097333a921373783264e858407))
+* **presets/sootio:** update HTTP stream provider options ([#626](https://github.com/Viren070/AIOStreams/issues/626)) ([e0bd36e](https://github.com/Viren070/AIOStreams/commit/e0bd36e631303a31b2c8c6add7e0b9f7a5d1cf90))
+* use correct timeout ([df4160c](https://github.com/Viren070/AIOStreams/commit/df4160c387ecde867cd2146f8aa46c9b3a8b75a3))
+
 ## [2.21.1](https://github.com/Viren070/AIOStreams/compare/v2.21.0...v2.21.1) (2026-01-11)
 
 
