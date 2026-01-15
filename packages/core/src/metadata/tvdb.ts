@@ -245,6 +245,7 @@ export class TVDBMetadata {
             : undefined,
           tvdbId: series.id,
           tmdbId: null,
+          runtime: series.averageRuntime ?? undefined,
         };
       }
     }

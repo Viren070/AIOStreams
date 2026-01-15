@@ -315,8 +315,9 @@ export abstract class BaseFormatter {
         seasonEpisode: seasonEpisode || null,
         seasonPack: stream.parsedFile?.seasonPack ?? false,
         duration: stream.duration || null,
-        bitrate: stream.bitrate ? formatBitrateToken(stream.bitrate) : null,
-        bitrateRaw: stream.bitrate || null,
+        bitrate:
+          stream.bitrate != null ? formatBitrateToken(stream.bitrate) : null,
+        bitrateRaw: stream.bitrate ?? null,
         infoHash: stream.torrent?.infoHash || null,
         age: formattedAge,
         ageHours: stream.age || null,

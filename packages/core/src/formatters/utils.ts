@@ -16,7 +16,7 @@ export function formatBytes(
     value = Math.round(value);
   }
   return value + ' ' + sizes[i];
-  return value + ' ' + sizes[i];
+
 }
 
 export function formatBitrateToken(bits: number): string {

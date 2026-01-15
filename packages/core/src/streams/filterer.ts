@@ -1556,7 +1556,8 @@ class StreamFilterer {
         // Handle tuple format from schema: movies/series/anime keys which contain the tuple
         let range: [number, number] | undefined;
         if (type === 'movie') range = bitrateRange.movies;
-        if (type === 'series') range = bitrateRange.series;
+        if (type === 'series')
+          range = isAnime ? bitrateRange.anime : bitrateRange.series;
         if (type === 'anime') range = bitrateRange.anime;
 
         const normalisedBitrateRange = normaliseBitrateRange(range);

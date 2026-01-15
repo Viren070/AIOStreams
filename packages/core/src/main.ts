@@ -187,17 +187,27 @@ export class AIOStreams {
 
     // Fetch metadata for the stream and attach it to the addons
     const parsedId = IdParser.parse(id, type);
+    let addonsToUse = supportedAddons;
+
     if (parsedId) {
-      const metadataService = new MetadataService({
-        tmdbAccessToken: this.userData.tmdbAccessToken,
-        tmdbApiKey: this.userData.tmdbApiKey,
-        tvdbApiKey: this.userData.tvdbApiKey,
-      });
-      const metadata = await metadataService.getMetadata(parsedId, type as any);
-      if (metadata) {
-        supportedAddons.forEach((addon) => {
-          addon.metadata = metadata;
+      try {
+        const metadataService = new MetadataService({
+          tmdbAccessToken: this.userData.tmdbAccessToken,
+          tmdbApiKey: this.userData.tmdbApiKey,
+          tvdbApiKey: this.userData.tvdbApiKey,
         });
+        const metadata = await metadataService.getMetadata(
+          parsedId,
+          type as any
+        );
+        if (metadata) {
+          addonsToUse = supportedAddons.map((addon) => ({
+            ...addon,
+            metadata,
+          }));
+        }
+      } catch (error) {
+        logger.warn(`Failed to fetch metadata for ${id}: ${error}`);
       }
     }
 
@@ -205,7 +215,7 @@ export class AIOStreams {
       streams,
       errors,
       statistics: addonStatistics,
-    } = await this.fetcher.fetch(supportedAddons, type, id);
+    } = await this.fetcher.fetch(addonsToUse, type, id);
 
     if (
       this.userData.statistics?.enabled &&
