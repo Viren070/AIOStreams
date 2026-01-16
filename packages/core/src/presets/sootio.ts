@@ -39,6 +39,7 @@ export class SootioPreset extends Preset {
       constants.ALLDEBRID_SERVICE,
       constants.OFFCLOUD_SERVICE,
       constants.DEBRIDER_SERVICE,
+      constants.EASYNEWS_SERVICE,
     ];
 
     const supportedResources = [
@@ -60,8 +61,15 @@ export class SootioPreset extends Preset {
         type: 'multi-select',
         options: [
           { label: '4KHDHub', value: 'http4khdhub' },
-          { label: 'Stremsrc', value: 'httpStremsrc' },
+          { label: 'HDHub4u', value: 'httpHDHub4u' },
           { label: 'UHDMovies', value: 'httpUHDMovies' },
+          { label: 'MoviesDrive', value: 'httpMoviesDrive' },
+          { label: 'MKVCinemas', value: 'httpMKVCinemas' },
+          { label: 'MKVDrama', value: 'httpMkvDrama' },
+          { label: 'MalluMv', value: 'httpMalluMv' },
+          { label: 'CineDoze', value: 'httpCineDoze' },
+          { label: 'VixSrc (HLS)', value: 'httpVixSrc' },
+          { label: 'NetflixMirror (HLS)', value: 'httpNetflixMirror' },
         ],
         default: [],
       },
@@ -250,7 +258,47 @@ export class SootioPreset extends Preset {
       alldebrid: 'AllDebrid',
       debrider: 'DebriderApp',
       premiumize: 'Premiumize',
+      easynews: 'Easynews',
     };
+
+    const debridProviders = (serviceIds || []).map((id) => {
+      if (id === constants.EASYNEWS_SERVICE) {
+        const credential = this.getServiceCredential(id, userData);
+        return {
+          provider: serviceNameMap[id],
+          username: credential.username,
+          password: credential.password,
+        };
+      } else {
+        return {
+          provider: serviceNameMap[id],
+          apiKey: this.getServiceCredential(id, userData),
+        };
+      }
+    });
+
+    const httpProviders =
+      options.httpProviders && options.httpProviders.length > 0
+        ? {
+            provider: 'httpstreaming',
+            http4khdhub: options.httpProviders.includes('http4khdhub'),
+            httpHDHub4u: options.httpProviders.includes('httpHDHub4u'),
+            httpUHDMovies: options.httpProviders.includes('httpUHDMovies'),
+            httpMoviesDrive: options.httpProviders.includes('httpMoviesDrive'),
+            httpMKVCinemas: options.httpProviders.includes('httpMKVCinemas'),
+            httpMkvDrama: options.httpProviders.includes('httpMkvDrama'),
+            httpMalluMv: options.httpProviders.includes('httpMalluMv'),
+            httpCineDoze: options.httpProviders.includes('httpCineDoze'),
+            httpVixSrc: options.httpProviders.includes('httpVixSrc'),
+            httpNetflixMirror:
+              options.httpProviders.includes('httpNetflixMirror'),
+          }
+        : undefined;
+
+    const finalProviders = httpProviders
+      ? [httpProviders, ...debridProviders]
+      : debridProviders;
+
     const config = {
       DebridProvider:
         serviceIds && serviceIds.length > 0
@@ -260,24 +308,8 @@ export class SootioPreset extends Preset {
         serviceIds && serviceIds.length > 0
           ? this.getServiceCredential(serviceIds[0], userData)
           : undefined,
-      DebridServices: [
-        ...(serviceIds && serviceIds.length > 0
-          ? [
-              {
-                provider: serviceNameMap[serviceIds[0]],
-                apiKey: this.getServiceCredential(serviceIds[0], userData),
-              },
-            ]
-          : []),
-        options.httpProviders && options.httpProviders.length > 0
-          ? {
-              provider: 'httpstreaming',
-              http4khdhub: options.httpProviders.includes('http4khdhub'),
-              httpStremsrc: options.httpProviders.includes('httpStremsrc'),
-              httpUHDMovies: options.httpProviders.includes('httpUHDMovies'),
-            }
-          : undefined,
-      ].filter((item) => item !== undefined),
+      DebridServices: finalProviders,
+      ShowCatalog: true,
       Languages: [],
     };
 

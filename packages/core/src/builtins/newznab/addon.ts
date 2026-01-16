@@ -28,7 +28,15 @@ class NewznabApi extends BaseNabApi<'newznab'> {
     apiPath?: string,
     extraParams?: Record<string, string | number | boolean>
   ) {
-    super('newznab', logger, baseUrl, apiKey, apiPath, extraParams);
+    super(
+      'newznab',
+      logger,
+      baseUrl,
+      apiKey,
+      apiPath,
+      extraParams,
+      Env.BUILTIN_NAB_USER_AGENT || null
+    );
   }
 }
 

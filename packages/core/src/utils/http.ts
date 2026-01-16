@@ -86,10 +86,6 @@ export async function makeRequest(url: string, options: RequestOptions) {
     }
   }
 
-  if (headers.get('User-Agent') === 'none') {
-    headers.delete('User-Agent');
-  }
-
   if (urlObj.toString().startsWith(Env.INTERNAL_URL)) {
     headers.set(INTERNAL_SECRET_HEADER, Env.INTERNAL_SECRET);
   }
@@ -97,6 +93,14 @@ export async function makeRequest(url: string, options: RequestOptions) {
   let domainUserAgent = domainHasUserAgent(urlObj);
   if (domainUserAgent) {
     headers.set('User-Agent', domainUserAgent);
+  }
+
+  if (
+    ['none', 'false', ''].includes(
+      (headers.get('User-Agent') ?? '').toLowerCase().trim()
+    )
+  ) {
+    headers.delete('User-Agent');
   }
 
   // block recursive requests

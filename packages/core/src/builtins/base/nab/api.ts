@@ -226,6 +226,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
   private readonly logger: Logger;
   private readonly params: Record<string, string>;
+  private readonly userAgent: string | null;
 
   constructor(
     public readonly namespace: N,
@@ -233,7 +234,8 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     private readonly baseUrl: string,
     private readonly apiKey?: string,
     private readonly apiPath: string = '/api',
-    params: Record<string, string | number | boolean> = {}
+    params: Record<string, string | number | boolean> = {},
+    userAgent?: string | null
   ) {
     this.logger = logger;
     this.baseUrl = this.removeTrailingSlash(baseUrl);
@@ -244,6 +246,10 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
+    this.userAgent =
+      userAgent === null
+        ? null
+        : (userAgent ?? Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT);
 
     // Create the appropriate schema based on namespace
     if (namespace === 'torznab') {
@@ -360,7 +366,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     path.endsWith('/') ? path.slice(0, -1) : path;
   private getHeaders = () => ({
     'Content-Type': 'application/xml',
-    'User-Agent': Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT,
+    'User-Agent': this.userAgent !== null ? this.userAgent : undefined,
   });
 
   private async request<T>(
