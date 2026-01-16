@@ -719,6 +719,69 @@ export abstract class UsenetStreamService implements DebridService {
     return result;
   }
 
+
+// wait for item (not history!)
+  public async waitForItem(
+	expectedContentPath: string,
+	timeoutMs: number = 80000,
+	pollIntervalMs: number = 2000
+  ): Promise<boolean> {
+	const deadline = Date.now() + timeoutMs;
+
+	let contentAvailable = false;
+	  
+	// wait for content to be available until deadline is reached
+	while (Date.now() < deadline) {
+
+		try {
+			const stat = await this.webdavClient.stat(expectedContentPath);
+			const statData = 'data' in stat ? stat.data : stat;
+			if (statData.type === 'directory') {
+				contentAvailable = true;
+			}
+		} catch (error: any) {
+			// if error is a 401, rethrow as DebridError
+			const status = typeof error.status === 'number' ? error.status : 500;
+			if (status === 401) {
+				throw new DebridError(`Could not access WebDAV: Unauthorized`, {
+					statusCode: 401,
+					statusText: 'Unauthorized',
+					code: 'UNAUTHORIZED',
+					headers: {},
+					body: null,
+					type: 'api_error',
+					cause: error.message,
+				});
+			}
+	    }
+
+		// content is available, can return
+		if (contentAvailable) {
+			this.serviceLogger.debug(`Content is now available`, {
+				path: expectedContentPath,
+			});
+			
+			return true;
+		}
+
+		await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+	}
+
+	// deadline reached, throw error
+	throw new DebridError(
+		'Timeout while waiting for NZB to become streamable',
+		{
+			statusCode: 504,
+			statusText: 'Gateway Timeout',
+			code: 'UNKNOWN',
+			headers: {},
+			body: { expectedContentPath },
+			type: 'api_error',
+		}
+	);
+  }
+
+	
   protected async _resolve(
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string
@@ -793,15 +856,26 @@ export abstract class UsenetStreamService implements DebridService {
       );
       nzoId = addResult.nzoId;
 
-      // Poll history until download is complete
       const pollStartTime = Date.now();
-      const slot = await this.api.waitForHistorySlot(nzoId, category);
+		
+//      // Poll history until download is complete
+//      const slot = await this.api.waitForHistorySlot(nzoId, category);
 
-      // Use slot.storage as source of truth for the content path
-      jobName = slot.storage ? basename(slot.storage) : slot.name || filename;
-      jobCategory = slot.category || category;
-      contentPath = `${this.getContentPathPrefix()}/${jobCategory}/${jobName}`;
+//	  // Use slot.storage as source of truth for the content path
+//      jobName = slot.storage ? basename(slot.storage) : slot.name || filename;
+//      jobCategory = slot.category || category;
+//      contentPath = `${this.getContentPathPrefix()}/${jobCategory}/${jobName}`;
+		
+      // Poll expectedContentPath until download is complete
+      const itemAvailable = await this.waitForItem(expectedContentPath);
 
+	  // set expected values
+	  if (itemAvailable) {
+		  contentPath = expectedContentPath;
+		  jobName = expectedFolderName;
+	      jobCategory = category;
+	  }
+		
       this.serviceLogger.debug(`NZB download completed`, {
         nzoId,
         jobName,
