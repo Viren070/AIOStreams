@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.21.4](https://github.com/Viren070/AIOStreams/compare/v2.21.3...v2.21.4) (2026-01-16)
+
+
+### Bug Fixes
+
+* handle undefined user agent and ensure only added when valid ([6ad1aba](https://github.com/Viren070/AIOStreams/commit/6ad1aba842eb8be2a1da0f40fd035bbea10acf3b))
+
 ## [2.21.3](https://github.com/Viren070/AIOStreams/compare/v2.21.2...v2.21.3) (2026-01-15)
 
 
