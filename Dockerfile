@@ -85,8 +85,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD ["/nodejs/bin/node", "/app/scripts/healthcheck.js"]
 EXPOSE ${PORT:-3000}
 
-<<<<<<< HEAD
 CMD ["/app/packages/server/dist/server.js"]
-=======
-CMD ["/app/packages/server/dist/server.js"]
->>>>>>> 74653a32 (feat(build/docker): switch to debian based distroless image)
