@@ -69,10 +69,15 @@ COPY --from=builder /build/packages/core/node_modules ./packages/core/node_modul
 COPY --from=builder /build/packages/server/node_modules ./packages/server/node_modules
 
 FROM gcr.io/distroless/nodejs24-debian12 AS production
-COPY --from=busybox:1.36.0-uclibc /bin/wget /bin/wget
+
+LABEL org.opencontainers.image.title="AIOStreams"
+LABEL org.opencontainers.image.source="https://github.com/Viren070/AIOStreams"
+LABEL org.opencontainers.image.description="AIOStreams consolidates multiple Stremio addons and debrid services - including its own suite of built-in addons - into a single, highly customisable super-addon."
+LABEL org.opencontainers.image.licenses="GPL-3.0"
 
 WORKDIR /app
 
+COPY --from=busybox:1.36.0-uclibc /bin/wget /bin/wget
 COPY --from=runtime /runtime /app
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
