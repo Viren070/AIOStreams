@@ -19,6 +19,7 @@ import {
   FileInfoSchema,
   getSimpleTextHash,
   FileInfo,
+  maskSensitiveInfo,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import { StaticFiles } from '../../app.js';
@@ -64,7 +65,19 @@ router.get(
       } catch (error: any) {
         fileInfo = await fileInfoStore()?.get(encodedFileInfo);
         if (!fileInfo) {
-          throw error;
+          logger.warn(`Could not get file info`, {
+            fileInfo: encodedFileInfo,
+            error,
+            fileInfoStoreAvailable: fileInfoStore() ? true : false,
+          });
+          next(
+            new APIError(
+              constants.ErrorCode.BAD_REQUEST,
+              undefined,
+              'Failed to parse file info and not found in store.'
+            )
+          );
+          return;
         }
       }
 
@@ -77,9 +90,23 @@ router.get(
         );
       }
 
-      const storeAuth = ServiceAuthSchema.parse(
-        JSON.parse(decryptedStoreAuth.data)
-      );
+      let storeAuth: ServiceAuth;
+      try {
+        storeAuth = ServiceAuthSchema.parse(
+          JSON.parse(decryptedStoreAuth.data)
+        );
+      } catch (error: any) {
+        logger.warn(`Could not parse decrypted store auth`, {
+          decryptedStoreAuth: maskSensitiveInfo(decryptedStoreAuth.data),
+          error,
+        });
+        throw new APIError(
+          constants.ErrorCode.BAD_REQUEST,
+          undefined,
+          'Failed to parse store auth'
+        );
+      }
+
       const metadata: TitleMetadata | undefined =
         await metadataStore().get(metadataId);
       if (!metadata) {
