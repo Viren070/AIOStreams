@@ -65,48 +65,38 @@ const commaSeparated = makeExactValidator<string[]>((x) => {
   return parsed;
 });
 
-const regexes = makeValidator((x) => {
-  // json array of string
-  const parsed = JSON.parse(x);
-  if (!Array.isArray(parsed)) {
-    throw new EnvError('Regexes must be an array');
-  }
-  // each element must be a string
-  parsed.forEach((x) => {
+// comma separated list of key:url where key is in choices
+const httpProxyMap = <T extends string>(choices: readonly T[]) =>
+  makeExactValidator<Map<T, string>>((x: string): Map<T, string> => {
     if (typeof x !== 'string') {
-      throw new EnvError('Regexes must be an array of strings');
+      throw new EnvError('HTTP Proxy Map must be a string');
     }
-    try {
-      new RegExp(x);
-    } catch (e) {
-      throw new EnvError(`Invalid regex pattern: ${x}`);
-    }
-  });
-  return parsed;
-});
+    const proxyMap = new Map<T, string>();
 
-const namedRegexes = makeValidator((x) => {
-  // array of objects with properties name and pattern
-  const parsed = JSON.parse(x);
-  if (!Array.isArray(parsed)) {
-    throw new EnvError('Named regexes must be an array');
-  }
-  // each element must be an object with properties name and pattern
-  parsed.forEach((x) => {
-    if (typeof x !== 'object' || !x.name || !x.pattern) {
-      throw new EnvError(
-        'Named regexes must be an array of objects with properties name and pattern'
-      );
+    const entries = x.split(',').map((entry) => entry.trim());
+    for (const entry of entries) {
+      const tokens = entry.split(':');
+      const key = tokens.shift()?.trim();
+      const value = tokens.join(':').trim();
+      if (!key || !value) {
+        throw new EnvError(`Invalid HTTP Proxy Map entry: "${entry}"`);
+      }
+      if (!choices.includes(key as (typeof choices)[number])) {
+        throw new EnvError(
+          `Invalid HTTP Proxy Map key: "${key}". Must be one of: ${choices.join(', ')}`
+        );
+      }
+      try {
+        new URL(value);
+      } catch {
+        throw new EnvError(
+          `Invalid HTTP Proxy Map value: "${value}". Must be a valid URL.`
+        );
+      }
+      proxyMap.set(key as T, value);
     }
-    try {
-      new RegExp(x.pattern);
-    } catch (e) {
-      throw new EnvError(`Invalid regex pattern: ${x.pattern}`);
-    }
+    return proxyMap;
   });
-
-  return parsed;
-});
 
 const removeTrailingSlash = (x: string) =>
   x.endsWith('/') ? x.slice(0, -1) : x;
@@ -1890,6 +1880,10 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_NAB_USER_AGENT: userAgent({
     default: undefined,
     desc: 'Builtin Torznab/Newznab user agent',
+  }),
+  BUILTIN_NAB_HTTP_PROXY: httpProxyMap(['torznab', 'newznab'])({
+    default: undefined,
+    desc: 'HTTP proxy for Torzab/Newznab indexers, overrides ADDON_PROXY and ADDON_PROXY_CONFIG',
   }),
   BUILTIN_NAB_MAX_PAGES: num({
     default: 5,

@@ -227,6 +227,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private readonly logger: Logger;
   private readonly params: Record<string, string>;
   private readonly userAgent: string | null;
+  private readonly httpProxy: string | undefined;
 
   constructor(
     public readonly namespace: N,
@@ -250,6 +251,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       userAgent === null
         ? null
         : (userAgent ?? Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT);
+    this.httpProxy = Env.BUILTIN_NAB_HTTP_PROXY?.get(namespace);
 
     // Create the appropriate schema based on namespace
     if (namespace === 'torznab') {
@@ -423,6 +425,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         method: 'GET',
         headers: this.getHeaders(),
         timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
+        forceProxy: this.httpProxy,
       });
 
       const data = await response.text();
