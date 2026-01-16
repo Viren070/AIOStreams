@@ -1065,7 +1065,7 @@ class StreamFilterer {
       // If we want a default max, 1Gbps (10^9) is likely safe to not rule out any streams (including ones in folders)
       return normaliseRange(bitrateRange, {
         min: 0,
-        max: 1_000_000_000,
+        max: constants.MAX_BITRATE,
       });
     };
 
@@ -1563,27 +1563,32 @@ class StreamFilterer {
         const normalisedBitrateRange = normaliseBitrateRange(range);
 
         if (normalisedBitrateRange) {
-          const streamBitrate = stream.bitrate ?? 0;
-          if (
-            normalisedBitrateRange[0] !== undefined &&
-            streamBitrate < normalisedBitrateRange[0]
-          ) {
-            this.incrementRemovalReason(
-              'bitrate',
-              `<${formatBytes(normalisedBitrateRange[0] / 8, 1024, true)}/s` 
-            );
-            return false;
-          }
-          if (
-            normalisedBitrateRange[1] !== undefined &&
-            normalisedBitrateRange[1] !== constants.MAX_BITRATE &&
-            streamBitrate > normalisedBitrateRange[1]
-          ) {
-            this.incrementRemovalReason(
-              'bitrate',
-              `>${formatBytes(normalisedBitrateRange[1] / 8, 1024, true)}/s`
-            );
-            return false;
+          const streamBitrate = Number.isFinite(stream.bitrate)
+            ? stream.bitrate
+            : undefined;
+
+          if (streamBitrate !== undefined) {
+            if (
+              normalisedBitrateRange[0] !== undefined &&
+              streamBitrate < normalisedBitrateRange[0]
+            ) {
+              this.incrementRemovalReason(
+                'bitrate',
+                `<${formatBytes(normalisedBitrateRange[0] / 8, 1024, true)}/s`
+              );
+              return false;
+            }
+            if (
+              normalisedBitrateRange[1] !== undefined &&
+              normalisedBitrateRange[1] !== constants.MAX_BITRATE &&
+              streamBitrate > normalisedBitrateRange[1]
+            ) {
+              this.incrementRemovalReason(
+                'bitrate',
+                `>${formatBytes(normalisedBitrateRange[1] / 8, 1024, true)}/s`
+              );
+              return false;
+            }
           }
         }
       }

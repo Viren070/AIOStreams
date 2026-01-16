@@ -189,7 +189,12 @@ export class AIOStreams {
     const parsedId = IdParser.parse(id, type);
     let addonsToUse = supportedAddons;
 
-    if (parsedId) {
+    if (
+      parsedId &&
+      (this.userData.tmdbApiKey ||
+        this.userData.tmdbAccessToken ||
+        this.userData.tvdbApiKey)
+    ) {
       try {
         const metadataService = new MetadataService({
           tmdbAccessToken: this.userData.tmdbAccessToken,
