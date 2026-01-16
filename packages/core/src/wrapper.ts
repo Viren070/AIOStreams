@@ -403,9 +403,11 @@ export class Wrapper {
 
     let doBackground = Env.BACKGROUND_RESOURCE_REQUESTS_ENABLED && cacher;
 
-    if (cacher && !bypassCache) {
-      const cached = await cacher.get(cacheKey);
-      if (cached) {
+    let cached = null;
+
+    if (cacher) {
+      cached = await cacher.get(cacheKey);
+      if (cached && !bypassCache) {
         logger.debug(
           `Returning cached ${resourceName} for ${this.getAddonName(this.addon)}`
         );
@@ -444,6 +446,12 @@ export class Wrapper {
     try {
       return await Promise.race([requestPromise, timeoutPromise]);
     } catch (error: any) {
+      if (cached) {
+        logger.warn(
+          `Returning cached ${resourceName} for ${this.getAddonName(this.addon)} after request failure: ${error.message}`
+        );
+        return cached;
+      }
       if (error.message.includes('timed out')) {
         logger.warn(
           `Request for ${resourceName} for ${this.getAddonName(this.addon)} timed out. Will process in background.`
