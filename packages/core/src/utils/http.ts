@@ -96,7 +96,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
   }
 
   if (
-    ['none', 'false', ''].includes(
+    ['none', 'false', '', 'undefined'].includes(
       (headers.get('User-Agent') ?? '').toLowerCase().trim()
     )
   ) {

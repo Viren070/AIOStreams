@@ -364,10 +364,16 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
 
   private removeTrailingSlash = (path: string) =>
     path.endsWith('/') ? path.slice(0, -1) : path;
-  private getHeaders = () => ({
-    'Content-Type': 'application/xml',
-    'User-Agent': this.userAgent !== null ? this.userAgent : undefined,
-  });
+
+  private getHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/xml',
+    };
+    if (this.userAgent !== null) {
+      headers['User-Agent'] = this.userAgent;
+    }
+    return headers;
+  };
 
   private async request<T>(
     func: string,
