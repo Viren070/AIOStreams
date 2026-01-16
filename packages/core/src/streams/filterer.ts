@@ -1060,9 +1060,8 @@ class StreamFilterer {
     const normaliseBitrateRange = (
       bitrateRange: [number, number] | undefined
     ) => {
-      // Bitrate is usually in bps, but users might configure it differently.
-      // Assuming schemas/frontend handle units, here we'll assume the range is in bps.
-      // If we want a default max, 1Gbps (10^9) is likely safe to not rule out any streams (including ones in folders)
+      // Range assumed to be in bps.
+      // Default to 0 and max. Similar to size, when set to max, it's unlimited.
       return normaliseRange(bitrateRange, {
         min: 0,
         max: constants.MAX_BITRATE,
@@ -1322,9 +1321,6 @@ class StreamFilterer {
           return true;
         }
       }
-
-      // Bitrate Inclusion (if needed - currently no 'includedBitrateRange' in schema but preparing)
-      // If we added includedBitrateRange later, it would go here.
 
       if (this.userData.excludedStreamTypes?.includes(stream.type)) {
         // Track stream type exclusions
