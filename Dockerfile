@@ -56,7 +56,6 @@ COPY --from=builder /build/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder /build/pnpm-lock.yaml ./pnpm-lock.yaml
 
 COPY --from=builder /build/packages/core/package.*json ./packages/core/
-COPY --from=builder /build/packages/frontend/package.*json ./packages/frontend/
 COPY --from=builder /build/packages/server/package.*json ./packages/server/
 
 COPY --from=builder /build/packages/core/dist ./packages/core/dist
@@ -69,7 +68,6 @@ COPY --from=builder /build/resources ./resources
 COPY --from=builder /build/node_modules ./node_modules
 COPY --from=builder /build/packages/core/node_modules ./packages/core/node_modules
 COPY --from=builder /build/packages/server/node_modules ./packages/server/node_modules
-COPY --from=builder /build/packages/frontend/node_modules ./packages/frontend/node_modules
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -fsS http://localhost:${PORT:-3000}/api/v1/status || exit 1
