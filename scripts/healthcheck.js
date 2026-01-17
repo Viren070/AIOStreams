@@ -7,7 +7,7 @@ function checkHealth(retries = 0) {
   const options = {
     host: 'localhost',
     port: PORT,
-    path: '/api/v1/health',
+    path: '/api/v1/status',
     timeout: 15000,
     method: 'GET',
   };
