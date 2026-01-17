@@ -1,6 +1,7 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
+  enrichParsedIdWithAnimeEntry,
   FeatureControl,
   getTimeTakenSincePoint,
   constants,
@@ -288,24 +289,12 @@ class StreamFilterer {
         }
         const animeEntry = AnimeDatabase.getInstance().getEntryById(
           parsedId.type,
-          parsedId.value
+          parsedId.value,
+          parsedId.season ? Number(parsedId.season) : undefined,
+          parsedId.episode ? Number(parsedId.episode) : undefined
         );
         if (animeEntry && !parsedId.season) {
-          parsedId.season =
-            animeEntry.imdb?.fromImdbSeason?.toString() ??
-            animeEntry.trakt?.season?.toString();
-          if (
-            animeEntry.imdb?.fromImdbEpisode &&
-            animeEntry.imdb?.fromImdbEpisode !== 1 &&
-            parsedId.episode &&
-            ['malId', 'kitsuId'].includes(parsedId.type)
-          ) {
-            parsedId.episode = (
-              animeEntry.imdb.fromImdbEpisode +
-              Number(parsedId.episode) -
-              1
-            ).toString();
-          }
+          enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
         }
         const metadataStart = Date.now();
         requestedMetadata = await new MetadataService({

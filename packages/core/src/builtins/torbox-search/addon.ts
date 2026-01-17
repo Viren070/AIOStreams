@@ -3,6 +3,7 @@ import { Manifest, Stream } from '../../db/index.js';
 import {
   AnimeDatabase,
   createLogger,
+  enrichParsedIdWithAnimeEntry,
   formatZodError,
   getTimeTakenSincePoint,
 } from '../../utils/index.js';
@@ -128,22 +129,7 @@ export class TorBoxSearchAddon {
       parsedId.value
     );
     if (animeEntry && !parsedId.season) {
-      parsedId.season =
-        animeEntry.imdb?.fromImdbSeason?.toString() ??
-        animeEntry.trakt?.season?.toString();
-      if (
-        animeEntry.imdb?.fromImdbEpisode &&
-        animeEntry.imdb?.fromImdbEpisode !== 1 &&
-        parsedId.episode &&
-        ['malId', 'kitsuId'].includes(parsedId.type)
-      ) {
-        parsedId.episode = (
-          animeEntry.imdb.fromImdbEpisode +
-          Number(parsedId.episode) -
-          1
-        ).toString();
-      }
-      logger.debug(`Updated season for ${id} to ${parsedId.season}`);
+      enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
     }
 
     logger.info(`Handling stream request`, {

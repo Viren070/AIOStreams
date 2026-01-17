@@ -12,6 +12,7 @@ import {
   BuiltinServiceId,
   constants,
   encryptString,
+  enrichParsedIdWithAnimeEntry,
   Env,
   formatZodError,
   fromUrlSafeBase64,
@@ -628,40 +629,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       parsedId.episode ? Number(parsedId.episode) : undefined
     );
 
-    const getSeasonFromSynonyms = (synonyms: string[]): string | undefined => {
-      const seasonRegex = /(?:season|s)\s(\d+)/i;
-      for (const synonym of synonyms) {
-        const match = synonym.match(seasonRegex);
-        if (match) {
-          this.logger.debug(
-            `Extracted season from synonym "${synonym}" for ${animeEntry?.title} (${parsedId.fullId}): ${match[1]}`
-          );
-          return match[1].toString().trim();
-        }
-      }
-      return undefined;
-    };
-
     // Update season from anime entry if available
     if (animeEntry && !parsedId.season) {
-      parsedId.season =
-        animeEntry.imdb?.fromImdbSeason?.toString() ??
-        animeEntry.trakt?.season?.number?.toString() ??
-        (animeEntry.synonyms
-          ? getSeasonFromSynonyms(animeEntry.synonyms)
-          : undefined);
-      if (
-        animeEntry.imdb?.fromImdbEpisode &&
-        animeEntry.imdb?.fromImdbEpisode !== 1 &&
-        parsedId.episode &&
-        ['malId', 'kitsuId'].includes(parsedId.type)
-      ) {
-        parsedId.episode = (
-          animeEntry.imdb.fromImdbEpisode +
-          Number(parsedId.episode) -
-          1
-        ).toString();
-      }
+      enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
     }
 
     const metadata = await new MetadataService({
