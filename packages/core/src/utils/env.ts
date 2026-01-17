@@ -538,6 +538,10 @@ export const Env = cleanEnv(process.env, {
     default: 24 * 60 * 60 * 1000, // 24 hours
     desc: 'Interval for refreshing the Extended Anitrakt TV in milliseconds',
   }),
+  ANIME_DB_ANIME_LIST_REFRESH_INTERVAL: num({
+    default: 7 * 24 * 60 * 60 * 1000, // 7 days
+    desc: 'Interval for refreshing the Anime Lists XML in milliseconds',
+  }),
   // logging settings
   LOG_SENSITIVE_INFO: bool({
     default: false,
