@@ -56,8 +56,7 @@ export interface ParseValue {
     filename: string | null;
     folderName: string | null;
     size: number | null;
-    bitrate: string | null;
-    bitrateRaw: number | null;
+    bitrate: number | null;
     folderSize: number | null;
     library: boolean;
     quality: string | null;
@@ -315,9 +314,7 @@ export abstract class BaseFormatter {
         seasonEpisode: seasonEpisode || null,
         seasonPack: stream.parsedFile?.seasonPack ?? false,
         duration: stream.duration || null,
-        bitrate:
-          stream.bitrate != null ? formatBitrateToken(stream.bitrate) : null,
-        bitrateRaw: stream.bitrate ?? null,
+        bitrate: stream.bitrate ?? null,
         infoHash: stream.torrent?.infoHash || null,
         age: formattedAge,
         ageHours: stream.age || null,
@@ -1011,6 +1008,7 @@ Number: {stream.size}
   ::hex {stream.size::hex}
   ::octal {stream.size::octal}
   ::binary {stream.size::binary}
+  ::bitrate {stream.bitrate::bitrate}
 {tools.newLine}
 
 Array: {stream.languages}
