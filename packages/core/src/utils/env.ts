@@ -190,7 +190,7 @@ const userAgentMappings = makeValidator<Map<string, string>>((x) => {
   }
   const mappings = new Map<string, string>();
 
-  const regex = /([a-zA-Z0-9.-]+):([^,]*(?:,[^a-zA-Z0-9.-][^,]*)*)/g;
+  const regex = /([a-zA-Z0-9.-\\*]+):([^,]*(?:,[^a-zA-Z0-9.-][^,]*)*)/g;
 
   let match;
   let hasMatches = false;
@@ -214,7 +214,7 @@ const userAgentMappings = makeValidator<Map<string, string>>((x) => {
       'User agent mappings must be in the format hostname:useragent,hostname:useragent,...'
     );
   }
-
+  console.log('user agent mappings:', mappings);
   return mappings;
 });
 
