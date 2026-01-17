@@ -164,3 +164,29 @@ export function parseAgeString(ageString: string): number | undefined {
       return undefined;
   }
 }
+
+export function parseBitrate(bitrateString: string): number | undefined {
+  const match = bitrateString.match(
+    /^(\d+(\.\d+)?)\s*(bps|kbps|mbps|gbps|tbps)$/i
+  );
+  if (!match) {
+    const floatVal = parseFloat(bitrateString);
+    return isNaN(floatVal) ? undefined : floatVal;
+  }
+  const num = parseFloat(match[1]);
+  const unit = match[3].toLowerCase();
+  switch (unit) {
+    case 'bps':
+      return num;
+    case 'kbps':
+      return num * 1000;
+    case 'mbps':
+      return num * 1000000;
+    case 'gbps':
+      return num * 1000000000;
+    case 'tbps':
+      return num * 1000000000000;
+    default:
+      return num;
+  }
+}

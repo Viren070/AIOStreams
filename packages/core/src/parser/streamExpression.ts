@@ -9,6 +9,7 @@ import bytes from 'bytes';
 import { formatZodError } from '../utils/config.js';
 import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
+import { parseBitrate } from './utils.js';
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
@@ -378,6 +379,39 @@ export abstract class StreamExpressionEngine {
           return false;
         }
         if (maxSize && maxSizeInBytes && (stream.size ?? 0) > maxSizeInBytes) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.bitrate = function (
+      streams: ParsedStream[],
+      minBitrate?: string | number,
+      maxBitrate?: string | number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        typeof minBitrate !== 'number' &&
+        typeof maxBitrate !== 'number' &&
+        typeof minBitrate !== 'string' &&
+        typeof maxBitrate !== 'string'
+      ) {
+        throw new Error('Min and max bitrate must be a number or string');
+      }
+
+      // select streams with bitrate that lie within the range.
+      const minBps =
+        typeof minBitrate === 'string' ? parseBitrate(minBitrate) : minBitrate;
+      const maxBps =
+        typeof maxBitrate === 'string' ? parseBitrate(maxBitrate) : maxBitrate;
+
+      return streams.filter((stream) => {
+        if (minBps !== undefined && (stream.bitrate ?? 0) < minBps) {
+          return false;
+        }
+        if (maxBps !== undefined && (stream.bitrate ?? 0) > maxBps) {
           return false;
         }
         return true;
