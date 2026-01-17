@@ -170,8 +170,11 @@ export function parseBitrate(bitrateString: string): number | undefined {
     /^(\d+(\.\d+)?)\s*(bps|kbps|mbps|gbps|tbps)$/i
   );
   if (!match) {
-    const floatVal = parseFloat(bitrateString);
-    return isNaN(floatVal) ? undefined : floatVal;
+    const trimmed = bitrateString.trim();
+    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+      return undefined;
+    }
+    return parseFloat(trimmed);
   }
   const num = parseFloat(match[1]);
   const unit = match[3].toLowerCase();

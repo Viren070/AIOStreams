@@ -407,6 +407,13 @@ export abstract class StreamExpressionEngine {
       const maxBps =
         typeof maxBitrate === 'string' ? parseBitrate(maxBitrate) : maxBitrate;
 
+      if (typeof minBitrate === 'string' && minBps === undefined) {
+        throw new Error(`Invalid min bitrate: ${minBitrate}`);
+      }
+      if (typeof maxBitrate === 'string' && maxBps === undefined) {
+        throw new Error(`Invalid max bitrate: ${maxBitrate}`);
+      }
+
       return streams.filter((stream) => {
         if (minBps !== undefined && (stream.bitrate ?? 0) < minBps) {
           return false;
