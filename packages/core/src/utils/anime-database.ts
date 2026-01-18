@@ -1669,10 +1669,7 @@ export function enrichParsedIdWithAnimeEntry(
 
   if (parsedId.episode && ['malId', 'kitsuId'].includes(parsedId.type)) {
     const fromEpisode =
-      animeEntry.imdb?.fromEpisode ??
-      animeEntry.tvdb?.fromEpisode ??
-      animeEntry.tmdb?.fromEpisode;
-
+      animeEntry.imdb?.fromEpisode ?? animeEntry.tvdb?.fromEpisode;
     if (fromEpisode && fromEpisode !== 1) {
       parsedId.episode = (
         fromEpisode +
