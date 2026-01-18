@@ -78,6 +78,7 @@ LABEL org.opencontainers.image.licenses="GPL-3.0"
 WORKDIR /app
 
 COPY --from=busybox:1.36.0-uclibc /bin/wget /bin/wget
+COPY --from=busybox:1.36.0-uclibc /bin/sh /bin/sh
 COPY --from=runtime /runtime /app
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
