@@ -104,6 +104,7 @@ const SizeFilterOptions = z.object({
 });
 
 const BitrateFilterOptions = z.object({
+  useMetadataRuntime: z.boolean().optional().default(true),
   global: SizeFilter.optional(),
   resolution: z.partialRecord(Resolutions, SizeFilter).optional(),
 });

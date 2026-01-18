@@ -279,8 +279,7 @@ class StreamFilterer {
     let releaseDates: ReleaseDate[] | undefined;
     let episodeAirDate: string | undefined;
     if (
-      (this.userData.bitrate?.global ||
-        this.userData.bitrate?.resolution ||
+      (this.userData.bitrate?.useMetadataRuntime ||
         this.userData.titleMatching?.enabled ||
         (this.userData.digitalReleaseFilter?.enabled &&
           ['movie', 'series', 'anime'].includes(type)) ||
@@ -405,6 +404,21 @@ class StreamFilterer {
           `Error fetching titles for ${id}, title/year matching will not be performed: ${error}`
         );
       }
+    }
+
+    // fill in bitrate from metadata runtime and size if missing and enabled
+    if (this.userData.bitrate?.useMetadataRuntime !== false) {
+      streams.forEach((stream) => {
+        if (
+          (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
+          requestedMetadata?.runtime &&
+          stream.size
+        ) {
+          stream.bitrate = Math.round(
+            (stream.size * 8) / (requestedMetadata.runtime * 60)
+          );
+        }
+      });
     }
 
     const applyDigitalReleaseFilter = () => {
@@ -1854,19 +1868,10 @@ class StreamFilterer {
           normaliseBitrateRange(globalBitrateRange?.series);
       }
 
-      let streamBitrate: number | undefined = undefined;
-      if (stream.bitrate !== undefined && Number.isFinite(stream.bitrate)) {
-        streamBitrate = stream.bitrate;
-      } else if (requestedMetadata?.runtime && stream.size) {
-        const sizeInBits = stream.size * 8;
-        streamBitrate = sizeInBits / (requestedMetadata.runtime * 60);
-        stream.bitrate = streamBitrate;
-      }
-
-      if (finalBitrateRange && streamBitrate !== undefined) {
+      if (finalBitrateRange && stream.bitrate !== undefined) {
         if (
           finalBitrateRange[0] !== undefined &&
-          streamBitrate < finalBitrateRange[0]
+          stream.bitrate < finalBitrateRange[0]
         ) {
           this.incrementRemovalReason(
             'bitrate',
@@ -1876,7 +1881,7 @@ class StreamFilterer {
         }
         if (
           finalBitrateRange[1] !== undefined &&
-          streamBitrate > finalBitrateRange[1]
+          stream.bitrate > finalBitrateRange[1]
         ) {
           this.incrementRemovalReason(
             'bitrate',

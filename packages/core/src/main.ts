@@ -47,7 +47,6 @@ import {
 } from './streams/index.js';
 import { getAddonName } from './utils/general.js';
 import { TMDBMetadata } from './metadata/tmdb.js';
-import { MetadataService } from './metadata/service.js';
 import { Metadata } from './metadata/utils.js';
 const logger = createLogger('core');
 

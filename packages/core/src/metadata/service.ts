@@ -9,6 +9,7 @@ import { AnimeDatabase, IdParser, ParsedId, Env } from '../utils/index.js';
 import { withRetry } from '../utils/general.js';
 import { Meta } from '../db/schemas.js';
 import { TVDBMetadata } from './tvdb.js';
+import { parseDuration } from '../parser/utils.js';
 
 const logger = createLogger('metadata-service');
 
@@ -185,7 +186,8 @@ export class MetadataService {
               if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
               if (tvdbMetadata.year) year = tvdbMetadata.year;
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
-              if (tvdbMetadata.runtime && !runtime) runtime = tvdbMetadata.runtime;
+              if (tvdbMetadata.runtime && !runtime)
+                runtime = tvdbMetadata.runtime;
               tvdbId = tvdbMetadata.tvdbId;
             } else if (tvdbResult.status === 'rejected') {
               logger.warn(
@@ -265,6 +267,10 @@ export class MetadataService {
                 if (!isNaN(parsedReleaseDate.getTime())) {
                   releaseDate = parsedReleaseDate.toISOString().split('T')[0];
                 }
+              }
+              if (cinemetaData.runtime && !runtime) {
+                runtime = parseDuration(cinemetaData.runtime);
+                runtime = runtime ? Math.round(runtime / 60000) : undefined;
               }
             } else if (imdbResult.status === 'rejected') {
               logger.warn(

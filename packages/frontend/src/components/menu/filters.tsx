@@ -359,7 +359,7 @@ function Content() {
               </TabsTrigger>
               <TabsTrigger value="bitrate">
                 <FaTachometerAlt className="text-lg mr-3" />
-                Bitrate (Estimate)
+                Bitrate
               </TabsTrigger>
               <TabsTrigger value="limit">
                 <GoContainer className="text-lg mr-3" />
@@ -2363,7 +2363,8 @@ function Content() {
           </TabsContent>
           <TabsContent value="bitrate" className="space-y-4">
             <>
-              <HeadingWithPageControls heading="Bitrate (Estimate)" />
+              <HeadingWithPageControls heading="Bitrate" />
+
               <div className="mb-4">
                 <p className="text-sm text-[--muted]">
                   Set minimum and maximum bitrate limits for movies, series, and
@@ -2374,7 +2375,33 @@ function Content() {
                   precedence over regular series limits.
                 </p>
               </div>
+
+              <Alert
+                intent="warning"
+                className="mb-4"
+                title="Bitrate Accuracy"
+                description="Bitrate values are estimates calculated from file size and duration. These represent average bitrates and may not reflect peak bitrates or exact encoding quality."
+              />
+
               <div className="space-y-4">
+                <div className="rounded-[--radius-md] border bg-[--background] p-4">
+                  <Switch
+                    label="Use Runtime from Metadata Providers"
+                    side="right"
+                    help="When enabled, uses runtime data from metadata providers (like TMDB) for bitrate calculations as fallback. Note: This makes estimates less accurate as actual file durations often differ from metadata, and most files lack duration info, making sorting by bitrate similar to sorting by size."
+                    value={userData.bitrate?.useMetadataRuntime ?? true}
+                    onValueChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          useMetadataRuntime: value,
+                        },
+                      }));
+                    }}
+                  />
+                </div>
+
                 <SettingsCard
                   title="Global"
                   description="Apply bitrate filters for movies, series, and anime series"
@@ -2388,9 +2415,7 @@ function Content() {
                           MIN_BITRATE,
                           MAX_BITRATE,
                         ]
-                      ).map((v) =>
-                        Math.min(v, MAX_BITRATE)
-                      ) as [number, number]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
                     }
                     seriesValue={
                       (
@@ -2398,9 +2423,7 @@ function Content() {
                           MIN_BITRATE,
                           MAX_BITRATE,
                         ]
-                      ).map((v) =>
-                        Math.min(v, MAX_BITRATE)
-                      ) as [number, number]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
                     }
                     animeValue={
                       (
@@ -2408,9 +2431,7 @@ function Content() {
                           MIN_BITRATE,
                           MAX_BITRATE,
                         ]
-                      ).map((v) =>
-                        Math.min(v, MAX_BITRATE)
-                      ) as [number, number]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
                     }
                     onMoviesChange={(value) => {
                       setUserData((prev: any) => ({
@@ -2457,25 +2478,28 @@ function Content() {
                             (
                               userData.bitrate?.resolution?.[resolution]
                                 ?.movies || [MIN_BITRATE, MAX_BITRATE]
-                            ).map((v) =>
-                              Math.min(v, MAX_BITRATE)
-                            ) as [number, number]
+                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
+                              number,
+                              number,
+                            ]
                           }
                           seriesValue={
                             (
                               userData.bitrate?.resolution?.[resolution]
                                 ?.series || [MIN_BITRATE, MAX_BITRATE]
-                            ).map((v) =>
-                              Math.min(v, MAX_BITRATE)
-                            ) as [number, number]
+                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
+                              number,
+                              number,
+                            ]
                           }
                           animeValue={
                             (
                               userData.bitrate?.resolution?.[resolution]
                                 ?.anime || [MIN_BITRATE, MAX_BITRATE]
-                            ).map((v) =>
-                              Math.min(v, MAX_BITRATE)
-                            ) as [number, number]
+                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
+                              number,
+                              number,
+                            ]
                           }
                           onMoviesChange={(value) => {
                             setUserData((prev: any) => ({
