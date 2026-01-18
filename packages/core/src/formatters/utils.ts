@@ -18,12 +18,17 @@ export function formatBytes(
   return value + ' ' + sizes[i];
 }
 
-export function formatBitrate(bitrate: number): string {
-  if (bitrate === 0) return '0 bps';
+export function formatBitrate(bitrate: number, round: boolean = false): string {
+  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
   const k = 1000;
   const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-  const i = Math.floor(Math.log(bitrate) / Math.log(k));
-  return `${(bitrate / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  const i = Math.min(
+    sizes.length - 1,
+    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
+  );
+  let value = bitrate / Math.pow(k, i);
+  value = round ? Math.round(value) : parseFloat(value.toFixed(1));
+  return `${value} ${sizes[i]}`;
 }
 
 export function formatDuration(durationInMs: number): string {

@@ -922,6 +922,7 @@ class ModifierConstants {
     bytes2: (value: number) => formatBytes(value, 1024),
     rbytes2: (value: number) => formatBytes(value, 1024, true),
     bitrate: (value: number) => formatBitrate(value),
+    rbitrate: (value: number) => formatBitrate(value, true),
     string: (value: number) => value.toString(),
     time: (value: number) => formatDuration(value),
   };
