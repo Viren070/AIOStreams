@@ -329,6 +329,56 @@ const urlMappings = makeValidator<Record<string, string>>((x) => {
   return mappings;
 });
 
+const cacheTtls = (defaultWildcard: number = 300) =>
+  makeValidator<Record<string, number>>((x) => {
+    if (typeof x !== 'string') {
+      throw new EnvError('Cache TTLs must be a string');
+    }
+
+    // If just a number, apply to wildcard
+    if (/^\-?\d+$/.test(x.trim())) {
+      const value = Number(x.trim());
+      if (value !== -1 && (value <= 0 || !Number.isInteger(value))) {
+        throw new EnvError(
+          'Cache TTL value must be -1 (disabled) or a positive integer'
+        );
+      }
+      return { '*': value };
+    }
+
+    const ttlMap: Record<string, number> = {};
+    let hasWildcard = false;
+
+    x.split(',').forEach((entry) => {
+      const [key, valueStr] = entry.split(':').map((s) => s.trim());
+      if (!key || !valueStr) {
+        throw new EnvError(
+          'Cache TTLs must be a comma separated list of key:value pairs'
+        );
+      }
+      const value = Number(valueStr);
+      if (
+        Number.isNaN(value) ||
+        (value !== -1 && (value <= 0 || !Number.isInteger(value)))
+      ) {
+        throw new EnvError(
+          'Cache TTL value must be -1 (disabled) or a positive integer'
+        );
+      }
+      if (key === '*') {
+        hasWildcard = true;
+      }
+      ttlMap[key] = value;
+    });
+
+    // If no wildcard is specified, add the default
+    if (!hasWildcard) {
+      ttlMap['*'] = defaultWildcard;
+    }
+
+    return ttlMap;
+  });
+
 const boolOrChoice = <T extends string>(choices: T[]) =>
   makeValidator<boolean | T>((input: string) => {
     input = input.trim();
@@ -619,47 +669,47 @@ export const Env = cleanEnv(process.env, {
     default: 900,
     desc: 'Cache TTL for proxy IPs',
   }),
-  MANIFEST_CACHE_TTL: num({
-    default: 21600,
+  MANIFEST_CACHE_TTL: cacheTtls(21600)({
+    default: { '*': 21600 },
     desc: 'Cache TTL for manifest files',
   }),
   MANIFEST_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of manifest items to cache',
   }),
-  SUBTITLE_CACHE_TTL: num({
-    default: 300,
+  SUBTITLE_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for subtitle files',
   }),
   SUBTITLE_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of subtitle items to cache',
   }),
-  STREAM_CACHE_TTL: num({
-    default: -1,
+  STREAM_CACHE_TTL: cacheTtls(-1)({
+    default: { '*': -1 },
     desc: 'Cache TTL for stream files. If -1, no caching will be done.',
   }),
   STREAM_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of stream items to cache',
   }),
-  CATALOG_CACHE_TTL: num({
-    default: 300,
+  CATALOG_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for catalog files',
   }),
   CATALOG_CACHE_MAX_SIZE: num({
     default: 1000,
     desc: 'Max number of catalog items to cache',
   }),
-  META_CACHE_TTL: num({
-    default: 300,
+  META_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
   }),
   META_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of metadata items to cache',
   }),
-  ADDON_CATALOG_CACHE_TTL: num({
-    default: 300,
+  ADDON_CATALOG_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for addon catalog files',
   }),
   ADDON_CATALOG_CACHE_MAX_SIZE: num({

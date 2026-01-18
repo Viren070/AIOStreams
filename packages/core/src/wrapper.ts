@@ -71,7 +71,38 @@ const streamsCache = Cache.getInstance<string, ParsedStream[]>(
   Env.STREAM_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
 );
 
-const RESOURCE_TTL = 5 * 60;
+/**
+ * Resolves TTL value from a cacheTtls map based on priority:
+ * 1. presetId match
+ * 2. hostname match (from manifestUrl)
+ * 3. wildcard match (*)
+ */
+function resolveTtl(
+  ttlMap: Record<string, number>,
+  presetId?: string,
+  manifestUrl?: string
+): number {
+  let resolvedTtl = undefined;
+  let hostname: string | undefined;
+  try {
+    if (manifestUrl) {
+      hostname = new URL(manifestUrl).hostname;
+    }
+  } catch {}
+
+  if (presetId && ttlMap[presetId] !== undefined) {
+    resolvedTtl = ttlMap[presetId];
+  }
+
+  if (resolvedTtl === undefined && hostname && ttlMap[hostname] !== undefined) {
+    resolvedTtl = ttlMap[hostname];
+  }
+
+  if (resolvedTtl === undefined && ttlMap['*'] !== undefined) {
+    resolvedTtl = ttlMap['*'];
+  }
+  return resolvedTtl !== undefined ? resolvedTtl : -1;
+}
 
 type ResourceParams = {
   type: string;
@@ -191,7 +222,11 @@ export class Wrapper {
       resourceName: 'manifest',
       cacher: manifestCache,
       cacheKey,
-      cacheTtl: Env.MANIFEST_CACHE_TTL,
+      cacheTtl: resolveTtl(
+        Env.MANIFEST_CACHE_TTL,
+        this.addon.preset.type,
+        this.manifestUrl
+      ),
       bypassCache: options?.bypassCache,
     });
   }
@@ -208,13 +243,18 @@ export class Wrapper {
         id,
         options: this.addon.preset.options,
       }) || this.buildResourceUrl('stream', type, id);
+    const streamTtl = resolveTtl(
+      Env.STREAM_CACHE_TTL,
+      this.addon.preset.type,
+      this.manifestUrl
+    );
     const streams = await this.makeResourceRequest(
       'stream',
       { type, id },
       this.addon.timeout,
       validator,
-      Env.STREAM_CACHE_TTL != -1 ? streamsCache : undefined,
-      Env.STREAM_CACHE_TTL,
+      streamTtl != -1 ? streamsCache : undefined,
+      streamTtl,
       this.preset.getCacheKey({
         resource: 'stream',
         type,
@@ -264,13 +304,18 @@ export class Wrapper {
       return this.validateArray(data.metas, MetaPreviewSchema, 'catalog items');
     };
 
+    const catalogTtl = resolveTtl(
+      Env.CATALOG_CACHE_TTL,
+      this.addon.preset.type,
+      this.manifestUrl
+    );
     return await this.makeResourceRequest(
       'catalog',
       { type, id, extras },
       Env.CATALOG_TIMEOUT,
       validator,
-      Env.CATALOG_CACHE_TTL != -1 ? catalogCache : undefined,
-      Env.CATALOG_CACHE_TTL,
+      catalogTtl != -1 ? catalogCache : undefined,
+      catalogTtl,
       this.preset.getCacheKey({
         resource: 'catalog',
         type,
@@ -292,13 +337,18 @@ export class Wrapper {
       }
       return parsed.data;
     };
+    const metaTtl = resolveTtl(
+      Env.META_CACHE_TTL,
+      this.addon.preset.type,
+      this.manifestUrl
+    );
     const meta: Meta = await this.makeResourceRequest(
       'meta',
       { type, id },
       Env.META_TIMEOUT,
       validator,
-      Env.META_CACHE_TTL != -1 ? metaCache : undefined,
-      Env.META_CACHE_TTL,
+      metaTtl != -1 ? metaCache : undefined,
+      metaTtl,
       this.preset.getCacheKey({
         resource: 'meta',
         type,
@@ -331,13 +381,18 @@ export class Wrapper {
       return this.validateArray(data.subtitles, SubtitleSchema, 'subtitles');
     };
 
+    const subtitleTtl = resolveTtl(
+      Env.SUBTITLE_CACHE_TTL,
+      this.addon.preset.type,
+      this.manifestUrl
+    );
     return await this.makeResourceRequest(
       'subtitles',
       { type, id, extras },
       this.addon.timeout,
       validator,
-      Env.SUBTITLE_CACHE_TTL != -1 ? subtitlesCache : undefined,
-      Env.SUBTITLE_CACHE_TTL,
+      subtitleTtl != -1 ? subtitlesCache : undefined,
+      subtitleTtl,
       this.preset.getCacheKey({
         resource: 'subtitles',
         type,
@@ -356,13 +411,18 @@ export class Wrapper {
       );
     };
 
+    const addonCatalogTtl = resolveTtl(
+      Env.ADDON_CATALOG_CACHE_TTL,
+      this.addon.preset.type,
+      this.manifestUrl
+    );
     return await this.makeResourceRequest(
       'addon_catalog',
       { type, id },
       Env.CATALOG_TIMEOUT,
       validator,
-      Env.ADDON_CATALOG_CACHE_TTL != -1 ? addonCatalogCache : undefined,
-      Env.ADDON_CATALOG_CACHE_TTL,
+      addonCatalogTtl != -1 ? addonCatalogCache : undefined,
+      addonCatalogTtl,
       this.preset.getCacheKey({
         resource: 'addon_catalog',
         type,
@@ -472,7 +532,7 @@ export class Wrapper {
     timeout: number,
     validator: (data: unknown) => T,
     cacher: Cache<string, T> | undefined,
-    cacheTtl: number = RESOURCE_TTL,
+    cacheTtl: number,
     cacheKey?: string
   ) {
     const { type, id, extras } = params;

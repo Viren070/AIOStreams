@@ -44,6 +44,48 @@ const logKeyValue = (
   logger.info(`${indent}${formattedKey} ${value}`);
 };
 
+/**
+ * Helper function to log cache TTL configuration for cacheTtls format
+ */
+const logCacheTtl = (cacheName: string, ttlMap: Record<string, number>) => {
+  const indent = '        ';
+  const wildcardTtl = ttlMap['*'];
+  const overrides = Object.entries(ttlMap).filter(([key]) => key !== '*');
+
+  // Determine overall cache status
+  const enabledEntries = Object.values(ttlMap).filter((ttl) => ttl !== -1);
+  const disabledEntries = Object.values(ttlMap).filter((ttl) => ttl === -1);
+
+  let status: string;
+  if (enabledEntries.length === 0) {
+    status = '❌ FULLY DISABLED';
+  } else if (disabledEntries.length === 0) {
+    status = '✅ FULLY ENABLED';
+  } else {
+    status = '🔀 MIXED';
+  }
+
+  logKeyValue(`${cacheName}:`, status);
+
+  if (status.includes('FULLY')) {
+    return;
+  }
+
+  // Always show the wildcard default
+  const wildcardStatus =
+    wildcardTtl === -1 ? '❌ DISABLED' : formatDurationAsText(wildcardTtl);
+  logKeyValue('Default (*):', wildcardStatus, indent);
+
+  // Show specific overrides
+  if (overrides.length > 0) {
+    overrides.forEach(([key, value]) => {
+      const overrideStatus =
+        value === -1 ? '❌ DISABLED' : formatDurationAsText(value);
+      logKeyValue(`${key}:`, overrideStatus, indent);
+    });
+  }
+};
+
 const logStartupInfo = () => {
   const currentTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
@@ -143,7 +185,15 @@ const logStartupInfo = () => {
   logSection('CACHE CONFIGURATION', '⚡', () => {
     logKeyValue('Max Cache Size:', Env.DEFAULT_MAX_CACHE_SIZE);
 
-    // Proxy IP Cache
+    // Main cache types that use cacheTtls format
+    logCacheTtl('Manifest Cache', Env.MANIFEST_CACHE_TTL);
+    logCacheTtl('Stream Cache', Env.STREAM_CACHE_TTL);
+    logCacheTtl('Catalog Cache', Env.CATALOG_CACHE_TTL);
+    logCacheTtl('Meta Cache', Env.META_CACHE_TTL);
+    logCacheTtl('Subtitle Cache', Env.SUBTITLE_CACHE_TTL);
+    logCacheTtl('Addon Catalog Cache', Env.ADDON_CATALOG_CACHE_TTL);
+
+    // Legacy cache types that still use simple numbers
     if (Env.PROXY_IP_CACHE_TTL === -1) {
       logKeyValue('Proxy IP Cache:', '❌ DISABLED');
     } else {
@@ -153,58 +203,6 @@ const logStartupInfo = () => {
       );
     }
 
-    // Manifest Cache
-    if (Env.MANIFEST_CACHE_TTL === -1) {
-      logKeyValue('Manifest Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue(
-        'Manifest TTL:',
-        formatDurationAsText(Env.MANIFEST_CACHE_TTL)
-      );
-    }
-
-    // Stream Cache
-    if (Env.STREAM_CACHE_TTL === -1) {
-      logKeyValue('Stream Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue('Stream TTL:', formatDurationAsText(Env.STREAM_CACHE_TTL));
-    }
-
-    // Subtitle Cache
-    if (Env.SUBTITLE_CACHE_TTL === -1) {
-      logKeyValue('Subtitle Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue(
-        'Subtitle TTL:',
-        formatDurationAsText(Env.SUBTITLE_CACHE_TTL)
-      );
-    }
-
-    // Catalog Cache
-    if (Env.CATALOG_CACHE_TTL === -1) {
-      logKeyValue('Catalog Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue('Catalog TTL:', formatDurationAsText(Env.CATALOG_CACHE_TTL));
-    }
-
-    // Meta Cache
-    if (Env.META_CACHE_TTL === -1) {
-      logKeyValue('Meta Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue('Meta TTL:', formatDurationAsText(Env.META_CACHE_TTL));
-    }
-
-    // Addon Catalog Cache
-    if (Env.ADDON_CATALOG_CACHE_TTL === -1) {
-      logKeyValue('Addon Catalog Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue(
-        'Addon Catalog TTL:',
-        formatDurationAsText(Env.ADDON_CATALOG_CACHE_TTL)
-      );
-    }
-
-    // RPDB API Cache
     if (Env.RPDB_API_KEY_VALIDITY_CACHE_TTL === -1) {
       logKeyValue('RPDB API Cache:', '❌ DISABLED');
     } else {
