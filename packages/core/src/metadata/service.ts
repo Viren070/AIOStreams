@@ -269,7 +269,13 @@ export class MetadataService {
                 }
               }
               if (cinemetaData.runtime && !runtime) {
-                runtime = parseDuration(cinemetaData.runtime);
+                runtime = parseDuration(
+                  cinemetaData.runtime
+                    .replace('min', 'm')
+                    .replace('hr', 'h')
+                    .replace(' ', '')
+                    .trim()
+                );
                 runtime = runtime ? Math.round(runtime / 60000) : undefined;
               }
             } else if (imdbResult.status === 'rejected') {
