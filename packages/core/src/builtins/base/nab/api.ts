@@ -244,6 +244,16 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     this.params = Object.fromEntries(
       Object.entries(params).map(([key, value]) => [key, String(value)])
     );
+    const apiPathUrl = new URL(this.baseUrl + this.apiPath);
+    // append any search params from the apiPath to this.params
+    if (apiPathUrl.search) {
+      apiPathUrl.searchParams.forEach((value, key) => {
+        if (!(key in this.params)) {
+          this.params[key] = value;
+        }
+      });
+      this.apiPath = apiPathUrl.pathname;
+    }
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
