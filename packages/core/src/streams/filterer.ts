@@ -81,7 +81,6 @@ export interface FilterStatistics {
     language: Reason;
     streamType: Reason;
     size: Reason;
-    bitrate: Reason;
     seeder: Reason;
     age: Reason;
     regex: Reason;
@@ -145,7 +144,6 @@ class StreamFilterer {
         language: { total: 0, details: {} },
         streamType: { total: 0, details: {} },
         size: { total: 0, details: {} },
-        bitrate: { total: 0, details: {} },
         seeder: { total: 0, details: {} },
         age: { total: 0, details: {} },
         regex: { total: 0, details: {} },
