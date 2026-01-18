@@ -3,7 +3,7 @@ import * as constants from '../utils/constants.js';
 import { createLogger } from '../utils/logger.js';
 import {
   formatBytes,
-  formatBitrateToken,
+  formatBitrate,
   formatDuration,
   formatHours,
   languageToCode,
@@ -921,7 +921,7 @@ class ModifierConstants {
     rbytes10: (value: number) => formatBytes(value, 1000, true),
     bytes2: (value: number) => formatBytes(value, 1024),
     rbytes2: (value: number) => formatBytes(value, 1024, true),
-    bitrate: (value: number) => formatBitrateToken(value),
+    bitrate: (value: number) => formatBitrate(value),
     string: (value: number) => value.toString(),
     time: (value: number) => formatDuration(value),
   };

@@ -145,11 +145,6 @@ const AddonSchema = z.object({
   forceToTop: z.boolean().optional(),
   headers: z.record(z.string().min(1), z.string().min(1)).optional(),
   ip: z.union([z.ipv4(), z.ipv6()]).optional(),
-  metadata: z
-    .object({
-      runtime: z.number().optional(),
-    })
-    .optional(),
 });
 
 // preset objects are transformed into addons by a preset transformer.

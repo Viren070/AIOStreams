@@ -401,7 +401,6 @@ export abstract class StreamExpressionEngine {
         throw new Error('Min and max bitrate must be a number or string');
       }
 
-      // select streams with bitrate that lie within the range.
       const minBps =
         typeof minBitrate === 'string' ? parseBitrate(minBitrate) : minBitrate;
       const maxBps =

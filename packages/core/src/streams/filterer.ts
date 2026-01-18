@@ -22,7 +22,7 @@ import {
 } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
-import { formatBytes } from '../formatters/utils.js';
+import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
 
 const logger = createLogger('filterer');
@@ -279,7 +279,9 @@ class StreamFilterer {
     let releaseDates: ReleaseDate[] | undefined;
     let episodeAirDate: string | undefined;
     if (
-      (this.userData.titleMatching?.enabled ||
+      (this.userData.bitrate?.global ||
+        this.userData.bitrate?.resolution ||
+        this.userData.titleMatching?.enabled ||
         (this.userData.digitalReleaseFilter?.enabled &&
           ['movie', 'series', 'anime'].includes(type)) ||
         this.userData.yearMatching?.enabled ||
@@ -1060,8 +1062,6 @@ class StreamFilterer {
     const normaliseBitrateRange = (
       bitrateRange: [number, number] | undefined
     ) => {
-      // Range assumed to be in bps.
-      // Default to 0 and max. Similar to size, when set to max, it's unlimited.
       return normaliseRange(bitrateRange, {
         min: 0,
         max: constants.MAX_BITRATE,
@@ -1540,55 +1540,6 @@ class StreamFilterer {
         return false;
       }
 
-
-
-      // Bitrate Filtering
-      const bitrateRange =
-        (this.userData.bitrate?.resolution as any)?.[
-          file?.resolution || 'Unknown'
-        ] || this.userData.bitrate?.global;
-
-      if (bitrateRange) {
-        // Handle tuple format from schema: movies/series/anime keys which contain the tuple
-        let range: [number, number] | undefined;
-        if (type === 'movie') range = bitrateRange.movies;
-        if (type === 'series')
-          range = isAnime ? bitrateRange.anime : bitrateRange.series;
-        if (type === 'anime') range = bitrateRange.anime;
-
-        const normalisedBitrateRange = normaliseBitrateRange(range);
-
-        if (normalisedBitrateRange) {
-          const streamBitrate = Number.isFinite(stream.bitrate)
-            ? stream.bitrate
-            : undefined;
-
-          if (streamBitrate !== undefined) {
-            if (
-              normalisedBitrateRange[0] !== undefined &&
-              streamBitrate < normalisedBitrateRange[0]
-            ) {
-              this.incrementRemovalReason(
-                'bitrate',
-                `<${formatBytes(normalisedBitrateRange[0] / 8, 1024, true)}/s`
-              );
-              return false;
-            }
-            if (
-              normalisedBitrateRange[1] !== undefined &&
-              normalisedBitrateRange[1] !== constants.MAX_BITRATE &&
-              streamBitrate > normalisedBitrateRange[1]
-            ) {
-              this.incrementRemovalReason(
-                'bitrate',
-                `>${formatBytes(normalisedBitrateRange[1] / 8, 1024, true)}/s`
-              );
-              return false;
-            }
-          }
-        }
-      }
-
       // uncached
 
       if (this.userData.excludeUncached && stream.service?.cached === false) {
@@ -1834,39 +1785,102 @@ class StreamFilterer {
         return false;
       }
 
-      const global = this.userData.size?.global;
-      const resolution = stream.parsedFile?.resolution
+      const globalSizeRange = this.userData.size?.global;
+      const resolutionSizeRange = stream.parsedFile?.resolution
         ? // @ts-ignore
           this.userData.size?.resolution?.[stream.parsedFile.resolution]
         : undefined;
 
-      let minMax: [number | undefined, number | undefined] | undefined;
+      let finalSizeRange: [number | undefined, number | undefined] | undefined;
       if (type === 'movie') {
-        minMax =
-          normaliseSizeRange(resolution?.movies) ||
-          normaliseSizeRange(global?.movies);
+        finalSizeRange =
+          normaliseSizeRange(resolutionSizeRange?.movies) ||
+          normaliseSizeRange(globalSizeRange?.movies);
       } else {
-        minMax =
+        finalSizeRange =
           (isAnime
-            ? normaliseSizeRange(resolution?.anime) ||
-              normaliseSizeRange(global?.anime)
+            ? normaliseSizeRange(resolutionSizeRange?.anime) ||
+              normaliseSizeRange(globalSizeRange?.anime)
             : undefined) ||
-          normaliseSizeRange(resolution?.series) ||
-          normaliseSizeRange(global?.series);
+          normaliseSizeRange(resolutionSizeRange?.series) ||
+          normaliseSizeRange(globalSizeRange?.series);
       }
 
-      if (minMax) {
-        if (stream.size && minMax[0] && stream.size < minMax[0]) {
+      if (finalSizeRange) {
+        if (
+          stream.size &&
+          finalSizeRange[0] &&
+          stream.size < finalSizeRange[0]
+        ) {
           this.incrementRemovalReason(
             'size',
-            `< ${formatBytes(minMax[0], 1000)}`
+            `< ${formatBytes(finalSizeRange[0], 1000)}`
           );
           return false;
         }
-        if (stream.size && minMax[1] && stream.size > minMax[1]) {
+        if (
+          stream.size &&
+          finalSizeRange[1] &&
+          stream.size > finalSizeRange[1]
+        ) {
           this.incrementRemovalReason(
             'size',
-            `> ${formatBytes(minMax[1], 1000)}`
+            `> ${formatBytes(finalSizeRange[1], 1000)}`
+          );
+          return false;
+        }
+      }
+
+      const globalBitrateRange = this.userData.bitrate?.global;
+      const resolutionBitrateRange = stream.parsedFile?.resolution
+        ? // @ts-ignore
+          this.userData.bitrate?.resolution?.[stream.parsedFile.resolution]
+        : undefined;
+
+      let finalBitrateRange:
+        | [number | undefined, number | undefined]
+        | undefined;
+      if (type === 'movie') {
+        finalBitrateRange =
+          normaliseBitrateRange(resolutionBitrateRange?.movies) ||
+          normaliseBitrateRange(globalBitrateRange?.movies);
+      } else {
+        finalBitrateRange =
+          (isAnime
+            ? normaliseBitrateRange(resolutionBitrateRange?.anime) ||
+              normaliseBitrateRange(globalBitrateRange?.anime)
+            : undefined) ||
+          normaliseBitrateRange(resolutionBitrateRange?.series) ||
+          normaliseBitrateRange(globalBitrateRange?.series);
+      }
+
+      let streamBitrate: number | undefined = undefined;
+      if (stream.bitrate !== undefined && Number.isFinite(stream.bitrate)) {
+        streamBitrate = stream.bitrate;
+      } else if (requestedMetadata?.runtime && stream.size) {
+        const sizeInBits = stream.size * 8;
+        streamBitrate = sizeInBits / (requestedMetadata.runtime * 60);
+        stream.bitrate = streamBitrate;
+      }
+
+      if (finalBitrateRange && streamBitrate !== undefined) {
+        if (
+          finalBitrateRange[0] !== undefined &&
+          streamBitrate < finalBitrateRange[0]
+        ) {
+          this.incrementRemovalReason(
+            'bitrate',
+            `<${formatBitrate(finalBitrateRange[0])}`
+          );
+          return false;
+        }
+        if (
+          finalBitrateRange[1] !== undefined &&
+          streamBitrate > finalBitrateRange[1]
+        ) {
+          this.incrementRemovalReason(
+            'bitrate',
+            `>${formatBitrate(finalBitrateRange[1])}`
           );
           return false;
         }

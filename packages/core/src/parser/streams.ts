@@ -431,18 +431,12 @@ class StreamParser {
   }
 
   protected getBitrate(
-    stream: Stream,
+    _: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
-    // try to get from regex first
-    // then calculate from size and duration
-    if (
-      currentParsedStream.size &&
-      (currentParsedStream.duration || this.addon.metadata?.runtime)
-    ) {
+    if (currentParsedStream.size && currentParsedStream.duration) {
       const sizeBits = currentParsedStream.size * 8;
-      const durationSeconds =
-        currentParsedStream.duration || (this.addon.metadata?.runtime ?? 0) * 60;
+      const durationSeconds = currentParsedStream.duration / 1000;
       if (durationSeconds > 0) {
         return Math.round(sizeBits / durationSeconds);
       }

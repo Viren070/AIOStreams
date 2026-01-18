@@ -16,15 +16,14 @@ export function formatBytes(
     value = Math.round(value);
   }
   return value + ' ' + sizes[i];
-
 }
 
-export function formatBitrateToken(bits: number): string {
-  if (bits === 0) return '0 bps';
+export function formatBitrate(bitrate: number): string {
+  if (bitrate === 0) return '0 bps';
   const k = 1000;
   const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-  const i = Math.floor(Math.log(bits) / Math.log(k));
-  return `${(bits / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  const i = Math.floor(Math.log(bitrate) / Math.log(k));
+  return `${(bitrate / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
 export function formatDuration(durationInMs: number): string {
