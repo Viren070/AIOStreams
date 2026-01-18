@@ -1077,7 +1077,7 @@ class StreamFilterer {
       bitrateRange: [number, number] | undefined
     ) => {
       return normaliseRange(bitrateRange, {
-        min: 0,
+        min: constants.MIN_BITRATE,
         max: constants.MAX_BITRATE,
       });
     };
@@ -1868,7 +1868,11 @@ class StreamFilterer {
           normaliseBitrateRange(globalBitrateRange?.series);
       }
 
-      if (finalBitrateRange && stream.bitrate !== undefined) {
+      if (
+        finalBitrateRange &&
+        stream.bitrate !== undefined &&
+        Number.isFinite(stream.bitrate)
+      ) {
         if (
           finalBitrateRange[0] !== undefined &&
           stream.bitrate < finalBitrateRange[0]
