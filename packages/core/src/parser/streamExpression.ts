@@ -393,10 +393,12 @@ export abstract class StreamExpressionEngine {
       if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
         throw new Error('Your streams input must be an array of streams');
       } else if (
-        typeof minBitrate !== 'number' &&
-        typeof maxBitrate !== 'number' &&
-        typeof minBitrate !== 'string' &&
-        typeof maxBitrate !== 'string'
+        (minBitrate !== undefined &&
+          typeof minBitrate !== 'number' &&
+          typeof minBitrate !== 'string') ||
+        (maxBitrate !== undefined &&
+          typeof maxBitrate !== 'number' &&
+          typeof maxBitrate !== 'string')
       ) {
         throw new Error('Min and max bitrate must be a number or string');
       }
