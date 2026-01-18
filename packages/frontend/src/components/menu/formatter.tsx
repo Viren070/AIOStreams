@@ -259,6 +259,10 @@ function Content() {
         age: parseAgeToHours(age),
         duration,
         size: fileSize,
+        bitrate:
+          fileSize && duration
+            ? Math.floor((fileSize * 8) / (duration / 1000))
+            : undefined,
         proxied,
         message,
       };

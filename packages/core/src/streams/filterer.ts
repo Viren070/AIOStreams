@@ -23,7 +23,7 @@ import {
 } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
-import { formatBytes } from '../formatters/utils.js';
+import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
 
 const logger = createLogger('filterer');
@@ -69,6 +69,7 @@ export interface FilterStatistics {
     excludedFilterCondition: Reason;
     requiredFilterCondition: Reason;
     size: Reason;
+    bitrate: Reason;
   };
   included: {
     passthrough: Reason;
@@ -131,6 +132,7 @@ class StreamFilterer {
         excludedFilterCondition: { total: 0, details: {} },
         requiredFilterCondition: { total: 0, details: {} },
         size: { total: 0, details: {} },
+        bitrate: { total: 0, details: {} },
       },
       included: {
         passthrough: { total: 0, details: {} },
@@ -276,7 +278,8 @@ class StreamFilterer {
     let releaseDates: ReleaseDate[] | undefined;
     let episodeAirDate: string | undefined;
     if (
-      (this.userData.titleMatching?.enabled ||
+      (this.userData.bitrate?.useMetadataRuntime ||
+        this.userData.titleMatching?.enabled ||
         (this.userData.digitalReleaseFilter?.enabled &&
           ['movie', 'series', 'anime'].includes(type)) ||
         this.userData.yearMatching?.enabled ||
@@ -388,6 +391,21 @@ class StreamFilterer {
           `Error fetching titles for ${id}, title/year matching will not be performed: ${error}`
         );
       }
+    }
+
+    // fill in bitrate from metadata runtime and size if missing and enabled
+    if (this.userData.bitrate?.useMetadataRuntime !== false) {
+      streams.forEach((stream) => {
+        if (
+          (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
+          requestedMetadata?.runtime &&
+          stream.size
+        ) {
+          stream.bitrate = Math.round(
+            (stream.size * 8) / (requestedMetadata.runtime * 60)
+          );
+        }
+      });
     }
 
     const applyDigitalReleaseFilter = () => {
@@ -1039,6 +1057,15 @@ class StreamFilterer {
       return normaliseRange(sizeRange, {
         min: constants.MIN_SIZE,
         max: constants.MAX_SIZE,
+      });
+    };
+
+    const normaliseBitrateRange = (
+      bitrateRange: [number, number] | undefined
+    ) => {
+      return normaliseRange(bitrateRange, {
+        min: constants.MIN_BITRATE,
+        max: constants.MAX_BITRATE,
       });
     };
 
@@ -1759,39 +1786,97 @@ class StreamFilterer {
         return false;
       }
 
-      const global = this.userData.size?.global;
-      const resolution = stream.parsedFile?.resolution
+      const globalSizeRange = this.userData.size?.global;
+      const resolutionSizeRange = stream.parsedFile?.resolution
         ? // @ts-ignore
           this.userData.size?.resolution?.[stream.parsedFile.resolution]
         : undefined;
 
-      let minMax: [number | undefined, number | undefined] | undefined;
+      let finalSizeRange: [number | undefined, number | undefined] | undefined;
       if (type === 'movie') {
-        minMax =
-          normaliseSizeRange(resolution?.movies) ||
-          normaliseSizeRange(global?.movies);
+        finalSizeRange =
+          normaliseSizeRange(resolutionSizeRange?.movies) ||
+          normaliseSizeRange(globalSizeRange?.movies);
       } else {
-        minMax =
+        finalSizeRange =
           (isAnime
-            ? normaliseSizeRange(resolution?.anime) ||
-              normaliseSizeRange(global?.anime)
+            ? normaliseSizeRange(resolutionSizeRange?.anime) ||
+              normaliseSizeRange(globalSizeRange?.anime)
             : undefined) ||
-          normaliseSizeRange(resolution?.series) ||
-          normaliseSizeRange(global?.series);
+          normaliseSizeRange(resolutionSizeRange?.series) ||
+          normaliseSizeRange(globalSizeRange?.series);
       }
 
-      if (minMax) {
-        if (stream.size && minMax[0] && stream.size < minMax[0]) {
+      if (finalSizeRange) {
+        if (
+          stream.size &&
+          finalSizeRange[0] &&
+          stream.size < finalSizeRange[0]
+        ) {
           this.incrementRemovalReason(
             'size',
-            `< ${formatBytes(minMax[0], 1000)}`
+            `< ${formatBytes(finalSizeRange[0], 1000)}`
           );
           return false;
         }
-        if (stream.size && minMax[1] && stream.size > minMax[1]) {
+        if (
+          stream.size &&
+          finalSizeRange[1] &&
+          stream.size > finalSizeRange[1]
+        ) {
           this.incrementRemovalReason(
             'size',
-            `> ${formatBytes(minMax[1], 1000)}`
+            `> ${formatBytes(finalSizeRange[1], 1000)}`
+          );
+          return false;
+        }
+      }
+
+      const globalBitrateRange = this.userData.bitrate?.global;
+      const resolutionBitrateRange = stream.parsedFile?.resolution
+        ? // @ts-ignore
+          this.userData.bitrate?.resolution?.[stream.parsedFile.resolution]
+        : undefined;
+
+      let finalBitrateRange:
+        | [number | undefined, number | undefined]
+        | undefined;
+      if (type === 'movie') {
+        finalBitrateRange =
+          normaliseBitrateRange(resolutionBitrateRange?.movies) ||
+          normaliseBitrateRange(globalBitrateRange?.movies);
+      } else {
+        finalBitrateRange =
+          (isAnime
+            ? normaliseBitrateRange(resolutionBitrateRange?.anime) ||
+              normaliseBitrateRange(globalBitrateRange?.anime)
+            : undefined) ||
+          normaliseBitrateRange(resolutionBitrateRange?.series) ||
+          normaliseBitrateRange(globalBitrateRange?.series);
+      }
+
+      if (
+        finalBitrateRange &&
+        stream.bitrate !== undefined &&
+        Number.isFinite(stream.bitrate)
+      ) {
+        if (
+          finalBitrateRange[0] !== undefined &&
+          stream.bitrate < finalBitrateRange[0]
+        ) {
+          this.incrementRemovalReason(
+            'bitrate',
+            `< ${formatBitrate(finalBitrateRange[0])}`
+          );
+          return false;
+        }
+        if (
+          finalBitrateRange[1] !== undefined &&
+          stream.bitrate > finalBitrateRange[1]
+        ) {
+          this.incrementRemovalReason(
+            'bitrate',
+            `> ${formatBitrate(finalBitrateRange[1])}`
           );
           return false;
         }

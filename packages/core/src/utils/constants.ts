@@ -918,10 +918,14 @@ const SORT_CRITERIA = [
   'keyword',
   'streamExpressionMatched',
   'seadex',
+  'bitrate',
 ] as const;
 
 export const MIN_SIZE = 0;
 export const MAX_SIZE = 100 * 1000 * 1000 * 1000; // 100GB
+
+export const MIN_BITRATE = 0;
+export const MAX_BITRATE = 250 * 1000 * 1000; // 250 Mbps
 
 export const MIN_SEEDERS = 0;
 export const MAX_SEEDERS = 1000;
@@ -1113,6 +1117,13 @@ export const SORT_CRITERIA_DETAILS: Record<
     ascendingDescription: 'Streams that are not listed on SeaDex are preferred',
     descendingDescription:
       'Streams that are marked as the Best release on SeaDex are preferred, followed by the Alternative release',
+  },
+  bitrate: {
+    name: 'Bitrate (Estimate)',
+    defaultDirection: 'desc',
+    description: 'Sort by the bitrate of the stream',
+    ascendingDescription: 'Streams with lower bitrate are preferred',
+    descendingDescription: 'Streams with higher bitrate are preferred',
   },
 } as const;
 

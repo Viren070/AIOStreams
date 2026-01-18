@@ -429,7 +429,8 @@ export async function validateConfig(
   const needTmdb =
     config.titleMatching?.enabled ||
     config.yearMatching?.enabled ||
-    config.digitalReleaseFilter?.enabled;
+    config.digitalReleaseFilter?.enabled ||
+    config.bitrate?.useMetadataRuntime;
 
   if (needTmdb && !tmdbAuth) {
     throw new Error(

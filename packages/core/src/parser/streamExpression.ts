@@ -9,6 +9,7 @@ import bytes from 'bytes';
 import { formatZodError } from '../utils/config.js';
 import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
+import { parseBitrate } from './utils.js';
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
@@ -361,12 +362,16 @@ export abstract class StreamExpressionEngine {
       if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
         throw new Error('Your streams input must be an array of streams');
       } else if (
-        typeof minSize !== 'number' &&
-        typeof maxSize !== 'number' &&
-        typeof minSize !== 'string' &&
-        typeof maxSize !== 'string'
+        (minSize !== undefined &&
+          typeof minSize !== 'number' &&
+          typeof minSize !== 'string') ||
+        (maxSize !== undefined &&
+          typeof maxSize !== 'number' &&
+          typeof maxSize !== 'string')
       ) {
-        throw new Error('Min and max size must be a number');
+        throw new Error('Min and max size must be a number or string');
+      } else if (minSize === undefined && maxSize === undefined) {
+        throw new Error('You must provide at least one size boundary');
       }
       // use the bytes library to ensure we get a number
       const minSizeInBytes =
@@ -378,6 +383,49 @@ export abstract class StreamExpressionEngine {
           return false;
         }
         if (maxSize && maxSizeInBytes && (stream.size ?? 0) > maxSizeInBytes) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.bitrate = function (
+      streams: ParsedStream[],
+      minBitrate?: string | number,
+      maxBitrate?: string | number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minBitrate !== undefined &&
+          typeof minBitrate !== 'number' &&
+          typeof minBitrate !== 'string') ||
+        (maxBitrate !== undefined &&
+          typeof maxBitrate !== 'number' &&
+          typeof maxBitrate !== 'string')
+      ) {
+        throw new Error('Min and max bitrate must be a number or string');
+      } else if (minBitrate === undefined && maxBitrate === undefined) {
+        throw new Error('You must provide at least one bitrate boundary');
+      }
+
+      const minBps =
+        typeof minBitrate === 'string' ? parseBitrate(minBitrate) : minBitrate;
+      const maxBps =
+        typeof maxBitrate === 'string' ? parseBitrate(maxBitrate) : maxBitrate;
+
+      if (typeof minBitrate === 'string' && minBps === undefined) {
+        throw new Error(`Invalid min bitrate: ${minBitrate}`);
+      }
+      if (typeof maxBitrate === 'string' && maxBps === undefined) {
+        throw new Error(`Invalid max bitrate: ${maxBitrate}`);
+      }
+
+      return streams.filter((stream) => {
+        if (minBps !== undefined && (stream.bitrate ?? 0) < minBps) {
+          return false;
+        }
+        if (maxBps !== undefined && (stream.bitrate ?? 0) > maxBps) {
           return false;
         }
         return true;
