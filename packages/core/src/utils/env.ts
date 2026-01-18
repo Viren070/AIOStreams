@@ -611,6 +611,10 @@ export const Env = cleanEnv(process.env, {
     default: 100000,
     desc: 'Default max cache size for a cache instance',
   }),
+  SQL_CACHE_MAX_SIZE: num({
+    default: 100000,
+    desc: 'Max size for the SQL cache',
+  }),
   PROXY_IP_CACHE_TTL: num({
     default: 900,
     desc: 'Cache TTL for proxy IPs',
