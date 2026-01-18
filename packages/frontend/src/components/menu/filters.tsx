@@ -4070,12 +4070,17 @@ function SizeRangeSlider({
   );
 }
 
-function formatBitrate(bits: number): string {
-  if (bits === 0) return '0 bps';
+function formatBitrate(bitrate: number, round: boolean = false): string {
+  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
   const k = 1000;
   const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-  const i = Math.floor(Math.log(bits) / Math.log(k));
-  return `${(bits / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  const i = Math.min(
+    sizes.length - 1,
+    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
+  );
+  let value = bitrate / Math.pow(k, i);
+  value = round ? Math.round(value) : parseFloat(value.toFixed(1));
+  return `${value} ${sizes[i]}`;
 }
 
 interface BitrateRangeSliderProps {
