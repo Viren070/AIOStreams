@@ -1879,7 +1879,7 @@ class StreamFilterer {
         ) {
           this.incrementRemovalReason(
             'bitrate',
-            `<${formatBitrate(finalBitrateRange[0])}`
+            `< ${formatBitrate(finalBitrateRange[0])}`
           );
           return false;
         }
@@ -1889,7 +1889,7 @@ class StreamFilterer {
         ) {
           this.incrementRemovalReason(
             'bitrate',
-            `>${formatBitrate(finalBitrateRange[1])}`
+            `> ${formatBitrate(finalBitrateRange[1])}`
           );
           return false;
         }
