@@ -396,10 +396,17 @@ class StreamFilterer {
     // fill in bitrate from metadata runtime and size if missing and enabled
     if (this.userData.bitrate?.useMetadataRuntime !== false) {
       streams.forEach((stream) => {
+        const isFolderSize =
+          stream.parsedFile?.seasons?.length &&
+          stream.parsedFile.seasons.length > 0 &&
+          (!stream.parsedFile.episodes ||
+            stream.parsedFile.episodes.length === 0);
+
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
           requestedMetadata?.runtime &&
-          stream.size
+          stream.size &&
+          !isFolderSize
         ) {
           stream.bitrate = Math.round(
             (stream.size * 8) / (requestedMetadata.runtime * 60)
