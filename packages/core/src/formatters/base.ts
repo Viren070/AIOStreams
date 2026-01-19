@@ -598,7 +598,8 @@ export abstract class BaseFormatter {
         result = this.applySingleModifier(
           result,
           lastModMatched,
-          fullStringModifiers
+          fullStringModifiers,
+          parseValue
         );
         if (result === undefined) {
           let getErrorResult = () => {
@@ -640,8 +641,9 @@ export abstract class BaseFormatter {
     mod: string,
     fullStringModifiers: {
       mod_tzlocale: string | undefined;
-    }
-  ): string | boolean | undefined {
+    },
+    parseValue: ParseValue
+  ): string | boolean | any[] | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
 
@@ -754,14 +756,76 @@ export abstract class BaseFormatter {
       if (mod in ModifierConstants.arrayModifiers)
         return ModifierConstants.arrayModifiers[
           mod as keyof typeof ModifierConstants.arrayModifiers
-        ](variable)?.toString();
+        ](variable);
 
       // handle hardcoded modifiers here
       switch (true) {
+        case mod.startsWith('slice(') && mod.endsWith(')'): {
+          // Extract the start and end indices from slice(start, end)
+          const args = _mod
+            .substring(6, _mod.length -1)
+            .split(',')
+            .map((arg) => parseInt(arg.trim(), 10));
+
+          const start = args[0];
+          const end = args.length > 1 ? args[1] : undefined;
+          
+          if (!isNaN(start)) {
+            return variable.slice(start, end);
+          }
+          return variable;
+        }
+        case mod.startsWith('sort(') && mod.endsWith(')'): {
+          const direction = _mod
+            .substring(5, _mod.length - 1)
+            .trim()
+            .toLowerCase();
+
+          if (direction !== 'asc' && direction !== 'desc') {
+            return undefined;
+          }
+
+          const isDesc = direction === 'desc';
+
+          return [...variable].sort((a, b) => {
+            if (typeof a === 'number' && typeof b === 'number') {
+              return isDesc ? b - a : a - b;
+            }
+            const strA = String(a);
+            const strB = String(b);
+            return isDesc
+              ? strB.localeCompare(strA, undefined, { numeric: true })
+              : strA.localeCompare(strB, undefined, { numeric: true });
+          });
+        }
         case mod.startsWith('join(') && mod.endsWith(')'): {
           // Extract the separator from join('separator') or join("separator")
           const separator = _mod.substring(6, _mod.length - 2);
           return variable.join(separator);
+        }
+        case mod.startsWith('merge(') && mod.endsWith(')'): {
+          // Extract the variable path from merge('variablePath') or merge("variablePath")
+          // The variable path is expected to be wrapped in { } like {stream.audioChannels}
+          // But the user input in the modifier string is like ::merge('{stream.audioChannels}')
+          // So we need to extract the string inside the quotes
+          const content = _mod.substring(7, _mod.length - 2); // remove merge(' and ')
+          
+          // The content should be something like {stream.audioChannels}
+          // We need to strip the { and } to get stream.audioChannels
+          if (content.startsWith('{') && content.endsWith('}')) {
+             const variablePath = content.substring(1, content.length - 1);
+             const [variableType, propertyName] = variablePath.split('.');
+             
+             if (variableType && propertyName && parseValue[variableType as keyof ParseValue]) {
+                 const variableDict = parseValue[variableType as keyof ParseValue];
+                 const property = variableDict![propertyName as keyof typeof variableDict] as any;
+                 
+                 if (Array.isArray(property)) {
+                     return [...variable, ...property];
+                 }
+             }
+          }
+          return variable;
         }
       }
     }
@@ -906,7 +970,15 @@ class ModifierConstants {
         value,
         Math.floor(Math.random() * value.length)
       ),
-    sort: (value: string[]) => [...value].sort(),
+    sort: (value: any[]) =>
+      [...value].sort((a, b) => {
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b;
+        }
+        const strA = String(a);
+        const strB = String(b);
+        return strA.localeCompare(strB, undefined, { numeric: true });
+      }),
     reverse: (value: string[]) => [...value].reverse(),
   };
 
@@ -961,6 +1033,12 @@ class ModifierConstants {
     "join('.*?')": null,
     'join(".*?")': null,
     'truncate(\\d+)': null,
+    'slice(\\s*\\d+\\s*)': null,
+    'slice(\\s*\\d+\\s*,\\s*\\d+\\s*)': null,
+    'sort(asc)': null,
+    'sort(desc)': null,
+    "merge('.*?')": null,
+    'merge(".*?")': null,
     '$.*?': null,
     '^.*?': null,
     '~.*?': null,
