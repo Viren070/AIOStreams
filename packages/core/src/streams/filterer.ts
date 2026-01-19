@@ -1076,13 +1076,11 @@ class StreamFilterer {
       });
     };
 
-    const getStreamType = (
+    const getSeederStreamType = (
       stream: ParsedStream
     ): 'p2p' | 'cached' | 'uncached' | undefined => {
       switch (stream.type) {
         case 'debrid':
-          return stream.service?.cached ? 'cached' : 'uncached';
-        case 'usenet':
           return stream.service?.cached ? 'cached' : 'uncached';
         case 'p2p':
           return 'p2p';
@@ -1289,7 +1287,7 @@ class StreamFilterer {
         this.userData.requiredAgeRange
       );
 
-      const typeForSeederRange = getStreamType(stream);
+      const typeForSeederRange = getSeederStreamType(stream);
       const typeForAgeRange = getAgeStreamType(stream);
 
       if (
