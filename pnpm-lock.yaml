@@ -86,6 +86,9 @@ importers:
       undici:
         specifier: ^7.16.0
         version: 7.16.0
+      user-agents:
+        specifier: ^1.1.669
+        version: 1.1.669
       webdav:
         specifier: ^5.8.0
         version: 5.8.0
@@ -114,6 +117,9 @@ importers:
       '@types/pg':
         specifier: ^8.15.6
         version: 8.15.6
+      '@types/user-agents':
+        specifier: ^1.0.4
+        version: 1.0.4
       '@types/xml2js':
         specifier: ^0.4.14
         version: 0.4.14
@@ -1920,6 +1926,9 @@ packages:
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
 
+  '@types/user-agents@1.0.4':
+    resolution: {integrity: sha512-AjeFc4oX5WPPflgKfRWWJfkEk7Wu82fnj1rROPsiqFt6yElpdGFg8Srtm/4PU4rA9UiDUZlruGPgcwTMQlwq4w==}
+
   '@types/xml2js@0.4.14':
     resolution: {integrity: sha512-4YnrRemBShWRO2QjvUin8ESA41rH+9nQGLUGZV/1IDhi3SL9OhdpNC/MrulTWuptXKwhx/aDxE7toV0f/ypIXQ==}
 
@@ -3556,6 +3565,9 @@ packages:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
 
+  lodash.clonedeep@4.5.0:
+    resolution: {integrity: sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ==}
+
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
 
@@ -3854,6 +3866,7 @@ packages:
   next@15.5.7:
     resolution: {integrity: sha512-+t2/0jIJ48kUpGKkdlhgkv+zPTEOoXyr60qXe68eB/pl3CMJaLeIGjzp5D6Oqt25hCBiBTt8wEeeAzfJvUKnPQ==}
     engines: {node: ^18.18.0 || ^19.8.0 || >= 20.0.0}
+    deprecated: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/security-update-2025-12-11 for more details.
     hasBin: true
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
@@ -4912,6 +4925,9 @@ packages:
     resolution: {integrity: sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  user-agents@1.1.669:
+    resolution: {integrity: sha512-pbIzG+AOqCaIpySKJ4IAm1l0VyE4jMnK4y1thV8lm8PYxI+7X5uWcppOK7zY79TCKKTAnJH3/4gaVIZHsjrmJA==}
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -6496,6 +6512,8 @@ snapshots:
   '@types/unist@2.0.11': {}
 
   '@types/unist@3.0.3': {}
+
+  '@types/user-agents@1.0.4': {}
 
   '@types/xml2js@0.4.14':
     dependencies:
@@ -8380,6 +8398,8 @@ snapshots:
     dependencies:
       p-locate: 5.0.0
 
+  lodash.clonedeep@4.5.0: {}
+
   lodash.merge@4.6.2: {}
 
   lodash@4.17.21: {}
@@ -10113,6 +10133,10 @@ snapshots:
   use-sync-external-store@1.5.0(react@19.2.1):
     dependencies:
       react: 19.2.1
+
+  user-agents@1.1.669:
+    dependencies:
+      lodash.clonedeep: 4.5.0
 
   util-deprecate@1.0.2: {}
 

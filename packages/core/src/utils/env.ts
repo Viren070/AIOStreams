@@ -18,6 +18,7 @@ import * as constants from './constants.js';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import bytes from 'bytes';
+import UserAgent from 'user-agents';
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -174,7 +175,13 @@ export const forcedPort = makeValidator<string>((input: string) => {
 const parseUserAgent = (input: string): string => {
   if (['false', 'none', ''].includes(input.toLowerCase().trim()))
     return 'false';
-  return input.replace(/{version}/g, metadata?.version || 'unknown');
+  const filters =
+    typeof process.env.RANDOM_USER_AGENT_FILTERS === 'string'
+      ? JSON.parse(process.env.RANDOM_USER_AGENT_FILTERS)
+      : undefined;
+  return input
+    .replace(/{version}/g, metadata?.version || 'unknown')
+    .replace(/{random}/g, new UserAgent(filters).toString());
 };
 const userAgent = makeValidator((x) => {
   if (typeof x !== 'string') {

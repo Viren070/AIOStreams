@@ -29,6 +29,7 @@
     "stremthru": "^0.10.0",
     "super-regex": "^1.1.0",
     "undici": "^7.16.0",
+    "user-agents": "^1.1.669",
     "webdav": "^5.8.0",
     "winston": "^3.19.0",
     "xml2js": "^0.6.2",
@@ -40,6 +41,7 @@
     "@types/node": "^20.19.26",
     "@types/parse-torrent": "^5.8.8",
     "@types/pg": "^8.15.6",
+    "@types/user-agents": "^1.0.4",
     "@types/xml2js": "^0.4.14"
   }
 }
