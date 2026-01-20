@@ -107,6 +107,19 @@ export class NZBHydraPreset extends NewznabPreset {
         ],
       },
       {
+        id: 'initialLimit',
+        name: 'Initial Result Limit',
+        description:
+          'When performing a search, NZBHydra may limit the number of results returned. This option allows you to set a limit to request more results upfront.',
+        type: 'number',
+        default: 250,
+        constraints: {
+          min: 1,
+          max: 10000,
+          forceInUi: false,
+        },
+      },
+      {
         id: 'paginate',
         name: 'Paginate Results',
         description:
@@ -177,9 +190,9 @@ export class NZBHydraPreset extends NewznabPreset {
       apiPath: options.apiPath,
       apiKey: nzbhydraApiKey,
       forceQuerySearch: options.forceQuerySearch ?? true,
-      forceInitialLimit: 10000,
+      forceInitialLimit: options.initialLimit ?? 250,
       checkOwned: options.checkOwned ?? true,
-      paginate: false,
+      paginate: options.paginate ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
