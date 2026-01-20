@@ -170,6 +170,9 @@ router.get(
             case 'PAYMENT_REQUIRED':
               staticFile = StaticFiles.PAYMENT_REQUIRED;
               break;
+            case 'TOO_MANY_REQUESTS':
+              staticFile = StaticFiles.TOO_MANY_REQUESTS;
+              break;
             case 'FORBIDDEN':
               staticFile = StaticFiles.FORBIDDEN;
               break;
