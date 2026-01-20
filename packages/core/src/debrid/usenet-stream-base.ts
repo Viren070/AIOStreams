@@ -416,9 +416,10 @@ export interface UsenetStreamServiceConfig {
 export abstract class UsenetStreamService implements DebridService {
   protected readonly webdavClient: WebDAVClient;
   protected readonly api: SABnzbdApi;
-  protected static playbackLinkCache = Cache.getInstance<string, string>(
-    'usenet-stream:link'
-  );
+  protected static resolveCache = Cache.getInstance<
+    string,
+    string | { message: string; code: DebridError['code'] }
+  >('usenet-stream:link');
   protected static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'usenet-stream:library'
   );
@@ -714,12 +715,23 @@ export abstract class UsenetStreamService implements DebridService {
 
     const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
 
-    const cachedLink =
-      await UsenetStreamService.playbackLinkCache.get(cacheKey);
+    const cachedResponse = await UsenetStreamService.resolveCache.get(cacheKey);
 
-    if (cachedLink) {
-      this.serviceLogger.debug(`Using cached link for ${nzb}`);
-      return cachedLink;
+    if (cachedResponse) {
+      this.serviceLogger.debug(
+        `Using cached response for ${nzb}: ${typeof cachedResponse === 'string' ? 'stream URL' : 'error'}`
+      );
+      if (typeof cachedResponse === 'string') {
+        return cachedResponse;
+      }
+      throw new DebridError(cachedResponse.message, {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: cachedResponse.code,
+        headers: {},
+        body: null,
+        type: 'api_error',
+      });
     }
 
     this.serviceLogger.debug(`Resolving NZB`, {
@@ -782,7 +794,24 @@ export abstract class UsenetStreamService implements DebridService {
 
       // Poll history until download is complete
       const pollStartTime = Date.now();
-      const slot = await this.api.waitForHistorySlot(nzoId, category);
+      let slot: ReturnType<typeof transformHistorySlot>;
+      try {
+        slot = await this.api.waitForHistorySlot(nzoId, category);
+      } catch (error) {
+        if (!(error instanceof DebridError)) {
+          throw error;
+        }
+        UsenetStreamService.resolveCache.set(
+          cacheKey,
+          {
+            message: error.message,
+            code: error.code,
+          },
+          Env.BUILTIN_DEBRID_RESOLVE_ERROR_CACHE_TTL,
+          true
+        );
+        throw error;
+      }
 
       // Use slot.storage as source of truth for the content path
       jobName = slot.storage ? basename(slot.storage) : slot.name || filename;
@@ -908,7 +937,7 @@ export abstract class UsenetStreamService implements DebridService {
     this.serviceLogger.debug(`Generated playback link`, { playbackLink });
 
     // Cache the result
-    await UsenetStreamService.playbackLinkCache.set(
+    await UsenetStreamService.resolveCache.set(
       cacheKey,
       playbackLink,
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,

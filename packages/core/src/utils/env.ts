@@ -1832,6 +1832,10 @@ export const Env = cleanEnv(process.env, {
     default: 60 * 60, // 1 hour
     desc: 'Builtin Debrid playback link cache TTL',
   }),
+  BUILTIN_DEBRID_RESOLVE_ERROR_CACHE_TTL: num({
+    default: 60 * 10, // 10 minutes
+    desc: 'Builtin Debrid resolve error cache TTL',
+  }),
   BUILTIN_DEBRID_LIBRARY_CACHE_TTL: num({
     default: 60 * 5, // 5 minutes
     desc: 'Builtin Debrid NZB list cache TTL',
