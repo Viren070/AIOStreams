@@ -71,6 +71,284 @@ export abstract class StreamExpressionEngine {
   }
 
   private setupParserFunctions() {
+    this.setupMathFunctions();
+    this.setupStreamFunctions();
+  }
+
+  private setupMathFunctions() {
+    type NumberInput = number[] | number;
+
+    const toNumberArray = (
+      args: NumberInput,
+      rest: number[],
+      functionName: string
+    ): number[] => {
+      const arr = Array.isArray(args) ? args : [args, ...rest];
+      if (!Array.isArray(arr)) {
+        throw new Error(
+          `${functionName} requires  a number or array of numbers`
+        );
+      }
+      if (arr.some((n) => typeof n !== 'number' || isNaN(n))) {
+        throw new Error(
+          `${functionName} requires all values to be valid numbers`
+        );
+      }
+      return arr;
+    };
+
+    const eMath = {
+      mean(numbers: number[]): number {
+        if (numbers.length === 0) return 0;
+        let sum = 0;
+        for (let i = 0; i < numbers.length; i++) {
+          sum += numbers[i];
+        }
+        return sum / numbers.length;
+      },
+      variance(numbers: number[]): number {
+        if (numbers.length === 0) return 0;
+        const m = eMath.mean(numbers);
+        let sumSquaredDiff = 0;
+        for (let i = 0; i < numbers.length; i++) {
+          const diff = numbers[i] - m;
+          sumSquaredDiff += diff * diff;
+        }
+        return sumSquaredDiff / numbers.length;
+      },
+      sort(numbers: number[]): number[] {
+        return [...numbers].sort((a, b) => a - b);
+      },
+      percentile(numbers: number[], p: number): number {
+        if (numbers.length === 0) return 0;
+        if (numbers.length === 1) return numbers[0];
+
+        const sorted = eMath.sort(numbers);
+        if (p === 0) return sorted[0];
+        if (p === 100) return sorted[sorted.length - 1];
+
+        const pos = ((sorted.length - 1) * p) / 100;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+
+        if (rest === 0 || base === sorted.length - 1) {
+          return sorted[base];
+        }
+        return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+      },
+    };
+
+    this.parser.functions.max = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'max');
+      if (values.length === 0) return 0;
+      let max = values[0];
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] > max) max = values[i];
+      }
+      return max;
+    };
+
+    this.parser.functions.min = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'min');
+      if (values.length === 0) return 0;
+      let min = values[0];
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < min) min = values[i];
+      }
+      return min;
+    };
+
+    this.parser.functions.avg = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      return eMath.mean(toNumberArray(args, rest, 'avg'));
+    };
+
+    this.parser.functions.mean = this.parser.functions.avg;
+
+    this.parser.functions.sum = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'sum');
+      if (values.length === 0) return 0;
+      let sum = 0;
+      for (let i = 0; i < values.length; i++) {
+        sum += values[i];
+      }
+      return sum;
+    };
+
+    this.parser.functions.percentile = function (
+      numbers: number[],
+      p: number
+    ): number {
+      const values = toNumberArray(numbers, [], 'percentile');
+      if (typeof p !== 'number' || isNaN(p)) {
+        throw new Error('Percentile value must be a number');
+      }
+      if (p < 0 || p > 100) {
+        throw new Error('Percentile must be between 0 and 100');
+      }
+      return eMath.percentile(values, p);
+    };
+
+    this.parser.functions.q1 = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'q1');
+      return eMath.percentile(values, 25);
+    };
+
+    this.parser.functions.median = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'median');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return values[0];
+
+      const sorted = eMath.sort(values);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
+    this.parser.functions.q2 = this.parser.functions.median;
+
+    this.parser.functions.q3 = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'q3');
+      return eMath.percentile(values, 75);
+    };
+
+    this.parser.functions.iqr = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'iqr');
+      const q3 = eMath.percentile(values, 75);
+      const q1 = eMath.percentile(values, 25);
+      return q3 - q1;
+    };
+
+    this.parser.functions.variance = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'variance');
+      return eMath.variance(values);
+    };
+
+    this.parser.functions.stddev = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'stddev');
+      return Math.sqrt(eMath.variance(values));
+    };
+
+    this.parser.functions.range = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'range');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return 0;
+
+      let min = values[0];
+      let max = values[0];
+
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < min) min = values[i];
+        if (values[i] > max) max = values[i];
+      }
+
+      return max - min;
+    };
+
+    this.parser.functions.mode = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'mode');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return values[0];
+
+      const frequency: Record<number, number> = {};
+      let maxFreq = 0;
+      let mode = values[0];
+
+      for (let i = 0; i < values.length; i++) {
+        const val = values[i];
+        frequency[val] = (frequency[val] || 0) + 1;
+        if (frequency[val] > maxFreq) {
+          maxFreq = frequency[val];
+          mode = val;
+        }
+      }
+      return mode;
+    };
+
+    this.parser.functions.skewness = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'skewness');
+      if (values.length < 3) return 0;
+
+      const mean = eMath.mean(values);
+      const variance = eMath.variance(values);
+      const stdDev = Math.sqrt(variance);
+
+      if (stdDev === 0) return 0;
+
+      let sumCubedDiff = 0;
+      for (let i = 0; i < values.length; i++) {
+        const diff = values[i] - mean;
+        sumCubedDiff += diff * diff * diff;
+      }
+
+      const n = values.length;
+      return sumCubedDiff / n / (stdDev * stdDev * stdDev);
+    };
+
+    this.parser.functions.kurtosis = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'kurtosis');
+      if (values.length < 4) return 0;
+
+      const mean = eMath.mean(values);
+      const variance = eMath.variance(values);
+      const stdDev = Math.sqrt(variance);
+
+      if (stdDev === 0) return 0;
+
+      let sumFourthPower = 0;
+      for (let i = 0; i < values.length; i++) {
+        const diff = values[i] - mean;
+        sumFourthPower += diff * diff * diff * diff;
+      }
+
+      const n = values.length;
+      return sumFourthPower / n / (variance * variance) - 3;
+    };
+  }
+
+  private setupStreamFunctions() {
     this.parser.functions.values = function (
       streams: ParsedStream[],
       attr: string
@@ -104,81 +382,9 @@ export abstract class StreamExpressionEngine {
         }
       };
 
-      // test with one stream to validate path
-      getStreamProperty(streams[0], attr);
-
       return streams
         .map((stream) => getStreamProperty(stream, attr))
         .filter((val) => typeof val === 'number' && !isNaN(val));
-    };
-
-    this.parser.functions.max = function (
-      args: number[] | number,
-      ...rest: number[]
-    ) {
-      const values = Array.isArray(args) ? args : [args, ...rest];
-      if (values.length === 0) return 0;
-      return Math.max(...values);
-    };
-
-    this.parser.functions.min = function (
-      args: number[] | number,
-      ...rest: number[]
-    ) {
-      const values = Array.isArray(args) ? args : [args, ...rest];
-      if (values.length === 0) return 0;
-      return Math.min(...values);
-    };
-
-    this.parser.functions.avg = function (numbers: number[]): number {
-      if (
-        !Array.isArray(numbers) ||
-        numbers.some((n) => typeof n !== 'number')
-      ) {
-        throw new Error('Input must be an array of numbers');
-      }
-      if (numbers.length === 0) return 0;
-      return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
-    };
-
-    this.parser.functions.sum = function (numbers: number[]): number {
-      if (
-        !Array.isArray(numbers) ||
-        numbers.some((n) => typeof n !== 'number')
-      ) {
-        throw new Error('Input must be an array of numbers');
-      }
-      return numbers.reduce((sum, num) => sum + num, 0);
-    };
-
-    this.parser.functions.median = function (numbers: number[]): number {
-      if (
-        !Array.isArray(numbers) ||
-        numbers.some((n) => typeof n !== 'number')
-      ) {
-        throw new Error('Input must be an array of numbers');
-      }
-      if (numbers.length === 0) return 0;
-      const sorted = [...numbers].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      return sorted.length % 2 !== 0
-        ? sorted[mid]
-        : (sorted[mid - 1] + sorted[mid]) / 2;
-    };
-
-    this.parser.functions.variance = function (numbers: number[]): number {
-      if (
-        !Array.isArray(numbers) ||
-        numbers.some((n) => typeof n !== 'number')
-      ) {
-        throw new Error('Input must be an array of numbers');
-      }
-      if (numbers.length === 0) return 0;
-      const mean = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
-      const variance =
-        numbers.reduce((sum, num) => sum + (num - mean) ** 2, 0) /
-        numbers.length;
-      return variance;
     };
 
     this.parser.functions.regexMatched = function (
