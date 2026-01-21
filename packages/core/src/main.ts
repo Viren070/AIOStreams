@@ -2192,6 +2192,8 @@ export class AIOStreams {
       id
     );
 
+    this.filterer.generateFilterSummary(streams, finalStreams, type, id);
+
     const { streams: proxiedStreams, error } =
       await this.proxifier.proxify(finalStreams);
 

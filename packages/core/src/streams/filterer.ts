@@ -180,15 +180,16 @@ class StreamFilterer {
     return this.filterStatistics;
   }
 
-  private generateFilterSummary(
+  public generateFilterSummary(
     streams: ParsedStream[],
     finalStreams: ParsedStream[],
-    start: number
+    type: string,
+    id: string
   ): void {
     const totalFiltered = streams.length - finalStreams.length;
     const summary = [
       '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-      `  🔍 Filter Summary`,
+      `  🔍 Filter Summary for ${id} (${type})`,
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
       `  📊 Total Streams : ${streams.length}`,
       `  ✔️ Kept         : ${finalStreams.length}`,
@@ -207,9 +208,7 @@ class StreamFilterer {
       summary.push(...includedDetails);
     }
     summary.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    logger.info(summary.join('\n'));
-
-    logger.info(`Applied filters in ${getTimeTakenSincePoint(start)}`);
+    logger.debug(summary.join('\n'));
   }
 
   public getFormattedFilterDetails(): {
@@ -913,7 +912,9 @@ class StreamFilterer {
 
       if (passthroughDigitalRelease.length === 0) {
         const finalStreams: ParsedStream[] = [];
-        this.generateFilterSummary(streams, finalStreams, start);
+        logger.info(
+          `Applied basic filters in ${getTimeTakenSincePoint(start)}`
+        );
         return finalStreams;
       }
       // Continue with only passthrough streams
@@ -1937,8 +1938,9 @@ class StreamFilterer {
       ...filteredStreams,
     ]);
 
-    // Generate filter summary
-    this.generateFilterSummary(streams, finalStreams, start);
+    logger.info(
+      `Applied basic filters in ${getTimeTakenSincePoint(start)}, removed ${streams.length - finalStreams.length} streams`
+    );
     return finalStreams;
   }
 
