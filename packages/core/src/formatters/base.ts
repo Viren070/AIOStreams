@@ -3,6 +3,7 @@ import * as constants from '../utils/constants.js';
 import { createLogger } from '../utils/logger.js';
 import {
   formatBytes,
+  formatBitrate,
   formatDuration,
   formatHours,
   languageToCode,
@@ -55,6 +56,7 @@ export interface ParseValue {
     filename: string | null;
     folderName: string | null;
     size: number | null;
+    bitrate: number | null;
     folderSize: number | null;
     library: boolean;
     quality: string | null;
@@ -312,6 +314,7 @@ export abstract class BaseFormatter {
         seasonEpisode: seasonEpisode || null,
         seasonPack: stream.parsedFile?.seasonPack ?? false,
         duration: stream.duration || null,
+        bitrate: stream.bitrate ?? null,
         infoHash: stream.torrent?.infoHash || null,
         age: formattedAge,
         ageHours: stream.age || null,
@@ -918,6 +921,8 @@ class ModifierConstants {
     rbytes10: (value: number) => formatBytes(value, 1000, true),
     bytes2: (value: number) => formatBytes(value, 1024),
     rbytes2: (value: number) => formatBytes(value, 1024, true),
+    bitrate: (value: number) => formatBitrate(value),
+    rbitrate: (value: number) => formatBitrate(value, true),
     string: (value: number) => value.toString(),
     time: (value: number) => formatDuration(value),
   };
@@ -1004,6 +1009,7 @@ Number: {stream.size}
   ::hex {stream.size::hex}
   ::octal {stream.size::octal}
   ::binary {stream.size::binary}
+  ::bitrate {stream.bitrate::bitrate}
 {tools.newLine}
 
 Array: {stream.languages}

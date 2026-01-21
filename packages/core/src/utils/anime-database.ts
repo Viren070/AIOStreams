@@ -7,12 +7,13 @@ import {
   IdParser,
   IdType,
   ID_TYPES,
-  DistributedLock,
   Env,
   withRetry,
+  ParsedId,
 } from './index.js';
 import { createWriteStream } from 'fs';
 import { createLogger } from './logger.js';
+import { Parser } from 'xml2js';
 
 const logger = createLogger('anime-database');
 
@@ -64,6 +65,15 @@ const DATA_SOURCES = {
     loader: 'loadExtendedAnitraktTv',
     refreshInterval: Env.ANIME_DB_EXTENDED_ANITRAKT_TV_REFRESH_INTERVAL,
     dataKey: 'extendedAnitraktTvById',
+  },
+  animeList: {
+    name: 'Anime Lists XML',
+    url: 'https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml',
+    filePath: path.join(ANIME_DATABASE_PATH, 'anime-list-master.xml'),
+    etagPath: path.join(ANIME_DATABASE_PATH, 'anime-list-master.etag'),
+    loader: 'loadAnimeList',
+    refreshInterval: Env.ANIME_DB_ANIME_LIST_REFRESH_INTERVAL,
+    dataKey: 'animeListById',
   },
 } as const;
 
@@ -168,6 +178,12 @@ interface MappingEntry {
   thetvdbId?: number | null;
   traktId?: number;
   type: AnimeType;
+  season?:
+    | {
+        tvdb?: number;
+        tmdb?: number;
+      }
+    | undefined;
 }
 
 interface ManamiEntry {
@@ -257,7 +273,6 @@ interface ExtendedAnitraktTvEntry {
       externals: {
         tvdb: number | null;
         tmdb: number | null;
-        imdb?: string | null;
       };
     } | null;
   };
@@ -269,11 +284,36 @@ interface ExtendedAnitraktTvEntry {
   };
 }
 
+interface AnimeListMapping {
+  anidbSeason: number;
+  tvdbSeason?: number;
+  tmdbSeason?: number;
+  start?: number;
+  end?: number;
+  offset?: number;
+  episodes?: string;
+}
+
+interface AnimeListEntry {
+  anidbId: number;
+  tvdbId?: number | null;
+  defaultTvdbSeason?: number | 'a' | null; // 'a' means absolute numbering
+  episodeOffset?: number | null;
+  tmdbTv?: number | null;
+  tmdbSeason?: number | null;
+  tmdbOffset?: number | null;
+  tmdbId?: number | null;
+  imdbId?: string | null;
+  mappings?: AnimeListMapping[];
+  before?: string;
+}
+
 interface AnimeEntry {
-  mappings?: Record<string, string | number | null | undefined>;
+  mappings?: Omit<MappingEntry, 'type'>;
+  type: AnimeType;
   imdb?: {
-    fromImdbSeason?: number;
-    fromImdbEpisode?: number;
+    seasonNumber?: number;
+    fromEpisode?: number;
     nonImdbEpisodes?: number[];
     title?: string;
   } | null;
@@ -284,22 +324,26 @@ interface AnimeEntry {
     title: string;
     slug: string;
     isSplitCour?: boolean;
-    season?: {
-      id: number;
-      number: number;
-      externals: {
-        tvdb: number | null;
-        tmdb: number | null;
-        imdb?: string | null;
-      };
-    } | null;
+    seasonId?: number | null;
+    seasonNumber?: number | null;
   } | null;
+  tmdb: {
+    seasonNumber: number | null;
+    seasonId: number | null;
+    fromEpisode?: number | null; // Episode offset from AnimeList
+  };
+  tvdb: {
+    seasonNumber: number | null;
+    seasonId: number | null;
+    fromEpisode?: number | null; // Episode offset from AnimeList
+  };
   title?: string;
   animeSeason?: {
     season: AnimeSeason;
     year: number | null;
   };
   synonyms?: string[];
+  episodeMappings?: AnimeListMapping[];
 }
 
 // Validation functions
@@ -314,6 +358,15 @@ function isValidUrl(url: string): boolean {
 
 function validateMappingEntry(data: any): MappingEntry | null {
   if (!data || typeof data !== 'object') return null;
+
+  const season = data['season'];
+  if (season !== undefined && typeof season !== 'object') return null;
+  if (
+    season &&
+    ((season.tmdb !== undefined && typeof season.tmdb !== 'number') ||
+      (season.tvdb !== undefined && typeof season.tvdb !== 'number'))
+  )
+    return null;
 
   // Transform raw data to match our interface
   const entry: MappingEntry = {
@@ -332,9 +385,10 @@ function validateMappingEntry(data: any): MappingEntry | null {
       typeof data['themoviedb_id'] === 'string'
         ? parseInt(data['themoviedb_id'])
         : data['themoviedb_id'],
-    thetvdbId: data['thetvdb_id'],
+    thetvdbId: data['thetvdb_id'] || data['tvdb_id'],
     traktId: data['trakt_id'],
-    type: data['type'],
+    type: data['type'] ?? AnimeType.UNKNOWN,
+    season: data['season'],
   };
 
   // Validate type
@@ -491,6 +545,86 @@ function validateExtendedAnitraktTvEntry(
   };
 }
 
+function validateAnimeListEntry(data: any): AnimeListEntry | null {
+  if (!data || typeof data !== 'object') return null;
+
+  const attrs = data.$;
+  if (!attrs) return null;
+
+  const parseNum = (val: any): number | null => {
+    if (val === undefined || val === null || val === '') return null;
+    if (typeof val === 'number') return val;
+    if (typeof val !== 'string') return null;
+    if (['unknown', 'hentai', 'a'].includes(val.toLowerCase())) return null;
+    const num = parseInt(val, 10);
+    return isNaN(num) ? null : num;
+  };
+
+  const parseSeason = (val: any): number | 'a' | null => {
+    if (val === undefined || val === null || val === '') return null;
+    if (val === 'a' || val === 'A') return 'a';
+    return parseNum(val);
+  };
+
+  const anidbId = parseNum(attrs.anidbid);
+  if (anidbId === null) return null;
+
+  const entry: AnimeListEntry = {
+    anidbId,
+    tvdbId: parseNum(attrs.tvdbid),
+    defaultTvdbSeason: parseSeason(attrs.defaulttvdbseason),
+    episodeOffset: parseNum(attrs.episodeoffset),
+    tmdbTv: parseNum(attrs.tmdbtv),
+    tmdbSeason: parseNum(attrs.tmdbseason),
+    tmdbOffset: parseNum(attrs.tmdboffset),
+    tmdbId: parseNum(attrs.tmdbid),
+    imdbId: attrs.imdbid && attrs.imdbid !== '' ? attrs.imdbid : null,
+  };
+
+  if (data.before?.[0]) {
+    entry.before = data.before[0];
+  }
+
+  if (
+    Array.isArray(data['mapping-list']) &&
+    Env.ANIME_DB_LEVEL_OF_DETAIL === 'full'
+  ) {
+    const mappingList = data['mapping-list'][0];
+    if (mappingList?.mapping && Array.isArray(mappingList.mapping)) {
+      const mappings = mappingList.mapping
+        .map((m: any) => {
+          const mAttrs = m.$;
+          if (!mAttrs) return null;
+
+          const anidbSeason = parseNum(mAttrs.anidbseason);
+          if (anidbSeason === null) return null;
+
+          const mapping: AnimeListMapping = {
+            anidbSeason,
+            tvdbSeason: parseNum(mAttrs.tvdbseason) ?? undefined,
+            tmdbSeason: parseNum(mAttrs.tmdbseason) ?? undefined,
+            start: parseNum(mAttrs.start) ?? undefined,
+            end: parseNum(mAttrs.end) ?? undefined,
+            offset: parseNum(mAttrs.offset) ?? undefined,
+          };
+
+          if (m._ && typeof m._ === 'string') {
+            mapping.episodes = m._;
+          }
+
+          return mapping;
+        })
+        .filter((m: any): m is AnimeListMapping => m !== null);
+
+      if (mappings.length > 0) {
+        entry.mappings = mappings;
+      }
+    }
+  }
+
+  return entry;
+}
+
 type MappingIdMap = Map<IdType, Map<string | number, MappingEntry[]>>;
 type ManamiIdMap = Map<
   IdType,
@@ -499,17 +633,12 @@ type ManamiIdMap = Map<
 type KitsuIdMap = Map<number, KitsuEntry>;
 type ExtendedAnitraktMoviesIdMap = Map<number, ExtendedAnitraktMovieEntry>;
 type ExtendedAnitraktTvIdMap = Map<number, ExtendedAnitraktTvEntry>;
+type AnimeListIdMap = Map<number, AnimeListEntry>;
+type AnimeListByTvdbIdMap = Map<number, AnimeListEntry[]>;
 
 export class AnimeDatabase {
   private static instance: AnimeDatabase;
   private isInitialised = false;
-
-  // Data storage
-  // private mappingsById: MappingIdMap = new Map();
-  // private manamiById: ManamiIdMap = new Map();
-  // private kitsuById: KitsuIdMap = new Map();
-  // private extendedAnitraktMoviesById: ExtendedAnitraktMoviesIdMap = new Map();
-  // private extendedAnitraktTvById: ExtendedAnitraktTvIdMap = new Map();
 
   private dataStore: {
     fribbMappingsById: MappingIdMap;
@@ -517,12 +646,16 @@ export class AnimeDatabase {
     kitsuById: KitsuIdMap;
     extendedAnitraktMoviesById: ExtendedAnitraktMoviesIdMap;
     extendedAnitraktTvById: ExtendedAnitraktTvIdMap;
+    animeListById: AnimeListIdMap;
+    animeListByTvdbId: AnimeListByTvdbIdMap;
   } = {
     fribbMappingsById: new Map(),
     manamiById: new Map(),
     kitsuById: new Map(),
     extendedAnitraktMoviesById: new Map(),
     extendedAnitraktTvById: new Map(),
+    animeListById: new Map(),
+    animeListByTvdbId: new Map(),
   };
 
   // Refresh timers
@@ -599,18 +732,21 @@ export class AnimeDatabase {
 
     mappingsList = this.filterMappingsBySeasonType(mappingsList, season);
 
-    const { mappings, details } = this.selectBestMappingAndDetails(
-      mappingsList,
-      idType,
-      idValue,
-      season,
-      episode
-    );
+    const { mappings, details, animeListEntry } =
+      this.selectBestMappingAndDetails(
+        mappingsList,
+        idType,
+        idValue,
+        season,
+        episode
+      );
 
     const malId =
       mappings?.malId ?? (idType === 'malId' ? Number(idValue) : null);
     const kitsuId =
       mappings?.kitsuId ?? (idType === 'kitsuId' ? Number(idValue) : null);
+    const anidbId =
+      mappings?.anidbId ?? (idType === 'anidbId' ? Number(idValue) : null);
 
     const kitsuEntry = kitsuId ? this.dataStore.kitsuById.get(kitsuId) : null;
     const tvAnitraktEntry = malId
@@ -620,12 +756,17 @@ export class AnimeDatabase {
       ? this.dataStore.extendedAnitraktMoviesById.get(malId)
       : null;
 
+    const finalAnimeListEntry =
+      animeListEntry ??
+      (anidbId ? this.dataStore.animeListById.get(anidbId) : null);
+
     if (
       !details &&
       !mappings &&
       !kitsuEntry &&
       !tvAnitraktEntry &&
-      !movieAnitraktEntry
+      !movieAnitraktEntry &&
+      !finalAnimeListEntry
     ) {
       return null;
     }
@@ -635,7 +776,8 @@ export class AnimeDatabase {
       details,
       kitsuEntry ?? null,
       tvAnitraktEntry ?? null,
-      movieAnitraktEntry ?? null
+      movieAnitraktEntry ?? null,
+      finalAnimeListEntry ?? null
     );
   }
 
@@ -682,10 +824,11 @@ export class AnimeDatabase {
     idValue: string | number,
     season?: number,
     episode?: number
-  ): { mappings?: MappingEntry; details?: MinimisedManamiEntry } {
-    const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
-      map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
-
+  ): {
+    mappings?: MappingEntry;
+    details?: MinimisedManamiEntry;
+    animeListEntry?: AnimeListEntry;
+  } {
     if (!mappingsList?.length) {
       return {};
     }
@@ -722,18 +865,35 @@ export class AnimeDatabase {
     episode: number,
     idType: IdType,
     idValue: string | number
-  ): { mappings?: MappingEntry; details?: MinimisedManamiEntry } {
+  ): {
+    mappings?: MappingEntry;
+    details?: MinimisedManamiEntry;
+    animeListEntry?: AnimeListEntry;
+  } {
     const getFromMap = <T>(map: Map<any, T> | undefined, key: any) =>
       map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
 
     logger.debug(
       `Multiple mapping entries found for ${idType}:${idValue}, attempting to find matching details...`,
-      { mappingsList: mappingsList.map((m) => m.kitsuId) }
+      {
+        mappingsList: mappingsList.map(
+          (m) =>
+            `${m.anidbId ? 'anidb:' : m.kitsuId ? 'kitsu:' : ''}${m.anidbId ?? m.kitsuId ?? 'UNKNOWN'}`
+        ),
+      }
     );
 
-    let bestKitsuMatch: { mapping: MappingEntry; fromEpisode: number } | null =
-      null;
+    // Collect all potential matches from both Kitsu and AnimeList
+    type CandidateMatch = {
+      mapping: MappingEntry;
+      fromEpisode: number;
+      source: 'kitsu' | 'animeList';
+      animeListEntry?: AnimeListEntry;
+    };
 
+    const candidates: CandidateMatch[] = [];
+
+    // Check Kitsu entries
     for (const mappingEntry of mappingsList) {
       if (mappingEntry.kitsuId) {
         const kitsuEntry = this.dataStore.kitsuById.get(mappingEntry.kitsuId);
@@ -741,22 +901,63 @@ export class AnimeDatabase {
           const fromEpisode = kitsuEntry.fromEpisode ?? 1;
 
           if (episode >= fromEpisode) {
-            // Keep track of the best match (highest fromEpisode that's still <= episode)
-            if (!bestKitsuMatch || fromEpisode > bestKitsuMatch.fromEpisode) {
-              bestKitsuMatch = { mapping: mappingEntry, fromEpisode };
-            }
+            candidates.push({
+              mapping: mappingEntry,
+              fromEpisode,
+              source: 'kitsu',
+            });
           }
         }
       }
     }
 
-    if (bestKitsuMatch) {
-      logger.debug(
-        `Matched season and episode on kitsuId:${bestKitsuMatch.mapping.kitsuId} (fromEpisode: ${bestKitsuMatch.fromEpisode})`
+    // Check AnimeList entries
+    let tvdbId: number | null = null;
+
+    if (idType === 'thetvdbId') {
+      tvdbId =
+        typeof idValue === 'number' ? idValue : parseInt(idValue.toString());
+    } else if (idType === 'imdbId') {
+      tvdbId = this.getTvdbIdFromImdbId(idValue.toString());
+    }
+
+    if (tvdbId) {
+      const animeListMatch = this.findAnimeListMatchForTvdbSeason(
+        tvdbId,
+        season,
+        episode
       );
+      if (animeListMatch) {
+        // Find the mapping entry that has this anidbId
+        const matchingMapping = mappingsList.find(
+          (m) => m.anidbId === animeListMatch.anidbId
+        );
+        if (matchingMapping) {
+          const fromEpisode = (animeListMatch.episodeOffset ?? 0) + 1;
+          candidates.push({
+            mapping: matchingMapping,
+            fromEpisode,
+            source: 'animeList',
+            animeListEntry: animeListMatch,
+          });
+        }
+      }
+    }
+
+    // Select the best match: highest fromEpisode that episode still qualifies for
+    if (candidates.length > 0) {
+      const bestMatch = candidates.reduce((best, current) =>
+        current.fromEpisode > best.fromEpisode ? current : best
+      );
+
+      logger.debug(
+        `Best match for S${season}E${episode}: ${bestMatch.source === 'kitsu' ? `kitsuId:${bestMatch.mapping.kitsuId}` : `anidbId:${bestMatch.mapping.anidbId}`} (fromEpisode: ${bestMatch.fromEpisode})`
+      );
+
       return {
-        mappings: bestKitsuMatch.mapping,
-        details: this.findManamiDetailsFromMapping(bestKitsuMatch.mapping),
+        mappings: bestMatch.mapping,
+        details: this.findManamiDetailsFromMapping(bestMatch.mapping),
+        animeListEntry: bestMatch.animeListEntry,
       };
     }
 
@@ -781,17 +982,92 @@ export class AnimeDatabase {
     return {};
   }
 
+  /**
+   * Convert IMDB ID to TVDB ID using Fribb mappings
+   */
+  private getTvdbIdFromImdbId(imdbId: string): number | null {
+    const imdbMappings = this.dataStore.fribbMappingsById
+      .get('imdbId')
+      ?.get(imdbId);
+    if (!imdbMappings || imdbMappings.length === 0) return null;
+
+    // Return the first TVDB ID found in mappings
+    for (const mapping of imdbMappings) {
+      if (mapping.thetvdbId) {
+        return mapping.thetvdbId;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find the best AnimeList entry for a TVDB ID + season/episode combination
+   * Uses TVDB/TMDB season mappings and offsets from the AnimeList XML
+   */
+  private findAnimeListMatchForTvdbSeason(
+    tvdbId: number,
+    season: number,
+    episode: number
+  ): AnimeListEntry | null {
+    const candidates = this.dataStore.animeListByTvdbId.get(tvdbId);
+    if (!candidates || candidates.length === 0) return null;
+
+    if (candidates.length === 1) {
+      return candidates[0];
+    }
+
+    let bestMatch: AnimeListEntry | null = null;
+    let highestOffset = -1;
+
+    for (const candidate of candidates) {
+      // Check TVDB season match
+      if (
+        candidate.defaultTvdbSeason !== null &&
+        (candidate.defaultTvdbSeason === season ||
+          candidate.defaultTvdbSeason === 'a')
+      ) {
+        const offset = candidate.episodeOffset ?? 0;
+        if (episode >= 1 + offset && offset > highestOffset) {
+          bestMatch = candidate;
+          highestOffset = offset;
+        }
+      }
+
+      // Check TMDB season match as fallback (only if no TVDB match for this season)
+      if (
+        candidate.tmdbSeason !== null &&
+        candidate.tmdbSeason === season &&
+        candidate.defaultTvdbSeason !== season
+      ) {
+        const offset = candidate.tmdbOffset ?? 0;
+        if (episode >= 1 + offset && offset > highestOffset) {
+          bestMatch = candidate;
+          highestOffset = offset;
+        }
+      }
+    }
+
+    if (bestMatch) {
+      return bestMatch;
+    }
+
+    return null;
+  }
+
   private buildAnimeEntry(
     mappings: MappingEntry | undefined,
     details: MinimisedManamiEntry | undefined,
     kitsuEntry: KitsuEntry | null,
     tvAnitraktEntry: ExtendedAnitraktTvEntry | null,
-    movieAnitraktEntry: ExtendedAnitraktMovieEntry | null
+    movieAnitraktEntry: ExtendedAnitraktMovieEntry | null,
+    animeListEntry: AnimeListEntry | null
   ): AnimeEntry {
-    const finalMappings = {
+    const combinedMappings: MappingEntry = {
       ...mappings,
+      type: mappings?.type ?? AnimeType.UNKNOWN,
       imdbId:
         mappings?.imdbId ??
+        animeListEntry?.imdbId ??
         kitsuEntry?.imdbId ??
         movieAnitraktEntry?.externals?.imdb ??
         tvAnitraktEntry?.externals?.imdb,
@@ -799,9 +1075,13 @@ export class AnimeDatabase {
       malId: mappings?.malId,
       themoviedbId:
         mappings?.themoviedbId ??
+        animeListEntry?.tmdbId ??
+        animeListEntry?.tmdbTv ??
         movieAnitraktEntry?.externals?.tmdb ??
-        tvAnitraktEntry?.externals?.tmdb,
+        tvAnitraktEntry?.externals?.tmdb ??
+        undefined,
       thetvdbId:
+        animeListEntry?.tvdbId ??
         kitsuEntry?.tvdbId ??
         mappings?.thetvdbId ??
         tvAnitraktEntry?.externals?.tvdb,
@@ -811,14 +1091,47 @@ export class AnimeDatabase {
         movieAnitraktEntry?.trakt?.id,
     };
 
+    const {
+      type,
+      season: mappingSeasonInfo,
+      ...finalMappings
+    } = combinedMappings;
+    const traktExternalSeasonInfo = tvAnitraktEntry?.trakt?.season?.externals;
+
+    // Determine TVDB season and episode offset
+    const tvdbSeasonNumber =
+      mappingSeasonInfo?.tvdb ??
+      (animeListEntry?.defaultTvdbSeason === 'a'
+        ? null
+        : (animeListEntry?.defaultTvdbSeason ?? null));
+    const tvdbFromEpisode =
+      animeListEntry?.episodeOffset != null
+        ? animeListEntry.episodeOffset + 1
+        : null;
+
+    const tmdbSeasonNumber =
+      mappingSeasonInfo?.tmdb ?? animeListEntry?.tmdbSeason ?? null;
+    const tmdbFromEpisode =
+      animeListEntry?.tmdbOffset != null ? animeListEntry.tmdbOffset + 1 : null;
+
     return {
       mappings: finalMappings,
+      tmdb: {
+        seasonNumber: tmdbSeasonNumber,
+        seasonId: traktExternalSeasonInfo?.tmdb ?? null,
+        fromEpisode: tmdbFromEpisode,
+      },
+      tvdb: {
+        seasonNumber: tvdbSeasonNumber,
+        seasonId: traktExternalSeasonInfo?.tvdb ?? null,
+        fromEpisode: tvdbFromEpisode,
+      },
       imdb: kitsuEntry
         ? {
-            fromImdbSeason: kitsuEntry.fromSeason,
-            fromImdbEpisode: kitsuEntry.fromEpisode,
-            nonImdbEpisodes: kitsuEntry.nonImdbEpisodes,
-            title: kitsuEntry.title,
+            seasonNumber: kitsuEntry?.fromSeason,
+            fromEpisode: kitsuEntry?.fromEpisode,
+            nonImdbEpisodes: kitsuEntry?.nonImdbEpisodes,
+            title: kitsuEntry?.title,
           }
         : null,
       fanart: kitsuEntry?.fanartLogoId
@@ -829,7 +1142,8 @@ export class AnimeDatabase {
             title: tvAnitraktEntry.trakt.title,
             slug: tvAnitraktEntry.trakt.slug,
             isSplitCour: tvAnitraktEntry.trakt.isSplitCour,
-            season: tvAnitraktEntry.trakt.season ?? null,
+            seasonId: tvAnitraktEntry.trakt.season?.id ?? null,
+            seasonNumber: tvAnitraktEntry.trakt.season?.number ?? null,
           }
         : movieAnitraktEntry?.trakt
           ? {
@@ -837,7 +1151,9 @@ export class AnimeDatabase {
               slug: movieAnitraktEntry.trakt.slug,
             }
           : null,
+      type: type,
       ...details,
+      episodeMappings: animeListEntry?.mappings,
     };
   }
 
@@ -1130,6 +1446,57 @@ export class AnimeDatabase {
     );
   }
 
+  private async loadAnimeList(): Promise<void> {
+    const start = Date.now();
+    const fileContents = await this.readLocalFile(
+      DATA_SOURCES.animeList.filePath
+    );
+    if (!fileContents)
+      throw new Error(DATA_SOURCES.animeList.name + ' file not found');
+    const parser = new Parser({
+      explicitArray: true,
+      async: true,
+    });
+    const rawParseStart = Date.now();
+    const parsed = await parser.parseStringPromise(fileContents);
+    logger.info(
+      `[${DATA_SOURCES.animeList.name}] Parsed XML in ${getTimeTakenSincePoint(
+        rawParseStart
+      )}`
+    );
+    if (!parsed?.['anime-list']?.anime) {
+      throw new Error(DATA_SOURCES.animeList.name + ' invalid XML structure');
+    }
+
+    const validEntries = this.validateEntries(
+      parsed['anime-list'].anime,
+      validateAnimeListEntry
+    );
+
+    const newAnimeListById: AnimeListIdMap = new Map();
+    const newAnimeListByTvdbId: AnimeListByTvdbIdMap = new Map();
+    let entriesInTvdbMap = 0;
+
+    for (const entry of validEntries) {
+      newAnimeListById.set(entry.anidbId, entry);
+
+      // Index by TVDB ID for reverse lookups
+      if (entry.tvdbId) {
+        const existing = newAnimeListByTvdbId.get(entry.tvdbId) ?? [];
+        existing.push(entry);
+        newAnimeListByTvdbId.set(entry.tvdbId, existing);
+        entriesInTvdbMap++;
+      }
+    }
+
+    this.dataStore.animeListById = newAnimeListById;
+    this.dataStore.animeListByTvdbId = newAnimeListByTvdbId;
+
+    logger.info(
+      `[${DATA_SOURCES.animeList.name}] Loaded ${validEntries.length} entries (${entriesInTvdbMap} with TVDB IDs) in ${getTimeTakenSincePoint(start)}`
+    );
+  }
+
   // --- Generic File and Network Helpers ---
 
   private validateEntries<T>(
@@ -1143,7 +1510,7 @@ export class AnimeDatabase {
         validEntries.push(validated);
       } else {
         logger.warn(
-          `Skipping invalid entry: ${JSON.stringify(entry, null, 2)}`
+          `Skipping invalid entry for ${validator.name}: ${JSON.stringify(entry, null, 2)}`
         );
       }
     }
@@ -1253,5 +1620,70 @@ export class AnimeDatabase {
     } catch {
       return false;
     }
+  }
+}
+
+/**
+ * Extract season number from anime synonyms
+ * @param synonyms - Array of anime title synonyms
+ * @returns Season number as string, or undefined if not found
+ */
+export function getSeasonFromSynonyms(synonyms: string[]): string | undefined {
+  const seasonRegex = /(?:season|s)\s(\d+)/i;
+  for (const synonym of synonyms) {
+    const match = synonym.match(seasonRegex);
+    if (match) {
+      return match[1].toString().trim();
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Enrich parsed ID with anime database entry information
+ * Updates season and episode numbers based on anime database mappings
+ * @param parsedId - Parsed ID object to enrich (modified in place)
+ * @param animeEntry - Anime database entry
+ */
+export function enrichParsedIdWithAnimeEntry(
+  parsedId: ParsedId,
+  animeEntry: AnimeEntry
+): void {
+  let enriched: boolean = false;
+  let original = {
+    season: parsedId.season,
+    episode: parsedId.episode,
+  };
+  if (!parsedId.season) {
+    parsedId.season =
+      animeEntry.imdb?.seasonNumber?.toString() ??
+      animeEntry.trakt?.seasonNumber?.toString() ??
+      animeEntry.tvdb?.seasonNumber?.toString() ??
+      (animeEntry.synonyms
+        ? getSeasonFromSynonyms(animeEntry.synonyms)
+        : undefined) ??
+      animeEntry.tmdb?.seasonNumber?.toString();
+
+    if (parsedId.season) enriched = true;
+  }
+
+  if (parsedId.episode && ['malId', 'kitsuId'].includes(parsedId.type)) {
+    const fromEpisode =
+      animeEntry.imdb?.fromEpisode ?? animeEntry.tvdb?.fromEpisode;
+    if (fromEpisode && fromEpisode !== 1) {
+      parsedId.episode = (
+        fromEpisode +
+        Number(parsedId.episode) -
+        1
+      ).toString();
+      enriched = true;
+    }
+  }
+
+  if (enriched) {
+    logger.debug(`Enriched anime ID`, {
+      original: `${parsedId.type}:${parsedId.value}${original.season ? `:${original.season}` : ''}${original.episode ? `:${original.episode}` : ''}`,
+      enriched: `${parsedId.type}:${parsedId.value}${parsedId.season ? `:${parsedId.season}` : ''}${parsedId.episode ? `:${parsedId.episode}` : ''}`,
+    });
   }
 }

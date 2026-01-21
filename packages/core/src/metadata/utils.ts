@@ -4,6 +4,7 @@ export interface Metadata {
   year?: number;
   yearEnd?: number;
   releaseDate?: string;
+  runtime?: number; // Runtime in minutes
   seasons?: {
     season_number: number;
     episode_count: number;

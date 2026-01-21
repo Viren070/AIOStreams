@@ -358,7 +358,6 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private db: DB;
   private prefix: string;
-  private maxSize: number;
   static maintenanceStarted: boolean = false;
 
   private static writeBuffer: Map<string, { value: any; ttl: number }> =
@@ -368,13 +367,9 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private static batchSize: number = 100;
   private static flushIntervalTime: number = 2000;
 
-  constructor(
-    prefix: string = '',
-    maxSize: number = Env.DEFAULT_MAX_CACHE_SIZE
-  ) {
+  constructor(prefix: string = '', _: number) {
     this.db = DB.getInstance();
     this.prefix = prefix;
-    this.maxSize = maxSize;
     this.startMaintenance();
     SQLCacheBackend.startFlushInterval();
   }
@@ -401,9 +396,16 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
 
     try {
       const countResult = await db.query('SELECT COUNT(*) as count FROM cache');
-      let currentSize = countResult[0].count;
-      const overflow =
-        currentSize + bufferToFlush.size - Env.DEFAULT_MAX_CACHE_SIZE;
+      let currentSize = Number(countResult[0].count);
+      let overflow = currentSize + bufferToFlush.size - Env.SQL_CACHE_MAX_SIZE;
+      if (overflow > 0) {
+        const removed = await SQLCacheBackend.flushStaleEntries(db);
+        logger.debug(
+          `Removed ${removed} stale entries from SQL cache during flush.`
+        );
+        currentSize -= removed;
+        overflow -= removed;
+      }
 
       if (overflow > 0) {
         logger.debug(`Cache overflow detected. Evicting ${overflow} items.`);
@@ -456,19 +458,26 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     }
   }
 
+  private static async flushStaleEntries(db: DB): Promise<number> {
+    return db
+      .execute('DELETE FROM cache WHERE expires_at < ?', [Date.now()])
+      .then((result) => {
+        const count = result.changed || result.rowCount || 0;
+        if (Number.isFinite(count)) return count;
+        return 0;
+      });
+  }
+
   private startMaintenance() {
     if (SQLCacheBackend.maintenanceStarted) return;
     logger.debug('Starting SQL cache maintenance');
     SQLCacheBackend.maintenanceStarted = true;
     setInterval(
       () => {
-        this.db
-          .execute('DELETE FROM cache WHERE expires_at < ?', [Date.now()])
-          .then((result) => {
-            logger.debug(
-              `${result.changed || result.rowCount || 0} stale entries removed from SQL cache`
-            );
-          })
+        SQLCacheBackend.flushStaleEntries(this.db)
+          .then((removed) =>
+            logger.debug(`${removed} stale entries removed from SQL cache`)
+          )
           .catch((err) => {
             logger.error(`Error during SQL cache maintenance: ${err}`);
           });

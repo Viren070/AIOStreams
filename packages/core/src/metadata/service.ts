@@ -9,6 +9,7 @@ import { AnimeDatabase, IdParser, ParsedId, Env } from '../utils/index.js';
 import { withRetry } from '../utils/general.js';
 import { Meta } from '../db/schemas.js';
 import { TVDBMetadata } from './tvdb.js';
+import { parseDuration } from '../parser/utils.js';
 
 const logger = createLogger('metadata-service');
 
@@ -41,6 +42,7 @@ export class MetadataService {
             let releaseDate: string | undefined;
             let year: number | undefined;
             let yearEnd: number | undefined;
+            let runtime: number | undefined;
             let seasons:
               | {
                   season_number: number;
@@ -169,6 +171,7 @@ export class MetadataService {
                 seasons = tmdbMetadata.seasons.sort(
                   (a, b) => a.season_number - b.season_number
                 );
+              if (tmdbMetadata.runtime) runtime = tmdbMetadata.runtime;
               tmdbId = tmdbMetadata.tmdbId;
             } else if (tmdbResult.status === 'rejected') {
               logger.warn(
@@ -183,6 +186,8 @@ export class MetadataService {
               if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
               if (tvdbMetadata.year) year = tvdbMetadata.year;
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
+              if (tvdbMetadata.runtime && !runtime)
+                runtime = tvdbMetadata.runtime;
               tvdbId = tvdbMetadata.tvdbId;
             } else if (tvdbResult.status === 'rejected') {
               logger.warn(
@@ -263,6 +268,16 @@ export class MetadataService {
                   releaseDate = parsedReleaseDate.toISOString().split('T')[0];
                 }
               }
+              if (cinemetaData.runtime && !runtime) {
+                runtime = parseDuration(
+                  cinemetaData.runtime
+                    .replace('min', 'm')
+                    .replace('hr', 'h')
+                    .replace(' ', '')
+                    .trim()
+                );
+                runtime = runtime ? Math.round(runtime / 60000) : undefined;
+              }
             } else if (imdbResult.status === 'rejected') {
               logger.warn(
                 `Failed to fetch IMDb metadata for ${imdbId}: ${imdbResult.reason}`
@@ -312,6 +327,7 @@ export class MetadataService {
               releaseDate,
               tmdbId,
               tvdbId,
+              runtime,
             };
           },
           {

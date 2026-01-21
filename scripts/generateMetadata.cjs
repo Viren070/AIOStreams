@@ -7,14 +7,22 @@ const isNightly = channel === '--channel=nightly';
 
 // Get the version from package.json
 let { version, description } = require('../package.json');
+const os = require('os');
 
 let tag;
 if (isNightly) {
   tag = execSync('git describe --tags --abbrev=0').toString().trim();
 } else {
-  tag = execSync('git tag --sort=-version:refname | head -n 1')
-    .toString()
-    .trim();
+  if (os.platform() === 'win32') {
+    tag = execSync('git tag --sort=-version:refname')
+      .toString()
+      .trim()
+      .split('\n')[0];
+  } else {
+    tag = execSync('git tag --sort=-version:refname | head -n 1')
+      .toString()
+      .trim();
+  }
 }
 
 // Get the current Git commit hash

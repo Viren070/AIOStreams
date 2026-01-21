@@ -170,6 +170,9 @@ router.get(
             case 'PAYMENT_REQUIRED':
               staticFile = StaticFiles.PAYMENT_REQUIRED;
               break;
+            case 'TOO_MANY_REQUESTS':
+              staticFile = StaticFiles.TOO_MANY_REQUESTS;
+              break;
             case 'FORBIDDEN':
               staticFile = StaticFiles.FORBIDDEN;
               break;
@@ -193,27 +196,19 @@ router.get(
           );
         }
 
-        res.status(302).redirect(`/static/${staticFile}`);
+        res.redirect(307, `/static/${staticFile}`);
         return;
       }
 
       if (!streamUrl) {
-        res.status(302).redirect(`/static/${StaticFiles.DOWNLOADING}`);
+        res.redirect(307, `/static/${StaticFiles.DOWNLOADING}`);
         return;
       }
 
-      res.status(307).redirect(streamUrl);
+      res.redirect(307, streamUrl);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof APIError || error instanceof ZodError) {
         next(error);
-      } else if (error instanceof ZodError) {
-        next(
-          new APIError(
-            constants.ErrorCode.BAD_REQUEST,
-            undefined,
-            formatZodError(error)
-          )
-        );
       } else {
         logger.error(
           `Got unexpected error during debrid resolve: ${error.message}`

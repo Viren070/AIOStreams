@@ -19,6 +19,7 @@ import {
   FaFileExport,
   FaFileImport,
   FaEquals,
+  FaTachometerAlt,
 } from 'react-icons/fa';
 import { FaTextSlash } from 'react-icons/fa6';
 import {
@@ -70,6 +71,8 @@ import {
   MAX_SEEDERS,
   MIN_AGE_HOURS,
   MAX_AGE_HOURS,
+  MIN_BITRATE,
+  MAX_BITRATE,
 } from '../../../../core/src/utils/constants';
 import { PageControls } from '../shared/page-controls';
 import { Switch } from '../ui/switch';
@@ -353,6 +356,10 @@ function Content() {
               <TabsTrigger value="size">
                 <GoFileBinary className="text-lg mr-3" />
                 Size
+              </TabsTrigger>
+              <TabsTrigger value="bitrate">
+                <FaTachometerAlt className="text-lg mr-3" />
+                Bitrate
               </TabsTrigger>
               <TabsTrigger value="limit">
                 <GoContainer className="text-lg mr-3" />
@@ -2354,6 +2361,199 @@ function Content() {
               </div>
             </>
           </TabsContent>
+          <TabsContent value="bitrate" className="space-y-4">
+            <>
+              <HeadingWithPageControls heading="Bitrate" />
+
+              <div className="mb-4">
+                <p className="text-sm text-[--muted]">
+                  Set minimum and maximum bitrate limits for movies, series, and
+                  anime series. You can set a global limit, and also choose to
+                  set specific limits for each resolution. For a given stream,
+                  only one set of bitrate filters would be used. A resolution
+                  specific limit takes priority. Anime series limits take
+                  precedence over regular series limits.
+                </p>
+              </div>
+
+              <Alert
+                intent="warning"
+                className="mb-4"
+                title="Bitrate Accuracy"
+                description="Bitrate values are estimates calculated from file size and duration. These represent average bitrates and may not reflect peak bitrates or exact encoding quality."
+              />
+
+              <div className="space-y-4">
+                <div className="rounded-[--radius-md] border bg-[--background] p-4">
+                  <Switch
+                    label="Use Runtime from Metadata Providers"
+                    side="right"
+                    help="When enabled, uses runtime data from metadata providers (like TMDB) for bitrate calculations as fallback. Note: This makes estimates less accurate as actual file durations often differ from metadata, and most files lack duration info, making sorting by bitrate similar to sorting by size."
+                    value={userData.bitrate?.useMetadataRuntime ?? true}
+                    onValueChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          useMetadataRuntime: value,
+                        },
+                      }));
+                    }}
+                  />
+                </div>
+
+                <SettingsCard
+                  title="Global"
+                  description="Apply bitrate filters for movies, series, and anime series"
+                >
+                  <BitrateRangeSlider
+                    label="Global Bitrate Limits"
+                    help="Set the minimum and maximum bitrate limits for all results"
+                    moviesValue={
+                      (
+                        userData.bitrate?.global?.movies || [
+                          MIN_BITRATE,
+                          MAX_BITRATE,
+                        ]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+                    }
+                    seriesValue={
+                      (
+                        userData.bitrate?.global?.series || [
+                          MIN_BITRATE,
+                          MAX_BITRATE,
+                        ]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+                    }
+                    animeValue={
+                      (
+                        userData.bitrate?.global?.anime || [
+                          MIN_BITRATE,
+                          MAX_BITRATE,
+                        ]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+                    }
+                    onMoviesChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          global: { ...prev.bitrate?.global, movies: value },
+                        },
+                      }));
+                    }}
+                    onSeriesChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          global: { ...prev.bitrate?.global, series: value },
+                        },
+                      }));
+                    }}
+                    onAnimeChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          global: { ...prev.bitrate?.global, anime: value },
+                        },
+                      }));
+                    }}
+                  />
+                </SettingsCard>
+
+                {mode === 'pro' && (
+                  <SettingsCard
+                    title="Resolution-Specific"
+                    description="Set bitrate limits for specific resolutions"
+                  >
+                    <div className="space-y-8">
+                      {RESOLUTIONS.map((resolution) => (
+                        <BitrateRangeSlider
+                          key={resolution}
+                          label={resolution}
+                          help={`Set the minimum and maximum bitrate for ${resolution} results`}
+                          moviesValue={
+                            (
+                              userData.bitrate?.resolution?.[resolution]
+                                ?.movies || [MIN_BITRATE, MAX_BITRATE]
+                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
+                              number,
+                              number,
+                            ]
+                          }
+                          seriesValue={
+                            (
+                              userData.bitrate?.resolution?.[resolution]
+                                ?.series || [MIN_BITRATE, MAX_BITRATE]
+                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
+                              number,
+                              number,
+                            ]
+                          }
+                          animeValue={
+                            (
+                              userData.bitrate?.resolution?.[resolution]
+                                ?.anime || [MIN_BITRATE, MAX_BITRATE]
+                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
+                              number,
+                              number,
+                            ]
+                          }
+                          onMoviesChange={(value) => {
+                            setUserData((prev: any) => ({
+                              ...prev,
+                              bitrate: {
+                                ...prev.bitrate,
+                                resolution: {
+                                  ...prev.bitrate?.resolution,
+                                  [resolution]: {
+                                    ...prev.bitrate?.resolution?.[resolution],
+                                    movies: value,
+                                  },
+                                },
+                              },
+                            }));
+                          }}
+                          onSeriesChange={(value) => {
+                            setUserData((prev: any) => ({
+                              ...prev,
+                              bitrate: {
+                                ...prev.bitrate,
+                                resolution: {
+                                  ...prev.bitrate?.resolution,
+                                  [resolution]: {
+                                    ...prev.bitrate?.resolution?.[resolution],
+                                    series: value,
+                                  },
+                                },
+                              },
+                            }));
+                          }}
+                          onAnimeChange={(value) => {
+                            setUserData((prev: any) => ({
+                              ...prev,
+                              bitrate: {
+                                ...prev.bitrate,
+                                resolution: {
+                                  ...prev.bitrate?.resolution,
+                                  [resolution]: {
+                                    ...prev.bitrate?.resolution?.[resolution],
+                                    anime: value,
+                                  },
+                                },
+                              },
+                            }));
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </SettingsCard>
+                )}
+              </div>
+            </>
+          </TabsContent>
           <TabsContent value="size" className="space-y-4">
             <>
               <HeadingWithPageControls heading="Size" />
@@ -3838,6 +4038,210 @@ function SizeRangeSlider({
             <div className="flex justify-between mt-1 text-xs text-[--muted]">
               <span>{formatBytes(animeValue[0])}</span>
               <span>{formatBytes(animeValue[1])}</span>
+            </div>
+          </div>
+          <div className="flex gap-2 md:w-[240px] shrink-0">
+            <NumberInput
+              label="Min"
+              step={max / 1000}
+              value={animeValue[0]}
+              min={min}
+              max={animeValue[1]}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                onAnimeChange([newValue, animeValue[1]])
+              }
+            />
+            <NumberInput
+              label="Max"
+              step={max / 1000}
+              value={animeValue[1]}
+              min={animeValue[0]}
+              max={max}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                onAnimeChange([animeValue[0], newValue])
+              }
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatBitrate(bitrate: number, round: boolean = false): string {
+  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
+  const k = 1000;
+  const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
+  );
+  let value = bitrate / Math.pow(k, i);
+  value = round ? Math.round(value) : parseFloat(value.toFixed(1));
+  return `${value} ${sizes[i]}`;
+}
+
+interface BitrateRangeSliderProps {
+  label: string;
+  help?: string;
+  moviesValue: [number, number];
+  seriesValue: [number, number];
+  animeValue: [number, number];
+  onMoviesChange: (value: [number, number]) => void;
+  onSeriesChange: (value: [number, number]) => void;
+  onAnimeChange: (value: [number, number]) => void;
+  min?: number;
+  max?: number;
+}
+
+function BitrateRangeSlider({
+  label,
+  help,
+  moviesValue,
+  seriesValue,
+  animeValue,
+  onMoviesChange,
+  onSeriesChange,
+  onAnimeChange,
+  min = MIN_BITRATE,
+  max = MAX_BITRATE,
+}: BitrateRangeSliderProps) {
+  return (
+    <div className="space-y-6">
+      <h4 className="text-base font-medium">{label}</h4>
+
+      {/* Movies Slider */}
+      <div className="space-y-2">
+        <h5 className="text-sm font-medium text-[--muted]">Movies</h5>
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 min-w-0">
+            <Slider
+              min={min}
+              max={max}
+              defaultValue={[min, max]}
+              step={max / 1000}
+              value={moviesValue}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                newValue?.[0] !== undefined &&
+                newValue?.[1] !== undefined &&
+                onMoviesChange([newValue[0], newValue[1]])
+              }
+              minStepsBetweenThumbs={1}
+              label="Movies Bitrate Range"
+              help={help}
+            />
+            <div className="flex justify-between mt-1 text-xs text-[--muted]">
+              <span>{formatBitrate(moviesValue[0])}</span>
+              <span>{formatBitrate(moviesValue[1])}</span>
+            </div>
+          </div>
+          <div className="flex gap-2 md:w-[240px] shrink-0">
+            <NumberInput
+              label="Min"
+              step={max / 1000}
+              value={moviesValue[0]}
+              min={min}
+              max={moviesValue[1]}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                onMoviesChange([newValue, moviesValue[1]])
+              }
+            />
+            <NumberInput
+              label="Max"
+              step={max / 1000}
+              value={moviesValue[1]}
+              min={moviesValue[0]}
+              max={max}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                onMoviesChange([moviesValue[0], newValue])
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Series Slider */}
+      <div className="space-y-2">
+        <h5 className="text-sm font-medium text-[--muted]">Series</h5>
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 min-w-0">
+            <Slider
+              min={min}
+              max={max}
+              step={max / 1000}
+              defaultValue={[min, max]}
+              value={seriesValue}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                newValue?.[0] !== undefined &&
+                newValue?.[1] !== undefined &&
+                onSeriesChange([newValue[0], newValue[1]])
+              }
+              minStepsBetweenThumbs={1}
+              label="Series Bitrate Range"
+              help={help}
+            />
+            <div className="flex justify-between mt-1 text-xs text-[--muted]">
+              <span>{formatBitrate(seriesValue[0])}</span>
+              <span>{formatBitrate(seriesValue[1])}</span>
+            </div>
+          </div>
+          <div className="flex gap-2 md:w-[240px] shrink-0">
+            <NumberInput
+              label="Min"
+              step={max / 1000}
+              value={seriesValue[0]}
+              min={min}
+              max={seriesValue[1]}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                onSeriesChange([newValue, seriesValue[1]])
+              }
+            />
+            <NumberInput
+              label="Max"
+              step={max / 1000}
+              value={seriesValue[1]}
+              min={seriesValue[0]}
+              max={max}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                onSeriesChange([seriesValue[0], newValue])
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Anime Series Slider */}
+      <div className="space-y-2">
+        <h5 className="text-sm font-medium text-[--muted]">Anime Series</h5>
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 min-w-0">
+            <Slider
+              min={min}
+              max={max}
+              step={max / 1000}
+              defaultValue={[min, max]}
+              value={animeValue}
+              onValueChange={(newValue) =>
+                newValue !== undefined &&
+                newValue?.[0] !== undefined &&
+                newValue?.[1] !== undefined &&
+                onAnimeChange([newValue[0], newValue[1]])
+              }
+              minStepsBetweenThumbs={1}
+              label="Anime Series Bitrate Range"
+              help={help}
+            />
+            <div className="flex justify-between mt-1 text-xs text-[--muted]">
+              <span>{formatBitrate(animeValue[0])}</span>
+              <span>{formatBitrate(animeValue[1])}</span>
             </div>
           </div>
           <div className="flex gap-2 md:w-[240px] shrink-0">

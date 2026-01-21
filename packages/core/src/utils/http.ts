@@ -53,6 +53,7 @@ export interface RequestOptions {
   ignoreRecursion?: boolean;
   headers?: HeadersInit;
   body?: BodyInit;
+  forceProxy?: string;
   rawOptions?: RequestInit;
 }
 
@@ -122,11 +123,21 @@ export async function makeRequest(url: string, options: RequestOptions) {
   } else {
     await urlCount.set(key, 1, Env.RECURSION_THRESHOLD_WINDOW);
   }
+
+  let dispatcher: Dispatcher | undefined;
+
+  if (options.forceProxy) {
+    dispatcher = getProxyAgent(options.forceProxy);
+  } else if (useProxy) {
+    dispatcher = getProxyAgent(Env.ADDON_PROXY![proxyIndex]);
+  }
+
   logger.debug(
-    `Making a ${useProxy ? 'proxied' : 'direct'}${proxyIndex !== -1 ? ` (proxy ${proxyIndex + 1})` : ''} request to ${makeUrlLogSafe(
+    `Making a ${useProxy ? 'proxied' : options.forceProxy ? 'forced proxied (' + options.forceProxy + ')' : 'direct'}${proxyIndex !== -1 ? ` (proxy ${proxyIndex + 1})` : ''} request to ${makeUrlLogSafe(
       urlObj.toString()
     )} with forwarded ip ${maskSensitiveInfo(options.forwardIp ?? 'none')} and headers ${maskSensitiveInfo(JSON.stringify(Object.fromEntries(headers)))}`
   );
+
   let response;
   try {
     response = await fetch(urlObj.toString(), {
@@ -134,9 +145,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
       method: options.method,
       body: options.body,
       headers: headers,
-      dispatcher: useProxy
-        ? getProxyAgent(Env.ADDON_PROXY![proxyIndex])
-        : undefined,
+      dispatcher: dispatcher,
       signal: AbortSignal.timeout(options.timeout),
     });
   } catch (err) {

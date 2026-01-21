@@ -33,8 +33,8 @@ importers:
         specifier: github:viren070/torbox-sdk-js#dist
         version: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/dc1d0bc148dd35fa5e5d39f699f070aadeccad5c
       '@viren070/parse-torrent-title':
-        specifier: ^0.5.5
-        version: 0.5.5
+        specifier: ^0.6.1
+        version: 0.6.1
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -86,6 +86,9 @@ importers:
       undici:
         specifier: ^7.16.0
         version: 7.16.0
+      user-agents:
+        specifier: ^1.1.669
+        version: 1.1.669
       webdav:
         specifier: ^5.8.0
         version: 5.8.0
@@ -114,12 +117,15 @@ importers:
       '@types/pg':
         specifier: ^8.15.6
         version: 8.15.6
+      '@types/user-agents':
+        specifier: ^1.0.4
+        version: 1.0.4
       '@types/xml2js':
         specifier: ^0.4.14
         version: 0.4.14
 
   packages/frontend:
-    dependencies:
+    devDependencies:
       '@aiostreams/core':
         specifier: workspace:*
         version: link:../core
@@ -135,6 +141,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.1)
+      '@eslint/eslintrc':
+        specifier: ^3.3.3
+        version: 3.3.3
       '@headlessui/react':
         specifier: ^2.2.9
         version: 2.2.9(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -180,15 +189,30 @@ importers:
       '@tailwindcss/forms':
         specifier: ^0.5.10
         version: 0.5.10(tailwindcss@3.4.18(ts-node@10.9.2(@types/node@20.19.26)(typescript@5.9.3)))
+      '@tailwindcss/postcss':
+        specifier: ^4.1.17
+        version: 4.1.17
       '@tailwindcss/typography':
         specifier: ^0.5.19
         version: 0.5.19(tailwindcss@3.4.18(ts-node@10.9.2(@types/node@20.19.26)(typescript@5.9.3)))
+      '@types/node':
+        specifier: ^20.19.26
+        version: 20.19.26
+      '@types/react':
+        specifier: ^19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.7)
       '@zag-js/number-input':
         specifier: 1.21.1
         version: 1.21.1
       '@zag-js/react':
         specifier: 1.21.1
         version: 1.21.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      autoprefixer:
+        specifier: ^10.4.22
+        version: 10.4.22(postcss@8.5.6)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -198,6 +222,12 @@ importers:
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
+      eslint-config-next:
+        specifier: ^15.5.7
+        version: 15.5.7(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
       fast-deep-equal:
         specifier: ^3.0.0
         version: 3.1.3
@@ -216,6 +246,15 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      postcss:
+        specifier: ^8.5.3
+        version: 8.5.6
+      postcss-import:
+        specifier: ^16.1.1
+        version: 16.1.1(postcss@8.5.6)
+      postcss-nesting:
+        specifier: ^13.0.1
+        version: 13.0.2(postcss@8.5.6)
       react:
         specifier: ^19.2.1
         version: 19.2.1
@@ -237,52 +276,18 @@ importers:
       tailwind-scrollbar-hide:
         specifier: ~1.1.7
         version: 1.1.7
-      tailwindcss-animate:
-        specifier: ~1.0.7
-        version: 1.0.7(tailwindcss@3.4.18(ts-node@10.9.2(@types/node@20.19.26)(typescript@5.9.3)))
-      zod:
-        specifier: ^4.1.13
-        version: 4.1.13
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@tailwindcss/postcss':
-        specifier: ^4.1.17
-        version: 4.1.17
-      '@types/node':
-        specifier: ^20.19.26
-        version: 20.19.26
-      '@types/react':
-        specifier: ^19.2.7
-        version: 19.2.7
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.7)
-      autoprefixer:
-        specifier: ^10.4.22
-        version: 10.4.22(postcss@8.5.6)
-      eslint:
-        specifier: ^9.39.1
-        version: 9.39.1(jiti@2.6.1)
-      eslint-config-next:
-        specifier: ^15.5.7
-        version: 15.5.7(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
-      postcss:
-        specifier: ^8.5.3
-        version: 8.5.6
-      postcss-import:
-        specifier: ^16.1.1
-        version: 16.1.1(postcss@8.5.6)
-      postcss-nesting:
-        specifier: ^13.0.1
-        version: 13.0.2(postcss@8.5.6)
       tailwindcss:
         specifier: ^3.4.18
         version: 3.4.18(ts-node@10.9.2(@types/node@20.19.26)(typescript@5.9.3))
+      tailwindcss-animate:
+        specifier: ~1.0.7
+        version: 1.0.7(tailwindcss@3.4.18(ts-node@10.9.2(@types/node@20.19.26)(typescript@5.9.3)))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      zod:
+        specifier: ^4.1.13
+        version: 4.1.13
 
   packages/server:
     dependencies:
@@ -1921,6 +1926,9 @@ packages:
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
 
+  '@types/user-agents@1.0.4':
+    resolution: {integrity: sha512-AjeFc4oX5WPPflgKfRWWJfkEk7Wu82fnj1rROPsiqFt6yElpdGFg8Srtm/4PU4rA9UiDUZlruGPgcwTMQlwq4w==}
+
   '@types/xml2js@0.4.14':
     resolution: {integrity: sha512-4YnrRemBShWRO2QjvUin8ESA41rH+9nQGLUGZV/1IDhi3SL9OhdpNC/MrulTWuptXKwhx/aDxE7toV0f/ypIXQ==}
 
@@ -2081,8 +2089,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@viren070/parse-torrent-title@0.5.5':
-    resolution: {integrity: sha512-QclDSUxxkbsLrN4RKPflFaExiYC7YwyFFq5DYZWcptA7awk//VAC4d5xxcO4WB3rRt4ukANOH8kC+aaoT/JEQQ==}
+  '@viren070/parse-torrent-title@0.6.1':
+    resolution: {integrity: sha512-MkiK3RKDdxY/5Zp1sVIiLr8pApS0QVUE9CNVj8Qk2VdRYPyBDF4xV92MnXcreYDSNQVbVAEeJ5oIVU9uOO5aCg==}
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -3557,6 +3565,9 @@ packages:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
 
+  lodash.clonedeep@4.5.0:
+    resolution: {integrity: sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ==}
+
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
 
@@ -3855,6 +3866,7 @@ packages:
   next@15.5.7:
     resolution: {integrity: sha512-+t2/0jIJ48kUpGKkdlhgkv+zPTEOoXyr60qXe68eB/pl3CMJaLeIGjzp5D6Oqt25hCBiBTt8wEeeAzfJvUKnPQ==}
     engines: {node: ^18.18.0 || ^19.8.0 || >= 20.0.0}
+    deprecated: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/security-update-2025-12-11 for more details.
     hasBin: true
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
@@ -4913,6 +4925,9 @@ packages:
     resolution: {integrity: sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  user-agents@1.1.669:
+    resolution: {integrity: sha512-pbIzG+AOqCaIpySKJ4IAm1l0VyE4jMnK4y1thV8lm8PYxI+7X5uWcppOK7zY79TCKKTAnJH3/4gaVIZHsjrmJA==}
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -6498,6 +6513,8 @@ snapshots:
 
   '@types/unist@3.0.3': {}
 
+  '@types/user-agents@1.0.4': {}
+
   '@types/xml2js@0.4.14':
     dependencies:
       '@types/node': 20.19.26
@@ -6656,7 +6673,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@viren070/parse-torrent-title@0.5.5': {}
+  '@viren070/parse-torrent-title@0.6.1': {}
 
   '@vitest/expect@2.1.9':
     dependencies:
@@ -8380,6 +8397,8 @@ snapshots:
   locate-path@6.0.0:
     dependencies:
       p-locate: 5.0.0
+
+  lodash.clonedeep@4.5.0: {}
 
   lodash.merge@4.6.2: {}
 
@@ -10114,6 +10133,10 @@ snapshots:
   use-sync-external-store@1.5.0(react@19.2.1):
     dependencies:
       react: 19.2.1
+
+  user-agents@1.1.669:
+    dependencies:
+      lodash.clonedeep: 4.5.0
 
   util-deprecate@1.0.2: {}
 

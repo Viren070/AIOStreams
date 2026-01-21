@@ -103,6 +103,12 @@ const SizeFilterOptions = z.object({
   resolution: z.partialRecord(Resolutions, SizeFilter).optional(),
 });
 
+const BitrateFilterOptions = z.object({
+  useMetadataRuntime: z.boolean().optional().default(true),
+  global: SizeFilter.optional(),
+  resolution: z.partialRecord(Resolutions, SizeFilter).optional(),
+});
+
 const ServiceSchema = z.object({
   id: ServiceIds,
   enabled: z.boolean().optional(),
@@ -485,6 +491,7 @@ export const UserDataSchema = z.object({
   proxy: StreamProxyConfig.optional(),
   resultLimits: ResultLimitOptions.optional(),
   size: SizeFilterOptions.optional(),
+  bitrate: BitrateFilterOptions.optional(),
   hideErrors: z.boolean().optional(),
   hideErrorsForResources: z.array(ResourceSchema).optional(),
   // showStatistics: z.boolean().optional(),
@@ -796,6 +803,7 @@ export const ParsedStreamSchema = z.object({
     })
     .optional(),
   duration: z.number().optional(),
+  bitrate: z.number().optional(),
   library: z.boolean().optional(),
   seadex: z
     .object({

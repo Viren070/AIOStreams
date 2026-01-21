@@ -66,6 +66,7 @@ export enum StaticFiles {
   STORE_LIMIT_EXCEEDED = 'store_limit_exceeded.mp4',
   CONTENT_PROXY_LIMIT_REACHED = 'content_proxy_limit_reached.mp4',
   INTERNAL_SERVER_ERROR = '500.mp4',
+  TOO_MANY_REQUESTS = '429.mp4',
   FORBIDDEN = '403.mp4',
   UNAUTHORIZED = '401.mp4',
   NO_MATCHING_FILE = 'no_matching_file.mp4',

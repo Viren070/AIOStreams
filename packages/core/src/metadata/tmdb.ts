@@ -31,6 +31,7 @@ const MovieDetailsSchema = z.object({
   status: z.string(),
   original_title: z.string().optional(),
   original_language: z.string().optional(),
+  runtime: z.number().nullable().optional(),
 });
 
 const TVDetailsSchema = z.object({
@@ -41,6 +42,7 @@ const TVDetailsSchema = z.object({
   status: z.string(),
   original_title: z.string().optional(),
   original_language: z.string().optional(),
+  episode_run_time: z.array(z.number()).optional(),
   seasons: z.array(
     z.object({
       season_number: z.number(),
@@ -306,6 +308,7 @@ export class TMDBMetadata {
     let allTitles: string[] = [];
     let imdbId: string | undefined =
       parsedId.type === 'imdbId' ? parsedId.value.toString() : undefined;
+    let runtime: number | undefined;
 
     if (parsedId.mediaType === 'movie') {
       const movieData = MovieDetailsSchema.parse(detailsJson);
@@ -317,6 +320,7 @@ export class TMDBMetadata {
         allTitles.push(movieData.original_title);
       }
       releaseDate = movieData.release_date;
+      runtime = movieData.runtime || undefined;
     } else {
       const tvData = TVDetailsSchema.parse(detailsJson);
       primaryTitle =
@@ -331,6 +335,13 @@ export class TMDBMetadata {
         ? this.parseReleaseDate(tvData.last_air_date)
         : undefined;
       seasons = tvData.seasons;
+      if (tvData.episode_run_time && tvData.episode_run_time.length > 0) {
+        // Calculate average runtime
+        runtime = Math.round(
+          tvData.episode_run_time.reduce((a, b) => a + b, 0) /
+            tvData.episode_run_time.length
+        );
+      }
     }
 
     allTitles.push(primaryTitle);
@@ -388,6 +399,7 @@ export class TMDBMetadata {
       seasons,
       tmdbId: Number(tmdbId),
       tvdbId: null,
+      runtime: runtime,
     };
     // Cache the result
     TMDBMetadata.metadataCache.set(cacheKey, metadata, TITLE_CACHE_TTL);

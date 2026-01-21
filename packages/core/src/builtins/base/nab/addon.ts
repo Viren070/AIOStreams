@@ -27,6 +27,7 @@ export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
 interface SearchResultMetadata {
   searchType: 'id' | 'query';
+  capabilities: Capabilities;
 }
 
 export abstract class BaseNabAddon<
@@ -150,6 +151,7 @@ export abstract class BaseNabAddon<
       });
       searchType = 'query';
     }
+    queryParams.extended = '1';
     let results: SearchResultItem<A['namespace']>[] = [];
     if (queries.length > 0) {
       this.logger.debug('Performing queries', { queries });
@@ -173,6 +175,7 @@ export abstract class BaseNabAddon<
       results: results,
       meta: {
         searchType,
+        capabilities,
       },
     };
   }

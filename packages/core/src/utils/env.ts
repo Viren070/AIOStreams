@@ -18,6 +18,7 @@ import * as constants from './constants.js';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import bytes from 'bytes';
+import UserAgent from 'user-agents';
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -65,48 +66,38 @@ const commaSeparated = makeExactValidator<string[]>((x) => {
   return parsed;
 });
 
-const regexes = makeValidator((x) => {
-  // json array of string
-  const parsed = JSON.parse(x);
-  if (!Array.isArray(parsed)) {
-    throw new EnvError('Regexes must be an array');
-  }
-  // each element must be a string
-  parsed.forEach((x) => {
+// comma separated list of key:url where key is in choices
+const httpProxyMap = <T extends string>(choices: readonly T[]) =>
+  makeExactValidator<Map<T, string>>((x: string): Map<T, string> => {
     if (typeof x !== 'string') {
-      throw new EnvError('Regexes must be an array of strings');
+      throw new EnvError('HTTP Proxy Map must be a string');
     }
-    try {
-      new RegExp(x);
-    } catch (e) {
-      throw new EnvError(`Invalid regex pattern: ${x}`);
-    }
-  });
-  return parsed;
-});
+    const proxyMap = new Map<T, string>();
 
-const namedRegexes = makeValidator((x) => {
-  // array of objects with properties name and pattern
-  const parsed = JSON.parse(x);
-  if (!Array.isArray(parsed)) {
-    throw new EnvError('Named regexes must be an array');
-  }
-  // each element must be an object with properties name and pattern
-  parsed.forEach((x) => {
-    if (typeof x !== 'object' || !x.name || !x.pattern) {
-      throw new EnvError(
-        'Named regexes must be an array of objects with properties name and pattern'
-      );
+    const entries = x.split(',').map((entry) => entry.trim());
+    for (const entry of entries) {
+      const tokens = entry.split(':');
+      const key = tokens.shift()?.trim();
+      const value = tokens.join(':').trim();
+      if (!key || !value) {
+        throw new EnvError(`Invalid HTTP Proxy Map entry: "${entry}"`);
+      }
+      if (!choices.includes(key as (typeof choices)[number])) {
+        throw new EnvError(
+          `Invalid HTTP Proxy Map key: "${key}". Must be one of: ${choices.join(', ')}`
+        );
+      }
+      try {
+        new URL(value);
+      } catch {
+        throw new EnvError(
+          `Invalid HTTP Proxy Map value: "${value}". Must be a valid URL.`
+        );
+      }
+      proxyMap.set(key as T, value);
     }
-    try {
-      new RegExp(x.pattern);
-    } catch (e) {
-      throw new EnvError(`Invalid regex pattern: ${x.pattern}`);
-    }
+    return proxyMap;
   });
-
-  return parsed;
-});
 
 const removeTrailingSlash = (x: string) =>
   x.endsWith('/') ? x.slice(0, -1) : x;
@@ -184,7 +175,13 @@ export const forcedPort = makeValidator<string>((input: string) => {
 const parseUserAgent = (input: string): string => {
   if (['false', 'none', ''].includes(input.toLowerCase().trim()))
     return 'false';
-  return input.replace(/{version}/g, metadata?.version || 'unknown');
+  const filters =
+    typeof process.env.RANDOM_USER_AGENT_FILTERS === 'string'
+      ? JSON.parse(process.env.RANDOM_USER_AGENT_FILTERS)
+      : undefined;
+  return input
+    .replace(/{version}/g, metadata?.version || 'unknown')
+    .replace(/{random}/g, new UserAgent(filters).toString());
 };
 const userAgent = makeValidator((x) => {
   if (typeof x !== 'string') {
@@ -200,7 +197,7 @@ const userAgentMappings = makeValidator<Map<string, string>>((x) => {
   }
   const mappings = new Map<string, string>();
 
-  const regex = /([a-zA-Z0-9.-]+):([^,]*(?:,[^a-zA-Z0-9.-][^,]*)*)/g;
+  const regex = /([a-zA-Z0-9.-\\*]+):([^,]*(?:,[^a-zA-Z0-9.-][^,]*)*)/g;
 
   let match;
   let hasMatches = false;
@@ -224,7 +221,6 @@ const userAgentMappings = makeValidator<Map<string, string>>((x) => {
       'User agent mappings must be in the format hostname:useragent,hostname:useragent,...'
     );
   }
-
   return mappings;
 });
 
@@ -339,6 +335,56 @@ const urlMappings = makeValidator<Record<string, string>>((x) => {
   }
   return mappings;
 });
+
+const cacheTtls = (defaultWildcard: number = 300) =>
+  makeValidator<Record<string, number>>((x) => {
+    if (typeof x !== 'string') {
+      throw new EnvError('Cache TTLs must be a string');
+    }
+
+    // If just a number, apply to wildcard
+    if (/^\-?\d+$/.test(x.trim())) {
+      const value = Number(x.trim());
+      if (value !== -1 && (value <= 0 || !Number.isInteger(value))) {
+        throw new EnvError(
+          'Cache TTL value must be -1 (disabled) or a positive integer'
+        );
+      }
+      return { '*': value };
+    }
+
+    const ttlMap: Record<string, number> = {};
+    let hasWildcard = false;
+
+    x.split(',').forEach((entry) => {
+      const [key, valueStr] = entry.split(':').map((s) => s.trim());
+      if (!key || !valueStr) {
+        throw new EnvError(
+          'Cache TTLs must be a comma separated list of key:value pairs'
+        );
+      }
+      const value = Number(valueStr);
+      if (
+        Number.isNaN(value) ||
+        (value !== -1 && (value <= 0 || !Number.isInteger(value)))
+      ) {
+        throw new EnvError(
+          'Cache TTL value must be -1 (disabled) or a positive integer'
+        );
+      }
+      if (key === '*') {
+        hasWildcard = true;
+      }
+      ttlMap[key] = value;
+    });
+
+    // If no wildcard is specified, add the default
+    if (!hasWildcard) {
+      ttlMap['*'] = defaultWildcard;
+    }
+
+    return ttlMap;
+  });
 
 const boolOrChoice = <T extends string>(choices: T[]) =>
   makeValidator<boolean | T>((input: string) => {
@@ -548,6 +594,10 @@ export const Env = cleanEnv(process.env, {
     default: 24 * 60 * 60 * 1000, // 24 hours
     desc: 'Interval for refreshing the Extended Anitrakt TV in milliseconds',
   }),
+  ANIME_DB_ANIME_LIST_REFRESH_INTERVAL: num({
+    default: 7 * 24 * 60 * 60 * 1000, // 7 days
+    desc: 'Interval for refreshing the Anime Lists XML in milliseconds',
+  }),
   // logging settings
   LOG_SENSITIVE_INFO: bool({
     default: false,
@@ -618,51 +668,55 @@ export const Env = cleanEnv(process.env, {
     default: 100000,
     desc: 'Default max cache size for a cache instance',
   }),
+  SQL_CACHE_MAX_SIZE: num({
+    default: 100000,
+    desc: 'Max size for the SQL cache',
+  }),
   PROXY_IP_CACHE_TTL: num({
     default: 900,
     desc: 'Cache TTL for proxy IPs',
   }),
-  MANIFEST_CACHE_TTL: num({
-    default: 21600,
+  MANIFEST_CACHE_TTL: cacheTtls(21600)({
+    default: { '*': 21600 },
     desc: 'Cache TTL for manifest files',
   }),
   MANIFEST_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of manifest items to cache',
   }),
-  SUBTITLE_CACHE_TTL: num({
-    default: 300,
+  SUBTITLE_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for subtitle files',
   }),
   SUBTITLE_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of subtitle items to cache',
   }),
-  STREAM_CACHE_TTL: num({
-    default: -1,
+  STREAM_CACHE_TTL: cacheTtls(-1)({
+    default: { '*': -1 },
     desc: 'Cache TTL for stream files. If -1, no caching will be done.',
   }),
   STREAM_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of stream items to cache',
   }),
-  CATALOG_CACHE_TTL: num({
-    default: 300,
+  CATALOG_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for catalog files',
   }),
   CATALOG_CACHE_MAX_SIZE: num({
     default: 1000,
     desc: 'Max number of catalog items to cache',
   }),
-  META_CACHE_TTL: num({
-    default: 300,
+  META_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
   }),
   META_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of metadata items to cache',
   }),
-  ADDON_CATALOG_CACHE_TTL: num({
-    default: 300,
+  ADDON_CATALOG_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for addon catalog files',
   }),
   ADDON_CATALOG_CACHE_MAX_SIZE: num({
@@ -1778,6 +1832,10 @@ export const Env = cleanEnv(process.env, {
     default: 60 * 60, // 1 hour
     desc: 'Builtin Debrid playback link cache TTL',
   }),
+  BUILTIN_DEBRID_RESOLVE_ERROR_CACHE_TTL: num({
+    default: 60 * 10, // 10 minutes
+    desc: 'Builtin Debrid resolve error cache TTL',
+  }),
   BUILTIN_DEBRID_LIBRARY_CACHE_TTL: num({
     default: 60 * 5, // 5 minutes
     desc: 'Builtin Debrid NZB list cache TTL',
@@ -1890,6 +1948,10 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_NAB_USER_AGENT: userAgent({
     default: undefined,
     desc: 'Builtin Torznab/Newznab user agent',
+  }),
+  BUILTIN_NAB_HTTP_PROXY: httpProxyMap(['torznab', 'newznab'])({
+    default: undefined,
+    desc: 'HTTP proxy for Torzab/Newznab indexers, overrides ADDON_PROXY and ADDON_PROXY_CONFIG',
   }),
   BUILTIN_NAB_MAX_PAGES: num({
     default: 5,

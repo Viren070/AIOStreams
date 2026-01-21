@@ -194,6 +194,7 @@ export class TVDBMetadata {
           year: parseInt(movie.year),
           tvdbId: movie.id,
           tmdbId: null,
+          runtime: movie.runtime,
         };
       } else if ('series' in item) {
         const series = item.series;
@@ -206,6 +207,7 @@ export class TVDBMetadata {
             : undefined,
           tvdbId: series.id,
           tmdbId: null,
+          runtime: series.averageRuntime ?? undefined,
         };
       } else {
         throw new Error(`Could not find metadata for ${id.value}`);
@@ -225,6 +227,7 @@ export class TVDBMetadata {
           year: parseInt(response.data.year),
           tvdbId: response.data.id,
           tmdbId: null,
+          runtime: response.data.runtime,
         };
       } else {
         // Handle both series and anime the same way
@@ -242,6 +245,7 @@ export class TVDBMetadata {
             : undefined,
           tvdbId: series.id,
           tmdbId: null,
+          runtime: series.averageRuntime ?? undefined,
         };
       }
     }

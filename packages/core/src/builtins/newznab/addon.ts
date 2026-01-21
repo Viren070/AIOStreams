@@ -28,15 +28,7 @@ class NewznabApi extends BaseNabApi<'newznab'> {
     apiPath?: string,
     extraParams?: Record<string, string | number | boolean>
   ) {
-    super(
-      'newznab',
-      logger,
-      baseUrl,
-      apiKey,
-      apiPath,
-      extraParams,
-      Env.BUILTIN_NAB_USER_AGENT || null
-    );
+    super('newznab', logger, baseUrl, apiKey, apiPath, extraParams);
   }
 }
 
@@ -172,7 +164,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
 
     const nzbs: NZB[] = [];
     for (const result of results) {
-      const nzbUrl = this.getNzbUrl(result);
+      const enclosure = this.getEnclosure(result);
+      const nzbUrl = enclosure?.url;
       if (!nzbUrl) continue;
       if (seenNzbs.has(nzbUrl)) continue;
       seenNzbs.add(nzbUrl);
@@ -181,8 +174,12 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       const md5 =
         result.newznab?.infohash?.toString() ||
         createHash('md5').update(nzbUrl).digest('hex');
+      let date = result.pubDate?.toString();
+      if (typeof result.newznab?.usenetdate === 'string') {
+        date = result.newznab.usenetdate;
+      }
       const age = Math.ceil(
-        Math.abs(new Date().getTime() - new Date(result.pubDate).getTime()) /
+        Math.abs(new Date().getTime() - new Date(date).getTime()) /
           (1000 * 60 * 60)
       );
 
@@ -192,10 +189,14 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         nzb: nzbUrl,
         age: age,
         title: result.title,
-        indexer: result.newznab?.hydraIndexerName?.toString() ?? undefined,
+        indexer:
+          result.newznab?.hydraIndexerName?.toString() ??
+          meta.capabilities.server.title,
         size:
           result.size ??
-          (result.newznab?.size ? Number(result.newznab.size) : 0),
+          (result.newznab?.size ? Number(result.newznab.size) : undefined) ??
+          enclosure?.length ??
+          0,
         type: 'usenet',
       };
 
@@ -275,8 +276,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     return stream;
   }
 
-  private getNzbUrl(result: any): string | undefined {
-    return result.enclosure.find((e: any) => e.type === 'application/x-nzb')
-      ?.url;
+  private getEnclosure(result: any) {
+    return result.enclosure.find((e: any) => e.type === 'application/x-nzb');
   }
 }

@@ -226,7 +226,8 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
   private readonly logger: Logger;
   private readonly params: Record<string, string>;
-  private readonly userAgent: string | null;
+  private readonly userAgent: string;
+  private readonly httpProxy: string | undefined;
 
   constructor(
     public readonly namespace: N,
@@ -234,8 +235,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     private readonly baseUrl: string,
     private readonly apiKey?: string,
     private readonly apiPath: string = '/api',
-    params: Record<string, string | number | boolean> = {},
-    userAgent?: string | null
+    params: Record<string, string | number | boolean> = {}
   ) {
     this.logger = logger;
     this.baseUrl = this.removeTrailingSlash(baseUrl);
@@ -243,13 +243,21 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     this.params = Object.fromEntries(
       Object.entries(params).map(([key, value]) => [key, String(value)])
     );
+    const apiPathUrl = new URL(this.baseUrl + this.apiPath);
+    // append any search params from the apiPath to this.params
+    if (apiPathUrl.search) {
+      apiPathUrl.searchParams.forEach((value, key) => {
+        if (!(key in this.params)) {
+          this.params[key] = value;
+        }
+      });
+      this.apiPath = apiPathUrl.pathname;
+    }
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
-    this.userAgent =
-      userAgent === null
-        ? null
-        : (userAgent ?? Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT);
+    this.userAgent = Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT;
+    this.httpProxy = Env.BUILTIN_NAB_HTTP_PROXY?.get(namespace);
 
     // Create the appropriate schema based on namespace
     if (namespace === 'torznab') {
@@ -368,10 +376,10 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private getHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml',
+      Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
+      'Accept-Encoding': 'gzip, br',
+      'User-Agent': this.userAgent,
     };
-    if (this.userAgent !== null) {
-      headers['User-Agent'] = this.userAgent;
-    }
     return headers;
   };
 
@@ -423,6 +431,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         method: 'GET',
         headers: this.getHeaders(),
         timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
+        forceProxy: this.httpProxy,
       });
 
       const data = await response.text();
