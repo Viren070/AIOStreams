@@ -89,12 +89,16 @@ export interface ParseValue {
     indexer: string | null;
     year: string | null;
     title: string | null;
+    folderSeasons: number[] | null;
+    formattedFolderSeasons: string | null;
     seasons: number[] | null;
     season: number | null;
     formattedSeasons: string | null;
     episodes: number[] | null;
     episode: number | null;
     formattedEpisodes: string | null;
+    folderEpisodes: number[] | null;
+    formattedFolderEpisodes: string | null;
     seasonEpisode: string[] | null;
     seasonPack: boolean;
     seeders: number | null;
@@ -213,6 +217,19 @@ export abstract class BaseFormatter {
       formattedEpisodeString,
     ].filter((v) => v !== undefined);
 
+    const formattedFolderSeasonString = stream.parsedFile?.folderSeasons?.length
+      ? stream.parsedFile.folderSeasons.length === 1
+        ? `S${getPaddedNumber(stream.parsedFile.folderSeasons[0], 2)}`
+        : `S${getPaddedNumber(stream.parsedFile.folderSeasons[0], 2)}-${getPaddedNumber(stream.parsedFile.folderSeasons[stream.parsedFile.folderSeasons.length - 1], 2)}`
+      : undefined;
+
+    const formattedFolderEpisodesString = stream.parsedFile?.folderEpisodes
+      ?.length
+      ? stream.parsedFile.folderEpisodes.length === 1
+        ? `E${getPaddedNumber(stream.parsedFile.folderEpisodes[0], 2)}`
+        : `E${getPaddedNumber(stream.parsedFile.folderEpisodes[0], 2)}-${getPaddedNumber(stream.parsedFile.folderEpisodes[stream.parsedFile.folderEpisodes.length - 1], 2)}`
+      : undefined;
+
     const sortedLanguages = languages
       ? [...languages].sort((a, b) => {
           const aIndex = userSpecifiedLanguages.indexOf(a as any);
@@ -308,9 +325,13 @@ export abstract class BaseFormatter {
         season: stream.parsedFile?.seasons?.[0] || null,
         formattedSeasons: formattedSeasonString || null,
         seasons: stream.parsedFile?.seasons || null,
+        folderSeasons: stream.parsedFile?.folderSeasons || null,
+        formattedFolderSeasons: formattedFolderSeasonString || null,
         episode: stream.parsedFile?.episodes?.[0] || null,
         formattedEpisodes: formattedEpisodeString || null,
         episodes: stream.parsedFile?.episodes || null,
+        formattedFolderEpisodes: formattedFolderEpisodesString || null,
+        folderEpisodes: stream.parsedFile?.folderEpisodes || null,
         seasonEpisode: seasonEpisode || null,
         seasonPack: stream.parsedFile?.seasonPack ?? false,
         duration: stream.duration || null,
