@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import * as constants from '../utils/constants.js';
+import { Env } from '../utils/env.js';
 
 const ServiceIds = z.enum(constants.SERVICES);
 
@@ -46,8 +47,8 @@ const Formatter = z.object({
   id: z.enum(constants.FORMATTERS),
   definition: z
     .object({
-      name: z.string().max(5000),
-      description: z.string().max(5000),
+      name: z.string().max(Env.MAX_FORMATTER_TEMPLATE_LENGTH),
+      description: z.string().max(Env.MAX_FORMATTER_TEMPLATE_LENGTH),
     })
     .optional(),
 });
@@ -429,10 +430,18 @@ export const UserDataSchema = z.object({
   excludeUncachedFromServices: z.array(z.string().min(1)).optional(),
   excludeUncachedFromStreamTypes: z.array(StreamTypes).optional(),
   excludeUncachedMode: z.enum(['or', 'and']).optional(),
-  excludedStreamExpressions: z.array(z.string().min(1).max(3000)).optional(),
-  requiredStreamExpressions: z.array(z.string().min(1).max(3000)).optional(),
-  preferredStreamExpressions: z.array(z.string().min(1).max(3000)).optional(),
-  includedStreamExpressions: z.array(z.string().min(1).max(3000)).optional(),
+  excludedStreamExpressions: z
+    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .optional(),
+  requiredStreamExpressions: z
+    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .optional(),
+  preferredStreamExpressions: z
+    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .optional(),
+  includedStreamExpressions: z
+    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .optional(),
   // disableGroups: z.boolean().optional(),
   // groups: z
   //   .array(
@@ -445,7 +454,7 @@ export const UserDataSchema = z.object({
   dynamicAddonFetching: z
     .object({
       enabled: z.boolean().optional(),
-      condition: z.string().max(3000).optional(),
+      condition: z.string().max(Env.MAX_SEL_LENGTH).optional(),
     })
     .optional(),
   groups: z
@@ -455,7 +464,7 @@ export const UserDataSchema = z.object({
         .array(
           z.object({
             addons: z.array(z.string().min(1)),
-            condition: z.string().min(1).max(3000),
+            condition: z.string().min(1).max(Env.MAX_SEL_LENGTH),
           })
         )
         .optional(),
