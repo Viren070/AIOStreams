@@ -41,7 +41,7 @@ export abstract class StreamExpressionEngine {
         asinh: false,
         acosh: false,
         atanh: false,
-        sqrt: false,
+        sqrt: true,
         log: false,
         ln: false,
         lg: false,
@@ -139,6 +139,46 @@ export abstract class StreamExpressionEngine {
       }
       if (numbers.length === 0) return 0;
       return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+    };
+
+    this.parser.functions.sum = function (numbers: number[]): number {
+      if (
+        !Array.isArray(numbers) ||
+        numbers.some((n) => typeof n !== 'number')
+      ) {
+        throw new Error('Input must be an array of numbers');
+      }
+      return numbers.reduce((sum, num) => sum + num, 0);
+    };
+
+    this.parser.functions.median = function (numbers: number[]): number {
+      if (
+        !Array.isArray(numbers) ||
+        numbers.some((n) => typeof n !== 'number')
+      ) {
+        throw new Error('Input must be an array of numbers');
+      }
+      if (numbers.length === 0) return 0;
+      const sorted = [...numbers].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
+    this.parser.functions.variance = function (numbers: number[]): number {
+      if (
+        !Array.isArray(numbers) ||
+        numbers.some((n) => typeof n !== 'number')
+      ) {
+        throw new Error('Input must be an array of numbers');
+      }
+      if (numbers.length === 0) return 0;
+      const mean = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+      const variance =
+        numbers.reduce((sum, num) => sum + (num - mean) ** 2, 0) /
+        numbers.length;
+      return variance;
     };
 
     this.parser.functions.regexMatched = function (
