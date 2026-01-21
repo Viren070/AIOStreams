@@ -602,31 +602,35 @@ export abstract class UsenetStreamService implements DebridService {
           return cachedNzbs;
         }
 
-        // const path = `${this.getContentPathPrefix()}/${UsenetStreamService.AIOSTREAMS_CATEGORY}`;
-        // const contents = (await this.webdavClient.getDirectoryContents(
-        //   path
-        // )) as FileStat[];
-        // const nzbs = contents.map((item, index) => ({
-        //   id: index,
-        //   status: 'cached' as const,
-        //   hash: item.basename,
-        //   size: item.size,
-        //   files: [],
-        // }));
-        // this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
-        //   count: nzbs.length,
-        //   time: getTimeTakenSincePoint(start),
-        // });
-        const history = await this.api.history();
-        const nzbs: DebridDownload[] = history.slots.map((slot, index) => ({
+// START change 1 - use content path(s) instead of history
+        // Construct paths
+        const moviesPath = `${this.getContentPathPrefix()}/Movies`;
+        const tvPath = `${this.getContentPathPrefix()}/TV`;
+        
+        // Fetch both directories in parallel
+        const [moviesContents, tvContents] = await Promise.all([
+          this.webdavClient.getDirectoryContents(moviesPath),
+          this.webdavClient.getDirectoryContents(tvPath),
+        ]);
+        
+        // Combine the results
+        const combinedContents = [...(moviesContents as FileStat[]), ...(tvContents as FileStat[])];
+        
+        // Map to NZB objects
+        const nzbs = combinedContents.map((item, index) => ({
           id: index,
-          status: slot.status !== 'failed' ? 'cached' : 'failed',
-          name: slot.name,
+          status: 'cached' as const,
+          hash: item.basename,
+          size: item.size,
+          files: [],
         }));
-        this.serviceLogger.debug(`Listed NZBs from history`, {
+
+        this.serviceLogger.info(`Listed NZBs from WebDAV`, {
           count: nzbs.length,
           time: getTimeTakenSincePoint(start),
         });
+// END change 1
+        
         await UsenetStreamService.libraryCache.set(
           cacheKey,
           nzbs,
