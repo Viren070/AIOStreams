@@ -54,9 +54,9 @@ export abstract class StreamExpressionEngine {
         exp: false,
         length: false,
         in: true,
-        random: false,
-        min: true,
-        max: true,
+        random: true,
+        min: false,
+        max: false,
         assignment: false,
         fndef: false,
         cbrt: false,
@@ -71,6 +71,76 @@ export abstract class StreamExpressionEngine {
   }
 
   private setupParserFunctions() {
+    this.parser.functions.values = function (
+      streams: ParsedStream[],
+      attr: string
+    ) {
+      if (!Array.isArray(streams)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+      if (typeof attr !== 'string') {
+        throw new Error('You must provide a string path for the attribute');
+      }
+
+      const getStreamProperty = (
+        stream: ParsedStream,
+        key: string
+      ): number | undefined => {
+        switch (key) {
+          case 'bitrate':
+            return stream.bitrate;
+          case 'size':
+            return stream.size;
+          case 'folderSize':
+            return stream.folderSize;
+          case 'age':
+            return stream.age;
+          case 'duration':
+            return stream.duration;
+          case 'seeders':
+            return stream.torrent?.seeders;
+          default:
+            throw new Error(`Invalid attribute for values: '${key}'`);
+        }
+      };
+
+      // test with one stream to validate path
+      getStreamProperty(streams[0], attr);
+
+      return streams
+        .map((stream) => getStreamProperty(stream, attr))
+        .filter((val) => typeof val === 'number' && !isNaN(val));
+    };
+
+    this.parser.functions.max = function (
+      args: number[] | number,
+      ...rest: number[]
+    ) {
+      const values = Array.isArray(args) ? args : [args, ...rest];
+      if (values.length === 0) return 0;
+      return Math.max(...values);
+    };
+
+    this.parser.functions.min = function (
+      args: number[] | number,
+      ...rest: number[]
+    ) {
+      const values = Array.isArray(args) ? args : [args, ...rest];
+      if (values.length === 0) return 0;
+      return Math.min(...values);
+    };
+
+    this.parser.functions.avg = function (numbers: number[]): number {
+      if (
+        !Array.isArray(numbers) ||
+        numbers.some((n) => typeof n !== 'number')
+      ) {
+        throw new Error('Input must be an array of numbers');
+      }
+      if (numbers.length === 0) return 0;
+      return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+    };
+
     this.parser.functions.regexMatched = function (
       streams: ParsedStream[],
       ...regexNames: string[]
