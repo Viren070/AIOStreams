@@ -912,6 +912,7 @@ class ModifierConstants {
     reverse: (value: string) => value.split('').reverse().join(''),
     base64: (value: string) => btoa(value),
     string: (value: string) => value,
+    smallcaps: (value: string) => makeSmall(value),
   };
 
   static arrayModifierGetOrDefault = (value: string[], i: number) =>
