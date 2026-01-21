@@ -680,7 +680,9 @@ export abstract class UsenetStreamService implements DebridService {
     // All NZBs are "cached" since it's streaming-based
     return nzbs.map(({ hash: h, name: n }, index) => {
       const libraryNzb = libraryNzbs.find(
-        (nzb) => nzb.name === n || nzb.name === h
+// START change 4 - use hash for correct mapping
+        (nzb) => nzb.hash === n
+// END change 4
       );
       return {
         id: index,
