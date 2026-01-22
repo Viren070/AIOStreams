@@ -753,6 +753,7 @@ export const ParsedFileSchema = z.object({
   title: z.string().optional(),
   year: z.coerce.string().optional(),
   seasons: z.array(z.number()).optional(),
+  volumes: z.array(z.number()).optional(),
   folderSeasons: z.array(z.number()).optional(),
   folderEpisodes: z.array(z.number()).optional(),
   episodes: z.array(z.number()).optional(),

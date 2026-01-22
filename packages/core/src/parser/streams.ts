@@ -500,11 +500,12 @@ class StreamParser {
     const fileParsed = parsedStream.filename
       ? FileParser.parse(parsedStream.filename)
       : undefined;
-    function arrayFallback<T>(
-      arr1: T[] | undefined,
-      arr2: T[] | undefined
-    ): T[] | undefined {
-      return arr1?.length ? arr1 : arr2?.length ? arr2 : undefined;
+    function arrayFallback<T>(...arrs: (T[] | undefined)[]): T[] | undefined {
+      for (const arr of arrs) {
+        if (arr && arr.length > 0) {
+          return arr;
+        }
+      }
     }
     function arrayMerge<T>(arr1: T[] | undefined, arr2: T[] | undefined): T[] {
       return Array.from(new Set([...(arr1 ?? []), ...(arr2 ?? [])]));
@@ -512,7 +513,12 @@ class StreamParser {
 
     let seasonPack = folderParsed?.seasonPack || fileParsed?.seasonPack;
     let episodes = arrayFallback(fileParsed?.episodes, folderParsed?.episodes);
-    let seasons = arrayFallback(fileParsed?.seasons, folderParsed?.seasons);
+    let seasons = arrayFallback(
+      fileParsed?.seasons,
+      folderParsed?.seasons,
+      fileParsed?.volumes,
+      folderParsed?.volumes
+    );
 
     // Detect season pack based on folder size being significantly larger than file size
     if (
