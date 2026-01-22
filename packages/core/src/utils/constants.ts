@@ -175,9 +175,8 @@ export const FORMATTER_DETAILS: Record<FormatterType, FormatterDetail> = {
   },
   [MINIMALISTIC_GDRIVE_FORMATTER]: {
     id: MINIMALISTIC_GDRIVE_FORMATTER,
-    name: 'Minimalistic Google Drive',
-    description:
-      'A minimalistic formatter for Google Drive which shows only the bare minimum',
+    name: 'Minimalistic',
+    description: 'A minimalistic formatter which shows only the bare minimum',
   },
   [TORRENTIO_FORMATTER]: {
     id: TORRENTIO_FORMATTER,
