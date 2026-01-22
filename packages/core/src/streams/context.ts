@@ -311,7 +311,7 @@ export class StreamContext {
       this._seadexPromise ||
       this._seadexFetched ||
       !this.isAnime ||
-      !this.userData.enableSeadex
+      this.userData.enableSeadex === false
     ) {
       return;
     }

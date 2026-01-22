@@ -3191,7 +3191,7 @@ function Content() {
                   <Switch
                     label="Enable"
                     side="right"
-                    value={userData.enableSeadex}
+                    value={userData.enableSeadex ?? true}
                     onValueChange={(value) => {
                       setUserData((prev) => ({
                         ...prev,
