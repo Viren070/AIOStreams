@@ -2187,10 +2187,7 @@ export class AIOStreams {
 
     let finalStreams = await this.filterer.applyStreamExpressionFilters(
       await this.limiter.limit(
-        await this.sorter.sort(
-          processedStreams,
-          queryType.startsWith('anime') ? 'anime' : type
-        )
+        await this.sorter.sort(processedStreams, context)
       ),
       context
     );
@@ -2210,6 +2207,9 @@ export class AIOStreams {
       if (stream.parsedFile) {
         stream.parsedFile.visualTags = stream.parsedFile.visualTags.filter(
           (tag) => !constants.FAKE_VISUAL_TAGS.includes(tag as any)
+        );
+        stream.parsedFile.languages = stream.parsedFile.languages.filter(
+          (lang) => !['Original'].includes(lang as any)
         );
       }
       return stream;

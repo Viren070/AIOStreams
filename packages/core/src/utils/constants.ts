@@ -1270,6 +1270,7 @@ const LANGUAGES = [
   'Dual Audio',
   'Dubbed',
   'Multi',
+  'Original',
   'Unknown',
 ] as const;
 

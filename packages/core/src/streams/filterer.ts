@@ -8,7 +8,7 @@ import {
   formRegexFromKeywords,
   safeRegexTest,
 } from '../utils/index.js';
-import { StreamType } from '../utils/constants.js';
+import { LANGUAGES, StreamType } from '../utils/constants.js';
 import { StreamSelector } from '../parser/streamExpression.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import {
@@ -18,7 +18,11 @@ import {
 } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
-import { formatBitrate, formatBytes } from '../formatters/utils.js';
+import {
+  formatBitrate,
+  formatBytes,
+  iso6391ToLanguage,
+} from '../formatters/utils.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
 
@@ -266,6 +270,9 @@ class StreamFilterer {
       await context.getReleaseDates();
     const episodeAirDate: string | undefined =
       await context.getEpisodeAirDate();
+    let originalLanguage = requestedMetadata?.originalLanguage
+      ? iso6391ToLanguage(requestedMetadata.originalLanguage)
+      : undefined;
 
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
@@ -282,6 +289,7 @@ class StreamFilterer {
         title: requestedMetadata.title,
         year: requestedMetadata.year,
         hasGenres: !!requestedMetadata.genres?.length,
+        originalLanguage: originalLanguage,
       });
     }
 
@@ -1014,11 +1022,15 @@ class StreamFilterer {
     const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
       const file = stream.parsedFile;
 
-      if (shouldPassthroughStage(stream, 'filter')) {
-        this.incrementIncludedReason('passthrough', stream.addon.name);
-        return true;
+      if (originalLanguage && LANGUAGES.includes(originalLanguage as any)) {
+        if (
+          file?.languages &&
+          file?.languages.length > 0 &&
+          file?.languages.includes(originalLanguage)
+        ) {
+          file.languages.push('Original');
+        }
       }
-
       // Temporarily add in our fake visual tags used for sorting/filtering
       // HDR+DV
       if (
@@ -1047,6 +1059,11 @@ class StreamFilterer {
         !file?.visualTags?.some((tag) => tag.startsWith('DV'))
       ) {
         file?.visualTags?.push('HDR Only');
+      }
+
+      if (shouldPassthroughStage(stream, 'filter')) {
+        this.incrementIncludedReason('passthrough', stream.addon.name);
+        return true;
       }
 
       // carry out include checks first

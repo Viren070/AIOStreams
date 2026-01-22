@@ -3,6 +3,7 @@ export interface Metadata {
   titles?: string[];
   year?: number;
   yearEnd?: number;
+  originalLanguage?: string;
   releaseDate?: string;
   runtime?: number; // Runtime in minutes
   seasons?: {

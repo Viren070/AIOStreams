@@ -313,8 +313,7 @@ export class TMDBMetadata {
       | Array<{ season_number: number; episode_count: number }>
       | undefined;
     let allTitles: string[] = [];
-    let imdbId: string | undefined =
-      parsedId.type === 'imdbId' ? parsedId.value.toString() : undefined;
+    let originalLanguage: string | undefined;
     let runtime: number | undefined;
     let genres: string[] = [];
 
@@ -327,6 +326,7 @@ export class TMDBMetadata {
       if (movieData.original_title) {
         allTitles.push(movieData.original_title);
       }
+      originalLanguage = movieData.original_language;
       releaseDate = movieData.release_date;
       runtime = movieData.runtime || undefined;
       genres = movieData.genres?.map((g) => g.name) ?? [];
@@ -339,6 +339,7 @@ export class TMDBMetadata {
       if (tvData.original_title) {
         allTitles.push(tvData.original_title);
       }
+      originalLanguage = tvData.original_language;
       releaseDate = tvData.first_air_date ?? undefined;
       yearEnd = tvData.last_air_date
         ? this.parseReleaseDate(tvData.last_air_date)
@@ -406,6 +407,7 @@ export class TMDBMetadata {
       releaseDate: releaseDate,
       year: Number(year),
       yearEnd: yearEnd ? Number(yearEnd) : undefined,
+      originalLanguage,
       seasons,
       tmdbId: Number(tmdbId),
       tvdbId: null,
