@@ -301,11 +301,13 @@ class StreamFilterer {
           stream.parsedFile.seasons.length > 0 &&
           (!stream.parsedFile.episodes ||
             stream.parsedFile.episodes.length === 0);
+        let doBitrateCalculation = true;
+
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
           requestedMetadata?.runtime &&
           stream.size &&
-          !isFolderSize
+          (!isFolderSize || type === 'series') // only calculate for folder sizes if it's a series
         ) {
           let episodeCount = stream.parsedFile?.episodes?.length || 0;
           let finalSize = stream.size;
@@ -319,11 +321,50 @@ class StreamFilterer {
                 adjustedSize: formatBytes(finalSize, 1024),
               }
             );
+          } else if (isFolderSize && type === 'series') {
+            // For folder/season pack size, calculate per-episode size for bitrate calculation
+            // Get total episodes across all seasons in the pack
+            let totalEpisodes = 0;
+            let hasUnknownSeasons = false;
+
+            for (const season of stream.parsedFile?.seasons || []) {
+              const seasonData = requestedMetadata.seasons?.find(
+                (s) => s.season_number === season
+              );
+
+              if (seasonData?.episode_count) {
+                totalEpisodes += seasonData.episode_count;
+              } else {
+                // If we can't find episode count for any season, we can't reliably calculate
+                hasUnknownSeasons = true;
+                break;
+              }
+            }
+
+            if (!hasUnknownSeasons && totalEpisodes > 0) {
+              logger.silly(
+                `Calculating bitrate for season pack ${stream.filename} using total of ${totalEpisodes} episodes`,
+                {
+                  seasons: stream.parsedFile?.seasons,
+                }
+              );
+              finalSize = finalSize / totalEpisodes;
+            } else {
+              doBitrateCalculation = false;
+              logger.silly(
+                `Cannot calculate bitrate for season pack ${stream.filename}: ${hasUnknownSeasons ? 'unknown season data' : 'no episodes found'}`,
+                {
+                  seasons: stream.parsedFile?.seasons,
+                }
+              );
+            }
           }
 
-          stream.bitrate = Math.round(
-            (finalSize * 8) / (requestedMetadata.runtime * 60)
-          );
+          if (doBitrateCalculation) {
+            stream.bitrate = Math.round(
+              (finalSize * 8) / (requestedMetadata.runtime * 60)
+            );
+          }
         }
       });
     }
