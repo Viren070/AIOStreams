@@ -308,7 +308,7 @@ interface AnimeListEntry {
   before?: string;
 }
 
-interface AnimeEntry {
+export interface AnimeEntry {
   mappings?: Omit<MappingEntry, 'type'>;
   type: AnimeType;
   imdb?: {

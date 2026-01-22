@@ -43,6 +43,7 @@ export class MetadataService {
             let year: number | undefined;
             let yearEnd: number | undefined;
             let runtime: number | undefined;
+            let genres: string[] = [];
             let seasons:
               | {
                   season_number: number;
@@ -172,6 +173,7 @@ export class MetadataService {
                   (a, b) => a.season_number - b.season_number
                 );
               if (tmdbMetadata.runtime) runtime = tmdbMetadata.runtime;
+              if (tmdbMetadata.genres) genres = tmdbMetadata.genres;
               tmdbId = tmdbMetadata.tmdbId;
             } else if (tmdbResult.status === 'rejected') {
               logger.warn(
@@ -316,6 +318,7 @@ export class MetadataService {
                 year,
                 yearEnd,
                 seasons: seasons?.length,
+                genres: genres?.length,
               }
             );
             return {
@@ -328,6 +331,7 @@ export class MetadataService {
               tmdbId,
               tvdbId,
               runtime,
+              genres: genres.length > 0 ? genres : undefined,
             };
           },
           {

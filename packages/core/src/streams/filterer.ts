@@ -1,12 +1,9 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
-  enrichParsedIdWithAnimeEntry,
   FeatureControl,
   getTimeTakenSincePoint,
   constants,
-  AnimeDatabase,
-  IdParser,
   compileRegex,
   formRegexFromKeywords,
   safeRegexTest,
@@ -14,8 +11,6 @@ import {
 import { StreamType } from '../utils/constants.js';
 import { StreamSelector } from '../parser/streamExpression.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
-import { MetadataService } from '../metadata/service.js';
-import { Metadata } from '../metadata/utils.js';
 import {
   normaliseTitle,
   preprocessTitle,
@@ -24,7 +19,8 @@ import {
 import { partial_ratio } from 'fuzzball';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
 import { formatBitrate, formatBytes } from '../formatters/utils.js';
-import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
+import { ReleaseDate } from '../metadata/tmdb.js';
+import { StreamContext, ExtendedMetadata } from './context.js';
 
 const logger = createLogger('filterer');
 
@@ -252,15 +248,9 @@ class StreamFilterer {
 
   public async filter(
     streams: ParsedStream[],
-    type: string,
-    id: string
+    context: StreamContext
   ): Promise<ParsedStream[]> {
-    const parsedId = IdParser.parse(id, type);
-    let isAnime = id.startsWith('kitsu');
-
-    if (AnimeDatabase.getInstance().isAnime(id)) {
-      isAnime = true;
-    }
+    const { type, id, parsedId, isAnime } = context;
 
     const start = Date.now();
     const isRegexAllowed = await FeatureControl.isRegexAllowed(this.userData, [
@@ -269,127 +259,30 @@ class StreamFilterer {
       ...(this.userData.includedRegexPatterns ?? []),
     ]);
 
-    let requestedMetadata:
-      | (Metadata & { absoluteEpisode?: number })
-      | undefined;
+    // Get metadata from context (already fetched in parallel with addon requests)
+    const requestedMetadata: ExtendedMetadata | undefined =
+      await context.getMetadata();
+    const releaseDates: ReleaseDate[] | undefined =
+      await context.getReleaseDates();
+    const episodeAirDate: string | undefined =
+      await context.getEpisodeAirDate();
+
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
-    let releaseDates: ReleaseDate[] | undefined;
-    let episodeAirDate: string | undefined;
-    if (
-      (this.userData.bitrate?.useMetadataRuntime ||
-        this.userData.titleMatching?.enabled ||
-        (this.userData.digitalReleaseFilter?.enabled &&
-          ['movie', 'series', 'anime'].includes(type)) ||
-        this.userData.yearMatching?.enabled ||
-        this.userData.seasonEpisodeMatching?.enabled) &&
-      constants.TYPES.includes(type as any)
-    ) {
-      try {
-        if (!parsedId) {
-          throw new Error(`Invalid ID: ${id}`);
-        }
-        const animeEntry = AnimeDatabase.getInstance().getEntryById(
-          parsedId.type,
-          parsedId.value,
-          parsedId.season ? Number(parsedId.season) : undefined,
-          parsedId.episode ? Number(parsedId.episode) : undefined
-        );
-        if (animeEntry && !parsedId.season) {
-          enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
-        }
-        const metadataStart = Date.now();
-        requestedMetadata = await new MetadataService({
-          tmdbAccessToken: this.userData.tmdbAccessToken,
-          tmdbApiKey: this.userData.tmdbApiKey,
-          tvdbApiKey: this.userData.tvdbApiKey,
-        }).getMetadata(parsedId, type as any);
-        if (
-          isAnime &&
-          parsedId.season &&
-          parsedId.episode &&
-          requestedMetadata.seasons
-        ) {
-          const seasons = requestedMetadata.seasons.map(
-            ({ season_number, episode_count }) => ({
-              number: season_number.toString(),
-              episodes: episode_count,
-            })
-          );
-          logger.debug(
-            `Calculating absolute episode with current season and episode: ${parsedId.season}, ${parsedId.episode} and seasons: ${JSON.stringify(seasons)}`
-          );
-          let absoluteEpisode = Number(
-            calculateAbsoluteEpisode(parsedId.season, parsedId.episode, seasons)
-          );
-          if (animeEntry?.imdb?.nonImdbEpisodes && absoluteEpisode) {
-            const nonImdbEpisodesBefore =
-              animeEntry.imdb.nonImdbEpisodes.filter(
-                (ep) => ep < absoluteEpisode!
-              ).length;
-            if (nonImdbEpisodesBefore > 0) {
-              absoluteEpisode += nonImdbEpisodesBefore;
-            }
-          }
-          requestedMetadata.absoluteEpisode = absoluteEpisode;
-        }
 
-        if (
-          this.userData.digitalReleaseFilter?.enabled &&
-          requestedMetadata.tmdbId
-        ) {
-          if (type === 'movie') {
-            try {
-              releaseDates = await new TMDBMetadata({
-                accessToken: this.userData.tmdbAccessToken,
-                apiKey: this.userData.tmdbApiKey,
-              }).getReleaseDates(requestedMetadata.tmdbId);
-            } catch (error) {
-              logger.warn(
-                `Error fetching release dates for ${id} (tmdb: ${requestedMetadata.tmdbId}): ${error}`
-              );
-            }
-          } else if (
-            (type === 'series' || type === 'anime') &&
-            parsedId.season &&
-            parsedId.episode
-          ) {
-            try {
-              episodeAirDate = await new TMDBMetadata({
-                accessToken: this.userData.tmdbAccessToken,
-                apiKey: this.userData.tmdbApiKey,
-              }).getEpisodeAirDate(
-                requestedMetadata.tmdbId,
-                Number(parsedId.season),
-                Number(parsedId.episode)
-              );
-              logger.debug(
-                `Fetched episode air date for ${id}: ${episodeAirDate}`
-              );
-            } catch (error) {
-              logger.warn(
-                `Error fetching episode air date for ${id} (tmdb: ${requestedMetadata.tmdbId}, S${parsedId.season}E${parsedId.episode}): ${error}`
-              );
-            }
-          }
-        }
-
-        yearWithinTitle = requestedMetadata.title.match(
-          /\b(19\d{2}|20[012]\d{1})\b/
-        )?.[0];
-        if (yearWithinTitle) {
-          yearWithinTitleRegex = new RegExp(`${yearWithinTitle[0]}`, 'g');
-        }
-        logger.info(`Fetched metadata`, {
-          id,
-          time: getTimeTakenSincePoint(metadataStart),
-          ...requestedMetadata,
-        });
-      } catch (error) {
-        logger.warn(
-          `Error fetching titles for ${id}, title/year matching will not be performed: ${error}`
-        );
+    if (requestedMetadata?.title) {
+      yearWithinTitle = requestedMetadata.title.match(
+        /\b(19\d{2}|20[012]\d{1})\b/
+      )?.[0];
+      if (yearWithinTitle) {
+        yearWithinTitleRegex = new RegExp(`${yearWithinTitle[0]}`, 'g');
       }
+      logger.info(`Using metadata from context`, {
+        id,
+        title: requestedMetadata.title,
+        year: requestedMetadata.year,
+        hasGenres: !!requestedMetadata.genres?.length,
+      });
     }
 
     // fill in bitrate from metadata runtime and size if missing and enabled
@@ -881,7 +774,7 @@ class StreamFilterer {
     };
 
     const includedStreamsByExpression =
-      await this.applyIncludedStreamExpressions(streams, type, id);
+      await this.applyIncludedStreamExpressions(streams, context);
     if (includedStreamsByExpression.length > 0) {
       logger.info(
         `${includedStreamsByExpression.length} streams were included by stream expressions`
@@ -1959,15 +1852,10 @@ class StreamFilterer {
 
   public async applyIncludedStreamExpressions(
     streams: ParsedStream[],
-    type: string,
-    id: string
+    context: StreamContext
   ): Promise<ParsedStream[]> {
-    let queryType = type;
-
-    if (AnimeDatabase.getInstance().isAnime(id)) {
-      queryType = `anime.${queryType}`;
-    }
-    const selector = new StreamSelector(queryType);
+    const expressionContext = context.toExpressionContext();
+    const selector = new StreamSelector(expressionContext);
     const streamsToKeep = new Set<string>();
     if (
       !this.userData.includedStreamExpressions ||
@@ -1989,14 +1877,9 @@ class StreamFilterer {
 
   public async applyStreamExpressionFilters(
     streams: ParsedStream[],
-    type: string,
-    id: string
+    context: StreamContext
   ): Promise<ParsedStream[]> {
-    let queryType = type;
-
-    if (AnimeDatabase.getInstance().isAnime(id)) {
-      queryType = `anime.${queryType}`;
-    }
+    const expressionContext = context.toExpressionContext();
 
     // Get streams that passthrough excluded SEL
     const excludedPassthroughStreams = streams
@@ -2012,7 +1895,7 @@ class StreamFilterer {
       this.userData.excludedStreamExpressions &&
       this.userData.excludedStreamExpressions.length > 0
     ) {
-      const selector = new StreamSelector(queryType);
+      const selector = new StreamSelector(expressionContext);
       const streamsToRemove = new Set<string>(); // Track actual stream objects to be removed
 
       for (const expression of this.userData.excludedStreamExpressions) {
@@ -2061,7 +1944,7 @@ class StreamFilterer {
       this.userData.requiredStreamExpressions &&
       this.userData.requiredStreamExpressions.length > 0
     ) {
-      const selector = new StreamSelector(queryType);
+      const selector = new StreamSelector(expressionContext);
       const streamsToKeep = new Set<string>(); // Track actual stream objects to be removed
       requiredPassthroughStreams.forEach((stream) => streamsToKeep.add(stream));
 

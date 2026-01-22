@@ -7,11 +7,9 @@ import {
   formRegexFromKeywords,
   compileRegex,
   parseRegex,
-  AnimeDatabase,
-  IdParser,
-  getSeaDexInfoHashes,
 } from '../utils/index.js';
 import { StreamSelector } from '../parser/streamExpression.js';
+import { StreamContext } from './context.js';
 
 const logger = createLogger('precomputer');
 
@@ -24,10 +22,27 @@ class StreamPrecomputer {
 
   /**
    * Precompute SeaDex only - runs BEFORE filtering so seadex() works in Included SEL
+   * Uses StreamContext's cached SeaDex data when available.
    */
-  public async precomputeSeaDexOnly(streams: ParsedStream[], id: string) {
-    const isAnime = AnimeDatabase.getInstance().isAnime(id);
-    await this.precomputeSeaDex(streams, id, isAnime);
+  public async precomputeSeaDexOnly(
+    streams: ParsedStream[],
+    context: StreamContext
+  ) {
+    if (!context.isAnime || !this.userData.enableSeadex) {
+      return;
+    }
+
+    // Wait for SeaDex data if it's being fetched
+    const seadexResult = await context.getSeaDex();
+    if (!seadexResult) {
+      return;
+    }
+
+    this.precomputeSeaDexFromResult(
+      streams,
+      seadexResult,
+      context.animeEntry?.mappings?.anilistId
+    );
   }
 
   /**
@@ -35,67 +50,28 @@ class StreamPrecomputer {
    */
   public async precomputePreferred(
     streams: ParsedStream[],
-    type: string,
-    id: string
+    context: StreamContext
   ) {
     const start = Date.now();
-    const isAnime = AnimeDatabase.getInstance().isAnime(id);
-    let queryType = type;
-    if (isAnime) {
-      queryType = `anime.${type}`;
-    }
-    await this.precomputePreferredMatches(streams, queryType);
+    await this.precomputePreferredMatches(streams, context);
     logger.info(
       `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
     );
   }
 
   /**
-   * Precompute SeaDex status for anime streams
-   * Tags streams with seadex.isBest and seadex.isSeadex
-   * First tries to match by infoHash, then falls back to release group matching
+   * Apply SeaDex tags to streams using pre-fetched SeaDex data
    */
-  private async precomputeSeaDex(
+  private precomputeSeaDexFromResult(
     streams: ParsedStream[],
-    id: string,
-    isAnime: boolean
+    seadexResult: {
+      bestHashes: Set<string>;
+      allHashes: Set<string>;
+      bestGroups: Set<string>;
+      allGroups: Set<string>;
+    },
+    anilistId: string | number | undefined
   ) {
-    if (!isAnime || !this.userData.enableSeadex) {
-      return;
-    }
-
-    const parsedId = IdParser.parse(id, 'unknown');
-    if (!parsedId) {
-      return;
-    }
-    const animeDb = AnimeDatabase.getInstance();
-    const entry = animeDb.getEntryById(
-      parsedId.type,
-      parsedId.value,
-      parsedId.season ? Number(parsedId.season) : undefined,
-      parsedId.episode ? Number(parsedId.episode) : undefined
-    );
-    const anilistIdRaw = entry?.mappings?.anilistId;
-
-    if (!anilistIdRaw) {
-      logger.debug(
-        `No AniList ID found for ${parsedId.type}:${parsedId.value}, skipping SeaDex lookup`
-      );
-      return;
-    }
-
-    const anilistId =
-      typeof anilistIdRaw === 'string'
-        ? parseInt(anilistIdRaw, 10)
-        : anilistIdRaw;
-    if (isNaN(anilistId)) {
-      logger.debug(
-        `Invalid AniList ID ${anilistIdRaw}, skipping SeaDex lookup`
-      );
-      return;
-    }
-    const seadexResult = await getSeaDexInfoHashes(anilistId);
-
     if (
       seadexResult.bestHashes.size === 0 &&
       seadexResult.allHashes.size === 0 &&
@@ -173,7 +149,7 @@ class StreamPrecomputer {
    */
   private async precomputePreferredMatches(
     streams: ParsedStream[],
-    queryType: string
+    context: StreamContext
   ) {
     const preferredRegexPatterns =
       (await FeatureControl.isRegexAllowed(
@@ -268,7 +244,7 @@ class StreamPrecomputer {
     }
 
     if (this.userData.preferredStreamExpressions?.length) {
-      const selector = new StreamSelector(queryType);
+      const selector = new StreamSelector(context.toExpressionContext());
       const streamToConditionIndex = new Map<string, number>();
 
       // Go through each preferred filter condition, from highest to lowest priority.

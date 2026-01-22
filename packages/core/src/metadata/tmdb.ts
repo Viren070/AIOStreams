@@ -24,6 +24,11 @@ const TITLE_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days
 const AUTHORISATION_CACHE_TTL = 2 * 24 * 60 * 60; // 2 days
 
 // Zod schemas for API responses
+const GenreSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
 const MovieDetailsSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -32,6 +37,7 @@ const MovieDetailsSchema = z.object({
   original_title: z.string().optional(),
   original_language: z.string().optional(),
   runtime: z.number().nullable().optional(),
+  genres: z.array(GenreSchema).optional(),
 });
 
 const TVDetailsSchema = z.object({
@@ -49,6 +55,7 @@ const TVDetailsSchema = z.object({
       episode_count: z.number(),
     })
   ),
+  genres: z.array(GenreSchema).optional(),
 });
 
 const MovieAlternativeTitlesSchema = z.object({
@@ -309,6 +316,7 @@ export class TMDBMetadata {
     let imdbId: string | undefined =
       parsedId.type === 'imdbId' ? parsedId.value.toString() : undefined;
     let runtime: number | undefined;
+    let genres: string[] = [];
 
     if (parsedId.mediaType === 'movie') {
       const movieData = MovieDetailsSchema.parse(detailsJson);
@@ -321,6 +329,7 @@ export class TMDBMetadata {
       }
       releaseDate = movieData.release_date;
       runtime = movieData.runtime || undefined;
+      genres = movieData.genres?.map((g) => g.name) ?? [];
     } else {
       const tvData = TVDetailsSchema.parse(detailsJson);
       primaryTitle =
@@ -342,6 +351,7 @@ export class TMDBMetadata {
             tvData.episode_run_time.length
         );
       }
+      genres = tvData.genres?.map((g) => g.name) ?? [];
     }
 
     allTitles.push(primaryTitle);
@@ -400,6 +410,7 @@ export class TMDBMetadata {
       tmdbId: Number(tmdbId),
       tvdbId: null,
       runtime: runtime,
+      genres: genres.length > 0 ? genres : undefined,
     };
     // Cache the result
     TMDBMetadata.metadataCache.set(cacheKey, metadata, TITLE_CACHE_TTL);
