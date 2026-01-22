@@ -1,5 +1,57 @@
 # Changelog
 
+## [2.22.0](https://github.com/Viren070/AIOStreams/compare/v2.21.4...v2.22.0) (2026-01-22)
+
+
+### Features
+
+* add 'Original' option in language filters ([72e37ea](https://github.com/Viren070/AIOStreams/commit/72e37eaa105a0392093902f8233117c54dc77c66)), closes [#526](https://github.com/Viren070/AIOStreams/issues/526) [#468](https://github.com/Viren070/AIOStreams/issues/468)
+* add bitrate to filters, sorting, formatter, and SEL ([#631](https://github.com/Viren070/AIOStreams/issues/631)) ([073724f](https://github.com/Viren070/AIOStreams/commit/073724ff74dd6d0b2143d05b1cf1f5efb69e6cf1))
+* allow configuring max sel / formatter length ([384ccda](https://github.com/Viren070/AIOStreams/commit/384ccdabcbc2a9d8a604768f39a4e31a6d947a76))
+* allow customising cache TTLs per preset/hostname ([47eabef](https://github.com/Viren070/AIOStreams/commit/47eabefd64308ea45955311325a187d734cc6b9e)), closes [#581](https://github.com/Viren070/AIOStreams/issues/581) [#580](https://github.com/Viren070/AIOStreams/issues/580)
+* **anime-database:** add new source and other improvements ([f47a441](https://github.com/Viren070/AIOStreams/commit/f47a441b6db3afe366e3b3af77ecafbe330dae1a))
+* **build/docker:** switch to debian based distroless image ([74653a3](https://github.com/Viren070/AIOStreams/commit/74653a323a295db7840b6accbe35b179fa8a934e))
+* **builtins/newznab:** add `BUILTIN_NAB_HTTP_PROXY` ([28eaafa](https://github.com/Viren070/AIOStreams/commit/28eaafa9be94b07ae77c09ee184169904b598963))
+* enable seadex integration by default ([1af1932](https://github.com/Viren070/AIOStreams/commit/1af1932c02d81d4fef394422c84a2533bee9d7d9))
+* fallback to cached manifest on save/refresh if available ([df39400](https://github.com/Viren070/AIOStreams/commit/df394007812e124477dae1b2a2e1ef4b93337778))
+* **formatter:** add `smallcaps` string modifier ([0e186dc](https://github.com/Viren070/AIOStreams/commit/0e186dc25147c1a9b11622028f7b071b2402538c))
+* improve seasonPack detection and add folderSeasons, formattedFolderSeasons, folderEpisodes, formattedFolderEpisodes to formatter ([47ea735](https://github.com/Viren070/AIOStreams/commit/47ea735d0d93c4aee05cc1bfc4c5723b92b9268c))
+* **sel:** add `values` &`avg`, functions; custom `min` & `max` functions; enable `random` function. ([60d3445](https://github.com/Viren070/AIOStreams/commit/60d34458a87ab04a30220a9c43a3f7b8707f597b))
+* **sel:** add median, sum, variance ([267c75d](https://github.com/Viren070/AIOStreams/commit/267c75d1d464df1ac21088be638398accf8a7e15))
+* **sel:** add metadata constants to expression filters ([e0ae160](https://github.com/Viren070/AIOStreams/commit/e0ae16004531352ae0eddfaed72cda97f66bcef4))
+* **sel:** add percentile, range, iqr, stddev, mode, skewness, kurtosis functions ([9513378](https://github.com/Viren070/AIOStreams/commit/951337806a6ee391084fa8278082cb655ca20c9d))
+* **sel:** enable sqrt ([267c75d](https://github.com/Viren070/AIOStreams/commit/267c75d1d464df1ac21088be638398accf8a7e15))
+* update predefined formatters ([f4bfb31](https://github.com/Viren070/AIOStreams/commit/f4bfb31f1bfc3ecea049992bb132393208d9ca90))
+
+
+### Bug Fixes
+
+* **anime-database:** dont use tmdb episode offset ([3ebfc9b](https://github.com/Viren070/AIOStreams/commit/3ebfc9ba99343e2a7466c8389dbc68a9078be12e))
+* **build/docker:** add /bin/sh for backwards compatability ([1568296](https://github.com/Viren070/AIOStreams/commit/1568296cfdb628fff73cc3538f76b5fa49a5e9e3))
+* **builtins/newznab:** always set user agent by default ([dc031ea](https://github.com/Viren070/AIOStreams/commit/dc031ea5ff918d9e59b378912cc1261ba88bb600))
+* **builtins/newznab:** prefer usenetdate for age and fallback to enclosure length for size ([2ac54d6](https://github.com/Viren070/AIOStreams/commit/2ac54d668dcdaf65fca367850ccaf47378a04c05))
+* **builtins/znab:** append search params from apiPath to params ([9bb7099](https://github.com/Viren070/AIOStreams/commit/9bb7099037708e159ab8683b094c9fbf98255217))
+* **cache:** flush stale entrie on write when necessary and add separate size variable ([6cabe65](https://github.com/Viren070/AIOStreams/commit/6cabe6520c485cf2fd91e751e6ba361c1287af3a))
+* **debrid:** handle TOO_MANY_REQUESTS with specific error video ([b893191](https://github.com/Viren070/AIOStreams/commit/b8931915a964abdffa9bee005a4129e01484c186))
+* **debrid:** improve error handling for file info and store auth parsing ([5656af4](https://github.com/Viren070/AIOStreams/commit/5656af4e1638d197ade14fdb7ebc6f344800da57))
+* **debrid:** pass zod error through, and use 307 status code. ([5ced1a5](https://github.com/Viren070/AIOStreams/commit/5ced1a5b4975a9eebf7314695de7021487417cde))
+* divide by episode count for episode packs during bitrate calculation ([58111dc](https://github.com/Viren070/AIOStreams/commit/58111dc62e046ead537fd1d7ae6bdd21457ef295))
+* dont calculate bitrate using runtime for season packs ([14e5b60](https://github.com/Viren070/AIOStreams/commit/14e5b60e1e7b7a6f0edbd2c5cbd05db53aee30ef))
+* **env:** update regex for user agent mappings to allow wildcard characters ([d29c0a3](https://github.com/Viren070/AIOStreams/commit/d29c0a3820d701cb0e9064bf1721ac87c740ee36))
+* estimate bitrate for season packs using season data from metadata ([6b84fbc](https://github.com/Viren070/AIOStreams/commit/6b84fbcc9fc1987bf1231e0a0ef07f003f629bb1))
+* fallback to volumes for season ([93ee286](https://github.com/Viren070/AIOStreams/commit/93ee2861b87d1042f0920f7cdee28ff197bc4232))
+* **healthcheck:** use status endpoint ([d8d1f06](https://github.com/Viren070/AIOStreams/commit/d8d1f0638d9f8b2c13ce2415c01e4e80eeb6bfeb))
+* ignore usenet types for seeder range ([fdbca21](https://github.com/Viren070/AIOStreams/commit/fdbca21757bfe335b4b02527a3a1812f46f003f3))
+* **presets/nzbhydra:** pass through pagination and add initial limit option ([a67ff08](https://github.com/Viren070/AIOStreams/commit/a67ff085566bb79c6d1c28fc92ff52965e67c525))
+* **presets/orion:** increase max constraint to 500 ([dba96f1](https://github.com/Viren070/AIOStreams/commit/dba96f14431f67a4a191377d0959b6f822c2396d))
+* reduce filter log noise ([e11649d](https://github.com/Viren070/AIOStreams/commit/e11649d5cf9da41777fa428599996c68a30352a1))
+* **usenet-stream-base:** cache resolve errors ([abe8dbc](https://github.com/Viren070/AIOStreams/commit/abe8dbca167de6494aa2b568a0061fd222ea2282))
+
+
+### Miscellaneous Chores
+
+* **Dockerfile:** add opencontainer labels ([d1e288f](https://github.com/Viren070/AIOStreams/commit/d1e288fd01a90cbf9dd38e55fee4dc199cf7f619))
+
 ## [2.21.4](https://github.com/Viren070/AIOStreams/compare/v2.21.3...v2.21.4) (2026-01-16)
 
 
