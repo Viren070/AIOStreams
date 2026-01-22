@@ -44,6 +44,7 @@ import {
   StreamDeduplicator as Deduplicator,
   StreamPrecomputer as Precomputer,
   StreamUtils,
+  TorrServerConverter,
 } from './streams/index.js';
 import { getAddonName } from './utils/general.js';
 import { TMDBMetadata } from './metadata/tmdb.js';
@@ -100,6 +101,7 @@ export class AIOStreams {
   private deduplicator: Deduplicator;
   private sorter: Sorter;
   private precomputer: Precomputer;
+  private torrServerConverter: TorrServerConverter;
 
   private addonInitialisationErrors: {
     addon: Addon | Preset;
@@ -120,6 +122,7 @@ export class AIOStreams {
     this.fetcher = new Fetcher(userData, this.filterer, this.precomputer);
     this.deduplicator = new Deduplicator(userData);
     this.sorter = new Sorter(userData);
+    this.torrServerConverter = new TorrServerConverter(userData);
   }
 
   private setUserData(userData: UserData) {
@@ -2175,6 +2178,9 @@ export class AIOStreams {
     }
 
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
+    
+    // Convert P2P streams to TorrServer URLs if TorrServer is configured
+    processedStreams = await this.torrServerConverter.convert(processedStreams);
 
     if (isMeta) {
       // Run preferred matching after filter
