@@ -19,6 +19,7 @@ interface TorrentMetadata {
   hash: string;
   files: DebridFile[];
   sources: string[];
+  private: boolean;
 }
 
 export class TorrentClient {
@@ -48,6 +49,7 @@ export class TorrentClient {
         hash: torrent.hash,
         files: [], // Empty files array since we don't need metadata
         sources: torrent.sources || [],
+        private: false,
       };
     }
 
@@ -111,6 +113,7 @@ export class TorrentClient {
           hash: torrent.hash,
           files: [],
           sources: torrent.sources || [],
+          private: false,
         };
       }
       return undefined;
@@ -160,7 +163,7 @@ export class TorrentClient {
           hash,
         }
       );
-      metadata = { hash, files: [], sources };
+      metadata = { hash, files: [], sources, private: false };
     } else if (response.ok) {
       const bytes = await response.arrayBuffer();
 
@@ -176,7 +179,7 @@ export class TorrentClient {
         logger.debug(
           `No info hash found in torrent: ${JSON.stringify(parsedTorrent)}`
         );
-        metadata = { hash: downloadUrl, files: [], sources };
+        metadata = { hash: downloadUrl, files: [], sources, private: false };
         throw new Error('No info hash found in torrent');
       }
 
@@ -196,6 +199,7 @@ export class TorrentClient {
           })
         ),
         sources,
+        private: !!parsedTorrent.info?.private,
       };
     } else {
       throw new Error(

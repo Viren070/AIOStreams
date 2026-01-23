@@ -201,6 +201,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             hash: metadata.hash,
             sources: metadata.sources,
             files: metadata.files,
+            private: metadata.private,
           } as Torrent;
         } catch (error) {
           return torrent.hash ? (torrent as Torrent) : null;
@@ -792,6 +793,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       duration: torrentOrNzb.duration,
       infoHash: torrentOrNzb.hash,
       fileIdx: torrentOrNzb.file.index,
+      private: torrentOrNzb.type === 'torrent' ? torrentOrNzb.private : undefined,
       behaviorHints: {
         videoSize: torrentOrNzb.file.size,
         filename: torrentOrNzb.file.name,
