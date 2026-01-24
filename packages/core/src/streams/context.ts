@@ -436,6 +436,20 @@ export class StreamContext {
     return this._seadex;
   }
 
+  private computeAgeInDays(): number | undefined {
+    const getDaysDifference = (dateString: string): number => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    };
+    if (this.type === 'series' && this._episodeAirDate) {
+      return getDaysDifference(this._episodeAirDate);
+    } else if (this._metadata?.releaseDate) {
+      return getDaysDifference(this._metadata.releaseDate);
+    }
+    return undefined;
+  }
   /**
    * Convert context to a plain object for expression evaluation.
    */
@@ -459,6 +473,7 @@ export class StreamContext {
       originalLanguage: iso6391ToLanguage(
         this._metadata?.originalLanguage || ''
       ),
+      age: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,
