@@ -194,13 +194,15 @@ function Content() {
           if (diffs.length === 0) {
             toast.info('No changes detected');
             suppressSuccessToast = true;
-          } else if (userData?.showChanges) {
+          } else {
             setRemoteConfig(remoteResult.data.config);
             setDiffData(diffs);
             diffModal.open();
             setLoading(false);
             return;
           }
+        } else if (userData?.showChanges) {
+             toast.warning('Error checking for changes. Proceeding with save.');
         }
       } catch (err) {
         console.error('Error checking for changes:', err);
@@ -417,7 +419,7 @@ function Content() {
     }
   };
 
-  const valueFormatter = (val: any): string => {
+  const valueFormatter = React.useCallback((val: any): string => {
       const resolveId = (v: string) => {
           const addon = userData?.presets?.find(p => p.instanceId === v || (p.options as any)?.id === v);
           if (addon) {
@@ -445,7 +447,7 @@ function Content() {
           return JSON.stringify(resolved, null, 2);
       }
       return String(resolved);
-  };
+  }, [userData?.presets]);
 
   return (
     <>
@@ -900,7 +902,6 @@ function Content() {
               <Button
                 intent="alert"
                 onClick={handleRevertAll}
-                loading={loading}
               >
                 Reset Changes
               </Button>
