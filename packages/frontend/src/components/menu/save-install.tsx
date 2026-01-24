@@ -183,7 +183,7 @@ function Content() {
       return;
     }
 
-    if (uuid && !shouldSkipDiff) {
+    if (uuid && !shouldSkipDiff && userData?.showChanges) {
       setLoading(true);
       try {
         const remoteResult = await UserConfigAPI.loadConfig(uuid, password!);
