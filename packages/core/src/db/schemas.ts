@@ -347,6 +347,7 @@ export const UserDataSchema = z.object({
   uuid: z.string().uuid().optional(),
   encryptedPassword: z.string().min(1).optional(),
   trusted: z.boolean().optional(),
+  showChanges: z.boolean().optional(),
   addonPassword: z.string().optional(),
   ip: z.union([z.ipv4(), z.ipv6()]).optional(),
   addonName: z.string().min(1).max(300).optional(),

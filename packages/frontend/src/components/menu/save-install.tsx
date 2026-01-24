@@ -32,6 +32,8 @@ import {
   useConfirmationDialog,
 } from '../shared/confirmation-dialog';
 import { UserData } from '@aiostreams/core';
+import { DiffViewer } from '../shared/diff-viewer';
+import { getObjectDiff, DiffItem } from '@/utils/diff';
 
 // Reusable modal option button component
 interface ModalOptionButtonProps {
@@ -107,6 +109,9 @@ function Content() {
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
     React.useState(false);
   const [installProtocol, setInstallProtocol] = React.useState('stremio');
+  const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
+  const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
+  const diffModal = useDisclosure(false);
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
     description: `Are you sure you want to reset your configuration? This will clear all your settings${uuid ? ` but keep your user account` : ''}. This action cannot be undone.`,
@@ -145,11 +150,21 @@ function Content() {
     setPasswordRequirements(requirements);
   }, [newPassword, uuid, password]);
 
+  const handleRevertAll = () => {
+    if (remoteConfig) {
+      setUserData(() => remoteConfig);
+      toast.success('Changes reverted');
+      diffModal.close();
+    }
+  };
+
   const handleSave = async (
     e?: React.FormEvent<HTMLFormElement>,
-    authenticated: boolean = false
+    authenticated: boolean = false,
+    skipDiffHandler: boolean = false
   ) => {
     e?.preventDefault();
+    let suppressSuccessToast = false;
     if (
       status?.settings.protected &&
       !authenticated &&
@@ -162,6 +177,31 @@ function Content() {
       toast.error('Password requirements not met');
       return;
     }
+
+    if (uuid && !skipDiffHandler) {
+      setLoading(true);
+      try {
+        const remoteResult = await UserConfigAPI.loadConfig(uuid, password!);
+        
+        if (remoteResult.success && remoteResult.data) {
+          const diffs = getObjectDiff(remoteResult.data.config, userData);
+          
+          if (diffs.length === 0) {
+            toast.info('No changes detected');
+            suppressSuccessToast = true;
+          } else if (userData?.showChanges) {
+            setRemoteConfig(remoteResult.data.config);
+            setDiffData(diffs);
+            diffModal.open();
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error checking for changes:', err);
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -191,7 +231,7 @@ function Content() {
         setUuid(result.data.uuid);
         setEncryptedPassword(result.data.encryptedPassword);
         setPassword(newPassword);
-      } else if (uuid && result.success) {
+      } else if (uuid && result.success && !suppressSuccessToast) {
         toast.success('Configuration updated successfully');
       }
 
@@ -369,6 +409,36 @@ function Content() {
     }
   };
 
+  const valueFormatter = (val: any): string => {
+      const resolveId = (v: string) => {
+          const addon = userData?.presets?.find(p => p.instanceId === v || (p.options as any)?.id === v);
+          if (addon) {
+              const name = (addon.options as any)?.name;
+              if (name) return name; 
+          }
+          return v;
+      };
+
+      const resolveDeep = (v: any): any => {
+          // Swap IDs for names
+          if (typeof v === 'string') return resolveId(v);
+          if (Array.isArray(v)) return v.map(resolveDeep);
+          if (v && typeof v === 'object') {
+              return Object.fromEntries(
+                  Object.entries(v).map(([k, val]) => [k, resolveDeep(val)])
+              );
+          }
+          return v;
+      };
+
+      const resolved = resolveDeep(val);
+
+      if (typeof resolved === 'object' && resolved !== null) {
+          return JSON.stringify(resolved, null, 2);
+      }
+      return String(resolved);
+  };
+
   return (
     <>
       <div className="flex items-center w-full">
@@ -459,9 +529,26 @@ function Content() {
                 />
               </div>
               <form onSubmit={handleSave}>
-                <Button type="submit" intent="white" loading={loading} rounded>
-                  Save
-                </Button>
+                <div className="flex items-center justify-between gap-4 mt-4">
+                  <Button type="submit" intent="white" loading={loading} rounded>
+                    Save
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="show-changes"
+                      className="text-sm text-[--muted] cursor-pointer"
+                    >
+                      Show changes before saving
+                    </label>
+                    <Switch
+                      id="show-changes"
+                      value={userData?.showChanges ?? false}
+                      onValueChange={(val) =>
+                        setUserData((prev) => ({ ...prev, showChanges: val }))
+                      }
+                    />
+                  </div>
+                </div>
               </form>
             </SettingsCard>
 
@@ -792,6 +879,45 @@ function Content() {
           onOpenChange={templatesModal.toggle}
           openImportModal
         />
+
+        <Modal
+          open={diffModal.isOpen}
+          onOpenChange={diffModal.toggle}
+          title="Confirm Changes"
+          description="Review the changes you are about to make to your configuration."
+        >
+          <div className="space-y-4">
+            <DiffViewer diffs={diffData} valueFormatter={valueFormatter} />
+            <div className="flex justify-between pt-4">
+              <Button
+                intent="alert"
+                onClick={handleRevertAll}
+                loading={loading}
+              >
+                Reset Changes
+              </Button>
+              <div className="flex gap-3">
+                <Button
+                  intent="gray-outline"
+                  onClick={diffModal.close}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  intent="white"
+                  onClick={() => {
+                    diffModal.close();
+                    handleSave(undefined, undefined, true);
+                  }}
+                  loading={loading}
+                >
+                  Confirm & Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       </div>
     </>
   );
