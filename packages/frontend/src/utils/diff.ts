@@ -1,5 +1,3 @@
-import { open } from 'fs';
-
 export interface DiffItem {
   path: string[];
   type: 'CHANGE' | 'ADD' | 'REMOVE';

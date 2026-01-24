@@ -199,6 +199,9 @@ function Content() {
         }
       } catch (err) {
         console.error('Error checking for changes:', err);
+        if (userData?.showChanges) {
+            toast.warning('Error checking for changes. Proceeding with save.');
+        }
       }
     }
 
