@@ -20,6 +20,8 @@ import {
   FaFileImport,
   FaEquals,
   FaTachometerAlt,
+  FaArrowUp,
+  FaArrowDown,
 } from 'react-icons/fa';
 import { FaTextSlash } from 'react-icons/fa6';
 import {
@@ -3663,6 +3665,26 @@ function TextInputs({
           <IconButton
             size="sm"
             rounded
+            icon={<FaArrowUp />}
+            intent="primary-subtle"
+            disabled={index === 0}
+            onClick={() => {
+              onValuesChange(arrayMove(values, index, index - 1));
+            }}
+          />
+          <IconButton
+            size="sm"
+            rounded
+            icon={<FaArrowDown />}
+            intent="primary-subtle"
+            disabled={index === values.length - 1}
+            onClick={() => {
+              onValuesChange(arrayMove(values, index, index + 1));
+            }}
+          />
+          <IconButton
+            size="sm"
+            rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
             onClick={() =>
@@ -3811,6 +3833,26 @@ function TwoTextInputs({
               onValueChange={(newValue) => onValueChange(newValue, index)}
             />
           </div>
+          <IconButton
+            size="sm"
+            rounded
+            icon={<FaArrowUp />}
+            intent="primary-subtle"
+            disabled={index === 0}
+            onClick={() => {
+              onValuesChange(arrayMove(values, index, index - 1));
+            }}
+          />
+          <IconButton
+            size="sm"
+            rounded
+            icon={<FaArrowDown />}
+            intent="primary-subtle"
+            disabled={index === values.length - 1}
+            onClick={() => {
+              onValuesChange(arrayMove(values, index, index + 1));
+            }}
+          />
           <IconButton
             size="sm"
             rounded
