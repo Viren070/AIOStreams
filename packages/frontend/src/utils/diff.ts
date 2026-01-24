@@ -213,7 +213,11 @@ export function getObjectDiff(
 
 export function formatValue(value: any): string {
   if (typeof value === 'object' && value !== null) {
-    return JSON.stringify(value, null, 2);
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return '[Circular Reference]';
+    }
   }
   return String(value);
 }

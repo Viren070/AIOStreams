@@ -201,14 +201,12 @@ function Content() {
             setLoading(false);
             return;
           }
-        } else if (userData?.showChanges) {
+        } else {
              toast.warning('Error checking for changes. Proceeding with save.');
         }
       } catch (err) {
         console.error('Error checking for changes:', err);
-        if (userData?.showChanges) {
-            toast.warning('Error checking for changes. Proceeding with save.');
-        }
+        toast.warning('Error checking for changes. Proceeding with save.');
         // Reset loading state before proceeding to actual save
         setLoading(false);
       }
