@@ -16,7 +16,7 @@ export function getObjectDiff(
 ): DiffItem[] {
   const diffs: DiffItem[] = [];
 
-  const ignoredKeys = new Set(['uuid', 'trusted']);
+  const ignoredKeys = new Set(['uuid', 'trusted', 'encryptedPassword']);
 
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
@@ -30,16 +30,20 @@ export function getObjectDiff(
         if (item.id) return item.id;
         if (item.name) return item.name;
         if (item.key) return item.key;
-        // Fallback for keyless objects (like groups)
-        try {
-            return JSON.stringify(item);
-        } catch (e) {
-            return null;
+        if (Array.isArray(item.addons) && typeof item.condition === 'string') {
+            return `group:${[...item.addons].sort().join(',')}`;
         }
+        // Fallback for keyless objects (like groups)
+        return null;
     };
 
-    const canKey = obj1.length > 0 && obj2.length > 0 && 
-                   obj1.every(getKey) && obj2.every(getKey);
+    const canKey =
+      obj1.length > 0 &&
+      obj2.length > 0 && 
+      obj1.every(getKey) &&
+      obj2.every(getKey) &&
+      new Set(obj1.map(getKey)).size === obj1.length &&
+      new Set(obj2.map(getKey)).size === obj2.length;
 
     if (canKey) {
         const oldMap = new Map();
@@ -155,12 +159,14 @@ export function getObjectDiff(
     return diffs;
   }
 
-  if (
-    !isObject(obj1) ||
-    !isObject(obj2)
-  ) {
-    if (JSON.stringify(obj1) === JSON.stringify(obj2)) return diffs;
-
+  if (!isObject(obj1) || !isObject(obj2)) {
+    if (obj1 === obj2) return diffs;
+    
+    try {
+        if (JSON.stringify(obj1) === JSON.stringify(obj2)) return diffs;
+    } catch {
+    }
+    
     return [
       {
         path,

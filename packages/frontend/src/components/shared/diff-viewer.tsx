@@ -10,7 +10,9 @@ export function DiffViewer({ diffs, valueFormatter }: DiffViewerProps) {
   const format = (val: any) => {
       if (valueFormatter) {
           const formatted = valueFormatter(val);
-          if (formatted !== String(val)) return formatted;
+          if (formatted !== undefined && formatted !== null) {
+            return formatted;
+          }
       }
       return formatValue(val);
   };
@@ -26,7 +28,7 @@ export function DiffViewer({ diffs, valueFormatter }: DiffViewerProps) {
       <div className="space-y-3">
         {diffs.map((diff, idx) => (
           <div
-            key={idx}
+              key={`${diff.path.join('.')}-${diff.type}-${idx}`}
             className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 relative group"
           >
             <div className="flex items-center justify-between mb-2">
@@ -37,7 +39,11 @@ export function DiffViewer({ diffs, valueFormatter }: DiffViewerProps) {
                     </span>
                 </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div
+              className={`grid gap-4 text-sm ${
+                diff.type === 'CHANGE' ? 'grid-cols-2' : 'grid-cols-1'
+              }`}
+            >
               {diff.type !== 'ADD' && (
                 <div className="space-y-1">
                   <div className="text-xs text-[--muted] uppercase">Old</div>

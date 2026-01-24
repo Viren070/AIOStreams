@@ -183,10 +183,10 @@ function Content() {
       return;
     }
 
-    if (uuid && !shouldSkipDiff && userData?.showChanges) {
+    if (uuid && password && !shouldSkipDiff && userData?.showChanges) {
       setLoading(true);
       try {
-        const remoteResult = await UserConfigAPI.loadConfig(uuid, password!);
+        const remoteResult = await UserConfigAPI.loadConfig(uuid, password);
         
         if (remoteResult.success && remoteResult.data) {
           const diffs = getObjectDiff(remoteResult.data.config, userData);
@@ -209,6 +209,8 @@ function Content() {
         if (userData?.showChanges) {
             toast.warning('Error checking for changes. Proceeding with save.');
         }
+        // Reset loading state before proceeding to actual save
+        setLoading(false);
       }
     }
 
@@ -444,7 +446,11 @@ function Content() {
       const resolved = resolveDeep(val);
 
       if (typeof resolved === 'object' && resolved !== null) {
-          return JSON.stringify(resolved, null, 2);
+          try {
+              return JSON.stringify(resolved, null, 2);
+          } catch {
+              return '[Circular Reference]';
+          }
       }
       return String(resolved);
   }, [userData?.presets]);
@@ -544,14 +550,9 @@ function Content() {
                     Save
                   </Button>
                   <div className="flex items-center gap-2">
-                    <label
-                      htmlFor="show-changes"
-                      className="text-sm text-[--muted] cursor-pointer"
-                    >
-                      Show changes before saving
-                    </label>
                     <Switch
                       id="show-changes"
+                      label="Show changes before saving"
                       value={userData?.showChanges ?? false}
                       onValueChange={(val) =>
                         setUserData((prev) => ({ ...prev, showChanges: val }))
