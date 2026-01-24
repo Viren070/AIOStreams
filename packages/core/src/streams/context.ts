@@ -14,6 +14,7 @@ import {
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
+import { iso6391ToLanguage } from '../formatters/utils.js';
 
 const logger = createLogger('stream-context');
 
@@ -455,6 +456,9 @@ export class StreamContext {
       yearEnd: this._metadata?.yearEnd,
       genres: this._metadata?.genres ?? [],
       runtime: this._metadata?.runtime,
+      originalLanguage: iso6391ToLanguage(
+        this._metadata?.originalLanguage || ''
+      ),
       absoluteEpisode: this._metadata?.absoluteEpisode,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,

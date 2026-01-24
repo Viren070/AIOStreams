@@ -1178,6 +1178,7 @@ export interface ExpressionContext {
   genres?: string[];
   runtime?: number;
   absoluteEpisode?: number;
+  originalLanguage?: string;
   // Anime entry data
   anilistId?: number;
   malId?: number;
@@ -1201,6 +1202,7 @@ export class StreamSelector extends StreamExpressionEngine {
     this.parser.consts.yearEnd = context.yearEnd ?? 0;
     this.parser.consts.runtime = context.runtime ?? 0;
     this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? 0;
+    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
     this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
   }
 
