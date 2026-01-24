@@ -1385,9 +1385,13 @@ function AddonFetchingBehaviorCard() {
 
           {(() => {
             const handleGroupsChange = (newGroups: any[]) => {
+              const normalized = [...newGroups];
+              if (normalized.length > 0) {
+                normalized[0] = { ...normalized[0], condition: 'true' };
+              }
               setUserData((prev) => ({
                 ...prev,
-                groups: { ...prev.groups, groupings: newGroups },
+                groups: { ...prev.groups, groupings: normalized },
               }));
             };
 
@@ -1467,16 +1471,17 @@ function AddonFetchingBehaviorCard() {
               intent="primary-subtle"
               icon={<FaPlus />}
               onClick={() => {
-                  setUserData((prev) => {
+                setUserData((prev) => {
                   const currentGroups = prev.groups?.groupings || [];
+                  const newGroup = {
+                    addons: [],
+                    condition: currentGroups.length === 0 ? 'true' : '',
+                  };
                   return {
                     ...prev,
                     groups: {
                       ...prev.groups,
-                      groupings: [
-                        ...currentGroups,
-                        { addons: [], condition: '' },
-                      ],
+                      groupings: [...currentGroups, newGroup],
                     },
                   };
                 });
