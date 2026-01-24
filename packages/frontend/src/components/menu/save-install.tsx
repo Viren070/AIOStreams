@@ -112,6 +112,7 @@ function Content() {
   const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
   const diffModal = useDisclosure(false);
+  const pendingSkipDiffRef = React.useRef(false);
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
     description: `Are you sure you want to reset your configuration? This will clear all your settings${uuid ? ` but keep your user account` : ''}. This action cannot be undone.`,
@@ -164,12 +165,16 @@ function Content() {
     skipDiffHandler: boolean = false
   ) => {
     e?.preventDefault();
+    const shouldSkipDiff = skipDiffHandler || pendingSkipDiffRef.current;
+    pendingSkipDiffRef.current = false;
+
     let suppressSuccessToast = false;
     if (
       status?.settings.protected &&
       !authenticated &&
       !userData.addonPassword
     ) {
+      pendingSkipDiffRef.current = shouldSkipDiff;
       passwordModal.open();
       return;
     }
@@ -178,7 +183,7 @@ function Content() {
       return;
     }
 
-    if (uuid && !skipDiffHandler) {
+    if (uuid && !shouldSkipDiff) {
       setLoading(true);
       try {
         const remoteResult = await UserConfigAPI.loadConfig(uuid, password!);
