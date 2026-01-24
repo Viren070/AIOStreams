@@ -513,12 +513,7 @@ class StreamParser {
 
     let seasonPack = folderParsed?.seasonPack || fileParsed?.seasonPack;
     let episodes = arrayFallback(fileParsed?.episodes, folderParsed?.episodes);
-    let seasons = arrayFallback(
-      fileParsed?.seasons,
-      folderParsed?.seasons,
-      fileParsed?.volumes,
-      folderParsed?.volumes
-    );
+    let seasons = arrayFallback(fileParsed?.seasons, folderParsed?.seasons);
 
     // Detect season pack based on folder size being significantly larger than file size
     if (
