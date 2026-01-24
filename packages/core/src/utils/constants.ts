@@ -875,6 +875,7 @@ const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
 // Passthrough stages that can be selectively bypassed
 const PASSTHROUGH_STAGES = [
   'filter', // bypass main filtering (shouldKeepStream)
+  'language', // bypass language filtering specifically
   'dedup', // bypass deduplication
   'limit', // bypass result limiting
   'excluded', // bypass excluded stream expressions
