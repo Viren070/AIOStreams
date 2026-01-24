@@ -16,7 +16,7 @@ export function getObjectDiff(
 ): DiffItem[] {
   const diffs: DiffItem[] = [];
 
-  const ignoredKeys = new Set(['uuid', 'trusted', 'encryptedPassword']);
+  const ignoredKeys = new Set(['uuid', 'trusted', 'encryptedPassword', 'showChanges']);
 
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
@@ -40,8 +40,8 @@ export function getObjectDiff(
     const canKey =
       obj1.length > 0 &&
       obj2.length > 0 && 
-      obj1.every(getKey) &&
-      obj2.every(getKey) &&
+      obj1.every(item => getKey(item) !== null) &&
+      obj2.every(item => getKey(item) !== null) &&
       new Set(obj1.map(getKey)).size === obj1.length &&
       new Set(obj2.map(getKey)).size === obj2.length;
 

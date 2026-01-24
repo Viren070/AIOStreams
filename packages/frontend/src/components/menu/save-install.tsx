@@ -153,7 +153,7 @@ function Content() {
 
   const handleRevertAll = () => {
     if (remoteConfig) {
-      setUserData(() => remoteConfig);
+      setUserData((prev) => (prev ? { ...prev, ...remoteConfig } : remoteConfig));
       toast.success('Changes reverted');
       diffModal.close();
     }
@@ -421,10 +421,14 @@ function Content() {
 
   const valueFormatter = React.useCallback((val: any): string => {
       const resolveId = (v: string) => {
-          const addon = userData?.presets?.find(p => p.instanceId === v || (p.options as any)?.id === v);
+          const addon = userData?.presets?.find(p => {
+             if (p.instanceId === v) return true;
+             const opts = p.options as Record<string, any>;
+             return opts?.id === v;
+          });
           if (addon) {
-              const name = (addon.options as any)?.name;
-              if (name) return name; 
+              const opts = addon.options as Record<string, any>;
+              if (opts?.name && typeof opts.name === 'string') return opts.name;
           }
           return v;
       };
@@ -901,6 +905,7 @@ function Content() {
               <Button
                 intent="alert"
                 onClick={handleRevertAll}
+                disabled={loading}
               >
                 Reset Changes
               </Button>
