@@ -153,7 +153,14 @@ function Content() {
 
   const handleRevertAll = () => {
     if (remoteConfig) {
-      setUserData((prev) => (prev ? { ...prev, ...remoteConfig } : remoteConfig));
+      setUserData((prev) => {
+        if (!prev) return remoteConfig;
+        return {
+          ...prev,
+          ...remoteConfig,
+          showChanges: prev.showChanges, 
+        };
+      });
       toast.success('Changes reverted');
       diffModal.close();
     }
