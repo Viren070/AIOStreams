@@ -473,7 +473,7 @@ export class StreamContext {
       originalLanguage: iso6391ToLanguage(
         this._metadata?.originalLanguage || ''
       ),
-      age: this.computeAgeInDays(),
+      daysSinceRelease: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,

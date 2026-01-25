@@ -1200,7 +1200,7 @@ export interface ExpressionContext {
   runtime?: number;
   absoluteEpisode?: number;
   originalLanguage?: string;
-  age?: number; // age in days of the movie / **episode**
+  daysSinceRelease?: number; // age in days of the movie / **episode**
   // Anime entry data
   anilistId?: number;
   malId?: number;
@@ -1222,7 +1222,7 @@ export class StreamSelector extends StreamExpressionEngine {
     this.parser.consts.title = context.title ?? '';
     this.parser.consts.year = context.year ?? 0;
     this.parser.consts.yearEnd = context.yearEnd ?? 0;
-    this.parser.consts.age = context.age ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? 0;
     this.parser.consts.runtime = context.runtime ?? 0;
     this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? 0;
     this.parser.consts.originalLanguage = context.originalLanguage ?? '';
