@@ -568,6 +568,13 @@ export const UserDataSchema = z.object({
   cacheAndPlay: CacheAndPlaySchema.optional(),
 
   autoRemoveDownloads: z.boolean().optional(),
+
+  subdetect: z
+    .object({
+      enabled: z.boolean().optional(),
+      apiKey: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;

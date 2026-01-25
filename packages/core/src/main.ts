@@ -18,6 +18,7 @@ import {
   AnimeDatabase,
   ParsedId,
   IdParser,
+  SubDetectService,
 } from './utils/index.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from './presets/index.js';
@@ -101,6 +102,7 @@ export class AIOStreams {
   private deduplicator: Deduplicator;
   private sorter: Sorter;
   private precomputer: Precomputer;
+  private subdetectService: SubDetectService;
 
   private addonInitialisationErrors: {
     addon: Addon | Preset;
@@ -121,6 +123,10 @@ export class AIOStreams {
     this.fetcher = new Fetcher(userData, this.filterer, this.precomputer);
     this.deduplicator = new Deduplicator(userData);
     this.sorter = new Sorter(userData);
+    this.subdetectService = new SubDetectService(
+      userData.subdetect?.apiKey,
+      userData.subdetect?.enabled ?? false
+    );
   }
 
   private setUserData(userData: UserData) {
@@ -2163,6 +2169,66 @@ export class AIOStreams {
     return { season, episode };
   }
 
+  private async _enrichWithSubDetectLanguages(
+    streams: ParsedStream[]
+  ): Promise<ParsedStream[]> {
+    if (!this.subdetectService.isEnabled()) {
+      return streams;
+    }
+
+    const startTime = Date.now();
+
+    const releaseToStreams = new Map<string, ParsedStream[]>();
+
+    for (const stream of streams) {
+      const releaseName = stream.filename || stream.folderName;
+      if (releaseName) {
+        const existing = releaseToStreams.get(releaseName) || [];
+        existing.push(stream);
+        releaseToStreams.set(releaseName, existing);
+      }
+    }
+
+    if (releaseToStreams.size === 0) {
+      logger.debug('No valid release names found for SubDetect processing');
+      return streams;
+    }
+
+    // Get unique release names
+    const releaseNames = Array.from(releaseToStreams.keys());
+    logger.info(
+      `Processing ${releaseNames.length} unique release names with SubDetect`
+    );
+
+    const detectedLanguages =
+      await this.subdetectService.detectLanguages(releaseNames);
+
+    // Enrich streams with the languages
+    let enrichedCount = 0;
+    for (const [releaseName, languages] of detectedLanguages) {
+      const matchingStreams = releaseToStreams.get(releaseName);
+      if (matchingStreams && languages.length > 0) {
+        for (const stream of matchingStreams) {
+          if (stream.parsedFile) {
+            const existingLanguages = stream.parsedFile.languages || [];
+            const mergedLanguages = [
+              ...languages,
+              ...existingLanguages.filter((l) => !languages.includes(l)),
+            ];
+            stream.parsedFile.languages = mergedLanguages;
+            enrichedCount++;
+          }
+        }
+      }
+    }
+
+    logger.info(
+      `SubDetect enriched ${enrichedCount} streams with language info in ${Date.now() - startTime}ms`
+    );
+
+    return streams;
+  }
+
   private async _processStreams(
     streams: ParsedStream[],
     context: StreamContext,
@@ -2179,6 +2245,9 @@ export class AIOStreams {
     }
 
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
+
+    processedStreams =
+      await this._enrichWithSubDetectLanguages(processedStreams);
 
     if (isMeta) {
       // Run preferred matching after filter

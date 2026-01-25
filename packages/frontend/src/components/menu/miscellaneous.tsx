@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { PageWrapper } from '../shared/page-wrapper';
 import { PageControls } from '../shared/page-controls';
 import { Switch } from '../ui/switch';
@@ -429,7 +430,83 @@ function Content() {
             />
           </SettingsCard>
         )}
+        {mode === 'pro' && <SubDetectCard />}
       </div>
     </>
+  );
+}
+
+function SubDetectCard() {
+  const { userData, setUserData } = useUserData();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleToggle = async (enabled: boolean) => {
+    setError(null);
+
+    // If enabling and no API key, generate one first
+    if (enabled && !userData.subdetect?.apiKey) {
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          'https://subdetect.chromeknight.dev/api/generate-key',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to generate API key: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        setUserData((prev) => ({
+          ...prev,
+          subdetect: {
+            apiKey: data.api_key,
+            enabled: true,
+          },
+        }));
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to enable SubDetect'
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setUserData((prev) => ({
+        ...prev,
+        subdetect: {
+          ...prev.subdetect,
+          enabled,
+        },
+      }));
+    }
+  };
+
+  return (
+    <SettingsCard
+      title="SubDetect - Subtitle Language Detection"
+      description="Automatically detect embedded subtitle languages from scene release NFO files. Languages detected by SubDetect take priority over parsed languages."
+    >
+      <Switch
+        label="Enable"
+        side="right"
+        disabled={isLoading}
+        value={userData.subdetect?.enabled ?? false}
+        onValueChange={handleToggle}
+      />
+
+      {error && (
+        <Alert intent="alert-basic">
+          <p className="text-sm">{error}</p>
+        </Alert>
+      )}
+    </SettingsCard>
   );
 }

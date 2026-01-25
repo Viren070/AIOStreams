@@ -38,6 +38,7 @@ type PARSE_REGEX = {
   >;
   encodes: Omit<Record<(typeof constants.ENCODES)[number], RegExp>, 'Unknown'>;
   releaseGroup: RegExp;
+  sceneRelease: RegExp;
 };
 
 export const PARSE_REGEX: PARSE_REGEX = {
@@ -187,4 +188,6 @@ export const PARSE_REGEX: PARSE_REGEX = {
   },
   releaseGroup:
     /-[. ]?(?!\d+$|S\d+|\d+x|ep?\d+|[^[]+]$)([^\-. []+[^\-. [)\]\d][^\-. [)\]]*)(?:\[[\w.-]+])?(?=\)|[.-]+\w{2,4}$|$)/i,
+
+  sceneRelease: /-[a-zA-Z0-9]{2,}$/,
 };
