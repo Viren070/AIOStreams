@@ -1063,6 +1063,8 @@ class StreamFilterer {
     const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
       const file = stream.parsedFile;
 
+      const skipLanguageFiltering = shouldPassthroughStage(stream, 'language');
+
       if (originalLanguage && LANGUAGES.includes(originalLanguage as any)) {
         if (
           file?.languages &&
@@ -1070,6 +1072,7 @@ class StreamFilterer {
           file?.languages.includes(originalLanguage)
         ) {
           file.languages.push('Original');
+          file.languages.push(`Original-${originalLanguage}`);
         }
       }
       // Temporarily add in our fake visual tags used for sorting/filtering
@@ -1192,6 +1195,7 @@ class StreamFilterer {
       }
 
       if (
+        !skipLanguageFiltering &&
         this.userData.includedLanguages?.some((lang) =>
           (file?.languages.length ? file.languages : ['Unknown']).includes(lang)
         )
@@ -1485,6 +1489,7 @@ class StreamFilterer {
 
       // languages
       if (
+        !skipLanguageFiltering &&
         this.userData.excludedLanguages?.length &&
         (file?.languages.length ? file.languages : ['Unknown']).every((lang) =>
           this.userData.excludedLanguages!.includes(lang as any)
@@ -1498,6 +1503,7 @@ class StreamFilterer {
       }
 
       if (
+        !skipLanguageFiltering &&
         this.userData.requiredLanguages &&
         this.userData.requiredLanguages.length > 0 &&
         !this.userData.requiredLanguages.some((lang) =>

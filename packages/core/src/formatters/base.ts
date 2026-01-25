@@ -192,13 +192,27 @@ export abstract class BaseFormatter {
   }
 
   protected convertStreamToParseValue(stream: ParsedStream): ParseValue {
-    const languages = stream.parsedFile?.languages || null;
+    const resolvedOriginalLanguage = stream.parsedFile?.languages
+      ?.find((l) => l.startsWith('Original-'))
+      ?.replace('Original-', '');
+    const languages =
+      stream.parsedFile?.languages?.filter((l) => !l.startsWith('Original-')) ||
+      null;
+
+    const rawUserLanguages = [
+      ...(this.userData.preferredLanguages || []),
+      ...(this.userData.requiredLanguages || []),
+      ...(this.userData.includedLanguages || []),
+    ];
     const userSpecifiedLanguages = [
-      ...new Set([
-        ...(this.userData.preferredLanguages || []),
-        ...(this.userData.requiredLanguages || []),
-        ...(this.userData.includedLanguages || []),
-      ]),
+      ...new Set(
+        rawUserLanguages.flatMap((lang) => {
+          if (lang === 'Original' && resolvedOriginalLanguage) {
+            return [resolvedOriginalLanguage];
+          }
+          return [lang];
+        })
+      ),
     ];
     const getPaddedNumber = (number: number, length: number) =>
       number.toString().padStart(length, '0');

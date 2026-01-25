@@ -836,6 +836,27 @@ export abstract class StreamExpressionEngine {
       );
     };
 
+    this.parser.functions.seasonPack = function (
+      streams: ParsedStream[],
+      mode: 'seasonPack' | 'onlySeasons' = 'onlySeasons'
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (mode !== 'seasonPack' && mode !== 'onlySeasons') {
+        throw new Error("Mode must be either 'seasonPack' or 'onlySeasons'");
+      }
+
+      return streams.filter((stream) =>
+        mode === 'seasonPack'
+          ? stream.parsedFile?.seasonPack
+          : // when there are only seasons and no episodes
+            stream.parsedFile?.seasons &&
+            stream.parsedFile?.seasons.length > 0 &&
+            (!stream.parsedFile.episodes ||
+              !stream.parsedFile?.episodes?.length)
+      );
+    };
+
     this.parser.functions.addon = function (
       streams: ParsedStream[],
       ...addons: string[]
@@ -1178,6 +1199,8 @@ export interface ExpressionContext {
   genres?: string[];
   runtime?: number;
   absoluteEpisode?: number;
+  originalLanguage?: string;
+  age?: number; // age in days of the movie / **episode**
   // Anime entry data
   anilistId?: number;
   malId?: number;
@@ -1199,8 +1222,10 @@ export class StreamSelector extends StreamExpressionEngine {
     this.parser.consts.title = context.title ?? '';
     this.parser.consts.year = context.year ?? 0;
     this.parser.consts.yearEnd = context.yearEnd ?? 0;
+    this.parser.consts.age = context.age ?? 0;
     this.parser.consts.runtime = context.runtime ?? 0;
     this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? 0;
+    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
     this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
   }
 

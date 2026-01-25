@@ -14,6 +14,7 @@ import {
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
+import { iso6391ToLanguage } from '../formatters/utils.js';
 
 const logger = createLogger('stream-context');
 
@@ -435,6 +436,20 @@ export class StreamContext {
     return this._seadex;
   }
 
+  private computeAgeInDays(): number | undefined {
+    const getDaysDifference = (dateString: string): number => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    };
+    if (this.type === 'series' && this._episodeAirDate) {
+      return getDaysDifference(this._episodeAirDate);
+    } else if (this._metadata?.releaseDate) {
+      return getDaysDifference(this._metadata.releaseDate);
+    }
+    return undefined;
+  }
   /**
    * Convert context to a plain object for expression evaluation.
    */
@@ -455,6 +470,10 @@ export class StreamContext {
       yearEnd: this._metadata?.yearEnd,
       genres: this._metadata?.genres ?? [],
       runtime: this._metadata?.runtime,
+      originalLanguage: iso6391ToLanguage(
+        this._metadata?.originalLanguage || ''
+      ),
+      age: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,
