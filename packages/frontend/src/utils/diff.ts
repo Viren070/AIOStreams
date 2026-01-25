@@ -9,6 +9,21 @@ function isObject(val: any) {
   return val != null && typeof val === 'object' && !Array.isArray(val);
 }
 
+export function sortKeys(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(sortKeys);
+  }
+  if (isObject(obj)) {
+    return Object.keys(obj)
+      .sort()
+      .reduce((sortedObj: any, key) => {
+        sortedObj[key] = sortKeys(obj[key]);
+        return sortedObj;
+      }, {});
+  }
+  return obj;
+}
+
 export function getObjectDiff(
   obj1: any,
   obj2: any,
@@ -16,13 +31,25 @@ export function getObjectDiff(
 ): DiffItem[] {
   const diffs: DiffItem[] = [];
 
-  const ignoredKeys = new Set(['uuid', 'trusted', 'encryptedPassword', 'showChanges']);
+  const ignoredKeys = new Set([
+    'uuid',
+    'trusted',
+    'encryptedPassword',
+    'showChanges',
+    'ip',
+    'addonPassword',
+  ]);
 
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
     // Check for reference equality first
     if (obj1 === obj2) return [];
+    
+    // Check for content equality (covers empty arrays and identical content from sortKeys)
+    try {
+      if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
+    } catch {}
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
     const isAddons = lastPath === 'addons';

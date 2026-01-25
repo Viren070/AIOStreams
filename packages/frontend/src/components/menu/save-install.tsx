@@ -33,7 +33,7 @@ import {
 } from '../shared/confirmation-dialog';
 import { UserData } from '@aiostreams/core';
 import { DiffViewer } from '../shared/diff-viewer';
-import { getObjectDiff, DiffItem } from '@/utils/diff';
+import { getObjectDiff, DiffItem, sortKeys } from '@/utils/diff';
 
 // Reusable modal option button component
 interface ModalOptionButtonProps {
@@ -111,6 +111,7 @@ function Content() {
   const [installProtocol, setInstallProtocol] = React.useState('stremio');
   const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
+  const [localDiffConfig, setLocalDiffConfig] = React.useState<UserData | null>(null);
   const diffModal = useDisclosure(false);
   const pendingSkipDiffRef = React.useRef(false);
   const confirmResetProps = useConfirmationDialog({
@@ -220,9 +221,26 @@ function Content() {
           };
 
           const allPresets = [...(userData?.presets || []), ...(remoteConf?.presets || [])];
+           const filterForDiff = (d: UserData | null) => {
+               if (!d) return d;
+               const filtered: any = { ...d };
+               delete filtered.ip;
+               delete filtered.uuid;
+               delete filtered.addonPassword;
+               delete filtered.trusted;
+               delete filtered.encryptedPassword;
+               delete filtered.showChanges;
+               
+               // Sort keys to ensure deterministic ordering for diffs (fixes ghost diffs)
+               return sortKeys(filtered) as UserData;
+           };
+
+           const filteredRemote = filterForDiff(remoteConf);
+           const filteredLocal = filterForDiff(userData);
+
            // Resolve IDs to Names for readable diffs (e.g. Group Swaps)
-           const processedRemote = resolveNamesInConfig(remoteConf, allPresets);
-           const processedLocal = resolveNamesInConfig(userData, allPresets);
+           const processedRemote = resolveNamesInConfig(filteredRemote, allPresets);
+           const processedLocal = resolveNamesInConfig(filteredLocal, allPresets);
            const diffs = getObjectDiff(processedRemote, processedLocal);
           
           if (diffs.length === 0) {
@@ -230,7 +248,8 @@ function Content() {
             suppressSuccessToast = true;
             setLoading(false);
           } else {
-            setRemoteConfig(remoteConf);
+            setRemoteConfig(processedRemote);
+            setLocalDiffConfig(processedLocal);
             setDiffData(diffs);
             if (authenticated) {
               passwordModal.close();
@@ -942,7 +961,12 @@ function Content() {
           description="Review the changes you are about to make to your configuration."
         >
           <div className="space-y-4">
-            <DiffViewer diffs={diffData} valueFormatter={valueFormatter} />
+            <DiffViewer
+              diffs={diffData}
+              valueFormatter={valueFormatter}
+              oldValue={remoteConfig}
+              newValue={localDiffConfig}
+            />
             <div className="flex justify-between pt-4">
               <Button
                 intent="alert"
