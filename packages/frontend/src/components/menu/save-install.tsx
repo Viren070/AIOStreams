@@ -232,6 +232,9 @@ function Content() {
           } else {
             setRemoteConfig(remoteConf);
             setDiffData(diffs);
+            if (authenticated) {
+              passwordModal.close();
+            }
             diffModal.open();
             setLoading(false);
             return;
