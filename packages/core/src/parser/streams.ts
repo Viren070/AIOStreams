@@ -517,7 +517,7 @@ class StreamParser {
 
     // Detect season pack based on folder size being significantly larger than file size
     if (
-      seasonPack === undefined &&
+      !seasonPack &&
       episodes &&
       episodes.length > 0 && // to handle movie folders
       parsedStream.folderSize &&
@@ -527,7 +527,7 @@ class StreamParser {
       seasonPack = true;
     }
     // Detect season pack when more than 5 episodes are present
-    if (seasonPack === undefined && episodes && episodes.length > 5) {
+    if (!seasonPack && episodes && episodes.length > 5) {
       seasonPack = true;
     }
     return {
