@@ -31,11 +31,6 @@ interface SubDetectProcessResponse {
   results: SubDetectResult[];
 }
 
-interface SubDetectApiKeyResponse {
-  api_key: string;
-  created_at: string;
-}
-
 export function convertISO6392ToLanguage(code: string): string | undefined {
   const lang = FULL_LANGUAGE_MAPPING.find(
     (language) => language.iso_639_2 === code.toLowerCase()
