@@ -21,19 +21,26 @@ export function getObjectDiff(
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
+    if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
+
+    const lastPath = path.length > 0 ? path[path.length - 1] : '';
+    const isAddons = lastPath === 'addons';
+    const isGroupings = lastPath === 'groupings';
+
     const getKey = (item: any) => {
         if (!isObject(item)) {
-             // Avoid noisy diffs by defaulting to index for non-objects
-             return null;
+             // Use value as key for primitives to enable Set/Order diffing
+             return String(item);
         }
         if (item.instanceId) return item.instanceId;
         if (item.id) return item.id;
         if (item.name) return item.name;
         if (item.key) return item.key;
-        if (Array.isArray(item.addons) && typeof item.condition === 'string') {
-            return `group:${[...item.addons].sort().join(',')}`;
+        if (item.pattern) return item.pattern;
+        if (Array.isArray(item.addons)) {
+            // Key groups by content to track them across condition changes or duplicates
+            return `group:${JSON.stringify(item.addons)}`;
         }
-        // Fallback for keyless objects (like groups)
         return null;
     };
 
@@ -87,56 +94,80 @@ export function getObjectDiff(
              }
         });
 
-        const len = Math.min(obj1.length, obj2.length);
-        for (let i = 0; i < len; i++) {
-          const key1 = getKey(obj1[i]);
-          const key2 = getKey(obj2[i]);
-          
-          if (key1 !== key2) {
-             const name1 = obj1[i].name || obj1[i].options?.name;
-             const name2 = obj2[i].name || obj2[i].options?.name;
+        if (!isAddons) {
+            // Check relative order of remaining items (ignores pure deletes)
+            const intersectionOld = oldOrder.filter(key => newOrder.includes(key));
+            const intersectionNew = newOrder.filter(key => oldOrder.includes(key));
 
-             if (name1 && name2 && name1 !== name2) {
-                  diffs.push({
-                     path: [...path, `[${i}]`, 'name'],
-                     type: 'CHANGE',
-                     oldValue: name1,
-                     newValue: name2
-                 });
-             } else {
-                 const identityFields = ['id', 'instanceId', 'key', 'condition'];
-                 let foundIdentityChange = false;
-                 
-                 identityFields.forEach(field => {
-                     const val1 = obj1[i][field];
-                     const val2 = obj2[i][field];
-                     if (val1 !== val2 && (val1 !== undefined || val2 !== undefined)) {
-                         diffs.push({
-                             path: [...path, `[${i}]`, field],
-                             type: 'CHANGE',
-                             oldValue: val1,
-                             newValue: val2
-                         });
-                         foundIdentityChange = true;
+            const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
+                                  intersectionOld.some((key, i) => key !== intersectionNew[i]);
+            
+            if (isOrderChanged) {
+                 const getLabel = (key: any) => {
+                     const item = newMap.get(key) || oldMap.get(key);
+                     
+                     if (item && Array.isArray(item.addons)) {
+                         const firstAddon = item.addons[0] || '';
+                         const count = item.addons.length;
+                         const summary = firstAddon ? `(${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '(Empty)';
+                         const cond = item.condition ? ` ${item.condition}` : '';
+                         return `Group${cond} ${summary}`;
                      }
-                 });
+                     
+                     return item?.name || item?.options?.name || item?.instanceId || item?.id || key; 
+                 };
 
-                 if (!foundIdentityChange) {
-                      diffs.push({
-                         path: [...path, `[${i}]`],
-                         type: 'CHANGE',
-                         oldValue: obj1[i],
-                         newValue: obj2[i]
-                     });
-                 }
-             }
-          }
+                 diffs.push({
+                     path: [...path],
+                     type: 'CHANGE',
+                     oldValue: oldOrder.map(getLabel),
+                     newValue: newOrder.map(getLabel)
+                 });
+            }
         }
         
         return diffs;
     }
 
     const len = Math.max(obj1.length, obj2.length);
+
+    const isPermutation = () => {
+        if (!isGroupings) return false;
+
+        if (obj1.length !== obj2.length) return false;
+        const count = new Map<string, number>();
+        for (const item of obj1) {
+            const s = JSON.stringify(item);
+            count.set(s, (count.get(s) || 0) + 1);
+        }
+        for (const item of obj2) {
+            const s = JSON.stringify(item);
+            const c = count.get(s);
+            if (!c) return false;
+            count.set(s, c - 1);
+        }
+        return true;
+    };
+
+    if (isPermutation()) {
+        const getGroupLabel = (item: any) => {
+            if (item.condition) {
+                 let firstAddon = item.addons?.[0] || '';
+                 const count = item.addons?.length || 0;
+                 const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
+                 return `Group: ${item.condition}${summary}`;
+            }
+            return 'Group';
+        };
+
+        return [{
+             path: [...path],
+             type: 'CHANGE',
+             oldValue: obj1.map(getGroupLabel),
+             newValue: obj2.map(getGroupLabel)
+        }];
+    }
+
     for (let i = 0; i < len; i++) {
         if (i < obj1.length && i < obj2.length) {
             diffs.push(...getObjectDiff(obj1[i], obj2[i], [...path, `[${i}]`]));

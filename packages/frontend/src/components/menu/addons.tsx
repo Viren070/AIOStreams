@@ -425,6 +425,17 @@ function Content() {
                                   presets: prev.presets.filter(
                                     (a) => a.instanceId !== preset.instanceId
                                   ),
+                                  groups: prev.groups
+                                    ? {
+                                        ...prev.groups,
+                                        groupings: prev.groups.groupings?.map((g) => ({
+                                          ...g,
+                                          addons: g.addons.filter(
+                                            (id) => id !== preset.instanceId
+                                          ),
+                                        })),
+                                      }
+                                    : prev.groups,
                                 }));
                               }}
                               onToggleEnabled={(v: boolean) => {

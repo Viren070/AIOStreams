@@ -189,13 +189,40 @@ function Content() {
         const remoteResult = await UserConfigAPI.loadConfig(uuid, password);
         
         if (remoteResult.success && remoteResult.data) {
-          const diffs = getObjectDiff(remoteResult.data.config, userData);
+          const remoteConf = remoteResult.data.config;
+          const resolveNamesInConfig = (conf: UserData | null, presetsSource: UserData['presets']) => {
+             if (!conf || !conf.groups) return conf;
+             const newConf = { ...conf, groups: { ...conf.groups } };
+             
+             if (newConf.groups.groupings) {
+                 newConf.groups.groupings = newConf.groups.groupings.map((g: any) => {
+                     if (Array.isArray(g.addons)) {
+                         return {
+                             ...g,
+                             addons: g.addons.map((id: string) => {
+                                 const find = (list?: any[]) => list?.find(p => p.instanceId === id || p.options?.id === id);
+                                 const item = find(presetsSource);
+                                 return item?.options?.name || id;
+                             })
+                         };
+                     }
+                     return g;
+                 });
+             }
+             return newConf;
+          };
+
+          const allPresets = [...(userData?.presets || []), ...(remoteConf?.presets || [])];
+           // Resolve IDs to Names for readable diffs (e.g. Group Swaps)
+           const processedRemote = resolveNamesInConfig(remoteConf, allPresets);
+           const processedLocal = resolveNamesInConfig(userData, allPresets);
+           const diffs = getObjectDiff(processedRemote, processedLocal);
           
           if (diffs.length === 0) {
             toast.info('No changes detected');
             suppressSuccessToast = true;
           } else {
-            setRemoteConfig(remoteResult.data.config);
+            setRemoteConfig(remoteConf);
             setDiffData(diffs);
             diffModal.open();
             setLoading(false);
@@ -419,20 +446,23 @@ function Content() {
     }
   };
 
-  const valueFormatter = React.useCallback((val: any): string => {
-      const resolveId = (v: string) => {
-          const addon = userData?.presets?.find(p => {
-             if (p.instanceId === v) return true;
-             const opts = p.options as Record<string, any>;
-             return opts?.id === v;
-          });
-          if (addon) {
-              const opts = addon.options as Record<string, any>;
-              if (opts?.name && typeof opts.name === 'string') return opts.name;
-          }
-          return v;
-      };
+  const resolveId = React.useCallback((v: string) => {
+      const findAddon = (presets?: UserData['presets']) => presets?.find(p => {
+         if (p.instanceId === v) return true;
+         const opts = p.options as Record<string, any>;
+         return opts?.id === v;
+      });
 
+      const addon = findAddon(userData?.presets) || findAddon(remoteConfig?.presets);
+
+      if (addon) {
+          const opts = addon.options as Record<string, any>;
+          if (opts?.name && typeof opts.name === 'string') return opts.name;
+      }
+      return v;
+  }, [userData?.presets, remoteConfig?.presets]);
+
+  const valueFormatter = React.useCallback((val: any): string => {
       const resolveDeep = (v: any): any => {
           // Swap IDs for names
           if (typeof v === 'string') return resolveId(v);
@@ -455,7 +485,7 @@ function Content() {
           }
       }
       return String(resolved);
-  }, [userData?.presets]);
+  }, [resolveId]);
 
   return (
     <>
