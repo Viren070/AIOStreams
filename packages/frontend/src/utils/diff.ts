@@ -21,7 +21,11 @@ export function getObjectDiff(
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
-    if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
+    try {
+        if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
+    } catch {
+        // Fall through to element-wise comparison if stringify fails
+    }
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
     const isAddons = lastPath === 'addons';
@@ -39,7 +43,11 @@ export function getObjectDiff(
         if (item.pattern) return item.pattern;
         if (Array.isArray(item.addons)) {
             // Key groups by content to track them across condition changes or duplicates
-            return `group:${JSON.stringify(item.addons)}`;
+            try {
+                return `group:${JSON.stringify(item.addons)}`;
+            } catch {
+                return null;
+            }
         }
         return null;
     };
@@ -135,18 +143,22 @@ export function getObjectDiff(
         if (!isGroupings) return false;
 
         if (obj1.length !== obj2.length) return false;
-        const count = new Map<string, number>();
-        for (const item of obj1) {
-            const s = JSON.stringify(item);
-            count.set(s, (count.get(s) || 0) + 1);
+        try {
+            const count = new Map<string, number>();
+            for (const item of obj1) {
+                const s = JSON.stringify(item);
+                count.set(s, (count.get(s) || 0) + 1);
+            }
+            for (const item of obj2) {
+                const s = JSON.stringify(item);
+                const c = count.get(s);
+                if (!c) return false;
+                count.set(s, c - 1);
+            }
+            return true;
+        } catch {
+            return false;
         }
-        for (const item of obj2) {
-            const s = JSON.stringify(item);
-            const c = count.get(s);
-            if (!c) return false;
-            count.set(s, c - 1);
-        }
-        return true;
     };
 
     if (isPermutation()) {
