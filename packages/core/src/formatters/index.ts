@@ -11,6 +11,7 @@ import {
   LightGDriveFormatter,
   MinimalisticGdriveFormatter,
   PrismFormatter,
+  TamtaroFormatter,
 } from './predefined.js';
 import { CustomFormatter } from './custom.js';
 import { UserData } from '../db/schemas.js';
@@ -29,6 +30,8 @@ export function createFormatter(userData: UserData): BaseFormatter {
       return new MinimalisticGdriveFormatter(userData);
     case 'prism':
       return new PrismFormatter(userData);
+    case 'tamtaro':
+      return new TamtaroFormatter(userData);
     case 'custom':
       if (!userData.formatter.definition) {
         throw new Error('Definition is required for custom formatter');

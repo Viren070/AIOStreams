@@ -106,6 +106,27 @@ export class PrismFormatter extends BaseFormatter {
   }
 }
 
+export class TamtaroFormatter extends BaseFormatter {
+  constructor(userData: UserData) {
+    super(
+      {
+        name: `
+{stream.resolution::exists["{stream.resolution::replace('2160p','  4K ')::replace('1440p','    2K ')::replace('p','P')}"||"      "]} {stream.type::replace('debrid','   ')::replace('p2p','⁽ᵖ²ᵖ⁾')::replace('live','⁽ˡᶦᵛᵉ⁾')::replace('http','⁽ʷᵉᵇ⁾')::replace('usenet','⁽ⁿᶻᵇ⁾')::replace('stremio-usenet','⁽ⁿᶻᵇ⁾')::replace('statistic','⁽ˢᵗᵃᵗˢ⁾')::replace('external','⁽ᵉˣᵗ⁾')::replace('error','⁽ᵉʳʳᵒʳ⁾')::replace('youtube','⁽ʸᵗ⁾')}{service.cached::istrue["⚡"||""]}{service.cached::isfalse["⏳"||""]}{tools.newLine}{stream.quality::exists["  \n〈{stream.quality::title::replace('Bluray Remux','Remux')}〉 "||""]}{stream.message::~Download["{tools.removeLine}\n‎ "||""]}
+`,
+        description: `
+{stream.title::exists::and::stream.library::isfalse["▤  {stream.title::title::truncate(15)}"||""]}{stream.title::exists::and::stream.library::istrue["☁︎  {stream.title::title::truncate(15)} "||""]}{stream.year::exists::and::stream.episodes::exists::isfalse::and::stream.seasons::exists::isfalse[" ({stream.year})"||""]}{stream.seasonEpisode::exists["   {stream.seasonEpisode::join('·')::replace('E','ᴇ')::replace('S','s')::replace('0','₀')::replace('1','₁')::replace('2','₂')::replace('3','₃')::replace('4','₄')::replace('5','₅')::replace('6','₆')::replace('7','₇')::replace('8','₈')::replace('9','₉')}"||""]}
+{stream.encode::exists["▣  {stream.encode}  "||""]}{stream.visualTags::exists["✧  {stream.visualTags::join(' · ')}  "||""]}
+{stream.audioTags::exists["♬  {stream.audioTags::join(' · ')}  "||""]}{stream.audioChannels::exists["☊  {stream.audioChannels::join(' · ')} "||""]}
+{stream.size::>0::and::stream.seasonPack::istrue["⧉  "||""]}{stream.size::>0::and::stream.seasonPack::isfalse["◧  "||""]}{stream.size::>0["{stream.size::bytes}"||""]}{stream.folderSize::>0["/ {stream.folderSize::rbytes}"||""]}{stream.bitrate::exists[" · {stream.bitrate::bitrate::replace('Mbps','ᴹᵇᵖˢ')::replace('Kbps','ᴷᵇᵖˢ')} "||""]}{stream.message::~Download["{tools.removeLine}"||""]}{service.cached::isfalse::or::stream.type::=p2p::and::stream.seeders::>0["⇋ {stream.seeders}𖧧"||""]}{stream.age::exists[" · ⟳ {stream.age}"||""]}
+{stream.proxied::istrue["⛊  "||"⛉  "]}{service.shortName::exists["[{service.shortName}] "||""]}{addon.name}{stream.releaseGroup::exists[" · {stream.releaseGroup::truncate(13)}"||""]}{stream.indexer::exists::and::stream.type::~usenet[" · {stream.indexer::truncate(13)}"||""]}{stream.message::~Download["{tools.removeLine}\n"||""]}
+{stream.uLanguages::exists[" ⚐  {stream.uSmallLanguageCodes::join(' · ')::replace('ᴅᴜᴀʟ ᴀᴜᴅɪᴏ','ᴅᴜᴏ')::replace('ᴅᴜʙʙᴇᴅ','ᴅᴜʙ')}  "||""]}{stream.edition::exists::and::stream.visualTags::~IMAX::isfalse::or::stream.regexMatched::exists::and::stream.seadex::isfalse::or::stream.seadex::istrue::or::stream.network::exists::or::stream.message::exists::or::stream.upscaled::istrue::or::stream.repack::istrue::or::stream.uncensored::istrue::or::stream.unrated::istrue[" » "||""]}{stream.seadexBest::istrue[" ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ "||""]}{stream.seadex::istrue::and::stream.seadexBest::isfalse[" ᴀʟᴛ ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ "||""]}{stream.regexMatched::exists::and::stream.seadex::isfalse[" {stream.regexMatched::replace('Bad','ᴜɴʀᴇʟɪᴀʙʟᴇ')::replace('0','₀')::replace('1','₁')::replace('2','₂')::replace('3','₃')::replace('4','₄')::replace('5','₅')::replace('6','₆')::replace('7','₇')::replace('8','₈')::replace('9','₉')::smallcaps} "||""]}{stream.network::exists[" {stream.network::smallcaps} "||""]}{stream.upscaled::istrue[" ᴜᴘsᴄᴀʟᴇᴅ "||""]}{stream.remastered::istrue::and::stream.edition::~Remastered::isfalse[" ʀᴇᴍᴀsᴛᴇʀᴇᴅ "||""]}{stream.uncensored::istrue[" ᴜɴᴄᴇɴsᴏʀᴇᴅ "||""]}{stream.repack::istrue[" ʀᴇᴘᴀᴄᴋᴇᴅ "||""]}{stream.unrated::istrue[" ᴜɴʀᴀᴛᴇᴅ "||""]}{stream.message::exists[" {stream.message::replace('NZB Health: ✅','☑ ɴᴢʙ')::replace('NZB Health: 🧝','☑ ᴇʟғ ɴᴢʙ')::replace('NZB Health: ⚠️','ᴜɴᴠᴇʀɪғɪᴇᴅ ɴᴢʙ')::replace('NZB Health: 🚫','☒ ɴᴢʙ')::smallcaps} "||""]}{stream.edition::exists::and::stream.visualTags::~IMAX::isfalse["  {stream.edition::smallcaps} "||""]}{stream.message::~Download["{tools.removeLine}"||""]}{service.cached::istrue::and::stream.message::~Download::istrue["\n⭳ DL Stream"||""]}
+`,
+      },
+      userData
+    );
+  }
+}
+
 export class MinimalisticGdriveFormatter extends BaseFormatter {
   constructor(userData: UserData) {
     super(

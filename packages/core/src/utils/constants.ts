@@ -138,15 +138,17 @@ export const MINIMALISTIC_GDRIVE_FORMATTER = 'minimalisticgdrive';
 export const TORRENTIO_FORMATTER = 'torrentio';
 export const TORBOX_FORMATTER = 'torbox';
 export const PRISM_FORMATTER = 'prism';
+export const TAMTARO_FORMATTER = 'tamtaro';
 export const CUSTOM_FORMATTER = 'custom';
 
 export const FORMATTERS = [
   GDRIVE_FORMATTER,
+  PRISM_FORMATTER,
+  TAMTARO_FORMATTER,
   LIGHT_GDRIVE_FORMATTER,
   MINIMALISTIC_GDRIVE_FORMATTER,
   TORRENTIO_FORMATTER,
   TORBOX_FORMATTER,
-  PRISM_FORMATTER,
   CUSTOM_FORMATTER,
 ] as const;
 
@@ -162,16 +164,22 @@ export const FORMATTER_DETAILS: Record<FormatterType, FormatterDetail> = {
     name: 'Google Drive',
     description: 'Uses the formatting from the Stremio GDrive addon',
   },
+  [PRISM_FORMATTER]: {
+    id: PRISM_FORMATTER,
+    name: 'Prism',
+    description: 'An aesthetic formatter with every detail within 5 lines.',
+  },
+  [TAMTARO_FORMATTER]: {
+    id: TAMTARO_FORMATTER,
+    name: 'Tamtaro',
+    description:
+      "Minimal and clean, without flashy coloured emojis, while comprehensive enough to display all necessary information for stream selection. Smartly switches icons for cached (⚡/⏳), proxied (⛊/⛉), library (☁︎/▤), and season packs (⧉/◧). The last line in small caps font shows Usenet's health status (eg., ☑ ɴᴢʙ), SeaDex status (ᴀʟᴛ/ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ), Vidhin's regex tiers (eg., ʀᴇᴍᴜx ᴛ𝟷), networks (egs., ɴᴇᴛғʟɪx), editions (eg., ᴅɪʀᴇᴄᴛᴏʀ's ᴄᴜᴛ), and special attributes like ʀᴇᴘᴀᴄᴋᴇᴅ, ᴜɴᴄᴇɴsᴏʀᴇᴅ, and ᴜɴʀᴀᴛᴇᴅ.",
+  },
   [LIGHT_GDRIVE_FORMATTER]: {
     id: LIGHT_GDRIVE_FORMATTER,
     name: 'Light Google Drive',
     description:
       'A lighter version of the GDrive formatter, focused on asthetics',
-  },
-  [PRISM_FORMATTER]: {
-    id: PRISM_FORMATTER,
-    name: 'Prism',
-    description: 'An aesthetic formatter with every detail within 5 lines.',
   },
   [MINIMALISTIC_GDRIVE_FORMATTER]: {
     id: MINIMALISTIC_GDRIVE_FORMATTER,
