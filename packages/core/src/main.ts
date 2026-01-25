@@ -2176,57 +2176,64 @@ export class AIOStreams {
       return streams;
     }
 
-    const startTime = Date.now();
+    try {
+      const startTime = Date.now();
 
-    const releaseToStreams = new Map<string, ParsedStream[]>();
+      const releaseToStreams = new Map<string, ParsedStream[]>();
 
-    for (const stream of streams) {
-      const releaseName = stream.filename || stream.folderName;
-      if (releaseName) {
-        const existing = releaseToStreams.get(releaseName) || [];
-        existing.push(stream);
-        releaseToStreams.set(releaseName, existing);
+      for (const stream of streams) {
+        const releaseName = stream.filename || stream.folderName;
+        if (releaseName) {
+          const existing = releaseToStreams.get(releaseName) || [];
+          existing.push(stream);
+          releaseToStreams.set(releaseName, existing);
+        }
       }
-    }
 
-    if (releaseToStreams.size === 0) {
-      logger.debug('No valid release names found for SubDetect processing');
-      return streams;
-    }
+      if (releaseToStreams.size === 0) {
+        logger.debug('No valid release names found for SubDetect processing');
+        return streams;
+      }
 
-    // Get unique release names
-    const releaseNames = Array.from(releaseToStreams.keys());
-    logger.info(
-      `Processing ${releaseNames.length} unique release names with SubDetect`
-    );
+      // Get unique release names
+      const releaseNames = Array.from(releaseToStreams.keys());
+      logger.info(
+        `Processing ${releaseNames.length} unique release names with SubDetect`
+      );
 
-    const detectedLanguages =
-      await this.subdetectService.detectLanguages(releaseNames);
+      const detectedLanguages =
+        await this.subdetectService.detectLanguages(releaseNames);
 
-    // Enrich streams with the languages
-    let enrichedCount = 0;
-    for (const [releaseName, languages] of detectedLanguages) {
-      const matchingStreams = releaseToStreams.get(releaseName);
-      if (matchingStreams && languages.length > 0) {
-        for (const stream of matchingStreams) {
-          if (stream.parsedFile) {
-            const existingLanguages = stream.parsedFile.languages || [];
-            const mergedLanguages = [
-              ...languages,
-              ...existingLanguages.filter((l) => !languages.includes(l)),
-            ];
-            stream.parsedFile.languages = mergedLanguages;
-            enrichedCount++;
+      // Enrich streams with the languages
+      let enrichedCount = 0;
+      for (const [releaseName, languages] of detectedLanguages) {
+        const matchingStreams = releaseToStreams.get(releaseName);
+        if (matchingStreams && languages.length > 0) {
+          for (const stream of matchingStreams) {
+            if (stream.parsedFile) {
+              const existingLanguages = stream.parsedFile.languages || [];
+              const mergedLanguages = [
+                ...languages,
+                ...existingLanguages.filter((l) => !languages.includes(l)),
+              ];
+              stream.parsedFile.languages = mergedLanguages;
+              enrichedCount++;
+            }
           }
         }
       }
+
+      logger.info(
+        `SubDetect enriched ${enrichedCount} streams with language info in ${Date.now() - startTime}ms`
+      );
+
+      return streams;
+    } catch (error) {
+      logger.error('SubDetect enrichment failed, continuing:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return streams;
     }
-
-    logger.info(
-      `SubDetect enriched ${enrichedCount} streams with language info in ${Date.now() - startTime}ms`
-    );
-
-    return streams;
   }
 
   private async _processStreams(
