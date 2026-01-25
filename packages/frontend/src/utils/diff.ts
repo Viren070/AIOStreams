@@ -21,11 +21,8 @@ export function getObjectDiff(
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
-    try {
-        if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
-    } catch {
-        // Fall through to element-wise comparison if stringify fails
-    }
+    // Check for reference equality first
+    if (obj1 === obj2) return [];
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
     const isAddons = lastPath === 'addons';
@@ -52,18 +49,21 @@ export function getObjectDiff(
         return null;
     };
 
+    const keys1 = obj1.map(getKey);
+    const keys2 = obj2.map(getKey);
+
     const canKey =
       obj1.length > 0 &&
       obj2.length > 0 && 
-      obj1.every(item => getKey(item) !== null) &&
-      obj2.every(item => getKey(item) !== null) &&
-      new Set(obj1.map(getKey)).size === obj1.length &&
-      new Set(obj2.map(getKey)).size === obj2.length;
+      keys1.every(k => k !== null) &&
+      keys2.every(k => k !== null) &&
+      new Set(keys1).size === obj1.length &&
+      new Set(keys2).size === obj2.length;
 
     if (canKey) {
         const oldMap = new Map();
         const oldOrder: any[] = [];
-        obj1.forEach((item: any, index: number) => {
+        obj1.forEach((item: any) => {
             const key = getKey(item);
             oldMap.set(key, item);
             oldOrder.push(key);
@@ -71,7 +71,7 @@ export function getObjectDiff(
 
         const newMap = new Map();
         const newOrder: any[] = [];
-        obj2.forEach((item: any, index: number) => {
+        obj2.forEach((item: any) => {
             const key = getKey(item);
             newMap.set(key, item);
             newOrder.push(key);

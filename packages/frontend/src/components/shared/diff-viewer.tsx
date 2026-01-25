@@ -30,7 +30,7 @@ export function DiffViewer({ diffs, valueFormatter }: DiffViewerProps) {
       <div className="space-y-3">
         {diffs.map((diff, idx) => (
           <div
-              key={`${diff.path.join('.')}-${diff.type}`}
+              key={`${diff.path.join('.')}-${diff.type}-${idx}`}
             className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 relative group"
           >
             <div className="flex items-center justify-between mb-2">

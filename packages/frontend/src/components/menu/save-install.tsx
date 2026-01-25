@@ -221,6 +221,7 @@ function Content() {
           if (diffs.length === 0) {
             toast.info('No changes detected');
             suppressSuccessToast = true;
+            setLoading(false);
           } else {
             setRemoteConfig(remoteConf);
             setDiffData(diffs);
@@ -229,6 +230,7 @@ function Content() {
             return;
           }
         } else {
+             setLoading(false);
              toast.warning('Error checking for changes. Proceeding with save.');
         }
       } catch (err) {
