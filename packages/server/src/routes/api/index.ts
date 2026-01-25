@@ -11,4 +11,3 @@ export { default as searchApi } from './search.js';
 export { default as animeApi } from './anime.js';
 export { default as proxyApi } from './proxy.js';
 export { default as templatesApi } from './templates.js';
-export { default as subdetectApi } from './subdetect.js';

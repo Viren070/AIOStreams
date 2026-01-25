@@ -43,41 +43,6 @@ export function convertISO6392ToLanguage(code: string): string | undefined {
   return lang?.english_name?.split('(')?.[0]?.trim();
 }
 
-export async function generateApiKey(): Promise<{
-  apiKey: string;
-  createdAt: string;
-} | null> {
-  try {
-    const response = await makeRequest(
-      `${SUBDETECT_API_URL}/api/generate-key`,
-      {
-        method: 'POST',
-        timeout: 30000,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      logger.error(`Failed to generate SubDetect API key: ${response.status}`);
-      return null;
-    }
-
-    const data = (await response.json()) as SubDetectApiKeyResponse;
-    logger.info('Successfully generated SubDetect API key');
-    return {
-      apiKey: data.api_key,
-      createdAt: data.created_at,
-    };
-  } catch (error) {
-    logger.error('Error generating SubDetect API key:', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
-
 export async function processReleases(
   apiKey: string,
   releases: string[]
@@ -92,18 +57,15 @@ export async function processReleases(
     const batch = releases.slice(i, i + MAX_BATCH_SIZE);
 
     try {
-      const response = await makeRequest(
-        `${SUBDETECT_API_URL}/api/process`,
-        {
-          method: 'POST',
-          timeout: 30000,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': apiKey,
-          },
-          body: JSON.stringify({ releases: batch }),
-        }
-      );
+      const response = await makeRequest(`${SUBDETECT_API_URL}/api/process`, {
+        method: 'POST',
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({ releases: batch }),
+      });
 
       if (response.status === 429) {
         logger.warn(
