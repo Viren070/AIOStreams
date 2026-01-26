@@ -329,7 +329,7 @@ export class StremThruInterface implements DebridService {
       size: magnetDownload.size || 0,
       type: 'torrent',
       sources: playbackInfo.sources,
-      private: false,
+      private: playbackInfo.private,
     };
 
     const allStrings: string[] = [];

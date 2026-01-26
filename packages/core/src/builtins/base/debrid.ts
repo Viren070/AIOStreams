@@ -726,6 +726,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ? {
             type: 'torrent',
             hash: torrentOrNzb.hash,
+            private: torrentOrNzb.private,
             sources: torrentOrNzb.sources,
             index: torrentOrNzb.file.index,
             cacheAndPlay:

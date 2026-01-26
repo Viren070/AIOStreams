@@ -97,6 +97,7 @@ abstract class SourceHandler {
         ? {
             type: 'torrent',
             hash: torrentOrNzb.hash,
+            private: torrentOrNzb.private,
             sources: torrentOrNzb.sources,
             index: torrentOrNzb.file.index,
             cacheAndPlay:
