@@ -753,6 +753,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       ? SERVICE_DETAILS[torrentOrNzb.service.id]
       : undefined;
     // const svcMeta = SERVICE_DETAILS[torrentOrNzb.service.id];
+    const isPrivate =
+      torrentOrNzb.type === 'torrent' ? torrentOrNzb.private : undefined;
     const shortCode = svcMeta?.shortName || 'P2P';
     const cacheIndicator = torrentOrNzb.service
       ? torrentOrNzb.service.cached
@@ -760,7 +762,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         : '⏳'
       : '';
 
-    const name = `[${shortCode} ${cacheIndicator}${torrentOrNzb.service?.library ? ' ☁️' : ''}] ${this.name}`;
+    const name = `${isPrivate ? '🔑 ' : ''}[${shortCode} ${cacheIndicator}${torrentOrNzb.service?.library ? ' ☁️' : ''}] ${this.name}`;
     const description = `${torrentOrNzb.title ? torrentOrNzb.title : ''}\n${torrentOrNzb.file.name ? torrentOrNzb.file.name : ''}\n${
       torrentOrNzb.indexer ? `🔍 ${torrentOrNzb.indexer}` : ''
     } ${'seeders' in torrentOrNzb && torrentOrNzb.seeders ? `👤 ${torrentOrNzb.seeders}` : ''} ${
@@ -793,7 +795,6 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       duration: torrentOrNzb.duration,
       infoHash: torrentOrNzb.hash,
       fileIdx: torrentOrNzb.file.index,
-      private: torrentOrNzb.type === 'torrent' ? torrentOrNzb.private : undefined,
       behaviorHints: {
         videoSize: torrentOrNzb.file.size,
         filename: torrentOrNzb.file.name,

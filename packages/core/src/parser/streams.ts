@@ -374,7 +374,7 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean | undefined {
-    return stream.private;
+    return false;
   }
 
   protected getIndexer(

@@ -715,7 +715,6 @@ export const StreamSchema = z.looseObject({
   description: z.string().nullable().optional(),
   subtitles: z.array(SubtitleSchema).or(z.null()).optional(),
   sources: z.array(z.string().min(1)).or(z.null()).optional(),
-  private: z.boolean().optional(),
   behaviorHints: z
     .looseObject({
       countryWhitelist: z.array(z.string().length(3)).or(z.null()).optional(),
