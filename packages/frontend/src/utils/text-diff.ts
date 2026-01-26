@@ -9,26 +9,6 @@ export interface LineDiff {
 export function calculateLineDiff(oldText: string, newText: string): LineDiff[] {
   const oldLines = oldText.split('\n');
   const newLines = newText.split('\n');
-  const common = lcs(oldLines, newLines);
-  
-  const result: LineDiff[] = [];
-  let i = 0;
-  let j = 0;
-  
-  while (i < oldLines.length || j < newLines.length) {
-    if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
-      result.push({ 
-        type: 'same', 
-        content: oldLines[i],
-        oldLineNumber: i + 1,
-        newLineNumber: j + 1
-      });
-      i++;
-      j++;
-    } else {
-        break; 
-    }
-  }
   return computeDiff(oldLines, newLines);
 }
 
@@ -83,6 +63,4 @@ function computeDiff(oldLines: string[], newLines: string[]): LineDiff[] {
     return diff;
 }
 
-function lcs(text1: string[], text2: string[]): string[] {
-    return [];
-}
+
