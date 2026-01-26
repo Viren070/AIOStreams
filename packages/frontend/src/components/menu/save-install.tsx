@@ -111,6 +111,7 @@ function Content() {
   const [installProtocol, setInstallProtocol] = React.useState('stremio');
   const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
+  const [remoteDiffConfig, setRemoteDiffConfig] = React.useState<UserData | null>(null);
   const [localDiffConfig, setLocalDiffConfig] = React.useState<UserData | null>(null);
   const diffModal = useDisclosure(false);
   const pendingSkipDiffRef = React.useRef(false);
@@ -248,7 +249,8 @@ function Content() {
             suppressSuccessToast = true;
             setLoading(false);
           } else {
-            setRemoteConfig(processedRemote);
+            setRemoteConfig(remoteConf);
+            setRemoteDiffConfig(processedRemote);
             setLocalDiffConfig(processedLocal);
             setDiffData(diffs);
             if (authenticated) {
@@ -964,7 +966,7 @@ function Content() {
             <DiffViewer
               diffs={diffData}
               valueFormatter={valueFormatter}
-              oldValue={remoteConfig}
+              oldValue={remoteDiffConfig}
               newValue={localDiffConfig}
             />
             <div className="flex justify-between pt-4">

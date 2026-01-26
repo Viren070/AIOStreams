@@ -27,9 +27,14 @@ export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffVi
 
   const textDiffs = useMemo(() => {
     if (!oldValue && !newValue) return [];
-    const oldJson = oldValue ? JSON.stringify(oldValue, null, 2) : '';
-    const newJson = newValue ? JSON.stringify(newValue, null, 2) : '';
-    return calculateLineDiff(oldJson, newJson);
+    try {
+      const oldJson = oldValue ? JSON.stringify(oldValue, null, 2) : '';
+      const newJson = newValue ? JSON.stringify(newValue, null, 2) : '';
+      return calculateLineDiff(oldJson, newJson);
+    } catch (e) {
+      console.error('Failed to stringify JSON for diff:', e);
+      return calculateLineDiff('', '');
+    }
   }, [oldValue, newValue]);
 
   if (diffs.length === 0) {
@@ -141,29 +146,29 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
     return (
         <>
             {changeIndices.length > 0 && (
-                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-gray-900/90 border border-gray-700 rounded-md p-1 shadow-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <span className="text-[10px] text-gray-400 font-mono px-2 select-none">
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-gray-900/90 border border-gray-700 rounded-md p-1.5 shadow-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <span className="text-xs text-gray-400 font-mono px-2 select-none">
                         {currentChangeIndex + 1} / {changeIndices.length}
                     </span>
                     <div className="h-4 w-px bg-gray-700 mx-1" />
                     <Button
-                        className="h-6 w-6 p-0 hover:bg-gray-800 bg-transparent"
+                        className="h-7 w-7 p-0 hover:bg-gray-800 bg-transparent"
                         onClick={handlePrev}
                         title="Previous Change"
                     >
-                        <ChevronUp className="h-3 w-3" />
+                        <ChevronUp className="h-4 w-4" />
                     </Button>
                     <Button
-                        className="h-6 w-6 p-0 hover:bg-gray-800 bg-transparent"
+                        className="h-7 w-7 p-0 hover:bg-gray-800 bg-transparent"
                         onClick={handleNext}
                         title="Next Change"
                     >
-                        <ChevronDown className="h-3 w-3" />
+                        <ChevronDown className="h-4 w-4" />
                     </Button>
                 </div>
             )}
             
-            <div ref={scrollContainerRef} className="overflow-y-auto custom-scrollbar p-4 flex-1">
+            <div ref={scrollContainerRef} className="overflow-y-auto custom-scrollbar p-4 flex-1 font-mono text-xs">
                 <div className="flex flex-col">
                     {textDiffs.map((line, idx) => (
                     <div 
