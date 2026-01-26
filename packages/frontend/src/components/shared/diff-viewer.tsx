@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { DiffItem, formatValue } from '@/utils/diff';
 import { calculateLineDiff, LineDiff } from '@/utils/text-diff';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs/tabs';
@@ -108,12 +108,24 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
     const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const changeIndices = useMemo(() => {
-        return textDiffs
-            .map((line, idx) => (line.type !== 'same' ? idx : -1))
-            .filter((idx) => idx !== -1);
+        const indices: number[] = [];
+        let inChangeBlock = false;
+
+        textDiffs.forEach((line, idx) => {
+            if (line.type !== 'same') {
+                if (!inChangeBlock) {
+                    indices.push(idx);
+                    inChangeBlock = true;
+                }
+            } else {
+                inChangeBlock = false;
+            }
+        });
+        
+        return indices;
     }, [textDiffs]);
 
-    const scrollToChange = (index: number) => {
+    const scrollToChange = useCallback((index: number) => {
         const lineIndex = changeIndices[index];
         if (lineIndex !== undefined && lineRefs.current[lineIndex] && scrollContainerRef.current) {
             const element = lineRefs.current[lineIndex];
@@ -123,7 +135,7 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
             });
         }
         setCurrentChangeIndex(index);
-    };
+    }, [changeIndices]);
 
     const handleNext = () => {
         const nextIndex = (currentChangeIndex + 1) % changeIndices.length;
@@ -140,7 +152,13 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
         setCurrentChangeIndex(0);
         // Reset refs array sizing
         lineRefs.current = lineRefs.current.slice(0, textDiffs.length);
-    }, [textDiffs]);
+
+        // Auto-scroll to first change if exists
+        if (changeIndices.length > 0) {
+            // Small timeout to ensure rendering is complete before scrolling
+            setTimeout(() => scrollToChange(0), 100);
+        }
+    }, [textDiffs, changeIndices, scrollToChange]);
 
     // Check for truncation and show toast
     useEffect(() => {
@@ -186,7 +204,7 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
                         line.type === 'add' ? 'bg-green-900/20 text-green-300' : 
                         line.type === 'remove' ? 'bg-red-900/20 text-red-300' : 
                         'text-gray-400'
-                        } ${changeIndices.includes(idx) && changeIndices.indexOf(idx) === currentChangeIndex ? 'ring-1 ring-blue-500/50' : ''}`}
+                        } ${idx === changeIndices[currentChangeIndex] ? 'ring-1 ring-blue-500/50' : ''}`}
                     >
                         <div className="w-8 shrink-0 text-right pr-3 select-none text-gray-600 border-r border-gray-800 mr-2">
                             {line.oldLineNumber || ' '}
