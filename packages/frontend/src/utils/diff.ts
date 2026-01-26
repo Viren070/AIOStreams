@@ -63,7 +63,8 @@ export function getObjectDiff(
     }
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
-    const isAddons = lastPath === 'addons';    const isPresets = lastPath === 'presets';
+    const isAddons = lastPath === 'addons';
+    const isPresets = lastPath === 'presets';
     const isRegexPatterns = lastPath && (lastPath.endsWith('RegexPatterns') || lastPath === 'regexPatterns');
     const isStreamExpressions = lastPath && (lastPath.endsWith('StreamExpressions') || lastPath === 'streamExpressions');
     const isMergedCatalogs = lastPath === 'mergedCatalogs';
@@ -122,7 +123,7 @@ export function getObjectDiff(
       new Set(keys1).size === obj1.length &&
       new Set(keys2).size === obj2.length;
 
-    if (canKey && !isAddons) {
+    if (canKey) {
         const oldMap = new Map();
         const oldOrder: any[] = [];
         obj1.forEach((item: any) => {
@@ -396,13 +397,25 @@ function calculatePrimitiveArrayDiff(
       }
   });
 
-  if (diffs.length === 0 && JSON.stringify(arr1) !== JSON.stringify(arr2)) {
-       diffs.push({
-          path,
-          type: 'CHANGE',
-          oldValue: arr1,
-          newValue: arr2
-       });
+  if (diffs.length === 0) {
+       try {
+           if (JSON.stringify(arr1) !== JSON.stringify(arr2)) {
+               diffs.push({
+                  path,
+                  type: 'CHANGE',
+                  oldValue: arr1,
+                  newValue: arr2
+               });
+           }
+       } catch {
+           // Arrays differ in a way Set comparison missed; treat as changed
+           diffs.push({
+               path,
+               type: 'CHANGE',
+               oldValue: arr1,
+               newValue: arr2
+           });
+       }
   }
 
   return diffs; 
