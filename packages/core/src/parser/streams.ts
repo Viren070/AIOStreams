@@ -500,20 +500,47 @@ class StreamParser {
     const fileParsed = parsedStream.filename
       ? FileParser.parse(parsedStream.filename)
       : undefined;
-    function arrayFallback<T>(
-      arr1: T[] | undefined,
-      arr2: T[] | undefined
-    ): T[] | undefined {
-      return arr1?.length ? arr1 : arr2?.length ? arr2 : undefined;
+    function arrayFallback<T>(...arrs: (T[] | undefined)[]): T[] | undefined {
+      for (const arr of arrs) {
+        if (arr && arr.length > 0) {
+          return arr;
+        }
+      }
     }
     function arrayMerge<T>(arr1: T[] | undefined, arr2: T[] | undefined): T[] {
       return Array.from(new Set([...(arr1 ?? []), ...(arr2 ?? [])]));
     }
+
+    let seasonPack = folderParsed?.seasonPack || fileParsed?.seasonPack;
+    let episodes = arrayFallback(fileParsed?.episodes, folderParsed?.episodes);
+    let seasons = arrayFallback(fileParsed?.seasons, folderParsed?.seasons);
+
+    // Detect season pack based on folder size being significantly larger than file size
+    if (
+      !seasonPack &&
+      episodes &&
+      episodes.length > 0 && // to handle movie folders
+      parsedStream.folderSize &&
+      parsedStream.size &&
+      parsedStream.folderSize > parsedStream.size * 2
+    ) {
+      seasonPack = true;
+    }
+    // Detect season pack when more than 5 episodes are present
+    if (!seasonPack && episodes && episodes.length > 5) {
+      seasonPack = true;
+    }
     return {
       title: folderParsed?.title || fileParsed?.title,
       year: fileParsed?.year || folderParsed?.year,
-      seasons: arrayFallback(fileParsed?.seasons, folderParsed?.seasons),
-      episodes: arrayFallback(fileParsed?.episodes, folderParsed?.episodes),
+      folderSeasons:
+        seasons !== folderParsed?.seasons ? folderParsed?.seasons : undefined,
+      folderEpisodes:
+        episodes !== folderParsed?.episodes
+          ? folderParsed?.episodes
+          : undefined,
+      seasons,
+      episodes,
       resolution:
         this.getResolution(stream, parsedStream) ||
         fileParsed?.resolution ||

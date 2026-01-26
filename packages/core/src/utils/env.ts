@@ -756,6 +756,14 @@ export const Env = cleanEnv(process.env, {
     default: 10,
     desc: 'Max number of source catalogs in a single merged catalog',
   }),
+  MAX_SEL_LENGTH: num({
+    default: 3000,
+    desc: 'Max length of stream expression language strings',
+  }),
+  MAX_FORMATTER_TEMPLATE_LENGTH: num({
+    default: 5000,
+    desc: 'Max length of formatter template strings',
+  }),
 
   ALLOWED_REGEX_PATTERNS: json<string[]>({
     default: [],

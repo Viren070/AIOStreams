@@ -4,6 +4,7 @@ import {
   getTimeTakenSincePoint,
   constants,
 } from '../utils/index.js';
+import { StreamContext } from './index.js';
 
 const logger = createLogger('sorter');
 
@@ -16,8 +17,9 @@ class StreamSorter {
 
   public async sort(
     allStreams: ParsedStream[],
-    type: string
+    context: StreamContext
   ): Promise<ParsedStream[]> {
+    const type = context.isAnime ? 'anime' : context.type;
     const forcedToTopStreams = allStreams.filter(
       (stream) => stream.addon.forceToTop
     );

@@ -44,6 +44,7 @@ import {
   StreamDeduplicator as Deduplicator,
   StreamPrecomputer as Precomputer,
   StreamUtils,
+  StreamContext,
 } from './streams/index.js';
 import { getAddonName } from './utils/general.js';
 import { TMDBMetadata } from './metadata/tmdb.js';
@@ -184,11 +185,13 @@ export class AIOStreams {
       }
     );
 
+    const context = StreamContext.create(type, id, this.userData);
+
     const {
       streams,
       errors,
       statistics: addonStatistics,
-    } = await this.fetcher.fetch(supportedAddons, type, id);
+    } = await this.fetcher.fetch(supportedAddons, context);
 
     if (
       this.userData.statistics?.enabled &&
@@ -205,7 +208,7 @@ export class AIOStreams {
       }))
     );
 
-    const processResults = await this._processStreams(streams, type, id);
+    const processResults = await this._processStreams(streams, context);
     let finalStreams = processResults.streams;
     errors.push(...processResults.errors);
 
@@ -1146,13 +1149,14 @@ export class AIOStreams {
         }
 
         if (meta.videos) {
+          const context = StreamContext.create(type, id, this.userData);
           meta.videos = await Promise.all(
             meta.videos.map(async (video) => {
               if (!video.streams) {
                 return video;
               }
               video.streams = (
-                await this._processStreams(video.streams, type, id, true)
+                await this._processStreams(video.streams, context, true)
               ).streams;
               return video;
             })
@@ -2161,36 +2165,34 @@ export class AIOStreams {
 
   private async _processStreams(
     streams: ParsedStream[],
-    type: string,
-    id: string,
+    context: StreamContext,
     isMeta: boolean = false
   ): Promise<{ streams: ParsedStream[]; errors: AIOStreamsError[] }> {
+    const { type, id, queryType } = context;
     let processedStreams = streams;
     let errors: AIOStreamsError[] = [];
 
     if (isMeta) {
       // Run SeaDex precompute before filter so seadex() works in Included SEL
-      await this.precomputer.precomputeSeaDexOnly(processedStreams, id);
-      processedStreams = await this.filterer.filter(processedStreams, type, id);
+      await this.precomputer.precomputeSeaDexOnly(processedStreams, context);
+      processedStreams = await this.filterer.filter(processedStreams, context);
     }
 
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
 
     if (isMeta) {
       // Run preferred matching after filter
-      await this.precomputer.precomputePreferred(processedStreams, type, id);
+      await this.precomputer.precomputePreferred(processedStreams, context);
     }
 
     let finalStreams = await this.filterer.applyStreamExpressionFilters(
       await this.limiter.limit(
-        await this.sorter.sort(
-          processedStreams,
-          AnimeDatabase.getInstance().isAnime(id) ? 'anime' : type
-        )
+        await this.sorter.sort(processedStreams, context)
       ),
-      type,
-      id
+      context
     );
+
+    this.filterer.generateFilterSummary(streams, finalStreams, type, id);
 
     const { streams: proxiedStreams, error } =
       await this.proxifier.proxify(finalStreams);
@@ -2205,6 +2207,9 @@ export class AIOStreams {
       if (stream.parsedFile) {
         stream.parsedFile.visualTags = stream.parsedFile.visualTags.filter(
           (tag) => !constants.FAKE_VISUAL_TAGS.includes(tag as any)
+        );
+        stream.parsedFile.languages = stream.parsedFile.languages.filter(
+          (lang) => !['Original'].includes(lang as any)
         );
       }
       return stream;

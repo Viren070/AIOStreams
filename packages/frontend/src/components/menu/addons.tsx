@@ -58,7 +58,7 @@ import { AnimatePresence } from 'framer-motion';
 import { PageControls } from '../shared/page-controls';
 import Image from 'next/image';
 import { Combobox } from '../ui/combobox';
-import { FaPlus, FaRegTrashAlt } from 'react-icons/fa';
+import { FaPlus, FaRegTrashAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { UserConfigAPI } from '../../services/api';
 import {
   ConfirmationDialog,
@@ -1383,52 +1383,86 @@ function AddonFetchingBehaviorCard() {
             }
           />
 
-          {(userData.groups?.groupings || []).map((group, index) => (
-            <div key={index} className="flex gap-2">
-              <div className="flex-1 flex gap-2">
-                <div className="flex-1">
-                  <Combobox
-                    multiple
-                    value={group.addons}
-                    options={getAvailablePresets(index)}
-                    emptyMessage="You haven't installed any addons yet or they are already in a group"
-                    label="Addons"
-                    placeholder="Select addons"
-                    onValueChange={(value) => {
-                      updateGroup(index, { addons: value });
-                    }}
-                  />
+          {(() => {
+            const handleGroupsChange = (newGroups: any[]) => {
+              const normalized = [...newGroups];
+              if (normalized.length > 0) {
+                normalized[0] = { ...normalized[0], condition: 'true' };
+              }
+              setUserData((prev) => ({
+                ...prev,
+                groups: { ...prev.groups, groupings: normalized },
+              }));
+            };
+
+            return (userData.groups?.groupings || []).map((group, index) => (
+              <div key={index} className="flex gap-2">
+                <div className="flex-1 flex gap-2">
+                  <div className="flex-1">
+                    <Combobox
+                      multiple
+                      value={group.addons}
+                      options={getAvailablePresets(index)}
+                      emptyMessage="You haven't installed any addons yet or they are already in a group"
+                      label="Addons"
+                      placeholder="Select addons"
+                      onValueChange={(value) => {
+                        updateGroup(index, { addons: value });
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <TextInput
+                      value={index === 0 ? 'true' : group.condition}
+                      disabled={index === 0}
+                      label="Condition"
+                      placeholder="Enter condition"
+                      onValueChange={(value) => {
+                        updateGroup(index, { condition: value });
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <TextInput
-                    value={index === 0 ? 'true' : group.condition}
-                    disabled={index === 0}
-                    label="Condition"
-                    placeholder="Enter condition"
-                    onValueChange={(value) => {
-                      updateGroup(index, { condition: value });
-                    }}
-                  />
-                </div>
-              </div>
-              <IconButton
-                size="sm"
-                rounded
-                icon={<FaRegTrashAlt />}
-                intent="alert-subtle"
-                onClick={() => {
-                  setUserData((prev) => {
-                    const newGroups = [...(prev.groups?.groupings || [])];
+                <IconButton
+                  size="sm"
+                  rounded
+                  icon={<FaArrowUp />}
+                  intent="primary-subtle"
+                  disabled={index === 0}
+                  onClick={() => {
+                    handleGroupsChange(
+                      arrayMove(userData.groups?.groupings || [], index, index - 1)
+                    );
+                  }}
+                />
+                <IconButton
+                  size="sm"
+                  rounded
+                  icon={<FaArrowDown />}
+                  intent="primary-subtle"
+                  disabled={
+                    index === (userData.groups?.groupings || []).length - 1
+                  }
+                  onClick={() => {
+                    handleGroupsChange(
+                      arrayMove(userData.groups?.groupings || [], index, index + 1)
+                    );
+                  }}
+                />
+                <IconButton
+                  size="sm"
+                  rounded
+                  icon={<FaRegTrashAlt />}
+                  intent="alert-subtle"
+                  onClick={() => {
+                    const newGroups = [...(userData.groups?.groupings || [])];
                     newGroups.splice(index, 1);
-                    return {
-                      ...prev,
-                      groups: { ...prev.groups, groupings: newGroups },
-                    };
-                  });
-                }}
-              />
-            </div>
-          ))}
+                    handleGroupsChange(newGroups);
+                  }}
+                />
+              </div>
+            ));
+          })()}
 
           <div className="mt-2 flex gap-2 items-center">
             <IconButton
@@ -1439,14 +1473,15 @@ function AddonFetchingBehaviorCard() {
               onClick={() => {
                 setUserData((prev) => {
                   const currentGroups = prev.groups?.groupings || [];
+                  const newGroup = {
+                    addons: [],
+                    condition: currentGroups.length === 0 ? 'true' : '',
+                  };
                   return {
                     ...prev,
                     groups: {
                       ...prev.groups,
-                      groupings: [
-                        ...currentGroups,
-                        { addons: [], condition: '' },
-                      ],
+                      groupings: [...currentGroups, newGroup],
                     },
                   };
                 });

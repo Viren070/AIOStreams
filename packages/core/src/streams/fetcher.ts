@@ -1,6 +1,5 @@
 import { Addon, ParsedStream, UserData } from '../db/schemas.js';
 import {
-  AnimeDatabase,
   constants,
   createLogger,
   getAddonName,
@@ -14,6 +13,7 @@ import {
 import StreamFilter from './filterer.js';
 import StreamPrecompute from './precomputer.js';
 import StreamDeduplicator from './deduplicator.js';
+import { StreamContext } from './context.js';
 
 const logger = createLogger('fetcher');
 
@@ -35,8 +35,7 @@ class StreamFetcher {
 
   public async fetch(
     addons: Addon[],
-    type: string,
-    id: string
+    context: StreamContext
   ): Promise<{
     streams: ParsedStream[];
     errors: {
@@ -48,6 +47,10 @@ class StreamFetcher {
       description: string;
     }[];
   }> {
+    const { type, id, queryType } = context;
+
+    context.startAllFetches();
+
     const allErrors: {
       title: string;
       description: string;
@@ -58,10 +61,6 @@ class StreamFetcher {
     }[] = [];
     let allStreams: ParsedStream[] = [];
     const start = Date.now();
-    let queryType = type;
-    if (AnimeDatabase.getInstance().isAnime(id)) {
-      queryType = `anime.${type}`;
-    }
 
     addons = addons.filter((addon) => {
       if (
@@ -182,14 +181,15 @@ class StreamFetcher {
         .filter((s) => s !== undefined);
 
       // Run SeaDex precompute BEFORE filter so seadex() works in Included SEL
-      await this.precompute.precomputeSeaDexOnly(groupStreams, id);
+      // Now uses context's cached SeaDex data when available
+      await this.precompute.precomputeSeaDexOnly(groupStreams, context);
 
       const filteredStreams = await this.deduplicate.deduplicate(
-        await this.filter.filter(groupStreams, type, id)
+        await this.filter.filter(groupStreams, context)
       );
 
       // Run preferred matching AFTER filter
-      await this.precompute.precomputePreferred(filteredStreams, type, id);
+      await this.precompute.precomputePreferred(filteredStreams, context);
 
       logger.info(
         `Finished fetching from group in ${getTimeTakenSincePoint(groupStart)}`

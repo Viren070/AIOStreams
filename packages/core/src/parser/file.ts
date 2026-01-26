@@ -147,6 +147,7 @@ class FileParser {
       container: parsed.container,
       extension: parsed.extension,
       seasons: parsed.seasons,
+      volumes: parsed.volumes,
       episodes: parsed.episodes,
       seasonPack: !!(parsed.seasons?.length && !parsed.episodes?.length),
     };

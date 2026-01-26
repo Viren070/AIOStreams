@@ -41,7 +41,7 @@ export abstract class StreamExpressionEngine {
         asinh: false,
         acosh: false,
         atanh: false,
-        sqrt: false,
+        sqrt: true,
         log: false,
         ln: false,
         lg: false,
@@ -54,9 +54,9 @@ export abstract class StreamExpressionEngine {
         exp: false,
         length: false,
         in: true,
-        random: false,
-        min: true,
-        max: true,
+        random: true,
+        min: false,
+        max: false,
         assignment: false,
         fndef: false,
         cbrt: false,
@@ -71,6 +71,322 @@ export abstract class StreamExpressionEngine {
   }
 
   private setupParserFunctions() {
+    this.setupMathFunctions();
+    this.setupStreamFunctions();
+  }
+
+  private setupMathFunctions() {
+    type NumberInput = number[] | number;
+
+    const toNumberArray = (
+      args: NumberInput,
+      rest: number[],
+      functionName: string
+    ): number[] => {
+      const arr = Array.isArray(args) ? args : [args, ...rest];
+      if (!Array.isArray(arr)) {
+        throw new Error(
+          `${functionName} requires  a number or array of numbers`
+        );
+      }
+      if (arr.some((n) => typeof n !== 'number' || isNaN(n))) {
+        throw new Error(
+          `${functionName} requires all values to be valid numbers`
+        );
+      }
+      return arr;
+    };
+
+    const eMath = {
+      mean(numbers: number[]): number {
+        if (numbers.length === 0) return 0;
+        let sum = 0;
+        for (let i = 0; i < numbers.length; i++) {
+          sum += numbers[i];
+        }
+        return sum / numbers.length;
+      },
+      variance(numbers: number[]): number {
+        if (numbers.length === 0) return 0;
+        const m = eMath.mean(numbers);
+        let sumSquaredDiff = 0;
+        for (let i = 0; i < numbers.length; i++) {
+          const diff = numbers[i] - m;
+          sumSquaredDiff += diff * diff;
+        }
+        return sumSquaredDiff / numbers.length;
+      },
+      sort(numbers: number[]): number[] {
+        return [...numbers].sort((a, b) => a - b);
+      },
+      percentile(numbers: number[], p: number): number {
+        if (numbers.length === 0) return 0;
+        if (numbers.length === 1) return numbers[0];
+
+        const sorted = eMath.sort(numbers);
+        if (p === 0) return sorted[0];
+        if (p === 100) return sorted[sorted.length - 1];
+
+        const pos = ((sorted.length - 1) * p) / 100;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+
+        if (rest === 0 || base === sorted.length - 1) {
+          return sorted[base];
+        }
+        return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+      },
+    };
+
+    this.parser.functions.max = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'max');
+      if (values.length === 0) return 0;
+      let max = values[0];
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] > max) max = values[i];
+      }
+      return max;
+    };
+
+    this.parser.functions.min = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'min');
+      if (values.length === 0) return 0;
+      let min = values[0];
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < min) min = values[i];
+      }
+      return min;
+    };
+
+    this.parser.functions.avg = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      return eMath.mean(toNumberArray(args, rest, 'avg'));
+    };
+
+    this.parser.functions.mean = this.parser.functions.avg;
+
+    this.parser.functions.sum = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'sum');
+      if (values.length === 0) return 0;
+      let sum = 0;
+      for (let i = 0; i < values.length; i++) {
+        sum += values[i];
+      }
+      return sum;
+    };
+
+    this.parser.functions.percentile = function (
+      numbers: number[],
+      p: number
+    ): number {
+      const values = toNumberArray(numbers, [], 'percentile');
+      if (typeof p !== 'number' || isNaN(p)) {
+        throw new Error('Percentile value must be a number');
+      }
+      if (p < 0 || p > 100) {
+        throw new Error('Percentile must be between 0 and 100');
+      }
+      return eMath.percentile(values, p);
+    };
+
+    this.parser.functions.q1 = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'q1');
+      return eMath.percentile(values, 25);
+    };
+
+    this.parser.functions.median = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'median');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return values[0];
+
+      const sorted = eMath.sort(values);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
+    this.parser.functions.q2 = this.parser.functions.median;
+
+    this.parser.functions.q3 = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'q3');
+      return eMath.percentile(values, 75);
+    };
+
+    this.parser.functions.iqr = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'iqr');
+      const q3 = eMath.percentile(values, 75);
+      const q1 = eMath.percentile(values, 25);
+      return q3 - q1;
+    };
+
+    this.parser.functions.variance = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'variance');
+      return eMath.variance(values);
+    };
+
+    this.parser.functions.stddev = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'stddev');
+      return Math.sqrt(eMath.variance(values));
+    };
+
+    this.parser.functions.range = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'range');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return 0;
+
+      let min = values[0];
+      let max = values[0];
+
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < min) min = values[i];
+        if (values[i] > max) max = values[i];
+      }
+
+      return max - min;
+    };
+
+    this.parser.functions.mode = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'mode');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return values[0];
+
+      const frequency: Record<number, number> = {};
+      let maxFreq = 0;
+      let mode = values[0];
+
+      for (let i = 0; i < values.length; i++) {
+        const val = values[i];
+        frequency[val] = (frequency[val] || 0) + 1;
+        if (frequency[val] > maxFreq) {
+          maxFreq = frequency[val];
+          mode = val;
+        }
+      }
+      return mode;
+    };
+
+    this.parser.functions.skewness = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'skewness');
+      if (values.length < 3) return 0;
+
+      const mean = eMath.mean(values);
+      const variance = eMath.variance(values);
+      const stdDev = Math.sqrt(variance);
+
+      if (stdDev === 0) return 0;
+
+      let sumCubedDiff = 0;
+      for (let i = 0; i < values.length; i++) {
+        const diff = values[i] - mean;
+        sumCubedDiff += diff * diff * diff;
+      }
+
+      const n = values.length;
+      return sumCubedDiff / n / (stdDev * stdDev * stdDev);
+    };
+
+    this.parser.functions.kurtosis = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'kurtosis');
+      if (values.length < 4) return 0;
+
+      const mean = eMath.mean(values);
+      const variance = eMath.variance(values);
+      const stdDev = Math.sqrt(variance);
+
+      if (stdDev === 0) return 0;
+
+      let sumFourthPower = 0;
+      for (let i = 0; i < values.length; i++) {
+        const diff = values[i] - mean;
+        sumFourthPower += diff * diff * diff * diff;
+      }
+
+      const n = values.length;
+      return sumFourthPower / n / (variance * variance) - 3;
+    };
+  }
+
+  private setupStreamFunctions() {
+    this.parser.functions.values = function (
+      streams: ParsedStream[],
+      attr: string
+    ) {
+      if (!Array.isArray(streams)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+      if (typeof attr !== 'string') {
+        throw new Error('You must provide a string path for the attribute');
+      }
+
+      const getStreamProperty = (
+        stream: ParsedStream,
+        key: string
+      ): number | undefined => {
+        switch (key) {
+          case 'bitrate':
+            return stream.bitrate;
+          case 'size':
+            return stream.size;
+          case 'folderSize':
+            return stream.folderSize;
+          case 'age':
+            return stream.age;
+          case 'duration':
+            return stream.duration;
+          case 'seeders':
+            return stream.torrent?.seeders;
+          default:
+            throw new Error(`Invalid attribute for values: '${key}'`);
+        }
+      };
+
+      return streams
+        .map((stream) => getStreamProperty(stream, attr))
+        .filter((val) => typeof val === 'number' && !isNaN(val));
+    };
+
     this.parser.functions.regexMatched = function (
       streams: ParsedStream[],
       ...regexNames: string[]
@@ -520,6 +836,27 @@ export abstract class StreamExpressionEngine {
       );
     };
 
+    this.parser.functions.seasonPack = function (
+      streams: ParsedStream[],
+      mode: 'seasonPack' | 'onlySeasons' = 'onlySeasons'
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (mode !== 'seasonPack' && mode !== 'onlySeasons') {
+        throw new Error("Mode must be either 'seasonPack' or 'onlySeasons'");
+      }
+
+      return streams.filter((stream) =>
+        mode === 'seasonPack'
+          ? stream.parsedFile?.seasonPack
+          : // when there are only seasons and no episodes
+            stream.parsedFile?.seasons &&
+            stream.parsedFile?.seasons.length > 0 &&
+            (!stream.parsedFile.episodes ||
+              !stream.parsedFile?.episodes?.length)
+      );
+    };
+
     this.parser.functions.addon = function (
       streams: ParsedStream[],
       ...addons: string[]
@@ -843,12 +1180,53 @@ export class GroupConditionEvaluator extends StreamExpressionEngine {
   }
 }
 
+/**
+ * Expression context containing metadata and request information
+ * that can be accessed in stream expressions.
+ */
+export interface ExpressionContext {
+  type?: string;
+  id?: string;
+  isAnime?: boolean;
+  queryType?: string;
+  season?: number;
+  episode?: number;
+  // Metadata fields
+  title?: string;
+  titles?: string[];
+  year?: number;
+  yearEnd?: number;
+  genres?: string[];
+  runtime?: number;
+  absoluteEpisode?: number;
+  originalLanguage?: string;
+  daysSinceRelease?: number; // age in days of the movie / **episode**
+  // Anime entry data
+  anilistId?: number;
+  malId?: number;
+  // SeaDex availability
+  hasSeaDex?: boolean;
+}
+
 export class StreamSelector extends StreamExpressionEngine {
-  private queryType: string;
-  constructor(queryType: string) {
+  constructor(context: ExpressionContext) {
     super();
-    this.queryType = queryType;
-    this.parser.consts.queryType = queryType;
+
+    // we need to ensure these are always defined to a safe default
+    // because otherwise the expression parser may throw errors
+    this.parser.consts.queryType = context.queryType ?? '';
+    this.parser.consts.isAnime = context.isAnime ?? false;
+    this.parser.consts.season = context.season ?? -1;
+    this.parser.consts.episode = context.episode ?? -1;
+    this.parser.consts.genres = context.genres ?? [];
+    this.parser.consts.title = context.title ?? '';
+    this.parser.consts.year = context.year ?? 0;
+    this.parser.consts.yearEnd = context.yearEnd ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? 0;
+    this.parser.consts.runtime = context.runtime ?? 0;
+    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? 0;
+    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
+    this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
   }
 
   async select(
@@ -879,7 +1257,7 @@ export class StreamSelector extends StreamExpressionEngine {
   }
 
   static async testSelect(condition: string): Promise<ParsedStream[]> {
-    const parser = new StreamSelector('movie');
+    const parser = new StreamSelector({ queryType: 'movie' });
     const streams = [
       parser.createTestStream({ type: 'debrid' }),
       parser.createTestStream({ type: 'debrid' }),

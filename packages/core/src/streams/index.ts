@@ -4,6 +4,7 @@ import StreamSorter from './sorter.js';
 import StreamDeduplicator from './deduplicator.js';
 import StreamPrecomputer from './precomputer.js';
 import StreamUtils from './utils.js';
+import { StreamContext, ExtendedMetadata } from './context.js';
 
 export {
   StreamFetcher,
@@ -12,4 +13,7 @@ export {
   StreamDeduplicator,
   StreamPrecomputer,
   StreamUtils,
+  StreamContext,
 };
+
+export type { ExtendedMetadata };

@@ -98,6 +98,21 @@ export function languageToCode(language: string): string | undefined {
   return undefined;
 }
 
+export function iso6391ToLanguage(code: string): string | undefined {
+  const langs = FULL_LANGUAGE_MAPPING.filter(
+    (lang) => lang.iso_639_1?.toLowerCase() === code.toLowerCase()
+  );
+
+  if (langs.length === 0) {
+    return undefined;
+  }
+
+  const selectedLang = langs.find((lang) => lang.flag_priority) ?? langs[0];
+  return (selectedLang.internal_english_name || selectedLang.english_name)
+    .split(/;|\(/)[0]
+    .trim();
+}
+
 export function emojiToLanguage(emoji: string): string | undefined {
   return Object.entries(languageEmojiMap).find(
     ([_, value]) => value === emoji
