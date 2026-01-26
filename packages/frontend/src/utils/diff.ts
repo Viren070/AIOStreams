@@ -71,15 +71,15 @@ export function getObjectDiff(
     const isProxiedList = lastPath === 'proxiedAddons' || lastPath === 'proxiedServices';
     
     const isPrimitiveList = lastPath && (
-        lastPath.endsWith('Keywords') || 
-        lastPath.endsWith('Resolutions') ||
-        lastPath.endsWith('Qualities') ||
-        lastPath.endsWith('Encodes') ||
-        lastPath.endsWith('Tags') ||
-        lastPath.endsWith('Languages') ||
-        lastPath.endsWith('StreamTypes') ||
-        lastPath.endsWith('Sources') ||
-        lastPath.endsWith('Types')
+      lastPath.endsWith('Keywords') || 
+      lastPath.endsWith('Resolutions') ||
+      lastPath.endsWith('Qualities') ||
+      lastPath.endsWith('Encodes') ||
+      lastPath.endsWith('Tags') ||
+      lastPath.endsWith('Languages') ||
+      lastPath.endsWith('StreamTypes') ||
+      lastPath.endsWith('Sources') ||
+      lastPath.endsWith('Types')
     );
 
     if (isAddons) {
@@ -92,26 +92,26 @@ export function getObjectDiff(
       return calculateKeyedArrayDiff(obj1, obj2, (item) => item.pattern || item.name, path);
     }
     else if (isStreamExpressions || isPrimitiveList || isProxiedList) {
-      return calculatePrimitiveArrayDiff(obj1, obj2, path);
+      return calculateKeyedArrayDiff(obj1, obj2, (item) => String(item), path);
     }
 
     const getKey = (item: any) => {
-        if (!isObject(item)) {
-             return String(item);
+      if (!isObject(item)) {
+        return String(item);
+      }
+      if (item.instanceId) return item.instanceId;
+      if (item.id) return item.id;
+      if (item.name) return item.name;
+      if (item.key) return item.key;
+      if (item.pattern) return item.pattern;
+      if (Array.isArray(item.addons)) {
+        try {
+          return `group:${JSON.stringify(item.addons)}`;
+        } catch {
+          return null;
         }
-        if (item.instanceId) return item.instanceId;
-        if (item.id) return item.id;
-        if (item.name) return item.name;
-        if (item.key) return item.key;
-        if (item.pattern) return item.pattern;
-        if (Array.isArray(item.addons)) {
-            try {
-                return `group:${JSON.stringify(item.addons)}`;
-            } catch {
-                return null;
-            }
-        }
-        return null;
+      }
+      return null;
     };
 
     const keys1 = obj1.map(getKey);
@@ -124,74 +124,74 @@ export function getObjectDiff(
       new Set(keys2).size === obj2.length;
 
     if (canKey) {
-        const oldMap = new Map();
-        const oldOrder: any[] = [];
-        obj1.forEach((item: any) => {
-            const key = getKey(item);
-            oldMap.set(key, item);
-            oldOrder.push(key);
-        });
+      const oldMap = new Map();
+      const oldOrder: any[] = [];
+      obj1.forEach((item: any) => {
+        const key = getKey(item);
+        oldMap.set(key, item);
+        oldOrder.push(key);
+      });
 
-        const newMap = new Map();
-        const newOrder: any[] = [];
-        obj2.forEach((item: any) => {
-            const key = getKey(item);
-            newMap.set(key, item);
-            newOrder.push(key);
-        });
+      const newMap = new Map();
+      const newOrder: any[] = [];
+      obj2.forEach((item: any) => {
+        const key = getKey(item);
+        newMap.set(key, item);
+        newOrder.push(key);
+      });
 
-        const getLabel = (key: any) => {
-            const item = newMap.get(key) || oldMap.get(key);
-            if (item?.addons && Array.isArray(item.addons)) {
-                const firstAddon = item.addons[0] || '';
-                const count = item.addons.length;
-                const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
-                return `Group: ${item.condition || 'true'}${summary}`;
-            }
-            return item?.name || item?.options?.name || item?.instanceId || item?.id || key; 
-        };
-
-        oldMap.forEach((val, key) => {
-            if (!newMap.has(key)) {
-                 const originalIndex = obj1.findIndex((i: any) => getKey(i) === key);
-                 diffs.push({
-                     path: [...path, `[${originalIndex}]`], 
-                     type: 'REMOVE',
-                     oldValue: isPresets ? `Deleted: ${getLabel(key)}` : val
-                 });
-            }
-        });
-
-        newMap.forEach((val, key) => {
-             const newIndex = obj2.findIndex((i: any) => getKey(i) === key);
-             if (!oldMap.has(key)) {
-                 diffs.push({
-                     path: [...path, `[${newIndex}]`],
-                     type: 'ADD',
-                     newValue: val
-                 });
-             } else {
-                 const oldVal = oldMap.get(key);
-                 diffs.push(...getObjectDiff(oldVal, val, [...path, `[${newIndex}]`]));
-             }
-        });
-
-        const intersectionOld = oldOrder.filter(key => newOrder.includes(key));
-        const intersectionNew = newOrder.filter(key => oldOrder.includes(key));
-
-        const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
-                              intersectionOld.some((key, i) => key !== intersectionNew[i]);
-        
-        if (isOrderChanged) {
-              diffs.push({
-                  path: [...path],
-                  type: 'CHANGE',
-                  oldValue: oldOrder.map(getLabel),
-                  newValue: newOrder.map(getLabel)
-              });
+      const getLabel = (key: any) => {
+        const item = newMap.get(key) || oldMap.get(key);
+        if (item?.addons && Array.isArray(item.addons)) {
+          const firstAddon = item.addons[0] || '';
+          const count = item.addons.length;
+          const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
+          return `Group: ${item.condition || 'true'}${summary}`;
         }
-        
-        return diffs;
+        return item?.name || item?.options?.name || item?.instanceId || item?.id || key; 
+      };
+
+      oldMap.forEach((val, key) => {
+        if (!newMap.has(key)) {
+          const originalIndex = obj1.findIndex((i: any) => getKey(i) === key);
+          diffs.push({
+            path: [...path, `[${originalIndex}]`], 
+            type: 'REMOVE',
+            oldValue: isPresets ? `Deleted: ${getLabel(key)}` : val
+          });
+        }
+      });
+
+      newMap.forEach((val, key) => {
+        const newIndex = obj2.findIndex((i: any) => getKey(i) === key);
+        if (!oldMap.has(key)) {
+          diffs.push({
+            path: [...path, `[${newIndex}]`],
+            type: 'ADD',
+            newValue: val
+          });
+        } else {
+          const oldVal = oldMap.get(key);
+          diffs.push(...getObjectDiff(oldVal, val, [...path, `[${newIndex}]`]));
+        }
+      });
+
+      const intersectionOld = oldOrder.filter(key => newOrder.includes(key));
+      const intersectionNew = newOrder.filter(key => oldOrder.includes(key));
+
+      const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
+                             intersectionOld.some((key, i) => key !== intersectionNew[i]);
+      
+      if (isOrderChanged) {
+        diffs.push({
+          path: [...path],
+          type: 'CHANGE',
+          oldValue: oldOrder.map(getLabel),
+          newValue: newOrder.map(getLabel)
+        });
+      }
+      
+      return diffs;
     }
 
     const len = Math.max(obj1.length, obj2.length);
@@ -287,135 +287,80 @@ function calculateKeyedArrayDiff(
   key: string | ((item: any) => string),
   path: string[]
 ): DiffItem[] {
-    const diffs: DiffItem[] = [];
-    
-    const getKey = (item: any) => {
-      if (typeof key === 'function') return key(item);
-      return item[key];
+  const diffs: DiffItem[] = [];
+  
+  const getKey = (item: any) => {
+    if (typeof key === 'function') return key(item);
+    return item[key];
+  };
+
+  const oldMap = new Map();
+  const oldOrder: any[] = [];
+  arr1.forEach((item: any) => {
+    const k = getKey(item);
+    if (k) {
+      oldMap.set(k, item);
+      oldOrder.push(k);
+    }
+  });
+
+  const newMap = new Map();
+  const newOrder: any[] = [];
+  arr2.forEach((item: any) => {
+    const k = getKey(item);
+    if (k) {
+      newMap.set(k, item);
+      newOrder.push(k);
+    }
+  });
+
+  oldMap.forEach((val, k) => {
+    if (!newMap.has(k)) {
+      const originalIndex = arr1.findIndex((i: any) => getKey(i) === k);
+      diffs.push({
+        path: [...path, `[${originalIndex}]`],
+        type: 'REMOVE',
+        oldValue: val
+      });
+    }
+  });
+
+  newMap.forEach((val, k) => {
+    const newIndex = arr2.findIndex((i: any) => getKey(i) === k);
+    if (!oldMap.has(k)) {
+      diffs.push({
+        path: [...path, `[${newIndex}]`],
+        type: 'ADD',
+        newValue: val
+      });
+    } else {
+      const oldVal = oldMap.get(k);
+      diffs.push(...getObjectDiff(oldVal, val, [...path, `[${newIndex}]`]));
+    }
+  });
+
+  // Check for reordering
+  const intersectionOld = oldOrder.filter(k => newOrder.includes(k));
+  const intersectionNew = newOrder.filter(k => oldOrder.includes(k));
+
+  const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
+                         intersectionOld.some((k, i) => k !== intersectionNew[i]);
+
+  if (isOrderChanged) {
+    const getLabel = (k: any) => {
+      const item = newMap.get(k) || oldMap.get(k);
+      if (item?.name) return item.name;
+      if (item?.pattern) return item.pattern;
+      if (item?.instanceId) return item.instanceId;
+      return k;
     };
 
-    const oldMap = new Map();
-    const oldOrder: any[] = [];
-    arr1.forEach((item: any) => {
-        const k = getKey(item);
-        if (k) {
-            oldMap.set(k, item);
-            oldOrder.push(k);
-        }
+    diffs.push({
+      path: [...path],
+      type: 'CHANGE',
+      oldValue: oldOrder.map(getLabel),
+      newValue: newOrder.map(getLabel)
     });
-
-    const newMap = new Map();
-    const newOrder: any[] = [];
-    arr2.forEach((item: any) => {
-        const k = getKey(item);
-        if (k) {
-            newMap.set(k, item);
-            newOrder.push(k);
-        }
-    });
-
-    oldMap.forEach((val, k) => {
-        if (!newMap.has(k)) {
-            const originalIndex = arr1.findIndex((i: any) => getKey(i) === k);
-            diffs.push({
-                path: [...path, `[${originalIndex}]`],
-                type: 'REMOVE',
-                oldValue: val
-            });
-        }
-    });
-
-    newMap.forEach((val, k) => {
-        const newIndex = arr2.findIndex((i: any) => getKey(i) === k);
-        if (!oldMap.has(k)) {
-            diffs.push({
-                path: [...path, `[${newIndex}]`],
-                type: 'ADD',
-                newValue: val
-            });
-        } else {
-            const oldVal = oldMap.get(k);
-            diffs.push(...getObjectDiff(oldVal, val, [...path, `[${newIndex}]`]));
-        }
-    });
-
-    // Check for reordering
-    const intersectionOld = oldOrder.filter(k => newOrder.includes(k));
-    const intersectionNew = newOrder.filter(k => oldOrder.includes(k));
-
-    const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
-                          intersectionOld.some((k, i) => k !== intersectionNew[i]);
-
-    if (isOrderChanged) {
-        const getLabel = (k: any) => {
-             const item = newMap.get(k) || oldMap.get(k);
-             if (item?.name) return item.name;
-             if (item?.pattern) return item.pattern;
-             if (item?.instanceId) return item.instanceId;
-             return k;
-        };
-
-        diffs.push({
-            path: [...path],
-            type: 'CHANGE',
-            oldValue: oldOrder.map(getLabel),
-            newValue: newOrder.map(getLabel)
-        });
-    }
-
-    return diffs;
-}
-
-function calculatePrimitiveArrayDiff(
-  arr1: any[],
-  arr2: any[],
-  path: string[]
-): DiffItem[] {
-  const diffs: DiffItem[] = [];
-  const set1 = new Set(arr1);
-  const set2 = new Set(arr2);
-  
-  arr1.forEach((item, index) => {
-      if (!set2.has(item)) {
-          diffs.push({
-            path: [...path, `[${index}]`],
-            oldValue: item,
-            newValue: undefined,
-            type: 'REMOVE'
-          });
-      }
-  });
-
-  arr2.forEach((item, index) => {
-      if (!set1.has(item)) {
-          diffs.push({
-            path: [...path, `[${index}]`],
-            oldValue: undefined,
-            newValue: item,
-            type: 'ADD'
-          });
-      }
-  });
-
-  if (diffs.length === 0) {
-       try {
-           if (JSON.stringify(arr1) !== JSON.stringify(arr2)) {
-               diffs.push({
-                  path,
-                  type: 'CHANGE',
-                  oldValue: arr1,
-                  newValue: arr2
-               });
-           }
-       } catch {
-           // Arrays differ in a way Set comparison missed; treat as changed
-           diffs.push({
-               path,
-               type: 'CHANGE',
-               oldValue: arr1,
-               newValue: arr2
-           });
-       }
   }
 
   return diffs; 

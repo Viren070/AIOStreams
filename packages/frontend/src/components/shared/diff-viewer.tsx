@@ -15,15 +15,15 @@ interface DiffViewerProps {
 
 export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffViewerProps) {
   const format = (val: any) => {
-      if (valueFormatter) {
-          const formatted = valueFormatter(val);
-          if (formatted !== undefined && formatted !== null) {
-            return formatted;
-          }
+    if (valueFormatter) {
+      const formatted = valueFormatter(val);
+      if (formatted !== undefined && formatted !== null) {
+        return formatted;
       }
-      if (val === undefined) return '(undefined)';
-      if (val === null) return '(null)';
-      return formatValue(val);
+    }
+    if (val === undefined) return '(undefined)';
+    if (val === null) return '(null)';
+    return formatValue(val);
   };
 
   const textDiffs = useMemo(() => {
@@ -56,16 +56,16 @@ export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffVi
           <div className="space-y-3">
             {diffs.map((diff, idx) => (
               <div
-                  key={`${diff.path.join('.')}-${diff.type}-${idx}`}
+                key={`${diff.path.join('.')}-${diff.type}-${idx}`}
                 className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 relative group"
               >
                 <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                        <Badge type={diff.type} />
-                        <span className="font-mono text-sm text-gray-300">
-                            {diff.path.join('.').replace(/\.\[/g, '[')}
-                        </span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Badge type={diff.type} />
+                    <span className="font-mono text-sm text-gray-300">
+                      {diff.path.join('.').replace(/\.\[/g, '[')}
+                    </span>
+                  </div>
                 </div>
                 <div
                   className={`grid gap-4 text-sm ${
@@ -95,7 +95,7 @@ export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffVi
         </TabsContent>
 
         <TabsContent value="json" className="relative max-h-[60vh] overflow-hidden rounded-md border border-gray-800 bg-gray-950/50 flex flex-col group">
-           <JsonDiffContent textDiffs={textDiffs} />
+          <JsonDiffContent textDiffs={textDiffs} />
         </TabsContent>
       </Tabs>
     </div>
