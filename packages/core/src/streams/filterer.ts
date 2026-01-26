@@ -543,6 +543,42 @@ class StreamFilterer {
         return true;
       }
 
+      if (digitalReleaseDates.length > 0) {
+        const closestDigitalRelease = digitalReleaseDates
+          .map((rd) => {
+            const releaseDate = new Date(rd.release_date);
+            const daysUntilRelease = Math.ceil(
+              (releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            return { ...rd, daysUntilRelease };
+          })
+          .sort((a, b) => a.daysUntilRelease - b.daysUntilRelease)[0];
+
+        if (
+          closestDigitalRelease &&
+          closestDigitalRelease.daysUntilRelease <= tolerance
+        ) {
+          logger.debug(
+            `[DigitalReleaseFilter] Digital release within tolerance. ${closestDigitalRelease.daysUntilRelease} days until release <= ${tolerance} days tolerance. allowing streams.`,
+            {
+              title: requestedMetadata?.title,
+              digitalReleaseDate: closestDigitalRelease.release_date,
+            }
+          );
+          return true;
+        }
+
+        logger.info(
+          `[DigitalReleaseFilter] BLOCKING - No digital release found for "${requestedMetadata?.title}"`,
+          {
+            daysSinceRelease,
+            closestDigitalRelease: closestDigitalRelease?.release_date,
+            daysUntilDigitalRelease: closestDigitalRelease?.daysUntilRelease,
+          }
+        );
+        return false;
+      }
+
       logger.info(
         `[DigitalReleaseFilter] BLOCKING - No digital release found for "${requestedMetadata?.title}"`,
         { daysSinceRelease }
