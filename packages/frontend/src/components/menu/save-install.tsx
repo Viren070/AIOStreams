@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/text-input';
-import { applyMigrations, useUserData } from '@/context/userData';
+import { applyMigrations, useUserData, DefaultUserData } from '@/context/userData';
 import { UserConfigAPI } from '@/services/api';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@/components/ui/alert';
@@ -156,10 +156,15 @@ function Content() {
   const handleRevertAll = () => {
     if (remoteConfig) {
       setUserData((prev) => {
-        if (!prev) return remoteConfig;
         return {
-          ...prev,
+          ...DefaultUserData,
           ...remoteConfig,
+          // Preserve user-specific fields that are ignored in diff
+          uuid: prev.uuid,
+          encryptedPassword: prev.encryptedPassword,
+          trusted: prev.trusted,
+          addonPassword: prev.addonPassword,
+          ip: prev.ip,
           showChanges: prev.showChanges, 
         };
       });

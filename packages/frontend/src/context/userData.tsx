@@ -198,7 +198,7 @@ export function removeInvalidPresetReferences(config: UserData) {
   }
   return config;
 }
-const DefaultUserData: UserData = {
+export const DefaultUserData: UserData = {
   services: Object.values(SERVICE_DETAILS).map((service) => ({
     id: service.id,
     enabled: false,

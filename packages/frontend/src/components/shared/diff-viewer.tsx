@@ -4,6 +4,7 @@ import { calculateLineDiff, LineDiff } from '@/utils/text-diff';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs/tabs';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface DiffViewerProps {
   diffs: DiffItem[];
@@ -116,12 +117,10 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
         const lineIndex = changeIndices[index];
         if (lineIndex !== undefined && lineRefs.current[lineIndex] && scrollContainerRef.current) {
             const element = lineRefs.current[lineIndex];
-            if (element) {
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                });
-            }
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
         }
         setCurrentChangeIndex(index);
     };
@@ -141,6 +140,15 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
         setCurrentChangeIndex(0);
         // Reset refs array sizing
         lineRefs.current = lineRefs.current.slice(0, textDiffs.length);
+    }, [textDiffs]);
+
+    // Check for truncation and show toast
+    useEffect(() => {
+        if (textDiffs.some(diff => diff.truncated)) {
+            toast.warning('Large File Detected: Diff simplified for performance.', {
+                id: 'large-file-warning'
+            });
+        }
     }, [textDiffs]);
 
     return (

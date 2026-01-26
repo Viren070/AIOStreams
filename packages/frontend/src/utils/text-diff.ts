@@ -1,21 +1,29 @@
 export interface LineDiff {
   type: 'same' | 'add' | 'remove';
   content: string;
-  lineNumber?: number;
   oldLineNumber?: number;
   newLineNumber?: number;
+  truncated?: boolean;
 }
 
 export function calculateLineDiff(oldText: string, newText: string): LineDiff[] {
   const oldLines = oldText.split('\n');
   const newLines = newText.split('\n');
+
+  // Safety check
+  if (oldLines.length * newLines.length > 2500000) { // 1500 x 1500 lines
+      return [
+          { type: 'remove', content: oldText, oldLineNumber: 1, truncated: true },
+          { type: 'add', content: newText, newLineNumber: 1, truncated: true }
+      ];
+  }
+
   return computeDiff(oldLines, newLines);
 }
 
 function computeDiff(oldLines: string[], newLines: string[]): LineDiff[] {
     const N = oldLines.length;
     const M = newLines.length;
-    const MAX = N + M;
     
     const dp: number[][] = Array(N + 1).fill(0).map(() => Array(M + 1).fill(0));
     

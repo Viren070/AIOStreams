@@ -9,6 +9,14 @@ function isObject(val: any) {
   return val != null && typeof val === 'object' && !Array.isArray(val);
 }
 
+function isEmptyValue(val: any) {
+  return (
+    val == null ||
+    (Array.isArray(val) && val.length === 0) ||
+    (isObject(val) && Object.keys(val).length === 0)
+  );
+}
+
 export function sortKeys(obj: any): any {
   if (Array.isArray(obj)) {
     return obj.map(sortKeys);
@@ -42,12 +50,17 @@ export function getObjectDiff(
 
   if ((obj1 == null) && (obj2 == null)) return diffs;
 
+  // Treat empty objects/arrays as equal to null/undefined to avoid ghost diffs
+  if (isEmptyValue(obj1) && isEmptyValue(obj2)) return diffs;
+
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
     if (obj1 === obj2) return [];
     
     try {
       if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
-    } catch {}
+    } catch(e) {
+      console.warn('Fast array comparison failed:', e);
+    }
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
     const isAddons = lastPath === 'addons';
@@ -108,8 +121,6 @@ export function getObjectDiff(
     const keys2 = obj2.map(getKey);
 
     const canKey =
-      obj1.length > 0 &&
-      obj2.length > 0 && 
       keys1.every(k => k !== null) &&
       keys2.every(k => k !== null) &&
       new Set(keys1).size === obj1.length &&
@@ -269,7 +280,7 @@ export function getObjectDiff(
   for (const key of keys1) {
     if (ignoredKeys.has(key)) continue;
     if (!Object.prototype.hasOwnProperty.call(obj2, key)) {
-       if (obj1[key] == null) continue;
+       if (obj1[key] == null || isEmptyValue(obj1[key])) continue;
       diffs.push({
         path: [...path, key],
         type: 'REMOVE',
@@ -284,7 +295,7 @@ export function getObjectDiff(
     if (ignoredKeys.has(key)) continue;
     
     if (!Object.prototype.hasOwnProperty.call(obj1, key)) {
-      if (obj2[key] == null) continue;
+      if (obj2[key] == null || isEmptyValue(obj2[key])) continue;
       
       diffs.push({
         path: [...path, key],
