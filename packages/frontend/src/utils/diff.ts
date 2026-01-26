@@ -63,8 +63,7 @@ export function getObjectDiff(
     }
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
-    const isAddons = lastPath === 'addons';
-    const isGroupings = lastPath === 'groupings';
+    const isAddons = lastPath === 'addons';    const isPresets = lastPath === 'presets';
     const isRegexPatterns = lastPath && (lastPath.endsWith('RegexPatterns') || lastPath === 'regexPatterns');
     const isStreamExpressions = lastPath && (lastPath.endsWith('StreamExpressions') || lastPath === 'streamExpressions');
     const isMergedCatalogs = lastPath === 'mergedCatalogs';
@@ -85,9 +84,6 @@ export function getObjectDiff(
     if (isAddons) {
       return calculateKeyedArrayDiff(obj1, obj2, 'instanceId', path);
     } 
-    else if (isGroupings) {
-      return calculateKeyedArrayDiff(obj1, obj2, 'name', path);
-    }
     else if (isMergedCatalogs) {
       return calculateKeyedArrayDiff(obj1, obj2, 'id', path);
     }
@@ -143,13 +139,24 @@ export function getObjectDiff(
             newOrder.push(key);
         });
 
+        const getLabel = (key: any) => {
+            const item = newMap.get(key) || oldMap.get(key);
+            if (item?.addons && Array.isArray(item.addons)) {
+                const firstAddon = item.addons[0] || '';
+                const count = item.addons.length;
+                const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
+                return `Group: ${item.condition || 'true'}${summary}`;
+            }
+            return item?.name || item?.options?.name || item?.instanceId || item?.id || key; 
+        };
+
         oldMap.forEach((val, key) => {
             if (!newMap.has(key)) {
                  const originalIndex = obj1.findIndex((i: any) => getKey(i) === key);
                  diffs.push({
                      path: [...path, `[${originalIndex}]`], 
                      type: 'REMOVE',
-                     oldValue: val
+                     oldValue: isPresets ? `Deleted: ${getLabel(key)}` : val
                  });
             }
         });
@@ -175,11 +182,6 @@ export function getObjectDiff(
                               intersectionOld.some((key, i) => key !== intersectionNew[i]);
         
         if (isOrderChanged) {
-              const getLabel = (key: any) => {
-                  const item = newMap.get(key) || oldMap.get(key);
-                  return item?.name || item?.options?.name || item?.instanceId || item?.id || key; 
-              };
-
               diffs.push({
                   path: [...path],
                   type: 'CHANGE',
@@ -192,47 +194,6 @@ export function getObjectDiff(
     }
 
     const len = Math.max(obj1.length, obj2.length);
-
-    const isPermutation = () => {
-        if (!isGroupings) return false;
-
-        if (obj1.length !== obj2.length) return false;
-        try {
-            const count = new Map<string, number>();
-            for (const item of obj1) {
-                const s = JSON.stringify(item);
-                count.set(s, (count.get(s) || 0) + 1);
-            }
-            for (const item of obj2) {
-                const s = JSON.stringify(item);
-                const c = count.get(s);
-                if (!c) return false;
-                count.set(s, c - 1);
-            }
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
-    if (isPermutation()) {
-        const getGroupLabel = (item: any) => {
-            if (item.condition) {
-                 let firstAddon = item.addons?.[0] || '';
-                 const count = item.addons?.length || 0;
-                 const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
-                 return `Group: ${item.condition}${summary}`;
-            }
-            return 'Group';
-        };
-
-        return [{
-             path: [...path],
-             type: 'CHANGE',
-             oldValue: obj1.map(getGroupLabel),
-             newValue: obj2.map(getGroupLabel)
-        }];
-    }
 
     for (let i = 0; i < len; i++) {
         if (i < obj1.length && i < obj2.length) {
