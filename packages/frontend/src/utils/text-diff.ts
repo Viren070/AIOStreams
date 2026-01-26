@@ -13,8 +13,8 @@ export function calculateLineDiff(oldText: string, newText: string): LineDiff[] 
   // Safety check
   if (oldLines.length * newLines.length > 2500000) { // 1500 x 1500 lines
     return [
-      { type: 'remove', content: oldText, oldLineNumber: 1, truncated: true },
-      { type: 'add', content: newText, newLineNumber: 1, truncated: true }
+      { type: 'remove', content: `[Content too large to diff: ${oldLines.length} lines]`, oldLineNumber: 1, truncated: true },
+      { type: 'add', content: `[Content too large to diff: ${newLines.length} lines]`, newLineNumber: 1, truncated: true }
     ];
   }
 
@@ -43,7 +43,7 @@ function computeDiff(oldLines: string[], newLines: string[]): LineDiff[] {
   
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-      diff.unshift({ 
+      diff.push({ 
         type: 'same', 
         content: oldLines[i - 1],
         oldLineNumber: i,
@@ -52,14 +52,14 @@ function computeDiff(oldLines: string[], newLines: string[]): LineDiff[] {
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      diff.unshift({ 
+      diff.push({ 
         type: 'add', 
         content: newLines[j - 1],
         newLineNumber: j
       });
       j--;
     } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
-      diff.unshift({ 
+      diff.push({ 
         type: 'remove', 
         content: oldLines[i - 1],
         oldLineNumber: i
@@ -68,7 +68,7 @@ function computeDiff(oldLines: string[], newLines: string[]): LineDiff[] {
     }
   }
   
-  return diff;
+  return diff.reverse();
 }
 
 

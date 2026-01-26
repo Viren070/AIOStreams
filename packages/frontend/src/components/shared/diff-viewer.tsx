@@ -103,127 +103,134 @@ export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffVi
 }
 
 function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
-    const [currentChangeIndex, setCurrentChangeIndex] = useState(0);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [currentChangeIndex, setCurrentChangeIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-    const changeIndices = useMemo(() => {
-        const indices: number[] = [];
-        let inChangeBlock = false;
+  const changeIndices = useMemo(() => {
+    const indices: number[] = [];
+    let inChangeBlock = false;
 
-        textDiffs.forEach((line, idx) => {
-            if (line.type !== 'same') {
-                if (!inChangeBlock) {
-                    indices.push(idx);
-                    inChangeBlock = true;
-                }
-            } else {
-                inChangeBlock = false;
-            }
-        });
-        
-        return indices;
-    }, [textDiffs]);
-
-    const scrollToChange = useCallback((index: number) => {
-        const lineIndex = changeIndices[index];
-        if (lineIndex !== undefined && lineRefs.current[lineIndex] && scrollContainerRef.current) {
-            const element = lineRefs.current[lineIndex];
-            element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-            });
+    textDiffs.forEach((line, idx) => {
+      if (line.type !== 'same') {
+        if (!inChangeBlock) {
+          indices.push(idx);
+          inChangeBlock = true;
         }
-        setCurrentChangeIndex(index);
-    }, [changeIndices]);
+      } else {
+        inChangeBlock = false;
+      }
+    });
 
-    const handleNext = () => {
-        const nextIndex = (currentChangeIndex + 1) % changeIndices.length;
-        scrollToChange(nextIndex);
+    return indices;
+  }, [textDiffs]);
+
+  const scrollToChange = useCallback((index: number) => {
+    const lineIndex = changeIndices[index];
+    if (lineIndex !== undefined && lineRefs.current[lineIndex] && scrollContainerRef.current) {
+      const element = lineRefs.current[lineIndex];
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+    setCurrentChangeIndex(index);
+  }, [changeIndices]);
+
+  const handleNext = () => {
+    const nextIndex = (currentChangeIndex + 1) % changeIndices.length;
+    scrollToChange(nextIndex);
+  };
+
+  const handlePrev = () => {
+    const prevIndex = (currentChangeIndex - 1 + changeIndices.length) % changeIndices.length;
+    scrollToChange(prevIndex);
+  };
+
+  // Reset index when diffs change
+  useEffect(() => {
+    setCurrentChangeIndex(0);
+    // Reset refs array sizing
+    lineRefs.current = lineRefs.current.slice(0, textDiffs.length);
+
+    // Auto-scroll to first change if exists
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (changeIndices.length > 0) {
+      // Small timeout to ensure rendering is complete before scrolling
+      timeoutId = setTimeout(() => scrollToChange(0), 100);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
     };
+  }, [textDiffs, changeIndices, scrollToChange]);
 
-    const handlePrev = () => {
-        const prevIndex = (currentChangeIndex - 1 + changeIndices.length) % changeIndices.length;
-        scrollToChange(prevIndex);
-    };
+  // Check for truncation and show toast
+  useEffect(() => {
+    if (textDiffs.some(diff => diff.truncated)) {
+      toast.warning('Large File Detected: Diff simplified for performance.', {
+        id: 'large-file-warning'
+      });
+    }
+  }, [textDiffs]);
 
-    // Reset index when diffs change
-    useEffect(() => {
-        setCurrentChangeIndex(0);
-        // Reset refs array sizing
-        lineRefs.current = lineRefs.current.slice(0, textDiffs.length);
-
-        // Auto-scroll to first change if exists
-        if (changeIndices.length > 0) {
-            // Small timeout to ensure rendering is complete before scrolling
-            setTimeout(() => scrollToChange(0), 100);
-        }
-    }, [textDiffs, changeIndices, scrollToChange]);
-
-    // Check for truncation and show toast
-    useEffect(() => {
-        if (textDiffs.some(diff => diff.truncated)) {
-            toast.warning('Large File Detected: Diff simplified for performance.', {
-                id: 'large-file-warning'
-            });
-        }
-    }, [textDiffs]);
-
-    return (
-        <>
-            {changeIndices.length > 0 && (
-                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-gray-900/90 border border-gray-700 rounded-md p-1.5 shadow-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <span className="text-xs text-gray-400 font-mono px-2 select-none">
-                        {currentChangeIndex + 1} / {changeIndices.length}
-                    </span>
-                    <div className="h-4 w-px bg-gray-700 mx-1" />
-                    <Button
-                        className="h-7 w-7 p-0 hover:bg-gray-800 bg-transparent"
-                        onClick={handlePrev}
-                        title="Previous Change"
-                    >
-                        <ChevronUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        className="h-7 w-7 p-0 hover:bg-gray-800 bg-transparent"
-                        onClick={handleNext}
-                        title="Next Change"
-                    >
-                        <ChevronDown className="h-4 w-4" />
-                    </Button>
-                </div>
-            )}
-            
-            <div ref={scrollContainerRef} className="overflow-y-auto custom-scrollbar p-4 flex-1 font-mono text-xs">
-                <div className="flex flex-col">
-                    {textDiffs.map((line, idx) => (
-                    <div 
-                        key={idx}
-                        ref={(el) => { lineRefs.current[idx] = el; }}
-                        className={`flex ${
-                        line.type === 'add' ? 'bg-green-900/20 text-green-300' : 
-                        line.type === 'remove' ? 'bg-red-900/20 text-red-300' : 
-                        'text-gray-400'
-                        } ${idx === changeIndices[currentChangeIndex] ? 'ring-1 ring-blue-500/50' : ''}`}
-                    >
-                        <div className="w-8 shrink-0 text-right pr-3 select-none text-gray-600 border-r border-gray-800 mr-2">
-                            {line.oldLineNumber || ' '}
-                        </div>
-                        <div className="w-8 shrink-0 text-right pr-3 select-none text-gray-600 border-r border-gray-800 mr-2">
-                            {line.newLineNumber || ' '}
-                        </div>
-                        <pre className="whitespace-pre-wrap break-all flex-1">
-                        {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '} {line.content}
-                        </pre>
-                    </div>
-                    ))}
-                    {textDiffs.length === 0 && (
-                        <div className="text-center p-4 text-[--muted]">No raw JSON available for comparison.</div>
-                    )}
-                </div>
+  return (
+    <>
+      {changeIndices.length > 0 && (
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-gray-900/90 border border-gray-700 rounded-md p-1.5 shadow-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <span className="text-xs text-gray-400 font-mono px-2 select-none">
+            {currentChangeIndex + 1} / {changeIndices.length}
+          </span>
+          <div className="h-4 w-px bg-gray-700 mx-1" />
+          <Button
+            className="h-7 w-7 p-0 hover:bg-gray-800 bg-transparent"
+            onClick={handlePrev}
+            title="Previous Change"
+            aria-label="Previous Change"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button
+            className="h-7 w-7 p-0 hover:bg-gray-800 bg-transparent"
+            onClick={handleNext}
+            title="Next Change"
+            aria-label="Next Change"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
+      <div ref={scrollContainerRef} className="overflow-y-auto custom-scrollbar p-4 flex-1 font-mono text-xs">
+        <div className="flex flex-col">
+          {textDiffs.map((line, idx) => (
+            <div 
+              key={idx}
+              ref={(el) => { lineRefs.current[idx] = el; }}
+              className={`flex ${
+                line.type === 'add' ? 'bg-green-900/20 text-green-300' : 
+                line.type === 'remove' ? 'bg-red-900/20 text-red-300' : 
+                'text-gray-400'
+              } ${idx === changeIndices[currentChangeIndex] ? 'ring-1 ring-blue-500/50' : ''}`}
+            >
+              <div className="w-8 shrink-0 text-right pr-3 select-none text-gray-600 border-r border-gray-800 mr-2">
+                {line.oldLineNumber || ' '}
+              </div>
+              <div className="w-8 shrink-0 text-right pr-3 select-none text-gray-600 border-r border-gray-800 mr-2">
+                {line.newLineNumber || ' '}
+              </div>
+              <pre className="whitespace-pre-wrap break-all flex-1">
+                {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '} {line.content}
+              </pre>
             </div>
-        </>
-    );
+          ))}
+          {textDiffs.length === 0 && (
+            <div className="text-center p-4 text-[--muted]">No raw JSON available for comparison.</div>
+          )}
+        </div>
+      </div>
+    </>
+  );
 }
 
 function Badge({ type }: { type: string }) {
