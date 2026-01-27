@@ -163,7 +163,42 @@ export function applyMigrations(config: any): UserData {
 
   return config;
 }
-const DefaultUserData: UserData = {
+
+export function removeInvalidPresetReferences(config: UserData) {
+  // remove references to non-existent presets in options:
+  const existingPresetIds = config.presets?.map((preset) => preset.instanceId);
+  if (config.proxy) {
+    config.proxy.proxiedAddons = config.proxy.proxiedAddons?.filter((addon) =>
+      existingPresetIds?.includes(addon)
+    );
+  }
+  if (config.yearMatching) {
+    config.yearMatching.addons = config.yearMatching.addons?.filter((addon) =>
+      existingPresetIds?.includes(addon)
+    );
+  }
+  if (config.titleMatching) {
+    config.titleMatching.addons = config.titleMatching.addons?.filter((addon) =>
+      existingPresetIds?.includes(addon)
+    );
+  }
+  if (config.seasonEpisodeMatching) {
+    config.seasonEpisodeMatching.addons =
+      config.seasonEpisodeMatching.addons?.filter((addon) =>
+        existingPresetIds?.includes(addon)
+      );
+  }
+  if (config.groups?.groupings) {
+    config.groups.groupings = config.groups.groupings.map((group) => ({
+      ...group,
+      addons: group.addons?.filter((addon) =>
+        existingPresetIds?.includes(addon)
+      ),
+    }));
+  }
+  return config;
+}
+export const DefaultUserData: UserData = {
   services: Object.values(SERVICE_DETAILS).map((service) => ({
     id: service.id,
     enabled: false,
