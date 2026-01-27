@@ -570,7 +570,7 @@ class StreamParser {
         arrayMerge(folderParsed?.languages, fileParsed?.languages),
         this.getLanguages(stream, parsedStream)
       ),
-      seasonPack: folderParsed?.seasonPack || fileParsed?.seasonPack,
+      seasonPack,
     };
   }
 
