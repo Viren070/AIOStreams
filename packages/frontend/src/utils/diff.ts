@@ -67,6 +67,7 @@ export function getObjectDiff(
     const isPresets = lastPath === 'presets';
     const isRegexPatterns = lastPath && (lastPath.endsWith('RegexPatterns') || lastPath === 'regexPatterns');
     const isStreamExpressions = lastPath && (lastPath.endsWith('StreamExpressions') || lastPath === 'streamExpressions');
+    const isCatalogModifications = lastPath === 'catalogModifications';
     const isMergedCatalogs = lastPath === 'mergedCatalogs';
     const isProxiedList = lastPath === 'proxiedAddons' || lastPath === 'proxiedServices';
     
@@ -84,6 +85,9 @@ export function getObjectDiff(
 
     if (isAddons) {
       return calculateKeyedArrayDiff(obj1, obj2, 'instanceId', path);
+    } 
+    else if (isCatalogModifications) {
+      return calculateKeyedArrayDiff(obj1, obj2, (item) => `${item.id}_${item.type}`, path);
     } 
     else if (isMergedCatalogs) {
       return calculateKeyedArrayDiff(obj1, obj2, 'id', path);
@@ -349,7 +353,12 @@ function calculateKeyedArrayDiff(
   if (isOrderChanged) {
     const getLabel = (k: any) => {
       const item = newMap.get(k) || oldMap.get(k);
-      if (item?.name) return item.name;
+      if (item?.name) {
+        if (item.type && (path.includes('catalogModifications') || path[path.length-1] === 'catalogModifications')) {
+          return `${item.name} (${item.type})`;
+        }
+        return item.name;
+      }
       if (item?.pattern) return item.pattern;
       if (item?.instanceId) return item.instanceId;
       return k;
