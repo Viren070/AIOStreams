@@ -234,6 +234,39 @@ const DefaultUserData: UserData = {
     uncached: 'per_service',
     p2p: 'single_result',
   },
+  autoPlay: {
+    enabled: true,
+    method: 'matchingFile',
+    attributes: ['resolution', 'quality', 'releaseGroup'],
+  },
+  cacheAndPlay: {
+    enabled: false,
+    streamTypes: ['usenet'],
+  },
+  statistics: {
+    enabled: false,
+    position: 'bottom',
+    statsToShow: ['addon', 'filter'],
+  },
+  digitalReleaseFilter: {
+    enabled: false,
+    tolerance: 0,
+    requestTypes: [],
+    addons: [],
+  },
+  ageRangeTypes: ['usenet'],
+  seasonEpisodeMatching: {
+    addons: [],
+    requestTypes: [],
+  },
+  yearMatching: {
+    addons: [],
+    requestTypes: [],
+  },
+  titleMatching: {
+    addons: [],
+    requestTypes: [],
+  },
 };
 
 interface UserDataContextType {
