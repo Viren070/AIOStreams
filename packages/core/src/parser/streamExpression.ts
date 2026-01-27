@@ -1222,9 +1222,9 @@ export class StreamSelector extends StreamExpressionEngine {
     this.parser.consts.title = context.title ?? '';
     this.parser.consts.year = context.year ?? 0;
     this.parser.consts.yearEnd = context.yearEnd ?? 0;
-    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
     this.parser.consts.runtime = context.runtime ?? 0;
-    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? 0;
+    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
     this.parser.consts.originalLanguage = context.originalLanguage ?? '';
     this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
   }
