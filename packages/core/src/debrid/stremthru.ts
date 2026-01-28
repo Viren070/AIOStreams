@@ -193,6 +193,37 @@ export class StremThruInterface implements DebridService {
     }
   }
 
+  public async addTorrent(downloadUrl: string): Promise<DebridDownload> {
+    try {
+      const result = await this.stremthru.store.addMagnet({
+        torrent: downloadUrl,
+      });
+      assert.ok(
+        result?.data,
+        `Missing data from StremThru addTorrent: ${JSON.stringify(result)}`
+      );
+      result.data.files = result.data.files ?? [];
+
+      return {
+        id: result.data.id,
+        status: result.data.status,
+        hash: result.data.hash,
+        size: result.data.files.reduce((acc, file) => acc + file.size, 0),
+        files: result.data.files.map((file) => ({
+          name: file.name,
+          size: file.size,
+          link: file.link,
+          path: file.path,
+          index: file.index,
+        })),
+      };
+    } catch (error) {
+      throw error instanceof StremThruError
+        ? convertStremThruError(error)
+        : error;
+    }
+  }
+
   public async generateTorrentLink(
     link: string,
     clientIp?: string
@@ -257,14 +288,6 @@ export class StremThruInterface implements DebridService {
     const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}`;
     const cachedLink = await StremThruInterface.playbackLinkCache.get(cacheKey);
 
-    let magnet = `magnet:?xt=urn:btih:${hash}`;
-    if (playbackInfo.filename) {
-      magnet += `&dn=${playbackInfo.filename}`;
-    }
-    if (playbackInfo.sources.length > 0) {
-      magnet += `&tr=${playbackInfo.sources.join('&tr=')}`;
-    }
-
     if (cachedLink !== undefined) {
       logger.debug(`Using cached link for ${hash}`);
       if (cachedLink === null) {
@@ -276,14 +299,36 @@ export class StremThruInterface implements DebridService {
       }
     }
 
-    logger.debug(`Adding magnet to ${this.serviceName} for ${magnet}`);
+    let magnetDownload: DebridDownload;
+    if (playbackInfo.downloadUrl) {
+      logger.debug(
+        `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
+      );
 
-    let magnetDownload = await this.addMagnet(magnet);
+      magnetDownload = await this.addTorrent(playbackInfo.downloadUrl);
 
-    logger.debug(`Magnet download added for ${magnet}`, {
-      status: magnetDownload.status,
-      id: magnetDownload.id,
-    });
+      logger.debug(`Torrent added for ${playbackInfo.downloadUrl}`, {
+        status: magnetDownload.status,
+        id: magnetDownload.id,
+      });
+    } else {
+      let magnet = `magnet:?xt=urn:btih:${hash}`;
+      if (playbackInfo.filename) {
+        magnet += `&dn=${playbackInfo.filename}`;
+      }
+      if (playbackInfo.sources.length > 0) {
+        magnet += `&tr=${playbackInfo.sources.join('&tr=')}`;
+      }
+
+      logger.debug(`Adding magnet to ${this.serviceName} for ${magnet}`);
+
+      magnetDownload = await this.addMagnet(magnet);
+
+      logger.debug(`Magnet download added for ${magnet}`, {
+        status: magnetDownload.status,
+        id: magnetDownload.id,
+      });
+    }
 
     if (magnetDownload.status !== 'downloaded') {
       // temporarily cache the null value for 1m

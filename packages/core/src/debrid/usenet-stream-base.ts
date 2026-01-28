@@ -580,6 +580,10 @@ export abstract class UsenetStreamService implements DebridService {
     throw new Error('Unsupported operation');
   }
 
+  public async addTorrent(downloadFile: string): Promise<DebridDownload> {
+    throw new Error('Unsupported operation');
+  }
+
   public async generateTorrentLink(
     link: string,
     clientIp?: string
