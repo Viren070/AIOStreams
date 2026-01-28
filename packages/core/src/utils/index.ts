@@ -21,3 +21,5 @@ export * from './regex.js';
 export * from './general.js';
 export * from './seadex.js';
 export * from './nzb-proxy.js';
+
+export * from './subdetect.js';
