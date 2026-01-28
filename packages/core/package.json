@@ -26,7 +26,7 @@
     "redis": "^5.10.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
-    "stremthru": "^0.10.0",
+    "stremthru": "^0.11.0",
     "super-regex": "^1.1.0",
     "undici": "^7.16.0",
     "user-agents": "^1.1.669",

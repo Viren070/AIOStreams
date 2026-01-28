@@ -125,6 +125,7 @@ const BaseFileInfoSchema = z.object({
 });
 
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
+  downloadUrl: z.string().optional(),
   hash: z.string(),
   private: z.boolean().default(false),
   sources: z.array(z.string()),
@@ -176,6 +177,7 @@ export interface DebridService {
   checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]>;
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
+  addTorrent(downloadUrl: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
 
   // Usenet specific methods
