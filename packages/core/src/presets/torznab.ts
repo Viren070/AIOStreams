@@ -1,24 +1,10 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Addon, Option, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { Env, RESOURCES, ServiceId, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { BuiltinAddonPreset } from './builtin.js';
-import { StreamParser } from '../parser';
-
-export class TorznabStreamParser extends StreamParser {
-  protected override isPrivate(
-    stream: Stream,
-    _currentParsedStream: ParsedStream
-  ): boolean | undefined {
-    return stream.name?.includes('🔑') ? true : false;
-  }
-}
 
 export class TorznabPreset extends BuiltinAddonPreset {
-  static override getParser(): typeof StreamParser {
-    return TorznabStreamParser;
-  }
-
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
     const options: Option[] = [
