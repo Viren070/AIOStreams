@@ -125,6 +125,7 @@ router.get(
               type: 'torrent',
               metadata: metadata,
               hash: fileInfo.hash,
+              private: fileInfo.private,
               sources: fileInfo.sources,
               index: fileInfo.index,
               filename: filename,
