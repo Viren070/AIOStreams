@@ -1715,7 +1715,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   SUBHERO_URL: url({
-    default: 'https://subhero.onrender.com',
+    default: 'https://subhero.chromeknight.dev',
     desc: 'SubHero URL',
   }),
   DEFAULT_SUBHERO_TIMEOUT: num({
