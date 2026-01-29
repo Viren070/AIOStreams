@@ -165,8 +165,8 @@ export class StremThruInterface implements DebridService {
     return await this._addMagnet({ magnet });
   }
 
-  public async addTorrent(downloadUrl: string): Promise<DebridDownload> {
-    return await this._addMagnet({ torrent: downloadUrl });
+  public async addTorrent(torrent: string): Promise<DebridDownload> {
+    return await this._addMagnet({ torrent });
   }
 
   public async _addMagnet(

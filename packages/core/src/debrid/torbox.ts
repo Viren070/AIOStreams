@@ -84,8 +84,8 @@ export class TorboxDebridService implements DebridService {
     return this.stremthru.addMagnet(magnet);
   }
 
-  public async addTorrent(downloadUrl: string): Promise<DebridDownload> {
-    return this.stremthru.addTorrent(downloadUrl);
+  public async addTorrent(torrent: string): Promise<DebridDownload> {
+    return this.stremthru.addTorrent(torrent);
   }
 
   public async generateTorrentLink(

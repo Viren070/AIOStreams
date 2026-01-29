@@ -36,7 +36,7 @@ export class StremioNNTPService implements DebridService {
     throw new Error('Method not implemented.');
   }
 
-  addTorrent(downloadUrl: string): Promise<DebridDownload> {
+  addTorrent(torrent: string): Promise<DebridDownload> {
     throw new Error('Method not implemented.');
   }
 

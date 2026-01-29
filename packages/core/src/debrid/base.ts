@@ -177,7 +177,7 @@ export interface DebridService {
   checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]>;
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
-  addTorrent(downloadUrl: string): Promise<DebridDownload>;
+  addTorrent(torrent: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
 
   // Usenet specific methods
