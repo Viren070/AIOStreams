@@ -73,7 +73,6 @@ export class StremThruInterface implements DebridService {
       logger.debug(`Removed magnet ${magnetId} from ${this.serviceName}`);
     } catch (error) {
       if (error instanceof StremThruError) {
-
         throw convertStremThruError(error);
       }
       throw error;
@@ -163,44 +162,23 @@ export class StremThruInterface implements DebridService {
   }
 
   public async addMagnet(magnet: string): Promise<DebridDownload> {
-    try {
-      const result = await this.stremthru.store.addMagnet({
-        magnet,
-      });
-      assert.ok(
-        result?.data,
-        `Missing data from StremThru addMagnet: ${JSON.stringify(result)}`
-      );
-      result.data.files = result.data.files ?? [];
-
-      return {
-        id: result.data.id,
-        status: result.data.status,
-        hash: result.data.hash,
-        size: result.data.files.reduce((acc, file) => acc + file.size, 0),
-        files: result.data.files.map((file) => ({
-          name: file.name,
-          size: file.size,
-          link: file.link,
-          path: file.path,
-          index: file.index,
-        })),
-      };
-    } catch (error) {
-      throw error instanceof StremThruError
-        ? convertStremThruError(error)
-        : error;
-    }
+    return await this._addMagnet({ magnet });
   }
 
   public async addTorrent(downloadUrl: string): Promise<DebridDownload> {
+    return await this._addMagnet({ torrent: downloadUrl });
+  }
+
+  public async _addMagnet(
+    input:
+      | { magnet: string; torrent?: never }
+      | { magnet?: never; torrent: File | string }
+  ): Promise<DebridDownload> {
     try {
-      const result = await this.stremthru.store.addMagnet({
-        torrent: downloadUrl,
-      });
+      const result = await this.stremthru.store.addMagnet(input);
       assert.ok(
         result?.data,
-        `Missing data from StremThru addTorrent: ${JSON.stringify(result)}`
+        `Missing data from StremThru addMagnet: ${JSON.stringify(result)}`
       );
       result.data.files = result.data.files ?? [];
 
@@ -437,7 +415,6 @@ export class StremThruInterface implements DebridService {
           `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`
         );
       });
-
     }
 
     return playbackLink;
