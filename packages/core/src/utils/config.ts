@@ -27,6 +27,7 @@ import { z, ZodError } from 'zod';
 import {
   ExitConditionEvaluator,
   GroupConditionEvaluator,
+  PrecacheConditionEvaluator,
   StreamSelector,
 } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
@@ -401,6 +402,15 @@ export async function validateConfig(
     }
   }
 
+  // validate precache condition
+  if (config.precacheCondition) {
+    try {
+      await PrecacheConditionEvaluator.testEvaluate(config.precacheCondition);
+    } catch (error) {
+      throw new Error(`Invalid precache condition: ${error}`);
+    }
+  }
+
   if (config.services) {
     config.services = config.services.map((service: Service) =>
       validateService(service, options?.decryptValues)
@@ -685,6 +695,15 @@ export function applyMigrations(config: any): UserData {
       delete mod.rpdb;
     }
   }
+
+  // migrate alwaysPrecache to precacheCondition
+  if (config.precacheCondition === undefined && config.precacheNextEpisode) {
+    config.precacheCondition =
+      config.alwaysPrecache === true
+        ? 'true'
+        : constants.DEFAULT_PRECACHE_CONDITION;
+  }
+  delete config.alwaysPrecache;
 
   return config;
 }

@@ -157,7 +157,8 @@ export class StreamContext {
       // Always fetch if user might need genres in expressions
       this.userData.excludedStreamExpressions?.length ||
       this.userData.requiredStreamExpressions?.length ||
-      this.userData.includedStreamExpressions?.length;
+      this.userData.includedStreamExpressions?.length ||
+      (this.userData.precacheNextEpisode && this.type === 'series');
 
     if (!needsMetadata || !this.parsedId) {
       this._metadataFetched = true;

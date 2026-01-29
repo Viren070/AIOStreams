@@ -47,8 +47,8 @@ import {
   StreamContext,
 } from './streams/index.js';
 import { getAddonName } from './utils/general.js';
-import { TMDBMetadata } from './metadata/tmdb.js';
 import { Metadata } from './metadata/utils.js';
+import { PrecacheConditionEvaluator } from './parser/streamExpression.js';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
@@ -230,7 +230,7 @@ export class AIOStreams {
       }
       if (precache) {
         setImmediate(() => {
-          this.precacheNextEpisode(type, id).catch((error) => {
+          this.precacheNextEpisode(context).catch((error) => {
             logger.error('Error during precaching:', {
               error: error instanceof Error ? error.message : String(error),
               type,
@@ -2114,24 +2114,6 @@ export class AIOStreams {
     });
   }
 
-  private async getMetadata(parsedId: ParsedId): Promise<Metadata | undefined> {
-    try {
-      const metadata = await new TMDBMetadata({
-        accessToken: this.userData.tmdbAccessToken,
-        apiKey: this.userData.tmdbApiKey,
-      }).getMetadata(parsedId);
-      return metadata;
-    } catch (error) {
-      logger.warn(
-        `Error getting metadata for ${parsedId.fullId}, will not be able to precache next season if necessary`,
-        {
-          error: error instanceof Error ? error.message : String(error),
-        }
-      );
-      return undefined;
-    }
-  }
-
   private _getNextEpisode(
     currentSeason: number | undefined,
     currentEpisode: number,
@@ -2272,8 +2254,8 @@ export class AIOStreams {
     return initialResponse;
   }
 
-  private async precacheNextEpisode(type: string, id: string) {
-    const parsedId = IdParser.parse(id, type);
+  private async precacheNextEpisode(context: StreamContext) {
+    const { type, id, parsedId } = context;
     if (!parsedId) {
       return;
     }
@@ -2286,7 +2268,7 @@ export class AIOStreams {
       return;
     }
 
-    const metadata = await this.getMetadata(parsedId);
+    const metadata = await context.getMetadata();
 
     const { season: seasonToPrecache, episode: episodeToPrecache } =
       this._getNextEpisode(currentSeason, currentEpisode, metadata);
@@ -2319,21 +2301,37 @@ export class AIOStreams {
       return;
     }
 
-    const serviceStreams = nextStreamsResponse.data.streams.filter(
-      (stream) => stream.service
-    );
-    const shouldPrecache =
-      serviceStreams.every((stream) => stream.service?.cached === false) ||
-      this.userData.alwaysPrecache;
+    const nextStreams = nextStreamsResponse.data.streams;
+
+    // Evaluate precache condition on the next episode's streams
+    let shouldPrecache = false;
+    const condition =
+      this.userData.precacheCondition || constants.DEFAULT_PRECACHE_CONDITION;
+    try {
+      const evaluator = new PrecacheConditionEvaluator(
+        nextStreams,
+        context.toExpressionContext()
+      );
+      shouldPrecache = await evaluator.evaluate(condition);
+      logger.debug(`Precache condition evaluated`, {
+        condition,
+        result: shouldPrecache,
+      });
+    } catch (error) {
+      logger.error(`Failed to evaluate precache condition`, {
+        condition,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     if (!shouldPrecache) {
       logger.debug(
-        `Skipping precaching ${id} as all streams are cached or Always Precache is disabled`
+        `Skipping precaching ${id} as precache condition was not met`
       );
       return;
     }
 
-    const firstUncachedStream = serviceStreams.find(
+    const firstUncachedStream = nextStreams.find(
       (stream) => stream.service?.cached === false
     );
     if (!firstUncachedStream || !firstUncachedStream.url) {

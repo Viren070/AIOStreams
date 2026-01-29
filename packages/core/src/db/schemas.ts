@@ -568,7 +568,9 @@ export const UserDataSchema = z.object({
     })
     .optional(),
   precacheNextEpisode: z.boolean().optional(),
+  /** @deprecated Use precacheCondition instead */
   alwaysPrecache: z.boolean().optional(),
+  precacheCondition: z.string().optional(),
   services: ServiceList.optional(),
   presets: PresetList,
   catalogModifications: z.array(CatalogModification).optional(),

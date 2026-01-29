@@ -17,6 +17,7 @@ import { Select } from '../ui/select';
 import { Alert } from '../ui/alert';
 import { useMode } from '@/context/mode';
 import { NumberInput } from '../ui/number-input/number-input';
+import { TextInput } from '../ui/text-input';
 
 export function MiscellaneousMenu() {
   return (
@@ -60,16 +61,16 @@ function Content() {
               }));
             }}
           />
-          <Switch
-            label="Always Pre-cache"
-            help="If enabled, AIOStreams will always attempt to precache the next episode of a series, even if there is already a cached stream available."
-            side="right"
+          <TextInput
+            label="Precache Condition"
+            help="A SEL expression that determines whether to precache or not. Executed on the next episodes streams. If not set, precaching only occurs when all streams are uncached. Set to 'true' to always precache. Has access to the same constants as expression filters (streams, queryType, isAnime, etc.)."
+            placeholder="e.g., true or queryType == 'anime.series'"
             disabled={!userData.precacheNextEpisode}
-            value={userData.alwaysPrecache}
+            value={userData.precacheCondition ?? ''}
             onValueChange={(value) => {
               setUserData((prev) => ({
                 ...prev,
-                alwaysPrecache: value,
+                precacheCondition: value || undefined,
               }));
             }}
           />

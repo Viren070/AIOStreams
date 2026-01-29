@@ -4,6 +4,7 @@ import {
   QUALITIES,
   RESOLUTIONS,
   SERVICE_DETAILS,
+  DEFAULT_PRECACHE_CONDITION,
 } from '../../../core/src/utils/constants';
 import { useStatus } from './status';
 
@@ -161,6 +162,13 @@ export function applyMigrations(config: any): UserData {
     }
   }
 
+  // migrate alwaysPrecache to precacheCondition
+  if (config.precacheCondition === undefined && config.precacheNextEpisode) {
+    config.precacheCondition =
+      config.alwaysPrecache === true ? 'true' : DEFAULT_PRECACHE_CONDITION;
+  }
+  delete config.alwaysPrecache;
+
   return config;
 }
 
@@ -302,6 +310,7 @@ export const DefaultUserData: UserData = {
     addons: [],
     requestTypes: [],
   },
+  precacheCondition: DEFAULT_PRECACHE_CONDITION,
 };
 
 interface UserDataContextType {

@@ -132,6 +132,8 @@ const API_VERSION = 1;
 
 export const REDIS_PREFIX = 'aiostreams:';
 
+export const DEFAULT_PRECACHE_CONDITION = 'count(cached(streams)) == 0';
+
 export const GDRIVE_FORMATTER = 'gdrive';
 export const LIGHT_GDRIVE_FORMATTER = 'lightgdrive';
 export const MINIMALISTIC_GDRIVE_FORMATTER = 'minimalisticgdrive';

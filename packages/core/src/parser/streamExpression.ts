@@ -1180,6 +1180,41 @@ export class ExitConditionEvaluator extends StreamExpressionEngine {
   }
 }
 
+export class PrecacheConditionEvaluator extends StreamExpressionEngine {
+  constructor(streams: ParsedStream[], context: ExpressionContext) {
+    super();
+    this.parser.consts.streams = streams;
+    this.parser.consts.queryType = context.queryType ?? '';
+    this.parser.consts.isAnime = context.isAnime ?? false;
+    this.parser.consts.season = context.season ?? -1;
+    this.parser.consts.episode = context.episode ?? -1;
+    this.parser.consts.genres = context.genres ?? [];
+    this.parser.consts.title = context.title ?? '';
+    this.parser.consts.year = context.year ?? 0;
+    this.parser.consts.yearEnd = context.yearEnd ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
+    this.parser.consts.runtime = context.runtime ?? 0;
+    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
+    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
+    this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+  }
+
+  async evaluate(condition: string): Promise<boolean> {
+    const result = await this.evaluateCondition(condition);
+    if (typeof result !== 'boolean') {
+      throw new Error(
+        `Precache condition must evaluate to a boolean, got: ${typeof result}`
+      );
+    }
+    return result;
+  }
+
+  static async testEvaluate(condition: string): Promise<boolean> {
+    const parser = new PrecacheConditionEvaluator([], { queryType: 'series' });
+    return await parser.evaluate(condition);
+  }
+}
+
 export class GroupConditionEvaluator extends StreamExpressionEngine {
   private previousStreams: ParsedStream[];
   private totalStreams: ParsedStream[];
