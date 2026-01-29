@@ -324,7 +324,7 @@ class StreamFilterer {
                 );
                 return;
               }
-            } else if (parsedId?.episode && stream.parsedFile.seasons.length === 1) {
+            } else if (parsedId?.episode && parsedId?.season && seasonNum === Number(parsedId.season)) {
               const episodeNum = Number(parsedId.episode);
               if (episodeNum > seasonData.episode_count) {
                 logger.debug(
