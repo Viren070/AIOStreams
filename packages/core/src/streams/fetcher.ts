@@ -260,36 +260,63 @@ class StreamFetcher {
 
         let activePromises = addons.length;
         let resolved: boolean = false;
+        let checkingPromise: Promise<void> | null = null;
         const timeouts: NodeJS.Timeout[] = [];
         if (activePromises === 0) {
           resolve();
           return;
         }
 
-        const checkExit = async () => {
+        const doResolve = (stillFetching: number) => {
           if (resolved) return;
-          const timeTaken = Date.now() - start;
-          const evaluator = new ExitConditionEvaluator(
-            allStreams,
-            timeTaken,
-            queryType,
-            queriedAddons,
-            allAddons
+          resolved = true;
+          timeouts.forEach(clearTimeout);
+          logger.info(
+            `Exit condition met with results from ${queriedAddons.length} addons. (${stillFetching} addons still fetching) Returning results.`
           );
+          resolve();
+        };
 
-          const shouldExit = await evaluator.evaluate(condition);
-          logger.debug(`Evaluated exit condition`, {
-            shouldExit,
-            queriedAddons,
-          });
-          if (shouldExit) {
-            logger.info(
-              // subtract 1 because this function is awaited before activePromises is decremented
-              `Exit condition met with results from ${queriedAddons.length} addons. (${activePromises - 1} addons still fetching) Returning results.`
-            );
-            resolved = true;
-            resolve();
+        const checkExit = async (fromAddonCompletion: boolean) => {
+          if (resolved) return;
+          // If already checking, wait for that check to complete instead of skipping
+          if (checkingPromise) {
+            await checkingPromise;
+            return;
           }
+
+          checkingPromise = (async () => {
+            try {
+              if (resolved) return;
+              const timeTaken = Date.now() - start;
+              // Take a snapshot of current streams for evaluation
+              const streamsSnapshot = [...allStreams];
+              const evaluator = new ExitConditionEvaluator(
+                await this.deduplicate.deduplicate(streamsSnapshot),
+                timeTaken,
+                queryType,
+                [...queriedAddons],
+                allAddons
+              );
+
+              const shouldExit = await evaluator.evaluate(condition);
+              logger.debug(`Evaluated exit condition`, {
+                shouldExit,
+                queriedAddons,
+              });
+              if (shouldExit && !resolved) {
+                // If triggered by addon completion, that addon hasn't decremented activePromises yet
+                const stillFetching = fromAddonCompletion
+                  ? activePromises - 1
+                  : activePromises;
+                doResolve(stillFetching);
+              }
+            } finally {
+              checkingPromise = null;
+            }
+          })();
+
+          await checkingPromise;
         };
 
         checkpointTimes.forEach((checkpointTime) => {
@@ -299,7 +326,7 @@ class StreamFetcher {
                 checkpoint: checkpointTime,
                 time: (performance.now() - addonFetchStartTime).toFixed(0),
               });
-              checkExit();
+              checkExit(false);
             }
           }, checkpointTime + 50);
           timeouts.push(timeout);
@@ -319,15 +346,15 @@ class StreamFetcher {
                 queriedAddons.push(addon.name);
               }
 
-              const newStreams = [...allStreams, ...result.streams];
-              allStreams = await this.deduplicate.deduplicate(newStreams);
+              allStreams.push(...result.streams);
               allErrors.push(...result.errors);
               if (result.statistics) {
                 allStatisticStreams.push(...result.statistics);
               }
-              await checkExit();
+              await checkExit(true);
             })
             .catch((error) => {
+              if (resolved) return;
               logger.error(
                 `Unhandled error from fetchAndProcessAddons for ${getAddonName(addon)}:`,
                 error
@@ -341,6 +368,9 @@ class StreamFetcher {
             .finally(() => {
               activePromises--;
               if (activePromises === 0 && !resolved) {
+                logger.info(
+                  `All ${addons.length} addons finished fetching. Returning results.`
+                );
                 resolved = true;
                 timeouts.forEach(clearTimeout);
                 resolve();
