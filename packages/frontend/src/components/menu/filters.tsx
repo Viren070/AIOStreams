@@ -4028,6 +4028,9 @@ function RankedExpressionInputs({
               value={value.score}
               label="Score"
               onValueChange={(newValue) => onScoreChange(newValue ?? 0, index)}
+              min={-1_000_000}
+              max={1_000_000}
+              step={50}
             />
           </div>
           <IconButton

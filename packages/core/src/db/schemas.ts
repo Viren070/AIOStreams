@@ -447,7 +447,7 @@ export const UserDataSchema = z.object({
     .array(
       z.object({
         expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
-        score: z.number(),
+        score: z.number().min(-1_000_000).max(1_000_000),
       })
     )
     .optional(),
