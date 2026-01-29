@@ -55,6 +55,16 @@ class StreamDeduplicator {
       }
     }
 
+// START change 1 - add map for library status
+    // Map stream ID -> stream for quick access to library status
+    const idToStreamMap = new Map(streams.map((s) => [s.id, s]));
+// START change 1
+
+// START change 2 - initialize normalisedFilename for later use
+      // Ensure normalisedFilename is always in scope
+      let normalisedFilename: string | undefined;
+// END change 2
+
     // Process ALL streams (including excluded ones) for deduplication grouping
     for (const stream of streams) {
       // Create a unique key based on the selected deduplication methods
@@ -62,7 +72,9 @@ class StreamDeduplicator {
       const currentStreamKeyStrings: string[] = [];
 
       if (deduplicationKeys.includes('filename') && stream.filename) {
-        let normalisedFilename = stream.filename
+// START change 6 - use initialized var
+        normalisedFilename = stream.filename
+// END change 6
           .replace(
             /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
             ''
@@ -95,11 +107,28 @@ class StreamDeduplicator {
         currentStreamKeyStrings.push(`smartDetect:${hash}`);
       }
 
+// START change 3 - dedup library streams
+      // Library-only deduplication key so library streams dedupe among themselves
+      // without affecting non-library streams
+      if (stream.library && normalisedFilename) {
+        currentStreamKeyStrings.push(`library:${normalisedFilename}`);
+      }
+// END change 3
+
       if (currentStreamKeyStrings.length > 0) {
         for (const key of currentStreamKeyStrings) {
           if (!keyToStreamIds.has(key)) {
             keyToStreamIds.set(key, []);
           }
+
+// START change 4 - prefer library streams in dedup
+          const existingStreamIds = keyToStreamIds.get(key)!;
+          const hasConflict = existingStreamIds.some(
+            (id) => idToStreamMap.get(id)?.library !== stream.library
+          );
+          if (hasConflict) continue;
+// END change 4
+
           keyToStreamIds.get(key)!.push(stream.id);
         }
       }
@@ -115,7 +144,10 @@ class StreamDeduplicator {
       }
     }
     // Group actual stream objects by their DSU representative ID
-    const idToStreamMap = new Map(streams.map((s) => [s.id, s])); // For quick lookup
+
+// START change 7 - remove duplicate 'const idToStreamMap'
+// END change 7
+
     const finalDuplicateGroupsMap = new Map<string, ParsedStream[]>(); // Maps representative ID to stream objects
 
     for (const stream of streams) {
@@ -134,10 +166,41 @@ class StreamDeduplicator {
       }
     }
 
+// START change 5 - dedupt library/non-library separately
+
     for (const group of finalDuplicateGroupsMap.values()) {
-      // Group streams by type
+
+      const libraryStreams = group.filter(s => s.library);
+      const nonLibraryStreams = group.filter(s => !s.library);
+
+      if (libraryStreams.length > 0) {
+        const selectedLibraryStream = libraryStreams.sort((a, b) => {
+          let aServiceIdx = this.userData.services?.filter(s => s.enabled).findIndex(s => s.id === a.service?.id) ?? 0;
+          let bServiceIdx = this.userData.services?.filter(s => s.enabled).findIndex(s => s.id === b.service?.id) ?? 0;
+          aServiceIdx = aServiceIdx === -1 ? Infinity : aServiceIdx;
+          bServiceIdx = bServiceIdx === -1 ? Infinity : bServiceIdx;
+          if (aServiceIdx !== bServiceIdx) return aServiceIdx - bServiceIdx;
+
+          const aAddonIdx = this.userData.presets.findIndex(p => p.instanceId === a.addon.preset.id);
+          const bAddonIdx = this.userData.presets.findIndex(p => p.instanceId === b.addon.preset.id);
+          if (aAddonIdx !== bAddonIdx) return aAddonIdx - bAddonIdx;
+
+          let aTypeIdx = this.userData.preferredStreamTypes?.findIndex(t => t === a.type) ?? 0;
+          let bTypeIdx = this.userData.preferredStreamTypes?.findIndex(t => t === b.type) ?? 0;
+          aTypeIdx = aTypeIdx === -1 ? Infinity : aTypeIdx;
+          bTypeIdx = bTypeIdx === -1 ? Infinity : bTypeIdx;
+          if (aTypeIdx !== bTypeIdx) return aTypeIdx - bTypeIdx;
+
+          return 0;
+        })[0];
+        processedStreams.add(selectedLibraryStream);
+      }
+
       const streamsByType = new Map<string, ParsedStream[]>();
-      for (const stream of group) {
+
+      for (const stream of nonLibraryStreams) {
+// END change 5
+
         let type = stream.type as string;
         if (
           (type === 'debrid' ||
