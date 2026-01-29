@@ -408,6 +408,10 @@ export interface UsenetStreamServiceConfig {
   aiostreamsAuth?: string;
 }
 
+enum Category {
+  MOVIES = 'Movies',
+  TV = 'TV',
+}
 /**
  * Base class for streaming usenet services (NzbDAV, Altmount).
  * These services accept NZBs via a SABnzbd-compatible API and stream content
@@ -587,6 +591,32 @@ export abstract class UsenetStreamService implements DebridService {
     throw new Error('Unsupported operation');
   }
 
+  private async listWebdavFolders(path: string): Promise<FileStat[]> {
+    let contents: FileStat[];
+    try {
+      contents = (await this.webdavClient.getDirectoryContents(
+        path
+      )) as FileStat[];
+    } catch (error: any) {
+      const status = typeof error.status === 'number' ? error.status : 500;
+      throw new DebridError(
+        `Failed to list WebDAV directory: ${(error as Error).message}`,
+        {
+          statusCode: status,
+          statusText: status
+            ? error.message.match(/response: \d+ (.*)/)?.[1] ||
+              'Internal Server Error'
+            : 'Internal Server Error',
+          code: convertStatusCodeToError(status),
+          headers: {},
+          type: 'api_error',
+        }
+      );
+    }
+    const directories = contents.filter((item) => item.type === 'directory');
+    return directories;
+  }
+
   public async listNzbs(): Promise<DebridDownload[]> {
     const cacheKey = `${this.serviceName}:${this.config.token}`;
 
@@ -602,31 +632,46 @@ export abstract class UsenetStreamService implements DebridService {
           return cachedNzbs;
         }
 
-        // const path = `${this.getContentPathPrefix()}/${UsenetStreamService.AIOSTREAMS_CATEGORY}`;
-        // const contents = (await this.webdavClient.getDirectoryContents(
-        //   path
-        // )) as FileStat[];
-        // const nzbs = contents.map((item, index) => ({
-        //   id: index,
-        //   status: 'cached' as const,
-        //   hash: item.basename,
-        //   size: item.size,
-        //   files: [],
-        // }));
-        // this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
-        //   count: nzbs.length,
-        //   time: getTimeTakenSincePoint(start),
-        // });
-        const history = await this.api.history();
-        const nzbs: DebridDownload[] = history.slots.map((slot, index) => ({
-          id: index,
-          status: slot.status !== 'failed' ? 'cached' : 'failed',
-          name: slot.name,
-        }));
-        this.serviceLogger.debug(`Listed NZBs from history`, {
-          count: nzbs.length,
-          time: getTimeTakenSincePoint(start),
+        const historyPromise = this.api.history({ limit: 1000 });
+        const webdavTvPromise = this.listWebdavFolders(
+          `${this.getContentPathPrefix()}/${Category.TV}`
+        );
+        const webdavMoviesPromise = this.listWebdavFolders(
+          `${this.getContentPathPrefix()}/${Category.MOVIES}`
+        );
+
+        const [history, webdavTv, webdavMovies] = await Promise.all([
+          historyPromise,
+          webdavTvPromise,
+          webdavMoviesPromise,
+        ]);
+
+        const webdavFiles = [...webdavTv, ...webdavMovies];
+        const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
+          const matchingSlot = history.slots.find(
+            (slot) => slot.name === file.basename
+          );
+          return {
+            id: index,
+            status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
+            name: file.basename,
+            size: file.size,
+            hash: file.basename,
+            files: [],
+          };
         });
+
+        this.serviceLogger.debug(`Fetched NZB list from history and WebDAV`, {
+          files: nzbs.map((nzb) => nzb.name),
+        });
+
+        this.serviceLogger.debug(
+          `Listed NZBs from combined history and WebDAV`,
+          {
+            count: nzbs.length,
+            time: getTimeTakenSincePoint(start),
+          }
+        );
         await UsenetStreamService.libraryCache.set(
           cacheKey,
           nzbs,
@@ -740,7 +785,8 @@ export abstract class UsenetStreamService implements DebridService {
       nzbUrl: maskSensitiveInfo(nzb),
     });
 
-    const category = metadata?.season || metadata?.episode ? 'TV' : 'Movies';
+    const category =
+      metadata?.season || metadata?.episode ? Category.TV : Category.MOVIES;
     const expectedFolderName = this.getExpectedFolderName(playbackInfo);
 
     // Check if content already exists at the expected path
