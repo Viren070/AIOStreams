@@ -1949,6 +1949,13 @@ class StreamFilterer {
     );
     return finalStreams;
   }
+  private truncateCondition(condition: string): string {
+    const maxLength = 50;
+    if (condition.length > maxLength) {
+      return condition.substring(0, maxLength - 3) + '...';
+    }
+    return condition;
+  }
 
   public async applyIncludedStreamExpressions(
     streams: ParsedStream[],
@@ -1967,9 +1974,13 @@ class StreamFilterer {
       const selectedStreams = await selector.select(streams, expression);
       this.filterStatistics.included.streamExpression.total +=
         selectedStreams.length;
-      this.filterStatistics.included.streamExpression.details[expression] =
-        (this.filterStatistics.included.streamExpression.details[expression] ||
-          0) + selectedStreams.length;
+      const displayCondition = this.truncateCondition(expression);
+      this.filterStatistics.included.streamExpression.details[
+        displayCondition
+      ] =
+        (this.filterStatistics.included.streamExpression.details[
+          displayCondition
+        ] || 0) + selectedStreams.length;
       selectedStreams.forEach((stream) => streamsToKeep.add(stream.id));
     }
     return streams.filter((stream) => streamsToKeep.has(stream.id));
@@ -2017,11 +2028,12 @@ class StreamFilterer {
           if (selectedStreams.length > 0) {
             this.filterStatistics.removed.excludedFilterCondition.total +=
               selectedStreams.length;
+            const displayCondition = this.truncateCondition(expression);
             this.filterStatistics.removed.excludedFilterCondition.details[
-              expression
+              displayCondition
             ] =
               (this.filterStatistics.removed.excludedFilterCondition.details[
-                expression
+                displayCondition
               ] || 0) + selectedStreams.length;
           }
         } catch (error) {
@@ -2062,11 +2074,12 @@ class StreamFilterer {
           if (selectedStreams.length > 0) {
             this.filterStatistics.removed.requiredFilterCondition.total +=
               selectedStreams.length;
+            const displayCondition = this.truncateCondition(expression);
             this.filterStatistics.removed.requiredFilterCondition.details[
-              expression
+              displayCondition
             ] =
               (this.filterStatistics.removed.requiredFilterCondition.details[
-                expression
+                displayCondition
               ] || 0) + selectedStreams.length;
           }
         } catch (error) {
