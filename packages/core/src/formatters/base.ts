@@ -678,7 +678,7 @@ export abstract class BaseFormatter {
     fullStringModifiers: {
       mod_tzlocale: string | undefined;
     }
-  ): string | boolean | undefined {
+  ): string | boolean | any[] | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
 
@@ -791,10 +791,25 @@ export abstract class BaseFormatter {
       if (mod in ModifierConstants.arrayModifiers)
         return ModifierConstants.arrayModifiers[
           mod as keyof typeof ModifierConstants.arrayModifiers
-        ](variable)?.toString();
+        ](variable);
 
       // handle hardcoded modifiers here
       switch (true) {
+        case mod.startsWith('slice(') && mod.endsWith(')'): {
+          // Extract the start and end indices from slice(start, end)
+          const args = _mod
+            .substring(6, _mod.length - 1)
+            .split(',')
+            .map((arg) => parseInt(arg.trim(), 10));
+
+          const start = args[0];
+          const end = args.length > 1 && !isNaN(args[1]) ? args[1] : undefined;
+
+          if (!isNaN(start)) {
+            return variable.slice(start, end);
+          }
+          return variable;
+        }
         case mod.startsWith('join(') && mod.endsWith(')'): {
           // Extract the separator from join('separator') or join("separator")
           const separator = _mod.substring(6, _mod.length - 2);
@@ -933,6 +948,22 @@ class ModifierConstants {
 
   static arrayModifierGetOrDefault = (value: string[], i: number) =>
     value.length > 0 ? String(value[i]) : '';
+
+  static getSortModifier = (ascending: boolean) => {
+    return (value: string[] | number[]) =>
+      [...value].sort((a, b) => {
+        let result: number;
+        if (typeof a === 'number' && typeof b === 'number') {
+          result = a - b;
+        } else {
+          const strA = String(a);
+          const strB = String(b);
+          result = strA.localeCompare(strB, undefined, { numeric: true });
+        }
+        return ascending ? result : -result;
+      });
+  };
+
   static arrayModifiers = {
     join: (value: string[]) => value.join(', '),
     length: (value: string[]) => value.length.toString(),
@@ -944,7 +975,9 @@ class ModifierConstants {
         value,
         Math.floor(Math.random() * value.length)
       ),
-    sort: (value: string[]) => [...value].sort(),
+    sort: this.getSortModifier(true),
+    rsort: this.getSortModifier(false),
+    lsort: (value: any[]) => [...value].sort(),
     reverse: (value: string[]) => [...value].reverse(),
   };
 
@@ -999,6 +1032,8 @@ class ModifierConstants {
     "join('.*?')": null,
     'join(".*?")': null,
     'truncate(\\d+)': null,
+    'slice(\\s*\\d+\\s*)': null,
+    'slice(\\s*\\d+\\s*,\\s*\\d+\\s*)': null,
     '$.*?': null,
     '^.*?': null,
     '~.*?': null,
