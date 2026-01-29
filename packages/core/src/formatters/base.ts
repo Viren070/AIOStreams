@@ -757,7 +757,7 @@ export abstract class BaseFormatter {
             .map((arg) => parseInt(arg.trim(), 10));
 
           const start = args[0];
-          const end = args.length > 1 ? args[1] : undefined;
+          const end = args.length > 1 && !isNaN(args[1]) ? args[1] : undefined;
 
           if (!isNaN(start)) {
             return variable.slice(start, end);
