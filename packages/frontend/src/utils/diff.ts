@@ -116,6 +116,9 @@ export function getObjectDiff(
 
       const getLabel = (key: any) => {
         const item = newMap.get(key) || oldMap.get(key);
+        if (item?.expression && item?.score !== undefined) {
+          return `${item.expression} (Score: ${item.score})`;
+        }
         if (item?.addons && Array.isArray(item.addons)) {
           const firstAddon = item.addons[0] || '';
           const count = item.addons.length;
