@@ -303,6 +303,40 @@ class StreamFilterer {
             stream.parsedFile.episodes.length === 0);
         let doBitrateCalculation = true;
 
+        // checks for metadata mismatches
+        if (
+          type === 'series' &&
+          requestedMetadata?.seasons &&
+          stream.parsedFile?.seasons?.length
+        ) {
+          const metadataSeasons = requestedMetadata.seasons;
+
+          for (const seasonNum of stream.parsedFile.seasons) {
+            const seasonData = metadataSeasons.find(
+              (s) => s.season_number === seasonNum
+            );
+
+            if (!seasonData) {
+              if (!this.userData.tvdbApiKey) {
+                logger.debug(
+                  `Skipping bitrate calculation for stream ${stream.filename}: Season ${seasonNum} missing from metadata (fallback mismatch)`,
+                  { streamSeasons: stream.parsedFile.seasons }
+                );
+                return;
+              }
+            } else if (parsedId?.episode && stream.parsedFile.seasons.length === 1) {
+              const episodeNum = Number(parsedId.episode);
+              if (episodeNum > seasonData.episode_count) {
+                logger.debug(
+                  `Skipping bitrate calculation for stream ${stream.filename}: Episode ${episodeNum} exceeds Season ${seasonNum} count (${seasonData.episode_count})`,
+                  { stream, seasonData }
+                );
+                return;
+              }
+            }
+          }
+        }
+
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
           requestedMetadata?.runtime &&
@@ -360,10 +394,17 @@ class StreamFilterer {
             }
           }
 
-          if (doBitrateCalculation) {
+          if (doBitrateCalculation && requestedMetadata.runtime > 1) {
             stream.bitrate = Math.round(
               (finalSize * 8) / (requestedMetadata.runtime * 60)
             );
+          } else if (doBitrateCalculation && requestedMetadata.runtime <= 1) {
+             logger.debug(
+               `Skipping bitrate calculation for stream ${stream.filename}: Runtime is invalid (${requestedMetadata.runtime})`,
+               {
+                  runtime: requestedMetadata.runtime,
+               }
+             );
           }
         }
       });
