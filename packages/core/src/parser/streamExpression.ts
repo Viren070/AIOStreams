@@ -10,6 +10,9 @@ import { formatZodError } from '../utils/config.js';
 import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
 import { parseBitrate } from './utils.js';
+import { createLogger } from '../utils/logger.js';
+
+const logger = createLogger('stream-expression');
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
@@ -898,6 +901,32 @@ export abstract class StreamExpressionEngine {
       return streams.filter((stream) => stream.seadex?.isSeadex === true);
     };
 
+    this.parser.functions.score = function (
+      streams: ParsedStream[],
+      minScore?: number,
+      maxScore?: number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minScore !== undefined && typeof minScore !== 'number') ||
+        (maxScore !== undefined && typeof maxScore !== 'number')
+      ) {
+        throw new Error('Score boundaries must be numbers if provided');
+      }
+      return streams.filter((stream) => {
+        const score = stream.streamExpressionScore;
+        if (score === undefined) return false;
+        if (minScore !== undefined && score < minScore) {
+          return false;
+        }
+        if (maxScore !== undefined && score > maxScore) {
+          return false;
+        }
+        return true;
+      });
+    };
+
     this.parser.functions.message = function (
       streams: ParsedStream[],
       mode: 'exact' | 'includes',
@@ -1020,12 +1049,21 @@ export abstract class StreamExpressionEngine {
         reject(new Error('Condition parsing timed out'));
       }, 1);
 
+      const start = Date.now();
       try {
         const result = this.parser.evaluate(condition);
         clearTimeout(timeout);
+        const elapsed = Date.now() - start;
+        logger.debug(
+          `Expression evaluated in ${elapsed}ms: "${condition.length > 100 ? condition.substring(0, 100) + '...' : condition}"`
+        );
         resolve(result);
       } catch (error) {
         clearTimeout(timeout);
+        const elapsed = Date.now() - start;
+        logger.debug(
+          `Expression failed after ${elapsed}ms: "${condition.length > 100 ? condition.substring(0, 100) + '...' : condition}"`
+        );
         if (error instanceof Error) {
           error.message = `Expression could not be evaluated: ${error.message}`;
         }
@@ -1222,9 +1260,9 @@ export class StreamSelector extends StreamExpressionEngine {
     this.parser.consts.title = context.title ?? '';
     this.parser.consts.year = context.year ?? 0;
     this.parser.consts.yearEnd = context.yearEnd ?? 0;
-    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
     this.parser.consts.runtime = context.runtime ?? 0;
-    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? 0;
+    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
     this.parser.consts.originalLanguage = context.originalLanguage ?? '';
     this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
   }

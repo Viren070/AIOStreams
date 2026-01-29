@@ -347,6 +347,7 @@ export const UserDataSchema = z.object({
   uuid: z.string().uuid().optional(),
   encryptedPassword: z.string().min(1).optional(),
   trusted: z.boolean().optional(),
+  showChanges: z.boolean().optional(),
   addonPassword: z.string().optional(),
   ip: z.union([z.ipv4(), z.ipv6()]).optional(),
   addonName: z.string().min(1).max(300).optional(),
@@ -441,6 +442,14 @@ export const UserDataSchema = z.object({
     .optional(),
   includedStreamExpressions: z
     .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .optional(),
+  rankedStreamExpressions: z
+    .array(
+      z.object({
+        expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        score: z.number(),
+      })
+    )
     .optional(),
   // disableGroups: z.boolean().optional(),
   // groups: z
@@ -785,6 +794,7 @@ export const ParsedStreamSchema = z.object({
     .optional(),
   keywordMatched: z.boolean().optional(),
   streamExpressionMatched: z.number().optional(),
+  streamExpressionScore: z.number().optional(),
   size: z.number().optional(),
   folderSize: z.number().optional(),
   type: StreamTypes,

@@ -54,8 +54,68 @@ class StreamPrecomputer {
   ) {
     const start = Date.now();
     await this.precomputePreferredMatches(streams, context);
+    await this.precomputeRankedStreamExpressions(streams, context);
     logger.info(
       `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
+    );
+  }
+
+  /**
+   * Precompute ranked stream expression scores.
+   * Each stream accumulates scores from all matching expressions.
+   */
+  private async precomputeRankedStreamExpressions(
+    streams: ParsedStream[],
+    context: StreamContext
+  ) {
+    if (
+      !this.userData.rankedStreamExpressions?.length ||
+      streams.length === 0
+    ) {
+      return;
+    }
+
+    const selector = new StreamSelector(context.toExpressionContext());
+
+    // Initialize all streams with a score of 0
+    const streamScores = new Map<string, number | null>();
+    for (const stream of streams) {
+      streamScores.set(stream.id, null);
+    }
+
+    // Evaluate each ranked expression and accumulate scores
+    for (const { expression, score } of this.userData.rankedStreamExpressions) {
+      try {
+        const selectedStreams = await selector.select(streams, expression);
+
+        // Add the score to each matched stream
+        for (const stream of selectedStreams) {
+          const currentScore = streamScores.get(stream.id) ?? 0;
+          streamScores.set(stream.id, currentScore + score);
+        }
+
+        logger.debug(
+          `Ranked expression "${expression.length > 50 ? expression.substring(0, 50) + '...' : expression}" matched ${selectedStreams.length} streams with score ${score}`
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to apply ranked stream expression "${expression}": ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    // Apply the computed scores to the streams
+    for (const stream of streams) {
+      stream.streamExpressionScore = streamScores.get(stream.id) ?? undefined;
+    }
+
+    const nonZeroScores = streams.filter(
+      (s) => s.streamExpressionScore !== 0
+    ).length;
+    logger.info(
+      `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores)`
     );
   }
 

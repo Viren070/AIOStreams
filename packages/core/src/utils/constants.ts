@@ -925,6 +925,7 @@ const SORT_CRITERIA = [
   'library',
   'keyword',
   'streamExpressionMatched',
+  'streamExpressionScore',
   'seadex',
   'bitrate',
 ] as const;
@@ -1132,6 +1133,14 @@ export const SORT_CRITERIA_DETAILS: Record<
     description: 'Sort by the bitrate of the stream',
     ascendingDescription: 'Streams with lower bitrate are preferred',
     descendingDescription: 'Streams with higher bitrate are preferred',
+  },
+  streamExpressionScore: {
+    name: 'Stream Expression Score',
+    defaultDirection: 'desc',
+    description: 'Sort by the computed score from ranked stream expressions',
+    ascendingDescription: 'Streams with lower expression scores are preferred',
+    descendingDescription:
+      'Streams with higher expression scores are preferred',
   },
 } as const;
 

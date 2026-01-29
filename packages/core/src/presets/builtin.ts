@@ -71,6 +71,13 @@ export class BuiltinStreamParser extends StreamParser {
     }
   }
 
+  protected override isPrivate(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): boolean | undefined {
+    return stream.name?.includes('🔑') ? true : false;
+  }
+
   protected getStreamType(
     stream: Stream,
     service: ParsedStream['service'],

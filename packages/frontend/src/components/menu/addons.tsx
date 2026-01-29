@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MergedCatalog, CatalogModification } from '@aiostreams/core';
+import { removeInvalidPresetReferences } from '@/context/userData';
 import { PageWrapper } from '../shared/page-wrapper';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -420,12 +421,14 @@ function Content() {
                                 setModalOpen(true);
                               }}
                               onRemove={() => {
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  presets: prev.presets.filter(
+                                setUserData((prev) => {
+                                  if (!prev) return prev;
+                                  const cloned = structuredClone(prev);
+                                  cloned.presets = cloned.presets.filter(
                                     (a) => a.instanceId !== preset.instanceId
-                                  ),
-                                }));
+                                  );
+                                  return removeInvalidPresetReferences(cloned);
+                                });
                               }}
                               onToggleEnabled={(v: boolean) => {
                                 setUserData((prev) => ({
