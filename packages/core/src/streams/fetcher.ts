@@ -319,7 +319,8 @@ class StreamFetcher {
                 queriedAddons.push(addon.name);
               }
 
-              allStreams.push(...result.streams);
+              const newStreams = [...allStreams, ...result.streams];
+              allStreams = await this.deduplicate.deduplicate(newStreams);
               allErrors.push(...result.errors);
               if (result.statistics) {
                 allStatisticStreams.push(...result.statistics);

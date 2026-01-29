@@ -2038,6 +2038,47 @@ function Content() {
                     }));
                   }}
                 />
+                <RankedExpressionInputs
+                  title="Ranked Stream Expressions"
+                  description="Add expressions with scores. All matching expressions accumulate their scores on each stream. Use negative scores to penalize matches. Sort by 'Stream Expression Score' to order by the total."
+                  values={userData.rankedStreamExpressions || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedStreamExpressions: values,
+                    }));
+                  }}
+                  onExpressionChange={(expression, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedStreamExpressions: [
+                        ...(prev.rankedStreamExpressions || []).slice(0, index),
+                        {
+                          ...(prev.rankedStreamExpressions || [])[index],
+                          expression,
+                        },
+                        ...(prev.rankedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                  onScoreChange={(score, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedStreamExpressions: [
+                        ...(prev.rankedStreamExpressions || []).slice(0, index),
+                        {
+                          ...(prev.rankedStreamExpressions || [])[index],
+                          score,
+                        },
+                        ...(prev.rankedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                />
               </div>
             </>
           </TabsContent>
@@ -3874,6 +3915,164 @@ function TwoTextInputs({
           intent="primary-subtle"
           icon={<FaPlus />}
           onClick={() => onValuesChange([...values, { name: '', value: '' }])}
+        />
+        <div className="ml-auto flex gap-2">
+          <Tooltip
+            trigger={
+              <IconButton
+                rounded
+                size="sm"
+                intent="primary-subtle"
+                icon={<FaFileImport />}
+                onClick={importModalDisclosure.open}
+              />
+            }
+          >
+            Import
+          </Tooltip>
+          <Tooltip
+            trigger={
+              <IconButton
+                rounded
+                size="sm"
+                intent="primary-subtle"
+                icon={<FaFileExport />}
+                onClick={handleExport}
+              />
+            }
+          >
+            Export
+          </Tooltip>
+        </div>
+      </div>
+      <ImportModal
+        open={importModalDisclosure.isOpen}
+        onOpenChange={importModalDisclosure.toggle}
+        onImport={handleImport}
+      />
+    </SettingsCard>
+  );
+}
+
+type RankedExpressionInputProps = {
+  title: string;
+  description: string;
+  values: { expression: string; score: number }[];
+  onValuesChange: (values: { expression: string; score: number }[]) => void;
+  onExpressionChange: (expression: string, index: number) => void;
+  onScoreChange: (score: number, index: number) => void;
+};
+
+function RankedExpressionInputs({
+  title,
+  description,
+  values,
+  onValuesChange,
+  onExpressionChange,
+  onScoreChange,
+}: RankedExpressionInputProps) {
+  const importModalDisclosure = useDisclosure(false);
+
+  const handleImport = (data: any) => {
+    if (
+      Array.isArray(data) &&
+      data.every(
+        (value: { expression?: string; score?: number }) =>
+          typeof value.expression === 'string' &&
+          typeof value.score === 'number'
+      )
+    ) {
+      onValuesChange(
+        data.map((v: { expression: string; score: number }) => ({
+          expression: v.expression,
+          score: v.score,
+        }))
+      );
+    } else {
+      toast.error('Invalid import format');
+    }
+  };
+
+  const handleExport = () => {
+    const data = values.map((value) => ({
+      expression: value.expression,
+      score: value.score,
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-values.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <SettingsCard title={title} description={description}>
+      {values.map((value, index) => (
+        <div key={index} className="flex gap-2">
+          <div className="flex-[3]">
+            <TextInput
+              value={value.expression}
+              label="Expression"
+              placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+              onValueChange={(newValue) => onExpressionChange(newValue, index)}
+            />
+          </div>
+          <div className="flex-1 min-w-[100px]">
+            <NumberInput
+              value={value.score}
+              label="Score"
+              onValueChange={(newValue) => onScoreChange(newValue ?? 0, index)}
+            />
+          </div>
+          <IconButton
+            size="sm"
+            rounded
+            icon={<FaArrowUp />}
+            intent="primary-subtle"
+            disabled={index === 0}
+            onClick={() => {
+              onValuesChange(arrayMove(values, index, index - 1));
+            }}
+          />
+          <IconButton
+            size="sm"
+            rounded
+            icon={<FaArrowDown />}
+            intent="primary-subtle"
+            disabled={index === values.length - 1}
+            onClick={() => {
+              onValuesChange(arrayMove(values, index, index + 1));
+            }}
+          />
+          <IconButton
+            size="sm"
+            rounded
+            icon={<FaRegTrashAlt />}
+            intent="alert-subtle"
+            onClick={() =>
+              onValuesChange([
+                ...values.slice(0, index),
+                ...values.slice(index + 1),
+              ])
+            }
+          />
+        </div>
+      ))}
+      <div className="mt-2 flex gap-2 items-center">
+        <IconButton
+          rounded
+          size="sm"
+          intent="primary-subtle"
+          icon={<FaPlus />}
+          onClick={() =>
+            onValuesChange([...values, { expression: '', score: 0 }])
+          }
         />
         <div className="ml-auto flex gap-2">
           <Tooltip

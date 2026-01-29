@@ -292,6 +292,8 @@ class StreamSorter {
           );
         case 'streamExpressionMatched':
           return multiplier * -(stream.streamExpressionMatched ?? Infinity);
+        case 'streamExpressionScore':
+          return multiplier * (stream.streamExpressionScore ?? 0);
         case 'keyword':
           return multiplier * (stream.keywordMatched ? 1 : 0);
 

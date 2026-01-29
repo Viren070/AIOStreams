@@ -443,6 +443,14 @@ export const UserDataSchema = z.object({
   includedStreamExpressions: z
     .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
     .optional(),
+  rankedStreamExpressions: z
+    .array(
+      z.object({
+        expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        score: z.number(),
+      })
+    )
+    .optional(),
   // disableGroups: z.boolean().optional(),
   // groups: z
   //   .array(
@@ -786,6 +794,7 @@ export const ParsedStreamSchema = z.object({
     .optional(),
   keywordMatched: z.boolean().optional(),
   streamExpressionMatched: z.number().optional(),
+  streamExpressionScore: z.number().optional(),
   size: z.number().optional(),
   folderSize: z.number().optional(),
   type: StreamTypes,

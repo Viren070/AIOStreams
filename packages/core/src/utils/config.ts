@@ -309,6 +309,10 @@ export async function validateConfig(
       config.includedStreamExpressions,
       Env.MAX_STREAM_EXPRESSION_FILTERS,
     ],
+    'ranked stream expressions': [
+      config.rankedStreamExpressions,
+      Env.MAX_STREAM_EXPRESSION_FILTERS,
+    ],
     'excluded keywords': [config.excludedKeywords, Env.MAX_KEYWORD_FILTERS],
     'included keywords': [config.includedKeywords, Env.MAX_KEYWORD_FILTERS],
     'required keywords': [config.requiredKeywords, Env.MAX_KEYWORD_FILTERS],
@@ -386,6 +390,7 @@ export async function validateConfig(
     ...(config.requiredStreamExpressions ?? []),
     ...(config.preferredStreamExpressions ?? []),
     ...(config.includedStreamExpressions ?? []),
+    ...(config.rankedStreamExpressions?.map((r) => r.expression) ?? []),
   ];
 
   for (const expression of streamExpressions) {
