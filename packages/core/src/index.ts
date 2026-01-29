@@ -16,6 +16,7 @@ export {
   NewznabAddon,
   ProwlarrAddon,
   KnabenAddon,
+  EztvAddon,
   TorrentGalaxyAddon,
   SeaDexAddon,
   EasynewsSearchAddon,
