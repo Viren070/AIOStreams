@@ -8,6 +8,7 @@ import { Cache } from './cache.js';
 const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
+const MAX_CACHE_SIZE = 100;
 
 let remotePatternCache: Cache<string, { name: string; pattern: string }[]> | undefined;
 if (Env.REDIS_URI) {
@@ -34,6 +35,12 @@ async function refreshPatternsInBackground(url: string): Promise<void> {
     }
   } catch (error) {
     logger.warn(`Background refresh failed for ${url}:`, error);
+
+    const existing = inMemoryPatternCache.get(url);
+    if (existing) {
+      existing.expiresAt = Date.now() + 60 * 1000;
+      inMemoryPatternCache.set(url, existing);
+    }
   } finally {
     refreshingUrls.delete(url);
   }
@@ -50,6 +57,10 @@ async function fetchPatternsFromUrl(url: string): Promise<{ name: string; patter
     }
     const patterns = await fetchPatternsFromUrlInternal(url);
     if (patterns.length > 0) {
+      if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
+        const firstKey = inMemoryPatternCache.keys().next().value;
+        if (firstKey) inMemoryPatternCache.delete(firstKey);
+      }
       inMemoryPatternCache.set(url, {
         patterns,
         expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
@@ -113,6 +124,10 @@ async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string
       if (remotePatternCache) {
         await remotePatternCache.set(url, patterns, Math.floor(ttlMs / 1000));
       } else {
+        if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
+          const firstKey = inMemoryPatternCache.keys().next().value;
+          if (firstKey) inMemoryPatternCache.delete(firstKey);
+        }
         inMemoryPatternCache.set(url, {
           patterns,
           expiresAt: Date.now() + ttlMs,

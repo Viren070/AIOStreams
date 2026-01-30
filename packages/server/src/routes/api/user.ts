@@ -22,8 +22,7 @@ router.use(resolveUuidAliasForUserApi);
 const validateSyncedUrls = (config: UserData, uuid?: string) => {
   const settings = FeatureControl.getSettings();
   const isUnrestricted =
-    (uuid &&
-      Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid))) ||
+    (uuid && Env.TRUSTED_UUIDS?.split(',').includes(uuid)) ||
     settings.regexFilterAccess === 'all';
 
   if (isUnrestricted) return;
