@@ -2294,6 +2294,14 @@ function Content() {
                           ],
                         }));
                       }}
+                      syncedUrls={userData.syncedRequiredRegexUrls || []}
+                      trusted={userData.trusted}
+                      onSyncedUrlsChange={(urls) => {
+                        setUserData((prev) => ({
+                          ...prev,
+                          syncedRequiredRegexUrls: urls,
+                        }));
+                      }}
                     />
                   </>
                 )}
@@ -2316,6 +2324,14 @@ function Content() {
                         value,
                         ...(prev.excludedRegexPatterns || []).slice(index + 1),
                       ],
+                    }));
+                  }}
+                  syncedUrls={userData.syncedExcludedRegexUrls || []}
+                  trusted={userData.trusted}
+                  onSyncedUrlsChange={(urls) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      syncedExcludedRegexUrls: urls,
                     }));
                   }}
                 />
@@ -2347,12 +2363,28 @@ function Content() {
                           ],
                         }));
                       }}
+                      syncedUrls={userData.syncedIncludedRegexUrls || []}
+                      trusted={userData.trusted}
+                      onSyncedUrlsChange={(urls) => {
+                        setUserData((prev) => ({
+                          ...prev,
+                          syncedIncludedRegexUrls: urls,
+                        }));
+                      }}
                     />
                   </>
                 )}
                 <TwoTextInputs
                   title="Preferred Regex Patterns"
                   description="Define regex patterns with names for easy reference"
+                  syncedUrls={userData.syncedPreferredRegexUrls || []}
+                  trusted={userData.trusted}
+                  onSyncedUrlsChange={(urls) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      syncedPreferredRegexUrls: urls,
+                    }));
+                  }}
                   keyName="Name"
                   keyId="name"
                   keyPlaceholder="Enter pattern name"
@@ -3653,7 +3685,146 @@ type TextInputProps = {
   onValuesChange: (values: string[]) => void;
   onValueChange: (value: string, index: number) => void;
   placeholder?: string;
-};
+  syncedUrls?: string[];
+  onSyncedUrlsChange?: (urls: string[]) => void;
+  disabled?: boolean;
+  trusted?: boolean;
+}
+function SyncedUrlInputs({
+  urls,
+  onUrlsChange,
+  trusted,
+  hasExistingPatterns,
+}: {
+  urls: string[];
+  onUrlsChange: (urls: string[]) => void;
+  trusted?: boolean;
+  hasExistingPatterns?: boolean;
+}) {
+  const { status } = useStatus();
+  const [newUrl, setNewUrl] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState('');
+
+  const validateAndAdd = (url: string) => {
+    const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
+    
+    if (!url) return false;
+
+    const isUnrestricted = trusted || status?.settings.regexFilterAccess === 'all';
+
+    if (!isUnrestricted && !allowedUrls.includes(url)) {
+      toast.error('URL is not in the allowed list');
+      return false;
+    }
+
+    if (urls.includes(url)) {
+      toast.error('URL already synced');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleAdd = () => {
+    if (!validateAndAdd(newUrl)) return;
+
+    if (hasExistingPatterns) {
+      setPendingUrl(newUrl);
+      setShowConfirmModal(true);
+    } else {
+      onUrlsChange([newUrl]);
+      setNewUrl('');
+    }
+  };
+
+  const confirmAdd = () => {
+    onUrlsChange([pendingUrl]);
+    setNewUrl('');
+    setPendingUrl('');
+    setShowConfirmModal(false);
+  };
+
+  return (
+    <>
+      <Modal
+        open={showConfirmModal}
+        onOpenChange={setShowConfirmModal}
+        title="Replace Existing Patterns?"
+        description="Syncing from a URL will delete all existing patterns in this list. Only the patterns fetched from the synced URL will be used."
+      >
+        <div className="flex gap-2 justify-end mt-4">
+          <Button
+            intent="gray-subtle"
+            onClick={() => {
+              setShowConfirmModal(false);
+              setPendingUrl('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button intent="alert" onClick={confirmAdd}>
+            Confirm
+          </Button>
+        </div>
+      </Modal>
+      <div className="space-y-3 mt-4 border-t border-gray-800 pt-4">
+        <div>
+          <h5 className="text-sm font-medium">Synced URL</h5>
+          <p className="text-xs text-[--muted]">
+            Automatically fetch and sync patterns from this URL
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {urls.length > 0 ? (
+            <div className="bg-gray-900 rounded-md border border-gray-800 divide-y divide-gray-800">
+              {urls.map((url, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 p-2 px-3 text-sm"
+                >
+                  <span className="flex-1 truncate font-mono text-xs">{url}</span>
+                  <IconButton
+                    size="sm"
+                    rounded
+                    icon={<FaRegTrashAlt />}
+                    intent="alert-subtle"
+                    onClick={() =>
+                      onUrlsChange(urls.filter((_, i) => i !== index))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <TextInput
+                  value={newUrl}
+                  placeholder="https://example.com/patterns.json"
+                  onValueChange={setNewUrl}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAdd();
+                    }
+                  }}
+                />
+              </div>
+              <IconButton
+                onClick={handleAdd}
+                disabled={!newUrl}
+                icon={<FaPlus />}
+                intent="primary"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
 
 // a component controls an array of text inputs.
 // and allows the user to add and remove values
@@ -3665,6 +3836,10 @@ function TextInputs({
   onValuesChange,
   onValueChange,
   placeholder,
+  syncedUrls,
+  onSyncedUrlsChange,
+  disabled,
+  trusted,
 }: TextInputProps) {
   const importModalDisclosure = useDisclosure(false);
 
@@ -3691,6 +3866,9 @@ function TextInputs({
     URL.revokeObjectURL(url);
   };
 
+  const isSynced = syncedUrls && syncedUrls.length > 0;
+  const effectiveDisabled = disabled || isSynced;
+
   return (
     <SettingsCard title={label} description={help} key={label}>
       {values.map((value, index) => (
@@ -3701,6 +3879,7 @@ function TextInputs({
               label={itemName}
               placeholder={placeholder}
               onValueChange={(value) => onValueChange(value, index)}
+              disabled={effectiveDisabled}
             />
           </div>
           <IconButton
@@ -3708,7 +3887,7 @@ function TextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={index === 0}
+            disabled={effectiveDisabled || index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -3718,7 +3897,7 @@ function TextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={index === values.length - 1}
+            disabled={effectiveDisabled || index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -3728,6 +3907,7 @@ function TextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
+            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -3743,6 +3923,7 @@ function TextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
+          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, ''])}
         />
         <div className="ml-auto flex gap-2">
@@ -3753,6 +3934,7 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
+                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -3766,6 +3948,7 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
+                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -3779,6 +3962,19 @@ function TextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
+      {syncedUrls && onSyncedUrlsChange && (
+        <SyncedUrlInputs
+          urls={syncedUrls}
+          trusted={trusted}
+          hasExistingPatterns={values.length > 0}
+          onUrlsChange={(newUrls) => {
+            onSyncedUrlsChange(newUrls);
+            if (newUrls.length > 0) {
+              onValuesChange([]);
+            }
+          }}
+        />
+      )}
     </SettingsCard>
   );
 }
@@ -3799,6 +3995,10 @@ type KeyValueInputProps = {
   onValuesChange: (values: { name: string; value: string }[]) => void;
   onValueChange: (value: string, index: number) => void;
   onKeyChange: (key: string, index: number) => void;
+  disabled?: boolean;
+  syncedUrls?: string[];
+  onSyncedUrlsChange?: (urls: string[]) => void;
+  trusted?: boolean;
 };
 
 function TwoTextInputs({
@@ -3814,7 +4014,13 @@ function TwoTextInputs({
   onValuesChange,
   onValueChange,
   onKeyChange,
+  disabled,
+  syncedUrls,
+  onSyncedUrlsChange,
+  trusted,
 }: KeyValueInputProps) {
+  const isSynced = syncedUrls && syncedUrls.length > 0;
+  const effectiveDisabled = disabled || isSynced;
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -3863,6 +4069,7 @@ function TwoTextInputs({
               value={value.name}
               label={keyName}
               placeholder={keyPlaceholder}
+              disabled={effectiveDisabled}
               onValueChange={(newValue) => onKeyChange(newValue, index)}
             />
           </div>
@@ -3871,6 +4078,7 @@ function TwoTextInputs({
               value={value.value}
               label={valueName}
               placeholder={valuePlaceholder}
+              disabled={effectiveDisabled}
               onValueChange={(newValue) => onValueChange(newValue, index)}
             />
           </div>
@@ -3879,7 +4087,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={index === 0}
+            disabled={effectiveDisabled || index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -3889,7 +4097,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={index === values.length - 1}
+            disabled={effectiveDisabled || index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -3899,6 +4107,7 @@ function TwoTextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
+            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -3914,6 +4123,7 @@ function TwoTextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
+          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, { name: '', value: '' }])}
         />
         <div className="ml-auto flex gap-2">
@@ -3924,6 +4134,7 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
+                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -3937,6 +4148,7 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
+                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -3950,6 +4162,19 @@ function TwoTextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
+      {syncedUrls && onSyncedUrlsChange && (
+        <SyncedUrlInputs
+          urls={syncedUrls}
+          trusted={trusted}
+          hasExistingPatterns={values.length > 0}
+          onUrlsChange={(newUrls) => {
+            onSyncedUrlsChange(newUrls);
+            if (newUrls.length > 0) {
+              onValuesChange([]);
+            }
+          }}
+        />
+      )}
     </SettingsCard>
   );
 }

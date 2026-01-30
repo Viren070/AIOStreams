@@ -9,6 +9,7 @@ import {
   StremioTransformer,
   UserRepository,
   Env,
+  FeatureControl,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -117,6 +118,66 @@ export const userDataMiddleware = async (
 
     if (resource !== 'configure') {
       try {
+        // Sync regex patterns from URLs
+        const syncPatterns = async (
+          urls: string[] | undefined,
+          existing: string[],
+          isObject: false
+        ): Promise<string[]> => {
+          if (!urls?.length) return existing;
+          const result = [...existing];
+          const existingSet = new Set(existing);
+          for (const url of urls) {
+            const patterns = await FeatureControl.getPatternsForUrl(url);
+            for (const { pattern } of patterns) {
+              if (!existingSet.has(pattern)) {
+                result.push(pattern);
+                existingSet.add(pattern);
+              }
+            }
+          }
+          return result;
+        };
+
+        const syncPatternsWithNames = async (
+          urls: string[] | undefined,
+          existing: { name: string; pattern: string }[]
+        ): Promise<{ name: string; pattern: string }[]> => {
+          if (!urls?.length) return existing;
+          const result = [...existing];
+          const existingSet = new Set(existing.map((p) => p.pattern));
+          for (const url of urls) {
+            const patterns = await FeatureControl.getPatternsForUrl(url);
+            for (const { name, pattern } of patterns) {
+              if (!existingSet.has(pattern)) {
+                result.push({ name, pattern });
+                existingSet.add(pattern);
+              }
+            }
+          }
+          return result;
+        };
+
+        userData.preferredRegexPatterns = await syncPatternsWithNames(
+          userData.syncedPreferredRegexUrls,
+          userData.preferredRegexPatterns || []
+        );
+        userData.excludedRegexPatterns = await syncPatterns(
+          userData.syncedExcludedRegexUrls,
+          userData.excludedRegexPatterns || [],
+          false
+        );
+        userData.requiredRegexPatterns = await syncPatterns(
+          userData.syncedRequiredRegexUrls,
+          userData.requiredRegexPatterns || [],
+          false
+        );
+        userData.includedRegexPatterns = await syncPatterns(
+          userData.syncedIncludedRegexUrls,
+          userData.includedRegexPatterns || [],
+          false
+        );
+
         userData = await validateConfig(userData, {
           skipErrorsFromAddonsOrProxies: true,
           decryptValues: true,

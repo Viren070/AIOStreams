@@ -257,6 +257,11 @@ class StreamFilterer {
     const { type, id, parsedId, isAnime } = context;
 
     const start = Date.now();
+
+    const preferredRegexPatterns = [
+      ...(this.userData.preferredRegexPatterns ?? []),
+    ];
+
     const isRegexAllowed = await FeatureControl.isRegexAllowed(this.userData, [
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),

@@ -9,13 +9,13 @@ const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
 
-let remotePatternCache: Cache<string, string[]> | undefined;
+let remotePatternCache: Cache<string, { name: string; pattern: string }[]> | undefined;
 if (Env.REDIS_URI) {
   remotePatternCache = Cache.getInstance('remote-pattern');
 }
 
-async function fetchPatternsFromUrl(url: string): Promise<string[]> {
-  let patterns: string[] | undefined;
+async function fetchPatternsFromUrl(url: string): Promise<{ name: string; pattern: string }[]> {
+  let patterns: { name: string; pattern: string }[] | undefined;
   for (let i = 0; i < 3; i++) {
     logger.debug(
       `Fetching allowed regex patterns from ${url}${i > 0 ? ` (attempt ${i + 1} of 3)` : ''}`
@@ -58,8 +58,8 @@ async function fetchPatternsFromUrl(url: string): Promise<string[]> {
       const data = await response.json();
       const parsedData = schema.parse(data);
       patterns = Array.isArray(parsedData)
-        ? parsedData.map((item) => item.pattern)
-        : parsedData.values;
+        ? parsedData
+        : parsedData.values.map((p) => ({ name: p, pattern: p }));
       if (remotePatternCache) {
         await remotePatternCache.set(
           url,
@@ -153,13 +153,13 @@ export class FeatureControl {
 
     const patternsFromUrls = fetchPromises
       .filter(
-        (result): result is PromiseFulfilledResult<string[]> =>
+        (result): result is PromiseFulfilledResult<{ name: string; pattern: string }[]> =>
           result.status === 'fulfilled'
       )
       .flatMap((result) => result.value);
 
     if (patternsFromUrls.length > 0) {
-      FeatureControl._addPatterns(patternsFromUrls);
+      FeatureControl._addPatterns(patternsFromUrls.map((p) => p.pattern));
     }
   }
 
@@ -234,5 +234,11 @@ export class FeatureControl {
       default:
         return false;
     }
+  }
+
+  public static async getPatternsForUrl(
+    url: string
+  ): Promise<{ name: string; pattern: string }[]> {
+    return fetchPatternsFromUrl(url);
   }
 }
