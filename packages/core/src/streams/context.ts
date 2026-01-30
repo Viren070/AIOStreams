@@ -437,17 +437,20 @@ export class StreamContext {
     return this._seadex;
   }
 
+  private getDaysSince(dateString: string): number {
+    const date = new Date(dateString);
+    const now = new Date();
+    date.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = now.getTime() - date.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
   private computeAgeInDays(): number | undefined {
-    const getDaysDifference = (dateString: string): number => {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - date.getTime());
-      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    };
     if (this.type === 'series' && this._episodeAirDate) {
-      return getDaysDifference(this._episodeAirDate);
+      return this.getDaysSince(this._episodeAirDate);
     } else if (this._metadata?.releaseDate) {
-      return getDaysDifference(this._metadata.releaseDate);
+      return this.getDaysSince(this._metadata.releaseDate);
     }
     return undefined;
   }
@@ -456,12 +459,7 @@ export class StreamContext {
     if (!this._metadata?.nextAirDate) {
       return undefined;
     }
-    const nextDate = new Date(this._metadata.nextAirDate);
-    const now = new Date();
-    nextDate.setHours(0, 0, 0, 0);
-    now.setHours(0, 0, 0, 0);
-    const diffTime = nextDate.getTime() - now.getTime();
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return -this.getDaysSince(this._metadata.nextAirDate);
   }
 
   /**
