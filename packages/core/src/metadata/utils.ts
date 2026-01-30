@@ -13,4 +13,5 @@ export interface Metadata {
   tmdbId?: number | null;
   tvdbId?: number | null;
   genres?: string[]; // Genre names (e.g., ["Action", "Drama"])
+  nextAirDate?: string;
 }

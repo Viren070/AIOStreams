@@ -451,6 +451,19 @@ export class StreamContext {
     }
     return undefined;
   }
+
+  private computeDaysUntilNextEpisode(): number | undefined {
+    if (!this._metadata?.nextAirDate) {
+      return undefined;
+    }
+    const nextDate = new Date(this._metadata.nextAirDate);
+    const now = new Date();
+    nextDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = nextDate.getTime() - now.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
   /**
    * Convert context to a plain object for expression evaluation.
    */
@@ -476,6 +489,8 @@ export class StreamContext {
       ),
       daysSinceRelease: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
+      hasNextEpisode: !!this._metadata?.nextAirDate,
+      daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,
       malId: this.animeEntry?.mappings?.malId,

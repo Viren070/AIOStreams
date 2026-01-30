@@ -51,6 +51,7 @@ export class MetadataService {
                   episode_count: number;
                 }[]
               | undefined;
+            let nextAirDate: string | undefined;
 
             // Check anime database first
             const animeEntry = AnimeDatabase.getInstance().getEntryById(
@@ -193,6 +194,8 @@ export class MetadataService {
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
               if (tvdbMetadata.runtime && !runtime)
                 runtime = tvdbMetadata.runtime;
+              if (tvdbMetadata.nextAirDate)
+                nextAirDate = tvdbMetadata.nextAirDate;
               tvdbId = tvdbMetadata.tvdbId;
             } else if (tvdbResult.status === 'rejected') {
               logger.warn(
@@ -336,6 +339,7 @@ export class MetadataService {
               tvdbId,
               runtime,
               genres,
+              nextAirDate,
             };
           },
           {

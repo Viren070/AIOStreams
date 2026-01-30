@@ -1197,6 +1197,9 @@ export class PrecacheConditionEvaluator extends StreamExpressionEngine {
     this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
     this.parser.consts.originalLanguage = context.originalLanguage ?? '';
     this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+    this.parser.consts.hasNextEpisode = context.hasNextEpisode ?? false;
+    this.parser.consts.daysUntilNextEpisode =
+      context.daysUntilNextEpisode ?? -1;
   }
 
   async evaluate(condition: string): Promise<boolean> {
@@ -1274,6 +1277,8 @@ export interface ExpressionContext {
   absoluteEpisode?: number;
   originalLanguage?: string;
   daysSinceRelease?: number; // age in days of the movie / **episode**
+  hasNextEpisode?: boolean;
+  daysUntilNextEpisode?: number;
   // Anime entry data
   anilistId?: number;
   malId?: number;
@@ -1300,6 +1305,9 @@ export class StreamSelector extends StreamExpressionEngine {
     this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
     this.parser.consts.originalLanguage = context.originalLanguage ?? '';
     this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+    this.parser.consts.hasNextEpisode = context.hasNextEpisode ?? false;
+    this.parser.consts.daysUntilNextEpisode =
+      context.daysUntilNextEpisode ?? -1;
   }
 
   async select(
