@@ -5,6 +5,9 @@ import {
   createLogger,
   encryptString,
   UserRepository,
+  FeatureControl,
+  Env,
+  UserData,
 } from '@aiostreams/core';
 import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
@@ -15,6 +18,34 @@ const logger = createLogger('server');
 
 router.use(userApiRateLimiter);
 router.use(resolveUuidAliasForUserApi);
+
+const validateSyncedUrls = (config: UserData, uuid?: string) => {
+  const settings = FeatureControl.getSettings();
+  const isUnrestricted =
+    (uuid &&
+      Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid))) ||
+    settings.regexFilterAccess === 'all';
+
+  if (isUnrestricted) return;
+
+  const allowedUrls = settings.allowedRegexPatterns?.urls || [];
+  const urlsToCheck = [
+    ...(config.syncedIncludedRegexUrls || []),
+    ...(config.syncedExcludedRegexUrls || []),
+    ...(config.syncedRequiredRegexUrls || []),
+    ...(config.syncedPreferredRegexUrls || []),
+  ];
+
+  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
+
+  if (invalidUrls.length > 0) {
+    throw new APIError(
+      constants.ErrorCode.USER_INVALID_CONFIG,
+      undefined,
+      `Forbidden URL(s) in regex configuration: ${invalidUrls.join(', ')}`
+    );
+  }
+};
 
 // checking existence of a user
 router.head('/', async (req, res, next) => {
@@ -124,6 +155,13 @@ router.post('/', async (req, res, next) => {
   }
   //
   try {
+    // For new users, we don't have a UUID yet to check trusted list unless we pre-allocate or check config?
+    // Actually, trusted users usually have a specific UUID they use.
+    // But createUser generates a random UUID.
+    // So a NEW user cannot be trusted initially unless they are using an existing UUID (which createUser doesn't support).
+    // Thus, new users are always restricted unless regexFilterAccess is 'all'.
+    validateSyncedUrls(config);
+
     const { uuid, encryptedPassword } = await UserRepository.createUser(
       config,
       password
@@ -165,6 +203,7 @@ router.put('/', async (req, res, next) => {
   }
 
   try {
+    validateSyncedUrls(config, uuid);
     config.uuid = uuid;
     const updatedUser = await UserRepository.updateUser(uuid, password, config);
     res.status(200).json(
