@@ -14,7 +14,53 @@ if (Env.REDIS_URI) {
   remotePatternCache = Cache.getInstance('remote-pattern');
 }
 
+const inMemoryPatternCache = new Map<
+  string,
+  { patterns: { name: string; pattern: string }[]; expiresAt: number }
+>();
+const refreshingUrls = new Set<string>();
+
+async function refreshPatternsInBackground(url: string): Promise<void> {
+  if (refreshingUrls.has(url)) return;
+  refreshingUrls.add(url);
+
+  try {
+    const patterns = await fetchPatternsFromUrlInternal(url);
+    if (patterns.length > 0) {
+      inMemoryPatternCache.set(url, {
+        patterns,
+        expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
+      });
+    }
+  } finally {
+    refreshingUrls.delete(url);
+  }
+}
+
 async function fetchPatternsFromUrl(url: string): Promise<{ name: string; pattern: string }[]> {
+  if (!remotePatternCache) {
+    const memCached = inMemoryPatternCache.get(url);
+    if (memCached) {
+      if (memCached.expiresAt <= Date.now()) {
+        refreshPatternsInBackground(url);
+      }
+      return memCached.patterns;
+    }
+    const patterns = await fetchPatternsFromUrlInternal(url);
+    if (patterns.length > 0) {
+      inMemoryPatternCache.set(url, {
+        patterns,
+        expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
+      });
+    }
+    return patterns;
+  }
+  return fetchPatternsFromUrlInternal(url);
+}
+
+async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string; pattern: string }[]> {
+  const ttlMs = Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL;
+
   let patterns: { name: string; pattern: string }[] | undefined;
   for (let i = 0; i < 3; i++) {
     logger.debug(
@@ -60,12 +106,15 @@ async function fetchPatternsFromUrl(url: string): Promise<{ name: string; patter
       patterns = Array.isArray(parsedData)
         ? parsedData
         : parsedData.values.map((p) => ({ name: p, pattern: p }));
+
+      // Cache the result
       if (remotePatternCache) {
-        await remotePatternCache.set(
-          url,
+        await remotePatternCache.set(url, patterns, Math.floor(ttlMs / 1000));
+      } else {
+        inMemoryPatternCache.set(url, {
           patterns,
-          Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000)
-        );
+          expiresAt: Date.now() + ttlMs,
+        });
       }
       break;
     } catch (error) {
