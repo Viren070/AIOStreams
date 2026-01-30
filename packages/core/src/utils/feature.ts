@@ -32,6 +32,8 @@ async function refreshPatternsInBackground(url: string): Promise<void> {
         expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
       });
     }
+  } catch (error) {
+    logger.warn(`Background refresh failed for ${url}:`, error);
   } finally {
     refreshingUrls.delete(url);
   }

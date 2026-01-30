@@ -3711,6 +3711,13 @@ function SyncedUrlInputs({
     
     if (!url) return false;
 
+    try {
+      new URL(url);
+    } catch {
+      toast.error('Invalid URL format');
+      return false;
+    }
+
     const isUnrestricted = trusted || status?.settings.regexFilterAccess === 'all';
 
     if (!isUnrestricted && !allowedUrls.includes(url)) {

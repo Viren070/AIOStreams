@@ -122,13 +122,16 @@ export const userDataMiddleware = async (
         const syncPatterns = async (
           urls: string[] | undefined,
           existing: string[],
-          isObject: false
         ): Promise<string[]> => {
           if (!urls?.length) return existing;
           const result = [...existing];
           const existingSet = new Set(existing);
-          for (const url of urls) {
-            const patterns = await FeatureControl.getPatternsForUrl(url);
+
+          const allPatterns = await Promise.all(
+            urls.map((url) => FeatureControl.getPatternsForUrl(url))
+          );
+
+          for (const patterns of allPatterns) {
             for (const { pattern } of patterns) {
               if (!existingSet.has(pattern)) {
                 result.push(pattern);
@@ -146,8 +149,12 @@ export const userDataMiddleware = async (
           if (!urls?.length) return existing;
           const result = [...existing];
           const existingSet = new Set(existing.map((p) => p.pattern));
-          for (const url of urls) {
-            const patterns = await FeatureControl.getPatternsForUrl(url);
+
+          const allPatterns = await Promise.all(
+            urls.map((url) => FeatureControl.getPatternsForUrl(url))
+          );
+
+          for (const patterns of allPatterns) {
             for (const { name, pattern } of patterns) {
               if (!existingSet.has(pattern)) {
                 result.push({ name, pattern });
@@ -164,18 +171,15 @@ export const userDataMiddleware = async (
         );
         userData.excludedRegexPatterns = await syncPatterns(
           userData.syncedExcludedRegexUrls,
-          userData.excludedRegexPatterns || [],
-          false
+          userData.excludedRegexPatterns || []
         );
         userData.requiredRegexPatterns = await syncPatterns(
           userData.syncedRequiredRegexUrls,
-          userData.requiredRegexPatterns || [],
-          false
+          userData.requiredRegexPatterns || []
         );
         userData.includedRegexPatterns = await syncPatterns(
           userData.syncedIncludedRegexUrls,
-          userData.includedRegexPatterns || [],
-          false
+          userData.includedRegexPatterns || []
         );
 
         userData = await validateConfig(userData, {
