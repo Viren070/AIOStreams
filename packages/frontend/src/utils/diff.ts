@@ -74,17 +74,24 @@ export function getObjectDiff(
       if (item.instanceId) return item.instanceId;
       if (item.id) return item.id;
       if (item.pattern) return item.pattern;
+      if (item.condition && Array.isArray(item.addons)) {
+        try {
+          return `grouping:${item.condition}:${JSON.stringify(item.addons)}`;
+        } catch {
+          return item.condition;
+        }
+      }
       if (item.condition) return item.condition;
       if (item.expression) return item.expression;
-      if (item.key) return item.key;
-      if (item.name) return item.name;
       if (Array.isArray(item.addons)) {
         try {
-          return `group:${JSON.stringify(item.addons)}`;
+          return `addons:${JSON.stringify(item.addons)}`;
         } catch {
           return null;
         }
       }
+      if (item.key) return item.key;
+      if (item.name) return item.name;
       return null;
     };
 
