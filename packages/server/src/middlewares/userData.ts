@@ -127,8 +127,18 @@ export const userDataMiddleware = async (
           const result = [...existing];
           const existingSet = new Set(existing);
 
+          const settings = FeatureControl.getSettings();
+          const allowedUrls = settings.allowedRegexPatterns?.urls || [];
+          const isUnrestricted =
+            userData?.trusted ||
+            settings.regexFilterAccess === 'all';
+
+          const validUrls = urls.filter(
+            (url) => isUnrestricted || allowedUrls.includes(url)
+          );
+
           const allPatterns = await Promise.all(
-            urls.map((url) => FeatureControl.getPatternsForUrl(url))
+            validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
           );
 
           for (const patterns of allPatterns) {
@@ -150,8 +160,18 @@ export const userDataMiddleware = async (
           const result = [...existing];
           const existingSet = new Set(existing.map((p) => p.pattern));
 
+          const settings = FeatureControl.getSettings();
+          const allowedUrls = settings.allowedRegexPatterns?.urls || [];
+          const isUnrestricted =
+            userData?.trusted ||
+            settings.regexFilterAccess === 'all';
+
+          const validUrls = urls.filter(
+            (url) => isUnrestricted || allowedUrls.includes(url)
+          );
+
           const allPatterns = await Promise.all(
-            urls.map((url) => FeatureControl.getPatternsForUrl(url))
+            validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
           );
 
           for (const patterns of allPatterns) {

@@ -292,4 +292,13 @@ export class FeatureControl {
   ): Promise<{ name: string; pattern: string }[]> {
     return fetchPatternsFromUrl(url);
   }
+
+  public static getSettings() {
+    return {
+      allowedRegexPatterns: {
+        urls: Env.ALLOWED_REGEX_PATTERNS_URLS,
+      },
+      regexFilterAccess: Env.REGEX_FILTER_ACCESS,
+    };
+  }
 }
