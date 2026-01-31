@@ -91,7 +91,7 @@ async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string
       const response = await makeRequest(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
         timeout: 5000,
       });
