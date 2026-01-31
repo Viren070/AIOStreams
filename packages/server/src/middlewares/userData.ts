@@ -118,23 +118,25 @@ export const userDataMiddleware = async (
 
     if (resource !== 'configure') {
       try {
+        const getValidUrls = (urls: string[] | undefined): string[] => {
+          if (!urls?.length) return [];
+          const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+          const isUnrestricted =
+            userData?.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+          return urls.filter(
+            (url) => isUnrestricted || allowedUrls.includes(url)
+          );
+        };
+
         // Sync regex patterns from URLs
         const syncPatterns = async (
           urls: string[] | undefined,
-          existing: string[],
+          existing: string[]
         ): Promise<string[]> => {
-          if (!urls?.length) return existing;
+          const validUrls = getValidUrls(urls);
+          if (!validUrls.length) return existing;
           const result = [...existing];
           const existingSet = new Set(existing);
-
-          const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
-          const isUnrestricted =
-            userData?.trusted ||
-            Env.REGEX_FILTER_ACCESS === 'all';
-
-          const validUrls = urls.filter(
-            (url) => isUnrestricted || allowedUrls.includes(url)
-          );
 
           const allPatterns = await Promise.all(
             validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
@@ -155,18 +157,10 @@ export const userDataMiddleware = async (
           urls: string[] | undefined,
           existing: { name: string; pattern: string }[]
         ): Promise<{ name: string; pattern: string }[]> => {
-          if (!urls?.length) return existing;
+          const validUrls = getValidUrls(urls);
+          if (!validUrls.length) return existing;
           const result = [...existing];
           const existingSet = new Set(existing.map((p) => p.pattern));
-
-          const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
-          const isUnrestricted =
-            userData?.trusted ||
-            Env.REGEX_FILTER_ACCESS === 'all';
-
-          const validUrls = urls.filter(
-            (url) => isUnrestricted || allowedUrls.includes(url)
-          );
 
           const allPatterns = await Promise.all(
             validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
