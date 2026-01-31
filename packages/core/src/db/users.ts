@@ -189,7 +189,8 @@ export class UserRepository {
       //   );
       // }
       decryptedConfig.trusted =
-        Env.TRUSTED_UUIDS?.split(',').includes(uuid) ?? false;
+        Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
+        false;
       decryptedConfig.ip = undefined;
       logger.info(`Retrieved configuration for user ${uuid}`);
       return applyMigrations(decryptedConfig);
@@ -231,7 +232,8 @@ export class UserRepository {
           );
         }
         config.trusted =
-          Env.TRUSTED_UUIDS?.split(',').includes(uuid) ?? false;
+          Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
+          false;
         config.ip = undefined;
         let validatedConfig: UserData;
         try {
