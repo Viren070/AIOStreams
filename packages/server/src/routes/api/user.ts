@@ -5,9 +5,6 @@ import {
   createLogger,
   encryptString,
   UserRepository,
-  FeatureControl,
-  Env,
-  UserData,
 } from '@aiostreams/core';
 import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
@@ -18,32 +15,6 @@ const logger = createLogger('server');
 
 router.use(userApiRateLimiter);
 router.use(resolveUuidAliasForUserApi);
-
-const validateSyncedUrls = (config: UserData, uuid?: string) => {
-  const isUnrestricted =
-    (uuid && Env.TRUSTED_UUIDS?.split(',').includes(uuid)) ||
-    Env.REGEX_FILTER_ACCESS === 'all';
-
-  if (isUnrestricted) return;
-
-  const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
-  const urlsToCheck = [
-    ...(config.syncedIncludedRegexUrls || []),
-    ...(config.syncedExcludedRegexUrls || []),
-    ...(config.syncedRequiredRegexUrls || []),
-    ...(config.syncedPreferredRegexUrls || []),
-  ];
-
-  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
-
-  if (invalidUrls.length > 0) {
-    throw new APIError(
-      constants.ErrorCode.USER_INVALID_CONFIG,
-      undefined,
-      `Forbidden URL(s) in regex configuration: ${invalidUrls.join(', ')}`
-    );
-  }
-};
 
 // checking existence of a user
 router.head('/', async (req, res, next) => {
@@ -153,8 +124,6 @@ router.post('/', async (req, res, next) => {
   }
   //
   try {
-    validateSyncedUrls(config);
-
     const { uuid, encryptedPassword } = await UserRepository.createUser(
       config,
       password
@@ -196,7 +165,6 @@ router.put('/', async (req, res, next) => {
   }
 
   try {
-    validateSyncedUrls(config, uuid);
     config.uuid = uuid;
     const updatedUser = await UserRepository.updateUser(uuid, password, config);
     res.status(200).json(
