@@ -308,12 +308,4 @@ export class FeatureControl {
     return fetchPatternsFromUrl(url);
   }
 
-  public static getSettings() {
-    return {
-      allowedRegexPatterns: {
-        urls: Env.ALLOWED_REGEX_PATTERNS_URLS,
-      },
-      regexFilterAccess: Env.REGEX_FILTER_ACCESS,
-    };
-  }
 }

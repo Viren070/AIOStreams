@@ -127,11 +127,10 @@ export const userDataMiddleware = async (
           const result = [...existing];
           const existingSet = new Set(existing);
 
-          const settings = FeatureControl.getSettings();
-          const allowedUrls = settings.allowedRegexPatterns?.urls || [];
+          const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
           const isUnrestricted =
             userData?.trusted ||
-            settings.regexFilterAccess === 'all';
+            Env.REGEX_FILTER_ACCESS === 'all';
 
           const validUrls = urls.filter(
             (url) => isUnrestricted || allowedUrls.includes(url)
@@ -160,11 +159,10 @@ export const userDataMiddleware = async (
           const result = [...existing];
           const existingSet = new Set(existing.map((p) => p.pattern));
 
-          const settings = FeatureControl.getSettings();
-          const allowedUrls = settings.allowedRegexPatterns?.urls || [];
+          const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
           const isUnrestricted =
             userData?.trusted ||
-            settings.regexFilterAccess === 'all';
+            Env.REGEX_FILTER_ACCESS === 'all';
 
           const validUrls = urls.filter(
             (url) => isUnrestricted || allowedUrls.includes(url)

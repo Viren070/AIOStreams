@@ -20,14 +20,13 @@ router.use(userApiRateLimiter);
 router.use(resolveUuidAliasForUserApi);
 
 const validateSyncedUrls = (config: UserData, uuid?: string) => {
-  const settings = FeatureControl.getSettings();
   const isUnrestricted =
     (uuid && Env.TRUSTED_UUIDS?.split(',').includes(uuid)) ||
-    settings.regexFilterAccess === 'all';
+    Env.REGEX_FILTER_ACCESS === 'all';
 
   if (isUnrestricted) return;
 
-  const allowedUrls = settings.allowedRegexPatterns?.urls || [];
+  const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
   const urlsToCheck = [
     ...(config.syncedIncludedRegexUrls || []),
     ...(config.syncedExcludedRegexUrls || []),
@@ -154,11 +153,6 @@ router.post('/', async (req, res, next) => {
   }
   //
   try {
-    // For new users, we don't have a UUID yet to check trusted list unless we pre-allocate or check config?
-    // Actually, trusted users usually have a specific UUID they use.
-    // But createUser generates a random UUID.
-    // So a NEW user cannot be trusted initially unless they are using an existing UUID (which createUser doesn't support).
-    // Thus, new users are always restricted unless regexFilterAccess is 'all'.
     validateSyncedUrls(config);
 
     const { uuid, encryptedPassword } = await UserRepository.createUser(
