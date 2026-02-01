@@ -315,38 +315,6 @@ class StreamFilterer {
           );
         }
 
-        // checks for metadata mismatches
-        if (
-          type === 'series' &&
-          requestedMetadata?.seasons &&
-          stream.parsedFile?.seasons?.length
-        ) {
-          const metadataSeasons = requestedMetadata.seasons;
-
-          for (const seasonNum of stream.parsedFile.seasons) {
-            const seasonData = metadataSeasons.find(
-              (s) => s.season_number === seasonNum
-            );
-
-            if (
-              seasonData &&
-              parsedId?.episode &&
-              parsedId?.season &&
-              seasonNum === Number(parsedId.season)
-            ) {
-              const episodeNum = Number(parsedId.episode);
-              if (episodeNum > seasonData.episode_count) {
-                logger.debug(
-                  `Skipping bitrate calculation for stream ${stream.filename}: Episode ${episodeNum} exceeds Season ${seasonNum} count (${seasonData.episode_count})`,
-                  { stream, seasonData }
-                );
-                doBitrateCalculation = false;
-                break;
-              }
-            }
-          }
-        }
-
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
           requestedMetadata?.runtime &&
