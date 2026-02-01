@@ -303,6 +303,18 @@ class StreamFilterer {
             stream.parsedFile.episodes.length === 0);
         let doBitrateCalculation = true;
 
+        // Skip bitrate calculation for specials (Season 0)
+        if (
+          type === 'series' &&
+          stream.parsedFile?.seasons &&
+          stream.parsedFile.seasons.includes(0)
+        ) {
+          doBitrateCalculation = false;
+          logger.debug(
+            `Skipping bitrate calculation for stream ${stream.filename}: Season 0 (Specials) detected`
+          );
+        }
+
         // checks for metadata mismatches
         if (
           type === 'series' &&
@@ -316,15 +328,12 @@ class StreamFilterer {
               (s) => s.season_number === seasonNum
             );
 
-            if (!seasonData) {
-              if (!this.userData.tvdbApiKey) {
-                logger.debug(
-                  `Skipping bitrate calculation for stream ${stream.filename}: Season ${seasonNum} missing from metadata (fallback mismatch)`,
-                  { streamSeasons: stream.parsedFile.seasons }
-                );
-                return;
-              }
-            } else if (parsedId?.episode && parsedId?.season && seasonNum === Number(parsedId.season)) {
+            if (
+              seasonData &&
+              parsedId?.episode &&
+              parsedId?.season &&
+              seasonNum === Number(parsedId.season)
+            ) {
               const episodeNum = Number(parsedId.episode);
               if (episodeNum > seasonData.episode_count) {
                 logger.debug(
@@ -394,17 +403,10 @@ class StreamFilterer {
             }
           }
 
-          if (doBitrateCalculation && requestedMetadata.runtime > 1) {
+          if (doBitrateCalculation) {
             stream.bitrate = Math.round(
               (finalSize * 8) / (requestedMetadata.runtime * 60)
             );
-          } else if (doBitrateCalculation && requestedMetadata.runtime <= 1) {
-             logger.debug(
-               `Skipping bitrate calculation for stream ${stream.filename}: Runtime is invalid (${requestedMetadata.runtime})`,
-               {
-                  runtime: requestedMetadata.runtime,
-               }
-             );
           }
         }
       });
