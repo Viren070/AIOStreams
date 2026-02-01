@@ -494,6 +494,7 @@ export async function validateConfig(
   }
 
   await validateRegexes(config, options?.skipErrorsFromAddonsOrProxies);
+  validateSyncedRegexUrls(config, options?.skipErrorsFromAddonsOrProxies);
 
   await new AIOStreams(ensureDecrypted(config), {
     skipFailedAddons: options?.skipErrorsFromAddonsOrProxies ?? false,
@@ -756,6 +757,31 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
       }
     })
   );
+}
+
+function validateSyncedRegexUrls(config: UserData, skipErrors: boolean = false) {
+  const isUnrestricted =
+    config.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+
+  if (isUnrestricted) return;
+
+  const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+  const urlsToCheck = [
+    ...(config.syncedIncludedRegexUrls || []),
+    ...(config.syncedExcludedRegexUrls || []),
+    ...(config.syncedRequiredRegexUrls || []),
+    ...(config.syncedPreferredRegexUrls || []),
+  ];
+
+  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
+
+  if (invalidUrls.length > 0) {
+    if (!skipErrors) {
+      throw new Error(
+        `Forbidden URL(s) in regex configuration: ${invalidUrls.join(', ')}`
+      );
+    }
+  }
 }
 
 function ensureDecrypted(config: UserData): UserData {

@@ -8,14 +8,71 @@ import { Cache } from './cache.js';
 const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
+const MAX_CACHE_SIZE = 100;
 
-let remotePatternCache: Cache<string, string[]> | undefined;
+let remotePatternCache: Cache<string, { name: string; pattern: string }[]> | undefined;
 if (Env.REDIS_URI) {
   remotePatternCache = Cache.getInstance('remote-pattern');
 }
 
-async function fetchPatternsFromUrl(url: string): Promise<string[]> {
-  let patterns: string[] | undefined;
+const inMemoryPatternCache = new Map<
+  string,
+  { patterns: { name: string; pattern: string }[]; expiresAt: number }
+>();
+const refreshingUrls = new Set<string>();
+
+async function refreshPatternsInBackground(url: string): Promise<void> {
+  if (refreshingUrls.has(url)) return;
+  refreshingUrls.add(url);
+
+  try {
+    const patterns = await fetchPatternsFromUrlInternal(url);
+    if (patterns.length > 0) {
+      inMemoryPatternCache.set(url, {
+        patterns,
+        expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
+      });
+    }
+  } catch (error) {
+    logger.warn(`Background refresh failed for ${url}:`, error);
+
+    const existing = inMemoryPatternCache.get(url);
+    if (existing) {
+      existing.expiresAt = Date.now() + 60 * 1000;
+      inMemoryPatternCache.set(url, existing);
+    }
+  } finally {
+    refreshingUrls.delete(url);
+  }
+}
+
+async function fetchPatternsFromUrl(url: string): Promise<{ name: string; pattern: string }[]> {
+  if (!remotePatternCache) {
+    const memCached = inMemoryPatternCache.get(url);
+    if (memCached) {
+      if (memCached.expiresAt <= Date.now()) {
+        refreshPatternsInBackground(url);
+      }
+      return memCached.patterns;
+    }
+    const patterns = await fetchPatternsFromUrlInternal(url);
+    if (patterns.length > 0) {
+      if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
+        const firstKey = inMemoryPatternCache.keys().next().value;
+        if (firstKey) inMemoryPatternCache.delete(firstKey);
+      }
+      inMemoryPatternCache.set(url, {
+        patterns,
+        expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
+      });
+    }
+    return patterns;
+  }
+  return fetchPatternsFromUrlInternal(url);
+}
+
+async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string; pattern: string }[]> {
+  let patterns: { name: string; pattern: string }[] | undefined;
   for (let i = 0; i < 3; i++) {
     logger.debug(
       `Fetching allowed regex patterns from ${url}${i > 0 ? ` (attempt ${i + 1} of 3)` : ''}`
@@ -58,14 +115,21 @@ async function fetchPatternsFromUrl(url: string): Promise<string[]> {
       const data = await response.json();
       const parsedData = schema.parse(data);
       patterns = Array.isArray(parsedData)
-        ? parsedData.map((item) => item.pattern)
-        : parsedData.values;
+        ? parsedData
+        : parsedData.values.map((p) => ({ name: p, pattern: p }));
+
+      // Cache the result
       if (remotePatternCache) {
-        await remotePatternCache.set(
-          url,
+        await remotePatternCache.set(url, patterns, Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000));
+      } else {
+        if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
+          const firstKey = inMemoryPatternCache.keys().next().value;
+          if (firstKey) inMemoryPatternCache.delete(firstKey);
+        }
+        inMemoryPatternCache.set(url, {
           patterns,
-          Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000)
-        );
+          expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
+        });
       }
       break;
     } catch (error) {
@@ -153,13 +217,13 @@ export class FeatureControl {
 
     const patternsFromUrls = fetchPromises
       .filter(
-        (result): result is PromiseFulfilledResult<string[]> =>
+        (result): result is PromiseFulfilledResult<{ name: string; pattern: string }[]> =>
           result.status === 'fulfilled'
       )
       .flatMap((result) => result.value);
 
     if (patternsFromUrls.length > 0) {
-      FeatureControl._addPatterns(patternsFromUrls);
+      FeatureControl._addPatterns(patternsFromUrls.map((p) => p.pattern));
     }
   }
 
@@ -235,4 +299,11 @@ export class FeatureControl {
         return false;
     }
   }
+
+  public static async getPatternsForUrl(
+    url: string
+  ): Promise<{ name: string; pattern: string }[]> {
+    return fetchPatternsFromUrl(url);
+  }
+
 }
