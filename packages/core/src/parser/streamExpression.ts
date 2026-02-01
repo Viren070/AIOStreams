@@ -94,6 +94,8 @@ export abstract class StreamExpressionEngine {
     this.parser.consts.daysSinceFirstAired = context.daysSinceFirstAired ?? -1;
     this.parser.consts.daysSinceLastAired = context.daysSinceLastAired ?? -1;
     this.parser.consts.latestSeason = context.latestSeason ?? -1;
+    this.parser.consts.ongoingSeason =
+      context.hasNextEpisode && context.season === context.latestSeason;
   }
 
   private setupParserFunctions() {
