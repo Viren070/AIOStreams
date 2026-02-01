@@ -63,58 +63,35 @@ export function getObjectDiff(
     }
 
     const lastPath = path.length > 0 ? path[path.length - 1] : '';
-    const isAddons = lastPath === 'addons';
     const isPresets = lastPath === 'presets';
-    const isRegexPatterns = lastPath && (lastPath.endsWith('RegexPatterns') || lastPath === 'regexPatterns');
-    const isStreamExpressions = lastPath && (lastPath.endsWith('StreamExpressions') || lastPath === 'streamExpressions');
     const isCatalogModifications = lastPath === 'catalogModifications';
-    const isMergedCatalogs = lastPath === 'mergedCatalogs';
-    const isProxiedList = lastPath === 'proxiedAddons' || lastPath === 'proxiedServices';
-    
-    const isPrimitiveList = lastPath && (
-      lastPath.endsWith('Keywords') || 
-      lastPath.endsWith('Resolutions') ||
-      lastPath.endsWith('Qualities') ||
-      lastPath.endsWith('Encodes') ||
-      lastPath.endsWith('Tags') ||
-      lastPath.endsWith('Languages') ||
-      lastPath.endsWith('StreamTypes') ||
-      lastPath.endsWith('Sources') ||
-      lastPath.endsWith('Types')
-    );
-
-    if (isAddons) {
-      return calculateKeyedArrayDiff(obj1, obj2, 'instanceId', path);
-    } 
-    else if (isCatalogModifications) {
-      return calculateKeyedArrayDiff(obj1, obj2, (item) => `${item.id}_${item.type}`, path);
-    } 
-    else if (isMergedCatalogs) {
-      return calculateKeyedArrayDiff(obj1, obj2, 'id', path);
-    }
-    else if (isRegexPatterns) {
-      return calculateKeyedArrayDiff(obj1, obj2, (item) => item.pattern || item.name, path);
-    }
-    else if (isStreamExpressions || isPrimitiveList || isProxiedList) {
-      return calculateKeyedArrayDiff(obj1, obj2, (item) => String(item), path);
-    }
 
     const getKey = (item: any) => {
       if (!isObject(item)) {
         return String(item);
       }
+      if (isCatalogModifications && item.id && item.type) return `${item.id}_${item.type}`;
       if (item.instanceId) return item.instanceId;
       if (item.id) return item.id;
-      if (item.name) return item.name;
-      if (item.key) return item.key;
       if (item.pattern) return item.pattern;
+      if (item.condition && Array.isArray(item.addons)) {
+        try {
+          return `grouping:${item.condition}:${JSON.stringify(item.addons)}`;
+        } catch {
+          return item.condition;
+        }
+      }
+      if (item.condition) return item.condition;
+      if (item.expression) return item.expression;
       if (Array.isArray(item.addons)) {
         try {
-          return `group:${JSON.stringify(item.addons)}`;
+          return `addons:${JSON.stringify(item.addons)}`;
         } catch {
           return null;
         }
       }
+      if (item.key) return item.key;
+      if (item.name) return item.name;
       return null;
     };
 
@@ -146,13 +123,22 @@ export function getObjectDiff(
 
       const getLabel = (key: any) => {
         const item = newMap.get(key) || oldMap.get(key);
+        if (item?.expression && item?.score !== undefined) {
+          return `${item.expression} (Score: ${item.score})`;
+        }
         if (item?.addons && Array.isArray(item.addons)) {
           const firstAddon = item.addons[0] || '';
           const count = item.addons.length;
           const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
           return `Group: ${item.condition || 'true'}${summary}`;
         }
-        return item?.name || item?.options?.name || item?.instanceId || item?.id || key; 
+        if (item?.name) {
+          if (isCatalogModifications && item.type) {
+             return `${item.name} (${item.type})`;
+          }
+          return item.name;
+        }
+        return item?.options?.name || item?.instanceId || item?.id || key; 
       };
 
       oldMap.forEach((val, key) => {
@@ -198,26 +184,68 @@ export function getObjectDiff(
       return diffs;
     }
 
-    const len = Math.max(obj1.length, obj2.length);
+    let i = 0;
+    let j = 0;
+    while (i < obj1.length || j < obj2.length) {
+      if (i >= obj1.length) {
+        diffs.push({
+          path: [...path, `[${j}]`],
+          type: 'ADD',
+          newValue: obj2[j],
+        });
+        j++;
+        continue;
+      }
+      if (j >= obj2.length) {
+        diffs.push({
+          path: [...path, `[${i}]`],
+          type: 'REMOVE',
+          oldValue: obj1[i],
+        });
+        i++;
+        continue;
+      }
 
-    for (let i = 0; i < len; i++) {
-        if (i < obj1.length && i < obj2.length) {
-            diffs.push(...getObjectDiff(obj1[i], obj2[i], [...path, `[${i}]`]));
+      const diff = getObjectDiff(obj1[i], obj2[j], [...path, `[${j}]`]);
+      if (diff.length === 0) {
+        i++;
+        j++;
+        continue;
+      }
+
+      let isDeletion = false;
+      if (i + 1 < obj1.length) {
+        if (getObjectDiff(obj1[i + 1], obj2[j], []).length === 0) {
+          isDeletion = true;
         }
-        else if (i >= obj1.length) {
-            diffs.push({
-                path: [...path, `[${i}]`],
-                type: 'ADD',
-                newValue: obj2[i]
-            });
+      }
+
+      let isInsertion = false;
+      if (j + 1 < obj2.length) {
+        if (getObjectDiff(obj1[i], obj2[j + 1], []).length === 0) {
+          isInsertion = true;
         }
-        else if (i >= obj2.length) {
-             diffs.push({
-                path: [...path, `[${i}]`],
-                type: 'REMOVE',
-                oldValue: obj1[i]
-            });
-        }
+      }
+
+      if (isDeletion && !isInsertion) {
+        diffs.push({
+          path: [...path, `[${i}]`],
+          type: 'REMOVE',
+          oldValue: obj1[i],
+        });
+        i++;
+      } else if (isInsertion && !isDeletion) {
+        diffs.push({
+          path: [...path, `[${j}]`],
+          type: 'ADD',
+          newValue: obj2[j],
+        });
+        j++;
+      } else {
+        diffs.push(...diff);
+        i++;
+        j++;
+      }
     }
     return diffs;
   }
@@ -285,92 +313,3 @@ export function formatValue(value: any): string {
   return String(value);
 }
 
-function calculateKeyedArrayDiff(
-  arr1: any[],
-  arr2: any[],
-  key: string | ((item: any) => string),
-  path: string[]
-): DiffItem[] {
-  const diffs: DiffItem[] = [];
-  
-  const getKey = (item: any) => {
-    if (typeof key === 'function') return key(item);
-    return item[key];
-  };
-
-  const oldMap = new Map();
-  const oldOrder: any[] = [];
-  arr1.forEach((item: any) => {
-    const k = getKey(item);
-    if (k) {
-      oldMap.set(k, item);
-      oldOrder.push(k);
-    }
-  });
-
-  const newMap = new Map();
-  const newOrder: any[] = [];
-  arr2.forEach((item: any) => {
-    const k = getKey(item);
-    if (k) {
-      newMap.set(k, item);
-      newOrder.push(k);
-    }
-  });
-
-  oldMap.forEach((val, k) => {
-    if (!newMap.has(k)) {
-      const originalIndex = arr1.findIndex((i: any) => getKey(i) === k);
-      diffs.push({
-        path: [...path, `[${originalIndex}]`],
-        type: 'REMOVE',
-        oldValue: val
-      });
-    }
-  });
-
-  newMap.forEach((val, k) => {
-    const newIndex = arr2.findIndex((i: any) => getKey(i) === k);
-    if (!oldMap.has(k)) {
-      diffs.push({
-        path: [...path, `[${newIndex}]`],
-        type: 'ADD',
-        newValue: val
-      });
-    } else {
-      const oldVal = oldMap.get(k);
-      diffs.push(...getObjectDiff(oldVal, val, [...path, `[${newIndex}]`]));
-    }
-  });
-
-  // Check for reordering
-  const intersectionOld = oldOrder.filter(k => newOrder.includes(k));
-  const intersectionNew = newOrder.filter(k => oldOrder.includes(k));
-
-  const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
-                         intersectionOld.some((k, i) => k !== intersectionNew[i]);
-
-  if (isOrderChanged) {
-    const getLabel = (k: any) => {
-      const item = newMap.get(k) || oldMap.get(k);
-      if (item?.name) {
-        if (item.type && (path.includes('catalogModifications') || path[path.length-1] === 'catalogModifications')) {
-          return `${item.name} (${item.type})`;
-        }
-        return item.name;
-      }
-      if (item?.pattern) return item.pattern;
-      if (item?.instanceId) return item.instanceId;
-      return k;
-    };
-
-    diffs.push({
-      path: [...path],
-      type: 'CHANGE',
-      oldValue: oldOrder.map(getLabel),
-      newValue: newOrder.map(getLabel)
-    });
-  }
-
-  return diffs; 
-}
