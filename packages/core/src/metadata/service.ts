@@ -290,6 +290,9 @@ export class MetadataService {
                     .trim()
                 );
                 runtime = runtime ? Math.round(runtime / 60000) : undefined;
+                if (runtime !== undefined && runtime <= 1) {
+                  runtime = undefined;
+                }
               }
             } else if (imdbResult.status === 'rejected') {
               logger.warn(
