@@ -72,8 +72,6 @@ async function fetchPatternsFromUrl(url: string): Promise<{ name: string; patter
 }
 
 async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string; pattern: string }[]> {
-  const ttlMs = Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL;
-
   let patterns: { name: string; pattern: string }[] | undefined;
   for (let i = 0; i < 3; i++) {
     logger.debug(
@@ -122,7 +120,7 @@ async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string
 
       // Cache the result
       if (remotePatternCache) {
-        await remotePatternCache.set(url, patterns, Math.floor(ttlMs / 1000));
+        await remotePatternCache.set(url, patterns, Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000));
       } else {
         if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
           const firstKey = inMemoryPatternCache.keys().next().value;
@@ -130,7 +128,7 @@ async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string
         }
         inMemoryPatternCache.set(url, {
           patterns,
-          expiresAt: Date.now() + ttlMs,
+          expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
         });
       }
       break;
