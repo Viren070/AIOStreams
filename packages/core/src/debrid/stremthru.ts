@@ -278,7 +278,7 @@ export class StremThruInterface implements DebridService {
     }
 
     let magnetDownload: DebridDownload;
-    if (playbackInfo.downloadUrl) {
+    if (playbackInfo.downloadUrl && Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL) {
       logger.debug(
         `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
       );

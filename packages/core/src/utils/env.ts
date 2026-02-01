@@ -1848,6 +1848,10 @@ export const Env = cleanEnv(process.env, {
     default: 60 * 5, // 5 minutes
     desc: 'Builtin Debrid NZB list cache TTL',
   }),
+  BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL: bool({
+    default: true,
+    desc: 'Use torrent URLs instead of magnets for better private tracker integration',
+  }),
   BUILTIN_DEBRID_METADATA_STORE: str({
     choices: ['redis', 'sql', 'memory'],
     default: undefined,
