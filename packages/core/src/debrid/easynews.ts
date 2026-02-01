@@ -52,6 +52,11 @@ export class EasynewsService implements DebridService {
   addMagnet(magnet: string): Promise<DebridDownload> {
     throw new Error('Method not implemented.');
   }
+
+  addTorrent(torrent: string): Promise<DebridDownload> {
+    throw new Error('Method not implemented.');
+  }
+
   async checkNzbs(
     nzbs: { name?: string; hash?: string }[],
     checkOwned?: boolean
