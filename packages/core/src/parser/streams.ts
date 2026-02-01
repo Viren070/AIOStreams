@@ -135,7 +135,6 @@ class StreamParser {
     parsedStream.indexer = this.getIndexer(stream, parsedStream);
     parsedStream.service = this.getService(stream, parsedStream);
     parsedStream.duration = this.getDuration(stream, parsedStream);
-    parsedStream.bitrate = this.getBitrate(stream, parsedStream);
     parsedStream.type = this.getStreamType(
       stream,
       parsedStream.service,
@@ -143,6 +142,7 @@ class StreamParser {
     );
     parsedStream.library = this.getInLibrary(stream, parsedStream);
     parsedStream.age = this.getAge(stream, parsedStream);
+    parsedStream.bitrate = this.getBitrate(stream, parsedStream);
     parsedStream.message = this.getMessage(stream, parsedStream);
 
     parsedStream.parsedFile = this.getParsedFile(stream, parsedStream);
