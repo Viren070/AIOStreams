@@ -46,6 +46,7 @@ export interface ExpressionContext {
   daysUntilNextEpisode?: number;
   daysSinceFirstAired?: number;
   daysSinceLastAired?: number;
+  latestSeason?: number;
   // Anime entry data
   anilistId?: number;
   malId?: number;
@@ -524,6 +525,9 @@ export class StreamContext {
       daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
       daysSinceFirstAired: this.computeDaysSinceFirstAired(),
       daysSinceLastAired: this.computeDaysSinceLastAired(),
+      latestSeason: this._metadata?.seasons
+        ? Math.max(...this._metadata.seasons.map((s) => s.season_number))
+        : undefined,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,
       malId: this.animeEntry?.mappings?.malId,
