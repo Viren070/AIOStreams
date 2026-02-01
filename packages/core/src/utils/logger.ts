@@ -46,6 +46,7 @@ const moduleMap: { [key: string]: string } = {
   'metadata-service': '🔍  METADATA',
   torrent: '👤  TORRENT',
   knaben: '🔍  KNABEN',
+  eztv: '📺  EZTV',
   'torrent-galaxy': '🌐  TGx',
   templates: '📄  TEMPLATES',
   nzbdav: '📂  NZBDAV',
