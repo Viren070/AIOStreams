@@ -3725,11 +3725,6 @@ function SyncedUrlInputs({
       return false;
     }
 
-    if (urls.includes(url)) {
-      toast.error('URL already synced');
-      return false;
-    }
-
     return true;
   };
 
