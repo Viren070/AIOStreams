@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.23.0](https://github.com/Viren070/AIOStreams/compare/v2.22.0...v2.23.0) (2026-02-01)
+
+
+### Features
+
+* add 'language' passthrough stage ([b350c83](https://github.com/Viren070/AIOStreams/commit/b350c832489bf75758347fd8df0a2da5343f4b71))
+* Add hasNextEpisode and dasUntilNextEpisode SEL constants ([#670](https://github.com/Viren070/AIOStreams/issues/670)) ([bbed45d](https://github.com/Viren070/AIOStreams/commit/bbed45d44977e88ba80460e5654f89d571683afc))
+* add predefined tamtaro formatter ([0207d20](https://github.com/Viren070/AIOStreams/commit/0207d204f79f07c7c74f1089852f263d19df231a))
+* add ranked stream expressions with scoring sort ([f5b5484](https://github.com/Viren070/AIOStreams/commit/f5b5484210395fccd6967cda073a18eda0692aac))
+* Add toggle to show changes on save + confirm and reset changes ([#648](https://github.com/Viren070/AIOStreams/issues/648)) ([2ef5c4a](https://github.com/Viren070/AIOStreams/commit/2ef5c4af3fdcd4f609839ba88245a10bf1d8b0ab))
+* **builtins:** make use of torrent private flag ([#644](https://github.com/Viren070/AIOStreams/issues/644)) ([b1dd534](https://github.com/Viren070/AIOStreams/commit/b1dd53431a64686df723f8e166a0b1ae6cf0269a))
+* **core/formatter:** Add `slice(start, end)`, `rsort`, `lsort`, and numerical sorting to `sort` ([#493](https://github.com/Viren070/AIOStreams/issues/493)) ([65d1576](https://github.com/Viren070/AIOStreams/commit/65d15765e1d2f26a3a9a14892cd637ad0f0d4ad3))
+* deprecate always precache with customisable precache SEL condition ([11b6e05](https://github.com/Viren070/AIOStreams/commit/11b6e05319ed9a1a30ca62ddc3996727b2455e56))
+* **frontend:** add ability to reorder sel, regex, keyword and group addons ([#646](https://github.com/Viren070/AIOStreams/issues/646)) ([5f4737d](https://github.com/Viren070/AIOStreams/commit/5f4737d61c32aeac9276b291604eba78cf33dfee))
+* **sel:** add `age` in days constant for expression filters ([b804961](https://github.com/Viren070/AIOStreams/commit/b8049610596c05ccdecf4c9c8665f4ca821eb098))
+* **sel:** add `seasonPack` function ([bc25eaf](https://github.com/Viren070/AIOStreams/commit/bc25eaf22b8034083b5a4f2550d478e99945383f))
+* **sel:** add originalLanguage constant to expression filters ([7fdd89d](https://github.com/Viren070/AIOStreams/commit/7fdd89d5b445d25fe5f7438a87356a1672334a85))
+
+
+### Bug Fixes
+
+* allow streams when digital release is within tolerance window ([#658](https://github.com/Viren070/AIOStreams/issues/658)) ([9ced8ec](https://github.com/Viren070/AIOStreams/commit/9ced8ec6d9ffffe29496e85cafcc45ff48b58be1))
+* correctly handle falllback season pack detection ([41dbd53](https://github.com/Viren070/AIOStreams/commit/41dbd531203ec2a22a357981cd999dae4e43c4d5))
+* dont use volumes as season ([69c66e4](https://github.com/Viren070/AIOStreams/commit/69c66e40753d71eadf7f830652835024e7697c18))
+* enforce correct score range limits in ranked expressions ([31975fa](https://github.com/Viren070/AIOStreams/commit/31975fa665111ea5e6fd00dbba7a79ef5d00f9ca))
+* **fetcher:** improve exit condition handling and logging during stream fetching ([8f1a934](https://github.com/Viren070/AIOStreams/commit/8f1a9344f5ec173c16d0aa4e8330f4e2718313b8))
+* **filterer:** add truncation for long filter conditions in statistics ([068bdb9](https://github.com/Viren070/AIOStreams/commit/068bdb9083fd1e3d4ed3687823788e13b43440f6))
+* fix seasonPack detection ([b576804](https://github.com/Viren070/AIOStreams/commit/b576804f62be2f8dad4e8598d7b372d82902ce4e))
+* **frontend:** show changes for ranked sel + future proofing ([#668](https://github.com/Viren070/AIOStreams/issues/668)) ([c8add1d](https://github.com/Viren070/AIOStreams/commit/c8add1d8f86ea65823c0c3a47e0c91bda7c333d1))
+* Move when bitrate is calculated ([#672](https://github.com/Viren070/AIOStreams/issues/672)) ([bddd417](https://github.com/Viren070/AIOStreams/commit/bddd417be54e61e2ac3942d5697b2d71ab073e2c))
+* pass resolved original language to formatter for uLanguages ([91d2c52](https://github.com/Viren070/AIOStreams/commit/91d2c52fa5f7ca029d6ff00f0d97a7dbed2a46fc))
+* **presets/subhero:** update url ([#667](https://github.com/Viren070/AIOStreams/issues/667)) ([f55325c](https://github.com/Viren070/AIOStreams/commit/f55325ccee0ed5de34299b35faf6eaccc88be750))
+* **sel:** rename `age` constant to `daysSinceRelease` ([ad12037](https://github.com/Viren070/AIOStreams/commit/ad12037a62a269d28d1b4da7dad65a4c8f496ce7))
+* **sel:** use -1 as default for daysSinceRelease and absoluteEpisode ([b3b22f9](https://github.com/Viren070/AIOStreams/commit/b3b22f97425f116f2d5b9aed21a4a3c2f43dfe6b))
+* **stremthru:** add torrent filename as display name to magnet ([#663](https://github.com/Viren070/AIOStreams/issues/663)) ([cb6f3b5](https://github.com/Viren070/AIOStreams/commit/cb6f3b5016936094e15fff0edc94ecf93bfb5160))
+* **usenet-stream-base:** check webdav contents during checkNzbs ([d2a0f31](https://github.com/Viren070/AIOStreams/commit/d2a0f316bcf7f664a502296371625329de4b7ac7))
+
 ## [2.22.0](https://github.com/Viren070/AIOStreams/compare/v2.21.4...v2.22.0) (2026-01-22)
 
 
