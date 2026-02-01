@@ -208,6 +208,7 @@ export class TVDBMetadata {
           tvdbId: series.id,
           tmdbId: null,
           runtime: series.averageRuntime ?? undefined,
+          nextAirDate: series.nextAired ?? undefined,
         };
       } else {
         throw new Error(`Could not find metadata for ${id.value}`);
@@ -246,6 +247,7 @@ export class TVDBMetadata {
           tvdbId: series.id,
           tmdbId: null,
           runtime: series.averageRuntime ?? undefined,
+          nextAirDate: series.nextAired ?? undefined,
         };
       }
     }
