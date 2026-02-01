@@ -340,7 +340,8 @@ class StreamFilterer {
                   `Skipping bitrate calculation for stream ${stream.filename}: Episode ${episodeNum} exceeds Season ${seasonNum} count (${seasonData.episode_count})`,
                   { stream, seasonData }
                 );
-                return;
+                doBitrateCalculation = false;
+                break;
               }
             }
           }
