@@ -12,32 +12,57 @@ import { z } from 'zod';
 
 const logger = createLogger('eztv');
 
-const EztvTorrentSchema = z.object({
-  id: z.number(),
-  hash: z.string().transform((h) => h.toLowerCase()),
-  filename: z.string(),
-  magnet_url: z.string(),
-  title: z.string(),
-  imdb_id: z.string(),
-  season: z.string(),
-  episode: z.string(),
-  small_screenshot: z.string().optional(),
-  large_screenshot: z.string().optional(),
-  seeds: z.number(),
-  peers: z.number(),
-  date_released_unix: z.number(),
-  size_bytes: z.string(),
-});
+const EztvTorrentSchema = z
+  .object({
+    id: z.number(),
+    hash: z.string().transform((h) => h.toLowerCase()),
+    filename: z.string(),
+    magnet_url: z.string(),
+    title: z.string(),
+    imdb_id: z.string(),
+    season: z.string(),
+    episode: z.string(),
+    small_screenshot: z.string().optional(),
+    large_screenshot: z.string().optional(),
+    seeds: z.number(),
+    peers: z.number(),
+    date_released_unix: z.number(),
+    size_bytes: z.string(),
+  })
+  .transform((data) => ({
+    id: data.id,
+    hash: data.hash,
+    filename: data.filename,
+    magnetUrl: data.magnet_url,
+    title: data.title,
+    imdbId: data.imdb_id,
+    season: data.season,
+    episode: data.episode,
+    smallScreenshot: data.small_screenshot,
+    largeScreenshot: data.large_screenshot,
+    seeds: data.seeds,
+    peers: data.peers,
+    dateReleasedUnix: data.date_released_unix,
+    sizeBytes: data.size_bytes,
+  }));
 
 type EztvTorrent = z.infer<typeof EztvTorrentSchema>;
 
-const EztvGetTorrentsResponseSchema = z.object({
-  imdb_id: z.string(),
-  torrents_count: z.number(),
-  limit: z.number(),
-  page: z.number(),
-  torrents: z.array(EztvTorrentSchema),
-});
+const EztvGetTorrentsResponseSchema = z
+  .object({
+    imdb_id: z.string(),
+    torrents_count: z.number(),
+    limit: z.number(),
+    page: z.number(),
+    torrents: z.array(EztvTorrentSchema),
+  })
+  .transform((data) => ({
+    imdbId: data.imdb_id,
+    torrentsCount: data.torrents_count,
+    limit: data.limit,
+    page: data.page,
+    torrents: data.torrents,
+  }));
 
 type EztvGetTorrentsResponse = z.infer<typeof EztvGetTorrentsResponseSchema>;
 

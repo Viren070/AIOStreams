@@ -114,7 +114,7 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
     for (const t of matchingTorrents) {
       const hash = validateInfoHash(
         t.hash ||
-          (t.magnet_url ? extractInfoHashFromMagnet(t.magnet_url) : undefined)
+          (t.magnetUrl ? extractInfoHashFromMagnet(t.magnetUrl) : undefined)
       );
       if (!hash) {
         logger.warn(`EZTV torrent has no valid hash: ${t.filename}`);
@@ -125,12 +125,12 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
       }
       seenTorrents.add(hash);
 
-      const sources = t.magnet_url
-        ? extractTrackersFromMagnet(t.magnet_url)
+      const sources = t.magnetUrl
+        ? extractTrackersFromMagnet(t.magnetUrl)
         : [];
-      const sizeBytes = parseInt(t.size_bytes, 10);
-      const age = t.date_released_unix
-        ? Math.ceil((Date.now() / 1000 - t.date_released_unix) / 3600)
+      const sizeBytes = parseInt(t.sizeBytes, 10);
+      const age = t.dateReleasedUnix
+        ? Math.ceil((Date.now() / 1000 - t.dateReleasedUnix) / 3600)
         : undefined;
 
       torrents.push({
