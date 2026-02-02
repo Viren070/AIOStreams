@@ -2117,6 +2117,24 @@ export const Env = cleanEnv(process.env, {
     default: 5,
     desc: 'The maximum number of pages to fetch.',
   }),
+
+  BUILTIN_EZTV_URL: url({
+    default: 'https://eztvx.to',
+    desc: 'Builtin EZTV API URL',
+  }),
+  BUILTIN_DEFAULT_EZTV_TIMEOUT: num({
+    default: undefined,
+    desc: 'Builtin EZTV timeout',
+  }),
+  BUILTIN_EZTV_SEARCH_TIMEOUT: num({
+    default: 30000, // 30 seconds
+    desc: 'Builtin EZTV Search timeout',
+  }),
+  BUILTIN_EZTV_SEARCH_CACHE_TTL: num({
+    default: 7 * 24 * 60 * 60, // 7 days
+    desc: 'Builtin EZTV Search cache TTL',
+  }),
+
   // Rate limiting settings
   DISABLE_RATE_LIMITS: bool({
     default: false,
