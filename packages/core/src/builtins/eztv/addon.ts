@@ -8,7 +8,9 @@ import {
   createLogger,
   getTimeTakenSincePoint,
   ParsedId,
+  Env,
 } from '../../utils/index.js';
+import { createQueryLimit } from '../utils/general.js';
 import EztvAPI from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import {
@@ -83,29 +85,69 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
     });
 
     const start = Date.now();
-    let response;
-    try {
-      response = await this.api.getTorrents({
-        imdbId: imdbIdWithoutTt,
-        limit: 100,
-      });
-    } catch (error) {
-      logger.error(
-        `EZTV API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    const queryLimit = createQueryLimit();
+    const maxPages = Env.BUILTIN_EZTV_MAX_PAGES;
+
+    // Perform initial search
+    const initialResponse = await this.api.getTorrents({
+      imdbId: imdbIdWithoutTt,
+      limit: 100,
+      page: 1,
+    });
+
+    let allTorrents = [...initialResponse.torrents];
+
+    // Check if we need to fetch additional pages
+    const totalResults = initialResponse.torrentsCount;
+    const remainingResults = totalResults - initialResponse.torrents.length;
+
+    if (remainingResults > 0 && maxPages > 1) {
+      const additionalPages = Math.ceil(
+        remainingResults / initialResponse.limit
       );
-      return [];
+      const pagesToFetch = Math.min(additionalPages, maxPages - 1); // -1 because we already fetched first page
+
+      if (pagesToFetch > 0) {
+        logger.debug('Fetching additional EZTV pages in parallel', {
+          totalResults,
+          initialResultsCount: initialResponse.torrents.length,
+          pagesToFetch,
+          remainingResults,
+        });
+
+        // Create requests for all remaining pages in parallel
+        const pagePromises = Array.from({ length: pagesToFetch }, (_, i) => {
+          const pageNumber = i + 2; // Start from page 2 since we already fetched page 1
+          return queryLimit(() =>
+            this.api.getTorrents({
+              imdbId: imdbIdWithoutTt,
+              limit: 100,
+              page: pageNumber,
+            })
+          );
+        });
+
+        const pageResponses = await Promise.all(pagePromises);
+        for (const response of pageResponses) {
+          allTorrents.push(...response.torrents);
+        }
+      }
     }
 
     const seasonStr = String(requestedSeason);
     const episodeStr = String(requestedEpisode);
 
-    const matchingTorrents = response.torrents.filter(
+    const matchingTorrents = allTorrents.filter(
       (t) => t.season === seasonStr && t.episode === episodeStr
     );
 
     logger.info(`EZTV search took ${getTimeTakenSincePoint(start)}`, {
-      total: response.torrents.length,
+      total: allTorrents.length,
       matching: matchingTorrents.length,
+      pages: Math.min(
+        Math.ceil(initialResponse.torrentsCount / initialResponse.limit),
+        maxPages
+      ),
     });
 
     const seenTorrents = new Set<string>();
@@ -125,9 +167,7 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
       }
       seenTorrents.add(hash);
 
-      const sources = t.magnetUrl
-        ? extractTrackersFromMagnet(t.magnetUrl)
-        : [];
+      const sources = t.magnetUrl ? extractTrackersFromMagnet(t.magnetUrl) : [];
       const sizeBytes = parseInt(t.sizeBytes, 10);
       const age = t.dateReleasedUnix
         ? Math.ceil((Date.now() / 1000 - t.dateReleasedUnix) / 3600)

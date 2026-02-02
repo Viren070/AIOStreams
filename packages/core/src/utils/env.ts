@@ -2134,6 +2134,10 @@ export const Env = cleanEnv(process.env, {
     default: 7 * 24 * 60 * 60, // 7 days
     desc: 'Builtin EZTV Search cache TTL',
   }),
+  BUILTIN_EZTV_MAX_PAGES: num({
+    default: 5,
+    desc: 'Maximum number of pages to fetch for EZTV searches',
+  }),
 
   // Rate limiting settings
   DISABLE_RATE_LIMITS: bool({
