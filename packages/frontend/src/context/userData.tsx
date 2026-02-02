@@ -311,6 +311,7 @@ export const DefaultUserData: UserData = {
     requestTypes: [],
   },
   precacheCondition: DEFAULT_PRECACHE_CONDITION,
+  enableSeadex: true,
 };
 
 interface UserDataContextType {

@@ -3235,6 +3235,7 @@ function Content() {
                     label="Enable"
                     side="right"
                     value={userData.enableSeadex ?? true}
+                    defaultValue={true}
                     onValueChange={(value) => {
                       setUserData((prev) => ({
                         ...prev,
