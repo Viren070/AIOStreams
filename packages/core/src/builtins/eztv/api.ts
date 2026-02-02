@@ -168,13 +168,13 @@ class EztvAPI {
         timeout: options.timeout ?? Env.MAX_TIMEOUT,
       });
 
-      const data = (await response.json()) as unknown;
-
       if (!response.ok) {
         throw new Error(
           `EZTV API error (${response.status}): ${response.statusText}`
         );
       }
+
+      const data = (await response.json()) as unknown;
 
       try {
         return schema.parse(data);
