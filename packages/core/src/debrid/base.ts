@@ -127,7 +127,7 @@ const BaseFileInfoSchema = z.object({
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
   downloadUrl: z.string().optional(),
   hash: z.string(),
-  private: z.boolean().default(false),
+  private: z.boolean().optional(),
   sources: z.array(z.string()),
   type: z.literal('torrent'),
 });
