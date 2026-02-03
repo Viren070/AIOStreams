@@ -123,29 +123,29 @@ export const userDataMiddleware = async (
           userData.syncedPreferredRegexUrls,
           userData.preferredRegexPatterns || [],
           userData,
-          (p) => p,
-          (p) => p.pattern
+          (regex) => regex,
+          (regex) => regex.pattern
         );
         userData.excludedRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedExcludedRegexUrls,
           userData.excludedRegexPatterns || [],
           userData,
-          (p) => p.pattern,
-          (s) => s
+          (regex) => regex.pattern,
+          (pattern) => pattern
         );
         userData.requiredRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedRequiredRegexUrls,
           userData.requiredRegexPatterns || [],
           userData,
-          (p) => p.pattern,
-          (s) => s
+          (regex) => regex.pattern,
+          (pattern) => pattern
         );
         userData.includedRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedIncludedRegexUrls,
           userData.includedRegexPatterns || [],
           userData,
-          (p) => p.pattern,
-          (s) => s
+          (regex) => regex.pattern,
+          (pattern) => pattern
         );
 
         userData = await validateConfig(userData, {

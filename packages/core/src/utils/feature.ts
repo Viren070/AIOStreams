@@ -163,7 +163,6 @@ async function fetchPatternsFromUrlInternal(
 
     return fetchPatternsFromUrlInternal(url, attempt + 1);
   }
-
 }
 
 export class FeatureControl {
@@ -242,7 +241,7 @@ export class FeatureControl {
       .flatMap((result) => result.value);
 
     if (patternsFromUrls.length > 0) {
-      FeatureControl._addPatterns(patternsFromUrls.map((p) => p.pattern));
+      FeatureControl._addPatterns(patternsFromUrls.map((regex) => regex.pattern));
     }
   }
 
