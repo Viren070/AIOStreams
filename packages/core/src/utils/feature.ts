@@ -348,5 +348,4 @@ export class FeatureControl {
     }
     return result;
   }
-
 }

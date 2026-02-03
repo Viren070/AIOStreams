@@ -3684,16 +3684,22 @@ function SyncedUrlInputs({
   onUrlsChange,
   trusted,
   hasExistingPatterns,
+  onClearValues,
 }: {
-  urls: string[];
-  onUrlsChange: (urls: string[]) => void;
+  urls?: string[];
+  onUrlsChange?: (urls: string[]) => void;
   trusted?: boolean;
   hasExistingPatterns?: boolean;
+  onClearValues?: () => void;
 }) {
   const { status } = useStatus();
   const [newUrl, setNewUrl] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingUrl, setPendingUrl] = useState('');
+
+  if (!urls || !onUrlsChange) {
+    return null;
+  }
 
   const validateAndAdd = (url: string) => {
     const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
@@ -3717,6 +3723,13 @@ function SyncedUrlInputs({
     return true;
   };
 
+  const handleUrlsUpdate = (newUrls: string[]) => {
+    onUrlsChange(newUrls);
+    if (newUrls.length > 0 && onClearValues) {
+      onClearValues();
+    }
+  };
+
   const handleAdd = () => {
     if (!validateAndAdd(newUrl)) return;
 
@@ -3724,13 +3737,13 @@ function SyncedUrlInputs({
       setPendingUrl(newUrl);
       setShowConfirmModal(true);
     } else {
-      onUrlsChange([newUrl]);
+      handleUrlsUpdate([newUrl]);
       setNewUrl('');
     }
   };
 
   const confirmAdd = () => {
-    onUrlsChange([pendingUrl]);
+    handleUrlsUpdate([pendingUrl]);
     setNewUrl('');
     setPendingUrl('');
     setShowConfirmModal(false);
@@ -3782,7 +3795,7 @@ function SyncedUrlInputs({
                     icon={<FaRegTrashAlt />}
                     intent="alert-subtle"
                     onClick={() =>
-                      onUrlsChange(urls.filter((_, i) => i !== index))
+                      handleUrlsUpdate(urls.filter((_, i) => i !== index))
                     }
                   />
                 </div>
@@ -3953,19 +3966,13 @@ function TextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
-      {syncedUrls && onSyncedUrlsChange && (
-        <SyncedUrlInputs
-          urls={syncedUrls}
-          trusted={trusted}
-          hasExistingPatterns={values.length > 0}
-          onUrlsChange={(newUrls) => {
-            onSyncedUrlsChange(newUrls);
-            if (newUrls.length > 0) {
-              onValuesChange([]);
-            }
-          }}
-        />
-      )}
+      <SyncedUrlInputs
+        urls={syncedUrls}
+        trusted={trusted}
+        hasExistingPatterns={values.length > 0}
+        onUrlsChange={onSyncedUrlsChange}
+        onClearValues={() => onValuesChange([])}
+      />
     </SettingsCard>
   );
 }
@@ -4153,19 +4160,13 @@ function TwoTextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
-      {syncedUrls && onSyncedUrlsChange && (
-        <SyncedUrlInputs
-          urls={syncedUrls}
-          trusted={trusted}
-          hasExistingPatterns={values.length > 0}
-          onUrlsChange={(newUrls) => {
-            onSyncedUrlsChange(newUrls);
-            if (newUrls.length > 0) {
-              onValuesChange([]);
-            }
-          }}
-        />
-      )}
+      <SyncedUrlInputs
+        urls={syncedUrls}
+        trusted={trusted}
+        hasExistingPatterns={values.length > 0}
+        onUrlsChange={onSyncedUrlsChange}
+        onClearValues={() => onValuesChange([])}
+      />
     </SettingsCard>
   );
 }
