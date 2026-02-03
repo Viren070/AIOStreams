@@ -118,80 +118,34 @@ export const userDataMiddleware = async (
 
     if (resource !== 'configure') {
       try {
-        const getValidUrls = (urls: string[] | undefined): string[] => {
-          if (!urls?.length) return [];
-          const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
-          const isUnrestricted =
-            userData?.trusted || Env.REGEX_FILTER_ACCESS === 'all';
-          return urls.filter(
-            (url) => isUnrestricted || allowedUrls.includes(url)
-          );
-        };
-
         // Sync regex patterns from URLs
-        const syncPatterns = async (
-          urls: string[] | undefined,
-          existing: string[]
-        ): Promise<string[]> => {
-          const validUrls = getValidUrls(urls);
-          if (!validUrls.length) return existing;
-          const result = [...existing];
-          const existingSet = new Set(existing);
-
-          const allPatterns = await Promise.all(
-            validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
-          );
-
-          for (const patterns of allPatterns) {
-            for (const { pattern } of patterns) {
-              if (!existingSet.has(pattern)) {
-                result.push(pattern);
-                existingSet.add(pattern);
-              }
-            }
-          }
-          return result;
-        };
-
-        const syncPatternsWithNames = async (
-          urls: string[] | undefined,
-          existing: { name: string; pattern: string }[]
-        ): Promise<{ name: string; pattern: string }[]> => {
-          const validUrls = getValidUrls(urls);
-          if (!validUrls.length) return existing;
-          const result = [...existing];
-          const existingSet = new Set(existing.map((p) => p.pattern));
-
-          const allPatterns = await Promise.all(
-            validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
-          );
-
-          for (const patterns of allPatterns) {
-            for (const { name, pattern } of patterns) {
-              if (!existingSet.has(pattern)) {
-                result.push({ name, pattern });
-                existingSet.add(pattern);
-              }
-            }
-          }
-          return result;
-        };
-
-        userData.preferredRegexPatterns = await syncPatternsWithNames(
+        userData.preferredRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedPreferredRegexUrls,
-          userData.preferredRegexPatterns || []
+          userData.preferredRegexPatterns || [],
+          userData,
+          (p) => p,
+          (p) => p.pattern
         );
-        userData.excludedRegexPatterns = await syncPatterns(
+        userData.excludedRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedExcludedRegexUrls,
-          userData.excludedRegexPatterns || []
+          userData.excludedRegexPatterns || [],
+          userData,
+          (p) => p.pattern,
+          (s) => s
         );
-        userData.requiredRegexPatterns = await syncPatterns(
+        userData.requiredRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedRequiredRegexUrls,
-          userData.requiredRegexPatterns || []
+          userData.requiredRegexPatterns || [],
+          userData,
+          (p) => p.pattern,
+          (s) => s
         );
-        userData.includedRegexPatterns = await syncPatterns(
+        userData.includedRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedIncludedRegexUrls,
-          userData.includedRegexPatterns || []
+          userData.includedRegexPatterns || [],
+          userData,
+          (p) => p.pattern,
+          (s) => s
         );
 
         userData = await validateConfig(userData, {

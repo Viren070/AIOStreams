@@ -258,14 +258,11 @@ class StreamFilterer {
 
     const start = Date.now();
 
-    const preferredRegexPatterns = [
-      ...(this.userData.preferredRegexPatterns ?? []),
-    ];
-
     const isRegexAllowed = await FeatureControl.isRegexAllowed(this.userData, [
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),
+      ...(this.userData.preferredRegexPatterns?.map((p) => p.pattern) ?? []),
     ]);
 
     // Get metadata from context (already fetched in parallel with addon requests)

@@ -50,6 +50,8 @@ async function fetchPatternsFromUrl(url: string): Promise<{ name: string; patter
   if (!remotePatternCache) {
     const memCached = inMemoryPatternCache.get(url);
     if (memCached) {
+      inMemoryPatternCache.delete(url);
+      inMemoryPatternCache.set(url, memCached);
       if (memCached.expiresAt <= Date.now()) {
         refreshPatternsInBackground(url);
       }
@@ -277,7 +279,10 @@ export class FeatureControl {
 
   public static async allowedRegexPatterns() {
     await this.initialise();
-    return this._patternState;
+    return {
+      ...this._patternState,
+      urls: Env.ALLOWED_REGEX_PATTERNS_URLS || [],
+    };
   }
 
   public static async isRegexAllowed(userData: UserData, regexes?: string[]) {
@@ -304,6 +309,44 @@ export class FeatureControl {
     url: string
   ): Promise<{ name: string; pattern: string }[]> {
     return fetchPatternsFromUrl(url);
+  }
+
+  public static async syncPatterns<T>(
+    urls: string[] | undefined,
+    existing: T[],
+    userData: UserData,
+    transform: (item: { name: string; pattern: string }) => T,
+    uniqueKey: (item: T) => string
+  ): Promise<T[]> {
+    if (!urls?.length) return existing;
+
+    const isUnrestricted =
+      userData.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+    
+    const validUrls = urls.filter(
+      (url) => isUnrestricted || (Env.ALLOWED_REGEX_PATTERNS_URLS || []).includes(url)
+    );
+
+    if (!validUrls.length) return existing;
+
+    const result = [...existing];
+    const existingSet = new Set(existing.map(uniqueKey));
+
+    const allPatterns = await Promise.all(
+      validUrls.map((url) => this.getPatternsForUrl(url))
+    );
+
+    for (const patterns of allPatterns) {
+      for (const patternObj of patterns) {
+        const item = transform(patternObj);
+        const key = uniqueKey(item);
+        if (!existingSet.has(key)) {
+          result.push(item);
+          existingSet.add(key);
+        }
+      }
+    }
+    return result;
   }
 
 }

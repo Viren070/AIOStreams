@@ -204,6 +204,23 @@ function Content() {
     }
   }, [tab]);
 
+  const getSyncedProps = (
+    key:
+      | 'syncedPreferredRegexUrls'
+      | 'syncedExcludedRegexUrls'
+      | 'syncedIncludedRegexUrls'
+      | 'syncedRequiredRegexUrls'
+  ) => ({
+    syncedUrls: userData[key] || [],
+    trusted: userData.trusted,
+    onSyncedUrlsChange: (urls: string[]) => {
+      setUserData((prev) => ({
+        ...prev,
+        [key]: urls,
+      }));
+    },
+  });
+
   useEffect(() => {
     // set default preferred filters if they are undefined
     if (!userData.preferredResolutions) {
@@ -2294,14 +2311,7 @@ function Content() {
                           ],
                         }));
                       }}
-                      syncedUrls={userData.syncedRequiredRegexUrls || []}
-                      trusted={userData.trusted}
-                      onSyncedUrlsChange={(urls) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          syncedRequiredRegexUrls: urls,
-                        }));
-                      }}
+                      {...getSyncedProps('syncedRequiredRegexUrls')}
                     />
                   </>
                 )}
@@ -2326,14 +2336,7 @@ function Content() {
                       ],
                     }));
                   }}
-                  syncedUrls={userData.syncedExcludedRegexUrls || []}
-                  trusted={userData.trusted}
-                  onSyncedUrlsChange={(urls) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      syncedExcludedRegexUrls: urls,
-                    }));
-                  }}
+                  {...getSyncedProps('syncedExcludedRegexUrls')}
                 />
                 {mode === 'pro' && (
                   <>
@@ -2363,28 +2366,14 @@ function Content() {
                           ],
                         }));
                       }}
-                      syncedUrls={userData.syncedIncludedRegexUrls || []}
-                      trusted={userData.trusted}
-                      onSyncedUrlsChange={(urls) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          syncedIncludedRegexUrls: urls,
-                        }));
-                      }}
+                      {...getSyncedProps('syncedIncludedRegexUrls')}
                     />
                   </>
                 )}
                 <TwoTextInputs
                   title="Preferred Regex Patterns"
                   description="Define regex patterns with names for easy reference"
-                  syncedUrls={userData.syncedPreferredRegexUrls || []}
-                  trusted={userData.trusted}
-                  onSyncedUrlsChange={(urls) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      syncedPreferredRegexUrls: urls,
-                    }));
-                  }}
+                  {...getSyncedProps('syncedPreferredRegexUrls')}
                   keyName="Name"
                   keyId="name"
                   keyPlaceholder="Enter pattern name"
