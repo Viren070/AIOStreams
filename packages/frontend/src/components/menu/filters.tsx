@@ -211,13 +211,15 @@ function Content() {
       | 'syncedIncludedRegexUrls'
       | 'syncedRequiredRegexUrls'
   ) => ({
-    syncedUrls: userData[key] || [],
-    trusted: userData.trusted,
-    onSyncedUrlsChange: (urls: string[]) => {
-      setUserData((prev) => ({
-        ...prev,
-        [key]: urls,
-      }));
+    syncConfig: {
+      urls: userData[key] || [],
+      trusted: userData.trusted,
+      onUrlsChange: (urls: string[]) => {
+        setUserData((prev) => ({
+          ...prev,
+          [key]: urls,
+        }));
+      },
     },
   });
 
@@ -3674,32 +3676,33 @@ type TextInputProps = {
   onValuesChange: (values: string[]) => void;
   onValueChange: (value: string, index: number) => void;
   placeholder?: string;
-  syncedUrls?: string[];
-  onSyncedUrlsChange?: (urls: string[]) => void;
+  syncConfig?: SyncConfig;
   disabled?: boolean;
+}
+
+export interface SyncConfig {
+  urls: string[];
+  onUrlsChange: (urls: string[]) => void;
   trusted?: boolean;
+  onClearValues?: () => void;
 }
 function SyncedUrlInputs({
-  urls,
-  onUrlsChange,
-  trusted,
+  syncConfig,
   hasExistingPatterns,
-  onClearValues,
 }: {
-  urls?: string[];
-  onUrlsChange?: (urls: string[]) => void;
-  trusted?: boolean;
+  syncConfig?: SyncConfig;
   hasExistingPatterns?: boolean;
-  onClearValues?: () => void;
 }) {
   const { status } = useStatus();
   const [newUrl, setNewUrl] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingUrl, setPendingUrl] = useState('');
 
-  if (!urls || !onUrlsChange) {
+  if (!syncConfig) {
     return null;
   }
+  
+  const { urls, onUrlsChange, trusted, onClearValues } = syncConfig;
 
   const validateAndAdd = (url: string) => {
     const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
@@ -3840,10 +3843,8 @@ function TextInputs({
   onValuesChange,
   onValueChange,
   placeholder,
-  syncedUrls,
-  onSyncedUrlsChange,
+  syncConfig,
   disabled,
-  trusted,
 }: TextInputProps) {
   const importModalDisclosure = useDisclosure(false);
 
@@ -3870,8 +3871,7 @@ function TextInputs({
     URL.revokeObjectURL(url);
   };
 
-  const isSynced = syncedUrls && syncedUrls.length > 0;
-  const effectiveDisabled = disabled || isSynced;
+  const effectiveDisabled = disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
 
   return (
     <SettingsCard title={label} description={help} key={label}>
@@ -3966,13 +3966,15 @@ function TextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
-      <SyncedUrlInputs
-        urls={syncedUrls}
-        trusted={trusted}
-        hasExistingPatterns={values.length > 0}
-        onUrlsChange={onSyncedUrlsChange}
-        onClearValues={() => onValuesChange([])}
-      />
+      {syncConfig && (
+        <SyncedUrlInputs
+          syncConfig={{
+            ...syncConfig,
+            onClearValues: () => onValuesChange([]),
+          }}
+          hasExistingPatterns={values.length > 0}
+        />
+      )}
     </SettingsCard>
   );
 }
@@ -3994,9 +3996,7 @@ type KeyValueInputProps = {
   onValueChange: (value: string, index: number) => void;
   onKeyChange: (key: string, index: number) => void;
   disabled?: boolean;
-  syncedUrls?: string[];
-  onSyncedUrlsChange?: (urls: string[]) => void;
-  trusted?: boolean;
+  syncConfig?: SyncConfig;
 };
 
 function TwoTextInputs({
@@ -4013,12 +4013,9 @@ function TwoTextInputs({
   onValueChange,
   onKeyChange,
   disabled,
-  syncedUrls,
-  onSyncedUrlsChange,
-  trusted,
+  syncConfig,
 }: KeyValueInputProps) {
-  const isSynced = syncedUrls && syncedUrls.length > 0;
-  const effectiveDisabled = disabled || isSynced;
+  const effectiveDisabled = disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -4160,13 +4157,15 @@ function TwoTextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
-      <SyncedUrlInputs
-        urls={syncedUrls}
-        trusted={trusted}
-        hasExistingPatterns={values.length > 0}
-        onUrlsChange={onSyncedUrlsChange}
-        onClearValues={() => onValuesChange([])}
-      />
+      {syncConfig && (
+        <SyncedUrlInputs
+          syncConfig={{
+            ...syncConfig,
+            onClearValues: () => onValuesChange([]),
+          }}
+          hasExistingPatterns={values.length > 0}
+        />
+      )}
     </SettingsCard>
   );
 }

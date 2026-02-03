@@ -73,80 +73,97 @@ async function fetchPatternsFromUrl(url: string): Promise<{ name: string; patter
   return fetchPatternsFromUrlInternal(url);
 }
 
-async function fetchPatternsFromUrlInternal(url: string): Promise<{ name: string; pattern: string }[]> {
-  let patterns: { name: string; pattern: string }[] | undefined;
-  for (let i = 0; i < 3; i++) {
-    logger.debug(
-      `Fetching allowed regex patterns from ${url}${i > 0 ? ` (attempt ${i + 1} of 3)` : ''}`
-    );
-    try {
-      if (remotePatternCache) {
-        await remotePatternCache.waitUntilReady();
-        const cached = await remotePatternCache.get(url);
-        if (cached) {
-          patterns = cached;
-          break;
-        }
-      }
-      const response = await makeRequest(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 5000,
-      });
-      if (!response.ok) {
-        logger.error(
-          `Failed to fetch allowed regex patterns from ${url}: ${response.status} ${response.statusText}`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        continue;
-      }
+async function fetchPatternsFromUrlInternal(
+  url: string,
+  attempt = 1
+): Promise<{ name: string; pattern: string }[]> {
+  const MAX_ATTEMPTS = 3;
 
-      const schema = z.union([
-        z.array(
-          z.object({
-            name: z.string(),
-            pattern: z.string(),
-          })
+  if (attempt === 1) {
+    logger.debug(`Fetching regex patterns from ${url}`);
+  }
+
+  try {
+    if (attempt === 1 && remotePatternCache) {
+      const cachePromise = remotePatternCache
+        .waitUntilReady()
+        .then(() => remotePatternCache!.get(url));
+      const cached = await Promise.race([
+        cachePromise,
+        new Promise<undefined>((resolve) =>
+          setTimeout(() => resolve(undefined), 1000)
         ),
-        z.object({
-          values: z.array(z.string()),
-        }),
       ]);
-      const data = await response.json();
-      const parsedData = schema.parse(data);
-      patterns = Array.isArray(parsedData)
-        ? parsedData
-        : parsedData.values.map((p) => ({ name: p, pattern: p }));
 
-      // Cache the result
-      if (remotePatternCache) {
-        await remotePatternCache.set(url, patterns, Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000));
-      } else {
-        if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
-          const firstKey = inMemoryPatternCache.keys().next().value;
-          if (firstKey) inMemoryPatternCache.delete(firstKey);
-        }
-        inMemoryPatternCache.set(url, {
-          patterns,
-          expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
-        });
+      if (cached) {
+        return cached;
       }
-      break;
-    } catch (error) {
-      logger.error(`Error fetching or parsing patterns from ${url}:`, error);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      continue;
     }
-  }
-  if (!patterns) {
-    logger.error(
-      `Exhausted all attempts to fetch patterns from ${url}, will retry on next interval`
+
+    const response = await makeRequest(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 5000,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const schema = z.union([
+      z.array(
+        z.object({
+          name: z.string(),
+          pattern: z.string(),
+        })
+      ),
+      z.object({
+        values: z.array(z.string()),
+      }),
+    ]);
+
+    const data = await response.json();
+    const parsedData = schema.parse(data);
+    const patterns = Array.isArray(parsedData)
+      ? parsedData
+      : parsedData.values.map((p) => ({ name: p, pattern: p }));
+
+    if (remotePatternCache) {
+      await remotePatternCache.set(
+        url,
+        patterns,
+        Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000)
+      );
+    } else {
+      if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
+        const firstKey = inMemoryPatternCache.keys().next().value;
+        if (firstKey) inMemoryPatternCache.delete(firstKey);
+      }
+      inMemoryPatternCache.set(url, {
+        patterns,
+        expiresAt:
+          Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
+      });
+    }
+
+    return patterns;
+  } catch (error: any) {
+    const isLastAttempt = attempt >= MAX_ATTEMPTS;
+    logger.warn(
+      `Failed to fetch patterns from ${url} (attempt ${attempt}/${MAX_ATTEMPTS}): ${error.message}`
     );
-    return [];
+
+    if (isLastAttempt) {
+      logger.error(`Giving up on ${url} after ${MAX_ATTEMPTS} attempts.`);
+      return [];
+    }
+
+    const delay = Math.pow(2, attempt - 1) * 1000;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+
+    return fetchPatternsFromUrlInternal(url, attempt + 1);
   }
-  return patterns;
+
 }
 
 export class FeatureControl {
