@@ -8,17 +8,7 @@ import { Cache } from './cache.js';
 const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
-const MAX_CACHE_SIZE = 100;
 
-let remotePatternCache: Cache<string, { name: string; pattern: string }[]> | undefined;
-if (Env.REDIS_URI) {
-  remotePatternCache = Cache.getInstance('remote-pattern');
-}
-
-const inMemoryPatternCache = new Map<
-  string,
-  { patterns: { name: string; pattern: string }[]; expiresAt: number }
->();
 const refreshingUrls = new Set<string>();
 
 async function refreshPatternsInBackground(url: string): Promise<void> {
@@ -28,49 +18,34 @@ async function refreshPatternsInBackground(url: string): Promise<void> {
   try {
     const patterns = await fetchPatternsFromUrlInternal(url);
     if (patterns.length > 0) {
-      inMemoryPatternCache.set(url, {
-        patterns,
-        expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
-      });
+      FeatureControl.patternCache.set(
+        url,
+        { patterns },
+        Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000
+      );
     }
   } catch (error) {
     logger.warn(`Background refresh failed for ${url}:`, error);
-
-    const existing = inMemoryPatternCache.get(url);
-    if (existing) {
-      existing.expiresAt = Date.now() + 60 * 1000;
-      inMemoryPatternCache.set(url, existing);
-    }
   } finally {
     refreshingUrls.delete(url);
   }
 }
 
 async function fetchPatternsFromUrl(url: string): Promise<{ name: string; pattern: string }[]> {
-  if (!remotePatternCache) {
-    const memCached = inMemoryPatternCache.get(url);
-    if (memCached) {
-      inMemoryPatternCache.delete(url);
-      inMemoryPatternCache.set(url, memCached);
-      if (memCached.expiresAt <= Date.now()) {
-        refreshPatternsInBackground(url);
-      }
-      return memCached.patterns;
-    }
-    const patterns = await fetchPatternsFromUrlInternal(url);
-    if (patterns.length > 0) {
-      if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
-        const firstKey = inMemoryPatternCache.keys().next().value;
-        if (firstKey) inMemoryPatternCache.delete(firstKey);
-      }
-      inMemoryPatternCache.set(url, {
-        patterns,
-        expiresAt: Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
-      });
-    }
-    return patterns;
+  const cached = await FeatureControl.patternCache.get(url);
+  if (cached) {
+    return cached.patterns;
   }
-  return fetchPatternsFromUrlInternal(url);
+
+  const patterns = await fetchPatternsFromUrlInternal(url);
+  if (patterns.length > 0) {
+    await FeatureControl.patternCache.set(
+      url,
+      { patterns },
+      Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000
+    );
+  }
+  return patterns;
 }
 
 async function fetchPatternsFromUrlInternal(
@@ -84,22 +59,6 @@ async function fetchPatternsFromUrlInternal(
   }
 
   try {
-    if (attempt === 1 && remotePatternCache) {
-      const cachePromise = remotePatternCache
-        .waitUntilReady()
-        .then(() => remotePatternCache!.get(url));
-      const cached = await Promise.race([
-        cachePromise,
-        new Promise<undefined>((resolve) =>
-          setTimeout(() => resolve(undefined), 1000)
-        ),
-      ]);
-
-      if (cached) {
-        return cached;
-      }
-    }
-
     const response = await makeRequest(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
@@ -126,25 +85,7 @@ async function fetchPatternsFromUrlInternal(
     const parsedData = schema.parse(data);
     const patterns = Array.isArray(parsedData)
       ? parsedData
-      : parsedData.values.map((p) => ({ name: p, pattern: p }));
-
-    if (remotePatternCache) {
-      await remotePatternCache.set(
-        url,
-        patterns,
-        Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000)
-      );
-    } else {
-      if (inMemoryPatternCache.size >= MAX_CACHE_SIZE) {
-        const firstKey = inMemoryPatternCache.keys().next().value;
-        if (firstKey) inMemoryPatternCache.delete(firstKey);
-      }
-      inMemoryPatternCache.set(url, {
-        patterns,
-        expiresAt:
-          Date.now() + Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL,
-      });
-    }
+      : parsedData.values.map((pattern) => ({ name: pattern, pattern: pattern }));
 
     return patterns;
   } catch (error: any) {
@@ -176,6 +117,12 @@ export class FeatureControl {
   private static _initialisationPromise: Promise<void> | null = null;
   private static _refreshInterval: NodeJS.Timeout | null = null;
 
+  public static patternCache = Cache.getInstance<string, { patterns: { name: string; pattern: string }[] }>(
+    'regex-patterns',
+    100,
+    undefined
+  );
+
   /**
    * Initialises the FeatureControl service, performing the initial pattern fetch
    * and setting up periodic refreshes.
@@ -186,10 +133,12 @@ export class FeatureControl {
         logger.info(
           `Initialised with ${this._patternState.patterns.length} regex patterns.`
         );
-        this._refreshInterval = setInterval(
-          () => this._refreshPatterns(),
-          Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL
-        );
+        if (Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL > 0) {
+          this._refreshInterval = setInterval(
+            () => this._refreshPatterns(),
+            Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL
+          );
+        }
       });
     }
     return this._initialisationPromise;
@@ -352,9 +301,9 @@ export class FeatureControl {
       validUrls.map((url) => this.getPatternsForUrl(url))
     );
 
-    for (const patterns of allPatterns) {
-      for (const patternObj of patterns) {
-        const item = transform(patternObj);
+    for (const regexes of allPatterns) {
+      for (const regex of regexes) {
+        const item = transform(regex);
         const key = uniqueKey(item);
         if (!existingSet.has(key)) {
           result.push(item);
