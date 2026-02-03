@@ -207,6 +207,32 @@ export class MetadataService {
                 `Failed to fetch TVDB metadata for ${id.fullId}: ${tvdbResult.reason}`
               );
             }
+
+            // Fallback to TMDB for next episode air date if TVDB didn't provide it
+            if (!nextAirDate && type === 'series' && id.season && id.episode) {
+              try {
+                const tmdb = new TMDBMetadata({
+                  accessToken: this.config.tmdbAccessToken,
+                  apiKey: this.config.tmdbApiKey,
+                });
+                if (tmdbId && seasons) {
+                  const tmdbNextAirDate = await tmdb.getNextEpisodeAirDate(
+                    Number(tmdbId),
+                    Number(id.season),
+                    Number(id.episode),
+                    seasons
+                  );
+                  if (tmdbNextAirDate) {
+                    nextAirDate = tmdbNextAirDate;
+                  }
+                }
+              } catch (error) {
+                logger.debug(
+                  `Failed to get next episode air date from TMDB for ${id.fullId}: ${error}`
+                );
+              }
+            }
+
             // Process Trakt results
             if (traktResult.status === 'fulfilled' && traktResult.value) {
               titles.push(...traktResult.value);
