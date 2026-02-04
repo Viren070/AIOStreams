@@ -9,6 +9,7 @@ import {
   StremioTransformer,
   UserRepository,
   Env,
+  FeatureControl,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -117,6 +118,36 @@ export const userDataMiddleware = async (
 
     if (resource !== 'configure') {
       try {
+        // Sync regex patterns from URLs
+        userData.preferredRegexPatterns = await FeatureControl.syncPatterns(
+          userData.syncedPreferredRegexUrls,
+          userData.preferredRegexPatterns || [],
+          userData,
+          (regex) => regex,
+          (regex) => regex.pattern
+        );
+        userData.excludedRegexPatterns = await FeatureControl.syncPatterns(
+          userData.syncedExcludedRegexUrls,
+          userData.excludedRegexPatterns || [],
+          userData,
+          (regex) => regex.pattern,
+          (pattern) => pattern
+        );
+        userData.requiredRegexPatterns = await FeatureControl.syncPatterns(
+          userData.syncedRequiredRegexUrls,
+          userData.requiredRegexPatterns || [],
+          userData,
+          (regex) => regex.pattern,
+          (pattern) => pattern
+        );
+        userData.includedRegexPatterns = await FeatureControl.syncPatterns(
+          userData.syncedIncludedRegexUrls,
+          userData.includedRegexPatterns || [],
+          userData,
+          (regex) => regex.pattern,
+          (pattern) => pattern
+        );
+
         userData = await validateConfig(userData, {
           skipErrorsFromAddonsOrProxies: true,
           decryptValues: true,

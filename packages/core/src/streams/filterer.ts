@@ -267,6 +267,7 @@ class StreamFilterer {
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),
+      ...(this.userData.preferredRegexPatterns ?? []).map((regex) => regex.pattern),
     ]);
 
     // Get metadata from context (already fetched in parallel with addon requests)

@@ -9,78 +9,101 @@ const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
 
-let remotePatternCache: Cache<string, string[]> | undefined;
-if (Env.REDIS_URI) {
-  remotePatternCache = Cache.getInstance('remote-pattern');
+const refreshingUrls = new Set<string>();
+
+async function refreshPatternsInBackground(url: string): Promise<void> {
+  if (refreshingUrls.has(url)) return;
+  refreshingUrls.add(url);
+
+  try {
+    const patterns = await fetchPatternsFromUrlInternal(url);
+    if (patterns.length > 0) {
+      FeatureControl.patternCache.set(
+        url,
+        { patterns },
+        Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000
+      );
+    }
+  } catch (error) {
+    logger.warn(`Background refresh failed for ${url}:`, error);
+  } finally {
+    refreshingUrls.delete(url);
+  }
 }
 
-async function fetchPatternsFromUrl(url: string): Promise<string[]> {
-  let patterns: string[] | undefined;
-  for (let i = 0; i < 3; i++) {
-    logger.debug(
-      `Fetching allowed regex patterns from ${url}${i > 0 ? ` (attempt ${i + 1} of 3)` : ''}`
-    );
-    try {
-      if (remotePatternCache) {
-        await remotePatternCache.waitUntilReady();
-        const cached = await remotePatternCache.get(url);
-        if (cached) {
-          patterns = cached;
-          break;
-        }
-      }
-      const response = await makeRequest(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 5000,
-      });
-      if (!response.ok) {
-        logger.error(
-          `Failed to fetch allowed regex patterns from ${url}: ${response.status} ${response.statusText}`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        continue;
-      }
-
-      const schema = z.union([
-        z.array(
-          z.object({
-            name: z.string(),
-            pattern: z.string(),
-          })
-        ),
-        z.object({
-          values: z.array(z.string()),
-        }),
-      ]);
-      const data = await response.json();
-      const parsedData = schema.parse(data);
-      patterns = Array.isArray(parsedData)
-        ? parsedData.map((item) => item.pattern)
-        : parsedData.values;
-      if (remotePatternCache) {
-        await remotePatternCache.set(
-          url,
-          patterns,
-          Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000)
-        );
-      }
-      break;
-    } catch (error) {
-      logger.error(`Error fetching or parsing patterns from ${url}:`, error);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      continue;
-    }
+async function fetchPatternsFromUrl(url: string): Promise<{ name: string; pattern: string }[]> {
+  const cached = await FeatureControl.patternCache.get(url);
+  if (cached) {
+    return cached.patterns;
   }
-  if (!patterns) {
-    logger.error(
-      `Exhausted all attempts to fetch patterns from ${url}, will retry on next interval`
+
+  const patterns = await fetchPatternsFromUrlInternal(url);
+  if (patterns.length > 0) {
+    await FeatureControl.patternCache.set(
+      url,
+      { patterns },
+      Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000
     );
-    return [];
   }
   return patterns;
+}
+
+async function fetchPatternsFromUrlInternal(
+  url: string,
+  attempt = 1
+): Promise<{ name: string; pattern: string }[]> {
+  const MAX_ATTEMPTS = 3;
+
+  if (attempt === 1) {
+    logger.debug(`Fetching regex patterns from ${url}`);
+  }
+
+  try {
+    const response = await makeRequest(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 5000,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const schema = z.union([
+      z.array(
+        z.object({
+          name: z.string(),
+          pattern: z.string(),
+        })
+      ),
+      z.object({
+        values: z.array(z.string()),
+      }),
+    ]);
+
+    const data = await response.json();
+    const parsedData = schema.parse(data);
+    const patterns = Array.isArray(parsedData)
+      ? parsedData
+      : parsedData.values.map((pattern) => ({ name: pattern, pattern: pattern }));
+
+    return patterns;
+  } catch (error: any) {
+    const isLastAttempt = attempt >= MAX_ATTEMPTS;
+    logger.warn(
+      `Failed to fetch patterns from ${url} (attempt ${attempt}/${MAX_ATTEMPTS}): ${error.message}`
+    );
+
+    if (isLastAttempt) {
+      logger.error(`Giving up on ${url} after ${MAX_ATTEMPTS} attempts.`);
+      return [];
+    }
+
+    const delay = Math.pow(2, attempt - 1) * 1000;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+
+    return fetchPatternsFromUrlInternal(url, attempt + 1);
+  }
 }
 
 export class FeatureControl {
@@ -94,6 +117,12 @@ export class FeatureControl {
   private static _initialisationPromise: Promise<void> | null = null;
   private static _refreshInterval: NodeJS.Timeout | null = null;
 
+  public static patternCache = Cache.getInstance<string, { patterns: { name: string; pattern: string }[] }>(
+    'regex-patterns',
+    100,
+    undefined
+  );
+
   /**
    * Initialises the FeatureControl service, performing the initial pattern fetch
    * and setting up periodic refreshes.
@@ -104,10 +133,12 @@ export class FeatureControl {
         logger.info(
           `Initialised with ${this._patternState.patterns.length} regex patterns.`
         );
-        this._refreshInterval = setInterval(
-          () => this._refreshPatterns(),
-          Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL
-        );
+        if (Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL > 0) {
+          this._refreshInterval = setInterval(
+            () => this._refreshPatterns(),
+            Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL
+          );
+        }
       });
     }
     return this._initialisationPromise;
@@ -153,13 +184,13 @@ export class FeatureControl {
 
     const patternsFromUrls = fetchPromises
       .filter(
-        (result): result is PromiseFulfilledResult<string[]> =>
+        (result): result is PromiseFulfilledResult<{ name: string; pattern: string }[]> =>
           result.status === 'fulfilled'
       )
       .flatMap((result) => result.value);
 
     if (patternsFromUrls.length > 0) {
-      FeatureControl._addPatterns(patternsFromUrls);
+      FeatureControl._addPatterns(patternsFromUrls.map((regex) => regex.pattern));
     }
   }
 
@@ -213,7 +244,10 @@ export class FeatureControl {
 
   public static async allowedRegexPatterns() {
     await this.initialise();
-    return this._patternState;
+    return {
+      ...this._patternState,
+      urls: Env.ALLOWED_REGEX_PATTERNS_URLS || [],
+    };
   }
 
   public static async isRegexAllowed(userData: UserData, regexes?: string[]) {
@@ -234,5 +268,49 @@ export class FeatureControl {
       default:
         return false;
     }
+  }
+
+  public static async getPatternsForUrl(
+    url: string
+  ): Promise<{ name: string; pattern: string }[]> {
+    return fetchPatternsFromUrl(url);
+  }
+
+  public static async syncPatterns<T>(
+    urls: string[] | undefined,
+    existing: T[],
+    userData: UserData,
+    transform: (item: { name: string; pattern: string }) => T,
+    uniqueKey: (item: T) => string
+  ): Promise<T[]> {
+    if (!urls?.length) return existing;
+
+    const isUnrestricted =
+      userData.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+    
+    const validUrls = urls.filter(
+      (url) => isUnrestricted || (Env.ALLOWED_REGEX_PATTERNS_URLS || []).includes(url)
+    );
+
+    if (!validUrls.length) return existing;
+
+    const result = [...existing];
+    const existingSet = new Set(existing.map(uniqueKey));
+
+    const allPatterns = await Promise.all(
+      validUrls.map((url) => this.getPatternsForUrl(url))
+    );
+
+    for (const regexes of allPatterns) {
+      for (const regex of regexes) {
+        const item = transform(regex);
+        const key = uniqueKey(item);
+        if (!existingSet.has(key)) {
+          result.push(item);
+          existingSet.add(key);
+        }
+      }
+    }
+    return result;
   }
 }
