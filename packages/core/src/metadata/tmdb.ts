@@ -464,6 +464,60 @@ export class TMDBMetadata {
     return episodeData.air_date ?? undefined;
   }
 
+  public async getNextEpisodeAirDate(
+    tmdbId: number,
+    currentSeason: number,
+    currentEpisode: number,
+    seasons?: Array<{ season_number: number; episode_count: number }>
+  ): Promise<string | undefined> {
+    if (!seasons || seasons.length === 0) {
+      return undefined;
+    }
+
+    const currentSeasonData = seasons.find(
+      (s) => s.season_number === currentSeason
+    );
+    if (!currentSeasonData) {
+      return undefined;
+    }
+
+    let nextSeason = currentSeason;
+    let nextEpisode = currentEpisode + 1;
+
+    if (nextEpisode > currentSeasonData.episode_count) {
+      const nextSeasonData = seasons
+        .filter((s) => s.season_number > currentSeason)
+        .sort((a, b) => a.season_number - b.season_number)[0];
+
+      if (!nextSeasonData || nextSeasonData.episode_count === 0) {
+        return undefined;
+      }
+
+      nextSeason = nextSeasonData.season_number;
+      nextEpisode = 1;
+    }
+
+    try {
+      const url = new URL(
+        API_BASE_URL +
+          `/tv/${tmdbId}/season/${nextSeason}/episode/${nextEpisode}`
+      );
+      this.addSearchParams(url);
+      const response = await makeRequest(url.toString(), {
+        timeout: 5000,
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        return undefined;
+      }
+      const json = await response.json();
+      const episodeData = TVEpisodeDetailsSchema.parse(json);
+      return episodeData.air_date ?? undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
   public async validateAuthorisation() {
     const cacheKey = this.accessToken || this.apiKey;
     if (!cacheKey) {

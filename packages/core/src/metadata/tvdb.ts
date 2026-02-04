@@ -150,7 +150,11 @@ export type RemoteIdSearchResponse = z.infer<
 >;
 
 export class TVDBMetadata {
+  private static readonly ID_CACHE_TTL = 30 * 24 * 60 * 60; // 30 days
   private readonly api: TVDBApi;
+
+  private idCache = Cache.getInstance<string, string>('tvdb:id-map');
+
   public constructor(config: TVDBMetadataConfig) {
     const apiKey = config.apiKey || Env.TVDB_API_KEY;
     if (!apiKey) {
@@ -173,7 +177,18 @@ export class TVDBMetadata {
     }
     await this.ensureToken();
 
-    if (id.type !== 'thetvdbId') {
+    let tvdbId: number | null = null;
+    if (id.type === 'thetvdbId') {
+      tvdbId = parseInt(id.value.toString());
+    }
+
+    const cachedTvdbId = await this.idCache.get(id.fullId);
+    if (cachedTvdbId) {
+      tvdbId = parseInt(cachedTvdbId);
+      logger.debug(`Using cached TVDB ID for ${id.fullId}: ${tvdbId}`);
+    }
+
+    if (!tvdbId) {
       const response = await this.api.searchRemoteId(id.value.toString());
       if (!response.data?.[0]) {
         throw new Error(`No results found for ${id.value}`);
@@ -188,6 +203,11 @@ export class TVDBMetadata {
       }
       if ('movie' in item) {
         const movie = item.movie;
+        this.idCache.set(
+          id.fullId,
+          movie.id.toString(),
+          TVDBMetadata.ID_CACHE_TTL
+        );
         return {
           title: movie.name,
           titles: movie.aliases.map((a) => a.name),
@@ -198,6 +218,11 @@ export class TVDBMetadata {
         };
       } else if ('series' in item) {
         const series = item.series;
+        this.idCache.set(
+          id.fullId,
+          series.id.toString(),
+          TVDBMetadata.ID_CACHE_TTL
+        );
         return {
           title: series.name,
           titles: series.aliases.map((a) => a.name),
@@ -208,14 +233,14 @@ export class TVDBMetadata {
           tvdbId: series.id,
           tmdbId: null,
           runtime: series.averageRuntime ?? undefined,
+          nextAirDate: series.nextAired ?? undefined,
+          firstAiredDate: series.firstAired ?? undefined,
+          lastAiredDate: series.lastAired ?? undefined,
         };
       } else {
         throw new Error(`Could not find metadata for ${id.value}`);
       }
     } else {
-      // Direct TVDB ID lookup
-      const tvdbId = parseInt(id.value.toString());
-
       if (id.mediaType === 'movie') {
         const response = await this.api.getMovie(tvdbId);
         if (!response.data) {
@@ -246,6 +271,7 @@ export class TVDBMetadata {
           tvdbId: series.id,
           tmdbId: null,
           runtime: series.averageRuntime ?? undefined,
+          nextAirDate: series.nextAired ?? undefined,
         };
       }
     }

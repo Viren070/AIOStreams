@@ -96,6 +96,7 @@ abstract class SourceHandler {
       ? torrentOrNzb.type === 'torrent'
         ? {
             type: 'torrent',
+            downloadUrl: torrentOrNzb.downloadUrl,
             hash: torrentOrNzb.hash,
             private: torrentOrNzb.private,
             sources: torrentOrNzb.sources,
@@ -345,7 +346,6 @@ export class TorrentSourceHandler extends SourceHandler {
         return {
           ...torrent,
           type: 'torrent',
-          private: false,
         };
       }),
       this.services,

@@ -25,6 +25,34 @@ export interface ExtendedMetadata extends Metadata {
   absoluteEpisode?: number;
 }
 
+export interface ExpressionContext {
+  type?: string;
+  id?: string;
+  isAnime?: boolean;
+  queryType?: string;
+  season?: number;
+  episode?: number;
+  // Metadata fields
+  title?: string;
+  titles?: string[];
+  year?: number;
+  yearEnd?: number;
+  genres?: string[];
+  runtime?: number;
+  absoluteEpisode?: number;
+  originalLanguage?: string;
+  daysSinceRelease?: number; // age in days of the movie / **episode**
+  hasNextEpisode?: boolean;
+  daysUntilNextEpisode?: number;
+  daysSinceFirstAired?: number;
+  daysSinceLastAired?: number;
+  latestSeason?: number;
+  // Anime entry data
+  anilistId?: number;
+  malId?: number;
+  // SeaDex availability
+  hasSeaDex?: boolean;
+}
 /**
  * StreamContext encapsulates all request-specific data that can be shared
  * across filtering, sorting, precomputing, and expression evaluation.
@@ -215,14 +243,6 @@ export class StreamContext {
           ...metadata,
           absoluteEpisode,
         };
-
-        logger.info(`Fetched metadata for context`, {
-          id: this.id,
-          time: getTimeTakenSincePoint(metadataStart),
-          title: metadata.title,
-          year: metadata.year,
-          hasGenres: !!metadata.genres?.length,
-        });
 
         return extendedMetadata;
       } catch (error) {
@@ -437,20 +457,45 @@ export class StreamContext {
     return this._seadex;
   }
 
+  private getDaysSince(dateString: string): number {
+    const date = new Date(dateString);
+    const now = new Date();
+    date.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = now.getTime() - date.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
   private computeAgeInDays(): number | undefined {
-    const getDaysDifference = (dateString: string): number => {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - date.getTime());
-      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    };
     if (this.type === 'series' && this._episodeAirDate) {
-      return getDaysDifference(this._episodeAirDate);
+      return this.getDaysSince(this._episodeAirDate);
     } else if (this._metadata?.releaseDate) {
-      return getDaysDifference(this._metadata.releaseDate);
+      return this.getDaysSince(this._metadata.releaseDate);
     }
     return undefined;
   }
+
+  private computeDaysUntilNextEpisode(): number | undefined {
+    if (!this._metadata?.nextAirDate) {
+      return undefined;
+    }
+    return -this.getDaysSince(this._metadata.nextAirDate);
+  }
+
+  private computeDaysSinceFirstAired(): number | undefined {
+    if (this._metadata?.firstAiredDate) {
+      return this.getDaysSince(this._metadata.firstAiredDate);
+    }
+    return undefined;
+  }
+
+  private computeDaysSinceLastAired(): number | undefined {
+    if (this._metadata?.lastAiredDate) {
+      return this.getDaysSince(this._metadata.lastAiredDate);
+    }
+    return undefined;
+  }
+
   /**
    * Convert context to a plain object for expression evaluation.
    */
@@ -476,6 +521,13 @@ export class StreamContext {
       ),
       daysSinceRelease: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
+      hasNextEpisode: !!this._metadata?.nextAirDate,
+      daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
+      daysSinceFirstAired: this.computeDaysSinceFirstAired(),
+      daysSinceLastAired: this.computeDaysSinceLastAired(),
+      latestSeason: this._metadata?.seasons
+        ? Math.max(...this._metadata.seasons.map((s) => s.season_number))
+        : undefined,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,
       malId: this.animeEntry?.mappings?.malId,

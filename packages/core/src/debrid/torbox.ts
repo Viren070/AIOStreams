@@ -61,7 +61,6 @@ export class TorboxDebridService implements DebridService {
       });
       logger.debug(`Removed usenet download ${nzbId} from Torbox`);
     } catch (error: any) {
-
       throw new DebridError(
         `Failed to remove usenet download: ${error.message}`,
         {
@@ -82,6 +81,10 @@ export class TorboxDebridService implements DebridService {
 
   public async addMagnet(magnet: string): Promise<DebridDownload> {
     return this.stremthru.addMagnet(magnet);
+  }
+
+  public async addTorrent(torrent: string): Promise<DebridDownload> {
+    return this.stremthru.addTorrent(torrent);
   }
 
   public async generateTorrentLink(

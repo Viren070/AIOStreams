@@ -19,7 +19,7 @@ interface TorrentMetadata {
   hash: string;
   files: DebridFile[];
   sources: string[];
-  private: boolean;
+  private?: boolean;
 }
 
 export class TorrentClient {
@@ -49,7 +49,6 @@ export class TorrentClient {
         hash: torrent.hash,
         files: [], // Empty files array since we don't need metadata
         sources: torrent.sources || [],
-        private: false,
       };
     }
 
@@ -113,7 +112,6 @@ export class TorrentClient {
           hash: torrent.hash,
           files: [],
           sources: torrent.sources || [],
-          private: false,
         };
       }
       return undefined;
@@ -163,7 +161,7 @@ export class TorrentClient {
           hash,
         }
       );
-      metadata = { hash, files: [], sources, private: false };
+      metadata = { hash, files: [], sources };
     } else if (response.ok) {
       const bytes = await response.arrayBuffer();
 

@@ -274,7 +274,7 @@
       "streamTypes": ["usenet"]
     },
     "excludedStreamExpressions": [
-      "queryType == 'anime.movie' ? resolution(streams, '2160p') : []"
+      "queryType == 'anime.series' ? resolution(streams, '2160p') : []"
     ]
   }
 }

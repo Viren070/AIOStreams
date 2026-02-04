@@ -28,7 +28,7 @@ class StreamPrecomputer {
     streams: ParsedStream[],
     context: StreamContext
   ) {
-    if (!context.isAnime || !this.userData.enableSeadex) {
+    if (!context.isAnime || this.userData.enableSeadex === false) {
       return;
     }
 
@@ -141,6 +141,14 @@ class StreamPrecomputer {
       logger.debug(`No SeaDex releases found for AniList ID ${anilistId}`);
       return;
     }
+
+    logger.debug(`Applying SeaDex tags for anime`, {
+      anilistId,
+      bestHashes: Array.from(seadexResult.bestHashes),
+      allHashes: Array.from(seadexResult.allHashes),
+      bestGroups: Array.from(seadexResult.bestGroups),
+      allGroups: Array.from(seadexResult.allGroups),
+    });
     let seadexBestCount = 0;
     let seadexCount = 0;
     let seadexGroupFallbackCount = 0;

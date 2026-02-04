@@ -320,6 +320,17 @@ class StreamSorter {
           }
           return multiplier * 0;
         }
+        case 'releaseGroup': {
+          if (!userData.preferredReleaseGroups?.length) {
+            return 0;
+          }
+          const releaseGroup = stream.parsedFile?.releaseGroup || 'Unknown';
+          const index = userData.preferredReleaseGroups.findIndex(
+            (group) =>
+              group.toLowerCase() === releaseGroup.toLowerCase()
+          );
+          return multiplier * -(index === -1 ? Infinity : index);
+        }
         default:
           return 0;
       }

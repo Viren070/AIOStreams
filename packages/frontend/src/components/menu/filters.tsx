@@ -361,6 +361,12 @@ function Content() {
                 </TabsTrigger>
               )}
               {mode === 'pro' && (
+                <TabsTrigger value="release-group">
+                  <FaTextSlash className="text-lg mr-3" />
+                  Release Group
+                </TabsTrigger>
+              )}
+              {mode === 'pro' && (
                 <TabsTrigger value="stream-expression">
                   <TbFilterCode className="text-lg mr-3" />
                   Stream Expression
@@ -2210,6 +2216,107 @@ function Content() {
               </div>
             </>
           </TabsContent>
+          <TabsContent value="release-group" className="space-y-4">
+            <>
+              <HeadingWithPageControls heading="Release Group" />
+              <div className="mb-4">
+                <p className="text-sm text-[--muted]">
+                  Filter your streams by release group - the group that released
+                  the content (e.g., SPARKS, NTb, FLUX, etc.)
+                </p>
+              </div>
+              <div className="space-y-4">
+                <TextInputs
+                  label="Required Release Groups"
+                  help="Only streams from these release groups will be kept. Streams from other release groups will be excluded."
+                  itemName="Release Group"
+                  values={userData.requiredReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      requiredReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      requiredReleaseGroups: [
+                        ...(prev.requiredReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.requiredReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+                <TextInputs
+                  label="Excluded Release Groups"
+                  help="Streams from these release groups will be excluded"
+                  itemName="Release Group"
+                  values={userData.excludedReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      excludedReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      excludedReleaseGroups: [
+                        ...(prev.excludedReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.excludedReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+                <TextInputs
+                  label="Included Release Groups"
+                  help="Streams from these release groups will be included, ignoring ANY other exclude/required filters, not just for this filter"
+                  itemName="Release Group"
+                  values={userData.includedReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      includedReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      includedReleaseGroups: [
+                        ...(prev.includedReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.includedReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+                <TextInputs
+                  label="Preferred Release Groups"
+                  help="Streams from these release groups will be sorted higher. The order matters - release groups at the top will be preferred over those below."
+                  itemName="Release Group"
+                  values={userData.preferredReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      preferredReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      preferredReleaseGroups: [
+                        ...(prev.preferredReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.preferredReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+              </div>
+            </>
+          </TabsContent>
           <TabsContent value="regex" className="space-y-4">
             <>
               <HeadingWithPageControls heading="Regex" />
@@ -3258,6 +3365,7 @@ function Content() {
                     label="Enable"
                     side="right"
                     value={userData.enableSeadex ?? true}
+                    defaultValue={true}
                     onValueChange={(value) => {
                       setUserData((prev) => ({
                         ...prev,

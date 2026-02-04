@@ -1848,6 +1848,10 @@ export const Env = cleanEnv(process.env, {
     default: 60 * 5, // 5 minutes
     desc: 'Builtin Debrid NZB list cache TTL',
   }),
+  BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL: bool({
+    default: false,
+    desc: 'Use torrent URLs instead of magnets for better private tracker integration',
+  }),
   BUILTIN_DEBRID_METADATA_STORE: str({
     choices: ['redis', 'sql', 'memory'],
     default: undefined,
@@ -2113,6 +2117,28 @@ export const Env = cleanEnv(process.env, {
     default: 5,
     desc: 'The maximum number of pages to fetch.',
   }),
+
+  BUILTIN_EZTV_URL: url({
+    default: 'https://eztvx.to',
+    desc: 'Builtin EZTV API URL',
+  }),
+  BUILTIN_DEFAULT_EZTV_TIMEOUT: num({
+    default: undefined,
+    desc: 'Builtin EZTV timeout',
+  }),
+  BUILTIN_EZTV_SEARCH_TIMEOUT: num({
+    default: 30000, // 30 seconds
+    desc: 'Builtin EZTV Search timeout',
+  }),
+  BUILTIN_EZTV_SEARCH_CACHE_TTL: num({
+    default: 7 * 24 * 60 * 60, // 7 days
+    desc: 'Builtin EZTV Search cache TTL',
+  }),
+  BUILTIN_EZTV_MAX_PAGES: num({
+    default: 5,
+    desc: 'Maximum number of pages to fetch for EZTV searches',
+  }),
+
   // Rate limiting settings
   DISABLE_RATE_LIMITS: bool({
     default: false,

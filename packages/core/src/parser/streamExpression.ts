@@ -11,6 +11,7 @@ import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
 import { parseBitrate } from './utils.js';
 import { createLogger } from '../utils/logger.js';
+import { ExpressionContext } from '../streams/context.js';
 
 const logger = createLogger('stream-expression');
 
@@ -71,6 +72,30 @@ export abstract class StreamExpressionEngine {
     });
 
     this.setupParserFunctions();
+  }
+
+  protected setupExpressionContextConstants(context: ExpressionContext) {
+    this.parser.consts.queryType = context.queryType ?? '';
+    this.parser.consts.isAnime = context.isAnime ?? false;
+    this.parser.consts.season = context.season ?? -1;
+    this.parser.consts.episode = context.episode ?? -1;
+    this.parser.consts.genres = context.genres ?? [];
+    this.parser.consts.title = context.title ?? '';
+    this.parser.consts.year = context.year ?? 0;
+    this.parser.consts.yearEnd = context.yearEnd ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
+    this.parser.consts.runtime = context.runtime ?? 0;
+    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
+    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
+    this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+    this.parser.consts.hasNextEpisode = context.hasNextEpisode ?? false;
+    this.parser.consts.daysUntilNextEpisode =
+      context.daysUntilNextEpisode ?? -1;
+    this.parser.consts.daysSinceFirstAired = context.daysSinceFirstAired ?? -1;
+    this.parser.consts.daysSinceLastAired = context.daysSinceLastAired ?? -1;
+    this.parser.consts.latestSeason = context.latestSeason ?? -1;
+    this.parser.consts.ongoingSeason =
+      context.hasNextEpisode && context.season === context.latestSeason;
   }
 
   private setupParserFunctions() {
@@ -1184,19 +1209,7 @@ export class PrecacheConditionEvaluator extends StreamExpressionEngine {
   constructor(streams: ParsedStream[], context: ExpressionContext) {
     super();
     this.parser.consts.streams = streams;
-    this.parser.consts.queryType = context.queryType ?? '';
-    this.parser.consts.isAnime = context.isAnime ?? false;
-    this.parser.consts.season = context.season ?? -1;
-    this.parser.consts.episode = context.episode ?? -1;
-    this.parser.consts.genres = context.genres ?? [];
-    this.parser.consts.title = context.title ?? '';
-    this.parser.consts.year = context.year ?? 0;
-    this.parser.consts.yearEnd = context.yearEnd ?? 0;
-    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
-    this.parser.consts.runtime = context.runtime ?? 0;
-    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
-    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
-    this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+    this.setupExpressionContextConstants(context);
   }
 
   async evaluate(condition: string): Promise<boolean> {
@@ -1253,53 +1266,10 @@ export class GroupConditionEvaluator extends StreamExpressionEngine {
   }
 }
 
-/**
- * Expression context containing metadata and request information
- * that can be accessed in stream expressions.
- */
-export interface ExpressionContext {
-  type?: string;
-  id?: string;
-  isAnime?: boolean;
-  queryType?: string;
-  season?: number;
-  episode?: number;
-  // Metadata fields
-  title?: string;
-  titles?: string[];
-  year?: number;
-  yearEnd?: number;
-  genres?: string[];
-  runtime?: number;
-  absoluteEpisode?: number;
-  originalLanguage?: string;
-  daysSinceRelease?: number; // age in days of the movie / **episode**
-  // Anime entry data
-  anilistId?: number;
-  malId?: number;
-  // SeaDex availability
-  hasSeaDex?: boolean;
-}
-
 export class StreamSelector extends StreamExpressionEngine {
   constructor(context: ExpressionContext) {
     super();
-
-    // we need to ensure these are always defined to a safe default
-    // because otherwise the expression parser may throw errors
-    this.parser.consts.queryType = context.queryType ?? '';
-    this.parser.consts.isAnime = context.isAnime ?? false;
-    this.parser.consts.season = context.season ?? -1;
-    this.parser.consts.episode = context.episode ?? -1;
-    this.parser.consts.genres = context.genres ?? [];
-    this.parser.consts.title = context.title ?? '';
-    this.parser.consts.year = context.year ?? 0;
-    this.parser.consts.yearEnd = context.yearEnd ?? 0;
-    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
-    this.parser.consts.runtime = context.runtime ?? 0;
-    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
-    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
-    this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+    this.setupExpressionContextConstants(context);
   }
 
   async select(

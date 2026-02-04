@@ -124,6 +124,7 @@ router.get(
           ? {
               type: 'torrent',
               metadata: metadata,
+              downloadUrl: fileInfo.downloadUrl,
               hash: fileInfo.hash,
               private: fileInfo.private,
               sources: fileInfo.sources,
