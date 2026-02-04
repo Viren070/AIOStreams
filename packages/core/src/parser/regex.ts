@@ -84,7 +84,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     HDR10: createRegex('(dv)?hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
     HDR: createRegex('(dv)?hdr(?![ .\\-_]?10)(?![ .\\-_]?(?:\\+|p(lus)?))'),
     HLG: createRegex('hlg'),
-    DV: createRegex('do?(lby)?[ .\\-_]?vi?(sion)?(?:[ .\\-_]?atmos)?|dv?(hdr[ .\-_]?(10)?[ .\-_]?(p(lus)?|[+])?)?'),
+    DV: createRegex('do?(lby)?[ .\\-_]?vi?(sion)?(?:[ .\\-_]?atmos)?|dv(hdr[ .\-_]?(10)?[ .\-_]?(p(lus)?|[+])?)?'),
     '3D': createRegex('(bd)?(3|three)[ .\\-_]?(d(imension)?(al)?)'),
     IMAX: createRegex('imax'),
     AI: createRegex('ai[ .\\-_]?(upscale|enhanced|remaster)?'),
