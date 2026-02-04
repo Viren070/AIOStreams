@@ -930,6 +930,7 @@ const SORT_CRITERIA = [
   'streamExpressionScore',
   'seadex',
   'bitrate',
+  'releaseGroup',
 ] as const;
 
 export const MIN_SIZE = 0;
@@ -1143,6 +1144,15 @@ export const SORT_CRITERIA_DETAILS: Record<
     ascendingDescription: 'Streams with lower expression scores are preferred',
     descendingDescription:
       'Streams with higher expression scores are preferred',
+  },
+  releaseGroup: {
+    name: 'Release Group',
+    defaultDirection: 'desc',
+    description: 'Sort by the release group of the stream',
+    ascendingDescription:
+      'Streams that are not in your preferred release group list are preferred',
+    descendingDescription:
+      'Streams that are in your preferred release group list are preferred',
   },
 } as const;
 
