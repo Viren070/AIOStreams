@@ -346,7 +346,6 @@ export class TorrentSourceHandler extends SourceHandler {
         return {
           ...torrent,
           type: 'torrent',
-          private: false,
         };
       }),
       this.services,
