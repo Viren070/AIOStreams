@@ -1211,29 +1211,6 @@ export class ExitConditionEvaluator extends StreamExpressionEngine {
   }
 }
 
-export class PrecacheConditionEvaluator extends StreamExpressionEngine {
-  constructor(streams: ParsedStream[], context: ExpressionContext) {
-    super();
-    this.parser.consts.streams = streams;
-    this.setupExpressionContextConstants(context);
-  }
-
-  async evaluate(condition: string): Promise<boolean> {
-    const result = await this.evaluateCondition(condition);
-    if (typeof result !== 'boolean') {
-      throw new Error(
-        `Precache condition must evaluate to a boolean, got: ${typeof result}`
-      );
-    }
-    return result;
-  }
-
-  static async testEvaluate(condition: string): Promise<boolean> {
-    const parser = new PrecacheConditionEvaluator([], { queryType: 'series' });
-    return await parser.evaluate(condition);
-  }
-}
-
 export class GroupConditionEvaluator extends StreamExpressionEngine {
   private previousStreams: ParsedStream[];
   private totalStreams: ParsedStream[];

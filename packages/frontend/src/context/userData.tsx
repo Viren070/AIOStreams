@@ -4,7 +4,7 @@ import {
   QUALITIES,
   RESOLUTIONS,
   SERVICE_DETAILS,
-  DEFAULT_PRECACHE_CONDITION,
+  DEFAULT_PRECACHE_SELECTOR,
 } from '../../../core/src/utils/constants';
 import { useStatus } from './status';
 
@@ -162,12 +162,22 @@ export function applyMigrations(config: any): UserData {
     }
   }
 
-  // migrate alwaysPrecache to precacheCondition
-  if (config.precacheCondition === undefined && config.precacheNextEpisode) {
-    config.precacheCondition =
-      config.alwaysPrecache === true ? 'true' : DEFAULT_PRECACHE_CONDITION;
+  // migrate alwaysPrecache to precacheCondition, then precacheCondition to precacheSelector
+  if (config.precacheSelector === undefined && config.precacheNextEpisode) {
+    // First handle the old precacheCondition field
+    if (config.precacheCondition !== undefined) {
+      // Convert condition to selector format
+      config.precacheSelector = `${config.precacheCondition} ? uncached(streams) : []`;
+    } else {
+      // Handle even older alwaysPrecache field
+      config.precacheSelector =
+        config.alwaysPrecache === true
+          ? 'true ? uncached(streams) : []'
+          : DEFAULT_PRECACHE_SELECTOR;
+    }
   }
   delete config.alwaysPrecache;
+  delete config.precacheCondition;
 
   return config;
 }
@@ -310,7 +320,7 @@ export const DefaultUserData: UserData = {
     addons: [],
     requestTypes: [],
   },
-  precacheCondition: DEFAULT_PRECACHE_CONDITION,
+  precacheSelector: DEFAULT_PRECACHE_SELECTOR,
   enableSeadex: true,
 };
 
