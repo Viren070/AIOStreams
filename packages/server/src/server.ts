@@ -16,6 +16,7 @@ import {
   TemplateManager,
   maskSensitiveInfo,
   constants,
+  SeaDexDataset,
 } from '@aiostreams/core';
 import { randomBytes } from 'crypto';
 
@@ -52,6 +53,12 @@ async function initialiseAnimeDatabase() {
   } catch (error) {
     logger.error('Failed to initialise AnimeDatabase:', error);
   }
+}
+
+async function initialiseSeaDexDataset() {
+  try {
+    await SeaDexDataset.getInstance().initialise();
+  } catch {}
 }
 
 async function initialiseProwlarr() {
@@ -93,6 +100,7 @@ async function start() {
     await initialiseDatabase();
     await initialiseRedis();
     initialiseAnimeDatabase();
+    initialiseSeaDexDataset();
     FeatureControl.initialise();
     await initialiseProwlarr();
     if (Env.PRUNE_MAX_DAYS >= 0) {

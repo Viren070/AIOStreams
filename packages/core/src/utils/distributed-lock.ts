@@ -3,6 +3,8 @@ import { RedisClientType } from 'redis';
 import { TransactionQueue } from '../db/queue.js';
 import { Cache, Env, REDIS_PREFIX } from './index.js';
 import { createLogger } from './logger.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 const logger = createLogger('distributed-lock');
 const lockPrefix = `${REDIS_PREFIX}lock:`;
@@ -11,7 +13,8 @@ export interface LockOptions {
   timeout?: number;
   ttl?: number;
   retryInterval?: number;
-  type?: 'memory' | 'sql' | 'redis';
+  type?: 'memory' | 'sql' | 'redis' | 'file';
+  lockDir?: string; // Required for file-based locks
 }
 
 export interface LockResult<T> {
@@ -97,6 +100,10 @@ export class DistributedLock {
 
     if (options.type === 'memory') {
       return this.withMemoryLock(key, fn, options);
+    }
+
+    if (options.type === 'file') {
+      return this.withFileLock(key, fn, options);
     }
 
     return this.redis && options.type !== 'sql'
@@ -307,6 +314,129 @@ export class DistributedLock {
           reject: waiterReject,
         });
       }
+    });
+  }
+
+  private async withFileLock<T>(
+    key: string,
+    fn: () => Promise<T>,
+    options: LockOptions
+  ): Promise<LockResult<T>> {
+    const { timeout = 30000, ttl = 300000, lockDir } = options;
+
+    if (!lockDir) {
+      throw new Error('lockDir is required for file-based locks');
+    }
+
+    const owner = Math.random().toString(36).substring(2);
+    const lockPath = path.join(lockDir, `${key}.lock`);
+    const STALE_TIMEOUT = ttl;
+
+    const acquireLock = async (): Promise<boolean> => {
+      try {
+        // Check if lock file exists
+        const lockExists = await fs
+          .access(lockPath)
+          .then(() => true)
+          .catch(() => false);
+
+        if (lockExists) {
+          // Check if lock is stale
+          const stats = await fs.stat(lockPath);
+          const lockAge = Date.now() - stats.mtimeMs;
+
+          if (lockAge > STALE_TIMEOUT) {
+            logger.warn(
+              `Stale file lock detected for key ${key} (${Math.round(lockAge / 1000)}s old), removing...`
+            );
+            await fs.unlink(lockPath).catch(() => {});
+          } else {
+            logger.debug(
+              `File lock exists for key ${key} (${Math.round(lockAge / 1000)}s old), another process is syncing`
+            );
+            return false;
+          }
+        }
+
+        // Try to create lock file (atomic operation)
+        await fs.mkdir(path.dirname(lockPath), { recursive: true });
+        await fs.writeFile(
+          lockPath,
+          JSON.stringify({
+            owner,
+            pid: process.pid,
+            timestamp: Date.now(),
+          }),
+          { flag: 'wx' } // Fail if file exists
+        );
+
+        return true;
+      } catch (error: any) {
+        if (error.code === 'EEXIST') {
+          logger.debug(`File lock for key ${key} created by another process`);
+          return false;
+        }
+        logger.error(`Error acquiring file lock for key ${key}:`, error);
+        return false;
+      }
+    };
+
+    const releaseLock = async () => {
+      try {
+        await fs.unlink(lockPath);
+        logger.debug(`Released file lock for key: ${key}`);
+      } catch (error) {
+        logger.debug(
+          `Error releasing file lock for key ${key} (may already be released):`,
+          error
+        );
+      }
+    };
+
+    if (await acquireLock()) {
+      logger.debug(`File lock acquired for key: ${key}`);
+      let result: T;
+      try {
+        result = await fn();
+      } catch (e: any) {
+        throw e;
+      } finally {
+        await releaseLock();
+      }
+      return { result, cached: false };
+    }
+
+    logger.debug(
+      `Waiting for file lock on key ${key} to be released by another process...`
+    );
+
+    return new Promise<LockResult<T>>((resolve, reject) => {
+      const startTime = Date.now();
+      const checkInterval = options.retryInterval || 500;
+
+      const timeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        const errorMessage = `Timed out waiting for file lock on key: ${key}`;
+        logger.error(errorMessage);
+        reject(new Error(errorMessage));
+      }, timeout);
+
+      // Poll for lock release
+      const pollInterval = setInterval(async () => {
+        const exists = await fs
+          .access(lockPath)
+          .then(() => true)
+          .catch(() => false);
+
+        // Lock was released
+        if (!exists) {
+          clearTimeout(timeoutId);
+          clearInterval(pollInterval);
+          logger.debug(`File lock released for key ${key}`);
+          // We mark cached=true to indicate we waited for another process
+          resolve({ result: undefined as any, cached: true });
+        }
+      }, checkInterval);
     });
   }
 
