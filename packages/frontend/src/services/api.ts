@@ -213,7 +213,8 @@ export class UserConfigAPI {
   }
 
   static async resolvePatterns(
-    urls: string[]
+    urls: string[],
+    credentials?: { uuid: string; password: string }
   ): Promise<ApiResponse<{ patterns: { name: string; pattern: string; score?: number }[] }>> {
     try {
       const response = await fetch(`${this.BASE_URL}/user/resolve_patterns`, {
@@ -221,7 +222,11 @@ export class UserConfigAPI {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ urls }),
+        body: JSON.stringify({
+          urls,
+          uuid: credentials?.uuid,
+          password: credentials?.password,
+        }),
       });
 
       const data = await response.json();

@@ -218,6 +218,8 @@ router.delete('/', async (req, res, next) => {
 
 const ResolvePatternsSchema = z.object({
   urls: z.array(z.string().url()).max(10),
+  uuid: z.string().optional(),
+  password: z.string().optional(),
 });
 
 router.post('/resolve_patterns', async (req, res, next) => {
@@ -232,10 +234,13 @@ router.post('/resolve_patterns', async (req, res, next) => {
     );
     return;
   }
-  const { urls } = parsed.data;
+  const { urls, uuid, password } = parsed.data;
+
+  const userData: any =
+    uuid && password ? await UserRepository.getUser(uuid, password) : undefined;
 
   try {
-    const validUrls = FeatureControl.validateUrls(urls);
+    const validUrls = FeatureControl.validateUrls(urls, userData);
     const allPatterns = await Promise.all(
       validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
     );

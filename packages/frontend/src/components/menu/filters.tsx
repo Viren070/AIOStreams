@@ -3862,7 +3862,7 @@ interface SyncedPatternsProps {
 }
 
 function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
-  const {userData, setUserData} = useUserData();
+  const {userData, setUserData, password} = useUserData();
   const [syncedValues, setSyncedValues] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const {isOpen, open, close} = useDisclosure(false);
@@ -3870,7 +3870,12 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
 
   useEffect(() => {
     setIsLoading(true);
-    UserConfigAPI.resolvePatterns([url])
+    UserConfigAPI.resolvePatterns(
+      [url],
+      userData.uuid && password
+        ? { uuid: userData.uuid, password: password }
+        : undefined
+    )
       .then((res) => {
         if (res.success && res.data) {
           setSyncedValues(res.data.patterns);
