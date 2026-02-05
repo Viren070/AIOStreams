@@ -2290,7 +2290,9 @@ export class AIOStreams {
     // modify userData to remove the excludeUncached filter
     const userData = structuredClone(this.userData);
     userData.excludeUncached = false;
+    // ensure default fetching is used as time does not matter for a background precache
     userData.groups = undefined;
+    userData.dynamicAddonFetching = { enabled: false };
     this.setUserData(userData);
 
     const nextStreamsResponse = await this.getStreams(precacheId, type, true);
