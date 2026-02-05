@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,3 +44,20 @@ jobs:
             exit 1
           fi
           git push origin main --force-with-lease
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = `Upstream sync failed: run ${context.runId}`;
+            const body = [
+              `Workflow: ${context.workflow}`,
+              `Run: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
+              '',
+              'Rebase failed while syncing upstream. Please resolve conflicts on `main` and re-run.',
+            ].join('\\n');
+
+            await github.rest.issues.create({ owner, repo, title, body });
