@@ -662,7 +662,7 @@ class StreamParser {
   ): ParsedStream['service'] | undefined {
     const cleanString = string.replace(/web-?dl/i, '');
     const services = constants.SERVICE_DETAILS;
-    const cachedSymbols = ['+', '⚡', '🚀', 'cached'];
+    const cachedSymbols = ['+', '⚡', '🚀', 'cached', '🌩️'];
     const uncachedSymbols = ['⏳', 'download', 'UNCACHED'];
     let streamService: ParsedStream['service'] | undefined;
     Object.values(services).forEach((service) => {
