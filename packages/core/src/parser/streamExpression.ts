@@ -420,10 +420,16 @@ export abstract class StreamExpressionEngine {
       ...regexNames: string[]
     ) {
       if (regexNames.length === 0) {
-        return streams.filter((stream) => stream.regexMatched);
+        return streams.filter(
+          (stream) => stream.regexMatched || stream.rankedRegexesMatched?.length
+        );
       }
       return streams.filter((stream) =>
-        regexNames.some((regexName) => stream.regexMatched?.name === regexName)
+        regexNames.some(
+          (regexName) =>
+            stream.regexMatched?.name === regexName ||
+            stream.rankedRegexesMatched?.some((r) => r.name === regexName)
+        )
       );
     };
 

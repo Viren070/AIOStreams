@@ -147,6 +147,17 @@ export const userDataMiddleware = async (
           (regex) => regex.pattern,
           (pattern) => pattern
         );
+        userData.rankedRegexPatterns = await FeatureControl.syncPatterns(
+          userData.syncedRankedRegexUrls,
+          userData.rankedRegexPatterns || [],
+          userData,
+          (regex) => ({
+            pattern: regex.pattern,
+            name: regex.name,
+            score: regex.score || 0,
+          }),
+          (item) => item.pattern
+        );
 
         userData = await validateConfig(userData, {
           skipErrorsFromAddonsOrProxies: true,

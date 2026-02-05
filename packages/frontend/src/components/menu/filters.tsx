@@ -93,6 +93,7 @@ import { PasswordInput } from '../ui/password-input';
 import MarkdownLite from '../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@/utils/clipboard';
+import { UserData } from '@aiostreams/core';
 
 /**
  * Formats age in hours to a human-readable string.
@@ -2531,6 +2532,70 @@ function Content() {
                     }));
                   }}
                 />
+                <RankedRegexInputs
+                  title="Ranked Regex Patterns"
+                  description="Add regex patterns with scores. Matches on filename only. Accumulates scores."
+                  values={userData.rankedRegexPatterns || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedRegexPatterns: values,
+                    }));
+                  }}
+                  onPatternChange={(pattern, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedRegexPatterns: [
+                        ...(prev.rankedRegexPatterns || []).slice(0, index),
+                        {
+                          ...(prev.rankedRegexPatterns || [])[index],
+                          pattern,
+                        },
+                        ...(prev.rankedRegexPatterns || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                  onNameChange={(name, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedRegexPatterns: [
+                        ...(prev.rankedRegexPatterns || []).slice(0, index),
+                        {
+                          ...(prev.rankedRegexPatterns || [])[index],
+                          name,
+                        },
+                        ...(prev.rankedRegexPatterns || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                  onScoreChange={(score, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedRegexPatterns: [
+                        ...(prev.rankedRegexPatterns || []).slice(0, index),
+                        {
+                          ...(prev.rankedRegexPatterns || [])[index],
+                          score,
+                        },
+                        ...(prev.rankedRegexPatterns || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                  syncConfig={{
+                    urls: userData.syncedRankedRegexUrls || [],
+                    onUrlsChange: (urls) =>
+                      setUserData((prev) => ({
+                        ...prev,
+                        syncedRankedRegexUrls: urls,
+                      })),
+                    trusted: userData.trusted,
+                    onClearValues: () =>
+                      setUserData((prev) => ({
+                        ...prev,
+                        rankedRegexPatterns: [],
+                      })),
+                  }}
+                />
               </div>
             </>
           </TabsContent>
@@ -3786,7 +3851,7 @@ type TextInputProps = {
   placeholder?: string;
   syncConfig?: SyncConfig;
   disabled?: boolean;
-}
+};
 
 export interface SyncConfig {
   urls: string[];
@@ -3809,12 +3874,12 @@ function SyncedUrlInputs({
   if (!syncConfig) {
     return null;
   }
-  
+
   const { urls, onUrlsChange, trusted, onClearValues } = syncConfig;
 
   const validateAndAdd = (url: string) => {
     const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
-    
+
     if (!url) return false;
 
     try {
@@ -3824,7 +3889,8 @@ function SyncedUrlInputs({
       return false;
     }
 
-    const isUnrestricted = trusted || status?.settings.regexFilterAccess === 'all';
+    const isUnrestricted =
+      trusted || status?.settings.regexFilterAccess === 'all';
 
     if (!isUnrestricted && !allowedUrls.includes(url)) {
       toast.error('URL is not in the allowed list');
@@ -3899,7 +3965,9 @@ function SyncedUrlInputs({
                   key={index}
                   className="flex items-center gap-2 p-2 px-3 text-sm"
                 >
-                  <span className="flex-1 truncate font-mono text-xs">{url}</span>
+                  <span className="flex-1 truncate font-mono text-xs">
+                    {url}
+                  </span>
                   <IconButton
                     size="sm"
                     rounded
@@ -3979,7 +4047,8 @@ function TextInputs({
     URL.revokeObjectURL(url);
   };
 
-  const effectiveDisabled = disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
+  const effectiveDisabled =
+    disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
 
   return (
     <SettingsCard title={label} description={help} key={label}>
@@ -4123,7 +4192,8 @@ function TwoTextInputs({
   disabled,
   syncConfig,
 }: KeyValueInputProps) {
-  const effectiveDisabled = disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
+  const effectiveDisabled =
+    disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -4839,5 +4909,207 @@ function BitrateRangeSlider({
         </div>
       </div>
     </div>
+  );
+}
+
+interface RankedRegexInputProps {
+  title: string;
+  description: string;
+  values: NonNullable<UserData['rankedRegexPatterns']>;
+  onValuesChange: (
+    values: NonNullable<UserData['rankedRegexPatterns']>
+  ) => void;
+  onPatternChange: (pattern: string, index: number) => void;
+  onNameChange: (name: string, index: number) => void;
+  onScoreChange: (score: number, index: number) => void;
+  syncConfig?: SyncConfig;
+}
+
+function RankedRegexInputs({
+  title,
+  description,
+  values,
+  onValuesChange,
+  onPatternChange,
+  onNameChange,
+  onScoreChange,
+  syncConfig,
+}: RankedRegexInputProps) {
+  const effectiveDisabled = syncConfig?.urls && syncConfig.urls.length > 0;
+  const importModalDisclosure = useDisclosure(false);
+
+  const handleImport = (data: any) => {
+    if (
+      Array.isArray(data) &&
+      data.every(
+        (value: any) =>
+          typeof value.pattern === 'string' && typeof value.score === 'number'
+      )
+    ) {
+      onValuesChange(
+        data.map((v: any) => ({
+          pattern: v.pattern,
+          name: v.name,
+          score: v.score,
+        }))
+      );
+    } else {
+      toast.error('Invalid import format');
+    }
+  };
+
+  const handleExport = () => {
+    const data = values.map((value) => ({
+      pattern: value.pattern,
+      name: value.name,
+      score: value.score,
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-values.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <SettingsCard title={title} description={description}>
+      {values.map((value, index) => (
+        <div
+          key={index}
+          className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
+        >
+          <div className="w-full">
+            <TextInput
+              value={value.pattern}
+              label="Pattern"
+              placeholder="Regex Pattern"
+              disabled={effectiveDisabled}
+              onValueChange={(newValue) => onPatternChange(newValue, index)}
+            />
+          </div>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <TextInput
+                value={value.name || ''}
+                label="Name"
+                placeholder="Name (Optional)"
+                disabled={effectiveDisabled}
+                onValueChange={(newValue) => onNameChange(newValue, index)}
+              />
+            </div>
+            <div className="w-[20%] min-w-[100px]">
+              <NumberInput
+                value={value.score}
+                label="Score"
+                disabled={effectiveDisabled}
+                onValueChange={(newValue) =>
+                  onScoreChange(newValue ?? 0, index)
+                }
+                min={-1_000_000}
+                max={1_000_000}
+                step={50}
+              />
+            </div>
+            <div className="flex gap-1 pb-1">
+              <IconButton
+                size="sm"
+                rounded
+                icon={<FaArrowUp />}
+                intent="primary-subtle"
+                disabled={effectiveDisabled || index === 0}
+                onClick={() => {
+                  onValuesChange(arrayMove(values, index, index - 1));
+                }}
+              />
+              <IconButton
+                size="sm"
+                rounded
+                icon={<FaArrowDown />}
+                intent="primary-subtle"
+                disabled={effectiveDisabled || index === values.length - 1}
+                onClick={() => {
+                  onValuesChange(arrayMove(values, index, index + 1));
+                }}
+              />
+              <IconButton
+                size="sm"
+                rounded
+                icon={<FaRegTrashAlt />}
+                intent="alert-subtle"
+                disabled={effectiveDisabled}
+                onClick={() =>
+                  onValuesChange([
+                    ...values.slice(0, index),
+                    ...values.slice(index + 1),
+                  ])
+                }
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <div className="mt-2 flex gap-2 items-center">
+        <IconButton
+          rounded
+          size="sm"
+          intent="primary-subtle"
+          icon={<FaPlus />}
+          disabled={effectiveDisabled}
+          onClick={() =>
+            onValuesChange([...values, { pattern: '', name: '', score: 0 }])
+          }
+        />
+        <div className="ml-auto flex gap-2">
+          <Tooltip
+            trigger={
+              <IconButton
+                rounded
+                size="sm"
+                intent="primary-subtle"
+                icon={<FaFileImport />}
+                disabled={effectiveDisabled}
+                onClick={importModalDisclosure.open}
+              />
+            }
+          >
+            Import
+          </Tooltip>
+          <Tooltip
+            trigger={
+              <IconButton
+                rounded
+                size="sm"
+                intent="primary-subtle"
+                icon={<FaFileExport />}
+                disabled={effectiveDisabled}
+                onClick={handleExport}
+              />
+            }
+          >
+            Export
+          </Tooltip>
+        </div>
+      </div>
+      <ImportModal
+        open={importModalDisclosure.isOpen}
+        onOpenChange={importModalDisclosure.toggle}
+        onImport={handleImport}
+      />
+      {syncConfig && (
+        <SyncedUrlInputs
+          syncConfig={{
+            ...syncConfig,
+            onClearValues: () => onValuesChange([]),
+          }}
+          hasExistingPatterns={values.length > 0}
+        />
+      )}
+    </SettingsCard>
   );
 }

@@ -394,6 +394,7 @@ export const UserDataSchema = z.object({
   syncedExcludedRegexUrls: z.array(z.string().url()).optional(),
   syncedIncludedRegexUrls: z.array(z.string().url()).optional(),
   syncedRequiredRegexUrls: z.array(z.string().url()).optional(),
+  syncedRankedRegexUrls: z.array(z.string().url()).optional(),
   excludedReleaseGroups: z.array(z.string().min(1)).optional(),
   includedReleaseGroups: z.array(z.string().min(1)).optional(),
   requiredReleaseGroups: z.array(z.string().min(1)).optional(),
@@ -455,6 +456,15 @@ export const UserDataSchema = z.object({
     .array(
       z.object({
         expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        score: z.number().min(-1_000_000).max(1_000_000),
+      })
+    )
+    .optional(),
+  rankedRegexPatterns: z
+    .array(
+      z.object({
+        pattern: z.string().min(1),
+        name: z.string().optional(),
         score: z.number().min(-1_000_000).max(1_000_000),
       })
     )
@@ -802,6 +812,16 @@ export const ParsedStreamSchema = z.object({
       index: z.number(),
     })
     .optional(),
+  rankedRegexesMatched: z
+    .array(
+      z.object({
+        name: z.string().optional(),
+        pattern: z.string().min(1),
+        score: z.number(),
+      })
+    )
+    .optional(),
+  regexScore: z.number().optional(),
   keywordMatched: z.boolean().optional(),
   streamExpressionMatched: z.number().optional(),
   streamExpressionScore: z.number().optional(),
