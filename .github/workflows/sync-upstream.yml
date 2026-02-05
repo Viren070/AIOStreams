@@ -8,9 +8,16 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    concurrency:
+      group: sync-upstream-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: write
       issues: write
+    env:
+      UPSTREAM_REPO: Viren070/AIOStreams
+      UPSTREAM_BRANCH: main
+      MIRROR_BRANCH: upstream-main
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,22 +30,22 @@ jobs:
 
       - name: Fetch upstream
         run: |
-          git remote get-url upstream || git remote add upstream https://github.com/Viren070/AIOStreams.git
-          git fetch upstream main --tags
+          git remote get-url upstream || git remote add upstream https://github.com/${UPSTREAM_REPO}.git
+          git fetch upstream ${UPSTREAM_BRANCH} --tags
 
       - name: Update upstream-main mirror
         run: |
-          git checkout -B upstream-main upstream/main
-          git push origin upstream-main --force
+          git checkout -B ${MIRROR_BRANCH} upstream/${UPSTREAM_BRANCH}
+          git push origin ${MIRROR_BRANCH} --force
 
       - name: Rebase main onto upstream
         run: |
           git checkout main
-          if [ "$(git rev-parse HEAD)" = "$(git rev-parse upstream/main)" ]; then
-            echo "Main already matches upstream."
+          if git merge-base --is-ancestor upstream/${UPSTREAM_BRANCH} main; then
+            echo "Main already contains upstream."
             exit 0
           fi
-          if ! git rebase upstream/main; then
+          if ! git rebase upstream/${UPSTREAM_BRANCH}; then
             git rebase --abort || true
             echo "Rebase failed. Resolve conflicts manually."
             exit 1
@@ -53,6 +60,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const title = `Upstream sync failed: run ${context.runId}`;
+            const label = 'sync-failed';
             const body = [
               `Workflow: ${context.workflow}`,
               `Run: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
@@ -60,4 +68,29 @@ jobs:
               'Rebase failed while syncing upstream. Please resolve conflicts on `main` and re-run.',
             ].join('\\n');
 
-            await github.rest.issues.create({ owner, repo, title, body });
+            // Ensure label exists
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (error) {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: label,
+                color: 'd73a4a',
+                description: 'Upstream sync failures',
+              });
+            }
+
+            // Avoid duplicate open issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: label,
+            });
+
+            if (issues.some((issue) => issue.title.startsWith('Upstream sync failed:'))) {
+              return;
+            }
+
+            await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
