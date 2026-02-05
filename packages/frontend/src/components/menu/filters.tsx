@@ -94,6 +94,7 @@ import MarkdownLite from '../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@/utils/clipboard';
 import { UserData } from '@aiostreams/core';
+import { UserConfigAPI } from '@/services/api';
 
 /**
  * Formats age in hours to a human-readable string.
@@ -2589,11 +2590,6 @@ function Content() {
                         syncedRankedRegexUrls: urls,
                       })),
                     trusted: userData.trusted,
-                    onClearValues: () =>
-                      setUserData((prev) => ({
-                        ...prev,
-                        rankedRegexPatterns: [],
-                      })),
                   }}
                 />
               </div>
@@ -3857,25 +3853,120 @@ export interface SyncConfig {
   urls: string[];
   onUrlsChange: (urls: string[]) => void;
   trusted?: boolean;
-  onClearValues?: () => void;
 }
+interface SyncedPatternsProps {
+  url: string;
+  renderType: 'simple' | 'nameable' | 'ranked';
+}
+
+function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
+  const [syncedValues, setSyncedValues] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    UserConfigAPI.resolvePatterns([url])
+      .then((res) => {
+        if (res.success && res.data) {
+          setSyncedValues(res.data.patterns);
+        }
+      })
+      .finally(() => setIsLoading(false));
+  }, [url]);
+
+  if (isLoading) {
+    return (
+      <div className="px-3 pb-2 text-xs text-[--muted] animate-pulse">
+        Loading patterns...
+      </div>
+    );
+  }
+
+  if (syncedValues.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="px-3 pb-3 space-y-2">
+      {syncedValues.map((value, index) => (
+        <div key={index} className="opacity-70">
+          {renderType === 'simple' && (
+            <TextInput
+              value={typeof value === 'string' ? value : value.pattern}
+              label="Pattern (Synced)"
+              disabled
+              size="sm"
+            />
+          )}
+          {renderType === 'nameable' && (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <TextInput
+                  value={value.name || ''}
+                  label="Name (Synced)"
+                  disabled
+                  size="sm"
+                />
+              </div>
+              <div className="flex-[2]">
+                <TextInput
+                  value={value.pattern}
+                  label="Pattern (Synced)"
+                  disabled
+                  size="sm"
+                />
+              </div>
+            </div>
+          )}
+          {renderType === 'ranked' && (
+            <div className="flex flex-col gap-2 p-2 border rounded border-gray-800 bg-black/20">
+              <TextInput
+                value={value.pattern}
+                label="Pattern (Synced)"
+                disabled
+                size="sm"
+              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <TextInput
+                    value={value.name || ''}
+                    label="Name (Synced)"
+                    disabled
+                    size="sm"
+                  />
+                </div>
+                <div className="w-24">
+                  <NumberInput
+                    value={value.score || 0}
+                    label="Score"
+                    disabled
+                    size="sm"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SyncedUrlInputs({
   syncConfig,
-  hasExistingPatterns,
+  renderType = 'simple',
 }: {
   syncConfig?: SyncConfig;
-  hasExistingPatterns?: boolean;
+  renderType?: 'simple' | 'nameable' | 'ranked';
 }) {
   const { status } = useStatus();
   const [newUrl, setNewUrl] = useState('');
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingUrl, setPendingUrl] = useState('');
 
   if (!syncConfig) {
     return null;
   }
 
-  const { urls, onUrlsChange, trusted, onClearValues } = syncConfig;
+  const { urls, onUrlsChange, trusted } = syncConfig;
 
   const validateAndAdd = (url: string) => {
     const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
@@ -3902,53 +3993,17 @@ function SyncedUrlInputs({
 
   const handleUrlsUpdate = (newUrls: string[]) => {
     onUrlsChange(newUrls);
-    if (newUrls.length > 0 && onClearValues) {
-      onClearValues();
-    }
   };
 
   const handleAdd = () => {
     if (!validateAndAdd(newUrl)) return;
 
-    if (hasExistingPatterns) {
-      setPendingUrl(newUrl);
-      setShowConfirmModal(true);
-    } else {
-      handleUrlsUpdate([newUrl]);
-      setNewUrl('');
-    }
-  };
-
-  const confirmAdd = () => {
-    handleUrlsUpdate([pendingUrl]);
+    handleUrlsUpdate([...urls, newUrl]);
     setNewUrl('');
-    setPendingUrl('');
-    setShowConfirmModal(false);
   };
 
   return (
     <>
-      <Modal
-        open={showConfirmModal}
-        onOpenChange={setShowConfirmModal}
-        title="Replace Existing Patterns?"
-        description="Syncing from a URL will delete all existing patterns in this list. Only the patterns fetched from the synced URL will be used."
-      >
-        <div className="flex gap-2 justify-end mt-4">
-          <Button
-            intent="gray-subtle"
-            onClick={() => {
-              setShowConfirmModal(false);
-              setPendingUrl('');
-            }}
-          >
-            Cancel
-          </Button>
-          <Button intent="alert" onClick={confirmAdd}>
-            Confirm
-          </Button>
-        </div>
-      </Modal>
       <div className="space-y-3 mt-4 border-t border-gray-800 pt-4">
         <div>
           <h5 className="text-sm font-medium">Synced URL</h5>
@@ -3958,51 +4013,50 @@ function SyncedUrlInputs({
         </div>
 
         <div className="space-y-2">
-          {urls.length > 0 ? (
+          {urls.length > 0 && (
             <div className="bg-gray-900 rounded-md border border-gray-800 divide-y divide-gray-800">
               {urls.map((url, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-2 px-3 text-sm"
-                >
-                  <span className="flex-1 truncate font-mono text-xs">
-                    {url}
-                  </span>
-                  <IconButton
-                    size="sm"
-                    rounded
-                    icon={<FaRegTrashAlt />}
-                    intent="alert-subtle"
-                    onClick={() =>
-                      handleUrlsUpdate(urls.filter((_, i) => i !== index))
-                    }
-                  />
+                <div key={index} className="flex flex-col">
+                  <div className="flex items-center gap-2 p-2 px-3 text-sm">
+                    <span className="flex-1 truncate font-mono text-xs text-[--muted]">
+                      {url}
+                    </span>
+                    <IconButton
+                      size="sm"
+                      rounded
+                      icon={<FaRegTrashAlt />}
+                      intent="alert-subtle"
+                      onClick={() =>
+                        handleUrlsUpdate(urls.filter((_, i) => i !== index))
+                      }
+                    />
+                  </div>
+                  <SyncedPatterns url={url} renderType={renderType} />
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <TextInput
-                  value={newUrl}
-                  placeholder="https://example.com/patterns.json"
-                  onValueChange={setNewUrl}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAdd();
-                    }
-                  }}
-                />
-              </div>
-              <IconButton
-                onClick={handleAdd}
-                disabled={!newUrl}
-                icon={<FaPlus />}
-                intent="primary"
+          )}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <TextInput
+                value={newUrl}
+                placeholder="https://example.com/patterns.json"
+                onValueChange={setNewUrl}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
               />
             </div>
-          )}
+            <IconButton
+              onClick={handleAdd}
+              disabled={!newUrl}
+              icon={<FaPlus />}
+              intent="primary"
+            />
+          </div>
         </div>
       </div>
     </>
@@ -4047,9 +4101,6 @@ function TextInputs({
     URL.revokeObjectURL(url);
   };
 
-  const effectiveDisabled =
-    disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
-
   return (
     <SettingsCard title={label} description={help} key={label}>
       {values.map((value, index) => (
@@ -4060,7 +4111,6 @@ function TextInputs({
               label={itemName}
               placeholder={placeholder}
               onValueChange={(value) => onValueChange(value, index)}
-              disabled={effectiveDisabled}
             />
           </div>
           <IconButton
@@ -4068,7 +4118,7 @@ function TextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === 0}
+            disabled={index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -4078,7 +4128,7 @@ function TextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === values.length - 1}
+            disabled={index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -4088,7 +4138,6 @@ function TextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
-            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -4104,7 +4153,6 @@ function TextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
-          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, ''])}
         />
         <div className="ml-auto flex gap-2">
@@ -4115,7 +4163,6 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
-                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -4129,7 +4176,6 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
-                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -4145,11 +4191,8 @@ function TextInputs({
       />
       {syncConfig && (
         <SyncedUrlInputs
-          syncConfig={{
-            ...syncConfig,
-            onClearValues: () => onValuesChange([]),
-          }}
-          hasExistingPatterns={values.length > 0}
+          syncConfig={syncConfig}
+          renderType="simple"
         />
       )}
     </SettingsCard>
@@ -4192,8 +4235,6 @@ function TwoTextInputs({
   disabled,
   syncConfig,
 }: KeyValueInputProps) {
-  const effectiveDisabled =
-    disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -4242,7 +4283,6 @@ function TwoTextInputs({
               value={value.name}
               label={keyName}
               placeholder={keyPlaceholder}
-              disabled={effectiveDisabled}
               onValueChange={(newValue) => onKeyChange(newValue, index)}
             />
           </div>
@@ -4251,7 +4291,6 @@ function TwoTextInputs({
               value={value.value}
               label={valueName}
               placeholder={valuePlaceholder}
-              disabled={effectiveDisabled}
               onValueChange={(newValue) => onValueChange(newValue, index)}
             />
           </div>
@@ -4260,7 +4299,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === 0}
+            disabled={index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -4270,7 +4309,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === values.length - 1}
+            disabled={index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -4280,7 +4319,6 @@ function TwoTextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
-            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -4296,7 +4334,6 @@ function TwoTextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
-          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, { name: '', value: '' }])}
         />
         <div className="ml-auto flex gap-2">
@@ -4307,7 +4344,6 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
-                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -4321,7 +4357,6 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
-                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -4337,11 +4372,8 @@ function TwoTextInputs({
       />
       {syncConfig && (
         <SyncedUrlInputs
-          syncConfig={{
-            ...syncConfig,
-            onClearValues: () => onValuesChange([]),
-          }}
-          hasExistingPatterns={values.length > 0}
+          syncConfig={syncConfig}
+          renderType="nameable"
         />
       )}
     </SettingsCard>
@@ -4935,7 +4967,6 @@ function RankedRegexInputs({
   onScoreChange,
   syncConfig,
 }: RankedRegexInputProps) {
-  const effectiveDisabled = syncConfig?.urls && syncConfig.urls.length > 0;
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -4989,7 +5020,6 @@ function RankedRegexInputs({
               value={value.pattern}
               label="Pattern"
               placeholder="Regex Pattern"
-              disabled={effectiveDisabled}
               onValueChange={(newValue) => onPatternChange(newValue, index)}
             />
           </div>
@@ -4999,7 +5029,6 @@ function RankedRegexInputs({
                 value={value.name || ''}
                 label="Name"
                 placeholder="Name (Optional)"
-                disabled={effectiveDisabled}
                 onValueChange={(newValue) => onNameChange(newValue, index)}
               />
             </div>
@@ -5007,7 +5036,6 @@ function RankedRegexInputs({
               <NumberInput
                 value={value.score}
                 label="Score"
-                disabled={effectiveDisabled}
                 onValueChange={(newValue) =>
                   onScoreChange(newValue ?? 0, index)
                 }
@@ -5022,7 +5050,7 @@ function RankedRegexInputs({
                 rounded
                 icon={<FaArrowUp />}
                 intent="primary-subtle"
-                disabled={effectiveDisabled || index === 0}
+                disabled={index === 0}
                 onClick={() => {
                   onValuesChange(arrayMove(values, index, index - 1));
                 }}
@@ -5032,7 +5060,7 @@ function RankedRegexInputs({
                 rounded
                 icon={<FaArrowDown />}
                 intent="primary-subtle"
-                disabled={effectiveDisabled || index === values.length - 1}
+                disabled={index === values.length - 1}
                 onClick={() => {
                   onValuesChange(arrayMove(values, index, index + 1));
                 }}
@@ -5042,7 +5070,6 @@ function RankedRegexInputs({
                 rounded
                 icon={<FaRegTrashAlt />}
                 intent="alert-subtle"
-                disabled={effectiveDisabled}
                 onClick={() =>
                   onValuesChange([
                     ...values.slice(0, index),
@@ -5060,7 +5087,6 @@ function RankedRegexInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
-          disabled={effectiveDisabled}
           onClick={() =>
             onValuesChange([...values, { pattern: '', name: '', score: 0 }])
           }
@@ -5073,7 +5099,6 @@ function RankedRegexInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
-                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -5087,7 +5112,6 @@ function RankedRegexInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
-                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -5103,11 +5127,8 @@ function RankedRegexInputs({
       />
       {syncConfig && (
         <SyncedUrlInputs
-          syncConfig={{
-            ...syncConfig,
-            onClearValues: () => onValuesChange([]),
-          }}
-          hasExistingPatterns={values.length > 0}
+          syncConfig={syncConfig}
+          renderType="ranked"
         />
       )}
     </SettingsCard>

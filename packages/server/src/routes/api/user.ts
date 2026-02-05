@@ -213,4 +213,44 @@ router.delete('/', async (req, res, next) => {
     }
   }
 });
+
+router.post('/resolve_patterns', async (req, res, next) => {
+  const { urls } = req.body;
+  if (!Array.isArray(urls)) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'urls must be an array'
+      )
+    );
+    return;
+  }
+
+  try {
+    const { FeatureControl } = await import('@aiostreams/core');
+    const allPatterns = await Promise.all(
+      urls.map((url) => FeatureControl.getPatternsForUrl(url))
+    );
+    const flattened = allPatterns.flat();
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Patterns resolved successfully',
+        data: {
+          patterns: flattened,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
 export default router;

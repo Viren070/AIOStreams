@@ -9,28 +9,6 @@ const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
 
-const refreshingUrls = new Set<string>();
-
-async function refreshPatternsInBackground(url: string): Promise<void> {
-  if (refreshingUrls.has(url)) return;
-  refreshingUrls.add(url);
-
-  try {
-    const patterns = await fetchPatternsFromUrlInternal(url);
-    if (patterns.length > 0) {
-      FeatureControl.patternCache.set(
-        url,
-        { patterns },
-        Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000
-      );
-    }
-  } catch (error) {
-    logger.warn(`Background refresh failed for ${url}:`, error);
-  } finally {
-    refreshingUrls.delete(url);
-  }
-}
-
 async function fetchPatternsFromUrl(
   url: string
 ): Promise<{ name: string; pattern: string; score?: number }[]> {
