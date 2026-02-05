@@ -3861,14 +3861,28 @@ interface SyncedPatternsProps {
   renderType: 'simple' | 'nameable' | 'ranked';
 }
 
+interface SyncedPatternValue {
+  pattern: string;
+  name?: string;
+  score?: number;
+}
+
+interface EditingItemState {
+  pattern: string;
+  name?: string;
+  score?: number;
+  originalName?: string;
+}
+
 function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
-  const {userData, setUserData, password} = useUserData();
-  const [syncedValues, setSyncedValues] = useState<any[]>([]);
+  const { userData, setUserData, password } = useUserData();
+  const [syncedValues, setSyncedValues] = useState<SyncedPatternValue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const {isOpen, open, close} = useDisclosure(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const { isOpen, open, close } = useDisclosure(false);
+  const [editingItem, setEditingItem] = useState<EditingItemState | null>(null);
 
   useEffect(() => {
+    const abortController = new AbortController();
     setIsLoading(true);
     UserConfigAPI.resolvePatterns(
       [url],
@@ -3877,12 +3891,19 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
         : undefined
     )
       .then((res) => {
+        if (abortController.signal.aborted) return;
         if (res.success && res.data) {
           setSyncedValues(res.data.patterns);
         }
       })
-      .finally(() => setIsLoading(false));
-  }, [url]);
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => abortController.abort();
+  }, [url, userData.uuid, password]);
 
   if (isLoading) {
     return (
@@ -4114,7 +4135,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
               label="Custom Name"
               value={editingItem?.name || ''}
               onValueChange={(name) =>
-                setEditingItem((prev: any) => ({ ...prev, name }))
+                setEditingItem((prev) => (prev ? { ...prev, name } : null))
               }
             />
           )}
@@ -4123,7 +4144,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
               label="Custom Score"
               value={editingItem?.score ?? 0}
               onValueChange={(score) =>
-                setEditingItem((prev: any) => ({ ...prev, score }))
+                setEditingItem((prev) => (prev ? { ...prev, score } : null))
               }
             />
           )}
@@ -4139,6 +4160,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
             </Button>
             <Button
               onClick={() => {
+                if (!editingItem) return;
                 setUserData((prev) => {
                   const overrides = [...(prev.regexOverrides || [])];
                   const idx = overrides.findIndex(

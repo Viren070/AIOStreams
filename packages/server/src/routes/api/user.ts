@@ -236,10 +236,12 @@ router.post('/resolve_patterns', async (req, res, next) => {
   }
   const { urls, uuid, password } = parsed.data;
 
-  const userData: any =
-    uuid && password ? await UserRepository.getUser(uuid, password) : undefined;
-
   try {
+    const userData =
+      (uuid && password
+        ? await UserRepository.getUser(uuid, password)
+        : undefined) ?? undefined;
+
     const validUrls = FeatureControl.validateUrls(urls, userData);
     const allPatterns = await Promise.all(
       validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
