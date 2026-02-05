@@ -33,7 +33,8 @@ jobs:
           if ! git remote get-url upstream >/dev/null 2>&1; then
             git remote add upstream https://github.com/${UPSTREAM_REPO}.git
           fi
-          git fetch upstream ${UPSTREAM_BRANCH} --tags
+          # Force tag updates to avoid "would clobber existing tag" failures
+          git fetch upstream ${UPSTREAM_BRANCH} --tags --force
 
       - name: Update upstream-main mirror
         run: |
