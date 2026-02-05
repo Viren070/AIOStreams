@@ -3943,6 +3943,16 @@ function SyncedUrlInputs({
 
 // a component controls an array of text inputs.
 // and allows the user to add and remove values
+function ManualEditingDisabledAlert() {
+  return (
+    <Alert
+      intent="warning"
+      title="Manual Patterns Disabled"
+      description="Manual patterns are disabled because you are syncing patterns from a URL. To use manual patterns, remove the Synced URL."
+    />
+  );
+}
+
 function TextInputs({
   itemName,
   label,
@@ -3984,11 +3994,7 @@ function TextInputs({
   return (
     <SettingsCard title={label} description={help} key={label}>
       {syncConfig?.urls && syncConfig.urls.length > 0 && (
-        <Alert
-          intent="warning"
-          title="Manual Editing Disabled"
-          description="Manual pattern entry is disabled because you are syncing patterns from a URL. To edit patterns manually, remove the Synced URL."
-        />
+        <ManualEditingDisabledAlert />
       )}
       {values.map((value, index) => (
         <div key={index} className="flex gap-2">
@@ -4173,11 +4179,7 @@ function TwoTextInputs({
   return (
     <SettingsCard title={title} description={description}>
       {syncConfig?.urls && syncConfig.urls.length > 0 && (
-        <Alert
-          intent="warning"
-          title="Manual Editing Disabled"
-          description="Manual pattern entry is disabled because you are syncing patterns from a URL. To edit patterns manually, remove the Synced URL."
-        />
+        <ManualEditingDisabledAlert />
       )}
       {values.map((value, index) => (
         <div key={index} className="flex gap-2">
