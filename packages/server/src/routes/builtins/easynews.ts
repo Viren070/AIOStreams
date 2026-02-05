@@ -18,9 +18,13 @@ import { createResponse } from '../../utils/responses.js';
 const router: Router = Router();
 const logger = createLogger('server');
 
+interface EasynewsManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EasynewsManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -37,10 +41,23 @@ router.get(
   }
 );
 
+interface EasynewsStreamParams {
+  encodedConfig?: string; // optional
+  type?: string;
+  id?: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EasynewsStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
+    if (!type || !id) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'Type and id are required'
+      );
+    }
 
     try {
       const addon = new EasynewsSearchAddon(
@@ -63,15 +80,30 @@ router.get(
  * NZB endpoint - fetches NZB from Easynews and serves it
  * This endpoint is needed because Easynews requires a POST request to fetch NZBs
  */
+interface EasynewsNzbParams {
+  encodedAuth?: string;
+  encodedParams?: string;
+  aiostreamsAuth?: string; // optional
+  filename?: string;
+}
+
 router.get(
   '/nzb/:encodedAuth/:encodedParams{/:aiostreamsAuth}/:filename.nzb',
   easynewsNzbRateLimiter,
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EasynewsNzbParams>, res: Response, next: NextFunction) => {
     const {
       encodedAuth,
       encodedParams,
       aiostreamsAuth: encodedAiostreamsAuth,
+      filename,
     } = req.params;
+    if (!encodedAuth || !encodedParams || !filename) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'EncodedAuth, encodedParams, and filename are required'
+      );
+    }
 
     try {
       // Decode and validate auth credentials

@@ -38,9 +38,16 @@ router.use((req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+interface PlaybackParams {
+  encryptedStoreAuth?: string;
+  fileInfo?: string;
+  metadataId?: string;
+  filename?: string;
+}
+
 router.get(
   '/playback/:encryptedStoreAuth/:fileInfo/:metadataId/:filename',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<PlaybackParams>, res: Response, next: NextFunction) => {
     try {
       const {
         encryptedStoreAuth,
@@ -48,7 +55,7 @@ router.get(
         metadataId,
         filename,
       } = req.params;
-      if (!encodedFileInfo || !metadataId || !filename) {
+      if (!encryptedStoreAuth || !encodedFileInfo || !metadataId || !filename) {
         throw new APIError(
           constants.ErrorCode.BAD_REQUEST,
           undefined,

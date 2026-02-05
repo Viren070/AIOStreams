@@ -1,12 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { createLogger, fromUrlSafeBase64, GDriveAddon } from '@aiostreams/core';
+import { createLogger, fromUrlSafeBase64, GDriveAddon, APIError, constants } from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
 
+interface GDriveManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '{/:encodedConfig}/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<GDriveManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
     const config = encodedConfig
       ? JSON.parse(fromUrlSafeBase64(encodedConfig))
@@ -23,10 +27,23 @@ router.get(
   }
 );
 
+interface GDriveMetaParams {
+  encodedConfig?: string;
+  type?: string;
+  id?: string;
+}
+
 router.get(
   '/:encodedConfig/meta/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<GDriveMetaParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
+    if (!encodedConfig || !type || !id) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'EncodedConfig, type, and id are required'
+      );
+    }
     const config = JSON.parse(fromUrlSafeBase64(encodedConfig));
 
     try {
@@ -41,10 +58,24 @@ router.get(
   }
 );
 
+interface GDriveCatalogParams {
+  encodedConfig?: string;
+  type?: string;
+  id?: string;
+  extras?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/catalog/:type/:id{/:extras}.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<GDriveCatalogParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id, extras } = req.params;
+    if (!encodedConfig || !type || !id) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'EncodedConfig, type, and id are required'
+      );
+    }
     const config = JSON.parse(fromUrlSafeBase64(encodedConfig));
 
     try {
@@ -59,10 +90,23 @@ router.get(
   }
 );
 
+interface GDriveStreamParams {
+  encodedConfig?: string;
+  type?: string;
+  id?: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<GDriveStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
+    if (!encodedConfig || !type || !id) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'EncodedConfig, type, and id are required'
+      );
+    }
     const config = JSON.parse(fromUrlSafeBase64(encodedConfig));
 
     try {

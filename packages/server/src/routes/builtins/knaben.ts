@@ -1,13 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { KnabenAddon, fromUrlSafeBase64 } from '@aiostreams/core';
-import { createLogger } from '@aiostreams/core';
+import { KnabenAddon, fromUrlSafeBase64, createLogger, APIError, constants } from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
 
+interface KnabenManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<KnabenManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
     try {
       const manifest = new KnabenAddon(
@@ -23,10 +26,23 @@ router.get(
   }
 );
 
+interface KnabenStreamParams {
+  encodedConfig?: string; // optional
+  type?: string;
+  id?: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<KnabenStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
+    if (!type || !id) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'Type and id are required'
+      );
+    }
 
     try {
       const addon = new KnabenAddon(

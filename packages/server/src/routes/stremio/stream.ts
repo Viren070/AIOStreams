@@ -16,10 +16,15 @@ const logger = createLogger('server');
 
 router.use(stremioStreamRateLimiter);
 
+interface StreamParams {
+  type?: string;
+  id?: string;
+}
+
 router.get(
   '/:type/:id.json',
   async (
-    req: Request,
+    req: Request<StreamParams>,
     res: Response<AIOStreamResponse>,
     next: NextFunction
   ) => {
@@ -44,6 +49,14 @@ router.get(
 
     try {
       const { type, id } = req.params;
+      if (!type || !id) {
+        res.status(200).json(
+          StremioTransformer.createDynamicError('stream', {
+            errorDescription: 'Missing URL Parameters: Type and id are required',
+          })
+        );
+        return;
+      }
 
       const aiostreams = await new AIOStreams(req.userData).initialise();
 

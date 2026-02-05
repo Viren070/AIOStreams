@@ -1,11 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { EztvAddon, fromUrlSafeBase64 } from '@aiostreams/core';
+import { EztvAddon, fromUrlSafeBase64, APIError, constants } from '@aiostreams/core';
 
 const router: Router = Router();
 
+interface EztvManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EztvManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
     try {
       const manifest = new EztvAddon(
@@ -21,10 +25,23 @@ router.get(
   }
 );
 
+interface EztvStreamParams {
+  encodedConfig?: string; // optional
+  type?: string;
+  id?: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EztvStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
+    if (!type || !id) {
+      throw new APIError(
+        constants.ErrorCode.BAD_REQUEST,
+        undefined,
+        'Type and id are required'
+      );
+    }
 
     try {
       const addon = new EztvAddon(
