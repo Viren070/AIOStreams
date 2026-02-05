@@ -1,9 +1,9 @@
 import { createLogger } from './logger.js';
-import SeaDexAPI, { type SeaDexResponse } from '../builtins/seadex/api.js';
+import { SeaDexDataset } from '../builtins/seadex/dataset.js';
 
 const logger = createLogger('seadex');
 
-const seadexApi = new SeaDexAPI();
+const seadexDataset = SeaDexDataset.getInstance();
 
 export interface SeaDexResult {
   bestHashes: Set<string>;
@@ -26,8 +26,47 @@ export async function getSeaDexInfoHashes(
   anilistId: number
 ): Promise<SeaDexResult> {
   try {
-    const data = await seadexApi.getEntriesByAnilistId(anilistId);
-    return processSeaDexResponse(data, anilistId);
+    await seadexDataset.initialise();
+
+    const torrents = seadexDataset.getTorrents(anilistId);
+
+    const bestHashes = new Set<string>();
+    const allHashes = new Set<string>();
+    const bestGroups = new Set<string>();
+    const allGroups = new Set<string>();
+
+    for (const torrent of torrents) {
+      const infoHash = torrent.infoHash;
+
+      if (!infoHash || infoHash.includes('<redacted>') || infoHash === '') {
+        continue;
+      }
+
+      allHashes.add(infoHash);
+
+      if (torrent.isBest) {
+        bestHashes.add(infoHash);
+      }
+
+      const releaseGroup = torrent.releaseGroup?.toLowerCase();
+      if (releaseGroup) {
+        allGroups.add(releaseGroup);
+        if (torrent.isBest) {
+          bestGroups.add(releaseGroup);
+        }
+      }
+    }
+
+    logger.info(
+      `Found ${bestHashes.size} best hashes, ${allHashes.size} total hashes, ${bestGroups.size} best groups, ${allGroups.size} total groups for AniList ID ${anilistId}`
+    );
+
+    return {
+      bestHashes,
+      allHashes,
+      bestGroups,
+      allGroups,
+    };
   } catch (error) {
     logger.error(
       `Failed to fetch SeaDex data for AniList ID ${anilistId}:`,
@@ -40,71 +79,6 @@ export async function getSeaDexInfoHashes(
       allGroups: new Set(),
     };
   }
-}
-
-/**
- * Process SeaDex API response into our result format
- */
-function processSeaDexResponse(
-  data: SeaDexResponse,
-  anilistId: number
-): SeaDexResult {
-  const items = data.items;
-
-  if (!items || items.length === 0) {
-    logger.debug(`No SeaDex entries found for AniList ID ${anilistId}`);
-    return {
-      bestHashes: new Set(),
-      allHashes: new Set(),
-      bestGroups: new Set(),
-      allGroups: new Set(),
-    };
-  }
-
-  const bestHashes = new Set<string>();
-  const allHashes = new Set<string>();
-  const bestGroups = new Set<string>();
-  const allGroups = new Set<string>();
-
-  for (const item of items) {
-    const trsArray = item.expand?.trs;
-    if (!trsArray) continue;
-
-    for (const torrent of trsArray) {
-      const infoHash = torrent.infoHash?.toLowerCase();
-
-      // Skip empty or redacted hashes
-      if (!infoHash || infoHash.includes('<redacted>') || infoHash === '') {
-        continue;
-      }
-
-      allHashes.add(infoHash);
-
-      if (torrent.isBest) {
-        bestHashes.add(infoHash);
-      }
-
-      // Collect release groups
-      const releaseGroup = torrent.releaseGroup?.toLowerCase();
-      if (releaseGroup) {
-        allGroups.add(releaseGroup);
-        if (torrent.isBest) {
-          bestGroups.add(releaseGroup);
-        }
-      }
-    }
-  }
-
-  logger.info(
-    `Found ${bestHashes.size} best hashes, ${allHashes.size} total hashes, ${bestGroups.size} best groups, ${allGroups.size} total groups for AniList ID ${anilistId}`
-  );
-
-  return {
-    bestHashes,
-    allHashes,
-    bestGroups,
-    allGroups,
-  };
 }
 
 export default getSeaDexInfoHashes;

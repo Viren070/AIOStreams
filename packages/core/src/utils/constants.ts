@@ -132,7 +132,8 @@ const API_VERSION = 1;
 
 export const REDIS_PREFIX = 'aiostreams:';
 
-export const DEFAULT_PRECACHE_CONDITION = 'count(cached(streams)) == 0';
+export const DEFAULT_PRECACHE_SELECTOR =
+  'count(cached(streams)) == 0 ? uncached(streams) : []';
 
 export const GDRIVE_FORMATTER = 'gdrive';
 export const LIGHT_GDRIVE_FORMATTER = 'lightgdrive';
@@ -928,6 +929,7 @@ const SORT_CRITERIA = [
   'keyword',
   'streamExpressionMatched',
   'streamExpressionScore',
+  'regexScore',
   'seadex',
   'bitrate',
   'releaseGroup',
@@ -1136,6 +1138,13 @@ export const SORT_CRITERIA_DETAILS: Record<
     description: 'Sort by the bitrate of the stream',
     ascendingDescription: 'Streams with lower bitrate are preferred',
     descendingDescription: 'Streams with higher bitrate are preferred',
+  },
+  regexScore: {
+    name: 'Ranked Regex Score',
+    defaultDirection: 'desc',
+    description: 'Sort by the computed score from ranked regex patterns',
+    ascendingDescription: 'Streams with lower regex scores are preferred',
+    descendingDescription: 'Streams with higher regex scores are preferred',
   },
   streamExpressionScore: {
     name: 'Stream Expression Score',

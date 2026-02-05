@@ -188,11 +188,11 @@ export class NekoBtPreset extends TorznabPreset {
       ).filter((option) => option.id !== 'url' && option.id !== 'resources'),
       {
         id: 'apiKey',
-        name: 'API Key',
+        name: 'API Key (Optional)',
         description:
           'nekoBT API Key. You can find this in your nekoBT account settings.',
         type: 'password',
-        required: true,
+        required: false,
       },
       {
         id: 'services',

@@ -31,7 +31,9 @@ async function refreshPatternsInBackground(url: string): Promise<void> {
   }
 }
 
-async function fetchPatternsFromUrl(url: string): Promise<{ name: string; pattern: string }[]> {
+async function fetchPatternsFromUrl(
+  url: string
+): Promise<{ name: string; pattern: string; score?: number }[]> {
   const cached = await FeatureControl.patternCache.get(url);
   if (cached) {
     return cached.patterns;
@@ -51,7 +53,7 @@ async function fetchPatternsFromUrl(url: string): Promise<{ name: string; patter
 async function fetchPatternsFromUrlInternal(
   url: string,
   attempt = 1
-): Promise<{ name: string; pattern: string }[]> {
+): Promise<{ name: string; pattern: string; score?: number }[]> {
   const MAX_ATTEMPTS = 3;
 
   if (attempt === 1) {
@@ -72,8 +74,9 @@ async function fetchPatternsFromUrlInternal(
     const schema = z.union([
       z.array(
         z.object({
-          name: z.string(),
+          name: z.string().optional(),
           pattern: z.string(),
+          score: z.number().optional(),
         })
       ),
       z.object({
@@ -84,8 +87,15 @@ async function fetchPatternsFromUrlInternal(
     const data = await response.json();
     const parsedData = schema.parse(data);
     const patterns = Array.isArray(parsedData)
-      ? parsedData
-      : parsedData.values.map((pattern) => ({ name: pattern, pattern: pattern }));
+      ? parsedData.map((p) => ({
+          name: p.name ?? p.pattern,
+          pattern: p.pattern,
+          score: p.score,
+        }))
+      : parsedData.values.map((pattern) => ({
+          name: pattern,
+          pattern: pattern,
+        }));
 
     return patterns;
   } catch (error: any) {
@@ -117,11 +127,10 @@ export class FeatureControl {
   private static _initialisationPromise: Promise<void> | null = null;
   private static _refreshInterval: NodeJS.Timeout | null = null;
 
-  public static patternCache = Cache.getInstance<string, { patterns: { name: string; pattern: string }[] }>(
-    'regex-patterns',
-    100,
-    undefined
-  );
+  public static patternCache = Cache.getInstance<
+    string,
+    { patterns: { name: string; pattern: string; score?: number }[] }
+  >('regex-patterns', 100);
 
   /**
    * Initialises the FeatureControl service, performing the initial pattern fetch
@@ -184,13 +193,18 @@ export class FeatureControl {
 
     const patternsFromUrls = fetchPromises
       .filter(
-        (result): result is PromiseFulfilledResult<{ name: string; pattern: string }[]> =>
-          result.status === 'fulfilled'
+        (
+          result
+        ): result is PromiseFulfilledResult<
+          { name: string; pattern: string; score?: number }[]
+        > => result.status === 'fulfilled'
       )
       .flatMap((result) => result.value);
 
     if (patternsFromUrls.length > 0) {
-      FeatureControl._addPatterns(patternsFromUrls.map((regex) => regex.pattern));
+      FeatureControl._addPatterns(
+        patternsFromUrls.map((regex) => regex.pattern)
+      );
     }
   }
 
@@ -272,7 +286,7 @@ export class FeatureControl {
 
   public static async getPatternsForUrl(
     url: string
-  ): Promise<{ name: string; pattern: string }[]> {
+  ): Promise<{ name: string; pattern: string; score?: number }[]> {
     return fetchPatternsFromUrl(url);
   }
 
@@ -280,16 +294,17 @@ export class FeatureControl {
     urls: string[] | undefined,
     existing: T[],
     userData: UserData,
-    transform: (item: { name: string; pattern: string }) => T,
+    transform: (item: { name: string; pattern: string; score?: number }) => T,
     uniqueKey: (item: T) => string
   ): Promise<T[]> {
     if (!urls?.length) return existing;
 
     const isUnrestricted =
       userData.trusted || Env.REGEX_FILTER_ACCESS === 'all';
-    
+
     const validUrls = urls.filter(
-      (url) => isUnrestricted || (Env.ALLOWED_REGEX_PATTERNS_URLS || []).includes(url)
+      (url) =>
+        isUnrestricted || (Env.ALLOWED_REGEX_PATTERNS_URLS || []).includes(url)
     );
 
     if (!validUrls.length) return existing;

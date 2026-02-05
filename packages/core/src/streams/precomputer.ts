@@ -54,6 +54,8 @@ class StreamPrecomputer {
   ) {
     const start = Date.now();
     await this.precomputePreferredMatches(streams, context);
+    // carry out before ranked stream expressions so regex matches can be used in the expressions
+    await this.precomputeRankedRegexPatterns(streams);
     await this.precomputeRankedStreamExpressions(streams, context);
     logger.info(
       `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
@@ -116,6 +118,43 @@ class StreamPrecomputer {
     ).length;
     logger.info(
       `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores)`
+    );
+  }
+
+  private async precomputeRankedRegexPatterns(streams: ParsedStream[]) {
+    if (!this.userData.rankedRegexPatterns?.length || streams.length === 0) {
+      return;
+    }
+
+    const regexes = await Promise.all(
+      this.userData.rankedRegexPatterns.map(async (entry) => ({
+        ...entry,
+        regex: await compileRegex(entry.pattern),
+      }))
+    );
+
+    for (const stream of streams) {
+      if (!stream.filename) {
+        continue;
+      }
+      const matched: { pattern: string; name?: string; score: number }[] = [];
+      let totalScore = 0;
+      for (const { regex, pattern, name, score } of regexes) {
+        if (regex.test(stream.filename)) {
+          matched.push({ pattern, name, score });
+          totalScore += score;
+        }
+      }
+      if (matched.length > 0) {
+        stream.rankedRegexesMatched = matched;
+        stream.regexScore = totalScore;
+      }
+    }
+
+    logger.info(
+      `Computed ranked regex patterns for ${
+        streams.filter((s) => s.rankedRegexesMatched?.length).length
+      } streams`
     );
   }
 

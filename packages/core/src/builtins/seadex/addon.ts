@@ -10,7 +10,7 @@ import {
   ParsedId,
   AnimeDatabase,
 } from '../../utils/index.js';
-import SeaDexAPI from './api.js';
+import { SeaDexDataset } from './dataset.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import { validateInfoHash } from '../utils/debrid.js';
 
@@ -25,11 +25,11 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
   readonly name = 'SeaDex';
   readonly version = '1.0.0';
   readonly logger = logger;
-  readonly api: SeaDexAPI;
+  readonly dataset: SeaDexDataset;
 
   constructor(userData: SeaDexAddonConfig, clientIp?: string) {
     super(userData, SeaDexAddonConfigSchema, clientIp);
-    this.api = new SeaDexAPI();
+    this.dataset = SeaDexDataset.getInstance();
   }
 
   protected async _searchNzbs(
@@ -50,6 +50,13 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
     }
 
     const start = Date.now();
+    try {
+      await this.dataset.initialise();
+    } catch (error) {
+      throw new Error(
+        `SeaDex dataset was not initialised: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
 
     // Get AniList ID from the anime database
     const animeDb = AnimeDatabase.getInstance();
@@ -76,10 +83,9 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
     logger.info(`Performing SeaDex search for AniList ID ${anilistId}`);
 
     try {
-      const response = await this.api.getEntriesByAnilistId(anilistId);
+      const torrentsList = this.dataset.getTorrents(anilistId);
 
-      const items = response.items;
-      if (!items || items.length === 0) {
+      if (torrentsList.length === 0) {
         logger.debug(`No SeaDex entries found for AniList ID ${anilistId}`);
         return [];
       }
@@ -88,76 +94,64 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
       const torrents: UnprocessedTorrent[] = [];
       let redactedCount = 0;
 
-      for (const item of items) {
-        const trsArray = item.expand?.trs;
-        if (!trsArray) continue;
+      for (const torrent of torrentsList) {
+        const infoHash = torrent.infoHash;
 
-        for (const torrent of trsArray) {
-          const infoHash = torrent.infoHash?.toLowerCase();
-
-          // Handle redacted hashes
-          if (!infoHash || infoHash.includes('<redacted>') || infoHash === '') {
-            redactedCount++;
-            logger.debug(
-              `Skipping redacted/empty hash from ${torrent.tracker} (${torrent.releaseGroup || 'unknown group'})`
-            );
-            continue;
-          }
-
-          const hash = validateInfoHash(infoHash);
-          if (!hash) {
-            logger.warn(`Invalid info hash in SeaDex data: ${infoHash}`);
-            continue;
-          }
-
-          if (seenTorrents.has(hash)) {
-            continue;
-          }
-          seenTorrents.add(hash);
-
-          // Calculate file size from files array
-          const totalSize =
-            torrent.files?.reduce((sum, file) => sum + file.length, 0) ?? 0;
-
-          torrents.push({
-            confirmed: true,
-            hash,
-            group: torrent.releaseGroup,
-            indexer: torrent.tracker,
-            sources:
-              torrent.tracker === 'Nyaa'
-                ? [
-                    'http://nyaa.tracker.wf:7777/announce',
-                    'udp://open.stealth.si:80/announce',
-                    'udp://tracker.opentrackr.org:1337/announce',
-                    'udp://exodus.desync.com:6969/announce',
-                    'udp://tracker.torrent.eu.org:451/announce',
-                  ]
-                : [],
-            size: totalSize,
-            type: 'torrent',
-          });
+        // Handle redacted hashes
+        if (!infoHash || infoHash.includes('<redacted>') || infoHash === '') {
+          redactedCount++;
+          continue;
         }
-      }
 
-      if (redactedCount > 0) {
-        logger.info(
-          `Skipped ${redactedCount} redacted/empty hashes for AniList ID ${anilistId}`
+        if (seenTorrents.has(infoHash)) {
+          continue;
+        }
+        seenTorrents.add(infoHash);
+
+        if (!validateInfoHash(infoHash)) {
+          continue;
+        }
+
+        const totalSize = torrent.files.reduce(
+          (sum, file) => sum + file.length,
+          0
         );
+
+        const created = torrent.created ? new Date(torrent.created) : undefined;
+        const age = created ? Date.now() - created.getTime() : undefined;
+
+        torrents.push({
+          confirmed: true,
+          hash: infoHash,
+          group: torrent.releaseGroup,
+          age,
+          indexer: torrent.tracker,
+          sources:
+            torrent.tracker === 'Nyaa'
+              ? [
+                  'http://nyaa.tracker.wf:7777/announce',
+                  'udp://open.stealth.si:80/announce',
+                  'udp://tracker.opentrackr.org:1337/announce',
+                  'udp://exodus.desync.com:6969/announce',
+                  'udp://tracker.torrent.eu.org:451/announce',
+                ]
+              : [],
+          size: totalSize,
+          type: 'torrent',
+        });
       }
 
       logger.info(
-        `SeaDex search for AniList ID ${anilistId} took ${getTimeTakenSincePoint(start)}`,
-        {
-          results: torrents.length,
-          redacted: redactedCount,
-        }
+        `Found ${torrents.length} SeaDex torrents for AniList ID ${anilistId}${
+          redactedCount > 0 ? ` (skipped ${redactedCount} redacted)` : ''
+        } in ${getTimeTakenSincePoint(start)}`
       );
 
       return torrents;
     } catch (error) {
       logger.error(
-        `SeaDex search failed for AniList ID ${anilistId}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to search SeaDex for AniList ID ${anilistId}:`,
+        error
       );
       return [];
     }

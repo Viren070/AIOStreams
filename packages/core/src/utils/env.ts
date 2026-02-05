@@ -2001,9 +2001,9 @@ export const Env = cleanEnv(process.env, {
     default: 'https://releases.moe',
     desc: 'Builtin SeaDex URL',
   }),
-  BUILTIN_SEADEX_ENTRY_CACHE_TTL: num({
+  BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL: num({
     default: 24 * 60 * 60, // 24 hours
-    desc: 'Builtin SeaDex entry cache TTL',
+    desc: 'Builtin SeaDex dataset refresh interval in seconds',
   }),
 
   BUILTIN_BITMAGNET_URL: url({

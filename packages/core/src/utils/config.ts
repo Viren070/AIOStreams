@@ -27,7 +27,6 @@ import { z, ZodError } from 'zod';
 import {
   ExitConditionEvaluator,
   GroupConditionEvaluator,
-  PrecacheConditionEvaluator,
   StreamSelector,
 } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
@@ -402,12 +401,12 @@ export async function validateConfig(
     }
   }
 
-  // validate precache condition
-  if (config.precacheCondition) {
+  // validate precache selector
+  if (config.precacheSelector) {
     try {
-      await PrecacheConditionEvaluator.testEvaluate(config.precacheCondition);
+      await StreamSelector.testSelect(config.precacheSelector);
     } catch (error) {
-      throw new Error(`Invalid precache condition: ${error}`);
+      throw new Error(`Invalid precache selector: ${error}`);
     }
   }
 
@@ -697,14 +696,22 @@ export function applyMigrations(config: any): UserData {
     }
   }
 
-  // migrate alwaysPrecache to precacheCondition
-  if (config.precacheCondition === undefined && config.precacheNextEpisode) {
-    config.precacheCondition =
-      config.alwaysPrecache === true
-        ? 'true'
-        : constants.DEFAULT_PRECACHE_CONDITION;
+  // migrate alwaysPrecache to precacheCondition, then precacheCondition to precacheSelector
+  if (config.precacheSelector === undefined && config.precacheNextEpisode) {
+    // First handle the old precacheCondition field
+    if (config.precacheCondition !== undefined) {
+      // Convert condition to selector format
+      config.precacheSelector = `${config.precacheCondition} ? uncached(streams) : []`;
+    } else {
+      // Handle even older alwaysPrecache field
+      config.precacheSelector =
+        config.alwaysPrecache === true
+          ? 'true ? uncached(streams) : []'
+          : constants.DEFAULT_PRECACHE_SELECTOR;
+    }
   }
   delete config.alwaysPrecache;
+  delete config.precacheCondition;
 
   return config;
 }
@@ -759,9 +766,11 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
   );
 }
 
-function validateSyncedRegexUrls(config: UserData, skipErrors: boolean = false) {
-  const isUnrestricted =
-    config.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+function validateSyncedRegexUrls(
+  config: UserData,
+  skipErrors: boolean = false
+) {
+  const isUnrestricted = config.trusted || Env.REGEX_FILTER_ACCESS === 'all';
 
   if (isUnrestricted) return;
 

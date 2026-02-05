@@ -294,6 +294,8 @@ class StreamSorter {
           return multiplier * -(stream.streamExpressionMatched ?? Infinity);
         case 'streamExpressionScore':
           return multiplier * (stream.streamExpressionScore ?? 0);
+        case 'regexScore':
+          return multiplier * (stream.regexScore ?? 0);
         case 'keyword':
           return multiplier * (stream.keywordMatched ? 1 : 0);
 
@@ -326,8 +328,7 @@ class StreamSorter {
           }
           const releaseGroup = stream.parsedFile?.releaseGroup || 'Unknown';
           const index = userData.preferredReleaseGroups.findIndex(
-            (group) =>
-              group.toLowerCase() === releaseGroup.toLowerCase()
+            (group) => group.toLowerCase() === releaseGroup.toLowerCase()
           );
           return multiplier * -(index === -1 ? Infinity : index);
         }

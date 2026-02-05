@@ -75,6 +75,8 @@ export interface ParseValue {
     audioTags: string[] | null;
     releaseGroup: string | null;
     regexMatched: string | null;
+    rankedRegexMatched: string[];
+    regexScore: number | null;
     encode: string | null;
     audioChannels: string[] | null;
     edition: string | null;
@@ -328,7 +330,13 @@ export abstract class BaseFormatter {
         visualTags: stream.parsedFile?.visualTags || null,
         audioTags: stream.parsedFile?.audioTags || null,
         releaseGroup: stream.parsedFile?.releaseGroup || null,
-        regexMatched: stream.regexMatched?.name || null,
+        regexMatched:
+          stream.regexMatched?.name ||
+          stream.rankedRegexesMatched?.[0]?.name ||
+          null,
+        rankedRegexMatched:
+          stream.rankedRegexesMatched?.map((r) => r.name || r.pattern) || [],
+        regexScore: stream.regexScore || null,
         encode: stream.parsedFile?.encode || null,
         audioChannels: stream.parsedFile?.audioChannels || null,
         indexer: stream.indexer || null,

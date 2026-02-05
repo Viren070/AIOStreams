@@ -62,15 +62,67 @@ function Content() {
             }}
           />
           <TextInput
-            label="Precache Condition"
-            help="A SEL expression that determines whether to precache or not. Executed on the next episodes streams. If not set, precaching only occurs when all streams are uncached. Set to 'true' to always precache. Has access to the same constants as expression filters (streams, queryType, isAnime, etc.)."
-            placeholder="e.g., true or queryType == 'anime.series'"
+            label="Precache Selector"
+            help={
+              <>
+                <p>
+                  A SEL expression that determines which stream to precache for
+                  the next episode. Should evaluate to a list of streams - the
+                  first stream from this list will be selected for precaching.
+                </p>
+                <p className="mt-2">
+                  <strong>Recommended pattern:</strong>{' '}
+                  <code>condition ? streamsToSelectFrom : []</code>
+                </p>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>
+                    <code>condition</code> - When precaching should activate
+                  </li>
+                  <li>
+                    <code>streamsToSelectFrom</code> - Which streams AIOStreams
+                    should choose from
+                  </li>
+                </ul>
+                <p className="mt-2">
+                  <strong>Examples:</strong>
+                </p>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>
+                    <strong>Default behavior</strong> (precache only when all
+                    streams are uncached):
+                    <br />
+                    <code className="text-xs">
+                      count(cached(streams)) == 0 ? uncached(streams) : []
+                    </code>
+                  </li>
+                  <li>
+                    <strong>Always precache first uncached stream:</strong>
+                    <br />
+                    <code className="text-xs">
+                      true ? uncached(streams) : []
+                    </code>
+                  </li>
+                  <li>
+                    <strong>Only for anime series:</strong>
+                    <br />
+                    <code className="text-xs">
+                      queryType == 'anime.series' ? uncached(streams) : []
+                    </code>
+                  </li>
+                </ul>
+                <p className="mt-2 text-sm text-gray-600">
+                  Has access to the same constants as expression filters
+                  (streams, queryType, isAnime, etc.).
+                </p>
+              </>
+            }
+            placeholder="e.g., true ? uncached(streams) : []"
             disabled={!userData.precacheNextEpisode}
-            value={userData.precacheCondition ?? ''}
+            value={userData.precacheSelector ?? ''}
             onValueChange={(value) => {
               setUserData((prev) => ({
                 ...prev,
-                precacheCondition: value || undefined,
+                precacheSelector: value || undefined,
               }));
             }}
           />
