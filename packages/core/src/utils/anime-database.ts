@@ -460,8 +460,10 @@ function validateKitsuEntry(data: any): KitsuEntry | null {
         ? parseInt(data.fanartLogoId)
         : data.fanartLogoId,
     tvdbId:
-      typeof data.tvdb_id === 'string' ? parseInt(data.tvdb_id) : data.tvdb_id,
-    imdbId: data.imdb_id,
+      typeof data.tvdb_id === 'string'
+        ? parseInt(data.tvdb_id)
+        : data.tvdb_id || data.tvdbId,
+    imdbId: data.imdb_id || data.imdbId,
     title: data.title,
     fromSeason: data.fromSeason,
     fromEpisode: data.fromEpisode,
@@ -1340,7 +1342,11 @@ export class AnimeDatabase {
     this.dataStore.kitsuById = new Map();
     let enrichedCount = 0;
 
-    for (const [kitsuId, kitsuEntry] of Object.entries(data)) {
+    const entries: Array<[number, any]> = Array.isArray(data)
+      ? data.map((entry) => [entry.kitsu_id, entry])
+      : Object.entries(data).map(([id, entry]) => [Number(id), entry]);
+
+    for (const [kitsuId, kitsuEntry] of entries) {
       const validated = validateKitsuEntry(kitsuEntry);
       if (validated !== null) {
         this.dataStore.kitsuById.set(Number(kitsuId), validated);
