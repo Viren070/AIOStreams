@@ -235,8 +235,9 @@ router.post('/resolve_patterns', async (req, res, next) => {
   const { urls } = parsed.data;
 
   try {
+    const validUrls = FeatureControl.validateUrls(urls);
     const allPatterns = await Promise.all(
-      urls.map((url) => FeatureControl.getPatternsForUrl(url))
+      validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
     );
     const flattened = allPatterns.flat();
 

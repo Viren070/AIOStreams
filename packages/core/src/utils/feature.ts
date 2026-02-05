@@ -268,6 +268,18 @@ export class FeatureControl {
     return fetchPatternsFromUrl(url);
   }
 
+  public static validateUrls(urls: string[], userData?: UserData): string[] {
+    const isUnrestricted =
+      userData?.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+
+    if (isUnrestricted) {
+      return urls;
+    }
+
+    const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+    return urls.filter((url) => allowedUrls.includes(url));
+  }
+
   public static async syncPatterns<T>(
     urls: string[] | undefined,
     existing: T[],
@@ -277,13 +289,7 @@ export class FeatureControl {
   ): Promise<T[]> {
     if (!urls?.length) return existing;
 
-    const isUnrestricted =
-      userData.trusted || Env.REGEX_FILTER_ACCESS === 'all';
-
-    const validUrls = urls.filter(
-      (url) =>
-        isUnrestricted || (Env.ALLOWED_REGEX_PATTERNS_URLS || []).includes(url)
-    );
+    const validUrls = this.validateUrls(urls, userData);
 
     if (!validUrls.length) return existing;
 
