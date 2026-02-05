@@ -25,12 +25,21 @@ jobs:
           git remote get-url upstream || git remote add upstream https://github.com/Viren070/AIOStreams.git
           git fetch upstream main --tags
 
-      - name: Fast-forward main
+      - name: Update upstream-main mirror
+        run: |
+          git checkout -B upstream-main upstream/main
+          git push origin upstream-main --force
+
+      - name: Rebase main onto upstream
         run: |
           git checkout main
           if [ "$(git rev-parse HEAD)" = "$(git rev-parse upstream/main)" ]; then
-            echo "Already up to date"
+            echo "Main already matches upstream."
             exit 0
           fi
-          git merge --ff-only upstream/main
-          git push origin main
+          if ! git rebase upstream/main; then
+            git rebase --abort || true
+            echo "Rebase failed. Resolve conflicts manually."
+            exit 1
+          fi
+          git push origin main --force-with-lease
