@@ -721,6 +721,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
   const includedRegexes = config.includedRegexPatterns;
   const requiredRegexes = config.requiredRegexPatterns;
   const preferredRegexes = config.preferredRegexPatterns;
+  const rankedRegexes = config.rankedRegexPatterns;
   const regexAllowed = await FeatureControl.isRegexAllowed(config);
 
   const regexes = [
@@ -728,6 +729,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
     ...(includedRegexes ?? []),
     ...(requiredRegexes ?? []),
     ...(preferredRegexes ?? []).map((regex) => regex.pattern),
+    ...(rankedRegexes ?? []).map((regex) => regex.pattern),
   ];
 
   if (!regexAllowed && regexes.length > 0) {
