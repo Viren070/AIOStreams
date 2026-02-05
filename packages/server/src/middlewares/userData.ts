@@ -121,28 +121,36 @@ export const userDataMiddleware = async (
         // Sync regex patterns from URLs
         userData.preferredRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedPreferredRegexUrls,
-          userData.preferredRegexPatterns || [],
+          userData.syncedPreferredRegexUrls?.length
+            ? []
+            : userData.preferredRegexPatterns || [],
           userData,
           (regex) => regex,
           (regex) => regex.pattern
         );
         userData.excludedRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedExcludedRegexUrls,
-          userData.excludedRegexPatterns || [],
+          userData.syncedExcludedRegexUrls?.length
+            ? []
+            : userData.excludedRegexPatterns || [],
           userData,
           (regex) => regex.pattern,
           (pattern) => pattern
         );
         userData.requiredRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedRequiredRegexUrls,
-          userData.requiredRegexPatterns || [],
+          userData.syncedRequiredRegexUrls?.length
+            ? []
+            : userData.requiredRegexPatterns || [],
           userData,
           (regex) => regex.pattern,
           (pattern) => pattern
         );
         userData.includedRegexPatterns = await FeatureControl.syncPatterns(
           userData.syncedIncludedRegexUrls,
-          userData.includedRegexPatterns || [],
+          userData.syncedIncludedRegexUrls?.length
+            ? []
+            : userData.includedRegexPatterns || [],
           userData,
           (regex) => regex.pattern,
           (pattern) => pattern

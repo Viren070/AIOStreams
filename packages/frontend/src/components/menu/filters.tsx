@@ -3983,6 +3983,13 @@ function TextInputs({
 
   return (
     <SettingsCard title={label} description={help} key={label}>
+      {syncConfig?.urls && syncConfig.urls.length > 0 && (
+        <Alert
+          intent="warning"
+          title="Manual Editing Disabled"
+          description="Manual pattern entry is disabled because you are syncing patterns from a URL. To edit patterns manually, remove the Synced URL."
+        />
+      )}
       {values.map((value, index) => (
         <div key={index} className="flex gap-2">
           <div className="flex-1">
@@ -4165,6 +4172,13 @@ function TwoTextInputs({
 
   return (
     <SettingsCard title={title} description={description}>
+      {syncConfig?.urls && syncConfig.urls.length > 0 && (
+        <Alert
+          intent="warning"
+          title="Manual Editing Disabled"
+          description="Manual pattern entry is disabled because you are syncing patterns from a URL. To edit patterns manually, remove the Synced URL."
+        />
+      )}
       {values.map((value, index) => (
         <div key={index} className="flex gap-2">
           <div className="flex-1">
