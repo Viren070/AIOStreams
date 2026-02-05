@@ -469,6 +469,16 @@ export const UserDataSchema = z.object({
       })
     )
     .optional(),
+  regexOverrides: z
+    .array(
+      z.object({
+        pattern: z.string().min(1),
+        name: z.string().optional(),
+        score: z.number().min(-1_000_000).max(1_000_000).optional(),
+        originalName: z.string().optional(),
+      })
+    )
+    .optional(),
   // disableGroups: z.boolean().optional(),
   // groups: z
   //   .array(

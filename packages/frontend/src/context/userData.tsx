@@ -322,6 +322,7 @@ export const DefaultUserData: UserData = {
   },
   precacheSelector: DEFAULT_PRECACHE_SELECTOR,
   enableSeadex: true,
+  regexOverrides: [],
 };
 
 interface UserDataContextType {

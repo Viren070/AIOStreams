@@ -22,6 +22,8 @@ import {
   FaTachometerAlt,
   FaArrowUp,
   FaArrowDown,
+  FaEdit,
+  FaUndo,
 } from 'react-icons/fa';
 import { FaTextSlash } from 'react-icons/fa6';
 import {
@@ -3860,8 +3862,11 @@ interface SyncedPatternsProps {
 }
 
 function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
+  const {userData, setUserData} = useUserData();
   const [syncedValues, setSyncedValues] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const {isOpen, open, close} = useDisclosure(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -3888,66 +3893,277 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
 
   return (
     <div className="px-3 pb-3 space-y-2">
-      {syncedValues.map((value, index) => (
-        <div key={index} className="opacity-70">
-          {renderType === 'simple' && (
-            <TextInput
-              value={typeof value === 'string' ? value : value.pattern}
-              label="Pattern (Synced)"
-              disabled
-              size="sm"
-            />
-          )}
-          {renderType === 'nameable' && (
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <TextInput
-                  value={value.name || ''}
-                  label="Name (Synced)"
-                  disabled
-                  size="sm"
-                />
-              </div>
-              <div className="flex-[2]">
-                <TextInput
-                  value={value.pattern}
-                  label="Pattern (Synced)"
-                  disabled
-                  size="sm"
-                />
-              </div>
-            </div>
-          )}
-          {renderType === 'ranked' && (
-            <div className="flex flex-col gap-2 p-2 border rounded border-gray-800 bg-black/20">
-              <TextInput
-                value={value.pattern}
-                label="Pattern (Synced)"
-                disabled
-                size="sm"
-              />
-              <div className="flex gap-2">
+      {syncedValues.map((value, index) => {
+        const patternStr = typeof value === 'string' ? value : value.pattern;
+        const override = userData.regexOverrides?.find(
+          (o) =>
+            o.pattern === patternStr ||
+            (value.name && o.originalName === value.name)
+        );
+        const isOverridden = !!override;
+        const effectiveName = override?.name ?? value.name ?? '';
+        const effectiveScore =
+          override?.score !== undefined ? override.score : value.score ?? 0;
+
+        return (
+          <div key={index} className="opacity-70">
+            {renderType === 'simple' && (
+              <div className="flex gap-2 items-center">
                 <div className="flex-1">
                   <TextInput
-                    value={value.name || ''}
-                    label="Name (Synced)"
+                    value={patternStr}
+                    label="Pattern (Synced)"
                     disabled
                     size="sm"
+                    className={isOverridden ? 'border-primary/50' : ''}
                   />
                 </div>
-                <div className="w-24">
-                  <NumberInput
-                    value={value.score || 0}
-                    label="Score"
+                <div className="self-end pb-0.5 flex gap-1 flex-shrink-0" />
+              </div>
+            )}
+            {renderType === 'nameable' && (
+              <div className="flex gap-2 items-end">
+                <div className="flex-none w-1/3">
+                  <TextInput
+                    value={effectiveName}
+                    label={
+                      isOverridden ? 'Name (Overridden)' : 'Name (Synced)'
+                    }
                     disabled
                     size="sm"
+                    className={isOverridden ? 'border-primary/50' : ''}
                   />
+                </div>
+                <div className="flex-1">
+                  <TextInput
+                    value={patternStr}
+                    label="Pattern (Synced)"
+                    disabled
+                    size="sm"
+                    className={isOverridden ? 'border-primary/50' : ''}
+                  />
+                </div>
+                <div className="pb-0.5 flex gap-1 flex-shrink-0">
+                  {isOverridden && (
+                    <Tooltip
+                      trigger={
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={<FaUndo className="text-xs" />}
+                          intent="alert-subtle"
+                          onClick={() => {
+                            setUserData((prev) => ({
+                              ...prev,
+                              regexOverrides: (prev.regexOverrides || []).filter(
+                                (o) =>
+                                  o.pattern !== patternStr &&
+                                  (!value.name || o.originalName !== value.name)
+                              ),
+                            }));
+                            toast.info('Override removed');
+                          }}
+                          className="h-[38px] w-[38px] border border-red-500/20 hover:border-red-500/50 transition-colors shadow-sm"
+                        />
+                      }
+                    >
+                      Reset Override
+                    </Tooltip>
+                  )}
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="sm"
+                        rounded
+                        icon={<FaEdit className="text-xs" />}
+                        intent={isOverridden ? 'primary' : 'primary-subtle'}
+                        onClick={() => {
+                          setEditingItem({
+                            pattern: patternStr,
+                            name: effectiveName,
+                            originalName: value.name,
+                          });
+                          open();
+                        }}
+                        className="h-[38px] w-[38px] border border-primary/20 hover:border-primary/50 transition-colors shadow-sm"
+                      />
+                    }
+                  >
+                    Override
+                  </Tooltip>
                 </div>
               </div>
-            </div>
+            )}
+            {renderType === 'ranked' && (
+              <div
+                className={cn(
+                  'flex flex-col gap-2 p-2 border rounded border-gray-800 bg-black/20',
+                  isOverridden && 'border-primary/50'
+                )}
+              >
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <TextInput
+                      value={patternStr}
+                      label="Pattern (Synced)"
+                      disabled
+                      size="sm"
+                    />
+                  </div>
+                  <div className="pb-0.5 flex gap-1 flex-shrink-0">
+                    {isOverridden && (
+                      <Tooltip
+                        trigger={
+                          <IconButton
+                            size="sm"
+                            rounded
+                            icon={<FaUndo className="text-xs" />}
+                            intent="alert-subtle"
+                            onClick={() => {
+                              setUserData((prev) => ({
+                                ...prev,
+                                regexOverrides: (
+                                  prev.regexOverrides || []
+                                ).filter(
+                                  (o) =>
+                                    o.pattern !== patternStr &&
+                                    (!value.name ||
+                                      o.originalName !== value.name)
+                                ),
+                              }));
+                              toast.info('Override removed');
+                            }}
+                            className="h-[38px] w-[38px] border border-red-500/20 hover:border-red-500/50 transition-colors shadow-sm"
+                          />
+                        }
+                      >
+                        Reset Override
+                      </Tooltip>
+                    )}
+                    <Tooltip
+                      trigger={
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={<FaEdit className="text-xs" />}
+                          intent={isOverridden ? 'primary' : 'primary-subtle'}
+                          onClick={() => {
+                            setEditingItem({
+                              pattern: patternStr,
+                              name: effectiveName,
+                              score: effectiveScore,
+                              originalName: value.name,
+                            });
+                            open();
+                          }}
+                          className="h-[38px] w-[38px] border border-primary/20 hover:border-primary/50 transition-colors shadow-sm"
+                        />
+                      }
+                    >
+                      Override
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <TextInput
+                      value={effectiveName}
+                      label={
+                        isOverridden ? 'Name (Overridden)' : 'Name (Synced)'
+                      }
+                      disabled
+                      size="sm"
+                    />
+                  </div>
+                  <div className="w-24">
+                    <NumberInput
+                      value={effectiveScore}
+                      label={isOverridden ? 'Score (Ovr)' : 'Score'}
+                      disabled
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <Modal
+        open={isOpen}
+        onOpenChange={(val) => {
+          if (!val) {
+            setEditingItem(null);
+            close();
+          }
+        }}
+        title="Override"
+      >
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-[--muted] break-all">
+            Pattern: <code className="text-[--primary]">{editingItem?.pattern}</code>
+          </p>
+          {(renderType === 'nameable' || renderType === 'ranked') && (
+            <TextInput
+              label="Custom Name"
+              value={editingItem?.name || ''}
+              onValueChange={(name) =>
+                setEditingItem((prev: any) => ({ ...prev, name }))
+              }
+            />
           )}
+          {renderType === 'ranked' && (
+            <NumberInput
+              label="Custom Score"
+              value={editingItem?.score ?? 0}
+              onValueChange={(score) =>
+                setEditingItem((prev: any) => ({ ...prev, score }))
+              }
+            />
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              intent="primary-basic"
+              onClick={() => {
+                setEditingItem(null);
+                close();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setUserData((prev) => {
+                  const overrides = [...(prev.regexOverrides || [])];
+                  const idx = overrides.findIndex(
+                    (o) =>
+                      o.pattern === editingItem.pattern ||
+                      (editingItem.originalName &&
+                        o.originalName === editingItem.originalName)
+                  );
+                  const entry = {
+                    pattern: editingItem.pattern,
+                    name: editingItem.name || undefined,
+                    score: editingItem.score,
+                    originalName: editingItem.originalName,
+                  };
+                  if (idx >= 0) {
+                    overrides[idx] = entry;
+                  } else {
+                    overrides.push(entry);
+                  }
+                  return { ...prev, regexOverrides: overrides };
+                });
+                close();
+                toast.success('Override saved');
+              }}
+            >
+              Save Override
+            </Button>
+          </div>
         </div>
-      ))}
+      </Modal>
     </div>
   );
 }
@@ -3980,6 +4196,11 @@ function SyncedUrlInputs({
       return false;
     }
 
+    if (urls.includes(url)) {
+      toast.error('URL is already added');
+      return false;
+    }
+
     const isUnrestricted =
       trusted || status?.settings.regexFilterAccess === 'all';
 
@@ -4008,7 +4229,7 @@ function SyncedUrlInputs({
         <div>
           <h5 className="text-sm font-medium">Synced URL</h5>
           <p className="text-xs text-[--muted]">
-            Automatically fetch and sync patterns from this URL
+            Automatically fetch and sync patterns from this URL. Manual patterns will always take priority over synced patterns.
           </p>
         </div>
 
@@ -4031,9 +4252,12 @@ function SyncedUrlInputs({
                       }
                     />
                   </div>
-                  <SyncedPatterns url={url} renderType={renderType} />
-                </div>
-              ))}
+                  <SyncedPatterns
+                  url={url}
+                  renderType={renderType}
+                />
+              </div>
+            ))}
             </div>
           )}
           <div className="flex gap-2">

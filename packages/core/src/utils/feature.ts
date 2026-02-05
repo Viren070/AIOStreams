@@ -296,7 +296,20 @@ export class FeatureControl {
 
     for (const regexes of allPatterns) {
       for (const regex of regexes) {
-        const item = transform(regex);
+        const override = userData.regexOverrides?.find(
+          (o) =>
+            o.pattern === regex.pattern ||
+            (regex.name && o.originalName === regex.name)
+        );
+        const item = transform(
+          override
+            ? {
+                ...regex,
+                name: override.name ?? regex.name,
+                score: override.score !== undefined ? override.score : regex.score,
+              }
+            : regex
+        );
         const key = uniqueKey(item);
         if (!existingSet.has(key)) {
           result.push(item);
