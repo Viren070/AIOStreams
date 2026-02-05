@@ -30,7 +30,9 @@ jobs:
 
       - name: Fetch upstream
         run: |
-          git remote get-url upstream || git remote add upstream https://github.com/${UPSTREAM_REPO}.git
+          if ! git remote get-url upstream >/dev/null 2>&1; then
+            git remote add upstream https://github.com/${UPSTREAM_REPO}.git
+          fi
           git fetch upstream ${UPSTREAM_BRANCH} --tags
 
       - name: Update upstream-main mirror
