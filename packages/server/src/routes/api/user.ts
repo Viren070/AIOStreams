@@ -5,7 +5,9 @@ import {
   createLogger,
   encryptString,
   UserRepository,
+  FeatureControl,
 } from '@aiostreams/core';
+import { z } from 'zod';
 import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
 import { createResponse } from '../../utils/responses.js';
@@ -214,21 +216,25 @@ router.delete('/', async (req, res, next) => {
   }
 });
 
+const ResolvePatternsSchema = z.object({
+  urls: z.array(z.string().url()).max(10),
+});
+
 router.post('/resolve_patterns', async (req, res, next) => {
-  const { urls } = req.body;
-  if (!Array.isArray(urls)) {
+  const parsed = ResolvePatternsSchema.safeParse(req.body);
+  if (!parsed.success) {
     next(
       new APIError(
         constants.ErrorCode.MISSING_REQUIRED_FIELDS,
         undefined,
-        'urls must be an array'
+        'urls must be an array of valid URLs (max 10)'
       )
     );
     return;
   }
+  const { urls } = parsed.data;
 
   try {
-    const { FeatureControl } = await import('@aiostreams/core');
     const allPatterns = await Promise.all(
       urls.map((url) => FeatureControl.getPatternsForUrl(url))
     );
