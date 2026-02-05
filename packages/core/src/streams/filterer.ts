@@ -56,6 +56,8 @@ export interface FilterStatistics {
     requiredAudioChannel: Reason;
     excludedLanguage: Reason;
     requiredLanguage: Reason;
+    excludedReleaseGroup: Reason;
+    requiredReleaseGroup: Reason;
     excludedCached: Reason;
     excludedUncached: Reason;
     excludedRegex: Reason;
@@ -81,6 +83,7 @@ export interface FilterStatistics {
     audioChannel: Reason;
     language: Reason;
     streamType: Reason;
+    releaseGroup: Reason;
     size: Reason;
     seeder: Reason;
     age: Reason;
@@ -119,6 +122,8 @@ class StreamFilterer {
         requiredAudioChannel: { total: 0, details: {} },
         excludedLanguage: { total: 0, details: {} },
         requiredLanguage: { total: 0, details: {} },
+        excludedReleaseGroup: { total: 0, details: {} },
+        requiredReleaseGroup: { total: 0, details: {} },
         excludedCached: { total: 0, details: {} },
         excludedUncached: { total: 0, details: {} },
         excludedRegex: { total: 0, details: {} },
@@ -144,6 +149,7 @@ class StreamFilterer {
         audioChannel: { total: 0, details: {} },
         language: { total: 0, details: {} },
         streamType: { total: 0, details: {} },
+        releaseGroup: { total: 0, details: {} },
         size: { total: 0, details: {} },
         seeder: { total: 0, details: {} },
         age: { total: 0, details: {} },
@@ -261,6 +267,7 @@ class StreamFilterer {
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),
+      ...(this.userData.preferredRegexPatterns ?? []).map((regex) => regex.pattern),
     ]);
 
     // Get metadata from context (already fetched in parallel with addon requests)
@@ -1244,6 +1251,22 @@ class StreamFilterer {
       }
 
       if (
+        this.userData.includedReleaseGroups?.some(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        )
+      ) {
+        const group = this.userData.includedReleaseGroups.find(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        );
+        this.incrementIncludedReason('releaseGroup', group!);
+        return true;
+      }
+
+      if (
         this.userData.includedEncodes?.some(
           (encode) => (file?.encode || 'Unknown') === encode
         )
@@ -1549,6 +1572,37 @@ class StreamFilterer {
         this.incrementRemovalReason(
           'requiredLanguage',
           file?.languages.length ? file.languages.join(', ') : 'Unknown'
+        );
+        return false;
+      }
+
+      // release group
+      if (
+        this.userData.excludedReleaseGroups?.some(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        )
+      ) {
+        this.incrementRemovalReason(
+          'excludedReleaseGroup',
+          file?.releaseGroup || 'Unknown'
+        );
+        return false;
+      }
+
+      if (
+        this.userData.requiredReleaseGroups &&
+        this.userData.requiredReleaseGroups.length > 0 &&
+        !this.userData.requiredReleaseGroups.some(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        )
+      ) {
+        this.incrementRemovalReason(
+          'requiredReleaseGroup',
+          file?.releaseGroup || 'Unknown'
         );
         return false;
       }

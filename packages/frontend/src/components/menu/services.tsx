@@ -322,33 +322,32 @@ function Content() {
           defaultValue="rpdb"
         />
 
-        {!userData.posterService ||
-          (userData.posterService === 'rpdb' && (
-            <PasswordInput
-              autoComplete="new-password"
-              label="RPDB API Key"
-              help={
-                <span>
-                  Get your API Key from{' '}
-                  <a
-                    href="https://ratingposterdb.com/api-key/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[--brand] hover:underline"
-                  >
-                    here
-                  </a>
-                </span>
-              }
-              value={userData.rpdbApiKey}
-              onValueChange={(v) => {
-                setUserData((prev) => ({
-                  ...prev,
-                  rpdbApiKey: v,
-                }));
-              }}
-            />
-          ))}
+        {(!userData.posterService || userData.posterService === 'rpdb') && (
+          <PasswordInput
+            autoComplete="new-password"
+            label="RPDB API Key"
+            help={
+              <span>
+                Get your API Key from{' '}
+                <a
+                  href="https://ratingposterdb.com/api-key/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  here
+                </a>
+              </span>
+            }
+            value={userData.rpdbApiKey}
+            onValueChange={(v) => {
+              setUserData((prev) => ({
+                ...prev,
+                rpdbApiKey: v,
+              }));
+            }}
+          />
+        )}
         {userData.posterService === 'top-poster' && (
           <PasswordInput
             autoComplete="new-password"

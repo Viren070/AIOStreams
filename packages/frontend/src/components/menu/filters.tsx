@@ -204,6 +204,25 @@ function Content() {
     }
   }, [tab]);
 
+  const getSyncedProps = (
+    key:
+      | 'syncedPreferredRegexUrls'
+      | 'syncedExcludedRegexUrls'
+      | 'syncedIncludedRegexUrls'
+      | 'syncedRequiredRegexUrls'
+  ) => ({
+    syncConfig: {
+      urls: userData[key] || [],
+      trusted: userData.trusted,
+      onUrlsChange: (urls: string[]) => {
+        setUserData((prev) => ({
+          ...prev,
+          [key]: urls,
+        }));
+      },
+    },
+  });
+
   useEffect(() => {
     // set default preferred filters if they are undefined
     if (!userData.preferredResolutions) {
@@ -339,6 +358,12 @@ function Content() {
                 <TabsTrigger value="keyword">
                   <MdTextFields className="text-lg mr-3" />
                   Keyword
+                </TabsTrigger>
+              )}
+              {mode === 'pro' && (
+                <TabsTrigger value="release-group">
+                  <FaTextSlash className="text-lg mr-3" />
+                  Release Group
                 </TabsTrigger>
               )}
               {mode === 'pro' && (
@@ -2191,6 +2216,107 @@ function Content() {
               </div>
             </>
           </TabsContent>
+          <TabsContent value="release-group" className="space-y-4">
+            <>
+              <HeadingWithPageControls heading="Release Group" />
+              <div className="mb-4">
+                <p className="text-sm text-[--muted]">
+                  Filter your streams by release group - the group that released
+                  the content (e.g., SPARKS, NTb, FLUX, etc.)
+                </p>
+              </div>
+              <div className="space-y-4">
+                <TextInputs
+                  label="Required Release Groups"
+                  help="Only streams from these release groups will be kept. Streams from other release groups will be excluded."
+                  itemName="Release Group"
+                  values={userData.requiredReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      requiredReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      requiredReleaseGroups: [
+                        ...(prev.requiredReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.requiredReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+                <TextInputs
+                  label="Excluded Release Groups"
+                  help="Streams from these release groups will be excluded"
+                  itemName="Release Group"
+                  values={userData.excludedReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      excludedReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      excludedReleaseGroups: [
+                        ...(prev.excludedReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.excludedReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+                <TextInputs
+                  label="Included Release Groups"
+                  help="Streams from these release groups will be included, ignoring ANY other exclude/required filters, not just for this filter"
+                  itemName="Release Group"
+                  values={userData.includedReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      includedReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      includedReleaseGroups: [
+                        ...(prev.includedReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.includedReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+                <TextInputs
+                  label="Preferred Release Groups"
+                  help="Streams from these release groups will be sorted higher. The order matters - release groups at the top will be preferred over those below."
+                  itemName="Release Group"
+                  values={userData.preferredReleaseGroups || []}
+                  onValuesChange={(values) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      preferredReleaseGroups: values,
+                    }));
+                  }}
+                  onValueChange={(value, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      preferredReleaseGroups: [
+                        ...(prev.preferredReleaseGroups || []).slice(0, index),
+                        value,
+                        ...(prev.preferredReleaseGroups || []).slice(index + 1),
+                      ],
+                    }));
+                  }}
+                />
+              </div>
+            </>
+          </TabsContent>
           <TabsContent value="regex" className="space-y-4">
             <>
               <HeadingWithPageControls heading="Regex" />
@@ -2294,6 +2420,7 @@ function Content() {
                           ],
                         }));
                       }}
+                      {...getSyncedProps('syncedRequiredRegexUrls')}
                     />
                   </>
                 )}
@@ -2318,6 +2445,7 @@ function Content() {
                       ],
                     }));
                   }}
+                  {...getSyncedProps('syncedExcludedRegexUrls')}
                 />
                 {mode === 'pro' && (
                   <>
@@ -2347,12 +2475,14 @@ function Content() {
                           ],
                         }));
                       }}
+                      {...getSyncedProps('syncedIncludedRegexUrls')}
                     />
                   </>
                 )}
                 <TwoTextInputs
                   title="Preferred Regex Patterns"
                   description="Define regex patterns with names for easy reference"
+                  {...getSyncedProps('syncedPreferredRegexUrls')}
                   keyName="Name"
                   keyId="name"
                   keyPlaceholder="Enter pattern name"
@@ -3654,7 +3784,162 @@ type TextInputProps = {
   onValuesChange: (values: string[]) => void;
   onValueChange: (value: string, index: number) => void;
   placeholder?: string;
-};
+  syncConfig?: SyncConfig;
+  disabled?: boolean;
+}
+
+export interface SyncConfig {
+  urls: string[];
+  onUrlsChange: (urls: string[]) => void;
+  trusted?: boolean;
+  onClearValues?: () => void;
+}
+function SyncedUrlInputs({
+  syncConfig,
+  hasExistingPatterns,
+}: {
+  syncConfig?: SyncConfig;
+  hasExistingPatterns?: boolean;
+}) {
+  const { status } = useStatus();
+  const [newUrl, setNewUrl] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState('');
+
+  if (!syncConfig) {
+    return null;
+  }
+  
+  const { urls, onUrlsChange, trusted, onClearValues } = syncConfig;
+
+  const validateAndAdd = (url: string) => {
+    const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
+    
+    if (!url) return false;
+
+    try {
+      new URL(url);
+    } catch {
+      toast.error('Invalid URL format');
+      return false;
+    }
+
+    const isUnrestricted = trusted || status?.settings.regexFilterAccess === 'all';
+
+    if (!isUnrestricted && !allowedUrls.includes(url)) {
+      toast.error('URL is not in the allowed list');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleUrlsUpdate = (newUrls: string[]) => {
+    onUrlsChange(newUrls);
+    if (newUrls.length > 0 && onClearValues) {
+      onClearValues();
+    }
+  };
+
+  const handleAdd = () => {
+    if (!validateAndAdd(newUrl)) return;
+
+    if (hasExistingPatterns) {
+      setPendingUrl(newUrl);
+      setShowConfirmModal(true);
+    } else {
+      handleUrlsUpdate([newUrl]);
+      setNewUrl('');
+    }
+  };
+
+  const confirmAdd = () => {
+    handleUrlsUpdate([pendingUrl]);
+    setNewUrl('');
+    setPendingUrl('');
+    setShowConfirmModal(false);
+  };
+
+  return (
+    <>
+      <Modal
+        open={showConfirmModal}
+        onOpenChange={setShowConfirmModal}
+        title="Replace Existing Patterns?"
+        description="Syncing from a URL will delete all existing patterns in this list. Only the patterns fetched from the synced URL will be used."
+      >
+        <div className="flex gap-2 justify-end mt-4">
+          <Button
+            intent="gray-subtle"
+            onClick={() => {
+              setShowConfirmModal(false);
+              setPendingUrl('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button intent="alert" onClick={confirmAdd}>
+            Confirm
+          </Button>
+        </div>
+      </Modal>
+      <div className="space-y-3 mt-4 border-t border-gray-800 pt-4">
+        <div>
+          <h5 className="text-sm font-medium">Synced URL</h5>
+          <p className="text-xs text-[--muted]">
+            Automatically fetch and sync patterns from this URL
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {urls.length > 0 ? (
+            <div className="bg-gray-900 rounded-md border border-gray-800 divide-y divide-gray-800">
+              {urls.map((url, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 p-2 px-3 text-sm"
+                >
+                  <span className="flex-1 truncate font-mono text-xs">{url}</span>
+                  <IconButton
+                    size="sm"
+                    rounded
+                    icon={<FaRegTrashAlt />}
+                    intent="alert-subtle"
+                    onClick={() =>
+                      handleUrlsUpdate(urls.filter((_, i) => i !== index))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <TextInput
+                  value={newUrl}
+                  placeholder="https://example.com/patterns.json"
+                  onValueChange={setNewUrl}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAdd();
+                    }
+                  }}
+                />
+              </div>
+              <IconButton
+                onClick={handleAdd}
+                disabled={!newUrl}
+                icon={<FaPlus />}
+                intent="primary"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
 
 // a component controls an array of text inputs.
 // and allows the user to add and remove values
@@ -3666,6 +3951,8 @@ function TextInputs({
   onValuesChange,
   onValueChange,
   placeholder,
+  syncConfig,
+  disabled,
 }: TextInputProps) {
   const importModalDisclosure = useDisclosure(false);
 
@@ -3692,6 +3979,8 @@ function TextInputs({
     URL.revokeObjectURL(url);
   };
 
+  const effectiveDisabled = disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
+
   return (
     <SettingsCard title={label} description={help} key={label}>
       {values.map((value, index) => (
@@ -3702,6 +3991,7 @@ function TextInputs({
               label={itemName}
               placeholder={placeholder}
               onValueChange={(value) => onValueChange(value, index)}
+              disabled={effectiveDisabled}
             />
           </div>
           <IconButton
@@ -3709,7 +3999,7 @@ function TextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={index === 0}
+            disabled={effectiveDisabled || index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -3719,7 +4009,7 @@ function TextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={index === values.length - 1}
+            disabled={effectiveDisabled || index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -3729,6 +4019,7 @@ function TextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
+            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -3744,6 +4035,7 @@ function TextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
+          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, ''])}
         />
         <div className="ml-auto flex gap-2">
@@ -3754,6 +4046,7 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
+                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -3767,6 +4060,7 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
+                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -3780,6 +4074,15 @@ function TextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
+      {syncConfig && (
+        <SyncedUrlInputs
+          syncConfig={{
+            ...syncConfig,
+            onClearValues: () => onValuesChange([]),
+          }}
+          hasExistingPatterns={values.length > 0}
+        />
+      )}
     </SettingsCard>
   );
 }
@@ -3800,6 +4103,8 @@ type KeyValueInputProps = {
   onValuesChange: (values: { name: string; value: string }[]) => void;
   onValueChange: (value: string, index: number) => void;
   onKeyChange: (key: string, index: number) => void;
+  disabled?: boolean;
+  syncConfig?: SyncConfig;
 };
 
 function TwoTextInputs({
@@ -3815,7 +4120,10 @@ function TwoTextInputs({
   onValuesChange,
   onValueChange,
   onKeyChange,
+  disabled,
+  syncConfig,
 }: KeyValueInputProps) {
+  const effectiveDisabled = disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -3864,6 +4172,7 @@ function TwoTextInputs({
               value={value.name}
               label={keyName}
               placeholder={keyPlaceholder}
+              disabled={effectiveDisabled}
               onValueChange={(newValue) => onKeyChange(newValue, index)}
             />
           </div>
@@ -3872,6 +4181,7 @@ function TwoTextInputs({
               value={value.value}
               label={valueName}
               placeholder={valuePlaceholder}
+              disabled={effectiveDisabled}
               onValueChange={(newValue) => onValueChange(newValue, index)}
             />
           </div>
@@ -3880,7 +4190,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={index === 0}
+            disabled={effectiveDisabled || index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -3890,7 +4200,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={index === values.length - 1}
+            disabled={effectiveDisabled || index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -3900,6 +4210,7 @@ function TwoTextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
+            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -3915,6 +4226,7 @@ function TwoTextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
+          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, { name: '', value: '' }])}
         />
         <div className="ml-auto flex gap-2">
@@ -3925,6 +4237,7 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
+                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -3938,6 +4251,7 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
+                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -3951,6 +4265,15 @@ function TwoTextInputs({
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
+      {syncConfig && (
+        <SyncedUrlInputs
+          syncConfig={{
+            ...syncConfig,
+            onClearValues: () => onValuesChange([]),
+          }}
+          hasExistingPatterns={values.length > 0}
+        />
+      )}
     </SettingsCard>
   );
 }

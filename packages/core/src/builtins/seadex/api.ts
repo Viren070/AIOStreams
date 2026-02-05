@@ -110,7 +110,7 @@ class SeaDexAPI {
           `/api/collections/entries/records?${params.toString()}`,
           {
             schema: SeaDexResponseSchema,
-            timeout: 10000,
+            timeout: 3000,
           }
         );
       },
