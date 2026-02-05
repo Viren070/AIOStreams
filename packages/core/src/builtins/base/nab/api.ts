@@ -377,7 +377,6 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/xml',
       Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-      'Accept-Encoding': 'gzip, br',
       'User-Agent': this.userAgent,
     };
     return headers;
