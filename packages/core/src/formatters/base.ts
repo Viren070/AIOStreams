@@ -336,7 +336,7 @@ export abstract class BaseFormatter {
           null,
         rankedRegexMatched:
           stream.rankedRegexesMatched?.map((r) => r.name || r.pattern) || [],
-        regexScore: stream.regexScore || null,
+        regexScore: stream.regexScore ?? null,
         encode: stream.parsedFile?.encode || null,
         audioChannels: stream.parsedFile?.audioChannels || null,
         indexer: stream.indexer || null,

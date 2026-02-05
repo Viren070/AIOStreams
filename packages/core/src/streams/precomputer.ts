@@ -80,9 +80,9 @@ class StreamPrecomputer {
     const selector = new StreamSelector(context.toExpressionContext());
 
     // Initialize all streams with a score of 0
-    const streamScores = new Map<string, number | null>();
+    const streamScores = new Map<string, number>();
     for (const stream of streams) {
-      streamScores.set(stream.id, null);
+      streamScores.set(stream.id, 0);
     }
 
     // Evaluate each ranked expression and accumulate scores
@@ -110,12 +110,13 @@ class StreamPrecomputer {
 
     // Apply the computed scores to the streams
     for (const stream of streams) {
-      stream.streamExpressionScore = streamScores.get(stream.id) ?? undefined;
+      stream.streamExpressionScore = streamScores.get(stream.id) ?? 0;
     }
 
     const nonZeroScores = streams.filter(
-      (s) => s.streamExpressionScore !== 0
+      (s) => (s.streamExpressionScore ?? 0) !== 0
     ).length;
+
     logger.info(
       `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores)`
     );
