@@ -10,8 +10,8 @@ const logger = createLogger('server');
 const router: Router = Router();
 
 interface AddonCatalogParams {
-  type?: string;
-  id?: string;
+  type: string;
+  id: string;
 }
 
 router.get(
@@ -31,16 +31,6 @@ router.get(
 
     try {
       const { type, id } = req.params;
-      if (!type || !id) {
-        res.status(200).json({
-          addons: [
-            StremioTransformer.createErrorAddonCatalog({
-              errorDescription: 'Missing URL Parameters: Type and id are required',
-            }),
-          ],
-        });
-        return;
-      }
       logger.debug('Addon catalog request received', {
         type,
         id,

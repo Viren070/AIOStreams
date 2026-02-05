@@ -43,21 +43,14 @@ router.get(
 
 interface EasynewsStreamParams {
   encodedConfig?: string; // optional
-  type?: string;
-  id?: string;
+  type: string;
+  id: string;
 }
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
   async (req: Request<EasynewsStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
-    if (!type || !id) {
-      throw new APIError(
-        constants.ErrorCode.BAD_REQUEST,
-        undefined,
-        'Type and id are required'
-      );
-    }
 
     try {
       const addon = new EasynewsSearchAddon(
@@ -81,29 +74,24 @@ router.get(
  * This endpoint is needed because Easynews requires a POST request to fetch NZBs
  */
 interface EasynewsNzbParams {
-  encodedAuth?: string;
-  encodedParams?: string;
+  encodedAuth: string;
+  encodedParams: string;
   aiostreamsAuth?: string; // optional
-  filename?: string;
+  filename: string;
+  // match Express.Request<ParamsDictionary> to allow chaining of easynewsNzbRateLimiter middleware
+  [key: string]: string | string[] | undefined;
 }
 
 router.get(
   '/nzb/:encodedAuth/:encodedParams{/:aiostreamsAuth}/:filename.nzb',
   easynewsNzbRateLimiter,
-  async (req: Request<EasynewsNzbParams>, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const {
       encodedAuth,
       encodedParams,
       aiostreamsAuth: encodedAiostreamsAuth,
       filename,
-    } = req.params;
-    if (!encodedAuth || !encodedParams || !filename) {
-      throw new APIError(
-        constants.ErrorCode.BAD_REQUEST,
-        undefined,
-        'EncodedAuth, encodedParams, and filename are required'
-      );
-    }
+    } = req.params as EasynewsNzbParams;
 
     try {
       // Decode and validate auth credentials

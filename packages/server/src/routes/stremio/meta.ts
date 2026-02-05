@@ -14,8 +14,8 @@ const router: Router = Router();
 router.use(stremioMetaRateLimiter);
 
 interface MetaParams {
-  type?: string;
-  id?: string;
+  type: string;
+  id: string;
 }
 
 router.get(
@@ -32,14 +32,6 @@ router.get(
     const transformer = new StremioTransformer(req.userData);
     try {
       const { type, id } = req.params;
-      if (!type || !id) {
-        res.status(200).json({
-          meta: StremioTransformer.createErrorMeta({
-            errorDescription: 'Missing URL Parameters: Type and id are required',
-          }),
-        });
-        return;
-      }
       logger.debug('Meta request received', {
         type,
         id,

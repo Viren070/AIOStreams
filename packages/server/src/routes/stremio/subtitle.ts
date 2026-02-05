@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   SubtitleResponse,
@@ -13,14 +13,14 @@ const router: Router = Router();
 router.use(stremioSubtitleRateLimiter);
 
 interface SubtitleParams {
-  type?: string;
-  id?: string;
+  type: string;
+  id: string;
   extras?: string; // optional
 }
 
 router.get(
   '/:type/:id{/:extras}.json',
-  async (req: Request<SubtitleParams>, res: Response<SubtitleResponse>, next) => {
+  async (req: Request<SubtitleParams>, res: Response<SubtitleResponse>, next: NextFunction) => {
     if (!req.userData) {
       res.status(200).json(
         StremioTransformer.createDynamicError('subtitles', {
@@ -32,14 +32,6 @@ router.get(
     const transformer = new StremioTransformer(req.userData);
     try {
       const { type, id, extras } = req.params;
-      if (!type || !id) {
-        res.status(200).json(
-          StremioTransformer.createDynamicError('subtitles', {
-            errorDescription: 'Missing URL Parameters: Type and id are required',
-          })
-        );
-        return;
-      }
 
       res
         .status(200)

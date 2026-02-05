@@ -39,10 +39,10 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 interface PlaybackParams {
-  encryptedStoreAuth?: string;
-  fileInfo?: string;
-  metadataId?: string;
-  filename?: string;
+  encryptedStoreAuth: string;
+  fileInfo: string;
+  metadataId: string;
+  filename: string;
 }
 
 router.get(
@@ -55,13 +55,6 @@ router.get(
         metadataId,
         filename,
       } = req.params;
-      if (!encryptedStoreAuth || !encodedFileInfo || !metadataId || !filename) {
-        throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
-          undefined,
-          'Encrypted store auth, file info, metadata id and filename are required'
-        );
-      }
 
       let fileInfo: FileInfo | undefined;
 

@@ -193,7 +193,7 @@ router.get(
 );
 
 interface ProxyParams {
-  encryptedAuthAndData?: string;
+  encryptedAuthAndData: string;
   filename?: string; // optional
 }
 
@@ -210,13 +210,6 @@ router.all(
     try {
       // decrypt and authenticate the request
       const { encryptedAuthAndData } = req.params;
-      if (!encryptedAuthAndData) {
-        throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
-          undefined,
-          'EncryptedAuthAndData is required'
-        );
-      }
       // const [encodeMode, encryptedAuth, encryptedData] =
       //   encryptedAuthAndData.split('.');
       const parts = encryptedAuthAndData.split('.');

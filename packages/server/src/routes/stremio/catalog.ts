@@ -13,8 +13,8 @@ const router: Router = Router();
 router.use(stremioCatalogRateLimiter);
 
 interface CatalogParams {
-  type?: string;
-  id?: string;
+  type: string;
+  id: string;
   extras?: string; // optional
 }
 
@@ -35,16 +35,6 @@ router.get(
 
     try {
       const { type, id, extras } = req.params;
-      if (!type || !id) {
-        res.status(200).json(
-          transformer.transformCatalog({
-            success: false,
-            data: [],
-            errors: [{ description: 'Missing URL Parameters: Type and id are required' }],
-          })
-        );
-        return;
-      }
 
       res
         .status(200)

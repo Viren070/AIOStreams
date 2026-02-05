@@ -50,21 +50,14 @@ router.get(
 
 interface TorboxStreamParams {
   encodedConfig?: string; // optional
-  type?: string;
-  id?: string;
+  type: string;
+  id: string;
 }
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
   async (req: Request<TorboxStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
-    if (!type || !id) {
-      throw new APIError(
-        constants.ErrorCode.BAD_REQUEST,
-        undefined,
-        'Type and id are required'
-      );
-    }
 
     try {
       const addon = new TorBoxSearchAddon(
