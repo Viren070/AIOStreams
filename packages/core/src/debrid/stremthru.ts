@@ -281,7 +281,8 @@ export class StremThruInterface implements DebridService {
     if (
       playbackInfo.private !== undefined && // make sure the torrent was downloaded before
       playbackInfo.downloadUrl &&
-      Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL
+      Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
+      !await StremThruInterface.checkCache.get(`${this.serviceName}:${getSimpleTextHash(hash)}`)
     ) {
       logger.debug(
         `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
