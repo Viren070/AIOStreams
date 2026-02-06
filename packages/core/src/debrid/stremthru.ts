@@ -354,7 +354,7 @@ export class StremThruInterface implements DebridService {
     }
 
     const torrent: Torrent = {
-      title: magnetDownload.name || '',
+      title: magnetDownload.name || playbackInfo.title,
       hash: hash,
       size: magnetDownload.size || 0,
       type: 'torrent',
@@ -381,6 +381,7 @@ export class StremThruInterface implements DebridService {
       {
         chosenFilename: playbackInfo.filename,
         chosenIndex: playbackInfo.index,
+        printReport: true,
       }
     );
 

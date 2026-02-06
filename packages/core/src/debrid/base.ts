@@ -106,6 +106,7 @@ export interface DebridDownload {
 const TitleMetadataSchema = z.object({
   titles: z.array(z.string()),
   year: z.number().optional(),
+  seasonYear: z.number().optional(),
   season: z.number().optional(),
   episode: z.number().optional(),
   absoluteEpisode: z.number().optional(),
@@ -121,6 +122,7 @@ const BasePlaybackInfoSchema = z.object({
 
 const BaseFileInfoSchema = z.object({
   index: z.number().optional(),
+  title: z.string().optional(),
   cacheAndPlay: z.boolean().optional(),
   autoRemoveDownloads: z.boolean().optional(),
 });

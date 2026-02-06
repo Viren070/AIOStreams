@@ -319,6 +319,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const debridTitleMetadata: DebridTitleMetadata = {
       titles: searchMetadata.titles,
       year: searchMetadata.year,
+      seasonYear: searchMetadata.seasonYear,
       season: searchMetadata.season,
       episode: searchMetadata.episode,
       absoluteEpisode: searchMetadata.absoluteEpisode,
@@ -642,6 +643,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       parsedId.episode ? Number(parsedId.episode) : undefined
     );
 
+    // Extract seasonYear from anime entry
+    const seasonYear = animeEntry?.animeSeason?.year ?? undefined;
+
     // Update season from anime entry if available
     if (animeEntry && !parsedId.season) {
       enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
@@ -736,6 +740,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       absoluteEpisode,
       relativeAbsoluteEpisode,
       year: metadata.year,
+      seasonYear,
       imdbId,
       tmdbId: metadata.tmdbId ?? null,
       tvdbId: metadata.tvdbId ?? null,
@@ -768,6 +773,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ? {
             type: 'torrent',
             downloadUrl: torrentOrNzb.downloadUrl,
+            title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
             private: torrentOrNzb.private,
             sources: torrentOrNzb.sources,
@@ -780,6 +786,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         : {
             type: 'usenet',
             nzb: torrentOrNzb.nzb,
+            title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
             index: torrentOrNzb.file.index,
             easynewsUrl:
@@ -820,8 +827,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
               encryptedStoreAuth! as string,
               metadataId!,
               fileInfo!,
-              torrentOrNzb.title,
-              torrentOrNzb.file.name
+              torrentOrNzb.file.name ?? torrentOrNzb.title
             )
           : undefined,
       nzbUrl: torrentOrNzb.type === 'usenet' ? torrentOrNzb.nzb : undefined,

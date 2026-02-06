@@ -35,6 +35,7 @@ interface Metadata {
   season?: number;
   episode?: number;
   absoluteEpisode?: number;
+  seasonYear?: number;
 }
 
 export function validateInfoHash(
@@ -205,6 +206,11 @@ async function processTorrentsForDebridService(
   for (const [index, result] of allParsedFiles.entries()) {
     parsedFiles.set(allFileStrings[index], result);
   }
+
+  for (const [title, parsed] of parsedTitlesMap.entries()) {
+    parsedFiles.set(title, parsed);
+  }
+
   const parseTime = getTimeTakenSincePoint(parseStart);
   for (const { torrent, magnetCheckResult, parsedTitle } of validTorrents) {
     let file: DebridFile | undefined;
@@ -217,6 +223,7 @@ async function processTorrentsForDebridService(
           metadata,
           {
             useLevenshteinMatching: false,
+            skipSeasonEpisodeCheck: torrent.confirmed,
           }
         )
       : { name: torrent.title, size: torrent.size, index: -1 };
