@@ -48,13 +48,9 @@ router.get(
       const meta = await aiostreams.getMeta(type, id);
       const streamContext = aiostreams.getStreamContext();
 
-      if (!streamContext) {
-        throw new Error('Stream context not available');
-      }
-
       const transformed = await transformer.transformMeta(
         meta,
-        streamContext.toFormatterContext(),
+        streamContext?.toFormatterContext(),
         {
           provideStreamData: true,
         }

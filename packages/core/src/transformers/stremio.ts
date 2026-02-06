@@ -343,7 +343,7 @@ export class StremioTransformer {
 
   async transformMeta(
     response: AIOStreamsResponse<ParsedMeta | null>,
-    formatterContext: FormatterContext,
+    formatterContext?: FormatterContext,
     options?: { provideStreamData?: boolean; disableAutoplay?: boolean }
   ): Promise<MetaResponse | null> {
     const { data: meta, errors } = response;
@@ -369,7 +369,8 @@ export class StremioTransformer {
       ) => Promise<{ name: string; description: string }>;
     } | null = null;
     if (
-      meta.videos?.some((video) => video.streams && video.streams.length > 0)
+      meta.videos?.some((video) => video.streams && video.streams.length > 0) &&
+      formatterContext
     ) {
       formatter = createFormatter(formatterContext);
     }
