@@ -42,6 +42,7 @@ export interface TitleMetadata {
   season?: number;
   episode?: number;
   absoluteEpisode?: number;
+  relativeAbsoluteEpisode?: number;
 }
 
 abstract class SourceHandler {

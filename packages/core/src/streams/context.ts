@@ -23,6 +23,7 @@ const logger = createLogger('stream-context');
  */
 export interface ExtendedMetadata extends Metadata {
   absoluteEpisode?: number;
+  relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
 }
 
 export interface ExpressionContext {
@@ -40,6 +41,7 @@ export interface ExpressionContext {
   genres?: string[];
   runtime?: number;
   absoluteEpisode?: number;
+  relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
   originalLanguage?: string;
   daysSinceRelease?: number; // age in days of the movie / **episode**
   hasNextEpisode?: boolean;
@@ -209,6 +211,7 @@ export class StreamContext {
 
         // Calculate absolute episode for anime
         let absoluteEpisode: number | undefined;
+        let relativeAbsoluteEpisode: number | undefined;
         if (
           this.isAnime &&
           this.parsedId!.season &&
@@ -228,6 +231,33 @@ export class StreamContext {
               seasons
             )
           );
+
+          // Calculate relative absolute episode (within current AniDB entry)
+          const startingSeason =
+            this.animeEntry?.imdb?.seasonNumber ??
+            this.animeEntry?.trakt?.seasonNumber ??
+            this.animeEntry?.tvdb?.seasonNumber ??
+            this.animeEntry?.tmdb?.seasonNumber;
+
+          if (startingSeason) {
+            // Calculate absolute episode from the starting season (AniDB episode number)
+            const episodeNum = Number(this.parsedId!.episode);
+            let totalEpisodesBeforeCurrentSeason = 0;
+
+            for (const s of seasons.filter((s) => s.number !== '0')) {
+              const seasonNum = Number(s.number);
+              if (seasonNum < startingSeason) continue; // Skip seasons before this AniDB entry
+              if (s.number === this.parsedId!.season) break;
+              totalEpisodesBeforeCurrentSeason += s.episodes;
+            }
+
+            const calculated = totalEpisodesBeforeCurrentSeason + episodeNum;
+            // Only set if different from regular episode number
+            if (calculated !== episodeNum) {
+              relativeAbsoluteEpisode = calculated;
+            }
+          }
+
           if (this.animeEntry?.imdb?.nonImdbEpisodes && absoluteEpisode) {
             const nonImdbEpisodesBefore =
               this.animeEntry.imdb.nonImdbEpisodes.filter(
@@ -242,6 +272,7 @@ export class StreamContext {
         const extendedMetadata: ExtendedMetadata = {
           ...metadata,
           absoluteEpisode,
+          relativeAbsoluteEpisode,
         };
 
         return extendedMetadata;
@@ -521,6 +552,7 @@ export class StreamContext {
       ),
       daysSinceRelease: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
+      relativeAbsoluteEpisode: this._metadata?.relativeAbsoluteEpisode,
       hasNextEpisode: !!this._metadata?.nextAirDate,
       daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
       daysSinceFirstAired: this.computeDaysSinceFirstAired(),

@@ -322,6 +322,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       season: searchMetadata.season,
       episode: searchMetadata.episode,
       absoluteEpisode: searchMetadata.absoluteEpisode,
+      relativeAbsoluteEpisode: searchMetadata.relativeAbsoluteEpisode,
     };
     const metadataId = getSimpleTextHash(JSON.stringify(debridTitleMetadata));
     await metadataStore().set(
@@ -597,6 +598,17 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           `${titlePlaceholder} E${parsedId.episode!.toString().padStart(2, '0')}`
         );
       }
+      if (
+        // if relative absolute exists and is different from absoluteEpisode and episode
+        metadata.relativeAbsoluteEpisode &&
+        [metadata.absoluteEpisode, parsedId.episode].every(
+          (v) => v !== metadata.relativeAbsoluteEpisode
+        )
+      ) {
+        addQuery(
+          `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode!.toString().padStart(2, '0')}`
+        );
+      }
       if (parsedId.season && parsedId.episode) {
         addQuery(
           `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`
@@ -643,6 +655,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
 
     // Calculate absolute episode if needed
     let absoluteEpisode: number | undefined;
+    let relativeAbsoluteEpisode: number | undefined;
     if (animeEntry && parsedId.season && parsedId.episode && metadata.seasons) {
       const seasons = metadata.seasons.map(
         ({ season_number, episode_count }) => ({
@@ -657,6 +670,34 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       absoluteEpisode = Number(
         calculateAbsoluteEpisode(parsedId.season, parsedId.episode, seasons)
       );
+
+      // Calculate relative absolute episode (within current AniDB entry)
+      // Find the first season of this AniDB entry
+      const startingSeason =
+        animeEntry.imdb?.seasonNumber ??
+        animeEntry.trakt?.seasonNumber ??
+        animeEntry.tvdb?.seasonNumber ??
+        animeEntry.tmdb?.seasonNumber;
+
+      if (startingSeason) {
+        // Calculate absolute episode from the starting season (AniDB episode number)
+        const currentSeasonNum = Number(parsedId.season);
+        const episodeNum = Number(parsedId.episode);
+        let totalEpisodesBeforeCurrentSeason = 0;
+
+        for (const s of seasons.filter((s) => s.number !== '0')) {
+          const seasonNum = Number(s.number);
+          if (seasonNum < startingSeason) continue; // Skip seasons before this AniDB entry
+          if (s.number === parsedId.season) break;
+          totalEpisodesBeforeCurrentSeason += s.episodes;
+        }
+
+        const calculated = totalEpisodesBeforeCurrentSeason + episodeNum;
+        // Only set if different from regular episode number
+        if (calculated !== episodeNum) {
+          relativeAbsoluteEpisode = calculated;
+        }
+      }
 
       // Adjust for non-IMDB episodes if they exist
       if (
@@ -693,6 +734,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       season: parsedId.season ? Number(parsedId.season) : undefined,
       episode: parsedId.episode ? Number(parsedId.episode) : undefined,
       absoluteEpisode,
+      relativeAbsoluteEpisode,
       year: metadata.year,
       imdbId,
       tmdbId: metadata.tmdbId ?? null,

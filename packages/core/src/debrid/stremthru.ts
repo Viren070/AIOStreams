@@ -398,6 +398,7 @@ export class StremThruInterface implements DebridService {
       season: metadata?.season,
       episode: metadata?.episode,
       absoluteEpisode: metadata?.absoluteEpisode,
+      relativeAbsoluteEpisode: metadata?.relativeAbsoluteEpisode,
       chosenFile: file.name,
       availableFiles: `[${magnetDownload.files.map((file) => file.name).join(', ')}]`,
     });

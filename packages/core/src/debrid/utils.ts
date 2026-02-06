@@ -23,6 +23,7 @@ import {
   titleMatch,
 } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
+import { ParsedResult } from '@viren070/parse-torrent-title';
 
 const logger = createLogger('debrid');
 
@@ -43,7 +44,7 @@ interface BaseFile {
   indexer?: string;
   seeders?: number;
   group?: string;
-  age?: number;
+  age?: number; // age in hours
   duration?: number; // duration in seconds
 }
 
@@ -116,7 +117,11 @@ export const isSeasonWrong = (
 };
 export const isEpisodeWrong = (
   parsed: { episodes?: number[] },
-  metadata?: { episode?: number; absoluteEpisode?: number }
+  metadata?: {
+    episode?: number;
+    absoluteEpisode?: number;
+    relativeAbsoluteEpisode?: number;
+  }
 ) => {
   if (
     parsed.episodes?.length &&
@@ -124,7 +129,9 @@ export const isEpisodeWrong = (
     !(
       parsed.episodes.includes(metadata.episode) ||
       (metadata.absoluteEpisode &&
-        parsed.episodes.includes(metadata.absoluteEpisode))
+        parsed.episodes.includes(metadata.absoluteEpisode)) ||
+      (metadata.relativeAbsoluteEpisode &&
+        parsed.episodes.includes(metadata.relativeAbsoluteEpisode))
     )
   ) {
     return true;
@@ -164,15 +171,7 @@ export const isTitleWrongN = (
 export async function selectFileInTorrentOrNZB(
   torrentOrNZB: Torrent | NZB,
   debridDownload: DebridDownload,
-  parsedFiles: Map<
-    string,
-    {
-      title?: string;
-      seasons?: number[];
-      episodes?: number[];
-      year?: string;
-    }
-  >,
+  parsedFiles: Map<string, ParsedResult>,
 
   metadata?: {
     titles: string[];
@@ -180,6 +179,7 @@ export async function selectFileInTorrentOrNZB(
     season?: number;
     episode?: number;
     absoluteEpisode?: number;
+    relativeAbsoluteEpisode?: number;
   },
   options?: {
     chosenFilename?: string;
@@ -230,7 +230,7 @@ export async function selectFileInTorrentOrNZB(
     }
 
     if (
-      !(metadata?.season && metadata?.episode && metadata?.absoluteEpisode) &&
+      // !(metadata?.season && metadata?.episode && metadata?.absoluteEpisode) &&
       metadata?.year &&
       parsed?.year
     ) {
@@ -249,11 +249,45 @@ export async function selectFileInTorrentOrNZB(
 
     if (parsed && !isEpisodeWrong(parsed, metadata)) {
       const parsedEpisodesCount = parsed.episodes?.length || 0;
-      // prefer exact episode matches to batch matches
-      if (parsedEpisodesCount > 1) {
-        score += 250;
+      const parsedHasSeason = parsed.seasons && parsed.seasons.length > 0;
+      const isExactMatch = parsedEpisodesCount === 1;
+      const isBatchMatch = parsedEpisodesCount > 1;
+
+      // For files without season info: prefer absolute episode matches over regular episode
+      if (
+        !parsedHasSeason &&
+        metadata?.season &&
+        metadata?.absoluteEpisode &&
+        metadata?.episode
+      ) {
+        const matchesAbsolute = parsed.episodes?.includes(
+          metadata.absoluteEpisode
+        );
+        const matchesRelativeAbsolute = metadata.relativeAbsoluteEpisode
+          ? parsed.episodes?.includes(metadata.relativeAbsoluteEpisode)
+          : false;
+        const matchesRegular = parsed.episodes?.includes(metadata.episode);
+
+        if (matchesAbsolute && isExactMatch) {
+          score += 2000; // Exact absolute episode match (highest priority)
+        } else if (matchesAbsolute && isBatchMatch) {
+          score += 500; // Batch containing absolute episode
+        } else if (matchesRelativeAbsolute && isExactMatch) {
+          score += 1000; // Exact relative absolute episode match (for split AniDB entries like Fairy Tail 2014)
+        } else if (matchesRelativeAbsolute && isBatchMatch) {
+          score += 300; // Batch containing relative absolute episode
+        } else if (matchesRegular && isExactMatch) {
+          score += 300; // Exact regular episode match
+        } else if (matchesRegular && isBatchMatch) {
+          score += 100; // Batch containing regular episode
+        }
       } else {
-        score += 750;
+        // Standard scoring: strongly prefer exact episodes over batches
+        if (isExactMatch) {
+          score += 1500; // Exact episode match
+        } else if (isBatchMatch) {
+          score += 200; // Batch match (much less preferred)
+        }
       }
     }
     if (

@@ -267,7 +267,9 @@ class StreamFilterer {
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),
-      ...(this.userData.preferredRegexPatterns ?? []).map((regex) => regex.pattern),
+      ...(this.userData.preferredRegexPatterns ?? []).map(
+        (regex) => regex.pattern
+      ),
     ]);
 
     // Get metadata from context (already fetched in parallel with addon requests)
@@ -839,6 +841,15 @@ class StreamFilterer {
           )
         ) {
           // allow if absolute episode matches AND season is 1
+        } else if (
+          seasons[0] === 1 &&
+          stream.parsedFile?.episodes?.length &&
+          requestedMetadata?.relativeAbsoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.relativeAbsoluteEpisode
+          )
+        ) {
+          // allow if relative absolute episode (AniDB episode) matches AND season is 1
         } else {
           return false;
         }
@@ -857,6 +868,14 @@ class StreamFilterer {
           (!seasons?.length || seasons[0] === 1)
         ) {
           // allow if absolute episode matches AND (no season OR season is 1)
+        } else if (
+          requestedMetadata?.relativeAbsoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.relativeAbsoluteEpisode
+          ) &&
+          (!seasons?.length || seasons[0] === 1)
+        ) {
+          // allow if relative absolute episode (AniDB episode) matches AND (no season OR season is 1)
         } else {
           return false;
         }

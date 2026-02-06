@@ -587,10 +587,7 @@ function validateAnimeListEntry(data: any): AnimeListEntry | null {
     entry.before = data.before[0];
   }
 
-  if (
-    Array.isArray(data['mapping-list']) &&
-    Env.ANIME_DB_LEVEL_OF_DETAIL === 'full'
-  ) {
+  if (Array.isArray(data['mapping-list'])) {
     const mappingList = data['mapping-list'][0];
     if (mappingList?.mapping && Array.isArray(mappingList.mapping)) {
       const mappings = mappingList.mapping
@@ -1660,20 +1657,74 @@ export function enrichParsedIdWithAnimeEntry(
     season: parsedId.season,
     episode: parsedId.episode,
   };
+
+  const imdbId = animeEntry.mappings?.imdbId;
+  let episodeOffsetApplied: boolean = false;
+
+  // Handle episode mappings for anime with split seasons (e.g., one AniDB season maps to multiple TVDB seasons)
+  if (
+    parsedId.episode &&
+    ['malId', 'kitsuId', 'anilistId'].includes(parsedId.type) &&
+    animeEntry.episodeMappings &&
+    animeEntry.episodeMappings.length > 0
+  ) {
+    const episodeNum = Number(parsedId.episode);
+
+    // Find the mapping that contains this episode
+    const mapping = animeEntry.episodeMappings.find(
+      (m) =>
+        m.start !== undefined &&
+        m.end !== undefined &&
+        episodeNum >= m.start &&
+        episodeNum <= m.end
+    );
+
+    if (mapping) {
+      const mappedSeason = mapping.tvdbSeason;
+
+      const shouldApplyEpisodeOffset = imdbId && ['tt1528406'].includes(imdbId);
+
+      if (
+        mappedSeason &&
+        shouldApplyEpisodeOffset &&
+        mapping.offset !== undefined
+      ) {
+        // Apply both season and episode offset for whitelisted IDs
+        parsedId.season = mappedSeason.toString();
+        parsedId.episode = (episodeNum + mapping.offset).toString();
+        enriched = true;
+        episodeOffsetApplied = true;
+
+        logger.debug(
+          `Applied episode mapping for ${parsedId.type}:${parsedId.value}`,
+          {
+            originalEpisode: episodeNum,
+            mappedSeason: parsedId.season,
+            mappedEpisode: parsedId.episode,
+            ...mapping,
+          }
+        );
+      }
+    }
+  }
+
   if (!parsedId.season) {
     parsedId.season =
       animeEntry.imdb?.seasonNumber?.toString() ??
       animeEntry.trakt?.seasonNumber?.toString() ??
       animeEntry.tvdb?.seasonNumber?.toString() ??
-      (animeEntry.synonyms
-        ? getSeasonFromSynonyms(animeEntry.synonyms)
-        : undefined) ??
+      getSeasonFromSynonyms(animeEntry.synonyms ?? []) ??
       animeEntry.tmdb?.seasonNumber?.toString();
 
     if (parsedId.season) enriched = true;
   }
 
-  if (parsedId.episode && ['malId', 'kitsuId'].includes(parsedId.type)) {
+  // Only apply fromEpisode offset if episode mappings didn't already handle it
+  if (
+    parsedId.episode &&
+    ['malId', 'kitsuId'].includes(parsedId.type) &&
+    !episodeOffsetApplied
+  ) {
     const fromEpisode =
       animeEntry.imdb?.fromEpisode ?? animeEntry.tvdb?.fromEpisode;
     if (fromEpisode && fromEpisode !== 1) {
