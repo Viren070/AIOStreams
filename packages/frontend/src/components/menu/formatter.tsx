@@ -737,8 +737,8 @@ function Content() {
             </h3>
             <TextInput
               label="SE Matched"
-              value={rseMatched}
-              onValueChange={setRseMatched}
+              value={seMatched}
+              onValueChange={setSeMatched}
               placeholder="e.g., 'high-quality'"
             />
             <TextInput
