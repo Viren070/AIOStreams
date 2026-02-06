@@ -86,8 +86,7 @@ export class StremThruInterface implements DebridService {
     const cachedResults: DebridDownload[] = [];
     const magnetsToCheck: string[] = [];
     for (const magnet of magnets) {
-      const cacheKey = `${this.serviceName}:${getSimpleTextHash(magnet)}`;
-      const cached = await StremThruInterface.checkCache.get(cacheKey);
+      const cached = await this.checkCacheGet(magnet);
       if (cached) {
         cachedResults.push(cached);
       } else {
@@ -137,18 +136,7 @@ export class StremThruInterface implements DebridService {
         }));
 
         newResults.forEach((item) => {
-          StremThruInterface.checkCache
-            .set(
-              `${this.serviceName}:${getSimpleTextHash(item.hash!)}`,
-              item,
-              Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
-            )
-            .catch((err) => {
-              logger.error(
-                `Failed to cache item ${item.hash} in the background:`,
-                err
-              );
-            });
+          this.checkCacheSet(item);
         });
       } catch (error) {
         if (error instanceof StremThruError) {
@@ -246,6 +234,29 @@ export class StremThruInterface implements DebridService {
     return result;
   }
 
+  private async checkCacheGet(
+    hash: string
+  ): Promise<DebridDownload | undefined> {
+    return await StremThruInterface.checkCache.get(
+      `${this.serviceName}:${getSimpleTextHash(hash)}`
+    );
+  }
+
+  private async checkCacheSet(debridDownload: DebridDownload): Promise<void> {
+    try {
+      await StremThruInterface.checkCache.set(
+        `${this.serviceName}:${getSimpleTextHash(debridDownload.hash!)}`,
+        debridDownload,
+        Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
+      );
+    } catch (err) {
+      logger.error(
+        `Failed to cache item ${debridDownload.hash} in the background:`,
+        err
+      );
+    }
+  }
+
   private async _resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
@@ -282,7 +293,7 @@ export class StremThruInterface implements DebridService {
       playbackInfo.private !== undefined && // make sure the torrent was downloaded before
       playbackInfo.downloadUrl &&
       Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
-      !await StremThruInterface.checkCache.get(`${this.serviceName}:${getSimpleTextHash(hash)}`)
+      (await this.checkCacheGet(hash))?.status !== 'cached'
     ) {
       logger.debug(
         `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
