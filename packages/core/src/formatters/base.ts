@@ -3,6 +3,7 @@ import * as constants from '../utils/constants.js';
 import { createLogger } from '../utils/logger.js';
 import {
   formatBytes,
+  formatSmartBytes,
   formatBitrate,
   formatDuration,
   formatHours,
@@ -1094,6 +1095,9 @@ class ModifierConstants {
     octal: (value: number) => value.toString(8),
     binary: (value: number) => value.toString(2),
     bytes: (value: number) => formatBytes(value, 1000),
+    sbytes: (value: number) => formatSmartBytes(value, 1000),
+    sbytes10: (value: number) => formatSmartBytes(value, 1000),
+    sbytes2: (value: number) => formatSmartBytes(value, 1024),
     rbytes: (value: number) => formatBytes(value, 1000, true),
     bytes10: (value: number) => formatBytes(value, 1000),
     rbytes10: (value: number) => formatBytes(value, 1000, true),
