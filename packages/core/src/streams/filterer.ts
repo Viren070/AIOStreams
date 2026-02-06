@@ -1134,7 +1134,6 @@ class StreamFilterer {
           file?.languages.includes(originalLanguage)
         ) {
           file.languages.push('Original');
-          file.languages.push(`Original-${originalLanguage}`);
         }
       }
       // Temporarily add in our fake visual tags used for sorting/filtering

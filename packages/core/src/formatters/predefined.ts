@@ -1,8 +1,8 @@
-import { UserData } from '../db/schemas.js';
+import { FormatterContext } from './base.js';
 import { BaseFormatter } from './base.js';
 
 export class TorrentioFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -17,13 +17,13 @@ export class TorrentioFormatter extends BaseFormatter {
 {stream.languageEmojis::exists["{stream.languageEmojis::join(' / ')}"||""]}
 `,
       },
-      userData
+      ctx
     );
   }
 }
 
 export class TorboxFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -38,13 +38,13 @@ Type: {stream.type::title}{stream.seeders::>=0[" | Seeders: {stream.seeders}"||"
 {stream.message::exists["Message: {stream.message}"||""]}
       `,
       },
-      userData
+      ctx
     );
   }
 }
 
 export class GDriveFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -58,13 +58,13 @@ export class GDriveFormatter extends BaseFormatter {
 {stream.message::exists["ℹ️ {stream.message}"||""]}
       `,
       },
-      userData
+      ctx
     );
   }
 }
 
 export class LightGDriveFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -79,13 +79,13 @@ export class LightGDriveFormatter extends BaseFormatter {
 {stream.message::exists["ℹ️ {stream.message}"||""]}
 `,
       },
-      userData
+      ctx
     );
   }
 }
 
 export class PrismFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -101,13 +101,13 @@ export class PrismFormatter extends BaseFormatter {
 {stream.message::exists["ℹ️ {stream.message}"||""]}
 `,
       },
-      userData
+      ctx
     );
   }
 }
 
 export class TamtaroFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -122,13 +122,13 @@ export class TamtaroFormatter extends BaseFormatter {
 {stream.uLanguages::exists[" ⚐  {stream.uSmallLanguageCodes::join(' · ')::replace('ᴅᴜᴀʟ ᴀᴜᴅɪᴏ','ᴅᴜᴏ')::replace('ᴅᴜʙʙᴇᴅ','ᴅᴜʙ')}  "||""]}{stream.edition::exists::and::stream.visualTags::~IMAX::isfalse::or::stream.regexMatched::exists::and::stream.seadex::isfalse::or::stream.seadex::istrue::or::stream.network::exists::or::stream.message::exists::or::stream.upscaled::istrue::or::stream.repack::istrue::or::stream.uncensored::istrue::or::stream.unrated::istrue[" » "||""]}{stream.seadexBest::istrue[" ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ "||""]}{stream.seadex::istrue::and::stream.seadexBest::isfalse[" ᴀʟᴛ ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ "||""]}{stream.regexMatched::exists::and::stream.seadex::isfalse[" {stream.regexMatched::replace('Bad','ᴜɴʀᴇʟɪᴀʙʟᴇ')::replace('0','₀')::replace('1','₁')::replace('2','₂')::replace('3','₃')::replace('4','₄')::replace('5','₅')::replace('6','₆')::replace('7','₇')::replace('8','₈')::replace('9','₉')::smallcaps} "||""]}{stream.network::exists[" {stream.network::smallcaps} "||""]}{stream.upscaled::istrue[" ᴜᴘsᴄᴀʟᴇᴅ "||""]}{stream.remastered::istrue::and::stream.edition::~Remastered::isfalse[" ʀᴇᴍᴀsᴛᴇʀᴇᴅ "||""]}{stream.uncensored::istrue[" ᴜɴᴄᴇɴsᴏʀᴇᴅ "||""]}{stream.repack::istrue[" ʀᴇᴘᴀᴄᴋᴇᴅ "||""]}{stream.unrated::istrue[" ᴜɴʀᴀᴛᴇᴅ "||""]}{stream.message::exists[" {stream.message::replace('NZB Health: ✅','☑ ɴᴢʙ')::replace('NZB Health: 🧝','☑ ᴇʟғ ɴᴢʙ')::replace('NZB Health: ⚠️','ᴜɴᴠᴇʀɪғɪᴇᴅ ɴᴢʙ')::replace('NZB Health: 🚫','☒ ɴᴢʙ')::smallcaps} "||""]}{stream.edition::exists::and::stream.visualTags::~IMAX::isfalse["  {stream.edition::smallcaps} "||""]}{stream.message::~Download["{tools.removeLine}"||""]}{service.cached::istrue::and::stream.message::~Download::istrue["\n⭳ DL Stream"||""]}
 `,
       },
-      userData
+      ctx
     );
   }
 }
 
 export class MinimalisticGdriveFormatter extends BaseFormatter {
-  constructor(userData: UserData) {
+  constructor(ctx: FormatterContext) {
     super(
       {
         name: `
@@ -141,7 +141,7 @@ export class MinimalisticGdriveFormatter extends BaseFormatter {
 {stream.languages::exists["🌎 {stream.languages::join(' • ')}"||""]}
 `,
       },
-      userData
+      ctx
     );
   }
 }

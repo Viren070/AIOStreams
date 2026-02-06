@@ -173,6 +173,20 @@ function Content() {
   );
   const [message, setMessage] = useState('This is a message');
 
+  // Advanced variables
+  const advancedModalDisclosure = useDisclosure(false);
+  const [seadex, setSeadex] = useState(false);
+  const [seadexBest, setSeadexBest] = useState(false);
+  const [regexScore, setRegexScore] = useState<number | undefined>(25);
+  const [streamExpressionScore, setStreamExpressionScore] = useState<
+    number | undefined
+  >(150);
+  const [maxRegexScore, setMaxRegexScore] = useState<number | undefined>(50);
+  const [maxSeScore, setMaxSeScore] = useState<number | undefined>(100);
+  const [seMatched, setSeMatched] = useState<string | undefined>(undefined);
+  const [rseMatched, setRseMatched] = useState<string | undefined>(undefined);
+  const [rankedRegexMatched, setRankedRegexMatched] = useState<string>('');
+
   const handleFormatterChange = (
     formatterId?: string,
     name?: string,
@@ -265,8 +279,37 @@ function Content() {
             : undefined,
         proxied,
         message,
+        seadex: {
+          isSeadex: seadex,
+          isBest: seadex && seadexBest,
+        },
+        streamExpressionScore,
+        streamExpressionMatched: seMatched
+          ? { name: seMatched, index: 0 }
+          : undefined,
+        rankedStreamExpressionsMatched: rseMatched
+          ? rseMatched
+              .split(',')
+              .map((s) => s.trim())
+              .filter((s) => s)
+          : [],
+        regexScore,
+        rankedRegexesMatched: rankedRegexMatched
+          ? rankedRegexMatched
+              .split(',')
+              .map((s) => ({ name: s.trim(), pattern: s.trim(), score: 0 }))
+              .filter((r) => r.name)
+          : [],
       };
-      const data = await UserConfigAPI.formatStream(stream, userData);
+
+      // Create context with max scores for normalization
+      const context = {
+        userData,
+        maxRegexScore,
+        maxSeScore,
+      };
+
+      const data = await UserConfigAPI.formatStream(stream, userData, context);
       if (!data.success) {
         throw new Error(data.error?.message || 'Failed to format stream');
       }
@@ -297,6 +340,14 @@ function Content() {
     regexMatched,
     message,
     userData,
+    seadex,
+    seadexBest,
+    streamExpressionScore,
+    rseMatched,
+    rankedRegexMatched,
+    regexScore,
+    maxRegexScore,
+    maxSeScore,
   ]);
 
   useEffect(() => {
@@ -320,6 +371,14 @@ function Content() {
     regexMatched,
     userData,
     message,
+    seadex,
+    seadexBest,
+    streamExpressionScore,
+    rseMatched,
+    rankedRegexMatched,
+    regexScore,
+    maxRegexScore,
+    maxSeScore,
   ]);
 
   return (
@@ -580,6 +639,17 @@ function Content() {
             placeholder="This is a message"
           />
 
+          {/* Advanced Controls Button */}
+          <div className="flex justify-center pt-2">
+            <Button
+              intent="white"
+              size="sm"
+              onClick={advancedModalDisclosure.open}
+            >
+              Advanced Variables
+            </Button>
+          </div>
+
           {/* Centralized Switches Container - flex row, wraps on small width, centered */}
           <div className="flex justify-center flex-wrap gap-4 pt-2">
             <Switch
@@ -611,6 +681,104 @@ function Content() {
         onOpenChange={importModalDisclosure.toggle}
         onImport={handleImport}
       />
+
+      {/* Advanced Variables Modal */}
+      <Modal
+        open={advancedModalDisclosure.isOpen}
+        onOpenChange={advancedModalDisclosure.toggle}
+        title="Advanced Formatter Variables"
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* Score Variables */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm text-gray-300">
+              Score Variables
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <NumberInput
+                label="Regex Score"
+                value={regexScore}
+                onValueChange={setRegexScore}
+                min={0}
+                step={5}
+                placeholder="25"
+              />
+              <NumberInput
+                label="Highest Regex Score"
+                value={maxRegexScore}
+                onValueChange={setMaxRegexScore}
+                min={1}
+                step={10}
+                placeholder="50"
+              />
+              <NumberInput
+                label="SE Score"
+                value={streamExpressionScore}
+                onValueChange={setStreamExpressionScore}
+                min={0}
+                step={10}
+                placeholder="150"
+              />
+              <NumberInput
+                label="Highest SE Score"
+                value={maxSeScore}
+                onValueChange={setMaxSeScore}
+                min={1}
+                step={25}
+                placeholder="200"
+              />
+            </div>
+          </div>
+
+          {/* Matched Variables */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm text-gray-300">
+              Matched Variables
+            </h3>
+            <TextInput
+              label="SE Matched"
+              value={rseMatched}
+              onValueChange={setRseMatched}
+              placeholder="e.g., 'high-quality'"
+            />
+            <TextInput
+              label="Ranked SE Matched (comma-separated)"
+              value={rseMatched}
+              onValueChange={setRseMatched}
+              placeholder="e.g., 'high-quality, best-match, another-match'"
+            />
+            <TextInput
+              label="Ranked Regex Matched (comma-separated)"
+              value={rankedRegexMatched}
+              onValueChange={setRankedRegexMatched}
+              placeholder="e.g., '2160p, HDR10+, REMUX'"
+            />
+          </div>
+
+          {/* SeaDex Variables - centre at bottom */}
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm text-gray-300">
+              SeaDex Variables
+            </h3>
+            <div className="flex gap-4 justify-center">
+              <Switch label="SeaDex" value={seadex} onValueChange={setSeadex} />
+              <Switch
+                label="SeaDex Best"
+                value={seadex ? seadexBest : false}
+                disabled={!seadex}
+                onValueChange={setSeadexBest}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button intent="primary" onClick={advancedModalDisclosure.close}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

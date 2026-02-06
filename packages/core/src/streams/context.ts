@@ -1,4 +1,4 @@
-import { UserData } from '../db/schemas.js';
+import { ParsedStream, UserData } from '../db/schemas.js';
 import { MetadataService, MetadataServiceConfig } from '../metadata/service.js';
 import { Metadata } from '../metadata/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
@@ -525,6 +525,66 @@ export class StreamContext {
       return this.getDaysSince(this._metadata.lastAiredDate);
     }
     return undefined;
+  }
+
+  /**
+   * Convert context to FormatterContext for formatter initialization.
+   * Requires streams to calculate maxRseScore and maxRegexScore.
+   */
+  public toFormatterContext(
+    streams?: ParsedStream[]
+  ): import('../formatters/base.js').FormatterContext {
+    let maxSeScore: number | undefined;
+    let maxRegexScore: number | undefined;
+
+    if (streams && streams.length > 0) {
+      // Calculate max scores from streams
+      const seScores = streams
+        .map((s) => s.streamExpressionScore)
+        .filter((score): score is number => typeof score === 'number');
+      const regexScores = streams
+        .map((s) => s.regexScore)
+        .filter((score): score is number => typeof score === 'number');
+
+      maxSeScore = seScores.length > 0 ? Math.max(...seScores) : undefined;
+      maxRegexScore =
+        regexScores.length > 0 ? Math.max(...regexScores) : undefined;
+    }
+
+    return {
+      userData: this.userData,
+      type: this.type,
+      isAnime: this.isAnime,
+      queryType: this.queryType,
+      season: this.parsedId?.season ? Number(this.parsedId.season) : undefined,
+      episode: this.parsedId?.episode
+        ? Number(this.parsedId.episode)
+        : undefined,
+      title: this._metadata?.title,
+      titles: this._metadata?.titles,
+      year: this._metadata?.year,
+      yearEnd: this._metadata?.yearEnd,
+      genres: this._metadata?.genres,
+      runtime: this._metadata?.runtime,
+      absoluteEpisode: this._metadata?.absoluteEpisode,
+      relativeAbsoluteEpisode: this._metadata?.relativeAbsoluteEpisode,
+      originalLanguage: iso6391ToLanguage(
+        this._metadata?.originalLanguage || ''
+      ),
+      daysSinceRelease: this.computeAgeInDays(),
+      hasNextEpisode: !!this._metadata?.nextAirDate,
+      daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
+      daysSinceFirstAired: this.computeDaysSinceFirstAired(),
+      daysSinceLastAired: this.computeDaysSinceLastAired(),
+      latestSeason: this._metadata?.seasons
+        ? Math.max(...this._metadata.seasons.map((s) => s.season_number))
+        : undefined,
+      anilistId: this.animeEntry?.mappings?.anilistId,
+      malId: this.animeEntry?.mappings?.malId,
+      hasSeaDex: !!this._seadex?.allHashes?.size,
+      maxSeScore,
+      maxRegexScore,
+    };
   }
 
   /**

@@ -825,7 +825,16 @@ export const ParsedStreamSchema = z.object({
     .optional(),
   regexScore: z.number().optional(),
   keywordMatched: z.boolean().optional(),
-  streamExpressionMatched: z.number().optional(),
+  streamExpressionMatched: z
+    .object({
+      name: z.string().optional(),
+      index: z.number(),
+    })
+    .optional(),
+
+  rankedStreamExpressionsMatched: z
+    .array(z.string().min(1).optional())
+    .optional(),
   streamExpressionScore: z.number().optional(),
   size: z.number().optional(),
   folderSize: z.number().optional(),
@@ -1045,8 +1054,28 @@ export const AIOStream = StreamSchema.extend({
           index: z.number(),
         })
         .optional(),
+      rankedRegexesMatched: z
+        .array(
+          z.object({
+            name: z.string().optional(),
+            pattern: z.string().min(1),
+            score: z.number(),
+          })
+        )
+        .optional(),
+      regexScore: z.number().optional(),
       keywordMatched: z.boolean().optional(),
-      streamExpressionMatched: z.number().optional(),
+      streamExpressionMatched: z
+        .object({
+          name: z.string().optional(),
+          index: z.number(),
+        })
+        .or(z.number())
+        .optional(),
+      rankedStreamExpressionsMatched: z
+        .array(z.string().min(1).optional())
+        .optional(),
+      streamExpressionScore: z.number().optional(),
       seadex: z
         .object({
           isBest: z.boolean(),

@@ -3,7 +3,7 @@ export * from './predefined.js';
 export * from './custom.js';
 export * from './utils.js';
 
-import { BaseFormatter, FormatterConfig } from './base.js';
+import { BaseFormatter, FormatterConfig, FormatterContext } from './base.js';
 import {
   TorrentioFormatter,
   TorboxFormatter,
@@ -16,31 +16,28 @@ import {
 import { CustomFormatter } from './custom.js';
 import { UserData } from '../db/schemas.js';
 
-export function createFormatter(userData: UserData): BaseFormatter {
-  switch (userData.formatter.id) {
+export function createFormatter(ctx: FormatterContext): BaseFormatter {
+  switch (ctx.userData.formatter.id) {
     case 'torrentio':
-      return new TorrentioFormatter(userData);
+      return new TorrentioFormatter(ctx);
     case 'torbox':
-      return new TorboxFormatter(userData);
+      return new TorboxFormatter(ctx);
     case 'gdrive':
-      return new GDriveFormatter(userData);
+      return new GDriveFormatter(ctx);
     case 'lightgdrive':
-      return new LightGDriveFormatter(userData);
+      return new LightGDriveFormatter(ctx);
     case 'minimalisticgdrive':
-      return new MinimalisticGdriveFormatter(userData);
+      return new MinimalisticGdriveFormatter(ctx);
     case 'prism':
-      return new PrismFormatter(userData);
+      return new PrismFormatter(ctx);
     case 'tamtaro':
-      return new TamtaroFormatter(userData);
+      return new TamtaroFormatter(ctx);
     case 'custom':
-      if (!userData.formatter.definition) {
+      if (!ctx.userData.formatter.definition) {
         throw new Error('Definition is required for custom formatter');
       }
-      return CustomFormatter.fromConfig(
-        userData.formatter.definition,
-        userData
-      );
+      return CustomFormatter.fromConfig(ctx.userData.formatter.definition, ctx);
     default:
-      throw new Error(`Unknown formatter type: ${userData.formatter.id}`);
+      throw new Error(`Unknown formatter type: ${ctx.userData.formatter.id}`);
   }
 }

@@ -77,6 +77,7 @@ export interface ParseValue {
     regexMatched: string | null;
     rankedRegexMatched: string[];
     regexScore: number | null;
+    nRegexScore: number | null; // normalised (0-100) regex score
     encode: string | null;
     audioChannels: string[] | null;
     edition: string | null;
@@ -114,7 +115,17 @@ export interface ParseValue {
     proxied: boolean;
     seadex: boolean;
     seadexBest: boolean;
-    streamExpressionScore: number | null;
+    seScore: number | null;
+    nSeScore: number | null; // normalised (0-100) based on max and min scores (neg scores become 0)
+    seMatched: string | null;
+    rseMatched: string[];
+  };
+  metadata?: {
+    queryType: string | null;
+    title: string | null;
+    runtime: number | null;
+    genres: string[] | null;
+    year: number | null;
   };
   service?: {
     id: string | null;
@@ -148,9 +159,40 @@ type CompiledVariableWInsertFn = {
  */
 type CompiledModifiedVariableFn = (parseValue: ParseValue) => ResolvedVariable;
 
+export interface FormatterContext {
+  userData: UserData;
+  // From ExpressionContext
+  type?: string;
+  isAnime?: boolean;
+  queryType?: string;
+  season?: number;
+  episode?: number;
+  title?: string;
+  titles?: string[];
+  year?: number;
+  yearEnd?: number;
+  genres?: string[];
+  runtime?: number;
+  absoluteEpisode?: number;
+  relativeAbsoluteEpisode?: number;
+  originalLanguage?: string;
+  daysSinceRelease?: number;
+  hasNextEpisode?: boolean;
+  daysUntilNextEpisode?: number;
+  daysSinceFirstAired?: number;
+  daysSinceLastAired?: number;
+  latestSeason?: number;
+  anilistId?: number;
+  malId?: number;
+  hasSeaDex?: boolean;
+  maxSeScore?: number;
+  maxRegexScore?: number;
+}
+
 export abstract class BaseFormatter {
   protected config: FormatterConfig;
   protected userData: UserData;
+  protected formatterContext: FormatterContext;
 
   private regexBuilder: BaseFormatterRegexBuilder;
   private precompiledNameFunction: CompiledParseFunction | null = null;
@@ -158,9 +200,10 @@ export abstract class BaseFormatter {
 
   private _compilationPromise: Promise<void>;
 
-  constructor(config: FormatterConfig, userData: UserData) {
+  constructor(config: FormatterConfig, ctx: FormatterContext) {
     this.config = config;
-    this.userData = userData;
+    this.userData = ctx.userData;
+    this.formatterContext = ctx;
 
     this.regexBuilder = new BaseFormatterRegexBuilder(
       this.convertStreamToParseValue({} as ParsedStream)
@@ -195,12 +238,9 @@ export abstract class BaseFormatter {
   }
 
   protected convertStreamToParseValue(stream: ParsedStream): ParseValue {
-    const resolvedOriginalLanguage = stream.parsedFile?.languages
-      ?.find((l) => l.startsWith('Original-'))
-      ?.replace('Original-', '');
-    const languages =
-      stream.parsedFile?.languages?.filter((l) => !l.startsWith('Original-')) ||
-      null;
+    // Get original language from formatter context instead of from the stream's languages array hack
+    const resolvedOriginalLanguage = this.formatterContext.originalLanguage;
+    const languages = stream.parsedFile?.languages || null;
 
     const rawUserLanguages = [
       ...(this.userData.preferredLanguages || []),
@@ -335,8 +375,23 @@ export abstract class BaseFormatter {
           stream.rankedRegexesMatched?.[0]?.name ||
           null,
         rankedRegexMatched:
-          stream.rankedRegexesMatched?.map((r) => r.name || r.pattern) || [],
+          stream.rankedRegexesMatched
+            ?.map((r) => r.name)
+            .filter((name): name is string => typeof name === 'string') || [],
         regexScore: stream.regexScore ?? null,
+        nRegexScore:
+          stream.regexScore != null &&
+          this.formatterContext.maxRegexScore != null &&
+          this.formatterContext.maxRegexScore > 0
+            ? Math.max(
+                0,
+                Math.min(
+                  100,
+                  (stream.regexScore / this.formatterContext.maxRegexScore) *
+                    100
+                )
+              )
+            : null,
         encode: stream.parsedFile?.encode || null,
         audioChannels: stream.parsedFile?.audioChannels || null,
         indexer: stream.indexer || null,
@@ -375,7 +430,33 @@ export abstract class BaseFormatter {
         extension: stream.parsedFile?.extension || null,
         seadex: stream.seadex?.isSeadex ?? false,
         seadexBest: stream.seadex?.isBest ?? false,
-        streamExpressionScore: stream.streamExpressionScore ?? null,
+        nSeScore:
+          stream.streamExpressionScore != null &&
+          this.formatterContext.maxSeScore != null &&
+          this.formatterContext.maxSeScore > 0
+            ? Math.max(
+                0,
+                Math.min(
+                  100,
+                  (stream.streamExpressionScore /
+                    this.formatterContext.maxSeScore) *
+                    100
+                )
+              )
+            : null,
+        seScore: stream.streamExpressionScore ?? null,
+        seMatched: stream.streamExpressionMatched?.name || null,
+        rseMatched:
+          stream.rankedStreamExpressionsMatched?.filter(
+            (name): name is string => typeof name === 'string'
+          ) || [],
+      },
+      metadata: {
+        queryType: this.formatterContext.queryType || null,
+        title: this.formatterContext.title || null,
+        runtime: this.formatterContext.runtime || null,
+        genres: this.formatterContext.genres || null,
+        year: this.formatterContext.year || null,
       },
       addon: {
         name: stream.addon?.name || null,
@@ -972,6 +1053,24 @@ class ModifierConstants {
       });
   };
 
+  static getStarModifier = (padWithEmpty: boolean) => {
+    return (value: number) => {
+      const enum Star {
+        Full = '★',
+        Half = '⯪',
+        Empty = '☆',
+      }
+      const fullStars = Math.floor(value / 20);
+      const halfStars = value % 20 >= 10 ? 1 : 0;
+      const emptyStars = 5 - fullStars - halfStars;
+      return (
+        Star.Full.repeat(fullStars) +
+        Star.Half.repeat(halfStars) +
+        (padWithEmpty ? Star.Empty.repeat(emptyStars) : '')
+      );
+    };
+  };
+
   static arrayModifiers = {
     join: (value: string[]) => value.join(', '),
     length: (value: string[]) => value.length.toString(),
@@ -1004,6 +1103,8 @@ class ModifierConstants {
     rbitrate: (value: number) => formatBitrate(value, true),
     string: (value: number) => value.toString(),
     time: (value: number) => formatDuration(value),
+    star: this.getStarModifier(false),
+    pstar: this.getStarModifier(true),
   };
 
   static conditionalModifiers = {

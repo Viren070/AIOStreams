@@ -49,11 +49,19 @@ router.get(
 
       const disableAutoplay = await aiostreams.shouldStopAutoPlay(type, id);
 
+      const response = await aiostreams.getStreams(id, type);
+      const streamContext = aiostreams.getStreamContext();
+
+      if (!streamContext) {
+        throw new Error('Stream context not available');
+      }
+
       res
         .status(200)
         .json(
           await transformer.transformStreams(
-            await aiostreams.getStreams(id, type),
+            response,
+            streamContext.toFormatterContext(),
             { provideStreamData, disableAutoplay }
           )
         );

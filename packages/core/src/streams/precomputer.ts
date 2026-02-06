@@ -81,6 +81,7 @@ class StreamPrecomputer {
 
     // Initialize all streams with a score of 0
     const streamScores = new Map<string, number>();
+    const streamExpressionNames = new Map<string, string[]>();
     for (const stream of streams) {
       streamScores.set(stream.id, 0);
     }
@@ -94,6 +95,11 @@ class StreamPrecomputer {
         for (const stream of selectedStreams) {
           const currentScore = streamScores.get(stream.id) ?? 0;
           streamScores.set(stream.id, currentScore + score);
+          const exprName = this.extractNameFromExpression(expression);
+          if (exprName) {
+            const existingNames = streamExpressionNames.get(stream.id) || [];
+            streamExpressionNames.set(stream.id, [...existingNames, exprName]);
+          }
         }
 
         logger.debug(
@@ -111,6 +117,9 @@ class StreamPrecomputer {
     // Apply the computed scores to the streams
     for (const stream of streams) {
       stream.streamExpressionScore = streamScores.get(stream.id) ?? 0;
+      stream.rankedStreamExpressionsMatched = streamExpressionNames.get(
+        stream.id
+      );
     }
 
     const nonZeroScores = streams.filter(
@@ -390,9 +399,26 @@ class StreamPrecomputer {
 
       // Now, apply the results to the original streams list.
       for (const stream of streams) {
-        stream.streamExpressionMatched = streamToConditionIndex.get(stream.id);
+        const conditionIndex = streamToConditionIndex.get(stream.id);
+        if (conditionIndex !== undefined) {
+          const expression =
+            this.userData.preferredStreamExpressions[conditionIndex];
+          stream.streamExpressionMatched = {
+            index: conditionIndex,
+            name: this.extractNameFromExpression(expression),
+          };
+        }
       }
     }
+  }
+
+  private extractNameFromExpression(expression: string): string | undefined {
+    // expressions can have a comment at the beginning like so /* NAME */ <actual expression> so we can extract the name from there for better logging
+    const nameMatch = expression.match(/\/\*\s*(.*?)\s*\*\//);
+    if (nameMatch) {
+      return nameMatch[1];
+    }
+    return undefined;
   }
 }
 

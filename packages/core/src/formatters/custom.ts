@@ -1,26 +1,25 @@
-import { UserData } from '../db/schemas.js';
-import { BaseFormatter, FormatterConfig } from './base.js';
+import { BaseFormatter, FormatterConfig, FormatterContext } from './base.js';
 
 export class CustomFormatter extends BaseFormatter {
   constructor(
     nameTemplate: string,
     descriptionTemplate: string,
-    userData: UserData
+    ctx: FormatterContext
   ) {
     super(
       {
         name: nameTemplate,
         description: descriptionTemplate,
       },
-      userData
+      ctx
     );
   }
 
   public static fromConfig(
     config: FormatterConfig,
-    userData: UserData
+    ctx: FormatterContext
   ): CustomFormatter {
-    return new CustomFormatter(config.name, config.description, userData);
+    return new CustomFormatter(config.name, config.description, ctx);
   }
 
   public updateTemplate(
