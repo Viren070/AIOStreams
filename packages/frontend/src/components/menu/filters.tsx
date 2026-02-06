@@ -4351,7 +4351,8 @@ function SyncedUrlInputs({
     }
 
     const isUnrestricted =
-      trusted || status?.settings.regexFilterAccess === 'all';
+      status?.settings.regexFilterAccess === 'all' ||
+      (status?.settings.regexFilterAccess === 'trusted' && trusted);
 
     if (!isUnrestricted && !allowedUrls.includes(url)) {
       toast.error('URL is not in the allowed list');

@@ -270,7 +270,8 @@ export class FeatureControl {
 
   public static validateUrls(urls: string[], userData?: UserData): string[] {
     const isUnrestricted =
-      userData?.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+      Env.REGEX_FILTER_ACCESS === 'all' ||
+      (Env.REGEX_FILTER_ACCESS === 'trusted' && userData?.trusted);
 
     if (isUnrestricted) {
       return urls;
