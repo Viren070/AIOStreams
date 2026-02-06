@@ -1168,6 +1168,8 @@ const StatusResponseSchema = z.object({
     ),
     limits: z.object({
       maxMergedCatalogSources: z.number(),
+      maxStreamExpressionFilters: z.number(),
+      maxAddons: z.number(),
     }),
   }),
 });
