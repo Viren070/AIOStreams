@@ -220,10 +220,21 @@ export async function selectFileInTorrentOrNZB(
     skipReason: null,
   };
 
+  const handleReport = async () => {
+    if (options?.printReport) {
+      logger.debug(
+        `Selection report for ${torrentOrNZB.title}: ${JSON.stringify(report, null, 2)}`
+      );
+    }
+    if (options?.saveReport) {
+      await saveReport(torrentOrNZB.title, report);
+    }
+  };
+
   if (!debridDownload.files?.length) {
     report.skipped = true;
     report.skipReason = 'No files in debrid download';
-    await saveReport(torrentOrNZB.title, report);
+    await handleReport();
     return {
       name: torrentOrNZB.title,
       size: torrentOrNZB.size,
@@ -444,7 +455,7 @@ export async function selectFileInTorrentOrNZB(
     });
     report.skipped = true;
     report.skipReason = 'No valid video files with scores';
-    await saveReport(torrentOrNZB.title, report);
+    await handleReport();
     return undefined;
   }
   // Sort by score descending
@@ -480,14 +491,7 @@ export async function selectFileInTorrentOrNZB(
       );
       report.skipped = true;
       report.skipReason = `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`;
-      if (options?.printReport) {
-        logger.debug(
-          `Selection report for ${torrentOrNZB.title}: ${JSON.stringify(report, null, 2)}`
-        );
-      }
-      if (options?.saveReport) {
-        await saveReport(torrentOrNZB.title, report);
-      }
+      await handleReport();
       return undefined;
     }
   }
@@ -498,14 +502,7 @@ export async function selectFileInTorrentOrNZB(
     score: bestMatch.score,
     size: bestMatch.file.size,
   };
-  if (options?.printReport && report.files.length > 1) {
-    logger.debug(
-      `Selection report for ${torrentOrNZB.title}: ${JSON.stringify(report, null, 2)}`
-    );
-  }
-  if (options?.saveReport && report.files.length > 1) {
-    await saveReport(torrentOrNZB.title, report);
-  }
+  handleReport();
   return bestMatch.file;
 }
 
