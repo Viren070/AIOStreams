@@ -308,8 +308,12 @@ const logStartupInfo = () => {
     logKeyValue('Max Groups:', Env.MAX_GROUPS.toString());
     logKeyValue('Max Keyword Filters:', Env.MAX_KEYWORD_FILTERS.toString());
     logKeyValue(
-      'Max Stream Expression Filters:',
-      Env.MAX_STREAM_EXPRESSION_FILTERS.toString()
+      'Max Stream Expressions:',
+      Env.MAX_STREAM_EXPRESSIONS.toString()
+    );
+    logKeyValue(
+      'Max Stream Expressions Characters:',
+      Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS.toString()
     );
     logKeyValue(
       'Timeout Range:',

@@ -1197,7 +1197,8 @@ const StatusResponseSchema = z.object({
     ),
     limits: z.object({
       maxMergedCatalogSources: z.number(),
-      maxStreamExpressionFilters: z.number(),
+      maxStreamExpressions: z.number(),
+      maxStreamExpressionsTotalCharacters: z.number(),
       maxAddons: z.number(),
     }),
   }),
