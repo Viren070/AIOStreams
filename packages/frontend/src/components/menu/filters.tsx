@@ -25,7 +25,7 @@ import {
   FaEdit,
   FaUndo,
 } from 'react-icons/fa';
-import { FaTextSlash } from 'react-icons/fa6';
+import { FaTextSlash, FaEye, FaBan } from 'react-icons/fa6';
 import {
   MdCleaningServices,
   MdHdrOn,
@@ -3872,6 +3872,7 @@ interface EditingItemState {
   name?: string;
   score?: number;
   originalName?: string;
+  disabled?: boolean;
 }
 
 function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
@@ -3926,13 +3927,15 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
             o.pattern === patternStr ||
             (value.name && o.originalName === value.name)
         );
-        const isOverridden = !!override;
+        const isOverridden = !!override && !override.disabled;
         const effectiveName = override?.name ?? value.name ?? '';
         const effectiveScore =
           override?.score !== undefined ? override.score : value.score ?? 0;
 
+        const isDisabled = override?.disabled;
+
         return (
-          <div key={index} className="opacity-70">
+          <div key={index} className={isDisabled ? 'opacity-50' : 'opacity-70'}>
             {renderType === 'simple' && (
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
@@ -3957,7 +3960,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                     }
                     disabled
                     size="sm"
-                    className={isOverridden ? 'border-primary/50' : ''}
+                    className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
                   />
                 </div>
                 <div className="flex-1">
@@ -3966,7 +3969,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                     label="Pattern (Synced)"
                     disabled
                     size="sm"
-                    className={isOverridden ? 'border-primary/50' : ''}
+                    className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
                   />
                 </div>
                 <div className="pb-0.5 flex gap-1 flex-shrink-0">
@@ -4017,7 +4020,64 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                   >
                     Override
                   </Tooltip>
-                </div>
+                  <Tooltip
+                      trigger={
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={
+                            isDisabled ? (
+                              <FaEye className="text-xs" />
+                            ) : (
+                              <FaBan className="text-xs" />
+                            )
+                          }
+                          intent={isDisabled ? 'success-subtle' : 'gray-subtle'}
+                          onClick={() => {
+                            setUserData((prev) => {
+                              const overrides = [...(prev.regexOverrides || [])];
+                              
+                              if (isDisabled) {
+                                const newOverrides = overrides.filter(
+                                  (o) =>
+                                    o.pattern !== patternStr &&
+                                    (!value.name || o.originalName !== value.name)
+                                );
+                                return { ...prev, regexOverrides: newOverrides };
+                              }
+
+                              const idx = overrides.findIndex(
+                                (o) =>
+                                  o.pattern === patternStr ||
+                                  (value.name && o.originalName === value.name)
+                              );
+
+                              const entry = {
+                                pattern: patternStr,
+                                name: override?.name,
+                                score: override?.score,
+                                originalName: value.name,
+                                disabled: true,
+                              };
+
+                              if (idx >= 0) {
+                                overrides[idx] = entry;
+                              } else {
+                                overrides.push(entry);
+                              }
+                              return { ...prev, regexOverrides: overrides };
+                            });
+                            toast.success(
+                              isDisabled ? 'Pattern re-enabled' : 'Pattern disabled'
+                            );
+                          }}
+                          className="h-[38px] w-[38px] border border-gray-500/20 hover:border-gray-500/50 transition-colors shadow-sm"
+                        />
+                      }
+                    >
+                      {isDisabled ? 'Enable' : 'Disable'}
+                    </Tooltip>
+                  </div>
               </div>
             )}
             {renderType === 'ranked' && (
@@ -4034,6 +4094,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                       label="Pattern (Synced)"
                       disabled
                       size="sm"
+                      className={cn(isDisabled && 'line-through text-gray-500')}
                     />
                   </div>
                   <div className="pb-0.5 flex gap-1 flex-shrink-0">
@@ -4088,6 +4149,63 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                     >
                       Override
                     </Tooltip>
+                    <Tooltip
+                      trigger={
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={
+                            isDisabled ? (
+                              <FaEye className="text-xs" />
+                            ) : (
+                              <FaBan className="text-xs" />
+                            )
+                          }
+                          intent={isDisabled ? 'success-subtle' : 'gray-subtle'}
+                          onClick={() => {
+                            setUserData((prev) => {
+                              const overrides = [...(prev.regexOverrides || [])];
+                              
+                              if (isDisabled) {
+                                const newOverrides = overrides.filter(
+                                  (o) =>
+                                    o.pattern !== patternStr &&
+                                    (!value.name || o.originalName !== value.name)
+                                );
+                                return { ...prev, regexOverrides: newOverrides };
+                              }
+
+                              const idx = overrides.findIndex(
+                                (o) =>
+                                  o.pattern === patternStr ||
+                                  (value.name && o.originalName === value.name)
+                              );
+
+                              const entry = {
+                                pattern: patternStr,
+                                name: override?.name,
+                                score: override?.score,
+                                originalName: value.name,
+                                disabled: true,
+                              };
+
+                              if (idx >= 0) {
+                                overrides[idx] = entry;
+                              } else {
+                                overrides.push(entry);
+                              }
+                              return { ...prev, regexOverrides: overrides };
+                            });
+                            toast.success(
+                              isDisabled ? 'Pattern re-enabled' : 'Pattern disabled'
+                            );
+                          }}
+                          className="h-[38px] w-[38px] border border-gray-500/20 hover:border-gray-500/50 transition-colors shadow-sm"
+                        />
+                      }
+                    >
+                      {isDisabled ? 'Enable' : 'Disable'}
+                    </Tooltip>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -4099,6 +4217,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                       }
                       disabled
                       size="sm"
+                      className={cn(isDisabled && 'line-through text-gray-500')}
                     />
                   </div>
                   <div className="w-24">
@@ -4149,45 +4268,48 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
             />
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              intent="primary-basic"
-              onClick={() => {
-                setEditingItem(null);
-                close();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (!editingItem) return;
-                setUserData((prev) => {
-                  const overrides = [...(prev.regexOverrides || [])];
-                  const idx = overrides.findIndex(
-                    (o) =>
-                      o.pattern === editingItem.pattern ||
-                      (editingItem.originalName &&
-                        o.originalName === editingItem.originalName)
-                  );
-                  const entry = {
-                    pattern: editingItem.pattern,
-                    name: editingItem.name || undefined,
-                    score: editingItem.score,
-                    originalName: editingItem.originalName,
-                  };
-                  if (idx >= 0) {
-                    overrides[idx] = entry;
-                  } else {
-                    overrides.push(entry);
-                  }
-                  return { ...prev, regexOverrides: overrides };
-                });
-                close();
-                toast.success('Override saved');
-              }}
-            >
-              Save Override
-            </Button>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      intent="primary-outline"
+                      onClick={() => {
+                        setEditingItem(null);
+                        close();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!editingItem) return;
+                        setUserData((prev) => {
+                          const overrides = [...(prev.regexOverrides || [])];
+                          const idx = overrides.findIndex(
+                            (o) =>
+                              o.pattern === editingItem.pattern ||
+                              (editingItem.originalName &&
+                                o.originalName === editingItem.originalName)
+                          );
+                          const entry = {
+                            pattern: editingItem.pattern,
+                            name: editingItem.name || undefined,
+                            score: editingItem.score,
+                            originalName: editingItem.originalName,
+                            disabled: editingItem.disabled,
+                          };
+                          if (idx >= 0) {
+                            overrides[idx] = entry;
+                          } else {
+                            overrides.push(entry);
+                          }
+                          return { ...prev, regexOverrides: overrides };
+                        });
+                        close();
+                        toast.success('Override saved');
+                      }}
+                    >
+                      Save Override
+                    </Button>
+                  </div>
           </div>
         </div>
       </Modal>

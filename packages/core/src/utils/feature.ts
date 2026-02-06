@@ -315,6 +315,11 @@ export class FeatureControl {
           o.pattern === regex.pattern ||
           (regex.name && o.originalName === regex.name)
       );
+
+      if (override?.disabled) {
+        continue;
+      }
+
       const item = transform(
         override
           ? {

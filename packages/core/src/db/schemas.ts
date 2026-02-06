@@ -476,6 +476,7 @@ export const UserDataSchema = z.object({
         name: z.string().optional(),
         score: z.number().min(-1_000_000).max(1_000_000).optional(),
         originalName: z.string().optional(),
+        disabled: z.boolean().optional(),
       })
     )
     .optional(),
