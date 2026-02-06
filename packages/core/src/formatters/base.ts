@@ -806,6 +806,11 @@ export abstract class BaseFormatter {
             .find((key) => mod.startsWith(key))!!;
 
           // Pre-process string value and check to allow for intuitive comparisons
+          const arrayValue =
+            Array.isArray(variable) &&
+            variable.every((item) => typeof item === 'string')
+              ? variable.map((item) => item.toLowerCase())
+              : undefined;
           const stringValue = variable.toString().toLowerCase();
           let stringCheck = mod.substring(modPrefix.length).toLowerCase();
           // remove whitespace from stringCheck if it isn't in stringValue
@@ -822,11 +827,14 @@ export abstract class BaseFormatter {
             ['<', '<=', '>', '>=', '='].includes(modPrefix) &&
             !isNaN(parsedNumericValue) &&
             !isNaN(parsedNumericCheck);
+          const isArraySupported = ['$', '^', '~'].includes(modPrefix);
 
           conditional = ModifierConstants.conditionalModifiers.prefix[
             modPrefix as keyof typeof ModifierConstants.conditionalModifiers.prefix
           ](
-            isNumericComparison ? (parsedNumericValue as any) : stringValue,
+            isNumericComparison
+              ? (parsedNumericValue as any)
+              : (isArraySupported ? arrayValue : undefined) || stringValue,
             isNumericComparison ? (parsedNumericCheck as any) : stringCheck
           );
         }
@@ -1087,6 +1095,7 @@ class ModifierConstants {
     rsort: this.getSortModifier(false),
     lsort: (value: any[]) => [...value].sort(),
     reverse: (value: string[]) => [...value].reverse(),
+    string: (value: string[]) => value.toString(),
   };
 
   static numberModifiers = {
@@ -1126,10 +1135,16 @@ class ModifierConstants {
     },
 
     prefix: {
-      $: (value: string, check: string) => value.startsWith(check),
-      '^': (value: string, check: string) => value.endsWith(check),
-      '~': (value: string, check: string) => value.includes(check),
-      '=': (value: string, check: string) => value == check,
+      $: (value: string | string[], check: string) =>
+        typeof value === 'string'
+          ? value.startsWith(check)
+          : value?.[0] === check,
+      '^': (value: string | string[], check: string) =>
+        typeof value === 'string'
+          ? value.endsWith(check)
+          : value?.[value.length - 1] === check,
+      '~': (value: string | string[], check: string) => value.includes(check),
+      '=': (value: string, check: string) => value === check,
       '>=': (value: string | number, check: string | number) => value >= check,
       '>': (value: string | number, check: string | number) => value > check,
       '<=': (value: string | number, check: string | number) => value <= check,
