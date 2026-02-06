@@ -378,6 +378,24 @@ function Content() {
             <SettingsCard
               title="My Addons"
               description="Edit, remove, and reorder your installed addons. If you reorder your addons, you will have to refresh the catalogs if you have made any changes, and also reinstall the addon."
+              action={
+                <Switch
+                  id="toggle-addons"
+                  label="Toggle all"
+                  labelClass="text-sm"
+                  containerClass="gap-1"
+                  value={userData.presets.every((preset) => preset.enabled)}
+                  onValueChange={(val) =>
+                    setUserData((prev) => ({
+                      ...prev,
+                      presets: prev.presets.map((p) => ({
+                        ...p,
+                        enabled: val,
+                      })),
+                    }))
+                  }
+                />
+              }
             >
               <DndContext
                 modifiers={[restrictToVerticalAxis]}
