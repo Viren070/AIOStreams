@@ -242,18 +242,14 @@ router.post('/resolve_patterns', async (req, res, next) => {
         ? await UserRepository.getUser(uuid, password)
         : undefined) ?? undefined;
 
-    const validUrls = FeatureControl.validateUrls(urls, userData);
-    const allPatterns = await Promise.all(
-      validUrls.map((url) => FeatureControl.getPatternsForUrl(url))
-    );
-    const flattened = allPatterns.flat();
+    const patterns = await FeatureControl.resolvePatterns(urls, userData);
 
     res.status(200).json(
       createResponse({
         success: true,
         detail: 'Patterns resolved successfully',
         data: {
-          patterns: flattened,
+          patterns: patterns,
         },
       })
     );

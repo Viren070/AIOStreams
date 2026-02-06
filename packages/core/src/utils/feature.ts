@@ -280,6 +280,22 @@ export class FeatureControl {
     return urls.filter((url) => allowedUrls.includes(url));
   }
 
+  public static async resolvePatterns(
+    urls: string[] | undefined,
+    userData?: UserData
+  ): Promise<{ name: string; pattern: string; score?: number }[]> {
+    if (!urls?.length) return [];
+
+    const validUrls = this.validateUrls(urls, userData);
+    if (!validUrls.length) return [];
+
+    const allPatterns = await Promise.all(
+      validUrls.map((url) => this.getPatternsForUrl(url))
+    );
+
+    return allPatterns.flat();
+  }
+
   public static async syncPatterns<T>(
     urls: string[] | undefined,
     existing: T[],
@@ -287,40 +303,32 @@ export class FeatureControl {
     transform: (item: { name: string; pattern: string; score?: number }) => T,
     uniqueKey: (item: T) => string
   ): Promise<T[]> {
-    if (!urls?.length) return existing;
-
-    const validUrls = this.validateUrls(urls, userData);
-
-    if (!validUrls.length) return existing;
+    const patterns = await this.resolvePatterns(urls, userData);
+    if (patterns.length === 0) return existing;
 
     const result = [...existing];
     const existingSet = new Set(existing.map(uniqueKey));
 
-    const allPatterns = await Promise.all(
-      validUrls.map((url) => this.getPatternsForUrl(url))
-    );
-
-    for (const regexes of allPatterns) {
-      for (const regex of regexes) {
-        const override = userData.regexOverrides?.find(
-          (o) =>
-            o.pattern === regex.pattern ||
-            (regex.name && o.originalName === regex.name)
-        );
-        const item = transform(
-          override
-            ? {
-                ...regex,
-                name: override.name ?? regex.name,
-                score: override.score !== undefined ? override.score : regex.score,
-              }
-            : regex
-        );
-        const key = uniqueKey(item);
-        if (!existingSet.has(key)) {
-          result.push(item);
-          existingSet.add(key);
-        }
+    for (const regex of patterns) {
+      const override = userData.regexOverrides?.find(
+        (o) =>
+          o.pattern === regex.pattern ||
+          (regex.name && o.originalName === regex.name)
+      );
+      const item = transform(
+        override
+          ? {
+              ...regex,
+              name: override.name ?? regex.name,
+              score:
+                override.score !== undefined ? override.score : regex.score,
+            }
+          : regex
+      );
+      const key = uniqueKey(item);
+      if (!existingSet.has(key)) {
+        result.push(item);
+        existingSet.add(key);
       }
     }
     return result;
