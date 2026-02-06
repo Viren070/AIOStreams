@@ -372,13 +372,11 @@ export abstract class BaseFormatter {
         audioTags: stream.parsedFile?.audioTags || null,
         releaseGroup: stream.parsedFile?.releaseGroup || null,
         regexMatched:
-          stream.regexMatched?.name ||
-          stream.rankedRegexesMatched?.[0]?.name ||
-          null,
+          stream.regexMatched?.name || stream.rankedRegexesMatched?.[0] || null,
         rankedRegexMatched:
-          stream.rankedRegexesMatched
-            ?.map((r) => r.name)
-            .filter((name): name is string => typeof name === 'string') || [],
+          stream.rankedRegexesMatched?.filter(
+            (name): name is string => typeof name === 'string'
+          ) || [],
         regexScore: stream.regexScore ?? null,
         nRegexScore:
           stream.regexScore != null &&

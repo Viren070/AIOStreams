@@ -814,15 +814,7 @@ export const ParsedStreamSchema = z.object({
       index: z.number(),
     })
     .optional(),
-  rankedRegexesMatched: z
-    .array(
-      z.object({
-        name: z.string().optional(),
-        pattern: z.string().min(1),
-        score: z.number(),
-      })
-    )
-    .optional(),
+  rankedRegexesMatched: z.array(z.string()).optional(),
   regexScore: z.number().optional(),
   keywordMatched: z.boolean().optional(),
   streamExpressionMatched: z
@@ -1054,15 +1046,7 @@ export const AIOStream = StreamSchema.extend({
           index: z.number(),
         })
         .optional(),
-      rankedRegexesMatched: z
-        .array(
-          z.object({
-            name: z.string().optional(),
-            pattern: z.string().min(1),
-            score: z.number(),
-          })
-        )
-        .optional(),
+      rankedRegexesMatched: z.array(z.string()).optional(),
       regexScore: z.number().optional(),
       keywordMatched: z.boolean().optional(),
       streamExpressionMatched: z

@@ -147,11 +147,11 @@ class StreamPrecomputer {
       if (!stream.filename) {
         continue;
       }
-      const matched: { pattern: string; name?: string; score: number }[] = [];
+      const matched: string[] = [];
       let totalScore = 0;
       for (const { regex, pattern, name, score } of regexes) {
         if (regex.test(stream.filename)) {
-          matched.push({ pattern, name, score });
+          if (name) matched.push(name);
           totalScore += score;
         }
       }

@@ -297,8 +297,8 @@ function Content() {
         rankedRegexesMatched: rankedRegexMatched
           ? rankedRegexMatched
               .split(',')
-              .map((s) => ({ name: s.trim(), pattern: s.trim(), score: 0 }))
-              .filter((r) => r.name)
+              .map((s) => s.trim())
+              .filter((s) => s)
           : [],
       };
 

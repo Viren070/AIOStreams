@@ -428,7 +428,7 @@ export abstract class StreamExpressionEngine {
         regexNames.some(
           (regexName) =>
             stream.regexMatched?.name === regexName ||
-            stream.rankedRegexesMatched?.some((r) => r.name === regexName)
+            stream.rankedRegexesMatched?.some((r) => r === regexName)
         )
       );
     };
