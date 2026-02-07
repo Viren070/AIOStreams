@@ -128,6 +128,7 @@ const TVEpisodeDetailsSchema = z.object({
   overview: z.string().optional(),
   season_number: z.number(),
   still_path: z.string().nullable().optional(),
+  runtime: z.number().nullable().optional(),
 });
 
 const IdTypeMap: Partial<Record<IdType, TMDBIdType>> = {
@@ -440,11 +441,11 @@ export class TMDBMetadata {
     return data.results.flatMap((result) => result.release_dates);
   }
 
-  public async getEpisodeAirDate(
+  public async getEpisodeDetails(
     tmdbId: number,
     seasonNumber: number,
     episodeNumber: number
-  ): Promise<string | undefined> {
+  ): Promise<{ air_date?: string; runtime?: number } | undefined> {
     const url = new URL(
       API_BASE_URL +
         `/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`
@@ -461,7 +462,10 @@ export class TMDBMetadata {
     }
     const json = await response.json();
     const episodeData = TVEpisodeDetailsSchema.parse(json);
-    return episodeData.air_date ?? undefined;
+    return {
+      air_date: episodeData.air_date ?? undefined,
+      runtime: episodeData.runtime ?? undefined,
+    };
   }
 
   public async getNextEpisodeAirDate(
