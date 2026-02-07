@@ -380,8 +380,8 @@ export abstract class BaseFormatter {
           ) || [],
         regexScore: stream.regexScore ?? null,
         nRegexScore:
-          stream.regexScore != null &&
-          this.formatterContext.maxRegexScore != null &&
+          stream.regexScore != undefined &&
+          this.formatterContext.maxRegexScore != undefined &&
           this.formatterContext.maxRegexScore > 0
             ? Math.max(
                 0,
@@ -431,8 +431,8 @@ export abstract class BaseFormatter {
         seadex: stream.seadex?.isSeadex ?? false,
         seadexBest: stream.seadex?.isBest ?? false,
         nSeScore:
-          stream.streamExpressionScore != null &&
-          this.formatterContext.maxSeScore != null &&
+          stream.streamExpressionScore != undefined &&
+          this.formatterContext.maxSeScore != undefined &&
           this.formatterContext.maxSeScore > 0
             ? Math.max(
                 0,
