@@ -387,8 +387,10 @@ export abstract class BaseFormatter {
                 0,
                 Math.min(
                   100,
-                  (stream.regexScore / this.formatterContext.maxRegexScore) *
-                    100
+                  Math.round(
+                    (stream.regexScore / this.formatterContext.maxRegexScore) *
+                      100
+                  )
                 )
               )
             : null,
@@ -438,9 +440,11 @@ export abstract class BaseFormatter {
                 0,
                 Math.min(
                   100,
-                  (stream.streamExpressionScore /
-                    this.formatterContext.maxSeScore) *
-                    100
+                  Math.round(
+                    (stream.streamExpressionScore /
+                      this.formatterContext.maxSeScore) *
+                      100
+                  )
                 )
               )
             : null,
