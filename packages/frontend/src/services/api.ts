@@ -259,7 +259,7 @@ export class UserConfigAPI {
 
   static async formatStream(
     stream: ParsedStream,
-    userData: UserData
+    context?: any
   ): Promise<ApiResponse<{ name: string; description: string }>> {
     const response = await fetch(`${this.BASE_URL}/format`, {
       method: 'POST',
@@ -268,7 +268,7 @@ export class UserConfigAPI {
       },
       body: JSON.stringify({
         stream,
-        userData,
+        context,
       }),
     });
 

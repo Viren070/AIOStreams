@@ -51,11 +51,19 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const aiostreams = await new AIOStreams(req.userData).initialise();
 
+    const response = await aiostreams.getStreams(stremioId, type);
+    const streamContext = aiostreams.getStreamContext();
+
+    if (!streamContext) {
+      throw new Error('Stream context not available');
+    }
+
     res
       .status(200)
       .json(
         await transformer.transformStreams(
-          await aiostreams.getStreams(stremioId, type)
+          response,
+          streamContext.toFormatterContext()
         )
       );
   } catch (error) {

@@ -319,9 +319,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const debridTitleMetadata: DebridTitleMetadata = {
       titles: searchMetadata.titles,
       year: searchMetadata.year,
+      seasonYear: searchMetadata.seasonYear,
       season: searchMetadata.season,
       episode: searchMetadata.episode,
       absoluteEpisode: searchMetadata.absoluteEpisode,
+      relativeAbsoluteEpisode: searchMetadata.relativeAbsoluteEpisode,
     };
     const metadataId = getSimpleTextHash(JSON.stringify(debridTitleMetadata));
     await metadataStore().set(
@@ -597,6 +599,17 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           `${titlePlaceholder} E${parsedId.episode!.toString().padStart(2, '0')}`
         );
       }
+      if (
+        // if relative absolute exists and is different from absoluteEpisode and episode
+        metadata.relativeAbsoluteEpisode &&
+        [metadata.absoluteEpisode, parsedId.episode].every(
+          (v) => v !== metadata.relativeAbsoluteEpisode
+        )
+      ) {
+        addQuery(
+          `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode!.toString().padStart(2, '0')}`
+        );
+      }
       if (parsedId.season && parsedId.episode) {
         addQuery(
           `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`
@@ -630,6 +643,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       parsedId.episode ? Number(parsedId.episode) : undefined
     );
 
+    // Extract seasonYear from anime entry
+    const seasonYear = animeEntry?.animeSeason?.year ?? undefined;
+
     // Update season from anime entry if available
     if (animeEntry && !parsedId.season) {
       enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
@@ -643,6 +659,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
 
     // Calculate absolute episode if needed
     let absoluteEpisode: number | undefined;
+    let relativeAbsoluteEpisode: number | undefined;
     if (animeEntry && parsedId.season && parsedId.episode && metadata.seasons) {
       const seasons = metadata.seasons.map(
         ({ season_number, episode_count }) => ({
@@ -657,6 +674,34 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       absoluteEpisode = Number(
         calculateAbsoluteEpisode(parsedId.season, parsedId.episode, seasons)
       );
+
+      // Calculate relative absolute episode (within current AniDB entry)
+      // Find the first season of this AniDB entry
+      const startingSeason =
+        animeEntry.imdb?.seasonNumber ??
+        animeEntry.trakt?.seasonNumber ??
+        animeEntry.tvdb?.seasonNumber ??
+        animeEntry.tmdb?.seasonNumber;
+
+      if (startingSeason) {
+        // Calculate absolute episode from the starting season (AniDB episode number)
+        const currentSeasonNum = Number(parsedId.season);
+        const episodeNum = Number(parsedId.episode);
+        let totalEpisodesBeforeCurrentSeason = 0;
+
+        for (const s of seasons.filter((s) => s.number !== '0')) {
+          const seasonNum = Number(s.number);
+          if (seasonNum < startingSeason) continue; // Skip seasons before this AniDB entry
+          if (s.number === parsedId.season) break;
+          totalEpisodesBeforeCurrentSeason += s.episodes;
+        }
+
+        const calculated = totalEpisodesBeforeCurrentSeason + episodeNum;
+        // Only set if different from regular episode number
+        if (calculated !== episodeNum) {
+          relativeAbsoluteEpisode = calculated;
+        }
+      }
 
       // Adjust for non-IMDB episodes if they exist
       if (
@@ -693,7 +738,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       season: parsedId.season ? Number(parsedId.season) : undefined,
       episode: parsedId.episode ? Number(parsedId.episode) : undefined,
       absoluteEpisode,
+      relativeAbsoluteEpisode,
       year: metadata.year,
+      seasonYear,
       imdbId,
       tmdbId: metadata.tmdbId ?? null,
       tvdbId: metadata.tvdbId ?? null,
@@ -726,6 +773,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ? {
             type: 'torrent',
             downloadUrl: torrentOrNzb.downloadUrl,
+            title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
             private: torrentOrNzb.private,
             sources: torrentOrNzb.sources,
@@ -738,6 +786,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         : {
             type: 'usenet',
             nzb: torrentOrNzb.nzb,
+            title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
             index: torrentOrNzb.file.index,
             easynewsUrl:
@@ -764,7 +813,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         : '⏳'
       : '';
 
-    const name = `${isPrivate ? '🔑 ' : ''}[${shortCode} ${cacheIndicator}${torrentOrNzb.service?.library ? ' ☁️' : ''}] ${this.name}`;
+    const name = `${torrentOrNzb.service?.library ? '🗃️ ' : ''}${isPrivate ? '🔑 ' : ''}[${shortCode} ${cacheIndicator}] ${this.name} `;
     const description = `${torrentOrNzb.title ? torrentOrNzb.title : ''}\n${torrentOrNzb.file.name ? torrentOrNzb.file.name : ''}\n${
       torrentOrNzb.indexer ? `🔍 ${torrentOrNzb.indexer}` : ''
     } ${'seeders' in torrentOrNzb && torrentOrNzb.seeders ? `👤 ${torrentOrNzb.seeders}` : ''} ${
@@ -778,8 +827,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
               encryptedStoreAuth! as string,
               metadataId!,
               fileInfo!,
-              torrentOrNzb.title,
-              torrentOrNzb.file.name
+              torrentOrNzb.file.name ?? torrentOrNzb.title
             )
           : undefined,
       nzbUrl: torrentOrNzb.type === 'usenet' ? torrentOrNzb.nzb : undefined,

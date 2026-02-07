@@ -24,5 +24,6 @@ export {
   EasynewsNzbParamsSchema,
   EasynewsApi,
   EasynewsNzbParams,
+  SeaDexDataset,
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';

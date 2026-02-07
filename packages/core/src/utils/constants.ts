@@ -1115,13 +1115,14 @@ export const SORT_CRITERIA_DETAILS: Record<
       'Streams that match any of your keywords are preferred',
   },
   streamExpressionMatched: {
-    name: 'Stream Expression Matched',
+    name: 'Stream Expressions',
     defaultDirection: 'desc',
-    description: 'Whether the stream matches any of your stream expressions',
+    description:
+      'Whether the stream matches any of your preferred stream expressions',
     ascendingDescription:
-      'Streams that do not match your stream expressions are preferred while the ones that do are ranked by the order of your stream expressions',
+      'Streams that do not match your preferred stream expressions are preferred while the ones that do are ranked by the order of your preferred stream expressions',
     descendingDescription:
-      'Streams that match your stream expressions are preferred and ranked by the order of your stream expressions',
+      'Streams that match your preferred stream expressions are preferred and ranked by the order of your preferred stream expressions',
   },
   seadex: {
     name: 'SeaDex',

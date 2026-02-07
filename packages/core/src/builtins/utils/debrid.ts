@@ -35,6 +35,7 @@ interface Metadata {
   season?: number;
   episode?: number;
   absoluteEpisode?: number;
+  seasonYear?: number;
 }
 
 export function validateInfoHash(
@@ -83,10 +84,10 @@ export async function processTorrents(
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
-      logger.error(
-        `Error processing torrents for ${service.id}: ${error}`,
-        error
-      );
+      if (error instanceof Error && error.stack) {
+        delete error.stack;
+      }
+      logger.error(`Error processing torrents for ${service.id}:`, error);
       return { serviceId: service.id, results: [], error };
     }
   });
@@ -205,6 +206,11 @@ async function processTorrentsForDebridService(
   for (const [index, result] of allParsedFiles.entries()) {
     parsedFiles.set(allFileStrings[index], result);
   }
+
+  for (const [title, parsed] of parsedTitlesMap.entries()) {
+    parsedFiles.set(title, parsed);
+  }
+
   const parseTime = getTimeTakenSincePoint(parseStart);
   for (const { torrent, magnetCheckResult, parsedTitle } of validTorrents) {
     let file: DebridFile | undefined;
@@ -217,6 +223,7 @@ async function processTorrentsForDebridService(
           metadata,
           {
             useLevenshteinMatching: false,
+            skipSeasonEpisodeCheck: torrent.confirmed,
           }
         )
       : { name: torrent.title, size: torrent.size, index: -1 };
@@ -307,6 +314,7 @@ export async function processTorrentsForP2P(
           {
             id: 'p2p',
             name: torrent.title,
+            private: torrent.private,
             size: torrent.size,
             status: 'downloaded',
             files: torrent.files,
@@ -359,7 +367,10 @@ export async function processNZBs(
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
-      logger.error(`Error processing NZBs for ${service.id}: ${error}`, error);
+      if (error instanceof Error && error.stack) {
+        delete error.stack;
+      }
+      logger.error(`Error processing NZBs for ${service.id}:`, error);
       return { serviceId: service.id, results: [], error };
     }
   });
@@ -411,6 +422,8 @@ async function processNZBsForDebridService(
   });
 
   // Parse only NZB titles and perform validation checks
+  const processingStart = Date.now();
+  const parseStart = Date.now();
   const nzbTitles = nzbs.map((nzb) => nzb.title ?? '');
   const parsedTitles: ParsedResult[] = nzbTitles.map((title) =>
     parseTorrentTitle(title)
@@ -437,8 +450,22 @@ async function processNZBsForDebridService(
       });
       continue;
     }
-    const parsedNzb = parsedTitlesMap.get(nzb.title ?? '');
+    const parsedNzb = parsedTitlesMap.get(
+      nzb.title ?? nzbCheckResult?.name ?? ''
+    );
+
     if (metadata && parsedNzb) {
+      const preprocessedTitle = preprocessTitle(
+        parsedNzb.title ?? '',
+        nzb.title ?? nzbCheckResult?.name ?? '',
+        metadata.titles
+      );
+      if (
+        nzb.confirmed !== true &&
+        isTitleWrong({ title: preprocessedTitle }, metadata)
+      ) {
+        continue;
+      }
       if (isSeasonWrong(parsedNzb, metadata)) {
         continue;
       }
@@ -446,6 +473,7 @@ async function processNZBsForDebridService(
         continue;
       }
     }
+
     validNZBs.push({ nzb, nzbCheckResult, parsedTitle: parsedNzb! });
   }
 
@@ -468,7 +496,11 @@ async function processNZBsForDebridService(
     parsedFiles.set(allFileStrings[index], result);
   }
 
-  const processingStart = Date.now();
+  for (const [title, parsed] of parsedTitlesMap.entries()) {
+    parsedFiles.set(title, parsed);
+  }
+
+  const parseTime = getTimeTakenSincePoint(parseStart);
   for (const { nzb, nzbCheckResult } of validNZBs) {
     let file: DebridFile | undefined;
 
@@ -477,13 +509,19 @@ async function processNZBsForDebridService(
           nzb,
           nzbCheckResult,
           parsedFiles,
-          metadata
+          metadata,
+          {
+            useLevenshteinMatching: false,
+            skipSeasonEpisodeCheck: nzb.confirmed,
+          }
         )
       : { name: nzb.title, size: nzb.size, index: -1 };
 
     if (file) {
       results.push({
         ...nzb,
+        title: nzb.title ?? nzbCheckResult?.name,
+        size: nzbCheckResult?.size || nzb.size,
         file,
         service: {
           id: service.id,
@@ -500,6 +538,7 @@ async function processNZBsForDebridService(
     validNzbs: validNZBs.length,
     finalNzbs: results.length,
     totalTime: getTimeTakenSincePoint(processingStart),
+    parseTime,
   });
 
   return results;

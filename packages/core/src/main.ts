@@ -101,6 +101,7 @@ export class AIOStreams {
   private deduplicator: Deduplicator;
   private sorter: Sorter;
   private precomputer: Precomputer;
+  private streamContext: StreamContext | null = null;
 
   private addonInitialisationErrors: {
     addon: Addon | Preset;
@@ -186,6 +187,8 @@ export class AIOStreams {
     );
 
     const context = StreamContext.create(type, id, this.userData);
+    // Store context for later retrieval
+    this.streamContext = context;
 
     const {
       streams,
@@ -300,6 +303,17 @@ export class AIOStreams {
       },
       errors: errors,
     };
+  }
+
+  /**
+   * Get the stream context created during the last getStreams call.
+   * This provides access to metadata and other contextual information.
+   * The context can be used to create a FormatterContext with streams data.
+   *
+   * @returns The StreamContext or null if getStreams hasn't been called yet
+   */
+  public getStreamContext(): StreamContext | null {
+    return this.streamContext;
   }
 
   /**

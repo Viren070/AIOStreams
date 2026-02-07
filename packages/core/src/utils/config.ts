@@ -292,27 +292,41 @@ export async function validateConfig(
       'Invalid addon password. Please enter the value of the ADDON_PASSWORD environment variable '
     );
   }
+
+  // Validate total stream expressions count across all filter types
+  const totalStreamExpressions =
+    (config.excludedStreamExpressions?.length || 0) +
+    (config.requiredStreamExpressions?.length || 0) +
+    (config.preferredStreamExpressions?.length || 0) +
+    (config.includedStreamExpressions?.length || 0) +
+    (config.rankedStreamExpressions?.length || 0);
+
+  if (totalStreamExpressions > Env.MAX_STREAM_EXPRESSIONS) {
+    throw new Error(
+      `You have ${totalStreamExpressions} total stream expressions across all filter types, but the maximum is ${Env.MAX_STREAM_EXPRESSIONS}`
+    );
+  }
+
+  // Validate total character count across all stream expressions
+  const allExpressions: string[] = [
+    ...(config.excludedStreamExpressions || []),
+    ...(config.requiredStreamExpressions || []),
+    ...(config.preferredStreamExpressions || []),
+    ...(config.includedStreamExpressions || []),
+    ...(config.rankedStreamExpressions?.map((r) => r.expression) || []),
+  ];
+  const totalCharacters = allExpressions.reduce(
+    (sum, expr) => sum + expr.length,
+    0
+  );
+
+  if (totalCharacters > Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS) {
+    throw new Error(
+      `Your stream expressions have ${totalCharacters} total characters, but the maximum is ${Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS}`
+    );
+  }
+
   const validations = {
-    'excluded stream expressions': [
-      config.excludedStreamExpressions,
-      Env.MAX_STREAM_EXPRESSION_FILTERS,
-    ],
-    'required stream expressions': [
-      config.requiredStreamExpressions,
-      Env.MAX_STREAM_EXPRESSION_FILTERS,
-    ],
-    'preferred stream expressions': [
-      config.preferredStreamExpressions,
-      Env.MAX_STREAM_EXPRESSION_FILTERS,
-    ],
-    'included stream expressions': [
-      config.includedStreamExpressions,
-      Env.MAX_STREAM_EXPRESSION_FILTERS,
-    ],
-    'ranked stream expressions': [
-      config.rankedStreamExpressions,
-      Env.MAX_STREAM_EXPRESSION_FILTERS,
-    ],
     'excluded keywords': [config.excludedKeywords, Env.MAX_KEYWORD_FILTERS],
     'included keywords': [config.includedKeywords, Env.MAX_KEYWORD_FILTERS],
     'required keywords': [config.requiredKeywords, Env.MAX_KEYWORD_FILTERS],
@@ -721,6 +735,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
   const includedRegexes = config.includedRegexPatterns;
   const requiredRegexes = config.requiredRegexPatterns;
   const preferredRegexes = config.preferredRegexPatterns;
+  const rankedRegexes = config.rankedRegexPatterns;
   const regexAllowed = await FeatureControl.isRegexAllowed(config);
 
   const regexes = [
@@ -728,6 +743,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
     ...(includedRegexes ?? []),
     ...(requiredRegexes ?? []),
     ...(preferredRegexes ?? []).map((regex) => regex.pattern),
+    ...(rankedRegexes ?? []).map((regex) => regex.pattern),
   ];
 
   if (!regexAllowed && regexes.length > 0) {

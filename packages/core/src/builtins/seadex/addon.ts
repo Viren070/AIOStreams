@@ -118,7 +118,9 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
         );
 
         const created = torrent.created ? new Date(torrent.created) : undefined;
-        const age = created ? Date.now() - created.getTime() : undefined;
+        const age = created
+          ? Math.floor((Date.now() - created.getTime()) / 3600000)
+          : undefined;
 
         torrents.push({
           confirmed: true,

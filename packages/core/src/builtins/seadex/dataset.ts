@@ -4,6 +4,7 @@ import path from 'path';
 import { createLogger, getTimeTakenSincePoint } from '../../utils/logger.js';
 import { getDataFolder, makeRequest } from '../../utils/index.js';
 import { Env } from '../../utils/env.js';
+import { BaseDataset } from '../base/dataset.js';
 
 const logger = createLogger('seadex');
 
@@ -22,18 +23,21 @@ interface SeaDexData {
   lastUpdated: number;
 }
 
-export class SeaDexDataset {
+export class SeaDexDataset extends BaseDataset {
   private static instance: SeaDexDataset;
   private data: SeaDexData = {
     torrentsByAnilistId: {},
     lastUpdated: 0,
   };
-  private readonly DATA_PATH = path.join(getDataFolder(), 'seadex', 'trs.json');
-  private initialisationPromise: Promise<void> | null = null;
-  private refreshInterval: NodeJS.Timeout | null = null;
-  private syncInProgress: boolean = false;
+  protected logger = logger;
 
-  private constructor() {}
+  private constructor() {
+    super({
+      dataPath: path.join(getDataFolder(), 'seadex', 'trs.json'),
+      refreshIntervalSeconds: Env.BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL,
+      logger,
+    });
+  }
 
   public static getInstance(): SeaDexDataset {
     if (!SeaDexDataset.instance) {
@@ -42,68 +46,21 @@ export class SeaDexDataset {
     return SeaDexDataset.instance;
   }
 
-  public async initialise(): Promise<void> {
-    if (this.initialisationPromise) {
-      return this.initialisationPromise;
-    }
-
-    this.initialisationPromise = this.loadData().catch((err) => {
-      this.initialisationPromise = null;
-      throw err;
-    });
-
-    return this.initialisationPromise;
-  }
-
-  private async loadData(): Promise<void> {
-    const exists = await fs
-      .access(this.DATA_PATH)
-      .then(() => true)
-      .catch(() => false);
-
-    if (exists) {
-      try {
-        const fileContent = await fs.readFile(this.DATA_PATH, 'utf-8');
-        this.data = JSON.parse(fileContent);
-        logger.info(
-          `Loaded SeaDex dataset with ${
-            Object.keys(this.data.torrentsByAnilistId).length
-          } entries`
-        );
-      } catch (error) {
-        logger.error(
-          'Failed to load SeaDex dataset, forcing resync...:',
-          error
-        );
-        await this.sync();
-      }
-    } else {
-      logger.info('SeaDex dataset not found, starting initial sync...');
-      await this.sync();
-    }
-
-    this.startSyncInterval();
-  }
-
-  private startSyncInterval() {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
-    this.refreshInterval = setInterval(() => {
-      this.sync().catch((err) =>
-        logger.error('Background SeaDex sync failed:', err)
+  protected async reloadDataFromFile(): Promise<void> {
+    try {
+      const fileContent = await fs.readFile(this.DATA_PATH, 'utf-8');
+      this.data = JSON.parse(fileContent);
+      logger.info(
+        `Loaded SeaDex dataset with ${
+          Object.keys(this.data.torrentsByAnilistId).length
+        } entries`
       );
-    }, Env.BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL * 1000);
+    } catch (error) {
+      logger.error('Failed to reload SeaDex dataset from file:', error);
+    }
   }
 
-  public async sync(): Promise<void> {
-    if (this.syncInProgress) {
-      logger.debug('Sync already in progress, skipping...');
-      return;
-    }
-
-    this.syncInProgress = true;
-    logger.info('Starting SeaDex dataset sync...');
+  protected async performSync(): Promise<void> {
     const startTime = Date.now();
     const tempPath = `${this.DATA_PATH}.tmp`;
     let writeStream: WriteStream | null = null;
@@ -128,7 +85,7 @@ export class SeaDexDataset {
           `https://releases.moe/api/collections/entries/records?expand=trs&perPage=500&page=${page}`,
           {
             method: 'GET',
-            timeout: 10000,
+            timeout: 15000,
             headers: {
               'User-Agent': Env.DEFAULT_USER_AGENT,
               Accept: 'application/json',
@@ -219,13 +176,10 @@ export class SeaDexDataset {
 
       await fs.rename(tempPath, this.DATA_PATH);
 
-      await this.reloadDataFromFile();
-
       logger.info(
         `SeaDex sync completed in ${getTimeTakenSincePoint(startTime)}. Total entries: ${totalEntries}`
       );
     } catch (error) {
-      logger.error('Failed to sync SeaDex dataset:', error);
       try {
         if (writeStream) {
           writeStream.destroy();
@@ -233,17 +187,6 @@ export class SeaDexDataset {
         await fs.unlink(tempPath);
       } catch {}
       throw error;
-    } finally {
-      this.syncInProgress = false;
-    }
-  }
-
-  private async reloadDataFromFile(): Promise<void> {
-    try {
-      const fileContent = await fs.readFile(this.DATA_PATH, 'utf-8');
-      this.data = JSON.parse(fileContent);
-    } catch (error) {
-      logger.error('Failed to reload SeaDex dataset from file:', error);
     }
   }
 

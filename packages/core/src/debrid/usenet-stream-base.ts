@@ -644,15 +644,59 @@ export abstract class UsenetStreamService implements DebridService {
           `${this.getContentPathPrefix()}/${Category.MOVIES}`
         );
 
-        const [history, webdavTv, webdavMovies] = await Promise.all([
+        const [history, webdavTv, webdavMovies] = await Promise.allSettled([
           historyPromise,
           webdavTvPromise,
           webdavMoviesPromise,
         ]);
 
-        const webdavFiles = [...webdavTv, ...webdavMovies];
+        if (history.status === 'rejected') {
+          throw history.reason;
+        }
+
+        if (
+          webdavTv.status === 'rejected' ||
+          webdavMovies.status === 'rejected'
+        ) {
+          const error =
+            webdavTv.status === 'rejected'
+              ? webdavTv.reason
+              : webdavMovies.status === 'rejected'
+                ? webdavMovies.reason
+                : null;
+          const status = typeof error.status === 'number' ? error.status : 500;
+          if (status === 401) {
+            throw new DebridError(`Could not access WebDAV: Unauthorized`, {
+              statusCode: 401,
+              statusText: 'Unauthorized',
+              code: 'UNAUTHORIZED',
+              headers: {},
+              body: null,
+              type: 'api_error',
+            });
+          }
+
+          this.serviceLogger.warn(
+            `Failed to list WebDAV folders, library listing may be inaccurate`,
+            {
+              error: (error as Error).message,
+            }
+          );
+        }
+
+        const historyData =
+          history.status === 'fulfilled' ? history.value : null;
+        const webdavTvData =
+          webdavTv.status === 'fulfilled' ? webdavTv.value : null;
+        const webdavMoviesData =
+          webdavMovies.status === 'fulfilled' ? webdavMovies.value : null;
+
+        const webdavFiles = [
+          ...(webdavTvData ?? []),
+          ...(webdavMoviesData ?? []),
+        ];
         const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
-          const matchingSlot = history.slots.find(
+          const matchingSlot = historyData?.slots.find(
             (slot) => slot.name === file.basename
           );
           return {
@@ -663,10 +707,6 @@ export abstract class UsenetStreamService implements DebridService {
             hash: file.basename,
             files: [],
           };
-        });
-
-        this.serviceLogger.debug(`Fetched NZB list from history and WebDAV`, {
-          files: nzbs.map((nzb) => nzb.name),
         });
 
         this.serviceLogger.debug(

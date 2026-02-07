@@ -267,7 +267,9 @@ class StreamFilterer {
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),
-      ...(this.userData.preferredRegexPatterns ?? []).map((regex) => regex.pattern),
+      ...(this.userData.preferredRegexPatterns ?? []).map(
+        (regex) => regex.pattern
+      ),
     ]);
 
     // Get metadata from context (already fetched in parallel with addon requests)
@@ -280,6 +282,25 @@ class StreamFilterer {
     let originalLanguage = requestedMetadata?.originalLanguage
       ? iso6391ToLanguage(requestedMetadata.originalLanguage)
       : undefined;
+
+    const episodeRuntime = await context.getEpisodeRuntime();
+    const runtimeToUse =
+      episodeRuntime ||
+      (requestedMetadata?.runtime ? requestedMetadata.runtime : undefined);
+
+    if (episodeRuntime) {
+      logger.debug(`Using episode runtime: ${episodeRuntime} minutes`, {
+        id,
+        episode: `${parsedId?.season}:${parsedId?.episode}`,
+      });
+    } else if (requestedMetadata?.runtime) {
+      logger.debug(
+        `Using series average runtime: ${requestedMetadata.runtime} minutes`,
+        {
+          id,
+        }
+      );
+    }
 
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
@@ -312,7 +333,7 @@ class StreamFilterer {
 
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
-          requestedMetadata?.runtime &&
+          runtimeToUse &&
           stream.size &&
           (!isFolderSize || type === 'series') // only calculate for folder sizes if it's a series
         ) {
@@ -335,7 +356,7 @@ class StreamFilterer {
             let hasUnknownSeasons = false;
 
             for (const season of stream.parsedFile?.seasons || []) {
-              const seasonData = requestedMetadata.seasons?.find(
+              const seasonData = requestedMetadata?.seasons?.find(
                 (s) => s.season_number === season
               );
 
@@ -367,9 +388,9 @@ class StreamFilterer {
             }
           }
 
-          if (doBitrateCalculation) {
+          if (doBitrateCalculation && runtimeToUse) {
             stream.bitrate = Math.round(
-              (finalSize * 8) / (requestedMetadata.runtime * 60)
+              (finalSize * 8) / (runtimeToUse * 60)
             );
           }
         }
@@ -839,6 +860,15 @@ class StreamFilterer {
           )
         ) {
           // allow if absolute episode matches AND season is 1
+        } else if (
+          seasons[0] === 1 &&
+          stream.parsedFile?.episodes?.length &&
+          requestedMetadata?.relativeAbsoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.relativeAbsoluteEpisode
+          )
+        ) {
+          // allow if relative absolute episode (AniDB episode) matches AND season is 1
         } else {
           return false;
         }
@@ -857,6 +887,14 @@ class StreamFilterer {
           (!seasons?.length || seasons[0] === 1)
         ) {
           // allow if absolute episode matches AND (no season OR season is 1)
+        } else if (
+          requestedMetadata?.relativeAbsoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.relativeAbsoluteEpisode
+          ) &&
+          (!seasons?.length || seasons[0] === 1)
+        ) {
+          // allow if relative absolute episode (AniDB episode) matches AND (no season OR season is 1)
         } else {
           return false;
         }
@@ -1115,7 +1153,6 @@ class StreamFilterer {
           file?.languages.includes(originalLanguage)
         ) {
           file.languages.push('Original');
-          file.languages.push(`Original-${originalLanguage}`);
         }
       }
       // Temporarily add in our fake visual tags used for sorting/filtering

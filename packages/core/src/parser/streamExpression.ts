@@ -428,7 +428,7 @@ export abstract class StreamExpressionEngine {
         regexNames.some(
           (regexName) =>
             stream.regexMatched?.name === regexName ||
-            stream.rankedRegexesMatched?.some((r) => r.name === regexName)
+            stream.rankedRegexesMatched?.some((r) => r === regexName)
         )
       );
     };
@@ -932,7 +932,7 @@ export abstract class StreamExpressionEngine {
       return streams.filter((stream) => stream.seadex?.isSeadex === true);
     };
 
-    this.parser.functions.score = function (
+    this.parser.functions.streamExpressionScore = function (
       streams: ParsedStream[],
       minScore?: number,
       maxScore?: number
@@ -947,6 +947,32 @@ export abstract class StreamExpressionEngine {
       }
       return streams.filter((stream) => {
         const score = stream.streamExpressionScore;
+        if (score === undefined) return false;
+        if (minScore !== undefined && score < minScore) {
+          return false;
+        }
+        if (maxScore !== undefined && score > maxScore) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.regexScore = function (
+      streams: ParsedStream[],
+      minScore?: number,
+      maxScore?: number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minScore !== undefined && typeof minScore !== 'number') ||
+        (maxScore !== undefined && typeof maxScore !== 'number')
+      ) {
+        throw new Error('Score boundaries must be numbers if provided');
+      }
+      return streams.filter((stream) => {
+        const score = stream.regexScore;
         if (score === undefined) return false;
         if (minScore !== undefined && score < minScore) {
           return false;

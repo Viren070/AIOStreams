@@ -80,13 +80,19 @@ class StreamPrecomputer {
     const selector = new StreamSelector(context.toExpressionContext());
 
     // Initialize all streams with a score of 0
-    const streamScores = new Map<string, number | null>();
+    const streamScores = new Map<string, number>();
+    const streamExpressionNames = new Map<string, string[]>();
     for (const stream of streams) {
-      streamScores.set(stream.id, null);
+      streamScores.set(stream.id, 0);
     }
 
     // Evaluate each ranked expression and accumulate scores
-    for (const { expression, score } of this.userData.rankedStreamExpressions) {
+    for (const { expression, score, enabled } of this.userData
+      .rankedStreamExpressions) {
+      if (enabled === false) {
+        continue;
+      }
+
       try {
         const selectedStreams = await selector.select(streams, expression);
 
@@ -94,6 +100,14 @@ class StreamPrecomputer {
         for (const stream of selectedStreams) {
           const currentScore = streamScores.get(stream.id) ?? 0;
           streamScores.set(stream.id, currentScore + score);
+          const exprNames = this.extractNamesFromExpression(expression);
+          if (exprNames) {
+            const existingNames = streamExpressionNames.get(stream.id) || [];
+            streamExpressionNames.set(stream.id, [
+              ...existingNames,
+              ...exprNames,
+            ]);
+          }
         }
 
         logger.debug(
@@ -110,12 +124,16 @@ class StreamPrecomputer {
 
     // Apply the computed scores to the streams
     for (const stream of streams) {
-      stream.streamExpressionScore = streamScores.get(stream.id) ?? undefined;
+      stream.streamExpressionScore = streamScores.get(stream.id) ?? 0;
+      stream.rankedStreamExpressionsMatched = streamExpressionNames.get(
+        stream.id
+      );
     }
 
     const nonZeroScores = streams.filter(
-      (s) => s.streamExpressionScore !== 0
+      (s) => (s.streamExpressionScore ?? 0) !== 0
     ).length;
+
     logger.info(
       `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores)`
     );
@@ -137,11 +155,11 @@ class StreamPrecomputer {
       if (!stream.filename) {
         continue;
       }
-      const matched: { pattern: string; name?: string; score: number }[] = [];
+      const matched: string[] = [];
       let totalScore = 0;
       for (const { regex, pattern, name, score } of regexes) {
         if (regex.test(stream.filename)) {
-          matched.push({ pattern, name, score });
+          if (name) matched.push(name);
           totalScore += score;
         }
       }
@@ -389,9 +407,30 @@ class StreamPrecomputer {
 
       // Now, apply the results to the original streams list.
       for (const stream of streams) {
-        stream.streamExpressionMatched = streamToConditionIndex.get(stream.id);
+        const conditionIndex = streamToConditionIndex.get(stream.id);
+        if (conditionIndex !== undefined) {
+          const expression =
+            this.userData.preferredStreamExpressions[conditionIndex];
+          stream.streamExpressionMatched = {
+            index: conditionIndex,
+            name: this.extractNamesFromExpression(expression)?.[0],
+          };
+        }
       }
     }
+  }
+
+  private extractNamesFromExpression(expression: string): string[] | undefined {
+    const regex = /\/\*\s*(.*?)\s*\*\//g;
+    const names: string[] = [];
+    let match;
+    while ((match = regex.exec(expression)) !== null) {
+      const content = match[1];
+      if (!content.startsWith('#')) {
+        names.push(content);
+      }
+    }
+    return names.length > 0 ? names : undefined;
   }
 }
 

@@ -18,6 +18,33 @@ export function formatBytes(
   return value + ' ' + sizes[i];
 }
 
+export function formatSmartBytes(bytes: number, k: 1024 | 1000): string {
+  if (bytes === 0) return '0 B';
+  const sizes =
+    k === 1024
+      ? ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+      : ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const rawValue = bytes / Math.pow(k, i);
+  const integerPart = Math.floor(rawValue);
+
+  let value: number;
+  let formattedValue: string;
+
+  if (integerPart >= 100) {
+    value = Math.round(rawValue);
+    formattedValue = value.toString();
+  } else if (integerPart >= 10) {
+    value = parseFloat(rawValue.toFixed(1));
+    formattedValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+  } else {
+    value = parseFloat(rawValue.toFixed(2));
+    formattedValue = value.toString();
+  }
+
+  return formattedValue + ' ' + sizes[i];
+}
+
 export function formatBitrate(bitrate: number, round: boolean = false): string {
   if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
   const k = 1000;
@@ -27,8 +54,34 @@ export function formatBitrate(bitrate: number, round: boolean = false): string {
     Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
   );
   let value = bitrate / Math.pow(k, i);
-  value = round ? Math.round(value) : parseFloat(value.toFixed(1));
+  value = round ? Math.round(value) : parseFloat(value.toFixed(2));
   return `${value} ${sizes[i]}`;
+}
+
+export function formatSmartBitrate(bitrate: number): string {
+  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
+  const k = 1000;
+  const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
+  );
+  const rawValue = bitrate / Math.pow(k, i);
+  const integerPart = Math.floor(rawValue);
+
+  let value: number;
+  let formattedValue: string;
+  if (integerPart >= 100) {
+    value = Math.round(rawValue);
+    formattedValue = value.toString();
+  } else if (integerPart >= 10) {
+    value = parseFloat(rawValue.toFixed(1));
+    formattedValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+  } else {
+    value = parseFloat(rawValue.toFixed(2));
+    formattedValue = value.toString();
+  }
+  return `${formattedValue} ${sizes[i]}`;
 }
 
 export function formatDuration(durationInMs: number): string {

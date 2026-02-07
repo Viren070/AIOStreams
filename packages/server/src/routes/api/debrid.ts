@@ -124,6 +124,7 @@ router.get(
           ? {
               type: 'torrent',
               metadata: metadata,
+              title: fileInfo.title,
               downloadUrl: fileInfo.downloadUrl,
               hash: fileInfo.hash,
               private: fileInfo.private,
@@ -134,6 +135,7 @@ router.get(
           : {
               type: 'usenet',
               metadata: metadata,
+              title: fileInfo.title,
               hash: fileInfo.hash,
               nzb: fileInfo.nzb,
               easynewsUrl: fileInfo.easynewsUrl,

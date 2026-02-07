@@ -98,6 +98,10 @@ const statusInfo = async (): Promise<StatusResponse> => {
       services: getEnvironmentServiceDetails(),
       limits: {
         maxMergedCatalogSources: Env.MAX_MERGED_CATALOG_SOURCES,
+        maxStreamExpressions: Env.MAX_STREAM_EXPRESSIONS,
+        maxStreamExpressionsTotalCharacters:
+          Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS,
+        maxAddons: Env.MAX_ADDONS,
       },
     },
   };

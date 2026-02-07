@@ -86,8 +86,7 @@ export class StremThruInterface implements DebridService {
     const cachedResults: DebridDownload[] = [];
     const magnetsToCheck: string[] = [];
     for (const magnet of magnets) {
-      const cacheKey = `${this.serviceName}:${getSimpleTextHash(magnet)}`;
-      const cached = await StremThruInterface.checkCache.get(cacheKey);
+      const cached = await this.checkCacheGet(magnet);
       if (cached) {
         cachedResults.push(cached);
       } else {
@@ -137,18 +136,7 @@ export class StremThruInterface implements DebridService {
         }));
 
         newResults.forEach((item) => {
-          StremThruInterface.checkCache
-            .set(
-              `${this.serviceName}:${getSimpleTextHash(item.hash!)}`,
-              item,
-              Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
-            )
-            .catch((err) => {
-              logger.error(
-                `Failed to cache item ${item.hash} in the background:`,
-                err
-              );
-            });
+          this.checkCacheSet(item);
         });
       } catch (error) {
         if (error instanceof StremThruError) {
@@ -186,6 +174,7 @@ export class StremThruInterface implements DebridService {
         id: result.data.id,
         status: result.data.status,
         hash: result.data.hash,
+        private: result.data.private,
         size: result.data.files.reduce((acc, file) => acc + file.size, 0),
         files: result.data.files.map((file) => ({
           name: file.name,
@@ -246,6 +235,29 @@ export class StremThruInterface implements DebridService {
     return result;
   }
 
+  private async checkCacheGet(
+    hash: string
+  ): Promise<DebridDownload | undefined> {
+    return await StremThruInterface.checkCache.get(
+      `${this.serviceName}:${getSimpleTextHash(hash)}`
+    );
+  }
+
+  private async checkCacheSet(debridDownload: DebridDownload): Promise<void> {
+    try {
+      await StremThruInterface.checkCache.set(
+        `${this.serviceName}:${getSimpleTextHash(debridDownload.hash!)}`,
+        debridDownload,
+        Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
+      );
+    } catch (err) {
+      logger.error(
+        `Failed to cache item ${debridDownload.hash} in the background:`,
+        err
+      );
+    }
+  }
+
   private async _resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
@@ -281,7 +293,8 @@ export class StremThruInterface implements DebridService {
     if (
       playbackInfo.private !== undefined && // make sure the torrent was downloaded before
       playbackInfo.downloadUrl &&
-      Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL
+      Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
+      (await this.checkCacheGet(hash))?.status !== 'cached'
     ) {
       logger.debug(
         `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
@@ -354,7 +367,7 @@ export class StremThruInterface implements DebridService {
     }
 
     const torrent: Torrent = {
-      title: magnetDownload.name || '',
+      title: magnetDownload.name || playbackInfo.title,
       hash: hash,
       size: magnetDownload.size || 0,
       type: 'torrent',
@@ -381,6 +394,7 @@ export class StremThruInterface implements DebridService {
       {
         chosenFilename: playbackInfo.filename,
         chosenIndex: playbackInfo.index,
+        printReport: true,
       }
     );
 
@@ -398,6 +412,7 @@ export class StremThruInterface implements DebridService {
       season: metadata?.season,
       episode: metadata?.episode,
       absoluteEpisode: metadata?.absoluteEpisode,
+      relativeAbsoluteEpisode: metadata?.relativeAbsoluteEpisode,
       chosenFile: file.name,
       availableFiles: `[${magnetDownload.files.map((file) => file.name).join(', ')}]`,
     });
@@ -413,7 +428,7 @@ export class StremThruInterface implements DebridService {
       true
     );
 
-    if (autoRemoveDownloads && magnetDownload.id) {
+    if (autoRemoveDownloads && magnetDownload.id && !magnetDownload.private) {
       this.removeMagnet(magnetDownload.id.toString()).catch((err) => {
         logger.warn(
           `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`

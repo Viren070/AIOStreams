@@ -17,7 +17,7 @@ import {
   StreamResponse,
   ParsedMeta,
 } from '../db/index.js';
-import { createFormatter } from '../formatters/index.js';
+import { createFormatter, FormatterContext } from '../formatters/index.js';
 import { AIOStreamsError, AIOStreamsResponse } from '../main.js';
 import { Cache, createLogger, getTimeTakenSincePoint } from '../utils/index.js';
 
@@ -221,6 +221,11 @@ export class StremioTransformer {
             regexMatched: stream.regexMatched,
             keywordMatched: stream.keywordMatched,
             streamExpressionMatched: stream.streamExpressionMatched,
+            rankedStreamExpressionsMatched:
+              stream.rankedStreamExpressionsMatched,
+            streamExpressionScore: stream.streamExpressionScore,
+            regexScore: stream.regexScore,
+            rankedRegexesMatched: stream.rankedRegexesMatched,
             seadex: stream.seadex,
             id: stream.id,
           }
@@ -233,9 +238,10 @@ export class StremioTransformer {
       streams: ParsedStream[];
       statistics: { title: string; description: string }[];
     }>,
+    formatterContext: FormatterContext,
     options?: { provideStreamData?: boolean; disableAutoplay?: boolean }
   ): Promise<AIOStreamResponse> {
-    const formatter = createFormatter(this.userData);
+    const formatter = createFormatter(formatterContext);
     const {
       data: { streams, statistics },
       errors,
@@ -337,6 +343,7 @@ export class StremioTransformer {
 
   async transformMeta(
     response: AIOStreamsResponse<ParsedMeta | null>,
+    formatterContext?: FormatterContext,
     options?: { provideStreamData?: boolean; disableAutoplay?: boolean }
   ): Promise<MetaResponse | null> {
     const { data: meta, errors } = response;
@@ -362,9 +369,10 @@ export class StremioTransformer {
       ) => Promise<{ name: string; description: string }>;
     } | null = null;
     if (
-      meta.videos?.some((video) => video.streams && video.streams.length > 0)
+      meta.videos?.some((video) => video.streams && video.streams.length > 0) &&
+      formatterContext
     ) {
-      formatter = createFormatter(this.userData);
+      formatter = createFormatter(formatterContext);
     }
 
     // Transform streams in videos if present

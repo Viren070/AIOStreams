@@ -457,6 +457,7 @@ export const UserDataSchema = z.object({
       z.object({
         expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
         score: z.number().min(-1_000_000).max(1_000_000),
+        enabled: z.boolean().default(true),
       })
     )
     .optional(),
@@ -825,18 +826,19 @@ export const ParsedStreamSchema = z.object({
       index: z.number(),
     })
     .optional(),
-  rankedRegexesMatched: z
-    .array(
-      z.object({
-        name: z.string().optional(),
-        pattern: z.string().min(1),
-        score: z.number(),
-      })
-    )
-    .optional(),
+  rankedRegexesMatched: z.array(z.string()).optional(),
   regexScore: z.number().optional(),
   keywordMatched: z.boolean().optional(),
-  streamExpressionMatched: z.number().optional(),
+  streamExpressionMatched: z
+    .object({
+      name: z.string().optional(),
+      index: z.number(),
+    })
+    .optional(),
+
+  rankedStreamExpressionsMatched: z
+    .array(z.string().min(1).optional())
+    .optional(),
   streamExpressionScore: z.number().optional(),
   size: z.number().optional(),
   folderSize: z.number().optional(),
@@ -1056,8 +1058,20 @@ export const AIOStream = StreamSchema.extend({
           index: z.number(),
         })
         .optional(),
+      rankedRegexesMatched: z.array(z.string()).optional(),
+      regexScore: z.number().optional(),
       keywordMatched: z.boolean().optional(),
-      streamExpressionMatched: z.number().optional(),
+      streamExpressionMatched: z
+        .object({
+          name: z.string().optional(),
+          index: z.number(),
+        })
+        .or(z.number())
+        .optional(),
+      rankedStreamExpressionsMatched: z
+        .array(z.string().min(1).optional())
+        .optional(),
+      streamExpressionScore: z.number().optional(),
       seadex: z
         .object({
           isBest: z.boolean(),
@@ -1179,6 +1193,9 @@ const StatusResponseSchema = z.object({
     ),
     limits: z.object({
       maxMergedCatalogSources: z.number(),
+      maxStreamExpressions: z.number(),
+      maxStreamExpressionsTotalCharacters: z.number(),
+      maxAddons: z.number(),
     }),
   }),
 });
@@ -1222,7 +1239,7 @@ export const TemplateSchema = z.object({
     setToSaveInstallMenu: z.boolean().optional().default(true), // whether to set the menu to save-install after importing the template
     sourceUrl: z.url().optional(), // URL from which the template was imported (for auto-updates)
   }),
-  config: UserDataSchema, // config of the template
+  config: UserDataSchema.partial(),
 });
 
 export type Template = z.infer<typeof TemplateSchema>;

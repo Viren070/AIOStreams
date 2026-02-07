@@ -1,4 +1,4 @@
-import { UserData } from '../db/schemas.js';
+import { ParsedStream, UserData } from '../db/schemas.js';
 import { MetadataService, MetadataServiceConfig } from '../metadata/service.js';
 import { Metadata } from '../metadata/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
@@ -23,6 +23,7 @@ const logger = createLogger('stream-context');
  */
 export interface ExtendedMetadata extends Metadata {
   absoluteEpisode?: number;
+  relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
 }
 
 export interface ExpressionContext {
@@ -40,6 +41,7 @@ export interface ExpressionContext {
   genres?: string[];
   runtime?: number;
   absoluteEpisode?: number;
+  relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
   originalLanguage?: string;
   daysSinceRelease?: number; // age in days of the movie / **episode**
   hasNextEpisode?: boolean;
@@ -78,9 +80,10 @@ export class StreamContext {
   private _releaseDates: ReleaseDate[] | undefined;
   private _releaseDatesPromise: Promise<ReleaseDate[] | undefined> | undefined;
 
-  // Episode air date for series digital release filter
-  private _episodeAirDate: string | undefined;
-  private _episodeAirDatePromise: Promise<string | undefined> | undefined;
+  // Episode details for series digital release filter and bitrate calculation
+  private _episodeDetails: { air_date?: string; runtime?: number } | undefined;
+  private _episodeDetailsPromise:
+    | Promise<{ air_date?: string; runtime?: number } | undefined> | undefined;
 
   // SeaDex data (for anime)
   private _seadex: SeaDexResult | undefined;
@@ -209,6 +212,7 @@ export class StreamContext {
 
         // Calculate absolute episode for anime
         let absoluteEpisode: number | undefined;
+        let relativeAbsoluteEpisode: number | undefined;
         if (
           this.isAnime &&
           this.parsedId!.season &&
@@ -228,6 +232,33 @@ export class StreamContext {
               seasons
             )
           );
+
+          // Calculate relative absolute episode (within current AniDB entry)
+          const startingSeason =
+            this.animeEntry?.imdb?.seasonNumber ??
+            this.animeEntry?.trakt?.seasonNumber ??
+            this.animeEntry?.tvdb?.seasonNumber ??
+            this.animeEntry?.tmdb?.seasonNumber;
+
+          if (startingSeason) {
+            // Calculate absolute episode from the starting season (AniDB episode number)
+            const episodeNum = Number(this.parsedId!.episode);
+            let totalEpisodesBeforeCurrentSeason = 0;
+
+            for (const s of seasons.filter((s) => s.number !== '0')) {
+              const seasonNum = Number(s.number);
+              if (seasonNum < startingSeason) continue; // Skip seasons before this AniDB entry
+              if (s.number === this.parsedId!.season) break;
+              totalEpisodesBeforeCurrentSeason += s.episodes;
+            }
+
+            const calculated = totalEpisodesBeforeCurrentSeason + episodeNum;
+            // Only set if different from regular episode number
+            if (calculated !== episodeNum) {
+              relativeAbsoluteEpisode = calculated;
+            }
+          }
+
           if (this.animeEntry?.imdb?.nonImdbEpisodes && absoluteEpisode) {
             const nonImdbEpisodesBefore =
               this.animeEntry.imdb.nonImdbEpisodes.filter(
@@ -242,6 +273,7 @@ export class StreamContext {
         const extendedMetadata: ExtendedMetadata = {
           ...metadata,
           absoluteEpisode,
+          relativeAbsoluteEpisode,
         };
 
         return extendedMetadata;
@@ -287,18 +319,23 @@ export class StreamContext {
   }
 
   /**
-   * Start fetching episode air date asynchronously (for series digital release filter).
+   * Start fetching episode details asynchronously (for series digital release filter and bitrate).
    */
-  public startEpisodeAirDateFetch(): void {
+  public startEpisodeDetailsFetch(): void {
+    const useMetadataRuntime =
+      this.userData.bitrate?.useMetadataRuntime !== false;
+    const digitalReleaseFilterEnabled =
+      this.userData.digitalReleaseFilter?.enabled;
+
     if (
-      this._episodeAirDatePromise ||
-      !this.userData.digitalReleaseFilter?.enabled ||
+      this._episodeDetailsPromise ||
+      (!digitalReleaseFilterEnabled && !useMetadataRuntime) ||
       (this.type !== 'series' && !this.isAnime)
     ) {
       return;
     }
 
-    this._episodeAirDatePromise = (async () => {
+    this._episodeDetailsPromise = (async () => {
       const metadata = await this.getMetadata();
       if (
         !metadata?.tmdbId ||
@@ -312,13 +349,13 @@ export class StreamContext {
         return await new TMDBMetadata({
           accessToken: this.userData.tmdbAccessToken,
           apiKey: this.userData.tmdbApiKey,
-        }).getEpisodeAirDate(
+        }).getEpisodeDetails(
           metadata.tmdbId,
           Number(this.parsedId.season),
           Number(this.parsedId.episode)
         );
       } catch (error) {
-        logger.warn(`Error fetching episode air date for ${this.id}: ${error}`);
+        logger.warn(`Error fetching episode details for ${this.id}: ${error}`);
         return undefined;
       }
     })();
@@ -423,19 +460,35 @@ export class StreamContext {
    * Get episode air date, waiting for fetch if needed.
    */
   public async getEpisodeAirDate(): Promise<string | undefined> {
-    if (this._episodeAirDate !== undefined) {
-      return this._episodeAirDate;
+    if (this._episodeDetails !== undefined) {
+      return this._episodeDetails.air_date;
     }
 
-    if (!this._episodeAirDatePromise) {
-      this.startEpisodeAirDateFetch();
+    if (!this._episodeDetailsPromise) {
+      this.startEpisodeDetailsFetch();
     }
 
-    if (this._episodeAirDatePromise) {
-      this._episodeAirDate = await this._episodeAirDatePromise;
+    if (this._episodeDetailsPromise) {
+      this._episodeDetails = await this._episodeDetailsPromise;
     }
 
-    return this._episodeAirDate;
+    return this._episodeDetails?.air_date;
+  }
+
+  public async getEpisodeRuntime(): Promise<number | undefined> {
+    if (this._episodeDetails !== undefined) {
+      return this._episodeDetails.runtime;
+    }
+
+    if (!this._episodeDetailsPromise) {
+      this.startEpisodeDetailsFetch();
+    }
+
+    if (this._episodeDetailsPromise) {
+      this._episodeDetails = await this._episodeDetailsPromise;
+    }
+
+    return this._episodeDetails?.runtime;
   }
 
   /**
@@ -467,8 +520,8 @@ export class StreamContext {
   }
 
   private computeAgeInDays(): number | undefined {
-    if (this.type === 'series' && this._episodeAirDate) {
-      return this.getDaysSince(this._episodeAirDate);
+    if (this.type === 'series' && this._episodeDetails?.air_date) {
+      return this.getDaysSince(this._episodeDetails.air_date);
     } else if (this._metadata?.releaseDate) {
       return this.getDaysSince(this._metadata.releaseDate);
     }
@@ -497,6 +550,67 @@ export class StreamContext {
   }
 
   /**
+   * Convert context to FormatterContext for formatter initialization.
+   * Requires streams to calculate maxRseScore and maxRegexScore.
+   */
+  public toFormatterContext(
+    streams?: ParsedStream[]
+  ): import('../formatters/base.js').FormatterContext {
+    let maxSeScore: number | undefined;
+    let maxRegexScore: number | undefined;
+
+    if (streams && streams.length > 0) {
+      // Calculate max scores from streams
+      const seScores = streams
+        .map((s) => s.streamExpressionScore)
+        .filter((score): score is number => typeof score === 'number');
+      const regexScores = streams
+        .map((s) => s.regexScore)
+        .filter((score): score is number => typeof score === 'number');
+
+      maxSeScore = seScores.length > 0 ? Math.max(...seScores) : undefined;
+      maxRegexScore =
+        regexScores.length > 0 ? Math.max(...regexScores) : undefined;
+    }
+
+    return {
+      userData: this.userData,
+      type: this.type,
+      isAnime: this.isAnime,
+      queryType: this.queryType,
+      season: this.parsedId?.season ? Number(this.parsedId.season) : undefined,
+      episode: this.parsedId?.episode
+        ? Number(this.parsedId.episode)
+        : undefined,
+      title: this._metadata?.title,
+      titles: this._metadata?.titles,
+      year: this._metadata?.year,
+      yearEnd: this._metadata?.yearEnd,
+      genres: this._metadata?.genres,
+      runtime: this._metadata?.runtime,
+      episodeRuntime: this._episodeDetails?.runtime,
+      absoluteEpisode: this._metadata?.absoluteEpisode,
+      relativeAbsoluteEpisode: this._metadata?.relativeAbsoluteEpisode,
+      originalLanguage: iso6391ToLanguage(
+        this._metadata?.originalLanguage || ''
+      ),
+      daysSinceRelease: this.computeAgeInDays(),
+      hasNextEpisode: !!this._metadata?.nextAirDate,
+      daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
+      daysSinceFirstAired: this.computeDaysSinceFirstAired(),
+      daysSinceLastAired: this.computeDaysSinceLastAired(),
+      latestSeason: this._metadata?.seasons
+        ? Math.max(...this._metadata.seasons.map((s) => s.season_number))
+        : undefined,
+      anilistId: this.animeEntry?.mappings?.anilistId,
+      malId: this.animeEntry?.mappings?.malId,
+      hasSeaDex: !!this._seadex?.allHashes?.size,
+      maxSeScore,
+      maxRegexScore,
+    };
+  }
+
+  /**
    * Convert context to a plain object for expression evaluation.
    */
   public toExpressionContext(): Record<string, any> {
@@ -521,6 +635,7 @@ export class StreamContext {
       ),
       daysSinceRelease: this.computeAgeInDays(),
       absoluteEpisode: this._metadata?.absoluteEpisode,
+      relativeAbsoluteEpisode: this._metadata?.relativeAbsoluteEpisode,
       hasNextEpisode: !!this._metadata?.nextAirDate,
       daysUntilNextEpisode: this.computeDaysUntilNextEpisode(),
       daysSinceFirstAired: this.computeDaysSinceFirstAired(),
