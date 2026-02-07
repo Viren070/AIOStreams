@@ -80,9 +80,10 @@ export class StreamContext {
   private _releaseDates: ReleaseDate[] | undefined;
   private _releaseDatesPromise: Promise<ReleaseDate[] | undefined> | undefined;
 
-  // Episode air date for series digital release filter
-  private _episodeAirDate: string | undefined;
-  private _episodeAirDatePromise: Promise<string | undefined> | undefined;
+  // Episode details for series digital release filter and bitrate calculation
+  private _episodeDetails: { air_date?: string; runtime?: number } | undefined;
+  private _episodeDetailsPromise:
+    | Promise<{ air_date?: string; runtime?: number } | undefined> | undefined;
 
   // SeaDex data (for anime)
   private _seadex: SeaDexResult | undefined;
@@ -318,18 +319,23 @@ export class StreamContext {
   }
 
   /**
-   * Start fetching episode air date asynchronously (for series digital release filter).
+   * Start fetching episode details asynchronously (for series digital release filter and bitrate).
    */
-  public startEpisodeAirDateFetch(): void {
+  public startEpisodeDetailsFetch(): void {
+    const useMetadataRuntime =
+      this.userData.bitrate?.useMetadataRuntime !== false;
+    const digitalReleaseFilterEnabled =
+      this.userData.digitalReleaseFilter?.enabled;
+
     if (
-      this._episodeAirDatePromise ||
-      !this.userData.digitalReleaseFilter?.enabled ||
+      this._episodeDetailsPromise ||
+      (!digitalReleaseFilterEnabled && !useMetadataRuntime) ||
       (this.type !== 'series' && !this.isAnime)
     ) {
       return;
     }
 
-    this._episodeAirDatePromise = (async () => {
+    this._episodeDetailsPromise = (async () => {
       const metadata = await this.getMetadata();
       if (
         !metadata?.tmdbId ||
@@ -343,13 +349,13 @@ export class StreamContext {
         return await new TMDBMetadata({
           accessToken: this.userData.tmdbAccessToken,
           apiKey: this.userData.tmdbApiKey,
-        }).getEpisodeAirDate(
+        }).getEpisodeDetails(
           metadata.tmdbId,
           Number(this.parsedId.season),
           Number(this.parsedId.episode)
         );
       } catch (error) {
-        logger.warn(`Error fetching episode air date for ${this.id}: ${error}`);
+        logger.warn(`Error fetching episode details for ${this.id}: ${error}`);
         return undefined;
       }
     })();
@@ -454,19 +460,35 @@ export class StreamContext {
    * Get episode air date, waiting for fetch if needed.
    */
   public async getEpisodeAirDate(): Promise<string | undefined> {
-    if (this._episodeAirDate !== undefined) {
-      return this._episodeAirDate;
+    if (this._episodeDetails !== undefined) {
+      return this._episodeDetails.air_date;
     }
 
-    if (!this._episodeAirDatePromise) {
-      this.startEpisodeAirDateFetch();
+    if (!this._episodeDetailsPromise) {
+      this.startEpisodeDetailsFetch();
     }
 
-    if (this._episodeAirDatePromise) {
-      this._episodeAirDate = await this._episodeAirDatePromise;
+    if (this._episodeDetailsPromise) {
+      this._episodeDetails = await this._episodeDetailsPromise;
     }
 
-    return this._episodeAirDate;
+    return this._episodeDetails?.air_date;
+  }
+
+  public async getEpisodeRuntime(): Promise<number | undefined> {
+    if (this._episodeDetails !== undefined) {
+      return this._episodeDetails.runtime;
+    }
+
+    if (!this._episodeDetailsPromise) {
+      this.startEpisodeDetailsFetch();
+    }
+
+    if (this._episodeDetailsPromise) {
+      this._episodeDetails = await this._episodeDetailsPromise;
+    }
+
+    return this._episodeDetails?.runtime;
   }
 
   /**
@@ -498,8 +520,8 @@ export class StreamContext {
   }
 
   private computeAgeInDays(): number | undefined {
-    if (this.type === 'series' && this._episodeAirDate) {
-      return this.getDaysSince(this._episodeAirDate);
+    if (this.type === 'series' && this._episodeDetails?.air_date) {
+      return this.getDaysSince(this._episodeDetails.air_date);
     } else if (this._metadata?.releaseDate) {
       return this.getDaysSince(this._metadata.releaseDate);
     }
@@ -566,6 +588,7 @@ export class StreamContext {
       yearEnd: this._metadata?.yearEnd,
       genres: this._metadata?.genres,
       runtime: this._metadata?.runtime,
+      episodeRuntime: this._episodeDetails?.runtime,
       absoluteEpisode: this._metadata?.absoluteEpisode,
       relativeAbsoluteEpisode: this._metadata?.relativeAbsoluteEpisode,
       originalLanguage: iso6391ToLanguage(

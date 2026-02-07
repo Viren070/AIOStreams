@@ -128,6 +128,7 @@ export interface ParseValue {
     runtime: number | null;
     genres: string[] | null;
     year: number | null;
+    episodeRuntime: number | null;
   };
   service?: {
     id: string | null;
@@ -175,6 +176,7 @@ export interface FormatterContext {
   yearEnd?: number;
   genres?: string[];
   runtime?: number;
+  episodeRuntime?: number;
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number;
   originalLanguage?: string;
@@ -459,6 +461,7 @@ export abstract class BaseFormatter {
         queryType: this.formatterContext.queryType || null,
         title: this.formatterContext.title || null,
         runtime: this.formatterContext.runtime || null,
+        episodeRuntime: this.formatterContext.episodeRuntime || null,
         genres: this.formatterContext.genres || null,
         year: this.formatterContext.year || null,
       },

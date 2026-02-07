@@ -283,6 +283,25 @@ class StreamFilterer {
       ? iso6391ToLanguage(requestedMetadata.originalLanguage)
       : undefined;
 
+    const episodeRuntime = await context.getEpisodeRuntime();
+    const runtimeToUse =
+      episodeRuntime ||
+      (requestedMetadata?.runtime ? requestedMetadata.runtime : undefined);
+
+    if (episodeRuntime) {
+      logger.debug(`Using episode runtime: ${episodeRuntime} minutes`, {
+        id,
+        episode: `${parsedId?.season}:${parsedId?.episode}`,
+      });
+    } else if (requestedMetadata?.runtime) {
+      logger.debug(
+        `Using series average runtime: ${requestedMetadata.runtime} minutes`,
+        {
+          id,
+        }
+      );
+    }
+
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
 
@@ -314,7 +333,7 @@ class StreamFilterer {
 
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
-          requestedMetadata?.runtime &&
+          runtimeToUse &&
           stream.size &&
           (!isFolderSize || type === 'series') // only calculate for folder sizes if it's a series
         ) {
@@ -337,7 +356,7 @@ class StreamFilterer {
             let hasUnknownSeasons = false;
 
             for (const season of stream.parsedFile?.seasons || []) {
-              const seasonData = requestedMetadata.seasons?.find(
+              const seasonData = requestedMetadata?.seasons?.find(
                 (s) => s.season_number === season
               );
 
@@ -369,9 +388,9 @@ class StreamFilterer {
             }
           }
 
-          if (doBitrateCalculation) {
+          if (doBitrateCalculation && runtimeToUse) {
             stream.bitrate = Math.round(
-              (finalSize * 8) / (requestedMetadata.runtime * 60)
+              (finalSize * 8) / (runtimeToUse * 60)
             );
           }
         }
