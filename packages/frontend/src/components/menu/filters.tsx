@@ -25,7 +25,7 @@ import {
   FaEdit,
   FaUndo,
 } from 'react-icons/fa';
-import { FaTextSlash, FaEye, FaBan } from 'react-icons/fa6';
+import { FaTextSlash } from 'react-icons/fa6';
 import {
   MdCleaningServices,
   MdHdrOn,
@@ -3950,10 +3950,57 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
 
         const isDisabled = override?.disabled;
 
+        const handleEnabledChange = (enabled: boolean) => {
+          setUserData((prev) => {
+            const overrides = [...(prev.regexOverrides || [])];
+            
+            if (enabled) {
+              const newOverrides = overrides.filter(
+                (o) =>
+                  !(
+                    o.pattern === patternStr &&
+                    (!value.name || o.originalName === value.name) &&
+                    o.disabled
+                  )
+              );
+              return { ...prev, regexOverrides: newOverrides };
+            }
+
+            const idx = overrides.findIndex(
+              (o) =>
+                o.pattern === patternStr &&
+                (!value.name || o.originalName === value.name)
+            );
+
+            const entry = {
+              pattern: patternStr,
+              name: override?.name,
+              score: override?.score,
+              originalName: value.name,
+              disabled: true,
+            };
+
+            if (idx >= 0) {
+              overrides[idx] = entry;
+            } else {
+              overrides.push(entry);
+            }
+            return { ...prev, regexOverrides: overrides };
+          });
+          toast.success(enabled ? 'Pattern enabled' : 'Pattern disabled');
+        };
+
         return (
           <div key={index} className={isDisabled ? 'opacity-50' : 'opacity-70'}>
             {renderType === 'simple' && (
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-start">
+                <div className="pt-8 min-w-[24px] flex justify-center">
+                  <Checkbox
+                    value={!isDisabled}
+                    size="lg"
+                    onValueChange={(checked) => handleEnabledChange(checked === true)}
+                  />
+                </div>
                 <div className="flex-1">
                   <TextInput
                     value={patternStr}
@@ -3967,7 +4014,14 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
               </div>
             )}
             {renderType === 'nameable' && (
-              <div className="flex gap-2 items-end">
+              <div className="flex gap-2 items-start">
+                <div className="pt-8 min-w-[24px] flex justify-center">
+                  <Checkbox
+                    value={!isDisabled}
+                    size="lg"
+                    onValueChange={(checked) => handleEnabledChange(checked === true)}
+                  />
+                </div>
                 <div className="flex-none w-1/3">
                   <TextInput
                     value={effectiveName}
@@ -3988,7 +4042,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                     className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
                   />
                 </div>
-                <div className="pb-0.5 flex gap-1 flex-shrink-0">
+                <div className="pb-0.5 flex gap-1 flex-shrink-0 self-end">
                   {isOverridden && (
                     <Tooltip
                       trigger={
@@ -4036,64 +4090,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                   >
                     Override
                   </Tooltip>
-                  <Tooltip
-                      trigger={
-                        <IconButton
-                          size="sm"
-                          rounded
-                          icon={
-                            isDisabled ? (
-                              <FaEye className="text-xs" />
-                            ) : (
-                              <FaBan className="text-xs" />
-                            )
-                          }
-                          intent={isDisabled ? 'success-subtle' : 'gray-subtle'}
-                          onClick={() => {
-                            setUserData((prev) => {
-                              const overrides = [...(prev.regexOverrides || [])];
-                              
-                              if (isDisabled) {
-                                const newOverrides = overrides.filter(
-                                  (o) =>
-                                    o.pattern !== patternStr &&
-                                    (!value.name || o.originalName !== value.name)
-                                );
-                                return { ...prev, regexOverrides: newOverrides };
-                              }
-
-                              const idx = overrides.findIndex(
-                                (o) =>
-                                  o.pattern === patternStr ||
-                                  (value.name && o.originalName === value.name)
-                              );
-
-                              const entry = {
-                                pattern: patternStr,
-                                name: override?.name,
-                                score: override?.score,
-                                originalName: value.name,
-                                disabled: true,
-                              };
-
-                              if (idx >= 0) {
-                                overrides[idx] = entry;
-                              } else {
-                                overrides.push(entry);
-                              }
-                              return { ...prev, regexOverrides: overrides };
-                            });
-                            toast.success(
-                              isDisabled ? 'Pattern re-enabled' : 'Pattern disabled'
-                            );
-                          }}
-                          className="h-[38px] w-[38px] border border-gray-500/20 hover:border-gray-500/50 transition-colors shadow-sm"
-                        />
-                      }
-                    >
-                      {isDisabled ? 'Enable' : 'Disable'}
-                    </Tooltip>
-                  </div>
+                </div>
               </div>
             )}
             {renderType === 'ranked' && (
@@ -4103,7 +4100,14 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                   isOverridden && 'border-primary/50'
                 )}
               >
-                <div className="flex gap-2 items-end">
+                <div className="flex gap-2 items-start">
+                  <div className="pt-8 min-w-[24px] flex justify-center">
+                    <Checkbox
+                      value={!isDisabled}
+                      size="lg"
+                      onValueChange={(checked) => handleEnabledChange(checked === true)}
+                    />
+                  </div>
                   <div className="flex-1">
                     <TextInput
                       value={patternStr}
@@ -4113,7 +4117,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                       className={cn(isDisabled && 'line-through text-gray-500')}
                     />
                   </div>
-                  <div className="pb-0.5 flex gap-1 flex-shrink-0">
+                  <div className="pb-0.5 flex gap-1 flex-shrink-0 self-end">
                     {isOverridden && (
                       <Tooltip
                         trigger={
@@ -4165,66 +4169,9 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                     >
                       Override
                     </Tooltip>
-                    <Tooltip
-                      trigger={
-                        <IconButton
-                          size="sm"
-                          rounded
-                          icon={
-                            isDisabled ? (
-                              <FaEye className="text-xs" />
-                            ) : (
-                              <FaBan className="text-xs" />
-                            )
-                          }
-                          intent={isDisabled ? 'success-subtle' : 'gray-subtle'}
-                          onClick={() => {
-                            setUserData((prev) => {
-                              const overrides = [...(prev.regexOverrides || [])];
-                              
-                              if (isDisabled) {
-                                const newOverrides = overrides.filter(
-                                  (o) =>
-                                    o.pattern !== patternStr &&
-                                    (!value.name || o.originalName !== value.name)
-                                );
-                                return { ...prev, regexOverrides: newOverrides };
-                              }
-
-                              const idx = overrides.findIndex(
-                                (o) =>
-                                  o.pattern === patternStr ||
-                                  (value.name && o.originalName === value.name)
-                              );
-
-                              const entry = {
-                                pattern: patternStr,
-                                name: override?.name,
-                                score: override?.score,
-                                originalName: value.name,
-                                disabled: true,
-                              };
-
-                              if (idx >= 0) {
-                                overrides[idx] = entry;
-                              } else {
-                                overrides.push(entry);
-                              }
-                              return { ...prev, regexOverrides: overrides };
-                            });
-                            toast.success(
-                              isDisabled ? 'Pattern re-enabled' : 'Pattern disabled'
-                            );
-                          }}
-                          className="h-[38px] w-[38px] border border-gray-500/20 hover:border-gray-500/50 transition-colors shadow-sm"
-                        />
-                      }
-                    >
-                      {isDisabled ? 'Enable' : 'Disable'}
-                    </Tooltip>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 pl-[calc(24px+0.5rem)]">
                   <div className="flex-1">
                     <TextInput
                       value={effectiveName}
