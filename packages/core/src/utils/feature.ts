@@ -10,11 +10,14 @@ const DEFAULT_REASON = 'Disabled by owner of the instance';
 const logger = createLogger('core');
 
 async function fetchPatternsFromUrl(
-  url: string
+  url: string,
+  forceRefresh = false
 ): Promise<{ name: string; pattern: string; score?: number }[]> {
-  const cached = await FeatureControl.patternCache.get(url);
-  if (cached) {
-    return cached.patterns;
+  if (!forceRefresh) {
+    const cached = await FeatureControl.patternCache.get(url);
+    if (cached) {
+      return cached.patterns;
+    }
   }
 
   const patterns = await fetchPatternsFromUrlInternal(url);
@@ -104,6 +107,7 @@ export class FeatureControl {
   };
   private static _initialisationPromise: Promise<void> | null = null;
   private static _refreshInterval: NodeJS.Timeout | null = null;
+  private static _dynamicUrls = new Set<string>();
 
   public static patternCache = Cache.getInstance<
     string,
@@ -159,14 +163,17 @@ export class FeatureControl {
    * Fetches patterns from all configured URLs and accumulates them.
    */
   private static async _refreshPatterns(): Promise<void> {
-    const urls = Env.ALLOWED_REGEX_PATTERNS_URLS;
+    const configuredUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+    const urlsIndex = new Set([...configuredUrls, ...this._dynamicUrls]);
+    const urls = Array.from(urlsIndex);
+
     if (!urls || urls.length === 0) {
       return;
     }
 
     logger.debug(`Refreshing regex patterns from ${urls.length} URLs...`);
     const fetchPromises = await Promise.allSettled(
-      urls.map(fetchPatternsFromUrl)
+      urls.map((url) => fetchPatternsFromUrl(url, true))
     );
 
     const patternsFromUrls = fetchPromises
@@ -289,6 +296,8 @@ export class FeatureControl {
 
     const validUrls = this.validateUrls(urls, userData);
     if (!validUrls.length) return [];
+
+    validUrls.forEach((url) => this._dynamicUrls.add(url));
 
     const allPatterns = await Promise.all(
       validUrls.map((url) => this.getPatternsForUrl(url))
