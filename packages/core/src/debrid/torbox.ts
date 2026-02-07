@@ -330,7 +330,7 @@ export class TorboxDebridService implements DebridService {
         ),
       {
         timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
-        ttl: 10000,
+        ttl: playbackInfo.cacheAndPlay ? 130000 : 40000,
       }
     );
     return result;
