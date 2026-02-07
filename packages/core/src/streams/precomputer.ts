@@ -95,10 +95,13 @@ class StreamPrecomputer {
         for (const stream of selectedStreams) {
           const currentScore = streamScores.get(stream.id) ?? 0;
           streamScores.set(stream.id, currentScore + score);
-          const exprName = this.extractNameFromExpression(expression);
-          if (exprName) {
+          const exprNames = this.extractNamesFromExpression(expression);
+          if (exprNames) {
             const existingNames = streamExpressionNames.get(stream.id) || [];
-            streamExpressionNames.set(stream.id, [...existingNames, exprName]);
+            streamExpressionNames.set(stream.id, [
+              ...existingNames,
+              ...exprNames,
+            ]);
           }
         }
 
@@ -405,20 +408,21 @@ class StreamPrecomputer {
             this.userData.preferredStreamExpressions[conditionIndex];
           stream.streamExpressionMatched = {
             index: conditionIndex,
-            name: this.extractNameFromExpression(expression),
+            name: this.extractNamesFromExpression(expression)?.[0],
           };
         }
       }
     }
   }
 
-  private extractNameFromExpression(expression: string): string | undefined {
-    // expressions can have a comment at the beginning like so /* NAME */ <actual expression> so we can extract the name from there for better logging
-    const nameMatch = expression.match(/\/\*\s*(.*?)\s*\*\//);
-    if (nameMatch) {
-      return nameMatch[1];
+  private extractNamesFromExpression(expression: string): string[] | undefined {
+    const regex = /\/\*\s*(.*?)\s*\*\//g;
+    const names: string[] = [];
+    let match;
+    while ((match = regex.exec(expression)) !== null) {
+      names.push(match[1]);
     }
-    return undefined;
+    return names.length > 0 ? names : undefined;
   }
 }
 
