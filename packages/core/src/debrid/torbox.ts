@@ -1,5 +1,4 @@
 import { TorboxApi } from '@torbox/torbox-api';
-import { StremThruError } from 'stremthru';
 import {
   Env,
   ServiceId,
@@ -20,6 +19,79 @@ import { StremThruInterface } from './stremthru.js';
 import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
 
 const logger = createLogger('debrid:torbox');
+
+function convertTorBoxError(error: any): DebridError {
+  if (typeof error.message === 'string') {
+    // extract body JSON by looking for line in error.message starting with Body: and parsing the rest of the line as JSON
+    const body = (() => {
+      const match = error.message.match(/Body:\s*({.*})/);
+      if (match) {
+        try {
+          return JSON.parse(match[1]);
+        } catch (e) {
+          logger.warn(
+            `Failed to parse error body JSON: ${e instanceof Error ? e.message : String(e)}`
+          );
+          return undefined;
+        }
+      }
+      return undefined;
+    })();
+    const errorCode =
+      (body?.error || error.message.match(/([A-Z_]{2,})/)?.[1]) ?? 'UNKNOWN';
+
+    let code: DebridError['code'] = 'UNKNOWN';
+    let message = body?.detail || error.message || 'Unknown error';
+    const statusCode =
+      typeof error.metadata?.status === 'number'
+        ? error.metadata.status
+        : undefined;
+    const statusText =
+      typeof error.metadata?.statusText === 'string'
+        ? error.metadata.statusText
+        : undefined;
+
+    switch (errorCode) {
+      case 'ACTIVE_LIMIT':
+      case 'COOLDOWN_LIMIT':
+      case 'MONTHLY_LIMIT':
+      case 'DOWNLOAD_TOO_LARGE':
+        code = 'STORE_LIMIT_EXCEEDED';
+        break;
+      case 'NO_AUTH':
+      case 'BAD_TOKEN':
+      case 'AUTH_ERROR':
+        code = 'UNAUTHORIZED';
+        break;
+      case 'RATE_LIMIT_EXCEEDED':
+        code = 'TOO_MANY_REQUESTS';
+        break;
+    }
+    if (error.message.includes('429') || error.message.includes('rate limit')) {
+      code = 'TOO_MANY_REQUESTS';
+      message = 'Too many requests - rate limit exceeded';
+    }
+
+    return new DebridError(message, {
+      statusCode: statusCode ?? 500,
+      statusText: statusText ?? 'Unknown error',
+      code,
+      headers: error.metadata?.headers ?? {},
+      body,
+      cause: {},
+      type: 'api_error',
+    });
+  }
+  return new DebridError(error.message, {
+    statusCode: error.statusCode ?? 500,
+    statusText: error.statusText ?? 'Unknown error',
+    code: 'UNKNOWN',
+    headers: error.headers ?? {},
+    body: error,
+    cause: error,
+    type: 'api_error',
+  });
+}
 
 export class TorboxDebridService implements DebridService {
   private readonly apiVersion = 'v1';
@@ -123,60 +195,71 @@ export class TorboxDebridService implements DebridService {
         batches.push(hashesToCheck.slice(i, i + BATCH_SIZE));
       }
 
-      const batchResults = await Promise.all(
-        batches.map(async (batch) => {
-          const result =
-            await this.torboxApi.usenet.getUsenetCachedAvailability(
-              this.apiVersion,
-              {
-                hash: batch.join(','),
-                format: 'list',
-              }
-            );
-          if (!result.data?.success) {
-            throw new DebridError(`Failed to check instant availability`, {
-              statusCode: result.metadata.status,
-              statusText: result.metadata.statusText,
-              code: 'UNKNOWN',
-              headers: result.metadata.headers,
-              body: result.data,
-            });
-          }
-
-          if (!Array.isArray(result.data.data)) {
-            throw new DebridError(
-              'Invalid response from Torbox API. Expected array, got object',
-              {
+      try {
+        const batchResults = await Promise.all(
+          batches.map(async (batch) => {
+            const result =
+              await this.torboxApi.usenet.getUsenetCachedAvailability(
+                this.apiVersion,
+                {
+                  hash: batch.join(','),
+                  format: 'list',
+                  listFiles: 'true',
+                }
+              );
+            if (!result.data?.success) {
+              throw new DebridError(`Failed to check instant availability`, {
                 statusCode: result.metadata.status,
                 statusText: result.metadata.statusText,
                 code: 'UNKNOWN',
                 headers: result.metadata.headers,
                 body: result.data,
-              }
+              });
+            }
+
+            if (!Array.isArray(result.data.data)) {
+              throw new DebridError(
+                'Invalid response from Torbox API. Expected array, got object',
+                {
+                  statusCode: result.metadata.status,
+                  statusText: result.metadata.statusText,
+                  code: 'UNKNOWN',
+                  headers: result.metadata.headers,
+                  body: result.data,
+                }
+              );
+            }
+            return result.data.data;
+          })
+        );
+
+        const allItems = batchResults.flat();
+
+        newResults = allItems.map((item) => ({
+          id: -1,
+          hash: item.hash,
+          status: 'cached',
+          size: item.size,
+          files: item.files?.map((file) => ({
+            id: file.id,
+            name: file.shortName ?? file.name ?? '',
+            size: file.size ?? 0,
+            mimeType: file.mimetype,
+          })),
+        }));
+
+        newResults
+          .filter((item) => item.hash)
+          .forEach((item) => {
+            TorboxDebridService.instantAvailabilityCache.set(
+              getSimpleTextHash(item.hash!),
+              item,
+              Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
             );
-          }
-          return result.data.data;
-        })
-      );
-
-      const allItems = batchResults.flat();
-
-      newResults = allItems.map((item) => ({
-        id: -1,
-        hash: item.hash,
-        status: 'cached',
-        size: item.size,
-      }));
-
-      newResults
-        .filter((item) => item.hash)
-        .forEach((item) => {
-          TorboxDebridService.instantAvailabilityCache.set(
-            getSimpleTextHash(item.hash!),
-            item,
-            Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
-          );
-        });
+          });
+      } catch (error: any) {
+        throw convertTorBoxError(error);
+      }
 
       return [...cachedResults, ...newResults];
     }
@@ -185,38 +268,47 @@ export class TorboxDebridService implements DebridService {
   }
 
   public async addNzb(nzb: string, name: string): Promise<DebridDownload> {
-    const res = await this.torboxApi.usenet.createUsenetDownload(
-      this.apiVersion,
-      {
-        link: nzb,
-        name,
-      }
-    );
+    try {
+      const res = await this.torboxApi.usenet.createUsenetDownload(
+        this.apiVersion,
+        {
+          link: nzb,
+          name,
+        }
+      );
 
-    if (!res.data?.data?.usenetdownloadId) {
-      throw new DebridError(`Usenet download failed: ${res.data?.detail}`, {
-        statusCode: res.metadata.status,
-        statusText: res.metadata.statusText,
-        code: 'UNKNOWN',
-        headers: res.metadata.headers,
-        body: res.data,
-        cause: res.data,
-        type: 'api_error',
-      });
+      if (!res.data?.data?.usenetdownloadId) {
+        throw new DebridError(`Usenet download failed: ${res.data?.detail}`, {
+          statusCode: res.metadata.status,
+          statusText: res.metadata.statusText,
+          code: 'UNKNOWN',
+          headers: res.metadata.headers,
+          body: res.data,
+          cause: res.data,
+          type: 'api_error',
+        });
+      }
+      const usenetDownload = await this.listNzbz(
+        res.data.data.usenetdownloadId.toString()
+      );
+      if (Array.isArray(usenetDownload)) {
+        return usenetDownload[0];
+      }
+      return usenetDownload;
+    } catch (error: any) {
+      throw convertTorBoxError(error);
     }
-    const usenetDownload = await this.listNzbz(
-      res.data.data.usenetdownloadId.toString()
-    );
-    if (Array.isArray(usenetDownload)) {
-      return usenetDownload[0];
-    }
-    return usenetDownload;
   }
 
   public async listNzbz(id?: string): Promise<DebridDownload[]> {
-    const nzbInfo = await this.torboxApi.usenet.getUsenetList(this.apiVersion, {
-      id,
-    });
+    let nzbInfo;
+    try {
+      nzbInfo = await this.torboxApi.usenet.getUsenetList(this.apiVersion, {
+        id,
+      });
+    } catch (error: any) {
+      throw convertTorBoxError(error);
+    }
 
     if (
       !nzbInfo?.data?.data ||
