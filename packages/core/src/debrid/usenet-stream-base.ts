@@ -709,10 +709,6 @@ export abstract class UsenetStreamService implements DebridService {
           };
         });
 
-        this.serviceLogger.debug(`Fetched NZB list from history and WebDAV`, {
-          files: nzbs.map((nzb) => nzb.name),
-        });
-
         this.serviceLogger.debug(
           `Listed NZBs from combined history and WebDAV`,
           {

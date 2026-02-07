@@ -58,7 +58,7 @@ export class BuiltinStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean {
-    return stream.name?.includes('☁️') ?? false;
+    return stream.name?.includes('🗃️') ?? false;
   }
 
   protected getAge(
