@@ -61,7 +61,7 @@ router.get(
         .json(
           await transformer.transformStreams(
             response,
-            streamContext.toFormatterContext(),
+            streamContext.toFormatterContext(response.data.streams),
             { provideStreamData, disableAutoplay }
           )
         );
