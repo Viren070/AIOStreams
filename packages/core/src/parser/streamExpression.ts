@@ -857,16 +857,13 @@ export abstract class StreamExpressionEngine {
         throw new Error(
           "Please use one of 'totalStreams' or 'previousStreams' as the first argument"
         );
-      } else if (
-        releaseGroups.length === 0 ||
-        releaseGroups.some((r) => typeof r !== 'string')
-      ) {
-        throw new Error(
-          'You must provide one or more release group string parameters'
-        );
+      } else if (releaseGroups.some((r) => typeof r !== 'string')) {
+        throw new Error('All provided release groups must be strings');
       }
       return streams.filter((stream) =>
-        releaseGroups.some((r) => stream.parsedFile?.releaseGroup === r)
+        releaseGroups.length === 0
+          ? !!stream.parsedFile?.releaseGroup
+          : releaseGroups.some((r) => stream.parsedFile?.releaseGroup === r)
       );
     };
 
