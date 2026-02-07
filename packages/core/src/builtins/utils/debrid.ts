@@ -314,6 +314,7 @@ export async function processTorrentsForP2P(
           {
             id: 'p2p',
             name: torrent.title,
+            private: torrent.private,
             size: torrent.size,
             status: 'downloaded',
             files: torrent.files,

@@ -344,14 +344,14 @@ function Content() {
               <div className="space-y-2">
                 <p>
                   When enabled, AIOStreams will automatically remove the
-                  magnet/NZB from your debrid dashboard after generating a
+                  torrent/NZB from your debrid dashboard after generating a
                   playback link. This prevents watched items from cluttering
                   your debrid service&apos;s library.
                 </p>
                 <Alert intent="info-basic">
                   <p className="text-sm">
                     This feature only works for built-in addons and supported
-                    debrid services.
+                    debrid services. Private torrents will not be removed.
                   </p>
                 </Alert>
               </div>

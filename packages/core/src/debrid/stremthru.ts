@@ -186,6 +186,7 @@ export class StremThruInterface implements DebridService {
         id: result.data.id,
         status: result.data.status,
         hash: result.data.hash,
+        private: result.data.private,
         size: result.data.files.reduce((acc, file) => acc + file.size, 0),
         files: result.data.files.map((file) => ({
           name: file.name,
@@ -415,7 +416,7 @@ export class StremThruInterface implements DebridService {
       true
     );
 
-    if (autoRemoveDownloads && magnetDownload.id) {
+    if (autoRemoveDownloads && magnetDownload.id && !magnetDownload.private) {
       this.removeMagnet(magnetDownload.id.toString()).catch((err) => {
         logger.warn(
           `Failed to cleanup magnet ${magnetDownload.id} after resolve: ${err.message}`

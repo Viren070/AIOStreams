@@ -89,6 +89,7 @@ export interface DebridDownload {
   library?: boolean;
   hash?: string;
   name?: string;
+  private?: boolean;
   size?: number;
   status:
     | 'cached'
