@@ -309,7 +309,7 @@ function Content() {
         maxSeScore,
       };
 
-      const data = await UserConfigAPI.formatStream(stream, userData, context);
+      const data = await UserConfigAPI.formatStream(stream, context);
       if (!data.success) {
         throw new Error(data.error?.message || 'Failed to format stream');
       }

@@ -85,13 +85,13 @@ function createDummyFormatterContext(
 }
 
 router.post('/', async (req: Request, res: Response) => {
-  const { userData, stream, context } = req.body;
+  const { stream, context } = req.body;
 
   const {
     success: userDataSuccess,
     error: userDataError,
     data: userDataData,
-  } = UserDataSchema.safeParse(userData);
+  } = UserDataSchema.safeParse(context.userData);
   if (!userDataSuccess) {
     logger.error('Invalid user data', { error: userDataError });
     throw new APIError(
