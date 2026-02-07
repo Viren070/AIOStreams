@@ -1228,7 +1228,7 @@ export const TemplateSchema = z.object({
     setToSaveInstallMenu: z.boolean().optional().default(true), // whether to set the menu to save-install after importing the template
     sourceUrl: z.url().optional(), // URL from which the template was imported (for auto-updates)
   }),
-  config: UserDataSchema, // config of the template
+  config: UserDataSchema.partial(),
 });
 
 export type Template = z.infer<typeof TemplateSchema>;
