@@ -87,7 +87,12 @@ class StreamPrecomputer {
     }
 
     // Evaluate each ranked expression and accumulate scores
-    for (const { expression, score } of this.userData.rankedStreamExpressions) {
+    for (const { expression, score, enabled } of this.userData
+      .rankedStreamExpressions) {
+      if (enabled === false) {
+        continue;
+      }
+
       try {
         const selectedStreams = await selector.select(streams, expression);
 

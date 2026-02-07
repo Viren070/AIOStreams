@@ -85,6 +85,7 @@ import { TextInput } from '../ui/text-input';
 import { Tooltip } from '../ui/tooltip';
 import { Alert } from '../ui/alert';
 import { Modal } from '../ui/modal';
+import { Checkbox } from '../ui/checkbox';
 import { useDisclosure } from '@/hooks/disclosure';
 import { toast } from 'sonner';
 import { Slider } from '../ui/slider/slider';
@@ -2097,6 +2098,21 @@ function Content() {
                         {
                           ...(prev.rankedStreamExpressions || [])[index],
                           score,
+                        },
+                        ...(prev.rankedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                  onEnabledChange={(enabled, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      rankedStreamExpressions: [
+                        ...(prev.rankedStreamExpressions || []).slice(0, index),
+                        {
+                          ...(prev.rankedStreamExpressions || [])[index],
+                          enabled,
                         },
                         ...(prev.rankedStreamExpressions || []).slice(
                           index + 1
@@ -4351,10 +4367,13 @@ function TwoTextInputs({
 type RankedExpressionInputProps = {
   title: string;
   description: string;
-  values: { expression: string; score: number }[];
-  onValuesChange: (values: { expression: string; score: number }[]) => void;
+  values: { expression: string; score: number; enabled: boolean }[];
+  onValuesChange: (
+    values: { expression: string; score: number; enabled: boolean }[]
+  ) => void;
   onExpressionChange: (expression: string, index: number) => void;
   onScoreChange: (score: number, index: number) => void;
+  onEnabledChange?: (enabled: boolean, index: number) => void;
 };
 
 function RankedExpressionInputs({
@@ -4364,6 +4383,7 @@ function RankedExpressionInputs({
   onValuesChange,
   onExpressionChange,
   onScoreChange,
+  onEnabledChange,
 }: RankedExpressionInputProps) {
   const importModalDisclosure = useDisclosure(false);
 
@@ -4371,16 +4391,19 @@ function RankedExpressionInputs({
     if (
       Array.isArray(data) &&
       data.every(
-        (value: { expression?: string; score?: number }) =>
+        (value: { expression?: string; score?: number; enabled?: boolean }) =>
           typeof value.expression === 'string' &&
           typeof value.score === 'number'
       )
     ) {
       onValuesChange(
-        data.map((v: { expression: string; score: number }) => ({
-          expression: v.expression,
-          score: v.score,
-        }))
+        data.map(
+          (v: { expression: string; score: number; enabled?: boolean }) => ({
+            expression: v.expression,
+            score: v.score,
+            enabled: v.enabled ?? true,
+          })
+        )
       );
     } else {
       toast.error('Invalid import format');
@@ -4391,6 +4414,7 @@ function RankedExpressionInputs({
     const data = values.map((value) => ({
       expression: value.expression,
       score: value.score,
+      enabled: value.enabled,
     }));
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: 'application/json',
@@ -4408,20 +4432,35 @@ function RankedExpressionInputs({
   return (
     <SettingsCard title={title} description={description}>
       {values.map((value, index) => (
-        <div key={index} className="flex gap-2">
+        <div key={index} className="flex gap-2 items-start">
+          <div className="flex items-center pt-8">
+            <Checkbox
+              value={value.enabled ?? true}
+              defaultValue={true}
+              size="lg"
+              onValueChange={(value) => {
+                if (onEnabledChange) {
+                  onEnabledChange(value === true, index);
+                }
+              }}
+            />
+          </div>
           <div className="flex-[3]">
             <TextInput
               value={value.expression}
               label="Expression"
               placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+              disabled={value.enabled === false}
               onValueChange={(newValue) => onExpressionChange(newValue, index)}
             />
           </div>
           <div className="flex-1 min-w-[100px]">
             <NumberInput
-              value={value.score}
+              value={value.score || 0}
+              defaultValue={0}
               label="Score"
-              onValueChange={(newValue) => onScoreChange(newValue ?? 0, index)}
+              disabled={value.enabled === false}
+              onValueChange={(newValue) => onScoreChange(newValue || 0, index)}
               min={-1_000_000}
               max={1_000_000}
               step={50}
@@ -4468,7 +4507,10 @@ function RankedExpressionInputs({
           intent="primary-subtle"
           icon={<FaPlus />}
           onClick={() =>
-            onValuesChange([...values, { expression: '', score: 0 }])
+            onValuesChange([
+              ...values,
+              { expression: '', score: 0, enabled: true },
+            ])
           }
         />
         <div className="ml-auto flex gap-2">
