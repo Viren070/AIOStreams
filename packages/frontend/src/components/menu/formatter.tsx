@@ -699,7 +699,8 @@ function Content() {
                 label="Regex Score"
                 value={regexScore}
                 onValueChange={setRegexScore}
-                min={0}
+                min={-1_000_000}
+                max={1_000_000}
                 step={5}
                 placeholder="25"
               />
@@ -715,7 +716,8 @@ function Content() {
                 label="SE Score"
                 value={streamExpressionScore}
                 onValueChange={setStreamExpressionScore}
-                min={0}
+                min={-1_000_000}
+                max={1_000_000}
                 step={10}
                 placeholder="150"
               />
