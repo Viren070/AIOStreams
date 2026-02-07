@@ -420,7 +420,10 @@ class StreamPrecomputer {
     const names: string[] = [];
     let match;
     while ((match = regex.exec(expression)) !== null) {
-      names.push(match[1]);
+      const content = match[1];
+      if (!content.startsWith('#')) {
+        names.push(content);
+      }
     }
     return names.length > 0 ? names : undefined;
   }
