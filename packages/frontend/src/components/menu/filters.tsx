@@ -3948,8 +3948,8 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
         const matchesOverride = (
           o: NonNullable<typeof userData.regexOverrides>[number]
         ) =>
-          o.pattern === patternStr &&
-          (!value.name || o.originalName === value.name);
+          o.pattern === patternStr ||
+          (value.name && o.originalName === value.name);
 
         const override = userData.regexOverrides?.find(matchesOverride);
         const isOverridden = !!override && !override.disabled;
