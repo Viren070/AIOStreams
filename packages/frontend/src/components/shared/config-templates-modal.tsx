@@ -28,6 +28,7 @@ import { z, ZodError } from 'zod';
 import { Tooltip } from '../ui/tooltip';
 import { cn } from '../ui/core/styling';
 import { useMenu } from '@/context/menu';
+import { NNTPServersInput } from './template-option';
 
 const formatZodError = (error: ZodError) => {
   console.log(JSON.stringify(error, null, 2));
@@ -73,7 +74,7 @@ interface TemplateInput {
   path: string | string[]; // Path in the userData object (e.g., "tmdbApiKey", "presets.0.options.apiKey", "proxy.url")
   label: string;
   description?: string;
-  type: 'string' | 'password';
+  type: 'string' | 'password' | 'custom-nntp-servers';
   required: boolean;
   value: string;
 }
@@ -970,14 +971,24 @@ export function ConfigTemplatesModal({
       if (!serviceMeta?.credentials) return;
 
       serviceMeta.credentials
-        .filter((cred) => cred.type == 'string' || cred.type == 'password')
+        .filter(
+          (cred) =>
+            cred.type == 'string' ||
+            cred.type == 'password' ||
+            cred.type == 'custom-nntp-servers'
+        )
         .forEach((cred) => {
           serviceInputs.push({
             key: `service_${serviceId}_${cred.id}`,
             path: `services.${serviceId}.${cred.id}`,
             label: `${serviceMeta.name} - ${cred.name || cred.id}`,
             description: cred.description,
-            type: 'password',
+            type:
+              cred.type === 'custom-nntp-servers'
+                ? 'custom-nntp-servers'
+                : cred.type === 'password'
+                  ? 'password'
+                  : 'string',
             required: cred.required ?? true,
             value:
               userData?.services?.find((s: any) => s.id === serviceId)
@@ -1183,11 +1194,34 @@ export function ConfigTemplatesModal({
         }
       });
 
-      // Filter services to only selected ones
-      if (selectedServices.length > 0 && migratedData.services) {
-        migratedData.services = migratedData.services.filter((s: any) =>
-          selectedServices.includes(s.id)
-        );
+      // Enable selected services and disable others
+      if (selectedServices.length > 0) {
+        if (!migratedData.services) {
+          migratedData.services = [];
+        }
+
+        const services = migratedData.services;
+
+        // Add any selected services that don't exist yet
+        selectedServices.forEach((serviceId) => {
+          const existingService = services.find((s: any) => s.id === serviceId);
+          if (!existingService) {
+            services.push({
+              id: serviceId as any,
+              enabled: true,
+              credentials: {},
+            });
+          } else {
+            existingService.enabled = true;
+          }
+        });
+
+        // Disable services that weren't selected
+        services.forEach((service: any) => {
+          if (!selectedServices.includes(service.id)) {
+            service.enabled = false;
+          }
+        });
       }
 
       setUserData((prev) => ({
@@ -1716,14 +1750,27 @@ export function ConfigTemplatesModal({
                 <React.Fragment key={input.key}>
                   {input.type === 'string' ? (
                     <TextInput {...props} />
+                  ) : input.type === 'custom-nntp-servers' ? (
+                    <NNTPServersInput
+                      name={input.label}
+                      description={input.description}
+                      value={inputValues[input.key] || undefined}
+                      onChange={(newValue) => {
+                        setInputValues((prev) => ({
+                          ...prev,
+                          [input.key]: newValue || '',
+                        }));
+                      }}
+                    />
                   ) : (
                     <PasswordInput {...props} />
                   )}
-                  {input.description && (
-                    <MarkdownLite className="text-xs text-[--muted] mt-1">
-                      {input.description}
-                    </MarkdownLite>
-                  )}
+                  {input.type !== 'custom-nntp-servers' &&
+                    input.description && (
+                      <MarkdownLite className="text-xs text-[--muted] mt-1">
+                        {input.description}
+                      </MarkdownLite>
+                    )}
                 </React.Fragment>
               );
             })
