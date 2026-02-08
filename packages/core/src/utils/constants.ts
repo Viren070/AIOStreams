@@ -176,7 +176,7 @@ export const FORMATTER_DETAILS: Record<FormatterType, FormatterDetail> = {
     id: TAMTARO_FORMATTER,
     name: 'Tamtaro',
     description:
-      "Minimal and clean, without flashy coloured emojis, while comprehensive enough to display all necessary information for stream selection. Smartly switches icons for cached (⚡/⏳), proxied (⛊/⛉), library (☁︎/▤), and season packs (⧉/◧). The last line in small caps font shows Usenet's health status (eg., ☑ ɴᴢʙ), SeaDex status (ᴀʟᴛ/ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ), Vidhin's regex tiers (eg., ʀᴇᴍᴜx ᴛ𝟷), networks (egs., ɴᴇᴛғʟɪx), editions (eg., ᴅɪʀᴇᴄᴛᴏʀ's ᴄᴜᴛ), and special attributes like ʀᴇᴘᴀᴄᴋᴇᴅ, ᴜɴᴄᴇɴsᴏʀᴇᴅ, and ᴜɴʀᴀᴛᴇᴅ.",
+      "From Tamtaro's setup. Minimal and clean, yet comprehensive for stream selection. Smartly detects status for cached (⚡/⏳), proxied (⛊/⛉), library (☁︎/▤), and season packs (⧉/◧). The last line in sᴍᴀʟʟ ᴄᴀᴘs highlights special attributes like Usenet's health (☑ ɴᴢʙ), SeaDex (ᴀʟᴛ/ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ), SEL scores (ʀᴇᴍᴜx ᴛ𝟷 ₁,₉₅₀), networks (ɴᴇᴛғʟɪx) and special editions (ᴅɪʀᴇᴄᴛᴏʀ's ᴄᴜᴛ).",
   },
   [LIGHT_GDRIVE_FORMATTER]: {
     id: LIGHT_GDRIVE_FORMATTER,
