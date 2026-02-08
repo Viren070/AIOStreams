@@ -4358,8 +4358,8 @@ function SyncedUrlInputs({
         <div className="space-y-2">
           {urls.length > 0 && (
             <div className="bg-gray-900 rounded-md border border-gray-800 divide-y divide-gray-800">
-              {urls.map((url, index) => (
-                <div key={index} className="flex flex-col">
+              {urls.map((url) => (
+                <div key={url} className="flex flex-col">
                   <div className="flex items-center gap-2 p-2 px-3 text-sm">
                     <span className="flex-1 truncate font-mono text-xs text-[--muted]">
                       {url}
@@ -4370,7 +4370,7 @@ function SyncedUrlInputs({
                       icon={<FaRegTrashAlt />}
                       intent="alert-subtle"
                       onClick={() =>
-                        handleUrlsUpdate(urls.filter((_, i) => i !== index))
+                        handleUrlsUpdate(urls.filter((u) => u !== url))
                       }
                     />
                   </div>
