@@ -4,15 +4,21 @@ import {
   TorBoxSearchAddon,
   TorBoxSearchAddonError,
   fromUrlSafeBase64,
+  APIError,
+  constants,
 } from '@aiostreams/core';
 import { createResponse } from '../../utils/responses.js';
 const router: Router = Router();
 
 const logger = createLogger('builtins:torbox-search');
 
+interface TorboxManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '{/:encodedConfig}/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<TorboxManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
     try {
       const manifest = encodedConfig
@@ -42,9 +48,15 @@ router.get(
   }
 );
 
+interface TorboxStreamParams {
+  encodedConfig?: string; // optional
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<TorboxStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

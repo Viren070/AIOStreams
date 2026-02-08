@@ -16,10 +16,15 @@ const logger = createLogger('server');
 
 router.use(stremioStreamRateLimiter);
 
+interface StreamParams {
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:type/:id.json',
   async (
-    req: Request,
+    req: Request<StreamParams>,
     res: Response<AIOStreamResponse>,
     next: NextFunction
   ) => {
