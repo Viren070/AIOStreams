@@ -3911,7 +3911,14 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
         if (abortController.signal.aborted) return;
         if (res.success && res.data) {
           setSyncedValues(res.data.patterns);
+        } else {
+          setSyncedValues([]);
         }
+      })
+      .catch((err) => {
+        if (abortController.signal.aborted) return;
+        console.error('Failed to resolve patterns:', err);
+        setSyncedValues([]);
       })
       .finally(() => {
         if (!abortController.signal.aborted) {
@@ -4062,9 +4069,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                             setUserData((prev) => ({
                               ...prev,
                               regexOverrides: (prev.regexOverrides || []).filter(
-                                (o) =>
-                                  o.pattern !== patternStr &&
-                                  (!value.name || o.originalName !== value.name)
+                                (o) => !matchesOverride(o)
                               ),
                             }));
                             toast.info('Override removed');
@@ -4139,10 +4144,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                                 regexOverrides: (
                                   prev.regexOverrides || []
                                 ).filter(
-                                  (o) =>
-                                    o.pattern !== patternStr &&
-                                    (!value.name ||
-                                      o.originalName !== value.name)
+                                  (o) => !matchesOverride(o)
                                 ),
                               }));
                               toast.info('Override removed');
@@ -4238,7 +4240,6 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
             />
           )}
           <div className="flex justify-end gap-2 pt-2">
-                  <div className="flex gap-2 justify-end">
                     <Button
                       intent="primary-outline"
                       onClick={() => {
@@ -4281,7 +4282,6 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                     >
                       Save Override
                     </Button>
-                  </div>
           </div>
         </div>
       </Modal>
