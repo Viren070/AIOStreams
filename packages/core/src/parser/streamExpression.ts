@@ -405,6 +405,10 @@ export abstract class StreamExpressionEngine {
             return stream.duration;
           case 'seeders':
             return stream.torrent?.seeders;
+          case 'seScore':
+            return stream.streamExpressionScore;
+          case 'regexScore':
+            return stream.regexScore;
           default:
             throw new Error(`Invalid attribute for values: '${key}'`);
         }
