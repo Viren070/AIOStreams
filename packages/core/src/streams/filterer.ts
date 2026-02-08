@@ -9,7 +9,10 @@ import {
   safeRegexTest,
 } from '../utils/index.js';
 import { LANGUAGES, StreamType } from '../utils/constants.js';
-import { StreamSelector } from '../parser/streamExpression.js';
+import {
+  StreamSelector,
+  extractNamesFromExpression,
+} from '../parser/streamExpression.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import {
   normaliseTitle,
@@ -389,9 +392,7 @@ class StreamFilterer {
           }
 
           if (doBitrateCalculation && runtimeToUse) {
-            stream.bitrate = Math.round(
-              (finalSize * 8) / (runtimeToUse * 60)
-            );
+            stream.bitrate = Math.round((finalSize * 8) / (runtimeToUse * 60));
           }
         }
       });
@@ -2040,12 +2041,17 @@ class StreamFilterer {
     );
     return finalStreams;
   }
-  private truncateCondition(condition: string): string {
-    const maxLength = 50;
-    if (condition.length > maxLength) {
-      return condition.substring(0, maxLength - 3) + '...';
+  private getDisplayCondition(expression: string): string {
+    const names = extractNamesFromExpression(expression);
+    if (names && names.length > 0) {
+      return names.join(', ');
     }
-    return condition;
+    // Fallback to truncation if no names found
+    const maxLength = 50;
+    if (expression.length > maxLength) {
+      return expression.substring(0, maxLength - 3) + '...';
+    }
+    return expression;
   }
 
   public async applyIncludedStreamExpressions(
@@ -2065,7 +2071,7 @@ class StreamFilterer {
       const selectedStreams = await selector.select(streams, expression);
       this.filterStatistics.included.streamExpression.total +=
         selectedStreams.length;
-      const displayCondition = this.truncateCondition(expression);
+      const displayCondition = this.getDisplayCondition(expression);
       this.filterStatistics.included.streamExpression.details[
         displayCondition
       ] =
@@ -2119,7 +2125,7 @@ class StreamFilterer {
           if (selectedStreams.length > 0) {
             this.filterStatistics.removed.excludedFilterCondition.total +=
               selectedStreams.length;
-            const displayCondition = this.truncateCondition(expression);
+            const displayCondition = this.getDisplayCondition(expression);
             this.filterStatistics.removed.excludedFilterCondition.details[
               displayCondition
             ] =
@@ -2165,7 +2171,7 @@ class StreamFilterer {
           if (selectedStreams.length > 0) {
             this.filterStatistics.removed.requiredFilterCondition.total +=
               selectedStreams.length;
-            const displayCondition = this.truncateCondition(expression);
+            const displayCondition = this.getDisplayCondition(expression);
             this.filterStatistics.removed.requiredFilterCondition.details[
               displayCondition
             ] =

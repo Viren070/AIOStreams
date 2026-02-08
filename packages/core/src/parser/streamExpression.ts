@@ -1322,3 +1322,24 @@ export class StreamSelector extends StreamExpressionEngine {
     return await parser.select(streams, condition);
   }
 }
+
+/**
+ * Extracts names from comments in a stream expression.
+ * Names are extracted from block comments that don't start with #.
+ * @param expression The stream expression to extract names from
+ * @returns Array of extracted names, or undefined if none found
+ */
+export function extractNamesFromExpression(
+  expression: string
+): string[] | undefined {
+  const regex = /\/\*\s*(.*?)\s*\*\//g;
+  const names: string[] = [];
+  let match;
+  while ((match = regex.exec(expression)) !== null) {
+    const content = match[1];
+    if (!content.startsWith('#')) {
+      names.push(content);
+    }
+  }
+  return names.length > 0 ? names : undefined;
+}

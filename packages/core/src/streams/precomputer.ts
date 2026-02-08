@@ -8,7 +8,10 @@ import {
   compileRegex,
   parseRegex,
 } from '../utils/index.js';
-import { StreamSelector } from '../parser/streamExpression.js';
+import {
+  StreamSelector,
+  extractNamesFromExpression,
+} from '../parser/streamExpression.js';
 import { StreamContext } from './context.js';
 
 const logger = createLogger('precomputer');
@@ -100,7 +103,7 @@ class StreamPrecomputer {
         for (const stream of selectedStreams) {
           const currentScore = streamScores.get(stream.id) ?? 0;
           streamScores.set(stream.id, currentScore + score);
-          const exprNames = this.extractNamesFromExpression(expression);
+          const exprNames = extractNamesFromExpression(expression);
           if (exprNames) {
             const existingNames = streamExpressionNames.get(stream.id) || [];
             streamExpressionNames.set(stream.id, [
@@ -413,24 +416,11 @@ class StreamPrecomputer {
             this.userData.preferredStreamExpressions[conditionIndex];
           stream.streamExpressionMatched = {
             index: conditionIndex,
-            name: this.extractNamesFromExpression(expression)?.[0],
+            name: extractNamesFromExpression(expression)?.[0],
           };
         }
       }
     }
-  }
-
-  private extractNamesFromExpression(expression: string): string[] | undefined {
-    const regex = /\/\*\s*(.*?)\s*\*\//g;
-    const names: string[] = [];
-    let match;
-    while ((match = regex.exec(expression)) !== null) {
-      const content = match[1];
-      if (!content.startsWith('#')) {
-        names.push(content);
-      }
-    }
-    return names.length > 0 ? names : undefined;
   }
 }
 
