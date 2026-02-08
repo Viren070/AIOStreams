@@ -3938,11 +3938,13 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
     <div className="px-3 pb-3 space-y-2">
       {syncedValues.map((value, index) => {
         const patternStr = typeof value === 'string' ? value : value.pattern;
-        const override = userData.regexOverrides?.find(
-          (o) =>
-            o.pattern === patternStr ||
-            (value.name && o.originalName === value.name)
-        );
+        const matchesOverride = (
+          o: NonNullable<typeof userData.regexOverrides>[number]
+        ) =>
+          o.pattern === patternStr &&
+          (!value.name || o.originalName === value.name);
+
+        const override = userData.regexOverrides?.find(matchesOverride);
         const isOverridden = !!override && !override.disabled;
         const effectiveName = override?.name ?? value.name ?? '';
         const effectiveScore =
@@ -3955,11 +3957,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
             const overrides = [...(prev.regexOverrides || [])];
             
             if (enabled) {
-              const idx = overrides.findIndex(
-                (o) =>
-                  o.pattern === patternStr &&
-                  (!value.name || o.originalName === value.name)
-              );
+              const idx = overrides.findIndex(matchesOverride);
               
               if (idx >= 0) {
                 const existing = overrides[idx];
@@ -3977,11 +3975,7 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
               return prev;
             }
 
-            const idx = overrides.findIndex(
-              (o) =>
-                o.pattern === patternStr &&
-                (!value.name || o.originalName === value.name)
-            );
+            const idx = overrides.findIndex(matchesOverride);
 
             const existingOverride = idx >= 0 ? overrides[idx] : null;
 
