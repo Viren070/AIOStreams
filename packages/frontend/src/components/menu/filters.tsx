@@ -3955,15 +3955,26 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
             const overrides = [...(prev.regexOverrides || [])];
             
             if (enabled) {
-              const newOverrides = overrides.filter(
+              const idx = overrides.findIndex(
                 (o) =>
-                  !(
-                    o.pattern === patternStr &&
-                    (!value.name || o.originalName === value.name) &&
-                    o.disabled
-                  )
+                  o.pattern === patternStr &&
+                  (!value.name || o.originalName === value.name)
               );
-              return { ...prev, regexOverrides: newOverrides };
+              
+              if (idx >= 0) {
+                const existing = overrides[idx];
+                const hasNameChange = existing.name !== undefined && existing.name !== value.name;
+                const hasScoreChange = existing.score !== undefined && existing.score !== value.score;
+                
+                if (hasNameChange || hasScoreChange) {
+                  overrides[idx] = { ...existing, disabled: false };
+                  return { ...prev, regexOverrides: overrides };
+                } else {
+                  overrides.splice(idx, 1);
+                  return { ...prev, regexOverrides: overrides };
+                }
+              }
+              return prev;
             }
 
             const idx = overrides.findIndex(
@@ -3972,10 +3983,12 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                 (!value.name || o.originalName === value.name)
             );
 
+            const existingOverride = idx >= 0 ? overrides[idx] : null;
+
             const entry = {
               pattern: patternStr,
-              name: override?.name,
-              score: override?.score,
+              name: existingOverride?.name,
+              score: existingOverride?.score,
               originalName: value.name,
               disabled: true,
             };

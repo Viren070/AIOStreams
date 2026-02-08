@@ -297,7 +297,13 @@ export class FeatureControl {
     const validUrls = this.validateUrls(urls, userData);
     if (!validUrls.length) return [];
 
-    validUrls.forEach((url) => this._dynamicUrls.add(url));
+    for (const url of validUrls) {
+      if (this._dynamicUrls.size >= 100) {
+        const first = this._dynamicUrls.values().next().value;
+        if (first) this._dynamicUrls.delete(first);
+      }
+      this._dynamicUrls.add(url);
+    }
 
     const allPatterns = await Promise.all(
       validUrls.map((url) => this.getPatternsForUrl(url))
