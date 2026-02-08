@@ -20,8 +20,10 @@ import {
   maskSensitiveInfo,
   RPDB,
   FeatureControl,
+  RegexAccess,
   compileRegex,
   constants,
+  SelAccess,
 } from './index.js';
 import { z, ZodError } from 'zod';
 import {
@@ -293,13 +295,23 @@ export async function validateConfig(
     );
   }
 
+  validateSyncedRegexUrls(config, options?.skipErrorsFromAddonsOrProxies);
+  validateSyncedSelUrls(config, options?.skipErrorsFromAddonsOrProxies);
+
+  const {
+    excluded: excludedStreamExpressions,
+    required: requiredStreamExpressions,
+    preferred: preferredStreamExpressions,
+    included: includedStreamExpressions,
+    ranked: rankedStreamExpressions,
+  } = await SelAccess.resolveSyncedExpressionsForValidation(config);
+
   // Validate total stream expressions count across all filter types
   const totalStreamExpressions =
-    (config.excludedStreamExpressions?.length || 0) +
-    (config.requiredStreamExpressions?.length || 0) +
-    (config.preferredStreamExpressions?.length || 0) +
-    (config.includedStreamExpressions?.length || 0) +
-    (config.rankedStreamExpressions?.length || 0);
+    (excludedStreamExpressions?.length || 0) +
+    (requiredStreamExpressions?.length || 0) +
+    (preferredStreamExpressions?.length || 0) +
+    (includedStreamExpressions?.length || 0);
 
   if (totalStreamExpressions > Env.MAX_STREAM_EXPRESSIONS) {
     throw new Error(
@@ -309,11 +321,11 @@ export async function validateConfig(
 
   // Validate total character count across all stream expressions
   const allExpressions: string[] = [
-    ...(config.excludedStreamExpressions || []),
-    ...(config.requiredStreamExpressions || []),
-    ...(config.preferredStreamExpressions || []),
-    ...(config.includedStreamExpressions || []),
-    ...(config.rankedStreamExpressions?.map((r) => r.expression) || []),
+    ...(excludedStreamExpressions || []),
+    ...(requiredStreamExpressions || []),
+    ...(preferredStreamExpressions || []),
+    ...(includedStreamExpressions || []),
+    ...(rankedStreamExpressions?.map((r) => r.expression) || []),
   ];
   const totalCharacters = allExpressions.reduce(
     (sum, expr) => sum + expr.length,
@@ -507,7 +519,6 @@ export async function validateConfig(
   }
 
   await validateRegexes(config, options?.skipErrorsFromAddonsOrProxies);
-  validateSyncedRegexUrls(config, options?.skipErrorsFromAddonsOrProxies);
 
   await new AIOStreams(ensureDecrypted(config), {
     skipFailedAddons: options?.skipErrorsFromAddonsOrProxies ?? false,
@@ -731,24 +742,33 @@ export function applyMigrations(config: any): UserData {
 }
 
 async function validateRegexes(config: UserData, skipErrors: boolean = false) {
-  const excludedRegexes = config.excludedRegexPatterns;
-  const includedRegexes = config.includedRegexPatterns;
-  const requiredRegexes = config.requiredRegexPatterns;
-  const preferredRegexes = config.preferredRegexPatterns;
-  const rankedRegexes = config.rankedRegexPatterns;
-  const regexAllowed = await FeatureControl.isRegexAllowed(config);
+  const {
+    excluded: excludedRegexes,
+    included: includedRegexes,
+    required: requiredRegexes,
+    preferred: preferredRegexes,
+    ranked: rankedRegexes,
+  } = await RegexAccess.resolveSyncedRegexesForValidation(config);
+
+  const regexAllowed = await RegexAccess.isRegexAllowed({
+    ...config,
+    excludedRegexPatterns: excludedRegexes,
+    includedRegexPatterns: includedRegexes,
+    requiredRegexPatterns: requiredRegexes,
+    preferredRegexPatterns: preferredRegexes,
+    rankedRegexPatterns: rankedRegexes,
+  });
 
   const regexes = [
-    ...(excludedRegexes ?? []),
-    ...(includedRegexes ?? []),
-    ...(requiredRegexes ?? []),
-    ...(preferredRegexes ?? []).map((regex) => regex.pattern),
-    ...(rankedRegexes ?? []).map((regex) => regex.pattern),
+    ...excludedRegexes,
+    ...includedRegexes,
+    ...requiredRegexes,
+    ...preferredRegexes.map((regex) => regex.pattern),
+    ...rankedRegexes.map((regex) => regex.pattern),
   ];
 
   if (!regexAllowed && regexes.length > 0) {
-    const allowedPatterns = (await FeatureControl.allowedRegexPatterns())
-      .patterns;
+    const allowedPatterns = (await RegexAccess.allowedRegexPatterns()).patterns;
     const allowedRegexes = regexes.filter((regex) =>
       allowedPatterns.includes(regex)
     );
@@ -806,6 +826,33 @@ function validateSyncedRegexUrls(
     if (!skipErrors) {
       throw new Error(
         `Forbidden URL(s) in regex configuration: ${invalidUrls.join(', ')}`
+      );
+    }
+  }
+}
+
+function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
+  const isUnrestricted =
+    Env.SEL_SYNC_ACCESS === 'all' ||
+    (Env.SEL_SYNC_ACCESS === 'trusted' && config.trusted);
+
+  if (isUnrestricted) return;
+
+  const allowedUrls = Env.WHITELISTED_SEL_URLS || [];
+  const urlsToCheck = [
+    ...(config.syncedIncludedStreamExpressionUrls || []),
+    ...(config.syncedExcludedStreamExpressionUrls || []),
+    ...(config.syncedRequiredStreamExpressionUrls || []),
+    ...(config.syncedPreferredStreamExpressionUrls || []),
+    ...(config.syncedRankedStreamExpressionUrls || []),
+  ];
+
+  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
+
+  if (invalidUrls.length > 0) {
+    if (!skipErrors) {
+      throw new Error(
+        `Forbidden URL(s) in stream expression sync configuration: ${invalidUrls.join(', ')}`
       );
     }
   }

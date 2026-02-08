@@ -1112,7 +1112,7 @@ export abstract class StreamExpressionEngine {
         const result = this.parser.evaluate(condition);
         clearTimeout(timeout);
         const elapsed = Date.now() - start;
-        logger.debug(
+        logger.silly(
           `Expression evaluated in ${elapsed}ms: "${condition.length > 100 ? condition.substring(0, 100) + '...' : condition}"`
         );
         resolve(result);

@@ -60,7 +60,7 @@ import { PageControls } from '../shared/page-controls';
 import Image from 'next/image';
 import { Combobox } from '../ui/combobox';
 import { FaPlus, FaRegTrashAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import { UserConfigAPI } from '../../services/api';
+import { APIError, fetchCatalogs } from '@/lib/api';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -1434,7 +1434,11 @@ function AddonFetchingBehaviorCard() {
                   disabled={index === 0}
                   onClick={() => {
                     handleGroupsChange(
-                      arrayMove(userData.groups?.groupings || [], index, index - 1)
+                      arrayMove(
+                        userData.groups?.groupings || [],
+                        index,
+                        index - 1
+                      )
                     );
                   }}
                 />
@@ -1448,7 +1452,11 @@ function AddonFetchingBehaviorCard() {
                   }
                   onClick={() => {
                     handleGroupsChange(
-                      arrayMove(userData.groups?.groupings || [], index, index + 1)
+                      arrayMove(
+                        userData.groups?.groupings || [],
+                        index,
+                        index + 1
+                      )
                     );
                   }}
                 />
@@ -1558,100 +1566,98 @@ function CatalogSettingsCard() {
   const { userData, setUserData } = useUserData();
   const [loading, setLoading] = useState(false);
 
-  const fetchCatalogs = async (hideToast = false) => {
+  const fetchCatalogsData = async (hideToast = false) => {
     setLoading(true);
     try {
-      const response = await UserConfigAPI.getCatalogs(userData);
-      if (response.success && response.data) {
-        setUserData((prev) => {
-          const existingMods = prev.catalogModifications || [];
-          const existingIds = new Set(
-            existingMods.map((mod) => `${mod.id}-${mod.type}`)
-          );
+      const catalogs = await fetchCatalogs(userData);
+      setUserData((prev) => {
+        const existingMods = prev.catalogModifications || [];
+        const existingIds = new Set(
+          existingMods.map((mod) => `${mod.id}-${mod.type}`)
+        );
 
-          // first we need to handle existing modifications, to ensure that they keep their order
-          const modifications = existingMods.map((eMod) => {
-            // Skip merged catalogs - they don't come from the API
-            if (eMod.id.startsWith('aiostreams.merged.')) {
-              return eMod;
-            }
-            const nMod = response.data!.find(
-              (c) => c.id === eMod.id && c.type === eMod.type
-            );
-            if (nMod) {
-              return {
-                // keep all the existing attributes, except addonName, type, hideable
-                ...eMod,
-                addonName: nMod.addonName,
-                type: nMod.type,
-                hideable: nMod.hideable,
-                searchable: nMod.searchable,
-              };
-            }
+        // first we need to handle existing modifications, to ensure that they keep their order
+        const modifications = existingMods.map((eMod) => {
+          // Skip merged catalogs - they don't come from the API
+          if (eMod.id.startsWith('aiostreams.merged.')) {
             return eMod;
-          });
-
-          // Add new catalogs at the bottom
-          response.data!.forEach((catalog) => {
-            if (!existingIds.has(`${catalog.id}-${catalog.type}`)) {
-              modifications.push({
-                id: catalog.id,
-                name: catalog.name,
-                type: catalog.type,
-                enabled: true,
-                shuffle: false,
-                usePosterService: !!(
-                  userData.rpdbApiKey || userData.topPosterApiKey
-                ),
-                hideable: catalog.hideable,
-                searchable: catalog.searchable,
-                addonName: catalog.addonName,
-              });
-            }
-          });
-
-          // Filter out modifications for catalogs that no longer exist
-          // BUT keep merged catalogs (they're managed separately)
-          const newCatalogIds = new Set(
-            response.data!.map((c) => `${c.id}-${c.type}`)
+          }
+          const nMod = catalogs.find(
+            (c) => c.id === eMod.id && c.type === eMod.type
           );
-          const filteredMods = modifications.filter((mod) =>
-            newCatalogIds.has(`${mod.id}-${mod.type}`)
-          );
-
-          return {
-            ...prev,
-            catalogModifications: filteredMods,
-          };
+          if (nMod) {
+            return {
+              // keep all the existing attributes, except addonName, type, hideable
+              ...eMod,
+              addonName: nMod.addonName,
+              type: nMod.type,
+              hideable: nMod.hideable,
+              searchable: nMod.searchable,
+            };
+          }
+          return eMod;
         });
-        if (!hideToast) {
-          toast.success('Catalogs fetched successfully');
-        }
-      } else {
-        toast.error(response.error?.message || 'Failed to fetch catalogs');
+
+        // Add new catalogs at the bottom
+        catalogs.forEach((catalog) => {
+          if (!existingIds.has(`${catalog.id}-${catalog.type}`)) {
+            modifications.push({
+              id: catalog.id,
+              name: catalog.name,
+              type: catalog.type,
+              enabled: true,
+              shuffle: false,
+              usePosterService: !!(
+                userData.rpdbApiKey || userData.topPosterApiKey
+              ),
+              hideable: catalog.hideable,
+              searchable: catalog.searchable,
+              addonName: catalog.addonName,
+            });
+          }
+        });
+
+        // Filter out modifications for catalogs that no longer exist
+        // BUT keep merged catalogs (they're managed separately)
+        const newCatalogIds = new Set(catalogs.map((c) => `${c.id}-${c.type}`));
+        const filteredMods = modifications.filter((mod) =>
+          newCatalogIds.has(`${mod.id}-${mod.type}`)
+        );
+
+        return {
+          ...prev,
+          catalogModifications: filteredMods,
+        };
+      });
+      if (!hideToast) {
+        toast.success('Catalogs fetched successfully');
       }
     } catch (error) {
-      toast.error('Failed to fetch catalogs');
+      console.error('Error fetching catalogs:', error);
+      if (error instanceof APIError) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to fetch catalogs');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Auto-fetch catalogs when component mounts
+  // Fetch catalogs on mount
   useEffect(() => {
-    fetchCatalogs(true);
-  }, []); // Empty dependency array means this runs once when component mounts
+    fetchCatalogsData(true);
+  }, []);
 
-  // Track merged catalogs count to trigger refresh when a merged catalog is added/removed
   const mergedCatalogsCountRef = useRef(userData.mergedCatalogs?.length ?? 0);
   useEffect(() => {
     const currentCount = userData.mergedCatalogs?.length ?? 0;
     if (currentCount !== mergedCatalogsCountRef.current) {
       mergedCatalogsCountRef.current = currentCount;
       // Trigger refresh when merged catalog count changes (added or deleted)
-      fetchCatalogs(true);
+      fetchCatalogsData(true);
     }
-  }, [userData.mergedCatalogs?.length, fetchCatalogs]);
+  }, [userData.mergedCatalogs?.length, fetchCatalogsData]);
 
   const capitalise = (str: string | undefined) => {
     if (!str) return '';
@@ -1762,7 +1768,7 @@ function CatalogSettingsCard() {
           icon={<MdRefresh />}
           rounded
           onClick={() => {
-            fetchCatalogs();
+            fetchCatalogsData();
           }}
           loading={loading}
         />

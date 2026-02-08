@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from '@/components/ui/modal';
 import { TextInput } from '@/components/ui/text-input';
 import { Button } from '@/components/ui/button';
-import { UserConfigAPI } from '@/services/api';
+import { loadUserConfig, APIError } from '@/lib/api';
 import { useUserData } from '@/context/userData';
 import { toast } from 'sonner';
 import { PasswordInput } from './ui/password-input';
@@ -33,20 +33,15 @@ export function ConfigModal({
     setLoading(true);
 
     try {
-      const result = await UserConfigAPI.loadConfig(uuid, password);
-
-      if (!result.success || !result.data) {
-        toast.error(result.error?.message || 'Failed to load configuration');
-        return;
-      }
+      const result = await loadUserConfig(uuid, password);
 
       setUserData((prev) => ({
         ...prev,
-        ...result.data!.config, // we just checked that this is not null
+        ...result.userData,
       }));
       setUuid(uuid);
       setPassword(password);
-      setEncryptedPassword(result.data.encryptedPassword);
+      setEncryptedPassword(result.encryptedPassword);
       onSuccess();
     } catch (err) {
       toast.error(

@@ -395,6 +395,11 @@ export const UserDataSchema = z.object({
   syncedIncludedRegexUrls: z.array(z.string().url()).optional(),
   syncedRequiredRegexUrls: z.array(z.string().url()).optional(),
   syncedRankedRegexUrls: z.array(z.string().url()).optional(),
+  syncedPreferredStreamExpressionUrls: z.array(z.string().url()).optional(),
+  syncedExcludedStreamExpressionUrls: z.array(z.string().url()).optional(),
+  syncedIncludedStreamExpressionUrls: z.array(z.string().url()).optional(),
+  syncedRequiredStreamExpressionUrls: z.array(z.string().url()).optional(),
+  syncedRankedStreamExpressionUrls: z.array(z.string().url()).optional(),
   excludedReleaseGroups: z.array(z.string().min(1)).optional(),
   includedReleaseGroups: z.array(z.string().min(1)).optional(),
   requiredReleaseGroups: z.array(z.string().min(1)).optional(),
@@ -477,6 +482,16 @@ export const UserDataSchema = z.object({
         name: z.string().optional(),
         score: z.number().min(-1_000_000).max(1_000_000).optional(),
         originalName: z.string().optional(),
+        disabled: z.boolean().optional(),
+      })
+    )
+    .optional(),
+  selOverrides: z
+    .array(
+      z.object({
+        expression: z.string().min(1),
+        score: z.number().min(-1_000_000).max(1_000_000).optional(),
+        exprNames: z.array(z.string()).optional(),
         disabled: z.boolean().optional(),
       })
     )
@@ -1146,6 +1161,8 @@ const StatusResponseSchema = z.object({
     alternateDesign: z.boolean(),
     protected: z.boolean(),
     regexFilterAccess: z.enum(['none', 'trusted', 'all']),
+    selSyncAccess: z.enum(['all', 'trusted']),
+    whitelistedSelUrls: z.array(z.string()).optional(),
     allowedRegexPatterns: z
       .object({
         patterns: z.array(z.string()),

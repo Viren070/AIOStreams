@@ -1,7 +1,7 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
-  FeatureControl,
+  RegexAccess,
   getTimeTakenSincePoint,
   constants,
   compileRegex,
@@ -266,7 +266,7 @@ class StreamFilterer {
     const { type, id, parsedId, isAnime } = context;
 
     const start = Date.now();
-    const isRegexAllowed = await FeatureControl.isRegexAllowed(this.userData, [
+    const isRegexAllowed = await RegexAccess.isRegexAllowed(this.userData, [
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),

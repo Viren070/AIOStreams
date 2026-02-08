@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { StatusResponse } from '@aiostreams/core';
+import { api } from '@/lib/api';
 
 type StatusContextType = {
   status: StatusResponse | null;
@@ -22,22 +23,14 @@ const StatusContext = createContext<StatusContextType>({
 
 export const useStatus = () => useContext(StatusContext);
 
-const baseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || '/api/v1';
-
 export function StatusProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${baseUrl}/status`)
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(data.error?.message || 'Failed to fetch status');
-        return data;
-      })
-      .then((data) => setStatus(data.data))
+    api<StatusResponse>('/status')
+      .then((data) => setStatus(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);

@@ -11,7 +11,7 @@ import { Select } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { TextInput } from '../ui/text-input';
 import FileParser from '../../../../core/src/parser/file';
-import { UserConfigAPI } from '@/services/api';
+import { getFormattedStream } from '@/lib/api';
 import { SNIPPETS } from '../../../../core/src/utils/constants';
 import { Modal } from '@/components/ui/modal';
 import { useDisclosure } from '@/hooks/disclosure';
@@ -309,11 +309,8 @@ function Content() {
         maxSeScore,
       };
 
-      const data = await UserConfigAPI.formatStream(stream, context);
-      if (!data.success) {
-        throw new Error(data.error?.message || 'Failed to format stream');
-      }
-      setFormattedStream(data.data ?? null);
+      const formattedData = await getFormattedStream(stream, context);
+      setFormattedStream(formattedData);
     } catch (error) {
       console.error('Error formatting stream:', error);
       toast.error(`Failed to format stream: ${error}`);

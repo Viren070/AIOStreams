@@ -1,29 +1,17 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { PageWrapper } from '../shared/page-wrapper';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { cn } from '../ui/core/styling';
-import { SettingsNavCard } from '../shared/settings-card';
-import { ImportModal } from '../shared/import-modal';
+import { PageWrapper } from '../../shared/page-wrapper';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { SettingsNavCard } from '../../shared/settings-card';
 import { useUserData } from '@/context/userData';
 import {
   FaBolt,
   FaClock,
   FaFilm,
-  FaHourglassStart,
   FaLanguage,
-  FaTrash,
-  FaPlus,
-  FaRegTrashAlt,
-  FaRegCopy,
-  FaFileExport,
-  FaFileImport,
   FaEquals,
   FaTachometerAlt,
-  FaArrowUp,
-  FaArrowDown,
-  FaEdit,
-  FaUndo,
+  FaRegCopy,
 } from 'react-icons/fa';
 import { FaTextSlash } from 'react-icons/fa6';
 import {
@@ -37,27 +25,12 @@ import {
   MdMiscellaneousServices,
 } from 'react-icons/md';
 import { BiSolidCameraMovie } from 'react-icons/bi';
-import { SiDolby } from 'react-icons/si';
 import { BsRegex, BsSpeakerFill } from 'react-icons/bs';
 import { GoContainer, GoFileBinary } from 'react-icons/go';
-import {
-  DndContext,
-  useSensors,
-  useSensor,
-  PointerSensor,
-  TouchSensor,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  arrayMove,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { CSS } from '@dnd-kit/utilities';
-import { Select } from '../ui/select';
-import { Combobox } from '../ui/combobox';
-import { SettingsCard } from '../shared/settings-card';
+import { TbFilterCode } from 'react-icons/tb';
+import { Select } from '../../ui/select';
+import { Combobox } from '../../ui/combobox';
+import { SettingsCard } from '../../shared/settings-card';
 import {
   RESOLUTIONS,
   QUALITIES,
@@ -77,103 +50,56 @@ import {
   MAX_AGE_HOURS,
   MIN_BITRATE,
   MAX_BITRATE,
-} from '../../../../core/src/utils/constants';
-import { PageControls } from '../shared/page-controls';
-import { Switch } from '../ui/switch';
+} from '../../../../../core/src/utils/constants';
+import { Switch } from '../../ui/switch';
 import { useStatus } from '@/context/status';
-import { NumberInput } from '../ui/number-input';
-import { IconButton, Button } from '../ui/button';
-import { TextInput } from '../ui/text-input';
-import { Tooltip } from '../ui/tooltip';
-import { Alert } from '../ui/alert';
-import { Modal } from '../ui/modal';
-import { Checkbox } from '../ui/checkbox';
+import { NumberInput } from '../../ui/number-input';
+import { IconButton, Button } from '../../ui/button';
+import { Tooltip } from '../../ui/tooltip';
+import { Alert } from '../../ui/alert';
+import { Modal } from '../../ui/modal';
 import { useDisclosure } from '@/hooks/disclosure';
-import { toast } from 'sonner';
-import { Slider } from '../ui/slider/slider';
-import { TbFilterCode } from 'react-icons/tb';
-import { PasswordInput } from '../ui/password-input';
-import MarkdownLite from '../shared/markdown-lite';
+import { Slider } from '../../ui/slider/slider';
+import MarkdownLite from '../../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@/utils/clipboard';
-import { UserData } from '@aiostreams/core';
-import { UserConfigAPI } from '@/services/api';
 
-/**
- * Formats age in hours to a human-readable string.
- * Shows hours if < 24, otherwise shows days.
- */
-function formatAgeDisplay(hours: number): string {
-  if (hours < 24) {
-    return `${hours}h`;
-  }
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
-}
-
-type Resolution = (typeof RESOLUTIONS)[number];
-type Quality = (typeof QUALITIES)[number];
-type Encode = (typeof ENCODES)[number];
-type StreamType = (typeof STREAM_TYPES)[number];
-type VisualTag = (typeof VISUAL_TAGS)[number];
-type AudioTag = (typeof AUDIO_TAGS)[number];
-type AudioChannel = (typeof AUDIO_CHANNELS)[number];
-type Language = (typeof LANGUAGES)[number];
-
-const defaultPreferredResolutions: Resolution[] = [
-  '2160p',
-  '1440p',
-  '1080p',
-  '720p',
-  '576p',
-  '480p',
-  '360p',
-  '240p',
-  '144p',
-  'Unknown',
-];
-
-const defaultPreferredQualities: Quality[] = [
-  'BluRay REMUX',
-  'BluRay',
-  'WEB-DL',
-  'WEBRip',
-  'HDRip',
-  'HC HD-Rip',
-  'DVDRip',
-  'HDTV',
-  'CAM',
-  'TS',
-  'TC',
-  'SCR',
-  'Unknown',
-];
-
-const defaultPreferredEncodes: Encode[] = [];
-
-const defaultPreferredStreamTypes: StreamType[] = [];
-
-const defaultPreferredVisualTags: VisualTag[] = [];
-
-const defaultPreferredAudioTags: AudioTag[] = [];
-
-const tabsRootClass = cn(
-  'w-full grid grid-cols-1 lg:grid lg:grid-cols-[300px,1fr] gap-4'
-);
-
-const tabsTriggerClass = cn(
-  'font-bold text-base px-6 rounded-[--radius-md] w-fit lg:w-full border-none data-[state=active]:bg-[--subtle] data-[state=active]:text-white dark:hover:text-white',
-  'h-9 lg:justify-start px-3 transition-all duration-200 hover:bg-[--subtle]/50 hover:transform'
-);
-
-const tabsListClass = cn(
-  'w-full flex flex-wrap lg:flex-nowrap h-fit xl:h-10',
-  'lg:block p-2 lg:p-0'
-);
-
-const tabsContentClass = cn(
-  'space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-300'
-);
+import { FilterSettings } from './_components/filter-settings';
+import {
+  TextInputs,
+  TwoTextInputs,
+  RankedExpressionInputs,
+  RankedRegexInputs,
+} from './_components/filter-inputs';
+import {
+  SizeRangeSlider,
+  BitrateRangeSlider,
+} from './_components/range-sliders';
+import {
+  type Resolution,
+  type Quality,
+  type Encode,
+  type StreamType,
+  type VisualTag,
+  type AudioTag,
+  type AudioChannel,
+  type Language,
+  defaultPreferredResolutions,
+  defaultPreferredQualities,
+  defaultPreferredEncodes,
+  defaultPreferredStreamTypes,
+  defaultPreferredVisualTags,
+  defaultPreferredAudioTags,
+  tabsRootClass,
+  tabsTriggerClass,
+  tabsListClass,
+  tabsContentClass,
+  formatAgeDisplay,
+  HeadingWithPageControls,
+  deduplicatorMultiGroupBehaviourHelp,
+  defaultDeduplicatorMultiGroupBehaviour,
+} from './_components/filter-utils';
+import type { SyncConfig } from './_components/synced-patterns';
 
 export function FiltersMenu() {
   return (
@@ -184,16 +110,6 @@ export function FiltersMenu() {
     </>
   );
 }
-
-const deduplicatorMultiGroupBehaviourHelp = {
-  conservative:
-    'Removes duplicates conservatively - removes uncached versions which have cached versions from the same service, and removes P2P versions when cached versions exist',
-  aggressive:
-    'Aggressively removes all uncached and p2p streams when cached versions exist, and removes uncached streams when p2p versions exist',
-  keep_all: 'Keeps all streams and processes each group independently',
-};
-
-const defaultDeduplicatorMultiGroupBehaviour = 'aggressive';
 
 function Content() {
   const [tab, setTab] = useState('cache');
@@ -215,10 +131,16 @@ function Content() {
       | 'syncedExcludedRegexUrls'
       | 'syncedIncludedRegexUrls'
       | 'syncedRequiredRegexUrls'
-  ) => ({
+      | 'syncedPreferredStreamExpressionUrls'
+      | 'syncedExcludedStreamExpressionUrls'
+      | 'syncedIncludedStreamExpressionUrls'
+      | 'syncedRequiredStreamExpressionUrls'
+      | 'syncedRankedStreamExpressionUrls'
+  ): { syncConfig: SyncConfig } => ({
     syncConfig: {
       urls: userData[key] || [],
       trusted: userData.trusted,
+      syncMode: key.includes('StreamExpression') ? 'sel' : 'regex',
       onUrlsChange: (urls: string[]) => {
         setUserData((prev) => ({
           ...prev,
@@ -488,9 +410,8 @@ function Content() {
                                 value as StreamType[],
                             }));
                           }}
-                          options={STREAM_TYPES.filter(
-                            (streamType) =>
-                              ['debrid', 'usenet'].includes(streamType) // only these 2 stream types can have a service
+                          options={STREAM_TYPES.filter((streamType) =>
+                            ['debrid', 'usenet'].includes(streamType)
                           ).map((streamType) => ({
                             label: streamType,
                             value: streamType,
@@ -595,9 +516,8 @@ function Content() {
                                 value as StreamType[],
                             }));
                           }}
-                          options={STREAM_TYPES.filter(
-                            (streamType) =>
-                              ['debrid', 'usenet'].includes(streamType) // only these 2 stream types can have a service
+                          options={STREAM_TYPES.filter((streamType) =>
+                            ['debrid', 'usenet'].includes(streamType)
                           ).map((streamType) => ({
                             label: streamType,
                             value: streamType,
@@ -643,30 +563,30 @@ function Content() {
                 requiredOptions={userData.requiredResolutions || []}
                 excludedOptions={userData.excludedResolutions || []}
                 includedOptions={userData.includedResolutions || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredResolutions: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredResolutions: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedResolutions: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedResolutions: included,
-                  }));
-                }}
+                  }))
+                }
                 options={RESOLUTIONS.map((resolution) => ({
                   name: resolution,
                   value: resolution,
@@ -685,30 +605,30 @@ function Content() {
                 requiredOptions={userData.requiredQualities || []}
                 excludedOptions={userData.excludedQualities || []}
                 includedOptions={userData.includedQualities || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredQualities: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredQualities: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedQualities: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedQualities: included,
-                  }));
-                }}
+                  }))
+                }
                 options={QUALITIES.map((quality) => ({
                   name: quality,
                   value: quality,
@@ -727,30 +647,30 @@ function Content() {
                 requiredOptions={userData.requiredEncodes || []}
                 excludedOptions={userData.excludedEncodes || []}
                 includedOptions={userData.includedEncodes || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredEncodes: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredEncodes: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedEncodes: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedEncodes: included,
-                  }));
-                }}
+                  }))
+                }
                 options={ENCODES.map((encode) => ({
                   name: encode,
                   value: encode,
@@ -769,30 +689,30 @@ function Content() {
                 requiredOptions={userData.requiredStreamTypes || []}
                 excludedOptions={userData.excludedStreamTypes || []}
                 includedOptions={userData.includedStreamTypes || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredStreamTypes: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredStreamTypes: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedStreamTypes: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedStreamTypes: included,
-                  }));
-                }}
+                  }))
+                }
                 options={STREAM_TYPES.map((streamType) => ({
                   name: streamType,
                   value: streamType,
@@ -811,30 +731,30 @@ function Content() {
                 requiredOptions={userData.requiredVisualTags || []}
                 excludedOptions={userData.excludedVisualTags || []}
                 includedOptions={userData.includedVisualTags || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredVisualTags: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredVisualTags: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedVisualTags: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedVisualTags: included,
-                  }));
-                }}
+                  }))
+                }
                 options={VISUAL_TAGS.map((visualTag) => ({
                   name: visualTag,
                   value: visualTag,
@@ -851,30 +771,30 @@ function Content() {
                 requiredOptions={userData.requiredAudioTags || []}
                 excludedOptions={userData.excludedAudioTags || []}
                 includedOptions={userData.includedAudioTags || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredAudioTags: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredAudioTags: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedAudioTags: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedAudioTags: included,
-                  }));
-                }}
+                  }))
+                }
                 options={AUDIO_TAGS.map((audioTag) => ({
                   name: audioTag,
                   value: audioTag,
@@ -891,30 +811,30 @@ function Content() {
                 requiredOptions={userData.requiredAudioChannels || []}
                 excludedOptions={userData.excludedAudioChannels || []}
                 includedOptions={userData.includedAudioChannels || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredAudioChannels: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredAudioChannels: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedAudioChannels: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedAudioChannels: included,
-                  }));
-                }}
+                  }))
+                }
                 options={AUDIO_CHANNELS.map((audioChannel) => ({
                   name: audioChannel,
                   value: audioChannel,
@@ -931,30 +851,30 @@ function Content() {
                 requiredOptions={userData.requiredLanguages || []}
                 excludedOptions={userData.excludedLanguages || []}
                 includedOptions={userData.includedLanguages || []}
-                onPreferredChange={(preferred) => {
+                onPreferredChange={(preferred) =>
                   setUserData((prev) => ({
                     ...prev,
                     preferredLanguages: preferred,
-                  }));
-                }}
-                onRequiredChange={(required) => {
+                  }))
+                }
+                onRequiredChange={(required) =>
                   setUserData((prev) => ({
                     ...prev,
                     requiredLanguages: required,
-                  }));
-                }}
-                onExcludedChange={(excluded) => {
+                  }))
+                }
+                onExcludedChange={(excluded) =>
                   setUserData((prev) => ({
                     ...prev,
                     excludedLanguages: excluded,
-                  }));
-                }}
-                onIncludedChange={(included) => {
+                  }))
+                }
+                onIncludedChange={(included) =>
                   setUserData((prev) => ({
                     ...prev,
                     includedLanguages: included,
-                  }));
-                }}
+                  }))
+                }
                 options={LANGUAGES.map((language) => ({
                   name: language
                     .split(' ')
@@ -1701,14 +1621,10 @@ function Content() {
                     onValueChange={(value) => {
                       setUserData((prev) => ({
                         ...prev,
-                        yearMatching: {
-                          ...prev.yearMatching,
-                          enabled: value,
-                        },
+                        yearMatching: { ...prev.yearMatching, enabled: value },
                       }));
                     }}
                   />
-
                   <Switch
                     label="Strict"
                     side="right"
@@ -1723,7 +1639,6 @@ function Content() {
                       }));
                     }}
                   />
-
                   <NumberInput
                     label="Year Tolerance"
                     disabled={!userData.yearMatching?.enabled}
@@ -1741,7 +1656,6 @@ function Content() {
                     max={100}
                     help="The number of years to tolerate when matching years. For example, if the year tolerance is 5, then a stream with a year of 2020 will match a request for 2025."
                   />
-
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Combobox
@@ -1810,7 +1724,6 @@ function Content() {
                       }));
                     }}
                   />
-
                   <Switch
                     label="Strict"
                     side="right"
@@ -1828,7 +1741,6 @@ function Content() {
                       }));
                     }}
                   />
-
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Combobox
@@ -1931,8 +1843,8 @@ function Content() {
                           functions
                         </li>
                         <li>
-                          Apply conditional logic using ternary operators
-                          <code>expression ? arrayIfTrue : arrayIfFalse</code>
+                          Apply conditional logic using ternary operators{' '}
+                          <code>expression ? arrayIfTrue : arrayIfFalse</code>{' '}
                           where the two arrays can be replaced with true or
                           false for all streams and no streams respectively.
                         </li>
@@ -1968,21 +1880,7 @@ function Content() {
                       requiredStreamExpressions: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      requiredStreamExpressions: [
-                        ...(prev.requiredStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        value,
-                        ...(prev.requiredStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
+                  {...getSyncedProps('syncedRequiredStreamExpressionUrls')}
                 />
                 <TextInputs
                   label="Excluded Stream Expressions"
@@ -1996,21 +1894,7 @@ function Content() {
                       excludedStreamExpressions: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedStreamExpressions: [
-                        ...(prev.excludedStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        value,
-                        ...(prev.excludedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
+                  {...getSyncedProps('syncedExcludedStreamExpressionUrls')}
                 />
                 <TextInputs
                   label="Included Stream Expressions"
@@ -2024,21 +1908,7 @@ function Content() {
                       includedStreamExpressions: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      includedStreamExpressions: [
-                        ...(prev.includedStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        value,
-                        ...(prev.includedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
+                  {...getSyncedProps('syncedIncludedStreamExpressionUrls')}
                 />
                 <TextInputs
                   label="Preferred Stream Expressions"
@@ -2052,21 +1922,7 @@ function Content() {
                       preferredStreamExpressions: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredStreamExpressions: [
-                        ...(prev.preferredStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        value,
-                        ...(prev.preferredStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
+                  {...getSyncedProps('syncedPreferredStreamExpressionUrls')}
                 />
                 <RankedExpressionInputs
                   title="Ranked Stream Expressions"
@@ -2123,6 +1979,7 @@ function Content() {
                       ],
                     }));
                   }}
+                  {...getSyncedProps('syncedRankedStreamExpressionUrls')}
                 />
               </div>
             </>
@@ -2138,30 +1995,18 @@ function Content() {
               </div>
               <div className="space-y-4">
                 {mode === 'pro' && (
-                  <>
-                    <TextInputs
-                      label="Required Keywords"
-                      help="Streams that do not contain any of these keywords will be excluded"
-                      itemName="Keyword"
-                      values={userData.requiredKeywords || []}
-                      onValuesChange={(values) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          requiredKeywords: values,
-                        }));
-                      }}
-                      onValueChange={(value, index) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          requiredKeywords: [
-                            ...(prev.requiredKeywords || []).slice(0, index),
-                            value,
-                            ...(prev.requiredKeywords || []).slice(index + 1),
-                          ],
-                        }));
-                      }}
-                    />
-                  </>
+                  <TextInputs
+                    label="Required Keywords"
+                    help="Streams that do not contain any of these keywords will be excluded"
+                    itemName="Keyword"
+                    values={userData.requiredKeywords || []}
+                    onValuesChange={(values) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredKeywords: values,
+                      }));
+                    }}
+                  />
                 )}
                 <TextInputs
                   label="Excluded Keywords"
@@ -2174,42 +2019,20 @@ function Content() {
                       excludedKeywords: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedKeywords: [
-                        ...(prev.excludedKeywords || []).slice(0, index),
-                        value,
-                        ...(prev.excludedKeywords || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
                 />
                 {mode === 'pro' && (
-                  <>
-                    <TextInputs
-                      label="Included Keywords"
-                      help="Streams that contain any of these keywords will be included, ignoring ANY other exclude/required filters, not just for this filter"
-                      itemName="Keyword"
-                      values={userData.includedKeywords || []}
-                      onValuesChange={(values) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          includedKeywords: values,
-                        }));
-                      }}
-                      onValueChange={(value, index) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          includedKeywords: [
-                            ...(prev.includedKeywords || []).slice(0, index),
-                            value,
-                            ...(prev.includedKeywords || []).slice(index + 1),
-                          ],
-                        }));
-                      }}
-                    />
-                  </>
+                  <TextInputs
+                    label="Included Keywords"
+                    help="Streams that contain any of these keywords will be included, ignoring ANY other exclude/required filters, not just for this filter"
+                    itemName="Keyword"
+                    values={userData.includedKeywords || []}
+                    onValuesChange={(values) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        includedKeywords: values,
+                      }));
+                    }}
+                  />
                 )}
                 <TextInputs
                   label="Preferred Keywords"
@@ -2220,16 +2043,6 @@ function Content() {
                     setUserData((prev) => ({
                       ...prev,
                       preferredKeywords: values,
-                    }));
-                  }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredKeywords: [
-                        ...(prev.preferredKeywords || []).slice(0, index),
-                        value,
-                        ...(prev.preferredKeywords || []).slice(index + 1),
-                      ],
                     }));
                   }}
                 />
@@ -2257,16 +2070,6 @@ function Content() {
                       requiredReleaseGroups: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      requiredReleaseGroups: [
-                        ...(prev.requiredReleaseGroups || []).slice(0, index),
-                        value,
-                        ...(prev.requiredReleaseGroups || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
                 />
                 <TextInputs
                   label="Excluded Release Groups"
@@ -2277,16 +2080,6 @@ function Content() {
                     setUserData((prev) => ({
                       ...prev,
                       excludedReleaseGroups: values,
-                    }));
-                  }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedReleaseGroups: [
-                        ...(prev.excludedReleaseGroups || []).slice(0, index),
-                        value,
-                        ...(prev.excludedReleaseGroups || []).slice(index + 1),
-                      ],
                     }));
                   }}
                 />
@@ -2301,16 +2094,6 @@ function Content() {
                       includedReleaseGroups: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      includedReleaseGroups: [
-                        ...(prev.includedReleaseGroups || []).slice(0, index),
-                        value,
-                        ...(prev.includedReleaseGroups || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
                 />
                 <TextInputs
                   label="Preferred Release Groups"
@@ -2321,16 +2104,6 @@ function Content() {
                     setUserData((prev) => ({
                       ...prev,
                       preferredReleaseGroups: values,
-                    }));
-                  }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredReleaseGroups: [
-                        ...(prev.preferredReleaseGroups || []).slice(0, index),
-                        value,
-                        ...(prev.preferredReleaseGroups || []).slice(index + 1),
-                      ],
                     }));
                   }}
                 />
@@ -2413,36 +2186,19 @@ function Content() {
               </div>
               <div className="space-y-4">
                 {mode === 'pro' && (
-                  <>
-                    <TextInputs
-                      label="Required Regex"
-                      help="Streams that do not match any of these regular expressions will be excluded"
-                      itemName="Regex"
-                      values={userData.requiredRegexPatterns || []}
-                      onValuesChange={(values) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          requiredRegexPatterns: values,
-                        }));
-                      }}
-                      onValueChange={(value, index) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          requiredRegexPatterns: [
-                            ...(prev.requiredRegexPatterns || []).slice(
-                              0,
-                              index
-                            ),
-                            value,
-                            ...(prev.requiredRegexPatterns || []).slice(
-                              index + 1
-                            ),
-                          ],
-                        }));
-                      }}
-                      {...getSyncedProps('syncedRequiredRegexUrls')}
-                    />
-                  </>
+                  <TextInputs
+                    label="Required Regex"
+                    help="Streams that do not match any of these regular expressions will be excluded"
+                    itemName="Regex"
+                    values={userData.requiredRegexPatterns || []}
+                    onValuesChange={(values) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredRegexPatterns: values,
+                      }));
+                    }}
+                    {...getSyncedProps('syncedRequiredRegexUrls')}
+                  />
                 )}
                 <TextInputs
                   label="Excluded Regex"
@@ -2455,49 +2211,22 @@ function Content() {
                       excludedRegexPatterns: values,
                     }));
                   }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedRegexPatterns: [
-                        ...(prev.excludedRegexPatterns || []).slice(0, index),
-                        value,
-                        ...(prev.excludedRegexPatterns || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
                   {...getSyncedProps('syncedExcludedRegexUrls')}
                 />
                 {mode === 'pro' && (
-                  <>
-                    <TextInputs
-                      label="Included Regex"
-                      help="Streams that match any of these regular expressions will be included, ignoring other exclude/required filters"
-                      itemName="Regex"
-                      values={userData.includedRegexPatterns || []}
-                      onValuesChange={(values) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          includedRegexPatterns: values,
-                        }));
-                      }}
-                      onValueChange={(value, index) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          includedRegexPatterns: [
-                            ...(prev.includedRegexPatterns || []).slice(
-                              0,
-                              index
-                            ),
-                            value,
-                            ...(prev.includedRegexPatterns || []).slice(
-                              index + 1
-                            ),
-                          ],
-                        }));
-                      }}
-                      {...getSyncedProps('syncedIncludedRegexUrls')}
-                    />
-                  </>
+                  <TextInputs
+                    label="Included Regex"
+                    help="Streams that match any of these regular expressions will be included, ignoring other exclude/required filters"
+                    itemName="Regex"
+                    values={userData.includedRegexPatterns || []}
+                    onValuesChange={(values) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        includedRegexPatterns: values,
+                      }));
+                    }}
+                    {...getSyncedProps('syncedIncludedRegexUrls')}
+                  />
                 )}
                 <TwoTextInputs
                   title="Preferred Regex Patterns"
@@ -2566,10 +2295,7 @@ function Content() {
                       ...prev,
                       rankedRegexPatterns: [
                         ...(prev.rankedRegexPatterns || []).slice(0, index),
-                        {
-                          ...(prev.rankedRegexPatterns || [])[index],
-                          pattern,
-                        },
+                        { ...(prev.rankedRegexPatterns || [])[index], pattern },
                         ...(prev.rankedRegexPatterns || []).slice(index + 1),
                       ],
                     }));
@@ -2579,10 +2305,7 @@ function Content() {
                       ...prev,
                       rankedRegexPatterns: [
                         ...(prev.rankedRegexPatterns || []).slice(0, index),
-                        {
-                          ...(prev.rankedRegexPatterns || [])[index],
-                          name,
-                        },
+                        { ...(prev.rankedRegexPatterns || [])[index], name },
                         ...(prev.rankedRegexPatterns || []).slice(index + 1),
                       ],
                     }));
@@ -2592,10 +2315,7 @@ function Content() {
                       ...prev,
                       rankedRegexPatterns: [
                         ...(prev.rankedRegexPatterns || []).slice(0, index),
-                        {
-                          ...(prev.rankedRegexPatterns || [])[index],
-                          score,
-                        },
+                        { ...(prev.rankedRegexPatterns || [])[index], score },
                         ...(prev.rankedRegexPatterns || []).slice(index + 1),
                       ],
                     }));
@@ -2616,7 +2336,6 @@ function Content() {
           <TabsContent value="bitrate" className="space-y-4">
             <>
               <HeadingWithPageControls heading="Bitrate" />
-
               <div className="mb-4">
                 <p className="text-sm text-[--muted]">
                   Set minimum and maximum bitrate limits for movies, series, and
@@ -2627,14 +2346,12 @@ function Content() {
                   precedence over regular series limits.
                 </p>
               </div>
-
               <Alert
                 intent="warning"
                 className="mb-4"
                 title="Bitrate Accuracy"
                 description="Bitrate values are estimates calculated from file size and duration. These represent average bitrates and may not reflect peak bitrates or exact encoding quality."
               />
-
               <div className="space-y-4">
                 <div className="rounded-[--radius-md] border bg-[--background] p-4">
                   <Switch
@@ -2645,15 +2362,11 @@ function Content() {
                     onValueChange={(value) => {
                       setUserData((prev: any) => ({
                         ...prev,
-                        bitrate: {
-                          ...prev.bitrate,
-                          useMetadataRuntime: value,
-                        },
+                        bitrate: { ...prev.bitrate, useMetadataRuntime: value },
                       }));
                     }}
                   />
                 </div>
-
                 <SettingsCard
                   title="Global"
                   description="Apply bitrate filters for movies, series, and anime series"
@@ -2714,7 +2427,6 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
-
                 {mode === 'pro' && (
                   <SettingsCard
                     title="Resolution-Specific"
@@ -2865,7 +2577,6 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
-
                 {mode === 'pro' && (
                   <SettingsCard
                     title="Resolution-Specific"
@@ -3005,7 +2716,6 @@ function Content() {
                       }}
                     />
                   )}
-
                   <NumberInput
                     help="Limit for results by resolution"
                     label="Resolution Limit"
@@ -3022,7 +2732,6 @@ function Content() {
                       }));
                     }}
                   />
-
                   {mode === 'pro' && (
                     <NumberInput
                       help="Limit for results by quality"
@@ -3103,7 +2812,6 @@ function Content() {
                     }}
                   />
                 </SettingsCard>
-
                 {mode === 'pro' && (
                   <>
                     <SettingsCard
@@ -3168,7 +2876,6 @@ function Content() {
                           }));
                         }}
                       />
-
                       <Select
                         disabled={!userData.deduplicator?.enabled}
                         label="Uncached Results"
@@ -3193,7 +2900,6 @@ function Content() {
                           }));
                         }}
                       />
-
                       <Select
                         disabled={!userData.deduplicator?.enabled}
                         label="P2P Results"
@@ -3219,7 +2925,6 @@ function Content() {
                         }}
                       />
                     </SettingsCard>
-
                     <SettingsCard title="Other">
                       <Combobox
                         disabled={!userData.deduplicator?.enabled}
@@ -3247,7 +2952,6 @@ function Content() {
                           value: key,
                         }))}
                       />
-
                       <Combobox
                         help="Addons selected here will always have their results kept during deduplication."
                         label="Addon Exclusions"
@@ -3271,7 +2975,6 @@ function Content() {
                         multiple
                         disabled={userData.deduplicator?.enabled === false}
                       />
-
                       <Select
                         label="Multi-Group Behaviour"
                         help={`Configure how duplicates across multiple types are handled. e.g. if a given duplicate set has both cached and uncached streams, what should be done.
@@ -3315,13 +3018,6 @@ function Content() {
                 </p>
               </div>
               <div className="space-y-4">
-                {/* <SettingsCard>
-                  <Switch
-                    label="Enable"
-                    side="right"
-                    value={userData.miscellaneous?.enabled ?? false}
-                  />
-                </SettingsCard> */}
                 <SettingsCard
                   title="Digital Release Filter"
                   description="This will filter out all results for movies that are determined to not have a digital release."
@@ -3340,7 +3036,6 @@ function Content() {
                       }));
                     }}
                   />
-
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <Slider
@@ -3386,7 +3081,6 @@ function Content() {
                     </div>
                   </div>
                   <p className="text-sm text-[--muted]">Tolerance in days</p>
-
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Combobox
@@ -3446,14 +3140,10 @@ function Content() {
                     value={userData.enableSeadex ?? true}
                     defaultValue={true}
                     onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        enableSeadex: value,
-                      }));
+                      setUserData((prev) => ({ ...prev, enableSeadex: value }));
                     }}
                   />
                 </SettingsCard>
-                {/* Only show this setting if its enabled, otherwise hide it. */}
                 {mode === 'pro' && userData.excludeSeasonPacks && (
                   <SettingsCard
                     title="Exclude Season Packs"
@@ -3551,1958 +3241,5 @@ function Content() {
         </div>
       </Modal>
     </>
-  );
-}
-
-// component for general 3 settings - excluded, required, and preferred.
-// the component should have 3 combo boxes, accept names and descriptions as parameters, and provide
-// onPreferredChange, onRequiredChange, and onExcludedChange callbacks.
-// The 3rd combo box for preferred should have the options to prefer specific values, but the actual
-// array should be generated using a DragabbleContext
-
-// the values selected in the combobox for preferred would be the only options displayed in the sortable list.
-// and of course, the onPreferredChange callback is only used in the sortable list, not the combo box.
-// other callbacks are used in the combo box.
-
-type FilterSettingsProps<T extends string> = {
-  filterName: string;
-  preferredOptions: T[];
-  requiredOptions: T[];
-  excludedOptions: T[];
-  includedOptions: T[];
-  onPreferredChange: (preferred: T[]) => void;
-  onRequiredChange: (required: T[]) => void;
-  onExcludedChange: (excluded: T[]) => void;
-  onIncludedChange: (included: T[]) => void;
-  options: { name: string; value: T }[]; // these 3 options are used for all 3 combo boxes
-};
-
-function FilterSettings<T extends string>({
-  filterName,
-  preferredOptions,
-  requiredOptions,
-  excludedOptions,
-  includedOptions,
-  onPreferredChange,
-  onRequiredChange,
-  onExcludedChange,
-  onIncludedChange,
-  options,
-}: FilterSettingsProps<T>) {
-  const [required, setRequired] = useState<T[]>(requiredOptions);
-  const [excluded, setExcluded] = useState<T[]>(excludedOptions);
-  const [preferred, setPreferred] = useState<T[]>(preferredOptions);
-  const [included, setIncluded] = useState<T[]>(includedOptions);
-  const [isDragging, setIsDragging] = useState(false);
-  const { mode } = useMode();
-
-  const filterToAllowedValues = (filter: T[]) => {
-    return filter.filter((value) => options.some((opt) => opt.value === value));
-  };
-
-  useEffect(() => {
-    setRequired(filterToAllowedValues(requiredOptions));
-    setExcluded(filterToAllowedValues(excludedOptions));
-    setPreferred(filterToAllowedValues(preferredOptions));
-    setIncluded(filterToAllowedValues(includedOptions));
-  }, [requiredOptions, excludedOptions, preferredOptions, includedOptions]);
-
-  // DND logic
-  function handleDragEnd(event: any) {
-    const { active, over } = event;
-    if (!over) return;
-    if (active.id !== over.id) {
-      const oldIndex = preferred.indexOf(active.id);
-      const newIndex = preferred.indexOf(over.id);
-      const newPreferred = arrayMove(preferred, oldIndex, newIndex);
-      setPreferred(newPreferred);
-      onPreferredChange(newPreferred);
-    }
-    setIsDragging(false);
-  }
-
-  function handleDragStart(event: any) {
-    setIsDragging(true);
-  }
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 150,
-        tolerance: 8,
-      },
-    })
-  );
-
-  useEffect(() => {
-    function preventTouchMove(e: TouchEvent) {
-      if (isDragging) {
-        e.preventDefault();
-      }
-    }
-
-    function handleDragEnd() {
-      setIsDragging(false);
-    }
-
-    if (isDragging) {
-      document.body.addEventListener('touchmove', preventTouchMove, {
-        passive: false,
-      });
-      document.addEventListener('pointerup', handleDragEnd);
-      document.addEventListener('touchend', handleDragEnd);
-    } else {
-      document.body.removeEventListener('touchmove', preventTouchMove);
-    }
-
-    return () => {
-      document.body.removeEventListener('touchmove', preventTouchMove);
-      document.removeEventListener('pointerup', handleDragEnd);
-      document.removeEventListener('touchend', handleDragEnd);
-    };
-  }, [isDragging]);
-
-  return (
-    <div className="space-y-6">
-      <SettingsCard
-        title={`${filterName} Selection`}
-        description={`Configure required, excluded, and preferred ${filterName.toLowerCase()}`}
-      >
-        <div className="space-y-4">
-          {mode === 'pro' && (
-            <Combobox
-              label={`Required ${filterName}`}
-              help={`Any stream that is not one of the required ${filterName.toLowerCase()} will be excluded.`}
-              value={required}
-              onValueChange={(values) => {
-                setRequired(values as T[]);
-                onRequiredChange(values as T[]);
-              }}
-              options={options.map((opt) => ({
-                value: opt.value,
-                label: opt.name,
-                textValue: opt.name,
-              }))}
-              multiple
-              emptyMessage={`No ${filterName.toLowerCase()} available`}
-              placeholder={`Select required ${filterName.toLowerCase()}...`}
-            />
-          )}
-          <div>
-            <Combobox
-              label={`Excluded ${filterName}`}
-              value={excluded}
-              help={`Any stream that is one of the excluded ${filterName.toLowerCase()} will be excluded.`}
-              onValueChange={(values) => {
-                setExcluded(values as T[]);
-                onExcludedChange(values as T[]);
-              }}
-              options={options.map((opt) => ({
-                value: opt.value,
-                label: opt.name,
-                textValue: opt.name,
-              }))}
-              multiple
-              emptyMessage={`No ${filterName.toLowerCase()} available`}
-              placeholder={`Select excluded ${filterName.toLowerCase()}...`}
-            />
-          </div>
-          {mode === 'pro' && (
-            <div>
-              <Combobox
-                label={`Included ${filterName}`}
-                value={included}
-                help={`Included ${filterName.toLowerCase()} will be included regardless of ANY other exclude/required filters, not just for ${filterName.toLowerCase()}`}
-                onValueChange={(values) => {
-                  setIncluded(values as T[]);
-                  onIncludedChange(values as T[]);
-                }}
-                options={options.map((opt) => ({
-                  value: opt.value,
-                  label: opt.name,
-                  textValue: opt.name,
-                }))}
-                multiple
-                emptyMessage={`No ${filterName.toLowerCase()} available`}
-                placeholder={`Select included ${filterName.toLowerCase()}...`}
-              />
-            </div>
-          )}
-
-          <div>
-            <Combobox
-              label={`Preferred ${filterName}`}
-              help={`Set preferred ${filterName.toLowerCase()} and control its order below. This is used if the relevant sort criterion is enabled in the Sorting section.`}
-              value={preferred}
-              onValueChange={(values) => {
-                setPreferred(values as T[]);
-                onPreferredChange(values as T[]);
-              }}
-              options={options.map((opt) => ({
-                value: opt.value,
-                label: opt.name,
-                textValue: opt.name,
-              }))}
-              multiple
-              emptyMessage={`No ${filterName.toLowerCase()} available`}
-              placeholder={`Select preferred ${filterName.toLowerCase()}...`}
-            />
-          </div>
-        </div>
-      </SettingsCard>
-
-      {preferred.length > 0 && (
-        <SettingsCard
-          title="Preference Order"
-          description={`Drag to reorder your preferred ${filterName.toLowerCase()}`}
-        >
-          <DndContext
-            modifiers={[restrictToVerticalAxis]}
-            onDragEnd={handleDragEnd}
-            onDragStart={handleDragStart}
-            sensors={sensors}
-          >
-            <SortableContext
-              items={preferred}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-2">
-                {preferred.map((value) => (
-                  <SortableFilterItem
-                    key={value}
-                    id={value}
-                    name={
-                      options.find((opt) => opt.value === value)?.name || value
-                    }
-                    onDelete={() => {
-                      const newPreferred = preferred.filter((v) => v !== value);
-                      setPreferred(newPreferred);
-                      onPreferredChange(newPreferred);
-                    }}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </SettingsCard>
-      )}
-    </div>
-  );
-}
-
-function SortableFilterItem({
-  id,
-  name,
-  onDelete,
-}: {
-  id: string;
-  name: string;
-  onDelete: () => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div className="px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border flex gap-3 relative">
-        <div
-          className="rounded-full w-6 h-auto bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight] cursor-move"
-          {...attributes}
-          {...listeners}
-        />
-        <div className="flex-1 flex flex-col justify-center min-w-0">
-          <span className="font-mono text-base truncate">{name}</span>
-        </div>
-        <div className="flex-shrink-0 ml-auto">
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaRegTrashAlt />}
-            intent="alert-subtle"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete();
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function HeadingWithPageControls({ heading }: { heading: string }) {
-  return (
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-      <h3>{heading}</h3>
-      <div className="hidden lg:block lg:ml-auto">
-        <PageControls />
-      </div>
-    </div>
-  );
-}
-
-type TextInputProps = {
-  itemName: string; // what each item in the array is referred to as
-  label: string; // label that shows above the actual inputs
-  help: string; // help text that shows below the label
-  values: string[];
-  onValuesChange: (values: string[]) => void;
-  onValueChange: (value: string, index: number) => void;
-  placeholder?: string;
-  syncConfig?: SyncConfig;
-  disabled?: boolean;
-};
-
-export interface SyncConfig {
-  urls: string[];
-  onUrlsChange: (urls: string[]) => void;
-  trusted?: boolean;
-}
-interface SyncedPatternsProps {
-  url: string;
-  renderType: 'simple' | 'nameable' | 'ranked';
-}
-
-interface SyncedPatternValue {
-  pattern: string;
-  name?: string;
-  score?: number;
-}
-
-interface EditingItemState {
-  pattern: string;
-  name?: string;
-  score?: number;
-  originalName?: string;
-  disabled?: boolean;
-}
-
-function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
-  const { userData, setUserData, password } = useUserData();
-  const [syncedValues, setSyncedValues] = useState<SyncedPatternValue[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { isOpen, open, close } = useDisclosure(false);
-  const [editingItem, setEditingItem] = useState<EditingItemState | null>(null);
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    setIsLoading(true);
-    UserConfigAPI.resolvePatterns(
-      [url],
-      userData.uuid && password
-        ? { uuid: userData.uuid, password: password }
-        : undefined
-    )
-      .then((res) => {
-        if (abortController.signal.aborted) return;
-        if (res.success && res.data) {
-          setSyncedValues(res.data.patterns);
-        } else {
-          setSyncedValues([]);
-        }
-      })
-      .catch((err) => {
-        if (abortController.signal.aborted) return;
-        console.error('Failed to resolve patterns:', err);
-        setSyncedValues([]);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => abortController.abort();
-  }, [url, userData.uuid, password]);
-
-  if (isLoading) {
-    return (
-      <div className="px-3 pb-2 text-xs text-[--muted] animate-pulse">
-        Loading patterns...
-      </div>
-    );
-  }
-
-  if (syncedValues.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="px-3 pb-3 space-y-2">
-      {syncedValues.map((value, index) => {
-        const patternStr = typeof value === 'string' ? value : value.pattern;
-        const matchesOverride = (
-          o: NonNullable<typeof userData.regexOverrides>[number]
-        ) =>
-          o.pattern === patternStr ||
-          (value.name && o.originalName === value.name);
-
-        const override = userData.regexOverrides?.find(matchesOverride);
-        const isOverridden = !!override && !override.disabled;
-        const effectiveName = override?.name ?? value.name ?? '';
-        const effectiveScore =
-          override?.score !== undefined ? override.score : value.score ?? 0;
-
-        const isDisabled = override?.disabled;
-
-        const handleEnabledChange = (enabled: boolean) => {
-          setUserData((prev) => {
-            const overrides = [...(prev.regexOverrides || [])];
-            
-            if (enabled) {
-              const idx = overrides.findIndex(matchesOverride);
-              
-              if (idx >= 0) {
-                const existing = overrides[idx];
-                const hasNameChange = existing.name !== undefined && existing.name !== value.name;
-                const hasScoreChange = existing.score !== undefined && existing.score !== value.score;
-                
-                if (hasNameChange || hasScoreChange) {
-                  overrides[idx] = { ...existing, disabled: false };
-                  return { ...prev, regexOverrides: overrides };
-                } else {
-                  overrides.splice(idx, 1);
-                  return { ...prev, regexOverrides: overrides };
-                }
-              }
-              return prev;
-            }
-
-            const idx = overrides.findIndex(matchesOverride);
-
-            const existingOverride = idx >= 0 ? overrides[idx] : null;
-
-            const entry = {
-              pattern: patternStr,
-              name: existingOverride?.name,
-              score: existingOverride?.score,
-              originalName: value.name,
-              disabled: true,
-            };
-
-            if (idx >= 0) {
-              overrides[idx] = entry;
-            } else {
-              overrides.push(entry);
-            }
-            return { ...prev, regexOverrides: overrides };
-          });
-          toast.success(enabled ? 'Pattern enabled' : 'Pattern disabled');
-        };
-
-        return (
-          <div key={index} className={isDisabled ? 'opacity-50' : 'opacity-70'}>
-            {renderType === 'simple' && (
-              <div className="flex gap-2 items-start">
-                <div className="pt-8 min-w-[24px] flex justify-center">
-                  <Checkbox
-                    value={!isDisabled}
-                    size="lg"
-                    onValueChange={(checked) => handleEnabledChange(checked === true)}
-                  />
-                </div>
-                <div className="flex-1">
-                  <TextInput
-                    value={patternStr}
-                    label="Pattern (Synced)"
-                    disabled
-                    size="sm"
-                    className={isOverridden ? 'border-primary/50' : ''}
-                  />
-                </div>
-                <div className="self-end pb-0.5 flex gap-1 flex-shrink-0" />
-              </div>
-            )}
-            {renderType === 'nameable' && (
-              <div className="flex gap-2 items-start">
-                <div className="pt-8 min-w-[24px] flex justify-center">
-                  <Checkbox
-                    value={!isDisabled}
-                    size="lg"
-                    onValueChange={(checked) => handleEnabledChange(checked === true)}
-                  />
-                </div>
-                <div className="flex-none w-1/3">
-                  <TextInput
-                    value={effectiveName}
-                    label={
-                      isOverridden ? 'Name (Overridden)' : 'Name (Synced)'
-                    }
-                    disabled
-                    size="sm"
-                    className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
-                  />
-                </div>
-                <div className="flex-1">
-                  <TextInput
-                    value={patternStr}
-                    label="Pattern (Synced)"
-                    disabled
-                    size="sm"
-                    className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
-                  />
-                </div>
-                <div className="pb-0.5 flex gap-1 flex-shrink-0 self-end">
-                  {isOverridden && (
-                    <Tooltip
-                      trigger={
-                        <IconButton
-                          size="sm"
-                          rounded
-                          icon={<FaUndo className="text-xs" />}
-                          intent="alert-subtle"
-                          onClick={() => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              regexOverrides: (prev.regexOverrides || []).filter(
-                                (o) => !matchesOverride(o)
-                              ),
-                            }));
-                            toast.info('Override removed');
-                          }}
-                          className="h-[38px] w-[38px] border border-red-500/20 hover:border-red-500/50 transition-colors shadow-sm"
-                        />
-                      }
-                    >
-                      Reset Override
-                    </Tooltip>
-                  )}
-                  <Tooltip
-                    trigger={
-                      <IconButton
-                        size="sm"
-                        rounded
-                        icon={<FaEdit className="text-xs" />}
-                        intent={isOverridden ? 'primary' : 'primary-subtle'}
-                        onClick={() => {
-                          setEditingItem({
-                            pattern: patternStr,
-                            name: effectiveName,
-                            originalName: value.name,
-                          });
-                          open();
-                        }}
-                        className="h-[38px] w-[38px] border border-primary/20 hover:border-primary/50 transition-colors shadow-sm"
-                      />
-                    }
-                  >
-                    Override
-                  </Tooltip>
-                </div>
-              </div>
-            )}
-            {renderType === 'ranked' && (
-              <div
-                className={cn(
-                  'flex flex-col gap-2 p-2 border rounded border-gray-800 bg-black/20',
-                  isOverridden && 'border-primary/50'
-                )}
-              >
-                <div className="flex gap-2 items-start">
-                  <div className="pt-8 min-w-[24px] flex justify-center">
-                    <Checkbox
-                      value={!isDisabled}
-                      size="lg"
-                      onValueChange={(checked) => handleEnabledChange(checked === true)}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <TextInput
-                      value={patternStr}
-                      label="Pattern (Synced)"
-                      disabled
-                      size="sm"
-                      className={cn(isDisabled && 'line-through text-gray-500')}
-                    />
-                  </div>
-                  <div className="pb-0.5 flex gap-1 flex-shrink-0 self-end">
-                    {isOverridden && (
-                      <Tooltip
-                        trigger={
-                          <IconButton
-                            size="sm"
-                            rounded
-                            icon={<FaUndo className="text-xs" />}
-                            intent="alert-subtle"
-                            onClick={() => {
-                              setUserData((prev) => ({
-                                ...prev,
-                                regexOverrides: (
-                                  prev.regexOverrides || []
-                                ).filter(
-                                  (o) => !matchesOverride(o)
-                                ),
-                              }));
-                              toast.info('Override removed');
-                            }}
-                            className="h-[38px] w-[38px] border border-red-500/20 hover:border-red-500/50 transition-colors shadow-sm"
-                          />
-                        }
-                      >
-                        Reset Override
-                      </Tooltip>
-                    )}
-                    <Tooltip
-                      trigger={
-                        <IconButton
-                          size="sm"
-                          rounded
-                          icon={<FaEdit className="text-xs" />}
-                          intent={isOverridden ? 'primary' : 'primary-subtle'}
-                          onClick={() => {
-                            setEditingItem({
-                              pattern: patternStr,
-                              name: effectiveName,
-                              score: effectiveScore,
-                              originalName: value.name,
-                            });
-                            open();
-                          }}
-                          className="h-[38px] w-[38px] border border-primary/20 hover:border-primary/50 transition-colors shadow-sm"
-                        />
-                      }
-                    >
-                      Override
-                    </Tooltip>
-                  </div>
-                </div>
-                <div className="flex gap-2 pl-[calc(24px+0.5rem)]">
-                  <div className="flex-1">
-                    <TextInput
-                      value={effectiveName}
-                      label={
-                        isOverridden ? 'Name (Overridden)' : 'Name (Synced)'
-                      }
-                      disabled
-                      size="sm"
-                      className={cn(isDisabled && 'line-through text-gray-500')}
-                    />
-                  </div>
-                  <div className="w-24">
-                    <NumberInput
-                      value={effectiveScore}
-                      label={isOverridden ? 'Score (Ovr)' : 'Score'}
-                      disabled
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      <Modal
-        open={isOpen}
-        onOpenChange={(val) => {
-          if (!val) {
-            setEditingItem(null);
-            close();
-          }
-        }}
-        title="Override"
-      >
-        <div className="space-y-4 py-2">
-          <p className="text-xs text-[--muted] break-all">
-            Pattern: <code className="text-[--primary]">{editingItem?.pattern}</code>
-          </p>
-          {(renderType === 'nameable' || renderType === 'ranked') && (
-            <TextInput
-              label="Custom Name"
-              value={editingItem?.name || ''}
-              onValueChange={(name) =>
-                setEditingItem((prev) => (prev ? { ...prev, name } : null))
-              }
-            />
-          )}
-          {renderType === 'ranked' && (
-            <NumberInput
-              label="Custom Score"
-              value={editingItem?.score ?? 0}
-              onValueChange={(score) =>
-                setEditingItem((prev) => (prev ? { ...prev, score } : null))
-              }
-            />
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      intent="primary-outline"
-                      onClick={() => {
-                        setEditingItem(null);
-                        close();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (!editingItem) return;
-                        setUserData((prev) => {
-                          const overrides = [...(prev.regexOverrides || [])];
-                          const idx = overrides.findIndex(
-                            (o) =>
-                              o.pattern === editingItem.pattern ||
-                              (editingItem.originalName &&
-                                o.originalName === editingItem.originalName)
-                          );
-                          const existingOverride = idx >= 0 ? overrides[idx] : undefined;
-                          const entry = {
-                            pattern: editingItem.pattern,
-                            name: editingItem.name || undefined,
-                            score: editingItem.score,
-                            originalName: editingItem.originalName,
-                            disabled:
-                              editingItem.disabled ?? existingOverride?.disabled,
-                          };
-                          if (idx >= 0) {
-                            overrides[idx] = entry;
-                          } else {
-                            overrides.push(entry);
-                          }
-                          return { ...prev, regexOverrides: overrides };
-                        });
-                        close();
-                        toast.success('Override saved');
-                      }}
-                    >
-                      Save Override
-                    </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-}
-
-function SyncedUrlInputs({
-  syncConfig,
-  renderType = 'simple',
-}: {
-  syncConfig?: SyncConfig;
-  renderType?: 'simple' | 'nameable' | 'ranked';
-}) {
-  const { status } = useStatus();
-  const [newUrl, setNewUrl] = useState('');
-
-  if (!syncConfig) {
-    return null;
-  }
-
-  const { urls, onUrlsChange, trusted } = syncConfig;
-
-  const validateAndAdd = (url: string) => {
-    const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
-
-    if (!url) return false;
-
-    try {
-      new URL(url);
-    } catch {
-      toast.error('Invalid URL format');
-      return false;
-    }
-
-    if (urls.includes(url)) {
-      toast.error('URL is already added');
-      return false;
-    }
-
-    const isUnrestricted =
-      status?.settings.regexFilterAccess === 'all' ||
-      (status?.settings.regexFilterAccess === 'trusted' && trusted);
-
-    if (!isUnrestricted && !allowedUrls.includes(url)) {
-      toast.error('URL is not in the allowed list');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleUrlsUpdate = (newUrls: string[]) => {
-    onUrlsChange(newUrls);
-  };
-
-  const handleAdd = () => {
-    if (!validateAndAdd(newUrl)) return;
-
-    handleUrlsUpdate([...urls, newUrl]);
-    setNewUrl('');
-  };
-
-  return (
-    <>
-      <div className="space-y-3 mt-4 border-t border-gray-800 pt-4">
-        <div>
-          <h5 className="text-sm font-medium">Synced URL</h5>
-          <p className="text-xs text-[--muted]">
-            Automatically fetch and sync patterns from this URL. Manual patterns will always take priority over synced patterns.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          {urls.length > 0 && (
-            <div className="bg-gray-900 rounded-md border border-gray-800 divide-y divide-gray-800">
-              {urls.map((url) => (
-                <div key={url} className="flex flex-col">
-                  <div className="flex items-center gap-2 p-2 px-3 text-sm">
-                    <span className="flex-1 truncate font-mono text-xs text-[--muted]">
-                      {url}
-                    </span>
-                    <IconButton
-                      size="sm"
-                      rounded
-                      icon={<FaRegTrashAlt />}
-                      intent="alert-subtle"
-                      onClick={() =>
-                        handleUrlsUpdate(urls.filter((u) => u !== url))
-                      }
-                    />
-                  </div>
-                  <SyncedPatterns
-                  url={url}
-                  renderType={renderType}
-                />
-              </div>
-            ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <TextInput
-                value={newUrl}
-                placeholder="https://example.com/patterns.json"
-                onValueChange={setNewUrl}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAdd();
-                  }
-                }}
-              />
-            </div>
-            <IconButton
-              onClick={handleAdd}
-              disabled={!newUrl}
-              icon={<FaPlus />}
-              intent="primary"
-            />
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// a component controls an array of text inputs.
-// and allows the user to add and remove values
-function TextInputs({
-  itemName,
-  label,
-  help,
-  values,
-  onValuesChange,
-  onValueChange,
-  placeholder,
-  syncConfig,
-  disabled,
-}: TextInputProps) {
-  const importModalDisclosure = useDisclosure(false);
-
-  const handleImport = (data: any) => {
-    if (Array.isArray(data.values)) {
-      onValuesChange(data.values);
-    } else {
-      toast.error('Invalid import format');
-    }
-  };
-
-  const handleExport = () => {
-    const data = { values: values };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${label.toLowerCase().replace(/\s+/g, '-')}-values.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <SettingsCard title={label} description={help} key={label}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={value}
-              label={itemName}
-              placeholder={placeholder}
-              onValueChange={(value) => onValueChange(value, index)}
-            />
-          </div>
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaArrowUp />}
-            intent="primary-subtle"
-            disabled={index === 0}
-            onClick={() => {
-              onValuesChange(arrayMove(values, index, index - 1));
-            }}
-          />
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaArrowDown />}
-            intent="primary-subtle"
-            disabled={index === values.length - 1}
-            onClick={() => {
-              onValuesChange(arrayMove(values, index, index + 1));
-            }}
-          />
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaRegTrashAlt />}
-            intent="alert-subtle"
-            onClick={() =>
-              onValuesChange([
-                ...values.slice(0, index),
-                ...values.slice(index + 1),
-              ])
-            }
-          />
-        </div>
-      ))}
-      <div className="mt-2 flex gap-2 items-center">
-        <IconButton
-          rounded
-          size="sm"
-          intent="primary-subtle"
-          icon={<FaPlus />}
-          onClick={() => onValuesChange([...values, ''])}
-        />
-        <div className="ml-auto flex gap-2">
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileImport />}
-                onClick={importModalDisclosure.open}
-              />
-            }
-          >
-            Import
-          </Tooltip>
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileExport />}
-                onClick={handleExport}
-              />
-            }
-          >
-            Export
-          </Tooltip>
-        </div>
-      </div>
-      <ImportModal
-        open={importModalDisclosure.isOpen}
-        onOpenChange={importModalDisclosure.toggle}
-        onImport={handleImport}
-      />
-      {syncConfig && (
-        <SyncedUrlInputs
-          syncConfig={syncConfig}
-          renderType="simple"
-        />
-      )}
-    </SettingsCard>
-  );
-}
-
-// similar to textInputs, but with two text inputs, and the output being an array of objects of
-// the form {name: string, value: string}
-
-type KeyValueInputProps = {
-  title: string;
-  description: string;
-  keyId: string;
-  keyName: string;
-  keyPlaceholder: string;
-  valueId: string;
-  valueName: string;
-  valuePlaceholder: string;
-  values: { name: string; value: string }[];
-  onValuesChange: (values: { name: string; value: string }[]) => void;
-  onValueChange: (value: string, index: number) => void;
-  onKeyChange: (key: string, index: number) => void;
-  disabled?: boolean;
-  syncConfig?: SyncConfig;
-};
-
-function TwoTextInputs({
-  title,
-  description,
-  keyName,
-  keyId,
-  keyPlaceholder,
-  valueId,
-  valueName,
-  valuePlaceholder,
-  values,
-  onValuesChange,
-  onValueChange,
-  onKeyChange,
-  disabled,
-  syncConfig,
-}: KeyValueInputProps) {
-  const importModalDisclosure = useDisclosure(false);
-
-  const handleImport = (data: any) => {
-    if (
-      Array.isArray(data) &&
-      data.every(
-        (value: { [key: string]: string }) =>
-          typeof value[keyId] === 'string' && typeof value[valueId] === 'string'
-      )
-    ) {
-      onValuesChange(
-        data.map((v: { [key: string]: string }) => ({
-          name: v[keyId],
-          value: v[valueId],
-        }))
-      );
-    } else {
-      toast.error('Invalid import format');
-    }
-  };
-
-  const handleExport = () => {
-    const data = values.map((value) => ({
-      [keyId]: value.name,
-      [valueId]: value.value,
-    }));
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-values.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={value.name}
-              label={keyName}
-              placeholder={keyPlaceholder}
-              onValueChange={(newValue) => onKeyChange(newValue, index)}
-            />
-          </div>
-          <div className="flex-1">
-            <TextInput
-              value={value.value}
-              label={valueName}
-              placeholder={valuePlaceholder}
-              onValueChange={(newValue) => onValueChange(newValue, index)}
-            />
-          </div>
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaArrowUp />}
-            intent="primary-subtle"
-            disabled={index === 0}
-            onClick={() => {
-              onValuesChange(arrayMove(values, index, index - 1));
-            }}
-          />
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaArrowDown />}
-            intent="primary-subtle"
-            disabled={index === values.length - 1}
-            onClick={() => {
-              onValuesChange(arrayMove(values, index, index + 1));
-            }}
-          />
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaRegTrashAlt />}
-            intent="alert-subtle"
-            onClick={() =>
-              onValuesChange([
-                ...values.slice(0, index),
-                ...values.slice(index + 1),
-              ])
-            }
-          />
-        </div>
-      ))}
-      <div className="mt-2 flex gap-2 items-center">
-        <IconButton
-          rounded
-          size="sm"
-          intent="primary-subtle"
-          icon={<FaPlus />}
-          onClick={() => onValuesChange([...values, { name: '', value: '' }])}
-        />
-        <div className="ml-auto flex gap-2">
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileImport />}
-                onClick={importModalDisclosure.open}
-              />
-            }
-          >
-            Import
-          </Tooltip>
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileExport />}
-                onClick={handleExport}
-              />
-            }
-          >
-            Export
-          </Tooltip>
-        </div>
-      </div>
-      <ImportModal
-        open={importModalDisclosure.isOpen}
-        onOpenChange={importModalDisclosure.toggle}
-        onImport={handleImport}
-      />
-      {syncConfig && (
-        <SyncedUrlInputs
-          syncConfig={syncConfig}
-          renderType="nameable"
-        />
-      )}
-    </SettingsCard>
-  );
-}
-
-type RankedExpressionInputProps = {
-  title: string;
-  description: string;
-  values: { expression: string; score: number; enabled: boolean }[];
-  onValuesChange: (
-    values: { expression: string; score: number; enabled: boolean }[]
-  ) => void;
-  onExpressionChange: (expression: string, index: number) => void;
-  onScoreChange: (score: number, index: number) => void;
-  onEnabledChange?: (enabled: boolean, index: number) => void;
-};
-
-function RankedExpressionInputs({
-  title,
-  description,
-  values,
-  onValuesChange,
-  onExpressionChange,
-  onScoreChange,
-  onEnabledChange,
-}: RankedExpressionInputProps) {
-  const importModalDisclosure = useDisclosure(false);
-
-  const handleImport = (data: any) => {
-    if (
-      Array.isArray(data) &&
-      data.every(
-        (value: { expression?: string; score?: number; enabled?: boolean }) =>
-          typeof value.expression === 'string' &&
-          typeof value.score === 'number'
-      )
-    ) {
-      onValuesChange(
-        data.map(
-          (v: { expression: string; score: number; enabled?: boolean }) => ({
-            expression: v.expression,
-            score: v.score,
-            enabled: v.enabled ?? true,
-          })
-        )
-      );
-    } else {
-      toast.error('Invalid import format');
-    }
-  };
-
-  const handleExport = () => {
-    const data = values.map((value) => ({
-      expression: value.expression,
-      score: value.score,
-      enabled: value.enabled,
-    }));
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-values.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2 items-start">
-          <div className="flex items-center pt-8">
-            <Checkbox
-              value={value.enabled ?? true}
-              defaultValue={true}
-              size="lg"
-              onValueChange={(value) => {
-                if (onEnabledChange) {
-                  onEnabledChange(value === true, index);
-                }
-              }}
-            />
-          </div>
-          <div className="flex-[3]">
-            <TextInput
-              value={value.expression}
-              label="Expression"
-              placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onExpressionChange(newValue, index)}
-            />
-          </div>
-          <div className="flex-1 min-w-[100px]">
-            <NumberInput
-              value={value.score || 0}
-              defaultValue={0}
-              label="Score"
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onScoreChange(newValue || 0, index)}
-              min={-1_000_000}
-              max={1_000_000}
-              step={50}
-            />
-          </div>
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaArrowUp />}
-            intent="primary-subtle"
-            disabled={index === 0}
-            onClick={() => {
-              onValuesChange(arrayMove(values, index, index - 1));
-            }}
-          />
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaArrowDown />}
-            intent="primary-subtle"
-            disabled={index === values.length - 1}
-            onClick={() => {
-              onValuesChange(arrayMove(values, index, index + 1));
-            }}
-          />
-          <IconButton
-            size="sm"
-            rounded
-            icon={<FaRegTrashAlt />}
-            intent="alert-subtle"
-            onClick={() =>
-              onValuesChange([
-                ...values.slice(0, index),
-                ...values.slice(index + 1),
-              ])
-            }
-          />
-        </div>
-      ))}
-      <div className="mt-2 flex gap-2 items-center">
-        <IconButton
-          rounded
-          size="sm"
-          intent="primary-subtle"
-          icon={<FaPlus />}
-          onClick={() =>
-            onValuesChange([
-              ...values,
-              { expression: '', score: 0, enabled: true },
-            ])
-          }
-        />
-        <div className="ml-auto flex gap-2">
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileImport />}
-                onClick={importModalDisclosure.open}
-              />
-            }
-          >
-            Import
-          </Tooltip>
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileExport />}
-                onClick={handleExport}
-              />
-            }
-          >
-            Export
-          </Tooltip>
-        </div>
-      </div>
-      <ImportModal
-        open={importModalDisclosure.isOpen}
-        onOpenChange={importModalDisclosure.toggle}
-        onImport={handleImport}
-      />
-    </SettingsCard>
-  );
-}
-
-interface SizeRangeSliderProps {
-  label: string;
-  help?: string;
-  moviesValue: [number, number];
-  seriesValue: [number, number];
-  animeValue: [number, number];
-  onMoviesChange: (value: [number, number]) => void;
-  onSeriesChange: (value: [number, number]) => void;
-  onAnimeChange: (value: [number, number]) => void;
-  min?: number;
-  max?: number;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1000;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
-
-function SizeRangeSlider({
-  label,
-  help,
-  moviesValue,
-  seriesValue,
-  animeValue,
-  onMoviesChange,
-  onSeriesChange,
-  onAnimeChange,
-  min = MIN_SIZE,
-  max = MAX_SIZE,
-}: SizeRangeSliderProps) {
-  return (
-    <div className="space-y-6">
-      <h4 className="text-base font-medium">{label}</h4>
-
-      {/* Movies Slider */}
-      <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Movies</h5>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 min-w-0">
-            <Slider
-              min={min}
-              max={max}
-              defaultValue={[min, max]}
-              step={max / 1000}
-              value={moviesValue}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                newValue?.[0] !== undefined &&
-                newValue?.[1] !== undefined &&
-                onMoviesChange([newValue[0], newValue[1]])
-              }
-              minStepsBetweenThumbs={1}
-              label="Movies Size Range"
-              help={help}
-            />
-            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-              <span>{formatBytes(moviesValue[0])}</span>
-              <span>{formatBytes(moviesValue[1])}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 md:w-[240px] shrink-0">
-            <NumberInput
-              label="Min"
-              step={max / 1000}
-              value={moviesValue[0]}
-              min={min}
-              max={moviesValue[1]}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onMoviesChange([newValue, moviesValue[1]])
-              }
-            />
-            <NumberInput
-              label="Max"
-              step={max / 1000}
-              value={moviesValue[1]}
-              min={moviesValue[0]}
-              max={max}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onMoviesChange([moviesValue[0], newValue])
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Series Slider */}
-      <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Series</h5>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 min-w-0">
-            <Slider
-              min={min}
-              max={max}
-              step={max / 1000}
-              defaultValue={[min, max]}
-              value={seriesValue}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                newValue?.[0] !== undefined &&
-                newValue?.[1] !== undefined &&
-                onSeriesChange([newValue[0], newValue[1]])
-              }
-              minStepsBetweenThumbs={1}
-              label="Series Size Range"
-              help={help}
-            />
-            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-              <span>{formatBytes(seriesValue[0])}</span>
-              <span>{formatBytes(seriesValue[1])}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 md:w-[240px] shrink-0">
-            <NumberInput
-              label="Min"
-              step={max / 1000}
-              value={seriesValue[0]}
-              min={min}
-              max={seriesValue[1]}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onSeriesChange([newValue, seriesValue[1]])
-              }
-            />
-            <NumberInput
-              label="Max"
-              step={max / 1000}
-              value={seriesValue[1]}
-              min={seriesValue[0]}
-              max={max}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onSeriesChange([seriesValue[0], newValue])
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Anime Series Slider */}
-      <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Anime Series</h5>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 min-w-0">
-            <Slider
-              min={min}
-              max={max}
-              step={max / 1000}
-              defaultValue={[min, max]}
-              value={animeValue}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                newValue?.[0] !== undefined &&
-                newValue?.[1] !== undefined &&
-                onAnimeChange([newValue[0], newValue[1]])
-              }
-              minStepsBetweenThumbs={1}
-              label="Anime Series Size Range"
-              help={help}
-            />
-            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-              <span>{formatBytes(animeValue[0])}</span>
-              <span>{formatBytes(animeValue[1])}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 md:w-[240px] shrink-0">
-            <NumberInput
-              label="Min"
-              step={max / 1000}
-              value={animeValue[0]}
-              min={min}
-              max={animeValue[1]}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onAnimeChange([newValue, animeValue[1]])
-              }
-            />
-            <NumberInput
-              label="Max"
-              step={max / 1000}
-              value={animeValue[1]}
-              min={animeValue[0]}
-              max={max}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onAnimeChange([animeValue[0], newValue])
-              }
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function formatBitrate(bitrate: number, round: boolean = false): string {
-  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
-  const k = 1000;
-  const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-  const i = Math.min(
-    sizes.length - 1,
-    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
-  );
-  let value = bitrate / Math.pow(k, i);
-  value = round ? Math.round(value) : parseFloat(value.toFixed(1));
-  return `${value} ${sizes[i]}`;
-}
-
-interface BitrateRangeSliderProps {
-  label: string;
-  help?: string;
-  moviesValue: [number, number];
-  seriesValue: [number, number];
-  animeValue: [number, number];
-  onMoviesChange: (value: [number, number]) => void;
-  onSeriesChange: (value: [number, number]) => void;
-  onAnimeChange: (value: [number, number]) => void;
-  min?: number;
-  max?: number;
-}
-
-function BitrateRangeSlider({
-  label,
-  help,
-  moviesValue,
-  seriesValue,
-  animeValue,
-  onMoviesChange,
-  onSeriesChange,
-  onAnimeChange,
-  min = MIN_BITRATE,
-  max = MAX_BITRATE,
-}: BitrateRangeSliderProps) {
-  return (
-    <div className="space-y-6">
-      <h4 className="text-base font-medium">{label}</h4>
-
-      {/* Movies Slider */}
-      <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Movies</h5>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 min-w-0">
-            <Slider
-              min={min}
-              max={max}
-              defaultValue={[min, max]}
-              step={max / 1000}
-              value={moviesValue}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                newValue?.[0] !== undefined &&
-                newValue?.[1] !== undefined &&
-                onMoviesChange([newValue[0], newValue[1]])
-              }
-              minStepsBetweenThumbs={1}
-              label="Movies Bitrate Range"
-              help={help}
-            />
-            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-              <span>{formatBitrate(moviesValue[0])}</span>
-              <span>{formatBitrate(moviesValue[1])}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 md:w-[240px] shrink-0">
-            <NumberInput
-              label="Min"
-              step={max / 1000}
-              value={moviesValue[0]}
-              min={min}
-              max={moviesValue[1]}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onMoviesChange([newValue, moviesValue[1]])
-              }
-            />
-            <NumberInput
-              label="Max"
-              step={max / 1000}
-              value={moviesValue[1]}
-              min={moviesValue[0]}
-              max={max}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onMoviesChange([moviesValue[0], newValue])
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Series Slider */}
-      <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Series</h5>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 min-w-0">
-            <Slider
-              min={min}
-              max={max}
-              step={max / 1000}
-              defaultValue={[min, max]}
-              value={seriesValue}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                newValue?.[0] !== undefined &&
-                newValue?.[1] !== undefined &&
-                onSeriesChange([newValue[0], newValue[1]])
-              }
-              minStepsBetweenThumbs={1}
-              label="Series Bitrate Range"
-              help={help}
-            />
-            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-              <span>{formatBitrate(seriesValue[0])}</span>
-              <span>{formatBitrate(seriesValue[1])}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 md:w-[240px] shrink-0">
-            <NumberInput
-              label="Min"
-              step={max / 1000}
-              value={seriesValue[0]}
-              min={min}
-              max={seriesValue[1]}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onSeriesChange([newValue, seriesValue[1]])
-              }
-            />
-            <NumberInput
-              label="Max"
-              step={max / 1000}
-              value={seriesValue[1]}
-              min={seriesValue[0]}
-              max={max}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onSeriesChange([seriesValue[0], newValue])
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Anime Series Slider */}
-      <div className="space-y-2">
-        <h5 className="text-sm font-medium text-[--muted]">Anime Series</h5>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 min-w-0">
-            <Slider
-              min={min}
-              max={max}
-              step={max / 1000}
-              defaultValue={[min, max]}
-              value={animeValue}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                newValue?.[0] !== undefined &&
-                newValue?.[1] !== undefined &&
-                onAnimeChange([newValue[0], newValue[1]])
-              }
-              minStepsBetweenThumbs={1}
-              label="Anime Series Bitrate Range"
-              help={help}
-            />
-            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-              <span>{formatBitrate(animeValue[0])}</span>
-              <span>{formatBitrate(animeValue[1])}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 md:w-[240px] shrink-0">
-            <NumberInput
-              label="Min"
-              step={max / 1000}
-              value={animeValue[0]}
-              min={min}
-              max={animeValue[1]}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onAnimeChange([newValue, animeValue[1]])
-              }
-            />
-            <NumberInput
-              label="Max"
-              step={max / 1000}
-              value={animeValue[1]}
-              min={animeValue[0]}
-              max={max}
-              onValueChange={(newValue) =>
-                newValue !== undefined &&
-                onAnimeChange([animeValue[0], newValue])
-              }
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface RankedRegexInputProps {
-  title: string;
-  description: string;
-  values: NonNullable<UserData['rankedRegexPatterns']>;
-  onValuesChange: (
-    values: NonNullable<UserData['rankedRegexPatterns']>
-  ) => void;
-  onPatternChange: (pattern: string, index: number) => void;
-  onNameChange: (name: string, index: number) => void;
-  onScoreChange: (score: number, index: number) => void;
-  syncConfig?: SyncConfig;
-}
-
-function RankedRegexInputs({
-  title,
-  description,
-  values,
-  onValuesChange,
-  onPatternChange,
-  onNameChange,
-  onScoreChange,
-  syncConfig,
-}: RankedRegexInputProps) {
-  const importModalDisclosure = useDisclosure(false);
-
-  const handleImport = (data: any) => {
-    if (
-      Array.isArray(data) &&
-      data.every(
-        (value: any) =>
-          typeof value.pattern === 'string' && typeof value.score === 'number'
-      )
-    ) {
-      onValuesChange(
-        data.map((v: any) => ({
-          pattern: v.pattern,
-          name: v.name,
-          score: v.score,
-        }))
-      );
-    } else {
-      toast.error('Invalid import format');
-    }
-  };
-
-  const handleExport = () => {
-    const data = values.map((value) => ({
-      pattern: value.pattern,
-      name: value.name,
-      score: value.score,
-    }));
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-values.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div
-          key={index}
-          className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
-        >
-          <div className="w-full">
-            <TextInput
-              value={value.pattern}
-              label="Pattern"
-              placeholder="Regex Pattern"
-              onValueChange={(newValue) => onPatternChange(newValue, index)}
-            />
-          </div>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <TextInput
-                value={value.name || ''}
-                label="Name"
-                placeholder="Name (Optional)"
-                onValueChange={(newValue) => onNameChange(newValue, index)}
-              />
-            </div>
-            <div className="w-[20%] min-w-[100px]">
-              <NumberInput
-                value={value.score}
-                label="Score"
-                onValueChange={(newValue) =>
-                  onScoreChange(newValue ?? 0, index)
-                }
-                min={-1_000_000}
-                max={1_000_000}
-                step={50}
-              />
-            </div>
-            <div className="flex gap-1 pb-1">
-              <IconButton
-                size="sm"
-                rounded
-                icon={<FaArrowUp />}
-                intent="primary-subtle"
-                disabled={index === 0}
-                onClick={() => {
-                  onValuesChange(arrayMove(values, index, index - 1));
-                }}
-              />
-              <IconButton
-                size="sm"
-                rounded
-                icon={<FaArrowDown />}
-                intent="primary-subtle"
-                disabled={index === values.length - 1}
-                onClick={() => {
-                  onValuesChange(arrayMove(values, index, index + 1));
-                }}
-              />
-              <IconButton
-                size="sm"
-                rounded
-                icon={<FaRegTrashAlt />}
-                intent="alert-subtle"
-                onClick={() =>
-                  onValuesChange([
-                    ...values.slice(0, index),
-                    ...values.slice(index + 1),
-                  ])
-                }
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-      <div className="mt-2 flex gap-2 items-center">
-        <IconButton
-          rounded
-          size="sm"
-          intent="primary-subtle"
-          icon={<FaPlus />}
-          onClick={() =>
-            onValuesChange([...values, { pattern: '', name: '', score: 0 }])
-          }
-        />
-        <div className="ml-auto flex gap-2">
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileImport />}
-                onClick={importModalDisclosure.open}
-              />
-            }
-          >
-            Import
-          </Tooltip>
-          <Tooltip
-            trigger={
-              <IconButton
-                rounded
-                size="sm"
-                intent="primary-subtle"
-                icon={<FaFileExport />}
-                onClick={handleExport}
-              />
-            }
-          >
-            Export
-          </Tooltip>
-        </div>
-      </div>
-      <ImportModal
-        open={importModalDisclosure.isOpen}
-        onOpenChange={importModalDisclosure.toggle}
-        onImport={handleImport}
-      />
-      {syncConfig && (
-        <SyncedUrlInputs
-          syncConfig={syncConfig}
-          renderType="ranked"
-        />
-      )}
-    </SettingsCard>
   );
 }

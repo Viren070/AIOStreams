@@ -2,7 +2,7 @@ import { isMatch } from 'super-regex';
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
-  FeatureControl,
+  RegexAccess,
   getTimeTakenSincePoint,
   formRegexFromKeywords,
   compileRegex,
@@ -79,6 +79,7 @@ class StreamPrecomputer {
     ) {
       return;
     }
+    const start = Date.now();
 
     const selector = new StreamSelector(context.toExpressionContext());
 
@@ -112,10 +113,6 @@ class StreamPrecomputer {
             ]);
           }
         }
-
-        logger.debug(
-          `Ranked expression "${expression.length > 50 ? expression.substring(0, 50) + '...' : expression}" matched ${selectedStreams.length} streams with score ${score}`
-        );
       } catch (error) {
         logger.error(
           `Failed to apply ranked stream expression "${expression}": ${
@@ -138,7 +135,7 @@ class StreamPrecomputer {
     ).length;
 
     logger.info(
-      `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores)`
+      `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores) in ${getTimeTakenSincePoint(start)}`
     );
   }
 
@@ -146,6 +143,7 @@ class StreamPrecomputer {
     if (!this.userData.rankedRegexPatterns?.length || streams.length === 0) {
       return;
     }
+    const start = Date.now();
 
     const regexes = await Promise.all(
       this.userData.rankedRegexPatterns.map(async (entry) => ({
@@ -175,7 +173,7 @@ class StreamPrecomputer {
     logger.info(
       `Computed ranked regex patterns for ${
         streams.filter((s) => s.rankedRegexesMatched?.length).length
-      } streams`
+      } streams in ${getTimeTakenSincePoint(start)}`
     );
   }
 
@@ -280,7 +278,7 @@ class StreamPrecomputer {
     context: StreamContext
   ) {
     const preferredRegexPatterns =
-      (await FeatureControl.isRegexAllowed(
+      (await RegexAccess.isRegexAllowed(
         this.userData,
         this.userData.preferredRegexPatterns?.map(
           (pattern) => pattern.pattern

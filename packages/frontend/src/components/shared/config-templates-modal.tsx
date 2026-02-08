@@ -28,6 +28,7 @@ import { z, ZodError } from 'zod';
 import { Tooltip } from '../ui/tooltip';
 import { cn } from '../ui/core/styling';
 import { useMenu } from '@/context/menu';
+import { APIError, fetchTemplates } from '@/lib/api';
 
 const formatZodError = (error: ZodError) => {
   console.log(JSON.stringify(error, null, 2));
@@ -135,9 +136,19 @@ export function ConfigTemplatesModal({
   // Fetch templates from API when modal opens
   useEffect(() => {
     if (open) {
-      fetchTemplates();
-      if (openImportModal) {
-        setShowImportModal(true);
+      try {
+        fetchTemplates();
+        if (openImportModal) {
+          setShowImportModal(true);
+        }
+      } catch (error) {
+        let msg = 'Failed to load templates';
+        if (error instanceof APIError) {
+          msg += `: ${error.message}`;
+        } else {
+          console.error('Error loading templates:', error);
+        }
+        toast.error(msg);
       }
     }
   }, [open]);
@@ -301,18 +312,13 @@ export function ConfigTemplatesModal({
     return updatedTemplates;
   };
 
-  const fetchTemplates = async () => {
+  const loadTemplates = async () => {
     setLoadingTemplates(true);
     let fetchedTemplates: Template[] = [];
     try {
       const cachedTemplates = TEMPLATE_CACHE.get('api_templates');
       if (!cachedTemplates) {
-        const response = await fetch('/api/v1/templates');
-        if (!response.ok) {
-          throw new Error('Failed to fetch templates from API');
-        }
-        const data = await response.json();
-        fetchedTemplates = data.data || [];
+        fetchedTemplates = await fetchTemplates();
         TEMPLATE_CACHE.set('api_templates', fetchedTemplates);
       } else {
         fetchedTemplates = cachedTemplates;
@@ -864,7 +870,7 @@ export function ConfigTemplatesModal({
       'tmdbAccessToken',
       'tvdbApiKey',
       'rpdbApiKey',
-      'topPosterApiKey'
+      'topPosterApiKey',
     ] as const;
 
     topLevelFields.forEach((field) => {

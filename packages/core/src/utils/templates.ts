@@ -5,7 +5,7 @@ import { getDataFolder } from './general.js';
 import { Template, TemplateSchema } from '../db/schemas.js';
 import { ZodError } from 'zod';
 import { formatZodError, applyMigrations } from './config.js';
-import { FeatureControl } from './feature.js';
+import { RegexAccess } from './regex-access.js';
 import { createLogger } from './logger.js';
 
 const logger = createLogger('templates');
@@ -56,7 +56,7 @@ export class TemplateManager {
       `Loaded ${this.templates.length} templates from ${builtinTemplates.detected + customTemplates.detected} detected templates. ${patternsInTemplates.length} regex patterns detected. ${errors.length} errors occurred.`
     );
     if (patternsInTemplates.length > 0) {
-      FeatureControl._addPatterns(patternsInTemplates);
+      RegexAccess.addPatterns(patternsInTemplates);
     }
     if (errors.length > 0) {
       logger.error(

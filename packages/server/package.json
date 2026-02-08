@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch",
+    "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "tsc",
     "prepublish": "npm run build"
   },

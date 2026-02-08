@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch",
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc -w --preserveWatchOutput"
   },
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {

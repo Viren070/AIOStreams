@@ -9,7 +9,8 @@ import {
   StremioTransformer,
   UserRepository,
   Env,
-  FeatureControl,
+  RegexAccess,
+  SelAccess,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -119,35 +120,35 @@ export const userDataMiddleware = async (
     if (resource !== 'configure') {
       try {
         // Sync regex patterns from URLs
-        userData.preferredRegexPatterns = await FeatureControl.syncPatterns(
+        userData.preferredRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedPreferredRegexUrls,
           userData.preferredRegexPatterns || [],
           userData,
           (regex) => regex,
           (regex) => regex.pattern
         );
-        userData.excludedRegexPatterns = await FeatureControl.syncPatterns(
+        userData.excludedRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedExcludedRegexUrls,
           userData.excludedRegexPatterns || [],
           userData,
           (regex) => regex.pattern,
           (pattern) => pattern
         );
-        userData.requiredRegexPatterns = await FeatureControl.syncPatterns(
+        userData.requiredRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedRequiredRegexUrls,
           userData.requiredRegexPatterns || [],
           userData,
           (regex) => regex.pattern,
           (pattern) => pattern
         );
-        userData.includedRegexPatterns = await FeatureControl.syncPatterns(
+        userData.includedRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedIncludedRegexUrls,
           userData.includedRegexPatterns || [],
           userData,
           (regex) => regex.pattern,
           (pattern) => pattern
         );
-        userData.rankedRegexPatterns = await FeatureControl.syncPatterns(
+        userData.rankedRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedRankedRegexUrls,
           userData.rankedRegexPatterns || [],
           userData,
@@ -158,6 +159,52 @@ export const userDataMiddleware = async (
           }),
           (item) => item.pattern
         );
+
+        // Sync stream expressions from URLs
+        userData.preferredStreamExpressions =
+          await SelAccess.syncStreamExpressions(
+            userData.syncedPreferredStreamExpressionUrls,
+            userData.preferredStreamExpressions || [],
+            userData,
+            (item) => item.expression,
+            (expr) => expr
+          );
+        userData.excludedStreamExpressions =
+          await SelAccess.syncStreamExpressions(
+            userData.syncedExcludedStreamExpressionUrls,
+            userData.excludedStreamExpressions || [],
+            userData,
+            (item) => item.expression,
+            (expr) => expr
+          );
+        userData.requiredStreamExpressions =
+          await SelAccess.syncStreamExpressions(
+            userData.syncedRequiredStreamExpressionUrls,
+            userData.requiredStreamExpressions || [],
+            userData,
+            (item) => item.expression,
+            (expr) => expr
+          );
+        userData.includedStreamExpressions =
+          await SelAccess.syncStreamExpressions(
+            userData.syncedIncludedStreamExpressionUrls,
+            userData.includedStreamExpressions || [],
+            userData,
+            (item) => item.expression,
+            (expr) => expr
+          );
+        userData.rankedStreamExpressions =
+          await SelAccess.syncStreamExpressions(
+            userData.syncedRankedStreamExpressionUrls,
+            userData.rankedStreamExpressions || [],
+            userData,
+            (item) => ({
+              expression: item.expression,
+              score: item.score || 0,
+              enabled: true,
+            }),
+            (item) => item.expression
+          );
 
         userData = await validateConfig(userData, {
           skipErrorsFromAddonsOrProxies: true,

@@ -7,7 +7,7 @@ import {
 } from '@aiostreams/core';
 import { StatusResponse } from '@aiostreams/core';
 import { encryptString } from '@aiostreams/core';
-import { FeatureControl } from '@aiostreams/core';
+import { RegexAccess, FeatureControl } from '@aiostreams/core';
 import { createResponse } from '../../utils/responses.js';
 
 const router: Router = Router();
@@ -38,13 +38,15 @@ const statusInfo = async (): Promise<StatusResponse> => {
       protected: Env.ADDON_PASSWORD.length > 0,
       tmdbApiAvailable: !!Env.TMDB_ACCESS_TOKEN,
       regexFilterAccess: Env.REGEX_FILTER_ACCESS,
+      selSyncAccess: Env.SEL_SYNC_ACCESS,
+      whitelistedSelUrls: Env.WHITELISTED_SEL_URLS || [],
       allowedRegexPatterns:
-        (await FeatureControl.allowedRegexPatterns()).patterns.length > 0
+        (await RegexAccess.allowedRegexPatterns()).patterns.length > 0
           ? {
-              patterns: (await FeatureControl.allowedRegexPatterns()).patterns,
-              description: (await FeatureControl.allowedRegexPatterns())
+              patterns: (await RegexAccess.allowedRegexPatterns()).patterns,
+              description: (await RegexAccess.allowedRegexPatterns())
                 .description,
-              urls: Env.ALLOWED_REGEX_PATTERNS_URLS || [],
+              urls: (await RegexAccess.allowedRegexPatterns()).urls,
             }
           : undefined,
       loggingSensitiveInfo: Env.LOG_SENSITIVE_INFO,

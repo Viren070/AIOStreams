@@ -2,8 +2,19 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/text-input';
-import { applyMigrations, useUserData, DefaultUserData } from '@/context/userData';
-import { UserConfigAPI } from '@/services/api';
+import {
+  applyMigrations,
+  useUserData,
+  DefaultUserData,
+} from '@/context/userData';
+import {
+  loadUserConfig,
+  createUserConfig,
+  updateUserConfig,
+  deleteUserConfig,
+  APIError,
+  CreateUserResponse,
+} from '@/lib/api';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@/components/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
@@ -111,8 +122,11 @@ function Content() {
   const [installProtocol, setInstallProtocol] = React.useState('stremio');
   const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
-  const [remoteDiffConfig, setRemoteDiffConfig] = React.useState<UserData | null>(null);
-  const [localDiffConfig, setLocalDiffConfig] = React.useState<UserData | null>(null);
+  const [remoteDiffConfig, setRemoteDiffConfig] =
+    React.useState<UserData | null>(null);
+  const [localDiffConfig, setLocalDiffConfig] = React.useState<UserData | null>(
+    null
+  );
   const diffModal = useDisclosure(false);
   const pendingSkipDiffRef = React.useRef(false);
   const confirmResetProps = useConfirmationDialog({
@@ -165,7 +179,7 @@ function Content() {
           trusted: prev.trusted,
           addonPassword: prev.addonPassword,
           ip: prev.ip,
-          showChanges: prev.showChanges, 
+          showChanges: prev.showChanges,
         };
       });
       toast.success('Changes reverted');
@@ -200,74 +214,82 @@ function Content() {
     if (uuid && password && !shouldSkipDiff && userData?.showChanges) {
       setLoading(true);
       try {
-        const remoteResult = await UserConfigAPI.loadConfig(uuid, password);
-        
-        if (remoteResult.success && remoteResult.data) {
-          const remoteConf = remoteResult.data.config;
-          const resolveNamesInConfig = (conf: UserData | null, presetsSource: UserData['presets']) => {
-            if (!conf || !conf.groups) return conf;
-            const newConf = { ...conf, groups: { ...conf.groups } };
-            
-            if (newConf.groups.groupings) {
-              newConf.groups.groupings = newConf.groups.groupings.map((g: any) => {
+        const remoteData = await loadUserConfig(uuid, password);
+        const remoteConf = remoteData.userData;
+        const resolveNamesInConfig = (
+          conf: UserData | null,
+          presetsSource: UserData['presets']
+        ) => {
+          if (!conf || !conf.groups) return conf;
+          const newConf = { ...conf, groups: { ...conf.groups } };
+
+          if (newConf.groups.groupings) {
+            newConf.groups.groupings = newConf.groups.groupings.map(
+              (g: any) => {
                 if (Array.isArray(g.addons)) {
                   return {
                     ...g,
                     addons: g.addons.map((id: string) => {
-                      const find = (list?: any[]) => list?.find(p => p.instanceId === id || p.options?.id === id);
+                      const find = (list?: any[]) =>
+                        list?.find(
+                          (p) => p.instanceId === id || p.options?.id === id
+                        );
                       const item = find(presetsSource);
                       return item?.options?.name || id;
-                    })
+                    }),
                   };
                 }
                 return g;
-              });
-            }
-            return newConf;
-          };
-
-          const allPresets = [...(userData?.presets || []), ...(remoteConf?.presets || [])];
-           const filterForDiff = (d: UserData | null) => {
-             if (!d) return d;
-             const filtered: any = { ...d };
-             delete filtered.ip;
-             delete filtered.uuid;
-             delete filtered.addonPassword;
-             delete filtered.trusted;
-             delete filtered.encryptedPassword;
-             delete filtered.showChanges;
-               
-             // Sort keys to ensure deterministic ordering for diffs (fixes ghost diffs)
-             return sortKeys(filtered) as UserData;
-           };
-
-           const filteredRemote = filterForDiff(remoteConf);
-           const filteredLocal = filterForDiff(userData);
-
-           // Resolve IDs to Names for readable diffs (e.g. Group Swaps)
-           const processedRemote = resolveNamesInConfig(filteredRemote, allPresets);
-           const processedLocal = resolveNamesInConfig(filteredLocal, allPresets);
-           const diffs = getObjectDiff(processedRemote, processedLocal);
-          
-          if (diffs.length === 0) {
-            toast.info('No changes detected');
-            suppressSuccessToast = true;
-            setLoading(false);
-          } else {
-            setRemoteConfig(remoteConf);
-            setRemoteDiffConfig(processedRemote);
-            setLocalDiffConfig(processedLocal);
-            setDiffData(diffs);
-            if (authenticated) {
-              passwordModal.close();
-            }
-            diffModal.open();
-            setLoading(false);
-            return;
+              }
+            );
           }
+          return newConf;
+        };
+
+        const allPresets = [
+          ...(userData?.presets || []),
+          ...(remoteConf?.presets || []),
+        ];
+        const filterForDiff = (d: UserData | null) => {
+          if (!d) return d;
+          const filtered: any = { ...d };
+          delete filtered.ip;
+          delete filtered.uuid;
+          delete filtered.addonPassword;
+          delete filtered.trusted;
+          delete filtered.encryptedPassword;
+          delete filtered.showChanges;
+
+          // Sort keys to ensure deterministic ordering for diffs (fixes ghost diffs)
+          return sortKeys(filtered) as UserData;
+        };
+
+        const filteredRemote = filterForDiff(remoteConf);
+        const filteredLocal = filterForDiff(userData);
+
+        // Resolve IDs to Names for readable diffs (e.g. Group Swaps)
+        const processedRemote = resolveNamesInConfig(
+          filteredRemote,
+          allPresets
+        );
+        const processedLocal = resolveNamesInConfig(filteredLocal, allPresets);
+        const diffs = getObjectDiff(processedRemote, processedLocal);
+
+        if (diffs.length === 0) {
+          toast.info('No changes detected');
+          suppressSuccessToast = true;
+          setLoading(false);
         } else {
-             setLoading(false);
-             toast.warning('Error checking for changes. Proceeding with save.');
+          setRemoteConfig(remoteConf);
+          setRemoteDiffConfig(processedRemote);
+          setLocalDiffConfig(processedLocal);
+          setDiffData(diffs);
+          if (authenticated) {
+            passwordModal.close();
+          }
+          diffModal.open();
+          setLoading(false);
+          return;
         }
       } catch (err) {
         console.error('Error checking for changes:', err);
@@ -281,32 +303,17 @@ function Content() {
 
     try {
       const result = uuid
-        ? await UserConfigAPI.updateConfig(uuid, userData, password!)
-        : await UserConfigAPI.createConfig(userData, newPassword);
+        ? await updateUserConfig(uuid, userData, password!)
+        : await createUserConfig(userData, newPassword);
 
-      if (!result.success) {
-        if (result.error?.code === 'USER_INVALID_DETAILS') {
-          toast.error('Your addon password is incorrect');
-          setUserData((prev) => ({
-            ...prev,
-            addonPassword: '',
-          }));
-          passwordModal.open();
-          return;
-        }
-        throw new Error(
-          result.error?.message || 'Failed to save configuration'
-        );
-      }
-
-      if (!uuid && result.data) {
+      if (!uuid) {
         toast.success(
           'Configuration created successfully, your UUID and password are below'
         );
-        setUuid(result.data.uuid);
-        setEncryptedPassword(result.data.encryptedPassword);
+        setUuid(result.uuid);
+        setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
         setPassword(newPassword);
-      } else if (uuid && result.success && !suppressSuccessToast) {
+      } else if (uuid && !suppressSuccessToast) {
         toast.success('Configuration updated successfully');
       }
 
@@ -314,6 +321,15 @@ function Content() {
         passwordModal.close();
       }
     } catch (err) {
+      if (err instanceof APIError && err.is('USER_INVALID_DETAILS')) {
+        toast.error('Your addon password is incorrect');
+        setUserData((prev) => ({
+          ...prev,
+          addonPassword: '',
+        }));
+        passwordModal.open();
+        return;
+      }
       toast.error(
         err instanceof Error ? err.message : 'Failed to save configuration'
       );
@@ -451,21 +467,7 @@ function Content() {
         return;
       }
 
-      const result = await UserConfigAPI.deleteUser(
-        uuid,
-        confirmDeletionPassword
-      );
-
-      if (!result.success) {
-        if (result.error?.code === 'USER_INVALID_DETAILS') {
-          toast.error('Invalid password');
-        } else {
-          toast.error(
-            result.error?.message || 'Failed to delete configuration'
-          );
-        }
-        return;
-      }
+      await deleteUserConfig(uuid, confirmDeletionPassword);
 
       // Only clear data after successful deletion
       toast.success('Configuration deleted successfully');
@@ -484,46 +486,54 @@ function Content() {
     }
   };
 
-  const resolveId = React.useCallback((v: string) => {
-    const findAddon = (presets?: UserData['presets']) => presets?.find(p => {
-      if (p.instanceId === v) return true;
-      const opts = p.options as Record<string, any>;
-      return opts?.id === v;
-    });
+  const resolveId = React.useCallback(
+    (v: string) => {
+      const findAddon = (presets?: UserData['presets']) =>
+        presets?.find((p) => {
+          if (p.instanceId === v) return true;
+          const opts = p.options as Record<string, any>;
+          return opts?.id === v;
+        });
 
-    const addon = findAddon(userData?.presets) || findAddon(remoteConfig?.presets);
+      const addon =
+        findAddon(userData?.presets) || findAddon(remoteConfig?.presets);
 
-    if (addon) {
-      const opts = addon.options as Record<string, any>;
-      if (opts?.name && typeof opts.name === 'string') return opts.name;
-    }
-    return v;
-  }, [userData?.presets, remoteConfig?.presets]);
-
-  const valueFormatter = React.useCallback((val: any): string => {
-    const resolveDeep = (v: any): any => {
-      // Swap IDs for names
-      if (typeof v === 'string') return resolveId(v);
-      if (Array.isArray(v)) return v.map(resolveDeep);
-      if (v && typeof v === 'object') {
-        return Object.fromEntries(
-          Object.entries(v).map(([k, val]) => [k, resolveDeep(val)])
-        );
+      if (addon) {
+        const opts = addon.options as Record<string, any>;
+        if (opts?.name && typeof opts.name === 'string') return opts.name;
       }
       return v;
-    };
+    },
+    [userData?.presets, remoteConfig?.presets]
+  );
 
-    const resolved = resolveDeep(val);
+  const valueFormatter = React.useCallback(
+    (val: any): string => {
+      const resolveDeep = (v: any): any => {
+        // Swap IDs for names
+        if (typeof v === 'string') return resolveId(v);
+        if (Array.isArray(v)) return v.map(resolveDeep);
+        if (v && typeof v === 'object') {
+          return Object.fromEntries(
+            Object.entries(v).map(([k, val]) => [k, resolveDeep(val)])
+          );
+        }
+        return v;
+      };
 
-    if (typeof resolved === 'object' && resolved !== null) {
-      try {
-        return JSON.stringify(resolved, null, 2);
-      } catch {
-        return '[Circular Reference]';
+      const resolved = resolveDeep(val);
+
+      if (typeof resolved === 'object' && resolved !== null) {
+        try {
+          return JSON.stringify(resolved, null, 2);
+        } catch {
+          return '[Circular Reference]';
+        }
       }
-    }
-    return String(resolved);
-  }, [resolveId]);
+      return String(resolved);
+    },
+    [resolveId]
+  );
 
   return (
     <>
@@ -616,7 +626,12 @@ function Content() {
               </div>
               <form onSubmit={handleSave}>
                 <div className="flex items-center justify-between gap-4 mt-4">
-                  <Button type="submit" intent="white" loading={loading} rounded>
+                  <Button
+                    type="submit"
+                    intent="white"
+                    loading={loading}
+                    rounded
+                  >
                     Save
                   </Button>
                   <div className="flex items-center gap-2">

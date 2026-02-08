@@ -771,19 +771,45 @@ export const Env = cleanEnv(process.env, {
 
   ALLOWED_REGEX_PATTERNS: json<string[]>({
     default: [],
-    desc: 'Allowed regex patterns',
+    desc: '[DEPRECATED: use WHITELISTED_REGEX_PATTERNS] Allowed regex patterns',
   }),
   ALLOWED_REGEX_PATTERNS_URLS: json<string[]>({
     default: undefined,
-    desc: 'Comma separated list of allowed regex patterns URLs',
+    desc: '[DEPRECATED: use WHITELISTED_REGEX_PATTERNS_URLS] Comma separated list of allowed regex patterns URLs',
   }),
   ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL: num({
     default: 86400000,
-    desc: 'Interval for refreshing regex patterns from URLs in milliseconds',
+    desc: '[DEPRECATED: use WHITELISTED_SYNC_REFRESH_INTERVAL] Interval for refreshing regex patterns from URLs in milliseconds',
   }),
   ALLOWED_REGEX_PATTERNS_DESCRIPTION: str({
     default: undefined,
-    desc: 'Description of the allowed regex patterns',
+    desc: '[DEPRECATED: use WHITELISTED_REGEX_PATTERNS_DESCRIPTION] Description of the allowed regex patterns',
+  }),
+
+  WHITELISTED_REGEX_PATTERNS: json<string[]>({
+    default: undefined,
+    desc: 'Whitelisted regex patterns (JSON array of strings). Falls back to ALLOWED_REGEX_PATTERNS.',
+  }),
+  WHITELISTED_REGEX_PATTERNS_URLS: json<string[]>({
+    default: undefined,
+    desc: 'Whitelisted regex pattern sync URLs (JSON array of URL strings). Falls back to ALLOWED_REGEX_PATTERNS_URLS.',
+  }),
+  WHITELISTED_REGEX_PATTERNS_DESCRIPTION: str({
+    default: undefined,
+    desc: 'Description of the whitelisted regex patterns. Falls back to ALLOWED_REGEX_PATTERNS_DESCRIPTION.',
+  }),
+  WHITELISTED_SYNC_REFRESH_INTERVAL: num({
+    default: undefined,
+    desc: 'Refresh interval for synced URLs (regex and SEL) in seconds. Falls back to ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL (converted from ms to s). Default: 86400 (24h).',
+  }),
+  WHITELISTED_SEL_URLS: json<string[]>({
+    default: undefined,
+    desc: 'Whitelisted stream expression (SEL) sync URLs (JSON array of URL strings). Non-trusted users can only sync from these URLs.',
+  }),
+  SEL_SYNC_ACCESS: str({
+    default: 'trusted',
+    desc: 'Who can use SEL sync URLs. "all" = anyone can sync from any URL, "trusted" = only trusted users can sync from any URL (non-trusted users limited to WHITELISTED_SEL_URLS)',
+    choices: ['all', 'trusted'],
   }),
 
   MAX_TIMEOUT: num({

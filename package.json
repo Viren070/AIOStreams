@@ -10,6 +10,7 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "metadata": "node scripts/generateMetadata.cjs",
     "build": "pnpm -F core run build && pnpm -F server run build && pnpm -F frontend run build",
+    "dev": "pnpm -r --parallel dev",
     "build:watch": "tsc --build --watch",
     "start": "node packages/server/dist/server",
     "start:addon": "pnpm run start",

@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from 'sonner';
-import { UserConfigAPI } from '@/services/api';
+import { exchangeGDriveCode } from '@/lib/api';
 import { BiCopy } from 'react-icons/bi';
 import { copyToClipboard } from '@/utils/clipboard';
 
@@ -28,12 +28,14 @@ function OAuthCallbackContent() {
       if (errorParam) {
         setError(errorParam);
       } else if (authCode) {
-        const response = await UserConfigAPI.exchangeGDriveAuthCode(authCode);
-        if (response.success) {
-          setCode(response.data?.refreshToken || null);
-        } else {
+        try {
+          const response = await exchangeGDriveCode(authCode);
+          setCode(response.refreshToken);
+        } catch (err) {
           setError(
-            response.error?.message || 'Failed to exchange GDrive auth code'
+            err instanceof Error
+              ? err.message
+              : 'Failed to exchange GDrive auth code'
           );
         }
       } else {

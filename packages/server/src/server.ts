@@ -10,7 +10,8 @@ import {
   logStartupInfo,
   logStartupFooter,
   Cache,
-  FeatureControl,
+  RegexAccess,
+  SelAccess,
   AnimeDatabase,
   ProwlarrAddon,
   TemplateManager,
@@ -101,7 +102,8 @@ async function start() {
     await initialiseRedis();
     initialiseAnimeDatabase();
     initialiseSeaDexDataset();
-    FeatureControl.initialise();
+    RegexAccess.initialise();
+    SelAccess.initialise();
     await initialiseProwlarr();
     if (Env.PRUNE_MAX_DAYS >= 0) {
       startAutoPrune();
@@ -125,7 +127,8 @@ async function start() {
 
 async function shutdown() {
   await Cache.close();
-  FeatureControl.cleanup();
+  RegexAccess.cleanup();
+  SelAccess.cleanup();
   await DB.getInstance().close();
 }
 
