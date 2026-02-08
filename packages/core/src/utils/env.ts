@@ -745,7 +745,7 @@ export const Env = cleanEnv(process.env, {
     desc: 'Max number of keyword filters',
   }),
   MAX_STREAM_EXPRESSIONS: num({
-    default: 100,
+    default: 150,
     desc: 'Max total number of stream expressions across all filter types (ranked, preferred, excluded, required, included)',
   }),
   MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS: num({
