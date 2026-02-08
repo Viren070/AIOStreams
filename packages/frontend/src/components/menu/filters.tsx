@@ -4265,12 +4265,14 @@ function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
                               (editingItem.originalName &&
                                 o.originalName === editingItem.originalName)
                           );
+                          const existingOverride = idx >= 0 ? overrides[idx] : undefined;
                           const entry = {
                             pattern: editingItem.pattern,
                             name: editingItem.name || undefined,
                             score: editingItem.score,
                             originalName: editingItem.originalName,
-                            disabled: editingItem.disabled,
+                            disabled:
+                              editingItem.disabled ?? existingOverride?.disabled,
                           };
                           if (idx >= 0) {
                             overrides[idx] = entry;
