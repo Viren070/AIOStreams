@@ -10,6 +10,8 @@ export const stremthruSpecialCases: Partial<
     `${credentials.email}:${credentials.password}`,
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
+  [constants.QBITTORRENT_SERVICE]: (credentials: any) =>
+    `${credentials.url}|${credentials.username}|${credentials.password}|${credentials.fileBaseUrl}`,
 };
 
 export class StremThruStreamParser extends StreamParser {
@@ -51,6 +53,7 @@ export class StremThruPreset extends Preset {
     constants.PIKPAK_SERVICE,
     constants.REALDEBRID_SERVICE,
     constants.TORBOX_SERVICE,
+    constants.QBITTORRENT_SERVICE,
   ] as const;
 
   protected static readonly socialLinks: Option['socials'] = [

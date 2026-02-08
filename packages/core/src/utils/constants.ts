@@ -224,6 +224,7 @@ const NZBDAV_SERVICE = 'nzbdav';
 const ALTMOUNT_SERVICE = 'altmount';
 const STREMIO_NNTP_SERVICE = 'stremio_nntp';
 const STREMTHRU_NEWZ_SERVICE = 'stremthru_newz';
+const QBITTORRENT_SERVICE = 'qbittorrent';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -242,6 +243,7 @@ const SERVICES = [
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  QBITTORRENT_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -259,6 +261,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  QBITTORRENT_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -747,6 +750,55 @@ const SERVICE_DETAILS: Record<
         description:
           'Your StremThru authentication token from `STREMTHRU_AUTH`',
         type: 'password',
+        required: true,
+      },
+    ],
+  },
+  [QBITTORRENT_SERVICE]: {
+    id: QBITTORRENT_SERVICE,
+    name: 'qBittorrent',
+    shortName: 'QB',
+    knownNames: ['QB', 'qBittorrent', 'qBit'],
+    signUpText:
+      'Use your own seedbox running qBittorrent with Web UI enabled. Requires a [StremThru](https://github.com/MunifTanjim/stremthru) instance.',
+    credentials: [
+      {
+        id: 'note',
+        name: 'Configuration Help',
+        description:
+          '**Requires StremThru** with the qBittorrent store. Your qBittorrent instance must have the Web UI enabled. The File Server URL is where downloaded files are served over HTTP (e.g. your seedbox HTTPS file access URL).',
+        type: 'alert',
+        intent: 'info',
+        required: false,
+      },
+      {
+        id: 'url',
+        name: 'qBittorrent URL',
+        description:
+          'The base URL of your qBittorrent Web UI. E.g., https://your-seedbox.com:8080',
+        type: 'string',
+        required: true,
+      },
+      {
+        id: 'username',
+        name: 'Username',
+        description: 'Your qBittorrent Web UI username',
+        type: 'string',
+        required: true,
+      },
+      {
+        id: 'password',
+        name: 'Password',
+        description: 'Your qBittorrent Web UI password',
+        type: 'password',
+        required: true,
+      },
+      {
+        id: 'fileBaseUrl',
+        name: 'File Server URL',
+        description:
+          'The base URL where downloaded files are accessible over HTTP. E.g., https://your-seedbox.com/files/downloads/',
+        type: 'string',
         required: true,
       },
     ],
@@ -1424,6 +1476,7 @@ export {
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  QBITTORRENT_SERVICE,
   SERVICE_DETAILS,
   TOP_LEVEL_OPTION_DETAILS,
   HEADERS_FOR_IP_FORWARDING,
