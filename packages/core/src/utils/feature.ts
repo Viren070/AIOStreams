@@ -9,34 +9,15 @@ const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 const logger = createLogger('core');
 
-const refreshingUrls = new Set<string>();
-
-async function refreshPatternsInBackground(url: string): Promise<void> {
-  if (refreshingUrls.has(url)) return;
-  refreshingUrls.add(url);
-
-  try {
-    const patterns = await fetchPatternsFromUrlInternal(url);
-    if (patterns.length > 0) {
-      FeatureControl.patternCache.set(
-        url,
-        { patterns },
-        Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000
-      );
-    }
-  } catch (error) {
-    logger.warn(`Background refresh failed for ${url}:`, error);
-  } finally {
-    refreshingUrls.delete(url);
-  }
-}
-
 async function fetchPatternsFromUrl(
-  url: string
+  url: string,
+  forceRefresh = false
 ): Promise<{ name: string; pattern: string; score?: number }[]> {
-  const cached = await FeatureControl.patternCache.get(url);
-  if (cached) {
-    return cached.patterns;
+  if (!forceRefresh) {
+    const cached = await FeatureControl.patternCache.get(url);
+    if (cached) {
+      return cached.patterns;
+    }
   }
 
   const patterns = await fetchPatternsFromUrlInternal(url);
@@ -126,6 +107,7 @@ export class FeatureControl {
   };
   private static _initialisationPromise: Promise<void> | null = null;
   private static _refreshInterval: NodeJS.Timeout | null = null;
+  private static _dynamicUrls = new Set<string>();
 
   public static patternCache = Cache.getInstance<
     string,
@@ -181,14 +163,17 @@ export class FeatureControl {
    * Fetches patterns from all configured URLs and accumulates them.
    */
   private static async _refreshPatterns(): Promise<void> {
-    const urls = Env.ALLOWED_REGEX_PATTERNS_URLS;
+    const configuredUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+    const urlsIndex = new Set([...configuredUrls, ...this._dynamicUrls]);
+    const urls = Array.from(urlsIndex);
+
     if (!urls || urls.length === 0) {
       return;
     }
 
     logger.debug(`Refreshing regex patterns from ${urls.length} URLs...`);
     const fetchPromises = await Promise.allSettled(
-      urls.map(fetchPatternsFromUrl)
+      urls.map((url) => fetchPatternsFromUrl(url, true))
     );
 
     const patternsFromUrls = fetchPromises
@@ -290,6 +275,43 @@ export class FeatureControl {
     return fetchPatternsFromUrl(url);
   }
 
+  public static validateUrls(urls: string[], userData?: UserData): string[] {
+    const isUnrestricted =
+      Env.REGEX_FILTER_ACCESS === 'all' ||
+      (Env.REGEX_FILTER_ACCESS === 'trusted' && userData?.trusted);
+
+    if (isUnrestricted) {
+      return urls;
+    }
+
+    const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+    return urls.filter((url) => allowedUrls.includes(url));
+  }
+
+  public static async resolvePatterns(
+    urls: string[] | undefined,
+    userData?: UserData
+  ): Promise<{ name: string; pattern: string; score?: number }[]> {
+    if (!urls?.length) return [];
+
+    const validUrls = this.validateUrls(urls, userData);
+    if (!validUrls.length) return [];
+
+    for (const url of validUrls) {
+      if (this._dynamicUrls.size >= 100) {
+        const first = this._dynamicUrls.values().next().value;
+        if (first) this._dynamicUrls.delete(first);
+      }
+      this._dynamicUrls.add(url);
+    }
+
+    const allPatterns = await Promise.all(
+      validUrls.map((url) => this.getPatternsForUrl(url))
+    );
+
+    return allPatterns.flat();
+  }
+
   public static async syncPatterns<T>(
     urls: string[] | undefined,
     existing: T[],
@@ -297,33 +319,37 @@ export class FeatureControl {
     transform: (item: { name: string; pattern: string; score?: number }) => T,
     uniqueKey: (item: T) => string
   ): Promise<T[]> {
-    if (!urls?.length) return existing;
-
-    const isUnrestricted =
-      userData.trusted || Env.REGEX_FILTER_ACCESS === 'all';
-
-    const validUrls = urls.filter(
-      (url) =>
-        isUnrestricted || (Env.ALLOWED_REGEX_PATTERNS_URLS || []).includes(url)
-    );
-
-    if (!validUrls.length) return existing;
+    const patterns = await this.resolvePatterns(urls, userData);
+    if (patterns.length === 0) return existing;
 
     const result = [...existing];
     const existingSet = new Set(existing.map(uniqueKey));
 
-    const allPatterns = await Promise.all(
-      validUrls.map((url) => this.getPatternsForUrl(url))
-    );
+    for (const regex of patterns) {
+      const override = userData.regexOverrides?.find(
+        (o) =>
+          o.pattern === regex.pattern ||
+          (regex.name && o.originalName === regex.name)
+      );
 
-    for (const regexes of allPatterns) {
-      for (const regex of regexes) {
-        const item = transform(regex);
-        const key = uniqueKey(item);
-        if (!existingSet.has(key)) {
-          result.push(item);
-          existingSet.add(key);
-        }
+      if (override?.disabled) {
+        continue;
+      }
+
+      const item = transform(
+        override
+          ? {
+              ...regex,
+              name: override.name ?? regex.name,
+              score:
+                override.score !== undefined ? override.score : regex.score,
+            }
+          : regex
+      );
+      const key = uniqueKey(item);
+      if (!existingSet.has(key)) {
+        result.push(item);
+        existingSet.add(key);
       }
     }
     return result;

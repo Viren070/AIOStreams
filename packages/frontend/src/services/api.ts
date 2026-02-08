@@ -212,6 +212,51 @@ export class UserConfigAPI {
     }
   }
 
+  static async resolvePatterns(
+    urls: string[],
+    credentials?: { uuid: string; password: string }
+  ): Promise<ApiResponse<{ patterns: { name: string; pattern: string; score?: number }[] }>> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/user/resolve_patterns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          urls,
+          uuid: credentials?.uuid,
+          password: credentials?.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: {
+            code: data.error?.code || 'UNKNOWN_ERROR',
+            message: data.error?.message || 'Failed to resolve patterns',
+          },
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: {
+          code: 'UNKNOWN_ERROR',
+          message:
+            err instanceof Error ? err.message : 'Failed to resolve patterns',
+        },
+      };
+    }
+  }
+
   static async formatStream(
     stream: ParsedStream,
     context?: any

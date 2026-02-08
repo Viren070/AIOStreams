@@ -5,7 +5,9 @@ import {
   createLogger,
   encryptString,
   UserRepository,
+  FeatureControl,
 } from '@aiostreams/core';
+import { z } from 'zod';
 import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
 import { createResponse } from '../../utils/responses.js';
@@ -213,4 +215,52 @@ router.delete('/', async (req, res, next) => {
     }
   }
 });
+
+const ResolvePatternsSchema = z.object({
+  urls: z.array(z.string().url()).max(10),
+  uuid: z.string().optional(),
+  password: z.string().optional(),
+});
+
+router.post('/resolve_patterns', async (req, res, next) => {
+  const parsed = ResolvePatternsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'urls must be an array of valid URLs (max 10)'
+      )
+    );
+    return;
+  }
+  const { urls, uuid, password } = parsed.data;
+
+  try {
+    const userData =
+      (uuid && password
+        ? await UserRepository.getUser(uuid, password)
+        : undefined) ?? undefined;
+
+    const patterns = await FeatureControl.resolvePatterns(urls, userData);
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Patterns resolved successfully',
+        data: {
+          patterns: patterns,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
 export default router;

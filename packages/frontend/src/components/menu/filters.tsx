@@ -22,6 +22,8 @@ import {
   FaTachometerAlt,
   FaArrowUp,
   FaArrowDown,
+  FaEdit,
+  FaUndo,
 } from 'react-icons/fa';
 import { FaTextSlash } from 'react-icons/fa6';
 import {
@@ -95,6 +97,7 @@ import MarkdownLite from '../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@/utils/clipboard';
 import { UserData } from '@aiostreams/core';
+import { UserConfigAPI } from '@/services/api';
 
 /**
  * Formats age in hours to a human-readable string.
@@ -2605,11 +2608,6 @@ function Content() {
                         syncedRankedRegexUrls: urls,
                       })),
                     trusted: userData.trusted,
-                    onClearValues: () =>
-                      setUserData((prev) => ({
-                        ...prev,
-                        rankedRegexPatterns: [],
-                      })),
                   }}
                 />
               </div>
@@ -3873,25 +3871,439 @@ export interface SyncConfig {
   urls: string[];
   onUrlsChange: (urls: string[]) => void;
   trusted?: boolean;
-  onClearValues?: () => void;
 }
+interface SyncedPatternsProps {
+  url: string;
+  renderType: 'simple' | 'nameable' | 'ranked';
+}
+
+interface SyncedPatternValue {
+  pattern: string;
+  name?: string;
+  score?: number;
+}
+
+interface EditingItemState {
+  pattern: string;
+  name?: string;
+  score?: number;
+  originalName?: string;
+  disabled?: boolean;
+}
+
+function SyncedPatterns({ url, renderType }: SyncedPatternsProps) {
+  const { userData, setUserData, password } = useUserData();
+  const [syncedValues, setSyncedValues] = useState<SyncedPatternValue[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { isOpen, open, close } = useDisclosure(false);
+  const [editingItem, setEditingItem] = useState<EditingItemState | null>(null);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    setIsLoading(true);
+    UserConfigAPI.resolvePatterns(
+      [url],
+      userData.uuid && password
+        ? { uuid: userData.uuid, password: password }
+        : undefined
+    )
+      .then((res) => {
+        if (abortController.signal.aborted) return;
+        if (res.success && res.data) {
+          setSyncedValues(res.data.patterns);
+        } else {
+          setSyncedValues([]);
+        }
+      })
+      .catch((err) => {
+        if (abortController.signal.aborted) return;
+        console.error('Failed to resolve patterns:', err);
+        setSyncedValues([]);
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => abortController.abort();
+  }, [url, userData.uuid, password]);
+
+  if (isLoading) {
+    return (
+      <div className="px-3 pb-2 text-xs text-[--muted] animate-pulse">
+        Loading patterns...
+      </div>
+    );
+  }
+
+  if (syncedValues.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="px-3 pb-3 space-y-2">
+      {syncedValues.map((value, index) => {
+        const patternStr = typeof value === 'string' ? value : value.pattern;
+        const matchesOverride = (
+          o: NonNullable<typeof userData.regexOverrides>[number]
+        ) =>
+          o.pattern === patternStr ||
+          (value.name && o.originalName === value.name);
+
+        const override = userData.regexOverrides?.find(matchesOverride);
+        const isOverridden = !!override && !override.disabled;
+        const effectiveName = override?.name ?? value.name ?? '';
+        const effectiveScore =
+          override?.score !== undefined ? override.score : value.score ?? 0;
+
+        const isDisabled = override?.disabled;
+
+        const handleEnabledChange = (enabled: boolean) => {
+          setUserData((prev) => {
+            const overrides = [...(prev.regexOverrides || [])];
+            
+            if (enabled) {
+              const idx = overrides.findIndex(matchesOverride);
+              
+              if (idx >= 0) {
+                const existing = overrides[idx];
+                const hasNameChange = existing.name !== undefined && existing.name !== value.name;
+                const hasScoreChange = existing.score !== undefined && existing.score !== value.score;
+                
+                if (hasNameChange || hasScoreChange) {
+                  overrides[idx] = { ...existing, disabled: false };
+                  return { ...prev, regexOverrides: overrides };
+                } else {
+                  overrides.splice(idx, 1);
+                  return { ...prev, regexOverrides: overrides };
+                }
+              }
+              return prev;
+            }
+
+            const idx = overrides.findIndex(matchesOverride);
+
+            const existingOverride = idx >= 0 ? overrides[idx] : null;
+
+            const entry = {
+              pattern: patternStr,
+              name: existingOverride?.name,
+              score: existingOverride?.score,
+              originalName: value.name,
+              disabled: true,
+            };
+
+            if (idx >= 0) {
+              overrides[idx] = entry;
+            } else {
+              overrides.push(entry);
+            }
+            return { ...prev, regexOverrides: overrides };
+          });
+          toast.success(enabled ? 'Pattern enabled' : 'Pattern disabled');
+        };
+
+        return (
+          <div key={index} className={isDisabled ? 'opacity-50' : 'opacity-70'}>
+            {renderType === 'simple' && (
+              <div className="flex gap-2 items-start">
+                <div className="pt-8 min-w-[24px] flex justify-center">
+                  <Checkbox
+                    value={!isDisabled}
+                    size="lg"
+                    onValueChange={(checked) => handleEnabledChange(checked === true)}
+                  />
+                </div>
+                <div className="flex-1">
+                  <TextInput
+                    value={patternStr}
+                    label="Pattern (Synced)"
+                    disabled
+                    size="sm"
+                    className={isOverridden ? 'border-primary/50' : ''}
+                  />
+                </div>
+                <div className="self-end pb-0.5 flex gap-1 flex-shrink-0" />
+              </div>
+            )}
+            {renderType === 'nameable' && (
+              <div className="flex gap-2 items-start">
+                <div className="pt-8 min-w-[24px] flex justify-center">
+                  <Checkbox
+                    value={!isDisabled}
+                    size="lg"
+                    onValueChange={(checked) => handleEnabledChange(checked === true)}
+                  />
+                </div>
+                <div className="flex-none w-1/3">
+                  <TextInput
+                    value={effectiveName}
+                    label={
+                      isOverridden ? 'Name (Overridden)' : 'Name (Synced)'
+                    }
+                    disabled
+                    size="sm"
+                    className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
+                  />
+                </div>
+                <div className="flex-1">
+                  <TextInput
+                    value={patternStr}
+                    label="Pattern (Synced)"
+                    disabled
+                    size="sm"
+                    className={cn(isOverridden ? 'border-primary/50' : '', isDisabled && 'line-through text-gray-500')}
+                  />
+                </div>
+                <div className="pb-0.5 flex gap-1 flex-shrink-0 self-end">
+                  {isOverridden && (
+                    <Tooltip
+                      trigger={
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={<FaUndo className="text-xs" />}
+                          intent="alert-subtle"
+                          onClick={() => {
+                            setUserData((prev) => ({
+                              ...prev,
+                              regexOverrides: (prev.regexOverrides || []).filter(
+                                (o) => !matchesOverride(o)
+                              ),
+                            }));
+                            toast.info('Override removed');
+                          }}
+                          className="h-[38px] w-[38px] border border-red-500/20 hover:border-red-500/50 transition-colors shadow-sm"
+                        />
+                      }
+                    >
+                      Reset Override
+                    </Tooltip>
+                  )}
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="sm"
+                        rounded
+                        icon={<FaEdit className="text-xs" />}
+                        intent={isOverridden ? 'primary' : 'primary-subtle'}
+                        onClick={() => {
+                          setEditingItem({
+                            pattern: patternStr,
+                            name: effectiveName,
+                            originalName: value.name,
+                          });
+                          open();
+                        }}
+                        className="h-[38px] w-[38px] border border-primary/20 hover:border-primary/50 transition-colors shadow-sm"
+                      />
+                    }
+                  >
+                    Override
+                  </Tooltip>
+                </div>
+              </div>
+            )}
+            {renderType === 'ranked' && (
+              <div
+                className={cn(
+                  'flex flex-col gap-2 p-2 border rounded border-gray-800 bg-black/20',
+                  isOverridden && 'border-primary/50'
+                )}
+              >
+                <div className="flex gap-2 items-start">
+                  <div className="pt-8 min-w-[24px] flex justify-center">
+                    <Checkbox
+                      value={!isDisabled}
+                      size="lg"
+                      onValueChange={(checked) => handleEnabledChange(checked === true)}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <TextInput
+                      value={patternStr}
+                      label="Pattern (Synced)"
+                      disabled
+                      size="sm"
+                      className={cn(isDisabled && 'line-through text-gray-500')}
+                    />
+                  </div>
+                  <div className="pb-0.5 flex gap-1 flex-shrink-0 self-end">
+                    {isOverridden && (
+                      <Tooltip
+                        trigger={
+                          <IconButton
+                            size="sm"
+                            rounded
+                            icon={<FaUndo className="text-xs" />}
+                            intent="alert-subtle"
+                            onClick={() => {
+                              setUserData((prev) => ({
+                                ...prev,
+                                regexOverrides: (
+                                  prev.regexOverrides || []
+                                ).filter(
+                                  (o) => !matchesOverride(o)
+                                ),
+                              }));
+                              toast.info('Override removed');
+                            }}
+                            className="h-[38px] w-[38px] border border-red-500/20 hover:border-red-500/50 transition-colors shadow-sm"
+                          />
+                        }
+                      >
+                        Reset Override
+                      </Tooltip>
+                    )}
+                    <Tooltip
+                      trigger={
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={<FaEdit className="text-xs" />}
+                          intent={isOverridden ? 'primary' : 'primary-subtle'}
+                          onClick={() => {
+                            setEditingItem({
+                              pattern: patternStr,
+                              name: effectiveName,
+                              score: effectiveScore,
+                              originalName: value.name,
+                            });
+                            open();
+                          }}
+                          className="h-[38px] w-[38px] border border-primary/20 hover:border-primary/50 transition-colors shadow-sm"
+                        />
+                      }
+                    >
+                      Override
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="flex gap-2 pl-[calc(24px+0.5rem)]">
+                  <div className="flex-1">
+                    <TextInput
+                      value={effectiveName}
+                      label={
+                        isOverridden ? 'Name (Overridden)' : 'Name (Synced)'
+                      }
+                      disabled
+                      size="sm"
+                      className={cn(isDisabled && 'line-through text-gray-500')}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <NumberInput
+                      value={effectiveScore}
+                      label={isOverridden ? 'Score (Ovr)' : 'Score'}
+                      disabled
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <Modal
+        open={isOpen}
+        onOpenChange={(val) => {
+          if (!val) {
+            setEditingItem(null);
+            close();
+          }
+        }}
+        title="Override"
+      >
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-[--muted] break-all">
+            Pattern: <code className="text-[--primary]">{editingItem?.pattern}</code>
+          </p>
+          {(renderType === 'nameable' || renderType === 'ranked') && (
+            <TextInput
+              label="Custom Name"
+              value={editingItem?.name || ''}
+              onValueChange={(name) =>
+                setEditingItem((prev) => (prev ? { ...prev, name } : null))
+              }
+            />
+          )}
+          {renderType === 'ranked' && (
+            <NumberInput
+              label="Custom Score"
+              value={editingItem?.score ?? 0}
+              onValueChange={(score) =>
+                setEditingItem((prev) => (prev ? { ...prev, score } : null))
+              }
+            />
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      intent="primary-outline"
+                      onClick={() => {
+                        setEditingItem(null);
+                        close();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!editingItem) return;
+                        setUserData((prev) => {
+                          const overrides = [...(prev.regexOverrides || [])];
+                          const idx = overrides.findIndex(
+                            (o) =>
+                              o.pattern === editingItem.pattern ||
+                              (editingItem.originalName &&
+                                o.originalName === editingItem.originalName)
+                          );
+                          const existingOverride = idx >= 0 ? overrides[idx] : undefined;
+                          const entry = {
+                            pattern: editingItem.pattern,
+                            name: editingItem.name || undefined,
+                            score: editingItem.score,
+                            originalName: editingItem.originalName,
+                            disabled:
+                              editingItem.disabled ?? existingOverride?.disabled,
+                          };
+                          if (idx >= 0) {
+                            overrides[idx] = entry;
+                          } else {
+                            overrides.push(entry);
+                          }
+                          return { ...prev, regexOverrides: overrides };
+                        });
+                        close();
+                        toast.success('Override saved');
+                      }}
+                    >
+                      Save Override
+                    </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 function SyncedUrlInputs({
   syncConfig,
-  hasExistingPatterns,
+  renderType = 'simple',
 }: {
   syncConfig?: SyncConfig;
-  hasExistingPatterns?: boolean;
+  renderType?: 'simple' | 'nameable' | 'ranked';
 }) {
   const { status } = useStatus();
   const [newUrl, setNewUrl] = useState('');
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingUrl, setPendingUrl] = useState('');
 
   if (!syncConfig) {
     return null;
   }
 
-  const { urls, onUrlsChange, trusted, onClearValues } = syncConfig;
+  const { urls, onUrlsChange, trusted } = syncConfig;
 
   const validateAndAdd = (url: string) => {
     const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
@@ -3905,8 +4317,14 @@ function SyncedUrlInputs({
       return false;
     }
 
+    if (urls.includes(url)) {
+      toast.error('URL is already added');
+      return false;
+    }
+
     const isUnrestricted =
-      trusted || status?.settings.regexFilterAccess === 'all';
+      status?.settings.regexFilterAccess === 'all' ||
+      (status?.settings.regexFilterAccess === 'trusted' && trusted);
 
     if (!isUnrestricted && !allowedUrls.includes(url)) {
       toast.error('URL is not in the allowed list');
@@ -3918,107 +4336,73 @@ function SyncedUrlInputs({
 
   const handleUrlsUpdate = (newUrls: string[]) => {
     onUrlsChange(newUrls);
-    if (newUrls.length > 0 && onClearValues) {
-      onClearValues();
-    }
   };
 
   const handleAdd = () => {
     if (!validateAndAdd(newUrl)) return;
 
-    if (hasExistingPatterns) {
-      setPendingUrl(newUrl);
-      setShowConfirmModal(true);
-    } else {
-      handleUrlsUpdate([newUrl]);
-      setNewUrl('');
-    }
-  };
-
-  const confirmAdd = () => {
-    handleUrlsUpdate([pendingUrl]);
+    handleUrlsUpdate([...urls, newUrl]);
     setNewUrl('');
-    setPendingUrl('');
-    setShowConfirmModal(false);
   };
 
   return (
     <>
-      <Modal
-        open={showConfirmModal}
-        onOpenChange={setShowConfirmModal}
-        title="Replace Existing Patterns?"
-        description="Syncing from a URL will delete all existing patterns in this list. Only the patterns fetched from the synced URL will be used."
-      >
-        <div className="flex gap-2 justify-end mt-4">
-          <Button
-            intent="gray-subtle"
-            onClick={() => {
-              setShowConfirmModal(false);
-              setPendingUrl('');
-            }}
-          >
-            Cancel
-          </Button>
-          <Button intent="alert" onClick={confirmAdd}>
-            Confirm
-          </Button>
-        </div>
-      </Modal>
       <div className="space-y-3 mt-4 border-t border-gray-800 pt-4">
         <div>
           <h5 className="text-sm font-medium">Synced URL</h5>
           <p className="text-xs text-[--muted]">
-            Automatically fetch and sync patterns from this URL
+            Automatically fetch and sync patterns from this URL. Manual patterns will always take priority over synced patterns.
           </p>
         </div>
 
         <div className="space-y-2">
-          {urls.length > 0 ? (
+          {urls.length > 0 && (
             <div className="bg-gray-900 rounded-md border border-gray-800 divide-y divide-gray-800">
-              {urls.map((url, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-2 px-3 text-sm"
-                >
-                  <span className="flex-1 truncate font-mono text-xs">
-                    {url}
-                  </span>
-                  <IconButton
-                    size="sm"
-                    rounded
-                    icon={<FaRegTrashAlt />}
-                    intent="alert-subtle"
-                    onClick={() =>
-                      handleUrlsUpdate(urls.filter((_, i) => i !== index))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <TextInput
-                  value={newUrl}
-                  placeholder="https://example.com/patterns.json"
-                  onValueChange={setNewUrl}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAdd();
-                    }
-                  }}
+              {urls.map((url) => (
+                <div key={url} className="flex flex-col">
+                  <div className="flex items-center gap-2 p-2 px-3 text-sm">
+                    <span className="flex-1 truncate font-mono text-xs text-[--muted]">
+                      {url}
+                    </span>
+                    <IconButton
+                      size="sm"
+                      rounded
+                      icon={<FaRegTrashAlt />}
+                      intent="alert-subtle"
+                      onClick={() =>
+                        handleUrlsUpdate(urls.filter((u) => u !== url))
+                      }
+                    />
+                  </div>
+                  <SyncedPatterns
+                  url={url}
+                  renderType={renderType}
                 />
               </div>
-              <IconButton
-                onClick={handleAdd}
-                disabled={!newUrl}
-                icon={<FaPlus />}
-                intent="primary"
-              />
+            ))}
             </div>
           )}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <TextInput
+                value={newUrl}
+                placeholder="https://example.com/patterns.json"
+                onValueChange={setNewUrl}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
+              />
+            </div>
+            <IconButton
+              onClick={handleAdd}
+              disabled={!newUrl}
+              icon={<FaPlus />}
+              intent="primary"
+            />
+          </div>
         </div>
       </div>
     </>
@@ -4063,9 +4447,6 @@ function TextInputs({
     URL.revokeObjectURL(url);
   };
 
-  const effectiveDisabled =
-    disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
-
   return (
     <SettingsCard title={label} description={help} key={label}>
       {values.map((value, index) => (
@@ -4076,7 +4457,6 @@ function TextInputs({
               label={itemName}
               placeholder={placeholder}
               onValueChange={(value) => onValueChange(value, index)}
-              disabled={effectiveDisabled}
             />
           </div>
           <IconButton
@@ -4084,7 +4464,7 @@ function TextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === 0}
+            disabled={index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -4094,7 +4474,7 @@ function TextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === values.length - 1}
+            disabled={index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -4104,7 +4484,6 @@ function TextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
-            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -4120,7 +4499,6 @@ function TextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
-          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, ''])}
         />
         <div className="ml-auto flex gap-2">
@@ -4131,7 +4509,6 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
-                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -4145,7 +4522,6 @@ function TextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
-                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -4161,11 +4537,8 @@ function TextInputs({
       />
       {syncConfig && (
         <SyncedUrlInputs
-          syncConfig={{
-            ...syncConfig,
-            onClearValues: () => onValuesChange([]),
-          }}
-          hasExistingPatterns={values.length > 0}
+          syncConfig={syncConfig}
+          renderType="simple"
         />
       )}
     </SettingsCard>
@@ -4208,8 +4581,6 @@ function TwoTextInputs({
   disabled,
   syncConfig,
 }: KeyValueInputProps) {
-  const effectiveDisabled =
-    disabled || (syncConfig?.urls && syncConfig.urls.length > 0);
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -4258,7 +4629,6 @@ function TwoTextInputs({
               value={value.name}
               label={keyName}
               placeholder={keyPlaceholder}
-              disabled={effectiveDisabled}
               onValueChange={(newValue) => onKeyChange(newValue, index)}
             />
           </div>
@@ -4267,7 +4637,6 @@ function TwoTextInputs({
               value={value.value}
               label={valueName}
               placeholder={valuePlaceholder}
-              disabled={effectiveDisabled}
               onValueChange={(newValue) => onValueChange(newValue, index)}
             />
           </div>
@@ -4276,7 +4645,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowUp />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === 0}
+            disabled={index === 0}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index - 1));
             }}
@@ -4286,7 +4655,7 @@ function TwoTextInputs({
             rounded
             icon={<FaArrowDown />}
             intent="primary-subtle"
-            disabled={effectiveDisabled || index === values.length - 1}
+            disabled={index === values.length - 1}
             onClick={() => {
               onValuesChange(arrayMove(values, index, index + 1));
             }}
@@ -4296,7 +4665,6 @@ function TwoTextInputs({
             rounded
             icon={<FaRegTrashAlt />}
             intent="alert-subtle"
-            disabled={effectiveDisabled}
             onClick={() =>
               onValuesChange([
                 ...values.slice(0, index),
@@ -4312,7 +4680,6 @@ function TwoTextInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
-          disabled={effectiveDisabled}
           onClick={() => onValuesChange([...values, { name: '', value: '' }])}
         />
         <div className="ml-auto flex gap-2">
@@ -4323,7 +4690,6 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
-                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -4337,7 +4703,6 @@ function TwoTextInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
-                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -4353,11 +4718,8 @@ function TwoTextInputs({
       />
       {syncConfig && (
         <SyncedUrlInputs
-          syncConfig={{
-            ...syncConfig,
-            onClearValues: () => onValuesChange([]),
-          }}
-          hasExistingPatterns={values.length > 0}
+          syncConfig={syncConfig}
+          renderType="nameable"
         />
       )}
     </SettingsCard>
@@ -4977,7 +5339,6 @@ function RankedRegexInputs({
   onScoreChange,
   syncConfig,
 }: RankedRegexInputProps) {
-  const effectiveDisabled = syncConfig?.urls && syncConfig.urls.length > 0;
   const importModalDisclosure = useDisclosure(false);
 
   const handleImport = (data: any) => {
@@ -5031,7 +5392,6 @@ function RankedRegexInputs({
               value={value.pattern}
               label="Pattern"
               placeholder="Regex Pattern"
-              disabled={effectiveDisabled}
               onValueChange={(newValue) => onPatternChange(newValue, index)}
             />
           </div>
@@ -5041,7 +5401,6 @@ function RankedRegexInputs({
                 value={value.name || ''}
                 label="Name"
                 placeholder="Name (Optional)"
-                disabled={effectiveDisabled}
                 onValueChange={(newValue) => onNameChange(newValue, index)}
               />
             </div>
@@ -5049,7 +5408,6 @@ function RankedRegexInputs({
               <NumberInput
                 value={value.score}
                 label="Score"
-                disabled={effectiveDisabled}
                 onValueChange={(newValue) =>
                   onScoreChange(newValue ?? 0, index)
                 }
@@ -5064,7 +5422,7 @@ function RankedRegexInputs({
                 rounded
                 icon={<FaArrowUp />}
                 intent="primary-subtle"
-                disabled={effectiveDisabled || index === 0}
+                disabled={index === 0}
                 onClick={() => {
                   onValuesChange(arrayMove(values, index, index - 1));
                 }}
@@ -5074,7 +5432,7 @@ function RankedRegexInputs({
                 rounded
                 icon={<FaArrowDown />}
                 intent="primary-subtle"
-                disabled={effectiveDisabled || index === values.length - 1}
+                disabled={index === values.length - 1}
                 onClick={() => {
                   onValuesChange(arrayMove(values, index, index + 1));
                 }}
@@ -5084,7 +5442,6 @@ function RankedRegexInputs({
                 rounded
                 icon={<FaRegTrashAlt />}
                 intent="alert-subtle"
-                disabled={effectiveDisabled}
                 onClick={() =>
                   onValuesChange([
                     ...values.slice(0, index),
@@ -5102,7 +5459,6 @@ function RankedRegexInputs({
           size="sm"
           intent="primary-subtle"
           icon={<FaPlus />}
-          disabled={effectiveDisabled}
           onClick={() =>
             onValuesChange([...values, { pattern: '', name: '', score: 0 }])
           }
@@ -5115,7 +5471,6 @@ function RankedRegexInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileImport />}
-                disabled={effectiveDisabled}
                 onClick={importModalDisclosure.open}
               />
             }
@@ -5129,7 +5484,6 @@ function RankedRegexInputs({
                 size="sm"
                 intent="primary-subtle"
                 icon={<FaFileExport />}
-                disabled={effectiveDisabled}
                 onClick={handleExport}
               />
             }
@@ -5145,11 +5499,8 @@ function RankedRegexInputs({
       />
       {syncConfig && (
         <SyncedUrlInputs
-          syncConfig={{
-            ...syncConfig,
-            onClearValues: () => onValuesChange([]),
-          }}
-          hasExistingPatterns={values.length > 0}
+          syncConfig={syncConfig}
+          renderType="ranked"
         />
       )}
     </SettingsCard>

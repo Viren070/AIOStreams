@@ -786,7 +786,9 @@ function validateSyncedRegexUrls(
   config: UserData,
   skipErrors: boolean = false
 ) {
-  const isUnrestricted = config.trusted || Env.REGEX_FILTER_ACCESS === 'all';
+  const isUnrestricted =
+    Env.REGEX_FILTER_ACCESS === 'all' ||
+    (Env.REGEX_FILTER_ACCESS === 'trusted' && config.trusted);
 
   if (isUnrestricted) return;
 
