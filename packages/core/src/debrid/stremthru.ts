@@ -944,31 +944,58 @@ export class StremThruService
       });
     }
 
+    // Track whether we're attempting to stream a not-yet-downloaded torrent.
+    // Some stores (qBittorrent, Torbox) return file links during download,
+    // allowing streaming while downloading. If link generation fails for
+    // stores that don't actually support it (e.g. Debrider), we fall back
+    // to returning undefined (shows "downloading" page).
+    let streamingWhileDownloading = false;
+
     if (magnetDownload.status !== 'downloaded') {
-      StremThruService.playbackLinkCache.set(cacheKey, null, 60);
-      if (!cacheAndPlay) {
-        return undefined;
-      }
-      const pollingInterval = this.cacheAndPlayOptions.pollingInterval;
-      const maxPolls = Math.ceil(
-        this.cacheAndPlayOptions.maxWaitTime / pollingInterval
-      );
-      for (let i = 0; i < maxPolls; i++) {
-        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
-        const list = await this.listMagnets();
-        const magnetDownloadInList = list.find(
-          (magnet) => magnet.hash === hash
+      // If cacheAndPlay is enabled and we already have files with links
+      // (e.g. qBittorrent with sequential download), proceed immediately —
+      // the file server can serve partially-downloaded files.
+      const hasStreamableFiles = magnetDownload.files?.some((f) => f.link);
+      if (cacheAndPlay && hasStreamableFiles) {
+        logger.debug(
+          `Attempting streaming-while-downloading for ${hash}`,
+          { status: magnetDownload.status }
         );
-        if (!magnetDownloadInList) {
-          logger.warn(`Failed to find ${hash} in list`);
-        } else {
-          logger.debug(`Polled status for ${hash}`, {
-            attempt: i + 1,
-            status: magnetDownloadInList.status,
-          });
-          if (magnetDownloadInList.status === 'downloaded') {
-            magnetDownload = magnetDownloadInList;
-            break;
+        streamingWhileDownloading = true;
+      } else {
+        StremThruService.playbackLinkCache.set(cacheKey, null, 60);
+        if (!cacheAndPlay) {
+          return undefined;
+        }
+        const pollingInterval = this.cacheAndPlayOptions.pollingInterval;
+        const maxPolls = Math.ceil(
+          this.cacheAndPlayOptions.maxWaitTime / pollingInterval
+        );
+        const initialFiles = magnetDownload.files;
+        for (let i = 0; i < maxPolls; i++) {
+          await new Promise((resolve) => setTimeout(resolve, pollingInterval));
+          const list = await this.listMagnets();
+          const magnetDownloadInList = list.find(
+            (magnet) => magnet.hash === hash
+          );
+          if (!magnetDownloadInList) {
+            logger.warn(`Failed to find ${hash} in list`);
+          } else {
+            logger.debug(`Polled status for ${hash}`, {
+              attempt: i + 1,
+              status: magnetDownloadInList.status,
+            });
+            if (magnetDownloadInList.status === 'downloaded') {
+              // listMagnets doesn't return files, so preserve the original
+              // file list from addMagnet/addTorrent
+              magnetDownload = {
+                ...magnetDownloadInList,
+                files: magnetDownloadInList.files?.length
+                  ? magnetDownloadInList.files
+                  : initialFiles,
+              };
+              break;
+            }
           }
           if (['failed', 'invalid'].includes(magnetDownloadInList.status)) {
             throw new DebridError(
@@ -983,9 +1010,9 @@ export class StremThruService
             );
           }
         }
-      }
-      if (magnetDownload.status !== 'downloaded') {
-        return undefined;
+        if (magnetDownload.status !== 'downloaded') {
+          return undefined;
+        }
       }
     }
 
@@ -1078,10 +1105,26 @@ export class StremThruService
       availableFiles: `[${magnetDownload.files.map((file) => file.name).join(', ')}]`,
     });
 
-    const playbackLink = await this.generateTorrentLink(
-      file.link,
-      this.config.clientIp
-    );
+    let playbackLink: string;
+    try {
+      playbackLink = await this.generateTorrentLink(
+        file.link,
+        this.config.clientIp
+      );
+    } catch (error: any) {
+      // If we're streaming while downloading and link generation fails,
+      // the store doesn't support partial file serving. Fall back to
+      // showing the "downloading" page instead of an error.
+      if (streamingWhileDownloading) {
+        logger.debug(
+          `Streaming-while-downloading link generation failed for ${hash}, falling back`,
+          { error: error.message }
+        );
+        StremThruService.playbackLinkCache.set(cacheKey, null, 60);
+        return undefined;
+      }
+      throw error;
+    }
     await StremThruService.playbackLinkCache.set(
       cacheKey,
       playbackLink,
