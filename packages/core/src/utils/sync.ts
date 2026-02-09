@@ -246,12 +246,6 @@ export class SyncManager<T extends Record<string, any>> {
         );
       }
 
-      // throw an error if the current time is 2 30 AM or later ( debugging)
-      const now = new Date();
-      if (now.getHours() === 2 && now.getMinutes() >= 30) {
-        throw new Error('Simulated fetch error for testing retry logic');
-      }
-
       const data = await response.json();
 
       // Try parsing as array of items first
