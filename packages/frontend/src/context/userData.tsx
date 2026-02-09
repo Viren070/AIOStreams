@@ -241,6 +241,10 @@ export const DefaultUserData: UserData = {
         direction: 'desc',
       },
       {
+        key: 'library',
+        direction: 'desc',
+      },
+      {
         key: 'resolution',
         direction: 'desc',
       },
