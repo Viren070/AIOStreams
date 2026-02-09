@@ -445,7 +445,7 @@ export class TMDBMetadata {
     tmdbId: number,
     seasonNumber: number,
     episodeNumber: number
-  ): Promise<{ air_date?: string; runtime?: number } | undefined> {
+  ): Promise<{ airDate?: string; runtime?: number } | undefined> {
     const url = new URL(
       API_BASE_URL +
         `/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`
@@ -463,7 +463,7 @@ export class TMDBMetadata {
     const json = await response.json();
     const episodeData = TVEpisodeDetailsSchema.parse(json);
     return {
-      air_date: episodeData.air_date ?? undefined,
+      airDate: episodeData.air_date ?? undefined,
       runtime: episodeData.runtime ?? undefined,
     };
   }
@@ -501,25 +501,9 @@ export class TMDBMetadata {
       nextEpisode = 1;
     }
 
-    try {
-      const url = new URL(
-        API_BASE_URL +
-          `/tv/${tmdbId}/season/${nextSeason}/episode/${nextEpisode}`
-      );
-      this.addSearchParams(url);
-      const response = await makeRequest(url.toString(), {
-        timeout: 5000,
-        headers: this.getHeaders(),
-      });
-      if (!response.ok) {
-        return undefined;
-      }
-      const json = await response.json();
-      const episodeData = TVEpisodeDetailsSchema.parse(json);
-      return episodeData.air_date ?? undefined;
-    } catch (error) {
-      return undefined;
-    }
+    return this.getEpisodeDetails(tmdbId, nextSeason, nextEpisode).then(
+      (details) => details?.airDate
+    );
   }
 
   public async validateAuthorisation() {

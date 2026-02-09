@@ -28,6 +28,11 @@ export class MetadataService {
     this.config = config;
   }
 
+  private isDateInFuture(dateStr: string): boolean {
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) && date > new Date();
+  }
+
   public async getMetadata(
     id: ParsedId,
     type: (typeof TYPES)[number]
@@ -195,7 +200,10 @@ export class MetadataService {
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
               if (tvdbMetadata.runtime && !runtime)
                 runtime = tvdbMetadata.runtime;
-              if (tvdbMetadata.nextAirDate)
+              if (
+                tvdbMetadata.nextAirDate &&
+                this.isDateInFuture(tvdbMetadata.nextAirDate)
+              )
                 nextAirDate = tvdbMetadata.nextAirDate;
               if (tvdbMetadata.lastAiredDate)
                 lastAiredDate = tvdbMetadata.lastAiredDate;
@@ -208,7 +216,6 @@ export class MetadataService {
               );
             }
 
-            // Fallback to TMDB for next episode air date if TVDB didn't provide it
             if (!nextAirDate && type === 'series' && id.season && id.episode) {
               try {
                 const tmdb = new TMDBMetadata({
@@ -222,7 +229,7 @@ export class MetadataService {
                     Number(id.episode),
                     seasons
                   );
-                  if (tmdbNextAirDate) {
+                  if (tmdbNextAirDate && this.isDateInFuture(tmdbNextAirDate)) {
                     nextAirDate = tmdbNextAirDate;
                   }
                 }
