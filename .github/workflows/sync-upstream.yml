@@ -48,7 +48,7 @@ jobs:
             echo "Main already contains upstream."
             exit 0
           fi
-          if ! git rebase upstream/${UPSTREAM_BRANCH}; then
+          if ! git rebase --strategy-option=theirs upstream/${UPSTREAM_BRANCH}; then
             git rebase --abort || true
             echo "Rebase failed. Resolve conflicts manually."
             exit 1
