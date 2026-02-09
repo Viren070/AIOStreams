@@ -212,6 +212,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
 
     const queries = this.buildQueries(parsedId, metadata, {
       useAllTitles: useAllTitles(this.userData.url),
+      keepApostrophes: true,
     });
     if (queries.length === 0) {
       return { results: [], privateIndexerIds };
