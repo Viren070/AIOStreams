@@ -208,12 +208,20 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       return [];
     }
 
+    // Pass Newznab categories so Prowlarr only queries indexers that support
+    // the content type (e.g. PTP won't receive TV queries).
+    const categories =
+      parsedId.mediaType === 'movie' ? [2000] : // Movies (all subcategories)
+      parsedId.mediaType === 'series' ? [5000] : // TV (all subcategories)
+      undefined;
+
     const searchPromises = queries.map((q) =>
       queryLimit(async () => {
         const start = Date.now();
         const { data } = await this.api.search({
           query: q,
           indexerIds: chosenIndexers.map((indexer) => indexer.id),
+          categories,
           type: 'search',
           limit: 2000,
         });
