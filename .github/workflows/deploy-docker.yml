@@ -72,8 +72,8 @@ jobs:
           {
             echo 'DOCKER_IMAGE_TAGS<<EOF'
             for tag in ${TAGS}; do
-            echo "viren070/aiostreams:${tag}"
-            echo "ghcr.io/viren070/aiostreams:${tag}"
+            echo "${{ github.repository_owner }}/aios:${tag}"
+            echo "ghcr.io/${{ github.repository_owner }}/aios:${tag}"
             done
             echo EOF
           } >> "${GITHUB_ENV}"
@@ -155,23 +155,23 @@ jobs:
                   },
                   {
                     "name": "📍 View Images",
-                    "value": "[Docker Hub](https://hub.docker.com/r/viren070/aiostreams) · [GHCR](https://github.com/Viren070/AIOStreams/pkgs/container/aiostreams)",
+                    "value": "[Docker Hub](https://hub.docker.com/r/${{ github.repository_owner }}/aios) · [GHCR](https://github.com/${{ github.repository }}/pkgs/container/aios)",
                     "inline": false
                   },
                   {
                     "name": "📝 View Release Notes",
-                    "value": "[GitHub](https://github.com/Viren070/AIOStreams/releases/tag/${{ inputs.ref }})",
+                    "value": "[GitHub](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.ref }})",
                     "inline": false
                   },
                   {
                     "name": "🔗 View Build",
-                    "value": "[GitHub Actions](https://github.com/Viren070/aiostreams/actions/runs/${{ github.run_id }})",
+                    "value": "[GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})",
                     "inline": false
                   }
                 ],
                 "footer": {
                   "text": "AIOStreams CI",
-                  "icon_url": "https://github.com/Viren070.png"
+                  "icon_url": "https://github.com/${{ github.repository_owner }}.png"
                 },
                 "timestamp": "$TIMESTAMP"
               }
