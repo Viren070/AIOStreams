@@ -73,6 +73,14 @@ export class StremThruService
   private static checkCache = Cache.getInstance<string, DebridDownload>(
     'st:check'
   );
+  // Maps placeholder hashes (SHA-1 of downloadUrl) to real info hashes returned
+  // by StremThru after addTorrent. Persists via Redis or SQL so that future
+  // cache checks resolve correctly (e.g. showing qBittorrent torrents as cached).
+  private static hashMapping = Cache.getInstance<string, string>(
+    'st:hash-map',
+    5000,
+    Env.REDIS_URI ? undefined : 'sql'
+  );
   private static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'st:library'
   );
@@ -810,13 +818,28 @@ export class StremThruService
     return result;
   }
 
+  /**
+   * Resolve a placeholder hash to the real info hash if a mapping exists.
+   * Used by the cache-checking pipeline to look up real hashes before
+   * calling checkMagnets, so already-downloaded torrents show as cached.
+   */
+  public static async resolveHash(
+    serviceName: string,
+    hash: string
+  ): Promise<string> {
+    const realHash = await StremThruService.hashMapping.get(
+      `${serviceName}:${hash}`
+    );
+    return realHash ?? hash;
+  }
+
   private async _resolveTorrent(
     playbackInfo: PlaybackInfo & { type: 'torrent' },
     filename: string,
     cacheAndPlay: boolean,
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
-    const { hash, metadata } = playbackInfo;
+    let { hash, metadata } = playbackInfo;
     const cacheKey = `torrent:${this.serviceName}:${this.config.stremthru.token}:${this.config.clientIp}:${hash}:${metadata?.season}:${metadata?.episode}:${metadata?.absoluteEpisode}`;
     const cachedLink = await StremThruService.playbackLinkCache.get(cacheKey);
 
@@ -851,6 +874,21 @@ export class StremThruService
         `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
       );
       magnetDownload = await this.addTorrent(playbackInfo.downloadUrl);
+
+      // Map placeholder → real hash so future cache checks and polling work
+      const realHash = magnetDownload.hash;
+      if (playbackInfo.placeholderHash && realHash && realHash !== hash) {
+        logger.debug(
+          `Mapped placeholder hash ${hash} → real hash ${realHash}`
+        );
+        StremThruService.hashMapping
+          .set(`${this.serviceName}:${hash}`, realHash, 3600 * 24 * 7)
+          .catch((err) =>
+            logger.warn(`Failed to cache hash mapping: ${err.message}`)
+          );
+        hash = realHash;
+      }
+
       logger.debug(`Torrent added for ${playbackInfo.downloadUrl}`, {
         status: magnetDownload.status,
         id: magnetDownload.id,
