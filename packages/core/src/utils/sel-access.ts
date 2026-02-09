@@ -45,10 +45,13 @@ export class SelAccess {
           (Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL ?? 86400000) / 1000
         );
 
+      const staleTolerance = Env.WHITELISTED_SYNC_STALE_TOLERANCE;
+
       this._instance = new SyncManager<StreamExpressionItem>({
         cacheKey: 'sel-expressions',
         maxCacheSize: 100,
         refreshInterval,
+        staleTolerance,
         configuredUrls,
         itemSchema: StreamExpressionSchema,
         itemKey: (item) => item.expression,

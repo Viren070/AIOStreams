@@ -16,6 +16,8 @@ export interface SyncManagerConfig {
   maxCacheSize: number;
   /** Refresh interval in seconds (0 = no refresh) */
   refreshInterval: number;
+  /** Stale tolerance in seconds (0 = disabled) */
+  staleTolerance: number;
   /** Statically configured URLs from env vars */
   configuredUrls: string[];
   /** Zod schema to validate items fetched from URLs */
@@ -113,7 +115,7 @@ export class SyncManager<T extends Record<string, any>> {
 
     const items = await this._fetchWithRetry(url);
     if (items.length > 0) {
-      await this.cache.set(url, { items }, this.config.refreshInterval);
+      await this.cache.set(url, { items }, this.config.refreshInterval + this.config.staleTolerance);
     }
     return items;
   }
@@ -126,7 +128,7 @@ export class SyncManager<T extends Record<string, any>> {
     try {
       const items = await this._fetchWithRetry(url);
       if (items.length > 0) {
-        await this.cache.set(url, { items }, this.config.refreshInterval);
+        await this.cache.set(url, { items }, this.config.refreshInterval + this.config.staleTolerance);
       }
       return { url, items };
     } catch (error: any) {
@@ -264,7 +266,7 @@ export class SyncManager<T extends Record<string, any>> {
         this._fetchWithRetry(url)
           .then((items) => {
             if (items.length > 0) {
-              this.cache.set(url, { items }, this.config.refreshInterval);
+              this.cache.set(url, { items }, this.config.refreshInterval + this.config.staleTolerance);
             }
             return items;
           })

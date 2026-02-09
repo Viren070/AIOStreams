@@ -53,10 +53,13 @@ export class RegexAccess {
         Env.WHITELISTED_SYNC_REFRESH_INTERVAL ??
         Math.floor(Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL / 1000);
 
+      const staleTolerance = Env.WHITELISTED_SYNC_STALE_TOLERANCE;
+
       this._instance = new SyncManager<RegexPatternItem>({
         cacheKey: 'regex-patterns',
         maxCacheSize: 100,
         refreshInterval,
+        staleTolerance,
         configuredUrls,
         itemSchema: RegexPatternSchema,
         itemKey: (item) => item.pattern,

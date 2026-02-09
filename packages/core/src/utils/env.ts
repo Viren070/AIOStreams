@@ -802,6 +802,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Refresh interval for synced URLs (regex and SEL) in seconds. Falls back to ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL (converted from ms to s). Default: 86400 (24h).',
   }),
+  WHITELISTED_SYNC_STALE_TOLERANCE: num({
+    default: 604800,
+    desc: 'Stale tolerance for synced URLs in seconds. Extends cache TTL beyond refresh interval. Default: 604800 (7 days).',
+  }),
   WHITELISTED_SEL_URLS: json<string[]>({
     default: undefined,
     desc: 'Whitelisted stream expression (SEL) sync URLs (JSON array of URL strings). Non-trusted users can only sync from these URLs.',
