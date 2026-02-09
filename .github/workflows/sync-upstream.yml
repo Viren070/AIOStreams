@@ -53,6 +53,7 @@ jobs:
         run: |
           git remote remove origin
           git remote add origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git fetch origin main
           git checkout main
           if git merge-base --is-ancestor upstream/${UPSTREAM_BRANCH} main; then
             echo "Main already contains upstream."
@@ -63,7 +64,7 @@ jobs:
             echo "Rebase failed. Resolve conflicts manually."
             exit 1
           fi
-          git push origin main --force-with-lease
+          git push origin main --force-with-lease=main
 
       - name: Open issue on failure
         if: failure()
