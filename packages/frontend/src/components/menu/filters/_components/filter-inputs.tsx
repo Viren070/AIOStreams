@@ -454,8 +454,8 @@ export function RankedExpressionInputs({
   return (
     <SettingsCard title={title} description={description}>
       {values.map((value, index) => (
-        <div key={index} className="flex gap-2 items-start">
-          <div className="flex items-center pt-8">
+        <div key={index} className="flex gap-2 items-end">
+          <div className="flex items-center pb-0.5">
             <Checkbox
               value={value.enabled ?? true}
               defaultValue={true}
@@ -488,11 +488,13 @@ export function RankedExpressionInputs({
               step={50}
             />
           </div>
-          <ItemActions
-            items={values}
-            index={index}
-            onItemsChange={onValuesChange}
-          />
+          <div className="pb-1 gap-1 flex items-end">
+            <ItemActions
+              items={values}
+              index={index}
+              onItemsChange={onValuesChange}
+            />
+          </div>
         </div>
       ))}
       <ListFooter
