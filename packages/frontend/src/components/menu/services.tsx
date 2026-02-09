@@ -217,10 +217,9 @@ function Content() {
       })
       .map((service) => status.settings.services[service.id]?.name) ?? [];
 
-  const NON_DEBRID_SERVICES = ['qbittorrent', 'easynews', 'nzbdav', 'altmount', 'stremio_nntp'];
   const hasProwlarr = userData.presets?.some((p) => p.type === 'prowlarr' && p.enabled);
   const hasDebridService = userData.services?.some(
-    (s) => s.enabled && !NON_DEBRID_SERVICES.includes(s.id)
+    (s) => s.enabled && status.settings.services[s.id]?.debrid
   );
   const showPrivateTrackerWarning = hasProwlarr && hasDebridService;
 

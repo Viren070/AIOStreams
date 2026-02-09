@@ -644,17 +644,20 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       /** @deprecated Use titleLanguages instead. */
       useAllTitles?: boolean;
       titleLanguages?: string[];
+      keepApostrophes?: boolean;
     }
   ): string[] {
-    const { addYear, addSeasonEpisode } = {
+    const { addYear, addSeasonEpisode, keepApostrophes } = {
       addYear: true,
       addSeasonEpisode: true,
+      keepApostrophes: false,
       ...options,
     };
     let queries: string[] = [];
     if (!metadata.primaryTitle) {
       return [];
     }
+<<<<<<< HEAD
 
     // select titles based on options
     const titleLangs = options?.titleLanguages;
@@ -697,6 +700,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         .map(cleanTitle);
     } else {
       titles = [metadata.primaryTitle];
+    }
+
+    const cleanOpts = keepApostrophes ? { keepApostrophes: true } : undefined;
+    // Re-clean titles with apostrophe options if needed
+    if (cleanOpts) {
+      titles = titles.map((t) => cleanTitle(t, cleanOpts));
     }
 
     const titlePlaceholder = '<___title___>';
