@@ -118,8 +118,8 @@ export const userDataMiddleware = async (
     userData.ip = req.userIp;
 
     if (resource !== 'configure') {
+      // Sync regex patterns from URLs
       try {
-        // Sync regex patterns from URLs
         userData.preferredRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedPreferredRegexUrls,
           userData.preferredRegexPatterns || [],
@@ -127,6 +127,13 @@ export const userDataMiddleware = async (
           (regex) => regex,
           (regex) => regex.pattern
         );
+      } catch (error: any) {
+        logger.warn(
+          `Failed to sync preferred regex patterns: ${error.message}`
+        );
+      }
+
+      try {
         userData.excludedRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedExcludedRegexUrls,
           userData.excludedRegexPatterns || [],
@@ -134,6 +141,11 @@ export const userDataMiddleware = async (
           (regex) => regex.pattern,
           (pattern) => pattern
         );
+      } catch (error: any) {
+        logger.warn(`Failed to sync excluded regex patterns: ${error.message}`);
+      }
+
+      try {
         userData.requiredRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedRequiredRegexUrls,
           userData.requiredRegexPatterns || [],
@@ -141,6 +153,11 @@ export const userDataMiddleware = async (
           (regex) => regex.pattern,
           (pattern) => pattern
         );
+      } catch (error: any) {
+        logger.warn(`Failed to sync required regex patterns: ${error.message}`);
+      }
+
+      try {
         userData.includedRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedIncludedRegexUrls,
           userData.includedRegexPatterns || [],
@@ -148,6 +165,11 @@ export const userDataMiddleware = async (
           (regex) => regex.pattern,
           (pattern) => pattern
         );
+      } catch (error: any) {
+        logger.warn(`Failed to sync included regex patterns: ${error.message}`);
+      }
+
+      try {
         userData.rankedRegexPatterns = await RegexAccess.syncRegexPatterns(
           userData.syncedRankedRegexUrls,
           userData.rankedRegexPatterns || [],
@@ -159,8 +181,12 @@ export const userDataMiddleware = async (
           }),
           (item) => item.pattern
         );
+      } catch (error: any) {
+        logger.warn(`Failed to sync ranked regex patterns: ${error.message}`);
+      }
 
-        // Sync stream expressions from URLs
+      // Sync stream expressions from URLs (don't throw on failure)
+      try {
         userData.preferredStreamExpressions =
           await SelAccess.syncStreamExpressions(
             userData.syncedPreferredStreamExpressionUrls,
@@ -169,6 +195,13 @@ export const userDataMiddleware = async (
             (item) => item.expression,
             (expr) => expr
           );
+      } catch (error: any) {
+        logger.warn(
+          `Failed to sync preferred stream expressions: ${error.message}`
+        );
+      }
+
+      try {
         userData.excludedStreamExpressions =
           await SelAccess.syncStreamExpressions(
             userData.syncedExcludedStreamExpressionUrls,
@@ -177,6 +210,13 @@ export const userDataMiddleware = async (
             (item) => item.expression,
             (expr) => expr
           );
+      } catch (error: any) {
+        logger.warn(
+          `Failed to sync excluded stream expressions: ${error.message}`
+        );
+      }
+
+      try {
         userData.requiredStreamExpressions =
           await SelAccess.syncStreamExpressions(
             userData.syncedRequiredStreamExpressionUrls,
@@ -185,6 +225,13 @@ export const userDataMiddleware = async (
             (item) => item.expression,
             (expr) => expr
           );
+      } catch (error: any) {
+        logger.warn(
+          `Failed to sync required stream expressions: ${error.message}`
+        );
+      }
+
+      try {
         userData.includedStreamExpressions =
           await SelAccess.syncStreamExpressions(
             userData.syncedIncludedStreamExpressionUrls,
@@ -193,6 +240,13 @@ export const userDataMiddleware = async (
             (item) => item.expression,
             (expr) => expr
           );
+      } catch (error: any) {
+        logger.warn(
+          `Failed to sync included stream expressions: ${error.message}`
+        );
+      }
+
+      try {
         userData.rankedStreamExpressions =
           await SelAccess.syncStreamExpressions(
             userData.syncedRankedStreamExpressionUrls,
@@ -205,7 +259,13 @@ export const userDataMiddleware = async (
             }),
             (item) => item.expression
           );
+      } catch (error: any) {
+        logger.warn(
+          `Failed to sync ranked stream expressions: ${error.message}`
+        );
+      }
 
+      try {
         userData = await validateConfig(userData, {
           skipErrorsFromAddonsOrProxies: true,
           decryptValues: true,

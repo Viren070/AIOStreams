@@ -298,13 +298,36 @@ export async function validateConfig(
   validateSyncedRegexUrls(config, options?.skipErrorsFromAddonsOrProxies);
   validateSyncedSelUrls(config, options?.skipErrorsFromAddonsOrProxies);
 
-  const {
-    excluded: excludedStreamExpressions,
-    required: requiredStreamExpressions,
-    preferred: preferredStreamExpressions,
-    included: includedStreamExpressions,
-    ranked: rankedStreamExpressions,
-  } = await SelAccess.resolveSyncedExpressionsForValidation(config);
+  let excludedStreamExpressions: string[] = [];
+  let requiredStreamExpressions: string[] = [];
+  let preferredStreamExpressions: string[] = [];
+  let includedStreamExpressions: string[] = [];
+  let rankedStreamExpressions: {
+    expression: string;
+    score: number;
+    enabled: boolean;
+  }[] = [];
+
+  try {
+    const result =
+      await SelAccess.resolveSyncedExpressionsForValidation(config);
+    excludedStreamExpressions = result.excluded;
+    requiredStreamExpressions = result.required;
+    preferredStreamExpressions = result.preferred;
+    includedStreamExpressions = result.included;
+    rankedStreamExpressions = result.ranked;
+  } catch (error) {
+    if (!options?.skipErrorsFromAddonsOrProxies) {
+      throw error;
+    }
+    logger.warn(`Failed to resolve synced stream expressions: ${error}`);
+    // Use the expressions from the config directly
+    excludedStreamExpressions = config.excludedStreamExpressions || [];
+    requiredStreamExpressions = config.requiredStreamExpressions || [];
+    preferredStreamExpressions = config.preferredStreamExpressions || [];
+    includedStreamExpressions = config.includedStreamExpressions || [];
+    rankedStreamExpressions = config.rankedStreamExpressions || [];
+  }
 
   // Validate total stream expressions count across all filter types
   const totalStreamExpressions =
@@ -742,13 +765,32 @@ export function applyMigrations(config: any): UserData {
 }
 
 async function validateRegexes(config: UserData, skipErrors: boolean = false) {
-  const {
-    excluded: excludedRegexes,
-    included: includedRegexes,
-    required: requiredRegexes,
-    preferred: preferredRegexes,
-    ranked: rankedRegexes,
-  } = await RegexAccess.resolveSyncedRegexesForValidation(config);
+  let excludedRegexes: string[] = [];
+  let includedRegexes: string[] = [];
+  let requiredRegexes: string[] = [];
+  let preferredRegexes: { name: string; pattern: string; score?: number }[] =
+    [];
+  let rankedRegexes: { name?: string; pattern: string; score: number }[] = [];
+
+  try {
+    const result = await RegexAccess.resolveSyncedRegexesForValidation(config);
+    excludedRegexes = result.excluded;
+    includedRegexes = result.included;
+    requiredRegexes = result.required;
+    preferredRegexes = result.preferred;
+    rankedRegexes = result.ranked;
+  } catch (error) {
+    if (!skipErrors) {
+      throw error;
+    }
+    logger.warn(`Failed to resolve synced regex patterns: ${error}`);
+    // Use the patterns from the config directly
+    excludedRegexes = config.excludedRegexPatterns || [];
+    includedRegexes = config.includedRegexPatterns || [];
+    requiredRegexes = config.requiredRegexPatterns || [];
+    preferredRegexes = config.preferredRegexPatterns || [];
+    rankedRegexes = config.rankedRegexPatterns || [];
+  }
 
   const regexAllowed = await RegexAccess.isRegexAllowed({
     ...config,

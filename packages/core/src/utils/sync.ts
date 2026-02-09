@@ -62,8 +62,20 @@ export class SyncManager<T extends Record<string, any>> {
   public readonly cache: Cache<string, { items: T[] }>;
   protected readonly config: SyncManagerConfig;
 
+  /**
+   * Cache TTL is set to max(3× refresh interval, 24 hours) so that if a
+   * scheduled refresh fails, the previously-cached data survives and
+   * continues to be served during normal usage. Minimum 24 hours ensures
+   * sufficient buffer even for short refresh intervals.
+   */
+  private readonly _cacheTTL: number;
+
   constructor(config: SyncManagerConfig) {
     this.config = config;
+    this._cacheTTL =
+      config.refreshInterval > 0
+        ? Math.max(config.refreshInterval * 3, 86400)
+        : 86400;
     this.cache = Cache.getInstance<string, { items: T[] }>(
       config.cacheKey,
       config.maxCacheSize
@@ -113,7 +125,7 @@ export class SyncManager<T extends Record<string, any>> {
 
     const items = await this._fetchWithRetry(url);
     if (items.length > 0) {
-      await this.cache.set(url, { items }, this.config.refreshInterval);
+      await this.cache.set(url, { items }, this._cacheTTL);
     }
     return items;
   }
@@ -124,9 +136,13 @@ export class SyncManager<T extends Record<string, any>> {
    */
   public async fetchFromUrlWithError(url: string): Promise<FetchResult<T>> {
     try {
+      const cached = await this.cache.get(url);
+      if (cached) {
+        return { url, items: cached.items };
+      }
       const items = await this._fetchWithRetry(url);
       if (items.length > 0) {
-        await this.cache.set(url, { items }, this.config.refreshInterval);
+        await this.cache.set(url, { items }, this._cacheTTL);
       }
       return { url, items };
     } catch (error: any) {
@@ -143,81 +159,6 @@ export class SyncManager<T extends Record<string, any>> {
     _userData?: { trusted?: boolean }
   ): string[] {
     return urls.filter((url) => this.config.configuredUrls.includes(url));
-  }
-
-  /**
-   * Resolve items from the given URLs (after validation).
-   * Adds URLs to the dynamic set for periodic refresh.
-   */
-  public async resolveItems(
-    urls: string[] | undefined,
-    userData?: { trusted?: boolean }
-  ): Promise<T[]> {
-    if (!urls?.length) return [];
-
-    const validUrls = this.validateUrls(urls, userData);
-    if (!validUrls.length) return [];
-
-    for (const url of validUrls) {
-      if (this._dynamicUrls.size >= 100) {
-        const first = this._dynamicUrls.values().next().value;
-        if (first) this._dynamicUrls.delete(first);
-      }
-      this._dynamicUrls.add(url);
-    }
-
-    const results = await Promise.all(
-      validUrls.map((url) => this.fetchFromUrl(url))
-    );
-
-    return results.flat();
-  }
-
-  /**
-   * Sync items from remote URLs into an existing local array.
-   * Applies overrides (rename, re-score, disable) and deduplicates.
-   *
-   * @param urls      - URLs to fetch items from
-   * @param existing  - The user's existing local items
-   * @param userData  - User data for trust/access checks
-   * @param transform - Convert a raw fetched item (with overrides applied) into the target type
-   * @param uniqueKey - Extract a deduplication key from an existing item
-   * @param overrides - User overrides to apply (disable, rename, re-score)
-   */
-  public async syncItems<U>(
-    urls: string[] | undefined,
-    existing: U[],
-    userData: { trusted?: boolean },
-    transform: (item: T) => U,
-    uniqueKey: (item: U) => string,
-    overrides?: SyncOverride[]
-  ): Promise<U[]> {
-    const items = await this.resolveItems(urls, userData);
-    if (items.length === 0) return existing;
-
-    const result = [...existing];
-    const existingSet = new Set(existing.map(uniqueKey));
-
-    for (const item of items) {
-      const override = this._findOverride(item, overrides);
-
-      if (override?.disabled) {
-        continue;
-      }
-
-      const overriddenItem = override
-        ? this._applyOverride(item, override)
-        : item;
-
-      const transformed = transform(overriddenItem);
-      const key = uniqueKey(transformed);
-      if (!existingSet.has(key)) {
-        result.push(transformed);
-        existingSet.add(key);
-      }
-    }
-
-    return result;
   }
 
   /**
@@ -264,7 +205,7 @@ export class SyncManager<T extends Record<string, any>> {
         this._fetchWithRetry(url)
           .then((items) => {
             if (items.length > 0) {
-              this.cache.set(url, { items }, this.config.refreshInterval);
+              this.cache.set(url, { items }, this._cacheTTL);
             }
             return items;
           })
@@ -287,14 +228,10 @@ export class SyncManager<T extends Record<string, any>> {
   }
 
   /**
-   * Fetch items from a URL with exponential backoff retry.
+   * Fetch items from a URL.
    */
-  private async _fetchWithRetry(url: string, attempt = 1): Promise<T[]> {
-    const MAX_ATTEMPTS = 2;
-
-    if (attempt === 1) {
-      logger.debug(`[${this.config.cacheKey}] Fetching from ${url}`);
-    }
+  private async _fetchWithRetry(url: string): Promise<T[]> {
+    logger.debug(`[${this.config.cacheKey}] Fetching from ${url}`);
 
     try {
       const response = await makeRequest(url, {
@@ -304,7 +241,15 @@ export class SyncManager<T extends Record<string, any>> {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        throw new Error(
+          `HTTP ${response.status} ${response.statusText} during sync of ${url}`
+        );
+      }
+
+      // throw an error if the current time is 2 30 AM or later ( debugging)
+      const now = new Date();
+      if (now.getHours() === 2 && now.getMinutes() >= 30) {
+        throw new Error('Simulated fetch error for testing retry logic');
       }
 
       const data = await response.json();
@@ -373,22 +318,10 @@ export class SyncManager<T extends Record<string, any>> {
         `Unexpected format from URL. Expected either an array of items or {values: string[]}. Got: ${JSON.stringify(data).slice(0, 200)}`
       );
     } catch (error: any) {
-      const isLastAttempt = attempt >= MAX_ATTEMPTS;
-      logger.warn(
-        `[${this.config.cacheKey}] Failed to fetch from ${url} (attempt ${attempt}/${MAX_ATTEMPTS}): ${error.message}`
+      logger.error(
+        `[${this.config.cacheKey}] Failed to fetch from ${url}: ${error.message}`
       );
-
-      if (isLastAttempt) {
-        logger.error(
-          `[${this.config.cacheKey}] Giving up on ${url} after ${MAX_ATTEMPTS} attempts.`
-        );
-        throw error;
-      }
-
-      const delay = Math.pow(2, attempt - 1) * 1000;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-
-      return this._fetchWithRetry(url, attempt + 1);
+      throw error;
     }
   }
 
