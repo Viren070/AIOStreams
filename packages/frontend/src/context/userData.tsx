@@ -251,7 +251,7 @@ export const DefaultUserData: UserData = {
       {
         key: 'streamExpressionScore',
         direction: 'desc',
-      }
+      },
       {
         key: 'regexPatterns',
         direction: 'desc',

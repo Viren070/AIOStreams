@@ -19,6 +19,7 @@ jobs:
       - name: Release
         id: release
         uses: googleapis/release-please-action@v4
+        continue-on-error: true
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           repo-url: ${{ github.repository }}
@@ -31,4 +32,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
         run: |
-          gh workflow run --repo ${GITHUB_REPOSITORY} deploy-docker.yml -f ref=${TAG_NAME}
+          # Check if tag exists first
+          if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Tag ${TAG_NAME} exists, triggering Docker workflow"
+            gh workflow run --repo ${GITHUB_REPOSITORY} deploy-docker.yml -f ref=${TAG_NAME}
+          else
+            echo "Tag ${TAG_NAME} does not exist yet, skipping Docker workflow trigger"
+          fi
