@@ -66,6 +66,7 @@ export interface UnprocessedTorrent extends BaseFile {
   hash?: string;
   downloadUrl?: string;
   sources: string[];
+  private?: boolean;
 }
 
 export interface NZB extends BaseFile {
