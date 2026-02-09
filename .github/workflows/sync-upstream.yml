@@ -42,7 +42,8 @@ jobs:
         env:
           PAT: ${{ secrets.PAT_TOKEN }}
         run: |
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git remote remove origin
+          git remote add origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
           git checkout -B ${MIRROR_BRANCH} upstream/${UPSTREAM_BRANCH}
           git push origin ${MIRROR_BRANCH} --force
 
@@ -50,7 +51,8 @@ jobs:
         env:
           PAT: ${{ secrets.PAT_TOKEN }}
         run: |
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git remote remove origin
+          git remote add origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
           git checkout main
           if git merge-base --is-ancestor upstream/${UPSTREAM_BRANCH} main; then
             echo "Main already contains upstream."
