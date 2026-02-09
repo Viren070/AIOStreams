@@ -15,7 +15,8 @@ jobs:
       contents: write
       issues: write
       id-token: write
-      actions: write # Add the 'workflows' permission if you're pushing updates to workflow files.
+      actions: write
+      workflows: write
     env:
       UPSTREAM_REPO: Viren070/AIOStreams
       UPSTREAM_BRANCH: main
@@ -40,19 +41,19 @@ jobs:
 
       - name: Update upstream-main mirror
         env:
-          PAT: ${{ secrets.PAT_TOKEN }}
+          TOKEN: ${{ secrets.PAT_TOKEN || github.token }}
         run: |
           git remote remove origin
-          git remote add origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git remote add origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git
           git checkout -B ${MIRROR_BRANCH} upstream/${UPSTREAM_BRANCH}
           git push origin ${MIRROR_BRANCH} --force
 
       - name: Rebase main onto upstream
         env:
-          PAT: ${{ secrets.PAT_TOKEN }}
+          TOKEN: ${{ secrets.PAT_TOKEN || github.token }}
         run: |
           git remote remove origin
-          git remote add origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git remote add origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git
           git fetch origin main
           git checkout main
           if git merge-base --is-ancestor upstream/${UPSTREAM_BRANCH} main; then
