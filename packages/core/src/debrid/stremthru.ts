@@ -290,8 +290,11 @@ export class StremThruInterface implements DebridService {
     }
 
     let magnetDownload: DebridDownload;
+    // Use addTorrent(downloadUrl) when we know the .torrent was fetched during
+    // browse (private !== undefined) OR when the hash is a placeholder generated
+    // from the URL (placeholderHash) — in that case the magnet path would fail.
     if (
-      playbackInfo.private !== undefined && // make sure the torrent was downloaded before
+      (playbackInfo.private !== undefined || playbackInfo.placeholderHash) &&
       playbackInfo.downloadUrl &&
       Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
       (await this.checkCacheGet(hash))?.status !== 'cached'
