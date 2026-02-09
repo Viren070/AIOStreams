@@ -10,8 +10,10 @@ export const stremthruSpecialCases: Partial<
     `${credentials.email}:${credentials.password}`,
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
-  [constants.QBITTORRENT_SERVICE]: (credentials: any) =>
-    `${credentials.url}|${credentials.username}|${credentials.password}|${credentials.fileBaseUrl}`,
+  [constants.QBITTORRENT_SERVICE]: (credentials: any) => {
+    const base = `${credentials.url}|${credentials.username}|${credentials.password}|${credentials.fileBaseUrl}`;
+    return credentials.pathMapping ? `${base}|${credentials.pathMapping}` : base;
+  },
 };
 
 export class StremThruStreamParser extends StreamParser {

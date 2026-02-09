@@ -801,6 +801,14 @@ const SERVICE_DETAILS: Record<
         type: 'string',
         required: true,
       },
+      {
+        id: 'pathMapping',
+        name: 'Path Mapping (optional)',
+        description:
+          'Docker-style path mapping when qBittorrent\'s internal save path differs from the file server\'s directory layout. Format: /internal/path:/external/path. For example, if qBit saves to /downloads but your file server serves from /media/torrents, enter /downloads:/media/torrents. Leave empty if both use the same path.',
+        type: 'string',
+        required: false,
+      },
     ],
   },
 };
