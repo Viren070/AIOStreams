@@ -56,10 +56,12 @@ class StreamPrecomputer {
     context: StreamContext
   ) {
     const start = Date.now();
-    await this.precomputePreferredMatches(streams, context);
-    // carry out before ranked stream expressions so regex matches can be used in the expressions
+    // preferred regex / keywords --> ranked regex patterns --> ranked stream expressions --> preferred stream expressions
+    // this is the optimal order so that regexMatched can be used in RSE/PSE and streamExpressionScore and regexScore can be used in PSE
+    await this.precomputePreferredRegexMatches(streams, context);
     await this.precomputeRankedRegexPatterns(streams);
     await this.precomputeRankedStreamExpressions(streams, context);
+    await this.precomputePreferredExpressionMatches(streams, context);
     logger.info(
       `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
     );
@@ -273,7 +275,7 @@ class StreamPrecomputer {
   /**
    * Precompute preferred regex, keyword, and stream expression matches
    */
-  private async precomputePreferredMatches(
+  private async precomputePreferredRegexMatches(
     streams: ParsedStream[],
     context: StreamContext
   ) {
@@ -368,7 +370,12 @@ class StreamPrecomputer {
         }
       });
     }
+  }
 
+  private async precomputePreferredExpressionMatches(
+    streams: ParsedStream[],
+    context: StreamContext
+  ) {
     if (this.userData.preferredStreamExpressions?.length) {
       const selector = new StreamSelector(context.toExpressionContext());
       const streamToConditionIndex = new Map<string, number>();
