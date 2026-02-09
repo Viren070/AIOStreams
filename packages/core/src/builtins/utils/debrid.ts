@@ -1,6 +1,7 @@
 import {
   BuiltinServiceId,
   createLogger,
+  Env,
   getTimeTakenSincePoint,
 } from '../../utils/index.js';
 import {
@@ -117,6 +118,27 @@ async function processTorrentsForDebridService(
   checkOwned: boolean = true
 ): Promise<TorrentWithSelectedFile[]> {
   const startTime = Date.now();
+
+  // Exclude private tracker torrents from debrid services to prevent account
+  // bans. Private trackers require your own IP and ratio management — debrid
+  // services use shared IPs and non-whitelisted clients. qBittorrent is exempt
+  // since it runs on user-controlled infrastructure.
+  if (
+    Env.BUILTIN_DEBRID_EXCLUDE_PRIVATE_TRACKERS &&
+    service.id !== 'qbittorrent'
+  ) {
+    const privateTorrents = torrents.filter((t) => t.private);
+    if (privateTorrents.length > 0) {
+      logger.info(
+        `Excluded ${privateTorrents.length} private tracker torrents from ${service.id}`
+      );
+      torrents = torrents.filter((t) => !t.private);
+      if (torrents.length === 0) {
+        return [];
+      }
+    }
+  }
+
   const debridService = getDebridService(
     service.id,
     service.credential,
