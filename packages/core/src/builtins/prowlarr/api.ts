@@ -56,6 +56,7 @@ const ProwlarrApiIndexerSchema = z.object({
   definitionName: z.string(),
   enable: z.boolean(),
   protocol: z.enum(['torrent', 'usenet']),
+  privacy: z.enum(['public', 'private', 'semiPrivate']).optional(),
   tags: z.array(z.number()),
 });
 

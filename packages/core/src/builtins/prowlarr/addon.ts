@@ -188,9 +188,12 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     protocol: 'torrent' | 'usenet',
     parsedId: ParsedId,
     metadata: SearchMetadata
-  ): Promise<ProwlarrApiSearchItem[]> {
+  ): Promise<{
+    results: ProwlarrApiSearchItem[];
+    privateIndexerIds: Set<number>;
+  }> {
     if (this.sources.length > 0 && !this.sources.includes(protocol)) {
-      return [];
+      return { results: [], privateIndexerIds: new Set() };
     }
 
     const queryLimit = createQueryLimit();
@@ -198,14 +201,20 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
 
     if (chosenIndexers.length === 0) {
       this.logger.warn(`No ${protocol} indexers available`);
-      return [];
+      return { results: [], privateIndexerIds: new Set() };
     }
+
+    const privateIndexerIds = new Set(
+      chosenIndexers
+        .filter((i) => i.privacy === 'private' || i.privacy === 'semiPrivate')
+        .map((i) => i.id)
+    );
 
     const queries = this.buildQueries(parsedId, metadata, {
       useAllTitles: useAllTitles(this.userData.url),
     });
     if (queries.length === 0) {
-      return [];
+      return { results: [], privateIndexerIds };
     }
 
     // Pass Newznab categories so Prowlarr only queries indexers that support
@@ -235,14 +244,18 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       })
     );
     const allResults = await Promise.all(searchPromises);
-    return allResults.flat();
+    return { results: allResults.flat(), privateIndexerIds };
   }
 
   protected async _searchTorrents(
     parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
     const metadata = await this.getSearchMetadata();
-    const results = await this.performSearch('torrent', parsedId, metadata);
+    const { results, privateIndexerIds } = await this.performSearch(
+      'torrent',
+      parsedId,
+      metadata
+    );
     if (results.length === 0) return [];
 
     const seenTorrents = new Set<string>();
@@ -263,6 +276,8 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       if (seenTorrents.has(infoHash ?? downloadUrl!)) continue;
       seenTorrents.add(infoHash ?? downloadUrl!);
 
+      const isPrivate = privateIndexerIds.has(result.indexerId) || undefined;
+
       torrents.push({
         hash: infoHash,
         downloadUrl: downloadUrl,
@@ -272,6 +287,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
         size: result.size,
         indexer: result.indexer,
         type: 'torrent',
+        private: isPrivate,
       });
     }
     return torrents;
@@ -279,7 +295,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
 
   protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
     const metadata = await this.getSearchMetadata();
-    const results = await this.performSearch('usenet', parsedId, metadata);
+    const { results } = await this.performSearch('usenet', parsedId, metadata);
     if (results.length === 0) return [];
 
     const seenNzbs = new Set<string>();
