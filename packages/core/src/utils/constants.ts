@@ -797,7 +797,7 @@ const SERVICE_DETAILS: Record<
         id: 'fileBaseUrl',
         name: 'File Server URL',
         description:
-          'The HTTP URL where qBittorrent\'s completed downloads are served. This is typically an nginx or caddy container serving the download directory (e.g., http://qbit-fileserver). StremThru uses this to construct streaming URLs for your files.',
+          'The HTTP URL where qBittorrent\'s completed downloads are accessible. For remote seedboxes, this is usually the HTTPS file access URL from your provider (e.g., https://mybox.provider.com/downloads/). For self-hosted setups, you may need to serve the download directory with nginx or similar (e.g., http://qbit-fileserver).',
         type: 'string',
         required: true,
       },
