@@ -150,17 +150,19 @@ class ProwlarrApi {
   async search({
     query,
     indexerIds,
+    categories,
     type,
     limit,
     offset,
   }: {
     query: string;
     indexerIds: number[];
+    categories?: number[];
     type: 'search';
     limit?: number;
     offset?: number;
   }): Promise<ProwlarrApiResponse<ProwlarrApiSearchItem[]>> {
-    const cacheKey = `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${limit}:${offset}`;
+    const cacheKey = `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${categories?.join(',') ?? ''}:${limit}:${offset}`;
 
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache,
@@ -174,6 +176,7 @@ class ProwlarrApi {
             query,
             type,
             indexerIds,
+            ...(categories?.length && { categories }),
             ...(limit !== undefined && { limit }),
             ...(offset !== undefined && { offset }),
           },
