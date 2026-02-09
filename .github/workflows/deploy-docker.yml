@@ -23,12 +23,6 @@ jobs:
           ref: ${{inputs.ref}}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -72,7 +66,6 @@ jobs:
           {
             echo 'DOCKER_IMAGE_TAGS<<EOF'
             for tag in ${TAGS}; do
-            echo "${{ github.repository_owner }}/aios:${tag}"
             echo "ghcr.io/${{ github.repository_owner }}/aios:${tag}"
             done
             echo EOF
@@ -155,7 +148,7 @@ jobs:
                   },
                   {
                     "name": "📍 View Images",
-                    "value": "[Docker Hub](https://hub.docker.com/r/${{ github.repository_owner }}/aios) · [GHCR](https://github.com/${{ github.repository }}/pkgs/container/aios)",
+                    "value": "[GHCR](https://github.com/${{ github.repository }}/pkgs/container/aios)",
                     "inline": false
                   },
                   {
