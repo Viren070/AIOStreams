@@ -842,7 +842,7 @@ export class StremThruService
         id: magnetDownload.id,
       });
     } else if (
-      playbackInfo.private !== undefined &&
+      (playbackInfo.private !== undefined || playbackInfo.placeholderHash) &&
       playbackInfo.downloadUrl &&
       Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
       (await this.checkCacheGet(hash))?.status !== 'cached'
