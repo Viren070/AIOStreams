@@ -251,6 +251,12 @@ export class StremThruInterface implements DebridService {
     );
   }
 
+  private checkCacheDelete(hash: string): void {
+    StremThruInterface.checkCache
+      .delete(`${this.serviceName}:${getSimpleTextHash(hash)}`)
+      .catch(() => {});
+  }
+
   private async checkCacheSet(debridDownload: DebridDownload): Promise<void> {
     try {
       await StremThruInterface.checkCache.set(
@@ -278,6 +284,11 @@ export class StremThruInterface implements DebridService {
     const realHash = await StremThruInterface.hashMapping.get(
       `${serviceName}:${hash}`
     );
+    if (realHash) {
+      logger.debug(`Resolved placeholder hash ${hash} → ${realHash}`, {
+        serviceName,
+      });
+    }
     return realHash ?? hash;
   }
 
@@ -334,11 +345,16 @@ export class StremThruInterface implements DebridService {
         logger.debug(
           `Mapped placeholder hash ${hash} → real hash ${realHash}`
         );
-        StremThruInterface.hashMapping
-          .set(`${this.serviceName}:${hash}`, realHash, 3600 * 24 * 7)
-          .catch((err) =>
-            logger.warn(`Failed to cache hash mapping: ${err.message}`)
+        try {
+          await StremThruInterface.hashMapping.set(
+            `${this.serviceName}:${hash}`,
+            realHash,
+            3600 * 24 * 7,
+            true
           );
+        } catch (err: any) {
+          logger.warn(`Failed to cache hash mapping: ${err.message}`);
+        }
         hash = realHash;
       }
 
@@ -467,6 +483,13 @@ export class StremThruInterface implements DebridService {
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
       true
     );
+
+    // Invalidate stale instant availability cache entries so the next browse
+    // reflects the updated state (torrent now available in the store).
+    this.checkCacheDelete(playbackInfo.hash);
+    if (hash !== playbackInfo.hash) {
+      this.checkCacheDelete(hash);
+    }
 
     if (autoRemoveDownloads && magnetDownload.id && !magnetDownload.private) {
       this.removeMagnet(magnetDownload.id.toString()).catch((err) => {
