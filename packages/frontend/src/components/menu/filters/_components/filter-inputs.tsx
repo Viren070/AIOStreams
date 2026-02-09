@@ -488,11 +488,14 @@ export function RankedExpressionInputs({
               step={50}
             />
           </div>
-          <ItemActions
-            items={values}
-            index={index}
-            onItemsChange={onValuesChange}
-          />
+          <div className="flex gap-1 items-end pb-1">
+            <ItemActions
+              items={values}
+              index={index}
+              onItemsChange={onValuesChange}
+            />
+          </div>
+          
         </div>
       ))}
       <ListFooter
