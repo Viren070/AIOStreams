@@ -766,7 +766,7 @@ const SERVICE_DETAILS: Record<
         id: 'note',
         name: 'How it works',
         description:
-          'Connects to your qBittorrent via StremThru to browse and stream your torrent library. Torrents added through this service use **sequential download** for immediate streaming. **Torrents are never auto-deleted** — your seeding and ratio are preserved. Best suited for private tracker content where you need a dedicated IP, or as a fallback when debrid services don\'t have your content cached.',
+          'Primarily meant for private trackers. Debrid services can put your account at risk: your passkey runs on shared infrastructure you don\'t control, their IPs are often shared across users (problematic for trackers that enforce IP matching), and some use modified or non-whitelisted clients. This routes torrents through your own qBittorrent instead, where your passkey, client, and seeding stay fully under your control. Torrents are added with sequential download for immediate playback and are never auto-removed. You can use qBittorrent\'s built-in share ratio limits or a tool like [qbit_manage](https://github.com/StuffAnThings/qbit_manage) to handle cleanup after seeding.',
         type: 'alert',
         intent: 'info',
         required: false,
