@@ -760,13 +760,13 @@ const SERVICE_DETAILS: Record<
     shortName: 'QB',
     knownNames: ['QB', 'qBittorrent', 'qBit'],
     signUpText:
-      'Use your own seedbox running qBittorrent with Web UI enabled. Requires a [StremThru](https://github.com/MunifTanjim/stremthru) instance.',
+      'Stream from your own seedbox or server running qBittorrent. Ideal for private tracker users who need a dedicated IP and ratio management. Requires a [StremThru](https://github.com/MunifTanjim/stremthru) instance with the qBittorrent store.',
     credentials: [
       {
         id: 'note',
-        name: 'Configuration Help',
+        name: 'How it works',
         description:
-          '**Requires StremThru** with the qBittorrent store. Your qBittorrent instance must have the Web UI enabled. The File Server URL is where downloaded files are served over HTTP (e.g. your seedbox HTTPS file access URL).',
+          'Connects to your qBittorrent via StremThru to browse and stream your torrent library. Torrents added through this service use **sequential download** for immediate streaming. **Torrents are never auto-deleted** — your seeding and ratio are preserved. Best suited for private tracker content where you need a dedicated IP, or as a fallback when debrid services don\'t have your content cached.',
         type: 'alert',
         intent: 'info',
         required: false,
@@ -775,21 +775,21 @@ const SERVICE_DETAILS: Record<
         id: 'url',
         name: 'qBittorrent URL',
         description:
-          'The base URL of your qBittorrent Web UI. E.g., https://your-seedbox.com:8080',
+          'The URL of your qBittorrent Web UI, reachable from your StremThru instance. If both are on the same Docker network, use the container name (e.g., http://qbittorrent:8080).',
         type: 'string',
         required: true,
       },
       {
         id: 'username',
         name: 'Username',
-        description: 'Your qBittorrent Web UI username',
+        description: 'Your qBittorrent Web UI username.',
         type: 'string',
         required: true,
       },
       {
         id: 'password',
         name: 'Password',
-        description: 'Your qBittorrent Web UI password',
+        description: 'Your qBittorrent Web UI password.',
         type: 'password',
         required: true,
       },
@@ -797,7 +797,7 @@ const SERVICE_DETAILS: Record<
         id: 'fileBaseUrl',
         name: 'File Server URL',
         description:
-          'The base URL where downloaded files are accessible over HTTP. E.g., https://your-seedbox.com/files/downloads/',
+          'The HTTP URL where qBittorrent\'s completed downloads are served. This is typically an nginx or caddy container serving the download directory (e.g., http://qbit-fileserver). StremThru uses this to construct streaming URLs for your files.',
         type: 'string',
         required: true,
       },
