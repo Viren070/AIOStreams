@@ -137,7 +137,7 @@ export function ConfigTemplatesModal({
   useEffect(() => {
     if (open) {
       try {
-        fetchTemplates();
+        loadTemplates();
         if (openImportModal) {
           setShowImportModal(true);
         }
