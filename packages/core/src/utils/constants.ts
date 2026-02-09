@@ -776,7 +776,7 @@ const SERVICE_DETAILS: Record<
         name: 'qBittorrent URL',
         description:
           'The URL of your qBittorrent Web UI, reachable from your StremThru instance. If both are on the same Docker network, use the container name (e.g., http://qbittorrent:8080).',
-        type: 'string',
+        type: 'url',
         required: true,
       },
       {
@@ -798,7 +798,7 @@ const SERVICE_DETAILS: Record<
         name: 'File Server URL',
         description:
           'The HTTP URL where qBittorrent\'s completed downloads are accessible. For remote seedboxes, this is usually the HTTPS file access URL from your provider (e.g., https://mybox.provider.com/downloads/). For self-hosted setups, you may need to serve the download directory with nginx or similar (e.g., http://qbit-fileserver).',
-        type: 'string',
+        type: 'url',
         required: true,
       },
       {
