@@ -34,11 +34,7 @@ export function ConfigModal({
 
     try {
       const result = await loadUserConfig(uuid, password);
-
-      setUserData((prev) => ({
-        ...prev,
-        ...result.userData,
-      }));
+      setUserData(() => result.userData);
       setUuid(uuid);
       setPassword(password);
       setEncryptedPassword(result.encryptedPassword);
