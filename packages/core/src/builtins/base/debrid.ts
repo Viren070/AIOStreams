@@ -637,21 +637,24 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       addYear?: boolean;
       addSeasonEpisode?: boolean;
       useAllTitles?: boolean;
+      keepApostrophes?: boolean;
     }
   ): string[] {
-    const { addYear, addSeasonEpisode, useAllTitles } = {
+    const { addYear, addSeasonEpisode, useAllTitles, keepApostrophes } = {
       addYear: true,
       addSeasonEpisode: true,
       useAllTitles: false,
+      keepApostrophes: false,
       ...options,
     };
     let queries: string[] = [];
     if (!metadata.primaryTitle) {
       return [];
     }
+    const cleanOpts = keepApostrophes ? { keepApostrophes: true } : undefined;
     const titles = useAllTitles
-      ? metadata.titles.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT).map(cleanTitle)
-      : [metadata.primaryTitle];
+      ? metadata.titles.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT).map((t) => cleanTitle(t, cleanOpts))
+      : [cleanTitle(metadata.primaryTitle, cleanOpts)];
     const titlePlaceholder = '<___title___>';
     const addQuery = (query: string) => {
       titles.forEach((title) => {
