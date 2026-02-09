@@ -14,6 +14,8 @@ jobs:
     permissions:
       contents: write
       issues: write
+      id-token: write
+      actions: write # Add the 'workflows' permission if you're pushing updates to workflow files.
     env:
       UPSTREAM_REPO: Viren070/AIOStreams
       UPSTREAM_BRANCH: main
@@ -69,7 +71,7 @@ jobs:
               `Run: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
               '',
               'Rebase failed while syncing upstream. Please resolve conflicts on `main` and re-run.',
-            ].join('\\n');
+            ].join('\n');
 
             // Ensure label exists
             try {
