@@ -71,6 +71,8 @@ interface SyncedPatternValue {
   expression?: string;
   name?: string;
   score?: number;
+  /** Predefined enabled flag from URL (for ranked SEL expressions) */
+  enabled?: boolean;
 }
 
 interface SyncedPatternsProps {
@@ -178,7 +180,10 @@ export function SyncedPatterns({
         };
 
         const override = overrides.find(matchesOverride);
-        const isDisabled = override?.disabled;
+        // If no override exists, respect the predefined enabled flag from the URL
+        const isDisabled = override
+          ? override.disabled
+          : value.enabled === false;
 
         // For SEL: no name overrides, effectiveName is always from upstream
         // For regex: name comes from override or upstream
@@ -213,9 +218,33 @@ export function SyncedPatterns({
                   currentOverrides[idx] = { ...existing, disabled: false };
                   return { ...prev, [overrideKey]: currentOverrides };
                 } else {
+                  // If the item comes with enabled=false from the URL, we need
+                  // to keep an override with disabled=false to persist the user's
+                  // choice to enable it across syncs
+                  if (value.enabled === false) {
+                    currentOverrides[idx] = { ...existing, disabled: false };
+                    return { ...prev, [overrideKey]: currentOverrides };
+                  }
                   currentOverrides.splice(idx, 1);
                   return { ...prev, [overrideKey]: currentOverrides };
                 }
+              }
+              // No existing override but the URL has enabled=false:
+              // create an override with disabled=false to persist the user's choice
+              if (value.enabled === false) {
+                const entry = isSel
+                  ? {
+                      expression: patternStr,
+                      exprNames: extractedNames,
+                      disabled: false,
+                    }
+                  : {
+                      pattern: patternStr,
+                      originalName: value.name,
+                      disabled: false,
+                    };
+                currentOverrides.push(entry);
+                return { ...prev, [overrideKey]: currentOverrides };
               }
               return prev;
             }
@@ -689,6 +718,7 @@ export function SyncedUrlInputs({
                   pattern: e.expression,
                   name: e.name,
                   score: e.score,
+                  enabled: e.enabled,
                 })),
                 error: urlError?.error ?? null,
               };

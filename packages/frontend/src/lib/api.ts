@@ -210,7 +210,12 @@ interface ResolvePatternsResponse {
 
 interface ResolveSyncedResponse {
   patterns?: { name: string; pattern: string; score?: number }[];
-  expressions?: { expression: string; name?: string; score?: number }[];
+  expressions?: {
+    expression: string;
+    name?: string;
+    score?: number;
+    enabled?: boolean;
+  }[];
   errors?: { url: string; error: string }[];
 }
 

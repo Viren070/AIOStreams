@@ -118,6 +118,7 @@ function Content() {
   const { userData, setUserData } = useUserData();
   const allowedRegexModal = useDisclosure(false);
   const allowedRegexUrlsModal = useDisclosure(false);
+  const whitelistedSelUrlsModal = useDisclosure(false);
   const { mode } = useMode();
   useEffect(() => {
     if (tab !== previousTab.current) {
@@ -1809,6 +1810,64 @@ function Content() {
                   ternary operators to apply conditional logic to the streams.
                 </p>
               </div>
+              <div className="mb-4 space-y-4">
+                {status?.settings.selSyncAccess === 'trusted' &&
+                  (userData.trusted ? (
+                    <Alert
+                      intent="success"
+                      title="Trusted User"
+                      description={
+                        <div className="space-y-2">
+                          <p>
+                            You are a trusted user. You can sync expressions
+                            from any URL.
+                          </p>
+                          {status?.settings.whitelistedSelUrls &&
+                            status.settings.whitelistedSelUrls.length > 0 && (
+                              <div className="flex flex-row flex-wrap gap-2">
+                                <Button
+                                  intent="primary-outline"
+                                  size="sm"
+                                  onClick={whitelistedSelUrlsModal.open}
+                                >
+                                  View Whitelisted Sync URLs
+                                </Button>
+                              </div>
+                            )}
+                        </div>
+                      }
+                    />
+                  ) : (
+                    <Alert
+                      intent="info"
+                      title="Trusted Users Only"
+                      description={
+                        <div className="space-y-2">
+                          <p>
+                            Syncing stream expressions from arbitrary URLs is
+                            only available to trusted users. You can only sync
+                            from whitelisted URLs. If you are the owner of the
+                            instance, you can add your UUID to the{' '}
+                            <code className="font-mono">TRUSTED_UUIDS</code>{' '}
+                            environment variable.
+                          </p>
+                          {status?.settings.whitelistedSelUrls &&
+                            status.settings.whitelistedSelUrls.length > 0 && (
+                              <div className="flex flex-row flex-wrap gap-2">
+                                <Button
+                                  intent="primary-outline"
+                                  size="sm"
+                                  onClick={whitelistedSelUrlsModal.open}
+                                >
+                                  View Whitelisted Sync URLs
+                                </Button>
+                              </div>
+                            )}
+                        </div>
+                      }
+                    />
+                  ))}
+              </div>
               <div className="space-y-4">
                 <SettingsCard title="Help">
                   <div className="space-y-3">
@@ -2121,23 +2180,35 @@ function Content() {
                 </p>
               </div>
               <div className="mb-4 space-y-4">
-                {status?.settings.regexFilterAccess === 'trusted' && (
-                  <Alert
-                    intent="info"
-                    title="Trusted Users Only"
-                    description={
-                      <>
+                {status?.settings.regexFilterAccess === 'trusted' &&
+                  (userData.trusted ? (
+                    <Alert
+                      intent="success"
+                      title="Trusted User"
+                      description={
                         <p>
-                          Regex filters are only available to trusted users due
-                          to the potential for abuse. If you are the owner of
-                          the instance, you can add your UUID to the{' '}
-                          <code className="font-mono">TRUSTED_UUIDS</code>{' '}
-                          environment variable.
+                          You are a trusted user. You have full access to regex
+                          filters.
                         </p>
-                      </>
-                    }
-                  />
-                )}
+                      }
+                    />
+                  ) : (
+                    <Alert
+                      intent="info"
+                      title="Trusted Users Only"
+                      description={
+                        <>
+                          <p>
+                            Regex filters are only available to trusted users
+                            due to the potential for abuse. If you are the owner
+                            of the instance, you can add your UUID to the{' '}
+                            <code className="font-mono">TRUSTED_UUIDS</code>{' '}
+                            environment variable.
+                          </p>
+                        </>
+                      }
+                    />
+                  ))}
                 {status?.settings.allowedRegexPatterns?.patterns.length && (
                   <Alert
                     intent="info"
@@ -3192,6 +3263,46 @@ function Content() {
                 status.settings.allowedRegexPatterns.patterns.length === 0) && (
                 <div className="text-muted-foreground text-sm text-center">
                   No allowed regex patterns configured
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={whitelistedSelUrlsModal.isOpen}
+        onOpenChange={whitelistedSelUrlsModal.close}
+        title="Whitelisted Sync URLs"
+        description="These are URLs that are whitelisted for syncing stream expressions."
+      >
+        <div className="space-y-4">
+          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
+            <div className="space-y-2">
+              {status?.settings.whitelistedSelUrls?.map((url, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
+                >
+                  <div className="flex-1 break-all whitespace-pre-wrap">
+                    {url}
+                  </div>
+                  <IconButton
+                    size="sm"
+                    intent="primary-subtle"
+                    icon={<FaRegCopy />}
+                    onClick={() =>
+                      copyToClipboard(url, {
+                        successMessage: 'URL copied to clipboard',
+                      })
+                    }
+                  />
+                </div>
+              ))}
+              {(!status?.settings.whitelistedSelUrls ||
+                status.settings.whitelistedSelUrls.length === 0) && (
+                <div className="text-muted-foreground text-sm text-center">
+                  No whitelisted sync URLs configured
                 </div>
               )}
             </div>

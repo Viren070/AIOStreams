@@ -255,7 +255,7 @@ export const userDataMiddleware = async (
             (item) => ({
               expression: item.expression,
               score: item.score || 0,
-              enabled: true,
+              enabled: item.enabled ?? true,
             }),
             (item) => item.expression
           );

@@ -14,6 +14,7 @@ const StreamExpressionSchema = z.object({
   expression: z.string().min(1),
   name: z.string().optional(),
   score: z.number().optional(),
+  enabled: z.boolean().optional(),
 });
 
 export type StreamExpressionItem = z.infer<typeof StreamExpressionSchema>;
@@ -227,16 +228,21 @@ export class SelAccess {
 
   /**
    * Apply an SEL override to an expression item.
-   * Only score overrides are supported for SEL expressions.
+   * Supports score overrides and enabled state overrides.
    */
   private static _applySelOverride(
     expr: StreamExpressionItem,
     override: SyncOverride
   ): StreamExpressionItem {
+    const result = { ...expr };
     if (override.score !== undefined) {
-      return { ...expr, score: override.score };
+      result.score = override.score;
     }
-    return expr;
+    // If the user explicitly set disabled=false, override enabled to true
+    if (override.disabled === false && expr.enabled === false) {
+      result.enabled = true;
+    }
+    return result;
   }
 
   /**
@@ -291,7 +297,7 @@ export class SelAccess {
             (item) => ({
               expression: item.expression,
               score: item.score || 0,
-              enabled: true,
+              enabled: item.enabled ?? true,
             }),
             (item) => item.expression
           ),
