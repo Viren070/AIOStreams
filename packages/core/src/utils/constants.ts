@@ -760,7 +760,7 @@ const SERVICE_DETAILS: Record<
     shortName: 'QB',
     knownNames: ['QB', 'qBittorrent', 'qBit'],
     signUpText:
-      'Stream from your own seedbox or server running qBittorrent. Ideal for private tracker users who need a dedicated IP and ratio management. Requires a [StremThru](https://github.com/MunifTanjim/stremthru) instance with the qBittorrent store.',
+      'Stream from your own seedbox or server running qBittorrent. Ideal for private tracker users who need a dedicated IP and ratio management.',
     credentials: [
       {
         id: 'note',
