@@ -236,14 +236,22 @@ export const DefaultUserData: UserData = {
         key: 'cached',
         direction: 'desc',
       },
+            {
+        key: 'library',
+        direction: 'desc',
+      },
       {
         key: 'resolution',
         direction: 'desc',
       },
       {
-        key: 'library',
+        key: 'quality',
         direction: 'desc',
       },
+      {
+        key: 'streamExpressionScore',
+        direction: 'desc',
+      }
       {
         key: 'regexPatterns',
         direction: 'desc',
