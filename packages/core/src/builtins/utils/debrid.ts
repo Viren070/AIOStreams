@@ -151,10 +151,16 @@ async function processTorrentsForDebridService(
   if (debridService.resolveHash) {
     for (const torrent of torrents) {
       if (torrent.placeholderHash) {
-        const realHash = await debridService.resolveHash(torrent.hash);
-        if (realHash !== torrent.hash) {
-          torrent.hash = realHash;
-          torrent.placeholderHash = false;
+        try {
+          const realHash = await debridService.resolveHash(torrent.hash);
+          if (realHash !== torrent.hash) {
+            torrent.hash = realHash;
+            torrent.placeholderHash = false;
+          }
+        } catch (e) {
+          logger.warn(`Failed to resolve placeholder hash ${torrent.hash}`, {
+            error: e,
+          });
         }
       }
     }

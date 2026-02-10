@@ -287,15 +287,23 @@ export class StremThruInterface implements DebridService {
     serviceName: string,
     hash: string
   ): Promise<string> {
-    const realHash = await StremThruInterface.hashMapping.get(
-      `${serviceName}:${hash}`
-    );
-    if (realHash) {
-      logger.debug(`Resolved placeholder hash ${hash} → ${realHash}`, {
+    try {
+      const realHash = await StremThruInterface.hashMapping.get(
+        `${serviceName}:${hash}`
+      );
+      if (realHash) {
+        logger.debug(`Resolved placeholder hash ${hash} → ${realHash}`, {
+          serviceName,
+        });
+      }
+      return realHash ?? hash;
+    } catch (e) {
+      logger.warn(`Failed to look up hash mapping for ${hash}`, {
         serviceName,
+        error: e,
       });
+      return hash;
     }
-    return realHash ?? hash;
   }
 
   private async _resolve(
