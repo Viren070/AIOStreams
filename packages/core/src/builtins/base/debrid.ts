@@ -181,14 +181,14 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       );
     }
 
-    // For torrents without a hash (common with private trackers), generate a
-    // deterministic placeholder from the download URL instead of eagerly
-    // downloading the .torrent file. On private trackers, hitting the download
-    // endpoint counts as a snatch — doing it during browse risks ratio problems
-    // and hit-and-run warnings. The actual .torrent is downloaded later at
-    // resolve time via addTorrent(downloadUrl) when the user selects a stream.
+    // For private tracker torrents without a hash, generate a deterministic
+    // placeholder from the download URL instead of eagerly downloading the
+    // .torrent file. On private trackers, hitting the download endpoint counts
+    // as a snatch — doing it during browse risks ratio problems and hit-and-run
+    // warnings. The actual .torrent is downloaded later at resolve time via
+    // addTorrent(downloadUrl) when the user selects a stream.
     const torrentsWithPlaceholderHash = torrentResults
-      .filter((t) => !t.hash && t.downloadUrl)
+      .filter((t) => !t.hash && t.downloadUrl && t.private)
       .map(
         (t) =>
           ({
@@ -198,8 +198,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           }) as Torrent
       );
 
+    // Replace private hash-less torrents with their placeholder versions.
+    // Non-private hash-less torrents proceed to .torrent download below.
     torrentResults = [
-      ...torrentResults.filter((t) => t.hash),
+      ...torrentResults.filter((t) => t.hash || !t.private),
       ...torrentsWithPlaceholderHash,
     ];
 

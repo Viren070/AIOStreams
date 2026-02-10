@@ -777,7 +777,8 @@ const SERVICE_DETAILS: Record<
       {
         id: 'password',
         name: 'Password',
-        description: 'Your qBittorrent Web UI password.',
+        description:
+          'Your qBittorrent Web UI password. Must not contain the pipe character (|).',
         type: 'password',
         required: true,
       },

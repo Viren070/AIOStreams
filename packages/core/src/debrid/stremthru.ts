@@ -41,8 +41,10 @@ export class StremThruInterface implements DebridService {
     'st:instant-check'
   );
   // Maps placeholder hashes (SHA-1 of downloadUrl) to real info hashes returned
-  // by StremThru after addTorrent. Persists via Redis or SQL so that future
-  // cache checks resolve correctly (e.g. showing qBittorrent torrents as cached).
+  // by StremThru after addTorrent. This mapping is permanent — a download URL
+  // always corresponds to the same info hash. Actual availability (is the
+  // torrent still in qBit?) is checked live via checkMagnets on each browse.
+  // Persists via Redis or SQL so mappings survive restarts.
   private static hashMapping = Cache.getInstance<string, string>(
     'st:hash-map',
     5000,
@@ -277,7 +279,11 @@ export class StremThruInterface implements DebridService {
    * Used by the cache-checking pipeline to look up real hashes before
    * calling checkMagnets, so already-downloaded torrents show as cached.
    */
-  public static async resolveHash(
+  public async resolveHash(hash: string): Promise<string> {
+    return StremThruInterface._resolveHash(this.serviceName, hash);
+  }
+
+  private static async _resolveHash(
     serviceName: string,
     hash: string
   ): Promise<string> {
@@ -324,9 +330,10 @@ export class StremThruInterface implements DebridService {
     }
 
     let magnetDownload: DebridDownload;
-    // Use addTorrent(downloadUrl) when we know the .torrent was fetched during
-    // browse (private !== undefined) OR when the hash is a placeholder generated
-    // from the URL (placeholderHash) — in that case the magnet path would fail.
+    // Use addTorrent(downloadUrl) when we have privacy info from the indexer
+    // (private !== undefined) OR when the hash is a placeholder generated from
+    // the URL (placeholderHash) — in either case the magnet path may be missing
+    // or unreliable, so we pass the .torrent download URL to StremThru directly.
     if (
       (playbackInfo.private !== undefined || playbackInfo.placeholderHash) &&
       playbackInfo.downloadUrl &&
@@ -349,7 +356,7 @@ export class StremThruInterface implements DebridService {
           await StremThruInterface.hashMapping.set(
             `${this.serviceName}:${hash}`,
             realHash,
-            3600 * 24 * 7,
+            3600 * 24 * 365,
             true
           );
         } catch (err: any) {

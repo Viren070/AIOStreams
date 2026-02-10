@@ -200,6 +200,9 @@ export interface DebridService {
   removeMagnet?(magnetId: string): Promise<void>;
   removeNzb?(nzbId: string): Promise<void>;
 
+  // Placeholder hash resolution (e.g. for private tracker torrents)
+  resolveHash?(hash: string): Promise<string>;
+
   // Service info
   readonly serviceName: ServiceId;
   readonly supportsUsenet: boolean;
