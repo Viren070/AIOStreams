@@ -3,6 +3,7 @@ import { useStatus } from '@/context/status';
 import { PageWrapper } from '../shared/page-wrapper';
 import {
   // SERVICE_DETAILS,
+  QBITTORRENT_SERVICE,
   ServiceId,
 } from '../../../../core/src/utils/constants';
 import { useUserData } from '@/context/userData';
@@ -215,6 +216,9 @@ function Content() {
   const hasDebridService = userData.services?.some(
     (s) => s.enabled && status.settings.services[s.id]?.debrid
   );
+  const hasQbittorrent = userData.services?.some(
+    (s) => s.enabled && s.id === QBITTORRENT_SERVICE
+  );
   const showPrivateTrackerWarning = hasProwlarr && hasDebridService;
 
   // Render
@@ -262,7 +266,9 @@ function Content() {
                 Private tracker torrents from Prowlarr are automatically excluded
                 from debrid services to protect your tracker accounts. Debrid services
                 use shared IPs and non-whitelisted clients which can get you banned.
-                Use qBittorrent for private tracker content instead.
+                {hasQbittorrent
+                  ? ' Private tracker content will be routed through qBittorrent instead.'
+                  : ' Consider using qBittorrent for private tracker content.'}
               </>
             }
           />
