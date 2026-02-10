@@ -237,6 +237,7 @@ export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS
           name: service.name,
           shortName: service.shortName,
           knownNames: service.knownNames,
+          debrid: service.debrid,
           signUpText: service.signUpText,
           credentials: service.credentials.map((cred) => ({
             id: cred.id,
