@@ -109,6 +109,11 @@ export function cleanTitle(title: string, options?: CleanTitleOptions) {
     cleaned = cleaned.replaceAll(char, ' ');
   }
 
+  if (options?.keepApostrophes) {
+    // Normalize curly/typographic apostrophes to straight ASCII
+    cleaned = cleaned.replace(/[\u2018\u2019\u2032\u0060]/g, "'");
+  }
+
   const specialCharPattern = options?.keepApostrophes
     ? /[^\p{L}\p{N}\s']/gu
     : /[^\p{L}\p{N}\s]/gu;

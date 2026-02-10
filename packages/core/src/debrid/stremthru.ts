@@ -408,7 +408,9 @@ export class StremThruInterface implements DebridService {
         streamingWhileDownloading = true;
       } else {
         // temporarily cache the null value for 1m
-        StremThruInterface.playbackLinkCache.set(cacheKey, null, 60);
+        StremThruInterface.playbackLinkCache.set(cacheKey, null, 60).catch(
+          (e) => logger.debug('Failed to cache null playback link', { error: e })
+        );
         if (!cacheAndPlay) {
           return undefined;
         }
@@ -522,7 +524,9 @@ export class StremThruInterface implements DebridService {
           `Streaming-while-downloading link generation failed for ${hash}, falling back`,
           { error: error.message }
         );
-        StremThruInterface.playbackLinkCache.set(cacheKey, null, 60);
+        StremThruInterface.playbackLinkCache.set(cacheKey, null, 60).catch(
+          (e) => logger.debug('Failed to cache null playback link', { error: e })
+        );
         return undefined;
       }
       throw error;
