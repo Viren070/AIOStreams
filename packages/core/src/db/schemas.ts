@@ -1209,6 +1209,7 @@ const StatusResponseSchema = z.object({
         credentials: z.array(OptionDefinition),
       })
     ),
+    excludePrivateTrackersFromDebrid: z.boolean(),
     limits: z.object({
       maxMergedCatalogSources: z.number(),
       maxStreamExpressions: z.number(),

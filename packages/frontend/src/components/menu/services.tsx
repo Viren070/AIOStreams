@@ -219,7 +219,7 @@ function Content() {
   const hasQbittorrent = userData.services?.some(
     (s) => s.enabled && s.id === QBITTORRENT_SERVICE
   );
-  const showPrivateTrackerWarning = hasProwlarr && hasDebridService;
+  const showPrivateTrackerWarning = hasProwlarr && hasDebridService && status.settings.excludePrivateTrackersFromDebrid;
 
   // Render
   return (
