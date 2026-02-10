@@ -499,6 +499,16 @@ export class StremThruInterface implements DebridService {
     );
 
     if (!file?.link) {
+      if (streamingWhileDownloading) {
+        logger.debug(
+          `Selected file has no link yet during streaming-while-downloading for ${hash}`,
+          { file: file?.name }
+        );
+        StremThruInterface.playbackLinkCache.set(cacheKey, null, 60).catch(
+          (e) => logger.debug('Failed to cache null playback link', { error: e })
+        );
+        return undefined;
+      }
       throw new DebridError('Selected file was missing a link', {
         statusCode: 400,
         statusText: 'Selected file was missing a link',
