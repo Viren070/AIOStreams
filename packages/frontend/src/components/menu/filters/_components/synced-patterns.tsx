@@ -525,7 +525,10 @@ export function SyncedPatterns({
           {renderType === 'ranked' && (
             <NumberInput
               label="Custom Score"
-              value={regexEditing?.score ?? 0}
+              value={regexEditing?.score || 0}
+              min={-1_000_000}
+              max={1_000_000}
+              step={50}
               onValueChange={(score) =>
                 setRegexEditing((prev) => (prev ? { ...prev, score } : null))
               }
@@ -556,7 +559,7 @@ export function SyncedPatterns({
                   const entry = {
                     pattern: regexEditing.pattern,
                     name: regexEditing.name || undefined,
-                    score: regexEditing.score,
+                    score: regexEditing.score || 0,
                     originalName: regexEditing.originalName,
                     disabled:
                       regexEditing.disabled ?? existingOverride?.disabled,
@@ -597,7 +600,10 @@ export function SyncedPatterns({
           </p>
           <NumberInput
             label="Custom Score"
-            value={selEditing?.score ?? 0}
+            value={selEditing?.score || 0}
+            min={-1_000_000}
+            max={1_000_000}
+            step={50}
             onValueChange={(score) =>
               setSelEditing((prev) => (prev ? { ...prev, score } : null))
             }
@@ -629,7 +635,7 @@ export function SyncedPatterns({
                     idx >= 0 ? overrides[idx] : undefined;
                   const entry = {
                     expression: selEditing.expression,
-                    score: selEditing.score,
+                    score: selEditing.score || 0,
                     exprNames: selEditing.exprNames,
                     disabled: selEditing.disabled ?? existingOverride?.disabled,
                   };
