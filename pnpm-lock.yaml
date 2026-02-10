@@ -33,8 +33,8 @@ importers:
         specifier: github:viren070/torbox-sdk-js#dist
         version: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/3cbd6c42d50d26b18e2184f16e5506630a2f53e7
       '@viren070/parse-torrent-title':
-        specifier: ^0.6.4
-        version: 0.6.4
+        specifier: ^0.6.5
+        version: 0.6.5
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -2106,8 +2106,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@viren070/parse-torrent-title@0.6.4':
-    resolution: {integrity: sha512-lFXX5yXiupr9de1nROeBSzaE7I29OOjWagKK6cRJ2vJSxYFoivAWsbyzV21EEijQRDTkkpeLxqeQxchQ1IVhrw==}
+  '@viren070/parse-torrent-title@0.6.5':
+    resolution: {integrity: sha512-qjMC0jLyK0h4lZ2JT67huTvHJCxIPYPmPWDxuFjIqCZxTFEWYn/xptsiceNfn0PiOmyjDkvH0UBEmRzi1FpOuQ==}
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -6699,7 +6699,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@viren070/parse-torrent-title@0.6.4': {}
+  '@viren070/parse-torrent-title@0.6.5': {}
 
   '@vitest/expect@2.1.9':
     dependencies:
