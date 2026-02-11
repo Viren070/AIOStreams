@@ -2,7 +2,7 @@ import z from 'zod';
 import { UserData } from '../db/schemas.js';
 import { Env } from './env.js';
 import { SyncManager, type SyncOverride, type FetchResult } from './sync.js';
-import { extractNamesFromExpression } from '../parser/streamExpression.js';
+import { extractAllNamesFromExpression } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
 
 const logger = createLogger('core');
@@ -212,7 +212,7 @@ export class SelAccess {
 
       // Match by extracted names vs stored exprNames
       if (o.exprNames && o.exprNames.length > 0) {
-        const names = extractNamesFromExpression(expr.expression);
+        const names = extractAllNamesFromExpression(expr.expression);
         if (
           names &&
           names.length === o.exprNames.length &&
