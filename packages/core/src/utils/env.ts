@@ -798,6 +798,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Description of the whitelisted regex patterns. Falls back to ALLOWED_REGEX_PATTERNS_DESCRIPTION.',
   }),
+  WHITELISTED_REGEX_PATTERNS_URLS_GITHUB_USERNAMES: json<string[]>({
+    default: [],
+    desc: 'GitHub usernames; regex sync URLs starting with https://raw.githubusercontent.com/<username>/ are whitelisted.',
+  }),
   WHITELISTED_SYNC_REFRESH_INTERVAL: num({
     default: undefined,
     desc: 'Refresh interval for synced URLs (regex and SEL) in seconds. Falls back to ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL (converted from ms to s). Default: 86400 (24h).',
@@ -805,6 +809,10 @@ export const Env = cleanEnv(process.env, {
   WHITELISTED_SEL_URLS: json<string[]>({
     default: undefined,
     desc: 'Whitelisted stream expression (SEL) sync URLs (JSON array of URL strings). Non-trusted users can only sync from these URLs.',
+  }),
+  WHITELISTED_SEL_URLS_GITHUB_USERNAMES: json<string[]>({
+    default: [],
+    desc: 'GitHub usernames; SEL sync URLs starting with https://raw.githubusercontent.com/<username>/ are whitelisted.',
   }),
   SEL_SYNC_ACCESS: str({
     default: 'trusted',

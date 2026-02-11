@@ -3,6 +3,7 @@ import { UserData } from '../db/schemas.js';
 import { Env } from './env.js';
 import { SyncManager, type SyncOverride, type FetchResult } from './sync.js';
 import { createLogger } from './logger.js';
+import { isWhitelistedGithubRawUrl } from './general.js';
 
 const logger = createLogger('core');
 
@@ -170,7 +171,13 @@ export class RegexAccess {
 
     if (isUnrestricted) return urls;
 
-    return urls.filter((url) => this.manager.allowedUrls.includes(url));
+    const githubUsernames =
+      Env.WHITELISTED_REGEX_PATTERNS_URLS_GITHUB_USERNAMES || [];
+    return urls.filter(
+      (url) =>
+        this.manager.allowedUrls.includes(url) ||
+        isWhitelistedGithubRawUrl(url, githubUsernames)
+    );
   }
 
   /**

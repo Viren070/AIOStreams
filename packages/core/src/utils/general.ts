@@ -5,6 +5,26 @@ import { parseConnectionURI } from '../db/utils.js';
 import { Env } from './env.js';
 const logger = createLogger('utils-general');
 
+const GITHUB_RAW_URL_PREFIX = 'https://raw.githubusercontent.com/';
+
+/**
+ * Returns true if url is a raw GitHub URL whose owner (first path segment) is in usernames.
+ * Used to whitelist regex/SEL sync URLs by GitHub username.
+ */
+export function isWhitelistedGithubRawUrl(
+  url: string,
+  usernames: string[]
+): boolean {
+  if (!usernames?.length || typeof url !== 'string') return false;
+  if (!url.startsWith(GITHUB_RAW_URL_PREFIX)) return false;
+  const rest = url.slice(GITHUB_RAW_URL_PREFIX.length);
+  const slash = rest.indexOf('/');
+  const owner = slash === -1 ? rest : rest.slice(0, slash);
+  const ownerLower = owner.toLowerCase();
+  const whitelistLower = new Set(usernames.map((u) => u.toLowerCase()));
+  return whitelistLower.has(ownerLower);
+}
+
 export function getDataFolder(): string {
   const databaseURI = parseConnectionURI(Env.DATABASE_URI);
   if (databaseURI.dialect === 'sqlite') {
