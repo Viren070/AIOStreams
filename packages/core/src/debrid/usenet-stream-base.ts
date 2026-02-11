@@ -790,7 +790,7 @@ export abstract class UsenetStreamService implements DebridService {
       () => this._resolve(playbackInfo, filename),
       {
         timeout: 120000,
-        ttl: 10000,
+        ttl: 130000,
       }
     );
     return result;
