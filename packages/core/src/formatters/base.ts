@@ -291,26 +291,67 @@ export abstract class BaseFormatter {
         : `E${getPaddedNumber(stream.parsedFile.folderEpisodes[0], 2)}-${getPaddedNumber(stream.parsedFile.folderEpisodes[stream.parsedFile.folderEpisodes.length - 1], 2)}`
       : undefined;
 
-    const sortedLanguages = languages
-      ? [...languages].sort((a, b) => {
-          const aIndex = userSpecifiedLanguages.indexOf(a as any);
-          const bIndex = userSpecifiedLanguages.indexOf(b as any);
+    const sortByUserPreference = <T extends string>(
+      items: T[] | null,
+      userPrefs: string[]
+    ): T[] | null => {
+      if (!items) return null;
+      if (!userPrefs.length) return items;
+      return [...items].sort((a, b) => {
+        const aIndex = userPrefs.indexOf(a as any);
+        const bIndex = userPrefs.indexOf(b as any);
+        const aInUser = aIndex !== -1;
+        const bInUser = bIndex !== -1;
+        return aInUser && bInUser
+          ? aIndex - bIndex
+          : aInUser
+            ? -1
+            : bInUser
+              ? 1
+              : items.indexOf(a) - items.indexOf(b);
+      });
+    };
 
-          const aInUser = aIndex !== -1;
-          const bInUser = bIndex !== -1;
-
-          return aInUser && bInUser
-            ? aIndex - bIndex
-            : aInUser
-              ? -1
-              : bInUser
-                ? 1
-                : languages.indexOf(a) - languages.indexOf(b);
-        })
-      : null;
+    const sortedLanguages = sortByUserPreference(languages, userSpecifiedLanguages);
 
     const onlyUserSpecifiedLanguages = sortedLanguages?.filter((lang) =>
       userSpecifiedLanguages.includes(lang as any)
+    );
+
+    const userSpecifiedVisualTags = [
+      ...new Set([
+        ...(this.userData.preferredVisualTags || []),
+        ...(this.userData.requiredVisualTags || []),
+        ...(this.userData.includedVisualTags || []),
+      ]),
+    ];
+    const sortedVisualTags = sortByUserPreference(
+      stream.parsedFile?.visualTags || null,
+      userSpecifiedVisualTags
+    );
+
+    const userSpecifiedAudioTags = [
+      ...new Set([
+        ...(this.userData.preferredAudioTags || []),
+        ...(this.userData.requiredAudioTags || []),
+        ...(this.userData.includedAudioTags || []),
+      ]),
+    ];
+    const sortedAudioTags = sortByUserPreference(
+      stream.parsedFile?.audioTags || null,
+      userSpecifiedAudioTags
+    );
+
+    const userSpecifiedAudioChannels = [
+      ...new Set([
+        ...(this.userData.preferredAudioChannels || []),
+        ...(this.userData.requiredAudioChannels || []),
+        ...(this.userData.includedAudioChannels || []),
+      ]),
+    ];
+    const sortedAudioChannels = sortByUserPreference(
+      stream.parsedFile?.audioChannels || null,
+      userSpecifiedAudioChannels
     );
     const formattedAge = stream.age ? formatHours(stream.age) : null;
     const parseValue: ParseValue = {
@@ -371,8 +412,8 @@ export abstract class BaseFormatter {
               .map((emoji) => emoji.replace('🇬🇧', '🇺🇸🦅'))
               .filter((value, index, self) => self.indexOf(value) === index)
           : null,
-        visualTags: stream.parsedFile?.visualTags || null,
-        audioTags: stream.parsedFile?.audioTags || null,
+        visualTags: sortedVisualTags || null,
+        audioTags: sortedAudioTags || null,
         releaseGroup: stream.parsedFile?.releaseGroup || null,
         regexMatched:
           stream.regexMatched?.name || stream.rankedRegexesMatched?.[0] || null,
@@ -397,7 +438,7 @@ export abstract class BaseFormatter {
               )
             : null,
         encode: stream.parsedFile?.encode || null,
-        audioChannels: stream.parsedFile?.audioChannels || null,
+        audioChannels: sortedAudioChannels || null,
         indexer: stream.indexer || null,
         seeders: stream.torrent?.seeders ?? null,
         private: stream.torrent?.private ?? false,
