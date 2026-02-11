@@ -142,7 +142,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     Chinese: createLanguageRegex('chinese|chi'),
     Russian: createLanguageRegex('russian|rus'),
     Arabic: createLanguageRegex('arabic|ara'),
-    Portuguese: createLanguageRegex('portuguese|por'),
+    Portuguese: createLanguageRegex('portuguese'),
     Spanish: createLanguageRegex('spanish|spa|esp'),
     French: createLanguageRegex('french|fra|fr|vf|vff|vfi|vf2|vfq|truefrench'),
     German: createLanguageRegex('deu(tsch)?(land)?|ger(man)?'),
