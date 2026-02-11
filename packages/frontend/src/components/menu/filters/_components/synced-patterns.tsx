@@ -30,18 +30,16 @@ import {
 // Helpers
 
 /**
- * Extract names from C-style block comments in a SEL expression.
- * Names are comments that don't start with `#`.
+ * Extract ALL names from block comments, including #-prefixed ones.
+ * Used for override tracking to make each expression's name unique.
  */
-function extractNamesFromExpression(expression: string): string[] | undefined {
+function extractAllNamesFromExpression(expression: string): string[] | undefined {
   const regex = /\/\*\s*(.*?)\s*\*\//g;
   const names: string[] = [];
   let match;
   while ((match = regex.exec(expression)) !== null) {
     const content = match[1];
-    if (!content.startsWith('#')) {
-      names.push(content);
-    }
+    names.push(content.startsWith('#') ? content.slice(1).trim() : content);
   }
   return names.length > 0 ? names : undefined;
 }
@@ -162,7 +160,7 @@ export function SyncedPatterns({
 
         // For SEL items, extract names from expression comments
         const extractedNames = isSel
-          ? extractNamesFromExpression(patternStr)
+          ? extractAllNamesFromExpression(patternStr)
           : undefined;
 
         const matchesOverride = (o: any) => {

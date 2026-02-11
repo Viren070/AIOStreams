@@ -1343,3 +1343,22 @@ export function extractNamesFromExpression(
   }
   return names.length > 0 ? names : undefined;
 }
+
+/**
+ * Extracts ALL names from comments in a stream expression, including #-prefixed ones.
+ * This makes each expression's name set naturally unique for override tracking.
+ * @param expression The stream expression to extract names from
+ * @returns Array of extracted names, or undefined if none found
+ */
+export function extractAllNamesFromExpression(
+  expression: string
+): string[] | undefined {
+  const regex = /\/\*\s*(.*?)\s*\*\//g;
+  const names: string[] = [];
+  let match;
+  while ((match = regex.exec(expression)) !== null) {
+    const content = match[1];
+    names.push(content.startsWith('#') ? content.slice(1).trim() : content);
+  }
+  return names.length > 0 ? names : undefined;
+}
