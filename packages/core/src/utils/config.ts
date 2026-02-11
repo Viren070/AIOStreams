@@ -25,6 +25,7 @@ import {
   constants,
   SelAccess,
 } from './index.js';
+import { isWhitelistedGithubRawUrl } from './general.js';
 import { z, ZodError } from 'zod';
 import {
   ExitConditionEvaluator,
@@ -854,7 +855,11 @@ function validateSyncedRegexUrls(
 
   if (isUnrestricted) return;
 
-  const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+  const allowedUrls =
+    Env.WHITELISTED_REGEX_PATTERNS_URLS ??
+    Env.ALLOWED_REGEX_PATTERNS_URLS ??
+    [];
+  const githubUsernames = Env.WHITELISTED_REGEX_PATTERNS_URLS_GITHUB_USERNAMES || [];
   const urlsToCheck = [
     ...(config.syncedIncludedRegexUrls || []),
     ...(config.syncedExcludedRegexUrls || []),
@@ -862,7 +867,10 @@ function validateSyncedRegexUrls(
     ...(config.syncedPreferredRegexUrls || []),
   ];
 
-  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
+  const invalidUrls = urlsToCheck.filter(
+    (url) =>
+      !(allowedUrls.includes(url) || isWhitelistedGithubRawUrl(url, githubUsernames))
+  );
 
   if (invalidUrls.length > 0) {
     if (!skipErrors) {
@@ -881,6 +889,7 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
   if (isUnrestricted) return;
 
   const allowedUrls = Env.WHITELISTED_SEL_URLS || [];
+  const githubUsernames = Env.WHITELISTED_SEL_URLS_GITHUB_USERNAMES || [];
   const urlsToCheck = [
     ...(config.syncedIncludedStreamExpressionUrls || []),
     ...(config.syncedExcludedStreamExpressionUrls || []),
@@ -889,7 +898,10 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
     ...(config.syncedRankedStreamExpressionUrls || []),
   ];
 
-  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
+  const invalidUrls = urlsToCheck.filter(
+    (url) =>
+      !(allowedUrls.includes(url) || isWhitelistedGithubRawUrl(url, githubUsernames))
+  );
 
   if (invalidUrls.length > 0) {
     if (!skipErrors) {

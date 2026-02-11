@@ -4,6 +4,7 @@ import { Env } from './env.js';
 import { SyncManager, type SyncOverride, type FetchResult } from './sync.js';
 import { extractNamesFromExpression } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
+import { isWhitelistedGithubRawUrl } from './general.js';
 
 const logger = createLogger('core');
 
@@ -85,9 +86,14 @@ export class SelAccess {
 
     if (isUnrestricted) return urls;
 
-    // Non-trusted users can only use whitelisted SEL URLs
+    // Non-trusted users can only use whitelisted SEL URLs or raw GitHub URLs from whitelisted usernames
     const allowedUrls = Env.WHITELISTED_SEL_URLS || [];
-    return urls.filter((url) => allowedUrls.includes(url));
+    const githubUsernames = Env.WHITELISTED_SEL_URLS_GITHUB_USERNAMES || [];
+    return urls.filter(
+      (url) =>
+        allowedUrls.includes(url) ||
+        isWhitelistedGithubRawUrl(url, githubUsernames)
+    );
   }
 
   /**
