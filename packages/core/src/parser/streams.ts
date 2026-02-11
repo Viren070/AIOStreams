@@ -309,7 +309,9 @@ class StreamParser {
       size = Math.round(size);
     }
 
-    return size;
+    if (Number.isFinite(size) && size > 0) {
+      return size;
+    }
   }
 
   protected getFolderSize(
