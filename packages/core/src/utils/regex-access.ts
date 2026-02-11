@@ -100,6 +100,21 @@ export class RegexAccess {
   }
 
   /**
+   * Add URLs to the allowed list for regex pattern syncing.
+   * URLs added this way are considered trusted and can be used for syncing.
+   */
+  public static addAllowedUrls(urls: string[]): void {
+    this.manager.addAllowedUrls(urls);
+  }
+
+  /**
+   * Get all allowed URLs for regex pattern syncing.
+   */
+  public static getAllowedUrls(): string[] {
+    return this.manager.allowedUrls;
+  }
+
+  /**
    * Check if a user is allowed to use regex filters.
    * If specific regexes are provided, checks if they're all in the whitelist.
    */
@@ -138,10 +153,7 @@ export class RegexAccess {
     return {
       patterns: [...this.manager.accumulatedKeys],
       description: this._description,
-      urls:
-        Env.WHITELISTED_REGEX_PATTERNS_URLS ??
-        Env.ALLOWED_REGEX_PATTERNS_URLS ??
-        [],
+      urls: this.manager.allowedUrls,
     };
   }
 
@@ -158,11 +170,7 @@ export class RegexAccess {
 
     if (isUnrestricted) return urls;
 
-    const allowedUrls =
-      Env.WHITELISTED_REGEX_PATTERNS_URLS ??
-      Env.ALLOWED_REGEX_PATTERNS_URLS ??
-      [];
-    return urls.filter((url) => allowedUrls.includes(url));
+    return urls.filter((url) => this.manager.allowedUrls.includes(url));
   }
 
   /**

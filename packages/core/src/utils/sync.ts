@@ -58,6 +58,7 @@ export class SyncManager<T extends Record<string, any>> {
   private _refreshInterval: ReturnType<typeof setInterval> | null = null;
   private _dynamicUrls = new Set<string>();
   private _accumulatedKeys = new Set<string>();
+  private _allowedUrls = new Set<string>();
 
   public readonly cache: Cache<string, { items: T[] }>;
   protected readonly config: SyncManagerConfig;
@@ -80,6 +81,7 @@ export class SyncManager<T extends Record<string, any>> {
       config.cacheKey,
       config.maxCacheSize
     );
+    this._allowedUrls = new Set(config.configuredUrls);
   }
 
   /**
@@ -182,6 +184,53 @@ export class SyncManager<T extends Record<string, any>> {
         `[${this.config.cacheKey}] Accumulated ${newCount} new items. Total: ${this._accumulatedKeys.size}`
       );
     }
+  }
+
+  /**
+   * Add URLs to the allowed list.
+   * URLs added this way are considered trusted and can be used for syncing.
+   */
+  public addAllowedUrls(urls: string[]): void {
+    const initialCount = this._allowedUrls.size;
+    for (const url of urls) {
+      if (this.isValidUrl(url)) {
+        this._allowedUrls.add(url);
+      } else {
+        logger.warn(`[${this.config.cacheKey}] Skipping invalid URL: ${url}`);
+      }
+    }
+    const newCount = this._allowedUrls.size - initialCount;
+    if (newCount > 0) {
+      logger.info(
+        `[${this.config.cacheKey}] Added ${newCount} new allowed URLs. Total: ${this._allowedUrls.size}`
+      );
+    }
+  }
+
+  /**
+   * Get all allowed URLs (configured + dynamically added).
+   */
+  public get allowedUrls(): string[] {
+    return Array.from(this._allowedUrls);
+  }
+
+  /**
+   * Check if a URL is valid.
+   */
+  public isValidUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if a URL is in the allowed list.
+   */
+  public isAllowedUrl(url: string): boolean {
+    return this._allowedUrls.has(url);
   }
 
   // ─── Private ────────────────────────────────────────────────────────────────

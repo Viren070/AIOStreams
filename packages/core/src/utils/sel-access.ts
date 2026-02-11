@@ -86,8 +86,7 @@ export class SelAccess {
     if (isUnrestricted) return urls;
 
     // Non-trusted users can only use whitelisted SEL URLs
-    const allowedUrls = Env.WHITELISTED_SEL_URLS || [];
-    return urls.filter((url) => allowedUrls.includes(url));
+    return urls.filter((url) => this.manager.allowedUrls.includes(url));
   }
 
   /**
@@ -193,6 +192,21 @@ export class SelAccess {
     }
 
     return result;
+  }
+
+  /**
+   * Add URLs to the allowed list for SEL syncing.
+   * URLs added this way are considered trusted and can be used for syncing.
+   */
+  public static addAllowedUrls(urls: string[]): void {
+    this.manager.addAllowedUrls(urls);
+  }
+
+  /**
+   * Get all allowed URLs for SEL syncing.
+   */
+  public static getAllowedUrls(): string[] {
+    return this.manager.allowedUrls;
   }
 
   /**
