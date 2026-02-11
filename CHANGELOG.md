@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.23.1](https://github.com/Viren070/AIOStreams/compare/v2.23.0...v2.23.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* add fallback to handle previously stored exprNames ([5e024fa](https://github.com/Viren070/AIOStreams/commit/5e024fa5d5bb473e18d58d03ca462ee2fda2fda3))
+* compute PSE last after RSE ([c060fc6](https://github.com/Viren070/AIOStreams/commit/c060fc6337509b09ef93cb63b5e18f651d9b5627))
+* dont match por as portuguese ([781171c](https://github.com/Viren070/AIOStreams/commit/781171c292138f63488df3edd543c19a44574b37)), closes [#595](https://github.com/Viren070/AIOStreams/issues/595)
+* ensure size is finite and positive before returning ([d11f3d6](https://github.com/Viren070/AIOStreams/commit/d11f3d617a6b8f82aba17f6f2b2f20b62599d7bf))
+* **fronted:** Allow negatives in overrides ([#715](https://github.com/Viren070/AIOStreams/issues/715)) ([e49259a](https://github.com/Viren070/AIOStreams/commit/e49259a4ffc9d9ccdcef34b780cc969a24837f7f))
+* **frontend:** dont merge with existing user data upon login ([839e023](https://github.com/Viren070/AIOStreams/commit/839e023551626e24e0b6cb39007a04055d6d3539))
+* increase ttl of lock to higher than timeout ([639e41b](https://github.com/Viren070/AIOStreams/commit/639e41b0f25fd80d737ce30e2c3bcc8a08520712))
+* only assign nextAirDate when in future and correctly handle errors ([6e35979](https://github.com/Viren070/AIOStreams/commit/6e35979e1a7015d3dff9f70d63543f3015b62a18))
+* use # comments for override names ([#716](https://github.com/Viren070/AIOStreams/issues/716)) ([71d172b](https://github.com/Viren070/AIOStreams/commit/71d172b3d39c6fb4ad931fb57b428e0c9026bafd))
+
 ## [2.23.0](https://github.com/Viren070/AIOStreams/compare/v2.22.0...v2.23.0) (2026-02-09)
 
 
