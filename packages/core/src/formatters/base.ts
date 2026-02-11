@@ -871,7 +871,7 @@ export abstract class BaseFormatter {
             new RegExp(`${findStartChar}\\s*,\\s*${findEndChar}`)
           );
 
-          if (!shouldBeUndefined && key && replaceKey)
+          if (!shouldBeUndefined && key && replaceKey !== undefined)
             return variable.replaceAll(key, replaceKey);
         }
         case mod.startsWith('truncate(') && mod.endsWith(')'): {
