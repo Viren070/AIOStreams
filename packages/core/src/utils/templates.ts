@@ -84,19 +84,22 @@ export class TemplateManager {
       const filePath = path.join(dirPath, file);
       try {
         if (file.endsWith('.json')) {
-          const rawTemplate = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-          // Apply migrations to the config before parsing
-          if (rawTemplate.config) {
-            rawTemplate.config = applyMigrations(rawTemplate.config);
+          const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          const rawTemplates = Array.isArray(raw) ? raw : [raw];
+          for (const rawTemplate of rawTemplates) {
+            // Apply migrations to the config before parsing
+            if (rawTemplate.config) {
+              rawTemplate.config = applyMigrations(rawTemplate.config);
+            }
+            const template = TemplateSchema.parse(rawTemplate);
+            templateList.push({
+              ...template,
+              metadata: {
+                ...template.metadata,
+                source,
+              },
+            });
           }
-          const template = TemplateSchema.parse(rawTemplate);
-          templateList.push({
-            ...template,
-            metadata: {
-              ...template.metadata,
-              source,
-            },
-          });
         }
       } catch (error) {
         errors.push({
