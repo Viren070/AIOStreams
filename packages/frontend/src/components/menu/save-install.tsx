@@ -355,6 +355,8 @@ function Content() {
           );
           return;
         }
+        delete parsed.uuid;
+        delete parsed.trusted;
         setUserData((prev) => ({
           ...prev,
           ...applyMigrations(parsed),
