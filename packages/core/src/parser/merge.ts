@@ -20,6 +20,9 @@ export function mergeParsedFiles(
 ): ParsedFile | undefined {
   if (!fileParsed && !folderParsed) return undefined;
 
+  /**
+   * Returns the first non-empty array from the given arguments, or undefined if none.
+   */
   function arrayFallback<T>(...arrs: (T[] | undefined)[]): T[] | undefined {
     for (const arr of arrs) {
       if (arr && arr.length > 0) {

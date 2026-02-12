@@ -493,6 +493,10 @@ class StreamParser {
     throw new Error('Invalid stream, missing a required stream property');
   }
 
+  /**
+   * Parses the filename and folder name from the stream, merges the results,
+   * and applies season-pack detection heuristics.
+   */
   protected getParsedFile(
     stream: Stream,
     parsedStream: ParsedStream
