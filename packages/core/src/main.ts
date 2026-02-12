@@ -51,6 +51,7 @@ import { getAddonName } from './utils/general.js';
 import { Metadata } from './metadata/utils.js';
 import { StreamSelector } from './parser/streamExpression.js';
 import { getDebridService } from './debrid/index.js';
+import { basename } from 'path';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
@@ -2490,10 +2491,19 @@ export class AIOStreams {
           continue;
         }
 
-        // Extract the filename from the stream URL (last path segment)
-        // This matches what getExpectedFolderName() returns during resolve
+        // Derive folderName to match getExpectedFolderName() during resolve:
+        // - NzbDAV uses playbackInfo.filename (= last segment of stream.url)
+        // - Altmount uses path.basename() of the raw NZB URL (without .nzb ext)
+        //   Note: basename() includes query params in its result, unlike URL.pathname
         let folderName = 'unknown_nzb';
-        if (stream.url) {
+        if (serviceId === 'altmount' && stream.nzbUrl) {
+          // Replicate Altmount's getExpectedFolderName: basename(nzbUrl, '.nzb')
+          const nzbBasename = basename(stream.nzbUrl);
+          folderName = nzbBasename.endsWith('.nzb')
+            ? basename(stream.nzbUrl, '.nzb')
+            : nzbBasename;
+        } else if (stream.url) {
+          // NzbDAV: last segment of stream.url = torrentOrNzb.file.name ?? title
           try {
             const urlPath = new URL(stream.url).pathname;
             const lastSegment = urlPath.split('/').pop();
@@ -2501,7 +2511,6 @@ export class AIOStreams {
               folderName = decodeURIComponent(lastSegment);
             }
           } catch {
-            // If URL parsing fails, use stream filename as fallback
             folderName = stream.filename ?? 'unknown_nzb';
           }
         } else {
