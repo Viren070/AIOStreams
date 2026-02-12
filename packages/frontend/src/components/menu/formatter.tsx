@@ -11,6 +11,7 @@ import { Select } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { TextInput } from '../ui/text-input';
 import FileParser from '../../../../core/src/parser/file';
+import { mergeParsedFiles } from '../../../../core/src/parser/merge';
 import { getFormattedStream } from '@/lib/api';
 import { SNIPPETS } from '../../../../core/src/utils/constants';
 import { Modal } from '@/components/ui/modal';
@@ -233,7 +234,11 @@ function Content() {
 
     try {
       setIsFormatting(true);
-      const parsedFile = FileParser.parse(filename);
+      const fileParsed = FileParser.parse(filename);
+      const folderParsed = folder ? FileParser.parse(folder) : undefined;
+      const parsedFile =
+        mergeParsedFiles(fileParsed, folderParsed) || fileParsed;
+
       const stream: ParsedStream = {
         id: 'preview',
         type,
