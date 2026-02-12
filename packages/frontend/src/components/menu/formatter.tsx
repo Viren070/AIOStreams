@@ -11,6 +11,7 @@ import { Select } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { TextInput } from '../ui/text-input';
 import FileParser from '../../../../core/src/parser/file';
+import { mergeParsedFiles } from '../../../../core/src/parser/merge';
 import { getFormattedStream } from '@/lib/api';
 import { SNIPPETS } from '../../../../core/src/utils/constants';
 import { Modal } from '@/components/ui/modal';
@@ -98,6 +99,13 @@ function FormatterPreviewBox({
   );
 }
 
+/**
+ * Renders the formatter UI, including formatter selection, custom formatter editor, live preview inputs, advanced variables, import/export, and preview formatting logic.
+ *
+ * The component maintains local preview state for a sample stream, enqueues formatting requests through a FormatQueue, builds a ParsedStream from the preview inputs (merging parsed filename and folder), and displays the formatted name and description returned by the formatter.
+ *
+ * @returns The React element tree for the formatter page and its interactive controls.
+ */
 function Content() {
   const { userData, setUserData } = useUserData();
   const importModalDisclosure = useDisclosure(false);
@@ -233,7 +241,11 @@ function Content() {
 
     try {
       setIsFormatting(true);
-      const parsedFile = FileParser.parse(filename);
+      const fileParsed = FileParser.parse(filename);
+      const folderParsed = folder ? FileParser.parse(folder) : undefined;
+      const parsedFile =
+        mergeParsedFiles(fileParsed, folderParsed) || fileParsed;
+
       const stream: ParsedStream = {
         id: 'preview',
         type,
