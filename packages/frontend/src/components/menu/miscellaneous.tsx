@@ -129,7 +129,7 @@ function Content() {
         </SettingsCard>
         <SettingsCard
           title="Preload NZB"
-          description="When enabled, AIOStreams will automatically send the top X NZBs (based on your final sort order) to your usenet stream service (NzbDAV/Altmount) so they start downloading before you click on a stream. This happens asynchronously and does not delay the display of results."
+          description="When enabled, AIOStreams will automatically send the top X NZBs (based on your final sort order) to your usenet stream service (NzbDAV/Altmount/TorBox) so they start downloading before you click on a stream. This happens asynchronously and does not delay the display of results."
         >
           <Switch
             label="Enable"
@@ -158,6 +158,28 @@ function Content() {
                 preloadNzb: {
                   ...prev.preloadNzb,
                   count: Math.max(1, Math.min(20, Number(value || 3))),
+                },
+              }));
+            }}
+          />
+          <Combobox
+            label="Addons"
+            help="Select which addons should have their NZBs preloaded. Leave empty to include all addons."
+            emptyMessage="You haven't installed any addons yet..."
+            multiple
+            disabled={!userData.preloadNzb?.enabled}
+            options={userData.presets.map((preset) => ({
+              label: preset.options.name || preset.type,
+              value: preset.instanceId,
+              textValue: preset.options.name || preset.type,
+            }))}
+            value={userData.preloadNzb?.addons ?? []}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  addons: value as string[],
                 },
               }));
             }}

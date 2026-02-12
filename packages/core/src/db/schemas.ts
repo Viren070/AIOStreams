@@ -622,6 +622,7 @@ export const UserDataSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       count: z.number().min(1).max(20).optional(),
+      addons: z.array(z.string()).optional(),
     })
     .optional(),
   services: ServiceList.optional(),

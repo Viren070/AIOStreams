@@ -2397,7 +2397,7 @@ export class AIOStreams {
   }
 
   /**
-   * Preload top X NZBs by sending them to the usenet stream service (NzbDAV/Altmount)
+   * Preload top X NZBs by sending them to the usenet stream service (NzbDAV/Altmount/TorBox)
    * so they start downloading before the user clicks on a stream.
    * This runs as a fire-and-forget operation after the response is sent.
    */
@@ -2406,17 +2406,22 @@ export class AIOStreams {
     context: StreamContext
   ): Promise<void> {
     const count = this.userData.preloadNzb?.count ?? 3;
-    const usenetServiceIds = ['nzbdav', 'altmount'] as const;
+    const usenetServiceIds = ['nzbdav', 'altmount', 'torbox'] as const;
+    const selectedAddons = this.userData.preloadNzb?.addons;
 
     // Filter for streams that have an nzbUrl, belong to a supported usenet stream service,
-    // and whose addon has preloadNzb enabled in its options.
-    // Note: NzbDAV/Altmount streams have type 'debrid', not 'usenet', so we filter by nzbUrl + service.id
+    // and (if addons are specified) whose addon is in the selected list.
+    // Note: NzbDAV/Altmount/TorBox streams have type 'debrid', not 'usenet', so we filter by nzbUrl + service.id
     const usenetStreams = streams.filter(
       (stream) =>
         stream.nzbUrl &&
         stream.service?.id &&
         usenetServiceIds.includes(stream.service.id as any) &&
-        stream.addon?.preset?.options?.preloadNzb === true
+        // If addons are specified, only include streams from selected addons; otherwise include all
+        (!selectedAddons ||
+          selectedAddons.length === 0 ||
+          (stream.addon?.preset?.id &&
+            selectedAddons.includes(stream.addon.preset.id)))
     );
 
     if (usenetStreams.length === 0) {
@@ -2478,6 +2483,8 @@ export class AIOStreams {
                 aiostreamsAuth: creds.aiostreamsAuth,
               })
             );
+          } else if (serviceId === 'torbox') {
+            token = creds.apiKey;
           }
           if (token) {
             credentialCache.set(serviceId, token);
@@ -2495,6 +2502,7 @@ export class AIOStreams {
         // - NzbDAV uses playbackInfo.filename (= last segment of stream.url)
         // - Altmount uses path.basename() of the raw NZB URL (without .nzb ext)
         //   Note: basename() includes query params in its result, unlike URL.pathname
+        // - TorBox uses the stream filename or NZB basename
         let folderName = 'unknown_nzb';
         if (serviceId === 'altmount' && stream.nzbUrl) {
           // Replicate Altmount's getExpectedFolderName: basename(nzbUrl, '.nzb')
@@ -2502,6 +2510,10 @@ export class AIOStreams {
           folderName = nzbBasename.endsWith('.nzb')
             ? basename(stream.nzbUrl, '.nzb')
             : nzbBasename;
+        } else if (serviceId === 'torbox') {
+          // TorBox: use stream.filename (= torrentOrNzb.file.name ?? title)
+          // to match exactly what happens when a user clicks the stream (addNzb receives filename)
+          folderName = stream.filename ?? 'unknown_nzb';
         } else if (stream.url) {
           // NzbDAV: last segment of stream.url = torrentOrNzb.file.name ?? title
           try {
