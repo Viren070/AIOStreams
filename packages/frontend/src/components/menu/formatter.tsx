@@ -99,6 +99,10 @@ function FormatterPreviewBox({
   );
 }
 
+/**
+ * Main content component for the formatter preview panel.
+ * Provides controls for configuring stream properties and previewing formatted output.
+ */
 function Content() {
   const { userData, setUserData } = useUserData();
   const importModalDisclosure = useDisclosure(false);
