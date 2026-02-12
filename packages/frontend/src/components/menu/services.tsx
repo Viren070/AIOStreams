@@ -646,8 +646,18 @@ function ServiceModal({
               ...opt,
               required: false, // override required to false to allow unsetting
             }}
-            value={opt.forced || opt.default || localValues[opt.id]}
-            onChange={(v) => handleCredentialChange(opt.id, v || undefined)}
+            value={
+              opt.forced ??
+              (localValues[opt.id] !== undefined
+                ? localValues[opt.id]
+                : opt.default)
+            }
+            onChange={(v) =>
+              handleCredentialChange(
+                opt.id,
+                typeof v === 'boolean' ? v : v || undefined
+              )
+            }
           />
         ))}
         <div className="flex gap-2">

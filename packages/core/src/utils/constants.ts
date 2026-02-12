@@ -494,6 +494,15 @@ const SERVICE_DETAILS: Record<
         type: 'password',
         required: false,
       },
+      {
+        id: 'filterFailedNzbs',
+        name: 'Filter Failed NZBs',
+        description:
+          'When enabled, NZBs that have failed in NzbDAV will be excluded from the stream results.',
+        type: 'boolean',
+        default: true,
+        required: false,
+      },
     ],
   },
   [ALTMOUNT_SERVICE]: {
@@ -557,6 +566,15 @@ const SERVICE_DETAILS: Record<
         description:
           'If you would like to proxy your AltMount streams, you will need to provide a username:password pair for your AIOStreams instance, defined in the `AIOSTREAMS_AUTH` environment variable. **Other proxies will not work and you must define it here only**',
         type: 'password',
+        required: false,
+      },
+      {
+        id: 'filterFailedNzbs',
+        name: 'Filter Failed NZBs',
+        description:
+          'When enabled, NZBs that have failed in AltMount will be excluded from the stream results.',
+        type: 'boolean',
+        default: true,
         required: false,
       },
     ],

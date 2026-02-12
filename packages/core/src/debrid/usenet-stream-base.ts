@@ -751,6 +751,28 @@ export abstract class UsenetStreamService implements DebridService {
           };
         });
 
+        // Also include failed entries from history that don't have WebDAV folders
+        // so they can be detected and filtered out by processNZBs
+        if (historyData?.slots) {
+          const webdavNames = new Set(webdavFiles.map((file) => file.basename));
+          for (const slot of historyData.slots) {
+            if (
+              slot.status === 'failed' &&
+              slot.name &&
+              !webdavNames.has(slot.name)
+            ) {
+              nzbs.push({
+                id: nzbs.length,
+                status: 'failed',
+                name: slot.name,
+                size: 0,
+                hash: slot.name,
+                files: [],
+              });
+            }
+          }
+        }
+
         this.serviceLogger.debug(
           `Listed NZBs from combined history and WebDAV`,
           {
@@ -932,9 +954,7 @@ export abstract class UsenetStreamService implements DebridService {
             `addUrl failed but NZB is being preloaded, polling WebDAV for content`,
             {
               error:
-                addError instanceof Error
-                  ? addError.message
-                  : String(addError),
+                addError instanceof Error ? addError.message : String(addError),
               path: expectedContentPath,
             }
           );
