@@ -71,7 +71,7 @@ const TVDBSeriesRecordSchema = TVDBBaseRecordSchema.extend({
   originalLanguage: z.string().optional(),
   defaultSeasonType: z.number().optional(),
   isOrderRandomized: z.boolean().optional(),
-  averageRuntime: z.number().optional(),
+  averageRuntime: z.number().nullable().optional(),
   episodes: z.unknown().nullable().optional(),
   overview: z.string().optional(),
 });
