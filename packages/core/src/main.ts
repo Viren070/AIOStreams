@@ -18,6 +18,7 @@ import {
   AnimeDatabase,
   ParsedId,
   IdParser,
+  toUrlSafeBase64,
 } from './utils/index.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from './presets/index.js';
@@ -49,6 +50,7 @@ import {
 import { getAddonName } from './utils/general.js';
 import { Metadata } from './metadata/utils.js';
 import { StreamSelector } from './parser/streamExpression.js';
+import { getDebridService } from './debrid/index.js';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
@@ -242,6 +244,31 @@ export class AIOStreams {
           });
         });
       }
+    }
+
+    // Preload NZBs (fire and forget) - sends top X NZBs to usenet stream services
+    // so they start downloading before the user clicks
+    logger.info(`Preload NZB config`, {
+      enabled: this.userData.preloadNzb?.enabled,
+      count: this.userData.preloadNzb?.count,
+      preCaching,
+      usenetStreamsCount: finalStreams.filter(
+        (s) =>
+          s.nzbUrl &&
+          s.service?.id &&
+          ['nzbdav', 'altmount'].includes(s.service.id)
+      ).length,
+    });
+    if (this.userData.preloadNzb?.enabled && !preCaching) {
+      setImmediate(() => {
+        this._preloadNzbs(finalStreams, context).catch((error) => {
+          logger.error('Error during NZB preloading:', {
+            error: error instanceof Error ? error.message : String(error),
+            type,
+            id,
+          });
+        });
+      });
     }
 
     const { filterDetails, includedDetails } =
@@ -2377,5 +2404,151 @@ export class AIOStreams {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /**
+   * Preload top X NZBs by sending them to the usenet stream service (NzbDAV/Altmount)
+   * so they start downloading before the user clicks on a stream.
+   * This runs as a fire-and-forget operation after the response is sent.
+   */
+  private async _preloadNzbs(
+    streams: ParsedStream[],
+    context: StreamContext
+  ): Promise<void> {
+    const count = this.userData.preloadNzb?.count ?? 3;
+    const usenetServiceIds = ['nzbdav', 'altmount'] as const;
+
+    // Filter for streams that have an nzbUrl, belong to a supported usenet stream service,
+    // and whose addon has preloadNzb enabled in its options.
+    // Note: NzbDAV/Altmount streams have type 'debrid', not 'usenet', so we filter by nzbUrl + service.id
+    const usenetStreams = streams.filter(
+      (stream) =>
+        stream.nzbUrl &&
+        stream.service?.id &&
+        usenetServiceIds.includes(stream.service.id as any) &&
+        stream.addon?.preset?.options?.preloadNzb === true
+    );
+
+    if (usenetStreams.length === 0) {
+      logger.debug('No usenet streams to preload');
+      return;
+    }
+
+    // Take the top X streams (already sorted by the pipeline)
+    const streamsToPreload = usenetStreams.slice(0, count);
+    const category = context.type === 'movie' ? 'Movies' : 'TV';
+
+    logger.info(`Preloading ${streamsToPreload.length} NZBs`, {
+      category,
+      type: context.type,
+      id: context.id,
+    });
+
+    // Build a credential cache per service so we don't re-encode for each stream
+    const credentialCache = new Map<string, string>();
+
+    for (const stream of streamsToPreload) {
+      try {
+        const serviceId = stream.service!.id;
+
+        // Find the user's credentials for this service
+        const serviceConfig = this.userData.services?.find(
+          (s) => s.id === serviceId
+        );
+        if (!serviceConfig?.credentials) {
+          logger.debug(
+            `No credentials found for service ${serviceId}, skipping preload`
+          );
+          continue;
+        }
+
+        // Get or build the encoded token for this service
+        let token = credentialCache.get(serviceId);
+        if (!token) {
+          const creds = serviceConfig.credentials;
+          if (serviceId === 'nzbdav') {
+            token = toUrlSafeBase64(
+              JSON.stringify({
+                nzbdavUrl: creds.url,
+                publicNzbdavUrl: creds.publicUrl,
+                nzbdavApiKey: creds.apiKey,
+                webdavUser: creds.username,
+                webdavPassword: creds.password,
+                aiostreamsAuth: creds.aiostreamsAuth,
+              })
+            );
+          } else if (serviceId === 'altmount') {
+            token = toUrlSafeBase64(
+              JSON.stringify({
+                altmountUrl: creds.url,
+                publicAltmountUrl: creds.publicUrl,
+                altmountApiKey: creds.apiKey,
+                webdavUser: creds.username,
+                webdavPassword: creds.password,
+                aiostreamsAuth: creds.aiostreamsAuth,
+              })
+            );
+          }
+          if (token) {
+            credentialCache.set(serviceId, token);
+          }
+        }
+
+        if (!token) {
+          logger.debug(
+            `Could not encode credentials for service ${serviceId}, skipping preload`
+          );
+          continue;
+        }
+
+        // Extract the filename from the stream URL (last path segment)
+        // This matches what getExpectedFolderName() returns during resolve
+        let folderName = 'unknown_nzb';
+        if (stream.url) {
+          try {
+            const urlPath = new URL(stream.url).pathname;
+            const lastSegment = urlPath.split('/').pop();
+            if (lastSegment) {
+              folderName = decodeURIComponent(lastSegment);
+            }
+          } catch {
+            // If URL parsing fails, use stream filename as fallback
+            folderName = stream.filename ?? 'unknown_nzb';
+          }
+        } else {
+          folderName = stream.filename ?? 'unknown_nzb';
+        }
+
+        const debridService = getDebridService(serviceId, token);
+
+        if (debridService.preloadNzb) {
+          await debridService.preloadNzb(
+            stream.nzbUrl!,
+            category,
+            folderName
+          );
+          logger.debug(`Successfully preloaded NZB`, {
+            service: serviceId,
+            nzbUrl: maskSensitiveInfo(stream.nzbUrl!),
+            folderName,
+          });
+        } else {
+          logger.debug(
+            `Service ${serviceId} does not support NZB preloading`
+          );
+        }
+      } catch (error) {
+        logger.warn(`Failed to preload NZB`, {
+          error: error instanceof Error ? error.message : String(error),
+          nzbUrl: stream.nzbUrl
+            ? maskSensitiveInfo(stream.nzbUrl)
+            : undefined,
+        });
+      }
+    }
+
+    logger.info(
+      `NZB preloading complete for ${context.type} ${context.id}`
+    );
   }
 }

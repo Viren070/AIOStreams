@@ -127,6 +127,42 @@ function Content() {
             }}
           />
         </SettingsCard>
+        <SettingsCard
+          title="Preload NZB"
+          description="When enabled, AIOStreams will automatically send the top X NZBs (based on your final sort order) to your usenet stream service (NzbDAV/Altmount) so they start downloading before you click on a stream. This happens asynchronously and does not delay the display of results."
+        >
+          <Switch
+            label="Enable"
+            side="right"
+            value={userData.preloadNzb?.enabled}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  enabled: value,
+                },
+              }));
+            }}
+          />
+          <NumberInput
+            label="Number of NZBs to preload"
+            min={1}
+            max={20}
+            defaultValue={3}
+            disabled={!userData.preloadNzb?.enabled}
+            value={userData.preloadNzb?.count ?? 3}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  count: Math.max(1, Math.min(20, Number(value || 3))),
+                },
+              }));
+            }}
+          />
+        </SettingsCard>
         {mode === 'pro' && (
           <SettingsCard
             title="Auto Play"

@@ -199,6 +199,15 @@ export class NewznabPreset extends BuiltinAddonPreset {
         showInSimpleMode: false,
       },
       {
+        id: 'preloadNzb',
+        name: 'Preload NZB',
+        description:
+          'Allow NZBs from this addon to be preloaded to NzbDAV/Altmount when the global Preload NZB feature is enabled in Miscellaneous settings.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
