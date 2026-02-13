@@ -189,7 +189,10 @@ export class StreamContext {
       this.userData.excludedStreamExpressions?.length ||
       this.userData.requiredStreamExpressions?.length ||
       this.userData.includedStreamExpressions?.length ||
-      (this.userData.precacheNextEpisode && this.type === 'series');
+      (this.userData.precacheNextEpisode && this.type === 'series') ||
+      // STRM output needs metadata for filename generation (title, year, tmdbId)
+      (this.userData.strmOutput?.mode &&
+        this.userData.strmOutput.mode !== 'disabled');
 
     if (!needsMetadata || !this.parsedId) {
       this._metadataFetched = true;
