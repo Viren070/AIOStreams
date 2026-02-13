@@ -33,7 +33,6 @@ export const BuiltinDebridServices = z.array(
   z.object({
     id: z.enum(constants.BUILTIN_SUPPORTED_SERVICES),
     credential: z.string(),
-    filterFailedNzbs: z.boolean().optional(),
   })
 );
 

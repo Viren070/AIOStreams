@@ -443,10 +443,7 @@ async function processNZBsForDebridService(
     const nzbCheckResult = nzbCheckResults.find(
       (result) => result.hash === nzb.hash
     );
-    if (
-      nzbCheckResult?.status === 'failed' &&
-      service.filterFailedNzbs !== false
-    ) {
+    if (nzbCheckResult?.status === 'failed') {
       logger.debug(`Skipping NZB as its status is failed`, {
         service: service.id,
         nzb: nzb.title,

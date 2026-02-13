@@ -160,17 +160,10 @@ export class BuiltinAddonPreset extends Preset {
       tmdbAccessToken: userData.tmdbAccessToken,
       tmdbApiKey: userData.tmdbApiKey,
       tvdbApiKey: userData.tvdbApiKey,
-      services: services.map((service) => {
-        const userService = userData.services?.find((s) => s.id === service);
-        return {
-          id: service,
-          credential: this.getServiceCredential(service, userData),
-          filterFailedNzbs:
-            userService?.credentials?.filterFailedNzbs !== undefined
-              ? Boolean(userService.credentials.filterFailedNzbs)
-              : undefined,
-        };
-      }),
+      services: services.map((service) => ({
+        id: service,
+        credential: this.getServiceCredential(service, userData),
+      })),
       cacheAndPlay: userData.cacheAndPlay,
       autoRemoveDownloads: userData.autoRemoveDownloads,
     };
