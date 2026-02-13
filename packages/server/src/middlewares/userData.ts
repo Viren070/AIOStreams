@@ -24,8 +24,15 @@ const VALID_RESOURCES = [
   'streams',
 ];
 
+interface UserDataParams {
+  uuid?: string;
+  encryptedPassword?: string;
+  // match Express.Request<ParamsDictionary> to keep middleware flexible
+  [key: string]: string | string[] | undefined;
+}
+
 export const userDataMiddleware = async (
-  req: Request,
+  req: Request<UserDataParams>,
   res: Response,
   next: NextFunction
 ) => {
@@ -83,7 +90,7 @@ export const userDataMiddleware = async (
 
     // decrypt the encrypted password
     const { success: successfulDecryption, data: decryptedPassword } =
-      decryptString(encryptedPassword!);
+      decryptString(encryptedPassword);
     if (!successfulDecryption) {
       if (constants.RESOURCES.includes(resource as Resource)) {
         res.status(200).json(
