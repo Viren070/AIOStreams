@@ -17,6 +17,8 @@ import {
 } from './base.js';
 import { StremThruInterface } from './stremthru.js';
 import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
+import pLimit, { LimitFunction } from 'p-limit';
+import { LRUCache } from 'lru-cache';
 
 const logger = createLogger('debrid:torbox');
 
@@ -97,6 +99,7 @@ export class TorboxDebridService implements DebridService {
   private readonly apiVersion = 'v1';
   private readonly torboxApi: TorboxApi;
   private readonly stremthru: StremThruInterface;
+  private readonly token: string;
   private static playbackLinkCache = Cache.getInstance<string, string | null>(
     'tb:link'
   );
@@ -104,6 +107,9 @@ export class TorboxDebridService implements DebridService {
     string,
     DebridDownload
   >('tb:instant-availability');
+  private static checkMagnetsLimiters = new LRUCache<string, LimitFunction>({
+    max: 1000,
+  });
   readonly supportsUsenet = true;
   readonly serviceName: ServiceId = 'torbox';
 
@@ -111,11 +117,11 @@ export class TorboxDebridService implements DebridService {
     this.torboxApi = new TorboxApi({
       token: config.token,
     });
-
     this.stremthru = new StremThruInterface({
       ...config,
       serviceName: this.serviceName,
     });
+    this.token = config.token;
   }
   public async listMagnets(): Promise<DebridDownload[]> {
     return this.stremthru.listMagnets();
@@ -148,7 +154,13 @@ export class TorboxDebridService implements DebridService {
   }
 
   public async checkMagnets(magnets: string[], sid?: string) {
-    return this.stremthru.checkMagnets(magnets, sid);
+    let limiter = TorboxDebridService.checkMagnetsLimiters.get(this.token);
+    if (!limiter) {
+      limiter = pLimit(2);
+      TorboxDebridService.checkMagnetsLimiters.set(this.token, limiter);
+    }
+
+    return limiter(() => this.stremthru.checkMagnets(magnets, sid));
   }
 
   public async addMagnet(magnet: string): Promise<DebridDownload> {

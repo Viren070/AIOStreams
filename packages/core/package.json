@@ -20,6 +20,7 @@
     "expr-eval": "^2.0.2",
     "fetch-socks": "^1.3.2",
     "fuzzball": "^2.2.3",
+    "lru-cache": "^11.2.6",
     "moment-timezone": "^0.5.48",
     "p-limit": "^7.3.0",
     "parse-torrent": "^11.0.19",
