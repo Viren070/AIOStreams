@@ -196,42 +196,41 @@ export class TorboxDebridService implements DebridService {
       }
 
       try {
-        const batchResults = await Promise.all(
-          batches.map(async (batch) => {
-            const result =
-              await this.torboxApi.usenet.getUsenetCachedAvailability(
-                this.apiVersion,
-                {
-                  hash: batch.join(','),
-                  format: 'list',
-                  listFiles: 'true',
-                }
-              );
-            if (!result.data?.success) {
-              throw new DebridError(`Failed to check instant availability`, {
+        const batchResults = [];
+        for (const batch of batches) {
+          const result =
+            await this.torboxApi.usenet.getUsenetCachedAvailability(
+              this.apiVersion,
+              {
+                hash: batch.join(','),
+                format: 'list',
+                listFiles: 'true',
+              }
+            );
+          if (!result.data?.success) {
+            throw new DebridError(`Failed to check instant availability`, {
+              statusCode: result.metadata.status,
+              statusText: result.metadata.statusText,
+              code: 'UNKNOWN',
+              headers: result.metadata.headers,
+              body: result.data,
+            });
+          }
+
+          if (!Array.isArray(result.data.data)) {
+            throw new DebridError(
+              'Invalid response from Torbox API. Expected array, got object',
+              {
                 statusCode: result.metadata.status,
                 statusText: result.metadata.statusText,
                 code: 'UNKNOWN',
                 headers: result.metadata.headers,
                 body: result.data,
-              });
-            }
-
-            if (!Array.isArray(result.data.data)) {
-              throw new DebridError(
-                'Invalid response from Torbox API. Expected array, got object',
-                {
-                  statusCode: result.metadata.status,
-                  statusText: result.metadata.statusText,
-                  code: 'UNKNOWN',
-                  headers: result.metadata.headers,
-                  body: result.data,
-                }
-              );
-            }
-            return result.data.data;
-          })
-        );
+              }
+            );
+          }
+          batchResults.push(result.data.data);
+        }
 
         const allItems = batchResults.flat();
 
