@@ -2429,8 +2429,36 @@ export class AIOStreams {
       return;
     }
 
-    // Take the top X streams (already sorted by the pipeline)
-    const streamsToPreload = usenetStreams.slice(0, count);
+    // Select streams to preload based on mode
+    let streamsToPreload: ParsedStream[];
+
+    if (
+      this.userData.preloadNzb?.mode === 'perResolution' &&
+      this.userData.preloadNzb?.perResolutionCounts &&
+      Object.keys(this.userData.preloadNzb.perResolutionCounts).length > 0
+    ) {
+      // Per-resolution mode: take up to N streams per configured resolution,
+      // respecting the global count as an overall cap
+      const perResCounts = this.userData.preloadNzb.perResolutionCounts;
+      const selected: ParsedStream[] = [];
+      const resCounts = new Map<string, number>();
+
+      for (const stream of usenetStreams) {
+        if (selected.length >= count) break; // global cap
+        const res = stream.parsedFile?.resolution || 'Unknown';
+        const maxForRes = perResCounts[res];
+        if (maxForRes === undefined) continue; // resolution not configured, skip
+        const currentCount = resCounts.get(res) || 0;
+        if (currentCount < maxForRes) {
+          selected.push(stream);
+          resCounts.set(res, currentCount + 1);
+        }
+      }
+      streamsToPreload = selected;
+    } else {
+      // Global mode (default): take the top X streams (already sorted by the pipeline)
+      streamsToPreload = usenetStreams.slice(0, count);
+    }
     const category = context.type === 'movie' ? 'Movies' : 'TV';
 
     logger.info(`Preloading ${streamsToPreload.length} NZBs`, {
