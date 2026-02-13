@@ -132,6 +132,7 @@ const TorrentInfoSchema = BaseFileInfoSchema.extend({
   downloadUrl: z.string().optional(),
   hash: z.string(),
   private: z.boolean().optional(),
+  placeholderHash: z.boolean().optional(),
   sources: z.array(z.string()),
   type: z.literal('torrent'),
 });
@@ -198,6 +199,9 @@ export interface DebridService {
   ): Promise<string>;
   removeMagnet?(magnetId: string): Promise<void>;
   removeNzb?(nzbId: string): Promise<void>;
+
+  // Placeholder hash resolution (e.g. for private tracker torrents)
+  resolveHash?(hash: string): Promise<string>;
 
   // Service info
   readonly serviceName: ServiceId;

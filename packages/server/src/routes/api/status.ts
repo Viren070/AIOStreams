@@ -98,6 +98,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : preset.DISABLED,
       })),
       services: getEnvironmentServiceDetails(),
+      excludePrivateTrackersFromDebrid: Env.BUILTIN_DEBRID_EXCLUDE_PRIVATE_TRACKERS,
       limits: {
         maxMergedCatalogSources: Env.MAX_MERGED_CATALOG_SOURCES,
         maxStreamExpressions: Env.MAX_STREAM_EXPRESSIONS,

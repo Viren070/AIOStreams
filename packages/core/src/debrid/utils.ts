@@ -58,6 +58,7 @@ export interface Torrent extends BaseFile {
   files?: DebridFile[];
   // magnet?: string;
   private?: boolean;
+  placeholderHash?: boolean;
 }
 
 export interface UnprocessedTorrent extends BaseFile {
@@ -65,6 +66,7 @@ export interface UnprocessedTorrent extends BaseFile {
   hash?: string;
   downloadUrl?: string;
   sources: string[];
+  private?: boolean;
 }
 
 export interface NZB extends BaseFile {

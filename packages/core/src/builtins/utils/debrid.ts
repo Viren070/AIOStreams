@@ -1,6 +1,8 @@
 import {
   BuiltinServiceId,
+  constants,
   createLogger,
+  Env,
   getTimeTakenSincePoint,
 } from '../../utils/index.js';
 import {
@@ -114,6 +116,27 @@ async function processTorrentsForDebridService(
   clientIp?: string
 ): Promise<TorrentWithSelectedFile[]> {
   const startTime = Date.now();
+
+  // Exclude private tracker torrents from debrid services to prevent account
+  // bans. Private trackers require your own IP and ratio management — debrid
+  // services use shared IPs and non-whitelisted clients. qBittorrent is exempt
+  // since it runs on user-controlled infrastructure.
+  if (
+    Env.BUILTIN_DEBRID_EXCLUDE_PRIVATE_TRACKERS &&
+    service.id !== constants.QBITTORRENT_SERVICE
+  ) {
+    const privateTorrents = torrents.filter((t) => t.private);
+    if (privateTorrents.length > 0) {
+      logger.info(
+        `Excluded ${privateTorrents.length} private tracker torrents from ${service.id}`
+      );
+      torrents = torrents.filter((t) => !t.private);
+      if (torrents.length === 0) {
+        return [];
+      }
+    }
+  }
+
   const debridService = getDebridService(
     service.id,
     service.credential,
@@ -121,6 +144,27 @@ async function processTorrentsForDebridService(
   );
 
   const results: TorrentWithSelectedFile[] = [];
+
+  // Resolve placeholder hashes to real info hashes if we've seen them before
+  // (e.g. after a previous play through qBittorrent). This lets cache checks
+  // correctly identify already-downloaded private tracker torrents.
+  if (debridService.resolveHash) {
+    for (const torrent of torrents) {
+      if (torrent.placeholderHash) {
+        try {
+          const realHash = await debridService.resolveHash(torrent.hash);
+          if (realHash !== torrent.hash) {
+            torrent.hash = realHash;
+            torrent.placeholderHash = false;
+          }
+        } catch (e) {
+          logger.warn(`Failed to resolve placeholder hash ${torrent.hash}`, {
+            error: e,
+          });
+        }
+      }
+    }
+  }
 
   const magnetCheckResults = await debridService.checkMagnets(
     torrents.map((torrent) => torrent.hash),
