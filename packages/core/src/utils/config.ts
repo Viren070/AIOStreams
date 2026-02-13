@@ -247,16 +247,16 @@ export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS
             required: cred.required,
             default: getServiceCredentialDefault(service.id, cred.id)
               ? encryptString(getServiceCredentialDefault(service.id, cred.id)!)
-                  .data
+                .data
               : null,
             forced: getServiceCredentialForced(service.id, cred.id)
               ? encryptString(getServiceCredentialForced(service.id, cred.id)!)
-                  .data
+                .data
               : null,
             constraints: cred.required
               ? {
-                  min: 1,
-                }
+                min: 1,
+              }
               : undefined,
           })),
         },

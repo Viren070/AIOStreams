@@ -198,6 +198,11 @@ export interface DebridService {
   ): Promise<string>;
   removeMagnet?(magnetId: string): Promise<void>;
   removeNzb?(nzbId: string): Promise<void>;
+  preloadNzb?(
+    nzbUrl: string,
+    category: string,
+    expectedFolderName: string
+  ): Promise<void>;
 
   // Service info
   readonly serviceName: ServiceId;
