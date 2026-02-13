@@ -6,6 +6,7 @@ import {
   getSimpleTextHash,
   Cache,
   DistributedLock,
+  maskSensitiveInfo,
 } from '../utils/index.js';
 import { selectFileInTorrentOrNZB } from './utils.js';
 import {
@@ -597,22 +598,25 @@ export class TorboxDebridService implements DebridService {
 
       if (alreadyExists) {
         logger.debug(`NZB already exists in TorBox, skipping preload`, {
-          nzbUrl,
+          nzbUrl: maskSensitiveInfo(nzbUrl),
           expectedFolderName,
         });
         return;
       }
     } catch (error) {
       // If we can't check, proceed with preloading anyway
-      logger.debug(`Could not check existing TorBox downloads, proceeding with preload`, {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.debug(
+        `Could not check existing TorBox downloads, proceeding with preload`,
+        {
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
     }
 
     try {
       await this.addNzb(nzbUrl, expectedFolderName);
       logger.debug(`Preloaded NZB to TorBox`, {
-        nzbUrl,
+        nzbUrl: maskSensitiveInfo(nzbUrl),
         category,
         expectedFolderName,
       });

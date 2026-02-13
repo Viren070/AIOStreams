@@ -518,7 +518,7 @@ export abstract class UsenetStreamService implements DebridService {
           statusCode: status,
           statusText: status
             ? error.message.match(/response: \d+ (.*)/)?.[1] ||
-            'Internal Server Error'
+              'Internal Server Error'
             : 'Internal Server Error',
           code: convertStatusCodeToError(status),
           headers: {},
@@ -620,8 +620,7 @@ export abstract class UsenetStreamService implements DebridService {
     try {
       const history = await this.api.history({ limit: 500 });
       const failedSlot = history.slots.find(
-        (slot) =>
-          slot.status === 'failed' && slot.name === expectedFolderName
+        (slot) => slot.status === 'failed' && slot.name === expectedFolderName
       );
       if (failedSlot) {
         this.serviceLogger.debug(
@@ -647,7 +646,7 @@ export abstract class UsenetStreamService implements DebridService {
         expectedFolderName
       );
       this.serviceLogger.debug(`Preloaded NZB`, {
-        nzbUrl,
+        nzbUrl: maskSensitiveInfo(nzbUrl),
         category,
         expectedFolderName,
         nzoId: addResult.nzoId,
@@ -673,7 +672,7 @@ export abstract class UsenetStreamService implements DebridService {
           statusCode: status,
           statusText: status
             ? error.message.match(/response: \d+ (.*)/)?.[1] ||
-            'Internal Server Error'
+              'Internal Server Error'
             : 'Internal Server Error',
           code: convertStatusCodeToError(status),
           headers: {},
