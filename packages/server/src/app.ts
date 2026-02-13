@@ -7,6 +7,7 @@ import {
   catalogApi,
   rpdbApi,
   topPosterApi,
+  aioratingsApi,
   gdriveApi,
   debridApi,
   searchApi,
@@ -101,6 +102,7 @@ apiRouter.use('/format', formatApi);
 apiRouter.use('/catalogs', catalogApi);
 apiRouter.use('/rpdb', rpdbApi);
 apiRouter.use('/top-poster', topPosterApi);
+apiRouter.use('/aioratings', aioratingsApi);
 apiRouter.use('/oauth/exchange/gdrive', gdriveApi);
 apiRouter.use('/debrid', debridApi);
 if (Env.ENABLE_SEARCH_API) {

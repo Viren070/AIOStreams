@@ -19,6 +19,7 @@ import {
   Env,
   maskSensitiveInfo,
   RPDB,
+  AIOratings,
   FeatureControl,
   RegexAccess,
   compileRegex,
@@ -480,6 +481,21 @@ export async function validateConfig(
         throw new Error(`Invalid RPDB API key: ${error}`);
       }
       logger.warn(`Invalid RPDB API key: ${error}`);
+    }
+  }
+
+  if (config.aioratingsApiKey) {
+    try {
+      const aioratings = new AIOratings(
+        config.aioratingsApiKey,
+        config.aioratingsProfileId || 'default'
+      );
+      await aioratings.validateApiKey();
+    } catch (error) {
+      if (!options?.skipErrorsFromAddonsOrProxies) {
+        throw new Error(`Invalid AIOratings API key: ${error}`);
+      }
+      logger.warn(`Invalid AIOratings API key: ${error}`);
     }
   }
 
