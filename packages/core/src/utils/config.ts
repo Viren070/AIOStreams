@@ -1065,6 +1065,14 @@ function validateOption(
     }
     return value;
   }
+  if (
+    option.id === 'forceToTop' &&
+    option.type === 'select' &&
+    typeof value === 'boolean'
+  ) {
+    // Legacy boolean configs: true means streams-only, false means none
+    value = value ? 'streams' : 'none';
+  }
   if (option.type === 'multi-select') {
     if (!Array.isArray(value)) {
       throw new Error(
