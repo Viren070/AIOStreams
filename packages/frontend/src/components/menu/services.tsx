@@ -311,12 +311,13 @@ function Content() {
             { label: 'None', value: 'none' },
             { label: 'RPDB', value: 'rpdb' },
             { label: 'Top Poster', value: 'top-poster' },
+            { label: 'AIOratings', value: 'aioratings' },
           ]}
           value={userData.posterService || 'rpdb'}
           onValueChange={(v) => {
             setUserData((prev) => ({
               ...prev,
-              posterService: v as 'rpdb' | 'top-poster' | 'none',
+              posterService: v as 'rpdb' | 'top-poster' | 'aioratings' | 'none',
             }));
           }}
           defaultValue="rpdb"
@@ -374,6 +375,61 @@ function Content() {
             }}
           />
         )}
+        {userData.posterService === 'aioratings' && (
+          <>
+            <PasswordInput
+              autoComplete="new-password"
+              label="AIOratings API Key"
+              help={
+                <span>
+                  Get your API Key from{' '}
+                  <a
+                    href="https://aioratings.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[--brand] hover:underline"
+                  >
+                    here
+                  </a>
+                </span>
+              }
+              value={userData.aioratingsApiKey}
+              onValueChange={(v) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  aioratingsApiKey: v,
+                }));
+              }}
+            />
+            <TextInput
+              label="AIOratings Profile ID"
+              help={
+                <span>
+                  Custom profiles are a premium feature that lets you design
+                  your own poster layout. Premium users can map their API key
+                  and default posters dynamically from the{' '}
+                  <a
+                    href="https://aioratings.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[--brand] hover:underline"
+                  >
+                    AIOratings website
+                  </a>
+                  . Free users can leave this as &quot;default&quot;.
+                </span>
+              }
+              value={userData.aioratingsProfileId || 'default'}
+              placeholder="default"
+              onValueChange={(v) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  aioratingsProfileId: v,
+                }));
+              }}
+            />
+          </>
+        )}
 
         <Switch
           label="Use Poster Service for Library/Continue Watching"
@@ -387,7 +443,9 @@ function Content() {
           }}
           disabled={
             userData.posterService === 'none' ||
-            (!userData.rpdbApiKey && !userData.topPosterApiKey)
+            (!userData.rpdbApiKey &&
+              !userData.topPosterApiKey &&
+              !userData.aioratingsApiKey)
           }
           help={
             <span>
@@ -403,7 +461,9 @@ function Content() {
           side="right"
           disabled={
             userData.posterService === 'none' ||
-            (!userData.rpdbApiKey && !userData.topPosterApiKey)
+            (!userData.rpdbApiKey &&
+              !userData.topPosterApiKey &&
+              !userData.aioratingsApiKey)
           }
           help={
             <span>

@@ -547,7 +547,9 @@ export const UserDataSchema = z.object({
   rpdbApiKey: z.string().optional(),
   // rpdbUseRedirectApi: z.boolean().optional(),
   topPosterApiKey: z.string().optional(),
-  posterService: z.enum(['rpdb', 'top-poster', 'none']).optional(),
+  aioratingsApiKey: z.string().optional(),
+  aioratingsProfileId: z.string().optional(),
+  posterService: z.enum(['rpdb', 'top-poster', 'aioratings', 'none']).optional(),
   usePosterRedirectApi: z.boolean().optional(),
   usePosterServiceForMeta: z.boolean().optional(),
   formatter: Formatter,
@@ -1230,6 +1232,11 @@ export const TopPosterIsValidResponse = z.object({
   valid: z.boolean(),
 });
 export type TopPosterIsValidResponse = z.infer<typeof TopPosterIsValidResponse>;
+
+export const AIOratingsIsValidResponse = z.object({
+  valid: z.boolean(),
+});
+export type AIOratingsIsValidResponse = z.infer<typeof AIOratingsIsValidResponse>;
 
 export const TemplateSchema = z.object({
   metadata: z.object({

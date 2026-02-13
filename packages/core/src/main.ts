@@ -34,6 +34,7 @@ import {
 import { createProxy } from './proxy/index.js';
 import { TopPoster } from './utils/top-poster.js';
 import { RPDB } from './utils/rpdb.js';
+import { AIOratings } from './utils/aioratings.js';
 import { FeatureControl } from './utils/feature.js';
 import Proxifier from './streams/proxifier.js';
 import StreamLimiter from './streams/limiter.js';
@@ -977,13 +978,20 @@ export class AIOStreams {
         ? this.userData.rpdbApiKey
         : posterService === 'top-poster'
           ? this.userData.topPosterApiKey
-          : undefined;
+          : posterService === 'aioratings'
+            ? this.userData.aioratingsApiKey
+            : undefined;
     const posterApi = posterApiKey
       ? posterService === 'rpdb'
         ? new RPDB(posterApiKey)
         : posterService === 'top-poster'
           ? new TopPoster(posterApiKey)
-          : undefined
+          : posterService === 'aioratings'
+            ? new AIOratings(
+                posterApiKey,
+                this.userData.aioratingsProfileId || 'default'
+              )
+            : undefined
       : undefined;
 
     return Promise.all(
@@ -992,18 +1000,32 @@ export class AIOStreams {
           let posterUrl = item.poster;
           if (
             posterUrl.includes('api.ratingposterdb.com') ||
-            posterUrl.includes('api.top-streaming.stream')
+            posterUrl.includes('api.top-streaming.stream') ||
+            posterUrl.includes('apiv2.aioratings.com')
           ) {
             // already a poster from a poster service, do nothing.
           } else if (this.userData.usePosterRedirectApi) {
             const itemId = (item as any).imdb_id || item.id;
             const url = new URL(Env.BASE_URL);
             url.pathname =
-              posterService === 'rpdb' ? '/api/v1/rpdb' : '/api/v1/top-poster';
+              posterService === 'rpdb'
+                ? '/api/v1/rpdb'
+                : posterService === 'aioratings'
+                  ? '/api/v1/aioratings'
+                  : '/api/v1/top-poster';
             url.searchParams.set('id', itemId);
             url.searchParams.set('type', type);
             url.searchParams.set('fallback', item.poster);
             url.searchParams.set('apiKey', posterApiKey!);
+            if (
+              posterService === 'aioratings' &&
+              this.userData.aioratingsProfileId
+            ) {
+              url.searchParams.set(
+                'profileId',
+                this.userData.aioratingsProfileId
+              );
+            }
             posterUrl = url.toString();
           } else if (posterApi) {
             const servicePosterUrl = await posterApi.getPosterUrl(

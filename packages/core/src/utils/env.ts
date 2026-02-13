@@ -727,6 +727,10 @@ export const Env = cleanEnv(process.env, {
     default: 604800, // 7 days
     desc: 'Cache TTL for RPDB API key validity',
   }),
+  AIORATINGS_API_URL: str({
+    default: 'https://apiv2.aioratings.com',
+    desc: 'Base URL for the AIOratings API',
+  }),
 
   PRECACHE_NEXT_EPISODE_MIN_INTERVAL: num({
     default: 86400, // 24 hours
