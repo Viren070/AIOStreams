@@ -227,13 +227,12 @@ export class SelAccess {
       // Match by extracted names vs stored exprNames
       if (o.exprNames && o.exprNames.length > 0) {
         const names = extractNamesFromExpression(expr.expression, false);
-        const legacyNames = extractNamesFromExpression(expr.expression, true);
         const matches = (list?: string[]) =>
           !!list &&
           list.length === o.exprNames!.length &&
           list.every((n, i) => n === o.exprNames![i]);
 
-        if (matches(names) || matches(legacyNames)) {
+        if (matches(names)) {
           return true;
         }
       }
