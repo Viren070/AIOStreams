@@ -46,7 +46,7 @@ type PARSE_REGEX = {
 export const PARSE_REGEX: PARSE_REGEX = {
   resolutions: {
     '2160p': createRegex(
-      '(bd|hd|m)?2160(p|i)?|4k[-_. ](?:u(ltra)?[ .\\-_]?hd|hevc|bd|h\\.?265)|(?:u(ltra)?[ .\\-_]?hd|hevc|bd|h\\.?265)[-_. ]4k|3840\\s?x\\s?(\\d{4})'
+      '(bd|hd|m)?2160(p|i)?|4k[-_. ](?:u(ltra)?[ .\\-_]?hd|hevc|bd|(h|x)\\.?265)|(?:u(ltra)?[ .\\-_]?hd|hevc|bd|(h|x)\\.?265)[-_. ]4k|3840\\s?x\\s?(\\d{4})'
     ),
     '1440p': createRegex(
       '(bd|hd|m)?1440(p|i)?|2k|w?q(uad)?[ .\\-_]?hd|2560\\s?x(\\d{4})'
