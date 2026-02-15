@@ -9,11 +9,11 @@ import {
 } from '../utils/index.js';
 import { selectFileInTorrentOrNZB, Torrent } from './utils.js';
 import {
-  DebridService,
   DebridServiceConfig,
   DebridDownload,
   PlaybackInfo,
   DebridError,
+  TorrentDebridService,
 } from './base.js';
 import { StremThruServiceId } from '../presets/stremthru.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
@@ -32,7 +32,7 @@ function convertStremThruError(error: StremThruError): DebridError {
   });
 }
 
-export class StremThruInterface implements DebridService {
+export class StremThruInterface implements TorrentDebridService {
   private readonly stremthru: StremThru;
   private static playbackLinkCache = Cache.getInstance<string, string | null>(
     'st:link'
@@ -41,7 +41,6 @@ export class StremThruInterface implements DebridService {
     'st:instant-check'
   );
 
-  readonly supportsUsenet = false;
   readonly serviceName: ServiceId;
 
   constructor(
