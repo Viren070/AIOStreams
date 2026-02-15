@@ -9,11 +9,12 @@ import {
 } from '../utils/index.js';
 import { selectFileInTorrentOrNZB } from './utils.js';
 import {
-  DebridService,
   DebridServiceConfig,
   DebridDownload,
   PlaybackInfo,
   DebridError,
+  TorrentDebridService,
+  UsenetDebridService,
 } from './base.js';
 import { StremThruInterface } from './stremthru.js';
 import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
@@ -93,7 +94,9 @@ function convertTorBoxError(error: any): DebridError {
   });
 }
 
-export class TorboxDebridService implements DebridService {
+export class TorboxDebridService
+  implements TorrentDebridService, UsenetDebridService
+{
   private readonly apiVersion = 'v1';
   private readonly torboxApi: TorboxApi;
   private readonly stremthru: StremThruInterface;
@@ -104,7 +107,6 @@ export class TorboxDebridService implements DebridService {
     string,
     DebridDownload
   >('tb:instant-availability');
-  readonly supportsUsenet = true;
   readonly serviceName: ServiceId = 'torbox';
 
   constructor(private readonly config: DebridServiceConfig) {
