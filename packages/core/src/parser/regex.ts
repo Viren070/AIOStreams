@@ -62,7 +62,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     '144p': createRegex('(bd|hd|m)?144(p|i)?'),
   },
   alternativeResolutions: {
-    '2160p': createRegex('u(ltra)?[ .\\-_]?hd|\\[4k\\]'),
+    '2160p': createRegex('u(ltra)?[ .\\-_]?hd|4k'),
   },
   qualities: {
     'BluRay REMUX': createRegex('(bd|br|b|uhd)?remux'),
