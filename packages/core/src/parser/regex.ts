@@ -38,27 +38,33 @@ type PARSE_REGEX = {
   >;
   encodes: Omit<Record<(typeof constants.ENCODES)[number], RegExp>, 'Unknown'>;
   releaseGroup: RegExp;
+  alternativeResolutions: Partial<
+    Record<(typeof constants.RESOLUTIONS)[number], RegExp>
+  >;
 };
 
 export const PARSE_REGEX: PARSE_REGEX = {
   resolutions: {
     '2160p': createRegex(
-      '(bd|hd|m)?(4k|2160(p|i)?)|u(ltra)?[ .\\-_]?hd|3840\\s?x\\s?(\\d{4})'
+      '(bd|hd|m)?(4k|2160(p|i)?)|4k[-_. ](?:uhd|hevc|bd|h\\.?265)|(?:uhd|hevc|bd|h\\.?265)[-_. ]4k|3840\\s?x\\s?(\\d{4})'
     ),
     '1440p': createRegex(
-      '(bd|hd|m)?(1440(p|i)?)|2k|w?q(uad)?[ .\\-_]?hd|2560\\s?x(\\d{4})'
+      '(bd|hd|m)?1440(p|i)?|2k|w?q(uad)?[ .\\-_]?hd|2560\\s?x(\\d{4})'
     ),
     '1080p': createRegex(
-      '(bd|hd|m)?(1080(p|i)?)|f(ull)?[ .\\-_]?hd|1920\\s?x\\s?(\\d{3,4})'
+      '(bd|hd|m)?1080(p|i)?|f(ull)?[ .\\-_]?hd|4kto1080p|1920\\s?x\\s?(\\d{3,4})'
     ),
     '720p': createRegex(
-      '(bd|hd|m)?((720|800)(p|i)?)|hd|1280\\s?x\\s?(\\d{3,4})'
+      '(bd|hd|m)?(720|800)(p|i)?|960p|1280\\s?x\\s?(\\d{3,4})'
     ),
-    '576p': createRegex('(bd|hd|m)?((576|534)(p|i)?)'),
-    '480p': createRegex('(bd|hd|m)?(480(p|i)?)|sd'),
-    '360p': createRegex('(bd|hd|m)?(360(p|i)?)'),
-    '240p': createRegex('(bd|hd|m)?((240|266)(p|i)?)'),
-    '144p': createRegex('(bd|hd|m)?(144(p|i)?)'),
+    '576p': createRegex('(bd|hd|m)?(576|534)(p|i)?'),
+    '480p': createRegex('(bd|hd|m)?(480(p|i)?|640x480|848x480|540p)|sd'),
+    '360p': createRegex('(bd|hd|m)?360(p|i)?'),
+    '240p': createRegex('(bd|hd|m)?(240|266)(p|i)?'),
+    '144p': createRegex('(bd|hd|m)?144(p|i)?'),
+  },
+  alternativeResolutions: {
+    '2160p': createRegex('\\buhd\\b|\\[4k\\]|u(ltra)?[ .\\-_]?hd'),
   },
   qualities: {
     'BluRay REMUX': createRegex('(bd|br|b|uhd)?remux'),
