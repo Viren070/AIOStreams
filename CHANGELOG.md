@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.23.2](https://github.com/Viren070/AIOStreams/compare/v2.23.1...v2.23.2) (2026-02-16)
+
+
+### Bug Fixes
+
+* add sync urls in templates as allowed sync URLs ([afe74f9](https://github.com/Viren070/AIOStreams/commit/afe74f98bb19eb1184c0e4873216212c08b3ebb7))
+* **core/formatter:** allow replace modifier to replace with empty string ([#720](https://github.com/Viren070/AIOStreams/issues/720)) ([7140f03](https://github.com/Viren070/AIOStreams/commit/7140f038888d48795797e042c6bb4288daf4f9b7))
+* **frontend:** clear uuid and trusted from imported configuration ([#724](https://github.com/Viren070/AIOStreams/issues/724)) ([e7a6069](https://github.com/Viren070/AIOStreams/commit/e7a6069679c8ba5c1307f61b88f8b3db11a51471))
+* **metadata:** make averageRuntime nullable ([0e44a8c](https://github.com/Viren070/AIOStreams/commit/0e44a8cc0260ffe8bf3b873e19729b2c99454f66))
+* Prevent formatter regex backtracking and limit template nesting depth ([#737](https://github.com/Viren070/AIOStreams/issues/737)) ([36972ae](https://github.com/Viren070/AIOStreams/commit/36972aef38c385efdc77da2b23cb6b9fd9baaa42))
+* support loading template arrays ([3e61ea7](https://github.com/Viren070/AIOStreams/commit/3e61ea7c738403db3702335260f58890f75dba35))
+
 ## [2.23.1](https://github.com/Viren070/AIOStreams/compare/v2.23.0...v2.23.1) (2026-02-11)
 
 
