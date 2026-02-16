@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.3](https://github.com/Viren070/AIOStreams/compare/v2.23.2...v2.23.3) (2026-02-16)
+
+
+### Bug Fixes
+
+* Allow embedded quotes ([#738](https://github.com/Viren070/AIOStreams/issues/738)) ([e0c5cdc](https://github.com/Viren070/AIOStreams/commit/e0c5cdcc27ca54f740680f0d53e3eeeb84fa3f05))
+
 ## [2.23.2](https://github.com/Viren070/AIOStreams/compare/v2.23.1...v2.23.2) (2026-02-16)
 
 
