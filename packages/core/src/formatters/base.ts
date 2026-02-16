@@ -15,6 +15,7 @@ import {
 import { Env } from '../utils/env.js';
 
 const logger = createLogger('formatter');
+const MAX_TEMPLATE_DEPTH = 5;
 
 /**
  *
@@ -499,7 +500,7 @@ export abstract class BaseFormatter {
   }
 
   protected async compileTemplate(str: string): Promise<CompiledParseFunction> {
-    const compiledHelper = await this.compileTemplateHelper(str);
+    const compiledHelper = await this.compileTemplateHelper(str, 0);
     return (parseValue: ParseValue) => {
       const resultStr = compiledHelper(parseValue);
       // final post-processing of the result string
@@ -515,8 +516,16 @@ export abstract class BaseFormatter {
   }
 
   protected async compileTemplateHelper(
-    str: string
+    str: string,
+    depth: number = 0
   ): Promise<CompiledParseFunction> {
+    if (depth > MAX_TEMPLATE_DEPTH) {
+      logger.warn(
+        `Template nesting depth exceeded (max ${MAX_TEMPLATE_DEPTH}). Returning literal text.`
+      );
+      const literalStr = str;
+      return (_parseValue: ParseValue) => literalStr;
+    }
     const re = this.regexBuilder.buildRegexExpression();
     let matches: RegExpExecArray | null;
 
@@ -624,10 +633,12 @@ export abstract class BaseFormatter {
       // CHECK TRUE/FALSE logic: compile the true/false templates and apply them to the resolved variable
       if (matches.groups.mod_check !== undefined) {
         const check_trueFn = await this.compileTemplateHelper(
-          matches?.groups?.mod_check_true ?? ''
+          matches?.groups?.mod_check_true ?? '',
+          depth + 1
         );
         const check_falseFn = await this.compileTemplateHelper(
-          matches?.groups?.mod_check_false ?? ''
+          matches?.groups?.mod_check_false ?? '',
+          depth + 1
         );
 
         const _compiledResolvedVariableFn = precompiledResolvedVariableFn;
