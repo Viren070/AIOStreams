@@ -991,9 +991,10 @@ class BaseFormatterRegexBuilder {
       key.replace(/[\(\)\'\"\$\^\~\=\>\<]/g, '\\$&')
     );
     let pattern = `::(${validModifiers.join('|')})`;
-    // replace .*? with [^']* / [^"]* so the match can't bleed past quotes
+    // replace .*? so matches can't bleed past quotes, ::, or bracket boundaries
     pattern = pattern.replace(/\.\*\?(?=\\')/g, "[^']*");
     pattern = pattern.replace(/\.\*\?(?=\\")/g, '[^"]*');
+    pattern = pattern.replace(/\.\*\?/g, '(?:(?!::)[^}\\[\\]])*');
     return pattern;
   }
   /**
