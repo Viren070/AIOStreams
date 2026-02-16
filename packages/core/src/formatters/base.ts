@@ -992,8 +992,9 @@ class BaseFormatterRegexBuilder {
     );
     let pattern = `::(${validModifiers.join('|')})`;
     // replace .*? so matches can't bleed past quotes, ::, or bracket boundaries
-    pattern = pattern.replace(/\.\*\?(?=\\')/g, "[^']*");
-    pattern = pattern.replace(/\.\*\?(?=\\")/g, '[^"]*');
+    // allow embedded quotes (e.g. Director's Cut) — only treat ' as terminator when followed by , ) or whitespace
+    pattern = pattern.replace(/\.\*\?(?=\\')/g, "[^']*(?:'(?![,)\\s])[^']*)*");
+    pattern = pattern.replace(/\.\*\?(?=\\")/g, '[^"]*(?:"(?![,)\\s])[^"]*)*');
     pattern = pattern.replace(/\.\*\?/g, '(?:(?!::)[^}\\[\\]])*');
     return pattern;
   }
