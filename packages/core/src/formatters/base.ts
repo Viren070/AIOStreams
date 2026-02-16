@@ -990,7 +990,11 @@ class BaseFormatterRegexBuilder {
     const validModifiers = Object.keys(ModifierConstants.modifiers).map((key) =>
       key.replace(/[\(\)\'\"\$\^\~\=\>\<]/g, '\\$&')
     );
-    return `::(${validModifiers.join('|')})`;
+    let pattern = `::(${validModifiers.join('|')})`;
+    // replace .*? with [^']* / [^"]* so the match can't bleed past quotes
+    pattern = pattern.replace(/\.\*\?(?=\\')/g, "[^']*");
+    pattern = pattern.replace(/\.\*\?(?=\\")/g, '[^"]*');
+    return pattern;
   }
   /**
    * RegEx Capture Pattern: `::<comparator>::`
