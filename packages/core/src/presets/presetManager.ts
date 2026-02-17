@@ -66,6 +66,7 @@ import { KnabenPreset } from './knaben.js';
 import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
 import { BitmagnetPreset } from './bitmagnet.js';
+import { BrazucaTorrentsPreset } from './brazucaTorrents.js';
 import { SootioPreset } from './sootio.js';
 import { TorrentGalaxyPreset } from './torrentGalaxy.js';
 import { UsenetStreamerPreset } from './usenetStreamer.js';
@@ -116,6 +117,7 @@ let PRESET_LIST: string[] = [
   'nuvio-streams',
   'webstreamr',
   'astream',
+  'brazuca-torrents',
   'streamasia',
   'usa-tv',
   'argentina-tv',
@@ -251,6 +253,8 @@ export class PresetManager {
         return USATVPreset;
       case 'argentina-tv':
         return ArgentinaTVPreset;
+      case 'brazuca-torrents':
+        return BrazucaTorrentsPreset;
       case 'opensubtitles-v3-plus':
         return OpenSubtitlesV3PlusPreset;
       case 'subsource':

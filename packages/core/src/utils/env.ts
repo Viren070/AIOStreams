@@ -1694,6 +1694,20 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default Argentina TV user agent',
   }),
 
+  // Brazuca Torrents settings
+  BRAZUCA_TORRENTS_URL: url({
+    default: 'https://94c8cb9f702d-brazuca-torrents.baby-beamup.club',
+    desc: 'Brazuca Torrents URL',
+  }),
+  DEFAULT_BRAZUCA_TORRENTS_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Brazuca Torrents timeout',
+  }),
+  DEFAULT_BRAZUCA_TORRENTS_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Brazuca Torrents user agent',
+  }),
+
   SUBDL_URL: url({
     default: 'https://subdl.strem.top',
     desc: 'SubDL URL',
