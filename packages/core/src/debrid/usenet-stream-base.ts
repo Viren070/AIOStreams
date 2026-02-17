@@ -427,6 +427,8 @@ export abstract class UsenetStreamService implements DebridService {
   protected static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'usenet-stream:library'
   );
+  /** Tracks NZB URLs currently being preloaded to handle concurrent resolve attempts */
+  protected static preloadingUrls = new Set<string>();
 
   readonly supportsUsenet = true;
   abstract readonly serviceName: ServiceId;
@@ -595,6 +597,67 @@ export abstract class UsenetStreamService implements DebridService {
     throw new Error('Unsupported operation');
   }
 
+  public async preloadNzb(
+    nzbUrl: string,
+    category: string,
+    expectedFolderName: string
+  ): Promise<void> {
+    const expectedContentPath = `${this.getContentPathPrefix()}/${category}/${expectedFolderName}`;
+    try {
+      const stat = await this.webdavClient.stat(expectedContentPath);
+      const statData = 'data' in stat ? stat.data : stat;
+      if (statData.type === 'directory') {
+        this.serviceLogger.debug(`Content already exists, skipping preload`, {
+          path: expectedContentPath,
+        });
+        return;
+      }
+    } catch {
+      // Path does not exist, proceed with preload
+    }
+
+    // Check SABnzbd history for previously failed NZBs with the same name
+    try {
+      const history = await this.api.history({ limit: 500 });
+      const failedSlot = history.slots.find(
+        (slot) => slot.status === 'failed' && slot.name === expectedFolderName
+      );
+      if (failedSlot) {
+        this.serviceLogger.debug(
+          `NZB previously failed in history, skipping preload`,
+          {
+            expectedFolderName,
+            failMessage: failedSlot.failMessage,
+          }
+        );
+        return;
+      }
+    } catch {
+      // If history check fails, proceed with preload anyway
+    }
+
+    // Track this URL as preloading (scoped per service) so resolve can detect concurrent access
+    const preloadKey = `${this.serviceName}:${nzbUrl}`;
+    UsenetStreamService.preloadingUrls.add(preloadKey);
+    try {
+      const addResult = await this.api.addUrl(
+        nzbUrl,
+        category,
+        expectedFolderName
+      );
+      this.serviceLogger.debug(`Preloaded NZB`, {
+        nzbUrl: maskSensitiveInfo(nzbUrl),
+        category,
+        expectedFolderName,
+        nzoId: addResult.nzoId,
+      });
+    } catch (error) {
+      UsenetStreamService.preloadingUrls.delete(preloadKey);
+      throw error;
+    }
+    // Note: preloadKey stays in preloadingUrls until content appears (cleaned up in resolve)
+  }
+
   private async listWebdavFolders(path: string): Promise<FileStat[]> {
     let contents: FileStat[];
     try {
@@ -708,6 +771,28 @@ export abstract class UsenetStreamService implements DebridService {
             files: [],
           };
         });
+
+        // Also include failed entries from history that don't have WebDAV folders
+        // so they can be detected and filtered out by processNZBs
+        if (historyData?.slots) {
+          const webdavNames = new Set(webdavFiles.map((file) => file.basename));
+          for (const slot of historyData.slots) {
+            if (
+              slot.status === 'failed' &&
+              slot.name &&
+              !webdavNames.has(slot.name)
+            ) {
+              nzbs.push({
+                id: nzbs.length,
+                status: 'failed',
+                name: slot.name,
+                size: 0,
+                hash: slot.name,
+                files: [],
+              });
+            }
+          }
+        }
 
         this.serviceLogger.debug(
           `Listed NZBs from combined history and WebDAV`,
@@ -849,6 +934,8 @@ export abstract class UsenetStreamService implements DebridService {
         contentPath = expectedContentPath;
         jobName = expectedFolderName;
         jobCategory = category;
+        // Clean up preloading tracker if content is ready
+        UsenetStreamService.preloadingUrls.delete(`${this.serviceName}:${nzb}`);
         this.serviceLogger.debug(`Content already exists`, {
           path: expectedContentPath,
         });
@@ -875,13 +962,67 @@ export abstract class UsenetStreamService implements DebridService {
 
     // Only add NZB if content doesn't already exist
     if (!alreadyExists) {
-      const addResult = await this.api.addUrl(
-        nzb,
-        category,
-        expectedFolderName
-      );
-      nzoId = addResult.nzoId;
+      try {
+        const addResult = await this.api.addUrl(
+          nzb,
+          category,
+          expectedFolderName
+        );
+        nzoId = addResult.nzoId;
+      } catch (addError) {
+        // Check if this NZB is currently being preloaded (scoped per service)
+        const preloadKey = `${this.serviceName}:${nzb}`;
+        if (UsenetStreamService.preloadingUrls.has(preloadKey)) {
+          // NZB is being preloaded - poll for the content to appear
+          this.serviceLogger.debug(
+            `addUrl failed but NZB is being preloaded, polling WebDAV for content`,
+            {
+              error:
+                addError instanceof Error ? addError.message : String(addError),
+              path: expectedContentPath,
+            }
+          );
 
+          const pollDeadline = Date.now() + 80000;
+          let contentFound = false;
+          while (Date.now() < pollDeadline) {
+            try {
+              const stat = await this.webdavClient.stat(expectedContentPath);
+              const statData = 'data' in stat ? stat.data : stat;
+              if (statData.type === 'directory') {
+                alreadyExists = true;
+                contentPath = expectedContentPath;
+                jobName = expectedFolderName;
+                jobCategory = category;
+                contentFound = true;
+                this.serviceLogger.debug(
+                  `Content appeared at expected path (preload completed)`,
+                  { path: expectedContentPath }
+                );
+                break;
+              }
+            } catch {
+              // Content not ready yet, continue polling
+            }
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+
+          // Clean up preloading tracker
+          UsenetStreamService.preloadingUrls.delete(preloadKey);
+
+          if (!contentFound) {
+            // Timeout - rethrow the original error
+            throw addError;
+          }
+        } else {
+          // Not a preload - genuine addUrl failure, rethrow immediately
+          throw addError;
+        }
+      }
+    }
+
+    // If we added the NZB (not already existing), wait for it to complete
+    if (!alreadyExists && nzoId) {
       // Poll history until download is complete
       const pollStartTime = Date.now();
       let slot: ReturnType<typeof transformHistorySlot>;

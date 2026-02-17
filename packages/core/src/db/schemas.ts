@@ -618,6 +618,17 @@ export const UserDataSchema = z.object({
   /** @deprecated Use precacheSelector instead */
   precacheCondition: z.string().optional(),
   precacheSelector: z.string().optional(),
+  preloadNzb: z
+    .object({
+      enabled: z.boolean().optional(),
+      count: z.number().min(1).max(20).optional(),
+      mode: z.enum(['global', 'perResolution']).optional(),
+      perResolutionCounts: z
+        .record(z.string(), z.number().min(1).max(20))
+        .optional(),
+      addons: z.array(z.string()).optional(),
+    })
+    .optional(),
   services: ServiceList.optional(),
   presets: PresetList,
   catalogModifications: z.array(CatalogModification).optional(),

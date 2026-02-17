@@ -12,12 +12,15 @@ import {
   AutoPlayMethod,
   AUTO_PLAY_METHODS,
   AUTO_PLAY_METHOD_DETAILS,
+  RESOLUTIONS,
 } from '../../../../core/src/utils/constants';
 import { Select } from '../ui/select';
 import { Alert } from '../ui/alert';
 import { useMode } from '@/context/mode';
 import { NumberInput } from '../ui/number-input/number-input';
 import { TextInput } from '../ui/text-input';
+import { IconButton } from '../ui/button';
+import { FaPlus, FaRegTrashAlt } from 'react-icons/fa';
 
 export function MiscellaneousMenu() {
   return (
@@ -123,6 +126,219 @@ function Content() {
               setUserData((prev) => ({
                 ...prev,
                 precacheSelector: value || undefined,
+              }));
+            }}
+          />
+        </SettingsCard>
+        <SettingsCard
+          title="Preload NZB"
+          description="When enabled, AIOStreams will automatically send the top X NZBs (based on your final sort order) to your usenet stream service (NzbDAV/Altmount/TorBox) so they start downloading before you click on a stream. This happens asynchronously and does not delay the display of results."
+        >
+          <Switch
+            label="Enable"
+            side="right"
+            value={userData.preloadNzb?.enabled}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  enabled: value,
+                },
+              }));
+            }}
+          />
+          <Select
+            label="Mode"
+            help="Global: preload the top X NZBs overall. Per Resolution: preload up to X NZBs for each configured resolution."
+            disabled={!userData.preloadNzb?.enabled}
+            options={[
+              { value: 'global', label: 'Global' },
+              { value: 'perResolution', label: 'Per Resolution' },
+            ]}
+            value={userData.preloadNzb?.mode ?? 'global'}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  mode: value as 'global' | 'perResolution',
+                },
+              }));
+            }}
+          />
+          <NumberInput
+            label={
+              userData.preloadNzb?.mode === 'perResolution'
+                ? 'Maximum total NZBs to preload'
+                : 'Number of NZBs to preload'
+            }
+            help={
+              userData.preloadNzb?.mode === 'perResolution'
+                ? 'Acts as an overall cap on the total number of NZBs preloaded across all resolutions.'
+                : undefined
+            }
+            min={1}
+            max={20}
+            defaultValue={3}
+            disabled={!userData.preloadNzb?.enabled}
+            value={userData.preloadNzb?.count ?? 3}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  count: Math.max(1, Math.min(20, Number(value || 3))),
+                },
+              }));
+            }}
+          />
+          {userData.preloadNzb?.mode === 'perResolution' && (
+            <>
+              <div className="text-sm text-[--muted] mt-2 mb-4">
+                Configure how many NZBs to preload per resolution. Only
+                resolutions listed below will be preloaded.
+              </div>
+
+              {Object.entries(
+                userData.preloadNzb?.perResolutionCounts ?? {}
+              ).map(([resolution, resCount]) => (
+                <div key={resolution} className="flex gap-2">
+                  <div className="flex-1 flex gap-2">
+                    <div className="flex-1">
+                      <Select
+                        label="Resolution"
+                        options={RESOLUTIONS.map((r) => ({
+                          value: r,
+                          label: r,
+                          disabled:
+                            r !== resolution &&
+                            Object.keys(
+                              userData.preloadNzb?.perResolutionCounts ?? {}
+                            ).includes(r),
+                        }))}
+                        value={resolution}
+                        onValueChange={(newRes) => {
+                          setUserData((prev) => {
+                            const counts = {
+                              ...(prev.preloadNzb?.perResolutionCounts ?? {}),
+                            };
+                            const oldCount = counts[resolution] ?? 1;
+                            delete counts[resolution];
+                            counts[newRes] = oldCount;
+                            return {
+                              ...prev,
+                              preloadNzb: {
+                                ...prev.preloadNzb,
+                                perResolutionCounts: counts,
+                              },
+                            };
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <NumberInput
+                        label="Count"
+                        min={1}
+                        max={20}
+                        defaultValue={1}
+                        value={resCount}
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            preloadNzb: {
+                              ...prev.preloadNzb,
+                              perResolutionCounts: {
+                                ...(prev.preloadNzb?.perResolutionCounts ?? {}),
+                                [resolution]: Math.max(
+                                  1,
+                                  Math.min(20, Number(value || 1))
+                                ),
+                              },
+                            },
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <IconButton
+                    size="sm"
+                    rounded
+                    icon={<FaRegTrashAlt />}
+                    intent="alert-subtle"
+                    onClick={() => {
+                      setUserData((prev) => {
+                        const counts = {
+                          ...(prev.preloadNzb?.perResolutionCounts ?? {}),
+                        };
+                        delete counts[resolution];
+                        return {
+                          ...prev,
+                          preloadNzb: {
+                            ...prev.preloadNzb,
+                            perResolutionCounts: counts,
+                          },
+                        };
+                      });
+                    }}
+                  />
+                </div>
+              ))}
+
+              <div className="mt-2 flex gap-2 items-center">
+                <IconButton
+                  rounded
+                  size="sm"
+                  intent="primary-subtle"
+                  icon={<FaPlus />}
+                  disabled={
+                    Object.keys(
+                      userData.preloadNzb?.perResolutionCounts ?? {}
+                    ).length >= RESOLUTIONS.length
+                  }
+                  onClick={() => {
+                    const usedResolutions = Object.keys(
+                      userData.preloadNzb?.perResolutionCounts ?? {}
+                    );
+                    const nextResolution = RESOLUTIONS.find(
+                      (r) => !usedResolutions.includes(r)
+                    );
+                    if (!nextResolution) return;
+                    setUserData((prev) => ({
+                      ...prev,
+                      preloadNzb: {
+                        ...prev.preloadNzb,
+                        perResolutionCounts: {
+                          ...(prev.preloadNzb?.perResolutionCounts ?? {}),
+                          [nextResolution]: 1,
+                        },
+                      },
+                    }));
+                  }}
+                />
+              </div>
+            </>
+          )}
+          <Combobox
+            label="Addons"
+            help="Select which addons should have their NZBs preloaded. Leave empty to include all addons."
+            emptyMessage="You haven't installed any addons yet..."
+            multiple
+            disabled={!userData.preloadNzb?.enabled}
+            options={userData.presets.map((preset) => ({
+              label: preset.options.name || preset.type,
+              value: preset.instanceId,
+              textValue: preset.options.name || preset.type,
+            }))}
+            value={userData.preloadNzb?.addons ?? []}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                preloadNzb: {
+                  ...prev.preloadNzb,
+                  addons: value as string[],
+                },
               }));
             }}
           />

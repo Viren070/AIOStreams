@@ -18,6 +18,7 @@ import {
   AnimeDatabase,
   ParsedId,
   IdParser,
+  toUrlSafeBase64,
 } from './utils/index.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from './presets/index.js';
@@ -49,6 +50,8 @@ import {
 import { getAddonName } from './utils/general.js';
 import { Metadata } from './metadata/utils.js';
 import { StreamSelector } from './parser/streamExpression.js';
+import { getDebridService } from './debrid/index.js';
+import { basename } from 'path';
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
@@ -242,6 +245,20 @@ export class AIOStreams {
           });
         });
       }
+    }
+
+    // Preload NZBs (fire and forget) - sends top X NZBs to usenet stream services
+    // so they start downloading before the user clicks
+    if (this.userData.preloadNzb?.enabled && !preCaching) {
+      setImmediate(() => {
+        this._preloadNzbs(finalStreams, context).catch((error) => {
+          logger.error('Error during NZB preloading:', {
+            error: error instanceof Error ? error.message : String(error),
+            type,
+            id,
+          });
+        });
+      });
     }
 
     const { filterDetails, includedDetails } =
@@ -2377,5 +2394,199 @@ export class AIOStreams {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /**
+   * Preload top X NZBs by sending them to the usenet stream service (NzbDAV/Altmount/TorBox)
+   * so they start downloading before the user clicks on a stream.
+   * This runs as a fire-and-forget operation after the response is sent.
+   */
+  private async _preloadNzbs(
+    streams: ParsedStream[],
+    context: StreamContext
+  ): Promise<void> {
+    const count = this.userData.preloadNzb?.count ?? 3;
+    const usenetServiceIds = ['nzbdav', 'altmount', 'torbox'] as const;
+    const selectedAddons = this.userData.preloadNzb?.addons;
+
+    // Filter for streams that have an nzbUrl, belong to a supported usenet stream service,
+    // and (if addons are specified) whose addon is in the selected list.
+    // Note: NzbDAV/Altmount/TorBox streams have type 'debrid', not 'usenet', so we filter by nzbUrl + service.id
+    const usenetStreams = streams.filter(
+      (stream) =>
+        stream.nzbUrl &&
+        stream.service?.id &&
+        usenetServiceIds.includes(stream.service.id as any) &&
+        // If addons are specified, only include streams from selected addons; otherwise include all
+        (!selectedAddons ||
+          selectedAddons.length === 0 ||
+          (stream.addon?.preset?.id &&
+            selectedAddons.includes(stream.addon.preset.id)))
+    );
+
+    if (usenetStreams.length === 0) {
+      logger.debug('No usenet streams to preload');
+      return;
+    }
+
+    // Select streams to preload based on mode
+    let streamsToPreload: ParsedStream[];
+
+    if (
+      this.userData.preloadNzb?.mode === 'perResolution' &&
+      this.userData.preloadNzb?.perResolutionCounts &&
+      Object.keys(this.userData.preloadNzb.perResolutionCounts).length > 0
+    ) {
+      // Per-resolution mode: take up to N streams per configured resolution,
+      // respecting the global count as an overall cap
+      const perResCounts = this.userData.preloadNzb.perResolutionCounts;
+      const selected: ParsedStream[] = [];
+      const resCounts = new Map<string, number>();
+
+      for (const stream of usenetStreams) {
+        if (selected.length >= count) break; // global cap
+        const res = stream.parsedFile?.resolution || 'Unknown';
+        const maxForRes = perResCounts[res];
+        if (maxForRes === undefined) continue; // resolution not configured, skip
+        const currentCount = resCounts.get(res) || 0;
+        if (currentCount < maxForRes) {
+          selected.push(stream);
+          resCounts.set(res, currentCount + 1);
+        }
+      }
+      streamsToPreload = selected;
+    } else {
+      // Global mode (default): take the top X streams (already sorted by the pipeline)
+      streamsToPreload = usenetStreams.slice(0, count);
+    }
+    const category = context.type === 'movie' ? 'Movies' : 'TV';
+
+    logger.info(`Preloading ${streamsToPreload.length} NZBs`, {
+      category,
+      type: context.type,
+      id: context.id,
+    });
+
+    // Build a credential cache per service so we don't re-encode for each stream
+    const credentialCache = new Map<string, string>();
+
+    for (const stream of streamsToPreload) {
+      try {
+        const serviceId = stream.service!.id;
+
+        // Find the user's credentials for this service
+        const serviceConfig = this.userData.services?.find(
+          (s) => s.id === serviceId
+        );
+        if (!serviceConfig?.credentials) {
+          logger.debug(
+            `No credentials found for service ${serviceId}, skipping preload`
+          );
+          continue;
+        }
+
+        // Get or build the encoded token for this service
+        let token = credentialCache.get(serviceId);
+        if (!token) {
+          const creds = serviceConfig.credentials;
+          if (serviceId === 'nzbdav') {
+            token = toUrlSafeBase64(
+              JSON.stringify({
+                nzbdavUrl: creds.url,
+                publicNzbdavUrl: creds.publicUrl,
+                nzbdavApiKey: creds.apiKey,
+                webdavUser: creds.username,
+                webdavPassword: creds.password,
+                aiostreamsAuth: creds.aiostreamsAuth,
+              })
+            );
+          } else if (serviceId === 'altmount') {
+            token = toUrlSafeBase64(
+              JSON.stringify({
+                altmountUrl: creds.url,
+                publicAltmountUrl: creds.publicUrl,
+                altmountApiKey: creds.apiKey,
+                webdavUser: creds.username,
+                webdavPassword: creds.password,
+                aiostreamsAuth: creds.aiostreamsAuth,
+              })
+            );
+          } else if (serviceId === 'torbox') {
+            token = creds.apiKey;
+          }
+          if (token) {
+            credentialCache.set(serviceId, token);
+          }
+        }
+
+        if (!token) {
+          logger.debug(
+            `Could not encode credentials for service ${serviceId}, skipping preload`
+          );
+          continue;
+        }
+
+        // Derive folderName to match getExpectedFolderName() during resolve:
+        // - NzbDAV uses playbackInfo.filename (= last segment of stream.url)
+        // - Altmount uses path.basename() of the raw NZB URL (without .nzb ext)
+        //   Note: basename() includes query params in its result, unlike URL.pathname
+        // - TorBox uses the stream filename or NZB basename
+        let folderName = 'unknown_nzb';
+        if (serviceId === 'altmount' && stream.nzbUrl) {
+          // Replicate Altmount's getExpectedFolderName: basename(nzbUrl, '.nzb')
+          const nzbBasename = basename(stream.nzbUrl);
+          folderName = nzbBasename.endsWith('.nzb')
+            ? basename(stream.nzbUrl, '.nzb')
+            : nzbBasename;
+        } else if (serviceId === 'torbox') {
+          // TorBox: use stream.filename (= torrentOrNzb.file.name ?? title)
+          // to match exactly what happens when a user clicks the stream (addNzb receives filename)
+          folderName = stream.filename ?? 'unknown_nzb';
+        } else if (stream.url) {
+          // NzbDAV: last segment of stream.url = torrentOrNzb.file.name ?? title
+          try {
+            const urlPath = new URL(stream.url).pathname;
+            const lastSegment = urlPath.split('/').pop();
+            if (lastSegment) {
+              folderName = decodeURIComponent(lastSegment);
+            }
+          } catch {
+            folderName = stream.filename ?? 'unknown_nzb';
+          }
+        } else {
+          folderName = stream.filename ?? 'unknown_nzb';
+        }
+
+        const debridService = getDebridService(serviceId, token);
+
+        if (debridService.preloadNzb) {
+          await debridService.preloadNzb(
+            stream.nzbUrl!,
+            category,
+            folderName
+          );
+          logger.debug(`Successfully preloaded NZB`, {
+            service: serviceId,
+            nzbUrl: maskSensitiveInfo(stream.nzbUrl!),
+            folderName,
+          });
+        } else {
+          logger.debug(
+            `Service ${serviceId} does not support NZB preloading`
+          );
+        }
+      } catch (error) {
+        logger.warn(`Failed to preload NZB`, {
+          error: error instanceof Error ? error.message : String(error),
+          nzbUrl: stream.nzbUrl
+            ? maskSensitiveInfo(stream.nzbUrl)
+            : undefined,
+        });
+      }
+    }
+
+    logger.info(
+      `NZB preloading complete for ${context.type} ${context.id}`
+    );
   }
 }
