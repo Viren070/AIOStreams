@@ -17,6 +17,7 @@ import {
 } from '../debrid/index.js';
 import { processTorrents } from '../builtins/utils/debrid.js';
 import { StreamContext } from './context.js';
+import { parseTorrentTitle } from '@viren070/parse-torrent-title';
 
 const logger = createLogger('serviceWrapper');
 
@@ -341,6 +342,18 @@ function buildDebridStreams(
 ): ParsedStream[] {
   const debridStreams: ParsedStream[] = [];
 
+  const normaliseText = (text: string) => {
+    return text
+      .replace(
+        /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
+        ''
+      )
+      .replace(/[^\p{L}\p{N}+]/gu, '')
+
+      .toLowerCase()
+      .trim();
+  };
+
   for (const result of results) {
     const encryptedStoreAuth = result.service
       ? encryptedStoreAuths[result.service.id]
@@ -414,14 +427,14 @@ function buildDebridStreams(
         folderName: result.file.name ? result.title : original?.folderName,
         torrent: {
           infoHash: result.hash,
-          fileIdx: result.file.index,
+          fileIdx: original?.torrent?.fileIdx ?? result.file.index,
           seeders: 'seeders' in result ? result.seeders : undefined,
           sources: result.sources,
           private: isPrivate,
         },
       };
 
-      // if folder size within 5% of file size, treat as single file
+      // if folder size within 5% of file size, remove folder size to avoid redundant information.
       if (
         debridStream.folderSize &&
         debridStream.size &&
@@ -430,6 +443,77 @@ function buildDebridStreams(
         ) <= 0.05
       ) {
         debridStream.folderSize = undefined;
+      }
+
+      if (
+        debridStream.folderName &&
+        debridStream.filename &&
+        normaliseText(debridStream.folderName) ===
+          normaliseText(debridStream.filename)
+      ) {
+        debridStream.folderName = undefined;
+      }
+
+      // if original didnt have a foldername, but debrid result does and its filename is different from the original, re-parse both filename and foldername.
+      if (
+        original &&
+        debridStream.filename &&
+        original.filename &&
+        debridStream.filename !== original.filename &&
+        !original.folderName &&
+        debridStream.folderName &&
+        debridStream.parsedFile
+      ) {
+        // Re-parse the new filename and folder name to extract title/season/episode info
+        const fileParsed = parseTorrentTitle(debridStream.filename);
+        const folderParsed = parseTorrentTitle(debridStream.folderName);
+
+        const seasons = fileParsed.seasons?.length
+          ? fileParsed.seasons
+          : folderParsed.seasons;
+        const episodes = fileParsed.episodes?.length
+          ? fileParsed.episodes
+          : folderParsed.episodes;
+        const seasonPack =
+          !!(fileParsed.seasons?.length && !fileParsed.episodes?.length) ||
+          !!(folderParsed.seasons?.length && !folderParsed.episodes?.length);
+
+        debridStream.parsedFile = {
+          ...debridStream.parsedFile,
+          title: folderParsed.title || fileParsed.title,
+          seasons,
+          episodes,
+          folderSeasons:
+            seasons !== folderParsed.seasons ? folderParsed.seasons : undefined,
+          folderEpisodes:
+            episodes !== folderParsed.episodes
+              ? folderParsed.episodes
+              : undefined,
+          seasonPack,
+        };
+
+        // force re-calculation of bitrate if it was estimated before.
+        if (!debridStream.duration && debridStream.bitrate)
+          debridStream.bitrate = undefined;
+
+        // Apply the same season pack heuristics as StreamParser.getParsedFile
+        if (
+          !debridStream.parsedFile.seasonPack &&
+          debridStream.parsedFile.episodes &&
+          debridStream.parsedFile.episodes.length > 0 &&
+          debridStream.folderSize &&
+          debridStream.size &&
+          debridStream.folderSize > debridStream.size * 2
+        ) {
+          debridStream.parsedFile.seasonPack = true;
+        }
+        if (
+          !debridStream.parsedFile.seasonPack &&
+          debridStream.parsedFile.episodes &&
+          debridStream.parsedFile.episodes.length > 5
+        ) {
+          debridStream.parsedFile.seasonPack = true;
+        }
       }
 
       debridStreams.push(debridStream);
