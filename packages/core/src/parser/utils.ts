@@ -66,10 +66,11 @@ export function preprocessTitle(
     const match = preprocessedTitle.match(pattern);
 
     if (match) {
-      // Check if any existing titles contain this separator pattern
-      const hasExistingTitleWithSeparator = titles.some((title) =>
-        pattern.test(title.toLowerCase())
-      );
+      // if more than 20% of titles contain the separator pattern, consider it common and do not split
+      const hasExistingTitleWithSeparator =
+        titles.filter((title) => pattern.test(title.toLowerCase())).length /
+          titles.length >
+        0.2;
 
       if (!hasExistingTitleWithSeparator) {
         const parts = preprocessedTitle.split(pattern);
