@@ -134,9 +134,6 @@ const urlOrUrlList = makeExactValidator<readonly string[]>((x) => {
 });
 
 const strOrStrList = makeExactValidator<readonly string[]>((x) => {
-  if (typeof x === 'string') {
-    return Object.freeze(x.split(',').map((item) => item.trim()));
-  }
   try {
     const parsed = JSON.parse(x);
     if (
@@ -146,7 +143,7 @@ const strOrStrList = makeExactValidator<readonly string[]>((x) => {
       return Object.freeze(parsed);
     }
   } catch (e) {
-    return x;
+    return Object.freeze([x]);
   }
   throw new EnvError('Value must be a string or an array of strings');
 });
