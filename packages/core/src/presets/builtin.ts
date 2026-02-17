@@ -157,7 +157,7 @@ export class BuiltinAddonPreset extends Preset {
 
   protected static getBaseConfig(userData: UserData, services: ServiceId[]) {
     return {
-      tmdbAccessToken: userData.tmdbAccessToken,
+      tmdbReadAccessToken: userData.tmdbAccessToken,
       tmdbApiKey: userData.tmdbApiKey,
       tvdbApiKey: userData.tvdbApiKey,
       services: services.map((service) => ({
@@ -166,6 +166,7 @@ export class BuiltinAddonPreset extends Preset {
       })),
       cacheAndPlay: userData.cacheAndPlay,
       autoRemoveDownloads: userData.autoRemoveDownloads,
+      checkOwned: userData.checkOwned ?? true,
     };
   }
 }

@@ -231,9 +231,9 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
+    const metadata = await this.getSearchMetadata();
     const results = await this.performSearch('torrent', parsedId, metadata);
     if (results.length === 0) return [];
 
@@ -269,10 +269,8 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     return torrents;
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
+    const metadata = await this.getSearchMetadata();
     const results = await this.performSearch('usenet', parsedId, metadata);
     if (results.length === 0) return [];
 

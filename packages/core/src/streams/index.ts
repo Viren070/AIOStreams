@@ -17,3 +17,6 @@ export {
 };
 
 export type { ExtendedMetadata };
+
+export { resolveServiceWrappedStreams } from './serviceWrapper.js';
+export type { ServiceWrapResult, ServiceWrapError } from './serviceWrapper.js';

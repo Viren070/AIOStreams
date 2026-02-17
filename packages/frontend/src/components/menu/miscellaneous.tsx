@@ -372,6 +372,24 @@ function Content() {
         )}
         {mode === 'pro' && (
           <SettingsCard
+            title="Check Library"
+            description="When enabled, built-in addons will check if search results already exist in your debrid library and mark them accordingly. This applies to both torrent and usenet results."
+          >
+            <Switch
+              label="Enable"
+              side="right"
+              value={userData.checkOwned ?? true}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  checkOwned: value,
+                }));
+              }}
+            />
+          </SettingsCard>
+        )}
+        {mode === 'pro' && (
+          <SettingsCard
             title="External Downloads"
             description="Adds a stream that automatically opens the stream in your browser below every stream for easier downloading"
           >

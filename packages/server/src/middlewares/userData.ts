@@ -192,8 +192,11 @@ export const userDataMiddleware = async (
             userData.syncedPreferredStreamExpressionUrls,
             userData.preferredStreamExpressions || [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           );
       } catch (error: any) {
         logger.warn(
@@ -207,8 +210,11 @@ export const userDataMiddleware = async (
             userData.syncedExcludedStreamExpressionUrls,
             userData.excludedStreamExpressions || [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           );
       } catch (error: any) {
         logger.warn(
@@ -222,8 +228,11 @@ export const userDataMiddleware = async (
             userData.syncedRequiredStreamExpressionUrls,
             userData.requiredStreamExpressions || [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           );
       } catch (error: any) {
         logger.warn(
@@ -237,8 +246,11 @@ export const userDataMiddleware = async (
             userData.syncedIncludedStreamExpressionUrls,
             userData.includedStreamExpressions || [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           );
       } catch (error: any) {
         logger.warn(

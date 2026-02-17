@@ -269,10 +269,10 @@ export class SelAccess {
   public static async resolveSyncedExpressionsForValidation(
     userData: UserData
   ): Promise<{
-    included: string[];
-    excluded: string[];
-    required: string[];
-    preferred: string[];
+    included: { expression: string; enabled: boolean }[];
+    excluded: { expression: string; enabled: boolean }[];
+    required: { expression: string; enabled: boolean }[];
+    preferred: { expression: string; enabled: boolean }[];
     ranked: { expression: string; score: number; enabled: boolean }[];
   }> {
     try {
@@ -282,29 +282,41 @@ export class SelAccess {
             userData.syncedIncludedStreamExpressionUrls,
             [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedExcludedStreamExpressionUrls,
             [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedRequiredStreamExpressionUrls,
             [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedPreferredStreamExpressionUrls,
             [],
             userData,
-            (item) => item.expression,
-            (expr) => expr
+            (item) => ({
+              expression: item.expression,
+              enabled: item.enabled ?? true,
+            }),
+            (item) => item.expression
           ),
           this.syncStreamExpressions(
             userData.syncedRankedStreamExpressionUrls,

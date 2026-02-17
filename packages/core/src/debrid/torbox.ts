@@ -6,6 +6,7 @@ import {
   getSimpleTextHash,
   Cache,
   DistributedLock,
+  getTimeTakenSincePoint,
 } from '../utils/index.js';
 import { selectFileInTorrentOrNZB } from './utils.js';
 import {
@@ -122,6 +123,9 @@ export class TorboxDebridService
   public async listMagnets(): Promise<DebridDownload[]> {
     return this.stremthru.listMagnets();
   }
+  public async getMagnet(magnetId: string): Promise<DebridDownload> {
+    return this.stremthru.getMagnet(magnetId);
+  }
 
   public async removeMagnet(magnetId: string): Promise<void> {
     return this.stremthru.removeMagnet(magnetId);
@@ -149,8 +153,12 @@ export class TorboxDebridService
     }
   }
 
-  public async checkMagnets(magnets: string[], sid?: string) {
-    return this.stremthru.checkMagnets(magnets, sid);
+  public async checkMagnets(
+    magnets: string[],
+    sid?: string,
+    checkOwned: boolean = true
+  ) {
+    return this.stremthru.checkMagnets(magnets, sid, checkOwned);
   }
 
   public async addMagnet(magnet: string): Promise<DebridDownload> {
@@ -302,7 +310,11 @@ export class TorboxDebridService
     }
   }
 
-  public async listNzbs(id?: string): Promise<DebridDownload[]> {
+  private static libraryCache = Cache.getInstance<string, DebridDownload[]>(
+    'tb:library'
+  );
+
+  private async _fetchNzbList(id?: string): Promise<DebridDownload[]> {
     let nzbInfo;
     try {
       nzbInfo = await this.torboxApi.usenet.getUsenetList(this.apiVersion, {
@@ -343,7 +355,7 @@ export class TorboxDebridService
       });
     }
 
-    let usenetDownloads: DebridDownload[] = (
+    return (
       Array.isArray(nzbInfo.data.data) ? nzbInfo.data.data : [nzbInfo.data.data]
     ).map((usenetDownload) => {
       let status: DebridDownload['status'] = 'queued';
@@ -357,6 +369,7 @@ export class TorboxDebridService
         hash: usenetDownload.hash ?? undefined,
         name: usenetDownload.name ?? undefined,
         status,
+        addedAt: usenetDownload.createdAt ?? undefined,
         files: (usenetDownload.files ?? []).map((file) => ({
           id: file.id ?? -1,
           mimeType: file.mimetype,
@@ -365,8 +378,113 @@ export class TorboxDebridService
         })),
       };
     });
+  }
 
-    return usenetDownloads;
+  public async listNzbs(id?: string): Promise<DebridDownload[]> {
+    // If fetching a specific ID, bypass cache
+    if (id) {
+      return this._fetchNzbList(id);
+    }
+
+    const cacheKey = `torbox:usenet:${this.config.token}`;
+    const limit = Math.min(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100);
+    const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+
+    const { result } = await DistributedLock.getInstance().withLock(
+      `tb:library:usenet:${cacheKey}`,
+      async () => {
+        const cached = await TorboxDebridService.libraryCache.get(cacheKey);
+        if (cached) {
+          logger.debug(`Using cached usenet list for TorBox`);
+          return cached;
+        }
+
+        const start = Date.now();
+        const allItems: DebridDownload[] = [];
+        let offset = 0;
+
+        while (offset < maxItems) {
+          let nzbInfo;
+          try {
+            nzbInfo = await this.torboxApi.usenet.getUsenetList(
+              this.apiVersion,
+              {
+                limit: limit.toString(),
+                offset: offset.toString(),
+              }
+            );
+          } catch (error: any) {
+            throw convertTorBoxError(error);
+          }
+
+          if (
+            !nzbInfo?.data?.data ||
+            nzbInfo?.data?.error ||
+            nzbInfo.data.success === false
+          ) {
+            throw new DebridError(
+              `Failed to get usenet list: ${nzbInfo?.data?.error || 'Unknown error'}${nzbInfo?.data?.detail ? '- ' + nzbInfo.data.detail : ''}`,
+              {
+                statusCode: nzbInfo.metadata.status,
+                statusText: nzbInfo.metadata.statusText,
+                code: 'UNKNOWN',
+                headers: nzbInfo.metadata.headers,
+                body: nzbInfo.data,
+                cause: nzbInfo.data,
+                type: 'api_error',
+              }
+            );
+          }
+
+          const items = Array.isArray(nzbInfo.data.data)
+            ? nzbInfo.data.data
+            : [nzbInfo.data.data];
+
+          for (const usenetDownload of items) {
+            let status: DebridDownload['status'] = 'queued';
+            if (
+              usenetDownload.downloadFinished &&
+              usenetDownload.downloadPresent
+            ) {
+              status = 'downloaded';
+            } else if (usenetDownload.progress && usenetDownload.progress > 0) {
+              status = 'downloading';
+            }
+            allItems.push({
+              id: usenetDownload.id ?? -1,
+              hash: usenetDownload.hash ?? undefined,
+              name: usenetDownload.name ?? undefined,
+              status,
+              addedAt: usenetDownload.createdAt ?? undefined,
+            });
+          }
+
+          if (items.length < limit) break;
+          offset += limit;
+        }
+
+        logger.debug(`Listed usenet downloads from TorBox`, {
+          count: allItems.length,
+          time: getTimeTakenSincePoint(start),
+        });
+
+        await TorboxDebridService.libraryCache.set(
+          cacheKey,
+          allItems,
+          Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+          true
+        );
+
+        return allItems;
+      },
+      { type: 'memory', timeout: 10000 }
+    );
+    return result;
+  }
+
+  public async getNzb(nzbId: string): Promise<DebridDownload> {
+    const items = await this._fetchNzbList(nzbId);
+    return items[0];
   }
 
   public async generateUsenetLink(
@@ -452,16 +570,56 @@ export class TorboxDebridService
       }
     }
 
-    logger.debug(`Adding usenet download for ${nzb}`, {
-      hash,
-    });
+    let usenetDownload: DebridDownload;
 
-    let usenetDownload = await this.addNzb(nzb, filename);
+    if (!nzb) {
+      // Library item — no NZB URL, look up existing download
+      if (playbackInfo.serviceItemId) {
+        // Direct ID lookup from catalog
+        logger.debug(`Resolving library usenet item by serviceItemId`, {
+          serviceItemId: playbackInfo.serviceItemId,
+        });
+        const fullItems = await this._fetchNzbList(playbackInfo.serviceItemId);
+        usenetDownload = fullItems[0];
+      } else {
+        // Fallback: hash-based lookup
+        logger.debug(`Resolving library usenet item by hash`, { hash });
+        const libraryItems = await this.listNzbs();
+        const existingItem = libraryItems.find((item) => item.hash === hash);
+        if (!existingItem) {
+          throw new DebridError(
+            'Could not find usenet download in library by hash',
+            {
+              statusCode: 404,
+              statusText: 'Not found',
+              code: 'NOT_FOUND',
+              headers: {},
+              body: { hash },
+              type: 'api_error',
+            }
+          );
+        }
+        const fullItems = await this._fetchNzbList(existingItem.id.toString());
+        usenetDownload = fullItems[0];
+      }
 
-    logger.debug(`Usenet download added for ${nzb}`, {
-      status: usenetDownload.status,
-      id: usenetDownload.id,
-    });
+      logger.debug(`Found library usenet item`, {
+        id: usenetDownload.id,
+        status: usenetDownload.status,
+        name: usenetDownload.name,
+      });
+    } else {
+      logger.debug(`Adding usenet download for ${nzb}`, {
+        hash,
+      });
+
+      usenetDownload = await this.addNzb(nzb, filename);
+
+      logger.debug(`Usenet download added for ${nzb}`, {
+        status: usenetDownload.status,
+        id: usenetDownload.id,
+      });
+    }
 
     if (usenetDownload.status !== 'downloaded') {
       // temporarily cache the null value for 1m
@@ -472,14 +630,16 @@ export class TorboxDebridService
       // poll status when cacheAndPlay is true, max wait time is 110s
       for (let i = 0; i < 10; i++) {
         await new Promise((resolve) => setTimeout(resolve, 11000));
-        const usenetList = await this.listNzbs(usenetDownload.id.toString());
+        const usenetList = await this._fetchNzbList(
+          usenetDownload.id.toString()
+        );
         const usenetDownloadInList = usenetList.find(
           (usenet) => usenet.hash === hash || usenet.id === usenetDownload.id
         );
         if (!usenetDownloadInList) {
-          logger.warn(`Failed to find ${nzb} in list`);
+          logger.warn(`Failed to find ${nzb || hash} in list`);
         } else {
-          logger.debug(`Polled status for ${nzb}`, {
+          logger.debug(`Polled status for ${nzb || hash}`, {
             attempt: i + 1,
             status: usenetDownloadInList.status,
           });
@@ -506,7 +666,11 @@ export class TorboxDebridService
     }
 
     let fileId: number | undefined;
-    if (usenetDownload.files.length > 1) {
+    if (playbackInfo.fileIndex !== undefined) {
+      // Direct file index specified (e.g. from catalog meta)
+      fileId = playbackInfo.fileIndex;
+      logger.debug(`Using specified fileIndex`, { fileId });
+    } else if (usenetDownload.files.length > 1) {
       const nzbInfo = {
         type: 'usenet' as const,
         nzb: nzb,
@@ -572,7 +736,7 @@ export class TorboxDebridService
       true
     );
 
-    if (autoRemoveDownloads && usenetDownload.id) {
+    if (autoRemoveDownloads && usenetDownload.id && nzb) {
       this.removeNzb(usenetDownload.id.toString()).catch((err) => {
         logger.warn(
           `Failed to cleanup usenet download ${usenetDownload.id} after resolve: ${err.message}`

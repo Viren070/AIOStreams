@@ -871,6 +871,8 @@ export function ConfigTemplatesModal({
       'tvdbApiKey',
       'rpdbApiKey',
       'topPosterApiKey',
+      'aioratingsApiKey',
+      'aioratingsProfileId',
     ] as const;
 
     topLevelFields.forEach((field) => {

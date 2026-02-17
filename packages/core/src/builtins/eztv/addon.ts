@@ -41,21 +41,19 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
     this.api = new EztvAPI();
   }
 
-  protected async _searchNzbs(
-    _parsedId: ParsedId,
-    _metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(_parsedId: ParsedId): Promise<NZB[]> {
     return [];
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
     if (parsedId.mediaType !== 'series') {
       logger.debug('EZTV only supports TV series, skipping for non-series');
       return [];
     }
+
+    const metadata = await this.getSearchMetadata();
 
     const imdbId =
       metadata.imdbId ??

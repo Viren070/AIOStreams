@@ -1608,7 +1608,9 @@ function CatalogSettingsCard() {
               enabled: true,
               shuffle: false,
               usePosterService: !!(
-                userData.rpdbApiKey || userData.topPosterApiKey
+                userData.rpdbApiKey ||
+                userData.topPosterApiKey ||
+                userData.aioratingsApiKey
               ),
               hideable: catalog.hideable,
               searchable: catalog.searchable,

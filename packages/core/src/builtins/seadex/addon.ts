@@ -32,18 +32,15 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
     this.dataset = SeaDexDataset.getInstance();
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
     return [];
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
     // SeaDex only works with anime
+    const metadata = await this.getSearchMetadata();
     if (!metadata.isAnime) {
       logger.debug(`SeaDex skipped: not anime content`);
       return [];

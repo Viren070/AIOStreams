@@ -4,6 +4,11 @@ import { PageWrapper } from '../shared/page-wrapper';
 import {
   // SERVICE_DETAILS,
   ServiceId,
+  BUILTIN_SUPPORTED_SERVICES,
+  NZBDAV_SERVICE,
+  ALTMOUNT_SERVICE,
+  STREMIO_NNTP_SERVICE,
+  EASYNEWS_SERVICE,
 } from '../../../../core/src/utils/constants';
 import { useUserData } from '@/context/userData';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
@@ -37,6 +42,7 @@ import { TextInput } from '../ui/text-input';
 import { PasswordInput } from '../ui/password-input';
 import { StatusResponse, UserData } from '@aiostreams/core';
 import { Select } from '../ui/select';
+import { Combobox } from '../ui/combobox';
 export function ServicesMenu() {
   return (
     <>
@@ -302,6 +308,144 @@ function Content() {
       </div>
 
       <SettingsCard
+        title="Service Wrap"
+        description="Force external P2P-capable addons to return raw torrent results instead of debrid results. AIOStreams will then consolidate them through your configured debrid services, reducing API calls and allowing you to use any service supported by AIOStreams."
+      >
+        <Switch
+          label="Enable Service Wrap"
+          side="right"
+          value={userData.serviceWrap?.enabled ?? false}
+          onValueChange={(v) => {
+            setUserData((prev) => ({
+              ...prev,
+              serviceWrap: {
+                ...prev.serviceWrap,
+                enabled: v,
+              },
+            }));
+          }}
+          help={
+            <span>
+              When enabled, P2P-capable presets (Comet, Torrentio, MediaFusion,
+              StremThru Torz, Peerflix, FKStream) will be automatically
+              configured to return raw torrent hashes instead of debrid links.
+              This allows AIOStreams to process all torrents through your
+              configured services in a single consolidated API call.
+            </span>
+          }
+        />
+
+        {userData.serviceWrap?.enabled && (
+          <>
+            <Switch
+              label="Reconfigure Service"
+              side="right"
+              value={userData.serviceWrap?.reconfigureService ?? false}
+              onValueChange={(v) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  serviceWrap: {
+                    ...prev.serviceWrap,
+                    reconfigureService: v,
+                  },
+                }));
+              }}
+              help={
+                <span>
+                  Re-process debrid results from external addons that include
+                  torrent info hashes. This allows you to resolve those torrents
+                  through different or additional debrid services that the
+                  original addon may not support.
+                </span>
+              }
+            />
+            <Combobox
+              label="Wrap Addons"
+              help="Select which addons to wrap. Leave empty to wrap all applicable addons."
+              options={(userData.presets ?? [])
+                .filter((p) => {
+                  if (!p.enabled) return false;
+                  const presetMeta = status?.settings.presets.find(
+                    (meta) => meta.ID === p.type
+                  );
+                  // Builtin presets are never wrapped, their results are always handled by AIOStreams directly
+                  if (presetMeta?.BUILTIN) return false;
+                  // Custom presets are always shown
+                  if (presetMeta?.ID === 'custom') return true;
+                  // P2P-capable presets can always be wrapped
+                  if (presetMeta?.SUPPORTED_STREAM_TYPES.includes('p2p'))
+                    return true;
+                  // When reconfigure is enabled, debrid presets are also
+                  // eligible since their results can be re-processed
+                  if (
+                    userData.serviceWrap?.reconfigureService &&
+                    presetMeta?.SUPPORTED_STREAM_TYPES.includes('debrid')
+                  )
+                    return true;
+                  return false;
+                })
+                .map((preset) => ({
+                  label: preset.options.name || preset.type,
+                  value: preset.instanceId,
+                  textValue: preset.options.name,
+                }))}
+              multiple
+              emptyMessage="No supported addons found"
+              value={userData.serviceWrap?.presets ?? []}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  serviceWrap: {
+                    ...prev.serviceWrap,
+                    presets: value.length > 0 ? value : undefined,
+                  },
+                }));
+              }}
+            />
+
+            <Combobox
+              label="Processing Services"
+              help="Select which debrid services to use for processing wrapped torrents. Leave empty to use all enabled services."
+              options={(userData.services ?? [])
+                .filter(
+                  (s) =>
+                    s.enabled &&
+                    (BUILTIN_SUPPORTED_SERVICES as readonly string[]).includes(
+                      s.id
+                    ) &&
+                    ![
+                      NZBDAV_SERVICE,
+                      ALTMOUNT_SERVICE,
+                      STREMIO_NNTP_SERVICE,
+                      EASYNEWS_SERVICE,
+                    ].includes(s.id)
+                )
+                .map((service) => ({
+                  label:
+                    status?.settings.services[service.id]?.name ?? service.id,
+                  value: service.id,
+                  textValue:
+                    status?.settings.services[service.id]?.name ?? service.id,
+                }))}
+              multiple
+              emptyMessage="No supported services found"
+              value={userData.serviceWrap?.services ?? []}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  serviceWrap: {
+                    ...prev.serviceWrap,
+                    services:
+                      value.length > 0 ? (value as ServiceId[]) : undefined,
+                  },
+                }));
+              }}
+            />
+          </>
+        )}
+      </SettingsCard>
+
+      <SettingsCard
         title="Poster Service"
         description="Select a poster service to use for catalogs that support it."
       >
@@ -311,12 +455,13 @@ function Content() {
             { label: 'None', value: 'none' },
             { label: 'RPDB', value: 'rpdb' },
             { label: 'Top Poster', value: 'top-poster' },
+            { label: 'AIOratings', value: 'aioratings' },
           ]}
           value={userData.posterService || 'rpdb'}
           onValueChange={(v) => {
             setUserData((prev) => ({
               ...prev,
-              posterService: v as 'rpdb' | 'top-poster' | 'none',
+              posterService: v as 'rpdb' | 'top-poster' | 'aioratings' | 'none',
             }));
           }}
           defaultValue="rpdb"
@@ -374,6 +519,61 @@ function Content() {
             }}
           />
         )}
+        {userData.posterService === 'aioratings' && (
+          <>
+            <PasswordInput
+              autoComplete="new-password"
+              label="AIOratings API Key"
+              help={
+                <span>
+                  Get your API Key from{' '}
+                  <a
+                    href="https://aioratings.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[--brand] hover:underline"
+                  >
+                    here
+                  </a>
+                </span>
+              }
+              value={userData.aioratingsApiKey}
+              onValueChange={(v) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  aioratingsApiKey: v,
+                }));
+              }}
+            />
+            <TextInput
+              label="AIOratings Profile ID"
+              help={
+                <span>
+                  Custom profiles are a premium feature that lets you design
+                  your own poster layout. Premium users can map their API key
+                  and default posters dynamically from the{' '}
+                  <a
+                    href="https://aioratings.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[--brand] hover:underline"
+                  >
+                    AIOratings website
+                  </a>
+                  . Free users can leave this as &quot;default&quot;.
+                </span>
+              }
+              value={userData.aioratingsProfileId || 'default'}
+              placeholder="default"
+              onValueChange={(v) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  aioratingsProfileId: v,
+                }));
+              }}
+            />
+          </>
+        )}
 
         <Switch
           label="Use Poster Service for Library/Continue Watching"
@@ -387,7 +587,9 @@ function Content() {
           }}
           disabled={
             userData.posterService === 'none' ||
-            (!userData.rpdbApiKey && !userData.topPosterApiKey)
+            (!userData.rpdbApiKey &&
+              !userData.topPosterApiKey &&
+              !userData.aioratingsApiKey)
           }
           help={
             <span>
@@ -403,7 +605,9 @@ function Content() {
           side="right"
           disabled={
             userData.posterService === 'none' ||
-            (!userData.rpdbApiKey && !userData.topPosterApiKey)
+            (!userData.rpdbApiKey &&
+              !userData.topPosterApiKey &&
+              !userData.aioratingsApiKey)
           }
           help={
             <span>

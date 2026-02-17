@@ -67,6 +67,7 @@ import { copyToClipboard } from '@/utils/clipboard';
 import { FilterSettings } from './_components/filter-settings';
 import {
   TextInputs,
+  ToggleableTextInputs,
   TwoTextInputs,
   RankedExpressionInputs,
   RankedRegexInputs,
@@ -1927,10 +1928,9 @@ function Content() {
                     </p>
                   </div>
                 </SettingsCard>
-                <TextInputs
-                  label="Required Stream Expressions"
-                  itemName="Expression"
-                  help="The expressions to apply to the streams. Streams selected by any of these expressions will be required to be in the results."
+                <ToggleableTextInputs
+                  title="Required Stream Expressions"
+                  description="The expressions to apply to the streams. Streams selected by any of these expressions will be required to be in the results."
                   placeholder="addon(type(streams, 'debrid'), 'TorBox')"
                   values={userData.requiredStreamExpressions || []}
                   onValuesChange={(values) => {
@@ -1939,12 +1939,47 @@ function Content() {
                       requiredStreamExpressions: values,
                     }));
                   }}
+                  onExpressionChange={(expression, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      requiredStreamExpressions: [
+                        ...(prev.requiredStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.requiredStreamExpressions || [])[index],
+                          expression,
+                        },
+                        ...(prev.requiredStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                  onEnabledChange={(enabled, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      requiredStreamExpressions: [
+                        ...(prev.requiredStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.requiredStreamExpressions || [])[index],
+                          enabled,
+                        },
+                        ...(prev.requiredStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
                   {...getSyncedProps('syncedRequiredStreamExpressionUrls')}
                 />
-                <TextInputs
-                  label="Excluded Stream Expressions"
-                  itemName="Expression"
-                  help="The expressions to apply to the streams. Streams selected by any of these expressions will be excluded from the results."
+                <ToggleableTextInputs
+                  title="Excluded Stream Expressions"
+                  description="The expressions to apply to the streams. Streams selected by any of these expressions will be excluded from the results."
                   placeholder="addon(type(streams, 'debrid'), 'TorBox')"
                   values={userData.excludedStreamExpressions || []}
                   onValuesChange={(values) => {
@@ -1953,12 +1988,47 @@ function Content() {
                       excludedStreamExpressions: values,
                     }));
                   }}
+                  onExpressionChange={(expression, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      excludedStreamExpressions: [
+                        ...(prev.excludedStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.excludedStreamExpressions || [])[index],
+                          expression,
+                        },
+                        ...(prev.excludedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                  onEnabledChange={(enabled, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      excludedStreamExpressions: [
+                        ...(prev.excludedStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.excludedStreamExpressions || [])[index],
+                          enabled,
+                        },
+                        ...(prev.excludedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
                   {...getSyncedProps('syncedExcludedStreamExpressionUrls')}
                 />
-                <TextInputs
-                  label="Included Stream Expressions"
-                  itemName="Expression"
-                  help="The expressions to apply to the streams. Streams selected by any of these expressions will be included in the results."
+                <ToggleableTextInputs
+                  title="Included Stream Expressions"
+                  description="The expressions to apply to the streams. Streams selected by any of these expressions will be included in the results."
                   placeholder="addon(type(streams, 'debrid'), 'TorBox')"
                   values={userData.includedStreamExpressions || []}
                   onValuesChange={(values) => {
@@ -1967,18 +2037,89 @@ function Content() {
                       includedStreamExpressions: values,
                     }));
                   }}
+                  onExpressionChange={(expression, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      includedStreamExpressions: [
+                        ...(prev.includedStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.includedStreamExpressions || [])[index],
+                          expression,
+                        },
+                        ...(prev.includedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                  onEnabledChange={(enabled, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      includedStreamExpressions: [
+                        ...(prev.includedStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.includedStreamExpressions || [])[index],
+                          enabled,
+                        },
+                        ...(prev.includedStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
                   {...getSyncedProps('syncedIncludedStreamExpressionUrls')}
                 />
-                <TextInputs
-                  label="Preferred Stream Expressions"
-                  itemName="Expression"
-                  help="The expressions to apply to the streams. Streams selected by these expressions will be preferred over other streams and ranked by the order they are in this list."
+                <ToggleableTextInputs
+                  title="Preferred Stream Expressions"
+                  description="The expressions to apply to the streams. Streams selected by these expressions will be preferred over other streams and ranked by the order they are in this list."
                   placeholder="addon(type(streams, 'debrid'), 'TorBox')"
                   values={userData.preferredStreamExpressions || []}
                   onValuesChange={(values) => {
                     setUserData((prev) => ({
                       ...prev,
                       preferredStreamExpressions: values,
+                    }));
+                  }}
+                  onExpressionChange={(expression, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      preferredStreamExpressions: [
+                        ...(prev.preferredStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.preferredStreamExpressions || [])[index],
+                          expression,
+                        },
+                        ...(prev.preferredStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
+                    }));
+                  }}
+                  onEnabledChange={(enabled, index) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      preferredStreamExpressions: [
+                        ...(prev.preferredStreamExpressions || []).slice(
+                          0,
+                          index
+                        ),
+                        {
+                          ...(prev.preferredStreamExpressions || [])[index],
+                          enabled,
+                        },
+                        ...(prev.preferredStreamExpressions || []).slice(
+                          index + 1
+                        ),
+                      ],
                     }));
                   }}
                   {...getSyncedProps('syncedPreferredStreamExpressionUrls')}

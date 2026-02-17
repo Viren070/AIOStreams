@@ -19,6 +19,7 @@ import {
   isNotVideoFile,
   isTorrentDebridService,
   isUsenetDebridService,
+  TitleMetadata,
 } from '../../debrid/index.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
 import { preprocessTitle } from '../../parser/utils.js';
@@ -30,15 +31,9 @@ import { preprocessTitle } from '../../parser/utils.js';
 
 const logger = createLogger('debrid');
 
-// export function
-
-interface Metadata {
-  titles: string[];
-  season?: number;
-  episode?: number;
-  absoluteEpisode?: number;
-  seasonYear?: number;
-}
+// Use TitleMetadata from debrid base for consistent metadata across
+// the builtin addon search and the service wrap processing.
+type Metadata = TitleMetadata;
 
 export function validateInfoHash(
   infoHash: string | undefined
@@ -49,7 +44,9 @@ export function validateInfoHash(
 }
 
 export function extractTrackersFromMagnet(magnet: string): string[] {
-  return new URL(magnet.replace('&amp;', '&')).searchParams.getAll('tr');
+  return new URL(magnet.replace('&amp;', '&')).searchParams
+    .getAll('tr')
+    .filter((tracker) => tracker.trim() !== '');
 }
 
 export function extractInfoHashFromMagnet(magnet: string): string | undefined {
@@ -63,7 +60,8 @@ export async function processTorrents(
   debridServices: BuiltinDebridServices,
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  checkOwned: boolean = true
 ): Promise<{
   results: TorrentWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
@@ -82,7 +80,8 @@ export async function processTorrents(
         service,
         stremioId,
         metadata,
-        clientIp
+        clientIp,
+        checkOwned
       );
       return { serviceId: service.id, results: serviceResults, error: null };
     } catch (error) {
@@ -113,7 +112,8 @@ async function processTorrentsForDebridService(
   service: BuiltinDebridServices[number],
   stremioId: string,
   metadata?: Metadata,
-  clientIp?: string
+  clientIp?: string,
+  checkOwned: boolean = true
 ): Promise<TorrentWithSelectedFile[]> {
   const startTime = Date.now();
   const debridService = getDebridService(
@@ -129,7 +129,8 @@ async function processTorrentsForDebridService(
 
   const magnetCheckResults = await debridService.checkMagnets(
     torrents.map((torrent) => torrent.hash),
-    stremioId
+    stremioId,
+    checkOwned
   );
   // const magnetCheckTime = getTimeTakenSincePoint(startTime);
   logger.debug(`Retrieved magnet status from debrid`, {
@@ -242,7 +243,7 @@ async function processTorrentsForDebridService(
         service: {
           id: service.id,
           cached: magnetCheckResult?.status === 'cached',
-          library: magnetCheckResult?.library === true,
+          library: (magnetCheckResult?.library || torrent.library) === true,
         },
       });
     }
@@ -530,7 +531,7 @@ async function processNZBsForDebridService(
         service: {
           id: service.id,
           cached: nzbCheckResult?.status === 'cached',
-          library: nzbCheckResult?.library === true,
+          library: (nzbCheckResult?.library || nzb.library) === true,
         },
       });
     }

@@ -268,6 +268,127 @@ export function TextInputs({
   );
 }
 
+// ToggleableTextInputs
+
+export type ToggleableTextInputProps = {
+  title: string;
+  description: string;
+  values: { expression: string; enabled: boolean }[];
+  onValuesChange: (values: { expression: string; enabled: boolean }[]) => void;
+  onExpressionChange: (expression: string, index: number) => void;
+  onEnabledChange?: (enabled: boolean, index: number) => void;
+  placeholder?: string;
+  syncConfig?: SyncConfig;
+};
+
+export function ToggleableTextInputs({
+  title,
+  description,
+  values,
+  onValuesChange,
+  onExpressionChange,
+  onEnabledChange,
+  placeholder,
+  syncConfig,
+}: ToggleableTextInputProps) {
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+
+  const getExportData = useCallback(
+    () =>
+      valuesRef.current.map((v) => ({
+        expression: v.expression,
+        enabled: v.enabled,
+      })),
+    []
+  );
+  const handleImportData = useCallback(
+    (data: any) => {
+      // Support both new format [{expression, enabled}] and legacy format {values: string[]}
+      if (
+        Array.isArray(data) &&
+        data.every((v: any) => typeof v.expression === 'string')
+      ) {
+        onValuesChange(
+          data.map((v: { expression: string; enabled?: boolean }) => ({
+            expression: v.expression,
+            enabled: v.enabled ?? true,
+          }))
+        );
+        return true;
+      }
+      if (Array.isArray(data?.values)) {
+        onValuesChange(
+          data.values.map((v: string) => ({
+            expression: v,
+            enabled: true,
+          }))
+        );
+        return true;
+      }
+      return false;
+    },
+    [onValuesChange]
+  );
+  const { modal, handleImport, handleExport } = useImportExport(
+    getExportData,
+    handleImportData,
+    title
+  );
+
+  return (
+    <SettingsCard title={title} description={description}>
+      {values.map((value, index) => (
+        <div key={index} className="flex gap-2 items-end">
+          <div className="flex items-center pb-0.5">
+            <Checkbox
+              value={value.enabled ?? true}
+              defaultValue={true}
+              size="lg"
+              onValueChange={(v) => {
+                if (onEnabledChange) {
+                  onEnabledChange(v === true, index);
+                }
+              }}
+            />
+          </div>
+          <div className="flex-1">
+            <TextInput
+              value={value.expression}
+              label="Expression"
+              placeholder={placeholder}
+              disabled={value.enabled === false}
+              onValueChange={(newValue) => onExpressionChange(newValue, index)}
+            />
+          </div>
+          <div className="flex gap-1 items-end pb-1">
+            <ItemActions
+              items={values}
+              index={index}
+              onItemsChange={onValuesChange}
+            />
+          </div>
+        </div>
+      ))}
+      <ListFooter
+        onAdd={() =>
+          onValuesChange([...values, { expression: '', enabled: true }])
+        }
+        onImportClick={modal.open}
+        onExport={handleExport}
+      />
+      <ImportModal
+        open={modal.isOpen}
+        onOpenChange={modal.toggle}
+        onImport={handleImport}
+      />
+      {syncConfig && (
+        <SyncedUrlInputs syncConfig={syncConfig} renderType="nameable" />
+      )}
+    </SettingsCard>
+  );
+}
+
 // TwoTextInputs (KeyValueInput)
 
 export type KeyValueInputProps = {

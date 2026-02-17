@@ -382,6 +382,8 @@ function Content() {
       tvdbApiKey: undefined,
       rpdbApiKey: undefined,
       topPosterApiKey: undefined,
+      aioratingsApiKey: undefined,
+      aioratingsProfileId: undefined,
       services: clonedData?.services?.map((service) => ({
         ...service,
         credentials: {},

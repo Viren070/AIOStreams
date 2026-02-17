@@ -203,12 +203,12 @@ const logStartupInfo = () => {
       );
     }
 
-    if (Env.RPDB_API_KEY_VALIDITY_CACHE_TTL === -1) {
-      logKeyValue('RPDB API Cache:', '❌ DISABLED');
+    if (Env.POSTER_API_KEY_VALIDITY_CACHE_TTL === -1) {
+      logKeyValue('Poster API Cache:', '❌ DISABLED');
     } else {
       logKeyValue(
-        'RPDB API TTL:',
-        formatDurationAsText(Env.RPDB_API_KEY_VALIDITY_CACHE_TTL)
+        'Poster API TTL:',
+        formatDurationAsText(Env.POSTER_API_KEY_VALIDITY_CACHE_TTL)
       );
     }
   });

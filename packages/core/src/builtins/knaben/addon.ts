@@ -42,19 +42,16 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
     this.api = new KnabenAPI();
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(_parsedId: ParsedId): Promise<NZB[]> {
     return [];
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
     const queryLimit = createQueryLimit();
     let categories: number[] = [];
+    const metadata = await this.getSearchMetadata();
     if (!metadata.primaryTitle) {
       return [];
     }

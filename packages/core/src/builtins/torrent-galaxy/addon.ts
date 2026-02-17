@@ -47,18 +47,15 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
     this.api = new TorrentGalaxyAPI();
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(_parsedId: ParsedId): Promise<NZB[]> {
     return [];
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
     const queryLimit = createQueryLimit();
+    const metadata = await this.getSearchMetadata();
     if (!metadata.primaryTitle) {
       return [];
     }

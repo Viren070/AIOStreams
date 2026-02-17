@@ -379,7 +379,7 @@ export class StremioTransformer {
     if (meta.videos && formatter) {
       for (const video of meta.videos) {
         if (video.streams && video.streams.length > 0) {
-          const transformedStreams = await Promise.all(
+          const transformedStreams: AIOStream[] = await Promise.all(
             video.streams.map((stream, index) =>
               this.convertParsedStreamToStream(stream, formatter!, index, {
                 disableAutoplay: disableAutoplay ?? false,
@@ -387,7 +387,8 @@ export class StremioTransformer {
               })
             )
           );
-          video.streams = transformedStreams as unknown as ParsedStream[];
+          (video as NonNullable<Meta['videos']>[number]).streams =
+            transformedStreams;
         }
       }
     }

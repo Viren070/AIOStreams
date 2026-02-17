@@ -32,13 +32,12 @@ import {
   ServiceAuth,
   DebridError,
   generatePlaybackUrl,
-  TitleMetadata as DebridTitleMetadata,
+  TitleMetadata,
   metadataStore,
   FileInfo,
 } from '../../debrid/index.js';
 import { processTorrents, processNZBs } from '../utils/debrid.js';
 import { calculateAbsoluteEpisode } from '../utils/general.js';
-import { TitleMetadata } from '../torbox-search/source-handlers.js';
 import { MetadataService } from '../../metadata/service.js';
 import { Logger } from 'winston';
 import pLimit from 'p-limit';
@@ -82,13 +81,48 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   protected readonly userData: T;
   protected readonly clientIp?: string;
 
-  private static readonly supportedIdTypes: IdType[] = [
+  protected static readonly supportedIdTypes: IdType[] = [
     'imdbId',
     'kitsuId',
     'malId',
     'themoviedbId',
     'thetvdbId',
   ];
+
+  protected get supportedIdTypes(): IdType[] {
+    return (this.constructor as typeof BaseDebridAddon).supportedIdTypes;
+  }
+
+  /**
+   * Whether this addon needs search metadata (title, year, IDs, etc.).
+   * Set to false in subclasses that don't use metadata (e.g. EZTV).
+   * When false, getSearchMetadata() will return a minimal empty metadata object.
+   */
+  protected static readonly needsSearchMetadata: boolean = true;
+
+  protected get needsSearchMetadata(): boolean {
+    return (this.constructor as typeof BaseDebridAddon).needsSearchMetadata;
+  }
+
+  /**
+   * Promise that resolves to the search metadata. Started at the beginning of
+   * getStreams() but not awaited immediately, so implementations can do other
+   * work (e.g. fetching library lists) in parallel.
+   */
+  private _searchMetadataPromise: Promise<SearchMetadata> | null = null;
+
+  /**
+   * Await the search metadata promise. Must be called within _searchTorrents
+   * or _searchNzbs when the implementation actually needs the metadata.
+   */
+  protected async getSearchMetadata(): Promise<SearchMetadata> {
+    if (!this._searchMetadataPromise) {
+      throw new Error(
+        'Search metadata not initialised. getSearchMetadata() must be called within _searchTorrents or _searchNzbs.'
+      );
+    }
+    return this._searchMetadataPromise;
+  }
 
   constructor(userData: T, configSchema: z.ZodType<T>, clientIp?: string) {
     try {
@@ -114,7 +148,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         {
           name: 'stream',
           types: ['movie', 'series', 'anime'],
-          idPrefixes: IdParser.getPrefixes(BaseDebridAddon.supportedIdTypes),
+          idPrefixes: IdParser.getPrefixes(this.supportedIdTypes),
         },
       ],
     };
@@ -123,10 +157,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   public async getStreams(type: string, id: string): Promise<Stream[]> {
     const parsedId = IdParser.parse(id, type);
     const errorStreams: Stream[] = [];
-    if (
-      !parsedId ||
-      !BaseDebridAddon.supportedIdTypes.includes(parsedId.type)
-    ) {
+    if (!parsedId || !this.supportedIdTypes.includes(parsedId.type)) {
       throw new Error(`Unsupported ID: ${id}`);
     }
 
@@ -135,28 +166,34 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       requestId: id,
     });
 
-    let searchMetadata: SearchMetadata;
-    try {
-      searchMetadata = await this._getSearchMetadata(parsedId, type);
-      if (searchMetadata.primaryTitle) {
-        searchMetadata.primaryTitle = cleanTitle(searchMetadata.primaryTitle);
-        this.logger.debug(
-          `Cleaned primary title for ${id}: ${searchMetadata.primaryTitle}`
-        );
-      }
-    } catch (error) {
-      this.logger.error(`Failed to get search metadata for ${id}: ${error}`);
-      return [
-        this._createErrorStream({
-          title: `${this.name}`,
-          description: 'Failed to get metadata',
-        }),
-      ];
+    // Start metadata fetch in the background so implementations can do other
+    // work (e.g. fetching library lists) before awaiting it.
+    if (this.needsSearchMetadata) {
+      this._searchMetadataPromise = this._getSearchMetadata(
+        parsedId,
+        type
+      ).then((metadata) => {
+        if (metadata.primaryTitle) {
+          metadata.primaryTitle = cleanTitle(metadata.primaryTitle);
+          this.logger.debug(
+            `Cleaned primary title for ${id}: ${metadata.primaryTitle}`
+          );
+        }
+        return metadata;
+      });
+    } else {
+      // Provide a minimal empty metadata object for addons that don't need it
+      this._searchMetadataPromise = Promise.resolve({
+        primaryTitle: undefined,
+        titles: [],
+        season: parsedId.season ? Number(parsedId.season) : undefined,
+        episode: parsedId.episode ? Number(parsedId.episode) : undefined,
+      });
     }
 
     const searchPromises = await Promise.allSettled([
-      this._searchTorrents(parsedId, searchMetadata),
-      this._searchNzbs(parsedId, searchMetadata),
+      this._searchTorrents(parsedId),
+      this._searchNzbs(parsedId),
     ]);
 
     let torrentResults =
@@ -179,6 +216,20 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           description: searchPromises[1].reason.message,
         })
       );
+    }
+
+    // Now await the metadata — needed for processTorrents/processNZBs and titleMetadata
+    let searchMetadata: SearchMetadata;
+    try {
+      searchMetadata = await this.getSearchMetadata();
+    } catch (error) {
+      this.logger.error(`Failed to get search metadata for ${id}: ${error}`);
+      return [
+        this._createErrorStream({
+          title: `${this.name}`,
+          description: 'Failed to get metadata',
+        }),
+      ];
     }
 
     const torrentsToDownload = torrentResults.filter(
@@ -218,10 +269,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     }
 
     const torrentServices = this.userData.services.filter(
-      (s) => !['nzbdav', 'altmount'].includes(s.id) // usenet only services excluded
+      (s) => !['nzbdav', 'altmount'].includes(s.id)
     );
-    const nzbServices = this.userData.services.filter(
-      (s) => ['nzbdav', 'altmount', 'torbox', 'stremio_nntp'].includes(s.id) // only keep services that support usenet
+    const nzbServices = this.userData.services.filter((s) =>
+      ['nzbdav', 'altmount', 'torbox', 'stremio_nntp'].includes(s.id)
     );
 
     if (torrentServices.length === 0 && torrentResults.length > 0) {
@@ -257,7 +308,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         torrentServices,
         id,
         searchMetadata,
-        this.clientIp
+        this.clientIp,
+        this.userData.checkOwned
       ),
       processNZBs(
         nzbResults,
@@ -316,7 +368,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       },
       {} as Record<BuiltinServiceId, string | string[]>
     );
-    const debridTitleMetadata: DebridTitleMetadata = {
+    const titleMetadata: TitleMetadata = {
       titles: searchMetadata.titles,
       year: searchMetadata.year,
       seasonYear: searchMetadata.seasonYear,
@@ -325,10 +377,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       absoluteEpisode: searchMetadata.absoluteEpisode,
       relativeAbsoluteEpisode: searchMetadata.relativeAbsoluteEpisode,
     };
-    const metadataId = getSimpleTextHash(JSON.stringify(debridTitleMetadata));
+    const metadataId = getSimpleTextHash(JSON.stringify(titleMetadata));
     await metadataStore().set(
       metadataId,
-      debridTitleMetadata,
+      titleMetadata,
       Env.BUILTIN_PLAYBACK_LINK_VALIDITY
     );
 
@@ -622,13 +674,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   }
 
   protected abstract _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]>;
-  protected abstract _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]>;
+  protected abstract _searchNzbs(parsedId: ParsedId): Promise<NZB[]>;
 
   protected async _getSearchMetadata(
     parsedId: ParsedId,

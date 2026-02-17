@@ -24,6 +24,7 @@ const logger = createLogger('stream-context');
 export interface ExtendedMetadata extends Metadata {
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
+  seasonYear?: number; // For anime, the year of the season (e.g., 2021 for "Winter 2021")
 }
 
 export interface ExpressionContext {
@@ -83,7 +84,8 @@ export class StreamContext {
   // Episode details for series digital release filter and bitrate calculation
   private _episodeDetails: { air_date?: string; runtime?: number } | undefined;
   private _episodeDetailsPromise:
-    | Promise<{ air_date?: string; runtime?: number } | undefined> | undefined;
+    | Promise<{ air_date?: string; runtime?: number } | undefined>
+    | undefined;
 
   // SeaDex data (for anime)
   private _seadex: SeaDexResult | undefined;
@@ -274,6 +276,7 @@ export class StreamContext {
           ...metadata,
           absoluteEpisode,
           relativeAbsoluteEpisode,
+          seasonYear: this.animeEntry?.animeSeason?.year ?? undefined,
         };
 
         return extendedMetadata;

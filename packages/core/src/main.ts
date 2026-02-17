@@ -15,8 +15,6 @@ import {
   Cache,
   ExtrasParser,
   makeUrlLogSafe,
-  AnimeDatabase,
-  ParsedId,
   IdParser,
 } from './utils/index.js';
 import { Wrapper } from './wrapper.js';
@@ -32,8 +30,7 @@ import {
   Subtitle,
 } from './db/schemas.js';
 import { createProxy } from './proxy/index.js';
-import { TopPoster } from './utils/top-poster.js';
-import { RPDB } from './utils/rpdb.js';
+import { createPosterService, isPosterFromAnyService } from './poster/index.js';
 import { FeatureControl } from './utils/feature.js';
 import Proxifier from './streams/proxifier.js';
 import StreamLimiter from './streams/limiter.js';
@@ -46,6 +43,7 @@ import {
   StreamUtils,
   StreamContext,
 } from './streams/index.js';
+import { resolveServiceWrappedStreams } from './streams/serviceWrapper.js';
 import { getAddonName } from './utils/general.js';
 import { Metadata } from './metadata/utils.js';
 import { StreamSelector } from './parser/streamExpression.js';
@@ -968,44 +966,20 @@ export class AIOStreams {
     type: string,
     applyPosterService: boolean = true
   ): Promise<MetaPreview[]> {
-    const posterService = applyPosterService
-      ? this.userData.posterService ||
-        (this.userData.rpdbApiKey ? 'rpdb' : undefined)
-      : undefined;
-    const posterApiKey =
-      posterService === 'rpdb'
-        ? this.userData.rpdbApiKey
-        : posterService === 'top-poster'
-          ? this.userData.topPosterApiKey
-          : undefined;
-    const posterApi = posterApiKey
-      ? posterService === 'rpdb'
-        ? new RPDB(posterApiKey)
-        : posterService === 'top-poster'
-          ? new TopPoster(posterApiKey)
-          : undefined
-      : undefined;
+    const posterApi = applyPosterService
+      ? createPosterService(this.userData)
+      : null;
 
     return Promise.all(
       items.map(async (item) => {
         if (posterApi && item.poster) {
           let posterUrl = item.poster;
-          if (
-            posterUrl.includes('api.ratingposterdb.com') ||
-            posterUrl.includes('api.top-streaming.stream')
-          ) {
+          if (isPosterFromAnyService(posterUrl)) {
             // already a poster from a poster service, do nothing.
           } else if (this.userData.usePosterRedirectApi) {
             const itemId = (item as any).imdb_id || item.id;
-            const url = new URL(Env.BASE_URL);
-            url.pathname =
-              posterService === 'rpdb' ? '/api/v1/rpdb' : '/api/v1/top-poster';
-            url.searchParams.set('id', itemId);
-            url.searchParams.set('type', type);
-            url.searchParams.set('fallback', item.poster);
-            url.searchParams.set('apiKey', posterApiKey!);
-            posterUrl = url.toString();
-          } else if (posterApi) {
+            posterUrl = posterApi.buildRedirectUrl(itemId, type, item.poster);
+          } else {
             const servicePosterUrl = await posterApi.getPosterUrl(
               type,
               (item as any).imdb_id || item.id,
@@ -1164,6 +1138,7 @@ export class AIOStreams {
 
         if (meta.videos) {
           const context = StreamContext.create(type, id, this.userData);
+          this.streamContext = context;
           meta.videos = await Promise.all(
             meta.videos.map(async (video) => {
               if (!video.streams) {
@@ -1346,6 +1321,8 @@ export class AIOStreams {
       return;
     }
 
+    const serviceWrap = this.userData.serviceWrap;
+
     for (const preset of this.userData.presets.filter((p) => p.enabled)) {
       try {
         const Preset = PresetManager.fromId(preset.type);
@@ -1354,12 +1331,48 @@ export class AIOStreams {
             `${Preset.METADATA.NAME} has been ${Preset.METADATA.DISABLED.removed ? 'removed' : 'disabled'}: ${Preset.METADATA.DISABLED.reason}`
           );
         }
+
+        // Determine if P2P wrap applies to this preset
+        const shouldServiceWrap =
+          serviceWrap?.enabled &&
+          Preset.METADATA.SUPPORTED_STREAM_TYPES.includes(
+            constants.P2P_STREAM_TYPE
+          ) &&
+          !Preset.METADATA.BUILTIN &&
+          (!serviceWrap.presets ||
+            serviceWrap.presets.length === 0 ||
+            serviceWrap.presets.includes(preset.instanceId));
+
+        // When Service Wrap is active, only generate normal addons for services
+        // that are NOT builtin-supported (since builtin services will be handled
+        // by resolveServiceWrappedStreams through the service-wrapped addon).
+        // This avoids redundant debrid addons.
+        const normalUserData = shouldServiceWrap
+          ? {
+              ...this.userData,
+              services: (this.userData.services ?? []).filter(
+                (s) =>
+                  !(
+                    constants.BUILTIN_SUPPORTED_SERVICES as readonly string[]
+                  ).includes(s.id)
+              ),
+            }
+          : this.userData;
+
         const addons = await Preset.generateAddons(
-          this.userData,
+          normalUserData,
           preset.options
         );
+
+        // When service wrapping, don't add addons that fell into P2P mode
+        // due to having no usable services — those would be unmarked duplicates
+        // of the serviceWrapped addon we generate below.
+        const filteredAddons = shouldServiceWrap
+          ? addons.filter((a) => a.identifier !== 'p2p')
+          : addons;
+
         this.addons.push(
-          ...addons.map(
+          ...filteredAddons.map(
             (a): Addon => ({
               ...a,
               preset: {
@@ -1372,6 +1385,43 @@ export class AIOStreams {
             })
           )
         );
+
+        // Service Wrap: generate the P2P-mode addon for this preset
+        // so its torrent results can be resolved through builtin debrid services
+        if (shouldServiceWrap) {
+          try {
+            // Generate addons with no services, forcing the preset into P2P mode
+            const p2pUserData: UserData = {
+              ...this.userData,
+              services: [], // empty services → preset falls into P2P codepath
+            };
+            const p2pAddons = await Preset.generateAddons(
+              p2pUserData,
+              preset.options
+            );
+            // Only keep addons that are actually P2P (not debrid addons from presets that don't care about services)
+            this.addons.push(
+              ...p2pAddons.map(
+                (a): Addon => ({
+                  ...a,
+                  preset: {
+                    ...a.preset,
+                    id: preset.instanceId,
+                  },
+                  instanceId: `${preset.instanceId}${getSimpleTextHash(`servicewrap-${a.identifier ?? ''}`).slice(0, 4)}`,
+                  serviceWrapped: true,
+                })
+              )
+            );
+            logger.info(
+              `Service Wrap: generated ${p2pAddons.length} P2P-mode addon(s) for preset ${Preset.METADATA.NAME}`
+            );
+          } catch (error) {
+            logger.warn(
+              `Service Wrap: failed to generate P2P addons for ${Preset.METADATA.NAME}: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        }
       } catch (error) {
         if (this.options?.skipFailedAddons !== false) {
           this.addonInitialisationErrors.push({
@@ -2171,6 +2221,25 @@ export class AIOStreams {
     if (isMeta) {
       // Run SeaDex precompute before filter so seadex() works in Included SEL
       await this.precomputer.precomputeSeaDexOnly(processedStreams, context);
+      processedStreams = await this.filterer.filter(processedStreams, context);
+    }
+
+    // Resolve service-wrapped P2P streams through debrid services.
+    // This runs after the initial filter pass (which lets P2P streams through
+    // when serviceWrap is enabled) so that the streams can be converted to debrid.
+    const resolvedResults = await resolveServiceWrappedStreams(
+      processedStreams,
+      context,
+      this.userData,
+      this.addons
+    );
+    processedStreams = resolvedResults.streams;
+    errors.push(...resolvedResults.errors);
+
+    // Re-run filters on streams that were just service-wrapped.
+    // They now have debrid-specific info (service, cached status, etc.)
+    // that wasn't available during the first filter pass.
+    if (resolvedResults.hasNewStreams) {
       processedStreams = await this.filterer.filter(processedStreams, context);
     }
 

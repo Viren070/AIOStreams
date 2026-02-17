@@ -729,7 +729,9 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
   | 'tmdbAccessToken'
   | 'rpdbApiKey'
   | 'tvdbApiKey'
-  | 'topPosterApiKey',
+  | 'topPosterApiKey'
+  | 'aioratingsApiKey'
+  | 'aioratingsProfileId',
   {
     name: string;
     description: string;
@@ -759,6 +761,16 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     name: 'TVDB API Key',
     description:
       'Sign up for a free API Key at [TVDB](https://www.thetvdb.com/api-information) and then get it from your [dashboard](https://www.thetvdb.com/dashboard/account/apikeys).',
+  },
+  aioratingsApiKey: {
+    name: 'AIOratings API Key',
+    description:
+      'Get your API key from [here](https://aioratings.com) for custom posters with ratings.',
+  },
+  aioratingsProfileId: {
+    name: 'AIOratings Profile ID',
+    description:
+      'Use "default" for the default profile, or enter a custom profile UUID from your AIOratings dashboard.',
   },
 };
 

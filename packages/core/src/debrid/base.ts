@@ -91,6 +91,7 @@ export interface DebridDownload {
   name?: string;
   private?: boolean;
   size?: number;
+  addedAt?: string;
   status:
     | 'cached'
     | 'downloaded'
@@ -119,6 +120,8 @@ const BasePlaybackInfoSchema = z.object({
   metadata: TitleMetadataSchema.optional(),
   filename: z.string().optional(),
   index: z.number().optional(),
+  fileIndex: z.number().optional(),
+  serviceItemId: z.string().optional(),
 });
 
 const BaseFileInfoSchema = z.object({
@@ -126,6 +129,8 @@ const BaseFileInfoSchema = z.object({
   title: z.string().optional(),
   cacheAndPlay: z.boolean().optional(),
   autoRemoveDownloads: z.boolean().optional(),
+  serviceItemId: z.string().optional(),
+  fileIndex: z.number().optional(),
 });
 
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
@@ -166,6 +171,8 @@ export type ServiceAuth = z.infer<typeof ServiceAuthSchema>;
 
 export type PlaybackInfo = z.infer<typeof PlaybackInfoSchema>;
 export type FileInfo = z.infer<typeof FileInfoSchema>;
+export type TorrentInfo = z.infer<typeof TorrentInfoSchema>;
+export type UsenetInfo = z.infer<typeof UsenetInfoSchema>;
 export type TitleMetadata = z.infer<typeof TitleMetadataSchema>;
 
 interface BaseDebridService {
@@ -180,12 +187,17 @@ interface BaseDebridService {
 }
 
 export interface TorrentDebridService extends BaseDebridService {
-  checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]>;
+  checkMagnets(
+    magnets: string[],
+    sid?: string,
+    checkOwned?: boolean
+  ): Promise<DebridDownload[]>;
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
   addTorrent(torrent: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
   removeMagnet(magnetId: string): Promise<void>;
+  getMagnet?(magnetId: string): Promise<DebridDownload>;
 }
 
 export interface UsenetDebridService extends BaseDebridService {
@@ -201,6 +213,7 @@ export interface UsenetDebridService extends BaseDebridService {
     clientIp?: string
   ): Promise<string>;
   removeNzb?(nzbId: string): Promise<void>;
+  getNzb?(nzbId: string): Promise<DebridDownload>;
 }
 
 export type DebridService = TorrentDebridService | UsenetDebridService;

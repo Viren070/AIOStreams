@@ -11,7 +11,6 @@ export {
   GDriveAddon,
   GoogleOAuth,
   GDriveAPI,
-  TorBoxSearchAddonError,
   TorznabAddon,
   NewznabAddon,
   ProwlarrAddon,
@@ -25,5 +24,6 @@ export {
   EasynewsApi,
   EasynewsNzbParams,
   SeaDexDataset,
+  LibraryAddon,
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';

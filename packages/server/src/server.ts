@@ -72,7 +72,7 @@ async function initialiseProwlarr() {
 
 async function initialiseTemplates() {
   try {
-    TemplateManager.loadTemplates();
+    await TemplateManager.loadTemplates();
   } catch (error) {
     logger.error('Failed to initialise templates:', error);
   }

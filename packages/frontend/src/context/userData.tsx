@@ -123,11 +123,20 @@ export function applyMigrations(config: any): UserData {
 
   for (const key of expressionLists) {
     if (Array.isArray((config as any)[key])) {
-      (config as any)[key] = (config as any)[key].map((expr: unknown) =>
-        typeof expr === 'string'
-          ? migrateAnimeQueryTypeInExpression(expr)
-          : expr
-      );
+      (config as any)[key] = (config as any)[key].map((expr: unknown) => {
+        if (typeof expr === 'string') {
+          return migrateAnimeQueryTypeInExpression(expr);
+        }
+        if (typeof expr === 'object' && expr !== null && 'expression' in expr) {
+          return {
+            ...(expr as any),
+            expression: migrateAnimeQueryTypeInExpression(
+              (expr as any).expression
+            ),
+          };
+        }
+        return expr;
+      });
     }
   }
 
@@ -178,6 +187,27 @@ export function applyMigrations(config: any): UserData {
   }
   delete config.alwaysPrecache;
   delete config.precacheCondition;
+
+  // migrate p2pWrap to serviceWrap
+  if (config.p2pWrap !== undefined && config.serviceWrap === undefined) {
+    config.serviceWrap = config.p2pWrap;
+    delete config.p2pWrap;
+  }
+
+  // migrate stream expressions from string[] to {expression, enabled}[]
+  const streamExpressionKeys = [
+    'excludedStreamExpressions',
+    'requiredStreamExpressions',
+    'preferredStreamExpressions',
+    'includedStreamExpressions',
+  ] as const;
+  for (const key of streamExpressionKeys) {
+    if (Array.isArray(config[key])) {
+      config[key] = config[key].map((item: unknown) =>
+        typeof item === 'string' ? { expression: item, enabled: true } : item
+      );
+    }
+  }
 
   return config;
 }
@@ -331,6 +361,7 @@ export const DefaultUserData: UserData = {
   precacheSelector: DEFAULT_PRECACHE_SELECTOR,
   enableSeadex: true,
   regexOverrides: [],
+  checkOwned: true,
 };
 
 interface UserDataContextType {

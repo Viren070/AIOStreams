@@ -109,7 +109,7 @@ router.get(
 
       const metadata: TitleMetadata | undefined =
         await metadataStore().get(metadataId);
-      if (!metadata) {
+      if (!metadata && !fileInfo.serviceItemId) {
         throw new APIError(
           constants.ErrorCode.BAD_REQUEST,
           undefined,
@@ -131,6 +131,8 @@ router.get(
               sources: fileInfo.sources,
               index: fileInfo.index,
               filename: filename,
+              fileIndex: fileInfo.fileIndex,
+              serviceItemId: fileInfo.serviceItemId,
             }
           : {
               type: 'usenet',
@@ -141,6 +143,8 @@ router.get(
               easynewsUrl: fileInfo.easynewsUrl,
               index: fileInfo.index,
               filename: filename,
+              fileIndex: fileInfo.fileIndex,
+              serviceItemId: fileInfo.serviceItemId,
             };
 
       const debridInterface = getDebridService(

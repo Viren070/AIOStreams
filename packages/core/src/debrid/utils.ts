@@ -48,6 +48,7 @@ interface BaseFile {
   group?: string;
   age?: number; // age in hours
   duration?: number; // duration in seconds
+  library?: boolean; // whether the file is already in the user's library
 }
 
 export interface Torrent extends BaseFile {
@@ -370,6 +371,51 @@ export async function selectFileInTorrentOrNZB(
           score += 100;
           fileReport.scoreBreakdown.episodeMatchType = 'batchRegular';
           fileReport.scoreBreakdown.episodeScore = 100;
+        }
+      } else if (
+        parsedHasSeason &&
+        metadata?.season &&
+        metadata?.absoluteEpisode &&
+        metadata?.episode &&
+        metadata.absoluteEpisode !== metadata.episode
+      ) {
+        // File has season info: prefer regular episode over absolute.
+        const matchesRegular = parsed.episodes?.includes(metadata.episode);
+        const matchesAbsolute = parsed.episodes?.includes(
+          metadata.absoluteEpisode
+        );
+        const matchesRelativeAbsolute = metadata.relativeAbsoluteEpisode
+          ? parsed.episodes?.includes(metadata.relativeAbsoluteEpisode)
+          : false;
+
+        if (matchesRegular && isExactMatch) {
+          score += 750;
+          fileReport.scoreBreakdown.episodeMatchType = 'exact';
+          fileReport.scoreBreakdown.episodeScore = 750;
+        } else if (matchesRegular && isBatchMatch) {
+          score += 250;
+          fileReport.scoreBreakdown.episodeMatchType = 'batch';
+          fileReport.scoreBreakdown.episodeScore = 250;
+        } else if (matchesAbsolute && isExactMatch) {
+          score += 200;
+          fileReport.scoreBreakdown.episodeMatchType =
+            'exactAbsoluteWithSeason';
+          fileReport.scoreBreakdown.episodeScore = 200;
+        } else if (matchesRelativeAbsolute && isExactMatch) {
+          score += 150;
+          fileReport.scoreBreakdown.episodeMatchType =
+            'exactRelativeAbsoluteWithSeason';
+          fileReport.scoreBreakdown.episodeScore = 150;
+        } else if (matchesAbsolute && isBatchMatch) {
+          score += 100;
+          fileReport.scoreBreakdown.episodeMatchType =
+            'batchAbsoluteWithSeason';
+          fileReport.scoreBreakdown.episodeScore = 100;
+        } else if (matchesRelativeAbsolute && isBatchMatch) {
+          score += 50;
+          fileReport.scoreBreakdown.episodeMatchType =
+            'batchRelativeAbsoluteWithSeason';
+          fileReport.scoreBreakdown.episodeScore = 50;
         }
       } else {
         // Standard scoring: strongly prefer exact episodes over batches

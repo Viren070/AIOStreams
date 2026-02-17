@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { ParsedId } from '../../utils/id-parser.js';
 import { createLogger } from '../../utils/index.js';
 import { Torrent, NZB, UnprocessedTorrent } from '../../debrid/index.js';
-import { SearchMetadata } from '../base/debrid';
 import {
   extractTrackersFromMagnet,
   validateInfoHash,
@@ -41,9 +40,9 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
+    const metadata = await this.getSearchMetadata();
     const { results, meta } = await this.performSearch(parsedId, metadata);
     const seenTorrents = new Set<string>();
 
@@ -84,10 +83,7 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
     return torrents;
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(_parsedId: ParsedId): Promise<NZB[]> {
     // This addon does not support NZBs, so we return an empty array.
     return [];
   }

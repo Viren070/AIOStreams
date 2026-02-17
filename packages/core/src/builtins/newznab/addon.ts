@@ -155,10 +155,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     };
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
+    const metadata = await this.getSearchMetadata();
     const { results, meta } = await this.performSearch(parsedId, metadata);
     const seenNzbs = new Set<string>();
 
@@ -174,6 +172,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       const md5 =
         result.newznab?.infohash?.toString() ||
         createHash('md5').update(nzbUrl).digest('hex');
+
       let date = result.pubDate?.toString();
       if (typeof result.newznab?.usenetdate === 'string') {
         date = result.newznab.usenetdate;
@@ -246,10 +245,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     return nzbs;
   }
 
-  protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<Torrent[]> {
+  protected async _searchTorrents(_parsedId: ParsedId): Promise<Torrent[]> {
     return [];
   }
 

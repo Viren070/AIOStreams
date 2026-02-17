@@ -145,6 +145,7 @@ const AddonSchema = z.object({
   formatPassthrough: z.boolean().optional(),
   resultPassthrough: z.boolean().optional(),
   forceToTop: z.boolean().optional(),
+  serviceWrapped: z.boolean().optional(),
   headers: z.record(z.string().min(1), z.string().min(1)).optional(),
   ip: z.union([z.ipv4(), z.ipv6()]).optional(),
 });
@@ -446,16 +447,36 @@ export const UserDataSchema = z.object({
   excludeUncachedFromStreamTypes: z.array(StreamTypes).optional(),
   excludeUncachedMode: z.enum(['or', 'and']).optional(),
   excludedStreamExpressions: z
-    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .array(
+      z.object({
+        expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        enabled: z.boolean().default(true),
+      })
+    )
     .optional(),
   requiredStreamExpressions: z
-    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .array(
+      z.object({
+        expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        enabled: z.boolean().default(true),
+      })
+    )
     .optional(),
   preferredStreamExpressions: z
-    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .array(
+      z.object({
+        expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        enabled: z.boolean().default(true),
+      })
+    )
     .optional(),
   includedStreamExpressions: z
-    .array(z.string().min(1).max(Env.MAX_SEL_LENGTH))
+    .array(
+      z.object({
+        expression: z.string().min(1).max(Env.MAX_SEL_LENGTH),
+        enabled: z.boolean().default(true),
+      })
+    )
     .optional(),
   rankedStreamExpressions: z
     .array(
@@ -547,7 +568,11 @@ export const UserDataSchema = z.object({
   rpdbApiKey: z.string().optional(),
   // rpdbUseRedirectApi: z.boolean().optional(),
   topPosterApiKey: z.string().optional(),
-  posterService: z.enum(['rpdb', 'top-poster', 'none']).optional(),
+  aioratingsApiKey: z.string().optional(),
+  aioratingsProfileId: z.string().optional(),
+  posterService: z
+    .enum(['rpdb', 'top-poster', 'aioratings', 'none'])
+    .optional(),
   usePosterRedirectApi: z.boolean().optional(),
   usePosterServiceForMeta: z.boolean().optional(),
   formatter: Formatter,
@@ -626,6 +651,19 @@ export const UserDataSchema = z.object({
   cacheAndPlay: CacheAndPlaySchema.optional(),
 
   autoRemoveDownloads: z.boolean().optional(),
+  checkOwned: z.boolean().optional().default(true),
+  serviceWrap: z
+    .object({
+      enabled: z.boolean().optional(),
+      /** Preset instanceIds to wrap — if empty/absent, all P2P-capable presets are wrapped */
+      presets: z.array(z.string().min(1)).optional(),
+      /** Which debrid services to use for processing wrapped P2P torrents — if absent, uses all enabled */
+      services: z.array(ServiceIds).optional(),
+      /** Re-process debrid results from external addons that include torrent info hashes through
+       *  additional/different debrid services. Only applies to addons selected in the wrap addons list. */
+      reconfigureService: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;
@@ -859,7 +897,8 @@ export const ParsedStreamSchema = z.object({
   folderSize: z.number().optional(),
   type: StreamTypes,
   indexer: z.string().optional(),
-  age: z.number().optional(), // Age in hours since upload
+  /**Age in hours since upload */
+  age: z.number().optional(),
   torrent: z
     .object({
       infoHash: z.string().min(1).optional(),
@@ -1230,6 +1269,13 @@ export const TopPosterIsValidResponse = z.object({
   valid: z.boolean(),
 });
 export type TopPosterIsValidResponse = z.infer<typeof TopPosterIsValidResponse>;
+
+export const AIOratingsIsValidResponse = z.object({
+  valid: z.boolean(),
+});
+export type AIOratingsIsValidResponse = z.infer<
+  typeof AIOratingsIsValidResponse
+>;
 
 export const TemplateSchema = z.object({
   metadata: z.object({

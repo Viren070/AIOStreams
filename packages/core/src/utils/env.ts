@@ -133,6 +133,24 @@ const urlOrUrlList = makeExactValidator<readonly string[]>((x) => {
   }
 });
 
+const strOrStrList = makeExactValidator<readonly string[]>((x) => {
+  if (typeof x === 'string') {
+    return Object.freeze(x.split(',').map((item) => item.trim()));
+  }
+  try {
+    const parsed = JSON.parse(x);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((item) => typeof item === 'string')
+    ) {
+      return Object.freeze(parsed);
+    }
+  } catch (e) {
+    return x;
+  }
+  throw new EnvError('Value must be a string or an array of strings');
+});
+
 const url = makeValidator((x) => {
   if (x === '') {
     throw new EnvMissingError(`URL cannot be empty`);
@@ -723,9 +741,9 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Max number of addon catalog items to cache',
   }),
-  RPDB_API_KEY_VALIDITY_CACHE_TTL: num({
+  POSTER_API_KEY_VALIDITY_CACHE_TTL: num({
     default: 604800, // 7 days
-    desc: 'Cache TTL for RPDB API key validity',
+    desc: 'Cache TTL for poster API key validity',
   }),
 
   PRECACHE_NEXT_EPISODE_MIN_INTERVAL: num({
@@ -810,6 +828,15 @@ export const Env = cleanEnv(process.env, {
     default: 'trusted',
     desc: 'Who can use SEL sync URLs. "all" = anyone can sync from any URL, "trusted" = only trusted users can sync from any URL (non-trusted users limited to WHITELISTED_SEL_URLS)',
     choices: ['all', 'trusted'],
+  }),
+
+  TEMPLATE_URLS: json<string[]>({
+    default: [],
+    desc: 'Remote template URLs to fetch and cache locally (JSON array of URL strings). Templates are downloaded once and refreshed periodically.',
+  }),
+  TEMPLATE_REFRESH_INTERVAL: num({
+    default: 86400,
+    desc: 'Interval in seconds to refresh remote templates. Default: 86400 (24 hours). Set to 0 to disable automatic refresh.',
   }),
 
   MAX_TIMEOUT: num({
@@ -1091,6 +1118,10 @@ export const Env = cleanEnv(process.env, {
   COMET_URL: urlOrUrlList({
     default: ['https://comet.feels.legal'],
     desc: 'Comet URL',
+  }),
+  COMET_PUBLIC_API_TOKEN: strOrStrList({
+    default: undefined,
+    desc: 'Comet public API token',
   }),
   FORCE_COMET_HOSTNAME: host({
     default: undefined,
@@ -1876,7 +1907,15 @@ export const Env = cleanEnv(process.env, {
   }),
   BUILTIN_DEBRID_LIBRARY_CACHE_TTL: num({
     default: 60 * 5, // 5 minutes
-    desc: 'Builtin Debrid NZB list cache TTL',
+    desc: 'Builtin Debrid library list cache TTL (listMagnets/listNzbs)',
+  }),
+  BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT: num({
+    default: 1,
+    desc: 'Maximum number of items to fetch per page when listing library items (listMagnets/listNzbs) for StremThru. Max 500 for StremThru, 1000 for TorBox.',
+  }),
+  BUILTIN_DEBRID_LIBRARY_PAGE_SIZE: num({
+    default: 500,
+    desc: 'Maximum number of items to fetch per page when listing library items (listMagnets/listNzbs). Max 500 for StremThru, 1000 for TorBox.',
   }),
   BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL: bool({
     default: true,

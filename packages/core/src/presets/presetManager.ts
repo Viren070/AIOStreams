@@ -63,6 +63,7 @@ import { ProwlarrPreset } from './prowlarr.js';
 import { JackettPreset } from './jackett.js';
 import { NZBHydraPreset } from './nzbhydra.js';
 import { KnabenPreset } from './knaben.js';
+import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
 import { BitmagnetPreset } from './bitmagnet.js';
 import { SootioPreset } from './sootio.js';
@@ -86,6 +87,7 @@ let PRESET_LIST: string[] = [
   'sootio',
   'zilean',
   'knaben',
+  'library',
   'eztv',
   'torrent-galaxy',
   'bitmagnet',
@@ -291,6 +293,8 @@ export class PresetManager {
         return NZBHydraPreset;
       case 'knaben':
         return KnabenPreset;
+      case 'library':
+        return LibraryPreset;
       case 'eztv':
         return EztvPreset;
       case 'bitmagnet':

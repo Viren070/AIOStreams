@@ -411,6 +411,7 @@ export interface UsenetStreamServiceConfig {
 enum Category {
   MOVIES = 'Movies',
   TV = 'TV',
+  UNCATEGORIZED = 'uncategorized',
 }
 /**
  * Base class for streaming usenet services (NzbDAV, Altmount).
@@ -568,6 +569,55 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     return { files: allFiles, depth: currentDepth };
   }
 
+  /**
+   * Get a specific NZB item by its folder name (serviceItemId).
+   * Lists files within the folder via WebDAV to populate the files array.
+   */
+  public async getNzb(nzbId: string): Promise<DebridDownload> {
+    // nzbId is the folder basename (used as serviceItemId)
+    for (const category of [
+      Category.UNCATEGORIZED,
+      Category.TV,
+      Category.MOVIES,
+    ]) {
+      const contentPath = `${this.getContentPathPrefix()}/${category}/${nzbId}`;
+      try {
+        const stat = await this.webdavClient.stat(contentPath);
+        const statData = 'data' in stat ? stat.data : stat;
+        if (statData.type === 'directory') {
+          const { files: allFiles } = await this.collectFiles(contentPath);
+          const debridFiles: DebridFile[] = allFiles.map((file, index) => ({
+            id: index,
+            name: file.basename,
+            size: file.size,
+            path: file.filename,
+            index,
+          }));
+
+          return {
+            id: nzbId,
+            name: nzbId,
+            hash: nzbId,
+            status: 'downloaded',
+            size: debridFiles.reduce((sum, f) => sum + f.size, 0),
+            files: debridFiles,
+          };
+        }
+      } catch {
+        // Not found in this category, try next
+      }
+    }
+
+    throw new DebridError(`NZB item not found: ${nzbId}`, {
+      statusCode: 404,
+      statusText: 'Not found',
+      code: 'NOT_FOUND',
+      headers: {},
+      body: { nzbId },
+      type: 'api_error',
+    });
+  }
+
   private async listWebdavFolders(path: string): Promise<FileStat[]> {
     let contents: FileStat[];
     try {
@@ -591,6 +641,10 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       );
     }
     const directories = contents.filter((item) => item.type === 'directory');
+    this.serviceLogger.debug(`Listed WebDAV folders at ${path}`, {
+      count: directories.length,
+      folders: directories.map((d) => d.filename),
+    });
     return directories;
   }
 
@@ -616,12 +670,17 @@ export abstract class UsenetStreamService implements UsenetDebridService {
         const webdavMoviesPromise = this.listWebdavFolders(
           `${this.getContentPathPrefix()}/${Category.MOVIES}`
         );
+        const webdavUncategorizedPromise = this.listWebdavFolders(
+          `${this.getContentPathPrefix()}/${Category.UNCATEGORIZED}`
+        );
 
-        const [history, webdavTv, webdavMovies] = await Promise.allSettled([
-          historyPromise,
-          webdavTvPromise,
-          webdavMoviesPromise,
-        ]);
+        const [history, webdavTv, webdavMovies, webdavUncategorized] =
+          await Promise.allSettled([
+            historyPromise,
+            webdavTvPromise,
+            webdavMoviesPromise,
+            webdavUncategorizedPromise,
+          ]);
 
         if (history.status === 'rejected') {
           throw history.reason;
@@ -629,14 +688,18 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
         if (
           webdavTv.status === 'rejected' ||
-          webdavMovies.status === 'rejected'
+          webdavMovies.status === 'rejected' ||
+          webdavUncategorized.status === 'rejected'
         ) {
           const error =
             webdavTv.status === 'rejected'
               ? webdavTv.reason
               : webdavMovies.status === 'rejected'
                 ? webdavMovies.reason
-                : null;
+                : webdavUncategorized.status === 'rejected'
+                  ? webdavUncategorized.reason
+                  : null;
+
           const status = typeof error.status === 'number' ? error.status : 500;
           if (status === 401) {
             throw new DebridError(`Could not access WebDAV: Unauthorized`, {
@@ -663,21 +726,27 @@ export abstract class UsenetStreamService implements UsenetDebridService {
           webdavTv.status === 'fulfilled' ? webdavTv.value : null;
         const webdavMoviesData =
           webdavMovies.status === 'fulfilled' ? webdavMovies.value : null;
+        const webdavUncategorizedData =
+          webdavUncategorized.status === 'fulfilled'
+            ? webdavUncategorized.value
+            : null;
 
         const webdavFiles = [
           ...(webdavTvData ?? []),
           ...(webdavMoviesData ?? []),
+          ...(webdavUncategorizedData ?? []),
         ];
         const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
           const matchingSlot = historyData?.slots.find(
             (slot) => slot.name === file.basename
           );
           return {
-            id: index,
+            id: file.basename,
             status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
             name: file.basename,
             size: file.size,
             hash: file.basename,
+            addedAt: file.lastmod ?? undefined,
             files: [],
           };
         });
@@ -800,7 +869,15 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       hash,
       filename,
       nzbUrl: maskSensitiveInfo(nzb),
+      serviceItemId: playbackInfo.serviceItemId,
+      fileIndex: playbackInfo.fileIndex,
     });
+
+    // For catalog items with serviceItemId, the serviceItemId IS the folder name (basename)
+    // We need to search both TV and Movies categories to find it
+    if (playbackInfo.serviceItemId && !nzb) {
+      return this._resolveLibraryItem(playbackInfo, filename, cacheKey);
+    }
 
     const category =
       metadata?.season || metadata?.episode ? Category.TV : Category.MOVIES;
@@ -946,7 +1023,32 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     let selectedFile;
 
-    if (debridFiles.length === 1) {
+    if (playbackInfo.fileIndex !== undefined) {
+      // Direct file index specified (e.g. from catalog meta)
+      selectedFile = debridFiles.find(
+        (f) => f.index === playbackInfo.fileIndex
+      );
+      if (!selectedFile) {
+        throw new DebridError(
+          `File with index ${playbackInfo.fileIndex} not found`,
+          {
+            statusCode: 400,
+            statusText: 'File not found',
+            code: 'NO_MATCHING_FILE',
+            headers: {},
+            body: {
+              fileIndex: playbackInfo.fileIndex,
+              availableFiles: debridFiles.map((f) => f.index),
+            },
+            type: 'api_error',
+          }
+        );
+      }
+      this.serviceLogger.debug(`Using specified fileIndex`, {
+        fileIndex: playbackInfo.fileIndex,
+        fileName: selectedFile.name,
+      });
+    } else if (debridFiles.length === 1) {
       selectedFile = debridFiles[0];
     } else {
       // Parse all file names for matching
@@ -1000,6 +1102,148 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     this.serviceLogger.debug(`Generated playback link`, { playbackLink });
 
     // Cache the result
+    await UsenetStreamService.resolveCache.set(
+      cacheKey,
+      playbackLink,
+      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
+      true
+    );
+
+    return playbackLink;
+  }
+
+  /**
+   * Resolve a library item by serviceItemId (folder name) and optionally fileIndex.
+   * For nzbdav/altmount, serviceItemId is the folder basename, and we search
+   * both TV and Movies categories to find it.
+   */
+  protected async _resolveLibraryItem(
+    playbackInfo: PlaybackInfo & { type: 'usenet' },
+    filename: string,
+    cacheKey: string
+  ): Promise<string | undefined> {
+    const folderName = playbackInfo.serviceItemId!;
+
+    // Search both categories for the folder
+    let contentPath: string | undefined;
+    for (const category of [
+      Category.UNCATEGORIZED,
+      Category.TV,
+      Category.MOVIES,
+    ]) {
+      const candidatePath = `${this.getContentPathPrefix()}/${category}/${folderName}`;
+      try {
+        const stat = await this.webdavClient.stat(candidatePath);
+        const statData = 'data' in stat ? stat.data : stat;
+        if (statData.type === 'directory') {
+          contentPath = candidatePath;
+          break;
+        }
+      } catch {
+        // Not found in this category, try next
+      }
+    }
+
+    if (!contentPath) {
+      throw new DebridError(`Library item folder not found: ${folderName}`, {
+        statusCode: 404,
+        statusText: 'Not found',
+        code: 'NOT_FOUND',
+        headers: {},
+        body: { folderName },
+        type: 'api_error',
+      });
+    }
+
+    this.serviceLogger.debug(`Found library item folder`, { contentPath });
+
+    const { files: allFiles, depth } = await this.collectFiles(contentPath);
+
+    if (allFiles.length === 0) {
+      throw new DebridError('No files found in library item', {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'NO_MATCHING_FILE',
+        headers: {},
+        body: { contentPath },
+        type: 'api_error',
+      });
+    }
+
+    const debridFiles: DebridFile[] = allFiles.map((file, index) => ({
+      id: index,
+      name: file.basename,
+      size: file.size,
+      path: file.filename,
+      index,
+    }));
+
+    this.serviceLogger.debug(`Collected files from library item`, {
+      contentPath,
+      depth,
+      count: debridFiles.length,
+      files: debridFiles.map((f) => f.name),
+    });
+
+    let selectedFile: DebridFile | undefined;
+
+    if (playbackInfo.fileIndex !== undefined) {
+      // Direct file index specified from catalog
+      selectedFile = debridFiles.find(
+        (f) => f.index === playbackInfo.fileIndex
+      );
+      if (!selectedFile) {
+        throw new DebridError(
+          `File with index ${playbackInfo.fileIndex} not found`,
+          {
+            statusCode: 400,
+            statusText: 'File not found',
+            code: 'NO_MATCHING_FILE',
+            headers: {},
+            body: {
+              fileIndex: playbackInfo.fileIndex,
+              availableFiles: debridFiles.map((f) => f.index),
+            },
+            type: 'api_error',
+          }
+        );
+      }
+      this.serviceLogger.debug(`Using specified fileIndex for library item`, {
+        fileIndex: playbackInfo.fileIndex,
+        fileName: selectedFile.name,
+      });
+    } else if (debridFiles.length === 1) {
+      selectedFile = debridFiles[0];
+    } else {
+      // Fallback: pick the largest video file
+      const videoFiles = debridFiles.filter((f) => isVideoFile(f));
+      if (videoFiles.length > 0) {
+        selectedFile = videoFiles.reduce((a, b) => (a.size > b.size ? a : b));
+      } else {
+        selectedFile = debridFiles.reduce((a, b) => (a.size > b.size ? a : b));
+      }
+    }
+
+    if (!selectedFile) {
+      throw new DebridError('No matching file found in library item', {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'NO_MATCHING_FILE',
+        headers: {},
+        body: { availableFiles: debridFiles.map((f) => f.name) },
+        type: 'api_error',
+      });
+    }
+
+    this.serviceLogger.debug(`Selected file from library item`, {
+      chosenFile: selectedFile.name,
+      chosenPath: selectedFile.path,
+      availableFiles: debridFiles.length,
+    });
+
+    const filePath = selectedFile.path || `${contentPath}/${selectedFile.name}`;
+    const playbackLink = `${this.getPublicWebdavUrlWithAuth()}${filePath}`;
+
     await UsenetStreamService.resolveCache.set(
       cacheKey,
       playbackLink,

@@ -386,7 +386,9 @@ class StreamPrecomputer {
         i < this.userData.preferredStreamExpressions.length;
         i++
       ) {
-        const expression = this.userData.preferredStreamExpressions[i];
+        const item = this.userData.preferredStreamExpressions[i];
+        const { expression, enabled } = item;
+        if (!enabled) continue;
 
         // From the streams that haven't been matched to a higher-priority condition yet...
         const availableStreams = streams.filter(
@@ -418,7 +420,7 @@ class StreamPrecomputer {
         const conditionIndex = streamToConditionIndex.get(stream.id);
         if (conditionIndex !== undefined) {
           const expression =
-            this.userData.preferredStreamExpressions[conditionIndex];
+            this.userData.preferredStreamExpressions[conditionIndex].expression;
           stream.streamExpressionMatched = {
             index: conditionIndex,
             name: extractNamesFromExpression(expression)?.[0],

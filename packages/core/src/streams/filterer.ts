@@ -1394,7 +1394,15 @@ class StreamFilterer {
         }
       }
 
-      if (this.userData.excludedStreamTypes?.includes(stream.type)) {
+      // Skip stream type filtering for P2P streams when service wrapping is enabled.
+      // These will be converted to debrid streams by _resolveServiceWrappedStreams later.
+      const skipStreamTypeFilter =
+        stream.type === 'p2p' && this.userData.serviceWrap?.enabled;
+
+      if (
+        !skipStreamTypeFilter &&
+        this.userData.excludedStreamTypes?.includes(stream.type)
+      ) {
         // Track stream type exclusions
         this.incrementRemovalReason('excludedStreamType', stream.type);
         return false;
@@ -1402,6 +1410,7 @@ class StreamFilterer {
 
       // Track required stream type misses
       if (
+        !skipStreamTypeFilter &&
         this.userData.requiredStreamTypes &&
         this.userData.requiredStreamTypes.length > 0 &&
         !this.userData.requiredStreamTypes.includes(stream.type)
@@ -2067,7 +2076,10 @@ class StreamFilterer {
     ) {
       return [];
     }
-    for (const expression of this.userData.includedStreamExpressions) {
+    for (const item of this.userData.includedStreamExpressions) {
+      const { expression, enabled } =
+        typeof item === 'string' ? { expression: item, enabled: true } : item;
+      if (!enabled) continue;
       const selectedStreams = await selector.select(streams, expression);
       this.filterStatistics.included.streamExpression.total +=
         selectedStreams.length;
@@ -2106,7 +2118,10 @@ class StreamFilterer {
       const selector = new StreamSelector(expressionContext);
       const streamsToRemove = new Set<string>(); // Track actual stream objects to be removed
 
-      for (const expression of this.userData.excludedStreamExpressions) {
+      for (const item of this.userData.excludedStreamExpressions) {
+        const { expression, enabled } =
+          typeof item === 'string' ? { expression: item, enabled: true } : item;
+        if (!enabled) continue;
         try {
           // Always select from the current filteredStreams (not yet modified by this loop)
           const selectedStreams = await selector.select(
@@ -2157,7 +2172,10 @@ class StreamFilterer {
       const streamsToKeep = new Set<string>(); // Track actual stream objects to be removed
       requiredPassthroughStreams.forEach((stream) => streamsToKeep.add(stream));
 
-      for (const expression of this.userData.requiredStreamExpressions) {
+      for (const item of this.userData.requiredStreamExpressions) {
+        const { expression, enabled } =
+          typeof item === 'string' ? { expression: item, enabled: true } : item;
+        if (!enabled) continue;
         try {
           const selectedStreams = await selector.select(
             streams.filter((stream) => !streamsToKeep.has(stream.id)),

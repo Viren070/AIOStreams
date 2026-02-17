@@ -88,10 +88,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     this.api = new EasynewsApi(auth.username, auth.password);
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
     // validate aiostreams auth if provided
     if (this.userData.aiostreamsAuth) {
       try {
@@ -102,6 +99,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     }
     const queryLimit = createQueryLimit();
 
+    const metadata = await this.getSearchMetadata();
     if (!metadata.primaryTitle) {
       return [];
     }
@@ -207,10 +205,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
   /**
    * Search for torrents - not applicable for Easynews
    */
-  protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<Torrent[]> {
+  protected async _searchTorrents(parsedId: ParsedId): Promise<Torrent[]> {
     return [];
   }
 }

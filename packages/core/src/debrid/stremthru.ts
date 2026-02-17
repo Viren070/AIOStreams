@@ -6,6 +6,7 @@ import {
   getSimpleTextHash,
   Cache,
   DistributedLock,
+  getTimeTakenSincePoint,
 } from '../utils/index.js';
 import { selectFileInTorrentOrNZB, Torrent } from './utils.js';
 import {
@@ -61,9 +62,102 @@ export class StremThruInterface implements TorrentDebridService {
     });
   }
 
+  private static libraryCache = Cache.getInstance<string, DebridDownload[]>(
+    'st:library'
+  );
+
   public async listMagnets(): Promise<DebridDownload[]> {
-    const result = await this.stremthru.store.listMagnets({});
-    return result.data.items;
+    const cacheKey = `${this.serviceName}:${this.config.token}`;
+    const limit = Math.min(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100);
+
+    const { result } = await DistributedLock.getInstance().withLock(
+      `st:library:${cacheKey}`,
+      async () => {
+        const cached = await StremThruInterface.libraryCache.get(cacheKey);
+        if (cached) {
+          logger.debug(`Using cached magnet list for ${this.serviceName}`);
+          return cached;
+        }
+
+        const start = Date.now();
+        const allItems: DebridDownload[] = [];
+        let offset = 0;
+        const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+        let totalItems = maxItems;
+
+        while (offset < totalItems) {
+          const result = await this.stremthru.store.listMagnets({
+            limit,
+            offset,
+          });
+          totalItems = Math.min(result.data.total_items, maxItems);
+          for (const item of result.data.items) {
+            allItems.push({
+              id: item.id,
+              hash: item.hash,
+              name: item.name,
+              size: (item as any).size,
+              status: item.status,
+              private: item.private,
+              addedAt: item.added_at,
+            });
+          }
+          offset += limit;
+          if (result.data.items.length < limit) break;
+        }
+
+        logger.debug(`Listed magnets from ${this.serviceName}`, {
+          count: allItems.length,
+          totalItems,
+          time: getTimeTakenSincePoint(start),
+        });
+
+        await StremThruInterface.libraryCache.set(
+          cacheKey,
+          allItems,
+          Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+          true
+        );
+
+        return allItems;
+      },
+      { type: 'memory', timeout: 10000 }
+    );
+    return result;
+  }
+
+  public async getMagnet(magnetId: string): Promise<DebridDownload> {
+    try {
+      const result = await this.stremthru.store.getMagnet(magnetId);
+      assert.ok(
+        result?.data,
+        `Missing data from StremThru getMagnet: ${JSON.stringify(result)}`
+      );
+      return {
+        id: result.data.id,
+        hash: result.data.hash,
+        name: result.data.name,
+        status: result.data.status,
+        private: result.data.private,
+        addedAt: result.data.added_at,
+        files: (result.data.files ?? []).map((file) => ({
+          name: file.name,
+          size: file.size,
+          link: file.link,
+          path: file.path,
+          index: file.index,
+        })),
+        size: (result.data.files ?? []).reduce(
+          (acc, file) => acc + file.size,
+          0
+        ),
+      };
+    } catch (error) {
+      if (error instanceof StremThruError) {
+        throw convertStremThruError(error);
+      }
+      throw error;
+    }
   }
 
   public async removeMagnet(magnetId: string): Promise<void> {
@@ -80,9 +174,28 @@ export class StremThruInterface implements TorrentDebridService {
 
   public async checkMagnets(
     magnets: string[],
-    sid?: string
+    sid?: string,
+    checkOwned: boolean = true
   ): Promise<DebridDownload[]> {
+    let libraryHashes: Set<string> | undefined;
+    if (checkOwned) {
+      try {
+        const libraryItems = await this.listMagnets();
+        libraryHashes = new Set(
+          libraryItems
+            .filter((item) => item.hash)
+            .map((item) => item.hash!.toLowerCase())
+        );
+      } catch (error) {
+        logger.warn(
+          `Failed to list library magnets for checkOwned on ${this.serviceName}`,
+          { error: (error as Error).message }
+        );
+      }
+    }
+
     const cachedResults: DebridDownload[] = [];
+    let newResults: DebridDownload[] = [];
     const magnetsToCheck: string[] = [];
     for (const magnet of magnets) {
       const cached = await this.checkCacheGet(magnet);
@@ -94,7 +207,7 @@ export class StremThruInterface implements TorrentDebridService {
     }
 
     if (magnetsToCheck.length > 0) {
-      let newResults: DebridDownload[] = [];
+      // let newResults: DebridDownload[] = [];
       const BATCH_SIZE = 500;
       // Split magnetsToCheck into batches of 500
       const batches: string[][] = [];
@@ -104,8 +217,11 @@ export class StremThruInterface implements TorrentDebridService {
 
       try {
         // Perform all batch requests in parallel
+        const start = Date.now();
+
         const batchResults = await Promise.all(
-          batches.map(async (batch) => {
+          batches.map(async (batch, index) => {
+            const start = Date.now();
             const result = await this.stremthru.store.checkMagnet({
               magnet: batch,
               sid,
@@ -143,9 +259,19 @@ export class StremThruInterface implements TorrentDebridService {
         }
         throw error;
       }
-      return [...cachedResults, ...newResults];
+      // return [...cachedResults, ...newResults];
     }
-    return cachedResults;
+    const allResults = [...cachedResults, ...newResults];
+
+    if (libraryHashes) {
+      for (const item of allResults) {
+        if (item.hash && libraryHashes.has(item.hash.toLowerCase())) {
+          item.library = true;
+        }
+      }
+    }
+
+    return allResults;
   }
 
   public async addMagnet(magnet: string): Promise<DebridDownload> {
@@ -289,7 +415,17 @@ export class StremThruInterface implements TorrentDebridService {
     }
 
     let magnetDownload: DebridDownload;
-    if (
+    if (playbackInfo.serviceItemId) {
+      // Direct library item lookup by ID (from catalog)
+      logger.debug(`Resolving library torrent item by serviceItemId`, {
+        serviceItemId: playbackInfo.serviceItemId,
+      });
+      magnetDownload = await this.getMagnet(playbackInfo.serviceItemId);
+      logger.debug(`Found library torrent item`, {
+        status: magnetDownload.status,
+        id: magnetDownload.id,
+      });
+    } else if (
       playbackInfo.private !== undefined && // make sure the torrent was downloaded before
       playbackInfo.downloadUrl &&
       Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
@@ -365,37 +501,68 @@ export class StremThruInterface implements TorrentDebridService {
       });
     }
 
-    const torrent: Torrent = {
-      title: magnetDownload.name || playbackInfo.title,
-      hash: hash,
-      size: magnetDownload.size || 0,
-      type: 'torrent',
-      sources: playbackInfo.sources,
-      private: playbackInfo.private,
-    };
+    let file:
+      | { name?: string; link?: string; size: number; index?: number }
+      | undefined;
 
-    const allStrings: string[] = [];
-    allStrings.push(magnetDownload.name ?? '');
-    allStrings.push(...magnetDownload.files.map((file) => file.name ?? ''));
-    const parseResults: ParsedResult[] = allStrings.map((string) =>
-      parseTorrentTitle(string)
-    );
-    const parsedFiles = new Map<string, ParsedResult>();
-    for (const [index, result] of parseResults.entries()) {
-      parsedFiles.set(allStrings[index], result);
-    }
-
-    const file = await selectFileInTorrentOrNZB(
-      torrent,
-      magnetDownload,
-      parsedFiles,
-      metadata,
-      {
-        chosenFilename: playbackInfo.filename,
-        chosenIndex: playbackInfo.index,
-        printReport: true,
+    if (playbackInfo.fileIndex !== undefined) {
+      // Direct file index specified (e.g. from catalog meta)
+      file = magnetDownload.files.find(
+        (f) => f.index === playbackInfo.fileIndex
+      );
+      if (!file) {
+        throw new DebridError(
+          `File with index ${playbackInfo.fileIndex} not found`,
+          {
+            statusCode: 400,
+            statusText: 'File not found',
+            code: 'NO_MATCHING_FILE',
+            headers: {},
+            body: {
+              fileIndex: playbackInfo.fileIndex,
+              availableFiles: magnetDownload.files.map((f) => f.index),
+            },
+          }
+        );
       }
-    );
+      logger.debug(`Using specified fileIndex`, {
+        fileIndex: playbackInfo.fileIndex,
+        fileName: file.name,
+      });
+    } else {
+      const torrent: Torrent = {
+        title: magnetDownload.name || playbackInfo.title,
+        hash: hash,
+        size: magnetDownload.size || 0,
+        type: 'torrent',
+        sources: playbackInfo.sources,
+        private: playbackInfo.private,
+      };
+
+      const allStrings: string[] = [];
+      allStrings.push(magnetDownload.name ?? '');
+      allStrings.push(...magnetDownload.files.map((file) => file.name ?? ''));
+      const parseResults: ParsedResult[] = allStrings.map((string) =>
+        parseTorrentTitle(string)
+      );
+      const parsedFiles = new Map<string, ParsedResult>();
+      for (const [index, result] of parseResults.entries()) {
+        parsedFiles.set(allStrings[index], result);
+      }
+
+      file = await selectFileInTorrentOrNZB(
+        torrent,
+        magnetDownload,
+        parsedFiles,
+        metadata,
+        {
+          chosenFilename: playbackInfo.filename,
+          chosenIndex: playbackInfo.index,
+          // printReport: true,
+          // saveReport: true,
+        }
+      );
+    }
 
     if (!file?.link) {
       throw new DebridError('Selected file was missing a link', {
