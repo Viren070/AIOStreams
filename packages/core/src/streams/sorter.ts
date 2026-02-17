@@ -21,9 +21,11 @@ class StreamSorter {
   ): Promise<ParsedStream[]> {
     const type = context.isAnime ? 'anime' : context.type;
     const forcedToTopStreams = allStreams.filter(
-      (stream) => stream.addon.forceToTop
+      (stream) => StreamSorter.shouldForceStreamToTop(stream.addon.forceToTop)
     );
-    const streams = allStreams.filter((stream) => !stream.addon.forceToTop);
+    const streams = allStreams.filter(
+      (stream) => !StreamSorter.shouldForceStreamToTop(stream.addon.forceToTop)
+    );
 
     let primarySortCriteria = this.userData.sortCriteria.global;
     let cachedSortCriteria = this.userData.sortCriteria.cached;
@@ -135,6 +137,16 @@ class StreamSorter {
       } streams in ${getTimeTakenSincePoint(start)}`
     );
     return [...forcedToTopStreams, ...sortedStreams];
+  }
+
+  private static shouldForceStreamToTop(
+    forceToTop: ParsedStream['addon']['forceToTop']
+  ): boolean {
+    return (
+      forceToTop === true ||
+      forceToTop === 'streams' ||
+      forceToTop === 'both'
+    );
   }
 
   private dynamicSortKey(

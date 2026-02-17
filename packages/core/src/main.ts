@@ -92,6 +92,7 @@ export class AIOStreams {
   private finalResources: StrictManifestResource[] = [];
   private finalCatalogs: Manifest['catalogs'] = [];
   private finalAddonCatalogs: Manifest['addonCatalogs'] = [];
+  private catalogsForcedToTop: Set<string> = new Set();
   private isInitialised: boolean = false;
   private addons: Addon[] = [];
   private proxifier: Proxifier;
@@ -1426,6 +1427,7 @@ export class AIOStreams {
   }
 
   private async fetchResources() {
+    this.catalogsForcedToTop.clear();
     for (const [instanceId, manifest] of Object.entries(this.manifests)) {
       if (!manifest) continue;
 
@@ -1475,6 +1477,10 @@ export class AIOStreams {
         logger.error(`Addon with instanceId ${instanceId} not found`);
         continue;
       }
+
+      const shouldForceCatalogs = this.shouldForceCatalogsToTop(
+        addon.forceToTop
+      );
 
       // Filter and merge resources
       for (const resource of addonResources) {
@@ -1554,22 +1560,40 @@ export class AIOStreams {
         !addon.resources?.length ||
         (addon.resources && addon.resources.includes('catalog'))
       ) {
-        this.finalCatalogs.push(
-          ...manifest.catalogs.map((catalog) => ({
+        const catalogsToAdd = manifest.catalogs.map((catalog) => {
+          const catalogWithId = {
             ...catalog,
             id: `${addon.instanceId}.${catalog.id}`,
-          }))
-        );
+          };
+          if (shouldForceCatalogs) {
+            this.catalogsForcedToTop.add(
+              this.getCatalogForceKey(catalogWithId)
+            );
+          }
+          return catalogWithId;
+        });
+
+        this.finalCatalogs.push(...catalogsToAdd);
       }
 
       // add all addon catalogs, prefixing id with index
       if (manifest.addonCatalogs) {
-        this.finalAddonCatalogs!.push(
-          ...(manifest.addonCatalogs || []).map((catalog) => ({
-            ...catalog,
-            id: `${addon.instanceId}.${catalog.id}`,
-          }))
+        const addonCatalogsToAdd = (manifest.addonCatalogs || []).map(
+          (catalog) => {
+            const catalogWithId = {
+              ...catalog,
+              id: `${addon.instanceId}.${catalog.id}`,
+            };
+            if (shouldForceCatalogs) {
+              this.catalogsForcedToTop.add(
+                this.getCatalogForceKey(catalogWithId)
+              );
+            }
+            return catalogWithId;
+          }
         );
+
+        this.finalAddonCatalogs!.push(...addonCatalogsToAdd);
       }
 
       this.supportedResources[instanceId] = addonResources;
@@ -1643,12 +1667,20 @@ export class AIOStreams {
       );
       for (const mc of enabledMergedCatalogs) {
         const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
-        this.finalCatalogs.push({
+        const mergedCatalog = {
           id: mc.id,
           name: mc.name,
           type: mc.type,
           extra: mergedExtras.length > 0 ? mergedExtras : undefined,
-        });
+        };
+
+        if (mc.forceToTop) {
+          this.catalogsForcedToTop.add(
+            this.getCatalogForceKey({ id: mc.id, type: mc.type })
+          );
+        }
+
+        this.finalCatalogs.push(mergedCatalog);
       }
     }
 
@@ -1709,7 +1741,6 @@ export class AIOStreams {
           if (modification?.name) {
             catalog.name = modification.name;
           }
-
           // checking that no extras are required already
           // if its a non genre extra, then its just not possible as it would lead to having 2 required extras.
           // if it is the genre extra that is required, then there isnt a need to apply the modification as its already only on discover
@@ -1767,6 +1798,31 @@ export class AIOStreams {
           }
           return catalog;
         });
+    }
+
+    // Move forced-to-top catalogs (including merged) ahead while keeping the
+    // previously determined relative order.
+    if (this.catalogsForcedToTop.size > 0) {
+      const forcedCatalogs = this.finalCatalogs.filter((catalog) =>
+        this.isCatalogForcedToTop(catalog)
+      );
+      const remainingCatalogs = this.finalCatalogs.filter(
+        (catalog) => !this.isCatalogForcedToTop(catalog)
+      );
+      this.finalCatalogs = [...forcedCatalogs, ...remainingCatalogs];
+    }
+
+    if (this.catalogsForcedToTop.size > 0 && this.finalAddonCatalogs?.length) {
+      const forcedAddonCatalogs = this.finalAddonCatalogs.filter((catalog) =>
+        this.isCatalogForcedToTop(catalog)
+      );
+      const remainingAddonCatalogs = this.finalAddonCatalogs.filter(
+        (catalog) => !this.isCatalogForcedToTop(catalog)
+      );
+      this.finalAddonCatalogs = [
+        ...forcedAddonCatalogs,
+        ...remainingAddonCatalogs,
+      ];
     }
   }
 
@@ -1887,6 +1943,18 @@ export class AIOStreams {
     }
 
     return mergedExtras;
+  }
+
+  private getCatalogForceKey(catalog: { id: string; type: string }): string {
+    return `${catalog.id}::${catalog.type}`;
+  }
+
+  private isCatalogForcedToTop(catalog: { id: string; type: string }): boolean {
+    return this.catalogsForcedToTop.has(this.getCatalogForceKey(catalog));
+  }
+
+  private shouldForceCatalogsToTop(forceToTop: Addon['forceToTop']): boolean {
+    return forceToTop === 'catalogs' || forceToTop === 'both';
   }
 
   public getResources(): StrictManifestResource[] {
