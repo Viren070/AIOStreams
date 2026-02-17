@@ -51,7 +51,9 @@ jobs:
           v[0-9]*.[0-9]*.[0-9]*)
             TAGS="${INPUT_REF}"
             if [[ "$(git rev-parse origin/main)" = "$(git rev-parse "${INPUT_REF}")" ]]; then
-              TAGS="${TAGS} latest"
+              MAJOR_MINOR=$(echo "${INPUT_REF}" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/\1.\2/')
+              MAJOR=$(echo "${INPUT_REF}" | sed -E 's/v([0-9]+)\.[0-9]+\.[0-9]+/\1/')
+              TAGS="${TAGS} latest v${MAJOR_MINOR} v${MAJOR}"
             fi
             CHANNEL="stable"
             ;;
