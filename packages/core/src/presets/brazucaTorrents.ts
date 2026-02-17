@@ -1,9 +1,54 @@
-import { Addon, Option, UserData } from '../db/index.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { Env } from '../utils/index.js';
 import { constants } from '../utils/index.js';
+import { StreamParser } from '../index.js';
+
+export class BrazucaTorrentsParser extends StreamParser {
+  override getFolder(stream: Stream): string | undefined {
+    const description = stream.description;
+    if (!description) {
+      return undefined;
+    }
+
+    const lines = description.split('\n');
+    const saveIconIndex = lines.findIndex((line) => line.includes('💾'));
+
+    if (saveIconIndex === -1) {
+      return undefined;
+    }
+    if (saveIconIndex >= 2) {
+      return lines[0].trim() || undefined;
+    }
+    return undefined;
+  }
+
+  protected override getFilename(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    const description = stream.description;
+    if (!description) {
+      return undefined;
+    }
+
+    const lines = description.split('\n');
+    const saveIconIndex = lines.findIndex((line) => line.includes('💾'));
+
+    if (saveIconIndex === -1) {
+      return undefined;
+    }
+    if (saveIconIndex >= 2) {
+      return lines[saveIconIndex - 1].trim() || undefined;
+    }
+    return lines[0].trim() || undefined;
+  }
+}
 
 export class BrazucaTorrentsPreset extends Preset {
+  static override getParser(): typeof StreamParser {
+    return BrazucaTorrentsParser;
+  }
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
 
