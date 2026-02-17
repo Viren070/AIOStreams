@@ -168,24 +168,28 @@ export type PlaybackInfo = z.infer<typeof PlaybackInfoSchema>;
 export type FileInfo = z.infer<typeof FileInfoSchema>;
 export type TitleMetadata = z.infer<typeof TitleMetadataSchema>;
 
-export interface DebridService {
-  // Common methods
+interface BaseDebridService {
+  readonly serviceName: ServiceId;
+
   resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
     cacheAndPlay: boolean,
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined>;
+}
 
-  // Torrent specific methods
+export interface TorrentDebridService extends BaseDebridService {
   checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]>;
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
   addTorrent(torrent: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
+  removeMagnet(magnetId: string): Promise<void>;
+}
 
-  // Usenet specific methods
-  checkNzbs?(
+export interface UsenetDebridService extends BaseDebridService {
+  checkNzbs(
     nzbs: { name?: string; hash?: string }[],
     checkOwned?: boolean
   ): Promise<DebridDownload[]>;
@@ -196,15 +200,24 @@ export interface DebridService {
     fileId?: string,
     clientIp?: string
   ): Promise<string>;
-  removeMagnet?(magnetId: string): Promise<void>;
   removeNzb?(nzbId: string): Promise<void>;
-
-  // Service info
-  readonly serviceName: ServiceId;
-  readonly supportsUsenet: boolean;
 }
+
+export type DebridService = TorrentDebridService | UsenetDebridService;
 
 export type DebridServiceConfig = {
   token: string;
   clientIp?: string;
 };
+
+export function isTorrentDebridService(
+  debridService: DebridService
+): debridService is TorrentDebridService {
+  return (debridService as TorrentDebridService).checkMagnets !== undefined;
+}
+
+export function isUsenetDebridService(
+  debridService: DebridService
+): debridService is UsenetDebridService {
+  return (debridService as UsenetDebridService).checkNzbs !== undefined;
+}

@@ -17,6 +17,8 @@ import {
   isTitleWrong,
   DebridDownload,
   isNotVideoFile,
+  isTorrentDebridService,
+  isUsenetDebridService,
 } from '../../debrid/index.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
 import { preprocessTitle } from '../../parser/utils.js';
@@ -119,6 +121,9 @@ async function processTorrentsForDebridService(
     service.credential,
     clientIp
   );
+  if (!isTorrentDebridService(debridService)) {
+    throw new Error(`Service ${service.id} does not support torrent`);
+  }
 
   const results: TorrentWithSelectedFile[] = [];
 
@@ -403,8 +408,7 @@ async function processNZBsForDebridService(
     service.credential,
     clientIp
   );
-
-  if (!debridService.supportsUsenet || !debridService.checkNzbs) {
+  if (!isUsenetDebridService(debridService)) {
     throw new Error(`Service ${service.id} does not support usenet`);
   }
 

@@ -1,9 +1,9 @@
 import {
   DebridDownload,
   DebridError,
-  DebridService,
   DebridServiceConfig,
   PlaybackInfo,
+  UsenetDebridService,
 } from './base.js';
 import {
   Cache,
@@ -23,7 +23,7 @@ const EasynewsAuthSchema = z.object({
   password: z.string(),
 });
 
-export class EasynewsService implements DebridService {
+export class EasynewsService implements UsenetDebridService {
   readonly serviceName: ServiceId = 'easynews';
   readonly serviceLogger = logger;
 
@@ -32,29 +32,11 @@ export class EasynewsService implements DebridService {
     'easynews:link'
   );
 
-  supportsUsenet: boolean = true;
-
   constructor(private readonly config: DebridServiceConfig) {
     const auth = EasynewsAuthSchema.parse(
       JSON.parse(Buffer.from(config.token, 'base64').toString())
     );
     this.auth = auth;
-  }
-
-  checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  listMagnets(): Promise<DebridDownload[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  addMagnet(magnet: string): Promise<DebridDownload> {
-    throw new Error('Method not implemented.');
-  }
-
-  addTorrent(torrent: string): Promise<DebridDownload> {
-    throw new Error('Method not implemented.');
   }
 
   async checkNzbs(
@@ -151,9 +133,5 @@ export class EasynewsService implements DebridService {
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL
     );
     return finalUrl;
-  }
-
-  generateTorrentLink(link: string, clientIp?: string): Promise<string> {
-    throw new Error('Method not implemented.');
   }
 }

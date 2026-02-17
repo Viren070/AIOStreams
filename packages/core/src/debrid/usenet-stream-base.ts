@@ -11,12 +11,12 @@ import {
 } from '../utils/index.js';
 import { isVideoFile, selectFileInTorrentOrNZB } from './utils.js';
 import {
-  DebridService,
   DebridServiceConfig,
   DebridDownload,
   PlaybackInfo,
   DebridError,
   DebridFile,
+  UsenetDebridService,
 } from './base.js';
 import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
 import z, { ZodError } from 'zod';
@@ -417,7 +417,7 @@ enum Category {
  * These services accept NZBs via a SABnzbd-compatible API and stream content
  * directly from usenet providers via WebDAV, rather than downloading to disk.
  */
-export abstract class UsenetStreamService implements DebridService {
+export abstract class UsenetStreamService implements UsenetDebridService {
   protected readonly webdavClient: WebDAVClient;
   protected readonly api: SABnzbdApi;
   protected static resolveCache = Cache.getInstance<
@@ -428,7 +428,6 @@ export abstract class UsenetStreamService implements DebridService {
     'usenet-stream:library'
   );
 
-  readonly supportsUsenet = true;
   abstract readonly serviceName: ServiceId;
 
   protected readonly auth: UsenetStreamServiceConfig;
@@ -567,32 +566,6 @@ export abstract class UsenetStreamService implements DebridService {
     }
 
     return { files: allFiles, depth: currentDepth };
-  }
-
-  public async listMagnets(): Promise<DebridDownload[]> {
-    throw new Error('Unsupported operation');
-  }
-
-  public async checkMagnets(
-    magnets: string[],
-    sid?: string
-  ): Promise<DebridDownload[]> {
-    throw new Error('Unsupported operation');
-  }
-
-  public async addMagnet(magnet: string): Promise<DebridDownload> {
-    throw new Error('Unsupported operation');
-  }
-
-  public async addTorrent(torrent: string): Promise<DebridDownload> {
-    throw new Error('Unsupported operation');
-  }
-
-  public async generateTorrentLink(
-    link: string,
-    clientIp?: string
-  ): Promise<string> {
-    throw new Error('Unsupported operation');
   }
 
   private async listWebdavFolders(path: string): Promise<FileStat[]> {
