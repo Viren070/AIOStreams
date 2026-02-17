@@ -13,9 +13,14 @@ const router: Router = Router();
 
 router.use(stremioMetaRateLimiter);
 
+interface MetaParams {
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:type/:id.json',
-  async (req: Request, res: Response<MetaResponse>, next: NextFunction) => {
+  async (req: Request<MetaParams>, res: Response<MetaResponse>, next: NextFunction) => {
     if (!req.userData) {
       res.status(200).json({
         meta: StremioTransformer.createErrorMeta({

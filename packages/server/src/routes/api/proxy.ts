@@ -192,9 +192,14 @@ router.get(
   }
 );
 
+interface ProxyParams {
+  encryptedAuthAndData: string;
+  filename?: string; // optional
+}
+
 router.all(
   '/:encryptedAuthAndData{/:filename}',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<ProxyParams>, res: Response, next: NextFunction) => {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
     let upstreamResponse: Dispatcher.ResponseData | undefined;

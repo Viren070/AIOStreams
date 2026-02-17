@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   SubtitleResponse,
@@ -12,9 +12,15 @@ const router: Router = Router();
 
 router.use(stremioSubtitleRateLimiter);
 
+interface SubtitleParams {
+  type: string;
+  id: string;
+  extras?: string; // optional
+}
+
 router.get(
   '/:type/:id{/:extras}.json',
-  async (req: Request, res: Response<SubtitleResponse>, next) => {
+  async (req: Request<SubtitleParams>, res: Response<SubtitleResponse>, next: NextFunction) => {
     if (!req.userData) {
       res.status(200).json(
         StremioTransformer.createDynamicError('subtitles', {

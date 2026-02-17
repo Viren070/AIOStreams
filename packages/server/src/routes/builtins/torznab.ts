@@ -1,13 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { TorznabAddon, fromUrlSafeBase64 } from '@aiostreams/core';
-import { createLogger } from '@aiostreams/core';
+import { TorznabAddon, fromUrlSafeBase64, createLogger, APIError, constants } from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
 
+interface TorznabManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<TorznabManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -24,9 +27,15 @@ router.get(
   }
 );
 
+interface TorznabStreamParams {
+  encodedConfig?: string; // optional
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<TorznabStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
 
     try {
