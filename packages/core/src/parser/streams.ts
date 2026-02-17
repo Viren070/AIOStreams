@@ -8,6 +8,7 @@ import {
 } from '../utils/index.js';
 import FileParser from './file.js';
 import { parseAgeString, parseDuration } from './utils.js';
+import { mergeParsedFiles, arrayMerge } from './merge.js';
 const logger = createLogger('parser');
 
 class StreamParser {
@@ -492,6 +493,10 @@ class StreamParser {
     throw new Error('Invalid stream, missing a required stream property');
   }
 
+  /**
+   * Parses the filename and folder name from the stream, merges the results,
+   * and applies season-pack detection heuristics.
+   */
   protected getParsedFile(
     stream: Stream,
     parsedStream: ParsedStream
@@ -502,78 +507,42 @@ class StreamParser {
     const fileParsed = parsedStream.filename
       ? FileParser.parse(parsedStream.filename)
       : undefined;
-    function arrayFallback<T>(...arrs: (T[] | undefined)[]): T[] | undefined {
-      for (const arr of arrs) {
-        if (arr && arr.length > 0) {
-          return arr;
-        }
-      }
-    }
-    function arrayMerge<T>(arr1: T[] | undefined, arr2: T[] | undefined): T[] {
-      return Array.from(new Set([...(arr1 ?? []), ...(arr2 ?? [])]));
-    }
 
-    let seasonPack = folderParsed?.seasonPack || fileParsed?.seasonPack;
-    let episodes = arrayFallback(fileParsed?.episodes, folderParsed?.episodes);
-    let seasons = arrayFallback(fileParsed?.seasons, folderParsed?.seasons);
-
-    // Detect season pack based on folder size being significantly larger than file size
-    if (
-      !seasonPack &&
-      episodes &&
-      episodes.length > 0 && // to handle movie folders
-      parsedStream.folderSize &&
-      parsedStream.size &&
-      parsedStream.folderSize > parsedStream.size * 2
-    ) {
-      seasonPack = true;
-    }
-    // Detect season pack when more than 5 episodes are present
-    if (!seasonPack && episodes && episodes.length > 5) {
-      seasonPack = true;
-    }
-    return {
-      title: folderParsed?.title || fileParsed?.title,
-      year: fileParsed?.year || folderParsed?.year,
-      folderSeasons:
-        seasons !== folderParsed?.seasons ? folderParsed?.seasons : undefined,
-      folderEpisodes:
-        episodes !== folderParsed?.episodes
-          ? folderParsed?.episodes
-          : undefined,
-      seasons,
-      episodes,
+    const merged = mergeParsedFiles(fileParsed, folderParsed, {
+      // Overrides to include any info we can extract from the stream description
       resolution:
         this.getResolution(stream, parsedStream) ||
         fileParsed?.resolution ||
         folderParsed?.resolution,
-      quality: fileParsed?.quality || folderParsed?.quality,
-      encode: fileParsed?.encode || folderParsed?.encode,
       releaseGroup:
         this.getReleaseGroup(stream, parsedStream) ||
         fileParsed?.releaseGroup ||
         folderParsed?.releaseGroup,
-      edition: fileParsed?.edition || folderParsed?.edition,
-      remastered: fileParsed?.remastered || folderParsed?.remastered,
-      repack: fileParsed?.repack || folderParsed?.repack,
-      uncensored: fileParsed?.uncensored || folderParsed?.uncensored,
-      unrated: fileParsed?.unrated || folderParsed?.unrated,
-      upscaled: fileParsed?.upscaled || folderParsed?.upscaled,
-      network: fileParsed?.network || folderParsed?.network,
-      container: fileParsed?.container || folderParsed?.container,
-      extension: fileParsed?.extension || folderParsed?.extension,
-      visualTags: arrayMerge(folderParsed?.visualTags, fileParsed?.visualTags),
-      audioTags: arrayMerge(folderParsed?.audioTags, fileParsed?.audioTags),
-      audioChannels: arrayMerge(
-        folderParsed?.audioChannels,
-        fileParsed?.audioChannels
-      ),
       languages: arrayMerge(
         arrayMerge(folderParsed?.languages, fileParsed?.languages),
         this.getLanguages(stream, parsedStream)
       ),
-      seasonPack,
-    };
+    });
+
+    if (!merged) return undefined;
+
+    // Detect season pack based on folder size being significantly larger than file size
+    if (
+      !merged.seasonPack &&
+      merged.episodes &&
+      merged.episodes.length > 0 &&
+      parsedStream.folderSize &&
+      parsedStream.size &&
+      parsedStream.folderSize > parsedStream.size * 2
+    ) {
+      merged.seasonPack = true;
+    }
+    // Detect season pack when more than 5 episodes are present
+    if (!merged.seasonPack && merged.episodes && merged.episodes.length > 5) {
+      merged.seasonPack = true;
+    }
+
+    return merged;
   }
 
   /**
