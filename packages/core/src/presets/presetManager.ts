@@ -1,5 +1,6 @@
 import { PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
 import { CometPreset } from './comet.js';
+import { MeteorPreset } from './meteor.js';
 import { CustomPreset } from './custom.js';
 import { MediaFusionPreset } from './mediafusion.js';
 import { StremthruStorePreset } from './stremthruStore.js';
@@ -82,6 +83,7 @@ let PRESET_LIST: string[] = [
   'aiostreams',
   'torrentio',
   'comet',
+  'meteor',
   'mediafusion',
   'stremthruTorz',
   'stremthruStore',
@@ -179,6 +181,8 @@ export class PresetManager {
         return StremthruTorzPreset;
       case 'comet':
         return CometPreset;
+      case 'meteor':
+        return MeteorPreset;
       case 'mediafusion':
         return MediaFusionPreset;
       case 'custom':

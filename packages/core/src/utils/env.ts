@@ -1142,6 +1142,20 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default Comet user agent',
   }),
 
+  // Meteor settings
+  METEOR_URL: urlOrUrlList({
+    default: ['https://meteorfortheweebs.midnightignite.me'],
+    desc: 'Meteor URL',
+  }),
+  DEFAULT_METEOR_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Meteor timeout',
+  }),
+  DEFAULT_METEOR_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Meteor user agent',
+  }),
+
   // MediaFusion settings
   MEDIAFUSION_URL: urlOrUrlList({
     default: ['https://mediafusion.elfhosted.com'],
