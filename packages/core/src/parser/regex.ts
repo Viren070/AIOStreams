@@ -79,7 +79,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     SCR: createRegex('((dvd|bd|web|hd)?[ .\\-_]?)?(scr(eener)?)'),
   },
   visualTags: {
-    '10bit': createRegex('10[ .\\-_]?bit'),
+    '10bit': createRegex('10[ .\\-_]?bit|hi10p'),
     'HDR10+': createRegex('hdr[ .\\-_]?10[ .\\-_]?(p(lus)?|[+])'),
     HDR10: createRegex('hdr[ .\\-_]?10(?![ .\\-_]?(?:\\+|p(lus)?))'),
     HDR: createRegex('hdr(?![ .\\-_]?10)(?![ .\\-_]?(?:\\+|p(lus)?))'),
