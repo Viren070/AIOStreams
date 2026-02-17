@@ -18,9 +18,21 @@ export function titleMatch(
   titles: string[],
   options: {
     threshold: number;
+    limitTitles?: number;
   } & Exclude<FuzzballExtractOptions, 'returnObjects'>
 ) {
   const { threshold, ...extractOptions } = options;
+
+  // when threshold is 1, no need to use levenshtein distance, just check for exact matches
+  if (threshold === 1 && !extractOptions.scorer) {
+    return titles.some(
+      (title) => title.toLowerCase() === parsedTitle.toLowerCase()
+    );
+  }
+
+  if (options.limitTitles && titles.length > options.limitTitles) {
+    titles.length = options.limitTitles;
+  }
 
   const results = extract(parsedTitle, titles, {
     ...extractOptions,

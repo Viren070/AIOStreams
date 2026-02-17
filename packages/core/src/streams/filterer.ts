@@ -665,6 +665,7 @@ class StreamFilterer {
           requestedMetadata.titles.map(normaliseTitle),
           {
             threshold: titleMatchingOptions.similarityThreshold,
+            limitTitles: 100,
           }
         );
       } else {
@@ -674,6 +675,7 @@ class StreamFilterer {
           {
             threshold: titleMatchingOptions.similarityThreshold,
             scorer: partial_ratio,
+            limitTitles: 100,
           }
         );
       }
@@ -1852,17 +1854,6 @@ class StreamFilterer {
       }
 
       if (
-        !shouldPassthroughStage(stream, 'title') &&
-        !performTitleMatch(stream)
-      ) {
-        this.incrementRemovalReason(
-          'titleMatching',
-          `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
-        );
-        return false;
-      }
-
-      if (
         !shouldPassthroughStage(stream, 'year') &&
         !performYearMatch(stream)
       ) {
@@ -1896,6 +1887,17 @@ class StreamFilterer {
           (seasonEpisode?.join(' • ') || 'Unknown');
 
         this.incrementRemovalReason('seasonEpisodeMatching', detail);
+        return false;
+      }
+
+      if (
+        !shouldPassthroughStage(stream, 'title') &&
+        !performTitleMatch(stream)
+      ) {
+        this.incrementRemovalReason(
+          'titleMatching',
+          `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
+        );
         return false;
       }
 

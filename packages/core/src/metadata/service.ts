@@ -381,6 +381,7 @@ export class MetadataService {
                 seasons: metadata.seasons?.map(
                   (s) => `{s:${s.season_number},e:${s.episode_count}}`
                 ),
+                titleCount: titles.length,
               }
             );
             return metadata;
