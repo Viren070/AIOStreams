@@ -886,13 +886,24 @@ export abstract class BaseFormatter {
             return variable.replaceAll(key, replaceKey);
         }
         case mod.startsWith('remove(') && mod.endsWith(')'): {
-          const findStartChar = mod.charAt(7); // either " or '
-          const findEndChar = mod.charAt(mod.length - 2); // either " or '
+          const content = _mod.substring(7, _mod.length - 1);
 
-          // Extract the content from remove(['"]...['"])
-          const content = _mod.substring(8, _mod.length - 2);
+          // Extract options from remove("...", "...", ...)
+          const regex = /"([^"]*)"|'([^']*)'/g;
+          const args: string[] = [];
+          
+          let match;
+          while ((match = regex.exec(content)) !== null) {
+             args.push(match[1] ?? match[2] ?? '');
+          }
 
-          if (content) return variable.replaceAll(content,'');
+          if (args.length === 0) return variable;
+          
+          let result = variable;
+          for (const arg of args) {
+             if (arg) result = result.replaceAll(arg, '');
+          }
+          return result;
         }
         case mod.startsWith('truncate(') && mod.endsWith(')'): {
           // Extract N from truncate(N)
@@ -940,13 +951,20 @@ export abstract class BaseFormatter {
           return variable.join(separator);
         }
         case mod.startsWith('remove(') && mod.endsWith(')'): {
-          const findStartChar = mod.charAt(7); // either " or '
-          const findEndChar = mod.charAt(mod.length - 2); // either " or '
+          const content = _mod.substring(7, _mod.length - 1);
 
-          // Extract the content from remove(['"]...['"])
-          const content = _mod.substring(8, _mod.length - 2);
+          // Extract options from remove("...", "...", ...)
+          const regex = /"([^"]*)"|'([^']*)'/g;
+          const args: string[] = [];
+          
+          let match;
+          while ((match = regex.exec(content)) !== null) {
+             args.push(match[1] ?? match[2] ?? '');
+          }
 
-          if (content) return variable.filter((v) => v !== content);
+          if (args.length === 0) return variable;
+
+          return variable.filter((v) => !args.includes(v));
         }
       }
     }
@@ -1195,12 +1213,11 @@ class ModifierConstants {
   };
 
   static hardcodedModifiersForRegexMatching = {
+    'remove(.*?)': null,
     "replace('.*?'\\s*?,\\s*?'.*?')": null,
     'replace(".*?"\\s*?,\\s*?\'.*?\')': null,
     'replace(\'.*?\'\\s*?,\\s*?".*?")': null,
     'replace(".*?"\\s*?,\\s*?\".*?\")': null,
-    "remove('.*?')": null,
-    'remove(".*?")': null,
     "join('.*?')": null,
     'join(".*?")': null,
     'truncate(\\d+)': null,
