@@ -203,7 +203,7 @@ export class TorboxDebridService
         const result = await this.torboxApi.usenet.getUsenetCachedAvailability(
           this.apiVersion,
           {
-            hash: hashesToCheck.join(','),
+            hashes: hashesToCheck,
             format: 'list',
             listFiles: 'true',
           }
