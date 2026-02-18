@@ -885,6 +885,15 @@ export abstract class BaseFormatter {
           if (!shouldBeUndefined && key && replaceKey !== undefined)
             return variable.replaceAll(key, replaceKey);
         }
+        case mod.startsWith('remove(') && mod.endsWith(')'): {
+          const findStartChar = mod.charAt(7); // either " or '
+          const findEndChar = mod.charAt(mod.length - 2); // either " or '
+
+          // Extract the content from remove(['"]...['"])
+          const content = _mod.substring(8, _mod.length - 2);
+
+          if (content) return variable.replaceAll(content,'');
+        }
         case mod.startsWith('truncate(') && mod.endsWith(')'): {
           // Extract N from truncate(N)
           const inside = _mod.substring('truncate('.length, _mod.length - 1);
@@ -929,6 +938,15 @@ export abstract class BaseFormatter {
           // Extract the separator from join('separator') or join("separator")
           const separator = _mod.substring(6, _mod.length - 2);
           return variable.join(separator);
+        }
+        case mod.startsWith('remove(') && mod.endsWith(')'): {
+          const findStartChar = mod.charAt(7); // either " or '
+          const findEndChar = mod.charAt(mod.length - 2); // either " or '
+
+          // Extract the content from remove(['"]...['"])
+          const content = _mod.substring(8, _mod.length - 2);
+
+          if (content) return variable.filter((v) => v !== content);
         }
       }
     }
@@ -1181,6 +1199,8 @@ class ModifierConstants {
     'replace(".*?"\\s*?,\\s*?\'.*?\')': null,
     'replace(\'.*?\'\\s*?,\\s*?".*?")': null,
     'replace(".*?"\\s*?,\\s*?\".*?\")': null,
+    "remove('.*?')": null,
+    'remove(".*?")': null,
     "join('.*?')": null,
     'join(".*?")': null,
     'truncate(\\d+)': null,
