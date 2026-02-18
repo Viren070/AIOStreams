@@ -2245,7 +2245,7 @@ export class AIOStreams {
 
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
 
-    if (isMeta) {
+    if (isMeta || resolvedResults.hasNewStreams) {
       // Run preferred matching after filter
       await this.precomputer.precomputePreferred(processedStreams, context);
     }
