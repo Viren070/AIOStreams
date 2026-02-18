@@ -198,57 +198,43 @@ export class TorboxDebridService
 
     if (hashesToCheck.length > 0) {
       let newResults: DebridDownload[] = [];
-      const BATCH_SIZE = 100;
-
-      const batches: string[][] = [];
-      for (let i = 0; i < hashesToCheck.length; i += BATCH_SIZE) {
-        batches.push(hashesToCheck.slice(i, i + BATCH_SIZE));
-      }
 
       try {
-        const batchResults = await Promise.all(
-          batches.map(async (batch) => {
-            const result =
-              await this.torboxApi.usenet.getUsenetCachedAvailability(
-                this.apiVersion,
-                {
-                  hash: batch.join(','),
-                  format: 'list',
-                  listFiles: 'true',
-                }
-              );
-            if (!result.data?.success) {
-              throw new DebridError(`Failed to check instant availability`, {
-                statusCode: result.metadata.status,
-                statusText: result.metadata.statusText,
-                code: 'UNKNOWN',
-                headers: result.metadata.headers,
-                body: result.data,
-              });
-            }
-
-            if (!Array.isArray(result.data.data)) {
-              throw new DebridError(
-                'Invalid response from Torbox API. Expected array, got object',
-                {
-                  statusCode: result.metadata.status,
-                  statusText: result.metadata.statusText,
-                  code: 'UNKNOWN',
-                  headers: result.metadata.headers,
-                  body: result.data,
-                }
-              );
-            }
-            return result.data.data;
-          })
+        const result = await this.torboxApi.usenet.getUsenetCachedAvailability(
+          this.apiVersion,
+          {
+            hash: hashesToCheck.join(','),
+            format: 'list',
+            listFiles: 'true',
+          }
         );
+        if (!result.data?.success) {
+          throw new DebridError(`Failed to check instant availability`, {
+            statusCode: result.metadata.status,
+            statusText: result.metadata.statusText,
+            code: 'UNKNOWN',
+            headers: result.metadata.headers,
+            body: result.data,
+          });
+        }
 
-        const allItems = batchResults.flat();
+        if (!Array.isArray(result.data.data)) {
+          throw new DebridError(
+            'Invalid response from Torbox API. Expected array, got object',
+            {
+              statusCode: result.metadata.status,
+              statusText: result.metadata.statusText,
+              code: 'UNKNOWN',
+              headers: result.metadata.headers,
+              body: result.data,
+            }
+          );
+        }
 
-        newResults = allItems.map((item) => ({
+        newResults = result.data.data.map((item) => ({
           id: -1,
           hash: item.hash,
-          status: 'cached',
+          status: 'cached' as const,
           size: item.size,
           files: item.files?.map((file) => ({
             id: file.id,

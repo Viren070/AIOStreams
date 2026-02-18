@@ -31,7 +31,7 @@ importers:
     dependencies:
       '@torbox/torbox-api':
         specifier: github:viren070/torbox-sdk-js#dist
-        version: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/3cbd6c42d50d26b18e2184f16e5506630a2f53e7
+        version: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/a958b6326c805daaf2811331f1aad31cb729bc2e
       '@viren070/parse-torrent-title':
         specifier: ^0.6.5
         version: 0.6.5
@@ -1829,8 +1829,8 @@ packages:
     resolution: {integrity: sha512-RbzJvlNzmRq5c3O09UipeuXno4tA1FE6ikOjxZK0tuxVv3412l64l5t1W5pj4+rJq9vpkm/kwiR07aZXnsKPxw==}
     engines: {node: '>= 6'}
 
-  '@torbox/torbox-api@https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/3cbd6c42d50d26b18e2184f16e5506630a2f53e7':
-    resolution: {tarball: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/3cbd6c42d50d26b18e2184f16e5506630a2f53e7}
+  '@torbox/torbox-api@https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/a958b6326c805daaf2811331f1aad31cb729bc2e':
+    resolution: {tarball: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/a958b6326c805daaf2811331f1aad31cb729bc2e}
     version: 1.0.9
 
   '@tsconfig/node10@1.0.12':
@@ -6409,7 +6409,7 @@ snapshots:
   '@tootallnate/once@1.1.2':
     optional: true
 
-  '@torbox/torbox-api@https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/3cbd6c42d50d26b18e2184f16e5506630a2f53e7':
+  '@torbox/torbox-api@https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/a958b6326c805daaf2811331f1aad31cb729bc2e':
     dependencies:
       zod: 3.22.0
 
