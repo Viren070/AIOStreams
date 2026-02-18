@@ -1,4 +1,9 @@
-import { ParsedId, BuiltinServiceId, createLogger } from '../../utils/index.js';
+import {
+  ParsedId,
+  BuiltinServiceId,
+  createLogger,
+  getTimeTakenSincePoint,
+} from '../../utils/index.js';
 import {
   NZB,
   UnprocessedTorrent,
@@ -11,7 +16,7 @@ import { titleMatch, cleanTitle, preprocessTitle } from '../../parser/utils.js';
 import { parseTorrentTitle } from '@viren070/parse-torrent-title';
 import { SearchMetadata } from '../base/debrid.js';
 
-const logger = createLogger('library:matching');
+const logger = createLogger('library');
 
 const TITLE_MATCH_THRESHOLD = 0.85;
 
@@ -77,13 +82,11 @@ export function isItemMatch(
   return true;
 }
 
-/**
- * Matches debrid download items against metadata to find matching torrents.
- */
 export function matchTorrents(
   items: DebridDownload[],
   metadata: SearchMetadata,
-  parsedId: ParsedId
+  parsedId: ParsedId,
+  sourceServiceId?: BuiltinServiceId
 ): UnprocessedTorrent[] {
   const results: UnprocessedTorrent[] = [];
 
@@ -99,20 +102,20 @@ export function matchTorrents(
       sources: [],
       title: item.name,
       size: item.size ?? 0,
+      library: true,
       confirmed: true,
+      indexer: sourceServiceId,
     });
   }
 
   return results;
 }
 
-/**
- * Matches debrid download items against metadata to find matching NZBs.
- */
 export function matchNzbs(
   items: DebridDownload[],
   metadata: SearchMetadata,
-  parsedId: ParsedId
+  parsedId: ParsedId,
+  sourceServiceId?: BuiltinServiceId
 ): NZB[] {
   const results: NZB[] = [];
 
@@ -130,6 +133,7 @@ export function matchNzbs(
       size: item.size ?? 0,
       library: true,
       confirmed: true,
+      indexer: sourceServiceId,
     });
   }
 
@@ -147,6 +151,7 @@ export async function searchTorrents(
 ): Promise<UnprocessedTorrent[]> {
   const servicePromises = services.map(async (service) => {
     try {
+      let start = Date.now();
       const debridService = getDebridService(
         service.id,
         service.credential,
@@ -154,7 +159,17 @@ export async function searchTorrents(
       );
       if (!isTorrentDebridService(debridService)) return [];
       const items = await debridService.listMagnets();
-      return matchTorrents(items, metadata, parsedId);
+      const searchTime = getTimeTakenSincePoint(start);
+      start = Date.now();
+      const matched = matchTorrents(items, metadata, parsedId, service.id);
+      logger.info(`Matched torrents from service library`, {
+        serviceId: service.id,
+        totalItems: items.length,
+        matchedItems: matched.length,
+        searchTime,
+        matchTime: getTimeTakenSincePoint(start),
+      });
+      return matched;
     } catch (error) {
       logger.warn(`Failed to list magnets from ${service.id}`, {
         error: (error as Error).message,
@@ -187,6 +202,7 @@ export async function searchNzbs(
 ): Promise<NZB[]> {
   const servicePromises = services.map(async (service) => {
     try {
+      let start = Date.now();
       const debridService = getDebridService(
         service.id,
         service.credential,
@@ -195,7 +211,18 @@ export async function searchNzbs(
       if (!isUsenetDebridService(debridService) || !debridService.listNzbs)
         return [];
       const items = await debridService.listNzbs();
-      return matchNzbs(items, metadata, parsedId);
+      const searchTime = getTimeTakenSincePoint(start);
+      start = Date.now();
+      const matched = matchNzbs(items, metadata, parsedId, service.id);
+      const matchTime = getTimeTakenSincePoint(start);
+      logger.info(`Matched NZBs from service library`, {
+        serviceId: service.id,
+        totalItems: items.length,
+        matchedItems: matched.length,
+        searchTime,
+        matchTime,
+      });
+      return matched;
     } catch (error) {
       logger.warn(`Failed to list NZBs from ${service.id}`, {
         error: (error as Error).message,

@@ -2,6 +2,7 @@ import {
   BuiltinServiceId,
   constants,
   encryptString,
+  Env,
 } from '../../utils/index.js';
 import {
   DebridDownload,
@@ -11,10 +12,7 @@ import {
 } from '../../debrid/index.js';
 import { Stream } from '../../db/schemas.js';
 
-/**
- * Creates a library stream object with a playback URL for a specific file
- * within a debrid download item.
- */
+/** Creates a playback stream for a library item file. */
 export function createLibraryStream(
   item: DebridDownload,
   service: { id: BuiltinServiceId; credential: string },
@@ -75,5 +73,29 @@ export function createLibraryStream(
       filename: file?.name,
       folderSize: item.size ?? undefined,
     },
+  };
+}
+
+/** Creates a stream that triggers a library cache refresh via the refresh endpoint. */
+export function createRefreshStream(
+  serviceId: BuiltinServiceId,
+  serviceCredential: string,
+  sources?: ('torrent' | 'nzb')[]
+): Stream {
+  const serviceMeta = constants.SERVICE_DETAILS[serviceId];
+  const payload: Record<string, unknown> = {
+    id: serviceId,
+    credential: serviceCredential,
+  };
+  if (sources && sources.length > 0) {
+    payload.sources = sources;
+  }
+  const encryptedCredential = encryptString(JSON.stringify(payload)).data ?? '';
+
+  return {
+    url: `${Env.INTERNAL_URL}/builtins/library/refresh/${serviceId}/${encodeURIComponent(encryptedCredential)}`,
+    name: `🔄 Refresh ${serviceMeta.name} Library`,
+    description:
+      'Play to refresh the library cache for this service.\nUse if your library seems outdated.',
   };
 }

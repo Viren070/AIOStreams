@@ -184,6 +184,8 @@ interface BaseDebridService {
     cacheAndPlay: boolean,
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined>;
+
+  refreshLibraryCache?(sources?: ('torrent' | 'nzb')[]): Promise<void>;
 }
 
 export interface TorrentDebridService extends BaseDebridService {
@@ -195,6 +197,7 @@ export interface TorrentDebridService extends BaseDebridService {
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
   addTorrent(torrent: string): Promise<DebridDownload>;
+  getMagnet?(magnetId: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
   removeMagnet(magnetId: string): Promise<void>;
   getMagnet?(magnetId: string): Promise<DebridDownload>;

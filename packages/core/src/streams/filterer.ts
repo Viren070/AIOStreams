@@ -1421,6 +1421,12 @@ class StreamFilterer {
         return false;
       }
 
+      // info type streams can bypass remaining filters
+      if (stream.type === 'info') {
+        this.incrementIncludedReason('streamType', 'info');
+        return true;
+      }
+
       // Resolutions
       if (
         this.userData.excludedResolutions?.includes(

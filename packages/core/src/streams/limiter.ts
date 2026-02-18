@@ -57,6 +57,7 @@ class StreamLimiter {
       }
       // if stream is passthrough, skip limiting for this stream
       if (shouldPassthroughStage(stream, 'limit')) return;
+      if (stream.type === 'info') return; // don't limit info streams
 
       // Check indexer limit
       if (indexer && stream.indexer) {

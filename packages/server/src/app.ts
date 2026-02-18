@@ -73,6 +73,7 @@ export enum StaticFiles {
   UNAUTHORIZED = '401.mp4',
   NO_MATCHING_FILE = 'no_matching_file.mp4',
   PAYMENT_REQUIRED = 'payment_required.mp4',
+  OK = '200.mp4',
 }
 
 const __filename = fileURLToPath(import.meta.url);

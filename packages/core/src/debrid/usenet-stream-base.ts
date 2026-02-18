@@ -620,6 +620,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
   private async listWebdavFolders(path: string): Promise<FileStat[]> {
     let contents: FileStat[];
+    const start = Date.now();
     try {
       contents = (await this.webdavClient.getDirectoryContents(
         path
@@ -643,7 +644,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const directories = contents.filter((item) => item.type === 'directory');
     this.serviceLogger.debug(`Listed WebDAV folders at ${path}`, {
       count: directories.length,
-      folders: directories.map((d) => d.filename),
+      time: getTimeTakenSincePoint(start),
     });
     return directories;
   }
@@ -651,10 +652,31 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   public async listNzbs(): Promise<DebridDownload[]> {
     const cacheKey = `${this.serviceName}:${this.config.token}`;
 
+    // Check for stale cache before acquiring the lock
+    const cached = await UsenetStreamService.libraryCache.get(cacheKey);
+    if (cached) {
+      const remainingTTL =
+        await UsenetStreamService.libraryCache.getTTL(cacheKey);
+      if (remainingTTL !== null && remainingTTL > 0) {
+        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
+        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+          this.serviceLogger.debug(
+            `Library cache for ${this.serviceName} is stale (age: ${age}s), triggering background refresh`
+          );
+          this.refreshNzbsInBackground(cacheKey).catch((err) =>
+            this.serviceLogger.error(
+              `Background library refresh failed for ${this.serviceName}`,
+              err
+            )
+          );
+        }
+        return cached;
+      }
+    }
+
     const { result } = await DistributedLock.getInstance().withLock(
       `uss:library:${cacheKey}`,
       async () => {
-        const start = Date.now();
         const cachedNzbs = await UsenetStreamService.libraryCache.get(cacheKey);
         if (cachedNzbs) {
           this.serviceLogger.debug(
@@ -663,109 +685,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
           return cachedNzbs;
         }
 
-        const historyPromise = this.api.history({ limit: 1000 });
-        const webdavTvPromise = this.listWebdavFolders(
-          `${this.getContentPathPrefix()}/${Category.TV}`
-        );
-        const webdavMoviesPromise = this.listWebdavFolders(
-          `${this.getContentPathPrefix()}/${Category.MOVIES}`
-        );
-        const webdavUncategorizedPromise = this.listWebdavFolders(
-          `${this.getContentPathPrefix()}/${Category.UNCATEGORIZED}`
-        );
-
-        const [history, webdavTv, webdavMovies, webdavUncategorized] =
-          await Promise.allSettled([
-            historyPromise,
-            webdavTvPromise,
-            webdavMoviesPromise,
-            webdavUncategorizedPromise,
-          ]);
-
-        if (history.status === 'rejected') {
-          throw history.reason;
-        }
-
-        if (
-          webdavTv.status === 'rejected' ||
-          webdavMovies.status === 'rejected' ||
-          webdavUncategorized.status === 'rejected'
-        ) {
-          const error =
-            webdavTv.status === 'rejected'
-              ? webdavTv.reason
-              : webdavMovies.status === 'rejected'
-                ? webdavMovies.reason
-                : webdavUncategorized.status === 'rejected'
-                  ? webdavUncategorized.reason
-                  : null;
-
-          const status = typeof error.status === 'number' ? error.status : 500;
-          if (status === 401) {
-            throw new DebridError(`Could not access WebDAV: Unauthorized`, {
-              statusCode: 401,
-              statusText: 'Unauthorized',
-              code: 'UNAUTHORIZED',
-              headers: {},
-              body: null,
-              type: 'api_error',
-            });
-          }
-
-          this.serviceLogger.warn(
-            `Failed to list WebDAV folders, library listing may be inaccurate`,
-            {
-              error: (error as Error).message,
-            }
-          );
-        }
-
-        const historyData =
-          history.status === 'fulfilled' ? history.value : null;
-        const webdavTvData =
-          webdavTv.status === 'fulfilled' ? webdavTv.value : null;
-        const webdavMoviesData =
-          webdavMovies.status === 'fulfilled' ? webdavMovies.value : null;
-        const webdavUncategorizedData =
-          webdavUncategorized.status === 'fulfilled'
-            ? webdavUncategorized.value
-            : null;
-
-        const webdavFiles = [
-          ...(webdavTvData ?? []),
-          ...(webdavMoviesData ?? []),
-          ...(webdavUncategorizedData ?? []),
-        ];
-        const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
-          const matchingSlot = historyData?.slots.find(
-            (slot) => slot.name === file.basename
-          );
-          return {
-            id: file.basename,
-            status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
-            name: file.basename,
-            size: file.size,
-            hash: file.basename,
-            addedAt: file.lastmod ?? undefined,
-            files: [],
-          };
-        });
-
-        this.serviceLogger.debug(
-          `Listed NZBs from combined history and WebDAV`,
-          {
-            count: nzbs.length,
-            time: getTimeTakenSincePoint(start),
-          }
-        );
-        await UsenetStreamService.libraryCache.set(
-          cacheKey,
-          nzbs,
-          Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
-          true
-        );
-
-        return nzbs;
+        return this.fetchAndCacheNzbs(cacheKey);
       },
       {
         type: 'memory',
@@ -773,6 +693,130 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       }
     );
     return result;
+  }
+
+  private async fetchAndCacheNzbs(cacheKey: string): Promise<DebridDownload[]> {
+    const start = Date.now();
+
+    const historyPromise = this.api.history({ limit: 1000 });
+    const webdavTvPromise = this.listWebdavFolders(
+      `${this.getContentPathPrefix()}/${Category.TV}`
+    );
+    const webdavMoviesPromise = this.listWebdavFolders(
+      `${this.getContentPathPrefix()}/${Category.MOVIES}`
+    );
+    const webdavUncategorizedPromise = this.listWebdavFolders(
+      `${this.getContentPathPrefix()}/${Category.UNCATEGORIZED}`
+    );
+
+    const [history, webdavTv, webdavMovies, webdavUncategorized] =
+      await Promise.allSettled([
+        historyPromise,
+        webdavTvPromise,
+        webdavMoviesPromise,
+        webdavUncategorizedPromise,
+      ]);
+
+    if (history.status === 'rejected') {
+      throw history.reason;
+    }
+
+    if (
+      webdavTv.status === 'rejected' ||
+      webdavMovies.status === 'rejected' ||
+      webdavUncategorized.status === 'rejected'
+    ) {
+      const error =
+        webdavTv.status === 'rejected'
+          ? webdavTv.reason
+          : webdavMovies.status === 'rejected'
+            ? webdavMovies.reason
+            : webdavUncategorized.status === 'rejected'
+              ? webdavUncategorized.reason
+              : null;
+
+      const status = typeof error.status === 'number' ? error.status : 500;
+      if (status === 401) {
+        throw new DebridError(`Could not access WebDAV: Unauthorized`, {
+          statusCode: 401,
+          statusText: 'Unauthorized',
+          code: 'UNAUTHORIZED',
+          headers: {},
+          body: null,
+          type: 'api_error',
+        });
+      }
+
+      this.serviceLogger.warn(
+        `Failed to list WebDAV folders, library listing may be inaccurate`,
+        {
+          error: (error as Error).message,
+        }
+      );
+    }
+
+    const historyData = history.status === 'fulfilled' ? history.value : null;
+    const webdavTvData =
+      webdavTv.status === 'fulfilled' ? webdavTv.value : null;
+    const webdavMoviesData =
+      webdavMovies.status === 'fulfilled' ? webdavMovies.value : null;
+    const webdavUncategorizedData =
+      webdavUncategorized.status === 'fulfilled'
+        ? webdavUncategorized.value
+        : null;
+
+    const webdavFiles = [
+      ...(webdavTvData ?? []),
+      ...(webdavMoviesData ?? []),
+      ...(webdavUncategorizedData ?? []),
+    ];
+    const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
+      const matchingSlot = historyData?.slots.find(
+        (slot) => slot.name === file.basename
+      );
+      return {
+        id: file.basename,
+        status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
+        name: file.basename,
+        size: file.size,
+        hash: file.basename,
+        addedAt: file.lastmod ?? undefined,
+        files: [],
+      };
+    });
+
+    this.serviceLogger.debug(`Listed NZBs from combined history and WebDAV`, {
+      count: nzbs.length,
+      time: getTimeTakenSincePoint(start),
+    });
+    await UsenetStreamService.libraryCache.set(
+      cacheKey,
+      nzbs,
+      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      true
+    );
+
+    return nzbs;
+  }
+
+  private async refreshNzbsInBackground(cacheKey: string): Promise<void> {
+    const lockKey = `uss:library:refresh:${cacheKey}`;
+    await DistributedLock.getInstance().withLock(
+      lockKey,
+      async () => {
+        await UsenetStreamService.libraryCache.delete(cacheKey);
+        return this.fetchAndCacheNzbs(cacheKey);
+      },
+      { type: 'memory', timeout: 1000 }
+    );
+  }
+
+  public async refreshLibraryCache(
+    sources?: ('torrent' | 'nzb')[]
+  ): Promise<void> {
+    const cacheKey = `${this.serviceName}:${this.config.token}`;
+    await UsenetStreamService.libraryCache.delete(cacheKey);
+    await this.fetchAndCacheNzbs(cacheKey);
   }
 
   public async checkNzbs(

@@ -100,6 +100,13 @@ class StreamParser {
       return parsedStream;
     }
 
+    const infoStream = this.isInfoStream(stream);
+    if (infoStream) {
+      parsedStream.message = infoStream;
+      parsedStream.type = constants.INFO_STREAM_TYPE;
+      return parsedStream;
+    }
+
     const normaliseText = (text: string) => {
       return text
         .replace(
@@ -393,6 +400,10 @@ class StreamParser {
       return match[1].trim();
     }
 
+    return undefined;
+  }
+
+  protected isInfoStream(stream: Stream): string | undefined {
     return undefined;
   }
 

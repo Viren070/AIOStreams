@@ -1,7 +1,24 @@
 import { BaseDebridAddon, BaseDebridConfigSchema } from '../base/debrid.js';
 import { z } from 'zod';
-import { createLogger, ParsedId, BuiltinServiceId } from '../../utils/index.js';
-import { NZB, UnprocessedTorrent, DebridFile } from '../../debrid/index.js';
+import {
+  createLogger,
+  ParsedId,
+  IdParser,
+  BuiltinServiceId,
+  constants,
+  encryptString,
+  Env,
+  getSimpleTextHash,
+} from '../../utils/index.js';
+import {
+  NZB,
+  UnprocessedTorrent,
+  DebridFile,
+  generatePlaybackUrl,
+  FileInfo,
+  metadataStore,
+  TitleMetadata,
+} from '../../debrid/index.js';
 import { Manifest, Meta, MetaPreview, Stream } from '../../db/schemas.js';
 
 // Sub-modules
@@ -11,15 +28,20 @@ import {
   buildCatalogs,
   fetchCatalog,
   parseExtras,
+  preWarmLibraryCaches,
+  refreshLibraryCacheForService,
 } from './catalog.js';
 import { parseLibraryId, fetchItem, buildMeta } from './meta.js';
-import { createLibraryStream } from './streams.js';
+import { createLibraryStream, createRefreshStream } from './streams.js';
 import { searchTorrents, searchNzbs } from './matching.js';
+import { cleanTitle } from '../../parser/utils.js';
 
 const logger = createLogger('library');
 
 export const LibraryAddonConfigSchema = BaseDebridConfigSchema.extend({
   sources: z.array(z.enum(['torrent', 'nzb'])).optional(),
+  skipProcessing: z.boolean().optional(),
+  showRefreshActions: z.array(z.enum(['catalog', 'stream'])).optional(),
 });
 export type LibraryAddonConfig = z.infer<typeof LibraryAddonConfigSchema>;
 
@@ -35,9 +57,12 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
 
   public override getManifest(): Manifest {
     const baseManifest = super.getManifest();
+
+    const showRefresh = this.userData.showRefreshActions ?? ['catalog'];
     const catalogs = buildCatalogs(
       this.userData.services,
-      this.userData.sources
+      this.userData.sources,
+      showRefresh
     );
     const idPrefixes = buildIdPrefixes(this.userData.services);
 
@@ -97,15 +122,17 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       return [];
     }
 
-    const { skip, sort, sortDirection } = parseExtras(extras);
+    const { skip, sort, sortDirection, genre, search } = parseExtras(extras);
     return fetchCatalog(
       serviceId,
       service.credential,
       this.clientIp,
+      this.userData.sources ?? [],
       skip,
       sort,
       sortDirection,
-      this.userData.sources
+      genre,
+      search
     );
   }
 
@@ -128,15 +155,65 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       };
     }
 
+    // Handle action items
+    if (itemType === 'action') {
+      if (itemId === 'refresh') {
+        logger.info(`Refreshing library cache for ${serviceId}`);
+        try {
+          await refreshLibraryCacheForService(
+            serviceId,
+            service.credential,
+            this.clientIp,
+            this.userData.sources
+          );
+          return {
+            id,
+            name: '✅ Library Refreshed',
+            type: 'library',
+            description: `The library cache for ${constants.SERVICE_DETAILS[serviceId].name} has been refreshed successfully. Go back to the catalog to see the updated list.`,
+            posterShape: 'landscape',
+            videos: [],
+            behaviorHints: {},
+          };
+        } catch (error: any) {
+          logger.error(
+            `Failed to refresh library cache for ${serviceId}`,
+            error
+          );
+          return {
+            id,
+            name: '❌ Refresh Failed',
+            type: 'library',
+            description: `Failed to refresh the library cache: ${error?.message ?? 'Unknown error'}. Please try again later.`,
+            posterShape: 'landscape',
+            videos: [],
+            behaviorHints: {},
+          };
+        }
+      }
+      // Unknown action
+      return {
+        id,
+        name: 'Unknown Action',
+        type: 'library',
+        description: 'This action is not recognized.',
+        posterShape: 'landscape',
+        videos: [],
+        behaviorHints: {},
+      };
+    }
+
+    const narrowedItemType: 'torrent' | 'usenet' = itemType;
+
     const item = await fetchItem(
       serviceId,
       service.credential,
-      itemType,
+      narrowedItemType,
       itemId,
       this.clientIp
     );
 
-    return buildMeta(id, item, service, itemType);
+    return buildMeta(id, item, service, narrowedItemType);
   }
 
   /**
@@ -146,23 +223,53 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
    * For library IDs, the format is:
    *   ${LIBRARY_ID_PREFIX}<serviceId>.<itemType>.<itemId>:<fileIdentifier>
    * where fileIdentifier is either 'default' (whole item) or a file index number.
+   *
+   * When skipProcessing is enabled, normal stream requests bypass
+   * processTorrents/processNZBs and create streams directly from
+   * library search results, treating everything as cached.
    */
   public override async getStreams(
     type: string,
     id: string
   ): Promise<Stream[]> {
     if (!id.startsWith(LIBRARY_ID_PREFIX)) {
-      return super.getStreams(type, id);
+      if (this.userData.skipProcessing) {
+        return this._getStreamsSkipProcessing(type, id);
+      }
+      const streams = await super.getStreams(type, id);
+
+      // Append refresh stream action if configured
+      const showRefresh = this.userData.showRefreshActions ?? ['catalog'];
+      if (showRefresh.includes('stream')) {
+        for (const service of this.userData.services) {
+          streams.push(
+            createRefreshStream(
+              service.id,
+              service.credential,
+              this.userData.sources
+            )
+          );
+        }
+      }
+
+      return streams;
     }
 
     // Library catalog stream request
-    const lastColon = id.lastIndexOf(':');
-    if (lastColon === -1) {
+    // Find the file identifier separator colon AFTER the prefix
+    // (the prefix itself contains '::' which must be skipped)
+    const colonAfterPrefix = id.indexOf(':', LIBRARY_ID_PREFIX.length);
+    if (colonAfterPrefix === -1) {
+      // No file identifier — could be an action item
+      const { itemType } = parseLibraryId(id);
+      if (itemType === 'action') {
+        return [];
+      }
       throw new Error(`Invalid library stream ID: ${id}`);
     }
 
-    const metaId = id.substring(0, lastColon);
-    const fileIdentifier = id.substring(lastColon + 1);
+    const metaId = id.substring(0, colonAfterPrefix);
+    const fileIdentifier = id.substring(colonAfterPrefix + 1);
 
     const { serviceId, itemType, itemId } = parseLibraryId(metaId);
 
@@ -174,10 +281,17 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       return [];
     }
 
+    // Action items don't have streams
+    if (itemType === 'action') {
+      return [];
+    }
+
+    const narrowedItemType: 'torrent' | 'usenet' = itemType;
+
     const item = await fetchItem(
       serviceId,
       service.credential,
-      itemType,
+      narrowedItemType,
       itemId,
       this.clientIp
     );
@@ -197,7 +311,175 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       }
     }
 
-    return [createLibraryStream(item, service, itemType, fileIndex, file)];
+    return [
+      createLibraryStream(item, service, narrowedItemType, fileIndex, file),
+    ];
+  }
+
+  /**
+   * Skip processing mode: search library for matches but bypass
+   * processTorrents/processNZBs entirely. Creates streams directly
+   * from library results, marking everything as cached/library.
+   */
+  private async _getStreamsSkipProcessing(
+    type: string,
+    id: string
+  ): Promise<Stream[]> {
+    const parsedId = IdParser.parse(id, type);
+    if (!parsedId) {
+      throw new Error(`Unsupported ID: ${id}`);
+    }
+
+    this.logger.info(`Handling stream request (skip processing) for ${id}`);
+
+    this._searchMetadataPromise = this._getSearchMetadata(parsedId, type).then(
+      (metadata) => {
+        if (metadata.primaryTitle) {
+          metadata.primaryTitle = cleanTitle(metadata.primaryTitle);
+        }
+        return metadata;
+      }
+    );
+
+    const [torrentResults, nzbResults] = await Promise.allSettled([
+      this._searchTorrents(parsedId),
+      this._searchNzbs(parsedId),
+    ]);
+
+    const torrents =
+      torrentResults.status === 'fulfilled' ? torrentResults.value : [];
+    const nzbs = nzbResults.status === 'fulfilled' ? nzbResults.value : [];
+
+    // Build metadata ID for playback URLs
+    let metadataId = 'library';
+    try {
+      const meta = await this.getSearchMetadata();
+      const titleMetadata: TitleMetadata = {
+        titles: meta.titles,
+        year: meta.year,
+        seasonYear: meta.seasonYear,
+        season: meta.season,
+        episode: meta.episode,
+        absoluteEpisode: meta.absoluteEpisode,
+        relativeAbsoluteEpisode: meta.relativeAbsoluteEpisode,
+      };
+      metadataId = getSimpleTextHash(JSON.stringify(titleMetadata));
+      await metadataStore().set(
+        metadataId,
+        titleMetadata,
+        Env.BUILTIN_PLAYBACK_LINK_VALIDITY
+      );
+    } catch {
+      // metadata not critical for skip-processing
+    }
+
+    const streams: Stream[] = [];
+
+    const encryptedStoreAuths = this.userData.services.reduce(
+      (acc, service) => {
+        const auth = {
+          id: service.id,
+          credential: service.credential,
+        };
+
+        acc[service.id] = encryptString(JSON.stringify(auth)).data ?? '';
+
+        return acc;
+      },
+      {} as Record<BuiltinServiceId, string>
+    );
+
+    for (const torrent of torrents) {
+      const serviceId = torrent.indexer as BuiltinServiceId | undefined;
+      const service = serviceId
+        ? this.userData.services.find((s) => s.id === serviceId)
+        : this.userData.services[0];
+      if (!service) continue;
+
+      const serviceMeta = constants.SERVICE_DETAILS[service.id];
+      const encryptedStoreAuth = encryptedStoreAuths[service.id];
+
+      const fileInfo: FileInfo = {
+        type: 'torrent',
+        hash: torrent.hash ?? '',
+        sources: torrent.sources ?? [],
+        cacheAndPlay: false,
+        autoRemoveDownloads: false,
+      };
+
+      const fileName = torrent.title ?? 'unknown';
+      const url = generatePlaybackUrl(
+        encryptedStoreAuth,
+        metadataId,
+        fileInfo,
+        fileName
+      );
+
+      streams.push({
+        url,
+        name: `🗃️ [⚡ ${serviceMeta.shortName}] Library `,
+        description: torrent.title ?? '',
+        type: 'torrent',
+        infoHash: torrent.hash,
+        behaviorHints: {
+          filename: torrent.title,
+          videoSize: torrent.size,
+        },
+      });
+    }
+
+    for (const nzb of nzbs) {
+      const serviceId = nzb.indexer as BuiltinServiceId | undefined;
+      const service = serviceId
+        ? this.userData.services.find((s) => s.id === serviceId)
+        : this.userData.services[0];
+      if (!service) continue;
+
+      const serviceMeta = constants.SERVICE_DETAILS[service.id];
+      const encryptedStoreAuth = encryptedStoreAuths[service.id];
+      const fileInfo: FileInfo = {
+        type: 'usenet',
+        hash: nzb.hash ?? nzb.title ?? '',
+        nzb: '',
+        cacheAndPlay: false,
+        autoRemoveDownloads: false,
+      };
+
+      const fileName = nzb.title ?? 'unknown';
+      const url = generatePlaybackUrl(
+        encryptedStoreAuth,
+        metadataId,
+        fileInfo,
+        fileName
+      );
+
+      streams.push({
+        url,
+        name: `🗃️ [⚡ ${serviceMeta.shortName}] Library `,
+        description: nzb.title ?? '',
+        type: 'usenet',
+        behaviorHints: {
+          filename: nzb.title,
+          videoSize: nzb.size,
+        },
+      });
+    }
+
+    // Add refresh stream action if configured
+    const showRefresh = this.userData.showRefreshActions ?? ['catalog'];
+    if (showRefresh.includes('stream')) {
+      for (const service of this.userData.services) {
+        streams.push(
+          createRefreshStream(
+            service.id,
+            service.credential,
+            this.userData.sources
+          )
+        );
+      }
+    }
+
+    return streams;
   }
 
   protected async _searchTorrents(

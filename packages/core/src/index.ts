@@ -22,8 +22,10 @@ export {
   EasynewsAuthSchema,
   EasynewsNzbParamsSchema,
   EasynewsApi,
-  EasynewsNzbParams,
+  type EasynewsNzbParams,
   SeaDexDataset,
   LibraryAddon,
+  preWarmLibraryCaches,
+  refreshLibraryCacheForService,
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';

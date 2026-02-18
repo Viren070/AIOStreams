@@ -1187,6 +1187,7 @@ export const ARCHIVE_STREAM_TYPE = 'archive' as const;
 export const USENET_STREAM_TYPE = 'usenet' as const;
 export const DEBRID_STREAM_TYPE = 'debrid' as const;
 export const HTTP_STREAM_TYPE = 'http' as const;
+export const INFO_STREAM_TYPE = 'info' as const;
 export const EXTERNAL_STREAM_TYPE = 'external' as const;
 export const YOUTUBE_STREAM_TYPE = 'youtube' as const;
 export const ERROR_STREAM_TYPE = 'error' as const;
@@ -1204,6 +1205,7 @@ const STREAM_TYPES = [
   YOUTUBE_STREAM_TYPE,
   ERROR_STREAM_TYPE,
   STATISTIC_STREAM_TYPE,
+  INFO_STREAM_TYPE,
 ] as const;
 
 export type StreamType = (typeof STREAM_TYPES)[number];

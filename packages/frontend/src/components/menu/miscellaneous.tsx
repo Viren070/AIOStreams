@@ -373,7 +373,7 @@ function Content() {
         {mode === 'pro' && (
           <SettingsCard
             title="Check Library"
-            description="When enabled, built-in addons will check if search results already exist in your debrid library and mark them accordingly. This applies to both torrent and usenet results."
+            description="When enabled, built-in addons and service wrapped addons will check if search results already exist in your debrid library and mark them accordingly. This applies to both torrent and usenet results."
           >
             <Switch
               label="Enable"

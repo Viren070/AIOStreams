@@ -68,7 +68,33 @@ export class StremThruInterface implements TorrentDebridService {
 
   public async listMagnets(): Promise<DebridDownload[]> {
     const cacheKey = `${this.serviceName}:${this.config.token}`;
-    const limit = Math.min(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100);
+    const limit = Math.min(
+      Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100),
+      500
+    );
+
+    // Check for stale cache before acquiring the lock
+    const cached = await StremThruInterface.libraryCache.get(cacheKey);
+    if (cached) {
+      const remainingTTL =
+        await StremThruInterface.libraryCache.getTTL(cacheKey);
+      if (remainingTTL !== null && remainingTTL > 0) {
+        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
+        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+          logger.debug(
+            `Library cache for ${this.serviceName} is stale (age: ${age}s), triggering background refresh`
+          );
+          // Fire-and-forget background refresh
+          this.refreshMagnetsInBackground(cacheKey, limit).catch((err) =>
+            logger.error(
+              `Background library refresh failed for ${this.serviceName}`,
+              err
+            )
+          );
+        }
+        return cached;
+      }
+    }
 
     const { result } = await DistributedLock.getInstance().withLock(
       `st:library:${cacheKey}`,
@@ -79,51 +105,85 @@ export class StremThruInterface implements TorrentDebridService {
           return cached;
         }
 
-        const start = Date.now();
-        const allItems: DebridDownload[] = [];
-        let offset = 0;
-        const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
-        let totalItems = maxItems;
-
-        while (offset < totalItems) {
-          const result = await this.stremthru.store.listMagnets({
-            limit,
-            offset,
-          });
-          totalItems = Math.min(result.data.total_items, maxItems);
-          for (const item of result.data.items) {
-            allItems.push({
-              id: item.id,
-              hash: item.hash,
-              name: item.name,
-              size: (item as any).size,
-              status: item.status,
-              private: item.private,
-              addedAt: item.added_at,
-            });
-          }
-          offset += limit;
-          if (result.data.items.length < limit) break;
-        }
-
-        logger.debug(`Listed magnets from ${this.serviceName}`, {
-          count: allItems.length,
-          totalItems,
-          time: getTimeTakenSincePoint(start),
-        });
-
-        await StremThruInterface.libraryCache.set(
-          cacheKey,
-          allItems,
-          Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
-          true
-        );
-
-        return allItems;
+        return this.fetchAndCacheMagnets(cacheKey, limit);
       },
       { type: 'memory', timeout: 10000 }
     );
     return result;
+  }
+
+  private async fetchAndCacheMagnets(
+    cacheKey: string,
+    limit: number
+  ): Promise<DebridDownload[]> {
+    const start = Date.now();
+    const allItems: DebridDownload[] = [];
+    let offset = 0;
+    const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+    let totalItems = maxItems;
+
+    while (offset < totalItems) {
+      const result = await this.stremthru.store.listMagnets({
+        limit,
+        offset,
+      });
+      totalItems = Math.min(result.data.total_items, maxItems);
+      for (const item of result.data.items) {
+        allItems.push({
+          id: item.id,
+          hash: item.hash,
+          name: item.name,
+          size: (item as any).size,
+          status: item.status,
+          private: item.private,
+          addedAt: item.added_at,
+        });
+      }
+      offset += limit;
+      if (result.data.items.length < limit) break;
+    }
+
+    logger.debug(`Listed magnets from ${this.serviceName}`, {
+      count: allItems.length,
+      totalItems,
+      time: getTimeTakenSincePoint(start),
+    });
+
+    await StremThruInterface.libraryCache.set(
+      cacheKey,
+      allItems,
+      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      true
+    );
+
+    return allItems;
+  }
+
+  private async refreshMagnetsInBackground(
+    cacheKey: string,
+    limit: number
+  ): Promise<void> {
+    const lockKey = `st:library:refresh:${cacheKey}`;
+    const { result } = await DistributedLock.getInstance().withLock(
+      lockKey,
+      async () => {
+        await StremThruInterface.libraryCache.delete(cacheKey);
+        return this.fetchAndCacheMagnets(cacheKey, limit);
+      },
+      { type: 'memory', timeout: 1000 }
+    );
+  }
+
+  public async refreshLibraryCache(
+    sources?: ('torrent' | 'nzb')[]
+  ): Promise<void> {
+    const cacheKey = `${this.serviceName}:${this.config.token}`;
+    const limit = Math.min(
+      Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100),
+      500
+    );
+    await StremThruInterface.libraryCache.delete(cacheKey);
+    await this.fetchAndCacheMagnets(cacheKey, limit);
   }
 
   public async getMagnet(magnetId: string): Promise<DebridDownload> {

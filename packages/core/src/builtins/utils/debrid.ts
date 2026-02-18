@@ -125,6 +125,15 @@ async function processTorrentsForDebridService(
     throw new Error(`Service ${service.id} does not support torrent`);
   }
 
+  // Filter out library items that belong to a different service
+  torrents = torrents.filter(
+    (t) => !t.library || !t.indexer || t.indexer === service.id
+  );
+
+  if (torrents.length === 0) {
+    return [];
+  }
+
   const results: TorrentWithSelectedFile[] = [];
 
   const magnetCheckResults = await debridService.checkMagnets(
@@ -239,10 +248,13 @@ async function processTorrentsForDebridService(
         ...torrent,
         title: torrent.title ?? magnetCheckResult?.name,
         size: magnetCheckResult?.size || torrent.size,
+        indexer: torrent.library ? undefined : torrent.indexer,
         file,
         service: {
           id: service.id,
-          cached: magnetCheckResult?.status === 'cached',
+          cached:
+            magnetCheckResult?.status === 'cached' ||
+            (magnetCheckResult?.library || torrent.library) === true,
           library: (magnetCheckResult?.library || torrent.library) === true,
         },
       });
@@ -413,6 +425,14 @@ async function processNZBsForDebridService(
     throw new Error(`Service ${service.id} does not support usenet`);
   }
 
+  nzbs = nzbs.filter(
+    (n) => !n.library || !n.indexer || n.indexer === service.id
+  );
+
+  if (nzbs.length === 0) {
+    return [];
+  }
+
   const results: NZBWithSelectedFile[] = [];
 
   const nzbCheckResults = await debridService.checkNzbs(
@@ -527,6 +547,7 @@ async function processNZBsForDebridService(
         ...nzb,
         title: nzb.title ?? nzbCheckResult?.name,
         size: nzbCheckResult?.size || nzb.size,
+        indexer: nzb.library ? undefined : nzb.indexer,
         file,
         service: {
           id: service.id,

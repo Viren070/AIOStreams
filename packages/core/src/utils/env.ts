@@ -1931,8 +1931,12 @@ export const Env = cleanEnv(process.env, {
     desc: 'Builtin Debrid resolve error cache TTL',
   }),
   BUILTIN_DEBRID_LIBRARY_CACHE_TTL: num({
-    default: 60 * 5, // 5 minutes
+    default: 60 * 60 * 24 * 7, // 7 days
     desc: 'Builtin Debrid library list cache TTL (listMagnets/listNzbs)',
+  }),
+  BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD: num({
+    default: 60 * 10, // 10 minutes
+    desc: 'Time after which cached library data is considered stale and will be refreshed in the background while still serving the cached data (stale-while-revalidate)',
   }),
   BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT: num({
     default: 1,

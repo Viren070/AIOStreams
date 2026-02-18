@@ -47,10 +47,7 @@ class CometStreamParser extends StreamParser {
     }
   }
 
-  protected getMessage(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): string | undefined {
+  protected isInfoStream(stream: Stream): string | undefined {
     const str = 'Sync debrid account library now';
     if (stream.description?.includes(str)) {
       return stream.description;

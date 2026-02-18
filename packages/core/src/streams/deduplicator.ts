@@ -147,7 +147,7 @@ class StreamDeduplicator {
         ) {
           type = stream.service.cached ? 'cached' : 'uncached';
         }
-        if (shouldPassthroughStage(stream, 'dedup')) {
+        if (shouldPassthroughStage(stream, 'dedup') || type === 'info') {
           // ensure that passthrough streams are not deduplicated by adding each to a separate group
           type = `passthrough-${Math.random()}`;
         }

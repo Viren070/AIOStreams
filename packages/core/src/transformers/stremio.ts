@@ -149,7 +149,7 @@ export class StremioTransformer {
     return {
       name,
       description,
-      url: ['http', 'usenet', 'debrid', 'live'].includes(stream.type)
+      url: ['http', 'usenet', 'debrid', 'live', 'info'].includes(stream.type)
         ? stream.url
         : undefined,
       infoHash: stream.type === 'p2p' ? stream.torrent?.infoHash : undefined,

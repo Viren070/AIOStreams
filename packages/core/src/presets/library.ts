@@ -1,9 +1,21 @@
-import { Addon, Option, UserData } from '../db/index.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import StreamParser from '../parser/streams.js';
 import { Env, constants, ServiceId } from '../utils/index.js';
-import { BuiltinAddonPreset } from './builtin.js';
+import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import { StremThruPreset } from './stremthru.js';
 
+class LibraryStreamParser extends BuiltinStreamParser {
+  protected isInfoStream(stream: Stream): string | undefined {
+    if (stream.name?.startsWith('🔄')) {
+      return stream.name.replace('🔄', '').trim();
+    }
+  }
+}
+
 export class LibraryPreset extends BuiltinAddonPreset {
+  static override getParser(): typeof StreamParser {
+    return LibraryStreamParser;
+  }
   public static readonly supportedServices: ServiceId[] = [
     ...StremThruPreset.supportedServices,
     constants.NZBDAV_SERVICE,
@@ -91,6 +103,29 @@ export class LibraryPreset extends BuiltinAddonPreset {
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
+      },
+      {
+        id: 'skipProcessing',
+        name: 'Skip Processing',
+        description:
+          'Skip file selection processing for stream requests. When enabled, matching library items are returned directly without running the full processing pipeline. This is faster but may not pick the best file in multi-file torrents.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'showRefreshActions',
+        name: 'Show Refresh Actions',
+        description:
+          'Where to show the "Refresh Library" action. "Catalog" adds it as a genre filter in the catalog, "Stream" adds a refresh stream to stream results.',
+        type: 'multi-select',
+        required: false,
+        showInSimpleMode: false,
+        options: [
+          { value: 'catalog', label: 'Catalog' },
+          { value: 'stream', label: 'Stream' },
+        ],
+        default: ['catalog'],
       },
     ];
 
@@ -183,6 +218,13 @@ export class LibraryPreset extends BuiltinAddonPreset {
     };
     if (options?.sources && options.sources.length > 0) {
       config.sources = options.sources;
+    }
+
+    if (options?.skipProcessing) {
+      (config as any).skipProcessing = true;
+    }
+    if (options?.showRefreshActions) {
+      (config as any).showRefreshActions = options.showRefreshActions;
     }
     return `${Env.INTERNAL_URL}/builtins/library/${this.base64EncodeJSON(
       config,

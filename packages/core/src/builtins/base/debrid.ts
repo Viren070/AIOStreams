@@ -109,7 +109,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
    * getStreams() but not awaited immediately, so implementations can do other
    * work (e.g. fetching library lists) in parallel.
    */
-  private _searchMetadataPromise: Promise<SearchMetadata> | null = null;
+  protected _searchMetadataPromise: Promise<SearchMetadata> | null = null;
 
   /**
    * Await the search metadata promise. Must be called within _searchTorrents

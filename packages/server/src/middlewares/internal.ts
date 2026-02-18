@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { createResponse } from '../utils/responses.js';
 import { constants, Env } from '@aiostreams/core';
 
-const WHIELIST = ['/easynews/nzb'];
+const WHIELIST = ['/easynews/nzb', '/library/refresh'];
 
 export const internalMiddleware = (
   req: Request,

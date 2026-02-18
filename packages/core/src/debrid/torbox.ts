@@ -387,8 +387,33 @@ export class TorboxDebridService
     }
 
     const cacheKey = `torbox:usenet:${this.config.token}`;
-    const limit = Math.min(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100);
+    const limit = Math.min(
+      Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100),
+      1000
+    );
     const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+
+    // Check for stale cache before acquiring the lock
+    const cached = await TorboxDebridService.libraryCache.get(cacheKey);
+    if (cached) {
+      const remainingTTL =
+        await TorboxDebridService.libraryCache.getTTL(cacheKey);
+      if (remainingTTL !== null && remainingTTL > 0) {
+        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
+        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+          logger.debug(
+            `Library cache for TorBox usenet is stale (age: ${age}s), triggering background refresh`
+          );
+          this.refreshNzbsInBackground(cacheKey, limit, maxItems).catch((err) =>
+            logger.error(
+              `Background library refresh failed for TorBox usenet`,
+              err
+            )
+          );
+        }
+        return cached;
+      }
+    }
 
     const { result } = await DistributedLock.getInstance().withLock(
       `tb:library:usenet:${cacheKey}`,
@@ -399,87 +424,131 @@ export class TorboxDebridService
           return cached;
         }
 
-        const start = Date.now();
-        const allItems: DebridDownload[] = [];
-        let offset = 0;
-
-        while (offset < maxItems) {
-          let nzbInfo;
-          try {
-            nzbInfo = await this.torboxApi.usenet.getUsenetList(
-              this.apiVersion,
-              {
-                limit: limit.toString(),
-                offset: offset.toString(),
-              }
-            );
-          } catch (error: any) {
-            throw convertTorBoxError(error);
-          }
-
-          if (
-            !nzbInfo?.data?.data ||
-            nzbInfo?.data?.error ||
-            nzbInfo.data.success === false
-          ) {
-            throw new DebridError(
-              `Failed to get usenet list: ${nzbInfo?.data?.error || 'Unknown error'}${nzbInfo?.data?.detail ? '- ' + nzbInfo.data.detail : ''}`,
-              {
-                statusCode: nzbInfo.metadata.status,
-                statusText: nzbInfo.metadata.statusText,
-                code: 'UNKNOWN',
-                headers: nzbInfo.metadata.headers,
-                body: nzbInfo.data,
-                cause: nzbInfo.data,
-                type: 'api_error',
-              }
-            );
-          }
-
-          const items = Array.isArray(nzbInfo.data.data)
-            ? nzbInfo.data.data
-            : [nzbInfo.data.data];
-
-          for (const usenetDownload of items) {
-            let status: DebridDownload['status'] = 'queued';
-            if (
-              usenetDownload.downloadFinished &&
-              usenetDownload.downloadPresent
-            ) {
-              status = 'downloaded';
-            } else if (usenetDownload.progress && usenetDownload.progress > 0) {
-              status = 'downloading';
-            }
-            allItems.push({
-              id: usenetDownload.id ?? -1,
-              hash: usenetDownload.hash ?? undefined,
-              name: usenetDownload.name ?? undefined,
-              status,
-              addedAt: usenetDownload.createdAt ?? undefined,
-            });
-          }
-
-          if (items.length < limit) break;
-          offset += limit;
-        }
-
-        logger.debug(`Listed usenet downloads from TorBox`, {
-          count: allItems.length,
-          time: getTimeTakenSincePoint(start),
-        });
-
-        await TorboxDebridService.libraryCache.set(
-          cacheKey,
-          allItems,
-          Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
-          true
-        );
-
-        return allItems;
+        return this.fetchAndCacheNzbs(cacheKey, limit, maxItems);
       },
       { type: 'memory', timeout: 10000 }
     );
     return result;
+  }
+
+  private async fetchAndCacheNzbs(
+    cacheKey: string,
+    limit: number,
+    maxItems: number
+  ): Promise<DebridDownload[]> {
+    const start = Date.now();
+    const allItems: DebridDownload[] = [];
+    let offset = 0;
+
+    while (offset < maxItems) {
+      let nzbInfo;
+      try {
+        nzbInfo = await this.torboxApi.usenet.getUsenetList(this.apiVersion, {
+          limit: limit.toString(),
+          offset: offset.toString(),
+        });
+      } catch (error: any) {
+        throw convertTorBoxError(error);
+      }
+
+      if (
+        !nzbInfo?.data?.data ||
+        nzbInfo?.data?.error ||
+        nzbInfo.data.success === false
+      ) {
+        throw new DebridError(
+          `Failed to get usenet list: ${nzbInfo?.data?.error || 'Unknown error'}${nzbInfo?.data?.detail ? '- ' + nzbInfo.data.detail : ''}`,
+          {
+            statusCode: nzbInfo.metadata.status,
+            statusText: nzbInfo.metadata.statusText,
+            code: 'UNKNOWN',
+            headers: nzbInfo.metadata.headers,
+            body: nzbInfo.data,
+            cause: nzbInfo.data,
+            type: 'api_error',
+          }
+        );
+      }
+
+      const items = Array.isArray(nzbInfo.data.data)
+        ? nzbInfo.data.data
+        : [nzbInfo.data.data];
+
+      for (const usenetDownload of items) {
+        let status: DebridDownload['status'] = 'queued';
+        if (usenetDownload.downloadFinished && usenetDownload.downloadPresent) {
+          status = 'downloaded';
+        } else if (usenetDownload.progress && usenetDownload.progress > 0) {
+          status = 'downloading';
+        }
+        allItems.push({
+          id: usenetDownload.id ?? -1,
+          hash: usenetDownload.hash ?? undefined,
+          name: usenetDownload.name ?? undefined,
+          status,
+          addedAt: usenetDownload.createdAt ?? undefined,
+        });
+      }
+
+      if (items.length < limit) break;
+      offset += limit;
+    }
+
+    logger.debug(`Listed usenet downloads from TorBox`, {
+      count: allItems.length,
+      time: getTimeTakenSincePoint(start),
+    });
+
+    await TorboxDebridService.libraryCache.set(
+      cacheKey,
+      allItems,
+      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      true
+    );
+
+    return allItems;
+  }
+
+  private async refreshNzbsInBackground(
+    cacheKey: string,
+    limit: number,
+    maxItems: number
+  ): Promise<void> {
+    const lockKey = `tb:library:usenet:refresh:${cacheKey}`;
+    await DistributedLock.getInstance().withLock(
+      lockKey,
+      async () => {
+        await TorboxDebridService.libraryCache.delete(cacheKey);
+        return this.fetchAndCacheNzbs(cacheKey, limit, maxItems);
+      },
+      { type: 'memory', timeout: 1000 }
+    );
+  }
+
+  public async refreshLibraryCache(
+    sources?: ('torrent' | 'nzb')[]
+  ): Promise<void> {
+    const includeTorrents =
+      !sources || sources.length === 0 || sources.includes('torrent');
+    const includeNzbs =
+      !sources || sources.length === 0 || sources.includes('nzb');
+
+    // Refresh magnets (delegated to StremThru)
+    if (includeTorrents) {
+      await this.stremthru.refreshLibraryCache();
+    }
+
+    // Refresh NZBs
+    if (includeNzbs) {
+      const cacheKey = `torbox:usenet:${this.config.token}`;
+      const limit = Math.min(
+        Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100),
+        1000
+      );
+      const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+      await TorboxDebridService.libraryCache.delete(cacheKey);
+      await this.fetchAndCacheNzbs(cacheKey, limit, maxItems);
+    }
   }
 
   public async getNzb(nzbId: string): Promise<DebridDownload> {

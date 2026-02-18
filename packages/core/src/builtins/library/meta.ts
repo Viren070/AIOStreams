@@ -27,7 +27,7 @@ const logger = createLogger('library:meta');
  */
 export function parseLibraryId(id: string): {
   serviceId: BuiltinServiceId;
-  itemType: 'torrent' | 'usenet';
+  itemType: 'torrent' | 'usenet' | 'action';
   itemId: string;
 } {
   const parts = id.split('.');
@@ -37,14 +37,11 @@ export function parseLibraryId(id: string): {
 
   return {
     serviceId: parts[1] as BuiltinServiceId,
-    itemType: parts[2] as 'torrent' | 'usenet',
+    itemType: parts[2] as 'torrent' | 'usenet' | 'action',
     itemId: parts.slice(3).join('.'),
   };
 }
 
-/**
- * Fetches a single download item from a debrid service.
- */
 export async function fetchItem(
   serviceId: BuiltinServiceId,
   serviceCredential: string,
@@ -91,9 +88,6 @@ export async function fetchItem(
   throw new Error(`Service ${serviceId} does not support getNzb or listNzbs`);
 }
 
-/**
- * Builds a Meta object for a library item.
- */
 export function buildMeta(
   id: string,
   item: DebridDownload,

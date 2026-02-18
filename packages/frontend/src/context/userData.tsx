@@ -202,9 +202,12 @@ export function applyMigrations(config: any): UserData {
     'includedStreamExpressions',
   ] as const;
   for (const key of streamExpressionKeys) {
-    if (Array.isArray(config[key])) {
-      config[key] = config[key].map((item: unknown) =>
-        typeof item === 'string' ? { expression: item, enabled: true } : item
+    if (
+      Array.isArray(config[key]) &&
+      config[key].some((expr: unknown) => typeof expr === 'string')
+    ) {
+      config[key] = config[key].map((expr: unknown) =>
+        typeof expr === 'string' ? { expression: expr, enabled: true } : expr
       );
     }
   }
@@ -243,6 +246,11 @@ export function removeInvalidPresetReferences(config: UserData) {
         existingPresetIds?.includes(addon)
       ),
     }));
+  }
+  if (config.serviceWrap?.presets) {
+    config.serviceWrap.presets = config.serviceWrap.presets.filter((preset) =>
+      existingPresetIds?.includes(preset)
+    );
   }
   return config;
 }
