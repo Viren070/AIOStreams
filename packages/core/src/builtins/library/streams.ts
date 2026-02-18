@@ -93,7 +93,7 @@ export function createRefreshStream(
   const encryptedCredential = encryptString(JSON.stringify(payload)).data ?? '';
 
   return {
-    url: `${Env.INTERNAL_URL}/builtins/library/refresh/${serviceId}/${encodeURIComponent(encryptedCredential)}`,
+    url: `${Env.BASE_URL}/builtins/library/refresh/${serviceId}/${encodeURIComponent(encryptedCredential)}`,
     name: `🔄 Refresh ${serviceMeta.name} Library`,
     description:
       'Play to refresh the library cache for this service.\nUse if your library seems outdated.',
