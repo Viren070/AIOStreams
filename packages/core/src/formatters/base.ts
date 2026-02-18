@@ -897,7 +897,7 @@ export abstract class BaseFormatter {
              args.push(match[1] ?? match[2] ?? '');
           }
 
-          if (args.length === 0) return variable;
+          if (args.length === 0) return undefined;
           
           let result = variable;
           for (const arg of args) {
@@ -962,7 +962,7 @@ export abstract class BaseFormatter {
              args.push(match[1] ?? match[2] ?? '');
           }
 
-          if (args.length === 0) return variable;
+          if (args.length === 0) return undefined;
 
           return variable.filter((v) => !args.includes(v));
         }
