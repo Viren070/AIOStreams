@@ -115,17 +115,26 @@ export function FiltersMenu() {
 function Content() {
   const [tab, setTab] = useState('cache');
   const { status } = useStatus();
-  const previousTab = useRef(tab);
+  const { mode } = useMode();
   const { userData, setUserData } = useUserData();
   const allowedRegexModal = useDisclosure(false);
   const allowedRegexUrlsModal = useDisclosure(false);
   const whitelistedSelUrlsModal = useDisclosure(false);
-  const { mode } = useMode();
+  // check query params for a specific filter tab to open
   useEffect(() => {
-    if (tab !== previousTab.current) {
-      previousTab.current = tab;
+    const params = new URLSearchParams(window.location.search);
+    const filter = params.get('filter');
+    if (filter) {
+      setTab(filter);
     }
-  }, [tab]);
+  }, []);
+  const handleTabChange = (value: string) => {
+    setTab(value);
+    const params = new URLSearchParams(window.location.search);
+    params.set('filter', value);
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  };
 
   const getSyncedProps = (
     key:
@@ -195,7 +204,7 @@ function Content() {
     <>
       <Tabs
         value={tab}
-        onValueChange={setTab}
+        onValueChange={handleTabChange}
         className={tabsRootClass}
         triggerClass={tabsTriggerClass}
         listClass={tabsListClass}
