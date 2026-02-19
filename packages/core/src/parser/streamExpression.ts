@@ -456,6 +456,54 @@ export abstract class StreamExpressionEngine {
       });
     };
 
+    this.parser.functions.seMatched = function (
+      streams: ParsedStream[],
+      ...seNames: string[]
+    ) {
+      if (seNames.length === 0) {
+        return streams.filter((stream) => stream.streamExpressionMatched);
+      }
+      return streams.filter((stream) =>
+        seNames.some(
+          (seName) => stream.streamExpressionMatched?.name === seName
+        )
+      );
+    };
+
+    this.parser.functions.seMatchedInRange = function (
+      streams: ParsedStream[],
+      min: number,
+      max: number
+    ) {
+      return streams.filter((stream) => {
+        if (!stream.streamExpressionMatched) {
+          return false;
+        } else if (
+          stream.streamExpressionMatched.index < min ||
+          stream.streamExpressionMatched.index > max
+        ) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.rseMatched = function (
+      streams: ParsedStream[],
+      ...rseNames: string[]
+    ) {
+      if (rseNames.length === 0) {
+        return streams.filter(
+          (stream) => stream.rankedStreamExpressionsMatched?.length
+        );
+      }
+      return streams.filter((stream) =>
+        rseNames.some((rseName) =>
+          stream.rankedStreamExpressionsMatched?.some((r) => r === rseName)
+        )
+      );
+    };
+
     this.parser.functions.indexer = function (
       streams: ParsedStream[],
       ...indexers: string[]
@@ -933,7 +981,7 @@ export abstract class StreamExpressionEngine {
       return streams.filter((stream) => stream.seadex?.isSeadex === true);
     };
 
-    this.parser.functions.streamExpressionScore = function (
+    this.parser.functions.seScore = function (
       streams: ParsedStream[],
       minScore?: number,
       maxScore?: number
@@ -958,6 +1006,8 @@ export abstract class StreamExpressionEngine {
         return true;
       });
     };
+
+    this.parser.functions.streamExpressionScore = this.parser.functions.seScore;
 
     this.parser.functions.regexScore = function (
       streams: ParsedStream[],
