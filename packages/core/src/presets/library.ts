@@ -51,6 +51,20 @@ export class LibraryPreset extends BuiltinAddonPreset {
         },
       },
       {
+        id: 'resources',
+        name: 'Resources',
+        description: 'Optionally override the resources to use',
+        type: 'multi-select',
+        required: false,
+        showInSimpleMode: false,
+        emptyIsUndefined: true,
+        default: supportedResources,
+        options: supportedResources.map((resource) => ({
+          label: constants.RESOURCE_LABELS[resource],
+          value: resource,
+        })),
+      },
+      {
         id: 'services',
         name: 'Services',
         description:
@@ -194,7 +208,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
         .join(' | '),
       enabled: true,
       library: true,
-      resources: options.resources || undefined,
+      resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
       mediaTypes: options.mediaTypes || [],
       timeout: options.timeout || this.METADATA.TIMEOUT,
       preset: {
