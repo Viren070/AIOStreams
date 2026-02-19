@@ -42,6 +42,7 @@ export const LibraryAddonConfigSchema = BaseDebridConfigSchema.extend({
   sources: z.array(z.enum(['torrent', 'nzb'])).optional(),
   skipProcessing: z.boolean().optional(),
   showRefreshActions: z.array(z.enum(['catalog', 'stream'])).optional(),
+  resources: z.array(z.enum(['stream', 'catalog', 'meta'])).optional(),
 });
 export type LibraryAddonConfig = z.infer<typeof LibraryAddonConfigSchema>;
 
@@ -66,37 +67,50 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
     );
     const idPrefixes = buildIdPrefixes(this.userData.services);
 
+    const enabledResources = this.userData.resources ?? [
+      'stream',
+      'catalog',
+      'meta',
+    ];
+
+    const resources: Manifest['resources'] = [];
+
+    if (enabledResources.includes('stream')) {
+      resources.push({
+        name: 'stream',
+        types: ['movie', 'series', 'library', 'other'],
+        idPrefixes: [
+          ...baseManifest.resources
+            .filter(
+              (r): r is Exclude<typeof r, string> => typeof r !== 'string'
+            )
+            .flatMap((r) => r.idPrefixes ?? []),
+          ...idPrefixes,
+        ],
+      });
+    }
+
+    if (catalogs.length > 0) {
+      if (enabledResources.includes('catalog')) {
+        resources.push({
+          name: 'catalog',
+          types: ['library'],
+          idPrefixes: [LIBRARY_ID_PREFIX],
+        });
+      }
+      if (enabledResources.includes('meta')) {
+        resources.push({
+          name: 'meta',
+          types: ['library'],
+          idPrefixes,
+        });
+      }
+    }
+
     return {
       ...baseManifest,
       catalogs,
-      resources: [
-        {
-          name: 'stream',
-          types: ['movie', 'series', 'library', 'other'],
-          idPrefixes: [
-            ...baseManifest.resources
-              .filter(
-                (r): r is Exclude<typeof r, string> => typeof r !== 'string'
-              )
-              .flatMap((r) => r.idPrefixes ?? []),
-            ...idPrefixes,
-          ],
-        },
-        ...(catalogs.length > 0
-          ? [
-              {
-                name: 'catalog' as const,
-                types: ['library'],
-                idPrefixes: [LIBRARY_ID_PREFIX],
-              },
-              {
-                name: 'meta' as const,
-                types: ['library'],
-                idPrefixes,
-              },
-            ]
-          : []),
-      ],
+      resources,
       types: [...baseManifest.types!, 'library'],
     };
   }
