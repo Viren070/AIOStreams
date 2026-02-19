@@ -57,6 +57,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
         type: 'multi-select',
         required: false,
         showInSimpleMode: false,
+        emptyIsUndefined: true,
         default: supportedResources,
         options: supportedResources.map((resource) => ({
           label: constants.RESOURCE_LABELS[resource],
@@ -207,7 +208,9 @@ export class LibraryPreset extends BuiltinAddonPreset {
         .join(' | '),
       enabled: true,
       library: true,
-      resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
+      resources: (options.resources && options.resources.length > 0)
+          ? options.resources
+          : this.METADATA.SUPPORTED_RESOURCES,
       mediaTypes: options.mediaTypes || [],
       timeout: options.timeout || this.METADATA.TIMEOUT,
       preset: {
