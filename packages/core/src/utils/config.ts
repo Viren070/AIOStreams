@@ -890,7 +890,7 @@ function validateSyncedRegexUrls(
 
   if (isUnrestricted) return;
 
-  const allowedUrls = Env.ALLOWED_REGEX_PATTERNS_URLS || [];
+  const allowedUrls = RegexAccess.getAllowedUrls();
   const urlsToCheck = [
     ...(config.syncedIncludedRegexUrls || []),
     ...(config.syncedExcludedRegexUrls || []),
@@ -916,7 +916,7 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
 
   if (isUnrestricted) return;
 
-  const allowedUrls = Env.WHITELISTED_SEL_URLS || [];
+  const allowedUrls = SelAccess.getAllowedUrls();
   const urlsToCheck = [
     ...(config.syncedIncludedStreamExpressionUrls || []),
     ...(config.syncedExcludedStreamExpressionUrls || []),

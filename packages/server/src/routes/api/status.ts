@@ -3,6 +3,7 @@ import {
   Env,
   getEnvironmentServiceDetails,
   PresetManager,
+  SelAccess,
   UserRepository,
 } from '@aiostreams/core';
 import { StatusResponse } from '@aiostreams/core';
@@ -39,7 +40,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       tmdbApiAvailable: !!Env.TMDB_ACCESS_TOKEN,
       regexFilterAccess: Env.REGEX_FILTER_ACCESS,
       selSyncAccess: Env.SEL_SYNC_ACCESS,
-      whitelistedSelUrls: Env.WHITELISTED_SEL_URLS || [],
+      whitelistedSelUrls: SelAccess.getAllowedUrls(),
       allowedRegexPatterns:
         (await RegexAccess.allowedRegexPatterns()).patterns.length > 0
           ? {
