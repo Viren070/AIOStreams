@@ -44,7 +44,7 @@ class StreamParser {
   }
 
   protected get indexerEmojis(): string[] {
-    return ['🌐', '⚙️', '🔗', '🔎', '🔍', '☁️'];
+    return ['🔎', '🔍', '🌐', '⚙️', '🔗' , '☁️'];
   }
 
   protected get indexerRegex(): RegExp | undefined {
