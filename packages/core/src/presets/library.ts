@@ -233,10 +233,6 @@ export class LibraryPreset extends BuiltinAddonPreset {
       config.sources = options.sources;
     }
 
-    if (options?.resources) {
-      config.resources = options.resources;
-    }
-
     if (options?.skipProcessing) {
       (config as any).skipProcessing = true;
     }
