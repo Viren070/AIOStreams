@@ -309,7 +309,7 @@ function Content() {
 
       <SettingsCard
         title="Service Wrap"
-        description="Force external P2P-capable addons to return raw torrent results instead of debrid results. AIOStreams will then consolidate them through your configured debrid services, reducing API calls and allowing you to use any service supported by AIOStreams."
+        description="Wrap P2P results from external addons through your own debrid services, without sharing your credentials with those addons. Works with P2P-capable marketplace addons and custom addons added via a custom manifest URL."
       >
         <Switch
           label="Enable Service Wrap"
@@ -324,15 +324,7 @@ function Content() {
               },
             }));
           }}
-          help={
-            <span>
-              When enabled, P2P-capable presets (Comet, Torrentio, MediaFusion,
-              StremThru Torz, Peerflix, FKStream) will be automatically
-              configured to return raw torrent hashes instead of debrid links.
-              This allows AIOStreams to process all torrents through your
-              configured services in a single consolidated API call.
-            </span>
-          }
+          help="When enabled, AIOStreams configures supported addons to return raw torrents, then resolves them through your debrid services."
         />
 
         {userData.serviceWrap?.enabled && (
@@ -350,21 +342,15 @@ function Content() {
                   },
                 }));
               }}
-              help={
-                <span>
-                  Re-process debrid results from external addons that include
-                  torrent info hashes. This allows you to resolve those torrents
-                  through different or additional debrid services that the
-                  original addon may not support.
-                </span>
-              }
+              help="Re-processes debrid results from selected addons through your configured services. Useful if the addon doesn't support returning P2P results."
+              moreHelp="Only works when the torrent hash can be extracted from the stream - not all debrid results will be eligible."
             />
             <Combobox
               label="Wrap Addons"
               help="Select which addons to wrap. Leave empty to wrap all applicable addons."
               options={(userData.presets ?? [])
                 .filter((p) => {
-                  if (!p.enabled) return false;
+                  // if (!p.enabled) return false;
                   const presetMeta = status?.settings.presets.find(
                     (meta) => meta.ID === p.type
                   );
