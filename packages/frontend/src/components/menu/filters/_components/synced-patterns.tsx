@@ -33,7 +33,9 @@ import {
  * Extract ALL names from block comments, including #-prefixed ones.
  * Used for override tracking to make each expression's name unique.
  */
-function extractAllNamesFromExpression(expression: string): string[] | undefined {
+function extractAllNamesFromExpression(
+  expression: string
+): string[] | undefined {
   const regex = /\/\*\s*(.*?)\s*\*\//g;
   const names: string[] = [];
   let match;
@@ -771,7 +773,7 @@ export function SyncedUrlInputs({
   const { urls, onUrlsChange, trusted } = syncConfig;
 
   const validateAndAdd = (url: string) => {
-    const allowedUrls = status?.settings?.allowedRegexPatterns?.urls || [];
+    const allowedUrls = status?.settings?.regexAccess?.urls || [];
 
     if (!url) return false;
 
@@ -789,12 +791,13 @@ export function SyncedUrlInputs({
 
     if (syncMode === 'sel') {
       // SEL sync access check
-      const selAccess = status?.settings?.selSyncAccess ?? 'all';
+      const selAccess = status?.settings?.selSyncAccess?.level ?? 'all';
       const isUnrestricted =
         selAccess === 'all' || (selAccess === 'trusted' && trusted);
 
       if (!isUnrestricted) {
-        const whitelistedSelUrls = status?.settings?.whitelistedSelUrls || [];
+        const whitelistedSelUrls =
+          status?.settings?.selSyncAccess?.trustedUrls || [];
         if (!whitelistedSelUrls.includes(url)) {
           toast.error(
             'This URL is not in the allowed list. Contact the instance owner to whitelist it.'
@@ -807,8 +810,8 @@ export function SyncedUrlInputs({
 
     // Regex sync access check
     const isUnrestricted =
-      status?.settings.regexFilterAccess === 'all' ||
-      (status?.settings.regexFilterAccess === 'trusted' && trusted);
+      status?.settings.regexAccess.level === 'all' ||
+      (status?.settings.regexAccess.level === 'trusted' && trusted);
 
     if (!isUnrestricted && !allowedUrls.includes(url)) {
       toast.error('URL is not in the allowed list');

@@ -461,18 +461,17 @@ export function ConfigTemplatesModal({
 
     if (allRegexes.length > 0) {
       // Get allowed patterns from status
-      const allowedPatterns =
-        statusData.settings?.allowedRegexPatterns?.patterns || [];
+      const allowedPatterns = statusData.settings?.regexAccess?.patterns || [];
 
       // Check if regex access is restricted
       if (
-        statusData.settings?.regexFilterAccess === 'none' &&
+        statusData.settings?.regexAccess?.level === 'none' &&
         allowedPatterns.length === 0
       ) {
         warnings.push(
           'Template uses regex patterns but regex access is disabled on this instance'
         );
-      } else if (statusData.settings?.regexFilterAccess !== 'all') {
+      } else if (statusData.settings?.regexAccess?.level !== 'all') {
         const unsupportedPatterns = allRegexes.filter(
           (pattern) => !allowedPatterns.includes(pattern)
         );

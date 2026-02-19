@@ -1199,16 +1199,16 @@ const StatusResponseSchema = z.object({
     customHtml: z.string().optional(),
     alternateDesign: z.boolean(),
     protected: z.boolean(),
-    regexFilterAccess: z.enum(['none', 'trusted', 'all']),
-    selSyncAccess: z.enum(['all', 'trusted']),
-    whitelistedSelUrls: z.array(z.string()).optional(),
-    allowedRegexPatterns: z
-      .object({
-        patterns: z.array(z.string()),
-        description: z.string().optional(),
-        urls: z.array(z.string()).optional(),
-      })
-      .optional(),
+    regexAccess: z.object({
+      level: z.enum(['none', 'trusted', 'all']),
+      patterns: z.array(z.string()),
+      urls: z.array(z.string()),
+      description: z.string().optional(),
+    }),
+    selSyncAccess: z.object({
+      level: z.enum(['all', 'trusted']),
+      trustedUrls: z.array(z.string()).optional(),
+    }),
     loggingSensitiveInfo: z.boolean(),
     tmdbApiAvailable: z.boolean(),
     forced: z.object({

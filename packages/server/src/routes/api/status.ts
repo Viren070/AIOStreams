@@ -24,6 +24,8 @@ const statusInfo = async (): Promise<StatusResponse> => {
     forcedPublicProxyUrl = `${Env.FORCE_PUBLIC_PROXY_PROTOCOL}://${Env.FORCE_PUBLIC_PROXY_HOST}:${Env.FORCE_PUBLIC_PROXY_PORT ?? ''}`;
   }
 
+  const allowedRegexes = await RegexAccess.allowedRegexPatterns();
+
   return {
     version: Env.VERSION,
     tag: Env.TAG,
@@ -38,18 +40,14 @@ const statusInfo = async (): Promise<StatusResponse> => {
       alternateDesign: Env.ALTERNATE_DESIGN,
       protected: Env.ADDON_PASSWORD.length > 0,
       tmdbApiAvailable: !!Env.TMDB_ACCESS_TOKEN,
-      regexFilterAccess: Env.REGEX_FILTER_ACCESS,
-      selSyncAccess: Env.SEL_SYNC_ACCESS,
-      whitelistedSelUrls: SelAccess.getAllowedUrls(),
-      allowedRegexPatterns:
-        (await RegexAccess.allowedRegexPatterns()).patterns.length > 0
-          ? {
-              patterns: (await RegexAccess.allowedRegexPatterns()).patterns,
-              description: (await RegexAccess.allowedRegexPatterns())
-                .description,
-              urls: (await RegexAccess.allowedRegexPatterns()).urls,
-            }
-          : undefined,
+      regexAccess: {
+        level: Env.REGEX_FILTER_ACCESS,
+        ...allowedRegexes,
+      },
+      selSyncAccess: {
+        level: Env.SEL_SYNC_ACCESS,
+        trustedUrls: SelAccess.getAllowedUrls(),
+      },
       loggingSensitiveInfo: Env.LOG_SENSITIVE_INFO,
       forced: {
         proxy: {

@@ -310,8 +310,9 @@ function Content() {
                   Stream Expression
                 </TabsTrigger>
               )}
-              {(status?.settings.regexFilterAccess !== 'none' ||
-                status?.settings.allowedRegexPatterns) &&
+              {(status?.settings.regexAccess.level !== 'none' ||
+                (status?.settings.regexAccess.patterns?.length ?? 0) > 0 ||
+                (status?.settings.regexAccess.urls?.length ?? 0) > 0) &&
                 mode === 'pro' && (
                   <TabsTrigger value="regex">
                     <BsRegex className="text-lg mr-3" />
@@ -1821,7 +1822,7 @@ function Content() {
                 </p>
               </div>
               <div className="mb-4 space-y-4">
-                {status?.settings.selSyncAccess === 'trusted' &&
+                {status?.settings.selSyncAccess.level === 'trusted' &&
                   (userData.trusted ? (
                     <Alert
                       intent="success"
@@ -1832,8 +1833,9 @@ function Content() {
                             You are a trusted user. You can sync expressions
                             from any URL.
                           </p>
-                          {status?.settings.whitelistedSelUrls &&
-                            status.settings.whitelistedSelUrls.length > 0 && (
+                          {status?.settings.selSyncAccess.trustedUrls &&
+                            status.settings.selSyncAccess.trustedUrls.length >
+                              0 && (
                               <div className="flex flex-row flex-wrap gap-2">
                                 <Button
                                   intent="primary-outline"
@@ -1861,8 +1863,9 @@ function Content() {
                             <code className="font-mono">TRUSTED_UUIDS</code>{' '}
                             environment variable.
                           </p>
-                          {status?.settings.whitelistedSelUrls &&
-                            status.settings.whitelistedSelUrls.length > 0 && (
+                          {status?.settings.selSyncAccess.trustedUrls &&
+                            status.settings.selSyncAccess.trustedUrls.length >
+                              0 && (
                               <div className="flex flex-row flex-wrap gap-2">
                                 <Button
                                   intent="primary-outline"
@@ -2330,7 +2333,7 @@ function Content() {
                 </p>
               </div>
               <div className="mb-4 space-y-4">
-                {status?.settings.regexFilterAccess === 'trusted' &&
+                {status?.settings.regexAccess.level === 'trusted' &&
                   (userData.trusted ? (
                     <Alert
                       intent="success"
@@ -2359,7 +2362,8 @@ function Content() {
                       }
                     />
                   ))}
-                {status?.settings.allowedRegexPatterns?.patterns.length && (
+                {(status?.settings.regexAccess.patterns?.length ||
+                  status?.settings.regexAccess.urls?.length) && (
                   <Alert
                     intent="info"
                     title="Allowed Regex Patterns"
@@ -2370,20 +2374,17 @@ function Content() {
                             This instance has allowed a specific set of regexes
                             to be used by all users.
                           </p>
-                          {status?.settings.allowedRegexPatterns
-                            .description && (
+                          {status?.settings.regexAccess.description && (
                             <div className="mt-2 break-words overflow-hidden">
                               <MarkdownLite>
-                                {status?.settings.allowedRegexPatterns
-                                  .description || ''}
+                                {status?.settings.regexAccess.description || ''}
                               </MarkdownLite>
                             </div>
                           )}
                         </div>
                         <div className="flex flex-row flex-wrap gap-2">
-                          {status?.settings.allowedRegexPatterns?.urls &&
-                            status.settings.allowedRegexPatterns.urls.length >
-                              0 && (
+                          {status?.settings.regexAccess.urls &&
+                            status.settings.regexAccess.urls.length > 0 && (
                               <Button
                                 intent="primary-outline"
                                 size="sm"
@@ -3399,8 +3400,8 @@ function Content() {
         <div className="space-y-4">
           <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
             <div className="space-y-2">
-              {status?.settings.allowedRegexPatterns?.patterns.map(
-                (pattern, index) => (
+              {status?.settings.regexAccess.patterns?.map(
+                (pattern: string, index: number) => (
                   <div
                     key={index}
                     className="font-mono text-sm bg-gray-800 rounded px-3 py-2 break-all whitespace-pre-wrap"
@@ -3409,8 +3410,8 @@ function Content() {
                   </div>
                 )
               )}
-              {(!status?.settings.allowedRegexPatterns?.patterns ||
-                status.settings.allowedRegexPatterns.patterns.length === 0) && (
+              {(!status?.settings.regexAccess.patterns ||
+                status.settings.regexAccess.patterns.length === 0) && (
                 <div className="text-muted-foreground text-sm text-center">
                   No allowed regex patterns configured
                 </div>
@@ -3429,48 +3430,8 @@ function Content() {
         <div className="space-y-4">
           <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
             <div className="space-y-2">
-              {status?.settings.whitelistedSelUrls?.map((url, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
-                >
-                  <div className="flex-1 break-all whitespace-pre-wrap">
-                    {url}
-                  </div>
-                  <IconButton
-                    size="sm"
-                    intent="primary-subtle"
-                    icon={<FaRegCopy />}
-                    onClick={() =>
-                      copyToClipboard(url, {
-                        successMessage: 'URL copied to clipboard',
-                      })
-                    }
-                  />
-                </div>
-              ))}
-              {(!status?.settings.whitelistedSelUrls ||
-                status.settings.whitelistedSelUrls.length === 0) && (
-                <div className="text-muted-foreground text-sm text-center">
-                  No whitelisted sync URLs configured
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={allowedRegexUrlsModal.isOpen}
-        onOpenChange={allowedRegexUrlsModal.close}
-        title="Allowed Regex Pattern URLs"
-        description="These are URLs that you can import regex patterns from."
-      >
-        <div className="space-y-4">
-          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
-            <div className="space-y-2">
-              {status?.settings.allowedRegexPatterns?.urls?.map(
-                (url, index) => (
+              {status?.settings.selSyncAccess.trustedUrls?.map(
+                (url: string, index: number) => (
                   <div
                     key={index}
                     className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
@@ -3491,8 +3452,50 @@ function Content() {
                   </div>
                 )
               )}
-              {(!status?.settings.allowedRegexPatterns?.urls ||
-                status.settings.allowedRegexPatterns.urls.length === 0) && (
+              {(!status?.settings.selSyncAccess.trustedUrls ||
+                status.settings.selSyncAccess.trustedUrls.length === 0) && (
+                <div className="text-muted-foreground text-sm text-center">
+                  No whitelisted sync URLs configured
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={allowedRegexUrlsModal.isOpen}
+        onOpenChange={allowedRegexUrlsModal.close}
+        title="Allowed Regex Pattern URLs"
+        description="These are URLs that you can import regex patterns from."
+      >
+        <div className="space-y-4">
+          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
+            <div className="space-y-2">
+              {status?.settings.regexAccess.urls?.map(
+                (url: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
+                  >
+                    <div className="flex-1 break-all whitespace-pre-wrap">
+                      {url}
+                    </div>
+                    <IconButton
+                      size="sm"
+                      intent="primary-subtle"
+                      icon={<FaRegCopy />}
+                      onClick={() =>
+                        copyToClipboard(url, {
+                          successMessage: 'URL copied to clipboard',
+                        })
+                      }
+                    />
+                  </div>
+                )
+              )}
+              {(!status?.settings.regexAccess.urls ||
+                status.settings.regexAccess.urls.length === 0) && (
                 <div className="text-muted-foreground text-sm text-center">
                   No allowed regex pattern URLs configured
                 </div>
