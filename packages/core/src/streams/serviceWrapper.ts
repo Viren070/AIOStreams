@@ -18,6 +18,7 @@ import {
 import { processTorrents } from '../builtins/utils/debrid.js';
 import { StreamContext } from './context.js';
 import { parseTorrentTitle } from '@viren070/parse-torrent-title';
+import { PresetManager } from '../presets/presetManager.js';
 
 const logger = createLogger('serviceWrapper');
 
@@ -77,10 +78,14 @@ export async function resolveServiceWrappedStreams(
   const reconfigureStreams: ParsedStream[] = [];
   const otherStreams: ParsedStream[] = [];
 
+  const presetList = PresetManager.getPresetList();
+
   for (const stream of streams) {
     const isWrapped = stream.addon.instanceId
       ? serviceWrappedInstanceIds.has(stream.addon.instanceId)
       : false;
+
+    const presetMeta = presetList.find((p) => p.ID === stream.addon.preset.id);
 
     const presetInScope = isPresetInScope(stream.addon.preset.id);
 
@@ -98,6 +103,7 @@ export async function resolveServiceWrappedStreams(
       wrappedP2PStreams.push(stream);
     } else if (
       reconfigureEnabled &&
+      presetMeta?.BUILTIN == false &&
       !isWrapped &&
       stream.type === 'debrid' &&
       stream.torrent?.infoHash &&
