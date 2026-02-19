@@ -208,9 +208,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
         .join(' | '),
       enabled: true,
       library: true,
-      resources: (options.resources && options.resources.length > 0)
-          ? options.resources
-          : this.METADATA.SUPPORTED_RESOURCES,
+      resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
       mediaTypes: options.mediaTypes || [],
       timeout: options.timeout || this.METADATA.TIMEOUT,
       preset: {
