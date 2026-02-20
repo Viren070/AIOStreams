@@ -20,7 +20,7 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   apiKey: z.string().optional(),
   apiPath: z.string().optional(),
   forceQuerySearch: z.boolean().default(false),
-  limit: z.number().optional(),
+  limit: z.number().min(1).optional(),
   paginate: z.boolean().default(false),
   forceInitialLimit: z.number().optional(),
 });
