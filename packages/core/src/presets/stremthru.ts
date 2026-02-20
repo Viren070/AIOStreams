@@ -20,13 +20,6 @@ export class StremThruStreamParser extends StreamParser {
     return stream.name?.includes('🔑') ? true : false;
   }
 
-  protected override getIndexer(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): string | undefined {
-    return undefined;
-  }
-
   protected get filenameRegex(): RegExp | undefined {
     return this.getRegexForTextAfterEmojis(['📄', '📁']);
   }
@@ -40,6 +33,10 @@ export class StremThruStreamParser extends StreamParser {
       /📦\s*(\d+(\.\d+)?)\s?(KB|MB|GB|TB)/i
     );
     return folderSize;
+  }
+
+  protected override get indexerEmojis(): string[] {
+    return ['🔍'];
   }
 }
 
