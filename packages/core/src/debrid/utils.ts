@@ -11,6 +11,7 @@ import {
 } from '../utils/index.js';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { createHash } from 'crypto';
 import {
   DebridFile,
   DebridDownload,
@@ -28,6 +29,36 @@ import { partial_ratio } from 'fuzzball';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 
 const logger = createLogger('debrid');
+
+/**
+ * Clean an NZB URL by stripping query parameters, ampersand parameters, and fragments.
+ */
+export function cleanNzbUrl(url: string): string {
+  let cleaned = url;
+  const qIndex = cleaned.indexOf('?');
+  if (qIndex !== -1) {
+    cleaned = cleaned.substring(0, qIndex);
+  } else {
+    const aIndex = cleaned.indexOf('&');
+    if (aIndex !== -1) {
+      cleaned = cleaned.substring(0, aIndex);
+    }
+  }
+  const hIndex = cleaned.indexOf('#');
+  if (hIndex !== -1) {
+    cleaned = cleaned.substring(0, hIndex);
+  }
+  return cleaned;
+}
+
+/**
+ * Compute an MD5 hash of a cleaned NZB URL.
+ */
+export function hashNzbUrl(url: string, clean: boolean = true): string {
+  return createHash('md5')
+    .update(clean ? cleanNzbUrl(url) : url)
+    .digest('hex');
+}
 
 export const BuiltinDebridServices = z.array(
   z.object({

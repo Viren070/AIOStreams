@@ -11,6 +11,7 @@ export class NZBHydraPreset extends NewznabPreset {
       constants.NZBDAV_SERVICE,
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
     ] as ServiceId[];
     const options: Option[] = [
       {

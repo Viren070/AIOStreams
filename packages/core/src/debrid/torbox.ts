@@ -8,6 +8,7 @@ import {
   DistributedLock,
   getTimeTakenSincePoint,
 } from '../utils/index.js';
+import { StremThruService } from './stremthru.js';
 import { selectFileInTorrentOrNZB } from './utils.js';
 import {
   DebridServiceConfig,
@@ -17,7 +18,6 @@ import {
   TorrentDebridService,
   UsenetDebridService,
 } from './base.js';
-import { StremThruInterface } from './stremthru.js';
 import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
 
 const logger = createLogger('debrid:torbox');
@@ -100,7 +100,7 @@ export class TorboxDebridService
 {
   private readonly apiVersion = 'v1';
   private readonly torboxApi: TorboxApi;
-  private readonly stremthru: StremThruInterface;
+  private readonly stremthru: StremThruService;
   private static playbackLinkCache = Cache.getInstance<string, string | null>(
     'tb:link'
   );
@@ -109,15 +109,22 @@ export class TorboxDebridService
     DebridDownload
   >('tb:instant-availability');
   readonly serviceName: ServiceId = 'torbox';
+  readonly capabilities = { torrents: true, usenet: true };
 
   constructor(private readonly config: DebridServiceConfig) {
     this.torboxApi = new TorboxApi({
       token: config.token,
     });
 
-    this.stremthru = new StremThruInterface({
-      ...config,
+    this.stremthru = new StremThruService({
       serviceName: this.serviceName,
+      clientIp: config.clientIp,
+      stremthru: {
+        baseUrl: Env.BUILTIN_STREMTHRU_URL,
+        store: this.serviceName,
+        token: config.token,
+      },
+      capabilities: { torrents: true, usenet: false },
     });
   }
   public async listMagnets(): Promise<DebridDownload[]> {

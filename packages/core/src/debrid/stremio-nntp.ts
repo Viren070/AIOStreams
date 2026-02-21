@@ -11,6 +11,7 @@ const logger = createLogger('stremio-nntp');
 
 export class StremioNNTPService implements UsenetDebridService {
   readonly serviceName: ServiceId = 'stremio_nntp';
+  readonly capabilities = { torrents: false, usenet: true };
   readonly serviceLogger = logger;
 
   private servers: NNTPServers;

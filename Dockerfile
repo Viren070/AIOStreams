@@ -18,6 +18,7 @@ COPY packages/core/package*.json ./packages/core/
 COPY packages/frontend/package*.json ./packages/frontend/
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
+COPY patches ./patches
 
 # Install dependencies.
 RUN pnpm install --frozen-lockfile
@@ -52,6 +53,7 @@ WORKDIR /runtime
 COPY --from=builder /build/package*.json /build/LICENSE ./
 COPY --from=builder /build/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder /build/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /build/patches ./patches
 
 COPY --from=builder /build/packages/core/package.*json ./packages/core/
 COPY --from=builder /build/packages/server/package.*json ./packages/server/

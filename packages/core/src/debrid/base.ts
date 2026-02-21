@@ -177,6 +177,7 @@ export type TitleMetadata = z.infer<typeof TitleMetadataSchema>;
 
 interface BaseDebridService {
   readonly serviceName: ServiceId;
+  readonly capabilities: { torrents: boolean; usenet: boolean };
 
   resolve(
     playbackInfo: PlaybackInfo,
@@ -229,11 +230,11 @@ export type DebridServiceConfig = {
 export function isTorrentDebridService(
   debridService: DebridService
 ): debridService is TorrentDebridService {
-  return (debridService as TorrentDebridService).checkMagnets !== undefined;
+  return debridService.capabilities.torrents;
 }
 
 export function isUsenetDebridService(
   debridService: DebridService
 ): debridService is UsenetDebridService {
-  return (debridService as UsenetDebridService).checkNzbs !== undefined;
+  return debridService.capabilities.usenet;
 }

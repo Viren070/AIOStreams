@@ -20,7 +20,7 @@ import {
   validateInfoHash,
 } from '../utils/debrid.js';
 import { createQueryLimit, useAllTitles } from '../utils/general.js';
-import { createHash } from 'crypto';
+import { hashNzbUrl } from '../../debrid/utils.js';
 
 export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
   url: z.string(),
@@ -283,7 +283,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       if (seenNzbs.has(nzbUrl)) continue;
       seenNzbs.add(nzbUrl);
 
-      const hash = createHash('md5').update(nzbUrl).digest('hex');
+      const hash = hashNzbUrl(nzbUrl);
 
       nzbs.push({
         hash,

@@ -25,6 +25,7 @@ const EasynewsAuthSchema = z.object({
 
 export class EasynewsService implements UsenetDebridService {
   readonly serviceName: ServiceId = 'easynews';
+  readonly capabilities = { torrents: false, usenet: true };
   readonly serviceLogger = logger;
 
   private auth: z.infer<typeof EasynewsAuthSchema>;

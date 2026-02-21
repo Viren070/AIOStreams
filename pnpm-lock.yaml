@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  stremthru:
+    hash: 5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd
+    path: patches/stremthru.patch
+
 importers:
 
   .:
@@ -79,7 +84,7 @@ importers:
         version: 5.1.7
       stremthru:
         specifier: ^0.11.0
-        version: 0.11.0
+        version: 0.11.0(patch_hash=5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd)
       super-regex:
         specifier: ^1.1.0
         version: 1.1.0
@@ -9689,7 +9694,7 @@ snapshots:
       es-errors: 1.3.0
       internal-slot: 1.1.0
 
-  stremthru@0.11.0: {}
+  stremthru@0.11.0(patch_hash=5d59636029f2455cfc103c8b8206ce24ff67c7f7f77e6fb8ea3f65dca52105dd): {}
 
   string-width@4.2.3:
     dependencies:

@@ -430,6 +430,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   );
 
   abstract readonly serviceName: ServiceId;
+  readonly capabilities = { torrents: false, usenet: true };
 
   protected readonly auth: UsenetStreamServiceConfig;
   protected readonly serviceLogger: Logger;

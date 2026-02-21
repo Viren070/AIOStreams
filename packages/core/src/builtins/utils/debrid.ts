@@ -20,6 +20,7 @@ import {
   isTorrentDebridService,
   isUsenetDebridService,
   TitleMetadata,
+  hashNzbUrl,
 } from '../../debrid/index.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
 import { preprocessTitle } from '../../parser/utils.js';
@@ -434,6 +435,18 @@ async function processNZBsForDebridService(
   }
 
   const results: NZBWithSelectedFile[] = [];
+
+  if (service.id === 'torbox') {
+    // update the hashes to be the md5 of the URL without cleaning.
+    // torbox still hash entire URl instead of removing query params.
+    // TODO: remove once torbox hashes after cleaning.
+    nzbs = nzbs.map((nzb) => {
+      return {
+        ...nzb,
+        hash: hashNzbUrl(nzb.nzb, false),
+      };
+    });
+  }
 
   const nzbCheckResults = await debridService.checkNzbs(
     nzbs.map((nzb) => ({ name: nzb.title, hash: nzb.hash })),

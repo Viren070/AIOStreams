@@ -20,6 +20,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
     ...StremThruPreset.supportedServices,
     constants.NZBDAV_SERVICE,
     constants.ALTMOUNT_SERVICE,
+    constants.STREMTHRU_NEWZ_SERVICE,
   ];
 
   static override get METADATA() {

@@ -36,6 +36,7 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
       constants.EASYNEWS_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
     ] as ServiceId[];
 
     const options: Option[] = [

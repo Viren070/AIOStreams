@@ -272,7 +272,13 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       (s) => !['nzbdav', 'altmount'].includes(s.id)
     );
     const nzbServices = this.userData.services.filter((s) =>
-      ['nzbdav', 'altmount', 'torbox', 'stremio_nntp'].includes(s.id)
+      [
+        'nzbdav',
+        'altmount',
+        'torbox',
+        'stremio_nntp',
+        'stremthru_newz',
+      ].includes(s.id)
     );
 
     if (torrentServices.length === 0 && torrentResults.length > 0) {

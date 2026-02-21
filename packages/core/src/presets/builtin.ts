@@ -131,6 +131,13 @@ export class BuiltinAddonPreset extends Preset {
             password: credentials.password,
           })
         ),
+      [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) =>
+        toUrlSafeBase64(
+          JSON.stringify({
+            url: credentials.url,
+            authToken: credentials.authToken,
+          })
+        ),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>

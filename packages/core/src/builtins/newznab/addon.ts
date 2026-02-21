@@ -8,7 +8,7 @@ import {
   TorrentWithSelectedFile,
 } from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
-import { createHash } from 'crypto';
+import { hashNzbUrl } from '../../debrid/utils.js';
 import { BaseNabApi, SearchResultItem } from '../base/nab/api.js';
 import {
   BaseNabAddon,
@@ -70,6 +70,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
             constants.NZBDAV_SERVICE,
             constants.ALTMOUNT_SERVICE,
             constants.STREMIO_NNTP_SERVICE,
+            constants.STREMTHRU_NEWZ_SERVICE,
           ].includes(s.id)
       )
     ) {
@@ -169,9 +170,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       seenNzbs.add(nzbUrl);
 
       const zyclopsHealth = result.newznab?.zyclopsHealth?.toString();
-      const md5 =
-        result.newznab?.infohash?.toString() ||
-        createHash('md5').update(nzbUrl).digest('hex');
+      const md5 = result.newznab?.infohash?.toString() || hashNzbUrl(nzbUrl);
 
       let date = result.pubDate?.toString();
       if (typeof result.newznab?.usenetdate === 'string') {
@@ -239,7 +238,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       }
       for (let i = 0; i < nzbs.length; i++) {
         nzbs[i].nzb = proxiedUrls[i];
-        nzbs[i].hash = createHash('md5').update(nzbs[i].nzb).digest('hex');
+        nzbs[i].hash = hashNzbUrl(nzbs[i].nzb);
       }
     }
     return nzbs;

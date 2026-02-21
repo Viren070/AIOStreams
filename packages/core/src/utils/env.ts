@@ -1918,6 +1918,10 @@ export const Env = cleanEnv(process.env, {
     default: 'https://stremthru.13377001.xyz',
     desc: 'Builtin StremThru URL',
   }),
+  TORBOX_USENET_VIA_STREMTHRU: bool({
+    default: false,
+    desc: 'Route TorBox entirely through StremThru for both torrent and usenet operations instead of using the TorBox API directly for usenet operations.',
+  }),
   BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL: num({
     default: 60 * 30, // 30 minutes
     desc: 'Builtin Debrid instant availability cache TTL',

@@ -19,7 +19,7 @@ import {
   SearchMetadata,
 } from '../base/debrid.js';
 import { createQueryLimit, useAllTitles } from '../utils/general.js';
-import { createHash } from 'crypto';
+import { hashNzbUrl } from '../../debrid/utils.js';
 import EasynewsApi, {
   EasynewsApiError,
   EasynewsSearchItem,
@@ -72,6 +72,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
             constants.ALTMOUNT_SERVICE,
             constants.STREMIO_NNTP_SERVICE,
             constants.EASYNEWS_SERVICE,
+            constants.STREMTHRU_NEWZ_SERVICE,
           ].includes(s.id)
       )
     ) {
@@ -184,7 +185,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
 
       return {
         confirmed: false,
-        hash: createHash('md5').update(nzbUrl).digest('hex'),
+        hash: hashNzbUrl(nzbUrl),
         nzb: nzbUrl,
         easynewsUrl,
         age,
