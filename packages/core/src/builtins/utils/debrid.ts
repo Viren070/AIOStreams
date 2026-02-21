@@ -441,10 +441,14 @@ async function processNZBsForDebridService(
     // torbox still hash entire URl instead of removing query params.
     // TODO: remove once torbox hashes after cleaning.
     nzbs = nzbs.map((nzb) => {
-      return {
-        ...nzb,
-        hash: hashNzbUrl(nzb.nzb, false),
-      };
+      if (nzb.nzb) {
+        const hash = hashNzbUrl(nzb.nzb, false);
+        return {
+          ...nzb,
+          hash,
+        };
+      }
+      return nzb;
     });
   }
 
@@ -564,7 +568,9 @@ async function processNZBsForDebridService(
         file,
         service: {
           id: service.id,
-          cached: nzbCheckResult?.status === 'cached',
+          cached:
+            nzbCheckResult?.status === 'cached' ||
+            (nzbCheckResult?.library || nzb.library) === true,
           library: (nzbCheckResult?.library || nzb.library) === true,
         },
       });
