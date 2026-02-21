@@ -737,9 +737,17 @@ const SERVICE_DETAILS: Record<
         id: 'url',
         name: 'StremThru URL',
         description:
-          'The base URL of your StremThru instance. E.g., https://stremthru.example.com',
+          'The base URL of your StremThru instance used for requests e.g. http://stremthru:8080 or https://stremthru.mydomain.com',
         type: 'string',
         required: true,
+      },
+      {
+        id: 'publicUrl',
+        name: 'Public StremThru URL (Optional)',
+        description:
+          'The public URL of your StremThru instance. If your URL above is not publicly accessible, provide a public URL here to replace the base URL and protocol in playback links.',
+        type: 'string',
+        required: false,
       },
       {
         id: 'authToken',

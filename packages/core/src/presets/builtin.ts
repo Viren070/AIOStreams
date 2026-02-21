@@ -136,6 +136,7 @@ export class BuiltinAddonPreset extends Preset {
           JSON.stringify({
             url: credentials.url,
             authToken: credentials.authToken,
+            publicUrl: credentials.publicUrl,
           })
         ),
     };

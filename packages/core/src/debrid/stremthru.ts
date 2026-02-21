@@ -36,6 +36,7 @@ function convertStremThruError(error: StremThruError): DebridError {
 export interface StremThruServiceConfig {
   serviceName: ServiceId;
   clientIp?: string;
+  publicUrl?: string;
   stremthru: {
     baseUrl: string;
     store: string;
@@ -56,6 +57,7 @@ export class StremThruService
   implements TorrentDebridService, UsenetDebridService
 {
   private readonly stremthru: StremThru;
+  private readonly publicUrl?: string;
   readonly serviceName: ServiceId;
 
   readonly capabilities: { torrents: boolean; usenet: boolean };
@@ -103,6 +105,7 @@ export class StremThruService
         addNewz: timeouts.add,
       },
     });
+    this.publicUrl = config.publicUrl;
   }
 
   //  Shared check cache helpers
@@ -524,8 +527,6 @@ export class StremThruService
           checked: hashesToCheck.length,
           found: allItems.length,
         });
-
-        logger.debug(JSON.stringify(allItems, null, 2));
 
         newResults = allItems.map((item) => ({
           id: -1,
@@ -1212,11 +1213,27 @@ export class StremThruService
       });
     }
 
-    const playbackLink = await this.generateUsenetLink(
+    let playbackLink = await this.generateUsenetLink(
       file.link,
       undefined,
       this.config.clientIp
     );
+
+    if (this.publicUrl) {
+      try {
+        const playbackUrl = new URL(playbackLink);
+        const publicUrl = new URL(this.publicUrl);
+        playbackUrl.host = publicUrl.host;
+        playbackUrl.protocol = publicUrl.protocol;
+        playbackLink = playbackUrl.toString();
+      } catch (error) {
+        logger.warn(`Failed to rewrite playback link with public URL`, {
+          error: (error as Error).message,
+          playbackLink,
+          publicUrl: this.publicUrl,
+        });
+      }
+    }
 
     await StremThruService.playbackLinkCache.set(
       cacheKey,

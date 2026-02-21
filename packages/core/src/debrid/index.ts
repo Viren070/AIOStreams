@@ -72,11 +72,13 @@ function createStremThruNewzService(
 ): StremThruService {
   let url: string;
   let authToken: string;
+  let publicUrl: string | undefined;
 
   try {
     const parsed = JSON.parse(fromUrlSafeBase64(config.token));
     url = parsed.url;
     authToken = parsed.authToken;
+    publicUrl = parsed.publicUrl;
   } catch {
     throw new DebridError(
       'Invalid StremThru Newz credentials. Expected base64-encoded JSON with url and authToken.',
@@ -106,6 +108,7 @@ function createStremThruNewzService(
   return new StremThruService({
     serviceName: 'stremthru_newz',
     clientIp: config.clientIp,
+    publicUrl,
     stremthru: {
       baseUrl: url,
       store: 'stremthru',
