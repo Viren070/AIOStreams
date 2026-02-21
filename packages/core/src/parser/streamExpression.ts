@@ -871,11 +871,12 @@ export abstract class StreamExpressionEngine {
             'stremio_nntp',
             'easydebrid',
             'debrider',
+            'qbittorrent',
           ].includes(s)
         )
       ) {
         throw new Error(
-          'Service must be a string and one of: realdebrid, debridlink, alldebrid, torbox, pikpak, seedr, offcloud, premiumize, easynews, nzbdav, altmount, easydebrid, debrider'
+          'Service must be a string and one of: realdebrid, debridlink, alldebrid, torbox, pikpak, seedr, offcloud, premiumize, easynews, nzbdav, altmount, easydebrid, debrider, qbittorrent'
         );
       }
       return streams.filter((stream) =>
@@ -960,6 +961,15 @@ export abstract class StreamExpressionEngine {
         throw new Error('Your streams input must be an array of streams');
       }
       return streams.filter((stream) => stream.library);
+    };
+
+    this.parser.functions.privateTracker = function (
+      streams: ParsedStream[]
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+      return streams.filter((stream) => stream.torrent?.private === true);
     };
 
     this.parser.functions.seadex = function (

@@ -107,7 +107,12 @@ export function normaliseTitle(title: string) {
     .toLowerCase();
 }
 
-export function cleanTitle(title: string) {
+export interface CleanTitleOptions {
+  /** Keep apostrophes in the title (e.g. "Madea's" stays "madea's" instead of "madeas") */
+  keepApostrophes?: boolean;
+}
+
+export function cleanTitle(title: string, options?: CleanTitleOptions) {
   // replace German umlauts with ASCII equivalents, then normalize to NFD
   let cleaned = title
     .replace(/[ÄäÖöÜüß]/g, (c) => umlautMap[c])
@@ -117,10 +122,14 @@ export function cleanTitle(title: string) {
     cleaned = cleaned.replaceAll(char, ' ');
   }
 
+  const specialCharPattern = options?.keepApostrophes
+    ? /[^\p{L}\p{N}\s']/gu
+    : /[^\p{L}\p{N}\s]/gu;
+
   return cleaned
     .replace(/&/g, 'and')
     .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-    .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
+    .replace(specialCharPattern, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalise spaces
     .toLowerCase()
     .trim();

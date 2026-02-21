@@ -73,6 +73,14 @@ export class StremThruService
   private static checkCache = Cache.getInstance<string, DebridDownload>(
     'st:check'
   );
+  // Maps placeholder hashes (SHA-1 of downloadUrl) to real info hashes returned
+  // by StremThru after addTorrent. Persists via Redis or SQL so that future
+  // cache checks resolve correctly (e.g. showing qBittorrent torrents as cached).
+  private static hashMapping = Cache.getInstance<string, string>(
+    'st:hash-map',
+    5000,
+    Env.REDIS_URI ? undefined : 'sql'
+  );
   private static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'st:library'
   );
@@ -810,13 +818,33 @@ export class StremThruService
     return result;
   }
 
+  /**
+   * Resolve a placeholder hash to the real info hash if a mapping exists.
+   * Used by the cache-checking pipeline to look up real hashes before
+   * calling checkMagnets, so already-downloaded torrents show as cached.
+   */
+  public static async resolveHash(
+    serviceName: string,
+    hash: string
+  ): Promise<string> {
+    const realHash = await StremThruService.hashMapping.get(
+      `${serviceName}:${hash}`
+    );
+    if (realHash) {
+      logger.debug(`Resolved placeholder hash ${hash} → ${realHash}`, {
+        serviceName,
+      });
+    }
+    return realHash ?? hash;
+  }
+
   private async _resolveTorrent(
     playbackInfo: PlaybackInfo & { type: 'torrent' },
     filename: string,
     cacheAndPlay: boolean,
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
-    const { hash, metadata } = playbackInfo;
+    let { hash, metadata } = playbackInfo;
     const cacheKey = `torrent:${this.serviceName}:${this.config.stremthru.token}:${this.config.clientIp}:${hash}:${metadata?.season}:${metadata?.episode}:${metadata?.absoluteEpisode}`;
     const cachedLink = await StremThruService.playbackLinkCache.get(cacheKey);
 
@@ -842,7 +870,7 @@ export class StremThruService
         id: magnetDownload.id,
       });
     } else if (
-      playbackInfo.private !== undefined &&
+      (playbackInfo.private !== undefined || playbackInfo.placeholderHash) &&
       playbackInfo.downloadUrl &&
       Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
       (await this.checkCacheGet(hash))?.status !== 'cached'
@@ -851,6 +879,26 @@ export class StremThruService
         `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
       );
       magnetDownload = await this.addTorrent(playbackInfo.downloadUrl);
+
+      // Map placeholder → real hash so future cache checks and polling work
+      const realHash = magnetDownload.hash;
+      if (playbackInfo.placeholderHash && realHash && realHash !== hash) {
+        logger.debug(
+          `Mapped placeholder hash ${hash} → real hash ${realHash}`
+        );
+        try {
+          await StremThruService.hashMapping.set(
+            `${this.serviceName}:${hash}`,
+            realHash,
+            3600 * 24 * 7,
+            true
+          );
+        } catch (err: any) {
+          logger.warn(`Failed to cache hash mapping: ${err.message}`);
+        }
+        hash = realHash;
+      }
+
       logger.debug(`Torrent added for ${playbackInfo.downloadUrl}`, {
         status: magnetDownload.status,
         id: magnetDownload.id,
@@ -872,32 +920,61 @@ export class StremThruService
       });
     }
 
+    // Track whether we're attempting to stream a not-yet-downloaded torrent.
+    // Some stores (qBittorrent, Torbox) return file links during download,
+    // allowing streaming while downloading. If link generation fails for
+    // stores that don't actually support it (e.g. Debrider), we fall back
+    // to returning undefined (shows "downloading" page).
+    let streamingWhileDownloading = false;
+
     if (magnetDownload.status !== 'downloaded') {
-      StremThruService.playbackLinkCache.set(cacheKey, null, 60);
-      if (!cacheAndPlay) {
-        return undefined;
-      }
-      for (let i = 0; i < 10; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 11000));
-        const list = await this.listMagnets();
-        const magnetDownloadInList = list.find(
-          (magnet) => magnet.hash === hash
+      // If cacheAndPlay is enabled and we already have files with links
+      // (e.g. qBittorrent with sequential download), proceed immediately —
+      // the file server can serve partially-downloaded files.
+      const hasStreamableFiles = magnetDownload.files?.some((f) => f.link);
+      if (cacheAndPlay && hasStreamableFiles) {
+        logger.debug(
+          `Attempting streaming-while-downloading for ${hash}`,
+          { status: magnetDownload.status }
         );
-        if (!magnetDownloadInList) {
-          logger.warn(`Failed to find ${hash} in list`);
-        } else {
-          logger.debug(`Polled status for ${hash}`, {
-            attempt: i + 1,
-            status: magnetDownloadInList.status,
-          });
-          if (magnetDownloadInList.status === 'downloaded') {
-            magnetDownload = magnetDownloadInList;
-            break;
+        streamingWhileDownloading = true;
+      } else {
+        // temporarily cache the null value for 1m
+        StremThruService.playbackLinkCache.set(cacheKey, null, 60);
+        if (!cacheAndPlay) {
+          return undefined;
+        }
+        // poll status when cacheAndPlay is true, max wait time is 110s
+        const initialFiles = magnetDownload.files;
+        for (let i = 0; i < 10; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 11000));
+          const list = await this.listMagnets();
+          const magnetDownloadInList = list.find(
+            (magnet) => magnet.hash === hash
+          );
+          if (!magnetDownloadInList) {
+            logger.warn(`Failed to find ${hash} in list`);
+          } else {
+            logger.debug(`Polled status for ${hash}`, {
+              attempt: i + 1,
+              status: magnetDownloadInList.status,
+            });
+            if (magnetDownloadInList.status === 'downloaded') {
+              // listMagnets doesn't return files, so preserve the original
+              // file list from addMagnet/addTorrent
+              magnetDownload = {
+                ...magnetDownloadInList,
+                files: magnetDownloadInList.files?.length
+                  ? magnetDownloadInList.files
+                  : initialFiles,
+              };
+              break;
+            }
           }
         }
-      }
-      if (magnetDownload.status !== 'downloaded') {
-        return undefined;
+        if (magnetDownload.status !== 'downloaded') {
+          return undefined;
+        }
       }
     }
 
@@ -990,16 +1067,39 @@ export class StremThruService
       availableFiles: `[${magnetDownload.files.map((file) => file.name).join(', ')}]`,
     });
 
-    const playbackLink = await this.generateTorrentLink(
-      file.link,
-      this.config.clientIp
-    );
+    let playbackLink: string;
+    try {
+      playbackLink = await this.generateTorrentLink(
+        file.link,
+        this.config.clientIp
+      );
+    } catch (error: any) {
+      // If we're streaming while downloading and link generation fails,
+      // the store doesn't support partial file serving. Fall back to
+      // showing the "downloading" page instead of an error.
+      if (streamingWhileDownloading) {
+        logger.debug(
+          `Streaming-while-downloading link generation failed for ${hash}, falling back`,
+          { error: error.message }
+        );
+        StremThruService.playbackLinkCache.set(cacheKey, null, 60);
+        return undefined;
+      }
+      throw error;
+    }
     await StremThruService.playbackLinkCache.set(
       cacheKey,
       playbackLink,
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
       true
     );
+
+    // Invalidate stale instant availability cache entries so the next browse
+    // reflects the updated state (torrent now available in the store).
+    this.checkCacheDelete(playbackInfo.hash);
+    if (hash !== playbackInfo.hash) {
+      this.checkCacheDelete(hash);
+    }
 
     if (autoRemoveDownloads && magnetDownload.id && !magnetDownload.private) {
       this.removeMagnet(magnetDownload.id.toString()).catch((err) => {

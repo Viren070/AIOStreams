@@ -1954,6 +1954,10 @@ export const Env = cleanEnv(process.env, {
     default: true,
     desc: 'Use torrent URLs instead of magnets for better private tracker integration',
   }),
+  BUILTIN_DEBRID_EXCLUDE_PRIVATE_TRACKERS: bool({
+    default: true,
+    desc: 'Exclude private tracker torrents from debrid services (they are still available via qBittorrent)',
+  }),
   BUILTIN_DEBRID_METADATA_STORE: str({
     choices: ['redis', 'sql', 'memory'],
     default: undefined,

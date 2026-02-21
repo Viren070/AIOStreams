@@ -224,6 +224,7 @@ const NZBDAV_SERVICE = 'nzbdav';
 const ALTMOUNT_SERVICE = 'altmount';
 const STREMIO_NNTP_SERVICE = 'stremio_nntp';
 const STREMTHRU_NEWZ_SERVICE = 'stremthru_newz';
+const QBITTORRENT_SERVICE = 'qbittorrent';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -242,6 +243,7 @@ const SERVICES = [
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  QBITTORRENT_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -259,6 +261,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  QBITTORRENT_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -317,6 +320,7 @@ const SERVICE_DETAILS: Record<
     shortName: string;
     knownNames: string[];
     signUpText: string;
+    debrid: boolean;
     credentials: Option[];
   }
 > = {
@@ -325,6 +329,7 @@ const SERVICE_DETAILS: Record<
     name: 'Real-Debrid',
     shortName: 'RD',
     knownNames: ['RD', 'Real Debrid', 'RealDebrid', 'Real-Debrid'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://real-debrid.com/?id=9483829)",
     credentials: [
@@ -343,6 +348,7 @@ const SERVICE_DETAILS: Record<
     name: 'AllDebrid',
     shortName: 'AD',
     knownNames: ['AD', 'All Debrid', 'AllDebrid', 'All-Debrid'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://alldebrid.com/?uid=3n8qa&lang=en)",
     credentials: [
@@ -361,6 +367,7 @@ const SERVICE_DETAILS: Record<
     name: 'Premiumize',
     shortName: 'PM',
     knownNames: ['PM', 'Premiumize'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://www.premiumize.me/register)",
     credentials: [
@@ -379,6 +386,7 @@ const SERVICE_DETAILS: Record<
     name: 'Debrid-Link',
     shortName: 'DL',
     knownNames: ['DL', 'Debrid Link', 'DebridLink', 'Debrid-Link'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://debrid-link.com/id/EY0JO)",
     credentials: [
@@ -397,6 +405,7 @@ const SERVICE_DETAILS: Record<
     name: 'TorBox',
     shortName: 'TB',
     knownNames: ['TB', 'TorBox', 'Torbox', 'TRB'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://torbox.app/subscription?referral=9ca21adb-dbcb-4fb0-9195-412a5f3519bc) or use my referral code `9ca21adb-dbcb-4fb0-9195-412a5f3519bc`.",
     credentials: [
@@ -415,6 +424,7 @@ const SERVICE_DETAILS: Record<
     name: 'Stremio NNTP',
     shortName: 'SN',
     knownNames: ['SN', 'Stremio NNTP', 'StremioNntp', 'Stremio-NNTP'],
+    debrid: false,
     signUpText:
       "Stream usenet directly from your provider via Stremio's NNTP client.",
     credentials: [
@@ -439,6 +449,7 @@ const SERVICE_DETAILS: Record<
     name: 'NzbDAV',
     shortName: 'ND',
     knownNames: ['ND'],
+    debrid: false,
     signUpText: 'Stream usenet directly from your provider via Nzb DAV.',
     credentials: [
       {
@@ -504,6 +515,7 @@ const SERVICE_DETAILS: Record<
     name: 'AltMount',
     shortName: 'AM',
     knownNames: ['AM'],
+    debrid: false,
     signUpText: 'Stream usenet directly from your provider via AltMount.',
     credentials: [
       {
@@ -570,6 +582,7 @@ const SERVICE_DETAILS: Record<
     name: 'Offcloud',
     shortName: 'OC',
     knownNames: ['OC', 'Offcloud'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://offcloud.com/?=06202a3d)",
     credentials: [
@@ -604,6 +617,7 @@ const SERVICE_DETAILS: Record<
     name: 'put.io',
     shortName: 'P.IO',
     knownNames: ['PO', 'put.io', 'putio'],
+    debrid: true,
     signUpText: "Don't have an account? [Sign up here](https://put.io/)",
     credentials: [
       {
@@ -629,6 +643,7 @@ const SERVICE_DETAILS: Record<
     name: 'Easynews',
     shortName: 'EN',
     knownNames: ['EN', 'Easynews'],
+    debrid: false,
     signUpText:
       "Don't have an account? [Sign up here](https://www.easynews.com/)",
     credentials: [
@@ -653,6 +668,7 @@ const SERVICE_DETAILS: Record<
     name: 'EasyDebrid',
     shortName: 'ED',
     knownNames: ['ED', 'EasyDebrid'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://paradise-cloud.com/products/easydebrid)",
     credentials: [
@@ -671,6 +687,7 @@ const SERVICE_DETAILS: Record<
     name: 'Debrider',
     shortName: 'DR',
     knownNames: ['DBD', 'DR', 'DER', 'DB', 'Debrider'],
+    debrid: true,
     signUpText: "Don't have an account? [Sign up here](https://debrider.app/)",
     credentials: [
       {
@@ -688,6 +705,7 @@ const SERVICE_DETAILS: Record<
     name: 'PikPak',
     shortName: 'PKP',
     knownNames: ['PP', 'PikPak', 'PKP'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://mypikpak.com/drive/activity/invited?invitation-code=72822731)",
     credentials: [
@@ -712,6 +730,7 @@ const SERVICE_DETAILS: Record<
     name: 'Seedr',
     shortName: 'SDR',
     knownNames: ['SR', 'Seedr', 'SDR'],
+    debrid: true,
     signUpText:
       "Don't have an account? [Sign up here](https://www.seedr.cc/?r=6542079)",
     credentials: [
@@ -748,6 +767,64 @@ const SERVICE_DETAILS: Record<
           'Your StremThru authentication token from `STREMTHRU_AUTH`',
         type: 'password',
         required: true,
+      },
+    ],
+  },
+  [QBITTORRENT_SERVICE]: {
+    id: QBITTORRENT_SERVICE,
+    name: 'qBittorrent',
+    shortName: 'QB',
+    knownNames: ['QB', 'qBittorrent', 'qBit'],
+    debrid: false,
+    signUpText:
+      'Stream from your own seedbox or server running qBittorrent. Ideal for private tracker users who need a dedicated IP and ratio management.',
+    credentials: [
+      {
+        id: 'note',
+        name: 'How it works',
+        description:
+          'Primarily meant for private trackers. Debrid services can put your account at risk: your passkey runs on shared infrastructure you don\'t control, their IPs are often shared across users (problematic for trackers that enforce IP matching), and some use modified or non-whitelisted clients. This routes torrents through your own qBittorrent instead, where your passkey, client, and seeding stay fully under your control. Torrents are added with sequential download for immediate playback and are never auto-removed. You can use qBittorrent\'s built-in share ratio limits or a tool like [qbit_manage](https://github.com/StuffAnThings/qbit_manage) to handle cleanup after seeding.',
+        type: 'alert',
+        intent: 'info',
+        required: false,
+      },
+      {
+        id: 'url',
+        name: 'qBittorrent URL',
+        description:
+          'The URL of your qBittorrent Web UI, reachable from your StremThru instance. If both are on the same Docker network, use the container name (e.g., http://qbittorrent:8080).',
+        type: 'url',
+        required: true,
+      },
+      {
+        id: 'username',
+        name: 'Username',
+        description: 'Your qBittorrent Web UI username.',
+        type: 'string',
+        required: true,
+      },
+      {
+        id: 'password',
+        name: 'Password',
+        description: 'Your qBittorrent Web UI password.',
+        type: 'password',
+        required: true,
+      },
+      {
+        id: 'fileBaseUrl',
+        name: 'File Server URL',
+        description:
+          'The HTTP URL where qBittorrent\'s completed downloads are accessible. For remote seedboxes, this is usually the HTTPS file access URL from your provider (e.g., https://mybox.provider.com/downloads/). For self-hosted setups, you may need to serve the download directory with nginx or similar (e.g., http://qbit-fileserver).',
+        type: 'url',
+        required: true,
+      },
+      {
+        id: 'pathMapping',
+        name: 'Path Mapping (optional)',
+        description:
+          'Docker-style path mapping when qBittorrent\'s internal save path differs from the file server\'s directory layout. Format: /internal/path:/external/path. For example, if qBit saves to /downloads but your file server serves from /media/torrents, enter /downloads:/media/torrents. Leave empty if both use the same path.',
+        type: 'string',
+        required: false,
       },
     ],
   },
@@ -1424,6 +1501,7 @@ export {
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  QBITTORRENT_SERVICE,
   SERVICE_DETAILS,
   TOP_LEVEL_OPTION_DETAILS,
   HEADERS_FOR_IP_FORWARDING,

@@ -46,6 +46,7 @@ import { NzbDavConfig, NzbDAVService } from '../../debrid/nzbdav.js';
 import { AltmountConfig, AltmountService } from '../../debrid/altmount.js';
 import { createProxy } from '../../proxy/index.js';
 import { formatHours } from '../../formatters/utils.js';
+import { createHash } from 'crypto';
 
 export interface SearchMetadata extends TitleMetadata {
   primaryTitle?: string;
@@ -231,6 +232,28 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         }),
       ];
     }
+
+    // For torrents without a hash (common with private trackers), generate a
+    // deterministic placeholder from the download URL instead of eagerly
+    // downloading the .torrent file. On private trackers, hitting the download
+    // endpoint counts as a snatch — doing it during browse risks ratio problems
+    // and hit-and-run warnings. The actual .torrent is downloaded later at
+    // resolve time via addTorrent(downloadUrl) when the user selects a stream.
+    const torrentsWithPlaceholderHash = torrentResults
+      .filter((t) => !t.hash && t.downloadUrl)
+      .map(
+        (t) =>
+          ({
+            ...t,
+            hash: createHash('sha1').update(t.downloadUrl!).digest('hex'),
+            placeholderHash: true,
+          }) as Torrent
+      );
+
+    torrentResults = [
+      ...torrentResults.filter((t) => t.hash),
+      ...torrentsWithPlaceholderHash,
+    ];
 
     const torrentsToDownload = torrentResults.filter(
       (t) => !t.hash && t.downloadUrl
@@ -614,21 +637,24 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       addYear?: boolean;
       addSeasonEpisode?: boolean;
       useAllTitles?: boolean;
+      keepApostrophes?: boolean;
     }
   ): string[] {
-    const { addYear, addSeasonEpisode, useAllTitles } = {
+    const { addYear, addSeasonEpisode, useAllTitles, keepApostrophes } = {
       addYear: true,
       addSeasonEpisode: true,
       useAllTitles: false,
+      keepApostrophes: false,
       ...options,
     };
     let queries: string[] = [];
     if (!metadata.primaryTitle) {
       return [];
     }
+    const cleanOpts = keepApostrophes ? { keepApostrophes: true } : undefined;
     const titles = useAllTitles
-      ? metadata.titles.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT).map(cleanTitle)
-      : [metadata.primaryTitle];
+      ? metadata.titles.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT).map((t) => cleanTitle(t, cleanOpts))
+      : [cleanTitle(metadata.primaryTitle, cleanOpts)];
     const titlePlaceholder = '<___title___>';
     const addQuery = (query: string) => {
       titles.forEach((title) => {
@@ -830,6 +856,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
             private: torrentOrNzb.private,
+            placeholderHash: torrentOrNzb.placeholderHash,
             sources: torrentOrNzb.sources,
             index: torrentOrNzb.file.index,
             cacheAndPlay:

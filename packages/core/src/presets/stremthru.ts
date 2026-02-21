@@ -10,6 +10,21 @@ export const stremthruSpecialCases: Partial<
     `${credentials.email}:${credentials.password}`,
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
+  [constants.QBITTORRENT_SERVICE]: (credentials: any) => {
+    const base = `${credentials.url}|${credentials.username}|${credentials.password}|${credentials.fileBaseUrl}`;
+    if (credentials.pathMapping) {
+      const mapping = credentials.pathMapping as string;
+      const colonIdx = mapping.indexOf(':');
+      if (colonIdx === -1) {
+        throw new Error('Path mapping must be in "from:to" format (e.g. /downloads:/media/torrents)');
+      }
+      if (colonIdx === 0) {
+        throw new Error('Path mapping "from" path cannot be empty');
+      }
+      return `${base}|${mapping}`;
+    }
+    return base;
+  },
 };
 
 export class StremThruStreamParser extends StreamParser {
@@ -51,6 +66,7 @@ export class StremThruPreset extends Preset {
     constants.PIKPAK_SERVICE,
     constants.REALDEBRID_SERVICE,
     constants.TORBOX_SERVICE,
+    constants.QBITTORRENT_SERVICE,
   ] as const;
 
   protected static readonly socialLinks: Option['socials'] = [
