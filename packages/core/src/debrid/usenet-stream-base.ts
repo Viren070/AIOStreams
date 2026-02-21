@@ -40,6 +40,7 @@ const HistorySlotSchema = z.object({
   category: z.string().optional(),
   storage: z.string().nullable().optional(),
   fail_message: z.string().optional(),
+  bytes: z.number().optional(),
 });
 
 const HistoryResponseSchema = z.object({
@@ -68,6 +69,7 @@ const transformHistorySlot = (slot: z.infer<typeof HistorySlotSchema>) => ({
   category: slot.category,
   storage: slot.storage,
   failMessage: slot.fail_message,
+  bytes: slot.bytes,
 });
 
 const transformHistoryResponse = (
@@ -779,7 +781,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
         id: file.basename,
         status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
         name: file.basename,
-        size: file.size,
+        size: file.size > 0 ? file.size : (matchingSlot?.bytes ?? 0),
         hash: file.basename,
         addedAt: file.lastmod ?? undefined,
         files: [],
