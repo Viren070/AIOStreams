@@ -74,6 +74,11 @@ export class StremthruStorePreset extends StremThruPreset {
       constants.META_RESOURCE,
     ];
 
+    const supportedServices: ServiceId[] = [
+      ...StremThruPreset.supportedServices,
+      constants.STREMTHRU_NEWZ_SERVICE,
+    ];
+
     const options: Option[] = [
       ...baseOptions(
         'StremThru Store',
@@ -89,7 +94,7 @@ export class StremthruStorePreset extends StremThruPreset {
         type: 'multi-select',
         required: false,
         showInSimpleMode: false,
-        options: StremThruPreset.supportedServices.map((service) => ({
+        options: supportedServices.map((service) => ({
           value: service,
           label: constants.SERVICE_DETAILS[service].name,
         })),
@@ -110,6 +115,13 @@ export class StremthruStorePreset extends StremThruPreset {
           { label: 'Anime', value: 'anime' },
         ],
         default: [],
+      },
+      {
+        id: 'hideStreams',
+        name: 'Hide Streams',
+        description:
+          'Hide streams from this addon. This can be used to prevent StremThru Store from showing streams except in its catalogs.',
+        type: 'boolean',
       },
       {
         id: 'webDl',
@@ -142,7 +154,7 @@ export class StremthruStorePreset extends StremThruPreset {
       TIMEOUT: Env.DEFAULT_STREMTHRU_STORE_TIMEOUT || Env.DEFAULT_TIMEOUT,
       USER_AGENT:
         Env.DEFAULT_STREMTHRU_STORE_USER_AGENT || Env.DEFAULT_USER_AGENT,
-      SUPPORTED_SERVICES: StremThruPreset.supportedServices,
+      SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'Access your debrid library through catalogs and streams.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
@@ -219,11 +231,23 @@ export class StremthruStorePreset extends StremThruPreset {
         )}`
       );
     }
+
+    const credential = this.getServiceCredential(serviceId, userData);
+    let storeToken: string | undefined = credential;
+    let storeName: string | undefined = serviceId;
+    if (serviceId === constants.STREMTHRU_NEWZ_SERVICE) {
+      url = `${credential.url.replace(/\/$/, '')}`;
+      storeToken = credential.authToken;
+      storeName = '';
+    }
+    if (!url.endsWith('/stremio/store')) {
+      url += '/stremio/store';
+    }
     const configString = this.base64EncodeJSON({
-      store_name: serviceId,
-      store_token: this.getServiceCredential(serviceId, userData),
+      store_name: storeName,
+      store_token: storeToken,
       hide_catalog: false,
-      hide_stream: false,
+      hide_stream: options.hideStreams ?? false,
       webdl: options.webDl ?? false,
       usenet: options.usenet ?? false,
     });

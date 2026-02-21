@@ -10,6 +10,7 @@ export const stremthruSpecialCases: Partial<
     `${credentials.email}:${credentials.password}`,
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
+  [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) => credentials,
 };
 
 export class StremThruStreamParser extends StreamParser {
