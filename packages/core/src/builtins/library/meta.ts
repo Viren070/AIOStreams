@@ -169,8 +169,13 @@ function buildVideos(
       /NCED|NCOP/i.test(file.name ?? '') ||
       (parsed.releaseTypes?.length ?? 0) > 0;
 
+    const fileId =
+      file.index !== undefined && file.index !== -1
+        ? file.index
+        : (file.id ?? file.name);
+
     return {
-      id: `${metaId}:${file.index ?? file.id ?? file.name}`,
+      id: `${metaId}:${fileId}`,
       title: file.name,
       season: isSpecial
         ? 0
