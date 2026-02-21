@@ -111,24 +111,6 @@ export class LibraryPreset extends BuiltinAddonPreset {
         emptyIsUndefined: true,
       },
       {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'When using multiple services, use a different Library addon for each service, rather than using one instance for all services',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'skipProcessing',
-        name: 'Skip Processing',
-        description:
-          'Skip file selection processing for stream requests. When enabled, matching library items are returned directly without running the full processing pipeline. This is faster but may not pick the best file in multi-file torrents.',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
         id: 'showRefreshActions',
         name: 'Show Refresh Actions',
         description:
@@ -141,6 +123,32 @@ export class LibraryPreset extends BuiltinAddonPreset {
           { value: 'stream', label: 'Stream' },
         ],
         default: ['catalog'],
+      },
+      {
+        id: 'skipProcessing',
+        name: 'Skip Processing',
+        description:
+          'Skip file selection processing for stream requests. When enabled, matching library items are returned directly without running the full processing pipeline. This is faster but may not pick the best file in multi-file torrents.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'hideStreams',
+        name: 'Hide Streams',
+        description:
+          'Hide streams from this addon. This can be used to prevent the library addon from showing streams except in its catalogs.',
+        type: 'boolean',
+        default: false,
+      },
+      {
+        id: 'useMultipleInstances',
+        name: 'Use Multiple Instances',
+        description:
+          'When using multiple services, use a different Library addon for each service, rather than using one instance for all services',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
       },
     ];
 
@@ -230,17 +238,11 @@ export class LibraryPreset extends BuiltinAddonPreset {
   ): string {
     const config: Record<string, any> = {
       ...this.getBaseConfig(userData, services),
+      sources: options?.sources,
+      skipProcessing: options?.skipProcessing,
+      showRefreshActions: options?.showRefreshActions,
+      hideStreams: options?.hideStreams,
     };
-    if (options?.sources && options.sources.length > 0) {
-      config.sources = options.sources;
-    }
-
-    if (options?.skipProcessing) {
-      (config as any).skipProcessing = true;
-    }
-    if (options?.showRefreshActions) {
-      (config as any).showRefreshActions = options.showRefreshActions;
-    }
     return `${Env.INTERNAL_URL}/builtins/library/${this.base64EncodeJSON(
       config,
       'urlSafe'

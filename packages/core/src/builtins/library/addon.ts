@@ -42,6 +42,7 @@ export const LibraryAddonConfigSchema = BaseDebridConfigSchema.extend({
   sources: z.array(z.enum(['torrent', 'nzb'])).optional(),
   skipProcessing: z.boolean().optional(),
   showRefreshActions: z.array(z.enum(['catalog', 'stream'])).optional(),
+  hideStreams: z.boolean().default(false).optional(),
 });
 export type LibraryAddonConfig = z.infer<typeof LibraryAddonConfigSchema>;
 
@@ -74,11 +75,15 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
           name: 'stream',
           types: ['movie', 'series', 'library', 'other'],
           idPrefixes: [
-            ...baseManifest.resources
-              .filter(
-                (r): r is Exclude<typeof r, string> => typeof r !== 'string'
-              )
-              .flatMap((r) => r.idPrefixes ?? []),
+            // these id prefixes are for normal stream requests (imdb/kitsu/etc IDs)
+            // if hideStreams is true, don't set these prefixes so that the addon won't receive any stream requests aside from the library catalog ones
+            ...(!this.userData.hideStreams
+              ? baseManifest.resources
+                  .filter(
+                    (r): r is Exclude<typeof r, string> => typeof r !== 'string'
+                  )
+                  .flatMap((r) => r.idPrefixes ?? [])
+              : []),
             ...idPrefixes,
           ],
         },
