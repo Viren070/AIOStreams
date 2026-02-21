@@ -16,6 +16,9 @@ type PARSE_REGEX = {
     Record<(typeof constants.RESOLUTIONS)[number], RegExp>,
     'Unknown'
   >;
+  alternativeResolutions: Partial<
+    Record<(typeof constants.RESOLUTIONS)[number], RegExp>
+  >;
   qualities: Omit<
     Record<(typeof constants.QUALITIES)[number], RegExp>,
     'Unknown'
@@ -43,7 +46,7 @@ type PARSE_REGEX = {
 export const PARSE_REGEX: PARSE_REGEX = {
   resolutions: {
     '2160p': createRegex(
-      '(bd|hd|m)?(4k|2160(p|i)?)|u(ltra)?[ .\\-_]?hd|3840\\s?x\\s?(\\d{4})'
+      '(bd|hd|m)?2160(p|i)?|3840\\s?x\\s?(\\d{4})'
     ),
     '1440p': createRegex(
       '(bd|hd|m)?(1440(p|i)?)|2k|w?q(uad)?[ .\\-_]?hd|2560\\s?x(\\d{4})'
@@ -59,6 +62,10 @@ export const PARSE_REGEX: PARSE_REGEX = {
     '360p': createRegex('(bd|hd|m)?(360(p|i)?)'),
     '240p': createRegex('(bd|hd|m)?((240|266)(p|i)?)'),
     '144p': createRegex('(bd|hd|m)?(144(p|i)?)'),
+  },
+  // Fallback to prevent matching the wrong resolution in certain cases, e.g. downscaled or UHD Blu-ray sourced releases
+  alternativeResolutions: {
+    '2160p': createRegex('4k|u(ltra)?[ .\\-_]?hd'),
   },
   qualities: {
     'BluRay REMUX': createRegex('(bd|br|b|uhd)?remux'),
@@ -87,7 +94,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     DV: createRegex('do?(lby)?[ .\\-_]?vi?(sion)?(?:[ .\\-_]?atmos)?|dv'),
     '3D': createRegex('(bd)?(3|three)[ .\\-_]?(d(imension)?(al)?)'),
     IMAX: createRegex('imax'),
-    AI: createRegex('ai[ .\\-_]?(upscale|enhanced|remaster)?'),
+    AI: createRegex('ai|(ai)?(upscal(ed?|ing)|enhanced?|re[ .\\-_]?graded?)'),
     SDR: createRegex('sdr'),
     'H-OU': createRegex('h?(alf)?[ .\\-_]?(ou|over[ .\\-_]?under)'),
     'H-SBS': createRegex('h?(alf)?[ .\\-_]?(sbs|side[ .\\-_]?by[ .\\-_]?side)'),
