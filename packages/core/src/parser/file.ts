@@ -86,7 +86,9 @@ class FileParser {
       filename = filename.replace(parsed.title, '').trim();
       filename = filename.replace(/\s+/g, '.').replace(/^\.+|\.+$/g, '');
     }
-    const resolution = matchPattern(filename, PARSE_REGEX.resolutions);
+    const resolution =
+      matchPattern(filename, PARSE_REGEX.resolutions) ||
+      matchPattern(filename, PARSE_REGEX.alternativeResolutions);
     const quality = matchPattern(filename, PARSE_REGEX.qualities);
     const encode = matchPattern(filename, PARSE_REGEX.encodes);
     const audioChannels = matchMultiplePatterns(
