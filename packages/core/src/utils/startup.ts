@@ -1448,19 +1448,6 @@ const logStartupInfo = () => {
     logKeyValue('  User Agent:', Env.DEFAULT_SUBHERO_USER_AGENT, '     ');
   }
 
-  // StreamAsia
-  logKeyValue('StreamAsia:', Env.STREAMASIA_URL);
-  if (Env.DEFAULT_STREAMASIA_TIMEOUT) {
-    logKeyValue(
-      '  Timeout:',
-      formatMilliseconds(Env.DEFAULT_STREAMASIA_TIMEOUT),
-      '     '
-    );
-  }
-  if (Env.DEFAULT_STREAMASIA_USER_AGENT) {
-    logKeyValue('  User Agent:', Env.DEFAULT_STREAMASIA_USER_AGENT, '     ');
-  }
-
   // More Like This
   logKeyValue('More Like This:', Env.MORE_LIKE_THIS_URL);
   if (Env.DEFAULT_MORE_LIKE_THIS_TIMEOUT) {
