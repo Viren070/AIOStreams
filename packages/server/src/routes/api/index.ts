@@ -11,3 +11,4 @@ export { default as animeApi } from './anime.js';
 export { default as proxyApi } from './proxy.js';
 export { default as templatesApi } from './templates.js';
 export { default as syncApi } from './sync.js';
+export { default as strmApi } from './strm.js';

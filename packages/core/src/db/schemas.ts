@@ -650,6 +650,13 @@ export const UserDataSchema = z.object({
   externalDownloads: z.boolean().optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
 
+  strmOutput: z
+    .object({
+      mode: z.enum(['disabled', 'always', 'userAgent']).optional(),
+      userAgents: z.array(z.string().min(1)).optional(),
+    })
+    .optional(),
+
   autoRemoveDownloads: z.boolean().optional(),
   checkOwned: z.boolean().optional().default(true),
   serviceWrap: z

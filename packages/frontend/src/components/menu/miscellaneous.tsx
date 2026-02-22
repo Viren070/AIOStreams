@@ -467,6 +467,69 @@ function Content() {
           </SettingsCard>
         )}
         {mode === 'pro' && (
+          <SettingsCard
+            title="STRM Output"
+            description={
+              <div className="space-y-2">
+                <p>
+                  When enabled, stream URLs are routed through a gate endpoint.
+                  If the player&apos;s User-Agent matches, a .strm file is
+                  served instead of a direct link.
+                </p>
+                <Alert intent="info-basic">
+                  <p className="text-sm">
+                    In &quot;User-Agent Dependent&quot; mode, non-matching
+                    clients are transparently redirected to the direct stream
+                    URL.
+                  </p>
+                </Alert>
+              </div>
+            }
+          >
+            <Select
+              label="Mode"
+              options={[
+                { label: 'Disabled', value: 'disabled' },
+                { label: 'Always', value: 'always' },
+                { label: 'User-Agent Dependent', value: 'userAgent' },
+              ]}
+              value={userData.strmOutput?.mode || 'disabled'}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  strmOutput: {
+                    ...prev.strmOutput,
+                    mode: value as 'disabled' | 'always' | 'userAgent',
+                  },
+                }));
+              }}
+            />
+            {userData.strmOutput?.mode === 'userAgent' && (
+              <TextInput
+                label="User Agents"
+                help="Comma-separated list of User-Agent substrings to match (case-insensitive). If the player's User-Agent contains any of these, a .strm file is served."
+                placeholder="e.g., Infuse, VLC, mpv"
+                value={(userData.strmOutput?.userAgents ?? ['Infuse']).join(
+                  ', '
+                )}
+                onValueChange={(value) => {
+                  const agents = value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter((s) => s.length > 0);
+                  setUserData((prev) => ({
+                    ...prev,
+                    strmOutput: {
+                      ...prev.strmOutput,
+                      userAgents: agents.length > 0 ? agents : undefined,
+                    },
+                  }));
+                }}
+              />
+            )}
+          </SettingsCard>
+        )}
+        {mode === 'pro' && (
           <SettingsCard title="Hide Errors">
             <Switch
               label="Hide Errors"

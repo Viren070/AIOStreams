@@ -13,6 +13,7 @@ import {
   proxyApi,
   templatesApi,
   syncApi,
+  strmApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -110,6 +111,7 @@ apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
+apiRouter.use('/strm-gate', strmApi);
 app.use(`/api/v${constants.API_VERSION}`, apiRouter);
 
 // Stremio Routes
