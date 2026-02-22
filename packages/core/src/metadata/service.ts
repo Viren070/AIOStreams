@@ -92,7 +92,11 @@ export class MetadataService {
                 titles.push({ title: animeEntry.trakt.title });
               if (animeEntry.title) titles.push({ title: animeEntry.title });
               if (animeEntry.synonyms)
-                titles.push(...animeEntry.synonyms.map((s) => ({ title: s })));
+                titles.push(
+                  ...animeEntry.synonyms
+                    .filter((s): s is string => !!s)
+                    .map((s) => ({ title: s }))
+                );
               year = animeEntry.animeSeason?.year ?? undefined;
             }
 
@@ -175,7 +179,8 @@ export class MetadataService {
               const tmdbMetadata = tmdbResult.value;
               if (tmdbMetadata.title)
                 titles.unshift({ title: tmdbMetadata.title });
-              if (tmdbMetadata.titles) titles.push(...tmdbMetadata.titles);
+              if (tmdbMetadata.titles)
+                titles.push(...tmdbMetadata.titles.filter((t) => !!t.title));
               if (tmdbMetadata.year) year = tmdbMetadata.year;
               if (tmdbMetadata.yearEnd) yearEnd = tmdbMetadata.yearEnd;
               if (tmdbMetadata.originalLanguage)
@@ -200,7 +205,8 @@ export class MetadataService {
               const tvdbMetadata = tvdbResult.value;
               if (tvdbMetadata.title)
                 titles.unshift({ title: tvdbMetadata.title });
-              if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
+              if (tvdbMetadata.titles)
+                titles.push(...tvdbMetadata.titles.filter((t) => !!t.title));
               if (tvdbMetadata.year) year = tvdbMetadata.year;
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
               if (tvdbMetadata.runtime && !runtime)
@@ -247,7 +253,7 @@ export class MetadataService {
 
             // Process Trakt results
             if (traktResult.status === 'fulfilled' && traktResult.value) {
-              titles.push(...traktResult.value);
+              titles.push(...traktResult.value.filter((t) => !!t.title));
             } else if (traktResult.status === 'rejected') {
               logger.warn(
                 `Failed to fetch Trakt aliases for ${id.fullId}: ${traktResult.reason}`
@@ -355,7 +361,7 @@ export class MetadataService {
             // Deduplicate titles by lowercase title string
             const indexMap = new Map<string, number>();
             const uniqueTitles: MetadataTitle[] = [];
-            for (const t of titles) {
+            for (const t of titles.filter((t) => !!t.title)) {
               const key = t.title.toLowerCase();
               const existingIndex = indexMap.get(key);
               if (existingIndex === undefined) {
