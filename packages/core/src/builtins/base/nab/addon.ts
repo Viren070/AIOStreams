@@ -20,9 +20,8 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   apiKey: z.string().optional(),
   apiPath: z.string().optional(),
   forceQuerySearch: z.boolean().default(false),
-  limit: z.number().min(1).optional(),
   paginate: z.boolean().default(false),
-  forceInitialLimit: z.number().optional(),
+  forceInitialLimit: z.number().min(1).max(10000).optional(),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -173,7 +172,7 @@ export abstract class BaseNabAddon<
       }
     );
     return {
-      results: this.userData.limit ? results.slice(0, this.userData.limit) : results,
+      results: results,
       meta: {
         searchType,
         capabilities,

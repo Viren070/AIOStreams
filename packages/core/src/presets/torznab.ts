@@ -115,13 +115,15 @@ export class TorznabPreset extends BuiltinAddonPreset {
         ],
       },
       {
-        id: 'limit',
-        name: 'Result Limit',
-        description: 'The max amount of results to use. Setting this might be required to avoid rate-limits with some non-magnet trackers.',
+        id: 'initialLimit',
+        name: 'Initial Result Limit',
+        description:
+          'The amount of results to return per query/page. Setting this might make sense for performance reasons or to avoid rate-limits with some non-magnet trackers.',
         type: 'number',
         default: undefined,
         constraints: {
           min: 1,
+          max: 10000,
           forceInUi: false,
         },
       },
@@ -243,7 +245,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
       apiPath: options.apiPath,
       apiKey: options.apiKey,
       forceQuerySearch: options.forceQuerySearch ?? false,
-      limit: options.limit,
+      forceInitialLimit: options.initialLimit,
       paginate: options.paginate ?? false,
     };
 
