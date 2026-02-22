@@ -40,7 +40,7 @@ const HistorySlotSchema = z.object({
   category: z.string().optional(),
   storage: z.string().nullable().optional(),
   fail_message: z.string().optional(),
-  bytes: z.number().optional(),
+  bytes: z.number().int().optional(),
 });
 
 const HistoryResponseSchema = z.object({
