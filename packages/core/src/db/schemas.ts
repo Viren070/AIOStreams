@@ -909,6 +909,7 @@ export const ParsedStreamSchema = z.object({
       seeders: z.number().optional(),
       sources: z.array(z.string().min(1)).optional(),
       private: z.boolean().optional(),
+      freeleech: z.boolean().optional(),
     })
     .optional(),
   countryWhitelist: z.array(z.string().length(3)).optional(),

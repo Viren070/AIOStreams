@@ -162,6 +162,7 @@ class StreamParser {
       fileIdx:
         stream.fileIdx ?? this.getFileIdx(stream, parsedStream) ?? undefined,
       private: this.isPrivate(stream, parsedStream),
+      freeleech: this.isFreeleech(stream, parsedStream),
     };
 
     return parsedStream;
@@ -381,6 +382,13 @@ class StreamParser {
   }
 
   protected isPrivate(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): boolean | undefined {
+    return false;
+  }
+
+  protected isFreeleech(
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean | undefined {

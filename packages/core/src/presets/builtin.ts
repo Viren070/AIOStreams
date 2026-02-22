@@ -96,6 +96,13 @@ export class BuiltinStreamParser extends StreamParser {
     return stream.name?.includes('🔑') ? true : false;
   }
 
+  protected override isFreeleech(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): boolean | undefined {
+    return stream.name?.includes('FREELEECH') ? true : false;
+  }
+
   protected getStreamType(
     stream: Stream,
     service: ParsedStream['service'],
