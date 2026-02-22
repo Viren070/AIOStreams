@@ -46,7 +46,6 @@ import { AISearchPreset } from './aiSearch.js';
 import { FKStreamPreset } from './fkstream.js';
 import { AIOSubtitlePreset } from './aiosubtitle.js';
 import { SubHeroPreset } from './subhero.js';
-import { StreamAsiaPreset } from './streamasia.js';
 import { MoreLikeThisPreset } from './moreLikeThis.js';
 import { GDriveAPI } from '../builtins/gdrive/index.js';
 import { GDrivePreset } from './gdrive.js';
@@ -120,7 +119,6 @@ let PRESET_LIST: string[] = [
   'webstreamr',
   'astream',
   'brazuca-torrents',
-  'streamasia',
   'usa-tv',
   'argentina-tv',
   'debridio-tv',
@@ -271,8 +269,6 @@ export class PresetManager {
         return AIOSubtitlePreset;
       case 'subhero':
         return SubHeroPreset;
-      case 'streamasia':
-        return StreamAsiaPreset;
       case 'more-like-this':
         return MoreLikeThisPreset;
       case 'content-deep-dive':
