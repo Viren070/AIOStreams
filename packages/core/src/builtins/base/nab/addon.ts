@@ -21,7 +21,7 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   apiPath: z.string().optional(),
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
-  forceInitialLimit: z.number().optional(),
+  forceInitialLimit: z.number().min(1).max(10000).optional(),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
