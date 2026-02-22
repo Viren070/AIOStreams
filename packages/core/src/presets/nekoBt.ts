@@ -168,6 +168,30 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
             parsedFile.languages.push(lang);
           }
         });
+      // subtitle languages
+      if (
+        fileMetadata.subtitleLanguages &&
+        fileMetadata.subtitleLanguages.length > 0
+      ) {
+        parsedFile.subtitleLanguages = fileMetadata.subtitleLanguages
+          .map(mapLanguageCode)
+          .map(convertLangCodeToName)
+          .filter(
+            (lang: string | undefined): lang is string => lang !== undefined
+          );
+      }
+      // fansub languages
+      if (
+        fileMetadata.fansubLanguages &&
+        fileMetadata.fansubLanguages.length > 0
+      ) {
+        parsedFile.fansubLanguages = fileMetadata.fansubLanguages
+          .map(mapLanguageCode)
+          .map(convertLangCodeToName)
+          .filter(
+            (lang: string | undefined): lang is string => lang !== undefined
+          );
+      }
     }
 
     return parsedFile;

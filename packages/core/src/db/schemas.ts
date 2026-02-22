@@ -846,6 +846,8 @@ export const ParsedFileSchema = z.object({
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
   languages: z.array(z.string()),
+  subtitleLanguages: z.array(z.string()).optional(),
+  fansubLanguages: z.array(z.string()).optional(),
   title: z.string().optional(),
   year: z.coerce.string().optional(),
   seasons: z.array(z.number()).optional(),

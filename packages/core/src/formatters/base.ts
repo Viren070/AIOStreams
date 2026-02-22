@@ -65,8 +65,12 @@ export interface ParseValue {
     quality: string | null;
     resolution: string | null;
     languages: string[] | null;
+    subtitleLanguages: string[] | null;
+    fansubLanguages: string[] | null;
     uLanguages: string[] | null;
     languageEmojis: string[] | null;
+    subtitleLanguageEmojis: string[] | null;
+    fansubLanguageEmojis: string[] | null;
     uLanguageEmojis: string[] | null;
     languageCodes: string[] | null;
     uLanguageCodes: string[] | null;
@@ -313,6 +317,45 @@ export abstract class BaseFormatter {
     const onlyUserSpecifiedLanguages = sortedLanguages?.filter((lang) =>
       userSpecifiedLanguages.includes(lang as any)
     );
+
+    const subtitleLanguages = stream.parsedFile?.subtitleLanguages || null;
+    const sortedSubtitleLanguages = subtitleLanguages
+      ? [...subtitleLanguages].sort((a, b) => {
+          const aIndex = userSpecifiedLanguages.indexOf(a as any);
+          const bIndex = userSpecifiedLanguages.indexOf(b as any);
+
+          const aInUser = aIndex !== -1;
+          const bInUser = bIndex !== -1;
+
+          return aInUser && bInUser
+            ? aIndex - bIndex
+            : aInUser
+              ? -1
+              : bInUser
+                ? 1
+                : subtitleLanguages.indexOf(a) - subtitleLanguages.indexOf(b);
+        })
+      : null;
+
+    const fansubLanguages = stream.parsedFile?.fansubLanguages || null;
+    const sortedFansubLanguages = fansubLanguages
+      ? [...fansubLanguages].sort((a, b) => {
+          const aIndex = userSpecifiedLanguages.indexOf(a as any);
+          const bIndex = userSpecifiedLanguages.indexOf(b as any);
+
+          const aInUser = aIndex !== -1;
+          const bInUser = bIndex !== -1;
+
+          return aInUser && bInUser
+            ? aIndex - bIndex
+            : aInUser
+              ? -1
+              : bInUser
+                ? 1
+                : fansubLanguages.indexOf(a) - fansubLanguages.indexOf(b);
+        })
+      : null;
+
     const formattedAge = stream.age ? formatHours(stream.age) : null;
     const parseValue: ParseValue = {
       config: {
@@ -327,9 +370,21 @@ export abstract class BaseFormatter {
         quality: stream.parsedFile?.quality || null,
         resolution: stream.parsedFile?.resolution || null,
         languages: sortedLanguages || null,
+        subtitleLanguages: sortedSubtitleLanguages || null,
+        fansubLanguages: sortedFansubLanguages || null,
         uLanguages: onlyUserSpecifiedLanguages || null,
         languageEmojis: sortedLanguages
           ? sortedLanguages
+              .map((lang) => languageToEmoji(lang) || lang)
+              .filter((value, index, self) => self.indexOf(value) === index)
+          : null,
+        subtitleLanguageEmojis: sortedSubtitleLanguages
+          ? sortedSubtitleLanguages
+              .map((lang) => languageToEmoji(lang) || lang)
+              .filter((value, index, self) => self.indexOf(value) === index)
+          : null,
+        fansubLanguageEmojis: sortedFansubLanguages
+          ? sortedFansubLanguages
               .map((lang) => languageToEmoji(lang) || lang)
               .filter((value, index, self) => self.indexOf(value) === index)
           : null,
