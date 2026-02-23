@@ -87,7 +87,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     DV: createRegex('do?(lby)?[ .\\-_]?vi?(sion)?(?:[ .\\-_]?atmos)?|dv'),
     '3D': createRegex('(bd)?(3|three)[ .\\-_]?(d(imension)?(al)?)'),
     IMAX: createRegex('imax'),
-    AI: createRegex('ai[ .\\-_]?(upscale|enhanced|remaster)?'),
+    AI: createRegex('ai|(ai)?(upscal(ed?|ing)|enhanced?|re[ .\\-_]?graded?)'),
     SDR: createRegex('sdr'),
     'H-OU': createRegex('h?(alf)?[ .\\-_]?(ou|over[ .\\-_]?under)'),
     'H-SBS': createRegex('h?(alf)?[ .\\-_]?(sbs|side[ .\\-_]?by[ .\\-_]?side)'),
