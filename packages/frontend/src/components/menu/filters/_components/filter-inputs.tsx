@@ -1,5 +1,5 @@
 'use client';
-import { ReactNode, useCallback, useRef } from 'react';
+import { ReactNode, useCallback, useRef, useEffect } from 'react';
 import { useDisclosure } from '@/hooks/disclosure';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -175,6 +175,31 @@ function ListFooter({
   );
 }
 
+// Placeholder inline container for synced URLs
+function PlaceholderSyncedUrls({
+  syncConfig,
+  renderType,
+  url,
+}: {
+  syncConfig: SyncConfig;
+  renderType: 'simple' | 'nameable' | 'ranked';
+  url: string;
+}) {
+  return (
+    <div className="border border-dashed border-[--brand]/40 rounded-md p-3 bg-[--brand]/5 relative mt-4 mb-1">
+      <div className="absolute -top-3 left-3 bg-[--background] px-1 text-xs text-[--brand] font-medium">
+        Synced URLs
+      </div>
+      <SyncedUrlInputs
+        syncConfig={{ ...syncConfig, urls: [url] }}
+        renderType={renderType}
+        hideHeader
+        hideAddForm
+      />
+    </div>
+  );
+}
+
 // TextInputs
 
 export type TextInputProps = {
@@ -230,27 +255,77 @@ export function TextInputs({
     [onValuesChange]
   );
 
+  const hasAutoAppended = useRef(false);
+  useEffect(() => {
+    if (
+      syncConfig?.urls &&
+      syncConfig.urls.length > 0 &&
+      !hasAutoAppended.current
+    ) {
+      hasAutoAppended.current = true;
+      let newValues = [...valuesRef.current];
+      let changed = false;
+      for (const url of syncConfig.urls) {
+        if (!newValues.some((v) => v === `<SYNCED: ${url}>`)) {
+          newValues.push(`<SYNCED: ${url}>`);
+          changed = true;
+        }
+      }
+      if (changed) {
+        onValuesChange(newValues);
+      }
+      // Clear legacy array after migration
+      syncConfig.onUrlsChange([]);
+    }
+  }, [syncConfig?.urls, onValuesChange]);
+
+  const handleUrlAdded = useCallback(
+    (url: string) => {
+      onValuesChange([...valuesRef.current, `<SYNCED: ${url}>`]);
+    },
+    [onValuesChange]
+  );
+
   return (
     <SettingsCard title={label} description={help} key={label}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={value}
-              label={itemName}
-              placeholder={placeholder}
-              onValueChange={(newValue) => handleValueChange(newValue, index)}
-            />
+      {values.map((value, index) => {
+        const isSyncedPlaceholder =
+          value.startsWith('<SYNCED: ') && value.endsWith('>');
+        const syncedUrl = isSyncedPlaceholder
+          ? value.slice('<SYNCED: '.length, -1).trim()
+          : '';
+
+        return (
+          <div key={index} className="flex gap-2">
+            <div className="flex-1">
+              {isSyncedPlaceholder && syncConfig ? (
+                <PlaceholderSyncedUrls
+                  syncConfig={syncConfig}
+                  renderType="simple"
+                  url={syncedUrl}
+                />
+              ) : (
+                <TextInput
+                  value={value}
+                  label={itemName}
+                  placeholder={placeholder}
+                  onValueChange={(newValue) => {
+                    if (newValue.includes('<SYNCED')) return;
+                    handleValueChange(newValue, index);
+                  }}
+                />
+              )}
+            </div>
+            <div className="flex gap-1 items-end pb-1">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex gap-1 items-end pb-1">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <ListFooter
         onAdd={() => onValuesChange([...values, ''])}
         onImportClick={modal.open}
@@ -262,7 +337,13 @@ export function TextInputs({
         onImport={handleImport}
       />
       {syncConfig && (
-        <SyncedUrlInputs syncConfig={syncConfig} renderType="simple" />
+        <SyncedUrlInputs
+          syncConfig={syncConfig}
+          renderType="simple"
+          hideList
+          onUrlAdded={handleUrlAdded}
+          existingUrls={values.filter((v) => v.startsWith('<SYNCED: ') && v.endsWith('>')).map((v) => v.slice('<SYNCED: '.length, -1).trim())}
+        />
       )}
     </SettingsCard>
   );
@@ -336,40 +417,90 @@ export function ToggleableTextInputs({
     title
   );
 
+  const hasAutoAppended = useRef(false);
+  useEffect(() => {
+    if (
+      syncConfig?.urls &&
+      syncConfig.urls.length > 0 &&
+      !hasAutoAppended.current
+    ) {
+      hasAutoAppended.current = true;
+      let newValues = [...valuesRef.current];
+      let changed = false;
+      for (const url of syncConfig.urls) {
+        if (!newValues.some((v) => v.expression === `<SYNCED: ${url}>`)) {
+          newValues.push({ expression: `<SYNCED: ${url}>`, enabled: true });
+          changed = true;
+        }
+      }
+      if (changed) {
+        onValuesChange(newValues);
+      }
+      // Clear legacy array after migration
+      syncConfig.onUrlsChange([]);
+    }
+  }, [syncConfig?.urls, onValuesChange]);
+
+  const handleUrlAdded = useCallback(
+    (url: string) => {
+      onValuesChange([...valuesRef.current, { expression: `<SYNCED: ${url}>`, enabled: true }]);
+    },
+    [onValuesChange]
+  );
+
   return (
     <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2 items-end">
-          <div className="flex items-center pb-0.5">
-            <Checkbox
-              value={value.enabled ?? true}
-              defaultValue={true}
-              size="lg"
-              onValueChange={(v) => {
-                if (onEnabledChange) {
-                  onEnabledChange(v === true, index);
-                }
-              }}
-            />
+      {values.map((value, index) => {
+        const isSyncedPlaceholder =
+          value.expression.startsWith('<SYNCED: ') && value.expression.endsWith('>');
+        const syncedUrl = isSyncedPlaceholder
+          ? value.expression.slice('<SYNCED: '.length, -1).trim()
+          : '';
+
+        return (
+          <div key={index} className="flex gap-2 items-end">
+            <div className="flex items-center pb-0.5">
+              <Checkbox
+                value={value.enabled ?? true}
+                defaultValue={true}
+                size="lg"
+                onValueChange={(v) => {
+                  if (onEnabledChange) {
+                    onEnabledChange(v === true, index);
+                  }
+                }}
+              />
+            </div>
+            <div className="flex-1">
+              {isSyncedPlaceholder && syncConfig ? (
+                <PlaceholderSyncedUrls
+                  syncConfig={syncConfig}
+                  renderType="nameable"
+                  url={syncedUrl}
+                />
+              ) : (
+                <TextInput
+                  value={value.expression}
+                  label="Expression"
+                  placeholder={placeholder}
+                  disabled={value.enabled === false}
+                  onValueChange={(newValue) => {
+                    if (newValue.includes('<SYNCED')) return;
+                    onExpressionChange(newValue, index);
+                  }}
+                />
+              )}
+            </div>
+            <div className="flex gap-1 items-end pb-1">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <TextInput
-              value={value.expression}
-              label="Expression"
-              placeholder={placeholder}
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onExpressionChange(newValue, index)}
-            />
-          </div>
-          <div className="flex gap-1 items-end pb-1">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { expression: '', enabled: true }])
@@ -383,7 +514,13 @@ export function ToggleableTextInputs({
         onImport={handleImport}
       />
       {syncConfig && (
-        <SyncedUrlInputs syncConfig={syncConfig} renderType="nameable" />
+        <SyncedUrlInputs
+          syncConfig={syncConfig}
+          renderType="nameable"
+          hideList
+          onUrlAdded={handleUrlAdded}
+          existingUrls={values.filter((v) => v.expression.startsWith('<SYNCED: ') && v.expression.endsWith('>')).map((v) => v.expression.slice('<SYNCED: '.length, -1).trim())}
+        />
       )}
     </SettingsCard>
   );
@@ -459,35 +596,90 @@ export function TwoTextInputs({
     title
   );
 
+  const hasAutoAppended = useRef(false);
+  useEffect(() => {
+    if (
+      syncConfig?.urls &&
+      syncConfig.urls.length > 0 &&
+      !hasAutoAppended.current
+    ) {
+      hasAutoAppended.current = true;
+      let newValues = [...valuesRef.current];
+      let changed = false;
+      for (const url of syncConfig.urls) {
+        if (!newValues.some((v) => v.name === `<SYNCED: ${url}>`)) {
+          newValues.push({ name: `<SYNCED: ${url}>`, value: `<SYNCED: ${url}>` });
+          changed = true;
+        }
+      }
+      if (changed) {
+        onValuesChange(newValues);
+      }
+      // Clear legacy array after migration
+      syncConfig.onUrlsChange([]);
+    }
+  }, [syncConfig?.urls, onValuesChange]);
+
+  const handleUrlAdded = useCallback(
+    (url: string) => {
+      onValuesChange([...valuesRef.current, { name: `<SYNCED: ${url}>`, value: `<SYNCED: ${url}>` }]);
+    },
+    [onValuesChange]
+  );
+
   return (
     <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={value.name}
-              label={keyName}
-              placeholder={keyPlaceholder}
-              onValueChange={(newValue) => onKeyChange(newValue, index)}
-            />
+      {values.map((value, index) => {
+        const isSyncedPlaceholder =
+          value.name.startsWith('<SYNCED: ') && value.name.endsWith('>');
+        const syncedUrl = isSyncedPlaceholder
+          ? value.name.slice('<SYNCED: '.length, -1).trim()
+          : '';
+
+        return (
+          <div key={index} className="flex gap-2">
+            {!isSyncedPlaceholder && (
+              <div className="flex-1">
+                <TextInput
+                  value={value.name}
+                  label={keyName}
+                  placeholder={keyPlaceholder}
+                  onValueChange={(newValue) => {
+                    if (newValue.includes('<SYNCED')) return;
+                    onKeyChange(newValue, index);
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              {isSyncedPlaceholder && syncConfig ? (
+                <PlaceholderSyncedUrls
+                  syncConfig={syncConfig}
+                  renderType="nameable"
+                  url={syncedUrl}
+                />
+              ) : (
+                <TextInput
+                  value={value.value}
+                  label={valueName}
+                  placeholder={valuePlaceholder}
+                  onValueChange={(newValue) => {
+                    if (newValue.includes('<SYNCED')) return;
+                    onValueChange(newValue, index);
+                  }}
+                />
+              )}
+            </div>
+            <div className="flex gap-1 items-end pb-1">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <TextInput
-              value={value.value}
-              label={valueName}
-              placeholder={valuePlaceholder}
-              onValueChange={(newValue) => onValueChange(newValue, index)}
-            />
-          </div>
-          <div className="flex gap-1 items-end pb-1">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <ListFooter
         onAdd={() => onValuesChange([...values, { name: '', value: '' }])}
         onImportClick={modal.open}
@@ -499,7 +691,13 @@ export function TwoTextInputs({
         onImport={handleImport}
       />
       {syncConfig && (
-        <SyncedUrlInputs syncConfig={syncConfig} renderType="nameable" />
+        <SyncedUrlInputs
+          syncConfig={syncConfig}
+          renderType="nameable"
+          hideList
+          onUrlAdded={handleUrlAdded}
+          existingUrls={values.filter((v) => v.name.startsWith('<SYNCED: ') && v.name.endsWith('>')).map((v) => v.name.slice('<SYNCED: '.length, -1).trim())}
+        />
       )}
     </SettingsCard>
   );
@@ -572,52 +770,104 @@ export function RankedExpressionInputs({
     title
   );
 
+  const hasAutoAppended = useRef(false);
+  useEffect(() => {
+    if (
+      syncConfig?.urls &&
+      syncConfig.urls.length > 0 &&
+      !hasAutoAppended.current
+    ) {
+      hasAutoAppended.current = true;
+      let newValues = [...valuesRef.current];
+      let changed = false;
+      for (const url of syncConfig.urls) {
+        if (!newValues.some((v) => v.expression === `<SYNCED: ${url}>`)) {
+          newValues.push({ expression: `<SYNCED: ${url}>`, score: 0, enabled: true });
+          changed = true;
+        }
+      }
+      if (changed) {
+        onValuesChange(newValues);
+      }
+      // Clear legacy array after migration
+      syncConfig.onUrlsChange([]);
+    }
+  }, [syncConfig?.urls, onValuesChange]);
+
+  const handleUrlAdded = useCallback(
+    (url: string) => {
+      onValuesChange([...valuesRef.current, { expression: `<SYNCED: ${url}>`, score: 0, enabled: true }]);
+    },
+    [onValuesChange]
+  );
+
   return (
     <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div key={index} className="flex gap-2 items-end">
-          <div className="flex items-center pb-0.5">
-            <Checkbox
-              value={value.enabled ?? true}
-              defaultValue={true}
-              size="lg"
-              onValueChange={(v) => {
-                if (onEnabledChange) {
-                  onEnabledChange(v === true, index);
-                }
-              }}
-            />
+      {values.map((value, index) => {
+        const isSyncedPlaceholder =
+          value.expression.startsWith('<SYNCED: ') && value.expression.endsWith('>');
+        const syncedUrl = isSyncedPlaceholder
+          ? value.expression.slice('<SYNCED: '.length, -1).trim()
+          : '';
+
+        return (
+          <div key={index} className="flex gap-2 items-end">
+            <div className="flex items-center pb-0.5">
+              <Checkbox
+                value={value.enabled ?? true}
+                defaultValue={true}
+                size="lg"
+                onValueChange={(v) => {
+                  if (onEnabledChange) {
+                    onEnabledChange(v === true, index);
+                  }
+                }}
+              />
+            </div>
+            <div className={isSyncedPlaceholder ? "flex-1" : "flex-[3]"}>
+              {isSyncedPlaceholder && syncConfig ? (
+                <PlaceholderSyncedUrls
+                  syncConfig={syncConfig}
+                  renderType="ranked"
+                  url={syncedUrl}
+                />
+              ) : (
+                <TextInput
+                  value={value.expression}
+                  label="Expression"
+                  placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+                  disabled={value.enabled === false}
+                  onValueChange={(newValue) => {
+                    if (newValue.includes('<SYNCED')) return;
+                    onExpressionChange(newValue, index);
+                  }}
+                />
+              )}
+            </div>
+            {!isSyncedPlaceholder && (
+              <div className="flex-1 min-w-[100px]">
+                <NumberInput
+                  value={value.score || 0}
+                  defaultValue={0}
+                  label="Score"
+                  disabled={value.enabled === false}
+                  onValueChange={(newValue) => onScoreChange(newValue || 0, index)}
+                  min={-1_000_000}
+                  max={1_000_000}
+                  step={50}
+                />
+              </div>
+            )}
+            <div className="pb-1 gap-1 flex items-end">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex-[3]">
-            <TextInput
-              value={value.expression}
-              label="Expression"
-              placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onExpressionChange(newValue, index)}
-            />
-          </div>
-          <div className="flex-1 min-w-[100px]">
-            <NumberInput
-              value={value.score || 0}
-              defaultValue={0}
-              label="Score"
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onScoreChange(newValue || 0, index)}
-              min={-1_000_000}
-              max={1_000_000}
-              step={50}
-            />
-          </div>
-          <div className="pb-1 gap-1 flex items-end">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <ListFooter
         onAdd={() =>
           onValuesChange([
@@ -634,7 +884,13 @@ export function RankedExpressionInputs({
         onImport={handleImport}
       />
       {syncConfig && (
-        <SyncedUrlInputs syncConfig={syncConfig} renderType="ranked" />
+        <SyncedUrlInputs
+          syncConfig={syncConfig}
+          renderType="ranked"
+          hideList
+          onUrlAdded={handleUrlAdded}
+          existingUrls={values.filter((v) => v.expression.startsWith('<SYNCED: ') && v.expression.endsWith('>')).map((v) => v.expression.slice('<SYNCED: '.length, -1).trim())}
+        />
       )}
     </SettingsCard>
   );
@@ -705,52 +961,106 @@ export function RankedRegexInputs({
     title
   );
 
+  const hasAutoAppended = useRef(false);
+  useEffect(() => {
+    if (
+      syncConfig?.urls &&
+      syncConfig.urls.length > 0 &&
+      !hasAutoAppended.current
+    ) {
+      hasAutoAppended.current = true;
+      let newValues = [...valuesRef.current];
+      let changed = false;
+      for (const url of syncConfig.urls) {
+        if (!newValues.some((v) => v.pattern === `<SYNCED: ${url}>`)) {
+          newValues.push({ pattern: `<SYNCED: ${url}>`, name: url, score: 0 });
+          changed = true;
+        }
+      }
+      if (changed) {
+        onValuesChange(newValues);
+      }
+      // Clear legacy array after migration
+      syncConfig.onUrlsChange([]);
+    }
+  }, [syncConfig?.urls, onValuesChange]);
+
+  const handleUrlAdded = useCallback(
+    (url: string) => {
+      onValuesChange([...valuesRef.current, { pattern: `<SYNCED: ${url}>`, name: url, score: 0 }]);
+    },
+    [onValuesChange]
+  );
+
   return (
     <SettingsCard title={title} description={description}>
-      {values.map((value, index) => (
-        <div
-          key={index}
-          className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
-        >
-          <div className="w-full">
-            <TextInput
-              value={value.pattern}
-              label="Pattern"
-              placeholder="Regex Pattern"
-              onValueChange={(newValue) => onPatternChange(newValue, index)}
-            />
+      {values.map((value, index) => {
+        const isSyncedPlaceholder =
+          value.pattern.startsWith('<SYNCED: ') && value.pattern.endsWith('>');
+        const syncedUrl = isSyncedPlaceholder
+          ? value.pattern.slice('<SYNCED: '.length, -1).trim()
+          : '';
+
+        return (
+          <div
+            key={index}
+            className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
+          >
+            <div className="w-full">
+              {isSyncedPlaceholder && syncConfig ? (
+                <PlaceholderSyncedUrls
+                  syncConfig={syncConfig}
+                  renderType="ranked"
+                  url={syncedUrl}
+                />
+              ) : (
+                <TextInput
+                  value={value.pattern}
+                  label="Pattern"
+                  placeholder="Regex Pattern"
+                  onValueChange={(newValue) => {
+                    if (newValue.includes('<SYNCED')) return;
+                    onPatternChange(newValue, index);
+                  }}
+                />
+              )}
+            </div>
+            <div className="flex gap-2 items-end">
+              {!isSyncedPlaceholder && (
+                <>
+                  <div className="flex-1">
+                    <TextInput
+                      value={value.name || ''}
+                      label="Name"
+                      placeholder="Name (Optional)"
+                      onValueChange={(newValue) => onNameChange(newValue, index)}
+                    />
+                  </div>
+                  <div className="w-[20%] min-w-[100px]">
+                    <NumberInput
+                      value={value.score}
+                      label="Score"
+                      onValueChange={(newValue) =>
+                        onScoreChange(newValue ?? 0, index)
+                      }
+                      min={-1_000_000}
+                      max={1_000_000}
+                      step={50}
+                    />
+                  </div>
+                </>
+              )}
+              <div className={`flex gap-1 pb-1${isSyncedPlaceholder ? ' ml-auto' : ''}`}>
+                <ItemActions
+                  items={values}
+                  index={index}
+                  onItemsChange={onValuesChange}
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <TextInput
-                value={value.name || ''}
-                label="Name"
-                placeholder="Name (Optional)"
-                onValueChange={(newValue) => onNameChange(newValue, index)}
-              />
-            </div>
-            <div className="w-[20%] min-w-[100px]">
-              <NumberInput
-                value={value.score}
-                label="Score"
-                onValueChange={(newValue) =>
-                  onScoreChange(newValue ?? 0, index)
-                }
-                min={-1_000_000}
-                max={1_000_000}
-                step={50}
-              />
-            </div>
-            <div className="flex gap-1 pb-1">
-              <ItemActions
-                items={values}
-                index={index}
-                onItemsChange={onValuesChange}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { pattern: '', name: '', score: 0 }])
@@ -764,7 +1074,13 @@ export function RankedRegexInputs({
         onImport={handleImport}
       />
       {syncConfig && (
-        <SyncedUrlInputs syncConfig={syncConfig} renderType="ranked" />
+        <SyncedUrlInputs
+          syncConfig={syncConfig}
+          renderType="ranked"
+          hideList
+          onUrlAdded={handleUrlAdded}
+          existingUrls={values.filter((v) => v.pattern.startsWith('<SYNCED: ') && v.pattern.endsWith('>')).map((v) => v.pattern.slice('<SYNCED: '.length, -1).trim())}
+        />
       )}
     </SettingsCard>
   );

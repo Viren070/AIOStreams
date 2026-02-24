@@ -167,27 +167,66 @@ export class SelAccess {
     transform: (item: StreamExpressionItem) => U,
     uniqueKey: (item: U) => string
   ): Promise<U[]> {
-    const expressions = await this.resolveExpressions(urls, userData);
-    if (expressions.length === 0) return existing;
-
-    const result = [...existing];
     const existingSet = new Set(existing.map(uniqueKey));
     const overrides: SyncOverride[] = userData.selOverrides || [];
 
-    for (const expr of expressions) {
-      const override = this._findSelOverride(expr, overrides);
+    // Helper to process and transform expressions from a URL
+    const processExpressions = async (url: string): Promise<U[]> => {
+      const expressions = await this.resolveExpressions([url], userData);
+      const syncedItems: U[] = [];
+      for (const expr of expressions) {
+        const override = this._findSelOverride(expr, overrides);
+        if (override?.disabled) continue;
 
-      if (override?.disabled) continue;
+        const overriddenExpr = override
+          ? this._applySelOverride(expr, override)
+          : expr;
 
-      const overriddenExpr = override
-        ? this._applySelOverride(expr, override)
-        : expr;
+        const item = transform(overriddenExpr);
+        const key = uniqueKey(item);
+        if (!existingSet.has(key)) {
+          syncedItems.push(item);
+          existingSet.add(key);
+        }
+      }
+      return syncedItems;
+    };
 
-      const item = transform(overriddenExpr);
+    const SYNCED_PREFIX = '<SYNCED: ';
+    const SYNCED_SUFFIX = '>';
+    const result: U[] = [];
+    const usedUrls = new Set<string>();
+
+    for (const item of existing) {
       const key = uniqueKey(item);
-      if (!existingSet.has(key)) {
+
+      if (key.startsWith(SYNCED_PREFIX) && key.endsWith(SYNCED_SUFFIX)) {
+        const isPlaceholderDisabled =
+          typeof item === 'object' && item !== null && (item as any).enabled === false;
+
+        const url = key.slice(SYNCED_PREFIX.length, -SYNCED_SUFFIX.length).trim();
+
+        if (isPlaceholderDisabled) {
+          result.push(item); // Keep disabled placeholder without fetching
+        } else if (url) {
+          usedUrls.add(url);
+          const syncedItems = await processExpressions(url);
+          result.push(...syncedItems);
+        } else {
+           result.push(item);
+        }
+      } else {
         result.push(item);
-        existingSet.add(key);
+      }
+    }
+
+    // Legacy fallback: append URLs from the `urls` array not already handled above
+    if (urls && urls.length > 0) {
+      for (const url of urls) {
+        if (!usedUrls.has(url)) {
+          const syncedItems = await processExpressions(url);
+          result.push(...syncedItems);
+        }
       }
     }
 
