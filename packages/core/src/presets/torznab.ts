@@ -118,7 +118,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
         id: 'initialLimit',
         name: 'Initial Result Limit',
         description:
-          'The amount of results to return per query/page. Setting this might make sense for performance reasons or to avoid rate-limits with some non-magnet trackers.',
+          "Sets the maximum results to return. Leave blank to use the optimal default limit. Only use this if you need to restrict results.",
         type: 'number',
         required: false,
         showInSimpleMode: false,
