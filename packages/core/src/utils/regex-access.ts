@@ -264,7 +264,7 @@ export class RegexAccess {
     transform: (item: RegexPatternItem) => U,
     uniqueKey: (item: U) => string
   ): Promise<U[]> {
-    const existingSet = new Set(existing.map(uniqueKey));
+
     const overrides: SyncOverride[] = userData.regexOverrides || [];
 
     // Helper to process and transform patterns from a URL
@@ -291,11 +291,7 @@ export class RegexAccess {
             : regex
         );
 
-        const key = uniqueKey(item);
-        if (!existingSet.has(key)) {
-          syncedItems.push(item);
-          existingSet.add(key);
-        }
+        syncedItems.push(item);
       }
       return syncedItems;
     };

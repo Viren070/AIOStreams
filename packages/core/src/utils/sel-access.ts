@@ -167,7 +167,7 @@ export class SelAccess {
     transform: (item: StreamExpressionItem) => U,
     uniqueKey: (item: U) => string
   ): Promise<U[]> {
-    const existingSet = new Set(existing.map(uniqueKey));
+
     const overrides: SyncOverride[] = userData.selOverrides || [];
 
     // Helper to process and transform expressions from a URL
@@ -183,11 +183,7 @@ export class SelAccess {
           : expr;
 
         const item = transform(overriddenExpr);
-        const key = uniqueKey(item);
-        if (!existingSet.has(key)) {
-          syncedItems.push(item);
-          existingSet.add(key);
-        }
+        syncedItems.push(item);
       }
       return syncedItems;
     };
