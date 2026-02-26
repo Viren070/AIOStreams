@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.24.1](https://github.com/Viren070/AIOStreams/compare/v2.24.0...v2.24.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* **templates:** handle directives when registering trusted access ([bda9303](https://github.com/Viren070/AIOStreams/commit/bda9303a154a669709ee2435249817d7a485021e))
+
 ## [2.24.0](https://github.com/Viren070/AIOStreams/compare/v2.23.3...v2.24.0) (2026-02-26)
 
 
