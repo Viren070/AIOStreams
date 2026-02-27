@@ -25,7 +25,7 @@ import {
 } from '../../debrid/index.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
 import { preprocessTitle } from '../../parser/utils.js';
-import { StremThruInterface } from '../../debrid/stremthru.js';
+
 
 // we have a list of torrents which need to be
 // - 1. checked for instant availability for each configured debrid service
@@ -166,15 +166,20 @@ async function processTorrentsForDebridService(
   // Resolve placeholder hashes to real info hashes if we've seen them before
   // (e.g. after a previous play through qBittorrent). This lets cache checks
   // correctly identify already-downloaded private tracker torrents.
-  for (const torrent of torrents) {
-    if (torrent.placeholderHash) {
-      const realHash = await StremThruInterface.resolveHash(
-        service.id,
-        torrent.hash
-      );
-      if (realHash !== torrent.hash) {
-        torrent.hash = realHash;
-        torrent.placeholderHash = false;
+  if (debridService.resolveHash) {
+    for (const torrent of torrents) {
+      if (torrent.placeholderHash) {
+        try {
+          const realHash = await debridService.resolveHash(torrent.hash);
+          if (realHash !== torrent.hash) {
+            torrent.hash = realHash;
+            torrent.placeholderHash = false;
+          }
+        } catch (e) {
+          logger.warn(`Failed to resolve placeholder hash ${torrent.hash}`, {
+            error: e,
+          });
+        }
       }
     }
   }
