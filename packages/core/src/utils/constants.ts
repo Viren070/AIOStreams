@@ -749,6 +749,7 @@ const SERVICE_DETAILS: Record<
     name: 'StremThru Newz',
     shortName: 'ST',
     knownNames: ['ST', 'StremThru Newz', 'StremThruNewz'],
+    debrid: false,
     signUpText:
       'Stream usenet content via [StremThru](https://github.com/MunifTanjim/stremthru).',
     credentials: [

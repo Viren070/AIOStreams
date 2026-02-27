@@ -138,6 +138,14 @@ export class StremThruService
     );
   }
 
+  private checkCacheDelete(hash: string): void {
+    StremThruService.checkCache
+      .delete(`${this.serviceName}:${getSimpleTextHash(hash)}`)
+      .catch((e) =>
+        logger.debug('Failed to delete check cache entry', { error: e })
+      );
+  }
+
   private async checkCacheSet(debridDownload: DebridDownload): Promise<void> {
     try {
       await StremThruService.checkCache.set(
@@ -996,18 +1004,18 @@ export class StremThruService
               };
               break;
             }
-          }
-          if (['failed', 'invalid'].includes(magnetDownloadInList.status)) {
-            throw new DebridError(
-              `Magnet download ${magnetDownloadInList.status}`,
-              {
-                statusCode: 400,
-                statusText: `Magnet download ${magnetDownloadInList.status}`,
-                code: 'UNKNOWN',
-                headers: {},
-                body: magnetDownloadInList,
-              }
-            );
+            if (['failed', 'invalid'].includes(magnetDownloadInList.status)) {
+              throw new DebridError(
+                `Magnet download ${magnetDownloadInList.status}`,
+                {
+                  statusCode: 400,
+                  statusText: `Magnet download ${magnetDownloadInList.status}`,
+                  code: 'UNKNOWN',
+                  headers: {},
+                  body: magnetDownloadInList,
+                }
+              );
+            }
           }
         }
         if (magnetDownload.status !== 'downloaded') {

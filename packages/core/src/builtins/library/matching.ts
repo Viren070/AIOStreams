@@ -36,7 +36,7 @@ export function isItemMatch(
   );
 
   // Title match
-  const cleanedTitles = metadata.titles.map(cleanTitle);
+  const cleanedTitles = metadata.titles.map((t) => cleanTitle(t));
   if (
     !titleMatch(cleanTitle(preprocessedTitle), cleanedTitles, {
       threshold: TITLE_MATCH_THRESHOLD,

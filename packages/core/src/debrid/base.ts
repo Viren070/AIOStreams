@@ -203,6 +203,7 @@ export interface TorrentDebridService extends BaseDebridService {
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
   removeMagnet(magnetId: string): Promise<void>;
   getMagnet?(magnetId: string): Promise<DebridDownload>;
+  resolveHash?(hash: string): Promise<string>;
 }
 
 export interface UsenetDebridService extends BaseDebridService {
@@ -219,6 +220,13 @@ export interface UsenetDebridService extends BaseDebridService {
   ): Promise<string>;
   removeNzb?(nzbId: string): Promise<void>;
   getNzb?(nzbId: string): Promise<DebridDownload>;
+
+  // Placeholder hash resolution (e.g. for private tracker torrents)
+  resolveHash?(hash: string): Promise<string>;
+
+  // Service info
+  readonly serviceName: ServiceId;
+  readonly supportsUsenet?: boolean;
 }
 
 export type DebridService = TorrentDebridService | UsenetDebridService;

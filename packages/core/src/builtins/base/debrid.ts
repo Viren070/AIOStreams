@@ -696,7 +696,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     } else if (options?.useAllTitles) {
       titles = metadata.titles
         .slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT)
-        .map(cleanTitle);
+        .map((t) => cleanTitle(t));
     } else {
       titles = [metadata.primaryTitle];
     }
