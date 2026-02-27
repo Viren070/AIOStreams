@@ -74,6 +74,7 @@ import { UsenetStreamerPreset } from './usenetStreamer.js';
 import { NekoBtPreset } from './nekoBt.js';
 import { EasynewsSearchPreset } from './easynewsSearch.js';
 import { SeaDexPreset } from './seadex.js';
+import { StreamNZBPreset } from './streamnzb.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -115,6 +116,7 @@ let PRESET_LIST: string[] = [
   'easynewsPlusPlus',
   'easynews-search',
   'usenet-streamer',
+  'streamnzb',
   'dmm-cast',
   'nuvio-streams',
   'webstreamr',
@@ -316,6 +318,8 @@ export class PresetManager {
         return UsenetStreamerPreset;
       case 'easynews-search':
         return EasynewsSearchPreset;
+      case 'streamnzb':
+        return StreamNZBPreset;
       default:
         throw new Error(`Preset ${id} not found`);
     }
