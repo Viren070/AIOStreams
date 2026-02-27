@@ -657,7 +657,6 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     if (!metadata.primaryTitle) {
       return [];
     }
-<<<<<<< HEAD
 
     // select titles based on options
     const titleLangs = options?.titleLanguages;
