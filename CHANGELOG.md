@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.24.2](https://github.com/Viren070/AIOStreams/compare/v2.24.1...v2.24.2) (2026-02-27)
+
+
+### Features
+
+* **frontend/templates:** add validation modal ([26e401d](https://github.com/Viren070/AIOStreams/commit/26e401d2e411ea4cd59320556e1938639875b0f8))
+* **frontend/templates:** show warning on external links ([26e401d](https://github.com/Viren070/AIOStreams/commit/26e401d2e411ea4cd59320556e1938639875b0f8))
+* **presets/streamnzb:** implement preset ([#766](https://github.com/Viren070/AIOStreams/issues/766)) ([2fea58b](https://github.com/Viren070/AIOStreams/commit/2fea58b520f5f0fa3ddcc3bb8936bd023b8ee96b))
+
+
+### Bug Fixes
+
+* **frontend/templates:** dont show warnings twice when importing and loading ([d771e9c](https://github.com/Viren070/AIOStreams/commit/d771e9ca2054f65f340c54ad4b6d7776aa4c6480))
+* **frontend/templates:** show warning on duplicate keys ([d771e9c](https://github.com/Viren070/AIOStreams/commit/d771e9ca2054f65f340c54ad4b6d7776aa4c6480))
+* **parser/file:** escape title before removing from filename for parsing ([11507b0](https://github.com/Viren070/AIOStreams/commit/11507b0fdbc9ab56a3a1fff4e3c792ce386610e2))
+
+
+### Code Refactoring
+
+* **frontend/templates:** move export modal into templates folder and update wiki text ([0d67c58](https://github.com/Viren070/AIOStreams/commit/0d67c58dfe3117526e0e034e74c9bb01179c92f5))
+
 ## [2.24.1](https://github.com/Viren070/AIOStreams/compare/v2.24.0...v2.24.1) (2026-02-26)
 
 
