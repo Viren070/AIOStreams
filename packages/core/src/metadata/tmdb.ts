@@ -350,32 +350,43 @@ export class TMDBMetadata {
 
     if (parsedId.mediaType === 'movie') {
       const movieData = MovieDetailsSchema.parse(detailsJson);
-      primaryTitle =
-        movieData.original_language !== 'en'
-          ? (movieData.original_title ?? movieData.title)
-          : movieData.title;
       if (movieData.original_title) {
         allTitles.push({
           title: movieData.original_title,
           language: movieData.original_language,
         });
+      } else {
+        allTitles.push({
+          title: movieData.title,
+          language: 'en',
+        });
       }
+      primaryTitle =
+        movieData.original_language !== 'en'
+          ? (movieData.original_title ?? movieData.title)
+          : movieData.title;
+
       originalLanguage = movieData.original_language;
       releaseDate = movieData.release_date;
       runtime = movieData.runtime || undefined;
       genres = movieData.genres?.map((g) => g.name) ?? [];
     } else {
       const tvData = TVDetailsSchema.parse(detailsJson);
-      primaryTitle =
-        tvData.original_language !== 'en'
-          ? (tvData.original_title ?? tvData.name)
-          : tvData.name;
       if (tvData.original_title) {
         allTitles.push({
           title: tvData.original_title,
           language: tvData.original_language,
         });
+      } else {
+        allTitles.push({
+          title: tvData.name,
+          language: 'en',
+        });
       }
+      primaryTitle =
+        tvData.original_language !== 'en'
+          ? (tvData.original_title ?? tvData.name)
+          : tvData.name;
       originalLanguage = tvData.original_language;
       releaseDate = tvData.first_air_date ?? undefined;
       yearEnd = tvData.last_air_date
@@ -391,8 +402,6 @@ export class TMDBMetadata {
       }
       genres = tvData.genres?.map((g) => g.name) ?? [];
     }
-
-    allTitles.push({ title: primaryTitle, language: originalLanguage });
 
     const year = this.parseReleaseDate(releaseDate);
 

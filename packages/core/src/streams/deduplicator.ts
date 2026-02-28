@@ -4,6 +4,7 @@ import {
   getTimeTakenSincePoint,
   DSU,
   getSimpleTextHash,
+  constants,
 } from '../utils/index.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 
@@ -37,6 +38,11 @@ class StreamDeduplicator {
       live: deduplicator.live || 'disabled',
       youtube: deduplicator.youtube || 'disabled',
       external: deduplicator.external || 'disabled',
+      smartDetectAttributes:
+        deduplicator.smartDetectAttributes ??
+        constants.DEFAULT_SMART_DETECT_ATTRIBUTES,
+      smartDetectRounding: deduplicator.smartDetectRounding ?? 10,
+      libraryBehaviour: deduplicator.libraryBehaviour ?? 'ignore',
     };
 
     // Group streams by their deduplication keys
@@ -77,20 +83,57 @@ class StreamDeduplicator {
       // within a single torrent), while others don't. This creates an unavoidable trade-off
       // where addons that provide fileIdx will not deduplicate properly with those that don't
       // via infoHash alone.
-      if (deduplicationKeys.includes('infoHash') && stream.torrent?.infoHash) {
+      if (
+        deduplicationKeys.includes('infoHash') &&
+        stream.torrent?.infoHash &&
+        stream.type !== 'usenet'
+      ) {
         currentStreamKeyStrings.push(
           `infoHash:${stream.torrent.infoHash}${stream.torrent.fileIdx ?? 0}`
         );
       }
+      if (
+        deduplicationKeys.includes('infoHash') &&
+        stream.type === 'usenet' &&
+        stream.nzbUrl
+      ) {
+        currentStreamKeyStrings.push(`infoHash:${stream.nzbUrl}`);
+      }
 
       if (deduplicationKeys.includes('smartDetect')) {
-        // generate a hash using many different attributes
-        // round size to nearest 100MB for some margin of error
-        const roundedSize = stream.size
-          ? Math.round(stream.size / 100000000) * 100000000
-          : undefined;
+        const roundPct = deduplicator.smartDetectRounding ?? 10;
+        const geometricRound = (value: number): string => {
+          if (value <= 0) return '0';
+          const logStep = Math.log(1 + roundPct / 100);
+          const bucketIndex = Math.round(Math.log(value) / logStep);
+          return String(Math.round(Math.exp(bucketIndex * logStep)));
+        };
+        const attrs =
+          deduplicator.smartDetectAttributes ??
+          constants.DEFAULT_SMART_DETECT_ATTRIBUTES;
+        const parts = attrs.map((attr) => {
+          switch (attr) {
+            case 'size':
+              return stream.size !== undefined
+                ? geometricRound(stream.size)
+                : undefined;
+            case 'bitrate':
+              return stream.bitrate !== undefined
+                ? geometricRound(stream.bitrate)
+                : undefined;
+            default: {
+              const val = (
+                stream.parsedFile as Record<string, unknown> | undefined
+              )?.[attr];
+              if (val === undefined) return undefined;
+              if (Array.isArray(val))
+                return [...val].map(String).sort().join(',');
+              return String(val);
+            }
+          }
+        });
         const hash = getSimpleTextHash(
-          `${roundedSize}${stream.parsedFile?.resolution}${stream.parsedFile?.quality}${stream.parsedFile?.visualTags}${stream.parsedFile?.audioTags}${stream.parsedFile?.languages}${stream.parsedFile?.encode}`
+          parts.filter((p) => p !== undefined).join('|')
         );
         currentStreamKeyStrings.push(`smartDetect:${hash}`);
       }
@@ -192,21 +235,36 @@ class StreamDeduplicator {
       }
 
       // Process each type according to its deduplication mode
-      for (const [type, typeStreams] of streamsByType.entries()) {
+      for (const [type, rawTypeStreams] of streamsByType.entries()) {
         if (type.startsWith('passthrough-')) {
-          typeStreams.forEach((stream) => processedStreams.add(stream));
+          rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
         const mode = deduplicator[type as keyof typeof deduplicator] as string;
         if (mode === 'disabled') {
-          typeStreams.forEach((stream) => processedStreams.add(stream));
+          rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
+
+        const typeStreams =
+          deduplicator.libraryBehaviour === 'exclusive' &&
+          rawTypeStreams.some((s) => s.library)
+            ? rawTypeStreams.filter((s) => s.library)
+            : rawTypeStreams;
+
+        const libraryCmp = (a: ParsedStream, b: ParsedStream): number => {
+          if (deduplicator.libraryBehaviour !== 'prefer') return 0;
+          if (a.library && !b.library) return -1;
+          if (!a.library && b.library) return 1;
+          return 0;
+        };
 
         switch (mode) {
           case 'single_result': {
             // Keep one result with highest priority service and addon
             let selectedStream = typeStreams.sort((a, b) => {
+              const lc = libraryCmp(a, b);
+              if (lc !== 0) return lc;
               // so a specific type may either have both streams not have a service, or both streams have a service
               // if both streams have a service, then we can simpl
               let aProviderIndex =
@@ -289,6 +347,8 @@ class StreamDeduplicator {
               )
             ).map((serviceStreams) => {
               return serviceStreams.sort((a, b) => {
+                const lc = libraryCmp(a, b);
+                if (lc !== 0) return lc;
                 let aAddonIndex = this.userData.presets.findIndex(
                   (preset) => preset.instanceId === a.addon.preset.id
                 );
@@ -346,6 +406,8 @@ class StreamDeduplicator {
               )
             ).map((addonStreams) => {
               return addonStreams.sort((a, b) => {
+                const lc = libraryCmp(a, b);
+                if (lc !== 0) return lc;
                 let aServiceIndex =
                   this.userData.services
                     ?.filter((service) => service.enabled)

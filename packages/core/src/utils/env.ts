@@ -325,6 +325,47 @@ const boolOrList = makeValidator((x) => {
   return x.split(',').map((x) => x.trim());
 });
 
+/**
+ * Parses a comma-separated title-language map string.
+ * Format: `*:default,original,germanindexer.com:de,default`
+ *
+ * Each group starts with `domain:firstValue`. Subsequent comma-separated tokens
+ * without a colon are additional values for the current domain.
+ * `*` is the catch-all wildcard applied to all unmatched hostnames.
+ *
+ * Valid spec values:
+ *   - `default`  – use the primary (service-level) title
+ *   - `all`      – use all alternative titles up to BUILTIN_SCRAPE_TITLE_LIMIT
+ *   - `original` – use titles in the TMDB original language
+ *   - ISO 639-1  – use titles tagged with that language code (e.g. `de`, `fr`)
+ */
+const titleLangMap = makeValidator<Record<string, string[]> | undefined>(
+  (x) => {
+    if (typeof x !== 'string' || !x.trim()) return undefined;
+    const keySpecMap: Record<string, string[]> = {};
+    let currentKey: string | null = null;
+    for (const token of x
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)) {
+      const colonIdx = token.indexOf(':');
+      if (colonIdx !== -1) {
+        currentKey = token.slice(0, colonIdx).trim().toLowerCase();
+        const firstSpec = token
+          .slice(colonIdx + 1)
+          .trim()
+          .toLowerCase();
+        if (currentKey) {
+          keySpecMap[currentKey] = firstSpec ? [firstSpec] : [];
+        }
+      } else if (currentKey) {
+        keySpecMap[currentKey].push(token.toLowerCase());
+      }
+    }
+    return Object.keys(keySpecMap).length ? keySpecMap : undefined;
+  }
+);
+
 const urlMappings = makeValidator<Record<string, string>>((x) => {
   // json object with string properties
   const parsed = JSON.parse(x);
@@ -502,6 +543,10 @@ export const Env = cleanEnv(process.env, {
   CUSTOM_HTML: str({
     default: undefined,
     desc: 'Custom HTML for the addon',
+  }),
+  FEATURED_TEMPLATE_IDS: commaSeparated({
+    default: [],
+    desc: 'Comma-separated list of up to 2 template IDs to feature on the about page. Defaults to the first 2 available templates when unset.',
   }),
   ALTERNATE_DESIGN: bool({
     default: false,
@@ -1970,6 +2015,12 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_SCRAPE_WITH_ALL_TITLES: boolOrList({
     default: false,
     desc: 'Whether to use alternative titles during scraping for built-in addons. Set to true, false, or a comma separated list of hostnames',
+  }),
+  BUILTIN_SCRAPE_TITLE_LANGUAGES: titleLangMap<
+    Record<string, string[]> | undefined
+  >({
+    default: undefined,
+    desc: 'Fine-grained control over which titles are used when scraping built-in addons. Comma-separated list of domain:spec entries, where domain is a hostname or * for the default, and spec is one of: default (primary title), all (all titles up to limit), original (TMDB original-language titles), or an ISO 639-1 code (e.g. de, fr). Takes precedence over BUILTIN_SCRAPE_WITH_ALL_TITLES. Example: *:default,original,germanindexer.com:de,default',
   }),
   BUILTIN_SCRAPE_TITLE_LIMIT: num({
     default: 3,

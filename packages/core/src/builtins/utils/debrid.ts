@@ -123,7 +123,10 @@ async function processTorrentsForDebridService(
     clientIp
   );
   if (!isTorrentDebridService(debridService)) {
-    throw new Error(`Service ${service.id} does not support torrent`);
+    logger.warn(
+      `Service ${service.id} does not support torrents, skipping torrent processing`
+    );
+    return [];
   }
 
   // Filter out library items that belong to a different service
@@ -172,6 +175,13 @@ async function processTorrentsForDebridService(
     const magnetCheckResult = magnetCheckResults.find(
       (result) => result.hash === torrent.hash
     );
+    if (magnetCheckResult?.status === 'failed') {
+      logger.debug(`Skipping torrent as its status is failed`, {
+        service: service.id,
+        torrent: torrent.title,
+      });
+      continue;
+    }
     const parsedTorrent = parsedTitlesMap.get(
       torrent.title ?? magnetCheckResult?.name ?? ''
     );
@@ -423,7 +433,10 @@ async function processNZBsForDebridService(
     clientIp
   );
   if (!isUsenetDebridService(debridService)) {
-    throw new Error(`Service ${service.id} does not support usenet`);
+    logger.warn(
+      `Service ${service.id} does not support usenet, skipping NZB processing`
+    );
+    return [];
   }
 
   nzbs = nzbs.filter(

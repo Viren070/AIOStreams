@@ -197,13 +197,21 @@ const DeduplicatorOptions = z.object({
   live: DeduplicatorMode.optional(),
   youtube: DeduplicatorMode.optional(),
   external: DeduplicatorMode.optional(),
+  smartDetectAttributes: z
+    .array(z.enum(constants.SMART_DETECT_ATTRIBUTES))
+    .optional(),
+  smartDetectRounding: z.number().min(1).max(50).optional(),
+  libraryBehaviour: z
+    .enum(constants.DEDUPLICATOR_LIBRARY_BEHAVIOURS)
+    .optional(),
 });
 
-const OptionDefinition = z.object({
+const OptionDefinition = z.looseObject({
   id: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1),
   showInSimpleMode: z.boolean().optional(),
+  advanced: z.boolean().optional(),
   emptyIsUndefined: z.boolean().optional(),
   type: z.enum([
     'string',
@@ -909,6 +917,7 @@ export const ParsedStreamSchema = z.object({
       seeders: z.number().optional(),
       sources: z.array(z.string().min(1)).optional(),
       private: z.boolean().optional(),
+      freeleech: z.boolean().optional(),
     })
     .optional(),
   countryWhitelist: z.array(z.string().length(3)).optional(),
@@ -1140,6 +1149,7 @@ export const AIOStream = StreamSchema.extend({
       type: StreamTypes.optional(),
       indexer: z.string().optional(),
       age: z.number().or(z.string()).optional(), // Age in hours since upload
+      nzbUrl: z.string().or(z.null()).optional(),
       torrent: z
         .object({
           infoHash: z.string().min(1).optional(),
@@ -1200,6 +1210,7 @@ const StatusResponseSchema = z.object({
     baseUrl: z.string().url().optional(),
     addonName: z.string(),
     customHtml: z.string().optional(),
+    featuredTemplateIds: z.array(z.string()).optional(),
     alternateDesign: z.boolean(),
     protected: z.boolean(),
     regexAccess: z.object({
@@ -1304,8 +1315,9 @@ export const TemplateSchema = z.object({
     serviceRequired: z.boolean().optional(), // whether a service is required for this template or not.
     setToSaveInstallMenu: z.boolean().optional().default(true), // whether to set the menu to save-install after importing the template
     sourceUrl: z.url().optional(), // URL from which the template was imported (for auto-updates)
+    inputs: z.array(OptionDefinition).optional(), // template-creator-defined options shown to the user before loading
   }),
-  config: UserDataSchema.partial(),
+  config: z.any(),
 });
 
 export type Template = z.infer<typeof TemplateSchema>;

@@ -259,15 +259,18 @@ export class StremThruService
     sid?: string,
     checkOwned: boolean = true
   ): Promise<DebridDownload[]> {
-    let libraryHashes: Set<string> | undefined;
+    let libraryHashes = new Set<string>();
+    let failedHashes = new Set<string>();
     if (checkOwned) {
       try {
         const libraryItems = await this.listMagnets();
-        libraryHashes = new Set(
-          libraryItems
-            .filter((item) => item.hash)
-            .map((item) => item.hash!.toLowerCase())
-        );
+        for (const item of libraryItems) {
+          if (item.hash && ['failed', 'invalid'].includes(item.status)) {
+            failedHashes.add(item.hash.toLowerCase());
+          } else if (item.hash) {
+            libraryHashes.add(item.hash.toLowerCase());
+          }
+        }
       } catch (error) {
         logger.warn(
           `Failed to list library magnets for checkOwned on ${this.serviceName}`,
@@ -338,11 +341,11 @@ export class StremThruService
     }
     const allResults = [...cachedResults, ...newResults];
 
-    if (libraryHashes) {
-      for (const item of allResults) {
-        if (item.hash && libraryHashes.has(item.hash.toLowerCase())) {
-          item.library = true;
-        }
+    for (const item of allResults) {
+      if (item.hash && failedHashes.has(item.hash.toLowerCase())) {
+        item.status = 'failed';
+      } else if (item.hash && libraryHashes.has(item.hash.toLowerCase())) {
+        item.library = true;
       }
     }
 
@@ -485,15 +488,18 @@ export class StremThruService
       return [];
     }
 
-    let libraryHashes: Set<string> | undefined;
+    let libraryHashes = new Set<string>();
+    let failedHashes = new Set<string>();
     if (checkOwned) {
       try {
         const libraryItems = await this.listNzbs();
-        libraryHashes = new Set(
-          libraryItems
-            .filter((item) => item.hash)
-            .map((item) => item.hash!.toLowerCase())
-        );
+        for (const item of libraryItems) {
+          if (item.hash && ['failed', 'invalid'].includes(item.status)) {
+            failedHashes.add(item.hash.toLowerCase());
+          } else if (item.hash) {
+            libraryHashes.add(item.hash.toLowerCase());
+          }
+        }
       } catch (error) {
         logger.warn(
           `Failed to list library newz for checkOwned on ${this.serviceName}`,
@@ -574,11 +580,11 @@ export class StremThruService
 
     const allResults = [...cachedResults, ...newResults];
 
-    if (libraryHashes) {
-      for (const item of allResults) {
-        if (item.hash && libraryHashes.has(item.hash.toLowerCase())) {
-          item.library = true;
-        }
+    for (const item of allResults) {
+      if (item.hash && failedHashes.has(item.hash.toLowerCase())) {
+        item.status = 'failed';
+      } else if (item.hash && libraryHashes.has(item.hash.toLowerCase())) {
+        item.library = true;
       }
     }
 
@@ -916,6 +922,18 @@ export class StremThruService
             magnetDownload = magnetDownloadInList;
             break;
           }
+          if (['failed', 'invalid'].includes(magnetDownloadInList.status)) {
+            throw new DebridError(
+              `Magnet download ${magnetDownloadInList.status}`,
+              {
+                statusCode: 400,
+                statusText: `Magnet download ${magnetDownloadInList.status}`,
+                code: 'UNKNOWN',
+                headers: {},
+                body: magnetDownloadInList,
+              }
+            );
+          }
         }
       }
       if (magnetDownload.status !== 'downloaded') {
@@ -1113,22 +1131,22 @@ export class StremThruService
         await new Promise((resolve) =>
           setTimeout(resolve, this.cacheAndPlayOptions.pollingInterval)
         );
-        try {
-          const polledDownload = await this.getNzb(
-            usenetDownload.id.toString()
-          );
-          logger.debug(`Polled status for ${nzb || hash}`, {
-            attempt: i + 1,
-            status: polledDownload.status,
-          });
-          if (polledDownload.status === 'downloaded') {
-            usenetDownload = polledDownload;
-            break;
-          }
-        } catch (error) {
-          logger.warn(`Failed to poll status for ${nzb || hash}`, {
-            attempt: i + 1,
-            error: (error as Error).message,
+        const polledDownload = await this.getNzb(usenetDownload.id.toString());
+        logger.debug(`Polled status for ${nzb || hash}`, {
+          attempt: i + 1,
+          status: polledDownload.status,
+        });
+        if (polledDownload.status === 'downloaded') {
+          usenetDownload = polledDownload;
+          break;
+        }
+        if (['failed', 'invalid'].includes(polledDownload.status)) {
+          throw new DebridError(`Usenet download ${polledDownload.status}`, {
+            statusCode: 400,
+            statusText: `Usenet download ${polledDownload.status}`,
+            code: 'UNKNOWN',
+            headers: {},
+            body: polledDownload,
           });
         }
       }

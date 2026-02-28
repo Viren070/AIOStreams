@@ -39,6 +39,7 @@ import {
 import { processTorrents, processNZBs } from '../utils/debrid.js';
 import { calculateAbsoluteEpisode } from '../utils/general.js';
 import { MetadataService } from '../../metadata/service.js';
+import { MetadataTitle } from '../../metadata/utils.js';
 import { Logger } from 'winston';
 import pLimit from 'p-limit';
 import { cleanTitle } from '../../parser/utils.js';
@@ -54,6 +55,10 @@ export interface SearchMetadata extends TitleMetadata {
   tmdbId?: number | null;
   tvdbId?: number | null;
   isAnime?: boolean;
+  /** Full title list with language tags, used by buildQueries for language-aware scraping. */
+  titlesWithLang?: MetadataTitle[];
+  /** ISO 639-1 code of the content's original language (from TMDB). */
+  originalLanguage?: string;
 }
 
 export const BaseDebridConfigSchema = z.object({
@@ -613,22 +618,64 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     options?: {
       addYear?: boolean;
       addSeasonEpisode?: boolean;
+      /** @deprecated Use titleLanguages instead. */
       useAllTitles?: boolean;
+      titleLanguages?: string[];
     }
   ): string[] {
-    const { addYear, addSeasonEpisode, useAllTitles } = {
+    const { addYear, addSeasonEpisode } = {
       addYear: true,
       addSeasonEpisode: true,
-      useAllTitles: false,
       ...options,
     };
     let queries: string[] = [];
     if (!metadata.primaryTitle) {
       return [];
     }
-    const titles = useAllTitles
-      ? metadata.titles.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT).map(cleanTitle)
-      : [metadata.primaryTitle];
+
+    // select titles based on options
+    const titleLangs = options?.titleLanguages;
+    let titles: string[];
+
+    if (titleLangs && titleLangs.length > 0) {
+      const selected = new Set<string>();
+      for (const spec of titleLangs) {
+        if (spec === 'default') {
+          selected.add(metadata.primaryTitle);
+        } else if (spec === 'all') {
+          metadata.titlesWithLang
+            ?.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT)
+            .forEach((t) => selected.add(cleanTitle(t.title)));
+          break; // no need to process further specs
+        } else if (spec === 'original') {
+          // First title in the content's original language (from TMDB).
+          const match = metadata.originalLanguage
+            ? metadata.titlesWithLang?.find(
+                (t) => t.language === metadata.originalLanguage
+              )
+            : undefined;
+          if (match) selected.add(cleanTitle(match.title));
+        } else {
+          // take only the first matching title.
+          const match = metadata.titlesWithLang?.find(
+            (t) => t.language === spec
+          );
+          if (match) selected.add(cleanTitle(match.title));
+        }
+      }
+      titles = [...selected];
+      // Always fall back to primary title if nothing matched
+      if (titles.length === 0) {
+        titles = [metadata.primaryTitle];
+      }
+    } else if (options?.useAllTitles) {
+      titles = metadata.titles
+        .slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT)
+        .map(cleanTitle);
+    } else {
+      titles = [metadata.primaryTitle];
+    }
+
     const titlePlaceholder = '<___title___>';
     const addQuery = (query: string) => {
       titles.forEach((title) => {
@@ -789,6 +836,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const searchMetadata: SearchMetadata = {
       primaryTitle: metadata.title,
       titles: metadata.titles?.map((t) => t.title) ?? [],
+      titlesWithLang: metadata.titles ?? [],
+      originalLanguage: metadata.originalLanguage,
       season: parsedId.season ? Number(parsedId.season) : undefined,
       episode: parsedId.episode ? Number(parsedId.episode) : undefined,
       absoluteEpisode,
@@ -806,6 +855,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       {
         ...searchMetadata,
         titles: searchMetadata.titles.length,
+        titlesWithLang: searchMetadata.titlesWithLang?.length,
       }
     );
 
@@ -866,8 +916,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         ? '⚡'
         : '⏳'
       : '';
+    const isFreeleech = torrentOrNzb?.downloadvolumefactor === 0;
 
-    const name = `${torrentOrNzb.service?.library ? '🗃️ ' : ''}${isPrivate ? '🔑 ' : ''}[${shortCode} ${cacheIndicator}] ${this.name} `;
+    const name = `${torrentOrNzb.service?.library ? '🗃️ ' : ''}${isPrivate ? '🔑 ' : ''}[${shortCode} ${cacheIndicator}] ${this.name} ${isFreeleech ? 'FREELEECH' : ''} `;
     const description = `${torrentOrNzb.title ? torrentOrNzb.title : ''}\n${torrentOrNzb.file.name ? torrentOrNzb.file.name : ''}\n${
       torrentOrNzb.indexer ? `🔍 ${torrentOrNzb.indexer}` : ''
     } ${'seeders' in torrentOrNzb && torrentOrNzb.seeders ? `👤 ${torrentOrNzb.seeders}` : ''} ${

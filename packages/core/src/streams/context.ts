@@ -82,9 +82,9 @@ export class StreamContext {
   private _releaseDatesPromise: Promise<ReleaseDate[] | undefined> | undefined;
 
   // Episode details for series digital release filter and bitrate calculation
-  private _episodeDetails: { air_date?: string; runtime?: number } | undefined;
+  private _episodeDetails: { airDate?: string; runtime?: number } | undefined;
   private _episodeDetailsPromise:
-    | Promise<{ air_date?: string; runtime?: number } | undefined>
+    | Promise<{ airDate?: string; runtime?: number } | undefined>
     | undefined;
 
   // SeaDex data (for anime)
@@ -349,14 +349,19 @@ export class StreamContext {
       }
 
       try {
+        let seasonNumber = Number(this.parsedId.season);
+        let episodeNumber = Number(this.parsedId.episode);
+        if (this.isAnime && this.animeEntry) {
+          seasonNumber = this.animeEntry.tmdb?.seasonNumber ?? seasonNumber;
+          if (this.animeEntry.tmdb?.fromEpisode) {
+            episodeNumber =
+              Number(this.animeEntry.tmdb.fromEpisode) + episodeNumber - 1;
+          }
+        }
         return await new TMDBMetadata({
           accessToken: this.userData.tmdbAccessToken,
           apiKey: this.userData.tmdbApiKey,
-        }).getEpisodeDetails(
-          metadata.tmdbId,
-          Number(this.parsedId.season),
-          Number(this.parsedId.episode)
-        );
+        }).getEpisodeDetails(metadata.tmdbId, seasonNumber, episodeNumber);
       } catch (error) {
         logger.warn(`Error fetching episode details for ${this.id}: ${error}`);
         return undefined;
@@ -464,7 +469,7 @@ export class StreamContext {
    */
   public async getEpisodeAirDate(): Promise<string | undefined> {
     if (this._episodeDetails !== undefined) {
-      return this._episodeDetails.air_date;
+      return this._episodeDetails.airDate;
     }
 
     if (!this._episodeDetailsPromise) {
@@ -475,7 +480,7 @@ export class StreamContext {
       this._episodeDetails = await this._episodeDetailsPromise;
     }
 
-    return this._episodeDetails?.air_date;
+    return this._episodeDetails?.airDate;
   }
 
   public async getEpisodeRuntime(): Promise<number | undefined> {
@@ -523,8 +528,8 @@ export class StreamContext {
   }
 
   private computeAgeInDays(): number | undefined {
-    if (this.type === 'series' && this._episodeDetails?.air_date) {
-      return this.getDaysSince(this._episodeDetails.air_date);
+    if (this.type === 'series' && this._episodeDetails?.airDate) {
+      return this.getDaysSince(this._episodeDetails.airDate);
     } else if (this._metadata?.releaseDate) {
       return this.getDaysSince(this._metadata.releaseDate);
     }

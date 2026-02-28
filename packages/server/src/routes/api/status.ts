@@ -37,6 +37,10 @@ const statusInfo = async (): Promise<StatusResponse> => {
       baseUrl: Env.BASE_URL,
       addonName: Env.ADDON_NAME,
       customHtml: Env.CUSTOM_HTML,
+      featuredTemplateIds:
+        Env.FEATURED_TEMPLATE_IDS.length > 0
+          ? Env.FEATURED_TEMPLATE_IDS.slice(0, 2)
+          : undefined,
       alternateDesign: Env.ALTERNATE_DESIGN,
       protected: Env.ADDON_PASSWORD.length > 0,
       tmdbApiAvailable: !!Env.TMDB_ACCESS_TOKEN,

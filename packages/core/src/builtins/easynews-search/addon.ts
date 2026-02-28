@@ -18,7 +18,7 @@ import {
   BaseDebridConfigSchema,
   SearchMetadata,
 } from '../base/debrid.js';
-import { createQueryLimit, useAllTitles } from '../utils/general.js';
+import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
 import EasynewsApi, {
   EasynewsApiError,
@@ -108,7 +108,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     const queries = this.buildQueries(parsedId, metadata, {
       addYear: parsedId.mediaType === 'movie',
       addSeasonEpisode: parsedId.mediaType === 'series',
-      useAllTitles: useAllTitles(EASYNEWS_BASE),
+      titleLanguages: getTitleLanguagesForUrl(EASYNEWS_BASE, this.id),
     });
 
     if (queries.length === 0) {

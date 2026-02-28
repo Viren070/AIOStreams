@@ -79,6 +79,7 @@ interface BaseFile {
   group?: string;
   languages?: string[]; // languages extracted from indexer attributes (e.g. newznab/torznab)
   age?: number; // age in hours
+  downloadvolumefactor?: number; // multiplier for the download volume that counts toward the user’s account on the tracker
   duration?: number; // duration in seconds
   library?: boolean; // whether the file is already in the user's library
 }
@@ -705,6 +706,17 @@ export function isNotVideoFile(file: DebridFile): boolean {
     '.db',
     '.dbf',
     '.bak',
+    '.par2',
+    '.clpi',
+    '.jar',
+    '.mpls',
+    '.otf',
+    '.properties',
+    '.bdjo',
+    '.bdmv',
+    '.crt',
+    '.crl',
+    '.sig',
   ];
   const patterns = [/\.7z\.\d+$/];
   return (

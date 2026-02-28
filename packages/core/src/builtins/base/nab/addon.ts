@@ -13,7 +13,10 @@ import {
   SearchResponse,
   SearchResultItem,
 } from './api.js';
-import { createQueryLimit, useAllTitles } from '../../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+} from '../../utils/general.js';
 import { LANGUAGES } from '../../../utils/constants.js';
 
 /**
@@ -39,7 +42,7 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   apiPath: z.string().optional(),
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
-  forceInitialLimit: z.number().optional(),
+  forceInitialLimit: z.number().min(1).max(10000).optional(),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -165,7 +168,7 @@ export abstract class BaseNabAddon<
         )
           ? false
           : !queryParams.season && !queryParams.ep,
-        useAllTitles: useAllTitles(this.userData.url),
+        titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
       });
       searchType = 'query';
     }

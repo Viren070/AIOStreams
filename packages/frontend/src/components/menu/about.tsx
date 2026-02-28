@@ -34,7 +34,7 @@ import { DonationModal } from '../shared/donation-modal';
 import { ModeSwitch } from '../ui/mode-switch/mode-switch';
 import { ModeSelectModal } from '../shared/mode-select-modal';
 import { ConfigModal } from '../config-modal';
-import { ConfigTemplatesModal } from '../shared/config-templates-modal';
+import { ConfigTemplatesModal } from '../shared/templates';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -52,6 +52,10 @@ import { cn } from '@/components/ui/core/styling';
 import { Textarea } from '../ui/textarea';
 import { FaPlay } from 'react-icons/fa6';
 import { usePathname } from 'next/navigation';
+import { Template } from '@aiostreams/core';
+import { useTemplateLoader } from '@/hooks/templates/loader';
+import MarkdownLite from '../shared/markdown-lite';
+import { GlowCard } from '../shared/glow-card';
 
 interface QuickLinkProps {
   href?: string;
@@ -105,6 +109,66 @@ function QuickLink({
   );
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  debrid: 'bg-brand-500/20 text-brand-300 border border-brand-500/30',
+  p2p: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+  custom: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
+};
+
+function categoryPillClass(category: string) {
+  return (
+    CATEGORY_COLORS[category.toLowerCase()] ??
+    'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+  );
+}
+
+function TemplateMiniCard({
+  template,
+  onOpen,
+}: {
+  template: Template;
+  onOpen: () => void;
+}) {
+  return (
+    <GlowCard className="hover:border-gray-600 transition-colors duration-200 group">
+      <button
+        onClick={onOpen}
+        className="text-left w-full p-4 flex flex-col focus-visible:outline-none"
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h4 className="text-sm font-semibold text-white group-hover:text-[--brand] transition-colors truncate flex-1">
+            {template.metadata.name}
+          </h4>
+          <span
+            className={`text-[10px] font-medium px-2 py-0.5 rounded flex-shrink-0 ${categoryPillClass(template.metadata.category)}`}
+          >
+            {template.metadata.category}
+          </span>
+        </div>
+        <div
+          className="overflow-hidden max-h-[4.5rem] text-xs text-gray-400 mb-1 [&_strong]:text-gray-300 [&_em]:text-gray-400 [&_a]:text-[--brand] [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-0.5"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(to bottom, black 50%, transparent 100%)',
+            maskImage:
+              'linear-gradient(to bottom, black 50%, transparent 100%)',
+          }}
+        >
+          <MarkdownLite>{template.metadata.description}</MarkdownLite>
+        </div>
+        <div className="mt-auto flex items-center justify-between pt-1">
+          <span className="text-[10px] text-gray-500">
+            by {template.metadata.author}
+          </span>
+          <span className="text-[10px] text-gray-600 group-hover:text-[--brand] transition-colors">
+            View template →
+          </span>
+        </div>
+      </button>
+    </GlowCard>
+  );
+}
+
 export function AboutMenu() {
   return (
     <>
@@ -117,6 +181,7 @@ export function AboutMenu() {
 
 function Content() {
   const { status, loading, error } = useStatus();
+  const loader = useTemplateLoader(status);
   const { nextMenu } = useMenu();
   const [initialUuid, setInitialUuid] = React.useState<string | null>(null);
   const { userData, setUserData, uuid, setUuid, password, setPassword } =
@@ -142,6 +207,28 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   const setupChoiceModal = useDisclosure(false);
   const customHtml = status?.settings?.customHtml;
   const pathname = usePathname();
+  const [deepLinkUrl, setDeepLinkUrl] = React.useState<string | undefined>(
+    undefined
+  );
+  const [deepLinkTemplateId, setDeepLinkTemplateId] = React.useState<
+    string | undefined
+  >(undefined);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const templateUrl = url.searchParams.get('template');
+    const templateId = url.searchParams.get('templateId') ?? undefined;
+    if (templateUrl) {
+      setDeepLinkUrl(templateUrl);
+      setDeepLinkTemplateId(templateId);
+      templatesModal.open();
+      // Clean up the params so they don't persist on back/forward
+      url.searchParams.delete('template');
+      url.searchParams.delete('templateId');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
   const confirmClearConfig = useConfirmationDialog({
     title: 'Sign Out',
     description: 'Are you sure you want to sign out?',
@@ -160,6 +247,10 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
       setInitialUuid(uuidMatch[1]);
     }
   }, [pathname]);
+
+  React.useEffect(() => {
+    loader.loadTemplates();
+  }, []);
 
   return (
     <>
@@ -243,147 +334,155 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
           </SettingsCard>
         )}
 
-        {/* Setup Mode Row */}
-        <div className="flex flex-col items-center md:items-start gap-4 w-full md:pl-6">
-          <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-start">
-            <div className="flex flex-col items-start md:items-start">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 self-start">
-                Setup Mode
-              </span>
-              <ModeSwitch
-                value={mode}
-                onChange={setMode}
-                className="w-[280px] h-12 text-base"
-              />
-            </div>
-            <div className="text-gray-400 md:self-end md:pb-3">
-              <FaChevronRight className="hidden md:block text-2xl" />
-              <FaChevronRight className="md:hidden rotate-90 text-2xl" />
-            </div>
-            <div className="md:self-end">
-              <Button
-                intent="white"
-                rounded
-                leftIcon={<FaPlay />}
-                className="h-12 px-6 text-lg font-semibold"
-                onClick={setupChoiceModal.open}
-              >
-                {uuid && password ? 'CONTINUE SETUP' : 'START SETUP'}
-              </Button>
-            </div>
-          </div>
+        {loader.templates.length > 0 &&
+          (() => {
+            const envIds = (status?.settings?.featuredTemplateIds ?? []).slice(
+              0,
+              2
+            );
+            const featured =
+              envIds.length > 0
+                ? envIds
+                    .map((id) =>
+                      loader.templates.find((t) => t.metadata.id === id)
+                    )
+                    .filter((t): t is Template => t !== undefined)
+                : loader.templates.slice(0, 2);
+            if (featured.length === 0) return null;
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-white">
+                    Featured Templates
+                  </h3>
+                  <button
+                    onClick={templatesModal.open}
+                    className="text-sm text-[--brand] hover:underline transition-colors"
+                  >
+                    Browse all {loader.templates.length} →
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {featured.map((template) => (
+                    <TemplateMiniCard
+                      key={template.metadata.id}
+                      template={template}
+                      onOpen={templatesModal.open}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
-          {/* Template Wizard Link */}
-          <div className="text-center md:text-left text-sm text-gray-400 max-w-2xl">
-            New to AIOStreams? Try our{' '}
-            <button
-              onClick={templatesModal.open}
-              className="text-[--brand] hover:text-[--brand]/80 hover:underline font-medium"
-            >
-              Template Wizard
-            </button>{' '}
-            for a guided, step-by-step setup experience with pre-configured
-            settings.
-          </div>
-        </div>
-
-        {/* Main content: Get Started and What's New sections */}
-        <div className="flex flex-col lg:flex-row gap-8 mt-4">
-          {/* Get Started section */}
+        <div className="flex flex-col lg:flex-row gap-6 mt-2">
           <div className="flex-1">
-            <div className="p-6 h-full flex flex-col">
-              <div className="mb-4">
-                <h3 className="text-2xl font-semibold text-white mb-1">
-                  Welcome to AIOStreams!
+            <GlowCard className="p-6 h-full flex flex-col gap-5">
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">
+                  Get Started
                 </h3>
+                <p className="text-sm text-[--muted]">
+                  New here? Pick a setup mode and jump straight in, or load a
+                  template for an instant pre-configured setup.
+                </p>
               </div>
 
-              <div className="space-y-6 flex-1">
-                {/* Welcome section */}
-                <div className="text-base text-muted-foreground">
-                  <span>
-                    Click the Start Setup button above to start customising
-                    AIOStreams to your preferences. You'll be guided through
-                    each section where you can set up your configuration. Once
-                    complete, you'll create a password-protected configuration
-                    that you can install in Stremio or other compatible apps.
-                  </span>
-                  <br />
-                  <br />
-                  <span>
-                    Need to make changes later? Simply click configure within
-                    your app and enter your password. You can update your
-                    settings at any time, and in most cases - you won't need to
-                    reinstall AIOStreams!
-                  </span>
-                  <br />
-                  <br />
-                  <span>
-                    Got an existing configuration already? Click the login
-                    button in the top right corner to access it.
-                  </span>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-700/50 to-transparent" />
-                </div>
-
-                {/* Quick links grid */}
-                <div className="pt-6">
-                  <h4 className="text-xl font-semibold text-white mb-4">
-                    Resources & Support
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <QuickLink
-                      href={configGuideUrl}
-                      icon={<BookOpenIcon className="w-8 h-8" />}
-                    >
-                      Configuration Guide
-                    </QuickLink>
-                    <QuickLink
-                      href="https://github.com/Viren070/AIOStreams/wiki"
-                      icon={<BookOpenIcon className="w-8 h-8" />}
-                    >
-                      Wiki
-                    </QuickLink>
-                    <QuickLink
-                      href={stremioGuideUrl}
-                      icon={<InfoIcon className="w-8 h-8" />}
-                    >
-                      Stremio Guide
-                    </QuickLink>
-                    <QuickLink
-                      href={discordUrl}
-                      icon={<AiOutlineDiscord className="w-8 h-8" />}
-                    >
-                      Discord
-                    </QuickLink>
-                    <QuickLink
-                      href={githubUrl}
-                      icon={<FiGithub className="w-8 h-8" />}
-                    >
-                      GitHub
-                    </QuickLink>
-                    <QuickLink
-                      onClick={donationModal.open}
-                      icon={<HeartIcon className="w-8 h-8" />}
-                      className="bg-gradient-to-br from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-red-400/30 hover:border-red-400/50"
-                    >
-                      Donate
-                    </QuickLink>
-                  </div>
-                </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Setup Mode
+                </span>
+                <ModeSwitch
+                  value={mode}
+                  onChange={setMode}
+                  className="w-full h-11 text-sm"
+                />
               </div>
-            </div>
+
+              <div className="flex flex-col gap-3 mt-auto">
+                <Button
+                  intent="white"
+                  rounded
+                  leftIcon={<FaPlay />}
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={() => nextMenu()}
+                >
+                  {uuid && password ? 'Continue Setup' : 'Start Setup'}
+                </Button>
+                <Button
+                  intent="primary-outline"
+                  rounded
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={templatesModal.open}
+                >
+                  Use a Template
+                </Button>
+                {!(uuid && password) && (
+                  <p className="text-xs text-gray-500 text-center mt-1">
+                    Already have a config?{' '}
+                    <button
+                      onClick={signInModal.open}
+                      className="text-[--brand] hover:underline"
+                    >
+                      Sign in
+                    </button>{' '}
+                    to load it.
+                  </p>
+                )}
+              </div>
+            </GlowCard>
           </div>
 
-          {/* What's New section */}
           <div className="flex-[1.5]">
-            <ChangelogBox version={version} />
+            <GlowCard className="p-6 h-full flex flex-col gap-4">
+              <h3 className="text-xl font-semibold text-white">
+                Resources & Support
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
+                <QuickLink
+                  href={configGuideUrl}
+                  icon={<BookOpenIcon className="w-7 h-7" />}
+                >
+                  Configuration Guide
+                </QuickLink>
+                <QuickLink
+                  href="https://github.com/Viren070/AIOStreams/wiki"
+                  icon={<BookOpenIcon className="w-7 h-7" />}
+                >
+                  Wiki
+                </QuickLink>
+                <QuickLink
+                  href={stremioGuideUrl}
+                  icon={<InfoIcon className="w-7 h-7" />}
+                >
+                  Stremio Guide
+                </QuickLink>
+                <QuickLink
+                  href={discordUrl}
+                  icon={<AiOutlineDiscord className="w-7 h-7" />}
+                >
+                  Discord
+                </QuickLink>
+                <QuickLink
+                  href={githubUrl}
+                  icon={<FiGithub className="w-7 h-7" />}
+                >
+                  GitHub
+                </QuickLink>
+                <QuickLink
+                  onClick={donationModal.open}
+                  icon={<HeartIcon className="w-7 h-7" />}
+                  className="bg-gradient-to-br from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-red-400/30 hover:border-red-400/50"
+                >
+                  Donate
+                </QuickLink>
+              </div>
+            </GlowCard>
           </div>
         </div>
 
-        {/* Social & donation row */}
+        <ChangelogBox version={version} />
+
         <div className="flex flex-col items-center mt-4">
           <div className="flex flex-col items-center gap-0.5 mt-4 text-xs text-gray-500">
             <span>
@@ -435,6 +534,8 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
       <ConfigTemplatesModal
         open={templatesModal.isOpen}
         onOpenChange={templatesModal.toggle}
+        deepLinkUrl={deepLinkUrl}
+        deepLinkTemplateId={deepLinkTemplateId}
       />
       <SetupChoiceModal
         open={setupChoiceModal.isOpen}

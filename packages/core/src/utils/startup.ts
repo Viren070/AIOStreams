@@ -696,6 +696,35 @@ const logStartupInfo = () => {
         logKeyValue('    User Agent:', Env.BUILTIN_GDRIVE_USER_AGENT, '     ');
       }
     }
+
+    // Title language scraping config
+    logKeyValue('Title Scraping:', '');
+    const titleLangs = Env.BUILTIN_SCRAPE_TITLE_LANGUAGES as
+      | Record<string, string[]>
+      | undefined;
+    if (titleLangs) {
+      const entries = Object.entries(titleLangs);
+      entries.forEach(([domain, specs]) => {
+        logKeyValue(
+          `  ${domain === '*' ? '*(default):' : `${domain}:`}`,
+          specs.join(', '),
+          '       '
+        );
+      });
+    } else {
+      const legacyAllTitles = Env.BUILTIN_SCRAPE_WITH_ALL_TITLES;
+      const legacyValue = Array.isArray(legacyAllTitles)
+        ? `all titles for: ${legacyAllTitles.join(', ')}`
+        : legacyAllTitles
+          ? 'all titles (global)'
+          : 'primary title only (default)';
+      logKeyValue('  Mode (legacy):', legacyValue, '       ');
+    }
+    logKeyValue(
+      '  Title Limit:',
+      Env.BUILTIN_SCRAPE_TITLE_LIMIT.toString(),
+      '       '
+    );
   });
 
   // Addon Sources

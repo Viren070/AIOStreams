@@ -377,7 +377,7 @@ function Content() {
             </div>
             <SettingsCard
               title="My Addons"
-              description="Edit, remove, and reorder your installed addons. If you reorder your addons, you will have to refresh the catalogs if you have made any changes, and also reinstall the addon."
+              description="Edit, remove, and reorder your installed addons. Reordering addons may require a reinstall - if it does, a pop-up will tell you."
             >
               <DndContext
                 modifiers={[restrictToVerticalAxis]}
@@ -1154,6 +1154,7 @@ function AddonModal({
   if (configMode === 'noob') {
     dynamicOptions = dynamicOptions.filter((opt: any) => {
       if (opt?.showInSimpleMode === false) return false;
+      if (opt?.advanced === true) return false;
       return true;
     });
   }
@@ -1762,7 +1763,7 @@ function CatalogSettingsCard() {
   return (
     <SettingsCard
       title="Catalogs"
-      description="Rename, Reorder, and toggle your catalogs, and apply modifications like RPDB posters and shuffling. If you reorder the addons, you need to reinstall the addon"
+      description="Rename, reorder, and toggle your catalogs, and apply modifications like RPDB posters and shuffling. Adjusting catalogs may require a reinstall - if it does, a pop-up will tell you."
       action={
         <IconButton
           size="sm"

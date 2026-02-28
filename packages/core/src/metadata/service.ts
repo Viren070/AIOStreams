@@ -175,7 +175,16 @@ export class MetadataService {
               const tmdbMetadata = tmdbResult.value;
               if (tmdbMetadata.title)
                 titles.unshift({ title: tmdbMetadata.title });
-              if (tmdbMetadata.titles) titles.push(...tmdbMetadata.titles);
+              // Mark TMDB titles as trusted so their language tags are preserved
+              // during deduplication even when lower-quality sources (TVDB, Trakt,
+              // IMDb) return the same title without a language tag.
+              if (tmdbMetadata.titles)
+                titles.push(
+                  ...tmdbMetadata.titles.map((t) => ({
+                    ...t,
+                    trusted: true as const,
+                  }))
+                );
               if (tmdbMetadata.year) year = tmdbMetadata.year;
               if (tmdbMetadata.yearEnd) yearEnd = tmdbMetadata.yearEnd;
               if (tmdbMetadata.originalLanguage)
@@ -227,11 +236,20 @@ export class MetadataService {
                   accessToken: this.config.tmdbAccessToken,
                   apiKey: this.config.tmdbApiKey,
                 });
+                let seasonNumber = Number(id.season);
+                let episodeNumber = Number(id.episode);
+                if (animeEntry) {
+                  seasonNumber = animeEntry.tmdb?.seasonNumber ?? seasonNumber;
+                  if (animeEntry.tmdb?.fromEpisode) {
+                    episodeNumber =
+                      Number(animeEntry.tmdb.fromEpisode) + episodeNumber - 1;
+                  }
+                }
                 if (tmdbId && seasons) {
                   const tmdbNextAirDate = await tmdb.getNextEpisodeAirDate(
                     Number(tmdbId),
-                    Number(id.season),
-                    Number(id.episode),
+                    seasonNumber,
+                    episodeNumber,
                     seasons
                   );
                   if (tmdbNextAirDate && this.isDateInFuture(tmdbNextAirDate)) {
@@ -350,6 +368,10 @@ export class MetadataService {
                 year = imdbSuggestionData.year;
               if (imdbSuggestionData.yearEnd && !yearEnd)
                 yearEnd = imdbSuggestionData.yearEnd;
+            } else {
+              logger.warn(
+                `Failed to fetch IMDb suggestion data for ${imdbId}: ${imdbSuggestionResult.status === 'rejected' ? imdbSuggestionResult.reason : 'no data'}`
+              );
             }
 
             const uniqueTitles = deduplicateTitles(titles);

@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest watch"
   },
   "devDependencies": {
     "@aiostreams/core": "workspace:*",

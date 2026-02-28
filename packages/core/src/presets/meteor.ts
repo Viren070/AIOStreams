@@ -202,7 +202,11 @@ export class MeteorPreset extends Preset {
     }
 
     const configString = this.base64EncodeJSON({
-      ...(debridServices.length > 0 && { debridServices }),
+      debridService:
+        debridServices.length === 1 ? debridServices[0].service : undefined,
+      debridApiKey:
+        debridServices.length === 1 ? debridServices[0].apiKey : undefined,
+      debridServices: debridServices.length > 1 ? debridServices : undefined,
       cachedOnly: false,
       removeTrash: options.removeTrash ?? false,
       removeSamples: false,

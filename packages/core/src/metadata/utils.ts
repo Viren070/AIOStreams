@@ -1,6 +1,7 @@
 export interface MetadataTitle {
   title: string;
   language?: string; // ISO 639-1 language code, normalised from provider-specific formats
+  trusted?: boolean;
 }
 
 /**
@@ -9,6 +10,7 @@ export interface MetadataTitle {
  */
 export function deduplicateTitles(titles: MetadataTitle[]): MetadataTitle[] {
   const titleLangs = new Map<string, Set<string>>();
+  const titleTrustedLangs = new Map<string, Set<string>>();
   const titleHasUntagged = new Set<string>();
   const titleKeys: string[] = [];
   const titleFirstOccurrence = new Map<string, MetadataTitle>();
@@ -17,11 +19,15 @@ export function deduplicateTitles(titles: MetadataTitle[]): MetadataTitle[] {
     const key = t.title.toLowerCase();
     if (!titleLangs.has(key)) {
       titleLangs.set(key, new Set());
+      titleTrustedLangs.set(key, new Set());
       titleKeys.push(key);
       titleFirstOccurrence.set(key, t);
     }
     if (t.language) {
       titleLangs.get(key)!.add(t.language);
+      if (t.trusted) {
+        titleTrustedLangs.get(key)!.add(t.language);
+      }
     } else {
       titleHasUntagged.add(key);
     }
@@ -30,10 +36,18 @@ export function deduplicateTitles(titles: MetadataTitle[]): MetadataTitle[] {
   return titleKeys.map((key) => {
     const first = titleFirstOccurrence.get(key)!;
     const langs = titleLangs.get(key)!;
-    const unambiguous = langs.size === 1 && !titleHasUntagged.has(key);
+    const trustedLangs = titleTrustedLangs.get(key)!;
+
+    let language: string | undefined;
+    if (trustedLangs.size === 1) {
+      language = [...trustedLangs][0];
+    } else if (trustedLangs.size === 0) {
+      const unambiguous = langs.size === 1 && !titleHasUntagged.has(key);
+      language = unambiguous ? [...langs][0] : undefined;
+    }
     return {
       title: first.title,
-      language: unambiguous ? [...langs][0] : undefined,
+      language,
     };
   });
 }

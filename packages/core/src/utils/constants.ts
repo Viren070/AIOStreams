@@ -817,6 +817,45 @@ export const DEDUPLICATOR_KEYS = [
   'smartDetect',
 ] as const;
 
+export const DEDUPLICATOR_LIBRARY_BEHAVIOURS = [
+  'ignore',
+  'prefer',
+  'exclusive',
+] as const;
+
+export const SMART_DETECT_ATTRIBUTES = [
+  'size',
+  'bitrate',
+  'resolution',
+  'quality',
+  'encode',
+  'releaseGroup',
+  'edition',
+  'remastered',
+  'network',
+  'container',
+  'visualTags',
+  'audioTags',
+  'audioChannels',
+  'languages',
+] as const;
+
+export type SmartDetectAttribute = (typeof SMART_DETECT_ATTRIBUTES)[number];
+
+export const DEFAULT_SMART_DETECT_ATTRIBUTES: SmartDetectAttribute[] = [
+  'size',
+  'resolution',
+  'quality',
+  'visualTags',
+  'audioTags',
+  'audioChannels',
+  'languages',
+  'encode',
+  'edition',
+  'network',
+  'remastered',
+];
+
 export const AUTO_PLAY_ATTRIBUTES = [
   'service',
   'addon',

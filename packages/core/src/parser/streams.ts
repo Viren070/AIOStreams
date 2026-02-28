@@ -76,7 +76,7 @@ class StreamParser {
       type: 'http',
       proxied: this.isProxied(stream),
       url: this.applyUrlModifications(stream.url ?? undefined),
-      nzbUrl: stream.nzbUrl ?? undefined,
+      nzbUrl: stream.nzbUrl || undefined,
       tarUrls: stream.tarUrls ?? undefined,
       tgzUrls: stream.tgzUrls ?? undefined,
       '7zipUrls': stream['7zipUrls'] ?? undefined,
@@ -162,6 +162,7 @@ class StreamParser {
       fileIdx:
         stream.fileIdx ?? this.getFileIdx(stream, parsedStream) ?? undefined,
       private: this.isPrivate(stream, parsedStream),
+      freeleech: this.isFreeleech(stream, parsedStream),
     };
 
     return parsedStream;
@@ -381,6 +382,13 @@ class StreamParser {
   }
 
   protected isPrivate(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): boolean | undefined {
+    return false;
+  }
+
+  protected isFreeleech(
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean | undefined {

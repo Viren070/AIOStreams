@@ -35,12 +35,14 @@ interface TemplateOptionProps {
   option: Option;
   value: any;
   disabled?: boolean;
+  trusted?: boolean;
   onChange: (value: any) => void;
 }
 
 const TemplateOption: React.FC<TemplateOptionProps> = ({
   option,
   value,
+  trusted,
   onChange,
   disabled,
 }) => {
@@ -69,7 +71,12 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
       return (
         <div className="flex items-center justify-center w-full gap-6 mt-2">
           {socials?.map((social) => (
-            <SocialIcon key={social.id} id={social.id} url={social.url} />
+            <SocialIcon
+              key={social.id}
+              id={social.id}
+              url={social.url}
+              trusted={trusted}
+            />
           ))}
         </div>
       );
@@ -138,7 +145,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
             value={forcedValue ?? value ?? defaultValue}
             label={name}
             onValueChange={(value: number, valueAsString: string) =>
-              onChange(value)
+              onChange(isNaN(value) ? undefined : value)
             }
             required={required}
             step={
@@ -149,6 +156,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
                 : 1
             }
             disabled={isDisabled}
+            clampValueOnBlur={false}
             min={
               constraints?.forceInUi !== false ? constraints?.min : undefined
             }

@@ -2194,7 +2194,6 @@ class StreamFilterer {
       this.userData.requiredStreamExpressions.length > 0
     ) {
       const selector = new StreamSelector(expressionContext);
-      selector.mode = 'required'; // Make pin return matched streams for required SEL
       const streamsToKeep = new Set<string>(); // Track actual stream objects to be kept
 
       for (const item of this.userData.requiredStreamExpressions) {

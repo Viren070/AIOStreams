@@ -1,13 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Modal } from '../ui/modal';
-import { Button } from '../ui/button';
-import { Alert } from '../ui/alert';
+import { Modal } from '../../ui/modal';
+import { Button } from '../../ui/button';
+import { Alert } from '../../ui/alert';
 import { toast } from 'sonner';
 import { Template, UserData } from '@aiostreams/core';
 import { useStatus } from '@/context/status';
-import { TextInput } from '../ui/text-input';
-import { Textarea } from '../ui/textarea';
+import { TextInput } from '../../ui/text-input';
+import { Textarea } from '../../ui/textarea';
 
 export interface TemplateExportModalProps {
   open: boolean;
@@ -197,23 +197,34 @@ export function TemplateExportModal({
         <Alert
           intent="info"
           description={
-            <div>
-              A template is a configuration file that others can use as a
-              starting point. All personal credentials will be replaced with
-              placeholders.
-              <br />
-              <br />
-              For more customisability, edit the JSON file after exporting
-              manually. See the{' '}
-              <a
-                href="https://github.com/Viren070/AIOStreams/wiki/Templates"
-                target="_blank"
-                className="text-[--brand] hover:text-[--brand]/80 hover:underline"
-                rel="noopener noreferrer"
-              >
-                Templates wiki
-              </a>{' '}
-              for more information.
+            <div className="space-y-2 text-sm">
+              <p>
+                A template is a configuration file that others can use as a
+                starting point. All personal credentials will be replaced with
+                placeholders.
+              </p>
+              <p>
+                <strong>Want more control?</strong> Edit the exported JSON
+                manually to add advanced features like:
+              </p>
+              <ul className="list-disc list-inside ml-2 space-y-1">
+                <li>Conditional inputs and fields based on user selections</li>
+                <li>Template placeholders for dynamic values</li>
+                <li>Service filtering and smart service selection</li>
+                <li>Custom validation and input grouping</li>
+              </ul>
+              <p>
+                See the{' '}
+                <a
+                  href="https://github.com/Viren070/AIOStreams/wiki/Templates"
+                  target="_blank"
+                  className="text-[--brand] hover:text-[--brand]/80 hover:underline"
+                  rel="noopener noreferrer"
+                >
+                  Templates wiki
+                </a>{' '}
+                for detailed documentation.
+              </p>
             </div>
           }
         />

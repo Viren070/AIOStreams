@@ -18,7 +18,6 @@ const logger = createLogger('stream-expression');
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
   protected _pinInstructions: Map<string, 'top' | 'bottom'> = new Map();
-  public mode?: 'required' | 'excluded' | 'preferred' | 'ranked';
 
   constructor() {
     // only allow comparison and logical operators
@@ -1158,7 +1157,8 @@ export abstract class StreamExpressionEngine {
 
     this.parser.functions.pin = (
       matchedStreams: ParsedStream[],
-      position: string = 'top'
+      position: string = 'top',
+      returnMatched: boolean = false
     ) => {
       if (
         !Array.isArray(matchedStreams) ||
@@ -1175,7 +1175,8 @@ export abstract class StreamExpressionEngine {
       for (const stream of matchedStreams) {
         this._pinInstructions.set(stream.id, position as 'top' | 'bottom');
       }
-      return this.mode == 'required' ? matchedStreams : [];
+
+      return returnMatched ? matchedStreams : [];
     };
   }
 

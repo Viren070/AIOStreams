@@ -109,6 +109,7 @@ export interface ParseValue {
     seasonPack: boolean;
     seeders: number | null;
     private: boolean;
+    freeleech: boolean | null;
     age: string | null;
     ageHours: number | null;
     duration: number | null;
@@ -402,6 +403,7 @@ export abstract class BaseFormatter {
         indexer: stream.indexer || null,
         seeders: stream.torrent?.seeders ?? null,
         private: stream.torrent?.private ?? false,
+        freeleech: stream.torrent?.freeleech ?? null,
         year: stream.parsedFile?.year || null,
         type: stream.type || null,
         title: stream.parsedFile?.title || null,

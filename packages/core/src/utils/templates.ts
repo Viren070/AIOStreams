@@ -296,6 +296,40 @@ export class TemplateManager {
   // ---------------------------------------------------------------------------
 
   /**
+   * Extract all possible string leaf values from a template config field that
+   * may contain template directives
+   */
+  private static extractTemplateStrings(value: any): string[] {
+    if (typeof value === 'string') return value ? [value] : [];
+    if (Array.isArray(value))
+      return value.flatMap((v) => this.extractTemplateStrings(v));
+    if (value === null || typeof value !== 'object') return [];
+
+    // __if + __value  OR  bare __value
+    if ('__value' in value) {
+      return this.extractTemplateStrings(value.__value);
+    }
+
+    // __switch: extract from every case and the default
+    if ('__switch' in value) {
+      const caseVals = Object.values(value.cases ?? {});
+      const def = value.default ?? null;
+      return [
+        ...caseVals.flatMap((v) => this.extractTemplateStrings(v)),
+        ...(def !== null ? this.extractTemplateStrings(def) : []),
+      ];
+    }
+
+    // __remove: nothing to extract
+    if ((value as any).__remove === true) return [];
+
+    // Regex pattern object: { pattern: string, … }
+    if (typeof value.pattern === 'string') return [value.pattern];
+
+    return [];
+  }
+
+  /**
    * Ensure every template has a unique ID.
    * First occurrence of an ID wins; subsequent duplicates get a `-2`, `-3`, … suffix.
    */
@@ -334,28 +368,30 @@ export class TemplateManager {
    * Register regex patterns and synced URLs from templates as trusted.
    */
   private static registerTrustedAccess(templates: Template[]): void {
+    const ex = (v: any) => this.extractTemplateStrings(v);
+
     const patterns = templates.flatMap((t) => [
-      ...(t.config.excludedRegexPatterns || []),
-      ...(t.config.includedRegexPatterns || []),
-      ...(t.config.requiredRegexPatterns || []),
-      ...(t.config.preferredRegexPatterns || []).map((p) => p.pattern),
-      ...(t.config.rankedRegexPatterns || []).map((p) => p.pattern),
+      ...ex(t.config.excludedRegexPatterns),
+      ...ex(t.config.includedRegexPatterns),
+      ...ex(t.config.requiredRegexPatterns),
+      ...ex(t.config.preferredRegexPatterns),
+      ...ex(t.config.rankedRegexPatterns),
     ]);
 
     const syncedSelUrls = templates.flatMap((t) => [
-      ...(t.config.syncedExcludedStreamExpressionUrls || []),
-      ...(t.config.syncedIncludedStreamExpressionUrls || []),
-      ...(t.config.syncedRequiredStreamExpressionUrls || []),
-      ...(t.config.syncedPreferredStreamExpressionUrls || []),
-      ...(t.config.syncedRankedStreamExpressionUrls || []),
+      ...ex(t.config.syncedExcludedStreamExpressionUrls),
+      ...ex(t.config.syncedIncludedStreamExpressionUrls),
+      ...ex(t.config.syncedRequiredStreamExpressionUrls),
+      ...ex(t.config.syncedPreferredStreamExpressionUrls),
+      ...ex(t.config.syncedRankedStreamExpressionUrls),
     ]);
 
     const syncedRegexUrls = templates.flatMap((t) => [
-      ...(t.config.syncedExcludedRegexUrls || []),
-      ...(t.config.syncedIncludedRegexUrls || []),
-      ...(t.config.syncedRequiredRegexUrls || []),
-      ...(t.config.syncedPreferredRegexUrls || []),
-      ...(t.config.syncedRankedRegexUrls || []),
+      ...ex(t.config.syncedExcludedRegexUrls),
+      ...ex(t.config.syncedIncludedRegexUrls),
+      ...ex(t.config.syncedRequiredRegexUrls),
+      ...ex(t.config.syncedPreferredRegexUrls),
+      ...ex(t.config.syncedRankedRegexUrls),
     ]);
 
     if (patterns.length > 0) RegexAccess.addPatterns(patterns);

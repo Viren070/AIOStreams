@@ -122,7 +122,7 @@ function createStremThruNewzService(
       treatUnknownAsCached: true,
     },
     cacheAndPlayOptions: {
-      pollingInterval: 5 * Time.Second,
+      pollingInterval: 2 * Time.Second,
       maxWaitTime: 1 * Time.Minute,
     },
   });

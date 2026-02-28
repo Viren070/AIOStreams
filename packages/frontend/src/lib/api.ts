@@ -354,6 +354,19 @@ export async function fetchTemplates() {
   return api<any[]>('GET /templates');
 }
 
+/**
+ * Fetch a Stremio manifest from a URL
+ */
+export async function fetchManifest(url: string): Promise<any> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch manifest: ${response.status} ${response.statusText}`
+    );
+  }
+  return response.json();
+}
+
 export type {
   ParsedStream,
   LoadUserResponse,

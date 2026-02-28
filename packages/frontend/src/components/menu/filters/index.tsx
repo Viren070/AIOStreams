@@ -41,6 +41,8 @@ import {
   LANGUAGES,
   TYPES,
   DEDUPLICATOR_KEYS,
+  SMART_DETECT_ATTRIBUTES,
+  DEFAULT_SMART_DETECT_ATTRIBUTES,
   AUDIO_CHANNELS,
   MIN_SIZE,
   MAX_SIZE,
@@ -3202,6 +3204,66 @@ function Content() {
                           value: key,
                         }))}
                       />
+                      {(
+                        userData.deduplicator?.keys ?? ['filename', 'infoHash']
+                      ).includes('smartDetect') && (
+                        <>
+                          <Combobox
+                            disabled={!userData.deduplicator?.enabled}
+                            label="Smart Detect Attributes"
+                            multiple
+                            help="Choose which file attributes are used to identify duplicates when Smart Detect is enabled. Numeric attributes (size, bitrate) use a configurable percentage tolerance."
+                            value={
+                              userData.deduplicator?.smartDetectAttributes ??
+                              DEFAULT_SMART_DETECT_ATTRIBUTES
+                            }
+                            emptyMessage="No attributes available"
+                            onValueChange={(value) => {
+                              setUserData((prev) => ({
+                                ...prev,
+                                deduplicator: {
+                                  ...prev.deduplicator,
+                                  smartDetectAttributes:
+                                    value as (typeof SMART_DETECT_ATTRIBUTES)[number][],
+                                },
+                              }));
+                            }}
+                            options={SMART_DETECT_ATTRIBUTES.map((attr) => ({
+                              label: attr,
+                              value: attr,
+                            }))}
+                          />
+                          {(['size', 'bitrate'] as const).some((a) =>
+                            (
+                              userData.deduplicator?.smartDetectAttributes ??
+                              DEFAULT_SMART_DETECT_ATTRIBUTES
+                            ).includes(a)
+                          ) && (
+                            <NumberInput
+                              disabled={!userData.deduplicator?.enabled}
+                              label="Numeric Rounding (%)"
+                              help="Numeric attributes (size, bitrate) are bucketed using geometric rounding at this tolerance. Two values within roughly this percentage of each other are treated as equal. Higher = more lenient; lower = stricter."
+                              min={1}
+                              max={50}
+                              step={1}
+                              value={
+                                userData.deduplicator?.smartDetectRounding ?? 10
+                              }
+                              onValueChange={(value) => {
+                                if (value !== undefined) {
+                                  setUserData((prev) => ({
+                                    ...prev,
+                                    deduplicator: {
+                                      ...prev.deduplicator,
+                                      smartDetectRounding: value,
+                                    },
+                                  }));
+                                }
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
                       <Combobox
                         help="Addons selected here will always have their results kept during deduplication."
                         label="Addon Exclusions"
@@ -3251,6 +3313,31 @@ function Content() {
                           { label: 'Conservative', value: 'conservative' },
                           { label: 'Aggressive', value: 'aggressive' },
                           { label: 'Keep All', value: 'keep_all' },
+                        ]}
+                      />
+                      <Select
+                        label="Library Stream Behaviour"
+                        help="How to treat library streams when duplicates are found. 'Ignore': library streams have no special priority — normal service/addon order decides. 'Prefer': a library stream always beats a non-library stream head-to-head, even if the non-library stream is from a higher-priority addon. Other tiebreakers still apply between two library streams. 'Exclusive': if the group contains any library stream, all non-library streams are dropped before selection runs — only meaningful with Per Service or Per Addon modes where multiple winners are kept."
+                        value={
+                          userData.deduplicator?.libraryBehaviour ?? 'ignore'
+                        }
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            deduplicator: {
+                              ...prev.deduplicator,
+                              libraryBehaviour: value as
+                                | 'ignore'
+                                | 'prefer'
+                                | 'exclusive',
+                            },
+                          }));
+                        }}
+                        disabled={!userData.deduplicator?.enabled}
+                        options={[
+                          { label: 'Ignore', value: 'ignore' },
+                          { label: 'Prefer', value: 'prefer' },
+                          { label: 'Exclusive', value: 'exclusive' },
                         ]}
                       />
                     </SettingsCard>
