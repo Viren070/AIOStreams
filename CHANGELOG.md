@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.24.5](https://github.com/Viren070/AIOStreams/compare/v2.24.4...v2.24.5) (2026-02-28)
+
+
+### Features
+
+* **core/formatters:** add `editions` and `regraded` fields, remove `remastered` ([153a41e](https://github.com/Viren070/AIOStreams/commit/153a41e6051e8af038c104212b632c74e1f48cfe))
+
+
+### Bug Fixes
+
+* ensure invalid addon password is handled correctly ([65c20b6](https://github.com/Viren070/AIOStreams/commit/65c20b6cccfcb53359b924ff10d49b1045d37a99))
+* **frontend/templates:** allow bare services in validator ([adcc6bd](https://github.com/Viren070/AIOStreams/commit/adcc6bd8c8d4e0d664c6dddedbffac2ad69aa143))
+* **frontend/templates:** pre-select enabled services ([00fb425](https://github.com/Viren070/AIOStreams/commit/00fb4255798e6cc5fbf533ff80f3fea75ff63797))
+* **frontend/templates:** support `services` as conditional ([f6d6a8a](https://github.com/Viren070/AIOStreams/commit/f6d6a8a5cfa69579c7de91f40b12fbed732a2ba3))
+
 ## [2.24.4](https://github.com/Viren070/AIOStreams/compare/v2.24.3...v2.24.4) (2026-02-28)
 
 
