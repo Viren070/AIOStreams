@@ -155,12 +155,6 @@ function Content() {
       urls: userData[key] || [],
       trusted: userData.trusted,
       syncMode: key.includes('StreamExpression') ? 'sel' : 'regex',
-      onUrlsChange: (urls: string[]) => {
-        setUserData((prev) => ({
-          ...prev,
-          [key]: urls,
-        }));
-      },
     },
   });
 

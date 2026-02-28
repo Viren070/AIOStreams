@@ -59,7 +59,6 @@ export type SyncMode = 'regex' | 'sel';
 
 export interface SyncConfig {
   urls: string[];
-  onUrlsChange: (urls: string[]) => void;
   trusted?: boolean;
   syncMode?: SyncMode;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { ReactNode, useCallback, useRef, useEffect } from 'react';
+import { ReactNode, useCallback, useRef } from 'react';
 import { useDisclosure } from '@/hooks/disclosure';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -175,6 +175,37 @@ function ListFooter({
   );
 }
 
+const SYNCED_PREFIX = '<SYNCED: ';
+const SYNCED_SUFFIX = '>';
+
+/** Extracts the URL from a `<SYNCED: url>` tag, or returns empty string. */
+function parseSyncedUrl(tag: string): string {
+  return tag.startsWith(SYNCED_PREFIX) && tag.endsWith(SYNCED_SUFFIX)
+    ? tag.slice(SYNCED_PREFIX.length, -SYNCED_SUFFIX.length).trim()
+    : '';
+}
+
+/** Provides a callback for adding new synced URLs and computes existing synced URLs for duplicate detection. */
+function useSyncedUrls<T>(
+  valuesRef: React.MutableRefObject<T[]>,
+  onValuesChange: (values: T[]) => void,
+  getKey: (item: T) => string,
+  createItem: (url: string) => T
+) {
+  const handleUrlAdded = useCallback(
+    (url: string) => {
+      onValuesChange([...valuesRef.current, createItem(url)]);
+    },
+    [onValuesChange]
+  );
+
+  const existingUrls = valuesRef.current
+    .map((v) => parseSyncedUrl(getKey(v)))
+    .filter(Boolean);
+
+  return { handleUrlAdded, existingUrls };
+}
+
 // Placeholder inline container for synced URLs
 function PlaceholderSyncedUrls({
   syncConfig,
@@ -255,50 +286,22 @@ export function TextInputs({
     [onValuesChange]
   );
 
-  const hasAutoAppended = useRef(false);
-  useEffect(() => {
-    if (
-      syncConfig?.urls &&
-      syncConfig.urls.length > 0 &&
-      !hasAutoAppended.current
-    ) {
-      hasAutoAppended.current = true;
-      let newValues = [...valuesRef.current];
-      let changed = false;
-      for (const url of syncConfig.urls) {
-        if (!newValues.some((v) => v === `<SYNCED: ${url}>`)) {
-          newValues.push(`<SYNCED: ${url}>`);
-          changed = true;
-        }
-      }
-      if (changed) {
-        onValuesChange(newValues);
-      }
-      // Clear legacy array after migration
-      syncConfig.onUrlsChange([]);
-    }
-  }, [syncConfig?.urls, onValuesChange]);
-
-  const handleUrlAdded = useCallback(
-    (url: string) => {
-      onValuesChange([...valuesRef.current, `<SYNCED: ${url}>`]);
-    },
-    [onValuesChange]
+  const { handleUrlAdded, existingUrls } = useSyncedUrls(
+    valuesRef,
+    onValuesChange,
+    (v) => v,
+    (url) => `${SYNCED_PREFIX}${url}${SYNCED_SUFFIX}`
   );
 
   return (
     <SettingsCard title={label} description={help} key={label}>
       {values.map((value, index) => {
-        const isSyncedPlaceholder =
-          value.startsWith('<SYNCED: ') && value.endsWith('>');
-        const syncedUrl = isSyncedPlaceholder
-          ? value.slice('<SYNCED: '.length, -1).trim()
-          : '';
+        const syncedUrl = parseSyncedUrl(value);
 
         return (
           <div key={index} className="flex gap-2">
             <div className="flex-1">
-              {isSyncedPlaceholder && syncConfig ? (
+              {syncedUrl && syncConfig ? (
                 <PlaceholderSyncedUrls
                   syncConfig={syncConfig}
                   renderType="simple"
@@ -342,7 +345,7 @@ export function TextInputs({
           renderType="simple"
           hideList
           onUrlAdded={handleUrlAdded}
-          existingUrls={values.filter((v) => v.startsWith('<SYNCED: ') && v.endsWith('>')).map((v) => v.slice('<SYNCED: '.length, -1).trim())}
+          existingUrls={existingUrls}
         />
       )}
     </SettingsCard>
@@ -417,45 +420,17 @@ export function ToggleableTextInputs({
     title
   );
 
-  const hasAutoAppended = useRef(false);
-  useEffect(() => {
-    if (
-      syncConfig?.urls &&
-      syncConfig.urls.length > 0 &&
-      !hasAutoAppended.current
-    ) {
-      hasAutoAppended.current = true;
-      let newValues = [...valuesRef.current];
-      let changed = false;
-      for (const url of syncConfig.urls) {
-        if (!newValues.some((v) => v.expression === `<SYNCED: ${url}>`)) {
-          newValues.push({ expression: `<SYNCED: ${url}>`, enabled: true });
-          changed = true;
-        }
-      }
-      if (changed) {
-        onValuesChange(newValues);
-      }
-      // Clear legacy array after migration
-      syncConfig.onUrlsChange([]);
-    }
-  }, [syncConfig?.urls, onValuesChange]);
-
-  const handleUrlAdded = useCallback(
-    (url: string) => {
-      onValuesChange([...valuesRef.current, { expression: `<SYNCED: ${url}>`, enabled: true }]);
-    },
-    [onValuesChange]
+  const { handleUrlAdded, existingUrls } = useSyncedUrls(
+    valuesRef,
+    onValuesChange,
+    (v) => v.expression,
+    (url) => ({ expression: `${SYNCED_PREFIX}${url}${SYNCED_SUFFIX}`, enabled: true })
   );
 
   return (
     <SettingsCard title={title} description={description}>
       {values.map((value, index) => {
-        const isSyncedPlaceholder =
-          value.expression.startsWith('<SYNCED: ') && value.expression.endsWith('>');
-        const syncedUrl = isSyncedPlaceholder
-          ? value.expression.slice('<SYNCED: '.length, -1).trim()
-          : '';
+        const syncedUrl = parseSyncedUrl(value.expression);
 
         return (
           <div key={index} className="flex gap-2 items-end">
@@ -472,7 +447,7 @@ export function ToggleableTextInputs({
               />
             </div>
             <div className="flex-1">
-              {isSyncedPlaceholder && syncConfig ? (
+              {syncedUrl && syncConfig ? (
                 <PlaceholderSyncedUrls
                   syncConfig={syncConfig}
                   renderType="nameable"
@@ -519,7 +494,7 @@ export function ToggleableTextInputs({
           renderType="nameable"
           hideList
           onUrlAdded={handleUrlAdded}
-          existingUrls={values.filter((v) => v.expression.startsWith('<SYNCED: ') && v.expression.endsWith('>')).map((v) => v.expression.slice('<SYNCED: '.length, -1).trim())}
+          existingUrls={existingUrls}
         />
       )}
     </SettingsCard>
@@ -596,49 +571,21 @@ export function TwoTextInputs({
     title
   );
 
-  const hasAutoAppended = useRef(false);
-  useEffect(() => {
-    if (
-      syncConfig?.urls &&
-      syncConfig.urls.length > 0 &&
-      !hasAutoAppended.current
-    ) {
-      hasAutoAppended.current = true;
-      let newValues = [...valuesRef.current];
-      let changed = false;
-      for (const url of syncConfig.urls) {
-        if (!newValues.some((v) => v.name === `<SYNCED: ${url}>`)) {
-          newValues.push({ name: `<SYNCED: ${url}>`, value: `<SYNCED: ${url}>` });
-          changed = true;
-        }
-      }
-      if (changed) {
-        onValuesChange(newValues);
-      }
-      // Clear legacy array after migration
-      syncConfig.onUrlsChange([]);
-    }
-  }, [syncConfig?.urls, onValuesChange]);
-
-  const handleUrlAdded = useCallback(
-    (url: string) => {
-      onValuesChange([...valuesRef.current, { name: `<SYNCED: ${url}>`, value: `<SYNCED: ${url}>` }]);
-    },
-    [onValuesChange]
+  const { handleUrlAdded, existingUrls } = useSyncedUrls(
+    valuesRef,
+    onValuesChange,
+    (v) => v.name,
+    (url) => ({ name: `${SYNCED_PREFIX}${url}${SYNCED_SUFFIX}`, value: `${SYNCED_PREFIX}${url}${SYNCED_SUFFIX}` })
   );
 
   return (
     <SettingsCard title={title} description={description}>
       {values.map((value, index) => {
-        const isSyncedPlaceholder =
-          value.name.startsWith('<SYNCED: ') && value.name.endsWith('>');
-        const syncedUrl = isSyncedPlaceholder
-          ? value.name.slice('<SYNCED: '.length, -1).trim()
-          : '';
+        const syncedUrl = parseSyncedUrl(value.name);
 
         return (
           <div key={index} className="flex gap-2">
-            {!isSyncedPlaceholder && (
+            {!syncedUrl && (
               <div className="flex-1">
                 <TextInput
                   value={value.name}
@@ -652,7 +599,7 @@ export function TwoTextInputs({
               </div>
             )}
             <div className="flex-1">
-              {isSyncedPlaceholder && syncConfig ? (
+              {syncedUrl && syncConfig ? (
                 <PlaceholderSyncedUrls
                   syncConfig={syncConfig}
                   renderType="nameable"
@@ -696,7 +643,7 @@ export function TwoTextInputs({
           renderType="nameable"
           hideList
           onUrlAdded={handleUrlAdded}
-          existingUrls={values.filter((v) => v.name.startsWith('<SYNCED: ') && v.name.endsWith('>')).map((v) => v.name.slice('<SYNCED: '.length, -1).trim())}
+          existingUrls={existingUrls}
         />
       )}
     </SettingsCard>
@@ -770,45 +717,17 @@ export function RankedExpressionInputs({
     title
   );
 
-  const hasAutoAppended = useRef(false);
-  useEffect(() => {
-    if (
-      syncConfig?.urls &&
-      syncConfig.urls.length > 0 &&
-      !hasAutoAppended.current
-    ) {
-      hasAutoAppended.current = true;
-      let newValues = [...valuesRef.current];
-      let changed = false;
-      for (const url of syncConfig.urls) {
-        if (!newValues.some((v) => v.expression === `<SYNCED: ${url}>`)) {
-          newValues.push({ expression: `<SYNCED: ${url}>`, score: 0, enabled: true });
-          changed = true;
-        }
-      }
-      if (changed) {
-        onValuesChange(newValues);
-      }
-      // Clear legacy array after migration
-      syncConfig.onUrlsChange([]);
-    }
-  }, [syncConfig?.urls, onValuesChange]);
-
-  const handleUrlAdded = useCallback(
-    (url: string) => {
-      onValuesChange([...valuesRef.current, { expression: `<SYNCED: ${url}>`, score: 0, enabled: true }]);
-    },
-    [onValuesChange]
+  const { handleUrlAdded, existingUrls } = useSyncedUrls(
+    valuesRef,
+    onValuesChange,
+    (v) => v.expression,
+    (url) => ({ expression: `${SYNCED_PREFIX}${url}${SYNCED_SUFFIX}`, score: 0, enabled: true })
   );
 
   return (
     <SettingsCard title={title} description={description}>
       {values.map((value, index) => {
-        const isSyncedPlaceholder =
-          value.expression.startsWith('<SYNCED: ') && value.expression.endsWith('>');
-        const syncedUrl = isSyncedPlaceholder
-          ? value.expression.slice('<SYNCED: '.length, -1).trim()
-          : '';
+        const syncedUrl = parseSyncedUrl(value.expression);
 
         return (
           <div key={index} className="flex gap-2 items-end">
@@ -824,8 +743,8 @@ export function RankedExpressionInputs({
                 }}
               />
             </div>
-            <div className={isSyncedPlaceholder ? "flex-1" : "flex-[3]"}>
-              {isSyncedPlaceholder && syncConfig ? (
+            <div className={syncedUrl ? "flex-1" : "flex-[3]"}>
+              {syncedUrl && syncConfig ? (
                 <PlaceholderSyncedUrls
                   syncConfig={syncConfig}
                   renderType="ranked"
@@ -844,7 +763,7 @@ export function RankedExpressionInputs({
                 />
               )}
             </div>
-            {!isSyncedPlaceholder && (
+            {!syncedUrl && (
               <div className="flex-1 min-w-[100px]">
                 <NumberInput
                   value={value.score || 0}
@@ -889,7 +808,7 @@ export function RankedExpressionInputs({
           renderType="ranked"
           hideList
           onUrlAdded={handleUrlAdded}
-          existingUrls={values.filter((v) => v.expression.startsWith('<SYNCED: ') && v.expression.endsWith('>')).map((v) => v.expression.slice('<SYNCED: '.length, -1).trim())}
+          existingUrls={existingUrls}
         />
       )}
     </SettingsCard>
@@ -961,45 +880,17 @@ export function RankedRegexInputs({
     title
   );
 
-  const hasAutoAppended = useRef(false);
-  useEffect(() => {
-    if (
-      syncConfig?.urls &&
-      syncConfig.urls.length > 0 &&
-      !hasAutoAppended.current
-    ) {
-      hasAutoAppended.current = true;
-      let newValues = [...valuesRef.current];
-      let changed = false;
-      for (const url of syncConfig.urls) {
-        if (!newValues.some((v) => v.pattern === `<SYNCED: ${url}>`)) {
-          newValues.push({ pattern: `<SYNCED: ${url}>`, name: url, score: 0 });
-          changed = true;
-        }
-      }
-      if (changed) {
-        onValuesChange(newValues);
-      }
-      // Clear legacy array after migration
-      syncConfig.onUrlsChange([]);
-    }
-  }, [syncConfig?.urls, onValuesChange]);
-
-  const handleUrlAdded = useCallback(
-    (url: string) => {
-      onValuesChange([...valuesRef.current, { pattern: `<SYNCED: ${url}>`, name: url, score: 0 }]);
-    },
-    [onValuesChange]
+  const { handleUrlAdded, existingUrls } = useSyncedUrls(
+    valuesRef,
+    onValuesChange,
+    (v) => v.pattern,
+    (url) => ({ pattern: `${SYNCED_PREFIX}${url}${SYNCED_SUFFIX}`, name: url, score: 0 })
   );
 
   return (
     <SettingsCard title={title} description={description}>
       {values.map((value, index) => {
-        const isSyncedPlaceholder =
-          value.pattern.startsWith('<SYNCED: ') && value.pattern.endsWith('>');
-        const syncedUrl = isSyncedPlaceholder
-          ? value.pattern.slice('<SYNCED: '.length, -1).trim()
-          : '';
+        const syncedUrl = parseSyncedUrl(value.pattern);
 
         return (
           <div
@@ -1007,7 +898,7 @@ export function RankedRegexInputs({
             className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
           >
             <div className="w-full">
-              {isSyncedPlaceholder && syncConfig ? (
+              {syncedUrl && syncConfig ? (
                 <PlaceholderSyncedUrls
                   syncConfig={syncConfig}
                   renderType="ranked"
@@ -1026,7 +917,7 @@ export function RankedRegexInputs({
               )}
             </div>
             <div className="flex gap-2 items-end">
-              {!isSyncedPlaceholder && (
+              {!syncedUrl && (
                 <>
                   <div className="flex-1">
                     <TextInput
@@ -1050,7 +941,7 @@ export function RankedRegexInputs({
                   </div>
                 </>
               )}
-              <div className={`flex gap-1 pb-1${isSyncedPlaceholder ? ' ml-auto' : ''}`}>
+              <div className={`flex gap-1 pb-1${syncedUrl ? ' ml-auto' : ''}`}>
                 <ItemActions
                   items={values}
                   index={index}
@@ -1079,7 +970,7 @@ export function RankedRegexInputs({
           renderType="ranked"
           hideList
           onUrlAdded={handleUrlAdded}
-          existingUrls={values.filter((v) => v.pattern.startsWith('<SYNCED: ') && v.pattern.endsWith('>')).map((v) => v.pattern.slice('<SYNCED: '.length, -1).trim())}
+          existingUrls={existingUrls}
         />
       )}
     </SettingsCard>
