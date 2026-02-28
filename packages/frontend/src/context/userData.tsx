@@ -258,7 +258,7 @@ export function applyMigrations(config: any): UserData {
     migrateSyncedUrls(`synced${type}RegexUrls`, `${type.toLowerCase()}RegexPatterns`, (v) => v, (url) => syncedTag(url));
   }
   // preferred regex
-  migrateSyncedUrls('syncedPreferredRegexUrls', 'preferredRegexPatterns', (v) => v.name, (url) => ({ name: syncedTag(url), value: syncedTag(url) }));
+  migrateSyncedUrls('syncedPreferredRegexUrls', 'preferredRegexPatterns', (v) => v.name, (url) => ({ name: syncedTag(url), pattern: syncedTag(url) }));
   // ranked regex
   migrateSyncedUrls('syncedRankedRegexUrls', 'rankedRegexPatterns', (v) => v.pattern, (url) => ({ pattern: syncedTag(url), name: url, score: 0 }));
   // included/excluded/required/preferred SEL
