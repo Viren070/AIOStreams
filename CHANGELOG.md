@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.24.3](https://github.com/Viren070/AIOStreams/compare/v2.24.2...v2.24.3) (2026-02-28)
+
+
+### Features
+
+* **frontend:** redesign about menu with featured templates ([343247f](https://github.com/Viren070/AIOStreams/commit/343247f5e902cbf7b0563b17473339ab0535cf64))
+* **frontend:** redesign template browser ([343247f](https://github.com/Viren070/AIOStreams/commit/343247f5e902cbf7b0563b17473339ab0535cf64))
+* **templates:** add conditional visibility for template options based on selected services ([fafed9b](https://github.com/Viren070/AIOStreams/commit/fafed9bcff32202e3ee0ada376b6f8be6be74b5c))
+
+
+### Bug Fixes
+
+* **frontend/templates:** ensure consistent template order ([3ba05f5](https://github.com/Viren070/AIOStreams/commit/3ba05f5307f867597d2d932679eee55b588390ac))
+
 ## [2.24.2](https://github.com/Viren070/AIOStreams/compare/v2.24.1...v2.24.2) (2026-02-27)
 
 
