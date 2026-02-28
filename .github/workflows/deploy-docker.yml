@@ -100,7 +100,7 @@ jobs:
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           context: .
           file: ./Dockerfile
