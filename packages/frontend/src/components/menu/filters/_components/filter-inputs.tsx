@@ -219,13 +219,16 @@ function PlaceholderSyncedUrls({
   disabled?: boolean;
 }) {
   return (
-    <SyncedUrlInputs
-      syncConfig={{ ...syncConfig, urls: [url] }}
-      renderType={renderType}
-      hideHeader
-      hideAddForm
-      className={disabled ? 'opacity-50' : ''}
-    />
+    <div className="space-y-1">
+      <label className="text-base w-fit font-semibold self-start">Synced URL</label>
+      <SyncedUrlInputs
+        syncConfig={{ ...syncConfig, urls: [url] }}
+        renderType={renderType}
+        hideHeader
+        hideAddForm
+        className={disabled ? 'opacity-50' : ''}
+      />
+    </div>
   );
 }
 
