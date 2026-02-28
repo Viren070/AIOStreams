@@ -776,7 +776,7 @@ export function SyncedUrlInputs({
     }
 
     return () => abortController.abort();
-  }, [syncConfig?.urls?.join(','), userData.uuid, password, syncMode]);
+  }, [JSON.stringify(syncConfig?.urls), userData.uuid, password, syncMode]);
 
   if (!syncConfig) {
     return null;

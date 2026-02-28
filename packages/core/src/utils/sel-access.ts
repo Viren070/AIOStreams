@@ -203,6 +203,7 @@ export class SelAccess {
         const url = key.slice(SYNCED_PREFIX.length, -SYNCED_SUFFIX.length).trim();
 
         if (isPlaceholderDisabled) {
+          usedUrls.add(url);
           result.push(item); // Keep disabled placeholder without fetching
         } else if (url) {
           usedUrls.add(url);
