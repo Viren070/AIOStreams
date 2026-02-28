@@ -883,7 +883,7 @@ export function SyncedUrlInputs({
                           <FaChevronDown className="text-[10px] text-[--muted] transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </button>
                       </DisclosureTrigger>
-                      <span className="flex-1 truncate font-mono text-xs text-[--muted]">
+                      <span className="flex-1 font-mono text-xs text-[--muted] break-all">
                         {url}
                       </span>
                     </div>
