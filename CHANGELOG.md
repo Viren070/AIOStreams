@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.24.4](https://github.com/Viren070/AIOStreams/compare/v2.24.3...v2.24.4) (2026-02-28)
+
+
+### Bug Fixes
+
+* **frontend/templates:** directly import when no inputs/selections are required ([f84673c](https://github.com/Viren070/AIOStreams/commit/f84673cac9afe9bc546c90deea99eed5c3b613a1))
+* **frontend/templates:** ensure defaults are applied for subsections ([9f80109](https://github.com/Viren070/AIOStreams/commit/9f80109140872d56d5f9fbeae4f59301940426ad))
+
 ## [2.24.3](https://github.com/Viren070/AIOStreams/compare/v2.24.2...v2.24.3) (2026-02-28)
 
 
