@@ -241,9 +241,9 @@ export function applyMigrations(config: any): UserData {
     getKey: (item: any) => string,
     createItem: (url: string) => any
   ) => {
-    const urls: string[] | undefined = (config as any)[legacyKey];
-    if (!urls || urls.length === 0) return;
-    const values: any[] = (config as any)[valuesKey] || [];
+    const urls = (config as any)[legacyKey];
+    if (!Array.isArray(urls) || urls.length === 0) return;
+    const values: any[] = Array.isArray((config as any)[valuesKey]) ? (config as any)[valuesKey] : [];
     for (const url of urls) {
       if (!values.some((v: any) => getKey(v) === syncedTag(url))) {
         values.push(createItem(url));
