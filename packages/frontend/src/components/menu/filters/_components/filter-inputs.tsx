@@ -211,23 +211,21 @@ function PlaceholderSyncedUrls({
   syncConfig,
   renderType,
   url,
+  disabled,
 }: {
   syncConfig: SyncConfig;
   renderType: 'simple' | 'nameable' | 'ranked';
   url: string;
+  disabled?: boolean;
 }) {
   return (
-    <div className="border border-dashed border-[--brand]/40 rounded-md p-3 bg-[--brand]/5 relative mt-4 mb-1">
-      <div className="absolute -top-3 left-3 bg-[--background] px-1 text-xs text-[--brand] font-medium">
-        Synced URLs
-      </div>
-      <SyncedUrlInputs
-        syncConfig={{ ...syncConfig, urls: [url] }}
-        renderType={renderType}
-        hideHeader
-        hideAddForm
-      />
-    </div>
+    <SyncedUrlInputs
+      syncConfig={{ ...syncConfig, urls: [url] }}
+      renderType={renderType}
+      hideHeader
+      hideAddForm
+      className={disabled ? 'opacity-50' : ''}
+    />
   );
 }
 
@@ -452,6 +450,7 @@ export function ToggleableTextInputs({
                   syncConfig={syncConfig}
                   renderType="nameable"
                   url={syncedUrl}
+                  disabled={value.enabled === false}
                 />
               ) : (
                 <TextInput
