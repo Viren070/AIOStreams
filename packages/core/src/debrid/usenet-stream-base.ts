@@ -788,6 +788,28 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       };
     });
 
+    // Also include failed entries from history that don't have WebDAV folders
+    // so they can be detected and filtered out by processNZBs
+    if (historyData?.slots) {
+      const webdavNames = new Set(webdavFiles.map((file) => file.basename));
+      for (const slot of historyData.slots) {
+        if (
+          slot.status === 'failed' &&
+          slot.name &&
+          !webdavNames.has(slot.name)
+        ) {
+          nzbs.push({
+            id: nzbs.length,
+            status: 'failed',
+            name: slot.name,
+            size: slot.bytes ?? 0,
+            hash: slot.name,
+            files: [],
+          });
+        }
+      }
+    }
+
     this.serviceLogger.debug(`Listed NZBs from combined history and WebDAV`, {
       count: nzbs.length,
       time: getTimeTakenSincePoint(start),
