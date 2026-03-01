@@ -1155,6 +1155,130 @@ export abstract class StreamExpressionEngine {
       return streams.slice(start, end);
     };
 
+    this.parser.functions.perGroup = function (
+      streams: ParsedStream[],
+      attribute: string,
+      n: number,
+      ...filterValues: string[]
+    ): ParsedStream[] {
+      if (!Array.isArray(streams)) {
+        throw new Error('perGroup: first argument must be an array of streams');
+      }
+      if (typeof attribute !== 'string' || attribute.length === 0) {
+        throw new Error(
+          'perGroup: second argument must be a non-empty attribute string'
+        );
+      }
+      if (
+        typeof n !== 'number' ||
+        !Number.isFinite(n) ||
+        !Number.isInteger(n) ||
+        n < 1
+      ) {
+        throw new Error('perGroup: third argument must be a positive integer');
+      }
+      if (filterValues.some((v) => typeof v !== 'string')) {
+        throw new Error('perGroup: filter values must be strings');
+      }
+
+      const normalised = filterValues.map((v) => v.toLowerCase());
+
+      /** Return the group keys for a stream under the chosen attribute. */
+      const getKeys = (stream: ParsedStream): string[] => {
+        switch (attribute) {
+          case 'resolution':
+            return [stream.parsedFile?.resolution?.toLowerCase() || 'unknown'];
+          case 'quality':
+            return [stream.parsedFile?.quality?.toLowerCase() || 'unknown'];
+          case 'encode':
+            return [stream.parsedFile?.encode?.toLowerCase() || 'unknown'];
+          case 'type':
+            return [stream.type.toLowerCase()];
+          case 'service':
+            return [(stream.service?.id || 'none').toLowerCase()];
+          case 'indexer':
+            return [(stream.indexer || 'unknown').toLowerCase()];
+          case 'releaseGroup':
+            return [
+              (stream.parsedFile?.releaseGroup || 'unknown').toLowerCase(),
+            ];
+          case 'visualTag':
+            return (
+              stream.parsedFile?.visualTags.length
+                ? stream.parsedFile.visualTags
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'audioTag':
+            return (
+              stream.parsedFile?.audioTags.length
+                ? stream.parsedFile.audioTags
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'audioChannel':
+            return (
+              stream.parsedFile?.audioChannels?.length
+                ? stream.parsedFile.audioChannels
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'language':
+            return (
+              stream.parsedFile?.languages?.length
+                ? stream.parsedFile.languages
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          default:
+            throw new Error(
+              `perGroup: unsupported attribute '${attribute}'. Supported: resolution, quality, encode, type, service, indexer, releaseGroup, visualTag, audioTag, audioChannel, language`
+            );
+        }
+      };
+
+      const buckets = new Map<string, ParsedStream[]>();
+      const groupOrder: string[] = [];
+      // Deduplicate across groups (for multi-value attributes a stream could
+      // match multiple groups)
+      const added = new Set<string>();
+
+      for (const stream of streams) {
+        const keys = getKeys(stream);
+        let assignedKey: string | undefined;
+        if (normalised.length > 0) {
+          assignedKey = keys.find((k) => normalised.includes(k));
+        } else {
+          assignedKey = keys[0];
+        }
+        if (assignedKey === undefined) continue; // filtered out
+
+        if (!buckets.has(assignedKey)) {
+          buckets.set(assignedKey, []);
+          groupOrder.push(assignedKey);
+        }
+        const bucket = buckets.get(assignedKey)!;
+        if (bucket.length < n && !added.has(stream.id)) {
+          bucket.push(stream);
+          added.add(stream.id);
+        }
+      }
+
+      // interleave the buckets
+      const result: ParsedStream[] = [];
+      let round = 0;
+      while (result.length < added.size) {
+        let anyAdded = false;
+        for (const key of groupOrder) {
+          const bucket = buckets.get(key)!;
+          if (round < bucket.length) {
+            result.push(bucket[round]);
+            anyAdded = true;
+          }
+        }
+        if (!anyAdded) break;
+        round++;
+      }
+
+      return result;
+    };
+
     this.parser.functions.pin = (
       matchedStreams: ParsedStream[],
       position: string = 'top',
