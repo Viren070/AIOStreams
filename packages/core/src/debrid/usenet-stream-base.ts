@@ -991,13 +991,20 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     // Only add NZB if content doesn't already exist
     if (!alreadyExists) {
-      const addResult = await this.api.addUrl(
-        nzb,
-        category,
-        expectedFolderName
-      );
-      nzoId = addResult.nzoId;
+      try {
+        const addResult = await this.api.addUrl(
+          nzb,
+          category,
+          expectedFolderName
+        );
+        nzoId = addResult.nzoId;
+      } catch (addError) {
+        throw addError;
+      }
+    }
 
+    // If we added the NZB (not already existing), wait for it to complete
+    if (!alreadyExists && nzoId) {
       // Poll history until download is complete
       const pollStartTime = Date.now();
       let slot: ReturnType<typeof transformHistorySlot>;
