@@ -140,6 +140,8 @@ export const REDIS_PREFIX = 'aiostreams:';
 export const DEFAULT_PRECACHE_SELECTOR =
   'count(cached(streams)) == 0 ? uncached(streams) : []';
 
+export const DEFAULT_PRELOAD_SELECTOR = 'slice(streams, 0, 5)';
+
 export const GDRIVE_FORMATTER = 'gdrive';
 export const LIGHT_GDRIVE_FORMATTER = 'lightgdrive';
 export const MINIMALISTIC_GDRIVE_FORMATTER = 'minimalisticgdrive';

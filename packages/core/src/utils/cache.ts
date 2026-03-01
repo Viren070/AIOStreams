@@ -273,6 +273,10 @@ export class Cache<K, V> {
     return this.backend.set(key, value, ttl, forceWrite);
   }
 
+  async flush(): Promise<void> {
+    return this.backend.flush();
+  }
+
   /**
    * Update the value of an existing key in the cache without changing the TTL
    * @param key The key to update

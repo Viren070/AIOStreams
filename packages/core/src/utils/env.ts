@@ -811,6 +811,18 @@ export const Env = cleanEnv(process.env, {
     default: 86400, // 24 hours
     desc: 'Minimum interval for precaching the next episode of the current episode in seconds. i.e. the minimum wait before attempting to precache the same next episode again.',
   }),
+  PRELOAD_MIN_INTERVAL: num({
+    default: 3600, // 1 hour
+    desc: 'Minimum interval between preload operations for the same item (type + id) per user in seconds. Set to 0 to disable the cooldown.',
+  }),
+  MAX_BACKGROUND_PINGS: num({
+    default: 10,
+    desc: 'Maximum number of streams that can be pinged in a single background operation (preload or multi-stream precache).',
+  }),
+  PRELOAD_STREAMS_CONCURRENCY: num({
+    default: 5,
+    desc: 'Concurrency limit for simultaneous stream preload requests.',
+  }),
 
   // configuration settings
 

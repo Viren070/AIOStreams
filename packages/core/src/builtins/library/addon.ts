@@ -16,6 +16,7 @@ import {
   DebridFile,
   generatePlaybackUrl,
   FileInfo,
+  fileInfoStore,
   metadataStore,
   TitleMetadata,
 } from '../../debrid/index.js';
@@ -372,7 +373,8 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       await metadataStore().set(
         metadataId,
         titleMetadata,
-        Env.BUILTIN_PLAYBACK_LINK_VALIDITY
+        Env.BUILTIN_PLAYBACK_LINK_VALIDITY,
+        true
       );
     } catch {
       // metadata not critical for skip-processing
@@ -469,6 +471,10 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
         },
       });
     }
+
+    // Flush fileInfo store so all playback URLs are resolvable before any
+    // preload/precache ping hits the /playback/ route.
+    await fileInfoStore()?.flush();
 
     // Add refresh stream action if configured
     const showRefresh = this.userData.showRefreshActions ?? ['catalog'];

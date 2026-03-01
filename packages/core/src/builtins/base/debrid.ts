@@ -34,6 +34,7 @@ import {
   generatePlaybackUrl,
   TitleMetadata,
   metadataStore,
+  fileInfoStore,
   FileInfo,
 } from '../../debrid/index.js';
 import { processTorrents, processNZBs } from '../utils/debrid.js';
@@ -392,7 +393,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     await metadataStore().set(
       metadataId,
       titleMetadata,
-      Env.BUILTIN_PLAYBACK_LINK_VALIDITY
+      Env.BUILTIN_PLAYBACK_LINK_VALIDITY,
+      true
     );
 
     const results = [...processedTorrents.results, ...processedNzbs.results];
@@ -488,6 +490,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         return stream;
       })
     );
+    // Flush fileInfo store so all playback URLs are resolvable before any
+    // preload/precache ping hits the /playback/ route.
+    await fileInfoStore()?.flush();
     // Proxy NzbDAV streams
     if (nzbdavProxyIndices.length > 0 && nzbdavAuth?.aiostreamsAuth) {
       const proxy = createProxy({

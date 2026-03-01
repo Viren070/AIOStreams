@@ -12,6 +12,7 @@ import {
   BuiltinDebridServices,
   generatePlaybackUrl,
   metadataStore,
+  fileInfoStore,
   TitleMetadata,
   FileInfo,
 } from '../debrid/index.js';
@@ -198,7 +199,8 @@ export async function resolveServiceWrappedStreams(
   await metadataStore().set(
     metadataId,
     metadataToStore,
-    Env.BUILTIN_PLAYBACK_LINK_VALIDITY
+    Env.BUILTIN_PLAYBACK_LINK_VALIDITY,
+    true
   );
 
   // Map original ParsedStreams by infoHash for result attribution
@@ -212,7 +214,7 @@ export async function resolveServiceWrappedStreams(
     }
   }
 
-  const debridStreams = buildDebridStreams(
+  const debridStreams = await buildDebridStreams(
     processedTorrents.results,
     p2pByHash,
     encryptedStoreAuths,
@@ -340,14 +342,14 @@ function buildEncryptedStoreAuths(
   );
 }
 
-function buildDebridStreams(
+async function buildDebridStreams(
   results: Awaited<ReturnType<typeof processTorrents>>['results'],
   p2pByHash: Map<string, ParsedStream[]>,
   encryptedStoreAuths: Record<BuiltinServiceId, string | string[]>,
   metadataId: string,
   userData: UserData,
   addons: Addon[]
-): ParsedStream[] {
+): Promise<ParsedStream[]> {
   const debridStreams: ParsedStream[] = [];
 
   const normaliseText = (text: string) => {
@@ -527,6 +529,8 @@ function buildDebridStreams(
       debridStreams.push(debridStream);
     }
   }
+
+  await fileInfoStore()?.flush();
 
   return debridStreams;
 }

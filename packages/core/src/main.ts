@@ -43,11 +43,13 @@ import {
   StreamUtils,
   StreamContext,
   populateNzbFallbacks,
+  preloadStreams,
 } from './streams/index.js';
 import { resolveServiceWrappedStreams } from './streams/serviceWrapper.js';
 import { getAddonName } from './utils/general.js';
 import { Metadata } from './metadata/utils.js';
 import { StreamSelector } from './parser/streamExpression.js';
+
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
@@ -62,7 +64,7 @@ const mergedCatalogCache = Cache.getInstance<string, MergedCatalogSkipState>(
 const precacheCache = Cache.getInstance<string, boolean>(
   'precache',
   undefined,
-  'memory'
+  Env.REDIS_URI ? 'redis' : 'memory'
 );
 
 export interface AIOStreamsError {
@@ -253,6 +255,68 @@ export class AIOStreams {
           error: error instanceof Error ? error.message : String(error),
         });
       });
+    }
+
+    // preload selected streams
+    if (this.userData.preloadStreams?.enabled && !preCaching) {
+      // Skip if the same user has already triggered a preload for this item recently
+      let shouldPreload = true;
+      if (Env.PRELOAD_MIN_INTERVAL > 0) {
+        const preloadCooldownKey = `preload-${type}-${id}-${this.userData.uuid}`;
+        const recentlyPreloaded = await precacheCache.get(
+          preloadCooldownKey,
+          false
+        );
+        if (recentlyPreloaded) {
+          logger.info(
+            `Preload for ${type} ${id} skipped — within cooldown (${precacheCache.getTTL(preloadCooldownKey)} seconds left).`
+          );
+          shouldPreload = false;
+        } else {
+          await precacheCache.set(
+            preloadCooldownKey,
+            true,
+            Env.PRELOAD_MIN_INTERVAL
+          );
+        }
+      }
+
+      if (shouldPreload) {
+        const preloadSelector =
+          this.userData.preloadStreams.selector ??
+          constants.DEFAULT_PRELOAD_SELECTOR;
+        const streamSelector = new StreamSelector(
+          context.toExpressionContext()
+        );
+        let streamsToPreload: ParsedStream[];
+        try {
+          streamsToPreload = (
+            await streamSelector.select(finalStreams, preloadSelector)
+          )
+            .filter((s) => s.url)
+            .slice(0, Env.MAX_BACKGROUND_PINGS);
+        } catch (selectorError) {
+          logger.warn('Preload selector evaluation failed', {
+            selector: preloadSelector,
+            error:
+              selectorError instanceof Error
+                ? selectorError.message
+                : String(selectorError),
+          });
+          streamsToPreload = [];
+        }
+        if (streamsToPreload.length > 0) {
+          setImmediate(() => {
+            preloadStreams(streamsToPreload).catch((error) => {
+              logger.error('Error during stream preloading:', {
+                error: error instanceof Error ? error.message : String(error),
+                type,
+                id,
+              });
+            });
+          });
+        }
+      }
     }
 
     const { filterDetails, includedDetails } =
@@ -2325,44 +2389,6 @@ export class AIOStreams {
     return { streams: finalStreams, errors };
   }
 
-  private async _fetchAndHandleRedirects(stream: ParsedStream, id: string) {
-    const wrapper = new Wrapper(stream.addon);
-    if (!stream.url) {
-      throw new Error(`Stream URL is undefined`);
-    }
-    const initialResponse = await wrapper.makeRequest(stream.url, {
-      timeout: 30000,
-      rawOptions: { redirect: 'manual' },
-    });
-
-    // If it's a redirect, handle it
-    if (initialResponse.status >= 300 && initialResponse.status < 400) {
-      const redirectUrl = initialResponse.headers.get('Location');
-      if (!redirectUrl) {
-        throw new Error(
-          `Redirect response (${initialResponse.status}) has no Location header.`
-        );
-      }
-
-      const absoluteRedirectUrl = new URL(redirectUrl, stream.url).toString();
-      const originalHost = new URL(stream.url).host;
-      const redirectHost = new URL(absoluteRedirectUrl).host;
-
-      if (redirectHost !== originalHost) {
-        throw new Error(
-          `Host mismatch during redirect: original (${originalHost}) vs redirect (${redirectHost}). Not following.`
-        );
-      }
-
-      logger.debug(
-        `Following same-domain redirect to ${makeUrlLogSafe(absoluteRedirectUrl)} for precaching ${id}`
-      );
-      return wrapper.makeRequest(absoluteRedirectUrl, { timeout: 30000 });
-    }
-
-    return initialResponse;
-  }
-
   private async precacheNextEpisode(context: StreamContext) {
     const { type, id, parsedId } = context;
     if (!parsedId) {
@@ -2439,38 +2465,32 @@ export class AIOStreams {
       return;
     }
 
-    const selectedStream = selectedStreams[0];
-    if (!selectedStream || !selectedStream.url) {
-      logger.debug(`Skipping precaching ${id} as selected stream had no URL`);
+    const singleStreamOnly = this.userData.precacheSingleStream !== false;
+    const streamsToCache = selectedStreams
+      .filter((s) => s.url)
+      .slice(0, singleStreamOnly ? 1 : Env.MAX_BACKGROUND_PINGS);
+
+    if (streamsToCache.length === 0) {
+      logger.debug(`Skipping precaching ${id} as no selected stream had a URL`);
       return;
     }
 
     logger.debug(
-      `Selected following stream for precaching:\n${selectedStream.originalName}\n${selectedStream.originalDescription}`
+      `Precaching ${streamsToCache.length} stream(s) for ${id} (${type})`
     );
 
-    try {
-      const response = await this._fetchAndHandleRedirects(
-        selectedStream,
-        precacheId
-      );
-      logger.debug(`Response: ${response.status} ${response.statusText}`);
-      if (!response.ok) {
-        throw new Error(
-          `Final Response not OK: ${response.status} ${response.statusText}`
-        );
-      }
-      const cacheKey = `precache-${type}-${id}-${this.userData.uuid}`;
-      await precacheCache.set(
-        cacheKey,
-        true,
-        Env.PRECACHE_NEXT_EPISODE_MIN_INTERVAL
-      );
-      logger.info(`Successfully precached a stream for ${id} (${type})`);
-    } catch (error) {
-      logger.error(`Error pinging url of first uncached stream`, {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    const cacheKey = `precache-${type}-${id}-${this.userData.uuid}`;
+    await precacheCache.set(
+      cacheKey,
+      true,
+      Env.PRECACHE_NEXT_EPISODE_MIN_INTERVAL
+    );
+
+    // preloadStreams handles concurrency limiting and per-stream error logging
+    await preloadStreams(streamsToCache);
+
+    logger.info(
+      `Successfully precached ${streamsToCache.length} stream(s) for ${id} (${type})`
+    );
   }
 }

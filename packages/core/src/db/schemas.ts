@@ -652,8 +652,16 @@ export const UserDataSchema = z.object({
   /** @deprecated Use precacheSelector instead */
   alwaysPrecache: z.boolean().optional(),
   /** @deprecated Use precacheSelector instead */
-  precacheCondition: z.string().optional(),
-  precacheSelector: z.string().optional(),
+  precacheCondition: z.string().min(1).max(Env.MAX_SEL_LENGTH).optional(),
+  precacheSelector: z.string().min(1).max(Env.MAX_SEL_LENGTH).optional(),
+  /** When false, all streams returned by precacheSelector are pinged; defaults to true (first stream only). */
+  precacheSingleStream: z.boolean().optional(),
+  preloadStreams: z
+    .object({
+      enabled: z.boolean().optional(),
+      selector: z.string().min(1).max(Env.MAX_SEL_LENGTH).optional(),
+    })
+    .optional(),
   services: ServiceList.optional(),
   presets: PresetList,
   catalogModifications: z.array(CatalogModification).optional(),

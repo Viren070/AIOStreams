@@ -27,3 +27,5 @@ export {
   isNzbRetryableError,
 } from './nzbFailover.js';
 export type { NzbFallback } from './nzbFailover.js';
+
+export { preloadStreams, pingStream } from './preload.js';
