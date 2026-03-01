@@ -5,6 +5,7 @@ import {
   RESOLUTIONS,
   SERVICE_DETAILS,
   DEFAULT_PRECACHE_SELECTOR,
+  DEFAULT_SMART_DETECT_ATTRIBUTES,
 } from '../../../core/src/utils/constants';
 import { useStatus } from './status';
 
@@ -352,6 +353,13 @@ export const DefaultUserData: UserData = {
     cached: 'single_result',
     uncached: 'per_service',
     p2p: 'single_result',
+    http: 'disabled',
+    live: 'disabled',
+    youtube: 'disabled',
+    external: 'disabled',
+    smartDetectAttributes: DEFAULT_SMART_DETECT_ATTRIBUTES,
+    smartDetectRounding: 10,
+    libraryBehaviour: 'ignore',
   },
   autoPlay: {
     enabled: true,
@@ -386,6 +394,8 @@ export const DefaultUserData: UserData = {
     addons: [],
     requestTypes: [],
   },
+  precacheNextEpisode: false,
+  precacheSingleStream: true,
   precacheSelector: DEFAULT_PRECACHE_SELECTOR,
   enableSeadex: true,
   regexOverrides: [],
