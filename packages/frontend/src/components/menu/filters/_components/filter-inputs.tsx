@@ -751,6 +751,7 @@ export function RankedExpressionInputs({
                   syncConfig={syncConfig}
                   renderType="ranked"
                   url={syncedUrl}
+                  disabled={value.enabled === false}
                 />
               ) : (
                 <TextInput
