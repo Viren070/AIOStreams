@@ -65,10 +65,10 @@ const SERVICE_LOGO_MAP: Record<ServiceId, string> = {
   torbox: 'https://torbox.app/assets/logo-bb7a9579.svg',
   putio:
     'https://images.seeklogo.com/logo-png/51/1/put-io-logo-png_seeklogo-516681.png',
-  pikpak: '',
+  pikpak: 'https://mypikpak.com/apple-touch-icon.png',
   offcloud: 'https://offcloud.com/images/logo-blue-short-lg.png',
-  seedr: '',
-  easydebrid: '',
+  seedr: 'https://static.seedr.cc/images/seed_v2.png',
+  easydebrid: 'https://paradise-cloud.com/apple-touch-icon.png',
   debrider: 'https://debrider.app/icon.svg',
   easynews: '/assets/easynews_logo.png',
   stremthru_newz: 'https://emojiapi.dev/api/v1/sparkles/256.png',
