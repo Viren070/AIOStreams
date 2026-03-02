@@ -187,7 +187,7 @@ function parseSyncedUrl(tag: string): string {
 
 /** Provides a callback for adding new synced URLs and computes existing synced URLs for duplicate detection. */
 function useSyncedUrls<T>(
-  valuesRef: React.MutableRefObject<T[]>,
+  valuesRef: React.RefObject<T[]>,
   onValuesChange: (values: T[]) => void,
   getKey: (item: T) => string,
   createItem: (url: string) => T
