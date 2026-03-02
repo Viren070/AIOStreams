@@ -73,9 +73,11 @@ function Content() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
                   <FiSettings className="w-10 h-10 text-[--muted]" />
-                  <p className="text-lg font-semibold">Pro Mode Required</p>
+                  <p className="text-lg font-semibold">
+                    Advanced Mode Required
+                  </p>
                   <p className="text-sm text-[--muted]">
-                    Built-in addon settings are only available in Pro mode.
+                    Built-in addon settings are only available in Advanced mode.
                   </p>
                 </div>
               ),
