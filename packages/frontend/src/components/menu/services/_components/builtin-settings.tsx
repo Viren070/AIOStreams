@@ -134,7 +134,7 @@ export function BuiltinSettings() {
 
       <SettingsCard
         title="NZB Failover"
-        description="When a Usenet stream fails to play, AIOStreams will automatically try the next best NZB URLs from your sorted results. Only applies to built-in Usenet addons (StremThru Newz, NZBdav, AltMount, TorBox). Fallback order follows your sort settings."
+        description="When a Usenet stream fails to play, AIOStreams will automatically try the next best NZB URLs from your sorted results. Only applies to built-in Usenet addons."
       >
         <Switch
           label="Enable"
@@ -149,18 +149,25 @@ export function BuiltinSettings() {
         />
         <NumberInput
           label="Fallback Count"
-          help="How many fallback NZB URLs to try before giving up and showing an error."
+          help={
+            <>
+              How many fallback NZB URLs to try before giving up. Maximum is set
+              by <code>MAX_NZB_FAILOVER_COUNT</code> (currently{' '}
+              {status?.settings?.limits?.maxNzbFailoverCount ?? 5}).
+            </>
+          }
           min={1}
-          max={10}
+          max={status?.settings?.limits?.maxNzbFailoverCount ?? 5}
           defaultValue={3}
           disabled={!userData.nzbFailover?.enabled}
           value={userData.nzbFailover?.count ?? 3}
           onValueChange={(value) => {
+            const maxCount = status?.settings?.limits?.maxNzbFailoverCount ?? 5;
             setUserData((prev) => ({
               ...prev,
               nzbFailover: {
                 ...prev.nzbFailover,
-                count: Math.min(10, Math.max(1, Number(value || 3))),
+                count: Math.min(maxCount, Math.max(1, Number(value || 3))),
               },
             }));
           }}

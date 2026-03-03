@@ -108,6 +108,8 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxStreamExpressionsTotalCharacters:
           Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS,
         maxAddons: Env.MAX_ADDONS,
+        maxNzbFailoverCount: Env.MAX_NZB_FAILOVER_COUNT,
+        maxBackgroundPings: Env.MAX_BACKGROUND_PINGS,
       },
     },
   };

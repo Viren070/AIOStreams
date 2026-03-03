@@ -78,6 +78,30 @@ const logCacheTtl = (cacheName: string, ttlMap: Record<string, number>) => {
   }
 };
 
+/**
+ * Helper function to log a serviceId:time map (e.g., poll intervals, wait times)
+ */
+const logServiceTimeMap = (
+  mapName: string,
+  timeMap: Record<string, number>
+) => {
+  const indent = '        ';
+  const wildcardTime = timeMap['*'];
+  const overrides = Object.entries(timeMap).filter(([key]) => key !== '*');
+
+  logKeyValue(`${mapName}:`, '');
+
+  if (wildcardTime !== undefined) {
+    logKeyValue('Default (*):', formatMilliseconds(wildcardTime), indent);
+  }
+
+  if (overrides.length > 0) {
+    overrides.forEach(([key, value]) => {
+      logKeyValue(`${key}:`, formatMilliseconds(value), indent);
+    });
+  }
+};
+
 const logStartupInfo = () => {
   const currentTime = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
@@ -724,6 +748,16 @@ const logStartupInfo = () => {
       '  Title Limit:',
       Env.BUILTIN_SCRAPE_TITLE_LIMIT.toString(),
       '       '
+    );
+
+    // Download timing
+    logServiceTimeMap(
+      'Download Poll Interval',
+      Env.BUILTIN_DOWNLOAD_POLL_INTERVAL
+    );
+    logServiceTimeMap(
+      'Download Max Wait Time',
+      Env.BUILTIN_DOWNLOAD_MAX_WAIT_TIME
     );
   });
 

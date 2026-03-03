@@ -287,12 +287,14 @@ export class AIOStreams {
           context.toExpressionContext()
         );
         let streamsToPreload: ParsedStream[];
+        const preloadSingleStream =
+          this.userData.preloadStreams?.singleStream !== false;
         try {
           streamsToPreload = (
             await streamSelector.select(finalStreams, preloadSelector)
           )
             .filter((s) => s.url)
-            .slice(0, Env.MAX_BACKGROUND_PINGS);
+            .slice(0, preloadSingleStream ? 1 : Env.MAX_BACKGROUND_PINGS);
         } catch (selectorError) {
           logger.warn('Preload selector evaluation failed', {
             selector: preloadSelector,

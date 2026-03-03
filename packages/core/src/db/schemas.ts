@@ -660,6 +660,8 @@ export const UserDataSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       selector: z.string().min(1).max(Env.MAX_SEL_LENGTH).optional(),
+      /** When false, all streams returned by selector are pinged; defaults to true (first stream only). */
+      singleStream: z.boolean().optional(),
     })
     .optional(),
   services: ServiceList.optional(),
@@ -674,7 +676,7 @@ export const UserDataSchema = z.object({
   nzbFailover: z
     .object({
       enabled: z.boolean().optional(),
-      count: z.number().min(1).max(10).optional(),
+      count: z.number().min(1).optional(),
       position: z.enum(['beforeLimiting', 'beforeSEL', 'last']).optional(),
     })
     .optional(),
@@ -1281,6 +1283,8 @@ const StatusResponseSchema = z.object({
       maxStreamExpressions: z.number(),
       maxStreamExpressionsTotalCharacters: z.number(),
       maxAddons: z.number(),
+      maxNzbFailoverCount: z.number(),
+      maxBackgroundPings: z.number(),
     }),
   }),
 });

@@ -27,7 +27,10 @@ export class AltmountService extends UsenetStreamService {
   readonly serviceName: ServiceId = 'altmount';
   readonly serviceLogger = logger;
 
-  constructor(config: DebridServiceConfig) {
+  constructor(
+    config: DebridServiceConfig,
+    cacheAndPlayOptions?: { pollingInterval?: number; maxWaitTime?: number }
+  ) {
     const parsedConfig = AltmountConfig.parse(
       JSON.parse(fromUrlSafeBase64(config.token))
     );
@@ -40,6 +43,7 @@ export class AltmountService extends UsenetStreamService {
       apiUrl: `${parsedConfig.altmountUrl}/sabnzbd/api`,
       apiKey: parsedConfig.altmountApiKey,
       aiostreamsAuth: parsedConfig.aiostreamsAuth,
+      cacheAndPlayOptions,
     };
 
     super(config, auth, 'altmount');

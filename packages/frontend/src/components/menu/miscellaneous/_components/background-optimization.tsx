@@ -1,5 +1,6 @@
 'use client';
 import { useUserData } from '@/context/userData';
+import { useStatus } from '@/context/status';
 import { SettingsCard } from '../../../shared/settings-card';
 import { Switch } from '../../../ui/switch';
 import { TextInput } from '../../../ui/text-input';
@@ -7,12 +8,27 @@ import { DEFAULT_PRELOAD_SELECTOR } from '../../../../../../core/src/utils/const
 
 export function BackgroundOptimization() {
   const { userData, setUserData } = useUserData();
+  const { status } = useStatus();
+  const maxBackgroundPings = status?.settings?.limits?.maxBackgroundPings;
 
   return (
     <>
       <SettingsCard
         title="Pre-cache Next Episode"
-        description="When enabled, AIOStreams will fetch the next episode's streams in the background and ping the URLs selected by the precache selector. This triggers server-side caching before you click. A per-user cooldown prevents repeat pings for the same episode (controlled by PRECACHE_NEXT_EPISODE_MIN_INTERVAL, default 24 h)."
+        description={
+          <>
+            Fetches the next episode&apos;s streams in the background and pings
+            the URLs selected by the precache selector, triggering server-side
+            caching before you click.{' '}
+            {maxBackgroundPings !== undefined && (
+              <>
+                Up to <strong>{maxBackgroundPings}</strong> stream
+                {maxBackgroundPings === 1 ? '' : 's'} can be pinged per
+                operation (<code>MAX_BACKGROUND_PINGS</code>).
+              </>
+            )}
+          </>
+        }
       >
         <Switch
           label="Enable"
@@ -27,7 +43,25 @@ export function BackgroundOptimization() {
         />
         <Switch
           label="First stream only"
-          help="When on (default), only the first stream returned by the selector is pinged. Turn off to ping all streams the selector returns (capped by the server's MAX_BACKGROUND_PINGS limit)."
+          help={
+            <>
+              When on (default), only the first stream returned by the selector
+              is pinged. Turn off to ping all streams the selector returns
+              {maxBackgroundPings !== undefined ? (
+                <>
+                  {' '}
+                  (up to <strong>{maxBackgroundPings}</strong>,{' '}
+                  <code>MAX_BACKGROUND_PINGS</code>)
+                </>
+              ) : (
+                <>
+                  {' '}
+                  (capped by <code>MAX_BACKGROUND_PINGS</code>)
+                </>
+              )}
+              .
+            </>
+          }
           side="right"
           disabled={!userData.precacheNextEpisode}
           value={userData.precacheSingleStream ?? true}
@@ -106,7 +140,20 @@ export function BackgroundOptimization() {
 
       <SettingsCard
         title="Preload Streams"
-        description="When enabled, AIOStreams will automatically send HTTP requests to selected streams so they start processing before you click on them. This happens asynchronously and does not delay the display of results. Controlled by the server's MAX_BACKGROUND_PINGS (max streams), PRELOAD_STREAMS_CONCURRENCY (concurrent requests), and PRELOAD_MIN_INTERVAL (per-user cooldown, default 1 h)."
+        description={
+          <>
+            Automatically sends HTTP requests to selected streams so they start
+            processing before you click — runs asynchronously without delaying
+            results.{' '}
+            {maxBackgroundPings !== undefined && (
+              <>
+                Up to <strong>{maxBackgroundPings}</strong> stream
+                {maxBackgroundPings === 1 ? '' : 's'} can be pinged per
+                operation (<code>MAX_BACKGROUND_PINGS</code>).
+              </>
+            )}
+          </>
+        }
       >
         <Switch
           label="Enable"
@@ -118,6 +165,41 @@ export function BackgroundOptimization() {
               preloadStreams: {
                 ...prev.preloadStreams,
                 enabled: value,
+              },
+            }));
+          }}
+        />
+        <Switch
+          label="First stream only"
+          help={
+            <>
+              When on (default), only the first stream returned by the selector
+              is pinged. Turn off to ping all streams the selector returns
+              {maxBackgroundPings !== undefined ? (
+                <>
+                  {' '}
+                  (up to <strong>{maxBackgroundPings}</strong>,{' '}
+                  <code>MAX_BACKGROUND_PINGS</code>)
+                </>
+              ) : (
+                <>
+                  {' '}
+                  (capped by <code>MAX_BACKGROUND_PINGS</code>)
+                </>
+              )}
+              .
+            </>
+          }
+          side="right"
+          disabled={!userData.preloadStreams?.enabled}
+          value={userData.preloadStreams?.singleStream ?? true}
+          defaultValue={true}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              preloadStreams: {
+                ...prev.preloadStreams,
+                singleStream: value,
               },
             }));
           }}

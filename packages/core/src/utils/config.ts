@@ -393,6 +393,20 @@ export async function validateConfig(
     }
   }
 
+  // validate NZB failover count against the server limit
+  if (
+    config.nzbFailover?.count &&
+    config.nzbFailover.count > Env.MAX_NZB_FAILOVER_COUNT
+  ) {
+    if (options?.skipErrorsFromAddonsOrProxies) {
+      config.nzbFailover.count = Env.MAX_NZB_FAILOVER_COUNT;
+    } else {
+      throw new Error(
+        `NZB failover count is ${config.nzbFailover.count}, but the maximum allowed is ${Env.MAX_NZB_FAILOVER_COUNT}`
+      );
+    }
+  }
+
   // now, validate preset options and service credentials.
 
   if (config.presets) {

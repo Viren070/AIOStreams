@@ -948,7 +948,13 @@ export class StremThruService
         }
       }
       if (magnetDownload.status !== 'downloaded') {
-        return undefined;
+        throw new DebridError(`Timed out waiting for magnet to download`, {
+          statusCode: 408,
+          statusText: `Timed out waiting for magnet to download`,
+          code: 'UNKNOWN',
+          headers: {},
+          body: magnetDownload,
+        });
       }
     }
 
@@ -1182,7 +1188,16 @@ export class StremThruService
         }
       }
       if (usenetDownload.status !== 'downloaded') {
-        return undefined;
+        throw new DebridError(
+          `Timed out waiting for usenet download to complete`,
+          {
+            statusCode: 408,
+            statusText: `Timed out waiting for usenet download to complete`,
+            code: 'UNKNOWN',
+            headers: {},
+            body: usenetDownload,
+          }
+        );
       }
     }
 

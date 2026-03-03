@@ -8,6 +8,7 @@ import {
   DistributedLock,
   fromUrlSafeBase64,
   formatZodError,
+  Time,
 } from '../utils/index.js';
 import { isVideoFile, selectFileInTorrentOrNZB, hashNzbUrl } from './utils.js';
 import {
@@ -409,6 +410,10 @@ export interface UsenetStreamServiceConfig {
   apiUrl: string;
   apiKey: string;
   aiostreamsAuth?: string;
+  cacheAndPlayOptions?: {
+    pollingInterval?: number;
+    maxWaitTime?: number;
+  };
 }
 
 enum Category {
@@ -436,6 +441,8 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
   protected readonly auth: UsenetStreamServiceConfig;
   protected readonly serviceLogger: Logger;
+  protected readonly pollInterval: number;
+  protected readonly maxWaitTime: number;
   protected static readonly MIN_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
   protected static readonly MAX_DEPTH = 6;
 
@@ -455,21 +462,26 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
   constructor(
     protected readonly config: DebridServiceConfig,
-    auth: UsenetStreamServiceConfig,
+    serviceConfig: UsenetStreamServiceConfig,
     serviceName: ServiceId
   ) {
-    this.auth = auth;
+    this.auth = serviceConfig;
     this.serviceLogger = createLogger(serviceName);
-    this.webdavClient = createClient(auth.webdavUrl, {
-      username: auth.webdavUser,
-      password: auth.webdavPassword,
+    this.webdavClient = createClient(serviceConfig.webdavUrl, {
+      username: serviceConfig.webdavUser,
+      password: serviceConfig.webdavPassword,
     });
     this.api = new SABnzbdApi(
-      auth.apiUrl,
-      auth.apiKey,
+      serviceConfig.apiUrl,
+      serviceConfig.apiKey,
       serviceName,
       this.serviceLogger
     );
+
+    this.pollInterval =
+      serviceConfig.cacheAndPlayOptions?.pollingInterval ?? Time.Second * 2;
+    this.maxWaitTime =
+      serviceConfig.cacheAndPlayOptions?.maxWaitTime ?? Time.Second * 90;
   }
 
   protected async collectFiles(
@@ -1009,7 +1021,12 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       const pollStartTime = Date.now();
       let slot: ReturnType<typeof transformHistorySlot>;
       try {
-        slot = await this.api.waitForHistorySlot(nzoId, category);
+        slot = await this.api.waitForHistorySlot(
+          nzoId,
+          category,
+          this.maxWaitTime,
+          this.pollInterval
+        );
       } catch (error) {
         if (!(error instanceof DebridError)) {
           throw error;

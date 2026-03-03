@@ -7,6 +7,7 @@ import {
   Cache,
   DistributedLock,
   getTimeTakenSincePoint,
+  Time,
 } from '../utils/index.js';
 import { StremThruService } from './stremthru.js';
 import { selectFileInTorrentOrNZB, hashNzbUrl } from './utils.js';
@@ -102,6 +103,8 @@ export class TorboxDebridService
   private readonly apiVersion = 'v1';
   private readonly torboxApi: TorboxApi;
   private readonly stremthru: StremThruService;
+  private readonly pollInterval: number;
+  private readonly maxWaitTime: number;
   private static playbackLinkCache = Cache.getInstance<string, string | null>(
     'tb:link'
   );
@@ -112,7 +115,12 @@ export class TorboxDebridService
   readonly serviceName: ServiceId = 'torbox';
   readonly capabilities = { torrents: true, usenet: true };
 
-  constructor(private readonly config: DebridServiceConfig) {
+  constructor(
+    private readonly config: DebridServiceConfig,
+    options?: { pollInterval?: number; maxWaitTime?: number }
+  ) {
+    this.pollInterval = options?.pollInterval ?? Time.Second * 10;
+    this.maxWaitTime = options?.maxWaitTime ?? Time.Minute * 2;
     this.torboxApi = new TorboxApi({
       token: config.token,
     });
@@ -717,9 +725,10 @@ export class TorboxDebridService
       if (!cacheAndPlay) {
         return undefined;
       }
-      // poll status when cacheAndPlay is true, max wait time is 110s
-      for (let i = 0; i < 10; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 11000));
+      // poll status when cacheAndPlay is true
+      const maxPolls = Math.ceil(this.maxWaitTime / this.pollInterval);
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise((resolve) => setTimeout(resolve, this.pollInterval));
         const usenetList = await this._fetchNzbList(
           usenetDownload.id.toString()
         );
@@ -763,7 +772,17 @@ export class TorboxDebridService
         }
       }
       if (usenetDownload.status !== 'downloaded') {
-        return undefined;
+        throw new DebridError(
+          `Usenet download timed out waiting for completion (status: ${usenetDownload.status})`,
+          {
+            statusCode: 408,
+            statusText: 'Timeout',
+            code: 'UNKNOWN',
+            headers: {},
+            body: usenetDownload,
+            type: 'api_error',
+          }
+        );
       }
     }
 

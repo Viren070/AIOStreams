@@ -5,7 +5,12 @@ export * from './torbox.js';
 export * from './nzbdav.js';
 export * from './altmount.js';
 
-import { Env, ServiceId, Time, fromUrlSafeBase64 } from '../utils/index.js';
+import {
+  Env,
+  ServiceId,
+  fromUrlSafeBase64,
+  resolveServiceTime,
+} from '../utils/index.js';
 import { DebridService, DebridServiceConfig, DebridError } from './base.js';
 import { StremThruService } from './stremthru.js';
 import { TorboxDebridService } from './torbox.js';
@@ -25,6 +30,15 @@ export function getDebridService(
     clientIp,
   };
 
+  const pollInterval = resolveServiceTime(
+    Env.BUILTIN_DOWNLOAD_POLL_INTERVAL,
+    serviceName
+  );
+  const maxWaitTime = resolveServiceTime(
+    Env.BUILTIN_DOWNLOAD_MAX_WAIT_TIME,
+    serviceName
+  );
+
   switch (serviceName) {
     case 'torbox':
       if (Env.TORBOX_USENET_VIA_STREMTHRU) {
@@ -38,22 +52,31 @@ export function getDebridService(
           },
           capabilities: { torrents: true, usenet: true },
           cacheAndPlayOptions: {
-            pollingInterval: 10 * Time.Second,
-            maxWaitTime: 2 * Time.Minute,
+            pollingInterval: pollInterval,
+            maxWaitTime: maxWaitTime,
           },
         });
       }
-      return new TorboxDebridService(config);
+      return new TorboxDebridService(config, {
+        pollInterval,
+        maxWaitTime,
+      });
     case 'nzbdav':
-      return new NzbDAVService(config);
+      return new NzbDAVService(config, {
+        pollingInterval: pollInterval,
+        maxWaitTime: maxWaitTime,
+      });
     case 'altmount':
-      return new AltmountService(config);
+      return new AltmountService(config, {
+        pollingInterval: pollInterval,
+        maxWaitTime: maxWaitTime,
+      });
     case 'stremio_nntp':
       return new StremioNNTPService(config);
     case 'easynews':
       return new EasynewsService(config);
     case 'stremthru_newz':
-      return createStremThruNewzService(config);
+      return createStremThruNewzService(config, pollInterval, maxWaitTime);
     default:
       if (StremThruPreset.supportedServices.includes(serviceName)) {
         return new StremThruService({
@@ -65,6 +88,10 @@ export function getDebridService(
             token: config.token,
           },
           capabilities: { torrents: true, usenet: false },
+          cacheAndPlayOptions: {
+            pollingInterval: pollInterval,
+            maxWaitTime: maxWaitTime,
+          },
         });
       }
       throw new Error(`Unknown debrid service: ${serviceName}`);
@@ -72,7 +99,9 @@ export function getDebridService(
 }
 
 function createStremThruNewzService(
-  config: DebridServiceConfig
+  config: DebridServiceConfig,
+  pollInterval: number,
+  maxWaitTime: number
 ): StremThruService {
   let url: string;
   let authToken: string;
@@ -122,8 +151,8 @@ function createStremThruNewzService(
       treatUnknownAsCached: true,
     },
     cacheAndPlayOptions: {
-      pollingInterval: 2 * Time.Second,
-      maxWaitTime: 1 * Time.Minute,
+      pollingInterval: pollInterval,
+      maxWaitTime: maxWaitTime,
     },
   });
 }

@@ -19,7 +19,7 @@ import { randomBytes } from 'crypto';
 import fs from 'fs';
 import bytes from 'bytes';
 import UserAgent from 'user-agents';
-import { parseTime } from './time.js';
+import { parseTime, Time } from './time.js';
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -470,6 +470,98 @@ const boolOrChoice = <T extends string>(choices: T[]) =>
     );
   });
 
+export const BUILTIN_DOWNLOAD_POLL_INTERVAL_DEFAULTS: Record<string, number> = {
+  nzbdav: 2 * Time.Second,
+  altmount: 2 * Time.Second,
+  stremthru_newz: 2 * Time.Second,
+  '*': 10 * Time.Second,
+};
+
+export const BUILTIN_DOWNLOAD_MAX_WAIT_TIME_DEFAULTS: Record<string, number> = {
+  nzbdav: 90 * Time.Second,
+  altmount: 90 * Time.Second,
+  stremthru_newz: 90 * Time.Second,
+  '*': 120 * Time.Second,
+};
+
+const serviceTimeMap = (defaults: Record<string, number>) =>
+  makeExactValidator<Record<string, number>>(
+    (x: string): Record<string, number> => {
+      if (typeof x !== 'string' || !x.trim()) {
+        throw new EnvError('Service time map must be a non-empty string');
+      }
+
+      const map: Record<string, number> = {};
+      let hasUserWildcard = false;
+
+      const entries = x
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      for (const entry of entries) {
+        const colonIdx = entry.indexOf(':');
+        if (colonIdx === -1) {
+          throw new EnvError(
+            `Invalid service time map entry: "${entry}". Expected format: serviceId:<time> (e.g., torbox:10s, *:2m)`
+          );
+        }
+        const key = entry.slice(0, colonIdx).trim();
+        const timeStr = entry.slice(colonIdx + 1).trim();
+        if (!key || !timeStr) {
+          throw new EnvError(
+            `Invalid service time map entry: "${entry}". Both key and time value are required.`
+          );
+        }
+        if (key !== '*' && !constants.SERVICES.includes(key as any)) {
+          throw new EnvError(
+            `Invalid service ID: "${key}". Must be one of: ${constants.SERVICES.join(', ')}, or * for all services.`
+          );
+        }
+        let ms: number;
+        if (/^\d+$/.test(timeStr)) {
+          ms = Number(timeStr);
+        } else {
+          try {
+            ms = parseTime(timeStr);
+          } catch {
+            throw new EnvError(
+              `Invalid time value "${timeStr}" for service "${key}". Use a human-readable format (e.g., 10s, 2m) or milliseconds.`
+            );
+          }
+        }
+        if (ms < 0 || !Number.isInteger(ms)) {
+          throw new EnvError(
+            `Time value for service "${key}" must be a non-negative integer.`
+          );
+        }
+        if (key === '*') hasUserWildcard = true;
+        map[key] = ms;
+      }
+
+      // If user specified wildcard, don't apply our per-service defaults — their wildcard covers everything
+      if (!hasUserWildcard) {
+        for (const [defaultKey, defaultValue] of Object.entries(defaults)) {
+          if (!(defaultKey in map)) {
+            map[defaultKey] = defaultValue;
+          }
+        }
+      }
+
+      return map;
+    }
+  );
+
+/**
+ * Resolves the effective time value for a given service from a serviceTimeMap.
+ * Checks for a service-specific entry first, then falls back to the wildcard `*`.
+ */
+export function resolveServiceTime(
+  map: Record<string, number>,
+  serviceId: string
+): number {
+  return map[serviceId] ?? map['*'] ?? 0;
+}
+
 export const Env = cleanEnv(process.env, {
   VERSION: readonly({
     default: metadata?.version || 'unknown',
@@ -816,7 +908,7 @@ export const Env = cleanEnv(process.env, {
     desc: 'Minimum interval between preload operations for the same item (type + id) per user in seconds. Set to 0 to disable the cooldown.',
   }),
   MAX_BACKGROUND_PINGS: num({
-    default: 10,
+    default: 2,
     desc: 'Maximum number of streams that can be pinged in a single background operation (preload or multi-stream precache).',
   }),
   PRELOAD_STREAMS_CONCURRENCY: num({
@@ -842,6 +934,10 @@ export const Env = cleanEnv(process.env, {
   MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS: num({
     default: 50000,
     desc: 'Max total character count across all stream expressions',
+  }),
+  MAX_NZB_FAILOVER_COUNT: num({
+    default: 5,
+    desc: 'Maximum number of NZB failover attempts a user can configure. Controls the upper bound for the nzbFailover.count setting.',
   }),
   MAX_GROUPS: num({
     default: 20,
@@ -2042,6 +2138,18 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_PLAYBACK_LINK_VALIDITY: num({
     default: 1 * 24 * 60 * 60, // 1 day
     desc: 'Builtin Debrid playback link validity',
+  }),
+  BUILTIN_DOWNLOAD_POLL_INTERVAL: serviceTimeMap(
+    BUILTIN_DOWNLOAD_POLL_INTERVAL_DEFAULTS
+  )({
+    default: { ...BUILTIN_DOWNLOAD_POLL_INTERVAL_DEFAULTS },
+    desc: 'Comma-separated serviceId:<time> map for download poll intervals. Supports wildcard (*). Example: torbox:15s,nzbdav:3s,*:10s. If * is specified, per-service defaults are not applied.',
+  }),
+  BUILTIN_DOWNLOAD_MAX_WAIT_TIME: serviceTimeMap(
+    BUILTIN_DOWNLOAD_MAX_WAIT_TIME_DEFAULTS
+  )({
+    default: { ...BUILTIN_DOWNLOAD_MAX_WAIT_TIME_DEFAULTS },
+    desc: 'Comma-separated serviceId:<time> map for maximum wait times before timeout. Supports wildcard (*). Example: torbox:3m,nzbdav:90s,*:2m. If * is specified, per-service defaults are not applied.',
   }),
   BUILTIN_SCRAPE_WITH_ALL_TITLES: boolOrList({
     default: false,
