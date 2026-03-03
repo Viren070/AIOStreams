@@ -95,20 +95,12 @@ jobs:
         run: |
           node scripts/generateMetadata.cjs --channel=${{env.CHANNEL}}
 
-      - name: Set build platforms
-        run: |
-          if [ "${{ env.CHANNEL }}" = "stable" ]; then
-            echo "BUILD_PLATFORMS=linux/amd64,linux/arm64,linux/arm/v7" >> "${GITHUB_ENV}"
-          else
-            echo "BUILD_PLATFORMS=linux/amd64,linux/arm64" >> "${GITHUB_ENV}"
-          fi
-      
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: ${{ env.BUILD_PLATFORMS }}
+          platforms: linux/amd64,linux/arm64
           push: true
           context: .
           file: ./Dockerfile
