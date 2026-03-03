@@ -457,12 +457,12 @@ function ServiceItemRow({
     <div className="px-3 py-2.5 bg-[var(--background)] rounded-[--radius-md] border flex gap-3 items-center relative">
       {dragHandleProps ? (
         <div
-          className="rounded-full w-5 h-5 shrink-0 bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight] cursor-move self-center"
+          className="rounded-full w-6 h-auto self-stretch flex-shrink-0 bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight] cursor-move"
           {...dragHandleProps.attributes}
           {...dragHandleProps.listeners}
         />
       ) : (
-        <div className="w-5 shrink-0" />
+        <div className="w-6 flex-shrink-0" />
       )}
       <ServiceLogo serviceId={service.id} shortName={meta.shortName} />
       <div className="flex-1 flex flex-col justify-center min-w-0">
