@@ -1,5 +1,50 @@
 # Changelog
 
+## [2.25.0](https://github.com/Viren070/AIOStreams/compare/v2.24.5...v2.25.0) (2026-03-03)
+
+
+### Features
+
+* add customisable nzb failover position ([3cc2b88](https://github.com/Viren070/AIOStreams/commit/3cc2b880a9e84d9055302cac435d9a15b5d17585))
+* add env var for max failover nzbs ([77981c3](https://github.com/Viren070/AIOStreams/commit/77981c3a965b55eb8a29e36dff877e7c21e6668f))
+* add nzb failover ([03da152](https://github.com/Viren070/AIOStreams/commit/03da15278f854445401030bd208a358f21d172ec)), closes [#578](https://github.com/Viren070/AIOStreams/issues/578)
+* add per service configurable max wait time and poll interval ([77981c3](https://github.com/Viren070/AIOStreams/commit/77981c3a965b55eb8a29e36dff877e7c21e6668f))
+* add preload streams with SEL selector ([b0687b7](https://github.com/Viren070/AIOStreams/commit/b0687b79f2a0ee729fad9fcbb47490ccb290880e))
+* add single stream setting to prelaod ([77981c3](https://github.com/Viren070/AIOStreams/commit/77981c3a965b55eb8a29e36dff877e7c21e6668f))
+* allow precaching more than 1 stream ([b0687b7](https://github.com/Viren070/AIOStreams/commit/b0687b79f2a0ee729fad9fcbb47490ccb290880e))
+* **builtins/knaben:** add `BUILTIN_KNABEN_DOWNLOAD_TORRENTS` to disable torrent downloads from knaben ([510289b](https://github.com/Viren070/AIOStreams/commit/510289be87b3cbbaaf9dc903fc67fcca37f1c616))
+* cache debrid errors ([03da152](https://github.com/Viren070/AIOStreams/commit/03da15278f854445401030bd208a358f21d172ec))
+* **core/formatters:** Allow multiple remove modifier parameters ([#745](https://github.com/Viren070/AIOStreams/issues/745)) ([c3609b9](https://github.com/Viren070/AIOStreams/commit/c3609b93661a7837518e204992bc4913765cc994))
+* **frontend:** redesign services and miscellaneous menu ([ead41f0](https://github.com/Viren070/AIOStreams/commit/ead41f04ec012c2d1ba9a351442dbe55c299c769))
+* **sel:** add perGroup function ([aa3e221](https://github.com/Viren070/AIOStreams/commit/aa3e221dfb2e97ce182b0186dbe345aac97e0a56))
+
+
+### Bug Fixes
+
+* allow undefined value for builtin when checking to reconfigure service ([301ebc5](https://github.com/Viren070/AIOStreams/commit/301ebc5ec42ade43721d7ae389b2f99ef0ad366c))
+* **builtins/knaben:** allow null lastSeen ([ccd5507](https://github.com/Viren070/AIOStreams/commit/ccd5507b4157b04e09215f4b9e8d06dcee64df3a))
+* **frontend/templates:** ensure sub-options are filtered for visibility ([f4fe357](https://github.com/Viren070/AIOStreams/commit/f4fe3570651a1193e1b05b901b0c06558927e457))
+* **frontend/templates:** expand featured template when clicked ([46ac577](https://github.com/Viren070/AIOStreams/commit/46ac5771e92df7eca87d1ff87517ca53ba8c2136))
+* **frontend:** add missing service logos ([572a29c](https://github.com/Viren070/AIOStreams/commit/572a29c24142a3210326b6224806bd1ad45ea871))
+* **frontend:** adjust wizard layouts ([cc3786d](https://github.com/Viren070/AIOStreams/commit/cc3786d07e46fbf5e3eff3e229220d99fd9b9ec1))
+* **frontend:** cast subOptions to Option[] in getVisibleOptions ([1a92201](https://github.com/Viren070/AIOStreams/commit/1a92201f3a1234f42d94fca0db88eceacf9e0342))
+* **frontend:** fix various react errors ([47bf95d](https://github.com/Viren070/AIOStreams/commit/47bf95da07e819d9d0765cec238a513218952b34))
+* **frontend:** show text on simple mode for option-less menus consistently ([747a2f2](https://github.com/Viren070/AIOStreams/commit/747a2f2de37b69f6c0d5eb067fa71cbafb69cde7))
+* **frontend:** update mode type ([3d0dcb5](https://github.com/Viren070/AIOStreams/commit/3d0dcb58833372fb9cbfd3a70d5cfe2989affb22))
+* **frontend:** use consistent drag handle ([1f41a93](https://github.com/Viren070/AIOStreams/commit/1f41a93b9824bd1c63f7cac4e12a629ea6ccef88))
+* **presets/custom:** replace forceToTop with pinPosition ([c7a163e](https://github.com/Viren070/AIOStreams/commit/c7a163e6ff7ab14df4e2158dd6fdf7a3c110a23a))
+* **presets/torrentio:** add media types option ([a616ca0](https://github.com/Viren070/AIOStreams/commit/a616ca0fe38e3bf61e1ebfb582412a8036faa5af))
+* refresh library on failure during failover ([83ea8f1](https://github.com/Viren070/AIOStreams/commit/83ea8f1bfbd9464b19b1aa5cd821d7ad4aa5a9e8))
+* remove length requirement for name and description fields ([4d31e77](https://github.com/Viren070/AIOStreams/commit/4d31e77ccb22d1f65e3c2fdc9717789a4a1bb8cc))
+* throw debrid error on timeouts for cache and play ([77981c3](https://github.com/Viren070/AIOStreams/commit/77981c3a965b55eb8a29e36dff877e7c21e6668f))
+* **usenet-stream-base:** include failed nzbs from history ([d49ac1f](https://github.com/Viren070/AIOStreams/commit/d49ac1fc02d52e7284cd245b0d47c07fea1c04df))
+* **usenet-stream-base:** throw add error separately ([d5eb0e6](https://github.com/Viren070/AIOStreams/commit/d5eb0e6a880a520e3e28c179bf9e70d36f8e087b))
+
+
+### Continuous Integration
+
+* do not build for armv7 ([65bbad6](https://github.com/Viren070/AIOStreams/commit/65bbad627248c395bba1efeb4233982250f4413c))
+
 ## [2.24.5](https://github.com/Viren070/AIOStreams/compare/v2.24.4...v2.24.5) (2026-02-28)
 
 
