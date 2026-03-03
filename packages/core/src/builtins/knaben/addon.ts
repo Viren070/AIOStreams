@@ -6,6 +6,7 @@ import {
 import { z } from 'zod';
 import {
   createLogger,
+  Env,
   getTimeTakenSincePoint,
   ParsedId,
 } from '../../utils/index.js';
@@ -114,6 +115,9 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
         logger.warn(
           `Knaben search hit has no hash or download url: ${JSON.stringify(hit)}`
         );
+        continue;
+      }
+      if (!hash && hit.link && !Env.BUILTIN_KNABEN_DOWNLOAD_TORRENTS) {
         continue;
       }
       if (seenTorrents.has(hash ?? hit.link ?? '')) {

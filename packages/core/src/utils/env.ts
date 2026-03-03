@@ -2370,6 +2370,10 @@ export const Env = cleanEnv(process.env, {
     default: 30000, // 30 seconds
     desc: 'Builtin Knaben Search timeout',
   }),
+  BUILTIN_KNABEN_DOWNLOAD_TORRENTS: bool({
+    default: true,
+    desc: 'Whether to attempt downloading torrents for results from Knaben without an infohash. Set to false to skip results that require downloading the .torrent file',
+  }),
   BUILTIN_KNABEN_SEARCH_CACHE_TTL: num({
     default: 7 * 24 * 60 * 60, // 7 days
     desc: 'Builtin Knaben Search cache TTL',
