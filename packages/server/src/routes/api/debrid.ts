@@ -171,6 +171,8 @@ router.get(
 
       const outerLockKey = `nzb-failover:${storeAuth.id}:${fileInfo.hash ?? metadataId}:${filename}:${req.userIp}:${getSimpleTextHash(storeAuth.credential)}`;
 
+      let encounteredRetryableFailure = false;
+
       const runFailoverChain = async (): Promise<string | undefined> => {
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
@@ -217,6 +219,7 @@ router.get(
               throw error;
             }
 
+            encounteredRetryableFailure = true;
             logger.warn(
               `[${storeAuth.id}] NZB resolve failed, trying ${
                 attempt === null
@@ -250,6 +253,15 @@ router.get(
         }
       } catch (err: any) {
         resolveError = err;
+      }
+
+      if (encounteredRetryableFailure) {
+        debridInterface.refreshLibraryCache?.(['nzb']).catch((err) => {
+          logger.warn(
+            `[${storeAuth.id}] Failed to refresh library cache after NZB failover failures`,
+            { error: err?.message }
+          );
+        });
       }
 
       if (resolveError) {
