@@ -366,6 +366,24 @@ export class AIOStreams {
         }
       }
     }
+
+    // Optional: let presets react to final stream list (e.g. report order back to addon)
+    const byPresetType = new Map<string, ParsedStream[]>();
+    for (const s of finalStreams) {
+      const type = s.addon?.preset?.type ?? '';
+      if (type) {
+        const list = byPresetType.get(type) ?? [];
+        list.push(s);
+        byPresetType.set(type, list);
+      }
+    }
+    for (const [presetType, list] of byPresetType) {
+      const PresetClass = PresetManager.fromId(presetType);
+      if (typeof PresetClass.onStreamsReady === 'function') {
+        PresetClass.onStreamsReady(list);
+      }
+    }
+
     // return the final list of streams, followed by the error streams.
     logger.info(
       `Returning ${finalStreams.length} streams and ${errors.length} errors and ${statistics.length} statistic`

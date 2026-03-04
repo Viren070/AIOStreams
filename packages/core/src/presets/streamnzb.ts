@@ -1,10 +1,23 @@
 import { Addon, Option, UserData, ParsedStream, Stream } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { StreamParser } from '../parser/index.js';
-import { Env } from '../utils/index.js';
-import { constants, toUrlSafeBase64 } from '../utils/index.js';
+import { Env, createLogger, makeRequest } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+
+const logger = createLogger('streamnzb');
+
+const FAILOVER_ORDER_PATH = '/failover_order';
 
 class StreamNZBStreamParser extends StreamParser {
+  protected override getExtras(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): ParsedStream['extra'] {
+    const failoverId = (stream as Stream & { failoverId?: string }).failoverId;
+    if (failoverId == null) return undefined;
+    return { failoverId };
+  }
+
   protected override getService(
     stream: Stream,
     currentParsedStream: ParsedStream
@@ -33,60 +46,6 @@ class StreamNZBStreamParser extends StreamParser {
     return 'usenet';
   }
 }
-
-const STREAM_PREFERENCE_KEYS: readonly (keyof UserData)[] = [
-  'sortCriteria',
-  'includedResolutions',
-  'excludedResolutions',
-  'requiredResolutions',
-  'preferredResolutions',
-  'includedQualities',
-  'excludedQualities',
-  'requiredQualities',
-  'preferredQualities',
-  'includedLanguages',
-  'excludedLanguages',
-  'requiredLanguages',
-  'preferredLanguages',
-  'includedVisualTags',
-  'excludedVisualTags',
-  'requiredVisualTags',
-  'preferredVisualTags',
-  'includedAudioTags',
-  'excludedAudioTags',
-  'requiredAudioTags',
-  'preferredAudioTags',
-  'includedAudioChannels',
-  'excludedAudioChannels',
-  'requiredAudioChannels',
-  'preferredAudioChannels',
-  'includedStreamTypes',
-  'excludedStreamTypes',
-  'requiredStreamTypes',
-  'preferredStreamTypes',
-  'includedEncodes',
-  'excludedEncodes',
-  'requiredEncodes',
-  'preferredEncodes',
-  'includedRegexPatterns',
-  'excludedRegexPatterns',
-  'requiredRegexPatterns',
-  'preferredRegexPatterns',
-  'rankedRegexPatterns',
-  'includedStreamExpressions',
-  'excludedStreamExpressions',
-  'requiredStreamExpressions',
-  'preferredStreamExpressions',
-  'rankedStreamExpressions',
-  'includedReleaseGroups',
-  'excludedReleaseGroups',
-  'requiredReleaseGroups',
-  'preferredReleaseGroups',
-  'includedKeywords',
-  'excludedKeywords',
-  'requiredKeywords',
-  'preferredKeywords',
-];
 
 export class StreamNZBPreset extends Preset {
   static override getParser(): typeof StreamParser {
@@ -129,7 +88,7 @@ export class StreamNZBPreset extends Preset {
       LOGO: 'https://cdn.discordapp.com/icons/1470288400157380710/6f397b4a2e9561dc7ad43526588cfd67.png',
       URL: '',
       TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.AIOSTREAMS_USER_AGENT,
+      USER_AGENT: 'AIOStreams',
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Stream via nntp without any additional services, availability checks, failover supports aiostreams builtins.',
@@ -147,37 +106,57 @@ export class StreamNZBPreset extends Preset {
     return [this.generateAddon(userData, options)];
   }
 
-  private static generateManifestUrl(
-    options: Record<string, unknown>,
-    userData: UserData
-  ): string {
-    const raw = (options.url as string) || '';
-    if (!raw) return '';
-    const url = new URL(raw);
-    const pathname = url.pathname.replace(/\/+$/, '');
-    if (pathname.endsWith('/manifest.json')) {
-      url.pathname = pathname;
-    } else {
-      url.pathname = pathname ? `${pathname}/manifest.json` : '/manifest.json';
+  static override onStreamsReady(streams: ParsedStream[]): void {
+    if (streams.length === 0) return;
+    const byManifest = new Map<string, ParsedStream[]>();
+    for (const s of streams) {
+      const key = s.addon.manifestUrl ?? '';
+      const list = byManifest.get(key) ?? [];
+      list.push(s);
+      byManifest.set(key, list);
     }
-    const configQuery = this.buildConfigQuery(userData);
-    if (configQuery) {
-      url.search += (url.search ? '&' : '') + configQuery;
+    for (const [, list] of byManifest) {
+      const baseUrl =
+        (list[0].addon.preset.options?.url as string)
+          ?.replace(/\/manifest\.json.*$/i, '')
+          ?.replace(/\/+$/, '') ??
+        (() => {
+          const u = new URL(list[0].addon.manifestUrl ?? '');
+          u.pathname = u.pathname.replace(/\/manifest\.json$/i, '') || '/';
+          return u.toString().replace(/\/+$/, '');
+        })();
+      this.reportFailoverOrder(list, baseUrl);
     }
-    return url.toString();
   }
 
-  private static buildConfigQuery(userData: UserData): string | undefined {
-    const payload: Record<string, unknown> = {};
-    for (const key of STREAM_PREFERENCE_KEYS) {
-      const value = userData[key as keyof UserData];
-      if (value !== undefined && value !== null) {
-        payload[key as string] = value;
-      }
-    }
-    if (Object.keys(payload).length === 0) return undefined;
-    const encoded = toUrlSafeBase64(JSON.stringify(payload));
-    return `config=${encoded}`;
+  private static reportFailoverOrder(
+    streams: ParsedStream[],
+    baseUrl: string
+  ): void {
+    if (streams.length === 0) return;
+    const url = `${baseUrl.replace(/\/+$/, '')}${FAILOVER_ORDER_PATH}`;
+    const body = {
+      streams: streams.map((s) => ({
+        name: s.filename ?? s.originalName,
+        failoverId: (typeof s.extra?.failoverId === 'string' ? s.extra.failoverId : undefined) ?? s.id,
+      })),
+    };
+    logger.debug(
+      `Reporting failover order to StreamNZB: ${JSON.stringify(body)}`
+    );
+    makeRequest(url, {
+      method: 'POST',
+      timeout: 5000,
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'AIOStreams',
+      },
+    }).catch((err) => {
+      logger.debug(
+        `Failed to report failover order to StreamNZB: ${err instanceof Error ? err.message : String(err)}`
+      );
+    });
   }
 
   private static generateAddon(
@@ -186,7 +165,7 @@ export class StreamNZBPreset extends Preset {
   ): Addon {
     return {
       name: (options.name as string) || this.METADATA.NAME,
-      manifestUrl: this.generateManifestUrl(options, userData),
+      manifestUrl: (options.url as string) || '',
       enabled: true,
       mediaTypes: (options.mediaTypes as Addon['mediaTypes']) || [],
       resources:
@@ -199,7 +178,7 @@ export class StreamNZBPreset extends Preset {
         options: options as Record<string, unknown>,
       },
       headers: {
-        'User-Agent': this.METADATA.USER_AGENT,
+        'User-Agent': 'AIOStreams',
       },
     };
   }

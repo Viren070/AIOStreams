@@ -165,7 +165,16 @@ class StreamParser {
       freeleech: this.isFreeleech(stream, parsedStream),
     };
 
+    parsedStream.extra = this.getExtras(stream, parsedStream);
+
     return parsedStream;
+  }
+
+  protected getExtras(
+    _stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): ParsedStream['extra'] {
+    return undefined;
   }
 
   protected getRandomId(): string {

@@ -123,6 +123,12 @@ export abstract class Preset {
   }
 
   /**
+   * Optional hook called with this preset's streams after filtering and sorting (final order).
+   * Only invoked for presets that contributed to the response. Fire-and-forget use is fine.
+   */
+  static onStreamsReady?(_streams: ParsedStream[]): void | Promise<void>;
+
+  /**
    * Creates a preset from a preset id.
    * @param presetId - The id of the preset to create.
    * @returns The preset.
