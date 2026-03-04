@@ -8,7 +8,12 @@ import {
   DistributedLock,
   getTimeTakenSincePoint,
 } from '../utils/index.js';
-import { selectFileInTorrentOrNZB, Torrent, hashNzbUrl } from './utils.js';
+import {
+  selectFileInTorrentOrNZB,
+  Torrent,
+  hashNzbUrl,
+  buildResolveKey,
+} from './utils.js';
 import {
   DebridServiceConfig,
   DebridDownload,
@@ -301,10 +306,19 @@ export class StremThruService
 
       try {
         const batchResults = await Promise.all(
-          batches.map(async (batch) => {
+          batches.map(async (batch, index) => {
+            const start = Date.now();
             const result = await this.stremthru.store.checkMagnet({
               magnet: batch,
               sid,
+            });
+
+            logger.debug(`Checked magnets on ${this.serviceName}`, {
+              batch: index + 1,
+              checked: batch.length,
+              found: result.data.items.length,
+              id: getSimpleTextHash(batch.join(',')),
+              time: getTimeTakenSincePoint(start),
             });
 
             assert.ok(
@@ -795,7 +809,18 @@ export class StremThruService
         : autoRemoveDownloads;
 
       const { result } = await DistributedLock.getInstance().withLock(
-        `st:resolve:usenet:${this.serviceName}:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${effectiveCacheAndPlay}:${effectiveAutoRemove}:${this.config.clientIp}:${this.config.stremthru.token}`,
+        buildResolveKey(
+          'st:lock',
+          this.serviceName,
+          playbackInfo,
+          filename,
+          this.config.stremthru.token,
+          this.config.clientIp,
+          {
+            cacheAndPlay: effectiveCacheAndPlay,
+            autoRemoveDownloads: effectiveAutoRemove,
+          }
+        ),
         () =>
           this._resolveUsenet(
             playbackInfo,
@@ -819,7 +844,15 @@ export class StremThruService
 
     // Torrent resolve
     const { result } = await DistributedLock.getInstance().withLock(
-      `st:resolve:torrent:${this.serviceName}:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${autoRemoveDownloads}:${this.config.clientIp}:${this.config.stremthru.token}`,
+      buildResolveKey(
+        'st:lock',
+        this.serviceName,
+        playbackInfo,
+        filename,
+        this.config.stremthru.token,
+        this.config.clientIp,
+        { cacheAndPlay, autoRemoveDownloads }
+      ),
       () =>
         this._resolveTorrent(
           playbackInfo,
@@ -842,7 +875,14 @@ export class StremThruService
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { hash, metadata } = playbackInfo;
-    const cacheKey = `torrent:${this.serviceName}:${this.config.stremthru.token}:${this.config.clientIp}:${hash}:${metadata?.season}:${metadata?.episode}:${metadata?.absoluteEpisode}`;
+    const cacheKey = buildResolveKey(
+      'st:cache',
+      this.serviceName,
+      playbackInfo,
+      filename,
+      this.config.stremthru.token,
+      this.config.clientIp
+    );
     const cachedLink = await StremThruService.playbackLinkCache.get(cacheKey);
 
     if (cachedLink !== undefined) {
@@ -1076,7 +1116,14 @@ export class StremThruService
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
-    const cacheKey = `usenet:${this.serviceName}:${this.config.stremthru.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
+    const cacheKey = buildResolveKey(
+      'st:cache',
+      this.serviceName,
+      playbackInfo,
+      filename,
+      this.config.stremthru.token,
+      this.config.clientIp
+    );
     const cachedLink = await StremThruService.playbackLinkCache.get(cacheKey);
 
     if (cachedLink !== undefined) {

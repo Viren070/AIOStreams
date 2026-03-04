@@ -10,7 +10,11 @@ import {
   Time,
 } from '../utils/index.js';
 import { StremThruService } from './stremthru.js';
-import { selectFileInTorrentOrNZB, hashNzbUrl } from './utils.js';
+import {
+  selectFileInTorrentOrNZB,
+  hashNzbUrl,
+  buildResolveKey,
+} from './utils.js';
 import {
   DebridServiceConfig,
   DebridDownload,
@@ -622,7 +626,15 @@ export class TorboxDebridService
       );
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `torbox:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${cacheAndPlay}:${autoRemoveDownloads}:${this.config.clientIp}:${this.config.token}`,
+      buildResolveKey(
+        'tb:lock',
+        this.serviceName,
+        playbackInfo,
+        filename,
+        this.config.token,
+        this.config.clientIp,
+        { cacheAndPlay, autoRemoveDownloads }
+      ),
       () =>
         this._resolve(
           playbackInfo,
@@ -645,7 +657,14 @@ export class TorboxDebridService
     autoRemoveDownloads?: boolean
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
-    const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
+    const cacheKey = buildResolveKey(
+      'tb:cache',
+      this.serviceName,
+      playbackInfo,
+      filename,
+      this.config.token,
+      this.config.clientIp
+    );
     const cachedLink =
       await TorboxDebridService.playbackLinkCache.get(cacheKey);
 

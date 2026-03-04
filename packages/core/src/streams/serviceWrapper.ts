@@ -220,7 +220,8 @@ export async function resolveServiceWrappedStreams(
     encryptedStoreAuths,
     metadataId,
     userData,
-    addons
+    addons,
+    metadata
   );
 
   logger.info(
@@ -348,7 +349,8 @@ async function buildDebridStreams(
   encryptedStoreAuths: Record<BuiltinServiceId, string | string[]>,
   metadataId: string,
   userData: UserData,
-  addons: Addon[]
+  addons: Addon[],
+  metadata: TitleMetadata | undefined
 ): Promise<ParsedStream[]> {
   const debridStreams: ParsedStream[] = [];
 
@@ -369,39 +371,6 @@ async function buildDebridStreams(
       ? encryptedStoreAuths[result.service.id]
       : undefined;
 
-    // Build file info for playback URL
-    const fileInfo: FileInfo | undefined = result.service
-      ? {
-          type: 'torrent',
-          downloadUrl: result.downloadUrl,
-          title: result.title,
-          hash: result.hash,
-          private: result.private,
-          sources: result.sources,
-          index: result.file.index,
-          cacheAndPlay:
-            userData.cacheAndPlay?.enabled &&
-            userData.cacheAndPlay?.streamTypes?.includes('torrent'),
-          autoRemoveDownloads: userData.autoRemoveDownloads,
-        }
-      : undefined;
-
-    // Generate playback URL
-    let url: string | undefined;
-    if (
-      result.service &&
-      result.service.id !== 'stremio_nntp' &&
-      encryptedStoreAuth &&
-      fileInfo
-    ) {
-      url = generatePlaybackUrl(
-        encryptedStoreAuth as string,
-        metadataId,
-        fileInfo,
-        result.file.name ?? result.title
-      );
-    }
-
     // Find ALL original ParsedStreams this result came from (by infoHash).
     const originals = p2pByHash.get(result.hash) ?? [];
     const isPrivate = result.private;
@@ -410,6 +379,43 @@ async function buildDebridStreams(
     const streamsToProcess = originals.length > 0 ? originals : [undefined];
 
     for (const original of streamsToProcess) {
+      const fileInfo: FileInfo | undefined = result.service
+        ? {
+            type: 'torrent',
+            downloadUrl: result.downloadUrl,
+            title: result.title,
+            hash: result.hash,
+            private: result.private,
+            sources: result.sources,
+            index: result.file.index,
+            fileIndex:
+              original?.torrent?.fileIdx !== undefined &&
+              !metadata?.season &&
+              !metadata?.episode
+                ? original.torrent.fileIdx
+                : undefined,
+            cacheAndPlay:
+              userData.cacheAndPlay?.enabled &&
+              userData.cacheAndPlay?.streamTypes?.includes('torrent'),
+            autoRemoveDownloads: userData.autoRemoveDownloads,
+          }
+        : undefined;
+
+      // Generate playback URL
+      let url: string | undefined;
+      if (
+        result.service &&
+        result.service.id !== 'stremio_nntp' &&
+        encryptedStoreAuth &&
+        fileInfo
+      ) {
+        url = generatePlaybackUrl(
+          encryptedStoreAuth as string,
+          metadataId,
+          fileInfo,
+          result.file.name ?? result.title
+        );
+      }
       const debridStream: ParsedStream = {
         ...(original ?? {
           id: `wrap-${result.hash}-${result.service?.id}`,

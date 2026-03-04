@@ -13,6 +13,7 @@ import {
   createLogger,
   fromUrlSafeBase64,
 } from '../utils/index.js';
+import { buildResolveKey } from './utils.js';
 import { NNTPServers, NNTPServersSchema } from '../db/schemas.js';
 import z from 'zod';
 
@@ -64,7 +65,14 @@ export class EasynewsService implements UsenetDebridService {
       throw new Error('Unsupported operation');
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `${this.serviceName}:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${this.config.clientIp}:${this.config.token}`,
+      buildResolveKey(
+        'en:lock',
+        this.serviceName,
+        playbackInfo,
+        filename,
+        this.config.token,
+        this.config.clientIp
+      ),
       () => this._resolve(playbackInfo, filename),
       {
         timeout: 10000,

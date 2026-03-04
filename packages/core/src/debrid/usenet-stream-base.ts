@@ -10,7 +10,12 @@ import {
   formatZodError,
   Time,
 } from '../utils/index.js';
-import { isVideoFile, selectFileInTorrentOrNZB, hashNzbUrl } from './utils.js';
+import {
+  isVideoFile,
+  selectFileInTorrentOrNZB,
+  hashNzbUrl,
+  buildResolveKey,
+} from './utils.js';
 import {
   DebridServiceConfig,
   DebridDownload,
@@ -909,7 +914,15 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       throw new Error('Unsupported operation');
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `${this.serviceName}:resolve:${playbackInfo.hash}:${playbackInfo.nzb}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${this.config.clientIp}:${this.config.token}`,
+      buildResolveKey(
+        'uss:lock',
+        this.serviceName,
+        playbackInfo,
+        filename,
+        this.config.token,
+        this.config.clientIp,
+        { cacheAndPlay }
+      ),
       () => this._resolve(playbackInfo, filename),
       {
         timeout: 120000,
@@ -925,7 +938,14 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
 
-    const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
+    const cacheKey = buildResolveKey(
+      'uss:cache',
+      this.serviceName,
+      playbackInfo,
+      filename,
+      this.config.token,
+      this.config.clientIp
+    );
 
     const cachedResponse = await UsenetStreamService.resolveCache.get(cacheKey);
 

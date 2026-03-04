@@ -145,12 +145,13 @@ async function processTorrentsForDebridService(
     stremioId,
     checkOwned
   );
+  const magnetCheckTime = getTimeTakenSincePoint(startTime);
   // const magnetCheckTime = getTimeTakenSincePoint(startTime);
   logger.debug(`Retrieved magnet status from debrid`, {
     service: debridService.serviceName,
     magnetCount: torrents.length,
     cached: magnetCheckResults.filter((r) => r.status === 'cached').length,
-    time: getTimeTakenSincePoint(startTime),
+    time: magnetCheckTime,
   });
 
   // Parse only torrent titles and perform validation checks
@@ -277,7 +278,9 @@ async function processTorrentsForDebridService(
     torrents: torrents.length,
     validTorrents: validTorrents.length,
     finalTorrents: results.length,
-    totalTime: getTimeTakenSincePoint(processingStart),
+    totalTime: getTimeTakenSincePoint(startTime),
+    checkTime: magnetCheckTime,
+    processingTime: getTimeTakenSincePoint(processingStart),
     parseTime,
   });
 
