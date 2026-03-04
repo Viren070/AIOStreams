@@ -429,7 +429,31 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
           </SettingsCard>
         )}
 
-        {loader.templates.length > 0 &&
+        {loader.loadingTemplates ? (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[0, 1].map((i) => (
+                <GlowCard key={i} className="p-4 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-14 rounded flex-shrink-0" />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <div className="mt-2 flex items-center justify-between">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </GlowCard>
+              ))}
+            </div>
+          </div>
+        ) : loader.templates.length > 0 ? (
           (() => {
             const envIds = (status?.settings?.featuredTemplateIds ?? []).slice(
               0,
@@ -471,7 +495,8 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
                 </div>
               </div>
             );
-          })()}
+          })()
+        ) : null}
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
