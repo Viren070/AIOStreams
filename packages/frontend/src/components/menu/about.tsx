@@ -14,6 +14,7 @@ import {
   MessageCircleIcon,
   PencilIcon,
   PlusIcon,
+  BellIcon,
 } from 'lucide-react';
 import { FaGithub, FaDiscord, FaChevronRight } from 'react-icons/fa';
 import { BiDonateHeart, BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
@@ -24,6 +25,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDisclosure } from '@/hooks/disclosure';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '../ui/modal';
 import { SiGithubsponsors, SiKofi } from 'react-icons/si';
 import { useUserData } from '@/context/userData';
@@ -219,6 +221,8 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
     AppliedTemplateUpdate[]
   >([]);
   const hasOpenedUpdateModalRef = React.useRef(false);
+  const whatsNewRef = React.useRef<HTMLDivElement>(null);
+  const [appUpdatesCount, setAppUpdatesCount] = React.useState(0);
   const [featuredTemplateToOpen, setFeaturedTemplateToOpen] =
     React.useState<Template | null>(null);
   const customHtml = status?.settings?.customHtml;
@@ -356,10 +360,10 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
             />
           </div>
           {/* Name, version, about right */}
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full min-w-0 lg:pr-36">
             <div className="flex flex-col md:flex-row md:items-end md:gap-4">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-3xl md:text-4xl font-bold tracking-tight text-gray-100 truncate">
+                <span className="text-3xl md:text-4xl font-bold tracking-tight text-gray-100 truncate min-w-0">
                   {addonName}
                 </span>
                 <IconButton
@@ -369,6 +373,31 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
                   className="rounded-full flex-shrink-0"
                   size="sm"
                 />
+                {appUpdatesCount > 0 && (
+                  <div className="relative flex-shrink-0">
+                    <Tooltip
+                      side="bottom"
+                      trigger={
+                        <IconButton
+                          icon={<BellIcon className="w-4 h-4" />}
+                          intent="primary-subtle"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() =>
+                            whatsNewRef.current?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start',
+                            })
+                          }
+                        />
+                      }
+                    >
+                      {appUpdatesCount} update{appUpdatesCount > 1 ? 's' : ''}{' '}
+                      available — see What&apos;s New
+                    </Tooltip>
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[--brand] pointer-events-none" />
+                  </div>
+                )}
               </div>
               <span className="text-xl md:text-2xl font-semibold text-gray-400 md:mb-1">
                 {version}{' '}
@@ -444,7 +473,7 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
             );
           })()}
 
-        <div className="flex flex-col lg:flex-row gap-6 mt-2">
+        <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
             <GlowCard className="p-6 h-full flex flex-col gap-5">
               <div>
@@ -550,10 +579,16 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
           </div>
         </div>
 
-        <ChangelogBox version={version} channel={channel} />
+        <div ref={whatsNewRef}>
+          <ChangelogBox
+            version={version}
+            channel={channel}
+            onUpdatesFound={setAppUpdatesCount}
+          />
+        </div>
 
-        <div className="flex flex-col items-center mt-4">
-          <div className="flex flex-col items-center gap-0.5 mt-4 text-xs text-gray-500">
+        <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-0.5 text-xs text-gray-500">
             <span>
               © {new Date().getFullYear()} AIOStreams. Developed by Viren070.
             </span>
@@ -733,9 +768,11 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
 function ChangelogBox({
   version,
   channel,
+  onUpdatesFound,
 }: {
   version: string;
   channel: 'stable' | 'nightly' | 'dev';
+  onUpdatesFound?: (count: number) => void;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -890,6 +927,11 @@ function ChangelogBox({
     compareVersions,
   ]);
 
+  // Notify parent when newer app release count changes
+  React.useEffect(() => {
+    onUpdatesFound?.(newerReleases.length);
+  }, [newerReleases.length, onUpdatesFound]);
+
   // Function to fetch more releases when needed
   const fetchMoreReleases = React.useCallback(async () => {
     if (!hasMorePages || fetchingMore) return;
@@ -1016,47 +1058,39 @@ function ChangelogBox({
   );
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-2xl font-semibold text-white">What's New?</h3>
+    <GlowCard className="p-6 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold text-white">What's New?</h3>
         {newerReleases.length > 0 && (
-          <span className="text-[#c8af48] font-bold text-sm">
+          <span className="text-xs font-medium text-[--brand]">
             {newerReleases.length} update
             {newerReleases.length > 1 ? 's' : ''} available
           </span>
         )}
       </div>
-      <div className="relative flex-1" style={{ minHeight: '400px' }}>
+      <div className="relative">
         <div
           ref={containerRef}
-          className="changelog-container absolute inset-0 pr-2"
-          style={{
-            overflowY: 'auto',
-          }}
+          className="max-h-[500px] overflow-y-auto pr-4 -mr-2"
         >
           {loading ? (
-            <div className="p-4 space-y-4">
+            <div className="space-y-3">
               {[...Array(2)].map((_, i) => (
                 <Skeleton key={i} className="h-24 w-full" />
               ))}
             </div>
           ) : error ? (
-            <div className="p-4">
-              <Alert intent="alert" title="Error" description={error} />
-            </div>
+            <Alert intent="alert" title="Error" description={error} />
           ) : displayReleases.length === 0 ? (
-            <div className="p-4">
-              <Alert
-                intent="info"
-                title="No changelogs found"
-                description={`No ${currentChannel} changelogs available.`}
-              />
-            </div>
+            <Alert
+              intent="info"
+              title="No changelogs found"
+              description={`No ${currentChannel} changelogs available.`}
+            />
           ) : (
-            <div className="relative min-h-full p-4 space-y-4">
-              {/* Show updates button */}
+            <div className="space-y-3">
               {newerReleases.length > 0 && !showUpdates && (
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-center pb-1">
                   <Button
                     intent="primary-outline"
                     size="sm"
@@ -1067,37 +1101,32 @@ function ChangelogBox({
                   </Button>
                 </div>
               )}
-
-              {displayReleases.slice(0, visibleCount).map((release, idx) => (
+              {displayReleases.slice(0, visibleCount).map((release) => (
                 <Card
                   key={release.id || release.tag_name}
                   className={cn(
-                    'border bg-gray-800/60 border-gray-800 relative',
-                    isNewerVersion(release.tag_name) && 'border-[#c8af48]/30'
+                    'border bg-gray-800/60 border-gray-700/50',
+                    isNewerVersion(release.tag_name) && 'border-[--brand]/40'
                   )}
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span
-                          className={cn(
-                            'text-sm sm:text-base font-semibold break-all',
-                            isNewerVersion(release.tag_name)
-                              ? 'text-[#c8af48]' // c8af48
-                              : 'text-[--brand]'
-                          )}
-                        >
-                          {release.tag_name}
-                        </span>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <span className="text-xs text-gray-400">
-                          {new Date(release.published_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span
+                        className={cn(
+                          'text-sm font-semibold',
+                          isNewerVersion(release.tag_name)
+                            ? 'text-[--brand]'
+                            : 'text-gray-200'
+                        )}
+                      >
+                        {release.tag_name}
+                      </span>
+                      <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-gray-700/60 text-gray-400 border border-gray-600/40 flex-shrink-0">
+                        {new Date(release.published_at).toLocaleDateString()}
+                      </span>
                     </div>
                   </CardHeader>
-                  <CardContent className="prose prose-invert prose-sm max-w-none [&_p]:text-sm [&_ul]:text-sm [&_li]:text-sm [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_*]:break-all">
+                  <CardContent className="prose prose-invert prose-sm max-w-none min-w-0 [&_p]:text-sm [&_ul]:text-sm [&_li]:text-sm [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_*]:break-words">
                     <ReactMarkdown>
                       {release.body
                         ? release.body.replace(release.tag_name, '')
@@ -1109,13 +1138,13 @@ function ChangelogBox({
                       href={release.html_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:underline flex items-center justify-between w-full text-xs"
+                      className="text-gray-500 hover:text-white flex items-center justify-between w-full text-xs transition-colors"
                     >
-                      <span className="flex items-center gap-2">
-                        <FaGithub className="w-4 h-4" />
+                      <span className="flex items-center gap-1.5">
+                        <FaGithub className="w-3.5 h-3.5" />
                         View on GitHub
                       </span>
-                      <FaChevronRight className="w-4 h-4" />
+                      <FaChevronRight className="w-3 h-3" />
                     </a>
                   </CardFooter>
                 </Card>
@@ -1123,62 +1152,53 @@ function ChangelogBox({
             </div>
           )}
         </div>
-
-        {/* Bottom Load More Overlay */}
         {showLoadMoreOverlay && hasMoreContent && (
           <div
-            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none opacity-0 transition-opacity duration-300 ease-in-out"
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
             style={{
-              height: '96px',
+              height: '80px',
+              background:
+                'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
               opacity: showLoadMoreOverlay ? 1 : 0,
+              transition: 'opacity 0.3s ease-in-out',
             }}
           >
-            <div className="h-full flex items-end justify-center pb-4">
-              <div
-                className="flex flex-col items-center gap-2 pointer-events-auto opacity-0 translate-y-4 transition-all duration-300 ease-in-out"
-                style={{
-                  opacity: showLoadMoreOverlay ? 1 : 0,
-                  transform: showLoadMoreOverlay
-                    ? 'translateY(0)'
-                    : 'translateY(1rem)',
-                }}
+            <div className="h-full flex items-end justify-center pb-3 pointer-events-auto">
+              <button
+                onClick={handleLoadMore}
+                disabled={fetchingMore}
+                className="flex flex-col items-center gap-1 group disabled:opacity-50"
               >
-                <span className="text-sm font-medium text-white/90">
+                <span className="text-xs text-white/60 group-hover:text-white transition-colors">
                   {fetchingMore
                     ? 'Loading...'
                     : displayReleases.length > visibleCount
                       ? `Load ${Math.min(5, displayReleases.length - visibleCount)} more`
                       : 'Load more releases'}
                 </span>
-                <button
-                  onClick={handleLoadMore}
-                  disabled={fetchingMore}
-                  className="group flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {fetchingMore ? (
-                    <div className="w-5 h-5 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <svg
-                      className="w-6 h-6 text-white/80 group-hover:text-white transition-colors"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
+                {fetchingMore ? (
+                  <div className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    className="w-4 h-4 text-white/50 group-hover:text-white transition-colors"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </GlowCard>
   );
 }
 
