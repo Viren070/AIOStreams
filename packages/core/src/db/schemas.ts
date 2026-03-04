@@ -365,6 +365,17 @@ export const UserDataSchema = z.object({
   addonLogo: z.string().url().optional(),
   addonBackground: z.string().url().optional(),
   addonDescription: z.string().min(1).optional(),
+  appliedTemplates: z
+    .array(
+      z.object({
+        id: z.string(),
+        version: z.string(),
+        url: z.string().optional(),
+        dismissedVersion: z.string().optional(), // dismissed update notification up to this version
+        ignored: z.boolean().optional(), // permanently ignore all future update notifications
+      })
+    )
+    .optional(),
   excludedResolutions: z.array(Resolutions).optional(),
   includedResolutions: z.array(Resolutions).optional(),
   requiredResolutions: z.array(Resolutions).optional(),
@@ -1335,6 +1346,16 @@ export const TemplateSchema = z.object({
     setToSaveInstallMenu: z.boolean().optional().default(true), // whether to set the menu to save-install after importing the template
     sourceUrl: z.url().optional(), // URL from which the template was imported (for auto-updates)
     inputs: z.array(OptionDefinition).optional(), // template-creator-defined options shown to the user before loading
+    changelog: z
+      .array(
+        z.object({
+          date: z.string(),
+          version: z.string(),
+          content: z.string(),
+        })
+      )
+      .optional(), // version history entries for tracking updates applied by users
+    changelogUrl: z.url().optional(), // URL to a remote CHANGELOG.md file (alternative to inline changelog)
   }),
   config: z.any(),
 });

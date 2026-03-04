@@ -6,6 +6,7 @@ import {
   AlertTriangleIcon,
   Trash2Icon,
   CheckIcon,
+  ScrollText,
 } from 'lucide-react';
 import { BiImport } from 'react-icons/bi';
 import { Button, IconButton } from '../../../ui/button';
@@ -19,6 +20,7 @@ import { asConfigArray } from '@/lib/templates/processors/conditionals';
 import { TemplateValidation } from '@/lib/templates/types';
 import { TemplateValidationModal } from '../validation-modal';
 import { GlowCard } from '../../glow-card';
+import { TemplateChangelogModal } from '../changelog';
 
 interface TemplateBrowseStepProps {
   searchQuery: string;
@@ -61,6 +63,11 @@ function TemplateCard({
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showAddonsModal, setShowAddonsModal] = useState(false);
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
+
+  const hasChangelog =
+    (template.metadata.changelog?.length ?? 0) > 0 ||
+    !!template.metadata.changelogUrl;
 
   const hasWarnings = validation && validation.warnings.length > 0;
   const hasErrors = validation && validation.errors.length > 0;
@@ -229,6 +236,17 @@ function TemplateCard({
               }}
             />
           )}
+          {hasChangelog && (
+            <IconButton
+              icon={<ScrollText className="w-4 h-4" />}
+              intent="gray-outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowChangelogModal(true);
+              }}
+              title="View Changelog"
+            />
+          )}
           <Button
             intent="primary"
             size="md"
@@ -269,6 +287,14 @@ function TemplateCard({
           ))}
         </div>
       </Modal>
+
+      <TemplateChangelogModal
+        open={showChangelogModal}
+        onOpenChange={(o) => !o && setShowChangelogModal(false)}
+        templateName={template.metadata.name}
+        changelog={template.metadata.changelog}
+        changelogUrl={template.metadata.changelogUrl}
+      />
     </>
   );
 }

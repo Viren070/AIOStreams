@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Template, StatusResponse } from '@aiostreams/core';
 import { fetchTemplates } from '@/lib/api';
@@ -10,14 +10,24 @@ import {
   compareVersions,
 } from '@/lib/templates/storage';
 import { validateTemplate } from '@/lib/templates/validator';
+import { useUserData } from '@/context/userData';
+
+export interface AppliedTemplateUpdate {
+  template: Template;
+  appliedVersion: string;
+  newChangelog: Array<{ date: string; version: string; content: string }>;
+}
 
 export interface UseTemplateLoader {
   templates: Template[];
   setTemplates: React.Dispatch<React.SetStateAction<Template[]>>;
   loadingTemplates: boolean;
   templateValidations: Record<string, TemplateValidation>;
-  setTemplateValidations: React.Dispatch<React.SetStateAction<Record<string, TemplateValidation>>>;
+  setTemplateValidations: React.Dispatch<
+    React.SetStateAction<Record<string, TemplateValidation>>
+  >;
   loadTemplates(): Promise<void>;
+  appliedTemplateUpdates: AppliedTemplateUpdate[];
 }
 
 export function useTemplateLoader(
@@ -28,6 +38,40 @@ export function useTemplateLoader(
   const [templateValidations, setTemplateValidations] = useState<
     Record<string, TemplateValidation>
   >({});
+  const { userData } = useUserData();
+
+  const appliedTemplateUpdates = useMemo((): AppliedTemplateUpdate[] => {
+    const applied = userData?.appliedTemplates;
+    if (!applied || applied.length === 0 || templates.length === 0) return [];
+    const updates: AppliedTemplateUpdate[] = [];
+    for (const appliedEntry of applied) {
+      const template = templates.find((t) => t.metadata.id === appliedEntry.id);
+      if (!template) continue;
+      if (compareVersions(template.metadata.version, appliedEntry.version) <= 0)
+        continue;
+      // Skip if user permanently silenced notifications for this template
+      if (appliedEntry.ignored) continue;
+      // Skip if user already dismissed this specific version's notification
+      if (
+        appliedEntry.dismissedVersion &&
+        compareVersions(
+          appliedEntry.dismissedVersion,
+          template.metadata.version
+        ) >= 0
+      )
+        continue;
+      const changelog = template.metadata.changelog ?? [];
+      const newEntries = changelog.filter(
+        (entry) => compareVersions(entry.version, appliedEntry.version) > 0
+      );
+      updates.push({
+        template,
+        appliedVersion: appliedEntry.version,
+        newChangelog: newEntries,
+      });
+    }
+    return updates;
+  }, [templates, userData?.appliedTemplates]);
 
   const checkAndUpdateTemplates = async (
     templateList: Template[]
@@ -86,8 +130,7 @@ export function useTemplateLoader(
             description:
               remoteTemplate.metadata?.description ||
               template.metadata.description,
-            author:
-              remoteTemplate.metadata?.author || template.metadata.author,
+            author: remoteTemplate.metadata?.author || template.metadata.author,
             category:
               remoteTemplate.metadata?.category || template.metadata.category,
             services: remoteTemplate.metadata?.services,
@@ -200,5 +243,13 @@ export function useTemplateLoader(
     }
   };
 
-  return { templates, setTemplates, loadingTemplates, templateValidations, setTemplateValidations, loadTemplates };
+  return {
+    templates,
+    setTemplates,
+    loadingTemplates,
+    templateValidations,
+    setTemplateValidations,
+    loadTemplates,
+    appliedTemplateUpdates,
+  };
 }

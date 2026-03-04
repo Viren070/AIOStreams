@@ -32,6 +32,16 @@ export const TemplateSchema = z.object({
     setToSaveInstallMenu: z.boolean().optional().default(true),
     sourceUrl: z.url().optional(),
     inputs: z.array(z.any()).optional(),
+    changelog: z
+      .array(
+        z.object({
+          date: z.string(),
+          version: z.string(),
+          content: z.string(),
+        })
+      )
+      .optional(),
+    changelogUrl: z.url().optional(),
   }),
   config: z.any(),
 });

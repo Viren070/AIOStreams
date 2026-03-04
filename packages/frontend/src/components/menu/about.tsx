@@ -53,9 +53,16 @@ import { Textarea } from '../ui/textarea';
 import { FaPlay } from 'react-icons/fa6';
 import { usePathname } from 'next/navigation';
 import { Template } from '@aiostreams/core';
-import { useTemplateLoader } from '@/hooks/templates/loader';
+import {
+  useTemplateLoader,
+  type AppliedTemplateUpdate,
+} from '@/hooks/templates/loader';
 import MarkdownLite from '../shared/markdown-lite';
 import { GlowCard } from '../shared/glow-card';
+import {
+  ChangelogEntryRow,
+  TemplateUpdateChangelogSection,
+} from '../shared/templates/changelog';
 
 interface QuickLinkProps {
   href?: string;
@@ -207,6 +214,11 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   const signInModal = useDisclosure(false);
   const templatesModal = useDisclosure(false);
   const setupChoiceModal = useDisclosure(false);
+  const templateUpdateModal = useDisclosure(false);
+  const [updateTargets, setUpdateTargets] = React.useState<
+    AppliedTemplateUpdate[]
+  >([]);
+  const hasOpenedUpdateModalRef = React.useRef(false);
   const [featuredTemplateToOpen, setFeaturedTemplateToOpen] =
     React.useState<Template | null>(null);
   const customHtml = status?.settings?.customHtml;
@@ -255,6 +267,57 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   React.useEffect(() => {
     loader.loadTemplates();
   }, []);
+
+  // Reset the session guard whenever the user's identity changes (sign in / out)
+  // so the modal re-fires for the new session.
+  React.useEffect(() => {
+    hasOpenedUpdateModalRef.current = false;
+  }, [uuid]);
+
+  // Auto-open the update modal once per session, but only when signed in.
+  React.useEffect(() => {
+    if (!uuid || !password) return;
+    if (hasOpenedUpdateModalRef.current) return;
+    if (loader.appliedTemplateUpdates.length === 0) return;
+    hasOpenedUpdateModalRef.current = true;
+    setUpdateTargets(loader.appliedTemplateUpdates);
+    templateUpdateModal.open();
+  }, [loader.appliedTemplateUpdates, uuid, password]);
+
+  // Persist dismissal of a specific template's update notification.
+  const dismissUpdate = (templateId: string, toVersion: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      appliedTemplates: (prev.appliedTemplates ?? []).map((t) =>
+        t.id === templateId ? { ...t, dismissedVersion: toVersion } : t
+      ),
+    }));
+  };
+
+  // Permanently silence update notifications for a template.
+  const ignoreTemplateUpdates = (templateId: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      appliedTemplates: (prev.appliedTemplates ?? []).map((t) =>
+        t.id === templateId ? { ...t, ignored: true } : t
+      ),
+    }));
+  };
+
+  // Dismiss all currently-shown update notifications and close the modal.
+  const dismissAllCurrentUpdates = () => {
+    const targets = updateTargets;
+    setUserData((prev) => ({
+      ...prev,
+      appliedTemplates: (prev.appliedTemplates ?? []).map((t) => {
+        const match = targets.find((u) => u.template.metadata.id === t.id);
+        return match
+          ? { ...t, dismissedVersion: match.template.metadata.version }
+          : t;
+      }),
+    }));
+    templateUpdateModal.close();
+  };
 
   return (
     <>
@@ -574,6 +637,95 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
             : 'Start with a pre-configured template. Great for getting up and running quickly with recommended settings.'
         }
       />
+      <Modal
+        open={templateUpdateModal.isOpen}
+        onOpenChange={templateUpdateModal.toggle}
+        title="Template Updates Available"
+        contentClass="max-w-2xl"
+      >
+        <div className="space-y-4 min-w-0">
+          <p className="text-sm text-[--muted]">
+            Templates you&apos;ve applied have new versions available.
+          </p>
+          <div className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-4 -mr-2">
+            {updateTargets.map((update) => (
+              <div
+                key={update.template.metadata.id}
+                className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-semibold text-white">
+                    {update.template.metadata.name}
+                  </span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                    v{update.appliedVersion}{' '}
+                    <span className="text-gray-600">→</span>{' '}
+                    <span className="text-green-400">
+                      v{update.template.metadata.version}
+                    </span>
+                  </span>
+                </div>
+                {update.newChangelog.length > 0 ? (
+                  <div className="space-y-3">
+                    {update.newChangelog.map((entry) => (
+                      <ChangelogEntryRow key={entry.version} entry={entry} />
+                    ))}
+                  </div>
+                ) : update.template.metadata.changelogUrl ? (
+                  <TemplateUpdateChangelogSection update={update} />
+                ) : (
+                  <p className="text-xs text-gray-500 italic">
+                    No changelog provided for this update.
+                  </p>
+                )}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    intent="primary"
+                    className="flex-1"
+                    onClick={() => {
+                      templateUpdateModal.close();
+                      setFeaturedTemplateToOpen(update.template);
+                      templatesModal.open();
+                    }}
+                  >
+                    Apply Update
+                  </Button>
+                  <Button
+                    intent="gray-outline"
+                    onClick={() =>
+                      dismissUpdate(
+                        update.template.metadata.id,
+                        update.template.metadata.version
+                      )
+                    }
+                  >
+                    Skip this version
+                  </Button>
+                </div>
+                <button
+                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline-offset-2 hover:underline"
+                  onClick={() =>
+                    ignoreTemplateUpdates(update.template.metadata.id)
+                  }
+                >
+                  Ignore all future updates for this template
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+            <button
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={dismissAllCurrentUpdates}
+            >
+              Dismiss all
+            </button>
+            <Button intent="gray-outline" onClick={templateUpdateModal.close}>
+              Maybe later
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

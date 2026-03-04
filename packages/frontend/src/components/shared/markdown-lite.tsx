@@ -30,10 +30,28 @@ const MarkdownLite: React.FC<MarkdownLiteProps> = ({
 
   while (i < lines.length) {
     const line = lines[i];
-    const isBulletPoint =
-      line.trim().startsWith('* ') && !line.trim().startsWith('**');
+    const trimmed = line.trim();
+    const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    const isBulletPoint = trimmed.startsWith('* ') && !trimmed.startsWith('**');
 
-    if (isBulletPoint) {
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const text = headingMatch[2];
+      const headingClasses = [
+        'text-base font-bold mt-3 mb-1',
+        'text-sm font-semibold mt-2.5 mb-1',
+        'text-sm font-medium mt-2 mb-0.5',
+      ];
+      const tag = level === 1 ? 'h1' : level === 2 ? 'h2' : 'h3';
+      processedLines.push(
+        React.createElement(
+          tag,
+          { key: `h-${i}`, className: headingClasses[level - 1] },
+          processInlineMarkdown(text, stopPropagation)
+        )
+      );
+      i++;
+    } else if (isBulletPoint) {
       // Collect all consecutive bullet points
       const bulletPoints: string[] = [];
       while (

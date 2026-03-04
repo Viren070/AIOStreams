@@ -159,6 +159,9 @@ export function useTemplateWizard({
     selectedSvcs,
     templateName,
     setToSaveInstallMenu,
+    templateId,
+    templateVersion,
+    templateSourceUrl,
   }: {
     config: any;
     inputs: TemplateInput[];
@@ -166,6 +169,9 @@ export function useTemplateWizard({
     selectedSvcs: string[];
     templateName: string;
     setToSaveInstallMenu?: boolean;
+    templateId?: string;
+    templateVersion?: string;
+    templateSourceUrl?: string;
   }) => {
     setIsLoading(true);
     try {
@@ -205,6 +211,22 @@ export function useTemplateWizard({
 
       resolveCredentialRefs(migratedData, resolvedValues);
       setUserData((prev: any) => ({ ...prev, ...migratedData }));
+
+      if (templateId && templateVersion) {
+        setUserData((prev: any) => ({
+          ...prev,
+          appliedTemplates: [
+            ...((prev.appliedTemplates ?? []) as any[]).filter(
+              (t: any) => t.id !== templateId
+            ),
+            {
+              id: templateId,
+              version: templateVersion,
+              ...(templateSourceUrl ? { url: templateSourceUrl } : {}),
+            },
+          ],
+        }));
+      }
 
       const addonsNeedingSetup = (migratedData.presets || [])
         .filter((preset: any) =>
@@ -265,6 +287,9 @@ export function useTemplateWizard({
             processed.services.length === 1 ? processed.services : [],
           templateName: template.metadata.name,
           setToSaveInstallMenu: template.metadata.setToSaveInstallMenu,
+          templateId: template.metadata.id,
+          templateVersion: template.metadata.version,
+          templateSourceUrl: template.metadata.sourceUrl,
         });
         return;
       }
@@ -288,6 +313,9 @@ export function useTemplateWizard({
           selectedSvcs: [],
           templateName: template.metadata.name,
           setToSaveInstallMenu: template.metadata.setToSaveInstallMenu,
+          templateId: template.metadata.id,
+          templateVersion: template.metadata.version,
+          templateSourceUrl: template.metadata.sourceUrl,
         });
         return;
       }
@@ -563,6 +591,9 @@ export function useTemplateWizard({
       templateName: processedTemplate.template.metadata.name,
       setToSaveInstallMenu:
         processedTemplate.template.metadata.setToSaveInstallMenu,
+      templateId: processedTemplate.template.metadata.id,
+      templateVersion: processedTemplate.template.metadata.version,
+      templateSourceUrl: processedTemplate.template.metadata.sourceUrl,
     });
   };
 

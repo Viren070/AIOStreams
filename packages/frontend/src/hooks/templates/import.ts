@@ -163,6 +163,8 @@ export function useTemplateImport({
             setToSaveInstallMenu: true,
             sourceUrl,
             inputs: item.metadata?.inputs,
+            changelog: item.metadata?.changelog,
+            changelogUrl: item.metadata?.changelogUrl,
           },
           config: item.config || item,
         };
