@@ -11,7 +11,7 @@ import {
 
 export interface MenuTabItem {
   value: string;
-  label: string;
+  label: React.ReactNode;
   icon?: React.ReactNode;
   content: React.ReactNode;
 }
