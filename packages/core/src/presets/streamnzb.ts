@@ -9,13 +9,13 @@ const logger = createLogger('streamnzb');
 const FAILOVER_ORDER_PATH = '/failover_order';
 
 class StreamNZBStreamParser extends StreamParser {
-  override parse(stream: Stream): ParsedStream | { skip: true } {
-    const result = super.parse(stream);
-    if (typeof result === 'object' && 'skip' in result) return result;
-    const parsed = result as ParsedStream & { failoverId?: string };
+  protected override getExtras(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): ParsedStream['extra'] {
     const failoverId = (stream as Stream & { failoverId?: string }).failoverId;
-    if (failoverId != null) parsed.failoverId = failoverId;
-    return parsed;
+    if (failoverId == null) return undefined;
+    return { failoverId };
   }
 
   protected override getService(
@@ -137,9 +137,13 @@ export class StreamNZBPreset extends Preset {
     const url = `${baseUrl.replace(/\/+$/, '')}${FAILOVER_ORDER_PATH}`;
     const body = {
       streams: streams.map((s) => ({
-        failoverId: (s as { failoverId?: string }).failoverId,
+        name: s.filename ?? s.originalName,
+        failoverId: (typeof s.extra?.failoverId === 'string' ? s.extra.failoverId : undefined) ?? s.id,
       })),
     };
+    logger.debug(
+      `Reporting failover order to StreamNZB: ${JSON.stringify(body)}`
+    );
     makeRequest(url, {
       method: 'POST',
       timeout: 5000,

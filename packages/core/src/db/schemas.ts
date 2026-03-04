@@ -963,6 +963,7 @@ export const ParsedStreamSchema = z.object({
     .optional(),
   originalName: z.string().optional(),
   originalDescription: z.string().optional(),
+  extra: z.record(z.string(), z.any()).optional(),
 });
 
 export type ParsedFile = z.infer<typeof ParsedFileSchema>;
