@@ -54,7 +54,7 @@ export function TopNavbar(props: TopNavbarProps) {
       >
         <div
           data-top-navbar-content-container
-          className="relative z-10 px-4 w-full flex flex-row md:items-center overflow-x-auto"
+          className="relative z-10 px-4 w-full flex flex-row md:items-center overflow-x-auto overflow-y-hidden"
         >
           <div
             data-top-navbar-content
