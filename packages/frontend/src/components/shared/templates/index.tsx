@@ -206,6 +206,17 @@ export function ConfigTemplatesModal({
         onOpenChange={(isOpen) => {
           if (!isOpen) wizard.handleCancel();
         }}
+        onInteractOutside={(e) => {
+          // Prevent the modal from closing when interacting with a Select
+          // dropdown portal
+          if (
+            document.querySelector(
+              '[data-radix-select-content][data-state="open"]'
+            )
+          ) {
+            e.preventDefault();
+          }
+        }}
         title="Template Options"
         description="Customise this template to your needs"
         contentClass="max-w-xl max-h-[120vh]"
