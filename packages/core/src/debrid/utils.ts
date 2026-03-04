@@ -339,7 +339,15 @@ export async function selectFileInTorrentOrNZB(
   const isNotVideo = debridDownload.files.map((file) => isNotVideoFile(file));
   const videoExists = isVideo.map((f) => f == true);
 
-  // Create a scoring system for each file
+  const normTitles: Set<string> | null = metadata?.titles?.length
+    ? new Set(metadata.titles.map(normaliseTitle))
+    : null;
+  const titleCache = new Map<string, string>();
+  const files = debridDownload.files;
+  const maxSize =
+    torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
+
+  // Score each file
   const fileScores = [];
   for (let index = 0; index < debridDownload.files.length; index++) {
     const file = debridDownload.files[index];
@@ -547,31 +555,28 @@ export async function selectFileInTorrentOrNZB(
     }
 
     // Title matching (third priority)
-    const titleMatchFunc =
-      options?.useLevenshteinMatching == false ? isTitleWrongN : isTitleWrong;
-    if (
-      parsed?.title &&
-      (videoExists ? isVideo[index] : true) &&
-      !titleMatchFunc(
-        {
-          title: preprocessTitle(
-            parsed.title,
-            torrentOrNZB.title ?? '',
-            metadata?.titles ?? []
-          ),
-        },
-        metadata
-      )
-    ) {
-      score += 200;
-      fileReport.scoreBreakdown.titleMatch = 200;
+    if (parsed?.title && (videoExists ? isVideo[index] : true)) {
+      let preprocessed = titleCache.get(parsed.title);
+      if (preprocessed === undefined) {
+        preprocessed = preprocessTitle(
+          parsed.title,
+          torrentOrNZB.title ?? '',
+          metadata?.titles ?? []
+        );
+        titleCache.set(parsed.title, preprocessed);
+      }
+      const titleMatches =
+        normTitles === null
+          ? true
+          : normTitles.has(normaliseTitle(preprocessed));
+      if (titleMatches) {
+        score += 200;
+        fileReport.scoreBreakdown.titleMatch = 200;
+      }
     }
 
     // Size based score (lowest priority but still relevant)
     // We normalize the size to be between 0 and 50 points
-    const files = debridDownload.files || [];
-    const maxSize =
-      torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
     const sizeScore = maxSize > 0 ? (file.size / maxSize) * 50 : 0;
     score += sizeScore;
     fileReport.scoreBreakdown.sizeScore = sizeScore;
@@ -597,10 +602,6 @@ export async function selectFileInTorrentOrNZB(
       score: Math.max(score, 0),
       index,
     });
-
-    if ((index + 1) % 10 === 0) {
-      await new Promise((resolve) => setImmediate(resolve));
-    }
   }
 
   if (fileScores.length === 0) {
@@ -617,7 +618,6 @@ export async function selectFileInTorrentOrNZB(
 
   // Select the best matching file
   const bestMatch = fileScores[0];
-  // return bestMatch.file;
   const parsedFile = parsedFiles.get(bestMatch.file.name ?? '');
   const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
 
@@ -627,15 +627,6 @@ export async function selectFileInTorrentOrNZB(
     parsedTitle &&
     !options?.skipSeasonEpisodeCheck
   ) {
-    // if (
-    //   !isSeasonWrong(parsed, metadata) &&
-    //   !isSeasonWrong(parsedTorrentOrNZB, metadata)
-    // ) {
-    //   logger.debug(
-    //     `Season ${metadata.season} not found in ${torrentOrNZB.title} and ${bestMatch.file.name}, skipping...`
-    //   );
-    //   return undefined;
-    // }
     if (
       isEpisodeWrong(parsedFile, metadata) ||
       isEpisodeWrong(parsedTitle, metadata)
@@ -649,7 +640,6 @@ export async function selectFileInTorrentOrNZB(
       return undefined;
     }
   }
-
   report.selectedFile = {
     name: bestMatch.file.name,
     index: bestMatch.index,

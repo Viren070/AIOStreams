@@ -306,19 +306,10 @@ export class StremThruService
 
       try {
         const batchResults = await Promise.all(
-          batches.map(async (batch, index) => {
-            const start = Date.now();
+          batches.map(async (batch) => {
             const result = await this.stremthru.store.checkMagnet({
               magnet: batch,
               sid,
-            });
-
-            logger.debug(`Checked magnets on ${this.serviceName}`, {
-              batch: index + 1,
-              checked: batch.length,
-              found: result.data.items.length,
-              id: getSimpleTextHash(batch.join(',')),
-              time: getTimeTakenSincePoint(start),
             });
 
             assert.ok(
