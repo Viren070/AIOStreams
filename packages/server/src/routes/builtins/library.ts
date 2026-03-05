@@ -52,6 +52,7 @@ interface LibraryCatalogParams {
   encodedConfig: string;
   type: string;
   id: string;
+  extras?: string
 }
 
 router.get(
