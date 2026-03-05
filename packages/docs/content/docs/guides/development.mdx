@@ -1,0 +1,123 @@
+---
+title: Development
+description: How to set up AIOStreams locally for development and contribution.
+---
+
+## Prerequisites
+
+- **Node.js** v22+
+- **pnpm** v10.15+
+- **git**
+
+<Callout type="warn">
+  Earlier versions of Node.js or pnpm may work, but are not guaranteed.
+</Callout>
+
+---
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Clone the repository
+
+    ```bash
+    git clone https://github.com/Viren070/AIOStreams.git
+    cd AIOStreams
+    ```
+
+  </Step>
+
+  <Step>
+    ### Install dependencies
+
+    ```bash
+    pnpm i
+    ```
+
+  </Step>
+
+  <Step>
+    ### Build the project
+
+    ```bash
+    pnpm run build
+    ```
+
+  </Step>
+</Steps>
+
+---
+
+## Running in Development Mode
+
+Start the addon in development mode with hot reload for the server package:
+
+```bash
+pnpm run start:dev
+```
+
+<Callout type="info">
+  Only changes to the **server** package benefit from hot reload. Changes to the **core** package require a rebuild:
+
+```bash
+pnpm -F core run build
+```
+
+Changes to the **frontend** package also require a rebuild:
+
+```bash
+pnpm -F frontend run build
+```
+
+</Callout>
+
+---
+
+## Frontend Hot Reload
+
+For full hot reload including the frontend:
+
+<Steps>
+  <Step>
+    ### Change the server port
+
+    In your root `.env`, set `PORT` to something other than `3000` (e.g. `3001`). This is the port the backend server listens on.
+
+  </Step>
+
+  <Step>
+    ### Configure the frontend's backend URL
+
+    Create a `.env.development` file in `packages/frontend/`:
+
+    ```bash
+    NEXT_PUBLIC_BACKEND_BASE_URL=http://localhost:3001
+    ```
+
+    Adjust the port to match the one you set above.
+
+  </Step>
+
+  <Step>
+    ### Start all packages with hot reload
+
+    ```bash
+    pnpm dev
+    ```
+
+    The Next.js dev server will automatically proxy API requests to the backend. The frontend will be available at `http://localhost:3000`.
+
+  </Step>
+</Steps>
+
+<Callout type="info">
+  If you're only testing backend changes, use `pnpm run start:dev` instead — it
+  avoids starting the Next.js dev server unnecessarily.
+</Callout>
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/Viren070/AIOStreams). For questions or discussion, join the [Discord Server](https://discord.viren070.me/).

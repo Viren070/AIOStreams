@@ -1,0 +1,10 @@
+{
+  "pages": [
+    "getting-started",
+    "configuration",
+    "guides",
+    "reference",
+    "api",
+    "migrations"
+  ]
+}

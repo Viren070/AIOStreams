@@ -1,0 +1,54 @@
+---
+title: Introduction
+description: An overview of how to get AIOStreams up and running.
+---
+
+AIOStreams is a Stremio addon that aggregates streams from all of your other addons, then applies your filters, sorting, and formatting before passing results back to Stremio.
+
+## Prerequisites
+
+- A Stremio account and the Stremio app (desktop, Android TV, or web)
+- A Debrid service (Real-Debrid, TorBox, AllDebrid, etc.) _or_ direct P2P / Usenet access
+- Either a **[public instance](/docs/getting-started/public-instances)**, a **[managed ElfHosted plan](https://store.elfhosted.com/product/aiostreams/elf/viren070/)**, or a machine to self-host on (VPS, NAS, or local PC)
+
+## Quick start
+
+<Steps>
+  <Step>
+    **Choose how to run AIOStreams.** The quickest option is using one of the
+    available **[public instances](/docs/getting-started/public-instances)** —
+    no setup required. Alternatively, follow the
+    [Deployment](/docs/getting-started/deployment) guide to self-host with
+    Docker.
+  </Step>
+  <Step>
+    **Open** the configure page at `https://your-instance/stremio/configure` and
+    walk through the setup wizard.
+  </Step>
+  <Step>**Install** the generated addon URL into Stremio.</Step>
+</Steps>
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Deployment"
+    href="/docs/getting-started/deployment"
+    description="Docker Compose, Traefik, ElfHosted, and more."
+  />
+  <Card
+    title="Environment Variables"
+    href="/docs/getting-started/configuration"
+    description="Full reference for every .env option."
+  />
+  <Card
+    title="Guides"
+    href="/docs/guides/groups"
+    description="Groups, Usenet, Scored Sorting, Templates."
+  />
+  <Card
+    title="Migration from v1"
+    href="/docs/migrations/v1-to-v2"
+    description="Upgrading an existing v1 instance."
+  />
+</Cards>

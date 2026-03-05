@@ -1,0 +1,136 @@
+---
+title: Public Instances
+description: Use AIOStreams without hosting it yourself via community-run public instances.
+---
+
+<Accordions>
+  <Accordion title="What is an instance?">
+    An **instance** is a running deployment of the AIOStreams server. Because
+    AIOStreams is open-source, anyone can host their own copy — this is called
+    **self-hosting**. However, if you don't want to manage your own server, you
+    can use a **public instance** hosted by a community member instead.
+
+    Each instance is completely independent: it has its own URL, its own
+    database, and its own resource limits (such as a cap on the number of addons
+    per user) set by the host. Your configuration — addons, filters, API keys —
+    is stored on whichever instance you use.
+
+  </Accordion>
+</Accordions>
+
+You do not need to self-host AIOStreams. There are several **public instances** run by the community that work great for most users. They may have minor limitations (e.g. a cap on the number of addons per user) to ensure stability for all users.
+
+All instances are available on both **Stable** (official release tags, recommended) and **Nightly** (bleeding-edge `main` branch, latest features but may have bugs) channels where noted.
+
+<Callout type="info">
+  A live status page for all public instances is available at
+  [status.dinsden.top](https://status.dinsden.top/status/stremio-addons).
+</Callout>
+
+## Stable vs. Nightly
+
+| Channel     | Image tag | Who it's for                                        |
+| ----------- | --------- | --------------------------------------------------- |
+| **Stable**  | `latest`  | Recommended — tested release builds                 |
+| **Nightly** | `nightly` | Early adopters — latest commits, minor risk of bugs |
+
+---
+
+## Instances
+
+<Tabs items={["ElfHosted", "Viren's", "Yeb's", "Midnight's", "Kuu's", "ATBP Hosting", "Omni's", "StremioFR's"]}>
+  <Tab value="ElfHosted">
+    ### ElfHosted — Official Instance
+
+    Hosted by [ElfHosted](https://elfhosted.com), this is the **official public instance** of AIOStreams.
+
+    <Callout type="warn">
+      P2P, HTTP, and Live stream types are **forcefully excluded** on the ElfHosted instance. If you need those stream types, use one of the other instances below or self-host.
+    </Callout>
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aiostreams.elfhosted.com](https://aiostreams.elfhosted.com/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="Viren's">
+    ### Viren's AIOStreams — Developer Instance
+
+    Hosted by [@viren_7](https://github.com/Viren070), the developer of AIOStreams. This is a **public dev instance** primarily intended for testing new features, but works perfectly fine as a daily driver.
+
+    | Channel | URL |
+    |---|---|
+    | Nightly | [aiostreams.viren070.me](https://aiostreams.viren070.me/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="Yeb's">
+    ### Yeb's AIOStreams
+
+    Hosted by [@nhyyeb](https://github.com/nhyyeb), an AIOStreams Discord admin.
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aiostreams.fortheweak.cloud](https://aiostreams.fortheweak.cloud/stremio/configure) |
+    | Nightly | [aiostreams-nightly.fortheweak.cloud](https://aiostreams-nightly.fortheweak.cloud/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="Midnight's">
+    ### Midnight's AIOStreams
+
+    Hosted by [@midnightignite](https://github.com/midnightignite), the TorBox community manager.
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aiostreamsfortheweebsstable.midnightignite.me](https://aiostreamsfortheweebsstable.midnightignite.me/stremio/configure) |
+    | Nightly | [aiostreamsfortheweebs.midnightignite.me](https://aiostreamsfortheweebs.midnightignite.me/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="Kuu's">
+    ### Kuu's AIOStreams
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aiostreams.stremio.ru](https://aiostreams.stremio.ru/stremio/configure) |
+    | Nightly | [aiostreams-nightly.stremio.ru](https://aiostreams-nightly.stremio.ru/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="ATBP Hosting">
+    ### ATBP Hosting's AIOStreams
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aio.atbphosting.com](https://aio.atbphosting.com/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="Omni's">
+    ### Omni's AIOStreams
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aiostreams.12312023.xyz](https://aiostreams.12312023.xyz/stremio/configure) |
+
+  </Tab>
+
+  <Tab value="StremioFR's">
+    ### StremioFR's AIOStreams
+
+    Hosted by the [StremioFR](https://stremiofr.com/) community.
+
+    | Channel | URL |
+    |---|---|
+    | Stable | [aiostreams.stremiofr.com](https://aiostreams.stremiofr.com/stremio/configure) |
+
+  </Tab>
+</Tabs>
+
+<Callout type="info">
+  URLs marked as placeholders will be updated. Join the [Discord
+  Server](https://discord.viren070.me/) for the latest links or to report any
+  issues.
+</Callout>

@@ -1,0 +1,279 @@
+---
+title: Custom Formatter
+description: Complete reference for formatting stream names and descriptions using variables, modifiers, and conditionals.
+---
+
+The **Custom Formatter** gives you full control over how each stream's name and description are displayed in Stremio (and other clients). You can live-preview your format on the configuration page using the **Preview** button.
+
+Access a variable using:
+
+```
+{variableName.propertyName}
+```
+
+Modifiers are chained with `::`:
+
+```
+{variableName.propertyName::modifier}
+```
+
+---
+
+## Variables
+
+### Config
+
+| Variable             | Type   | Description                                                |
+| -------------------- | ------ | ---------------------------------------------------------- |
+| `{config.addonName}` | string | The name of the AIOStreams instance (`ADDON_NAME` env var) |
+
+### Stream
+
+| Variable                           | Type     | Description                                                               |
+| ---------------------------------- | -------- | ------------------------------------------------------------------------- |
+| `{stream.proxied}`                 | boolean  | Whether the stream is proxied (e.g. MediaFlow)                            |
+| `{stream.type}`                    | string   | Type: `debrid`, `usenet`, `http`, `live`, `youtube`, `p2p`                |
+| `{stream.filename}`                | string   | Filename of the stream or media file                                      |
+| `{stream.folderName}`              | string   | Folder name (usually only specific addons)                                |
+| `{stream.size}`                    | number   | File size in bytes                                                        |
+| `{stream.bitrate}`                 | number   | Bitrate in bits per second                                                |
+| `{stream.folderSize}`              | number   | Folder/torrent size in bytes                                              |
+| `{stream.library}`                 | boolean  | Whether from a personal Debrid library                                    |
+| `{stream.quality}`                 | string   | Quality tag (e.g. `Bluray`, `WEB-DL`)                                     |
+| `{stream.resolution}`              | string   | Video resolution (e.g. `1080p`, `2160p`)                                  |
+| `{stream.languages}`               | string[] | Available audio languages                                                 |
+| `{stream.seeders}`                 | number   | Torrent seeder count                                                      |
+| `{stream.private}`                 | boolean  | `true` if from a private tracker                                          |
+| `{stream.freelech}`                | boolean  | `true` if the torrent is freeleech                                        |
+| `{stream.age}`                     | string   | Human-readable age since release                                          |
+| `{stream.ageHours}`                | number   | Age in hours                                                              |
+| `{stream.duration}`                | number   | Media duration in seconds                                                 |
+| `{stream.infoHash}`                | string   | Torrent info hash                                                         |
+| `{stream.message}`                 | string   | Additional status message                                                 |
+| `{stream.languageEmojis}`          | string[] | Languages as emoji flags                                                  |
+| `{stream.languageCodes}`           | string[] | Languages as ISO 639 codes                                                |
+| `{stream.smallLanguageCodes}`      | string[] | Languages as small-caps codes                                             |
+| `{stream.uLanguages}`              | string[] | Languages also in your language settings                                  |
+| `{stream.uLanguageEmojis}`         | string[] | Same, as emoji flags                                                      |
+| `{stream.uLanguageCodes}`          | string[] | Same, as ISO 639 codes                                                    |
+| `{stream.uSmallLanguageCodes}`     | string[] | Same, as small-caps codes                                                 |
+| `{stream.visualTags}`              | string[] | Visual tags (e.g. `HDR`, `DV`, `HDR10`)                                   |
+| `{stream.audioTags}`               | string[] | Audio tags (e.g. `Atmos`, `DTS-HD MA`)                                    |
+| `{stream.audioChannels}`           | string[] | Detected audio channels (e.g. `5.1`)                                      |
+| `{stream.releaseGroup}`            | string   | Name of the release group                                                 |
+| `{stream.encode}`                  | string   | Encoding format (e.g. `x264`, `HEVC`)                                     |
+| `{stream.editions}`                | string[] | Special editions (e.g. `Director's Cut`)                                  |
+| `{stream.repack}`                  | boolean  | Whether the release is a repack                                           |
+| `{stream.regraded}`                | boolean  | Whether the content is regraded                                           |
+| `{stream.uncensored}`              | boolean  | Whether the content is uncensored                                         |
+| `{stream.unrated}`                 | boolean  | Whether the content is unrated                                            |
+| `{stream.upscaled}`                | boolean  | Whether the content has been upscaled                                     |
+| `{stream.network}`                 | string   | Source network (e.g. `Netflix`, `Disney+`)                                |
+| `{stream.container}`               | string   | File container format (e.g. `mkv`, `mp4`)                                 |
+| `{stream.extension}`               | string   | File extension (e.g. `.mkv`, `.iso`)                                      |
+| `{stream.indexer}`                 | string   | Source indexer                                                            |
+| `{stream.title}`                   | string   | Media title extracted from filename                                       |
+| `{stream.year}`                    | string   | Year extracted from filename                                              |
+| `{stream.date}`                    | string   | Date extracted from filename                                              |
+| `{stream.seasonPack}`              | boolean  | `true` if part of a season pack                                           |
+| `{stream.seasonEpisode}`           | string[] | Pre-formatted season/episode strings (e.g. `['S01', 'E05']`)              |
+| `{stream.seasons}`                 | number[] | Detected season numbers                                                   |
+| `{stream.formattedSeasons}`        | string   | Formatted season string (e.g. `S01` or `S01-05`)                          |
+| `{stream.folderSeasons}`           | number[] | Seasons from folder name (when different)                                 |
+| `{stream.formattedFolderSeasons}`  | string   | Formatted seasons from folder name                                        |
+| `{stream.episodes}`                | number[] | Detected episode numbers                                                  |
+| `{stream.formattedEpisodes}`       | string   | Formatted episode string (e.g. `E01` or `E01-05`)                         |
+| `{stream.folderEpisodes}`          | number[] | Episodes from folder name (when different)                                |
+| `{stream.formattedFolderEpisodes}` | string   | Formatted episodes from folder name                                       |
+| `{stream.seadex}`                  | boolean  | Whether listed as best/alt on SeaDex                                      |
+| `{stream.seadexBest}`              | boolean  | Whether listed as a _best_ release on SeaDex                              |
+| `{stream.regexMatched}`            | string   | Name of the highest-priority matched preferred regex                      |
+| `{stream.rankedRegexMatched}`      | string[] | All matched Ranked Regex Filter names (sorted)                            |
+| `{stream.regexScore}`              | number   | Score from matched Regex Filter                                           |
+| `{stream.nRegexScore}`             | number   | Regex score normalised to 0–100                                           |
+| `{stream.seScore}`                 | number   | Score from matched Stream Expression sort rule                            |
+| `{stream.nSeScore}`                | number   | Stream Expression score normalised to 0–100                               |
+| `{stream.seMatched}`               | string   | Name of the Preferred Stream Expression that matched (from first comment) |
+| `{stream.rseMatched}`              | string[] | Names of all Ranked Stream Expressions that matched                       |
+
+### Service
+
+| Variable              | Type    | Description                            |
+| --------------------- | ------- | -------------------------------------- |
+| `{service.id}`        | string  | Service identifier (e.g. `realdebrid`) |
+| `{service.shortName}` | string  | Abbreviated name (e.g. `RD`)           |
+| `{service.name}`      | string  | Full name (e.g. `Real-Debrid`)         |
+| `{service.cached}`    | boolean | Whether the stream is cached           |
+
+### Addon
+
+| Variable              | Type   | Description                                |
+| --------------------- | ------ | ------------------------------------------ |
+| `{addon.presetId}`    | string | The preset ID the addon was generated from |
+| `{addon.name}`        | string | Display name of the addon                  |
+| `{addon.manifestUrl}` | string | The addon's manifest URL                   |
+
+### Metadata
+
+| Variable                    | Type     | Description                                       |
+| --------------------------- | -------- | ------------------------------------------------- |
+| `{metadata.queryType}`      | string   | Media type being queried (e.g. `movie`, `series`) |
+| `{metadata.title}`          | string   | Title of the media being queried                  |
+| `{metadata.runtime}`        | number   | Movie runtime in minutes                          |
+| `{metadata.episodeRuntime}` | number   | Episode runtime in minutes                        |
+| `{metadata.genres}`         | string[] | List of genres                                    |
+| `{metadata.year}`           | number   | Release year                                      |
+
+### Debug
+
+| Variable        | Type   | Description                            |
+| --------------- | ------ | -------------------------------------- |
+| `{debug.json}`  | string | Raw JSON of the stream data            |
+| `{debug.jsonf}` | string | Pretty-printed JSON of the stream data |
+
+---
+
+## Modifiers
+
+### String Modifiers
+
+| Modifier                           | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| `::upper`                          | Convert to UPPERCASE                              |
+| `::lower`                          | Convert to lowercase                              |
+| `::smallcaps`                      | Convert to ꜱᴍᴀʟʟ ᴄᴀᴘꜱ                             |
+| `::title`                          | Title Case (capitalise first letter of each word) |
+| `::replace('find', 'replaceWith')` | Replace all occurrences of `find`                 |
+| `::truncate(N)`                    | Truncate to `N` characters and append `…`         |
+| `::length`                         | Return length of the string                       |
+| `::reverse`                        | Reverse the string                                |
+
+### Number Modifiers
+
+| Modifier                  | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| `::bytes` / `::bytes10`   | Format as base-10 bytes (KB, MB, GB)           |
+| `::sbytes` / `::sbytes10` | Concise base-10 byte format                    |
+| `::bytes2`                | Format as base-2 bytes (KiB, MiB, GiB)         |
+| `::sbytes2`               | Concise base-2 byte format                     |
+| `::rbytes` / `::rbytes10` | Like `::bytes` but rounded                     |
+| `::rbytes2`               | Like `::bytes2` but rounded                    |
+| `::bitrate`               | Format as bitrate (Kbps, Mbps)                 |
+| `::rbitrate`              | Like `::bitrate` but rounded                   |
+| `::sbitrate`              | Concise bitrate (e.g. `5.2 Mbps`)              |
+| `::time`                  | Format seconds as `1h 30m`                     |
+| `::star`                  | Star rating ★ out of 5 from a 0–100 score      |
+| `::pstar`                 | Padded star rating (always 5 stars e.g. ★★★☆☆) |
+| `::hex`                   | Encode to hexadecimal                          |
+| `::octal`                 | Encode to octal                                |
+| `::binary`                | Encode to binary                               |
+| `::string`                | Convert to string                              |
+
+### Array Modifiers
+
+| Modifier              | Description                                            |
+| --------------------- | ------------------------------------------------------ |
+| `::join('separator')` | Join elements with separator                           |
+| `::slice(start, end)` | Return a section (end is optional)                     |
+| `::length`            | Number of elements                                     |
+| `::first`             | First element                                          |
+| `::last`              | Last element                                           |
+| `::random`            | Single random element                                  |
+| `::sort`              | Sort (alphabetical for strings, numerical for numbers) |
+| `::rsort`             | Reverse sort                                           |
+| `::lsort`             | Lexicographic sort (case-sensitive)                    |
+| `::reverse`           | Reverse order                                          |
+| `::string`            | Convert to string                                      |
+
+### Conditional Modifiers
+
+Conditionals evaluate to `true` or `false` and control what text is shown:
+
+```
+{variable.property::conditionalModifier["trueString"||"falseString"]}
+```
+
+**Example:** Show seeders only if greater than 1:
+
+```
+{stream.seeders::>1["Seeders: {stream.seeders}"||""]}
+```
+
+| Modifier  | Description                                       | Types                    |
+| --------- | ------------------------------------------------- | ------------------------ |
+| `istrue`  | Value is `true`                                   | `boolean`                |
+| `isfalse` | Value is `false`                                  | `boolean`                |
+| `exists`  | Not null, undefined, empty string, or empty array | `string`, `array`, `any` |
+| `$X`      | Starts with `X` / first array element is `X`      | `string`, `string[]`     |
+| `^X`      | Ends with `X` / last array element is `X`         | `string`, `string[]`     |
+| `~X`      | Contains `X`                                      | `string`, `string[]`     |
+| `=X`      | Exactly equal to `X`                              | `string`, `number`       |
+| `>=X`     | Greater than or equal to `X`                      | `number`                 |
+| `<=X`     | Less than or equal to `X`                         | `number`                 |
+| `>X`      | Greater than `X`                                  | `number`                 |
+| `<X`      | Less than `X`                                     | `number`                 |
+
+<Callout type="info">
+  Both `istrue` and `isfalse` evaluate to `false` when the property is `null` or `undefined`. To handle true/false/null separately, chain two conditionals:
+
+```
+{service.cached::istrue["Cached"||""]}{service.cached::isfalse["Uncached"||""]}
+```
+
+</Callout>
+
+---
+
+## Conditionals
+
+Chain multiple conditions together using `and`, `or`, or `xor`:
+
+```
+{var1::cond1::or::var2::cond2["trueString"||"falseString"]}
+```
+
+Conditions are evaluated **left to right**: `(x and y or z)` → `((x and y) or z)`.
+
+| Operator | Description                          |
+| -------- | ------------------------------------ |
+| `and`    | Both expressions must be true        |
+| `or`     | At least one expression must be true |
+| `xor`    | Exactly one expression must be true  |
+
+**Example:** Show seeders only when the stream is either uncached or a P2P torrent:
+
+```
+{service.cached::isfalse::or::stream.type::=p2p::and::stream.seeders::>0["Seeders: {stream.seeders}"||""]}
+```
+
+---
+
+## Tools
+
+Use formatting tools with `{tools.toolName}`:
+
+| Tool                 | Description                           |
+| -------------------- | ------------------------------------- |
+| `{tools.newLine}`    | Add a newline at this position        |
+| `{tools.removeLine}` | Remove the entire line wherever found |
+
+<Callout type="warn">
+  `{tools.newLine}` works in the formatter preview but how it renders in Stremio
+  is platform-dependent. Many platforms do not respect newlines in the `name`
+  field. Avoid building your name template around `{tools.newLine}`.
+</Callout>
+
+---
+
+## Chillio
+
+For **Chillio**, the `name` template maps to the ChillLink `title` field. The `description` template is split line-by-line into `metadata` strings — each line becomes a separate metadata entry.
+
+---
+
+## Examples
+
+Community-created formats are shared on the [Discord Server](https://discord.viren070.me/).
+
+You can also view the built-in formatter definitions at:
+[`packages/core/src/formatters/predefined.ts`](https://github.com/Viren070/AIOStreams/blob/main/packages/core/src/formatters/predefined.ts)
