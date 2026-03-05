@@ -349,14 +349,27 @@ export class StreamContext {
       }
 
       try {
-        let seasonNumber = Number(this.parsedId.season);
+        const originalSeason = Number(this.parsedId.season);
+        let seasonNumber = originalSeason;
         let episodeNumber = Number(this.parsedId.episode);
         if (this.isAnime && this.animeEntry) {
           seasonNumber = this.animeEntry.tmdb?.seasonNumber ?? seasonNumber;
           if (this.animeEntry.tmdb?.fromEpisode) {
-            episodeNumber =
-              Number(this.animeEntry.tmdb.fromEpisode) + episodeNumber - 1;
+            const fromEpisode = Number(this.animeEntry.tmdb.fromEpisode);
+            if (
+              seasonNumber !== originalSeason ||
+              episodeNumber < fromEpisode
+            ) {
+              episodeNumber = fromEpisode + episodeNumber - 1;
+            }
           }
+          logger.debug(`Resolved TMDB season/episode for episode details`, {
+            originalSeason,
+            originalEpisode: this.parsedId.episode,
+            tmdbSeason: seasonNumber,
+            tmdbEpisode: episodeNumber,
+            fromEpisode: this.animeEntry.tmdb?.fromEpisode,
+          });
         }
         return await new TMDBMetadata({
           accessToken: this.userData.tmdbAccessToken,

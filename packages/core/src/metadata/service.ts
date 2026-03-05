@@ -239,10 +239,16 @@ export class MetadataService {
                 let seasonNumber = Number(id.season);
                 let episodeNumber = Number(id.episode);
                 if (animeEntry) {
+                  const originalSeason = seasonNumber;
                   seasonNumber = animeEntry.tmdb?.seasonNumber ?? seasonNumber;
                   if (animeEntry.tmdb?.fromEpisode) {
-                    episodeNumber =
-                      Number(animeEntry.tmdb.fromEpisode) + episodeNumber - 1;
+                    const fromEpisode = Number(animeEntry.tmdb.fromEpisode);
+                    if (
+                      seasonNumber !== originalSeason ||
+                      episodeNumber < fromEpisode
+                    ) {
+                      episodeNumber = fromEpisode + episodeNumber - 1;
+                    }
                   }
                 }
                 if (tmdbId && seasons) {
