@@ -197,7 +197,7 @@ export class MeteorPreset extends Preset {
     );
 
     // When includeP2P is enabled, add a torrent service entry to tell Meteor to include P2P results
-    if (options.includeP2P) {
+    if (options.includeP2P || services.length === 0) {
       debridServices.push({ service: 'torrent', apiKey: '' });
     }
 
