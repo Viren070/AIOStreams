@@ -1616,13 +1616,31 @@ export class AIOStreams {
                     constants.BUILTIN_SUPPORTED_SERVICES as readonly string[]
                   ).includes(s.id)
               ),
+              presets: this.userData.presets?.map((p) =>
+                p.instanceId === preset.instanceId
+                  ? {
+                      ...p,
+                      options: {
+                        ...p.options,
+                        // only keep non-builtin specified services.
+                        services: p.options.services?.filter(
+                          (s: string) =>
+                            !(
+                              constants.BUILTIN_SUPPORTED_SERVICES as readonly string[]
+                            ).includes(s)
+                        ),
+                      },
+                    }
+                  : p
+              ),
             }
           : this.userData;
 
-        const addons = await Preset.generateAddons(
-          normalUserData,
-          preset.options
-        );
+        const options = shouldServiceWrap
+          ? { ...preset.options, services: [] }
+          : preset.options;
+
+        const addons = await Preset.generateAddons(normalUserData, options);
 
         // When service wrapping, don't add addons that fell into P2P mode
         // due to having no usable services — those would be unmarked duplicates
@@ -1666,9 +1684,10 @@ export class AIOStreams {
                   : p
               ),
             };
+            const p2pOptions = { ...preset.options, services: [] };
             const p2pAddons = await Preset.generateAddons(
               p2pUserData,
-              preset.options
+              p2pOptions
             );
             // Only keep addons that are actually P2P (not debrid addons from presets that don't care about services)
             this.addons.push(
