@@ -1489,6 +1489,17 @@ export class AIOStreams {
             const p2pUserData: UserData = {
               ...this.userData,
               services: [], // empty services → preset falls into P2P codepath
+              presets: this.userData.presets?.map((p) =>
+                p.instanceId === preset.instanceId
+                  ? {
+                      ...p,
+                      options: {
+                        ...p.options,
+                        services: [], // remove specified services to avoid errors.
+                      },
+                    }
+                  : p
+              ),
             };
             const p2pAddons = await Preset.generateAddons(
               p2pUserData,
