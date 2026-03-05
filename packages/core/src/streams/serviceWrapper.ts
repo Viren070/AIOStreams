@@ -315,6 +315,7 @@ function buildAndDeduplicateTorrents(streams: ParsedStream[]): Torrent[] {
       age: s.age,
       private: s.torrent?.private,
       group: s.parsedFile?.releaseGroup,
+      confirmed: true,
       duration: s.duration,
     }));
 
