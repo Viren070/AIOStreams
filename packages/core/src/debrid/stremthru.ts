@@ -327,7 +327,9 @@ export class StremThruService
           id: -1,
           hash: item.hash,
           status: item.status,
-          size: item.files.reduce((acc, file) => acc + file.size, 0),
+          size: Math.round(
+            item.files.reduce((acc, file) => acc + file.size, 0)
+          ),
           files: item.files.map((file) => ({
             name: file.name,
             size: file.size,
