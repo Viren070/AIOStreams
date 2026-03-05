@@ -97,6 +97,7 @@ export interface ParseValue {
     indexer: string | null;
     year: string | null;
     title: string | null;
+    date: string | null;
     folderSeasons: number[] | null;
     formattedFolderSeasons: string | null;
     seasons: number[] | null;
@@ -409,6 +410,7 @@ export abstract class BaseFormatter {
         year: stream.parsedFile?.year || null,
         type: stream.type || null,
         title: stream.parsedFile?.title || null,
+        date: stream.parsedFile?.date || null,
         season: stream.parsedFile?.seasons?.[0] || null,
         formattedSeasons: formattedSeasonString || null,
         seasons: stream.parsedFile?.seasons || null,
@@ -897,17 +899,17 @@ export abstract class BaseFormatter {
           // Extract options from remove("...", "...", ...)
           const regex = /"([^"]*)"|'([^']*)'/g;
           const args: string[] = [];
-          
+
           let match;
           while ((match = regex.exec(content)) !== null) {
-             args.push(match[1] ?? match[2] ?? '');
+            args.push(match[1] ?? match[2] ?? '');
           }
 
           if (args.length === 0) return undefined;
-          
+
           let result = variable;
           for (const arg of args) {
-             if (arg) result = result.replaceAll(arg, '');
+            if (arg) result = result.replaceAll(arg, '');
           }
           return result;
         }
@@ -962,10 +964,10 @@ export abstract class BaseFormatter {
           // Extract options from remove("...", "...", ...)
           const regex = /"([^"]*)"|'([^']*)'/g;
           const args: string[] = [];
-          
+
           let match;
           while ((match = regex.exec(content)) !== null) {
-             args.push(match[1] ?? match[2] ?? '');
+            args.push(match[1] ?? match[2] ?? '');
           }
 
           if (args.length === 0) return undefined;

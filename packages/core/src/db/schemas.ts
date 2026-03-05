@@ -891,6 +891,7 @@ export const ParsedFileSchema = z.object({
   volumes: z.array(z.number()).optional(),
   folderSeasons: z.array(z.number()).optional(),
   folderEpisodes: z.array(z.number()).optional(),
+  date: z.string().optional(),
   episodes: z.array(z.number()).optional(),
   editions: z.array(z.string()).optional(),
   regraded: z.boolean().optional(),

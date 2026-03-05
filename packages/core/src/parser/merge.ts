@@ -92,6 +92,7 @@ export function mergeParsedFiles(
       episodes !== folderParsed?.episodes ? folderParsed?.episodes : undefined,
     seasons,
     episodes,
+    date: fileParsed?.date || folderParsed?.date,
     resolution: fileParsed?.resolution || folderParsed?.resolution,
     quality: fileParsed?.quality || folderParsed?.quality,
     encode: fileParsed?.encode || folderParsed?.encode,

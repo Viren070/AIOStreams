@@ -188,6 +188,7 @@ class FileParser {
       seasons: parsed.seasons,
       volumes: parsed.volumes,
       episodes: parsed.episodes,
+      date: parsed.date,
       seasonPack: !!(parsed.seasons?.length && !parsed.episodes?.length),
     };
   }
