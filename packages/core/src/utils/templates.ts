@@ -112,7 +112,7 @@ export class TemplateManager {
       return { templates: [], detected: 0, loaded: 0, errors: [] };
     }
     const errors: { file: string; error: string }[] = [];
-    const entries = fs.readdirSync(dirPath);
+    const entries = fs.readdirSync(dirPath, { recursive: true }) as string[];
     const templateList: Template[] = [];
     for (const file of entries) {
       const filePath = path.join(dirPath, file);
