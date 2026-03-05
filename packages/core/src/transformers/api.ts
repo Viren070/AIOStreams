@@ -7,6 +7,7 @@ import {
   UserData,
 } from '../db/index.js';
 import { AIOStreamsResponse } from '../main.js';
+import { generateBingeGroup } from './utils.js';
 
 export interface SearchApiResponseData {
   results: SearchApiResult[];
@@ -31,6 +32,7 @@ const SearchApiResultSchema = z.object({
   nzbUrl: z.string().nullable(),
   rarUrls: z.array(SourceSchema).nullable(),
   '7zipUrls': z.array(SourceSchema).nullable(),
+  zipUrls: z.array(SourceSchema).nullable(),
   tarUrls: z.array(SourceSchema).nullable(),
   tgzUrls: z.array(SourceSchema).nullable(),
   proxied: z.boolean(),
@@ -44,12 +46,21 @@ const SearchApiResultSchema = z.object({
   indexer: z.string().nullable(),
   addon: z.string().nullable(),
   duration: z.number().nullable(),
+  bitrate: z.number().nullable(),
   videoHash: z.string().nullable(),
   subtitles: z.array(SubtitleSchema),
   countryWhitelist: z.array(z.string()),
   requestHeaders: z.partialRecord(z.string(), z.string()),
   responseHeaders: z.partialRecord(z.string(), z.string()),
   parsedFile: ParsedFileSchema.optional(),
+  service: z.string().nullable(),
+  cached: z.boolean().nullable(),
+  servers: z.array(z.string()).nullable(),
+  notWebReady: z.boolean().nullable(),
+  bingeGroup: z.string().nullable(),
+  private: z.boolean().nullable(),
+  seadexBest: z.boolean().nullable(),
+  seadex: z.boolean().nullable(),
 });
 
 export type SearchApiResult = z.infer<typeof SearchApiResultSchema>;
@@ -70,12 +81,13 @@ export class ApiTransformer {
     const { data, errors } = response;
     let filteredCount = 0;
     const results: SearchApiResult[] = data.streams
-      .map((stream: ParsedStream) => ({
+      .map((stream: ParsedStream, index: number) => ({
         infoHash: stream.torrent?.infoHash ?? null,
         url: stream.url ?? null,
         nzbUrl: stream.nzbUrl ?? null,
         rarUrls: stream.rarUrls ?? null,
         '7zipUrls': stream['7zipUrls'] ?? null,
+        zipUrls: stream.zipUrls ?? null,
         tarUrls: stream.tarUrls ?? null,
         tgzUrls: stream.tgzUrls ?? null,
         seeders: stream.torrent?.seeders ?? null,
@@ -95,12 +107,21 @@ export class ApiTransformer {
         type: stream.type ?? '',
         indexer: stream.indexer ?? null,
         duration: stream.duration ?? null,
+        bitrate: stream.bitrate ?? null,
         videoHash: stream.videoHash ?? null,
         subtitles: stream.subtitles ?? [],
         countryWhitelist: stream.countryWhitelist ?? [],
         requestHeaders: stream.requestHeaders ?? {},
         responseHeaders: stream.responseHeaders ?? {},
         parsedFile: stream.parsedFile,
+        service: stream.service?.id ?? null,
+        cached: stream.service?.cached ?? null,
+        servers: stream.servers ?? null,
+        notWebReady: stream.notWebReady ?? null,
+        bingeGroup: generateBingeGroup(stream, index, this.userData) ?? null,
+        private: stream.torrent?.private ?? null,
+        seadexBest: stream.seadex?.isBest ?? null,
+        seadex: stream.seadex?.isSeadex ?? null,
       }))
       ?.filter((result) => {
         const hasRequiredFields = requiredFields.every(

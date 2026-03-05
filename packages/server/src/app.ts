@@ -5,14 +5,14 @@ import {
   statusApi,
   formatApi,
   catalogApi,
-  rpdbApi,
-  topPosterApi,
+  postersApi,
   gdriveApi,
   debridApi,
   searchApi,
   animeApi,
   proxyApi,
   templatesApi,
+  syncApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -39,6 +39,7 @@ import {
   torrentGalaxy,
   seadex,
   easynews,
+  library,
 } from './routes/builtins/index.js';
 import {
   ipMiddleware,
@@ -72,6 +73,7 @@ export enum StaticFiles {
   UNAUTHORIZED = '401.mp4',
   NO_MATCHING_FILE = 'no_matching_file.mp4',
   PAYMENT_REQUIRED = 'payment_required.mp4',
+  OK = '200.mp4',
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -98,8 +100,7 @@ apiRouter.use('/health', healthApi);
 apiRouter.use('/status', statusApi);
 apiRouter.use('/format', formatApi);
 apiRouter.use('/catalogs', catalogApi);
-apiRouter.use('/rpdb', rpdbApi);
-apiRouter.use('/top-poster', topPosterApi);
+apiRouter.use('/posters', postersApi);
 apiRouter.use('/oauth/exchange/gdrive', gdriveApi);
 apiRouter.use('/debrid', debridApi);
 if (Env.ENABLE_SEARCH_API) {
@@ -108,6 +109,7 @@ if (Env.ENABLE_SEARCH_API) {
 apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
+apiRouter.use('/sync', syncApi);
 app.use(`/api/v${constants.API_VERSION}`, apiRouter);
 
 // Stremio Routes
@@ -161,6 +163,7 @@ builtinsRouter.use('/eztv', eztv);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
 builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
+builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
 
 app.get('/logo.png', staticRateLimiter, (req, res, next) => {

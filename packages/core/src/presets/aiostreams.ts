@@ -68,7 +68,12 @@ class AIOStreamsStreamParser extends StreamParser {
       torrent: aioStream.streamData?.torrent,
       parsedFile: aioStream.streamData?.parsedFile,
       keywordMatched: aioStream.streamData?.keywordMatched,
-      streamExpressionMatched: aioStream.streamData?.streamExpressionMatched,
+      streamExpressionMatched:
+        typeof aioStream.streamData?.streamExpressionMatched === 'number'
+          ? {
+              index: aioStream.streamData?.streamExpressionMatched,
+            }
+          : aioStream.streamData?.streamExpressionMatched,
       regexMatched: aioStream.streamData?.regexMatched,
       seadex: aioStream.streamData?.seadex,
       originalName: aioStream.name ?? undefined,
@@ -172,13 +177,17 @@ export class AIOStreamsPreset extends Preset {
         showInSimpleMode: false,
       },
       {
-        id: 'forceToTop',
-        name: 'Force to Top',
+        id: 'pinPosition',
+        name: 'Pin Position',
         description:
-          'Whether to force results from this addon to be pushed to the top of the stream list.',
-        type: 'boolean',
+          'Pin streams from this addon to the top or bottom of the stream list. This will override the default sorting and place all streams from this addon either at the top or bottom, depending on your selection.',
+        type: 'select',
         required: false,
-        default: false,
+        default: undefined,
+        options: [
+          { label: 'Top', value: 'top' },
+          { label: 'Bottom', value: 'bottom' },
+        ],
         showInSimpleMode: false,
       },
     ];
@@ -224,7 +233,7 @@ export class AIOStreamsPreset extends Preset {
       timeout: options.timeout || this.METADATA.TIMEOUT,
       resultPassthrough: options.resultPassthrough ?? false,
       formatPassthrough: options.formatPassthrough ?? false,
-      forceToTop: options.forceToTop ?? false,
+      pinPosition: options.pinPosition || undefined,
       mediaTypes: options.mediaTypes || [],
       preset: {
         id: '',

@@ -6,7 +6,8 @@ import React from 'react';
 
 type PageWrapperProps = {
   children?: React.ReactNode;
-} & React.ComponentPropsWithoutRef<'div'>;
+} & React.ComponentPropsWithoutRef<'div'> &
+  React.ComponentPropsWithoutRef<typeof motion.div>;
 
 export function PageWrapper(props: PageWrapperProps) {
   const { children, className, ...rest } = props;

@@ -3,11 +3,12 @@ import {
   Env,
   getEnvironmentServiceDetails,
   PresetManager,
+  SelAccess,
   UserRepository,
 } from '@aiostreams/core';
 import { StatusResponse } from '@aiostreams/core';
 import { encryptString } from '@aiostreams/core';
-import { FeatureControl } from '@aiostreams/core';
+import { RegexAccess, FeatureControl } from '@aiostreams/core';
 import { createResponse } from '../../utils/responses.js';
 
 const router: Router = Router();
@@ -23,9 +24,12 @@ const statusInfo = async (): Promise<StatusResponse> => {
     forcedPublicProxyUrl = `${Env.FORCE_PUBLIC_PROXY_PROTOCOL}://${Env.FORCE_PUBLIC_PROXY_HOST}:${Env.FORCE_PUBLIC_PROXY_PORT ?? ''}`;
   }
 
+  const allowedRegexes = await RegexAccess.allowedRegexPatterns();
+
   return {
     version: Env.VERSION,
     tag: Env.TAG,
+    channel: Env.CHANNEL as 'stable' | 'nightly' | 'dev',
     commit: Env.GIT_COMMIT,
     buildTime: Env.BUILD_TIME,
     commitTime: Env.BUILD_COMMIT_TIME,
@@ -34,19 +38,21 @@ const statusInfo = async (): Promise<StatusResponse> => {
       baseUrl: Env.BASE_URL,
       addonName: Env.ADDON_NAME,
       customHtml: Env.CUSTOM_HTML,
+      featuredTemplateIds:
+        Env.FEATURED_TEMPLATE_IDS.length > 0
+          ? Env.FEATURED_TEMPLATE_IDS.slice(0, 2)
+          : undefined,
       alternateDesign: Env.ALTERNATE_DESIGN,
       protected: Env.ADDON_PASSWORD.length > 0,
       tmdbApiAvailable: !!Env.TMDB_ACCESS_TOKEN,
-      regexFilterAccess: Env.REGEX_FILTER_ACCESS,
-      allowedRegexPatterns:
-        (await FeatureControl.allowedRegexPatterns()).patterns.length > 0
-          ? {
-              patterns: (await FeatureControl.allowedRegexPatterns()).patterns,
-              description: (await FeatureControl.allowedRegexPatterns())
-                .description,
-              urls: Env.ALLOWED_REGEX_PATTERNS_URLS || [],
-            }
-          : undefined,
+      regexAccess: {
+        level: Env.REGEX_FILTER_ACCESS,
+        ...allowedRegexes,
+      },
+      selSyncAccess: {
+        level: Env.SEL_SYNC_ACCESS,
+        trustedUrls: SelAccess.getAllowedUrls(),
+      },
       loggingSensitiveInfo: Env.LOG_SENSITIVE_INFO,
       forced: {
         proxy: {
@@ -98,6 +104,12 @@ const statusInfo = async (): Promise<StatusResponse> => {
       services: getEnvironmentServiceDetails(),
       limits: {
         maxMergedCatalogSources: Env.MAX_MERGED_CATALOG_SOURCES,
+        maxStreamExpressions: Env.MAX_STREAM_EXPRESSIONS,
+        maxStreamExpressionsTotalCharacters:
+          Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS,
+        maxAddons: Env.MAX_ADDONS,
+        maxNzbFailoverCount: Env.MAX_NZB_FAILOVER_COUNT,
+        maxBackgroundPings: Env.MAX_BACKGROUND_PINGS,
       },
     },
   };

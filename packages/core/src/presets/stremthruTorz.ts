@@ -232,6 +232,10 @@ export class StremthruTorzPreset extends StremThruPreset {
     // Generate configuration string
     const configString = this.generateConfigString(serviceIds, userData);
 
+    if (!baseUrl.endsWith('/stremio/torz')) {
+      baseUrl += '/stremio/torz';
+    }
+
     // Build final manifest URL
     return `${baseUrl}${configString ? '/' + configString : ''}/manifest.json`;
   }

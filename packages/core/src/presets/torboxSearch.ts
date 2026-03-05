@@ -10,61 +10,15 @@ import { baseOptions } from './preset.js';
 import { Env, SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
+import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import { StremThruPreset } from './stremthru.js';
 
-export class TorboxSearchParser extends StreamParser {
-  override getFolder(stream: Stream): string | undefined {
-    if (!stream.description) {
-      return undefined;
-    }
-    const folderName = stream.description.split('\n')[0];
-    return folderName.trim() || undefined;
-  }
+export class TorBoxSearchPreset extends BuiltinAddonPreset {
+  public static readonly supportedServices: ServiceId[] =
+    StremThruPreset.supportedServices;
 
-  protected getError(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): ParsedStream['error'] | undefined {
-    if (stream.name?.startsWith('[❌]')) {
-      return {
-        title: stream.name.replace('[❌]', ''),
-        description: stream.description || 'Unknown error',
-      };
-    }
-    return undefined;
-  }
-  protected parseServiceData(
-    string: string
-  ): ParsedStream['service'] | undefined {
-    return super.parseServiceData(string.replace('TorBox', ''));
-  }
-
-  protected getInLibrary(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): boolean {
-    return stream.name?.includes('☁️') ?? false;
-  }
-
-  protected getAge(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): number | undefined {
-    return stream.age as number | undefined;
-  }
-
-  protected getStreamType(
-    stream: Stream,
-    service: ParsedStream['service'],
-    currentParsedStream: ParsedStream
-  ): ParsedStream['type'] {
-    return (stream as any).type === 'usenet' ? 'usenet' : 'debrid';
-  }
-}
-
-export class TorBoxSearchPreset extends StremThruPreset {
   static override getParser(): typeof StreamParser {
-    return TorboxSearchParser;
+    return BuiltinStreamParser;
   }
 
   static override get METADATA() {
@@ -111,7 +65,7 @@ export class TorBoxSearchPreset extends StremThruPreset {
         type: 'multi-select',
         required: false,
         showInSimpleMode: false,
-        options: StremThruPreset.supportedServices.map((service) => ({
+        options: TorBoxSearchPreset.supportedServices.map((service) => ({
           value: service,
           label: constants.SERVICE_DETAILS[service].name,
         })),
@@ -179,7 +133,7 @@ export class TorBoxSearchPreset extends StremThruPreset {
       TIMEOUT: Env.BUILTIN_TORBOX_SEARCH_TIMEOUT || Env.DEFAULT_TIMEOUT,
       USER_AGENT:
         Env.BUILTIN_TORBOX_SEARCH_USER_AGENT || Env.DEFAULT_USER_AGENT,
-      SUPPORTED_SERVICES: StremThruPreset.supportedServices,
+      SUPPORTED_SERVICES: TorBoxSearchPreset.supportedServices,
       REQUIRES_SERVICE: true,
       DESCRIPTION:
         'Unofficial debrid/usenet addon for the TorBox Search API, with support for multiple services.',
@@ -266,17 +220,11 @@ export class TorBoxSearchPreset extends StremThruPreset {
     }
 
     const config = {
+      ...this.getBaseConfig(userData, services),
       sources: sources,
       torBoxApiKey: torboxApiKey,
       searchUserEngines: options.userSearchEngines,
-      tmdbAccessToken: userData.tmdbAccessToken,
       onlyShowUserSearchResults: options.onlyShowUserSearchResults ?? false,
-      services: services.map((service) => ({
-        id: service,
-        credential: this.getServiceCredential(service, userData),
-      })),
-      cacheAndPlay: userData.cacheAndPlay,
-      autoRemoveDownloads: userData.autoRemoveDownloads,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

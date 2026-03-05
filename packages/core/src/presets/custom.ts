@@ -72,6 +72,20 @@ export class CustomPreset extends Preset {
         ],
       },
       {
+        id: 'pinPosition',
+        name: 'Pin Position',
+        description:
+          'Pin streams from this addon to the top or bottom of the stream list. This will override the default sorting and place all streams from this addon either at the top or bottom, depending on your selection.',
+        type: 'select',
+        required: false,
+        default: undefined,
+        options: [
+          { label: 'Top', value: 'top' },
+          { label: 'Bottom', value: 'bottom' },
+        ],
+        showInSimpleMode: false,
+      },
+      {
         id: 'libraryAddon',
         name: 'Library Addon',
         description:
@@ -92,15 +106,6 @@ export class CustomPreset extends Preset {
         name: 'Result Passthrough',
         description:
           'If enabled, all results from this addon will never be filtered out and always included in the final stream list.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        id: 'forceToTop',
-        name: 'Force to Top',
-        description:
-          'Whether to force results from this addon to be pushed to the top of the stream list.',
         type: 'boolean',
         required: false,
         default: false,
@@ -164,7 +169,7 @@ export class CustomPreset extends Preset {
       formatPassthrough:
         options.formatPassthrough ?? options.streamPassthrough ?? false,
       resultPassthrough: options.resultPassthrough ?? false,
-      forceToTop: options.forceToTop ?? false,
+      pinPosition: options.pinPosition || undefined,
       headers: {
         'User-Agent': this.METADATA.USER_AGENT,
       },

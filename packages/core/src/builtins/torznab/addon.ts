@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { ParsedId } from '../../utils/id-parser.js';
 import { createLogger } from '../../utils/index.js';
 import { Torrent, NZB, UnprocessedTorrent } from '../../debrid/index.js';
-import { SearchMetadata } from '../base/debrid';
 import {
   extractTrackersFromMagnet,
   validateInfoHash,
@@ -12,6 +11,7 @@ import {
   BaseNabAddon,
   NabAddonConfigSchema,
   NabAddonConfig,
+  parseNabLanguages,
 } from '../base/nab/addon.js';
 
 const logger = createLogger('torznab');
@@ -41,9 +41,9 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
+    const metadata = await this.getSearchMetadata();
     const { results, meta } = await this.performSearch(parsedId, metadata);
     const seenTorrents = new Set<string>();
 
@@ -60,6 +60,13 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
       if (seenTorrents.has(infoHash ?? downloadUrl!)) continue;
       seenTorrents.add(infoHash ?? downloadUrl!);
 
+      const languages = [
+        ...(result.torznab?.language
+          ? parseNabLanguages(result.torznab.language)
+          : []),
+        ...(result.torznab?.subs ? parseNabLanguages(result.torznab.subs) : []),
+      ];
+
       torrents.push({
         confirmed: meta.searchType === 'id',
         hash: infoHash,
@@ -72,22 +79,24 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
           ![-1, 999].includes(result.torznab.seeders)
             ? result.torznab.seeders
             : undefined,
+        downloadvolumefactor:
+          typeof result.torznab?.downloadvolumefactor === 'number'
+            ? result.torznab.downloadvolumefactor
+            : undefined,
         indexer: result.jackettindexer?.name ?? undefined,
         title: result.title,
         size:
           result.size ??
           (result.torznab?.size ? Number(result.torznab.size) : 0),
         type: 'torrent',
+        ...(languages.length > 0 && { languages }),
       });
     }
 
     return torrents;
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(_parsedId: ParsedId): Promise<NZB[]> {
     // This addon does not support NZBs, so we return an empty array.
     return [];
   }

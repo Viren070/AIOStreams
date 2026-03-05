@@ -11,7 +11,6 @@ export {
   GDriveAddon,
   GoogleOAuth,
   GDriveAPI,
-  TorBoxSearchAddonError,
   TorznabAddon,
   NewznabAddon,
   ProwlarrAddon,
@@ -23,6 +22,16 @@ export {
   EasynewsAuthSchema,
   EasynewsNzbParamsSchema,
   EasynewsApi,
-  EasynewsNzbParams,
+  type EasynewsNzbParams,
+  SeaDexDataset,
+  LibraryAddon,
+  preWarmLibraryCaches,
+  refreshLibraryCacheForService,
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';
+export {
+  populateNzbFallbacks,
+  getNzbFallbacks,
+  isNzbRetryableError,
+} from './streams/nzbFailover.js';
+export type { NzbFallback } from './streams/nzbFailover.js';

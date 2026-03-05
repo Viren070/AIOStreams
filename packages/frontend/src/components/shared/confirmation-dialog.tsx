@@ -6,7 +6,7 @@ import React from 'react';
 
 type ConfirmationDialogHookProps = {
   title: string;
-  description?: string;
+  description?: string | React.ReactNode;
   actionText?: string;
   actionIntent?: ButtonProps['intent'];
   onConfirm: () => void;

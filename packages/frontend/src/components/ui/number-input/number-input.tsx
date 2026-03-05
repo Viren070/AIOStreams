@@ -207,11 +207,12 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       name: basicFieldProps.name,
       disabled: basicFieldProps.disabled,
       readOnly: basicFieldProps.readonly,
-      value: controlledValue
-        ? String(controlledValue)
-        : defaultValue
-          ? String(defaultValue)
-          : undefined,
+      value:
+        controlledValue !== undefined && controlledValue !== null
+          ? String(controlledValue)
+          : defaultValue !== undefined && defaultValue !== null
+            ? String(defaultValue)
+            : undefined,
       min,
       max,
       step,

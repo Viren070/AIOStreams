@@ -6,18 +6,20 @@ import { Meta, MetaSchema } from '../db/schemas.js';
 const IMDBSuggestionSchema = z.object({
   d: z.array(
     z.object({
-      i: z.object({
-        height: z.number(),
-        imageUrl: z.string(),
-        width: z.number(),
-      }),
+      i: z
+        .object({
+          height: z.number(),
+          imageUrl: z.string(),
+          width: z.number(),
+        })
+        .optional(),
       id: z.string(),
       l: z.string(), // title
-      q: z.string(), // 'feature' |
-      qid: z.string(), // e.g. 'movie',
-      rank: z.number(),
+      q: z.string().optional(), // 'feature' |
+      qid: z.string().optional(), // e.g. 'movie',
+      rank: z.number().optional(),
       s: z.string(), // comma separated cast
-      y: z.number(), // year
+      y: z.number().optional(), // year
       yr: z.string().optional(),
     })
   ),

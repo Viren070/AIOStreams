@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch",
+    "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "tsc",
     "prepublish": "npm run build"
   },
@@ -15,12 +16,12 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "rate-limit-redis": "^4.3.1",
-    "undici": "^7.16.0",
-    "zod": "^4.1.13"
+    "undici": "^7.21.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/express-rate-limit": "^5.1.3",
-    "@types/node": "^20.19.26"
+    "@types/node": "^20.19.32"
   }
 }

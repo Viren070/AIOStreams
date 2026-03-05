@@ -1,4 +1,5 @@
 import { createLogger } from './logger.js';
+import { Time } from './time.js';
 import path from 'path';
 import { Addon, Preset } from '../db/schemas.js';
 import { parseConnectionURI } from '../db/utils.js';
@@ -87,7 +88,7 @@ export async function withRetry<T>(
 export interface TimeoutOptions {
   /**
    * Timeout duration in milliseconds
-   * @default 5000
+   * @default Time.Second * 5
    */
   timeout?: number;
   /**
@@ -114,7 +115,7 @@ export async function withTimeout<T>(
   fallback: T,
   options: TimeoutOptions = {}
 ): Promise<T> {
-  const { timeout = 5000, shouldProceed, getContext } = options;
+  const { timeout = 5 * Time.Second, shouldProceed, getContext } = options;
 
   // Check if operation should proceed
   if (shouldProceed && !shouldProceed()) {

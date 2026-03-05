@@ -115,6 +115,21 @@ export class TorznabPreset extends BuiltinAddonPreset {
         ],
       },
       {
+        id: 'initialLimit',
+        name: 'Initial Result Limit',
+        description:
+          "Sets the maximum results to return. Leave blank to use the optimal default limit. Only use this if you need to restrict results.",
+        type: 'number',
+        required: false,
+        showInSimpleMode: false,
+        default: undefined,
+        constraints: {
+          min: 1,
+          max: 10000,
+          forceInUi: false,
+        },
+      },
+      {
         id: 'paginate',
         name: 'Paginate Results',
         description:
@@ -214,7 +229,6 @@ export class TorznabPreset extends BuiltinAddonPreset {
       formatPassthrough:
         options.formatPassthrough ?? options.streamPassthrough ?? false,
       resultPassthrough: options.resultPassthrough ?? false,
-      forceToTop: options.forceToTop ?? false,
       headers: {
         'User-Agent': this.METADATA.USER_AGENT,
       },
@@ -232,6 +246,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
       apiPath: options.apiPath,
       apiKey: options.apiKey,
       forceQuerySearch: options.forceQuerySearch ?? false,
+      forceInitialLimit: options.initialLimit,
       paginate: options.paginate ?? false,
     };
 

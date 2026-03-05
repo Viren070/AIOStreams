@@ -36,6 +36,7 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
       constants.EASYNEWS_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
     ] as ServiceId[];
 
     const options: Option[] = [
@@ -214,7 +215,6 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       formatPassthrough:
         options.formatPassthrough ?? options.streamPassthrough ?? false,
       resultPassthrough: options.resultPassthrough ?? false,
-      forceToTop: options.forceToTop ?? false,
       headers: {
         'User-Agent': this.METADATA.USER_AGENT,
       },

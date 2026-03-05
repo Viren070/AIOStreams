@@ -8,3 +8,4 @@ export { default as eztv } from './eztv.js';
 export { default as torrentGalaxy } from './torrent-galaxy.js';
 export { default as seadex } from './seadex.js';
 export { default as easynews } from './easynews.js';
+export { default as library } from './library.js';

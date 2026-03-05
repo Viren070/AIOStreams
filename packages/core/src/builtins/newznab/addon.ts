@@ -8,12 +8,13 @@ import {
   TorrentWithSelectedFile,
 } from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
-import { createHash } from 'crypto';
+import { hashNzbUrl } from '../../debrid/utils.js';
 import { BaseNabApi, SearchResultItem } from '../base/nab/api.js';
 import {
   BaseNabAddon,
   NabAddonConfigSchema,
   NabAddonConfig,
+  parseNabLanguages,
 } from '../base/nab/addon.js';
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 import type { BuiltinServiceId } from '../../utils/index.js';
@@ -70,6 +71,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
             constants.NZBDAV_SERVICE,
             constants.ALTMOUNT_SERVICE,
             constants.STREMIO_NNTP_SERVICE,
+            constants.STREMTHRU_NEWZ_SERVICE,
           ].includes(s.id)
       )
     ) {
@@ -155,10 +157,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     };
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
+    const metadata = await this.getSearchMetadata();
     const { results, meta } = await this.performSearch(parsedId, metadata);
     const seenNzbs = new Set<string>();
 
@@ -171,9 +171,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       seenNzbs.add(nzbUrl);
 
       const zyclopsHealth = result.newznab?.zyclopsHealth?.toString();
-      const md5 =
-        result.newznab?.infohash?.toString() ||
-        createHash('md5').update(nzbUrl).digest('hex');
+      const md5 = result.newznab?.infohash?.toString() || hashNzbUrl(nzbUrl);
+
       let date = result.pubDate?.toString();
       if (typeof result.newznab?.usenetdate === 'string') {
         date = result.newznab.usenetdate;
@@ -182,7 +181,12 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         Math.abs(new Date().getTime() - new Date(date).getTime()) /
           (1000 * 60 * 60)
       );
-
+      const languages = [
+        ...(result.newznab?.language
+          ? parseNabLanguages(result.newznab.language)
+          : []),
+        ...(result.newznab?.subs ? parseNabLanguages(result.newznab.subs) : []),
+      ];
       const nzb: NZB = {
         confirmed: meta.searchType === 'id',
         hash: md5,
@@ -198,6 +202,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           enclosure?.length ??
           0,
         type: 'usenet',
+        ...(languages.length > 0 && { languages }),
       };
 
       if (zyclopsHealth) {
@@ -240,16 +245,13 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       }
       for (let i = 0; i < nzbs.length; i++) {
         nzbs[i].nzb = proxiedUrls[i];
-        nzbs[i].hash = createHash('md5').update(nzbs[i].nzb).digest('hex');
+        nzbs[i].hash = hashNzbUrl(nzbs[i].nzb);
       }
     }
     return nzbs;
   }
 
-  protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<Torrent[]> {
+  protected async _searchTorrents(_parsedId: ParsedId): Promise<Torrent[]> {
     return [];
   }
 

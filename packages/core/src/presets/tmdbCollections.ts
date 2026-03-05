@@ -880,7 +880,10 @@ export class TmdbCollectionsPreset extends Preset {
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
       timeout: options.timeout || this.METADATA.TIMEOUT,
-      forceToTop: options.moveStreamLinkToTop ?? true,
+      pinPosition:
+        (options.moveStreamLinkToTop ?? true)
+          ? 'top'
+          : options.pinPosition || undefined,
       resultPassthrough: true,
       preset: {
         id: '',

@@ -37,7 +37,7 @@ export class UserRepository {
         !Env.ADDON_PASSWORD.includes(config.addonPassword || '')
       ) {
         return Promise.reject(
-          new APIError(constants.ErrorCode.USER_INVALID_DETAILS)
+          new APIError(constants.ErrorCode.ADDON_PASSWORD_INVALID)
         );
       }
       config.trusted = false;
@@ -191,6 +191,7 @@ export class UserRepository {
       decryptedConfig.trusted =
         Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
         false;
+      decryptedConfig.uuid = uuid;
       decryptedConfig.ip = undefined;
       logger.info(`Retrieved configuration for user ${uuid}`);
       return applyMigrations(decryptedConfig);
@@ -225,11 +226,7 @@ export class UserRepository {
           Env.ADDON_PASSWORD.length > 0 &&
           !Env.ADDON_PASSWORD.includes(config.addonPassword || '')
         ) {
-          throw new APIError(
-            constants.ErrorCode.USER_INVALID_DETAILS,
-            undefined,
-            'Invalid password'
-          );
+          throw new APIError(constants.ErrorCode.ADDON_PASSWORD_INVALID);
         }
         config.trusted =
           Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??

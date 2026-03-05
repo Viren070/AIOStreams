@@ -214,10 +214,10 @@ export class GDriveAddon {
           parsedId.value.toString(),
           type
         );
-        titles = metadata.titles ?? [metadata.title];
+        titles = metadata.titles?.map((t) => t.title) ?? [metadata.title];
         const traktAliases = await getTraktAliases(parsedId);
         if (traktAliases) {
-          titles.push(...traktAliases);
+          titles.push(...traktAliases.map((t) => t.title));
         }
         titles = [...new Set(titles)];
         year = metadata.year;
@@ -231,12 +231,12 @@ export class GDriveAddon {
           accessToken: this.userData.tmdbReadAccessToken,
         });
         const metadata = await tmdbMetadata.getMetadata(parsedId);
-        titles = metadata.titles ?? [metadata.title];
+        titles = metadata.titles?.map((t) => t.title) ?? [metadata.title];
         year = Number(metadata.year);
         if (parsedId.type === 'imdbId') {
           const traktAliases = await getTraktAliases(parsedId);
           if (traktAliases) {
-            titles.push(...traktAliases);
+            titles.push(...traktAliases.map((t) => t.title));
           }
           titles = [...new Set(titles)];
         }

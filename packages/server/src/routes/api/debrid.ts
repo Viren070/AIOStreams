@@ -20,6 +20,10 @@ import {
   getSimpleTextHash,
   FileInfo,
   maskSensitiveInfo,
+  getNzbFallbacks,
+  isNzbRetryableError,
+  DistributedLock,
+  type NzbFallback,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import { StaticFiles } from '../../app.js';
@@ -109,7 +113,7 @@ router.get(
 
       const metadata: TitleMetadata | undefined =
         await metadataStore().get(metadataId);
-      if (!metadata) {
+      if (!metadata && !fileInfo.serviceItemId) {
         throw new APIError(
           constants.ErrorCode.BAD_REQUEST,
           undefined,
@@ -124,21 +128,27 @@ router.get(
           ? {
               type: 'torrent',
               metadata: metadata,
+              title: fileInfo.title,
               downloadUrl: fileInfo.downloadUrl,
               hash: fileInfo.hash,
               private: fileInfo.private,
               sources: fileInfo.sources,
               index: fileInfo.index,
               filename: filename,
+              fileIndex: fileInfo.fileIndex,
+              serviceItemId: fileInfo.serviceItemId,
             }
           : {
               type: 'usenet',
               metadata: metadata,
+              title: fileInfo.title,
               hash: fileInfo.hash,
               nzb: fileInfo.nzb,
               easynewsUrl: fileInfo.easynewsUrl,
               index: fileInfo.index,
               filename: filename,
+              fileIndex: fileInfo.fileIndex,
+              serviceItemId: fileInfo.serviceItemId,
             };
 
       const debridInterface = getDebridService(
@@ -147,22 +157,121 @@ router.get(
         req.userIp
       );
 
+      const fbk = req.query.fbk as string | undefined;
+      const nzbFallbacks: NzbFallback[] = fbk ? await getNzbFallbacks(fbk) : [];
+
+      logger.debug(`Attempting debrid resolve`, {
+        storeAuthId: storeAuth.id,
+        fallbacks: nzbFallbacks.length,
+      });
+
+      const attempts: Array<NzbFallback | null> = [null, ...nzbFallbacks];
+      const isUsenetFailover =
+        fileInfo.type === 'usenet' && nzbFallbacks.length > 0;
+
+      const outerLockKey = `nzb-failover:${storeAuth.id}:${fileInfo.hash ?? metadataId}:${filename}:${req.userIp}:${getSimpleTextHash(storeAuth.credential)}`;
+
+      let encounteredRetryableFailure = false;
+
+      const runFailoverChain = async (): Promise<string | undefined> => {
+        for (let i = 0; i < attempts.length; i++) {
+          const attempt = attempts[i];
+          const isLastAttempt = i === attempts.length - 1;
+
+          const currentPlaybackInfo: PlaybackInfo =
+            attempt !== null
+              ? {
+                  ...(playbackInfo as PlaybackInfo & { type: 'usenet' }),
+                  nzb: attempt.nzbUrl,
+                  hash: attempt.hash,
+                  serviceItemId: undefined,
+                  fileIndex: undefined,
+                  ...(attempt.filename !== undefined && {
+                    filename: attempt.filename,
+                    title: attempt.filename,
+                  }),
+                }
+              : playbackInfo;
+
+          const currentFilename = attempt?.filename ?? filename;
+
+          try {
+            const url = await debridInterface.resolve(
+              currentPlaybackInfo,
+              currentFilename,
+              fileInfo.cacheAndPlay ?? false,
+              fileInfo.autoRemoveDownloads
+            );
+            if (attempt !== null) {
+              logger.info(
+                `[${storeAuth.id}] NZB failover succeeded with fallback NZB`,
+                {
+                  attemptIndex: i,
+                  fallbackNzb: attempt.nzbUrl.substring(0, 80),
+                }
+              );
+            }
+            return url;
+          } catch (error: any) {
+            const isRetryable = isNzbRetryableError(error);
+
+            if (!isRetryable || isLastAttempt) {
+              throw error;
+            }
+
+            encounteredRetryableFailure = true;
+            logger.warn(
+              `[${storeAuth.id}] NZB resolve failed, trying ${
+                attempt === null
+                  ? `first fallback (1 of ${nzbFallbacks.length})`
+                  : `next fallback (${i + 1} of ${nzbFallbacks.length})`
+              }`,
+              { code: error?.code, message: error.message }
+            );
+          }
+        }
+        return undefined;
+      };
+
       let streamUrl: string | undefined;
+      let resolveError: Error | undefined;
       try {
-        streamUrl = await debridInterface.resolve(
-          playbackInfo,
-          filename,
-          fileInfo.cacheAndPlay ?? false,
-          fileInfo.autoRemoveDownloads
-        );
-      } catch (error: any) {
-        let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;
-        if (error instanceof DebridError) {
-          logger.error(
-            `[${storeAuth.id}] Got Debrid error during debrid resolve: ${error.code}: ${error.message}`,
-            { ...error, stack: undefined }
+        if (isUsenetFailover) {
+          const { result } = await DistributedLock.getInstance().withLock(
+            outerLockKey,
+            runFailoverChain,
+            { timeout: 180_000, ttl: 185_000 }
           );
-          switch (error.code) {
+          streamUrl = result;
+        } else {
+          streamUrl = await debridInterface.resolve(
+            playbackInfo,
+            filename,
+            fileInfo.cacheAndPlay ?? false,
+            fileInfo.autoRemoveDownloads
+          );
+        }
+      } catch (err: any) {
+        resolveError = err;
+      }
+
+      if (encounteredRetryableFailure) {
+        debridInterface.refreshLibraryCache?.(['nzb']).catch((err) => {
+          logger.warn(
+            `[${storeAuth.id}] Failed to refresh library cache after NZB failover failures`,
+            { error: err?.message }
+          );
+        });
+      }
+
+      if (resolveError) {
+        let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;
+        if (resolveError instanceof DebridError) {
+          logger.error(
+            `[${storeAuth.id}] Got Debrid error during debrid resolve: ${resolveError.code}: ${resolveError.message}`,
+            { ...resolveError, stack: undefined }
+          );
+          switch (resolveError.code) {
             case 'UNAVAILABLE_FOR_LEGAL_REASONS':
               staticFile = StaticFiles.UNAVAILABLE_FOR_LEGAL_REASONS;
               break;
@@ -194,7 +303,7 @@ router.get(
           }
         } else {
           logger.error(
-            `[${storeAuth.id}] Got unknown error during debrid resolve: ${error.message}`
+            `[${storeAuth.id}] Got unknown error during debrid resolve: ${resolveError.message}`
           );
         }
 

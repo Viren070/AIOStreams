@@ -2,13 +2,16 @@ import { isMatch } from 'super-regex';
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
-  FeatureControl,
+  RegexAccess,
   getTimeTakenSincePoint,
   formRegexFromKeywords,
   compileRegex,
   parseRegex,
 } from '../utils/index.js';
-import { StreamSelector } from '../parser/streamExpression.js';
+import {
+  StreamSelector,
+  extractNamesFromExpression,
+} from '../parser/streamExpression.js';
 import { StreamContext } from './context.js';
 
 const logger = createLogger('precomputer');
@@ -46,17 +49,29 @@ class StreamPrecomputer {
   }
 
   /**
-   * Precompute preferred matches - runs AFTER filtering on fewer streams
+   * Precompute preferred matches - runs AFTER filtering on fewer streams.
+   * When `skipPerStreamIds` is provided, per-stream operations (regex/keyword matching)
+   * skip streams that were already precomputed (e.g. in the fetcher).
+   * SEL-based operations always re-evaluate against the full stream list since
+   * selections can depend on the composition of the entire set.
    */
   public async precomputePreferred(
     streams: ParsedStream[],
-    context: StreamContext
+    context: StreamContext,
+    skipPerStreamIds?: Set<string>
   ) {
     const start = Date.now();
-    await this.precomputePreferredMatches(streams, context);
+    // preferred regex / keywords --> ranked regex patterns --> ranked stream expressions --> preferred stream expressions
+    // this is the optimal order so that regexMatched can be used in RSE/PSE and streamExpressionScore and regexScore can be used in PSE
+    await this.precomputePreferredRegexMatches(streams, skipPerStreamIds);
+    await this.precomputeRankedRegexPatterns(streams, skipPerStreamIds);
     await this.precomputeRankedStreamExpressions(streams, context);
+    await this.precomputePreferredExpressionMatches(streams, context);
+    const skippedInfo = skipPerStreamIds
+      ? ` (skipped per-stream ops for ${skipPerStreamIds.size} already-precomputed streams)`
+      : '';
     logger.info(
-      `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}`
+      `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}${skippedInfo}`
     );
   }
 
@@ -74,17 +89,24 @@ class StreamPrecomputer {
     ) {
       return;
     }
+    const start = Date.now();
 
     const selector = new StreamSelector(context.toExpressionContext());
 
     // Initialize all streams with a score of 0
-    const streamScores = new Map<string, number | null>();
+    const streamScores = new Map<string, number>();
+    const streamExpressionNames = new Map<string, string[]>();
     for (const stream of streams) {
-      streamScores.set(stream.id, null);
+      streamScores.set(stream.id, 0);
     }
 
     // Evaluate each ranked expression and accumulate scores
-    for (const { expression, score } of this.userData.rankedStreamExpressions) {
+    for (const { expression, score, enabled } of this.userData
+      .rankedStreamExpressions) {
+      if (enabled === false) {
+        continue;
+      }
+
       try {
         const selectedStreams = await selector.select(streams, expression);
 
@@ -92,11 +114,15 @@ class StreamPrecomputer {
         for (const stream of selectedStreams) {
           const currentScore = streamScores.get(stream.id) ?? 0;
           streamScores.set(stream.id, currentScore + score);
+          const exprNames = extractNamesFromExpression(expression);
+          if (exprNames) {
+            const existingNames = streamExpressionNames.get(stream.id) || [];
+            streamExpressionNames.set(stream.id, [
+              ...existingNames,
+              ...exprNames,
+            ]);
+          }
         }
-
-        logger.debug(
-          `Ranked expression "${expression.length > 50 ? expression.substring(0, 50) + '...' : expression}" matched ${selectedStreams.length} streams with score ${score}`
-        );
       } catch (error) {
         logger.error(
           `Failed to apply ranked stream expression "${expression}": ${
@@ -108,14 +134,63 @@ class StreamPrecomputer {
 
     // Apply the computed scores to the streams
     for (const stream of streams) {
-      stream.streamExpressionScore = streamScores.get(stream.id) ?? undefined;
+      stream.streamExpressionScore = streamScores.get(stream.id) ?? 0;
+      stream.rankedStreamExpressionsMatched = streamExpressionNames.get(
+        stream.id
+      );
     }
 
     const nonZeroScores = streams.filter(
-      (s) => s.streamExpressionScore !== 0
+      (s) => (s.streamExpressionScore ?? 0) !== 0
     ).length;
+
     logger.info(
-      `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores)`
+      `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores) in ${getTimeTakenSincePoint(start)}`
+    );
+  }
+
+  private async precomputeRankedRegexPatterns(
+    streams: ParsedStream[],
+    skipStreamIds?: Set<string>
+  ) {
+    if (!this.userData.rankedRegexPatterns?.length || streams.length === 0) {
+      return;
+    }
+    const start = Date.now();
+
+    const regexes = await Promise.all(
+      this.userData.rankedRegexPatterns.map(async (entry) => ({
+        ...entry,
+        regex: await compileRegex(entry.pattern),
+      }))
+    );
+
+    const streamsToProcess = skipStreamIds
+      ? streams.filter((s) => !skipStreamIds.has(s.id))
+      : streams;
+
+    for (const stream of streamsToProcess) {
+      if (!stream.filename) {
+        continue;
+      }
+      const matched: string[] = [];
+      let totalScore = 0;
+      for (const { regex, pattern, name, score } of regexes) {
+        if (regex.test(stream.filename)) {
+          if (name) matched.push(name);
+          totalScore += score;
+        }
+      }
+      if (matched.length > 0) {
+        stream.rankedRegexesMatched = matched;
+        stream.regexScore = totalScore;
+      }
+    }
+
+    logger.info(
+      `Computed ranked regex patterns for ${
+        streams.filter((s) => s.rankedRegexesMatched?.length).length
+      } streams in ${getTimeTakenSincePoint(start)}`
     );
   }
 
@@ -213,14 +288,16 @@ class StreamPrecomputer {
   }
 
   /**
-   * Precompute preferred regex, keyword, and stream expression matches
+   * Precompute preferred regex, keyword, and stream expression matches.
+   * When `skipStreamIds` is provided, per-stream keyword and regex matching
+   * is skipped for those streams (they were already computed in the fetcher).
    */
-  private async precomputePreferredMatches(
+  private async precomputePreferredRegexMatches(
     streams: ParsedStream[],
-    context: StreamContext
+    skipStreamIds?: Set<string>
   ) {
     const preferredRegexPatterns =
-      (await FeatureControl.isRegexAllowed(
+      (await RegexAccess.isRegexAllowed(
         this.userData,
         this.userData.preferredRegexPatterns?.map(
           (pattern) => pattern.pattern
@@ -248,8 +325,12 @@ class StreamPrecomputer {
       return;
     }
 
+    const streamsToProcess = skipStreamIds
+      ? streams.filter((s) => !skipStreamIds.has(s.id))
+      : streams;
+
     if (preferredKeywordsPatterns) {
-      streams.forEach((stream) => {
+      streamsToProcess.forEach((stream) => {
         stream.keywordMatched =
           isMatch(preferredKeywordsPatterns, stream.filename || '') ||
           isMatch(preferredKeywordsPatterns, stream.folderName || '') ||
@@ -268,7 +349,7 @@ class StreamPrecomputer {
       return attribute ? isMatch(regexPattern.pattern, attribute) : false;
     };
     if (preferredRegexPatterns) {
-      streams.forEach((stream) => {
+      streamsToProcess.forEach((stream) => {
         for (let i = 0; i < preferredRegexPatterns.length; i++) {
           // if negate, then the pattern must not match any of the attributes
           // and if the attribute is undefined, then we can consider that as a non-match so true
@@ -310,7 +391,12 @@ class StreamPrecomputer {
         }
       });
     }
+  }
 
+  private async precomputePreferredExpressionMatches(
+    streams: ParsedStream[],
+    context: StreamContext
+  ) {
     if (this.userData.preferredStreamExpressions?.length) {
       const selector = new StreamSelector(context.toExpressionContext());
       const streamToConditionIndex = new Map<string, number>();
@@ -321,7 +407,9 @@ class StreamPrecomputer {
         i < this.userData.preferredStreamExpressions.length;
         i++
       ) {
-        const expression = this.userData.preferredStreamExpressions[i];
+        const item = this.userData.preferredStreamExpressions[i];
+        const { expression, enabled } = item;
+        if (!enabled) continue;
 
         // From the streams that haven't been matched to a higher-priority condition yet...
         const availableStreams = streams.filter(
@@ -350,7 +438,15 @@ class StreamPrecomputer {
 
       // Now, apply the results to the original streams list.
       for (const stream of streams) {
-        stream.streamExpressionMatched = streamToConditionIndex.get(stream.id);
+        const conditionIndex = streamToConditionIndex.get(stream.id);
+        if (conditionIndex !== undefined) {
+          const expression =
+            this.userData.preferredStreamExpressions[conditionIndex].expression;
+          stream.streamExpressionMatched = {
+            index: conditionIndex,
+            name: extractNamesFromExpression(expression)?.[0],
+          };
+        }
       }
     }
   }

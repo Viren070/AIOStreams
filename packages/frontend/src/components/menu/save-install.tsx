@@ -2,8 +2,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/text-input';
-import { applyMigrations, useUserData, DefaultUserData } from '@/context/userData';
-import { UserConfigAPI } from '@/services/api';
+import { applyMigrations, useUserData } from '@/context/userData';
+import {
+  createUserConfig,
+  deleteUserConfig,
+  CreateUserResponse,
+  APIError,
+} from '@/lib/api';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@/components/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
@@ -16,8 +21,8 @@ import { PageControls } from '../shared/page-controls';
 import { useDisclosure } from '@/hooks/disclosure';
 import { Modal } from '../ui/modal';
 import { Switch } from '../ui/switch';
-import { TemplateExportModal } from '../shared/template-export-modal';
-import { ConfigTemplatesModal } from '../shared/config-templates-modal';
+import { TemplateExportModal } from '../shared/templates/export-modal';
+import { ConfigTemplatesModal } from '../shared/templates';
 import {
   Accordion,
   AccordionContent,
@@ -32,8 +37,8 @@ import {
   useConfirmationDialog,
 } from '../shared/confirmation-dialog';
 import { UserData } from '@aiostreams/core';
-import { DiffViewer } from '../shared/diff-viewer';
-import { getObjectDiff, DiffItem, sortKeys } from '@/utils/diff';
+import { useSave } from '@/context/save';
+import { AddonPasswordModal } from '@/components/shared/addon-password-modal';
 
 // Reusable modal option button component
 interface ModalOptionButtonProps {
@@ -89,7 +94,7 @@ function Content() {
     setEncryptedPassword,
   } = useUserData();
   const [newPassword, setNewPassword] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+  const [createLoading, setCreateLoading] = React.useState(false);
   const [passwordRequirements, setPasswordRequirements] = React.useState<
     string[]
   >([]);
@@ -97,7 +102,6 @@ function Content() {
   const baseUrl = status?.settings?.baseUrl || window.location.origin;
   const importFileRef = React.useRef<HTMLInputElement>(null);
   const installModal = useDisclosure(false);
-  const passwordModal = useDisclosure(false);
   const deleteUserModal = useDisclosure(false);
   const [confirmDeletionPassword, setConfirmDeletionPassword] =
     React.useState('');
@@ -107,14 +111,11 @@ function Content() {
   const exportMenuModal = useDisclosure(false);
   const importMenuModal = useDisclosure(false);
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
-    React.useState(false);
+    React.useState(true);
   const [installProtocol, setInstallProtocol] = React.useState('stremio');
-  const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
-  const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
-  const [remoteDiffConfig, setRemoteDiffConfig] = React.useState<UserData | null>(null);
-  const [localDiffConfig, setLocalDiffConfig] = React.useState<UserData | null>(null);
-  const diffModal = useDisclosure(false);
-  const pendingSkipDiffRef = React.useRef(false);
+  const [addonPasswordModalOpen, setAddonPasswordModalOpen] =
+    React.useState(false);
+  const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
     description: `Are you sure you want to reset your configuration? This will clear all your settings${uuid ? ` but keep your user account` : ''}. This action cannot be undone.`,
@@ -133,7 +134,7 @@ function Content() {
     actionText: 'Delete',
     actionIntent: 'alert',
     onConfirm: () => {
-      setLoading(true);
+      setCreateLoading(true);
       handleDelete();
     },
   });
@@ -153,175 +154,32 @@ function Content() {
     setPasswordRequirements(requirements);
   }, [newPassword, uuid, password]);
 
-  const handleRevertAll = () => {
-    if (remoteConfig) {
-      setUserData((prev) => {
-        return {
-          ...DefaultUserData,
-          ...remoteConfig,
-          // Preserve user-specific fields that are ignored in diff
-          uuid: prev.uuid,
-          encryptedPassword: prev.encryptedPassword,
-          trusted: prev.trusted,
-          addonPassword: prev.addonPassword,
-          ip: prev.ip,
-          showChanges: prev.showChanges, 
-        };
-      });
-      toast.success('Changes reverted');
-      diffModal.close();
-    }
-  };
-
-  const handleSave = async (
-    e?: React.FormEvent<HTMLFormElement>,
-    authenticated: boolean = false,
-    skipDiffHandler: boolean = false
-  ) => {
+  const handleCreate = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
-    const shouldSkipDiff = skipDiffHandler || pendingSkipDiffRef.current;
-    pendingSkipDiffRef.current = false;
-
-    let suppressSuccessToast = false;
-    if (
-      status?.settings.protected &&
-      !authenticated &&
-      !userData.addonPassword
-    ) {
-      pendingSkipDiffRef.current = shouldSkipDiff;
-      passwordModal.open();
-      return;
-    }
     if (passwordRequirements.length > 0) {
       toast.error('Password requirements not met');
       return;
     }
-
-    if (uuid && password && !shouldSkipDiff && userData?.showChanges) {
-      setLoading(true);
-      try {
-        const remoteResult = await UserConfigAPI.loadConfig(uuid, password);
-        
-        if (remoteResult.success && remoteResult.data) {
-          const remoteConf = remoteResult.data.config;
-          const resolveNamesInConfig = (conf: UserData | null, presetsSource: UserData['presets']) => {
-            if (!conf || !conf.groups) return conf;
-            const newConf = { ...conf, groups: { ...conf.groups } };
-            
-            if (newConf.groups.groupings) {
-              newConf.groups.groupings = newConf.groups.groupings.map((g: any) => {
-                if (Array.isArray(g.addons)) {
-                  return {
-                    ...g,
-                    addons: g.addons.map((id: string) => {
-                      const find = (list?: any[]) => list?.find(p => p.instanceId === id || p.options?.id === id);
-                      const item = find(presetsSource);
-                      return item?.options?.name || id;
-                    })
-                  };
-                }
-                return g;
-              });
-            }
-            return newConf;
-          };
-
-          const allPresets = [...(userData?.presets || []), ...(remoteConf?.presets || [])];
-           const filterForDiff = (d: UserData | null) => {
-             if (!d) return d;
-             const filtered: any = { ...d };
-             delete filtered.ip;
-             delete filtered.uuid;
-             delete filtered.addonPassword;
-             delete filtered.trusted;
-             delete filtered.encryptedPassword;
-             delete filtered.showChanges;
-               
-             // Sort keys to ensure deterministic ordering for diffs (fixes ghost diffs)
-             return sortKeys(filtered) as UserData;
-           };
-
-           const filteredRemote = filterForDiff(remoteConf);
-           const filteredLocal = filterForDiff(userData);
-
-           // Resolve IDs to Names for readable diffs (e.g. Group Swaps)
-           const processedRemote = resolveNamesInConfig(filteredRemote, allPresets);
-           const processedLocal = resolveNamesInConfig(filteredLocal, allPresets);
-           const diffs = getObjectDiff(processedRemote, processedLocal);
-          
-          if (diffs.length === 0) {
-            toast.info('No changes detected');
-            suppressSuccessToast = true;
-            setLoading(false);
-          } else {
-            setRemoteConfig(remoteConf);
-            setRemoteDiffConfig(processedRemote);
-            setLocalDiffConfig(processedLocal);
-            setDiffData(diffs);
-            if (authenticated) {
-              passwordModal.close();
-            }
-            diffModal.open();
-            setLoading(false);
-            return;
-          }
-        } else {
-             setLoading(false);
-             toast.warning('Error checking for changes. Proceeding with save.');
-        }
-      } catch (err) {
-        console.error('Error checking for changes:', err);
-        toast.warning('Error checking for changes. Proceeding with save.');
-        // Reset loading state before proceeding to actual save
-        setLoading(false);
-      }
-    }
-
-    setLoading(true);
-
+    setCreateLoading(true);
     try {
-      const result = uuid
-        ? await UserConfigAPI.updateConfig(uuid, userData, password!)
-        : await UserConfigAPI.createConfig(userData, newPassword);
-
-      if (!result.success) {
-        if (result.error?.code === 'USER_INVALID_DETAILS') {
-          toast.error('Your addon password is incorrect');
-          setUserData((prev) => ({
-            ...prev,
-            addonPassword: '',
-          }));
-          passwordModal.open();
-          return;
-        }
-        throw new Error(
-          result.error?.message || 'Failed to save configuration'
-        );
-      }
-
-      if (!uuid && result.data) {
-        toast.success(
-          'Configuration created successfully, your UUID and password are below'
-        );
-        setUuid(result.data.uuid);
-        setEncryptedPassword(result.data.encryptedPassword);
-        setPassword(newPassword);
-      } else if (uuid && result.success && !suppressSuccessToast) {
-        toast.success('Configuration updated successfully');
-      }
-
-      if (authenticated) {
-        passwordModal.close();
-      }
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to save configuration'
+      const result = await createUserConfig(userData, newPassword);
+      toast.success(
+        'Configuration created successfully, your UUID and password are below'
       );
-      if (authenticated) {
-        passwordModal.close();
+      setUuid(result.uuid);
+      setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
+      setPassword(newPassword);
+    } catch (err) {
+      if (err instanceof APIError && err.is('ADDON_PASSWORD_INVALID')) {
+        setUserData((prev) => ({ ...prev, addonPassword: '' }));
+        setAddonPasswordModalOpen(true);
+        return;
       }
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to create configuration'
+      );
     } finally {
-      setLoading(false);
+      setCreateLoading(false);
     }
   };
 
@@ -339,6 +197,8 @@ function Content() {
           );
           return;
         }
+        delete parsed.uuid;
+        delete parsed.trusted;
         setUserData((prev) => ({
           ...prev,
           ...applyMigrations(parsed),
@@ -364,6 +224,8 @@ function Content() {
       tvdbApiKey: undefined,
       rpdbApiKey: undefined,
       topPosterApiKey: undefined,
+      aioratingsApiKey: undefined,
+      aioratingsProfileId: undefined,
       services: clonedData?.services?.map((service) => ({
         ...service,
         credentials: {},
@@ -451,21 +313,7 @@ function Content() {
         return;
       }
 
-      const result = await UserConfigAPI.deleteUser(
-        uuid,
-        confirmDeletionPassword
-      );
-
-      if (!result.success) {
-        if (result.error?.code === 'USER_INVALID_DETAILS') {
-          toast.error('Invalid password');
-        } else {
-          toast.error(
-            result.error?.message || 'Failed to delete configuration'
-          );
-        }
-        return;
-      }
+      await deleteUserConfig(uuid, confirmDeletionPassword);
 
       // Only clear data after successful deletion
       toast.success('Configuration deleted successfully');
@@ -480,50 +328,9 @@ function Content() {
         err instanceof Error ? err.message : 'Failed to delete configuration'
       );
     } finally {
-      setLoading(false);
+      setCreateLoading(false);
     }
   };
-
-  const resolveId = React.useCallback((v: string) => {
-    const findAddon = (presets?: UserData['presets']) => presets?.find(p => {
-      if (p.instanceId === v) return true;
-      const opts = p.options as Record<string, any>;
-      return opts?.id === v;
-    });
-
-    const addon = findAddon(userData?.presets) || findAddon(remoteConfig?.presets);
-
-    if (addon) {
-      const opts = addon.options as Record<string, any>;
-      if (opts?.name && typeof opts.name === 'string') return opts.name;
-    }
-    return v;
-  }, [userData?.presets, remoteConfig?.presets]);
-
-  const valueFormatter = React.useCallback((val: any): string => {
-    const resolveDeep = (v: any): any => {
-      // Swap IDs for names
-      if (typeof v === 'string') return resolveId(v);
-      if (Array.isArray(v)) return v.map(resolveDeep);
-      if (v && typeof v === 'object') {
-        return Object.fromEntries(
-          Object.entries(v).map(([k, val]) => [k, resolveDeep(val)])
-        );
-      }
-      return v;
-    };
-
-    const resolved = resolveDeep(val);
-
-    if (typeof resolved === 'object' && resolved !== null) {
-      try {
-        return JSON.stringify(resolved, null, 2);
-      } catch {
-        return '[Circular Reference]';
-      }
-    }
-    return String(resolved);
-  }, [resolveId]);
 
   return (
     <>
@@ -545,7 +352,7 @@ function Content() {
             title="Create Configuration"
             description="Set up your personalised addon configuration"
           >
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 {passwordRequirements.length > 0 && newPassword?.length > 0 && (
                   <Alert
@@ -575,7 +382,12 @@ function Content() {
                   password once set, so please choose wisely, and remember it.
                 </p>
               </div>
-              <Button intent="white" type="submit" loading={loading} rounded>
+              <Button
+                intent="white"
+                type="submit"
+                loading={createLoading}
+                rounded
+              >
                 Create
               </Button>
             </form>
@@ -614,9 +426,19 @@ function Content() {
                   className="flex-1"
                 />
               </div>
-              <form onSubmit={handleSave}>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSaveContext();
+                }}
+              >
                 <div className="flex items-center justify-between gap-4 mt-4">
-                  <Button type="submit" intent="white" loading={loading} rounded>
+                  <Button
+                    type="submit"
+                    intent="white"
+                    loading={saveLoading}
+                    rounded
+                  >
                     Save
                   </Button>
                   <div className="flex items-center gap-2">
@@ -635,7 +457,7 @@ function Content() {
 
             {/* <SettingsCard
               title="Install"
-              description="Choose how you want to install your personalized addon. There is no need to reinstall the addon after updating your configuration above, unless you've updated your upstream addons."
+              description="Choose how you want to install your personalized addon. If a reinstall is necessary, a pop-up will tell you - otherwise, you do not need to reinstall."
             >
               <div className="flex flex-wrap gap-3">
                 <Button
@@ -662,7 +484,7 @@ function Content() {
 
             <SettingsCard
               title="Install"
-              description="Install your addon using your preferred method. There usually isn't a need to reinstall the addon after updating your configuration above, unless you use catalogs and you've changed the order of them or the addons that provide them"
+              description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you - otherwise, you do not need to reinstall."
             >
               <div className="flex justify-between items-center">
                 <Button intent="white" rounded onClick={installModal.open}>
@@ -744,36 +566,6 @@ function Content() {
             </SettingsCard>
           </>
         )}
-
-        <Modal
-          open={passwordModal.isOpen}
-          onOpenChange={passwordModal.toggle}
-          title="Addon Password"
-          description="This instance is protected with a password. You must enter the password for this instance (NOT your user password you set earlier) to create a configuration here."
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSave(e, true);
-            }}
-          >
-            <PasswordInput
-              label="Addon Password"
-              value={userData.addonPassword}
-              required
-              placeholder="Enter the password for this instance"
-              onValueChange={(value) =>
-                setUserData((prev) => ({
-                  ...prev,
-                  addonPassword: value,
-                }))
-              }
-            />
-            <Button type="submit" intent="white" loading={loading} rounded>
-              Save
-            </Button>
-          </form>
-        </Modal>
 
         <SettingsCard
           title="Backups"
@@ -865,7 +657,7 @@ function Content() {
                   <Button
                     type="submit"
                     intent="alert"
-                    loading={loading}
+                    loading={createLoading}
                     className="w-full"
                   >
                     Delete
@@ -878,6 +670,21 @@ function Content() {
         <ConfirmationDialog {...confirmDelete} />
         <ConfirmationDialog {...confirmResetProps} />
 
+        <AddonPasswordModal
+          open={addonPasswordModalOpen}
+          onOpenChange={setAddonPasswordModalOpen}
+          loading={createLoading}
+          onSubmit={() => {
+            setAddonPasswordModalOpen(false);
+            handleCreate();
+          }}
+          submitText="Create"
+          value={userData.addonPassword ?? ''}
+          onValueChange={(value) =>
+            setUserData((prev) => ({ ...prev, addonPassword: value }))
+          }
+        />
+
         <Modal
           open={exportMenuModal.isOpen}
           onOpenChange={exportMenuModal.toggle}
@@ -885,22 +692,6 @@ function Content() {
           description="Choose how to export your configuration"
         >
           <div className="space-y-4">
-            {/* Exclude Credentials Option */}
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <div className="flex-1">
-                <div className="text-sm font-medium text-white">
-                  Exclude Credentials
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Remove sensitive information from export
-                </div>
-              </div>
-              <Switch
-                value={filterCredentialsInExport}
-                onValueChange={setFilterCredentialsInExport}
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <ModalOptionButton
                 onClick={handleExport}
@@ -916,6 +707,28 @@ function Content() {
                 icon={<PlusIcon className="h-8 w-8" />}
                 title="Export as Template"
                 description="Create reusable template with custom metadata"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 mt-6 p-3 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-white">
+                    Exclude Credentials
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Remove sensitive API keys and passwords from the export
+                  </div>
+                </div>
+                <Switch
+                  value={filterCredentialsInExport}
+                  onValueChange={setFilterCredentialsInExport}
+                />
+              </div>
+              <Alert
+                intent="warning"
+                isClosable={false}
+                description="While excluding credentials removes your API keys, any custom addon URLs or manually overridden URLs in your config are not removed. These may contain sensitive information - double-check before sharing."
               />
             </div>
           </div>
@@ -960,50 +773,6 @@ function Content() {
           onOpenChange={templatesModal.toggle}
           openImportModal
         />
-
-        <Modal
-          open={diffModal.isOpen}
-          onOpenChange={diffModal.toggle}
-          title="Confirm Changes"
-          description="Review the changes you are about to make to your configuration."
-        >
-          <div className="space-y-4">
-            <DiffViewer
-              diffs={diffData}
-              valueFormatter={valueFormatter}
-              oldValue={remoteDiffConfig}
-              newValue={localDiffConfig}
-            />
-            <div className="flex justify-between pt-4">
-              <Button
-                intent="alert"
-                onClick={handleRevertAll}
-                disabled={loading}
-              >
-                Reset Changes
-              </Button>
-              <div className="flex gap-3">
-                <Button
-                  intent="gray-outline"
-                  onClick={diffModal.close}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  intent="white"
-                  onClick={() => {
-                    diffModal.close();
-                    handleSave(undefined, undefined, true);
-                  }}
-                  loading={loading}
-                >
-                  Confirm & Save
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Modal>
       </div>
     </>
   );

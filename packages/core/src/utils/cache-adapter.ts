@@ -12,6 +12,7 @@ const REDIS_TIMEOUT = Env.REDIS_TIMEOUT;
 export interface CacheBackend<K, V> {
   get(key: K, updateTTL?: boolean): Promise<V | undefined>;
   set(key: K, value: V, ttl: number, forceWrite?: boolean): Promise<void>;
+  flush(): Promise<void>;
   delete(key: K): Promise<boolean>;
   update(key: K, value: V): Promise<void>;
   clear(): Promise<void>;
@@ -127,6 +128,10 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
 
   async waitUntilReady(): Promise<void> {
     return Promise.resolve();
+  }
+
+  async flush(): Promise<void> {
+    // Memory writes are synchronous — nothing to flush
   }
 }
 
@@ -351,6 +356,10 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
     while (!this.client.isOpen) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
+  }
+
+  async flush(): Promise<void> {
+    await RedisCacheBackend.flushWriteBuffer();
   }
 }
 
@@ -641,6 +650,10 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       throw new Error('Database is not initialized');
     }
     return Promise.resolve();
+  }
+
+  async flush(): Promise<void> {
+    await SQLCacheBackend.flushWriteBuffer();
   }
 }
 

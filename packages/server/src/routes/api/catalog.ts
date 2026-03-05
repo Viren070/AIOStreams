@@ -29,11 +29,17 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     } catch (error) {
       if (
-        error instanceof Error &&
-        error.message.includes('Invalid addon password')
+        error instanceof APIError &&
+        error.code === constants.ErrorCode.ADDON_PASSWORD_INVALID
       ) {
-        error.message =
-          'Please make sure the addon password is provided and correct by attempting to create/save a user first';
+        next(
+          new APIError(
+            constants.ErrorCode.ADDON_PASSWORD_INVALID,
+            undefined,
+            'Please make sure the addon password is provided and correct by attempting to create/save a user first'
+          )
+        );
+        return;
       }
       next(
         new APIError(

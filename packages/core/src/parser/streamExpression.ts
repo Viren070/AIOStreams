@@ -17,6 +17,7 @@ const logger = createLogger('stream-expression');
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
+  protected _pinInstructions: Map<string, 'top' | 'bottom'> = new Map();
 
   constructor() {
     // only allow comparison and logical operators
@@ -96,6 +97,10 @@ export abstract class StreamExpressionEngine {
     this.parser.consts.latestSeason = context.latestSeason ?? -1;
     this.parser.consts.ongoingSeason =
       context.hasNextEpisode && context.season === context.latestSeason;
+  }
+
+  public getPinInstructions(): Map<string, 'top' | 'bottom'> {
+    return this._pinInstructions;
   }
 
   private setupParserFunctions() {
@@ -405,6 +410,10 @@ export abstract class StreamExpressionEngine {
             return stream.duration;
           case 'seeders':
             return stream.torrent?.seeders;
+          case 'seScore':
+            return stream.streamExpressionScore;
+          case 'regexScore':
+            return stream.regexScore;
           default:
             throw new Error(`Invalid attribute for values: '${key}'`);
         }
@@ -420,10 +429,16 @@ export abstract class StreamExpressionEngine {
       ...regexNames: string[]
     ) {
       if (regexNames.length === 0) {
-        return streams.filter((stream) => stream.regexMatched);
+        return streams.filter(
+          (stream) => stream.regexMatched || stream.rankedRegexesMatched?.length
+        );
       }
       return streams.filter((stream) =>
-        regexNames.some((regexName) => stream.regexMatched?.name === regexName)
+        regexNames.some(
+          (regexName) =>
+            stream.regexMatched?.name === regexName ||
+            stream.rankedRegexesMatched?.some((r) => r === regexName)
+        )
       );
     };
 
@@ -444,6 +459,54 @@ export abstract class StreamExpressionEngine {
         }
         return true;
       });
+    };
+
+    this.parser.functions.seMatched = function (
+      streams: ParsedStream[],
+      ...seNames: string[]
+    ) {
+      if (seNames.length === 0) {
+        return streams.filter((stream) => stream.streamExpressionMatched);
+      }
+      return streams.filter((stream) =>
+        seNames.some(
+          (seName) => stream.streamExpressionMatched?.name === seName
+        )
+      );
+    };
+
+    this.parser.functions.seMatchedInRange = function (
+      streams: ParsedStream[],
+      min: number,
+      max: number
+    ) {
+      return streams.filter((stream) => {
+        if (!stream.streamExpressionMatched) {
+          return false;
+        } else if (
+          stream.streamExpressionMatched.index < min ||
+          stream.streamExpressionMatched.index > max
+        ) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.rseMatched = function (
+      streams: ParsedStream[],
+      ...rseNames: string[]
+    ) {
+      if (rseNames.length === 0) {
+        return streams.filter(
+          (stream) => stream.rankedStreamExpressionsMatched?.length
+        );
+      }
+      return streams.filter((stream) =>
+        rseNames.some((rseName) =>
+          stream.rankedStreamExpressionsMatched?.some((r) => r === rseName)
+        )
+      );
     };
 
     this.parser.functions.indexer = function (
@@ -851,16 +914,13 @@ export abstract class StreamExpressionEngine {
         throw new Error(
           "Please use one of 'totalStreams' or 'previousStreams' as the first argument"
         );
-      } else if (
-        releaseGroups.length === 0 ||
-        releaseGroups.some((r) => typeof r !== 'string')
-      ) {
-        throw new Error(
-          'You must provide one or more release group string parameters'
-        );
+      } else if (releaseGroups.some((r) => typeof r !== 'string')) {
+        throw new Error('All provided release groups must be strings');
       }
       return streams.filter((stream) =>
-        releaseGroups.some((r) => stream.parsedFile?.releaseGroup === r)
+        releaseGroups.length === 0
+          ? !!stream.parsedFile?.releaseGroup
+          : releaseGroups.some((r) => stream.parsedFile?.releaseGroup === r)
       );
     };
 
@@ -926,7 +986,7 @@ export abstract class StreamExpressionEngine {
       return streams.filter((stream) => stream.seadex?.isSeadex === true);
     };
 
-    this.parser.functions.score = function (
+    this.parser.functions.seScore = function (
       streams: ParsedStream[],
       minScore?: number,
       maxScore?: number
@@ -941,6 +1001,34 @@ export abstract class StreamExpressionEngine {
       }
       return streams.filter((stream) => {
         const score = stream.streamExpressionScore;
+        if (score === undefined) return false;
+        if (minScore !== undefined && score < minScore) {
+          return false;
+        }
+        if (maxScore !== undefined && score > maxScore) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.streamExpressionScore = this.parser.functions.seScore;
+
+    this.parser.functions.regexScore = function (
+      streams: ParsedStream[],
+      minScore?: number,
+      maxScore?: number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minScore !== undefined && typeof minScore !== 'number') ||
+        (maxScore !== undefined && typeof maxScore !== 'number')
+      ) {
+        throw new Error('Score boundaries must be numbers if provided');
+      }
+      return streams.filter((stream) => {
+        const score = stream.regexScore;
         if (score === undefined) return false;
         if (minScore !== undefined && score < minScore) {
           return false;
@@ -1066,6 +1154,154 @@ export abstract class StreamExpressionEngine {
       }
       return streams.slice(start, end);
     };
+
+    this.parser.functions.perGroup = function (
+      streams: ParsedStream[],
+      attribute: string,
+      n: number,
+      ...filterValues: string[]
+    ): ParsedStream[] {
+      if (!Array.isArray(streams)) {
+        throw new Error('perGroup: first argument must be an array of streams');
+      }
+      if (typeof attribute !== 'string' || attribute.length === 0) {
+        throw new Error(
+          'perGroup: second argument must be a non-empty attribute string'
+        );
+      }
+      if (
+        typeof n !== 'number' ||
+        !Number.isFinite(n) ||
+        !Number.isInteger(n) ||
+        n < 1
+      ) {
+        throw new Error('perGroup: third argument must be a positive integer');
+      }
+      if (filterValues.some((v) => typeof v !== 'string')) {
+        throw new Error('perGroup: filter values must be strings');
+      }
+
+      const normalised = filterValues.map((v) => v.toLowerCase());
+
+      /** Return the group keys for a stream under the chosen attribute. */
+      const getKeys = (stream: ParsedStream): string[] => {
+        switch (attribute) {
+          case 'resolution':
+            return [stream.parsedFile?.resolution?.toLowerCase() || 'unknown'];
+          case 'quality':
+            return [stream.parsedFile?.quality?.toLowerCase() || 'unknown'];
+          case 'encode':
+            return [stream.parsedFile?.encode?.toLowerCase() || 'unknown'];
+          case 'type':
+            return [stream.type.toLowerCase()];
+          case 'service':
+            return [(stream.service?.id || 'none').toLowerCase()];
+          case 'indexer':
+            return [(stream.indexer || 'unknown').toLowerCase()];
+          case 'releaseGroup':
+            return [
+              (stream.parsedFile?.releaseGroup || 'unknown').toLowerCase(),
+            ];
+          case 'visualTag':
+            return (
+              stream.parsedFile?.visualTags.length
+                ? stream.parsedFile.visualTags
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'audioTag':
+            return (
+              stream.parsedFile?.audioTags.length
+                ? stream.parsedFile.audioTags
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'audioChannel':
+            return (
+              stream.parsedFile?.audioChannels?.length
+                ? stream.parsedFile.audioChannels
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'language':
+            return (
+              stream.parsedFile?.languages?.length
+                ? stream.parsedFile.languages
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          default:
+            throw new Error(
+              `perGroup: unsupported attribute '${attribute}'. Supported: resolution, quality, encode, type, service, indexer, releaseGroup, visualTag, audioTag, audioChannel, language`
+            );
+        }
+      };
+
+      const buckets = new Map<string, ParsedStream[]>();
+      const groupOrder: string[] = [];
+      // Deduplicate across groups (for multi-value attributes a stream could
+      // match multiple groups)
+      const added = new Set<string>();
+
+      for (const stream of streams) {
+        const keys = getKeys(stream);
+        let assignedKey: string | undefined;
+        if (normalised.length > 0) {
+          assignedKey = keys.find((k) => normalised.includes(k));
+        } else {
+          assignedKey = keys[0];
+        }
+        if (assignedKey === undefined) continue; // filtered out
+
+        if (!buckets.has(assignedKey)) {
+          buckets.set(assignedKey, []);
+          groupOrder.push(assignedKey);
+        }
+        const bucket = buckets.get(assignedKey)!;
+        if (bucket.length < n && !added.has(stream.id)) {
+          bucket.push(stream);
+          added.add(stream.id);
+        }
+      }
+
+      // interleave the buckets
+      const result: ParsedStream[] = [];
+      let round = 0;
+      while (result.length < added.size) {
+        let anyAdded = false;
+        for (const key of groupOrder) {
+          const bucket = buckets.get(key)!;
+          if (round < bucket.length) {
+            result.push(bucket[round]);
+            anyAdded = true;
+          }
+        }
+        if (!anyAdded) break;
+        round++;
+      }
+
+      return result;
+    };
+
+    this.parser.functions.pin = (
+      matchedStreams: ParsedStream[],
+      position: string = 'top',
+      returnMatched: boolean = false
+    ) => {
+      if (
+        !Array.isArray(matchedStreams) ||
+        matchedStreams.some((stream) => !stream.type)
+      ) {
+        throw new Error(
+          'The first argument must be a filtered subset of streams to pin'
+        );
+      }
+      if (position !== 'top' && position !== 'bottom') {
+        throw new Error("Position must be 'top' or 'bottom'");
+      }
+
+      for (const stream of matchedStreams) {
+        this._pinInstructions.set(stream.id, position as 'top' | 'bottom');
+      }
+
+      return returnMatched ? matchedStreams : [];
+    };
   }
 
   protected async evaluateCondition(condition: string): Promise<any> {
@@ -1079,7 +1315,7 @@ export abstract class StreamExpressionEngine {
         const result = this.parser.evaluate(condition);
         clearTimeout(timeout);
         const elapsed = Date.now() - start;
-        logger.debug(
+        logger.silly(
           `Expression evaluated in ${elapsed}ms: "${condition.length > 100 ? condition.substring(0, 100) + '...' : condition}"`
         );
         resolve(result);
@@ -1205,29 +1441,6 @@ export class ExitConditionEvaluator extends StreamExpressionEngine {
   }
 }
 
-export class PrecacheConditionEvaluator extends StreamExpressionEngine {
-  constructor(streams: ParsedStream[], context: ExpressionContext) {
-    super();
-    this.parser.consts.streams = streams;
-    this.setupExpressionContextConstants(context);
-  }
-
-  async evaluate(condition: string): Promise<boolean> {
-    const result = await this.evaluateCondition(condition);
-    if (typeof result !== 'boolean') {
-      throw new Error(
-        `Precache condition must evaluate to a boolean, got: ${typeof result}`
-      );
-    }
-    return result;
-  }
-
-  static async testEvaluate(condition: string): Promise<boolean> {
-    const parser = new PrecacheConditionEvaluator([], { queryType: 'series' });
-    return await parser.evaluate(condition);
-  }
-}
-
 export class GroupConditionEvaluator extends StreamExpressionEngine {
   private previousStreams: ParsedStream[];
   private totalStreams: ParsedStream[];
@@ -1311,4 +1524,26 @@ export class StreamSelector extends StreamExpressionEngine {
     ];
     return await parser.select(streams, condition);
   }
+}
+
+/**
+ * Extracts names from comments in a stream expression.
+ * Names are extracted from block comments that don't start with #.
+ * @param expression The stream expression to extract names from
+ * @returns Array of extracted names, or undefined if none found
+ */
+export function extractNamesFromExpression(
+  expression: string,
+  ignoreHashPrefixed = true
+): string[] | undefined {
+  const regex = /\/\*\s*(.*?)\s*\*\//g;
+  const names: string[] = [];
+  let match;
+  while ((match = regex.exec(expression)) !== null) {
+    const content = match[1];
+    if (!content.startsWith('#') || !ignoreHashPrefixed) {
+      names.push(content);
+    }
+  }
+  return names.length > 0 ? names : undefined;
 }
