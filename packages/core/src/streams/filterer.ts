@@ -2189,17 +2189,16 @@ class StreamFilterer {
       }
     }
 
-    if (
-      this.userData.requiredStreamExpressions &&
-      this.userData.requiredStreamExpressions.length > 0
-    ) {
+    const requiredStreamExpressions = (
+      this.userData.requiredStreamExpressions || []
+    ).filter((item) => item.enabled);
+
+    if (requiredStreamExpressions.length > 0) {
       const selector = new StreamSelector(expressionContext);
       const streamsToKeep = new Set<string>(); // Track actual stream objects to be kept
 
-      for (const item of this.userData.requiredStreamExpressions) {
-        const { expression, enabled } =
-          typeof item === 'string' ? { expression: item, enabled: true } : item;
-        if (!enabled) continue;
+      for (const item of requiredStreamExpressions) {
+        const { expression } = item;
         try {
           const selectedStreams = await selector.select(
             streams.filter(
