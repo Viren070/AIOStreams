@@ -663,7 +663,7 @@ export function applyMigrations(config: any): UserData {
     config.statistics = {
       enabled: config.showStatistics ?? false,
       position: config.statisticsPosition ?? 'bottom',
-      statsToShow: ['addon', 'filter'],
+      statsToShow: ['addon', 'filter', 'timing'],
       ...(config.statistics ?? {}),
     };
     delete config.showStatistics;

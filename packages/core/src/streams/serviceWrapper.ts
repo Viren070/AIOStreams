@@ -27,6 +27,24 @@ export interface ServiceWrapResult {
   streams: ParsedStream[];
   errors: ServiceWrapError[];
   hasNewStreams: boolean;
+  serviceTimings?: Record<string, ServiceWrapServiceTiming>;
+}
+
+export interface ServiceWrapServiceTiming {
+  /** Time (ms) spent waiting for the debrid checkMagnets API response. */
+  magnetCheckMs: number;
+  /** Time (ms) spent on post-magnet-check processing (title validation, file selection, stream building). */
+  processingMs: number;
+  /** Total wall-clock time for this service (magnetCheckMs + processingMs). */
+  totalMs: number;
+  /** Number of cached results returned. */
+  cachedCount: number;
+  /** Number of uncached results returned. */
+  uncachedCount: number;
+  /** Number of torrents submitted to this service. */
+  torrentsIn: number;
+  /** Whether an error occurred during processing. */
+  hasError?: boolean;
 }
 
 export interface ServiceWrapError {
@@ -187,8 +205,15 @@ export async function resolveServiceWrappedStreams(
     });
   }
 
+  const serviceTimings = processedTorrents.serviceTimings;
+
   if (processedTorrents.results.length === 0) {
-    return { streams: otherStreams, errors, hasNewStreams: false };
+    return {
+      streams: otherStreams,
+      errors,
+      hasNewStreams: false,
+      serviceTimings,
+    };
   }
 
   // Build encrypted store auths for each service
@@ -232,6 +257,7 @@ export async function resolveServiceWrappedStreams(
     streams: [...debridStreams, ...otherStreams],
     errors,
     hasNewStreams: debridStreams.length > 0,
+    serviceTimings,
   };
 }
 

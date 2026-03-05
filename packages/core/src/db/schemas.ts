@@ -609,7 +609,7 @@ export const UserDataSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       position: z.enum(['top', 'bottom']).optional(),
-      statsToShow: z.array(z.enum(['addon', 'filter'])).optional(),
+      statsToShow: z.array(z.enum(['addon', 'filter', 'timing'])).optional(),
     })
     .optional(),
   tmdbAccessToken: z.string().optional(),

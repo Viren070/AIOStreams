@@ -16,11 +16,48 @@ import { StreamContext } from './context.js';
 
 const logger = createLogger('precomputer');
 
+export interface PrecomputeSubTimings {
+  /** Time spent computing preferred regex/keyword matches (per-stream). */
+  preferredRegexMs: number;
+  /** Time spent computing ranked regex pattern scores (per-stream). */
+  rankedRegexMs: number;
+  /** Time spent evaluating ranked stream expressions (SEL). */
+  rankedSELMs: number;
+  /** Time spent evaluating preferred stream expressions (SEL). */
+  preferredSELMs: number;
+  /** Combined wall-clock time for all four stages. */
+  totalMs: number;
+}
+
 class StreamPrecomputer {
   private userData: UserData;
+  private accumulatedTimings: PrecomputeSubTimings;
 
   constructor(userData: UserData) {
     this.userData = userData;
+    this.accumulatedTimings = {
+      preferredRegexMs: 0,
+      rankedRegexMs: 0,
+      rankedSELMs: 0,
+      preferredSELMs: 0,
+      totalMs: 0,
+    };
+  }
+
+  /** Returns accumulated precompute timings for this request (fetcher + pipeline runs combined). */
+  public getPrecomputeTimings(): PrecomputeSubTimings {
+    return { ...this.accumulatedTimings };
+  }
+
+  /** Resets accumulated timings for a new request (call once per getStreams invocation). */
+  public resetPrecomputeTimings(): void {
+    this.accumulatedTimings = {
+      preferredRegexMs: 0,
+      rankedRegexMs: 0,
+      rankedSELMs: 0,
+      preferredSELMs: 0,
+      totalMs: 0,
+    };
   }
 
   /**
@@ -30,15 +67,16 @@ class StreamPrecomputer {
   public async precomputeSeaDexOnly(
     streams: ParsedStream[],
     context: StreamContext
-  ) {
+  ): Promise<number> {
+    const start = Date.now();
     if (!context.isAnime || this.userData.enableSeadex === false) {
-      return;
+      return 0;
     }
 
     // Wait for SeaDex data if it's being fetched
     const seadexResult = await context.getSeaDex();
     if (!seadexResult) {
-      return;
+      return Date.now() - start;
     }
 
     this.precomputeSeaDexFromResult(
@@ -46,6 +84,7 @@ class StreamPrecomputer {
       seadexResult,
       context.animeEntry?.mappings?.anilistId
     );
+    return Date.now() - start;
   }
 
   /**
@@ -59,20 +98,52 @@ class StreamPrecomputer {
     streams: ParsedStream[],
     context: StreamContext,
     skipPerStreamIds?: Set<string>
-  ) {
+  ): Promise<PrecomputeSubTimings> {
     const start = Date.now();
     // preferred regex / keywords --> ranked regex patterns --> ranked stream expressions --> preferred stream expressions
     // this is the optimal order so that regexMatched can be used in RSE/PSE and streamExpressionScore and regexScore can be used in PSE
-    await this.precomputePreferredRegexMatches(streams, skipPerStreamIds);
-    await this.precomputeRankedRegexPatterns(streams, skipPerStreamIds);
-    await this.precomputeRankedStreamExpressions(streams, context);
-    await this.precomputePreferredExpressionMatches(streams, context);
-    const skippedInfo = skipPerStreamIds
-      ? ` (skipped per-stream ops for ${skipPerStreamIds.size} already-precomputed streams)`
-      : '';
-    logger.info(
-      `Precomputed preferred filters in ${getTimeTakenSincePoint(start)}${skippedInfo}`
+    const preferredRegexMs = await this.precomputePreferredRegexMatches(
+      streams,
+      skipPerStreamIds
     );
+    const rankedRegexMs = await this.precomputeRankedRegexPatterns(
+      streams,
+      skipPerStreamIds
+    );
+    const rankedSELMs = await this.precomputeRankedStreamExpressions(
+      streams,
+      context
+    );
+    const preferredSELMs = await this.precomputePreferredExpressionMatches(
+      streams,
+      context
+    );
+    const totalMs = Date.now() - start;
+    const skippedInfo = skipPerStreamIds
+      ? ` (skipped ${skipPerStreamIds.size} pre-computed)`
+      : '';
+    const subParts: string[] = [];
+    if (preferredRegexMs > 0) subParts.push(`prefRegex=${preferredRegexMs}ms`);
+    if (rankedRegexMs > 0) subParts.push(`rankedRegex=${rankedRegexMs}ms`);
+    if (rankedSELMs > 0) subParts.push(`rankedSEL=${rankedSELMs}ms`);
+    if (preferredSELMs > 0) subParts.push(`prefSEL=${preferredSELMs}ms`);
+    logger.info(
+      `Precompute: ${getTimeTakenSincePoint(start)}${skippedInfo}` +
+        (subParts.length > 0 ? `  [${subParts.join('  ')}]` : '')
+    );
+    // Accumulate into per-request totals (mirrors how filterer accumulates filterTimings)
+    this.accumulatedTimings.preferredRegexMs += preferredRegexMs;
+    this.accumulatedTimings.rankedRegexMs += rankedRegexMs;
+    this.accumulatedTimings.rankedSELMs += rankedSELMs;
+    this.accumulatedTimings.preferredSELMs += preferredSELMs;
+    this.accumulatedTimings.totalMs += totalMs;
+    return {
+      preferredRegexMs,
+      rankedRegexMs,
+      rankedSELMs,
+      preferredSELMs,
+      totalMs,
+    };
   }
 
   /**
@@ -82,12 +153,12 @@ class StreamPrecomputer {
   private async precomputeRankedStreamExpressions(
     streams: ParsedStream[],
     context: StreamContext
-  ) {
+  ): Promise<number> {
     if (
       !this.userData.rankedStreamExpressions?.length ||
       streams.length === 0
     ) {
-      return;
+      return 0;
     }
     const start = Date.now();
 
@@ -147,14 +218,15 @@ class StreamPrecomputer {
     logger.info(
       `Computed ranked expression scores for ${streams.length} streams (${nonZeroScores} with non-zero scores) in ${getTimeTakenSincePoint(start)}`
     );
+    return Date.now() - start;
   }
 
   private async precomputeRankedRegexPatterns(
     streams: ParsedStream[],
     skipStreamIds?: Set<string>
-  ) {
+  ): Promise<number> {
     if (!this.userData.rankedRegexPatterns?.length || streams.length === 0) {
-      return;
+      return 0;
     }
     const start = Date.now();
 
@@ -192,6 +264,7 @@ class StreamPrecomputer {
         streams.filter((s) => s.rankedRegexesMatched?.length).length
       } streams in ${getTimeTakenSincePoint(start)}`
     );
+    return Date.now() - start;
   }
 
   /**
@@ -295,7 +368,8 @@ class StreamPrecomputer {
   private async precomputePreferredRegexMatches(
     streams: ParsedStream[],
     skipStreamIds?: Set<string>
-  ) {
+  ): Promise<number> {
+    const start = Date.now();
     const preferredRegexPatterns =
       (await RegexAccess.isRegexAllowed(
         this.userData,
@@ -322,7 +396,7 @@ class StreamPrecomputer {
       !preferredKeywordsPatterns &&
       !this.userData.preferredStreamExpressions?.length
     ) {
-      return;
+      return 0;
     }
 
     const streamsToProcess = skipStreamIds
@@ -391,12 +465,14 @@ class StreamPrecomputer {
         }
       });
     }
+    return Date.now() - start;
   }
 
   private async precomputePreferredExpressionMatches(
     streams: ParsedStream[],
     context: StreamContext
-  ) {
+  ): Promise<number> {
+    const start = Date.now();
     if (this.userData.preferredStreamExpressions?.length) {
       const selector = new StreamSelector(context.toExpressionContext());
       const streamToConditionIndex = new Map<string, number>();
@@ -449,6 +525,7 @@ class StreamPrecomputer {
         }
       }
     }
+    return Date.now() - start;
   }
 }
 

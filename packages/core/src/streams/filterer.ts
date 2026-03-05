@@ -3,6 +3,7 @@ import {
   createLogger,
   RegexAccess,
   getTimeTakenSincePoint,
+  formatMilliseconds,
   constants,
   compileRegex,
   formRegexFromKeywords,
@@ -96,9 +97,45 @@ export interface FilterStatistics {
   };
 }
 
+export interface PhaseTimingStats {
+  /** Total ms spent in this phase across all streams and all filter() calls */
+  totalMs: number;
+  /** Maximum ms for any single stream evaluation */
+  maxMs: number;
+  /** Minimum ms for any single stream evaluation */
+  minMs: number;
+  /** Number of per-stream evaluations tracked */
+  count: number;
+}
+
+export interface FilterTimings {
+  /** Total wall-clock ms spent inside all filter() calls for this request */
+  totalMs: number;
+  /** Ms spent awaiting metadata (context.getMetadata, getReleaseDates, etc.) */
+  metadataMs: number;
+  /** Ms spent evaluating includedStreamExpressions */
+  expressionMs: number;
+  /** Ms spent compiling regex / keyword patterns */
+  regexCompileMs: number;
+  /** Ms spent sequentially pre-computing per-stream regex/keyword decisions before the filter
+   *  pass. Pre-computed sequentially (not inside Promise.all) so this value is accurate. */
+  regexTestMs: number;
+  /** Ms spent in the core per-stream shouldKeepStream filter pass */
+  filterPassMs: number;
+  /** Number of filter() calls accumulated */
+  calls: number;
+  /** Per-stream phase timings from the shouldKeepStream pass, accumulated across all filter() calls */
+  phases: {
+    titleMatch: PhaseTimingStats;
+    yearMatch: PhaseTimingStats;
+    seasonEpisodeMatch: PhaseTimingStats;
+  };
+}
+
 class StreamFilterer {
   private userData: UserData;
   private filterStatistics: FilterStatistics;
+  private filterTimings: FilterTimings;
 
   constructor(userData: UserData) {
     this.userData = userData;
@@ -161,6 +198,20 @@ class StreamFilterer {
         streamExpression: { total: 0, details: {} },
       },
     };
+    this.filterTimings = {
+      totalMs: 0,
+      metadataMs: 0,
+      expressionMs: 0,
+      regexCompileMs: 0,
+      regexTestMs: 0,
+      filterPassMs: 0,
+      calls: 0,
+      phases: {
+        titleMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        yearMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        seasonEpisodeMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      },
+    };
   }
 
   private incrementRemovalReason(
@@ -187,6 +238,34 @@ class StreamFilterer {
 
   public getFilterStatistics() {
     return this.filterStatistics;
+  }
+
+  public getFilterTimings(): FilterTimings {
+    return {
+      ...this.filterTimings,
+      phases: {
+        titleMatch: { ...this.filterTimings.phases.titleMatch },
+        yearMatch: { ...this.filterTimings.phases.yearMatch },
+        seasonEpisodeMatch: { ...this.filterTimings.phases.seasonEpisodeMatch },
+      },
+    };
+  }
+
+  public resetFilterTimings(): void {
+    this.filterTimings = {
+      totalMs: 0,
+      metadataMs: 0,
+      expressionMs: 0,
+      regexCompileMs: 0,
+      regexTestMs: 0,
+      filterPassMs: 0,
+      calls: 0,
+      phases: {
+        titleMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        yearMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        seasonEpisodeMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      },
+    };
   }
 
   public generateFilterSummary(
@@ -266,6 +345,29 @@ class StreamFilterer {
     const { type, id, parsedId, isAnime } = context;
 
     const start = Date.now();
+    // Sub-phase timing accumulators for this filter() call
+    let metadataMs = 0;
+    let expressionMs = 0;
+    let regexCompileMs = 0;
+    let filterPassMs = 0;
+    let regexTestMs = 0;
+    // Per-stream phase timing accumulators (accumulated during the filter pass, then merged into filterTimings)
+    const phases = {
+      titleMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      yearMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      seasonEpisodeMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+    };
+    const accumPhase = (
+      s: { totalMs: number; maxMs: number; minMs: number; count: number },
+      ms: number
+    ) => {
+      s.totalMs += ms;
+      s.count++;
+      if (ms > s.maxMs) s.maxMs = ms;
+      if (ms < s.minMs) s.minMs = ms;
+    };
+
+    const metadataStart = Date.now();
     const isRegexAllowed = await RegexAccess.isRegexAllowed(this.userData, [
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
@@ -287,6 +389,13 @@ class StreamFilterer {
       : undefined;
 
     const episodeRuntime = await context.getEpisodeRuntime();
+    metadataMs = Date.now() - metadataStart;
+    if (metadataMs > 10) {
+      logger.debug(
+        `Metadata + regex access resolved in ${formatMilliseconds(metadataMs)}`,
+        { id }
+      );
+    }
     const runtimeToUse =
       episodeRuntime ||
       (requestedMetadata?.runtime ? requestedMetadata.runtime : undefined);
@@ -929,8 +1038,10 @@ class StreamFilterer {
       return true;
     };
 
+    const expressionStart = Date.now();
     const includedStreamsByExpression =
       await this.applyIncludedStreamExpressions(streams, context);
+    expressionMs = Date.now() - expressionStart;
     if (includedStreamsByExpression.length > 0) {
       logger.info(
         `${includedStreamsByExpression.length} streams were included by stream expressions`
@@ -974,6 +1085,11 @@ class StreamFilterer {
 
       if (passthroughDigitalRelease.length === 0) {
         const finalStreams: ParsedStream[] = [];
+        const totalMs = Date.now() - start;
+        this.filterTimings.totalMs += totalMs;
+        this.filterTimings.metadataMs += metadataMs;
+        this.filterTimings.expressionMs += expressionMs;
+        this.filterTimings.calls++;
         logger.info(
           `Applied basic filters in ${getTimeTakenSincePoint(start)}`
         );
@@ -983,6 +1099,7 @@ class StreamFilterer {
       streams = passthroughDigitalRelease;
     }
 
+    const regexCompileStart = Date.now();
     const excludedRegexPatterns =
       isRegexAllowed &&
       this.userData.excludedRegexPatterns &&
@@ -1033,6 +1150,7 @@ class StreamFilterer {
       this.userData.includedKeywords.length > 0
         ? await formRegexFromKeywords(this.userData.includedKeywords)
         : undefined;
+    regexCompileMs = Date.now() - regexCompileStart;
 
     // test many regexes against many attributes and return true if at least one regex matches any attribute
     // and false if no regex matches any attribute
@@ -1167,7 +1285,7 @@ class StreamFilterer {
       }
     };
 
-    const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
+    const shouldKeepStream = (stream: ParsedStream): boolean => {
       const file = stream.parsedFile;
 
       const skipLanguageFiltering = shouldPassthroughStage(stream, 'language');
@@ -1345,7 +1463,7 @@ class StreamFilterer {
 
       if (
         includedRegexPatterns &&
-        (await testRegexes(stream, includedRegexPatterns))
+        regexDecisionsMap.get(stream.id)?.includedByRegex
       ) {
         this.incrementIncludedReason('regex', includedRegexPatterns[0].source);
         return true;
@@ -1353,7 +1471,7 @@ class StreamFilterer {
 
       if (
         includedKeywordsPattern &&
-        (await testRegexes(stream, [includedKeywordsPattern]))
+        regexDecisionsMap.get(stream.id)?.includedByKeywords
       ) {
         this.incrementIncludedReason(
           'keywords',
@@ -1747,7 +1865,7 @@ class StreamFilterer {
 
       if (
         excludedRegexPatterns &&
-        (await testRegexes(stream, excludedRegexPatterns))
+        regexDecisionsMap.get(stream.id)?.excludedByRegex
       ) {
         this.incrementRemovalReason('excludedRegex');
         return false;
@@ -1755,7 +1873,7 @@ class StreamFilterer {
       if (
         requiredRegexPatterns &&
         requiredRegexPatterns.length > 0 &&
-        !(await testRegexes(stream, requiredRegexPatterns))
+        !regexDecisionsMap.get(stream.id)?.requiredByRegex
       ) {
         this.incrementRemovalReason('requiredRegex');
         return false;
@@ -1763,7 +1881,7 @@ class StreamFilterer {
 
       if (
         excludedKeywordsPattern &&
-        (await testRegexes(stream, [excludedKeywordsPattern]))
+        regexDecisionsMap.get(stream.id)?.excludedByKeywords
       ) {
         this.incrementRemovalReason('excludedKeywords');
         return false;
@@ -1771,7 +1889,7 @@ class StreamFilterer {
 
       if (
         requiredKeywordsPattern &&
-        !(await testRegexes(stream, [requiredKeywordsPattern]))
+        !regexDecisionsMap.get(stream.id)?.requiredByKeywords
       ) {
         this.incrementRemovalReason('requiredKeywords');
         return false;
@@ -1882,52 +2000,58 @@ class StreamFilterer {
         }
       }
 
-      if (
-        !shouldPassthroughStage(stream, 'year') &&
-        !performYearMatch(stream)
-      ) {
-        this.incrementRemovalReason(
-          'yearMatching',
-          `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
-        );
-        return false;
+      if (!shouldPassthroughStage(stream, 'year')) {
+        const _ymStart = Date.now();
+        const _ymResult = performYearMatch(stream);
+        accumPhase(phases.yearMatch, Date.now() - _ymStart);
+        if (!_ymResult) {
+          this.incrementRemovalReason(
+            'yearMatching',
+            `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
+          );
+          return false;
+        }
       }
 
-      if (
-        !shouldPassthroughStage(stream, 'episode') &&
-        !performSeasonEpisodeMatch(stream)
-      ) {
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        const s = stream.parsedFile?.seasons;
-        const e = stream.parsedFile?.episodes;
-        const formattedSeasonString = s?.length
-          ? `S${pad(s[0])}${s.length > 1 ? `-${pad(s[s.length - 1])}` : ''}`
-          : undefined;
-        const formattedEpisodeString = e?.length
-          ? `E${pad(e[0])}${e.length > 1 ? `-${pad(e[e.length - 1])}` : ''}`
-          : undefined;
-        const seasonEpisode = [
-          formattedSeasonString,
-          formattedEpisodeString,
-        ].filter(Boolean);
-        const detail =
-          stream.parsedFile?.title +
-          ' ' +
-          (seasonEpisode?.join(' • ') || 'Unknown');
+      if (!shouldPassthroughStage(stream, 'episode')) {
+        const _seStart = Date.now();
+        const _seResult = performSeasonEpisodeMatch(stream);
+        accumPhase(phases.seasonEpisodeMatch, Date.now() - _seStart);
+        if (!_seResult) {
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          const s = stream.parsedFile?.seasons;
+          const e = stream.parsedFile?.episodes;
+          const formattedSeasonString = s?.length
+            ? `S${pad(s[0])}${s.length > 1 ? `-${pad(s[s.length - 1])}` : ''}`
+            : undefined;
+          const formattedEpisodeString = e?.length
+            ? `E${pad(e[0])}${e.length > 1 ? `-${pad(e[e.length - 1])}` : ''}`
+            : undefined;
+          const seasonEpisode = [
+            formattedSeasonString,
+            formattedEpisodeString,
+          ].filter(Boolean);
+          const detail =
+            stream.parsedFile?.title +
+            ' ' +
+            (seasonEpisode?.join(' • ') || 'Unknown');
 
-        this.incrementRemovalReason('seasonEpisodeMatching', detail);
-        return false;
+          this.incrementRemovalReason('seasonEpisodeMatching', detail);
+          return false;
+        }
       }
 
-      if (
-        !shouldPassthroughStage(stream, 'title') &&
-        !performTitleMatch(stream)
-      ) {
-        this.incrementRemovalReason(
-          'titleMatching',
-          `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
-        );
-        return false;
+      if (!shouldPassthroughStage(stream, 'title')) {
+        const _tmStart = Date.now();
+        const _tmResult = performTitleMatch(stream);
+        accumPhase(phases.titleMatch, Date.now() - _tmStart);
+        if (!_tmResult) {
+          this.incrementRemovalReason(
+            'titleMatching',
+            `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
+          );
+          return false;
+        }
       }
 
       const globalSizeRange = this.userData.size?.global;
@@ -2054,18 +2178,86 @@ class StreamFilterer {
       (stream) => !includedWithoutPassthrough.some((s) => s.id === stream.id)
     );
 
-    const filterResults = await Promise.all(
-      filterableStreams.map(shouldKeepStream)
+    const hasAnyRegexFilter = !!(
+      excludedRegexPatterns ||
+      requiredRegexPatterns ||
+      includedRegexPatterns ||
+      excludedKeywordsPattern ||
+      requiredKeywordsPattern ||
+      includedKeywordsPattern
     );
+    const regexDecisionsMap = new Map<
+      string,
+      {
+        includedByRegex: boolean;
+        includedByKeywords: boolean;
+        excludedByRegex: boolean;
+        requiredByRegex: boolean;
+        excludedByKeywords: boolean;
+        requiredByKeywords: boolean;
+      }
+    >();
+    if (hasAnyRegexFilter) {
+      const regexTestStart = Date.now();
+      for (const stream of filterableStreams) {
+        regexDecisionsMap.set(stream.id, {
+          includedByRegex: includedRegexPatterns
+            ? await testRegexes(stream, includedRegexPatterns)
+            : false,
+          includedByKeywords: includedKeywordsPattern
+            ? await testRegexes(stream, [includedKeywordsPattern])
+            : false,
+          excludedByRegex: excludedRegexPatterns
+            ? await testRegexes(stream, excludedRegexPatterns)
+            : false,
+          requiredByRegex: requiredRegexPatterns
+            ? await testRegexes(stream, requiredRegexPatterns)
+            : true,
+          excludedByKeywords: excludedKeywordsPattern
+            ? await testRegexes(stream, [excludedKeywordsPattern])
+            : false,
+          requiredByKeywords: requiredKeywordsPattern
+            ? await testRegexes(stream, [requiredKeywordsPattern])
+            : true,
+        });
+      }
+      regexTestMs = Date.now() - regexTestStart;
+    }
 
-    let filteredStreams = filterableStreams.filter(
-      (_, index) => filterResults[index]
-    );
+    const filterPassStart = Date.now();
+    const filteredStreams = filterableStreams.filter(shouldKeepStream);
+    filterPassMs = Date.now() - filterPassStart;
 
     const finalStreams = StreamUtils.mergeStreams([
       ...includedWithoutPassthrough,
       ...filteredStreams,
     ]);
+
+    const totalMs = Date.now() - start;
+    this.filterTimings.totalMs += totalMs;
+    this.filterTimings.metadataMs += metadataMs;
+    this.filterTimings.expressionMs += expressionMs;
+    this.filterTimings.regexCompileMs += regexCompileMs;
+    this.filterTimings.regexTestMs += regexTestMs;
+    this.filterTimings.filterPassMs += filterPassMs;
+    this.filterTimings.calls++;
+    // Merge per-stream phase stats into the accumulated filterTimings
+    const mergePhase = (
+      dest: PhaseTimingStats,
+      src: { totalMs: number; maxMs: number; minMs: number; count: number }
+    ) => {
+      if (src.count === 0) return;
+      dest.totalMs += src.totalMs;
+      dest.count += src.count;
+      if (src.maxMs > dest.maxMs) dest.maxMs = src.maxMs;
+      if (src.minMs < dest.minMs) dest.minMs = src.minMs;
+    };
+    mergePhase(this.filterTimings.phases.titleMatch, phases.titleMatch);
+    mergePhase(this.filterTimings.phases.yearMatch, phases.yearMatch);
+    mergePhase(
+      this.filterTimings.phases.seasonEpisodeMatch,
+      phases.seasonEpisodeMatch
+    );
 
     logger.info(
       `Applied basic filters in ${getTimeTakenSincePoint(start)}, removed ${streams.length - finalStreams.length} streams`

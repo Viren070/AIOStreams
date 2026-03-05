@@ -59,9 +59,20 @@ export async function processTorrents(
 ): Promise<{
   results: TorrentWithSelectedFile[];
   errors: { serviceId: BuiltinServiceId; error: Error }[];
+  serviceTimings: Record<
+    string,
+    {
+      magnetCheckMs: number;
+      processingMs: number;
+      totalMs: number;
+      cachedCount: number;
+      uncachedCount: number;
+      torrentsIn: number;
+    }
+  >;
 }> {
   if (torrents.length === 0) {
-    return { results: [], errors: [] };
+    return { results: [], errors: [], serviceTimings: {} };
   }
   const results: TorrentWithSelectedFile[] = [];
   const errors: { serviceId: BuiltinServiceId; error: Error }[] = [];
@@ -78,7 +89,7 @@ export async function processTorrents(
   // Run all service checks in parallel and collect both results and errors
   const servicePromises = debridServices.map(async (service) => {
     try {
-      const serviceResults = await processTorrentsForDebridService(
+      const serviceResult = await processTorrentsForDebridService(
         torrents,
         service,
         stremioId,
@@ -87,28 +98,70 @@ export async function processTorrents(
         checkOwned,
         sharedParsedTitlesMap
       );
-      return { serviceId: service.id, results: serviceResults, error: null };
+      return { serviceId: service.id, ...serviceResult, error: null };
     } catch (error) {
       if (error instanceof Error && error.stack) {
         delete error.stack;
       }
       logger.error(`Error processing torrents for ${service.id}:`, error);
-      return { serviceId: service.id, results: [], error };
+      return {
+        serviceId: service.id,
+        results: [],
+        error,
+        magnetCheckMs: 0,
+        processingMs: 0,
+        totalMs: 0,
+        cachedCount: 0,
+        uncachedCount: 0,
+        torrentsIn: torrents.length,
+      };
     }
   });
 
   const settledResults = await Promise.all(servicePromises);
 
-  for (const { results: serviceResults, error, serviceId } of settledResults) {
+  const serviceTimings: Record<
+    string,
+    {
+      magnetCheckMs: number;
+      processingMs: number;
+      totalMs: number;
+      cachedCount: number;
+      uncachedCount: number;
+      torrentsIn: number;
+      hasError?: boolean;
+    }
+  > = {};
+
+  for (const {
+    results: serviceResults,
+    error,
+    serviceId,
+    magnetCheckMs,
+    processingMs,
+    totalMs,
+    cachedCount,
+    uncachedCount,
+    torrentsIn,
+  } of settledResults) {
     if (serviceResults && serviceResults.length > 0) {
       results.push(...serviceResults);
     }
     if (error instanceof Error) {
       errors.push({ serviceId, error });
     }
+    serviceTimings[serviceId] = {
+      magnetCheckMs,
+      processingMs,
+      totalMs,
+      cachedCount,
+      uncachedCount,
+      torrentsIn,
+      hasError: !!error,
+    };
   }
 
-  return { results, errors };
+  return { results, errors, serviceTimings };
 }
 
 async function processTorrentsForDebridService(
@@ -119,7 +172,15 @@ async function processTorrentsForDebridService(
   clientIp?: string,
   checkOwned: boolean = true,
   sharedParsedTitlesMap?: Map<string, ParsedResult>
-): Promise<TorrentWithSelectedFile[]> {
+): Promise<{
+  results: TorrentWithSelectedFile[];
+  magnetCheckMs: number;
+  processingMs: number;
+  totalMs: number;
+  cachedCount: number;
+  uncachedCount: number;
+  torrentsIn: number;
+}> {
   const startTime = Date.now();
   const debridService = getDebridService(
     service.id,
@@ -130,7 +191,15 @@ async function processTorrentsForDebridService(
     logger.warn(
       `Service ${service.id} does not support torrents, skipping torrent processing`
     );
-    return [];
+    return {
+      results: [],
+      magnetCheckMs: 0,
+      processingMs: 0,
+      totalMs: 0,
+      cachedCount: 0,
+      uncachedCount: 0,
+      torrentsIn: 0,
+    };
   }
 
   // Filter out library items that belong to a different service
@@ -139,7 +208,15 @@ async function processTorrentsForDebridService(
   );
 
   if (torrents.length === 0) {
-    return [];
+    return {
+      results: [],
+      magnetCheckMs: 0,
+      processingMs: 0,
+      totalMs: 0,
+      cachedCount: 0,
+      uncachedCount: 0,
+      torrentsIn: 0,
+    };
   }
 
   const results: TorrentWithSelectedFile[] = [];
@@ -149,6 +226,7 @@ async function processTorrentsForDebridService(
     stremioId,
     checkOwned
   );
+  const magnetCheckMs = Date.now() - startTime;
   const magnetCheckTime = getTimeTakenSincePoint(startTime);
   logger.debug(`Retrieved magnet status from debrid`, {
     service: debridService.serviceName,
@@ -317,7 +395,20 @@ async function processTorrentsForDebridService(
     checkTime: magnetCheckTime,
   });
 
-  return results;
+  const totalMs = Date.now() - startTime;
+  const cachedCount = results.filter((r) => r.service?.cached === true).length;
+  const uncachedCount = results.filter(
+    (r) => r.service?.cached === false
+  ).length;
+  return {
+    results,
+    magnetCheckMs,
+    processingMs: totalMs - magnetCheckMs,
+    totalMs,
+    cachedCount,
+    uncachedCount,
+    torrentsIn: torrents.length,
+  };
 }
 
 export async function processTorrentsForP2P(

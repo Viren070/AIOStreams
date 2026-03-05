@@ -11,6 +11,7 @@ import {
   Env,
   getSimpleTextHash,
   getTimeTakenSincePoint,
+  formatMilliseconds,
   maskSensitiveInfo,
   Cache,
   ExtrasParser,
@@ -46,6 +47,8 @@ import {
   preloadStreams,
 } from './streams/index.js';
 import { resolveServiceWrappedStreams } from './streams/serviceWrapper.js';
+import type { ServiceWrapServiceTiming } from './streams/serviceWrapper.js';
+import type { PrecomputeSubTimings } from './streams/precomputer.js';
 import { getAddonName } from './utils/general.js';
 import { Metadata } from './metadata/utils.js';
 import { StreamSelector } from './parser/streamExpression.js';
@@ -191,11 +194,16 @@ export class AIOStreams {
     // Store context for later retrieval
     this.streamContext = context;
 
+    this.filterer.resetFilterTimings();
+    this.precomputer.resetPrecomputeTimings();
+
+    const fetchStart = Date.now();
     const {
       streams,
       errors,
       statistics: addonStatistics,
     } = await this.fetcher.fetch(supportedAddons, context);
+    const fetchMs = Date.now() - fetchStart;
 
     if (
       this.userData.statistics?.enabled &&
@@ -224,6 +232,7 @@ export class AIOStreams {
         : undefined
     );
     let finalStreams = processResults.streams;
+    const pipelineTimings = processResults.timings;
     errors.push(...processResults.errors);
 
     // if this.userData.precacheNextEpisode is true, start a new thread to request the next episode, check if
@@ -362,6 +371,162 @@ export class AIOStreams {
           statistics.push({
             title: '🔍 Included Reasons',
             description: group.join('\n').trim(),
+          });
+        }
+      }
+    }
+
+    if (
+      this.userData.statistics?.enabled &&
+      this.userData.statistics?.statsToShow?.includes('timing')
+    ) {
+      const filterTimings = this.filterer.getFilterTimings();
+      const accumulatedPrecompute = this.precomputer.getPrecomputeTimings();
+      // totalMs uses pipeline-phase timings only (fetchMs already contains the fetcher filter/precompute)
+      const totalMs =
+        fetchMs +
+        pipelineTimings.serviceWrapMs +
+        pipelineTimings.filterMs +
+        pipelineTimings.deduplicationMs +
+        pipelineTimings.precomputeMs +
+        pipelineTimings.sortMs +
+        pipelineTimings.limitMs +
+        pipelineTimings.selMs;
+
+      const fmtMs = (ms: number) => formatMilliseconds(ms);
+
+      {
+        const lines: string[] = [
+          `📥 Fetch: ${fmtMs(fetchMs)}`,
+          `🔗 Service Wrap: ${fmtMs(pipelineTimings.serviceWrapMs)}`,
+        ];
+        // Show accumulated filter total (fetcher + optional re-filter pass)
+        if (filterTimings.totalMs > 0) {
+          lines.push(`🔍 Filter: ${fmtMs(filterTimings.totalMs)}`);
+        }
+        lines.push(
+          `🔄 Dedup: ${fmtMs(pipelineTimings.deduplicationMs)}`,
+          // Show accumulated precompute total (fetcher + optional pipeline pass)
+          `⚙️ Precompute: ${fmtMs(accumulatedPrecompute.totalMs)}`,
+          `📊 Sort: ${fmtMs(pipelineTimings.sortMs)}`,
+          `✂️ Limit: ${fmtMs(pipelineTimings.limitMs)}`,
+          `🎯 SEL: ${fmtMs(pipelineTimings.selMs)}`,
+          `${'─'.repeat(20)}`,
+          `⏱️ Total: ~${fmtMs(totalMs)}`
+        );
+        statistics.push({
+          title: '⏱️ Pipeline Timing',
+          description: lines.join('\n'),
+        });
+      }
+
+      if (filterTimings.calls > 0) {
+        const lines: string[] = [
+          `⏱️ Total: ${fmtMs(filterTimings.totalMs)} (${filterTimings.calls} call${filterTimings.calls > 1 ? 's' : ''})`,
+          `${'─'.repeat(20)}`,
+          `📝 Metadata: ${fmtMs(filterTimings.metadataMs)}`,
+          `⚡ Expressions: ${fmtMs(filterTimings.expressionMs)}`,
+          `🔨 Regex compile: ${fmtMs(filterTimings.regexCompileMs)}`,
+          `🧪 Regex test: ${fmtMs(filterTimings.regexTestMs)}`,
+          `🌪️ Filter pass: ${fmtMs(filterTimings.filterPassMs)}`,
+        ];
+        const { phases } = filterTimings;
+        const phaseRows: Array<[string, typeof phases.titleMatch, string]> = [
+          ['Title match', phases.titleMatch, '🔤'],
+          ['Year match', phases.yearMatch, '📅'],
+          ['Season/Ep', phases.seasonEpisodeMatch, '📺'],
+        ];
+        const activePhases = phaseRows.filter(
+          ([, p]) => (p as typeof phases.titleMatch).count > 0
+        );
+        if (activePhases.length > 0) {
+          lines.push(``, `🔍 Per-stream phases:`);
+          for (const [label, p, emoji] of activePhases) {
+            const phase = p as typeof phases.titleMatch;
+            lines.push(`  ${emoji} ${label}: ${fmtMs(phase.totalMs)}`);
+          }
+        }
+        statistics.push({
+          title: '🔍 Filter Breakdown',
+          description: lines.join('\n'),
+        });
+      }
+
+      if (accumulatedPrecompute.totalMs > 0) {
+        const sub = accumulatedPrecompute;
+        const fetcherPrecomputeMs =
+          accumulatedPrecompute.totalMs - pipelineTimings.precomputeMs;
+        const rows: Array<[string, number, string]> = [
+          ['Preferred regex', sub.preferredRegexMs, '⭐'],
+          ['Ranked regex', sub.rankedRegexMs, '📈'],
+          ['Ranked SEL', sub.rankedSELMs, '🎯'],
+          ['Preferred SEL', sub.preferredSELMs, '✨'],
+        ];
+        const activeRows = rows.filter(([, ms]) => (ms as number) > 0);
+        if (activeRows.length > 0) {
+          const lines: string[] = [
+            `⏱️ Total: ${fmtMs(accumulatedPrecompute.totalMs)}`,
+          ];
+          if (fetcherPrecomputeMs > 0 && pipelineTimings.precomputeMs > 0) {
+            lines.push(
+              `    • Fetcher: ${fmtMs(fetcherPrecomputeMs)}`,
+              `    • Pipeline: ${fmtMs(pipelineTimings.precomputeMs)}`
+            );
+          }
+          lines.push(`${'─'.repeat(20)}`);
+          for (const [label, ms, emoji] of activeRows) {
+            lines.push(`${emoji} ${label}: ${fmtMs(ms as number)}`);
+          }
+          statistics.push({
+            title: '⚙️ Precompute Breakdown',
+            description: lines.join('\n'),
+          });
+        }
+      }
+
+      if (
+        pipelineTimings.serviceWrapMs > 0 &&
+        pipelineTimings.serviceWrapTimings
+      ) {
+        const entries = Object.entries(pipelineTimings.serviceWrapTimings);
+        if (entries.length > 0) {
+          const lines: string[] = [
+            `⏱️ Total: ${fmtMs(pipelineTimings.serviceWrapMs)} (${entries.length} service${entries.length > 1 ? 's' : ''})`,
+            `${'─'.repeat(20)}`,
+          ];
+          for (let i = 0; i < entries.length; i++) {
+            const [serviceId, t] = entries[i];
+            const shortName =
+              (
+                constants.SERVICE_DETAILS as Record<
+                  string,
+                  { shortName?: string }
+                >
+              )[serviceId]?.shortName ?? serviceId;
+            let statusStr = '';
+            if (t.hasError) {
+              statusStr = ' | ❌ Error';
+            } else {
+              const cachedStr =
+                t.cachedCount > 0 ? ` | ✅ ${t.cachedCount} cached` : '';
+              const uncachedStr =
+                t.uncachedCount > 0 ? ` | ⏳ ${t.uncachedCount} uncached` : '';
+              statusStr = `${cachedStr}${uncachedStr}`;
+            }
+
+            lines.push(
+              `☁️ ${shortName} (${t.torrentsIn} torrents${statusStr})`,
+              `    • Magnet check: ${fmtMs(t.magnetCheckMs)}`,
+              `    • Processing: ${fmtMs(t.processingMs)}`,
+              `    • Total: ${fmtMs(t.totalMs)}`
+            );
+            if (i < entries.length - 1) {
+              lines.push(``);
+            }
+          }
+          statistics.push({
+            title: '🔗 Service Wrap Breakdown',
+            description: lines.join('\n'),
           });
         }
       }
@@ -2323,15 +2488,45 @@ export class AIOStreams {
       count: number;
       position: 'beforeLimiting' | 'beforeSEL' | 'last';
     }
-  ): Promise<{ streams: ParsedStream[]; errors: AIOStreamsError[] }> {
+  ): Promise<{
+    streams: ParsedStream[];
+    errors: AIOStreamsError[];
+    timings: {
+      metaFilterMs: number;
+      serviceWrapMs: number;
+      serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+      filterMs: number;
+      deduplicationMs: number;
+      precomputeMs: number;
+      precomputeSubTimings?: PrecomputeSubTimings;
+      sortMs: number;
+      limitMs: number;
+      selMs: number;
+    };
+  }> {
     const { type, id, queryType } = context;
     let processedStreams = streams;
     let errors: AIOStreamsError[] = [];
 
+    let metaFilterMs = 0;
+    let serviceWrapMs = 0;
+    let serviceWrapTimings:
+      | Record<string, ServiceWrapServiceTiming>
+      | undefined;
+    let filterMs = 0;
+    let deduplicationMs = 0;
+    let precomputeMs = 0;
+    let precomputeSubTimings: PrecomputeSubTimings | undefined;
+    let sortMs = 0;
+    let limitMs = 0;
+    let selMs = 0;
+
     if (isMeta) {
       // Run SeaDex precompute before filter so seadex() works in Included SEL
       await this.precomputer.precomputeSeaDexOnly(processedStreams, context);
+      const metaFilterStart = Date.now();
       processedStreams = await this.filterer.filter(processedStreams, context);
+      metaFilterMs = Date.now() - metaFilterStart;
     }
 
     // Resolve service-wrapped P2P streams through debrid services.
@@ -2340,23 +2535,32 @@ export class AIOStreams {
     // Capture existing stream IDs before service wrapping so we can skip
     // per-stream precomputation for streams already precomputed in the fetcher.
     const preServiceWrapIds = new Set(processedStreams.map((s) => s.id));
+    const serviceWrapStart = Date.now();
     const resolvedResults = await resolveServiceWrappedStreams(
       processedStreams,
       context,
       this.userData,
       this.addons
     );
+    serviceWrapMs = Date.now() - serviceWrapStart;
     processedStreams = resolvedResults.streams;
     errors.push(...resolvedResults.errors);
+    if (resolvedResults.serviceTimings) {
+      serviceWrapTimings = resolvedResults.serviceTimings;
+    }
 
     // Re-run filters on streams that were just service-wrapped.
     // They now have debrid-specific info (service, cached status, etc.)
     // that wasn't available during the first filter pass.
     if (resolvedResults.hasNewStreams) {
+      const filterStart = Date.now();
       processedStreams = await this.filterer.filter(processedStreams, context);
+      filterMs = Date.now() - filterStart;
     }
 
+    const dedupStart = Date.now();
     processedStreams = await this.deduplicator.deduplicate(processedStreams);
+    deduplicationMs = Date.now() - dedupStart;
 
     if (isMeta || resolvedResults.hasNewStreams) {
       // When service wrapping added new streams and we're not in meta mode,
@@ -2366,14 +2570,18 @@ export class AIOStreams {
         !isMeta && resolvedResults.hasNewStreams
           ? preServiceWrapIds
           : undefined;
-      await this.precomputer.precomputePreferred(
+      const precomputeStart = Date.now();
+      precomputeSubTimings = await this.precomputer.precomputePreferred(
         processedStreams,
         context,
         skipPerStreamIds
       );
+      precomputeMs = Date.now() - precomputeStart;
     }
 
+    const sortStart = Date.now();
     let finalStreams = await this.sorter.sort(processedStreams, context);
+    sortMs = Date.now() - sortStart;
 
     // NZB failover: beforeLimiting position - widest pool (after sort, before limit+SEL)
     if (nzbFailoverOpts?.position === 'beforeLimiting') {
@@ -2388,7 +2596,9 @@ export class AIOStreams {
       });
     }
 
+    const limitStart = Date.now();
     finalStreams = await this.limiter.limit(finalStreams);
+    limitMs = Date.now() - limitStart;
 
     // NZB failover: beforeSEL position - after limiting, before SEL expression filters
     if (nzbFailoverOpts?.position === 'beforeSEL') {
@@ -2403,10 +2613,12 @@ export class AIOStreams {
       });
     }
 
+    const selStart = Date.now();
     finalStreams = await this.filterer.applyStreamExpressionFilters(
       finalStreams,
       context
     );
+    selMs = Date.now() - selStart;
 
     // NZB failover: last position (default) - after limiting and SEL, cleanest pool
     if (!nzbFailoverOpts?.position || nzbFailoverOpts.position === 'last') {
@@ -2462,7 +2674,22 @@ export class AIOStreams {
       finalStreams = streamsWithExternalDownloads;
     }
 
-    return { streams: finalStreams, errors };
+    return {
+      streams: finalStreams,
+      errors,
+      timings: {
+        metaFilterMs,
+        serviceWrapMs,
+        serviceWrapTimings,
+        filterMs,
+        deduplicationMs,
+        precomputeMs,
+        precomputeSubTimings,
+        sortMs,
+        limitMs,
+        selMs,
+      },
+    };
   }
 
   private async precacheNextEpisode(context: StreamContext) {

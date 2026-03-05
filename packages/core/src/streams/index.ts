@@ -19,7 +19,13 @@ export {
 export type { ExtendedMetadata };
 
 export { resolveServiceWrappedStreams } from './serviceWrapper.js';
-export type { ServiceWrapResult, ServiceWrapError } from './serviceWrapper.js';
+export type {
+  ServiceWrapResult,
+  ServiceWrapError,
+  ServiceWrapServiceTiming,
+} from './serviceWrapper.js';
+
+export type { PrecomputeSubTimings } from './precomputer.js';
 
 export {
   populateNzbFallbacks,

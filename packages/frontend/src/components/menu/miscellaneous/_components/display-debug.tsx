@@ -50,20 +50,20 @@ export function DisplayDebug() {
         />
         <Combobox
           label="Statistics to Show"
-          options={['addon', 'filter'].map((statistic) => ({
+          options={['addon', 'filter', 'timing'].map((statistic) => ({
             label: statistic,
             value: statistic,
           }))}
           emptyMessage="No statistics to show"
           multiple
-          defaultValue={['addon', 'filter']}
+          defaultValue={['addon', 'filter', 'timing']}
           value={userData.statistics?.statsToShow}
           onValueChange={(value) => {
             setUserData((prev) => ({
               ...prev,
               statistics: {
                 ...prev.statistics,
-                statsToShow: value as ('addon' | 'filter')[],
+                statsToShow: value as ('addon' | 'filter' | 'timing')[],
               },
             }));
           }}

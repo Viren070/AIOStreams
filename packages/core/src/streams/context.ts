@@ -423,7 +423,8 @@ export class StreamContext {
   public startAllFetches(): void {
     this.startMetadataFetch();
     this.startSeaDexFetch();
-    // Release dates and episode air date depend on metadata, so they're fetched after
+    this.startReleaseDatesFetch();
+    this.startEpisodeDetailsFetch();
   }
 
   /**
