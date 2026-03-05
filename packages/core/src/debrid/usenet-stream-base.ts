@@ -925,8 +925,8 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       ),
       () => this._resolve(playbackInfo, filename),
       {
-        timeout: 120000,
-        ttl: 130000,
+        timeout: this.maxWaitTime + this.pollInterval,
+        ttl: this.maxWaitTime + this.pollInterval + 10000,
       }
     );
     return result;

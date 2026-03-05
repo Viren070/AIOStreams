@@ -643,8 +643,10 @@ export class TorboxDebridService
           autoRemoveDownloads
         ),
       {
-        timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
-        ttl: playbackInfo.cacheAndPlay ? 130000 : 40000,
+        timeout: cacheAndPlay ? this.maxWaitTime + this.pollInterval : 30000,
+        ttl: cacheAndPlay
+          ? this.maxWaitTime + this.pollInterval + 10000
+          : 40000,
       }
     );
     return result;

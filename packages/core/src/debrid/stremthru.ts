@@ -821,13 +821,14 @@ export class StremThruService
           ),
         {
           timeout: effectiveCacheAndPlay
-            ? (this.config.cacheAndPlayOptions?.maxWaitTime ?? 120000)
+            ? this.cacheAndPlayOptions.maxWaitTime +
+              this.cacheAndPlayOptions.pollingInterval
             : 30000,
           ttl: effectiveCacheAndPlay
-            ? (this.config.cacheAndPlayOptions?.maxWaitTime ?? 120000) + 10000
+            ? this.cacheAndPlayOptions.maxWaitTime +
+              this.cacheAndPlayOptions.pollingInterval +
+              10000
             : 40000,
-          // timeout: effectiveCacheAndPlay ? 120000 : 30000,
-          // ttl: effectiveCacheAndPlay ? 130000 : 40000,
         }
       );
       return result;
@@ -852,8 +853,15 @@ export class StremThruService
           autoRemoveDownloads
         ),
       {
-        timeout: playbackInfo.cacheAndPlay ? 120000 : 30000,
-        ttl: 10000,
+        timeout: cacheAndPlay
+          ? this.cacheAndPlayOptions.maxWaitTime +
+            this.cacheAndPlayOptions.pollingInterval
+          : 30000,
+        ttl: cacheAndPlay
+          ? this.cacheAndPlayOptions.maxWaitTime +
+            this.cacheAndPlayOptions.pollingInterval +
+            10000
+          : 40000,
       }
     );
     return result;
