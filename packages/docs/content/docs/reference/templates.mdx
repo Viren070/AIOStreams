@@ -1,0 +1,407 @@
+---
+title: Templates
+description: Complete reference for writing AIOStreams configuration templates.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+A template is a shareable JSON file that applies a partial AIOStreams configuration to a user's instance. Templates support dynamic expressions, user inputs, and service-conditional logic — making them powerful enough to cover most configuration scenarios without hardcoding anything.
+
+---
+
+## Template Structure
+
+```json
+{
+  "metadata": { ... },
+  "config": { ... }
+}
+```
+
+- **`metadata`** — describes the template (name, author, inputs, etc.)
+- **`config`** — a **partial** `UserData` object. Only the keys you include are applied; everything absent is left unchanged in the user's existing config.
+
+All dynamic expressions inside `config` are evaluated at load time, before the config is merged.
+
+---
+
+## `metadata` Fields
+
+| Field                  | Type                                      | Required | Description                                                                            |
+| ---------------------- | ----------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `id`                   | string (1–100)                            | No       | Unique ID. Auto-generates a UUID if omitted. Use namespaced form: `author.my-template` |
+| `name`                 | string (1–100)                            | **Yes**  | Display name shown in the template browser                                             |
+| `description`          | string (1–1000)                           | **Yes**  | Supports Markdown (links, bold, lists)                                                 |
+| `author`               | string (1–20)                             | **Yes**  | Author name or handle                                                                  |
+| `source`               | `"builtin"` \| `"custom"` \| `"external"` | No       | Defaults to `"builtin"`. Use `"external"` for user-imported remote templates           |
+| `version`              | semver string                             | No       | Defaults to `"1.0.0"`. Used for update comparisons                                     |
+| `category`             | string (1–20)                             | **Yes**  | Shown in the browser filter bar (e.g. `"Debrid"`, `"Usenet"`)                          |
+| `services`             | `ServiceId[]`                             | No       | Controls the service selection screen — see [Service Handling](#service-handling)      |
+| `serviceRequired`      | boolean                                   | No       | Whether a service must be selected before applying                                     |
+| `setToSaveInstallMenu` | boolean                                   | No       | Redirects the UI to Save & Install after loading. Defaults to `true`                   |
+| `sourceUrl`            | URL string                                | No       | URL the template was fetched from — enables auto-update                                |
+| `changelog`            | `ChangelogEntry[]`                        | No       | Inline version history. See [Changelog](#changelog)                                    |
+| `changelogUrl`         | URL string                                | No       | URL to a remote `CHANGELOG.md`. See [Changelog](#changelog)                            |
+| `inputs`               | `InputDefinition[]`                       | No       | User-fillable options shown before loading. See [Template Inputs](#template-inputs)    |
+
+---
+
+## Service Handling
+
+The `services` field controls whether (and how) the user is asked to select a debrid service.
+
+| Scenario                                 | Behaviour                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `services` not set                       | All services are shown in the selection screen                                 |
+| `services: []`                           | Service selection is skipped entirely                                          |
+| `services: ["realdebrid", "torbox"]`     | Only the listed services are shown                                             |
+| Single service + `serviceRequired: true` | Selection is skipped; user is prompted for that service's credentials directly |
+| `serviceRequired` absent or `false`      | A "Skip" button is shown                                                       |
+
+At load time, selected services are available via `services.<serviceId>`. The bare `services` reference (no service ID) is truthy when at least one service is selected and falsy when none are — making it the canonical way to distinguish debrid mode from P2P/no-service mode.
+
+---
+
+## Template Inputs
+
+Inputs are defined in `metadata.inputs`. They appear in a dialog before the template loads. Values are accessible throughout `config` via `inputs.<id>`.
+
+### Input Fields
+
+| Field              | Type                         | Required                    | Description                                                                 |
+| ------------------ | ---------------------------- | --------------------------- | --------------------------------------------------------------------------- |
+| `id`               | string                       | **Yes**                     | Identifier used in `inputs.<id>` references                                 |
+| `name`             | string                       | **Yes**                     | Label shown in the UI                                                       |
+| `description`      | string                       | **Yes**                     | Help text (supports Markdown)                                               |
+| `type`             | see below                    | **Yes**                     | Controls the UI widget                                                      |
+| `required`         | boolean                      | No                          | Prevents proceeding if the field is empty                                   |
+| `default`          | any                          | No                          | Pre-filled value                                                            |
+| `options`          | `{ value, label }[]`         | For `select`/`multi-select` | List of choices                                                             |
+| `showInSimpleMode` | boolean                      | No                          | Set `false` to hide in Simple mode. Defaults to `true`                      |
+| `advanced`         | boolean                      | No                          | Shorthand for `showInSimpleMode: false`                                     |
+| `constraints`      | `{ min?, max?, forceInUi? }` | No                          | Min/max for strings (length) or numbers (value)                             |
+| `__if`             | string                       | No                          | Hide this input when the condition is false. Only `services.<id>` supported |
+| `intent`           | see Alert                    | For `alert`                 | Controls the colour/icon of an alert banner                                 |
+| `socials`          | `{ id, url }[]`              | For `socials`               | Social links to render                                                      |
+
+### Input Types
+
+| Type                 | Widget          | Notes                                                |
+| -------------------- | --------------- | ---------------------------------------------------- |
+| `string`             | Text input      |                                                      |
+| `password`           | Masked input    | Not stored in plaintext after import                 |
+| `number`             | Number input    | Returns a number; blank returns `undefined`          |
+| `boolean`            | Toggle          | Returns `true` or `false`                            |
+| `select`             | Dropdown        | Requires `options`                                   |
+| `select-with-custom` | Dropdown + text | Same as `select` + "Custom" option with free-text    |
+| `multi-select`       | Multi-select    | Requires `options`. Returns an array                 |
+| `url`                | URL text input  | Client-side format validation                        |
+| `alert`              | Styled banner   | Displays info/warning/error. See Alert section       |
+| `socials`            | Icon row        | Renders social media icon links. See Socials section |
+| `subsection`         | Button → modal  | Groups sub-inputs. See Subsections section           |
+
+#### Subsections
+
+A `subsection` renders as a button that opens a modal containing `subOptions`. Values are accessed with dot notation: `inputs.<subsectionId>.<subOptionId>`.
+
+```json
+{
+  "id": "proxy",
+  "name": "Proxy Settings",
+  "description": "Optional proxy configuration.",
+  "type": "subsection",
+  "subOptions": [
+    { "id": "url", "name": "Proxy URL", "type": "url" },
+    { "id": "id", "name": "Proxy Service", "type": "select", "options": [...] }
+  ]
+}
+```
+
+Use in config as `{{inputs.proxy.url}}`.
+
+#### Alert
+
+Displays a styled banner — useful for important notes before the user fills in options. Captures no value.
+
+```json
+{
+  "id": "notice",
+  "name": "Important",
+  "description": "This template requires an active RealDebrid subscription.",
+  "type": "alert",
+  "intent": "warning"
+}
+```
+
+`intent` values: `info`, `success`, `warning`, `alert` (filled background), `info-basic`, `success-basic`, `warning-basic`, `alert-basic` (neutral card with coloured icon).
+
+#### Socials
+
+Renders a row of social icon links. Captures no value.
+
+```json
+{
+  "id": "credits",
+  "name": "Credits",
+  "type": "socials",
+  "socials": [
+    { "id": "github", "url": "https://github.com/yourname" },
+    { "id": "ko-fi", "url": "https://ko-fi.com/yourname" }
+  ]
+}
+```
+
+Supported `id` values: `website` · `github` · `discord` · `ko-fi` · `patreon` · `buymeacoffee` · `github-sponsors` · `donate`
+
+---
+
+## Dynamic Expressions
+
+### `{{}}` — String Interpolation
+
+Use inside any string value to substitute at load time:
+
+```json
+{
+  "addonLogo": "{{inputs.logoUrl}}",
+  "preferredLanguages": ["{{inputs.languages}}", "Original", "Unknown"]
+}
+```
+
+**Type preservation:** When the entire string value is a single `{{...}}` token, the raw value is returned (array stays array, boolean stays boolean). Arrays are spread into the parent array.
+
+**Credential refs:** `{{services.<id>.<key>}}` injects a credential entered by the user during service setup. Resolved at the final save step.
+
+```json
+{ "apiKey": "{{services.torbox.apiKey}}" }
+```
+
+`{{services}}` resolves to the array of all selected service IDs (or comma-joined string when embedded in a larger string).
+
+### `__if` — Conditional Array Items
+
+Add `"__if": "<condition>"` to any **object inside an array**. The object is included when the condition is true; omitted when false.
+
+```json
+{
+  "excludedStreamExpressions": [
+    {
+      "__if": "inputs.torboxTier == nonPro",
+      "expression": "/*TB Non-Pro Download Limit*/ size(uncached(streams), '200GB')",
+      "enabled": true
+    }
+  ]
+}
+```
+
+#### Condition Syntax
+
+| Form                            | Example                                         | Meaning                                                          |
+| ------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| Bare reference                  | `inputs.enableFeature`                          | Truthy if not `false`, `null`, `""`, or `[]` — `0` **is truthy** |
+| Negation                        | `!inputs.enableFeature`                         | Logical NOT                                                      |
+| Equality                        | `inputs.tier == premium`                        | String equals `"premium"`                                        |
+| Inequality                      | `inputs.tier != none`                           | String not equal to `"none"`                                     |
+| Array includes                  | `inputs.optionalFilters includes dvPassthrough` | Array contains the string                                        |
+| Numeric `>` / `>=` / `<` / `<=` | `inputs.count > 5`                              | Numeric comparison                                               |
+| Any service (debrid)            | `services`                                      | True when any service is selected                                |
+| No service (P2P)                | `!services`                                     | True when no service is selected                                 |
+| Service check                   | `services.realdebrid`                           | Specific service is enabled                                      |
+| Nested subsection               | `inputs.proxy.url`                              | Sub-option is filled                                             |
+| Compound `and`                  | `inputs.flag and inputs.tier == pro`            | Both sub-conditions true                                         |
+| Compound `or`                   | `services.torbox or services.realdebrid`        | At least one sub-condition true                                  |
+| Compound `xor`                  | `inputs.a xor inputs.b`                         | Exactly one sub-condition true                                   |
+
+**Precedence:** `and` > `xor` > `or`
+
+#### At the Object-Key Level
+
+`{ "__if": "cond", "__value": X }` as the _value_ of a config key conditionally includes or removes the key:
+
+```json
+{
+  "formatter": {
+    "__if": "!inputs.retainFormatter",
+    "__value": { "id": "tamtaro" }
+  }
+}
+```
+
+- Condition true → key is set to `X`
+- Condition false → key is absent from applied config (user's value is kept)
+
+### `__switch` — Object Replacement
+
+Replaces an entire object with a different object depending on an input value:
+
+```json
+"formatter": {
+  "__switch": "inputs.formatterStyle",
+  "cases": {
+    "torrentio": { "id": "torrentio" },
+    "gdrive":    { "id": "gdrive" }
+  },
+  "default": { "id": "prism" }
+}
+```
+
+Use `__switch: "services"` with `""` as the P2P case key (the resolved value is a comma-joined service ID string):
+
+```json
+"preferredStreamTypes": {
+  "__switch": "services",
+  "cases": { "": ["p2p"] },
+  "default": ["cached", "usenet"]
+}
+```
+
+### `__value` — Conditional Array Values
+
+Inject values directly into a parent array rather than inserting an object:
+
+```json
+{
+  "excludedVisualTags": [
+    "3D",
+    { "__if": "inputs.excludeDV", "__value": "DV" },
+    { "__if": "inputs.excludeHdr", "__value": ["HDR", "HDR10", "HDR10+"] }
+  ]
+}
+```
+
+### `__remove` — Drop a Config Key
+
+Remove a key from the applied config unconditionally (leaves the user's existing value untouched):
+
+```json
+{ "formatter": { "__remove": true } }
+```
+
+Most useful as a `__switch` case value when "leave unchanged" is a selectable outcome.
+
+---
+
+## Template Placeholders
+
+For fields the user should fill in themselves after loading:
+
+| Placeholder                         | Meaning                      |
+| ----------------------------------- | ---------------------------- |
+| `"<template_placeholder>"`          | Required — must be filled    |
+| `"<required_template_placeholder>"` | Same as above                |
+| `"<optional_template_placeholder>"` | Optional — can be left blank |
+
+The frontend highlights unfilled placeholder values after the template is applied.
+
+---
+
+## Validation Rules
+
+### Errors (block loading)
+
+- `metadata.name`, `description`, `author`, `category` must be non-empty strings
+- `metadata.version` must be a valid semver string
+- `metadata.source` must be `"builtin"`, `"custom"`, or `"external"`
+- `__if` condition must be a non-empty string
+- `__if` namespace must be `inputs` or `services`
+- `__switch` reference must start with `inputs.` or `services.`
+
+### Warnings (allowed but flagged)
+
+- `{{inputs.<id>}}` references an ID not declared in `metadata.inputs`
+- `__if` references an `inputs.<id>` not in `metadata.inputs`
+- `__switch` references an input not in `metadata.inputs`
+- `__switch` is missing a `cases` object
+
+---
+
+## Changelog
+
+Templates can expose a version history shown to users and used for update notifications.
+
+### Inline (`changelog`)
+
+```json
+"changelog": [
+  {
+    "version": "1.2.0",
+    "date": "2026-03-01",
+    "content": "- Added support for multi-audio streams\n- Fixed sort order bug"
+  },
+  {
+    "version": "1.1.0",
+    "date": "2025-12-01",
+    "content": "- Initial release"
+  }
+]
+```
+
+List entries in **reverse-chronological order** (newest first).
+
+### Remote (`changelogUrl`)
+
+```json
+"metadata": {
+  "sourceUrl": "https://raw.githubusercontent.com/you/repo/main/template.json",
+  "changelogUrl": "https://raw.githubusercontent.com/you/repo/main/CHANGELOG.md"
+}
+```
+
+When `changelogUrl` is present it takes full precedence — the inline `changelog` is ignored.
+
+### `CHANGELOG.md` Format
+
+AIOStreams parses this file with a strict format:
+
+```markdown
+# Changelog
+
+## 1.3.0 (2026-03-04)
+
+### What's new
+
+- Rewrote sort logic for better performance
+
+## 1.2.0 (2026-01-20)
+
+- Added language passthrough option
+```
+
+Rules:
+
+- File must start with `# Changelog` (h1)
+- Version headings must be `## <semver> (<YYYY-MM-DD>)` — nothing else on that line
+- Use `###` or deeper for sub-headings inside entry content; **never `##`** inside entries
+- Entries must be in **reverse-chronological order**
+
+---
+
+## Sharing Templates
+
+### Adding to an instance
+
+Instance hosters can add templates via:
+
+- The `templates` folder in the data directory (at `/app/data/templates` in the Docker container)
+- The `TEMPLATE_URLS` environment variable — a JSON array of URLs pointing to template JSON files
+
+### Deep link
+
+Send a user directly to the template import flow by appending query parameters to any AIOStreams URL:
+
+```
+https://your-aiostreams.example.com/stremio/configure?template=https://example.com/my-template.json
+```
+
+With a specific template pre-selected from a multi-template file:
+
+```
+https://your-aiostreams.example.com/stremio/configure?template=https://example.com/templates.json&templateId=author.my-template
+```
+
+<Callout type="warn">
+  Users are shown a warning when a template is imported via deep link. Remind
+  users in your documentation to only import templates from sources they trust.
+</Callout>
