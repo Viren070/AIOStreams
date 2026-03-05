@@ -6,7 +6,7 @@ const router: Router = Router();
 
 interface AliasParams {
   alias: string;
-  [key: string]: string;
+  wildcardPath?: string | string[]; // optional (wildcard route)
 }
 
 router.get(

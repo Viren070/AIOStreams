@@ -22,9 +22,13 @@ const lastRefreshMap = Cache.getInstance<string, number>(
 );
 const REFRESH_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
+interface LibraryManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<LibraryManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
     try {
       const config = encodedConfig
@@ -44,9 +48,16 @@ router.get(
   }
 );
 
+interface LibraryCatalogParams {
+  encodedConfig: string;
+  type: string;
+  id: string;
+  extras?: string
+}
+
 router.get(
   '/:encodedConfig/catalog/:type/:id{/:extras}.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<LibraryCatalogParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id, extras } = req.params;
 
     try {
@@ -66,9 +77,15 @@ router.get(
   }
 );
 
+interface LibraryMetaParams {
+  encodedConfig: string;
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:encodedConfig/meta/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<LibraryMetaParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
 
     try {
@@ -88,9 +105,16 @@ router.get(
   }
 );
 
+
+interface LibraryStreamParams {
+  encodedConfig: string;
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<LibraryStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
 
     try {
@@ -110,9 +134,15 @@ router.get(
   }
 );
 
+
+interface LibraryRefreshParams {
+  serviceId: string;
+  encryptedCredential: string
+}
+
 router.get(
   '/refresh/:serviceId/:encryptedCredential',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<LibraryRefreshParams>, res: Response, next: NextFunction) => {
     const { serviceId, encryptedCredential } = req.params;
 
     try {
