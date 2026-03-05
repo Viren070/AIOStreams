@@ -122,26 +122,35 @@ export class MeteorPreset extends Preset {
       return [this.generateAddon(userData, options, [])];
     }
 
-    let addedP2pAddon = false;
-    if (options?.useMultipleInstances) {
+    const additionalP2pAddon =
+      options.includeP2P && usableServices.length > 0
+        ? this.generateAddon(userData, options, [])
+        : null;
+
+    let addons: Addon[] = [];
+
+    if (options.useMultipleInstances) {
       const instanceOptions = { ...options, includeP2P: false };
-      if (options.includeP2P && !addedP2pAddon) {
-        instanceOptions.includeP2P = true;
-        addedP2pAddon = true;
-      }
-      const addons = usableServices.map((service) =>
-        this.generateAddon(userData, instanceOptions, [service.id])
+      usableServices.forEach((service) => {
+        addons.push(
+          this.generateAddon(userData, instanceOptions, [service.id])
+        );
+      });
+    } else {
+      addons.push(
+        this.generateAddon(
+          userData,
+          options,
+          usableServices.map((s) => s.id)
+        )
       );
-      return addons;
     }
 
-    return [
-      this.generateAddon(
-        userData,
-        options,
-        usableServices.map((service) => service.id)
-      ),
-    ];
+    if (additionalP2pAddon) {
+      addons.push(additionalP2pAddon);
+    }
+
+    return addons;
   }
 
   private static generateAddon(
@@ -196,8 +205,7 @@ export class MeteorPreset extends Preset {
       })
     );
 
-    // When includeP2P is enabled, add a torrent service entry to tell Meteor to include P2P results
-    if (options.includeP2P || services.length === 0) {
+    if (services.length === 0) {
       debridServices.push({ service: 'torrent', apiKey: '' });
     }
 
