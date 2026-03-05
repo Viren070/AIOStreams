@@ -20,6 +20,9 @@ const searchParams = z.object({
   profileId: z.string().optional(),
 });
 
+interface PosterServiceParams {
+  service: string
+}
 /**
  * Combined poster redirect handler.
  * Supports all poster services via /:service parameter.
@@ -27,7 +30,7 @@ const searchParams = z.object({
  */
 router.get(
   '/:service',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<PosterServiceParams>, res: Response, next: NextFunction) => {
     try {
       const { success, data, error } = searchParams.safeParse(req.query);
       if (!success) {
