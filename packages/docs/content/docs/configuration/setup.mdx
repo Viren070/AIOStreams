@@ -80,12 +80,14 @@ AIOStreams is primarily designed and maintained for Stremio, but works with othe
 
 ## Step 2 — Get a Debrid Service (Optional)
 
-A **debrid service** is a paid service that acts as a middle-man between you and torrents. When you play something, the debrid service downloads and streams it to you over HTTPS at up to 1 Gbps — no seeding required, no ISP notices, and no need for a VPN.
+A **debrid service** is a paid service that maintains a large cache of torrents on its own servers. When a torrent is first requested, the debrid service downloads it once and keeps it cached — subsequent requests for the same torrent are served instantly from the cache at high speeds over HTTPS, with no P2P involved on your end.
 
-**A debrid service is optional, but recommended.** P2P streams work without one — provided there are enough seeders — but in many countries (including Germany and the United States) torrenting without a VPN exposes you to ISP warnings, throttling, or fines. A debrid service eliminates this risk entirely, since you're only ever downloading over HTTPS from the debrid provider's servers. Using one also gives you:
+In Stremio, streams from debrid-enabled addons are labelled as either **cached** (available instantly) or **uncached** (needs to be downloaded to the debrid service first before you can stream it). For popular content, the vast majority of results will already be cached.
 
-- Instant streaming of cached torrents at high speeds (4K, HDR, Dolby Atmos without buffering)
-- No reliance on seeders for popular content
+**A debrid service is optional, but recommended.** P2P streams work without one — provided there are enough seeders — but in many countries (including Germany and the United States) torrenting without a VPN exposes you to ISP warnings, throttling, or fines. A debrid service eliminates this risk entirely, since you stream over HTTPS from the debrid provider's servers. Using one also gives you:
+
+- Instant streaming of cached content at high speeds (4K, HDR, Dolby Atmos without buffering)
+- No reliance on seeders
 - No VPN required
 
 <Callout type="warn">
