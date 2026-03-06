@@ -95,6 +95,7 @@ function Content() {
     setEncryptedPassword,
   } = useUserData();
   const [newPassword, setNewPassword] = React.useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [createLoading, setCreateLoading] = React.useState(false);
   const [passwordRequirements, setPasswordRequirements] = React.useState<
     string[]
@@ -152,8 +153,12 @@ function Content() {
       requirements.push('Password must be at least 6 characters long');
     }
 
+    if (confirmNewPassword.length > 0 && newPassword !== confirmNewPassword) {
+      requirements.push('Passwords do not match');
+    }
+
     setPasswordRequirements(requirements);
-  }, [newPassword, uuid, password]);
+  }, [newPassword, confirmNewPassword, uuid, password]);
 
   const handleCreate = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -334,9 +339,11 @@ function Content() {
   };
 
   const changePasswordModal = useDisclosure(false);
+  const [changePasswordLoading, setChangePasswordLoading] = React.useState(false);
   const [changePasswordData, setChangePasswordData] = React.useState({
     currentPassword: '',
     newPassword: '',
+    confirmNewPassword: '',
   });
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -345,11 +352,15 @@ function Content() {
       toast.error('New password must be at least 6 characters long');
       return;
     }
+    if (changePasswordData.newPassword !== changePasswordData.confirmNewPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
     if (changePasswordData.newPassword === changePasswordData.currentPassword) {
       toast.error('New password cannot be the same as current password');
       return;
     }
-    setCreateLoading(true);
+    setChangePasswordLoading(true);
     try {
       const result = await changePassword(
         uuid!,
@@ -363,13 +374,13 @@ function Content() {
       setPassword(changePasswordData.newPassword);
       setEncryptedPassword(result.encryptedPassword);
       changePasswordModal.close();
-      setChangePasswordData({ currentPassword: '', newPassword: '' });
+      setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to change password'
       );
     } finally {
-      setCreateLoading(false);
+      setChangePasswordLoading(false);
     }
   };
 
@@ -418,6 +429,17 @@ function Content() {
                   required
                   autoComplete="new-password"
                 />
+                <div className="pt-2">
+                  <PasswordInput
+                    label="Confirm Password"
+                    id="confirm-password"
+                    value={confirmNewPassword}
+                    onValueChange={(value) => setConfirmNewPassword(value)}
+                    placeholder="Re-enter your password"
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
                 <p className="text-sm text-[--muted] mt-1">
                   This is the password you will use to access and update your
                   configuration later. You can change your password later using
@@ -699,6 +721,18 @@ function Content() {
                 }))
               }
             />
+            <PasswordInput
+              label="Confirm New Password"
+              value={changePasswordData.confirmNewPassword}
+              required
+              placeholder="Re-enter your new password"
+              onValueChange={(value) =>
+                setChangePasswordData((prev) => ({
+                  ...prev,
+                  confirmNewPassword: value,
+                }))
+              }
+            />
             <div className="pt-2 flex justify-end gap-3">
               <Button
                 type="button"
@@ -707,7 +741,7 @@ function Content() {
               >
                 Cancel
               </Button>
-              <Button type="submit" intent="alert" loading={createLoading}>
+              <Button type="submit" intent="alert" loading={changePasswordLoading}>
                 Change Password
               </Button>
             </div>
