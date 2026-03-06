@@ -1,6 +1,6 @@
 ---
 title: Setup Guide
-description: Get AIOStreams up and running from scratch using a community template.
+description: Get AIOStreams up and running from scratch using Tamtaro's complete setup.
 ---
 
 This guide walks you through a complete AIOStreams setup — from installing your media client to having a fully configured addon ready to use. It uses a curated community template that handles the bulk of the configuration so you only need to fill in your credentials.
@@ -339,6 +339,19 @@ After the template loads you will land on the **Save & Install** page.
     successful you will see **Configuration created successfully** and a UUID
     will be shown. **Save both your UUID and password somewhere safe — there is
     no way to recover them if lost.**
+
+    <Callout type="warn">
+      If you see an error like **"Failed to fetch manifest for &lt;addon&gt;"**,
+      go to the **Addons** menu and disable the addon mentioned in the error,
+      then try clicking **Create** again. This is usually a temporary issue
+      with that addon — you can re-enable it and save again later once it
+      recovers.
+
+      If you see **"Failed to validate TMDB API Key" / 401 Unauthorized**,
+      double-check your TMDB API key is correct. You can review it in the
+      **Services** menu under the **Metadata** section.
+    </Callout>
+
   </Step>
   <Step>
     An **Install** card will appear. Click the **Install** button. A modal will
@@ -386,6 +399,16 @@ Once you've made your changes, go to **Save & Install** and click **Save**.
   Most changes apply immediately without reinstalling. Only reinstall if a
   pop-up appears telling you to.
 </Callout>
+
+---
+
+## Getting Help
+
+Run into something not covered here? Come join the [Discord server](https://discord.viren070.me).
+
+- **#support** — General AIOStreams questions and issues.
+- **#setups** — Tam is active on the server and has a [dedicated discussion post](https://discord.com/channels/1225024298490662974/1391478569607368924) for questions specifically about this template.
+  If you're stuck on something with this setup, this is the best place to ask.
 
 ---
 
