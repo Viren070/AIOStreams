@@ -73,7 +73,7 @@ Mount `/app/data` inside the container to a persistent location on the host:
 The old `/health` endpoint is **removed**. If you need a custom health check, use the new status endpoint:
 
 ```
-http://\<host>:\<port>/api/v1/status
+http://<host>:<port>/api/v1/status
 ```
 
 The Docker image includes a built-in health check; removing your custom one is the simplest option.
