@@ -64,6 +64,8 @@ export interface ParseValue {
     library: boolean;
     quality: string | null;
     resolution: string | null;
+    subbed: boolean;
+    dubbed: boolean;
     languages: string[] | null;
     uLanguages: string[] | null;
     languageEmojis: string[] | null;
@@ -330,6 +332,8 @@ export abstract class BaseFormatter {
         library: stream.library ?? false,
         quality: stream.parsedFile?.quality || null,
         resolution: stream.parsedFile?.resolution || null,
+        subbed: stream.parsedFile?.subbed || false,
+        dubbed: stream.parsedFile?.dubbed || false,
         languages: sortedLanguages || null,
         uLanguages: onlyUserSpecifiedLanguages || null,
         languageEmojis: sortedLanguages

@@ -113,6 +113,8 @@ export function mergeParsedFiles(
       fileParsed?.audioChannels
     ),
     languages: arrayMerge(folderParsed?.languages, fileParsed?.languages),
+    subbed: fileParsed?.subbed || folderParsed?.subbed || false,
+    dubbed: fileParsed?.dubbed || folderParsed?.dubbed || false,
     seasonPack,
     ...overrides,
   };

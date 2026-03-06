@@ -176,6 +176,8 @@ class FileParser {
       releaseGroup,
       title,
       year,
+      subbed: parsed.subbed ?? false,
+      dubbed: parsed.dubbed ?? false,
       editions: parsed.editions,
       regraded: parsed.regraded ?? false,
       repack: parsed.repack ?? false,
