@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.25.1](https://github.com/Viren070/AIOStreams/compare/v2.25.0...v2.25.1) (2026-03-06)
+
+
+### Features
+
+* add timing statistic streams ([ed88f6a](https://github.com/Viren070/AIOStreams/commit/ed88f6a01792fa0e9a449d731a8a6f455b945917))
+* **core/formatters:** add `date` field ([2bc9db9](https://github.com/Viren070/AIOStreams/commit/2bc9db9df7fd5da30afcdb6ee64d4023a8bcce25))
+* **core/formatters:** add `subbed` and `dubbed` attributes ([3792f29](https://github.com/Viren070/AIOStreams/commit/3792f29bd12b1c5059db978254411ca491c73bef))
+* **frontend:** redesign sorting menu ([0737ec5](https://github.com/Viren070/AIOStreams/commit/0737ec5602ecb5d8b11c1d5b1d58e12a9ccf6925))
+* **frontend:** redesign whats new section ([cbb29ac](https://github.com/Viren070/AIOStreams/commit/cbb29acf9d1ae592130b03efb238ad08c8457bf2))
+* **templates:** add changelog + update notifications ([21561d5](https://github.com/Viren070/AIOStreams/commit/21561d5631cb10939d5f8b7561b88816807be79e))
+
+
+### Bug Fixes
+
+* allow socks5h protocol proxy urls ([#786](https://github.com/Viren070/AIOStreams/issues/786)) ([1fd08fa](https://github.com/Viren070/AIOStreams/commit/1fd08faab0f767c984e347a52c13165a8818e3f0))
+* **builtins/eztv:** do not fail with missing torrents prop ([#788](https://github.com/Viren070/AIOStreams/issues/788)) ([c44cc25](https://github.com/Viren070/AIOStreams/commit/c44cc25c6368f77f4943448b90350fa621d68ed9))
+* **debrid:** adjust file selection scoring algorithm ([6de94af](https://github.com/Viren070/AIOStreams/commit/6de94aff10177e34f4f8cadacd029967b5a36912))
+* **debrid:** use specified file index in playback info ([34684d2](https://github.com/Viren070/AIOStreams/commit/34684d28b8af664874b5ae946acfdf01592e2d24))
+* filter required stream expressions for enabled before applying ([e868b0b](https://github.com/Viren070/AIOStreams/commit/e868b0b34692d17860890f3dc7c35466895c06f1))
+* **frontend/templates:** try and fix tapping out of select closing modal ([300a248](https://github.com/Viren070/AIOStreams/commit/300a248238e0c64cc5e89e33af344a668b8def07))
+* **frontend:** add skeleton during loading state for featured templates ([5535951](https://github.com/Viren070/AIOStreams/commit/55359517dd1f15f54206988e80007a606c813186))
+* **frontend:** fix scrollbar on navbar ([c03c05c](https://github.com/Viren070/AIOStreams/commit/c03c05ce7aba59343d04c0f8babb0848b5a42cf2))
+* **frontend:** update wiki links to point to new docs site ([6867535](https://github.com/Viren070/AIOStreams/commit/6867535f3ce7f60b90dc26b9b1a75427f5e898c6))
+* handle services option during preset generation with service wrap ([acbf274](https://github.com/Viren070/AIOStreams/commit/acbf274b520eb0196f689fcfed4452ae99c439b7))
+* improve infohash extraction ([cdae32d](https://github.com/Viren070/AIOStreams/commit/cdae32dfa9a4e6a8596e7b892320a4a29079ec8c))
+* load templates recursively ([452d6e8](https://github.com/Viren070/AIOStreams/commit/452d6e813780126995d71c96f3bbe41c5f1b156e))
+* **metadata/imdb:** adjust schema ([cdff10a](https://github.com/Viren070/AIOStreams/commit/cdff10a54a79fde18295de14f18e0e6a795507a9))
+* **metadata:** only apply tmdb episode offset in certain cases ([2f34050](https://github.com/Viren070/AIOStreams/commit/2f34050cb542d4b0967096718f404c464b26cf03))
+* **presets/meteor:** add torrent service when no services ([5f38339](https://github.com/Viren070/AIOStreams/commit/5f38339ecafddc7c38ad4a39abdc2a2f4c17f3d9))
+* **presets/meteor:** include separate P2P addon for `includeP2P` ([578376c](https://github.com/Viren070/AIOStreams/commit/578376cd99d1bc8bba345bad9666cf3c6586c566))
+* **presets/streamnzb:** add hook to report filtered streams back to streamnzb ([#771](https://github.com/Viren070/AIOStreams/issues/771)) ([3d1325f](https://github.com/Viren070/AIOStreams/commit/3d1325fafbeff2dadcf656465db75754de7e30a5))
+* remove selected services during service wrap ([efe0f60](https://github.com/Viren070/AIOStreams/commit/efe0f605d332c428e083d4297662b1281760d31c))
+* **serviceWrap:** consider wrapped results as confirmed ([d92e482](https://github.com/Viren070/AIOStreams/commit/d92e4826391014a3594a572cd0608593221a0888))
+* **serviceWrap:** use fileIdx field when missing season/episode ([34684d2](https://github.com/Viren070/AIOStreams/commit/34684d28b8af664874b5ae946acfdf01592e2d24))
+* **stremthru:** round total size of files in magnet list ([bd376c5](https://github.com/Viren070/AIOStreams/commit/bd376c5dae03e411b208e20fad109ea1145e1d4b))
+* use dynamic lock ttls / timeouts ([b8fe887](https://github.com/Viren070/AIOStreams/commit/b8fe8873efd1e5743e5fa80348a8665b17b1e6fb))
+
+
+### Performance Improvements
+
+* optimise processing of torrents/nzbs ([6de94af](https://github.com/Viren070/AIOStreams/commit/6de94aff10177e34f4f8cadacd029967b5a36912))
+
 ## [2.25.0](https://github.com/Viren070/AIOStreams/compare/v2.24.5...v2.25.0) (2026-03-03)
 
 
