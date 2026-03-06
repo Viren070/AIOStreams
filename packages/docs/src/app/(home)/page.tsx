@@ -27,7 +27,7 @@ export default function HomePage() {
         </p>
         <div className="flex gap-3 flex-wrap justify-center">
           <Link
-            href="/docs"
+            href="/getting-started"
             className="inline-flex items-center gap-2 rounded-md bg-fd-primary px-4 py-2 text-sm font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
           >
             Read the docs
