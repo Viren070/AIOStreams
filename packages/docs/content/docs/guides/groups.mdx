@@ -46,7 +46,7 @@ The **Grouping** feature lets you control _when_ different sets of your addons a
 
 ## Building Group Conditions
 
-Group conditions are written using the [Stream Expression Language (SEL)](/docs/reference/stream-expressions). The condition must evaluate to `true` or `false`.
+Group conditions are written using the [Stream Expression Language (SEL)](/reference/stream-expressions). The condition must evaluate to `true` or `false`.
 
 ### Available constants
 
@@ -101,4 +101,4 @@ count(resolution(previousStreams, '2160p')) == 0 or previousGroupTimeTaken > 500
 - **Start simple:** Begin with basic `count()` conditions and expand from there.
 - **Errors skip groups:** A malformed condition causes the group to be skipped as if the condition returned `false`.
 
-For the complete list of available functions, see the [SEL reference](/docs/reference/stream-expressions).
+For the complete list of available functions, see the [SEL reference](/reference/stream-expressions).

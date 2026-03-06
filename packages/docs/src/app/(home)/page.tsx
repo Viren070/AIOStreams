@@ -51,37 +51,37 @@ export default function HomePage() {
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <NavCard
-            href="/docs/getting-started"
+            href="/getting-started"
             title="Getting Started"
             description="Deploy AIOStreams and get it running in minutes."
             icon={FaRocket}
           />
           <NavCard
-            href="/docs/guides/groups"
+            href="/guides/groups"
             title="Guides"
             description="Groups, Usenet, Scored Sorting, and Templates."
             icon={FaBook}
           />
           <NavCard
-            href="/docs/reference/stream-expressions"
+            href="/reference/stream-expressions"
             title="Reference"
             description="Complete reference for SEL and the Custom Formatter."
             icon={FaFileCode}
           />
           <NavCard
-            href="/docs/api"
+            href="/api"
             title="API"
             description="HTTP API for search and user data operations."
             icon={FaCode}
           />
           <NavCard
-            href="/docs/migrations/v1-to-v2"
+            href="/migrations/v1-to-v2"
             title="Migration"
             description="Upgrading from AIOStreams v1 to v2."
             icon={FaArrowAltCircleUp}
           />
           <NavCard
-            href="/docs/guides/development"
+            href="/guides/development"
             title="Contributing"
             description="Set up a local development environment."
             icon={FaCodeBranch}
