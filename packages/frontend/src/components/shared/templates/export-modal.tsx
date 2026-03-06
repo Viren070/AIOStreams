@@ -216,12 +216,12 @@ export function TemplateExportModal({
               <p>
                 See the{' '}
                 <a
-                  href="https://github.com/Viren070/AIOStreams/wiki/Templates"
+                  href="https://docs.aiostreams.viren070.me/guides/templates"
                   target="_blank"
                   className="text-[--brand] hover:text-[--brand]/80 hover:underline"
                   rel="noopener noreferrer"
                 >
-                  Templates wiki
+                  Templates docs
                 </a>{' '}
                 for detailed documentation.
               </p>

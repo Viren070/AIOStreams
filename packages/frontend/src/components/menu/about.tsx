@@ -208,8 +208,9 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
     status?.channel ?? (version.startsWith('v') ? 'stable' : 'nightly');
   const githubUrl = 'https://github.com/Viren070/AIOStreams';
   const releasesUrl = 'https://github.com/Viren070/AIOStreams/releases';
-  const stremioGuideUrl = 'https://guides.viren070.me/stremio/';
-  const configGuideUrl = 'https://guides.viren070.me/stremio/addons/aiostreams';
+  const stremioGuideUrl =
+    'https://docs.aiostreams.viren070.me/configuration/setup';
+  const configGuideUrl = 'https://docs.aiostreams.viren070.me';
   const discordUrl = 'https://discord.viren070.me';
   const donationModal = useDisclosure(false);
   const customizeModal = useDisclosure(false);
@@ -569,10 +570,10 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
                   Configuration Guide
                 </QuickLink>
                 <QuickLink
-                  href="https://github.com/Viren070/AIOStreams/wiki"
+                  href="https://docs.aiostreams.viren070.me"
                   icon={<BookOpenIcon className="w-7 h-7" />}
                 >
-                  Wiki
+                  Docs
                 </QuickLink>
                 <QuickLink
                   href={stremioGuideUrl}

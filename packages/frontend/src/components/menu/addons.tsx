@@ -1331,7 +1331,7 @@ function AddonFetchingBehaviorCard() {
     default:
       'Fetch from all addons simultaneously and wait for all addons to finish fetching before returning results.',
     groups:
-      'Organise addons into groups with conditions. Each group can be evaluated based on results from previous groups. Read the [Wiki](https://github.com/Viren070/AIOStreams/wiki/Groups) for more information.',
+      'Organise addons into groups with conditions. Each group can be evaluated based on results from previous groups. Read the [docs](https://docs.aiostreams.viren070.me/guides/groups) for more information.',
     dynamic:
       'All addons start fetching at the same time. As soon as any addon returns results, the exit condition is evaluated. If the condition is met, results are returned immediately and any remaining addon results are ignored.',
   };
@@ -1528,7 +1528,7 @@ function AddonFetchingBehaviorCard() {
             <p>
               Write the condition using{' '}
               <a
-                href="https://github.com/Viren070/AIOStreams/wiki/Stream-Expression-Language"
+                href="https://docs.aiostreams.viren070.me/reference/stream-expressions"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[--brand] hover:underline"

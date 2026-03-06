@@ -1906,7 +1906,7 @@ function Content() {
                     <p className="text-sm text-[--muted]">
                       This filter uses AIOStreams'{' '}
                       <a
-                        href="https://github.com/Viren070/AIOStreams/wiki/Stream-Expression-Language"
+                        href="https://docs.aiostreams.viren070.me/reference/stream-expressions"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[--brand] hover:underline"
@@ -1949,7 +1949,7 @@ function Content() {
                     <p className="text-sm text-[--muted]">
                       For detailed syntax and available functions, see the{' '}
                       <a
-                        href="https://github.com/Viren070/AIOStreams/wiki/Stream-Expression-Language#complete-function-reference"
+                        href="https://docs.aiostreams.viren070.me/reference/stream-expressions#function-reference"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[--brand] hover:underline"

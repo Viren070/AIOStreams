@@ -431,12 +431,12 @@ function Content() {
             Type <span className="font-mono">{'{debug.jsonf}'}</span> to see the
             available variables. For a more detailed explanation, check the{' '}
             <a
-              href="https://github.com/Viren070/AIOStreams/wiki/Custom-Formatter"
+              href="https://docs.aiostreams.viren070.me/reference/custom-formatter"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[--brand] hover:text-[--brand]/80 hover:underline"
             >
-              wiki
+              docs
             </a>
             . You can also check the definitions of the predefined formatters{' '}
             <a
