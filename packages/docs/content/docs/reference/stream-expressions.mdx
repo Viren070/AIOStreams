@@ -516,10 +516,11 @@ regexScore(streams, 50)
 
 #### `passthrough()`
 
-Flags streams to bypass specific pipeline stages. Best used in **Included** or **Excluded Stream Expressions**.
+Flags streams to bypass specific pipeline stages. Best used in **Included Stream Expressions** or rarely in **Excluded Stream Expressions**.
 
-- In an **Included Stream Expression**: extends bypass to additional stages beyond the normal filter bypass.
-- In an **Excluded Stream Expression**: flagged streams won't be removed by _subsequent_ excluded expressions.
+While any stream selected by an Included Stream Expression (ISE) is already protected from normal filters, it still passes through stages like deduplication and result limiting. Wrapping your ISE with `passthrough()` expands which stages those streams skip.
+
+When used in an **Excluded Stream Expression**: flagged streams won't be removed by _subsequent_ excluded expressions. Since ESE filters run last, most stage values are not applicable here — only `excluded` is relevant.
 
 | Parameter   | Type             | Description                                |
 | ----------- | ---------------- | ------------------------------------------ |
@@ -537,7 +538,7 @@ passthrough(streams)  // bypass all stages
 
 #### `pin()`
 
-Pins streams to the very top or bottom of the final results list, overriding sort order. Typically used in **Precompute Expressions**.
+Pins streams to the very top or bottom of the final results list, overriding sort order. Typically used in **Excluded Stream Expressions**. Can also be used in **Required Stream Expressions** — but since unselected streams get filtered out, set `returnMatched: true` when doing so.
 
 | Parameter       | Type                | Default | Description                                                                        |
 | --------------- | ------------------- | ------- | ---------------------------------------------------------------------------------- |

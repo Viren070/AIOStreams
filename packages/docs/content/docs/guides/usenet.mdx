@@ -121,19 +121,29 @@ These apps mount NZBs as a virtual filesystem and expose a WebDAV server (or equ
   changes. StremThru is also actively developed.
 </Callout>
 
+<Callout type="info">
+  The nzbDAV and AltMount integrations were inspired by the
+  [UsenetStreamer](https://github.com/Sanket9225/UsenetStreamer) addon, which
+  was the first to serve nzbDAV streams through a Stremio addon.
+</Callout>
+
 ### Initial Application Setup
 
 #### StremThru
 
 <Steps>
   <Step>
-    Install and run StremThru following the [official
-    documentation](https://github.com/stremthru/stremthru).
+    Install and run StremThru following the
+    [official documentation](https://docs.stremthru.13377001.xyz/getting-started/installation).
+    Set
+    [`STREMTHRU_AUTH`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-auth)
+    and
+    [`STREMTHRU_VAULT_SECRET`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-vault-secret)
+    in your environment.
   </Step>
-  <Step>Configure your Usenet provider inside StremThru's settings.</Step>
   <Step>
-    Note your **StremThru URL** and **API password** — you'll need these for
-    AIOStreams.
+    Configure your Usenet providers in the StremThru dashboard (`/dash`) under
+    **Usenet → Servers**.
   </Step>
 </Steps>
 
@@ -176,10 +186,10 @@ These apps mount NZBs as a virtual filesystem and expose a WebDAV server (or equ
     In AIOStreams, go to **Services** and select nzbDAV, AltMount, or StremThru.
   </Step>
   <Step>
-    Enter the required details: 
-      - **nzbDAV / AltMount:** API Key, WebDAV User,
-    WebDAV Password 
-      - **StremThru:** StremThru URL, Store Password
+    Enter the required details. 
+      - **nzbDAV / AltMount:** API Key, WebDAV User, WebDAV Password. 
+      - **StremThru:** StremThru URL and Auth Token — a `user:password` string (optionally base64-encoded) from your `STREMTHRU_AUTH`
+      value.
   </Step>
   <Step>Configure the **URL** and **Public URL** fields (see below).</Step>
 </Steps>
@@ -193,18 +203,32 @@ This is the most critical configuration step.
 | **URL**        | Address AIOStreams uses to talk to the API                                   |
 | **Public URL** | Publicly accessible address used to construct streaming URLs for your player |
 
+<Callout type="info">
+  The **Public URL** field does not apply to StremThru. Use the
+  [`STREMTHRU_BASE_URL`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-base-url)
+  environment variable instead, and set **URL** to your local StremThru address
+  (e.g. `http://stremthru:8080`).
+</Callout>
+
 <Tabs items={['Same local network', 'AIOStreams remote']}>
   <Tab value="Same local network">
-    - **URL:** Internal Docker/local address (e.g. `http://nzbdav:3000`) -
-    **Public URL (Option A — Proxy, recommended):** Leave blank and provide your
-    `AIOStreams Auth Token`. AIOStreams proxies the stream — most reliable
-    method. - **Public URL (Option B — Direct):** Enter the publicly accessible
-    URL (e.g. `https://nzbdav.yourdomain.com`). Without it, your player receives
-    an inaccessible local URL.
+    **URL:** Internal Docker/local address (e.g. `http://nzbdav:3000`)
+
+    **Public URL — Option A (Proxy, recommended):** Leave blank and provide your
+    `AIOStreams Auth Token` in the service settings. AIOStreams proxies the stream
+    — most reliable method.
+
+    **Public URL — Option B (Direct):** Enter the publicly accessible URL (e.g.
+    `https://nzbdav.yourdomain.com`). Without it your player receives an
+    inaccessible local address.
+
   </Tab>
   <Tab value="AIOStreams remote">
-    - **URL:** Public URL of your instance (e.g.
-    `https://altmount.yourdomain.com`) - **Public URL:** Leave blank
+    **URL:** Public URL of your instance (e.g.
+    `https://altmount.yourdomain.com`)
+
+    **Public URL:** Leave blank.
+
   </Tab>
 </Tabs>
 
@@ -231,5 +255,12 @@ Some indexers flag mismatched IPs between the search request and the NZB grab as
 
 **Indexer managers:**
 
-- **NZBHydra2:** Proxies grabs by default (preferred behaviour).
+- **NZBHydra2:** Proxies grabs by default (preferred behaviour), unless the redirect option is enabled.
 - **Prowlarr:** Only redirects NZB grabs — this will cause an IP mismatch.
+
+### Indexer Policies
+
+Indexer rules vary — always check with your indexer directly. Some known policies:
+
+- **NinjaCentral:** Compatible with public AIOStreams instances, as long as you are not sharing your account.
+- **SceneNZBs:** Explicitly disallows use with Stremio. This is likely detected via the IP mismatch — self-hosting AIOStreams with the proxy feature or NZBHydra2 may resolve it.
