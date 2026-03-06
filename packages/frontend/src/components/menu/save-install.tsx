@@ -348,6 +348,10 @@ function Content() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!uuid) {
+      toast.error('No UUID found');
+      return;
+    }
     if (changePasswordData.newPassword.length < 6) {
       toast.error('New password must be at least 6 characters long');
       return;
@@ -363,7 +367,7 @@ function Content() {
     setChangePasswordLoading(true);
     try {
       const result = await changePassword(
-        uuid!,
+        uuid,
         changePasswordData.currentPassword,
         changePasswordData.newPassword
       );
@@ -688,6 +692,7 @@ function Content() {
         <Modal
           open={changePasswordModal.isOpen}
           onOpenChange={(open) => {
+            if (changePasswordLoading) return;
             changePasswordModal.toggle();
             if (!open) {
               setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
@@ -745,7 +750,10 @@ function Content() {
               <Button
                 type="button"
                 intent="gray-outline"
-                onClick={changePasswordModal.close}
+                onClick={() => {
+                  if (!changePasswordLoading) changePasswordModal.close();
+                }}
+                disabled={changePasswordLoading}
               >
                 Cancel
               </Button>
