@@ -5,6 +5,12 @@ import { Banner } from 'fumadocs-ui/components/banner';
 import './global.css';
 
 export const metadata: Metadata = {
+  title: {
+    template: '%s | AIOStreams',
+    default: 'AIOStreams',
+  },
+  description:
+    'The all-in-one Stremio addon aggregator. Combine, filter, sort, and customise streams from every source.',
   icons: {
     icon: '/favicon.png',
     apple: '/logo.png',
