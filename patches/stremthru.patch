@@ -1,0 +1,438 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index ba4052dca3d5b5e0d8687533478d6e0e315ba584..1e568218d9105c322e95d7c40ee99c968d511ef9 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -60,13 +60,15 @@ class StremThruStore {
+     return await this.#client.request("/v0/store/magnets", {
+       body,
+       method: "POST",
+-      params: clientIp ? { client_ip: clientIp } : {}
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "addMagnet"
+     });
+   }
+   async checkMagnet(params) {
+     return await this.#client.request("/v0/store/magnets/check", {
+       method: "GET",
+-      params
++      params,
++      methodName: "checkMagnet"
+     });
+   }
+   async generateLink({
+@@ -76,14 +78,15 @@ class StremThruStore {
+     return await this.#client.request(`/v0/store/link/generate`, {
+       body: { link },
+       method: "POST",
+-      params: clientIp ? { client_ip: clientIp } : {}
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "generateLink"
+     });
+   }
+   async getMagnet(magnetId) {
+-    return await this.#client.request(`/v0/store/magnets/${magnetId}`, { method: "GET" });
++    return await this.#client.request(`/v0/store/magnets/${magnetId}`, { method: "GET", methodName: "getMagnet" });
+   }
+   async getUser() {
+-    return await this.#client.request("/v0/store/user", { method: "GET" });
++    return await this.#client.request("/v0/store/user", { method: "GET", methodName: "getUser" });
+   }
+   async listMagnets({
+     limit,
+@@ -96,11 +99,71 @@ class StremThruStore {
+     if (offset) {
+       params["offset"] = String(offset);
+     }
+-    return await this.#client.request("/v0/store/magnets", { method: "GET", params });
++    return await this.#client.request("/v0/store/magnets", { method: "GET", params, methodName: "listMagnets" });
+   }
+   async removeMagnet(magnetId) {
+     return await this.#client.request(`/v0/store/magnets/${magnetId}`, {
+-      method: "DELETE"
++      method: "DELETE",
++      methodName: "removeMagnet"
++    });
++  }
++  async addNewz({
++    clientIp = this.#clientIp,
++    link,
++    file
++  }) {
++    let body;
++    if (link) {
++      body = { link };
++    } else {
++      body = new FormData();
++      body.set("file", file);
++    }
++    return await this.#client.request("/v0/store/newz", {
++      body,
++      method: "POST",
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "addNewz"
++    });
++  }
++  async checkNewz(params) {
++    return await this.#client.request("/v0/store/newz/check", {
++      method: "GET",
++      params,
++      methodName: "checkNewz"
++    });
++  }
++  async generateNewzLink({
++    clientIp = this.#clientIp,
++    link
++  }) {
++    return await this.#client.request("/v0/store/newz/link/generate", {
++      body: { link },
++      method: "POST",
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "generateNewzLink"
++    });
++  }
++  async getNewz(newzId) {
++    return await this.#client.request(`/v0/store/newz/${newzId}`, { method: "GET", methodName: "getNewz" });
++  }
++  async listNewz({
++    limit,
++    offset
++  } = {}) {
++    const params = {};
++    if (limit) {
++      params["limit"] = String(limit);
++    }
++    if (offset) {
++      params["offset"] = String(offset);
++    }
++    return await this.#client.request("/v0/store/newz", { method: "GET", params, methodName: "listNewz" });
++  }
++  async removeNewz(newzId) {
++    return await this.#client.request(`/v0/store/newz/${newzId}`, {
++      method: "DELETE",
++      methodName: "removeNewz"
+     });
+   }
+ }
+@@ -115,7 +178,7 @@ class StremThru {
+       "User-Agent": [USER_AGENT, config.userAgent].filter(Boolean).join(" ")
+     };
+     if (config.timeout) {
+-      this.#timeout = config.timeout;
++      this.#timeout = typeof config.timeout === "number" ? { global: config.timeout } : config.timeout;
+     }
+     if (config.auth) {
+       if (typeof config.auth === "object" && "user" in config.auth) {
+@@ -134,13 +197,14 @@ class StremThru {
+     this.store = new StremThruStore(this, config.clientIp);
+   }
+   async health() {
+-    return await this.request(`/v0/health`, {});
++    return await this.request(`/v0/health`, { methodName: "health" });
+   }
+   async request(endpoint, {
+     body,
+     headers,
+     method = "GET",
+     params,
++    methodName,
+     ...options
+   } = {}) {
+     const url = new URL(endpoint, this.baseUrl);
+@@ -158,7 +222,10 @@ class StremThru {
+       method
+     };
+     if (this.#timeout) {
+-      req.signal = AbortSignal.timeout(this.#timeout);
++      const effectiveTimeout = (methodName && this.#timeout[methodName]) ?? this.#timeout.global;
++      if (effectiveTimeout) {
++        req.signal = AbortSignal.timeout(effectiveTimeout);
++      }
+     }
+     if (body instanceof URLSearchParams) {
+       headers.set("Content-Type", "application/x-www-form-urlencoded");
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index c57456a18d2415b15af91a664fcabb3589fcd645..5700208c3c22517e0c6b7c96057ed6c66404aa37 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -1,6 +1,9 @@
+ type StoreMagnetStatus = "cached" | "downloaded" | "downloading" | "failed" | "invalid" | "processing" | "queued" | "unknown" | "uploading";
++type StoreNewzStatus = "cached" | "queued" | "downloading" | "processing" | "downloaded" | "failed" | "invalid" | "unknown";
+ type StoreUserSubscriptionStatus = "expired" | "premium" | "trial";
+ 
++type StremThruMethodName = "addMagnet" | "checkMagnet" | "generateLink" | "getMagnet" | "getUser" | "listMagnets" | "removeMagnet" | "addNewz" | "checkNewz" | "generateNewzLink" | "getNewz" | "listNewz" | "removeNewz" | "health";
++
+ type StremThruConfig = {
+     auth?: string | {
+         pass: string;
+@@ -12,7 +15,9 @@ type StremThruConfig = {
+ } & {
+     baseUrl: string;
+     clientIp?: string;
+-    timeout?: number;
++    timeout?: number | {
++        global?: number;
++    } & Partial<Record<StremThruMethodName, number>>;
+     userAgent?: string;
+ };
+ type ResponseMeta = {
+@@ -128,6 +133,90 @@ declare class StremThruStore {
+         data: null;
+         meta: ResponseMeta;
+     }>;
++    addNewz({ clientIp, link, file, }: {
++        clientIp?: string;
++    } & ({
++        link: string;
++        file?: never;
++    } | {
++        link?: never;
++        file: File;
++    })): Promise<{
++        data: {
++            id: string;
++            hash: string;
++            status: StoreNewzStatus;
++        };
++        meta: ResponseMeta;
++    }>;
++    checkNewz(params: {
++        hash: string[];
++    }): Promise<{
++        data: {
++            items: Array<{
++                hash: string;
++                status: StoreNewzStatus;
++                files: Array<{
++                    index: number;
++                    link: string;
++                    name: string;
++                    path: string;
++                    size: number;
++                    video_hash?: string;
++                }> | null;
++            }>;
++        };
++        meta: ResponseMeta;
++    }>;
++    generateNewzLink({ clientIp, link, }: {
++        clientIp?: string;
++        link: string;
++    }): Promise<{
++        data: {
++            link: string;
++        };
++        meta: ResponseMeta;
++    }>;
++    getNewz(newzId: string): Promise<{
++        data: {
++            id: string;
++            hash: string;
++            name: string;
++            size: number;
++            status: StoreNewzStatus;
++            files: Array<{
++                index: number;
++                link: string;
++                name: string;
++                path: string;
++                size: number;
++                video_hash?: string;
++            }>;
++            added_at: string;
++        };
++        meta: ResponseMeta;
++    }>;
++    listNewz({ limit, offset, }?: {
++        limit?: number;
++        offset?: number;
++    }): Promise<{
++        data: {
++            items: Array<{
++                id: string;
++                hash: string;
++                name: string;
++                size: number;
++                status: StoreNewzStatus;
++                added_at: string;
++            }>;
++            total_items: number;
++        };
++        meta: ResponseMeta;
++    }>;
++    removeNewz(newzId: string): Promise<{
++        data: null;
++        meta: ResponseMeta;
++    }>;
+ }
+ declare class StremThru {
+     #private;
+@@ -140,9 +229,10 @@ declare class StremThru {
+         };
+         meta: ResponseMeta;
+     }>;
+-    request<T>(endpoint: string, { body, headers, method, params, ...options }?: Omit<RequestInit, "body"> & {
++    request<T>(endpoint: string, { body, headers, method, params, methodName, ...options }?: Omit<RequestInit, "body"> & {
+         body?: FormData | Record<string, unknown> | URLSearchParams;
+         params?: Record<string, string | string[]> | URLSearchParams;
++        methodName?: StremThruMethodName;
+     }): Promise<{
+         data: T;
+         meta: ResponseMeta;
+@@ -163,4 +253,4 @@ declare class StremThruError extends Error {
+     });
+ }
+ 
+-export { type ErrorCode, type ErrorType, type StoreMagnetStatus, type StoreUserSubscriptionStatus, StremThru, type StremThruConfig, StremThruError };
++export { type ErrorCode, type ErrorType, type StoreMagnetStatus, type StoreNewzStatus, type StoreUserSubscriptionStatus, StremThru, type StremThruConfig, StremThruError, type StremThruMethodName };
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 967875150536c2753269cace3b4cc9882a261b37..1a275cc2756679fe89031c135abbbdcedfdbe9ef 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -58,13 +58,15 @@ class StremThruStore {
+     return await this.#client.request("/v0/store/magnets", {
+       body,
+       method: "POST",
+-      params: clientIp ? { client_ip: clientIp } : {}
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "addMagnet"
+     });
+   }
+   async checkMagnet(params) {
+     return await this.#client.request("/v0/store/magnets/check", {
+       method: "GET",
+-      params
++      params,
++      methodName: "checkMagnet"
+     });
+   }
+   async generateLink({
+@@ -74,14 +76,15 @@ class StremThruStore {
+     return await this.#client.request(`/v0/store/link/generate`, {
+       body: { link },
+       method: "POST",
+-      params: clientIp ? { client_ip: clientIp } : {}
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "generateLink"
+     });
+   }
+   async getMagnet(magnetId) {
+-    return await this.#client.request(`/v0/store/magnets/${magnetId}`, { method: "GET" });
++    return await this.#client.request(`/v0/store/magnets/${magnetId}`, { method: "GET", methodName: "getMagnet" });
+   }
+   async getUser() {
+-    return await this.#client.request("/v0/store/user", { method: "GET" });
++    return await this.#client.request("/v0/store/user", { method: "GET", methodName: "getUser" });
+   }
+   async listMagnets({
+     limit,
+@@ -94,11 +97,71 @@ class StremThruStore {
+     if (offset) {
+       params["offset"] = String(offset);
+     }
+-    return await this.#client.request("/v0/store/magnets", { method: "GET", params });
++    return await this.#client.request("/v0/store/magnets", { method: "GET", params, methodName: "listMagnets" });
+   }
+   async removeMagnet(magnetId) {
+     return await this.#client.request(`/v0/store/magnets/${magnetId}`, {
+-      method: "DELETE"
++      method: "DELETE",
++      methodName: "removeMagnet"
++    });
++  }
++  async addNewz({
++    clientIp = this.#clientIp,
++    link,
++    file
++  }) {
++    let body;
++    if (link) {
++      body = { link };
++    } else {
++      body = new FormData();
++      body.set("file", file);
++    }
++    return await this.#client.request("/v0/store/newz", {
++      body,
++      method: "POST",
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "addNewz"
++    });
++  }
++  async checkNewz(params) {
++    return await this.#client.request("/v0/store/newz/check", {
++      method: "GET",
++      params,
++      methodName: "checkNewz"
++    });
++  }
++  async generateNewzLink({
++    clientIp = this.#clientIp,
++    link
++  }) {
++    return await this.#client.request("/v0/store/newz/link/generate", {
++      body: { link },
++      method: "POST",
++      params: clientIp ? { client_ip: clientIp } : {},
++      methodName: "generateNewzLink"
++    });
++  }
++  async getNewz(newzId) {
++    return await this.#client.request(`/v0/store/newz/${newzId}`, { method: "GET", methodName: "getNewz" });
++  }
++  async listNewz({
++    limit,
++    offset
++  } = {}) {
++    const params = {};
++    if (limit) {
++      params["limit"] = String(limit);
++    }
++    if (offset) {
++      params["offset"] = String(offset);
++    }
++    return await this.#client.request("/v0/store/newz", { method: "GET", params, methodName: "listNewz" });
++  }
++  async removeNewz(newzId) {
++    return await this.#client.request(`/v0/store/newz/${newzId}`, {
++      method: "DELETE",
++      methodName: "removeNewz"
+     });
+   }
+ }
+@@ -113,7 +176,7 @@ class StremThru {
+       "User-Agent": [USER_AGENT, config.userAgent].filter(Boolean).join(" ")
+     };
+     if (config.timeout) {
+-      this.#timeout = config.timeout;
++      this.#timeout = typeof config.timeout === "number" ? { global: config.timeout } : config.timeout;
+     }
+     if (config.auth) {
+       if (typeof config.auth === "object" && "user" in config.auth) {
+@@ -132,13 +195,14 @@ class StremThru {
+     this.store = new StremThruStore(this, config.clientIp);
+   }
+   async health() {
+-    return await this.request(`/v0/health`, {});
++    return await this.request(`/v0/health`, { methodName: "health" });
+   }
+   async request(endpoint, {
+     body,
+     headers,
+     method = "GET",
+     params,
++    methodName,
+     ...options
+   } = {}) {
+     const url = new URL(endpoint, this.baseUrl);
+@@ -156,7 +220,10 @@ class StremThru {
+       method
+     };
+     if (this.#timeout) {
+-      req.signal = AbortSignal.timeout(this.#timeout);
++      const effectiveTimeout = (methodName && this.#timeout[methodName]) ?? this.#timeout.global;
++      if (effectiveTimeout) {
++        req.signal = AbortSignal.timeout(effectiveTimeout);
++      }
+     }
+     if (body instanceof URLSearchParams) {
+       headers.set("Content-Type", "application/x-www-form-urlencoded");

@@ -222,7 +222,7 @@ export function MainSidebar() {
               <img
                 src={
                   status?.settings.alternateDesign
-                    ? status?.tag.includes('nightly')
+                    ? status?.channel === 'nightly'
                       ? '/mini-nightly-white.png'
                       : '/mini-stable-white.png'
                     : user.userData.addonLogo || '/logo.png'
@@ -234,7 +234,7 @@ export function MainSidebar() {
             {status?.settings.alternateDesign === false && (
               <span className="text-xs text-gray-500">
                 {status
-                  ? status.tag.includes('nightly')
+                  ? status.channel === 'nightly'
                     ? 'nightly'
                     : status.tag
                   : ''}

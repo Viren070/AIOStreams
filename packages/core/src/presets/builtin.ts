@@ -6,6 +6,24 @@ import { Preset } from './preset.js';
 import { stremthruSpecialCases } from './stremthru.js';
 
 export class BuiltinStreamParser extends StreamParser {
+  protected override getLanguages(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string[] {
+    const languages = super.getLanguages(stream, currentParsedStream);
+    const builtinLanguages = (stream as Record<string, unknown>).languages as
+      | string[]
+      | undefined;
+    if (builtinLanguages) {
+      for (const lang of builtinLanguages) {
+        if (!languages.includes(lang)) {
+          languages.push(lang);
+        }
+      }
+    }
+    return languages;
+  }
+
   protected getFolder(
     stream: Stream,
     currentParsedStream: ParsedStream
@@ -58,7 +76,7 @@ export class BuiltinStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean {
-    return stream.name?.includes('☁️') ?? false;
+    return stream.name?.includes('🗃️') ?? false;
   }
 
   protected getAge(
@@ -76,6 +94,13 @@ export class BuiltinStreamParser extends StreamParser {
     _currentParsedStream: ParsedStream
   ): boolean | undefined {
     return stream.name?.includes('🔑') ? true : false;
+  }
+
+  protected override isFreeleech(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): boolean | undefined {
+    return stream.name?.includes('FREELEECH') ? true : false;
   }
 
   protected getStreamType(
@@ -131,6 +156,14 @@ export class BuiltinAddonPreset extends Preset {
             password: credentials.password,
           })
         ),
+      [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) =>
+        toUrlSafeBase64(
+          JSON.stringify({
+            url: credentials.url,
+            authToken: credentials.authToken,
+            publicUrl: credentials.publicUrl,
+          })
+        ),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>
@@ -157,7 +190,7 @@ export class BuiltinAddonPreset extends Preset {
 
   protected static getBaseConfig(userData: UserData, services: ServiceId[]) {
     return {
-      tmdbAccessToken: userData.tmdbAccessToken,
+      tmdbReadAccessToken: userData.tmdbAccessToken,
       tmdbApiKey: userData.tmdbApiKey,
       tvdbApiKey: userData.tvdbApiKey,
       services: services.map((service) => ({
@@ -166,6 +199,7 @@ export class BuiltinAddonPreset extends Preset {
       })),
       cacheAndPlay: userData.cacheAndPlay,
       autoRemoveDownloads: userData.autoRemoveDownloads,
+      checkOwned: userData.checkOwned ?? true,
     };
   }
 }

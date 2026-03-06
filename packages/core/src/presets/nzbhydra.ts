@@ -11,6 +11,7 @@ export class NZBHydraPreset extends NewznabPreset {
       constants.NZBDAV_SERVICE,
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
     ] as ServiceId[];
     const options: Option[] = [
       {
@@ -129,15 +130,6 @@ export class NZBHydraPreset extends NewznabPreset {
         showInSimpleMode: false,
       },
       {
-        id: 'checkOwned',
-        name: 'Check Owned NZBs',
-        description:
-          'When searching for NZBs, check if the NZB is already owned (in your library) and mark it as such if so. Note: only applies to nzbDAV/Altmount.',
-        type: 'boolean',
-        default: true,
-        showInSimpleMode: false,
-      },
-      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
@@ -191,7 +183,6 @@ export class NZBHydraPreset extends NewznabPreset {
       apiKey: nzbhydraApiKey,
       forceQuerySearch: options.forceQuerySearch ?? true,
       forceInitialLimit: options.initialLimit ?? 250,
-      checkOwned: options.checkOwned ?? true,
       paginate: options.paginate ?? false,
     };
 

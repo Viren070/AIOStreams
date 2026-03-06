@@ -1,0 +1,578 @@
+﻿---
+title: Stream Expression Language
+description: Complete technical reference for SEL syntax, operators, constants, and all functions.
+---
+
+The **Stream Expression Language (SEL)** lets you write custom logic to filter, rank, and select streams. It is used in **Groups**, **Stream Expression Filters**, **Precompute Selectors**, and more.
+
+---
+
+## Operators
+
+| Operator          | Description                           | Example                               |
+| ----------------- | ------------------------------------- | ------------------------------------- |
+| `==`              | Equal                                 | `queryType == 'movie'`                |
+| `!=`              | Not equal                             | `queryType != 'series'`               |
+| `>` `<` `>=` `<=` | Comparison                            | `count(previousStreams) > 5`          |
+| `in`              | Membership — value exists in sequence | `'Torrentio' in queriedAddons`        |
+| `+` `-` `*` `/`   | Arithmetic                            | `totalTimeTaken / 1000`               |
+| `and` `or` `not`  | Logical                               | `isAnime and season == 1`             |
+| `x ? y : z`       | Ternary                               | `isAnime ? seadex(streams) : streams` |
+| `()`              | Grouping                              | `(a or b) and c`                      |
+
+---
+
+## Nesting Functions
+
+Most functions accept a stream list as input and return a stream list as output. Chain them together by nesting:
+
+```
+count(resolution(cached(streams), '2160p'))
+```
+
+1. `cached(streams)` — get only cached streams
+2. `resolution(..., '2160p')` — keep only 4K ones
+3. `count(...)` — count how many remain
+
+---
+
+## Context Constants
+
+The constants available to you depend on where the expression is used.
+
+### Group Conditions
+
+| Constant                 | Type             | Description                                            |
+| ------------------------ | ---------------- | ------------------------------------------------------ |
+| `previousStreams`        | `ParsedStream[]` | Streams found by the last group that ran               |
+| `totalStreams`           | `ParsedStream[]` | All streams found by all groups so far                 |
+| `queryType`              | `string`         | Media type being searched (e.g. `"movie"`, `"series"`) |
+| `previousGroupTimeTaken` | `number`         | Time the last group took (ms)                          |
+| `totalTimeTaken`         | `number`         | Total time spent so far (ms)                           |
+
+### Dynamic Exit Conditions
+
+| Constant         | Type             | Description                                                                |
+| ---------------- | ---------------- | -------------------------------------------------------------------------- |
+| `totalStreams`   | `ParsedStream[]` | All streams found by all groups so far                                     |
+| `totalTimeTaken` | `number`         | Total time spent so far (ms)                                               |
+| `queryType`      | `string`         | Media type (e.g. `"movie"`, `"series"`, `"anime.series"`, `"anime.movie"`) |
+| `queriedAddons`  | `string[]`       | Addon names queried so far                                                 |
+
+### Stream Expression Filters & Precompute Selector
+
+| Constant               | Type             | Default | Description                                           |
+| ---------------------- | ---------------- | ------- | ----------------------------------------------------- |
+| `streams`              | `ParsedStream[]` | —       | All available streams                                 |
+| `queryType`            | `string`         | `''`    | Media type                                            |
+| `isAnime`              | `boolean`        | `false` | Whether the media is anime                            |
+| `season`               | `number`         | `-1`    | Season number                                         |
+| `episode`              | `number`         | `-1`    | Episode number                                        |
+| `absoluteEpisode`      | `number`         | `-1`    | Absolute episode number                               |
+| `genres`               | `string[]`       | `[]`    | List of genres                                        |
+| `title`                | `string`         | `''`    | Media title                                           |
+| `year`                 | `number`         | `0`     | Release year                                          |
+| `yearEnd`              | `number`         | `0`     | End year (series)                                     |
+| `daysSinceRelease`     | `number`         | `-1`    | Days since media was released                         |
+| `runtime`              | `number`         | `0`     | Runtime in minutes                                    |
+| `originalLanguage`     | `string`         | `''`    | Original language (e.g. `"English"`)                  |
+| `hasSeaDex`            | `boolean`        | `false` | Whether SeaDex results exist for this media           |
+| `hasNextEpisode`       | `boolean`        | `false` | Whether a next episode exists                         |
+| `daysUntilNextEpisode` | `number`         | `-1`    | Days until next episode airs                          |
+| `daysSinceFirstAired`  | `number`         | `-1`    | Days since the first episode aired                    |
+| `daysSinceLastAired`   | `number`         | `-1`    | Days since the last episode aired                     |
+| `latestSeason`         | `number`         | `-1`    | Latest season number                                  |
+| `ongoingSeason`        | `boolean`        | `false` | Viewing the latest season with a next episode pending |
+
+---
+
+## Naming Expressions
+
+Assign a name to a Stream Expression by adding a C-style comment. The name is used in the [Custom Formatter](/reference/custom-formatter).
+
+```
+/* 4K Dolby Vision */ merge(resolution(streams, '2160p'), visualTag(streams, 'DV'))
+```
+
+Multiple names (for Ranked Stream Expressions):
+
+```
+/* 4K */ resolution(streams, '2160p') /* High Quality */
+```
+
+Reference-only comment (not used as a name — start with `#`):
+
+```
+/*# This is just a note */ quality(streams, 'Bluray')
+```
+
+### Preferred vs. Ranked
+
+| Type          | Matching behaviour                                         | Formatter variable    |
+| ------------- | ---------------------------------------------------------- | --------------------- |
+| **Preferred** | Stream matches only the _first_ expression it satisfies    | `{stream.seMatched}`  |
+| **Ranked**    | Stream can match _multiple_ expressions; scores are summed | `{stream.rseMatched}` |
+
+---
+
+## Function Reference
+
+### Utility Functions
+
+#### `negate()`
+
+Returns streams from `originalStreamList` that are **not** in `streamsToExclude`.
+
+| Parameter            | Type             | Description                     |
+| -------------------- | ---------------- | ------------------------------- |
+| `streamsToExclude`   | `ParsedStream[]` | Streams to exclude              |
+| `originalStreamList` | `ParsedStream[]` | Full stream list to filter from |
+
+```
+negate(quality(streams, 'CAM', 'TS'), streams)
+```
+
+---
+
+#### `merge()`
+
+Combines multiple stream arrays into one, removing duplicates.
+
+```
+merge(visualTag(streams, 'DV'), audioTag(streams, 'Atmos'))
+```
+
+---
+
+#### `slice()`
+
+Returns a section of the stream list. Negative indices count from the end.
+
+| Parameter | Type             | Description                                   |
+| --------- | ---------------- | --------------------------------------------- |
+| `streams` | `ParsedStream[]` | Stream list to slice                          |
+| `start`   | `number`         | Start index (inclusive)                       |
+| `end`     | `number?`        | End index (exclusive). Omit to go to the end. |
+
+```
+slice(addon(streams, 'TorBox'), 0, 5)  // first 5 TorBox streams
+```
+
+---
+
+#### `values()`
+
+Extracts a numeric property from each stream as an array of numbers. Used with [Math Functions](#math-functions).
+
+| Parameter   | Type             | Description         |
+| ----------- | ---------------- | ------------------- |
+| `streams`   | `ParsedStream[]` | Stream list         |
+| `attribute` | `string`         | Property to extract |
+
+**Accepted attributes:** `'bitrate'` `'size'` `'folderSize'` `'age'` `'duration'` `'seeders'` `'seScore'` `'regexScore'`
+
+```
+avg(values(streams, 'bitrate'))
+```
+
+---
+
+### Filter Functions
+
+All filter functions follow the pattern: `fn(streams, ...values)` → `ParsedStream[]`
+
+---
+
+#### `indexer()`
+
+Filter by originating indexer name (case-sensitive).
+
+```
+indexer(streams, '1337x', 'RARBG')
+```
+
+---
+
+#### `resolution()`
+
+Filter by video resolution.
+
+**Accepted values:** `'2160p'` `'1440p'` `'1080p'` `'720p'` `'576p'` `'480p'` `'360p'` `'240p'` `'144p'` `'Unknown'`
+
+```
+resolution(streams, '2160p', '1080p')
+```
+
+---
+
+#### `quality()`
+
+Filter by quality tag.
+
+**Accepted values:** `'Bluray REMUX'` `'Bluray'` `'WEB-DL'` `'WEBRip'` `'HDRip'` `'HC HD-Rip'` `'DVDRip'` `'HDTV'` `'CAM'` `'TS'` `'TC'` `'SCR'` `'Unknown'`
+
+```
+quality(streams, 'Bluray', 'WEB-DL')
+```
+
+---
+
+#### `encode()`
+
+Filter by video encoding format (e.g. `'H.264'`, `'H.265'`, `'HEVC'`, `'x265'`).
+
+```
+encode(streams, 'H.265', 'HEVC')
+```
+
+---
+
+#### `type()`
+
+Filter by stream type.
+
+**Accepted values:** `'debrid'` `'usenet'` `'http'` `'live'` `'p2p'` `'external'` `'youtube'`
+
+```
+type(streams, 'debrid', 'p2p')
+```
+
+---
+
+#### `visualTag()`
+
+Filter by visual tag (e.g. `'HDR'`, `'DV'`, `'HDR10'`, `'HDR10+'`, `'HLG'`).
+
+```
+visualTag(streams, 'DV', 'HDR')
+```
+
+---
+
+#### `audioTag()`
+
+Filter by audio format tag (e.g. `'Atmos'`, `'DTS'`, `'DTS-HD MA'`, `'AC3'`, `'EAC3'`).
+
+```
+audioTag(streams, 'Atmos', 'DTS-HD MA')
+```
+
+---
+
+#### `audioChannels()`
+
+Filter by audio channel configuration (e.g. `'5.1'`, `'7.1'`, `'2.0'`).
+
+```
+audioChannels(streams, '5.1', '7.1')
+```
+
+---
+
+#### `language()`
+
+Filter by audio language (e.g. `'English'`, `'Spanish'`).
+
+```
+language(streams, 'English')
+```
+
+---
+
+#### `seeders()`
+
+Filter by torrent seeder count.
+
+| Parameter | Type             | Description                 |
+| --------- | ---------------- | --------------------------- |
+| `streams` | `ParsedStream[]` | Stream list                 |
+| `min`     | `number?`        | Minimum seeders (inclusive) |
+| `max`     | `number?`        | Maximum seeders (inclusive) |
+
+```
+seeders(streams, 5, 200)
+```
+
+---
+
+#### `age()`
+
+Filter by age in hours.
+
+| Parameter | Type             | Description          |
+| --------- | ---------------- | -------------------- |
+| `streams` | `ParsedStream[]` | Stream list          |
+| `min`     | `number?`        | Minimum age in hours |
+| `max`     | `number?`        | Maximum age in hours |
+
+```
+age(streams, 24, 8760)  // 1 day to 1 year old
+```
+
+---
+
+#### `size()`
+
+Filter by file size. Accepts human-readable strings (`'1GB'`, `'500MB'`) or raw byte counts.
+
+| Parameter | Type                | Description  |
+| --------- | ------------------- | ------------ |
+| `streams` | `ParsedStream[]`    | Stream list  |
+| `min`     | `number \| string?` | Minimum size |
+| `max`     | `number \| string?` | Maximum size |
+
+```
+size(streams, '1GB', '10GB')
+```
+
+---
+
+#### `bitrate()`
+
+Filter by bitrate. Accepts `'5Mbps'`, `'5000kbps'`, or raw bits-per-second.
+
+| Parameter | Type                | Description     |
+| --------- | ------------------- | --------------- |
+| `streams` | `ParsedStream[]`    | Stream list     |
+| `min`     | `number \| string?` | Minimum bitrate |
+| `max`     | `number \| string?` | Maximum bitrate |
+
+```
+bitrate(streams, '5Mbps')
+```
+
+---
+
+#### `service()`
+
+Filter by Debrid service.
+
+**Accepted values:** `'realdebrid'` `'debridlink'` `'alldebrid'` `'torbox'` `'pikpak'` `'seedr'` `'offcloud'` `'premiumize'` `'easynews'` `'easydebrid'`
+
+```
+service(streams, 'realdebrid', 'torbox')
+```
+
+---
+
+#### `cached()`
+
+Filter for cached Debrid streams only.
+
+```
+cached(streams)
+```
+
+---
+
+#### `uncached()`
+
+Filter for non-cached streams only.
+
+```
+uncached(streams)
+```
+
+---
+
+#### `releaseGroup()`
+
+Filter by release group name (case-sensitive). Omitting names matches streams with _any_ release group.
+
+```
+releaseGroup(streams, 'YIFY', 'FLUX')
+```
+
+---
+
+#### `seasonPack()`
+
+Filter for season pack streams.
+
+| Parameter | Type             | Description                                                                                                                                             |
+| --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `streams` | `ParsedStream[]` | Stream list                                                                                                                                             |
+| `mode`    | `string?`        | `'seasonPack'` — stream originates from a season pack. `'onlySeasons'` _(default)_ — title contains only season info, no episode info (ambiguous pack). |
+
+```
+seasonPack(streams, 'seasonPack')   // from any season pack
+seasonPack(streams, 'onlySeasons')  // ambiguous packs without episode reference
+```
+
+---
+
+#### `addon()`
+
+Filter by addon name (case-sensitive).
+
+```
+addon(streams, 'Torrentio', 'Knightcrawler')
+```
+
+---
+
+#### `library()`
+
+Filter for streams from a personal Debrid library.
+
+```
+library(streams)
+```
+
+---
+
+#### `message()`
+
+Filter by a stream's `message` property.
+
+| Parameter     | Type                    | Description                 |
+| ------------- | ----------------------- | --------------------------- |
+| `streams`     | `ParsedStream[]`        | Stream list                 |
+| `mode`        | `'exact' \| 'includes'` | Exact match or substring    |
+| `...messages` | `string`                | One or more message strings |
+
+```
+message(streams, 'includes', 'cached')
+```
+
+---
+
+#### `seadex()`
+
+Filter for [SeaDex](https://releases.moe)-listed streams (best anime releases).
+
+| Parameter | Type               | Description                                                                     |
+| --------- | ------------------ | ------------------------------------------------------------------------------- |
+| `streams` | `ParsedStream[]`   | Stream list                                                                     |
+| `type`    | `'best' \| 'all'?` | `'best'` for only SeaDex "Best" entries; omit or `'all'` for all SeaDex matches |
+
+<Callout type="info">
+  Only active when SeaDex integration is enabled under **Filters →
+  Miscellaneous**.
+</Callout>
+
+```
+seadex(streams, 'best')
+```
+
+---
+
+#### `regexMatched()`
+
+Filter for streams that matched a preferred or ranked regex filter.
+
+| Parameter  | Type             | Description                                                  |
+| ---------- | ---------------- | ------------------------------------------------------------ |
+| `streams`  | `ParsedStream[]` | Stream list                                                  |
+| `...names` | `string?`        | Optional filter names. If omitted, matches any regex filter. |
+
+<Callout type="warn">
+  Does not work in **Included Stream Expressions** — regex matching is computed
+  after filtering.
+</Callout>
+
+```
+regexMatched(streams)                          // matched any regex
+regexMatched(streams, 'HighQuality', 'Extras') // matched specific ones
+```
+
+---
+
+#### `regexMatchedInRange()`
+
+Filter for streams where the matched regex filter's index is within `[min, max]`.
+
+<Callout type="warn">Does not work in **Included Stream Expressions**.</Callout>
+
+```
+regexMatchedInRange(streams, 0, 5)
+```
+
+---
+
+#### `streamExpressionScore()`
+
+Filter by Ranked Stream Expression score.
+
+<Callout type="warn">Does not work in **Included Stream Expressions**.</Callout>
+
+```
+streamExpressionScore(streams, 100, 500)
+```
+
+---
+
+#### `regexScore()`
+
+Filter by Ranked Regex score.
+
+<Callout type="warn">Does not work in **Included Stream Expressions**.</Callout>
+
+```
+regexScore(streams, 50)
+```
+
+---
+
+#### `passthrough()`
+
+Flags streams to bypass specific pipeline stages. Best used in **Included Stream Expressions** or rarely in **Excluded Stream Expressions**.
+
+While any stream selected by an Included Stream Expression (ISE) is already protected from normal filters, it still passes through stages like deduplication and result limiting. Wrapping your ISE with `passthrough()` expands which stages those streams skip.
+
+When used in an **Excluded Stream Expression**: flagged streams won't be removed by _subsequent_ excluded expressions. Since ESE filters run last, most stage values are not applicable here — only `excluded` is relevant.
+
+| Parameter   | Type             | Description                                |
+| ----------- | ---------------- | ------------------------------------------ |
+| `streams`   | `ParsedStream[]` | Stream list                                |
+| `...stages` | `string?`        | Stages to skip. Omit to bypass all stages. |
+
+**Accepted stage values:** `filter` `language` `dedup` `limit` `excluded` `required` `title` `year` `episode` `digitalRelease`
+
+```
+passthrough(streams, 'language', 'limit')
+passthrough(streams)  // bypass all stages
+```
+
+---
+
+#### `pin()`
+
+Pins streams to the very top or bottom of the final results list, overriding sort order. Typically used in **Excluded Stream Expressions**. Can also be used in **Required Stream Expressions** — but since unselected streams get filtered out, set `returnMatched: true` when doing so.
+
+| Parameter       | Type                | Default | Description                                                                        |
+| --------------- | ------------------- | ------- | ---------------------------------------------------------------------------------- |
+| `streams`       | `ParsedStream[]`    | —       | Streams to pin                                                                     |
+| `position`      | `'top' \| 'bottom'` | `'top'` | Where to pin them                                                                  |
+| `returnMatched` | `boolean`           | `false` | `true` → return pinned streams; `false` → return empty array (useful for chaining) |
+
+```
+pin(seadex(streams, 'best'), 'top')
+```
+
+---
+
+### Math Functions
+
+Math functions operate on arrays of numbers, typically from [`values()`](#values).
+
+Most accept either an array (`avg(values(streams, 'bitrate'))`) or individual arguments (`avg(1, 2, 3)`).
+
+| Function                 | Alias  | Description                                 |
+| ------------------------ | ------ | ------------------------------------------- |
+| `count(arr)`             | —      | Number of items in the array                |
+| `max(numbers)`           | —      | Largest value                               |
+| `min(numbers)`           | —      | Smallest value                              |
+| `avg(numbers)`           | `mean` | Arithmetic mean                             |
+| `sum(numbers)`           | —      | Sum of all values                           |
+| `median(numbers)`        | `q2`   | Middle value (50th percentile)              |
+| `mode(numbers)`          | —      | Most frequently occurring value             |
+| `range(numbers)`         | —      | `max - min`                                 |
+| `variance(numbers)`      | —      | Spread from the average                     |
+| `stddev(numbers)`        | —      | Standard deviation                          |
+| `percentile(numbers, p)` | —      | Value below which `p`% of observations fall |
+| `q1(numbers)`            | —      | First quartile (25th percentile)            |
+| `q3(numbers)`            | —      | Third quartile (75th percentile)            |
+| `iqr(numbers)`           | —      | Interquartile range (`q3 - q1`)             |
+| `skewness(numbers)`      | —      | Asymmetry of the distribution               |
+| `kurtosis(numbers)`      | —      | "Tailedness" of the distribution            |

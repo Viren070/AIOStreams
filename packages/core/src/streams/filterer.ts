@@ -1,20 +1,24 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
-  FeatureControl,
+  RegexAccess,
   getTimeTakenSincePoint,
+  formatMilliseconds,
   constants,
   compileRegex,
   formRegexFromKeywords,
   safeRegexTest,
 } from '../utils/index.js';
 import { LANGUAGES, StreamType } from '../utils/constants.js';
-import { StreamSelector } from '../parser/streamExpression.js';
+import {
+  StreamSelector,
+  extractNamesFromExpression,
+} from '../parser/streamExpression.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import {
   normaliseTitle,
   preprocessTitle,
-  titleMatch,
+  titleMatchWithLang,
 } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
@@ -56,6 +60,8 @@ export interface FilterStatistics {
     requiredAudioChannel: Reason;
     excludedLanguage: Reason;
     requiredLanguage: Reason;
+    excludedReleaseGroup: Reason;
+    requiredReleaseGroup: Reason;
     excludedCached: Reason;
     excludedUncached: Reason;
     excludedRegex: Reason;
@@ -81,6 +87,7 @@ export interface FilterStatistics {
     audioChannel: Reason;
     language: Reason;
     streamType: Reason;
+    releaseGroup: Reason;
     size: Reason;
     seeder: Reason;
     age: Reason;
@@ -90,9 +97,45 @@ export interface FilterStatistics {
   };
 }
 
+export interface PhaseTimingStats {
+  /** Total ms spent in this phase across all streams and all filter() calls */
+  totalMs: number;
+  /** Maximum ms for any single stream evaluation */
+  maxMs: number;
+  /** Minimum ms for any single stream evaluation */
+  minMs: number;
+  /** Number of per-stream evaluations tracked */
+  count: number;
+}
+
+export interface FilterTimings {
+  /** Total wall-clock ms spent inside all filter() calls for this request */
+  totalMs: number;
+  /** Ms spent awaiting metadata (context.getMetadata, getReleaseDates, etc.) */
+  metadataMs: number;
+  /** Ms spent evaluating includedStreamExpressions */
+  expressionMs: number;
+  /** Ms spent compiling regex / keyword patterns */
+  regexCompileMs: number;
+  /** Ms spent sequentially pre-computing per-stream regex/keyword decisions before the filter
+   *  pass. Pre-computed sequentially (not inside Promise.all) so this value is accurate. */
+  regexTestMs: number;
+  /** Ms spent in the core per-stream shouldKeepStream filter pass */
+  filterPassMs: number;
+  /** Number of filter() calls accumulated */
+  calls: number;
+  /** Per-stream phase timings from the shouldKeepStream pass, accumulated across all filter() calls */
+  phases: {
+    titleMatch: PhaseTimingStats;
+    yearMatch: PhaseTimingStats;
+    seasonEpisodeMatch: PhaseTimingStats;
+  };
+}
+
 class StreamFilterer {
   private userData: UserData;
   private filterStatistics: FilterStatistics;
+  private filterTimings: FilterTimings;
 
   constructor(userData: UserData) {
     this.userData = userData;
@@ -119,6 +162,8 @@ class StreamFilterer {
         requiredAudioChannel: { total: 0, details: {} },
         excludedLanguage: { total: 0, details: {} },
         requiredLanguage: { total: 0, details: {} },
+        excludedReleaseGroup: { total: 0, details: {} },
+        requiredReleaseGroup: { total: 0, details: {} },
         excludedCached: { total: 0, details: {} },
         excludedUncached: { total: 0, details: {} },
         excludedRegex: { total: 0, details: {} },
@@ -144,12 +189,27 @@ class StreamFilterer {
         audioChannel: { total: 0, details: {} },
         language: { total: 0, details: {} },
         streamType: { total: 0, details: {} },
+        releaseGroup: { total: 0, details: {} },
         size: { total: 0, details: {} },
         seeder: { total: 0, details: {} },
         age: { total: 0, details: {} },
         regex: { total: 0, details: {} },
         keywords: { total: 0, details: {} },
         streamExpression: { total: 0, details: {} },
+      },
+    };
+    this.filterTimings = {
+      totalMs: 0,
+      metadataMs: 0,
+      expressionMs: 0,
+      regexCompileMs: 0,
+      regexTestMs: 0,
+      filterPassMs: 0,
+      calls: 0,
+      phases: {
+        titleMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        yearMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        seasonEpisodeMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
       },
     };
   }
@@ -178,6 +238,34 @@ class StreamFilterer {
 
   public getFilterStatistics() {
     return this.filterStatistics;
+  }
+
+  public getFilterTimings(): FilterTimings {
+    return {
+      ...this.filterTimings,
+      phases: {
+        titleMatch: { ...this.filterTimings.phases.titleMatch },
+        yearMatch: { ...this.filterTimings.phases.yearMatch },
+        seasonEpisodeMatch: { ...this.filterTimings.phases.seasonEpisodeMatch },
+      },
+    };
+  }
+
+  public resetFilterTimings(): void {
+    this.filterTimings = {
+      totalMs: 0,
+      metadataMs: 0,
+      expressionMs: 0,
+      regexCompileMs: 0,
+      regexTestMs: 0,
+      filterPassMs: 0,
+      calls: 0,
+      phases: {
+        titleMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        yearMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+        seasonEpisodeMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      },
+    };
   }
 
   public generateFilterSummary(
@@ -257,10 +345,36 @@ class StreamFilterer {
     const { type, id, parsedId, isAnime } = context;
 
     const start = Date.now();
-    const isRegexAllowed = await FeatureControl.isRegexAllowed(this.userData, [
+    // Sub-phase timing accumulators for this filter() call
+    let metadataMs = 0;
+    let expressionMs = 0;
+    let regexCompileMs = 0;
+    let filterPassMs = 0;
+    let regexTestMs = 0;
+    // Per-stream phase timing accumulators (accumulated during the filter pass, then merged into filterTimings)
+    const phases = {
+      titleMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      yearMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+      seasonEpisodeMatch: { totalMs: 0, maxMs: 0, minMs: Infinity, count: 0 },
+    };
+    const accumPhase = (
+      s: { totalMs: number; maxMs: number; minMs: number; count: number },
+      ms: number
+    ) => {
+      s.totalMs += ms;
+      s.count++;
+      if (ms > s.maxMs) s.maxMs = ms;
+      if (ms < s.minMs) s.minMs = ms;
+    };
+
+    const metadataStart = Date.now();
+    const isRegexAllowed = await RegexAccess.isRegexAllowed(this.userData, [
       ...(this.userData.excludedRegexPatterns ?? []),
       ...(this.userData.requiredRegexPatterns ?? []),
       ...(this.userData.includedRegexPatterns ?? []),
+      ...(this.userData.preferredRegexPatterns ?? []).map(
+        (regex) => regex.pattern
+      ),
     ]);
 
     // Get metadata from context (already fetched in parallel with addon requests)
@@ -273,6 +387,32 @@ class StreamFilterer {
     let originalLanguage = requestedMetadata?.originalLanguage
       ? iso6391ToLanguage(requestedMetadata.originalLanguage)
       : undefined;
+
+    const episodeRuntime = await context.getEpisodeRuntime();
+    metadataMs = Date.now() - metadataStart;
+    if (metadataMs > 10) {
+      logger.debug(
+        `Metadata + regex access resolved in ${formatMilliseconds(metadataMs)}`,
+        { id }
+      );
+    }
+    const runtimeToUse =
+      episodeRuntime ||
+      (requestedMetadata?.runtime ? requestedMetadata.runtime : undefined);
+
+    if (episodeRuntime) {
+      logger.debug(`Using episode runtime: ${episodeRuntime} minutes`, {
+        id,
+        episode: `${parsedId?.season}:${parsedId?.episode}`,
+      });
+    } else if (requestedMetadata?.runtime) {
+      logger.debug(
+        `Using series average runtime: ${requestedMetadata.runtime} minutes`,
+        {
+          id,
+        }
+      );
+    }
 
     let yearWithinTitle: string | undefined;
     let yearWithinTitleRegex: RegExp | undefined;
@@ -305,7 +445,7 @@ class StreamFilterer {
 
         if (
           (stream.bitrate === undefined || !Number.isFinite(stream.bitrate)) &&
-          requestedMetadata?.runtime &&
+          runtimeToUse &&
           stream.size &&
           (!isFolderSize || type === 'series') // only calculate for folder sizes if it's a series
         ) {
@@ -328,7 +468,7 @@ class StreamFilterer {
             let hasUnknownSeasons = false;
 
             for (const season of stream.parsedFile?.seasons || []) {
-              const seasonData = requestedMetadata.seasons?.find(
+              const seasonData = requestedMetadata?.seasons?.find(
                 (s) => s.season_number === season
               );
 
@@ -360,230 +500,207 @@ class StreamFilterer {
             }
           }
 
-          if (doBitrateCalculation) {
-            stream.bitrate = Math.round(
-              (finalSize * 8) / (requestedMetadata.runtime * 60)
-            );
+          if (doBitrateCalculation && runtimeToUse) {
+            stream.bitrate = Math.round((finalSize * 8) / (runtimeToUse * 60));
           }
         }
       });
     }
 
-    const applyDigitalReleaseFilter = () => {
-      const digitalReleaseFilterConfig = this.userData.digitalReleaseFilter;
-      logger.debug(`[DigitalReleaseFilter] Checking filter for ${id}`, {
-        enabled: digitalReleaseFilterConfig?.enabled,
-        tolerance: digitalReleaseFilterConfig?.tolerance,
-        requestTypes: digitalReleaseFilterConfig?.requestTypes,
-        addons: digitalReleaseFilterConfig?.addons,
-        contentType: type,
-        releaseDate: requestedMetadata?.releaseDate,
-        tmdbId: requestedMetadata?.tmdbId,
-        releaseDatesCount: releaseDates?.length ?? 0,
-      });
-      if (!digitalReleaseFilterConfig?.enabled) {
-        return true;
-      }
+    const applyDigitalReleaseFilter = (): boolean => {
+      const config = this.userData.digitalReleaseFilter;
+      if (!config?.enabled) return true;
 
-      const filterRequestTypes = digitalReleaseFilterConfig.requestTypes;
+      // Preconditions: check content type is in scope
+      const filterRequestTypes = config.requestTypes;
       if (
-        filterRequestTypes &&
-        filterRequestTypes.length > 0 &&
+        filterRequestTypes?.length &&
         ((isAnime && !filterRequestTypes.includes('anime')) ||
           (!isAnime && !filterRequestTypes.includes(type)))
       ) {
+        return true;
+      }
+      if (!['movie', 'series', 'anime'].includes(type)) return true;
+
+      // Parse and validate release date (required for all subsequent rules)
+      const releaseDate = requestedMetadata?.releaseDate
+        ? new Date(requestedMetadata.releaseDate)
+        : null;
+      if (!releaseDate || isNaN(releaseDate.getTime())) {
         logger.debug(
-          `[DigitalReleaseFilter] Skipping for type "${type}"${isAnime ? ' (anime)' : ''} (not in requestTypes: ${filterRequestTypes.join(', ')})`
+          `[DigitalReleaseFilter] No valid release date for "${requestedMetadata?.title}", allowing`
         );
         return true;
       }
 
-      if (!['movie', 'series', 'anime'].includes(type)) {
-        logger.debug(
-          `[DigitalReleaseFilter] Skipping for unsupported type "${type}"`
-        );
-        return true;
-      }
-
-      if (!requestedMetadata?.releaseDate) {
-        logger.debug(
-          `[DigitalReleaseFilter] No release date found, allowing streams`
-        );
-        return true;
-      }
-
-      const releaseDate = new Date(requestedMetadata.releaseDate);
-      if (isNaN(releaseDate.getTime())) {
-        logger.debug(
-          `[DigitalReleaseFilter] Invalid release date "${requestedMetadata.releaseDate}", allowing streams`
-        );
-        return true;
-      }
+      // Precompute values referenced by rules
       const today = new Date();
+      const tolerance = config.tolerance ?? 0;
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const daysBetween = (from: Date, to: Date) =>
+        Math.floor((to.getTime() - from.getTime()) / msPerDay);
+      const title = requestedMetadata?.title;
+      const daysSinceRelease = daysBetween(releaseDate, today);
+      const isSeries = type === 'series' || type === 'anime';
 
-      const daysSinceRelease = Math.floor(
-        (today.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      // Episode air date (series/anime only)
+      const epDateStr = isSeries
+        ? episodeAirDate || requestedMetadata?.releaseDate
+        : null;
+      const epDate =
+        epDateStr && !isNaN(new Date(epDateStr).getTime())
+          ? new Date(epDateStr)
+          : null;
+      const daysSinceEpisode = epDate ? daysBetween(epDate, today) : null;
+      const epLabel = `S${parsedId?.season}E${parsedId?.episode}`;
 
-      // Check tolerance: if release is within X days of current date, ignore filter
-      const tolerance = digitalReleaseFilterConfig.tolerance ?? 0;
-      const daysFromRelease = Math.abs(daysSinceRelease);
-
-      if (daysFromRelease <= tolerance) {
-        logger.debug(
-          `[DigitalReleaseFilter] Within tolerance! ${daysFromRelease} days <= ${tolerance} days tolerance. ALLOWING streams.`,
-          { title: requestedMetadata?.title, future: daysSinceRelease < 0 }
-        );
-        return true;
-      }
-
-      if (daysSinceRelease < 0) {
-        logger.info(
-          `[DigitalReleaseFilter] BLOCKING - Content releases in ${daysFromRelease} days (future release)`,
-          { title: requestedMetadata?.title, type }
-        );
-        return false;
-      }
-
-      if (type === 'series' || type === 'anime') {
-        // Use episode air date if we have it, else just use season releaseDate
-        const dateToCheck = episodeAirDate || requestedMetadata?.releaseDate;
-
-        if (!dateToCheck) {
-          logger.debug(
-            `[DigitalReleaseFilter] No episode or series air date found, allowing streams due to lack of data`
-          );
-          return true;
-        }
-
-        const episodeReleaseDate = new Date(dateToCheck);
-        if (isNaN(episodeReleaseDate.getTime())) {
-          logger.debug(
-            `[DigitalReleaseFilter] Invalid episode/series date "${dateToCheck}", allowing streams`
-          );
-          return true;
-        }
-
-        const daysSinceEpisode = Math.floor(
-          (today.getTime() - episodeReleaseDate.getTime()) /
-            (1000 * 60 * 60 * 24)
-        );
-
-        logger.debug(
-          `[DigitalReleaseFilter] Days since episode aired: ${daysSinceEpisode} (aired: ${dateToCheck})`
-        );
-
-        const daysFromAirDate = Math.abs(daysSinceEpisode);
-        if (daysFromAirDate <= tolerance) {
-          logger.debug(
-            `[DigitalReleaseFilter] Episode within tolerance! ${daysFromAirDate} days <= ${tolerance} days tolerance. ALLOWING streams.`,
-            {
-              title: requestedMetadata?.title,
-              episode: `${parsedId?.season}:${parsedId?.episode}`,
-              future: daysSinceEpisode < 0,
-            }
-          );
-          return true;
-        }
-
-        if (daysSinceEpisode < 0) {
-          logger.info(
-            `[DigitalReleaseFilter] BLOCKING - Episode airs in ${Math.abs(daysSinceEpisode)} days (future release)`,
-            {
-              title: requestedMetadata?.title,
-              episode: `${parsedId?.season}:${parsedId?.episode}`,
-            }
-          );
-          return false;
-        }
-
-        logger.debug(
-          `[DigitalReleaseFilter] Episode has aired, allowing streams`
-        );
-        return true;
-      }
-
-      if (daysSinceRelease > 365) {
-        logger.debug(
-          `[DigitalReleaseFilter] Movie is over 1 year old, probably has digital release. Allowing streams.`
-        );
-        return true;
-      }
-
-      if (!releaseDates || releaseDates.length === 0) {
-        logger.debug(
-          `[DigitalReleaseFilter] No TMDB release dates found, allowing streams due to lack of data`
-        );
-        return true;
-      }
-
-      // check if at least one of the release dates is in the past and return true if so
-      const digitalReleaseDates = releaseDates.filter(
+      // Digital release dates (TMDB types 4-6: Digital, Physical, TV)
+      const digitalDates = (releaseDates ?? []).filter(
         (rd) => rd.type >= 4 && rd.type <= 6
       );
-      const hasDigitalRelease = digitalReleaseDates.some(
+      const pastDigitalRelease = digitalDates.some(
         (rd) => new Date(rd.release_date) <= today
       );
+      const closestFutureDigital = pastDigitalRelease
+        ? null
+        : digitalDates.length > 0
+          ? digitalDates
+              .map((rd) => ({
+                date: rd.release_date,
+                daysUntil: Math.ceil(
+                  (new Date(rd.release_date).getTime() - today.getTime()) /
+                    msPerDay
+                ),
+              }))
+              .sort((a, b) => a.daysUntil - b.daysUntil)[0]
+          : null;
 
-      logger.debug(
-        `[DigitalReleaseFilter] Found ${digitalReleaseDates.length} digital release dates from TMDB`,
+      const formatDate = (dateStr: string | Date) =>
+        new Date(dateStr).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+
+      logger.debug(`[DigitalReleaseFilter] Evaluating "${title}"`, {
+        releaseDate: formatDate(releaseDate),
+        daysSinceRelease,
+        isSeries,
+        episodeAirDate: epDate ? formatDate(epDate) : 'N/A',
+        daysSinceEpisode: daysSinceEpisode ?? 'N/A',
+        digitalReleaseDates:
+          digitalDates.map((rd) => formatDate(rd.release_date)).join(', ') ||
+          'None',
+        pastDigitalRelease,
+        closestFutureDigital: closestFutureDigital
+          ? `${formatDate(closestFutureDigital.date)} (${closestFutureDigital.daysUntil}d away)`
+          : 'None',
+      });
+
+      // Rules evaluated top-to-bottom; first matching rule determines the outcome.
+      // allow: true = let streams through, false = block streams
+      // level: log level for the rule's reason (default: 'debug')
+      type FilterRule = {
+        when: () => boolean;
+        allow: boolean;
+        reason: () => string;
+        level?: 'debug' | 'info';
+      };
+      const rules: FilterRule[] = [
+        // General
         {
-          digitalReleaseDates: digitalReleaseDates.map((rd) => ({
-            date: rd.release_date,
-            type: rd.type,
-          })),
-          hasDigitalRelease,
-        }
-      );
+          when: () => Math.abs(daysSinceRelease) <= tolerance,
+          allow: true,
+          reason: () =>
+            `"${title}" within tolerance (${Math.abs(daysSinceRelease)}d <= ${tolerance}d)`,
+        },
+        {
+          when: () => daysSinceRelease < 0,
+          allow: false,
+          level: 'info',
+          reason: () =>
+            `"${title}" releases in ${Math.abs(daysSinceRelease)} days`,
+        },
+        // Series / Anime episode rules
+        {
+          when: () => isSeries && daysSinceEpisode === null,
+          allow: true,
+          reason: () => `No episode air date available`,
+        },
+        {
+          when: () =>
+            isSeries &&
+            daysSinceEpisode !== null &&
+            Math.abs(daysSinceEpisode) <= tolerance,
+          allow: true,
+          reason: () =>
+            `Episode ${epLabel} within tolerance (${Math.abs(daysSinceEpisode!)}d <= ${tolerance}d)`,
+        },
+        {
+          when: () =>
+            isSeries && daysSinceEpisode !== null && daysSinceEpisode < 0,
+          allow: false,
+          level: 'info',
+          reason: () =>
+            `"${title}" ${epLabel} airs in ${Math.abs(daysSinceEpisode!)} days`,
+        },
+        {
+          when: () => isSeries,
+          allow: true,
+          reason: () => `Episode has aired`,
+        },
+        // Movie rules
+        {
+          when: () => daysSinceRelease > 365,
+          allow: true,
+          reason: () => `Movie over 1 year old, likely has digital release`,
+        },
+        {
+          when: () => !releaseDates?.length,
+          allow: true,
+          reason: () => `No TMDB release dates for "${title}"`,
+        },
+        {
+          when: () => pastDigitalRelease,
+          allow: true,
+          reason: () => `Digital release found for "${title}"`,
+        },
+        {
+          when: () =>
+            closestFutureDigital !== null &&
+            closestFutureDigital.daysUntil <= tolerance,
+          allow: true,
+          reason: () =>
+            `Digital release for "${title}" within tolerance (${closestFutureDigital!.daysUntil}d <= ${tolerance}d)`,
+        },
+        {
+          when: () => digitalDates.length > 0,
+          allow: false,
+          level: 'info',
+          reason: () =>
+            `"${title}" no digital release yet (closest: ${closestFutureDigital ? formatDate(closestFutureDigital.date) : 'None'}, ${closestFutureDigital?.daysUntil}d away)`,
+        },
+        // Fallback
+        {
+          when: () => true,
+          allow: false,
+          level: 'info',
+          reason: () =>
+            `"${title}" no digital release data (${daysSinceRelease}d since theatrical)`,
+        },
+      ];
 
-      if (hasDigitalRelease) {
-        logger.debug(
-          `[DigitalReleaseFilter] Digital release found! Allowing streams.`
-        );
-        return true;
-      }
-
-      if (digitalReleaseDates.length > 0) {
-        const closestDigitalRelease = digitalReleaseDates
-          .map((rd) => {
-            const releaseDate = new Date(rd.release_date);
-            const daysUntilRelease = Math.ceil(
-              (releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-            );
-            return { ...rd, daysUntilRelease };
-          })
-          .sort((a, b) => a.daysUntilRelease - b.daysUntilRelease)[0];
-
-        if (
-          closestDigitalRelease &&
-          closestDigitalRelease.daysUntilRelease <= tolerance
-        ) {
-          logger.debug(
-            `[DigitalReleaseFilter] Digital release within tolerance. ${closestDigitalRelease.daysUntilRelease} days until release <= ${tolerance} days tolerance. allowing streams.`,
-            {
-              title: requestedMetadata?.title,
-              digitalReleaseDate: closestDigitalRelease.release_date,
-            }
+      for (const rule of rules) {
+        if (rule.when()) {
+          const action = rule.allow ? 'ALLOWING' : 'BLOCKING';
+          logger[rule.level ?? 'debug'](
+            `[DigitalReleaseFilter] ${action} - ${rule.reason()}`
           );
-          return true;
+          return rule.allow;
         }
-
-        logger.info(
-          `[DigitalReleaseFilter] BLOCKING - No digital release found for "${requestedMetadata?.title}"`,
-          {
-            daysSinceRelease,
-            closestDigitalRelease: closestDigitalRelease?.release_date,
-            daysUntilDigitalRelease: closestDigitalRelease?.daysUntilRelease,
-          }
-        );
-        return false;
       }
 
-      logger.info(
-        `[DigitalReleaseFilter] BLOCKING - No digital release found for "${requestedMetadata?.title}"`,
-        { daysSinceRelease }
-      );
-      return false;
+      return true;
     };
 
     const performTitleMatch = (stream: ParsedStream) => {
@@ -624,30 +741,70 @@ class StreamFilterer {
         return false;
       }
 
-      streamTitle = preprocessTitle(
-        streamTitle,
-        stream.filename,
-        requestedMetadata.titles
-      );
+      // Extract title strings for preprocessTitle
+      const titleStrings = requestedMetadata.titles.map((t) => t.title);
 
+      streamTitle = preprocessTitle(streamTitle, stream.filename, titleStrings);
+
+      const normalisedStreamTitle = normaliseTitle(streamTitle);
+
+      // Single-pass match that also returns the language of the best matching title
+      let result: { matched: boolean; language?: string };
       if (titleMatchingOptions.mode === 'exact') {
-        return titleMatch(
-          normaliseTitle(streamTitle),
-          requestedMetadata.titles.map(normaliseTitle),
+        result = titleMatchWithLang(
+          normalisedStreamTitle,
+          requestedMetadata.titles,
           {
             threshold: titleMatchingOptions.similarityThreshold,
+            limitTitles: 100,
           }
         );
       } else {
-        return titleMatch(
-          normaliseTitle(streamTitle),
-          requestedMetadata.titles.map(normaliseTitle),
+        result = titleMatchWithLang(
+          normalisedStreamTitle,
+          requestedMetadata.titles,
           {
             threshold: titleMatchingOptions.similarityThreshold,
             scorer: partial_ratio,
+            limitTitles: 100,
           }
         );
       }
+
+      if (result.matched && result.language && stream.parsedFile) {
+        const lang = result.language.toLowerCase();
+        // Skip common languages where a title match doesn't reliably indicate
+        // the stream is in that language (English/Japanese titles are universal)
+        const isCommon = lang === 'en' || (isAnime && lang === 'ja');
+
+        // Don't infer language if the stream already carries a specific language tag.
+        // Unknown / Dual Audio / Multi / Dubbed are non-specific and don't count.
+        const nonSpecificLanguages = [
+          'Unknown',
+          'Dual Audio',
+          'Multi',
+          'Dubbed',
+        ];
+        const hasSpecificLanguage = stream.parsedFile.languages.some(
+          (l) => !nonSpecificLanguages.includes(l)
+        );
+
+        if (!isCommon && !hasSpecificLanguage) {
+          const inferredLanguage = iso6391ToLanguage(lang);
+          if (
+            inferredLanguage &&
+            !stream.parsedFile.languages.includes(inferredLanguage) &&
+            LANGUAGES.includes(inferredLanguage as any)
+          ) {
+            stream.parsedFile.languages.push(inferredLanguage);
+            logger.debug(
+              `Inferred language "${inferredLanguage}" for stream "${stream.filename}" from matched title language (${lang})`
+            );
+          }
+        }
+      }
+
+      return result.matched;
     };
 
     const findYearInString = (string: string) => {
@@ -726,12 +883,18 @@ class StreamFilterer {
       }
 
       // streamYear can be a string like "2004" or "2012-2020"
-      // Calculate the requested year range
+      // Calculate the requested year range.
+      // When useInitialAirDate is enabled for series/anime, compare against
+      // only the initial air year instead of the full year range.
+      const useInitialOnly =
+        yearMatchingOptions.useInitialAirDate &&
+        (type === 'series' || type === 'anime');
+
       let requestedYearRange: [number, number] = [
         requestedMetadata.year,
         requestedMetadata.year,
       ];
-      if (requestedMetadata.yearEnd) {
+      if (requestedMetadata.yearEnd && !useInitialOnly) {
         requestedYearRange[1] = requestedMetadata.yearEnd;
       }
 
@@ -832,6 +995,15 @@ class StreamFilterer {
           )
         ) {
           // allow if absolute episode matches AND season is 1
+        } else if (
+          seasons[0] === 1 &&
+          stream.parsedFile?.episodes?.length &&
+          requestedMetadata?.relativeAbsoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.relativeAbsoluteEpisode
+          )
+        ) {
+          // allow if relative absolute episode (AniDB episode) matches AND season is 1
         } else {
           return false;
         }
@@ -850,6 +1022,14 @@ class StreamFilterer {
           (!seasons?.length || seasons[0] === 1)
         ) {
           // allow if absolute episode matches AND (no season OR season is 1)
+        } else if (
+          requestedMetadata?.relativeAbsoluteEpisode &&
+          stream.parsedFile?.episodes?.includes(
+            requestedMetadata.relativeAbsoluteEpisode
+          ) &&
+          (!seasons?.length || seasons[0] === 1)
+        ) {
+          // allow if relative absolute episode (AniDB episode) matches AND (no season OR season is 1)
         } else {
           return false;
         }
@@ -858,8 +1038,10 @@ class StreamFilterer {
       return true;
     };
 
+    const expressionStart = Date.now();
     const includedStreamsByExpression =
       await this.applyIncludedStreamExpressions(streams, context);
+    expressionMs = Date.now() - expressionStart;
     if (includedStreamsByExpression.length > 0) {
       logger.info(
         `${includedStreamsByExpression.length} streams were included by stream expressions`
@@ -903,6 +1085,11 @@ class StreamFilterer {
 
       if (passthroughDigitalRelease.length === 0) {
         const finalStreams: ParsedStream[] = [];
+        const totalMs = Date.now() - start;
+        this.filterTimings.totalMs += totalMs;
+        this.filterTimings.metadataMs += metadataMs;
+        this.filterTimings.expressionMs += expressionMs;
+        this.filterTimings.calls++;
         logger.info(
           `Applied basic filters in ${getTimeTakenSincePoint(start)}`
         );
@@ -912,6 +1099,7 @@ class StreamFilterer {
       streams = passthroughDigitalRelease;
     }
 
+    const regexCompileStart = Date.now();
     const excludedRegexPatterns =
       isRegexAllowed &&
       this.userData.excludedRegexPatterns &&
@@ -962,6 +1150,7 @@ class StreamFilterer {
       this.userData.includedKeywords.length > 0
         ? await formRegexFromKeywords(this.userData.includedKeywords)
         : undefined;
+    regexCompileMs = Date.now() - regexCompileStart;
 
     // test many regexes against many attributes and return true if at least one regex matches any attribute
     // and false if no regex matches any attribute
@@ -1096,7 +1285,7 @@ class StreamFilterer {
       }
     };
 
-    const shouldKeepStream = async (stream: ParsedStream): Promise<boolean> => {
+    const shouldKeepStream = (stream: ParsedStream): boolean => {
       const file = stream.parsedFile;
 
       const skipLanguageFiltering = shouldPassthroughStage(stream, 'language');
@@ -1108,7 +1297,6 @@ class StreamFilterer {
           file?.languages.includes(originalLanguage)
         ) {
           file.languages.push('Original');
-          file.languages.push(`Original-${originalLanguage}`);
         }
       }
       // Temporarily add in our fake visual tags used for sorting/filtering
@@ -1244,6 +1432,22 @@ class StreamFilterer {
       }
 
       if (
+        this.userData.includedReleaseGroups?.some(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        )
+      ) {
+        const group = this.userData.includedReleaseGroups.find(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        );
+        this.incrementIncludedReason('releaseGroup', group!);
+        return true;
+      }
+
+      if (
         this.userData.includedEncodes?.some(
           (encode) => (file?.encode || 'Unknown') === encode
         )
@@ -1259,7 +1463,7 @@ class StreamFilterer {
 
       if (
         includedRegexPatterns &&
-        (await testRegexes(stream, includedRegexPatterns))
+        regexDecisionsMap.get(stream.id)?.includedByRegex
       ) {
         this.incrementIncludedReason('regex', includedRegexPatterns[0].source);
         return true;
@@ -1267,7 +1471,7 @@ class StreamFilterer {
 
       if (
         includedKeywordsPattern &&
-        (await testRegexes(stream, [includedKeywordsPattern]))
+        regexDecisionsMap.get(stream.id)?.includedByKeywords
       ) {
         this.incrementIncludedReason(
           'keywords',
@@ -1333,7 +1537,15 @@ class StreamFilterer {
         }
       }
 
-      if (this.userData.excludedStreamTypes?.includes(stream.type)) {
+      // Skip stream type filtering for P2P streams when service wrapping is enabled.
+      // These will be converted to debrid streams by _resolveServiceWrappedStreams later.
+      const skipStreamTypeFilter =
+        stream.type === 'p2p' && this.userData.serviceWrap?.enabled;
+
+      if (
+        !skipStreamTypeFilter &&
+        this.userData.excludedStreamTypes?.includes(stream.type)
+      ) {
         // Track stream type exclusions
         this.incrementRemovalReason('excludedStreamType', stream.type);
         return false;
@@ -1341,12 +1553,19 @@ class StreamFilterer {
 
       // Track required stream type misses
       if (
+        !skipStreamTypeFilter &&
         this.userData.requiredStreamTypes &&
         this.userData.requiredStreamTypes.length > 0 &&
         !this.userData.requiredStreamTypes.includes(stream.type)
       ) {
         this.incrementRemovalReason('requiredStreamType', stream.type);
         return false;
+      }
+
+      // info type streams can bypass remaining filters
+      if (stream.type === 'info') {
+        this.incrementIncludedReason('streamType', 'info');
+        return true;
       }
 
       // Resolutions
@@ -1553,6 +1772,37 @@ class StreamFilterer {
         return false;
       }
 
+      // release group
+      if (
+        this.userData.excludedReleaseGroups?.some(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        )
+      ) {
+        this.incrementRemovalReason(
+          'excludedReleaseGroup',
+          file?.releaseGroup || 'Unknown'
+        );
+        return false;
+      }
+
+      if (
+        this.userData.requiredReleaseGroups &&
+        this.userData.requiredReleaseGroups.length > 0 &&
+        !this.userData.requiredReleaseGroups.some(
+          (group) =>
+            (file?.releaseGroup || 'Unknown').toLowerCase() ===
+            group.toLowerCase()
+        )
+      ) {
+        this.incrementRemovalReason(
+          'requiredReleaseGroup',
+          file?.releaseGroup || 'Unknown'
+        );
+        return false;
+      }
+
       // uncached
 
       if (this.userData.excludeUncached && stream.service?.cached === false) {
@@ -1615,7 +1865,7 @@ class StreamFilterer {
 
       if (
         excludedRegexPatterns &&
-        (await testRegexes(stream, excludedRegexPatterns))
+        regexDecisionsMap.get(stream.id)?.excludedByRegex
       ) {
         this.incrementRemovalReason('excludedRegex');
         return false;
@@ -1623,7 +1873,7 @@ class StreamFilterer {
       if (
         requiredRegexPatterns &&
         requiredRegexPatterns.length > 0 &&
-        !(await testRegexes(stream, requiredRegexPatterns))
+        !regexDecisionsMap.get(stream.id)?.requiredByRegex
       ) {
         this.incrementRemovalReason('requiredRegex');
         return false;
@@ -1631,7 +1881,7 @@ class StreamFilterer {
 
       if (
         excludedKeywordsPattern &&
-        (await testRegexes(stream, [excludedKeywordsPattern]))
+        regexDecisionsMap.get(stream.id)?.excludedByKeywords
       ) {
         this.incrementRemovalReason('excludedKeywords');
         return false;
@@ -1639,7 +1889,7 @@ class StreamFilterer {
 
       if (
         requiredKeywordsPattern &&
-        !(await testRegexes(stream, [requiredKeywordsPattern]))
+        !regexDecisionsMap.get(stream.id)?.requiredByKeywords
       ) {
         this.incrementRemovalReason('requiredKeywords');
         return false;
@@ -1750,52 +2000,58 @@ class StreamFilterer {
         }
       }
 
-      if (
-        !shouldPassthroughStage(stream, 'title') &&
-        !performTitleMatch(stream)
-      ) {
-        this.incrementRemovalReason(
-          'titleMatching',
-          `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
-        );
-        return false;
+      if (!shouldPassthroughStage(stream, 'year')) {
+        const _ymStart = Date.now();
+        const _ymResult = performYearMatch(stream);
+        accumPhase(phases.yearMatch, Date.now() - _ymStart);
+        if (!_ymResult) {
+          this.incrementRemovalReason(
+            'yearMatching',
+            `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
+          );
+          return false;
+        }
       }
 
-      if (
-        !shouldPassthroughStage(stream, 'year') &&
-        !performYearMatch(stream)
-      ) {
-        this.incrementRemovalReason(
-          'yearMatching',
-          `${stream.parsedFile?.title || 'Unknown Title'} - ${stream.parsedFile?.year || 'Unknown Year'}`
-        );
-        return false;
+      if (!shouldPassthroughStage(stream, 'episode')) {
+        const _seStart = Date.now();
+        const _seResult = performSeasonEpisodeMatch(stream);
+        accumPhase(phases.seasonEpisodeMatch, Date.now() - _seStart);
+        if (!_seResult) {
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          const s = stream.parsedFile?.seasons;
+          const e = stream.parsedFile?.episodes;
+          const formattedSeasonString = s?.length
+            ? `S${pad(s[0])}${s.length > 1 ? `-${pad(s[s.length - 1])}` : ''}`
+            : undefined;
+          const formattedEpisodeString = e?.length
+            ? `E${pad(e[0])}${e.length > 1 ? `-${pad(e[e.length - 1])}` : ''}`
+            : undefined;
+          const seasonEpisode = [
+            formattedSeasonString,
+            formattedEpisodeString,
+          ].filter(Boolean);
+          const detail =
+            stream.parsedFile?.title +
+            ' ' +
+            (seasonEpisode?.join(' • ') || 'Unknown');
+
+          this.incrementRemovalReason('seasonEpisodeMatching', detail);
+          return false;
+        }
       }
 
-      if (
-        !shouldPassthroughStage(stream, 'episode') &&
-        !performSeasonEpisodeMatch(stream)
-      ) {
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        const s = stream.parsedFile?.seasons;
-        const e = stream.parsedFile?.episodes;
-        const formattedSeasonString = s?.length
-          ? `S${pad(s[0])}${s.length > 1 ? `-${pad(s[s.length - 1])}` : ''}`
-          : undefined;
-        const formattedEpisodeString = e?.length
-          ? `E${pad(e[0])}${e.length > 1 ? `-${pad(e[e.length - 1])}` : ''}`
-          : undefined;
-        const seasonEpisode = [
-          formattedSeasonString,
-          formattedEpisodeString,
-        ].filter(Boolean);
-        const detail =
-          stream.parsedFile?.title +
-          ' ' +
-          (seasonEpisode?.join(' • ') || 'Unknown');
-
-        this.incrementRemovalReason('seasonEpisodeMatching', detail);
-        return false;
+      if (!shouldPassthroughStage(stream, 'title')) {
+        const _tmStart = Date.now();
+        const _tmResult = performTitleMatch(stream);
+        accumPhase(phases.titleMatch, Date.now() - _tmStart);
+        if (!_tmResult) {
+          this.incrementRemovalReason(
+            'titleMatching',
+            `${stream.parsedFile?.title || 'Unknown Title'}${type === 'movie' ? ` - (${stream.parsedFile?.year || 'Unknown Year'})` : ''}`
+          );
+          return false;
+        }
       }
 
       const globalSizeRange = this.userData.size?.global;
@@ -1915,15 +2171,6 @@ class StreamFilterer {
       logger.info(
         `${includedWithPassthrough.length} included streams have passthrough flags and will go through filtering`
       );
-
-      for (const stream of includedWithPassthrough) {
-        const stages = Array.isArray(stream.passthrough)
-          ? stream.passthrough.join(', ')
-          : 'all';
-        logger.debug(
-          `Stream "${stream.filename || stream.id}" passthrough stages: [${stages}]`
-        );
-      }
     }
 
     // Only exclude streams without passthrough from filtering
@@ -1931,30 +2178,103 @@ class StreamFilterer {
       (stream) => !includedWithoutPassthrough.some((s) => s.id === stream.id)
     );
 
-    const filterResults = await Promise.all(
-      filterableStreams.map(shouldKeepStream)
+    const hasAnyRegexFilter = !!(
+      excludedRegexPatterns ||
+      requiredRegexPatterns ||
+      includedRegexPatterns ||
+      excludedKeywordsPattern ||
+      requiredKeywordsPattern ||
+      includedKeywordsPattern
     );
+    const regexDecisionsMap = new Map<
+      string,
+      {
+        includedByRegex: boolean;
+        includedByKeywords: boolean;
+        excludedByRegex: boolean;
+        requiredByRegex: boolean;
+        excludedByKeywords: boolean;
+        requiredByKeywords: boolean;
+      }
+    >();
+    if (hasAnyRegexFilter) {
+      const regexTestStart = Date.now();
+      for (const stream of filterableStreams) {
+        regexDecisionsMap.set(stream.id, {
+          includedByRegex: includedRegexPatterns
+            ? await testRegexes(stream, includedRegexPatterns)
+            : false,
+          includedByKeywords: includedKeywordsPattern
+            ? await testRegexes(stream, [includedKeywordsPattern])
+            : false,
+          excludedByRegex: excludedRegexPatterns
+            ? await testRegexes(stream, excludedRegexPatterns)
+            : false,
+          requiredByRegex: requiredRegexPatterns
+            ? await testRegexes(stream, requiredRegexPatterns)
+            : true,
+          excludedByKeywords: excludedKeywordsPattern
+            ? await testRegexes(stream, [excludedKeywordsPattern])
+            : false,
+          requiredByKeywords: requiredKeywordsPattern
+            ? await testRegexes(stream, [requiredKeywordsPattern])
+            : true,
+        });
+      }
+      regexTestMs = Date.now() - regexTestStart;
+    }
 
-    let filteredStreams = filterableStreams.filter(
-      (_, index) => filterResults[index]
-    );
+    const filterPassStart = Date.now();
+    const filteredStreams = filterableStreams.filter(shouldKeepStream);
+    filterPassMs = Date.now() - filterPassStart;
 
     const finalStreams = StreamUtils.mergeStreams([
       ...includedWithoutPassthrough,
       ...filteredStreams,
     ]);
 
+    const totalMs = Date.now() - start;
+    this.filterTimings.totalMs += totalMs;
+    this.filterTimings.metadataMs += metadataMs;
+    this.filterTimings.expressionMs += expressionMs;
+    this.filterTimings.regexCompileMs += regexCompileMs;
+    this.filterTimings.regexTestMs += regexTestMs;
+    this.filterTimings.filterPassMs += filterPassMs;
+    this.filterTimings.calls++;
+    // Merge per-stream phase stats into the accumulated filterTimings
+    const mergePhase = (
+      dest: PhaseTimingStats,
+      src: { totalMs: number; maxMs: number; minMs: number; count: number }
+    ) => {
+      if (src.count === 0) return;
+      dest.totalMs += src.totalMs;
+      dest.count += src.count;
+      if (src.maxMs > dest.maxMs) dest.maxMs = src.maxMs;
+      if (src.minMs < dest.minMs) dest.minMs = src.minMs;
+    };
+    mergePhase(this.filterTimings.phases.titleMatch, phases.titleMatch);
+    mergePhase(this.filterTimings.phases.yearMatch, phases.yearMatch);
+    mergePhase(
+      this.filterTimings.phases.seasonEpisodeMatch,
+      phases.seasonEpisodeMatch
+    );
+
     logger.info(
       `Applied basic filters in ${getTimeTakenSincePoint(start)}, removed ${streams.length - finalStreams.length} streams`
     );
     return finalStreams;
   }
-  private truncateCondition(condition: string): string {
-    const maxLength = 50;
-    if (condition.length > maxLength) {
-      return condition.substring(0, maxLength - 3) + '...';
+  private getDisplayCondition(expression: string): string {
+    const names = extractNamesFromExpression(expression);
+    if (names && names.length > 0) {
+      return names.join(', ');
     }
-    return condition;
+    // Fallback to truncation if no names found
+    const maxLength = 50;
+    if (expression.length > maxLength) {
+      return expression.substring(0, maxLength - 3) + '...';
+    }
+    return expression;
   }
 
   public async applyIncludedStreamExpressions(
@@ -1970,11 +2290,14 @@ class StreamFilterer {
     ) {
       return [];
     }
-    for (const expression of this.userData.includedStreamExpressions) {
+    for (const item of this.userData.includedStreamExpressions) {
+      const { expression, enabled } =
+        typeof item === 'string' ? { expression: item, enabled: true } : item;
+      if (!enabled) continue;
       const selectedStreams = await selector.select(streams, expression);
       this.filterStatistics.included.streamExpression.total +=
         selectedStreams.length;
-      const displayCondition = this.truncateCondition(expression);
+      const displayCondition = this.getDisplayCondition(expression);
       this.filterStatistics.included.streamExpression.details[
         displayCondition
       ] =
@@ -1992,15 +2315,8 @@ class StreamFilterer {
   ): Promise<ParsedStream[]> {
     const expressionContext = context.toExpressionContext();
 
-    // Get streams that passthrough excluded SEL
-    const excludedPassthroughStreams = streams
-      .filter((stream) => shouldPassthroughStage(stream, 'excluded'))
-      .map((stream) => stream.id);
-
-    // Get streams that passthrough required SEL
-    const requiredPassthroughStreams = streams
-      .filter((stream) => shouldPassthroughStage(stream, 'required'))
-      .map((stream) => stream.id);
+    // Collect pin instructions from all selectors
+    const pinInstructions = new Map<string, 'top' | 'bottom'>();
 
     if (
       this.userData.excludedStreamExpressions &&
@@ -2009,7 +2325,10 @@ class StreamFilterer {
       const selector = new StreamSelector(expressionContext);
       const streamsToRemove = new Set<string>(); // Track actual stream objects to be removed
 
-      for (const expression of this.userData.excludedStreamExpressions) {
+      for (const item of this.userData.excludedStreamExpressions) {
+        const { expression, enabled } =
+          typeof item === 'string' ? { expression: item, enabled: true } : item;
+        if (!enabled) continue;
         try {
           // Always select from the current filteredStreams (not yet modified by this loop)
           const selectedStreams = await selector.select(
@@ -2018,23 +2337,28 @@ class StreamFilterer {
           );
 
           // Track these stream objects for removal (except passthrough streams)
-          selectedStreams.forEach(
-            (stream) =>
-              !excludedPassthroughStreams.includes(stream.id) &&
-              streamsToRemove.add(stream.id)
-          );
+          let newlyRemoved = 0;
+          selectedStreams.forEach((stream) => {
+            if (
+              !shouldPassthroughStage(stream, 'excluded') &&
+              !streamsToRemove.has(stream.id)
+            ) {
+              streamsToRemove.add(stream.id);
+              newlyRemoved++;
+            }
+          });
 
           // Update skip reasons for this condition (only count newly selected streams)
-          if (selectedStreams.length > 0) {
+          if (newlyRemoved > 0) {
             this.filterStatistics.removed.excludedFilterCondition.total +=
-              selectedStreams.length;
-            const displayCondition = this.truncateCondition(expression);
+              newlyRemoved;
+            const displayCondition = this.getDisplayCondition(expression);
             this.filterStatistics.removed.excludedFilterCondition.details[
               displayCondition
             ] =
               (this.filterStatistics.removed.excludedFilterCondition.details[
                 displayCondition
-              ] || 0) + selectedStreams.length;
+              ] || 0) + newlyRemoved;
           }
         } catch (error) {
           logger.error(
@@ -2050,37 +2374,53 @@ class StreamFilterer {
 
       // Remove all marked streams at once, after processing all conditions
       streams = streams.filter((stream) => !streamsToRemove.has(stream.id));
+
+      // Collect pin instructions from excluded selector
+      for (const [id, pos] of selector.getPinInstructions()) {
+        pinInstructions.set(id, pos);
+      }
     }
 
-    if (
-      this.userData.requiredStreamExpressions &&
-      this.userData.requiredStreamExpressions.length > 0
-    ) {
-      const selector = new StreamSelector(expressionContext);
-      const streamsToKeep = new Set<string>(); // Track actual stream objects to be removed
-      requiredPassthroughStreams.forEach((stream) => streamsToKeep.add(stream));
+    const requiredStreamExpressions = (
+      this.userData.requiredStreamExpressions || []
+    ).filter((item) => item.enabled);
 
-      for (const expression of this.userData.requiredStreamExpressions) {
+    if (requiredStreamExpressions.length > 0) {
+      const selector = new StreamSelector(expressionContext);
+      const streamsToKeep = new Set<string>(); // Track actual stream objects to be kept
+
+      for (const item of requiredStreamExpressions) {
+        const { expression } = item;
         try {
           const selectedStreams = await selector.select(
-            streams.filter((stream) => !streamsToKeep.has(stream.id)),
+            streams.filter(
+              (stream) =>
+                !streamsToKeep.has(stream.id) ||
+                shouldPassthroughStage(stream, 'required')
+            ),
             expression
           );
 
           // Track these stream objects to keep
-          selectedStreams.forEach((stream) => streamsToKeep.add(stream.id));
+          let newlyKept = 0;
+          selectedStreams.forEach((stream) => {
+            if (!streamsToKeep.has(stream.id)) {
+              streamsToKeep.add(stream.id);
+              newlyKept++;
+            }
+          });
 
           // Update skip reasons for this condition (only count newly selected streams)
-          if (selectedStreams.length > 0) {
+          if (newlyKept > 0) {
             this.filterStatistics.removed.requiredFilterCondition.total +=
-              selectedStreams.length;
-            const displayCondition = this.truncateCondition(expression);
+              newlyKept;
+            const displayCondition = this.getDisplayCondition(expression);
             this.filterStatistics.removed.requiredFilterCondition.details[
               displayCondition
             ] =
               (this.filterStatistics.removed.requiredFilterCondition.details[
                 displayCondition
-              ] || 0) + selectedStreams.length;
+              ] || 0) + newlyKept;
           }
         } catch (error) {
           logger.error(
@@ -2090,12 +2430,48 @@ class StreamFilterer {
         }
       }
 
+      let passthroughCount = 0;
+      streams.forEach((stream) => {
+        if (
+          shouldPassthroughStage(stream, 'required') &&
+          !streamsToKeep.has(stream.id)
+        ) {
+          streamsToKeep.add(stream.id);
+          passthroughCount++;
+        }
+      });
+
       logger.verbose(
-        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${requiredPassthroughStreams.length} passthrough streams)`
+        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${passthroughCount} passthrough streams)`
       );
       // remove all streams that are not in the streamsToKeep set
       streams = streams.filter((stream) => streamsToKeep.has(stream.id));
+
+      // Collect pin instructions from required selector
+      for (const [id, pos] of selector.getPinInstructions()) {
+        pinInstructions.set(id, pos);
+      }
     }
+
+    // Apply pin reordering from SEL pin() calls
+    if (pinInstructions.size > 0) {
+      const pinnedTop: ParsedStream[] = [];
+      const pinnedBottom: ParsedStream[] = [];
+      const rest: ParsedStream[] = [];
+
+      for (const stream of streams) {
+        const pin = pinInstructions.get(stream.id);
+        if (pin === 'top') pinnedTop.push(stream);
+        else if (pin === 'bottom') pinnedBottom.push(stream);
+        else rest.push(stream);
+      }
+
+      streams = [...pinnedTop, ...rest, ...pinnedBottom];
+      logger.info(
+        `Applied SEL pinning: ${pinnedTop.length} pinned to top, ${pinnedBottom.length} pinned to bottom`
+      );
+    }
+
     return streams;
   }
 }

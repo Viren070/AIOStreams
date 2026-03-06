@@ -38,7 +38,7 @@ const KnabenSearchHitSchema = z.looseObject({
     .nullable()
     .transform((val) => (val ? val.toLowerCase() : null)),
   id: z.string(),
-  lastSeen: z.iso.datetime({ offset: true }),
+  lastSeen: z.iso.datetime({ offset: true }).nullable(),
   magnetUrl: z.string().nullable(),
   link: z.url().nullable(),
   peers: z.number(),

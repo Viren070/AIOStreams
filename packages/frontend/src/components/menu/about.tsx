@@ -14,6 +14,7 @@ import {
   MessageCircleIcon,
   PencilIcon,
   PlusIcon,
+  BellIcon,
 } from 'lucide-react';
 import { FaGithub, FaDiscord, FaChevronRight } from 'react-icons/fa';
 import { BiDonateHeart, BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
@@ -24,6 +25,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDisclosure } from '@/hooks/disclosure';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '../ui/modal';
 import { SiGithubsponsors, SiKofi } from 'react-icons/si';
 import { useUserData } from '@/context/userData';
@@ -34,7 +36,7 @@ import { DonationModal } from '../shared/donation-modal';
 import { ModeSwitch } from '../ui/mode-switch/mode-switch';
 import { ModeSelectModal } from '../shared/mode-select-modal';
 import { ConfigModal } from '../config-modal';
-import { ConfigTemplatesModal } from '../shared/config-templates-modal';
+import { ConfigTemplatesModal } from '../shared/templates';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -52,6 +54,17 @@ import { cn } from '@/components/ui/core/styling';
 import { Textarea } from '../ui/textarea';
 import { FaPlay } from 'react-icons/fa6';
 import { usePathname } from 'next/navigation';
+import { Template } from '@aiostreams/core';
+import {
+  useTemplateLoader,
+  type AppliedTemplateUpdate,
+} from '@/hooks/templates/loader';
+import MarkdownLite from '../shared/markdown-lite';
+import { GlowCard } from '../shared/glow-card';
+import {
+  ChangelogEntryRow,
+  TemplateUpdateChangelogSection,
+} from '../shared/templates/changelog';
 
 interface QuickLinkProps {
   href?: string;
@@ -105,6 +118,66 @@ function QuickLink({
   );
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  debrid: 'bg-brand-500/20 text-brand-300 border border-brand-500/30',
+  p2p: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+  custom: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
+};
+
+function categoryPillClass(category: string) {
+  return (
+    CATEGORY_COLORS[category.toLowerCase()] ??
+    'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+  );
+}
+
+function TemplateMiniCard({
+  template,
+  onOpen,
+}: {
+  template: Template;
+  onOpen: () => void;
+}) {
+  return (
+    <GlowCard className="hover:border-gray-600 transition-colors duration-200 group">
+      <button
+        onClick={onOpen}
+        className="text-left w-full p-4 flex flex-col focus-visible:outline-none"
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h4 className="text-sm font-semibold text-white group-hover:text-[--brand] transition-colors truncate flex-1">
+            {template.metadata.name}
+          </h4>
+          <span
+            className={`text-[10px] font-medium px-2 py-0.5 rounded flex-shrink-0 ${categoryPillClass(template.metadata.category)}`}
+          >
+            {template.metadata.category}
+          </span>
+        </div>
+        <div
+          className="overflow-hidden max-h-[4.5rem] text-xs text-gray-400 mb-1 [&_strong]:text-gray-300 [&_em]:text-gray-400 [&_a]:text-[--brand] [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-0.5"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(to bottom, black 50%, transparent 100%)',
+            maskImage:
+              'linear-gradient(to bottom, black 50%, transparent 100%)',
+          }}
+        >
+          <MarkdownLite>{template.metadata.description}</MarkdownLite>
+        </div>
+        <div className="mt-auto flex items-center justify-between pt-1">
+          <span className="text-[10px] text-gray-500">
+            by {template.metadata.author}
+          </span>
+          <span className="text-[10px] text-gray-600 group-hover:text-[--brand] transition-colors">
+            View template →
+          </span>
+        </div>
+      </button>
+    </GlowCard>
+  );
+}
+
 export function AboutMenu() {
   return (
     <>
@@ -117,6 +190,7 @@ export function AboutMenu() {
 
 function Content() {
   const { status, loading, error } = useStatus();
+  const loader = useTemplateLoader(status);
   const { nextMenu } = useMenu();
   const [initialUuid, setInitialUuid] = React.useState<string | null>(null);
   const { userData, setUserData, uuid, setUuid, password, setPassword } =
@@ -130,18 +204,52 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   `;
   const addonDescription = userData.addonDescription || defaultDescription;
   const version = status?.tag || 'Unknown';
+  const channel: 'stable' | 'nightly' | 'dev' =
+    status?.channel ?? (version.startsWith('v') ? 'stable' : 'nightly');
   const githubUrl = 'https://github.com/Viren070/AIOStreams';
   const releasesUrl = 'https://github.com/Viren070/AIOStreams/releases';
-  const stremioGuideUrl = 'https://guides.viren070.me/stremio/';
-  const configGuideUrl = 'https://guides.viren070.me/stremio/addons/aiostreams';
+  const stremioGuideUrl =
+    'https://docs.aiostreams.viren070.me/configuration/setup';
+  const configGuideUrl = 'https://docs.aiostreams.viren070.me';
   const discordUrl = 'https://discord.viren070.me';
   const donationModal = useDisclosure(false);
   const customizeModal = useDisclosure(false);
   const signInModal = useDisclosure(false);
   const templatesModal = useDisclosure(false);
   const setupChoiceModal = useDisclosure(false);
+  const templateUpdateModal = useDisclosure(false);
+  const [updateTargets, setUpdateTargets] = React.useState<
+    AppliedTemplateUpdate[]
+  >([]);
+  const hasOpenedUpdateModalRef = React.useRef(false);
+  const whatsNewRef = React.useRef<HTMLDivElement>(null);
+  const [appUpdatesCount, setAppUpdatesCount] = React.useState(0);
+  const [featuredTemplateToOpen, setFeaturedTemplateToOpen] =
+    React.useState<Template | null>(null);
   const customHtml = status?.settings?.customHtml;
   const pathname = usePathname();
+  const [deepLinkUrl, setDeepLinkUrl] = React.useState<string | undefined>(
+    undefined
+  );
+  const [deepLinkTemplateId, setDeepLinkTemplateId] = React.useState<
+    string | undefined
+  >(undefined);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const templateUrl = url.searchParams.get('template');
+    const templateId = url.searchParams.get('templateId') ?? undefined;
+    if (templateUrl) {
+      setDeepLinkUrl(templateUrl);
+      setDeepLinkTemplateId(templateId);
+      templatesModal.open();
+      // Clean up the params so they don't persist on back/forward
+      url.searchParams.delete('template');
+      url.searchParams.delete('templateId');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
   const confirmClearConfig = useConfirmationDialog({
     title: 'Sign Out',
     description: 'Are you sure you want to sign out?',
@@ -160,6 +268,61 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
       setInitialUuid(uuidMatch[1]);
     }
   }, [pathname]);
+
+  React.useEffect(() => {
+    loader.loadTemplates();
+  }, []);
+
+  // Reset the session guard whenever the user's identity changes (sign in / out)
+  // so the modal re-fires for the new session.
+  React.useEffect(() => {
+    hasOpenedUpdateModalRef.current = false;
+  }, [uuid]);
+
+  // Auto-open the update modal once per session, but only when signed in.
+  React.useEffect(() => {
+    if (!uuid || !password) return;
+    if (hasOpenedUpdateModalRef.current) return;
+    if (loader.appliedTemplateUpdates.length === 0) return;
+    hasOpenedUpdateModalRef.current = true;
+    setUpdateTargets(loader.appliedTemplateUpdates);
+    templateUpdateModal.open();
+  }, [loader.appliedTemplateUpdates, uuid, password]);
+
+  // Persist dismissal of a specific template's update notification.
+  const dismissUpdate = (templateId: string, toVersion: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      appliedTemplates: (prev.appliedTemplates ?? []).map((t) =>
+        t.id === templateId ? { ...t, dismissedVersion: toVersion } : t
+      ),
+    }));
+  };
+
+  // Permanently silence update notifications for a template.
+  const ignoreTemplateUpdates = (templateId: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      appliedTemplates: (prev.appliedTemplates ?? []).map((t) =>
+        t.id === templateId ? { ...t, ignored: true } : t
+      ),
+    }));
+  };
+
+  // Dismiss all currently-shown update notifications and close the modal.
+  const dismissAllCurrentUpdates = () => {
+    const targets = updateTargets;
+    setUserData((prev) => ({
+      ...prev,
+      appliedTemplates: (prev.appliedTemplates ?? []).map((t) => {
+        const match = targets.find((u) => u.template.metadata.id === t.id);
+        return match
+          ? { ...t, dismissedVersion: match.template.metadata.version }
+          : t;
+      }),
+    }));
+    templateUpdateModal.close();
+  };
 
   return (
     <>
@@ -198,10 +361,10 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
             />
           </div>
           {/* Name, version, about right */}
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full min-w-0 lg:pr-36">
             <div className="flex flex-col md:flex-row md:items-end md:gap-4">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-3xl md:text-4xl font-bold tracking-tight text-gray-100 truncate">
+                <span className="text-3xl md:text-4xl font-bold tracking-tight text-gray-100 truncate min-w-0">
                   {addonName}
                 </span>
                 <IconButton
@@ -211,11 +374,35 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
                   className="rounded-full flex-shrink-0"
                   size="sm"
                 />
+                {appUpdatesCount > 0 && (
+                  <div className="relative flex-shrink-0">
+                    <Tooltip
+                      side="bottom"
+                      trigger={
+                        <IconButton
+                          icon={<BellIcon className="w-4 h-4" />}
+                          intent="primary-subtle"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() =>
+                            whatsNewRef.current?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start',
+                            })
+                          }
+                        />
+                      }
+                    >
+                      {appUpdatesCount} update{appUpdatesCount > 1 ? 's' : ''}{' '}
+                      available — see What&apos;s New
+                    </Tooltip>
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[--brand] pointer-events-none" />
+                  </div>
+                )}
               </div>
               <span className="text-xl md:text-2xl font-semibold text-gray-400 md:mb-1">
                 {version}{' '}
-                {/* {version.includes('nightly') ? `(${status?.commit})` : ''} */}
-                {version.includes('nightly') ? (
+                {channel === 'nightly' || channel === 'dev' ? (
                   <a
                     href={`https://github.com/Viren070/AIOStreams/commit/${status?.commit}`}
                     target="_blank"
@@ -243,149 +430,191 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
           </SettingsCard>
         )}
 
-        {/* Setup Mode Row */}
-        <div className="flex flex-col items-center md:items-start gap-4 w-full md:pl-6">
-          <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-start">
-            <div className="flex flex-col items-start md:items-start">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 self-start">
-                Setup Mode
-              </span>
-              <ModeSwitch
-                value={mode}
-                onChange={setMode}
-                className="w-[280px] h-12 text-base"
-              />
+        {loader.loadingTemplates ? (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-28" />
             </div>
-            <div className="text-gray-400 md:self-end md:pb-3">
-              <FaChevronRight className="hidden md:block text-2xl" />
-              <FaChevronRight className="md:hidden rotate-90 text-2xl" />
-            </div>
-            <div className="md:self-end">
-              <Button
-                intent="white"
-                rounded
-                leftIcon={<FaPlay />}
-                className="h-12 px-6 text-lg font-semibold"
-                onClick={setupChoiceModal.open}
-              >
-                {uuid && password ? 'CONTINUE SETUP' : 'START SETUP'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Template Wizard Link */}
-          <div className="text-center md:text-left text-sm text-gray-400 max-w-2xl">
-            New to AIOStreams? Try our{' '}
-            <button
-              onClick={templatesModal.open}
-              className="text-[--brand] hover:text-[--brand]/80 hover:underline font-medium"
-            >
-              Template Wizard
-            </button>{' '}
-            for a guided, step-by-step setup experience with pre-configured
-            settings.
-          </div>
-        </div>
-
-        {/* Main content: Get Started and What's New sections */}
-        <div className="flex flex-col lg:flex-row gap-8 mt-4">
-          {/* Get Started section */}
-          <div className="flex-1">
-            <div className="p-6 h-full flex flex-col">
-              <div className="mb-4">
-                <h3 className="text-2xl font-semibold text-white mb-1">
-                  Welcome to AIOStreams!
-                </h3>
-              </div>
-
-              <div className="space-y-6 flex-1">
-                {/* Welcome section */}
-                <div className="text-base text-muted-foreground">
-                  <span>
-                    Click the Start Setup button above to start customising
-                    AIOStreams to your preferences. You'll be guided through
-                    each section where you can set up your configuration. Once
-                    complete, you'll create a password-protected configuration
-                    that you can install in Stremio or other compatible apps.
-                  </span>
-                  <br />
-                  <br />
-                  <span>
-                    Need to make changes later? Simply click configure within
-                    your app and enter your password. You can update your
-                    settings at any time, and in most cases - you won't need to
-                    reinstall AIOStreams!
-                  </span>
-                  <br />
-                  <br />
-                  <span>
-                    Got an existing configuration already? Click the login
-                    button in the top right corner to access it.
-                  </span>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-700/50 to-transparent" />
-                </div>
-
-                {/* Quick links grid */}
-                <div className="pt-6">
-                  <h4 className="text-xl font-semibold text-white mb-4">
-                    Resources & Support
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <QuickLink
-                      href={configGuideUrl}
-                      icon={<BookOpenIcon className="w-8 h-8" />}
-                    >
-                      Configuration Guide
-                    </QuickLink>
-                    <QuickLink
-                      href="https://github.com/Viren070/AIOStreams/wiki"
-                      icon={<BookOpenIcon className="w-8 h-8" />}
-                    >
-                      Wiki
-                    </QuickLink>
-                    <QuickLink
-                      href={stremioGuideUrl}
-                      icon={<InfoIcon className="w-8 h-8" />}
-                    >
-                      Stremio Guide
-                    </QuickLink>
-                    <QuickLink
-                      href={discordUrl}
-                      icon={<AiOutlineDiscord className="w-8 h-8" />}
-                    >
-                      Discord
-                    </QuickLink>
-                    <QuickLink
-                      href={githubUrl}
-                      icon={<FiGithub className="w-8 h-8" />}
-                    >
-                      GitHub
-                    </QuickLink>
-                    <QuickLink
-                      onClick={donationModal.open}
-                      icon={<HeartIcon className="w-8 h-8" />}
-                      className="bg-gradient-to-br from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-red-400/30 hover:border-red-400/50"
-                    >
-                      Donate
-                    </QuickLink>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[0, 1].map((i) => (
+                <GlowCard key={i} className="p-4 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-14 rounded flex-shrink-0" />
                   </div>
-                </div>
-              </div>
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <div className="mt-2 flex items-center justify-between">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </GlowCard>
+              ))}
             </div>
           </div>
+        ) : loader.templates.length > 0 ? (
+          (() => {
+            const envIds = (status?.settings?.featuredTemplateIds ?? []).slice(
+              0,
+              2
+            );
+            const featured =
+              envIds.length > 0
+                ? envIds
+                    .map((id) =>
+                      loader.templates.find((t) => t.metadata.id === id)
+                    )
+                    .filter((t): t is Template => t !== undefined)
+                : loader.templates.slice(0, 2);
+            if (featured.length === 0) return null;
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-white">
+                    Featured Templates
+                  </h3>
+                  <button
+                    onClick={templatesModal.open}
+                    className="text-sm text-[--brand] hover:underline transition-colors"
+                  >
+                    Browse all {loader.templates.length} →
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {featured.map((template) => (
+                    <TemplateMiniCard
+                      key={template.metadata.id}
+                      template={template}
+                      onOpen={() => {
+                        setFeaturedTemplateToOpen(template);
+                        templatesModal.open();
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()
+        ) : null}
 
-          {/* What's New section */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1">
+            <GlowCard className="p-6 h-full flex flex-col gap-5">
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">
+                  Get Started
+                </h3>
+                <p className="text-sm text-[--muted]">
+                  New here? Pick a setup mode and jump straight in, or load a
+                  template for an instant pre-configured setup.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Setup Mode
+                </span>
+                <ModeSwitch
+                  value={mode}
+                  onChange={setMode}
+                  className="w-full h-11 text-sm"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 mt-auto">
+                <Button
+                  intent="white"
+                  rounded
+                  leftIcon={<FaPlay />}
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={() => nextMenu()}
+                >
+                  {uuid && password ? 'Continue Setup' : 'Start Setup'}
+                </Button>
+                <Button
+                  intent="primary-outline"
+                  rounded
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={templatesModal.open}
+                >
+                  Use a Template
+                </Button>
+                {!(uuid && password) && (
+                  <p className="text-xs text-gray-500 text-center mt-1">
+                    Already have a config?{' '}
+                    <button
+                      onClick={signInModal.open}
+                      className="text-[--brand] hover:underline"
+                    >
+                      Sign in
+                    </button>{' '}
+                    to load it.
+                  </p>
+                )}
+              </div>
+            </GlowCard>
+          </div>
+
           <div className="flex-[1.5]">
-            <ChangelogBox version={version} />
+            <GlowCard className="p-6 h-full flex flex-col gap-4">
+              <h3 className="text-xl font-semibold text-white">
+                Resources & Support
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
+                <QuickLink
+                  href={configGuideUrl}
+                  icon={<BookOpenIcon className="w-7 h-7" />}
+                >
+                  Configuration Guide
+                </QuickLink>
+                <QuickLink
+                  href="https://docs.aiostreams.viren070.me"
+                  icon={<BookOpenIcon className="w-7 h-7" />}
+                >
+                  Docs
+                </QuickLink>
+                <QuickLink
+                  href={stremioGuideUrl}
+                  icon={<InfoIcon className="w-7 h-7" />}
+                >
+                  Stremio Guide
+                </QuickLink>
+                <QuickLink
+                  href={discordUrl}
+                  icon={<AiOutlineDiscord className="w-7 h-7" />}
+                >
+                  Discord
+                </QuickLink>
+                <QuickLink
+                  href={githubUrl}
+                  icon={<FiGithub className="w-7 h-7" />}
+                >
+                  GitHub
+                </QuickLink>
+                <QuickLink
+                  onClick={donationModal.open}
+                  icon={<HeartIcon className="w-7 h-7" />}
+                  className="bg-gradient-to-br from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-red-400/30 hover:border-red-400/50"
+                >
+                  Donate
+                </QuickLink>
+              </div>
+            </GlowCard>
           </div>
         </div>
 
-        {/* Social & donation row */}
-        <div className="flex flex-col items-center mt-4">
-          <div className="flex flex-col items-center gap-0.5 mt-4 text-xs text-gray-500">
+        <div ref={whatsNewRef}>
+          <ChangelogBox
+            version={version}
+            channel={channel}
+            onUpdatesFound={setAppUpdatesCount}
+          />
+        </div>
+
+        <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-0.5 text-xs text-gray-500">
             <span>
               © {new Date().getFullYear()} AIOStreams. Developed by Viren070.
             </span>
@@ -434,7 +663,16 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
       <ConfirmationDialog {...confirmClearConfig} />
       <ConfigTemplatesModal
         open={templatesModal.isOpen}
-        onOpenChange={templatesModal.toggle}
+        onOpenChange={(v) => {
+          if (v) templatesModal.open();
+          else {
+            templatesModal.close();
+            setFeaturedTemplateToOpen(null);
+          }
+        }}
+        deepLinkUrl={deepLinkUrl}
+        deepLinkTemplateId={deepLinkTemplateId}
+        initialExpandedTemplateId={featuredTemplateToOpen?.metadata.id}
       />
       <SetupChoiceModal
         open={setupChoiceModal.isOpen}
@@ -460,11 +698,108 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
             : 'Start with a pre-configured template. Great for getting up and running quickly with recommended settings.'
         }
       />
+      <Modal
+        open={templateUpdateModal.isOpen}
+        onOpenChange={templateUpdateModal.toggle}
+        title="Template Updates Available"
+        contentClass="max-w-2xl"
+      >
+        <div className="space-y-4 min-w-0">
+          <p className="text-sm text-[--muted]">
+            Templates you&apos;ve applied have new versions available.
+          </p>
+          <div className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-4 -mr-2">
+            {updateTargets.map((update) => (
+              <div
+                key={update.template.metadata.id}
+                className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-semibold text-white">
+                    {update.template.metadata.name}
+                  </span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                    v{update.appliedVersion}{' '}
+                    <span className="text-gray-600">→</span>{' '}
+                    <span className="text-green-400">
+                      v{update.template.metadata.version}
+                    </span>
+                  </span>
+                </div>
+                {update.newChangelog.length > 0 ? (
+                  <div className="space-y-3">
+                    {update.newChangelog.map((entry) => (
+                      <ChangelogEntryRow key={entry.version} entry={entry} />
+                    ))}
+                  </div>
+                ) : update.template.metadata.changelogUrl ? (
+                  <TemplateUpdateChangelogSection update={update} />
+                ) : (
+                  <p className="text-xs text-gray-500 italic">
+                    No changelog provided for this update.
+                  </p>
+                )}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    intent="primary"
+                    className="flex-1"
+                    onClick={() => {
+                      templateUpdateModal.close();
+                      setFeaturedTemplateToOpen(update.template);
+                      templatesModal.open();
+                    }}
+                  >
+                    Apply Update
+                  </Button>
+                  <Button
+                    intent="gray-outline"
+                    onClick={() =>
+                      dismissUpdate(
+                        update.template.metadata.id,
+                        update.template.metadata.version
+                      )
+                    }
+                  >
+                    Skip this version
+                  </Button>
+                </div>
+                <button
+                  className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline-offset-2 hover:underline"
+                  onClick={() =>
+                    ignoreTemplateUpdates(update.template.metadata.id)
+                  }
+                >
+                  Ignore all future updates for this template
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+            <button
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={dismissAllCurrentUpdates}
+            >
+              Dismiss all
+            </button>
+            <Button intent="gray-outline" onClick={templateUpdateModal.close}>
+              Maybe later
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
 
-function ChangelogBox({ version }: { version: string }) {
+function ChangelogBox({
+  version,
+  channel,
+  onUpdatesFound,
+}: {
+  version: string;
+  channel: 'stable' | 'nightly' | 'dev';
+  onUpdatesFound?: (count: number) => void;
+}) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [allReleases, setAllReleases] = React.useState<any[]>([]);
@@ -478,10 +813,20 @@ function ChangelogBox({ version }: { version: string }) {
   const [showLoadMoreOverlay, setShowLoadMoreOverlay] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Determine channel from version
-  const currentChannel = React.useMemo(() => {
-    return version.startsWith('v') ? 'stable' : 'nightly';
-  }, [version]);
+  // For dev builds, skip the entire changelog / update-check UI
+  if (channel === 'dev') {
+    return (
+      <GlowCard className="p-4">
+        <p className="text-sm text-gray-400">
+          This is a dev/PR build (
+          <span className="font-mono text-gray-300">{version}</span>). Changelog
+          and update checks are not available.
+        </p>
+      </GlowCard>
+    );
+  }
+
+  const currentChannel = channel;
 
   // Version comparison function
   const compareVersions = React.useCallback(
@@ -607,6 +952,11 @@ function ChangelogBox({ version }: { version: string }) {
     filterReleasesByChannel,
     compareVersions,
   ]);
+
+  // Notify parent when newer app release count changes
+  React.useEffect(() => {
+    onUpdatesFound?.(newerReleases.length);
+  }, [newerReleases.length, onUpdatesFound]);
 
   // Function to fetch more releases when needed
   const fetchMoreReleases = React.useCallback(async () => {
@@ -734,47 +1084,39 @@ function ChangelogBox({ version }: { version: string }) {
   );
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-2xl font-semibold text-white">What's New?</h3>
+    <GlowCard className="p-6 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold text-white">What's New?</h3>
         {newerReleases.length > 0 && (
-          <span className="text-[#c8af48] font-bold text-sm">
+          <span className="text-xs font-medium text-[--brand]">
             {newerReleases.length} update
             {newerReleases.length > 1 ? 's' : ''} available
           </span>
         )}
       </div>
-      <div className="relative flex-1" style={{ minHeight: '400px' }}>
+      <div className="relative">
         <div
           ref={containerRef}
-          className="changelog-container absolute inset-0 pr-2"
-          style={{
-            overflowY: 'auto',
-          }}
+          className="max-h-[500px] overflow-y-auto pr-4 -mr-2"
         >
           {loading ? (
-            <div className="p-4 space-y-4">
+            <div className="space-y-3">
               {[...Array(2)].map((_, i) => (
                 <Skeleton key={i} className="h-24 w-full" />
               ))}
             </div>
           ) : error ? (
-            <div className="p-4">
-              <Alert intent="alert" title="Error" description={error} />
-            </div>
+            <Alert intent="alert" title="Error" description={error} />
           ) : displayReleases.length === 0 ? (
-            <div className="p-4">
-              <Alert
-                intent="info"
-                title="No changelogs found"
-                description={`No ${currentChannel} changelogs available.`}
-              />
-            </div>
+            <Alert
+              intent="info"
+              title="No changelogs found"
+              description={`No ${currentChannel} changelogs available.`}
+            />
           ) : (
-            <div className="relative min-h-full p-4 space-y-4">
-              {/* Show updates button */}
+            <div className="space-y-3">
               {newerReleases.length > 0 && !showUpdates && (
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-center pb-1">
                   <Button
                     intent="primary-outline"
                     size="sm"
@@ -785,37 +1127,32 @@ function ChangelogBox({ version }: { version: string }) {
                   </Button>
                 </div>
               )}
-
-              {displayReleases.slice(0, visibleCount).map((release, idx) => (
+              {displayReleases.slice(0, visibleCount).map((release) => (
                 <Card
                   key={release.id || release.tag_name}
                   className={cn(
-                    'border bg-gray-800/60 border-gray-800 relative',
-                    isNewerVersion(release.tag_name) && 'border-[#c8af48]/30'
+                    'border bg-gray-800/60 border-gray-700/50',
+                    isNewerVersion(release.tag_name) && 'border-[--brand]/40'
                   )}
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4">
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span
-                          className={cn(
-                            'text-sm sm:text-base font-semibold break-all',
-                            isNewerVersion(release.tag_name)
-                              ? 'text-[#c8af48]' // c8af48
-                              : 'text-[--brand]'
-                          )}
-                        >
-                          {release.tag_name}
-                        </span>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <span className="text-xs text-gray-400">
-                          {new Date(release.published_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span
+                        className={cn(
+                          'text-sm font-semibold',
+                          isNewerVersion(release.tag_name)
+                            ? 'text-[--brand]'
+                            : 'text-gray-200'
+                        )}
+                      >
+                        {release.tag_name}
+                      </span>
+                      <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-gray-700/60 text-gray-400 border border-gray-600/40 flex-shrink-0">
+                        {new Date(release.published_at).toLocaleDateString()}
+                      </span>
                     </div>
                   </CardHeader>
-                  <CardContent className="prose prose-invert prose-sm max-w-none [&_p]:text-sm [&_ul]:text-sm [&_li]:text-sm [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_*]:break-all">
+                  <CardContent className="prose prose-invert prose-sm max-w-none min-w-0 [&_p]:text-sm [&_ul]:text-sm [&_li]:text-sm [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_*]:break-words">
                     <ReactMarkdown>
                       {release.body
                         ? release.body.replace(release.tag_name, '')
@@ -827,13 +1164,13 @@ function ChangelogBox({ version }: { version: string }) {
                       href={release.html_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:underline flex items-center justify-between w-full text-xs"
+                      className="text-gray-500 hover:text-white flex items-center justify-between w-full text-xs transition-colors"
                     >
-                      <span className="flex items-center gap-2">
-                        <FaGithub className="w-4 h-4" />
+                      <span className="flex items-center gap-1.5">
+                        <FaGithub className="w-3.5 h-3.5" />
                         View on GitHub
                       </span>
-                      <FaChevronRight className="w-4 h-4" />
+                      <FaChevronRight className="w-3 h-3" />
                     </a>
                   </CardFooter>
                 </Card>
@@ -841,62 +1178,53 @@ function ChangelogBox({ version }: { version: string }) {
             </div>
           )}
         </div>
-
-        {/* Bottom Load More Overlay */}
         {showLoadMoreOverlay && hasMoreContent && (
           <div
-            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none opacity-0 transition-opacity duration-300 ease-in-out"
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
             style={{
-              height: '96px',
+              height: '80px',
+              background:
+                'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
               opacity: showLoadMoreOverlay ? 1 : 0,
+              transition: 'opacity 0.3s ease-in-out',
             }}
           >
-            <div className="h-full flex items-end justify-center pb-4">
-              <div
-                className="flex flex-col items-center gap-2 pointer-events-auto opacity-0 translate-y-4 transition-all duration-300 ease-in-out"
-                style={{
-                  opacity: showLoadMoreOverlay ? 1 : 0,
-                  transform: showLoadMoreOverlay
-                    ? 'translateY(0)'
-                    : 'translateY(1rem)',
-                }}
+            <div className="h-full flex items-end justify-center pb-3 pointer-events-auto">
+              <button
+                onClick={handleLoadMore}
+                disabled={fetchingMore}
+                className="flex flex-col items-center gap-1 group disabled:opacity-50"
               >
-                <span className="text-sm font-medium text-white/90">
+                <span className="text-xs text-white/60 group-hover:text-white transition-colors">
                   {fetchingMore
                     ? 'Loading...'
                     : displayReleases.length > visibleCount
                       ? `Load ${Math.min(5, displayReleases.length - visibleCount)} more`
                       : 'Load more releases'}
                 </span>
-                <button
-                  onClick={handleLoadMore}
-                  disabled={fetchingMore}
-                  className="group flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {fetchingMore ? (
-                    <div className="w-5 h-5 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <svg
-                      className="w-6 h-6 text-white/80 group-hover:text-white transition-colors"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
+                {fetchingMore ? (
+                  <div className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    className="w-4 h-4 text-white/50 group-hover:text-white transition-colors"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </GlowCard>
   );
 }
 

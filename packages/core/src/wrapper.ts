@@ -41,7 +41,6 @@ import {
   RequestOptions,
 } from './utils/index.js';
 import { Preset, PresetManager } from './presets/index.js';
-import { StreamParser } from './parser/index.js';
 import { z } from 'zod';
 
 const logger = createLogger('wrappers');

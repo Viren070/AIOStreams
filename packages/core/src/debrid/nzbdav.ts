@@ -29,12 +29,15 @@ export class NzbDAVService extends UsenetStreamService {
   readonly serviceName: ServiceId = 'nzbdav';
   readonly serviceLogger = logger;
 
-  constructor(config: DebridServiceConfig) {
+  constructor(
+    config: DebridServiceConfig,
+    cacheAndPlayOptions?: { pollingInterval?: number; maxWaitTime?: number }
+  ) {
     const parsedConfig = NzbDavConfig.parse(
       JSON.parse(fromUrlSafeBase64(config.token))
     );
 
-    const auth: UsenetStreamServiceConfig = {
+    const usenetConfig: UsenetStreamServiceConfig = {
       webdavUrl: `${parsedConfig.nzbdavUrl}/`,
       publicWebdavUrl: `${parsedConfig.publicNzbdavUrl || parsedConfig.nzbdavUrl}/`,
       webdavUser: parsedConfig.webdavUser,
@@ -42,9 +45,10 @@ export class NzbDAVService extends UsenetStreamService {
       apiUrl: `${parsedConfig.nzbdavUrl}/api`,
       apiKey: parsedConfig.nzbdavApiKey,
       aiostreamsAuth: parsedConfig.aiostreamsAuth,
+      cacheAndPlayOptions,
     };
 
-    super(config, auth, 'nzbdav');
+    super(config, usenetConfig, 'nzbdav');
   }
 
   protected getContentPathPrefix(): string {

@@ -91,7 +91,7 @@ export class ContentDeepDivePreset extends Preset {
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
       timeout: options.timeout || this.METADATA.TIMEOUT,
-      forceToTop: options.forceToTop ?? true,
+      pinPosition: options.forceToTop ? 'top' : undefined,
       resultPassthrough: true,
       preset: {
         id: '',

@@ -177,11 +177,21 @@ router.get(
       const stremioTransformer = format
         ? new StremioTransformer(userData)
         : null;
-      const response = await (
-        await new AIOStreams(userData).initialise()
-      ).getStreams(id, type);
 
-      const stremioData = await stremioTransformer?.transformStreams(response);
+      const aiostreams = new AIOStreams(userData);
+      await aiostreams.initialise();
+      const response = await aiostreams.getStreams(id, type);
+      const ctx = aiostreams.getStreamContext();
+
+      if (!ctx) {
+        throw new Error('Stream context not available');
+      }
+      const formatterContext = ctx.toFormatterContext(response.data.streams);
+
+      const stremioData = await stremioTransformer?.transformStreams(
+        response,
+        formatterContext
+      );
       const stremioStreams = stremioData?.streams.filter(
         (stream) =>
           !['statistic', 'error'].includes(stream.streamData?.type || '')

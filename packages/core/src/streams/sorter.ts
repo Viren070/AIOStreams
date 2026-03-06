@@ -20,10 +20,13 @@ class StreamSorter {
     context: StreamContext
   ): Promise<ParsedStream[]> {
     const type = context.isAnime ? 'anime' : context.type;
-    const forcedToTopStreams = allStreams.filter(
-      (stream) => stream.addon.forceToTop
+    const pinnedToTopStreams = allStreams.filter(
+      (stream) => stream.addon.pinPosition === 'top'
     );
-    const streams = allStreams.filter((stream) => !stream.addon.forceToTop);
+    const pinnedToBottomStreams = allStreams.filter(
+      (stream) => stream.addon.pinPosition === 'bottom'
+    );
+    const streams = allStreams.filter((stream) => !stream.addon.pinPosition);
 
     let primarySortCriteria = this.userData.sortCriteria.global;
     let cachedSortCriteria = this.userData.sortCriteria.cached;
@@ -127,14 +130,19 @@ class StreamSorter {
       });
     }
 
+    const pinnedParts = [];
+    if (pinnedToTopStreams.length > 0) {
+      pinnedParts.push(`${pinnedToTopStreams.length} pinned to top`);
+    }
+    if (pinnedToBottomStreams.length > 0) {
+      pinnedParts.push(`${pinnedToBottomStreams.length} pinned to bottom`);
+    }
     logger.info(
       `Sorted ${sortedStreams.length}${
-        forcedToTopStreams.length > 0
-          ? ` + ${forcedToTopStreams.length} forced to top`
-          : ''
+        pinnedParts.length > 0 ? ` + ${pinnedParts.join(', ')}` : ''
       } streams in ${getTimeTakenSincePoint(start)}`
     );
-    return [...forcedToTopStreams, ...sortedStreams];
+    return [...pinnedToTopStreams, ...sortedStreams, ...pinnedToBottomStreams];
   }
 
   private dynamicSortKey(
@@ -291,9 +299,13 @@ class StreamSorter {
             -(stream.regexMatched ? stream.regexMatched.index : Infinity)
           );
         case 'streamExpressionMatched':
-          return multiplier * -(stream.streamExpressionMatched ?? Infinity);
+          return (
+            multiplier * -(stream.streamExpressionMatched?.index ?? Infinity)
+          );
         case 'streamExpressionScore':
           return multiplier * (stream.streamExpressionScore ?? 0);
+        case 'regexScore':
+          return multiplier * (stream.regexScore ?? 0);
         case 'keyword':
           return multiplier * (stream.keywordMatched ? 1 : 0);
 
@@ -319,6 +331,16 @@ class StreamSorter {
             return multiplier * 1;
           }
           return multiplier * 0;
+        }
+        case 'releaseGroup': {
+          if (!userData.preferredReleaseGroups?.length) {
+            return 0;
+          }
+          const releaseGroup = stream.parsedFile?.releaseGroup || 'Unknown';
+          const index = userData.preferredReleaseGroups.findIndex(
+            (group) => group.toLowerCase() === releaseGroup.toLowerCase()
+          );
+          return multiplier * -(index === -1 ? Infinity : index);
         }
         default:
           return 0;

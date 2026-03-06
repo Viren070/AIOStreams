@@ -1,0 +1,296 @@
+---
+title: Configure Options
+description: A complete reference for every option on the AIOStreams configuration page.
+---
+
+### Description
+
+<Callout type="info">
+  This is the guide for v2 of AIOStreams, looking for the guide for v1? You can
+  find it [here](/docs/migrations/v1-to-v2).
+</Callout>
+
+This addon lets you combine all of your addons into one and provide consistent formatting, sorting, and filtering of the results.
+It is immensely configurable, allowing you to fine tune your catalogues too.
+
+I will attempt to explain every single option available.
+
+<h3>Configuration</h3>
+
+<Callout type="warn">
+  Torrentio is disabled on the public ElfHosted instance.
+</Callout>
+
+To get started, you'll want to head to the configuration page by clicking the "Configure" button above. Then, you'll
+need to click the big white `Configure` button on AIOStreams' configuration page.
+
+<h4>Services</h4>
+
+This is where you can enter credentials for, reorder, and toggle services like Real Debrid, Torbox etc.
+
+The order of the services determines a couple things:
+
+- The priority order when deduplicating streams - given that the deduplicator is enabled.
+- The ranking of services used when sorting - given that the sorting uses service as a criterion.
+
+Below all the services, there will be a field to enter your RPDB API Key. Add this if you would like to configure supported catalogue addons you add to use
+posters from RPDB.
+
+<h4>Addons</h4>
+
+Here you can manage your installed addons, add new ones, and configure them. You can also manage your catalogues here, as well as using
+the [Group](https://github.com/Viren070/AIOStreams/wiki/Groups) feature to group addons together. I will not be covering the Groups feature here, as it is not
+required and is a feature meant for advanced users. You may join the [AIOStreams Discord](https://discord.viren070.me) to view the community's configurations.
+
+To install addons, head to the `Marketplace` tab. You can choose from a variety of addons, and filter by supported services and the type of content or streams they provide.
+You may also use the `Custom Addon` feature to add any addon you want as long as you have the manifest URL. The addons provided in the Marketplace
+are all provided for convenience's sake to ensure you can easily add addons without having to leave AIOStreams.
+
+Upon clicking `Configure` on an addon, you will be presented with a list of options. In most cases, you don't have to change anything, and click `Install` on the popup
+that appears. However, some addons may require you to enter credentials or API keys, and some may have additional options that you can configure.
+
+As most options are generally explained well in the popup, I'm not going to cover them here. However, I will cover some of the more important ones that tend to appear
+on every addon.
+
+- `Name` - This lets you change the name of the addon as it appears in AIOStreams. This name is only used for stream results, it does not affect any catalog names.
+- `Timeout` - This lets you change the time that AIOStreams waits for the addon to respond before it aborts the request to it. Used for all requests to the addon, including catalogues, streams, subtitles etc.
+- `Resources` - This option allows you to override the resources that AIOStreams would use from the addon. This is useful if you want to disable catalogues from the addon, but keep its streams. So you would only select `stream` here. In most cases, its recommended to leave this blank, or at the defaults - as it is automatically determined by AIOStreams later.
+- `URL` - In most cases, you will be able to override the URL of the addon here. Usually this is generated automatically by AIOStreams - A benefit of this is you never having to worry about other addon updates, as AIOStreams will always use the latest version of the addon. However, if you want to use a custom URL, you can do so here. This is useful for using a specific configuration of the addon. Note: you will need to configure any debrid services separately, debrid services configured in AIOStreams do not apply to overriden URLs.
+
+Once you've installed your addons, you can head back to the `Installed` tab to view them. You'll be able to click
+the edit icon to edit the configuration, the delete icon to remove the addon from your installed addons, and optionally toggle the addon on or off
+to temporarily disable it without removing it.
+
+<h5>Catalogues</h5>
+
+Within the `Installed` tab of the `Addons` menu, you will find a section where you can control your catalogues (given that you have at least one addon installed).
+
+You'll first want to click the refresh icon on the top right corner. This will fetch the catalogues from all your addons and display them here.
+
+There are a few options available here to you to help you manage your catalogues. For each catalogue, you will see the following options:
+
+- To the left of each catalogue card, you can drag the black bar to reorder your catalogues. The order here determines the order they are displayed in on Stremio or other clients.
+- The edit icon next to the catalogue name allows you to edit a catalogues `name` and `type`. Both these values can be edited to your liking and those changes will be reflected in Stremio.
+- To the right, you also have position controls to allow you to instantly move a catalogue to the top or bottom of the list.
+- There is also a switch to toggle the catalogue on or off. This is useful if you want to hide specific catalogues.
+- Below that, there is a settings section that you can expand which allows you to apply certain modifications to the catalogue. Each modification also has a icon button to provide quick access to toggling it.
+
+Below the catalogue section, you will notice the Groups section. Like I mentioned earlier, this is an advanced feature that allows you to group addons together and I will not be covering it here.
+The [Wiki](https://github.com/Viren070/AIOStreams/wiki/Groups) has more information on how to use this feature.
+
+<h3>Filters</h3>
+
+One of AIOStreams' most recongisable feature is its advanced filtering system. This menu may look a bit overwhelming, but it is neatly organised into sections
+to try and make it easier to understand.
+
+<h4>Cache</h4>
+
+This section allows you to filter streams based on whether they are cached or not. There is a cached section and an uncached section.
+
+Each section will have a toggle to completely disable cached/uncached streams, and optionally a more granular filter
+to exclude cached/uncached streams from specific addons, services, or stream types.
+
+The apply mode setting controls how your 3 filters (addons, services, and stream types) are applied.
+The `OR` mode means that a cached/uncached stream will be excluded if it is either from an addon, service, or stream type that is excluded.
+The `AND` mode means that a cached/uncached stream will be excluded only if it is from all of the addons, services, and stream types that are excluded.
+
+The stream type setting allows you to exclude uncached results for debrid, while keeping uncached results for usenet. Useful for TorBox pro users.
+
+<h4>Generic Stream Attributes</h4>
+
+The next couple sections allow you to filter streams based on generic attributes:
+
+- `Resolution` - The resolution of the stream, such as 1080p, 720p, etc.
+- `Encode` - The encoding of the stream, such as HEVC, AVC etc.
+- `Stream Type` - The type of the stream, such as p2p, debrid, http, usenet, etc.
+- `Visual Tag` - The visual tag of the stream, such as HDR, Dolby Vision, etc.
+- `Audio Tag` - The audio tag of the stream, such as Dolby Atmos, DTS, etc.
+- `Audio Channel` - The audio channel of the stream, such as 5.1, 7.1, etc.
+- `Language` - The language of the stream, such as English, Spanish, etc.
+
+Each of these sections above have very similar options:
+
+- `Required` - Excludes streams that don't have one of the selected attributes. For example, if you set `1080p` as a required resolution, any streams that are not 1080p will be excluded.
+- `Excluded` - Excludes streams that have at least one of the selected attributes. For example, if you set `720p` as an excluded resolution, any streams that are 720p will be excluded.
+- `Included` - Prevents streams that have at least one of the selected attributes from being filtered out by all other exclude/required filters. For example, if you set `HDR` as an included visual tag, any streams that are HDR will not be filtered out by the other filters, even if they don't match the required or excluded attributes.
+- `Preferred` - This is a special filter that allows you to set a ranking for that specific attribute. This ranking is used when you enable the relevant sorting option in the `Sorting` section. For example, if you set `1080p` as a preferred resolution, any streams that are 1080p will be ranked higher than streams that are not 1080p when sorting by resolution.
+
+<h4>Seeders</h4>
+
+This section allows you to filter streams based on the number of seeders they have. You can set 3 ranges of seeders
+
+- `Required` - Excludes streams whose number of seeders is not within the range.
+- `Excluded` - Excludes streams whose number of seeders is within the range.
+- `Included` - Prevents streams whose number of seeders is within the range from being filtered out by all other exclude/required filters.
+
+You can also optionally set stream types for which the seeders filter should be applied. This is useful if you want to only apply these seeder filters to p2p streams, for example.
+
+<h4>Matching</h4>
+
+This section allows you to filter streams out based on whether they match with the requested content or not.
+You can apply title matching and season/episode matching.
+
+<h5>Title Matching</h5>
+
+This option fetches titles from the TMDB API and compares them to the titles of the streams returned by your addons.
+
+This allows you to filter streams based on whether they match the title of the requested content or not.
+You can set the `Matching mode` to either `Exact` or `Partial`. The `Exact` mode will only match streams that have the exact same title as the requested content, while the `contains` mode will match streams that have the requested content's title anywhere in their title.
+
+As the TMDB API is being used, it is required to provide a **TMDB API Key**. This can be obtained by creating an account on [TMDB](https://www.themoviedb.org/) and generating an API key in your account settings.
+You can then enter the key in the `TMDB API Key` field.
+
+<Callout type="info">
+  You can use fake information when creating your application on TMDB
+</Callout>
+
+You can then optionally limit the title matching to specific addons or request types (e.g. movies, series, anime)
+
+<h5>Season/Episode Matching</h5>
+
+This section is the same as the above, except it doesn't require a TMDB API Key, simply enable it if you wish to use it.
+
+<h4>Keyword</h4>
+
+This section allows you to filter streams based on whether they contain specific keywords in their title or not. You can enter multiple words
+or phrases in 4 different fields:
+
+- `Required` - Excludes streams that do not contain at least one of the words or phrases in their title.
+- `Excluded` - Excludes streams that contain at least one of the words or phrases in their title.
+- `Included` - Prevents streams that contain at least one of the words or phrases in their title from being filtered out by all other exclude/required filters.
+- `Preferred` - This is a special filter that allows you to set a ranking for a specific set of keyword. This ranking is used when you enable the relevant sorting option in the `Sorting` section.
+  For example, if you add `ilikethisterm` as a preferred keyword, any streams that contain `ilikethisterm` in their title will be ranked higher than streams that do not contain that term when sorting by keyword.
+
+<h4>Regex</h4>
+
+<Callout type="info">
+  This filter is only available on self hosted instances, due to potential abuse
+  You will either need to add your UUID to the `TRUSTED_UUIDS` environment
+  variable, or set the `REGEX_FILTER_ACCESS` environment variable to `all` (only
+  recommended if you have set an `ADDON_PASSWORD`, ensuring no one unauthorised
+  can access your instance)
+</Callout>
+
+This is essentially a more powerful version of the keyword filter, allowing you to use regular expressions to filter streams.
+The only difference is in the preferred section. With regex, the order of the regexes you enter matters, and streams that match a regex higher up in the list
+are ranked higher than streams that match a regex lower down in the list when sorting by regex.
+
+<h4>Size</h4>
+This section allows you to filter streams based on their size.
+
+You can set separate global size limits for movies and series. Any streams whose size does not lie within the specified range will be excluded.
+If you leave the two slider thumbs at opposite ends, no size filtering is applied.
+
+You can also optionally set a specific size limit for movies and series per resolution. This is useful if you want to have different size limits for different resolutions.
+Only one set of size limits will be applied at a time, meaning a resolution specific size limit will take precedence over the global size limits.
+
+<h4>Result Limits</h4>
+This section allows you to limit the number of results returned by AIOStreams.
+You can set a maximum number of results to return, and optionally also limit the
+number of results per: service, addon, resolution, quality, indexer, and release
+group.
+
+What this means is that AIOStreams will cut off streams after a specific group limit is reached. This means that it would keep streams
+higher up in the list (which depends on your sorting options) and remove streams lower down in the list.
+
+<h4>Deduplicator</h4>
+
+The deduplicator is a powerful feature that allows you to remove duplicate streams from your results.
+
+`Detection Methods` - Allows you to control what attributes are used to determine whether two streams are duplicates or not.
+
+- `filename` - Uses fuzzy filename matching.
+- `infoHash` - uses the hash of the torrent file (available for all torrent streams, and some debrid streams) - this is the most accurate method.
+- `smartDetect` - This uses a hash generated using a combination of the streams metadata - including file size, resolution, audio tags, visual tags etc.
+
+You can then control how duplicates are removed for specific types (cached, uncached, P2P), these are the 3 options you can choose:
+
+- `Single Result` - This keeps only one result, ranking the duplicates based on the serivce its from, and then the addon its from.
+- `Per Service` - This aims to keep the best result from each service, determined by the ranking of the addons.
+- `Per Addon` - This aims to keep the best result from each addon, determined by the ranking of the services.
+
+<h4>Sorting</h4>
+
+The sorting system uses a hierarchical approach to determine how content is sorted:
+
+1. Primary Sorts: Define the main sorting order for different content types:
+
+- Global: Used as a fallback when no specific type sort is defined (You most likely just want to define this and ignore everything else.)
+- Movies: Specific sorting for movies
+- Series: Specific sorting for TV series
+- Anime: Specific sorting for anime content
+
+2. Cached/Uncached Sorting: If your primary sort has "cached" at the top and there is both an `uncached` and `cached` sort criteria defined:
+
+- Content is split into cached and uncached groups
+- Each group is sorted separately using its specific sort criteria
+- Groups are then combined based on the cached sort direction
+- Type-specific cached/uncached sorts (e.g., "Cached Movies") take priority over global cached/uncached sorts
+
+<h4>Formatter</h4>
+
+Here, you can customise the way your streams are displayed in Stremio.
+
+You can either choose from a list of pre-defined formats, or create your own custom format using AIOStreams` [Formatter Syntax](https://github.com/Viren070/AIOStreams/wiki/Custom-Formatter)
+
+<Callout type="info">
+  Join AIOStreams' [Discord](https://discord.viren070.me) to see the formats
+  created by the community, or to share your own formats!
+</Callout>
+
+There is a preview section that allows you to see how your streams will look like in Stremio. You can adjust specific values in the preview to see how they affect the display of the streams.
+
+<h4>Proxy</h4>
+
+You can use this section to optionally configure a stream proxy for AIOStreams.
+You can choose from either [MediaFlow Proxy](https://github.com/mhdzumair/mediaflow-proxy) or [StremThru](https://github.com/MunifTanjim/stremthru).
+
+The rest of the options are already explained well in the UI, so I will not be covering them here.
+
+<h4>Miscellaneous</h4>
+
+The options on this menu are already explained well in the UI, so I will not be covering them here.
+
+<h4>Save & Install</h4>
+
+Here, you will be able to create a new user on your AIOStreams instance, or update the existing user with the current configuration.
+
+When creating a new user, you will need to set a reasonably strong password. You will also be given a unique UUID that you may need to access your configuration, should you lose your installation URL.
+
+Once you create a user, you will be presented with a button to install the addon using your preferred method.
+
+<Callout type="error">
+Make sure you save your UUID and password somewhere safe, as you will need them to access your configuration in the future.
+You will **NOT** be able to recover your configuration, or reset your password if you lose them.
+
+You can, however, keep exports of your configurations as backups, which I will discuss below.
+
+</Callout>
+
+Below the installation button, you will find a backup section that allows you to export your configuration as a JSON file and also import these configurations later.
+You can use this to backup your configuration, or to share it with others. You can also use this to import configurations from other users.
+
+You can expand the `Export Settings` to toggle the `Exclude Credentials` option, which will exclude any credentials you have entered in the configuration from the exported file.
+Note that while this option filters out all sensitive information entered in AIOStreams, it will not filter out any URLs from custom addons or URLs that you have overriden.
+These URLs can possible contain sensitive information, so make sure to double check the exported file before sharing it with others.
+
+<h3>FAQ</h3>
+
+<h4>How do I edit my configuration?</h4>
+
+When you create a user, you are given a unique installation URL ending in `/manifest.json`
+Most apps will display a `Configure` button next to the addon, which will take you to the configuration page.
+If this does not exist, you can manually navigate to the URL by replacing `/manifest.json` with `/configure`.
+
+You may also manually go to the configuration page by navigating to `https://your-instance-url/stremio/configure` where `your-instance-url` is the URL of your AIOStreams instance,
+and then click the login icon on the bottom left corner, where you will be asked for your UUID and password.
+
+<h4>How do I update my configuration?</h4>
+
+You can update your configuration by going to the configuration page and clicking the `Update user` button on the `Save & Install` menu.
+
+You don't have to reinstall the addon in Stremio, as the manifest URL will remain the same. **Note: This does not apply if you make changes that cause the manifest of the addon to change, such as reordering or editing catalogues or adding a type of addon (e.g. subtitle) that was not previously provided by your installation. In that case, you will need to reinstall the addon in Stremio.**
+
+<h3>Need Help?</h3>
+
+If you need help in configuring this addon, feel free to ask in the [AIOStreams Discord](https://discord.viren070.me) in the `#support` channel,

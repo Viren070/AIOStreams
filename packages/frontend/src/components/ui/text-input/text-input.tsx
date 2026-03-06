@@ -72,7 +72,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
         onValueChange?.(e.target.value);
         onChange?.(e);
       },
-      []
+      [onValueChange, onChange]
     );
 
     return (

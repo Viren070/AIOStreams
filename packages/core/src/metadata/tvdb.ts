@@ -1,6 +1,7 @@
 import { createLogger } from '../utils/logger.js';
 import { Cache, Env, formatZodError, ParsedId } from '../utils/index.js';
-import { Metadata } from './utils.js';
+import { Metadata, MetadataTitle } from './utils.js';
+import { iso6392ToIso6391 } from '../formatters/utils.js';
 import { makeRequest } from '../utils/http.js';
 import { z, ZodError } from 'zod';
 
@@ -13,7 +14,7 @@ interface TVDBMetadataConfig {
 const API_VERSION = '4';
 const API_BASE_URL = `https://api${API_VERSION}.thetvdb.com`;
 const TVDBAliasSchema = z.object({
-  language: z.string(),
+  language: z.string(), // A 3-4 character string indicating the language of the alias, as defined in Language
   name: z.string(),
 });
 
@@ -71,7 +72,7 @@ const TVDBSeriesRecordSchema = TVDBBaseRecordSchema.extend({
   originalLanguage: z.string().optional(),
   defaultSeasonType: z.number().optional(),
   isOrderRandomized: z.boolean().optional(),
-  averageRuntime: z.number().optional(),
+  averageRuntime: z.number().nullable().optional(),
   episodes: z.unknown().nullable().optional(),
   overview: z.string().optional(),
 });
@@ -210,7 +211,10 @@ export class TVDBMetadata {
         );
         return {
           title: movie.name,
-          titles: movie.aliases.map((a) => a.name),
+          titles: movie.aliases.map((a) => ({
+            title: a.name,
+            language: iso6392ToIso6391(a.language) || undefined,
+          })),
           year: parseInt(movie.year),
           tvdbId: movie.id,
           tmdbId: null,
@@ -225,7 +229,10 @@ export class TVDBMetadata {
         );
         return {
           title: series.name,
-          titles: series.aliases.map((a) => a.name),
+          titles: series.aliases.map((a) => ({
+            title: a.name,
+            language: iso6392ToIso6391(a.language) || undefined,
+          })),
           year: parseInt(series.year),
           yearEnd: series.lastAired
             ? new Date(series.lastAired).getFullYear()
@@ -248,7 +255,10 @@ export class TVDBMetadata {
         }
         return {
           title: response.data.name,
-          titles: response.data.aliases.map((a) => a.name),
+          titles: response.data.aliases.map((a) => ({
+            title: a.name,
+            language: iso6392ToIso6391(a.language) || undefined,
+          })),
           year: parseInt(response.data.year),
           tvdbId: response.data.id,
           tmdbId: null,
@@ -263,7 +273,10 @@ export class TVDBMetadata {
         const series = response.data;
         return {
           title: series.name,
-          titles: series.aliases.map((a) => a.name),
+          titles: series.aliases.map((a) => ({
+            title: a.name,
+            language: iso6392ToIso6391(a.language) || undefined,
+          })),
           year: parseInt(series.year),
           yearEnd: series.lastAired
             ? new Date(series.lastAired).getFullYear()

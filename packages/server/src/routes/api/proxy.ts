@@ -192,9 +192,14 @@ router.get(
   }
 );
 
+interface ProxyParams {
+  encryptedAuthAndData: string;
+  filename?: string; // optional
+}
+
 router.all(
   '/:encryptedAuthAndData{/:filename}',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<ProxyParams>, res: Response, next: NextFunction) => {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
     let upstreamResponse: Dispatcher.ResponseData | undefined;
@@ -358,6 +363,27 @@ router.all(
 
       const upstreamStartTime = Date.now();
       let currentUrl = data.url;
+
+      const INTERNAL_FORWARDED_PARAMS = ['fbk'] as const;
+      if (Env.BASE_URL) {
+        try {
+          const upstreamUrlObj = new URL(currentUrl);
+          if (upstreamUrlObj.origin === new URL(Env.BASE_URL).origin) {
+            let forwarded = false;
+            for (const param of INTERNAL_FORWARDED_PARAMS) {
+              const val = req.query[param];
+              if (val && typeof val === 'string') {
+                upstreamUrlObj.searchParams.set(param, val);
+                forwarded = true;
+              }
+            }
+            if (forwarded) currentUrl = upstreamUrlObj.toString();
+          }
+        } catch {
+          // ignore malformed URLs
+        }
+      }
+
       const maxRedirects = 10;
       let redirectCount = 0;
       let method = req.method as Dispatcher.HttpMethod;

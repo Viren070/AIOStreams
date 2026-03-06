@@ -178,7 +178,10 @@ export function getProxyAgent(proxyUrl: string): Dispatcher | undefined {
 
   if (!proxyAgent) {
     const proxyUrlObj = new URL(proxyUrl);
-    if (proxyUrlObj.protocol === 'socks5:') {
+    if (
+      proxyUrlObj.protocol === 'socks5:' ||
+      proxyUrlObj.protocol === 'socks5h:'
+    ) {
       proxyAgent = socksDispatcher({
         type: 5,
         port: parseInt(proxyUrlObj.port),

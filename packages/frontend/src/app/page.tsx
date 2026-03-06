@@ -19,6 +19,7 @@ import Image from 'next/image';
 import { TopNavbar } from './top-navbar';
 import { Button } from '@/components/ui/button';
 import { UserDataProvider } from '@/context/userData';
+import { SaveProvider } from '@/context/save';
 import { LuffyError } from '@/components/shared/luffy-error';
 import { TextGenerateEffect } from '@/components/shared/text-generate-effect';
 import { OptionsProvider } from '@/context/options';
@@ -54,23 +55,25 @@ function AppContent() {
 
   return (
     <MenuProvider>
-      <AppSidebarProvider>
-        <AppLayout withSidebar sidebarSize="slim">
-          <AppLayoutSidebar>
-            <MainSidebar />
-          </AppLayoutSidebar>
-          <AppLayout>
-            <AppLayoutContent>
-              <div data-main-layout-container className="h-auto">
-                <TopNavbar />
-                <div data-main-layout-content>
-                  <MenuContent />
+      <SaveProvider>
+        <AppSidebarProvider>
+          <AppLayout withSidebar sidebarSize="slim">
+            <AppLayoutSidebar>
+              <MainSidebar />
+            </AppLayoutSidebar>
+            <AppLayout>
+              <AppLayoutContent>
+                <div data-main-layout-container className="h-auto">
+                  <TopNavbar />
+                  <div data-main-layout-content>
+                    <MenuContent />
+                  </div>
                 </div>
-              </div>
-            </AppLayoutContent>
+              </AppLayoutContent>
+            </AppLayout>
           </AppLayout>
-        </AppLayout>
-      </AppSidebarProvider>
+        </AppSidebarProvider>
+      </SaveProvider>
       <Toaster />
     </MenuProvider>
   );

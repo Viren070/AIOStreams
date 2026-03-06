@@ -19,6 +19,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       constants.NZBDAV_SERVICE,
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
     ];
     const options: Option[] = [
       ...(Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY
@@ -257,7 +258,6 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       formatPassthrough:
         options.formatPassthrough ?? options.streamPassthrough ?? false,
       resultPassthrough: options.resultPassthrough ?? false,
-      forceToTop: options.forceToTop ?? false,
       headers: {
         'User-Agent': this.METADATA.USER_AGENT,
       },

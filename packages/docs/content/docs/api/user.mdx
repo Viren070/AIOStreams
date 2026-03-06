@@ -1,0 +1,229 @@
+---
+title: User
+description: Create, retrieve, update, and delete AIOStreams user configurations.
+---
+
+`/api/v1/user`
+
+Manage AIOStreams user accounts and configurations. A **user** is identified by a UUID and protected by a password. These endpoints are the programmatic equivalent of the **Save & Install** flow in the UI.
+
+<Callout type="info">
+  All user API requests are rate-limited.
+</Callout>
+
+---
+
+## UUID Aliases
+
+Wherever a UUID is accepted, you may supply a configured **alias** (a human-readable name mapped to a UUID via the `ALIASED_CONFIGURATIONS` environment variable) instead. The alias is resolved to the real UUID before processing.
+
+---
+
+## Check User Exists
+
+`HEAD /api/v1/user`
+
+Checks whether a user exists without returning any sensitive data. Useful for validating a UUID before attempting a full fetch.
+
+### Query Parameters
+
+| Parameter | Type   | Required | Description                          |
+| --------- | ------ | -------- | ------------------------------------ |
+| `uuid`    | string | ✅       | UUID (or alias) of the user to check |
+
+### Response `200`
+
+```json
+{
+  "success": true,
+  "detail": "User exists",
+  "error": null,
+  "data": {
+    "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+}
+```
+
+Returns an error response if the UUID is not found.
+
+### Example
+
+```bash
+curl -X HEAD "https://your-instance.example.com/api/v1/user?uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+
+---
+
+## Get User
+
+`GET /api/v1/user`
+
+Returns the full user configuration and an encrypted copy of the password for use in subsequent requests.
+
+### Query Parameters
+
+| Parameter  | Type   | Required | Description                 |
+| ---------- | ------ | -------- | --------------------------- |
+| `uuid`     | string | ✅       | UUID (or alias) of the user |
+| `password` | string | ✅       | User's plaintext password   |
+
+### Response `200`
+
+```json
+{
+  "success": true,
+  "detail": "User details retrieved successfully",
+  "error": null,
+  "data": {
+    "userData": { },
+    "encryptedPassword": "<encrypted string>"
+  }
+}
+```
+
+| Field               | Type   | Description                                                                                |
+| ------------------- | ------ | ------------------------------------------------------------------------------------------ |
+| `userData`          | object | Full user configuration object                                                             |
+| `encryptedPassword` | string | Server-encrypted password — pass this back in the manifest URL instead of the raw password |
+
+### Example
+
+```bash
+curl "https://your-instance.example.com/api/v1/user?uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&password=mypassword"
+```
+
+---
+
+## Create User
+
+`POST /api/v1/user`
+
+Creates a new user and returns the assigned UUID and an encrypted password.
+
+### Request Body
+
+```json
+{
+  "config": { },
+  "password": "mypassword"
+}
+```
+
+| Field      | Type   | Required | Description                            |
+| ---------- | ------ | -------- | -------------------------------------- |
+| `config`   | object | ✅       | Full user configuration object         |
+| `password` | string | ✅       | Password to protect this configuration |
+
+### Response `201`
+
+```json
+{
+  "success": true,
+  "detail": "User was successfully created",
+  "error": null,
+  "data": {
+    "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "encryptedPassword": "<encrypted string>"
+  }
+}
+```
+
+| Field               | Type   | Description                                           |
+| ------------------- | ------ | ----------------------------------------------------- |
+| `uuid`              | string | Assigned UUID — save this, it cannot be recovered     |
+| `encryptedPassword` | string | Server-encrypted password for use in the manifest URL |
+
+### Example
+
+```bash
+curl -X POST "https://your-instance.example.com/api/v1/user" \
+  -H "Content-Type: application/json" \
+  -d '{"config": { }, "password": "mypassword"}'
+```
+
+---
+
+## Update User
+
+`PUT /api/v1/user`
+
+Replaces the stored configuration for an existing user. The request must include the full updated `config` object — partial updates are not supported.
+
+### Request Body
+
+```json
+{
+  "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "password": "mypassword",
+  "config": { }
+}
+```
+
+| Field      | Type   | Required | Description                           |
+| ---------- | ------ | -------- | ------------------------------------- |
+| `uuid`     | string | ✅       | UUID (or alias) of the user to update |
+| `password` | string | ✅       | Current password                      |
+| `config`   | object | ✅       | Full replacement configuration object |
+
+### Response `200`
+
+```json
+{
+  "success": true,
+  "detail": "User updated successfully",
+  "error": null,
+  "data": {
+    "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "userData": { }
+  }
+}
+```
+
+### Example
+
+```bash
+curl -X PUT "https://your-instance.example.com/api/v1/user" \
+  -H "Content-Type: application/json" \
+  -d '{"uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "password": "mypassword", "config": { }}'
+```
+
+---
+
+## Delete User
+
+`DELETE /api/v1/user`
+
+Permanently deletes a user and their configuration. This action is irreversible.
+
+### Request Body
+
+```json
+{
+  "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "password": "mypassword"
+}
+```
+
+| Field      | Type   | Required | Description                           |
+| ---------- | ------ | -------- | ------------------------------------- |
+| `uuid`     | string | ✅       | UUID (or alias) of the user to delete |
+| `password` | string | ✅       | Current password                      |
+
+### Response `200`
+
+```json
+{
+  "success": true,
+  "detail": "User deleted successfully",
+  "error": null,
+  "data": null
+}
+```
+
+### Example
+
+```bash
+curl -X DELETE "https://your-instance.example.com/api/v1/user" \
+  -H "Content-Type: application/json" \
+  -d '{"uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "password": "mypassword"}'
+```

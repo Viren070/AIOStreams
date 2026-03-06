@@ -1,6 +1,7 @@
 import { Headers } from 'undici';
 import { Env, Cache, makeRequest, ParsedId, IdType } from '../utils/index.js';
-import { Metadata } from './utils.js';
+import { deduplicateTitles, Metadata, MetadataTitle } from './utils.js';
+import { iso31661ToIso6391 } from '../formatters/utils.js';
 import { z } from 'zod';
 
 export type TMDBIdType = 'imdb_id' | 'tmdb_id' | 'tvdb_id';
@@ -62,6 +63,7 @@ const MovieAlternativeTitlesSchema = z.object({
   titles: z.array(
     z.object({
       title: z.string(),
+      iso_3166_1: z.string(),
     })
   ),
 });
@@ -70,6 +72,7 @@ const TVAlternativeTitlesSchema = z.object({
   results: z.array(
     z.object({
       title: z.string(),
+      iso_3166_1: z.string(),
     })
   ),
 });
@@ -128,6 +131,7 @@ const TVEpisodeDetailsSchema = z.object({
   overview: z.string().optional(),
   season_number: z.number(),
   still_path: z.string().nullable().optional(),
+  runtime: z.number().nullable().optional(),
 });
 
 const IdTypeMap: Partial<Record<IdType, TMDBIdType>> = {
@@ -225,7 +229,7 @@ export class TMDBMetadata {
   private async fetchAlternativeTitles(
     url: URL,
     mediaType: string
-  ): Promise<string[]> {
+  ): Promise<MetadataTitle[]> {
     const response = await makeRequest(url.toString(), {
       timeout: 5000,
       headers: this.getHeaders(),
@@ -241,17 +245,27 @@ export class TMDBMetadata {
 
     if (mediaType === 'movie') {
       const data = MovieAlternativeTitlesSchema.parse(json);
-      return data.titles.map((title) => title.title);
+      return data.titles
+        .filter((t) => t.title)
+        .map((title) => ({
+          title: title.title,
+          language: iso31661ToIso6391(title.iso_3166_1) || undefined,
+        }));
     } else {
       const data = TVAlternativeTitlesSchema.parse(json);
-      return data.results.map((title) => title.title);
+      return data.results
+        .filter((t) => t.title)
+        .map((title) => ({
+          title: title.title,
+          language: iso31661ToIso6391(title.iso_3166_1) || undefined,
+        }));
     }
   }
 
   private async fetchTranslatedTitles(
     url: URL,
     mediaType: string
-  ): Promise<string[]> {
+  ): Promise<MetadataTitle[]> {
     const response = await makeRequest(url.toString(), {
       timeout: 5000,
       headers: this.getHeaders(),
@@ -264,8 +278,15 @@ export class TMDBMetadata {
     const json = await response.json();
     const data = TranslationsSchema.parse(json);
     return data.translations
-      .map((translation) => translation.data.title || translation.data.name)
-      .filter((s): s is string => Boolean(s));
+      .map((translation) => {
+        const title = translation.data.title || translation.data.name;
+        if (!title) return null;
+        return {
+          title,
+          language: translation.iso_639_1 || undefined,
+        } as MetadataTitle;
+      })
+      .filter((t): t is MetadataTitle => t !== null);
   }
 
   public async getMetadata(parsedId: ParsedId): Promise<Metadata> {
@@ -282,6 +303,16 @@ export class TMDBMetadata {
     const cacheKey = `${tmdbId}:${parsedId.mediaType}`;
     const cachedMetadata = await TMDBMetadata.metadataCache.get(cacheKey);
     if (cachedMetadata) {
+      if (
+        cachedMetadata.titles &&
+        Array.isArray(cachedMetadata.titles) &&
+        cachedMetadata.titles.every((t) => typeof t === 'string')
+      ) {
+        cachedMetadata.titles = cachedMetadata.titles.map((title) => ({
+          title: title,
+          language: undefined,
+        }));
+      }
       return { ...cachedMetadata, tmdbId: Number(tmdbId) };
     }
 
@@ -312,33 +343,50 @@ export class TMDBMetadata {
     let seasons:
       | Array<{ season_number: number; episode_count: number }>
       | undefined;
-    let allTitles: string[] = [];
+    let allTitles: MetadataTitle[] = [];
     let originalLanguage: string | undefined;
     let runtime: number | undefined;
     let genres: string[] = [];
 
     if (parsedId.mediaType === 'movie') {
       const movieData = MovieDetailsSchema.parse(detailsJson);
+      if (movieData.original_title) {
+        allTitles.push({
+          title: movieData.original_title,
+          language: movieData.original_language,
+        });
+      } else {
+        allTitles.push({
+          title: movieData.title,
+          language: 'en',
+        });
+      }
       primaryTitle =
         movieData.original_language !== 'en'
           ? (movieData.original_title ?? movieData.title)
           : movieData.title;
-      if (movieData.original_title) {
-        allTitles.push(movieData.original_title);
-      }
+
       originalLanguage = movieData.original_language;
       releaseDate = movieData.release_date;
       runtime = movieData.runtime || undefined;
       genres = movieData.genres?.map((g) => g.name) ?? [];
     } else {
       const tvData = TVDetailsSchema.parse(detailsJson);
+      if (tvData.original_title) {
+        allTitles.push({
+          title: tvData.original_title,
+          language: tvData.original_language,
+        });
+      } else {
+        allTitles.push({
+          title: tvData.name,
+          language: 'en',
+        });
+      }
       primaryTitle =
         tvData.original_language !== 'en'
           ? (tvData.original_title ?? tvData.name)
           : tvData.name;
-      if (tvData.original_title) {
-        allTitles.push(tvData.original_title);
-      }
       originalLanguage = tvData.original_language;
       releaseDate = tvData.first_air_date ?? undefined;
       yearEnd = tvData.last_air_date
@@ -354,8 +402,6 @@ export class TMDBMetadata {
       }
       genres = tvData.genres?.map((g) => g.name) ?? [];
     }
-
-    allTitles.push(primaryTitle);
 
     const year = this.parseReleaseDate(releaseDate);
 
@@ -400,7 +446,7 @@ export class TMDBMetadata {
       );
     }
 
-    const uniqueTitles = [...new Set(allTitles)];
+    const uniqueTitles = deduplicateTitles(allTitles);
     const metadata: Metadata = {
       title: primaryTitle,
       titles: uniqueTitles,
@@ -440,11 +486,11 @@ export class TMDBMetadata {
     return data.results.flatMap((result) => result.release_dates);
   }
 
-  public async getEpisodeAirDate(
+  public async getEpisodeDetails(
     tmdbId: number,
     seasonNumber: number,
     episodeNumber: number
-  ): Promise<string | undefined> {
+  ): Promise<{ airDate?: string; runtime?: number } | undefined> {
     const url = new URL(
       API_BASE_URL +
         `/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}`
@@ -461,7 +507,10 @@ export class TMDBMetadata {
     }
     const json = await response.json();
     const episodeData = TVEpisodeDetailsSchema.parse(json);
-    return episodeData.air_date ?? undefined;
+    return {
+      airDate: episodeData.air_date ?? undefined,
+      runtime: episodeData.runtime ?? undefined,
+    };
   }
 
   public async getNextEpisodeAirDate(
@@ -497,25 +546,9 @@ export class TMDBMetadata {
       nextEpisode = 1;
     }
 
-    try {
-      const url = new URL(
-        API_BASE_URL +
-          `/tv/${tmdbId}/season/${nextSeason}/episode/${nextEpisode}`
-      );
-      this.addSearchParams(url);
-      const response = await makeRequest(url.toString(), {
-        timeout: 5000,
-        headers: this.getHeaders(),
-      });
-      if (!response.ok) {
-        return undefined;
-      }
-      const json = await response.json();
-      const episodeData = TVEpisodeDetailsSchema.parse(json);
-      return episodeData.air_date ?? undefined;
-    } catch (error) {
-      return undefined;
-    }
+    return this.getEpisodeDetails(tmdbId, nextSeason, nextEpisode).then(
+      (details) => details?.airDate
+    );
   }
 
   public async validateAuthorisation() {

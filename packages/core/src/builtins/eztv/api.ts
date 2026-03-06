@@ -54,7 +54,7 @@ const EztvGetTorrentsResponseSchema = z
     torrents_count: z.number(),
     limit: z.number(),
     page: z.number(),
-    torrents: z.array(EztvTorrentSchema),
+    torrents: z.array(EztvTorrentSchema).default([]),
   })
   .transform((data) => ({
     imdbId: data.imdb_id,

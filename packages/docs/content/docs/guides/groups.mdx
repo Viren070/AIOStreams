@@ -1,0 +1,104 @@
+---
+title: Groups
+description: Control when different sets of addons are queried using conditional group logic.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+The **Grouping** feature lets you control _when_ different sets of your addons are asked for streams. This is useful for making AIOStreams faster by only querying fallback addons when your primary sources don't find enough results.
+
+**Why use groups?**
+
+- Make your fastest or most reliable addons run first.
+- Only query slower or backup addons when the primary ones don't deliver.
+- Avoid waiting for all addons every time when most results come from one or two.
+
+---
+
+## How It Works
+
+<Steps>
+  <Step>
+    **Parallel fetch start** — AIOStreams begins fetching from **all groups**
+    simultaneously.
+  </Step>
+  <Step>
+    **Evaluate as results arrive** — as soon as Group 1 responds, AIOStreams
+    evaluates Group 2's condition: 
+      - If the condition is `false`, Group 2 (and all subsequent groups) are skipped immediately. 
+      - If `true`, Group 2's results are included and Group 3's condition is evaluated next.
+  </Step>
+  <Step>
+    **Early exit** — the moment a group's condition is `false`, all pending
+    results beyond that point are discarded.
+  </Step>
+</Steps>
+
+**Example:** AIOStreams fires off fetches for Groups 1, 2, and 3 concurrently.
+
+- Group 1 returns 3 streams → check Group 2's condition.
+- If you set Group 2 to run only when Group 1 found fewer than 5 streams, and Group 1 returned 3: the condition is `true` → Group 2 runs.
+- If Group 1 returned 6: the condition is `false` → Groups 2 and 3 are skipped.
+
+---
+
+## Building Group Conditions
+
+Group conditions are written using the [Stream Expression Language (SEL)](/reference/stream-expressions). The condition must evaluate to `true` or `false`.
+
+### Available constants
+
+| Constant                 | Description                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `previousStreams`        | List of streams found by the last group that ran                                      |
+| `totalStreams`           | List of all streams found by all groups so far                                        |
+| `queryType`              | What is being searched for (`"movie"`, `"series"`, `"anime.series"`, `"anime.movie"`) |
+| `previousGroupTimeTaken` | How long the last group took (milliseconds)                                           |
+| `totalTimeTaken`         | Total time spent across all groups so far (milliseconds)                              |
+
+The most useful function for group conditions is `count()`, which counts how many streams are in a list:
+
+```
+count(cached(previousStreams)) > 0
+```
+
+---
+
+## Examples
+
+**Run Group 2 if Group 1 found fewer than 3 streams:**
+
+```
+count(previousStreams) < 3
+```
+
+**Run Group 2 if Group 1 found no cached Real-Debrid streams:**
+
+```
+count(cached(service(previousStreams, 'realdebrid'))) == 0
+```
+
+**Run Group 3 for series only when all previous groups together found fewer than 2 1080p streams:**
+
+```
+queryType == "series" and count(resolution(totalStreams, '1080p')) < 2
+```
+
+**Run Group 2 if Group 1 found no 4K streams OR took longer than 5 seconds:**
+
+```
+count(resolution(previousStreams, '2160p')) == 0 or previousGroupTimeTaken > 5000
+```
+
+---
+
+## Tips
+
+- **Always return `true` or `false`:** A condition that evaluates to neither will cause the group (and subsequent groups) to be skipped.
+- **`previousStreams` vs `totalStreams`:** Use `previousStreams` for logic based on the immediately preceding group; use `totalStreams` for cumulative logic across all groups run so far.
+- **Start simple:** Begin with basic `count()` conditions and expand from there.
+- **Errors skip groups:** A malformed condition causes the group to be skipped as if the condition returned `false`.
+
+For the complete list of available functions, see the [SEL reference](/reference/stream-expressions).

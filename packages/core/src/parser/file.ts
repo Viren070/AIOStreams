@@ -2,7 +2,7 @@ import { PARSE_REGEX } from './regex.js';
 import { ParsedFile } from '../db/schemas.js';
 import { Parser, handlers } from '@viren070/parse-torrent-title';
 import { FULL_LANGUAGE_MAPPING } from '../utils/languages.js';
-import { LANGUAGES } from '../utils/constants.js';
+import { LANGUAGES, RESOLUTIONS } from '../utils/constants.js';
 
 function matchPattern(
   filename: string,
@@ -11,6 +11,41 @@ function matchPattern(
   return Object.entries(patterns).find(([_, pattern]) =>
     pattern.test(filename)
   )?.[0];
+}
+
+function normaliseResolution(
+  resolution: string | undefined
+): string | undefined {
+  if (!resolution) {
+    return undefined;
+  }
+
+  const lower = resolution.toLowerCase();
+
+  if (lower === '4k') {
+    return '2160p';
+  }
+
+  // return known resolutions as-is
+  if ((RESOLUTIONS as readonly string[]).includes(lower)) {
+    return lower as (typeof RESOLUTIONS)[number];
+  }
+
+  // round numeric resolutions to the closest known resolutions
+  const pMatch = lower.match(/^(\d+)p$/);
+  if (pMatch) {
+    const num = parseInt(pMatch[1], 10);
+    const numericResolutions = (RESOLUTIONS as readonly string[])
+      .filter((r) => r !== 'Unknown')
+      .map((r) => [r, parseInt(r, 10)] as [string, number]);
+
+    const closest = numericResolutions.reduce((prev, curr) =>
+      Math.abs(curr[1] - num) < Math.abs(prev[1] - num) ? curr : prev
+    );
+    return closest[0];
+  }
+
+  return undefined;
 }
 
 function matchMultiplePatterns(
@@ -83,10 +118,14 @@ class FileParser {
     }
     // prevent the title from being parsed for info
     if (parsed.title && parsed.title.length > 4) {
-      filename = filename.replace(parsed.title, '').trim();
+      const escapedTitle = parsed.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const titleRegex = new RegExp(escapedTitle.replace(/ /g, '[._ ]'), 'i');
+      filename = filename.replace(titleRegex, '').trim();
       filename = filename.replace(/\s+/g, '.').replace(/^\.+|\.+$/g, '');
     }
-    const resolution = matchPattern(filename, PARSE_REGEX.resolutions);
+    const resolution =
+      normaliseResolution(parsed.resolution) ||
+      matchPattern(filename, PARSE_REGEX.resolutions);
     const quality = matchPattern(filename, PARSE_REGEX.qualities);
     const encode = matchPattern(filename, PARSE_REGEX.encodes);
     const audioChannels = matchMultiplePatterns(
@@ -137,8 +176,10 @@ class FileParser {
       releaseGroup,
       title,
       year,
-      edition: parsed.edition,
-      remastered: parsed.remastered ?? false,
+      subbed: parsed.subbed ?? false,
+      dubbed: parsed.dubbed ?? false,
+      editions: parsed.editions,
+      regraded: parsed.regraded ?? false,
       repack: parsed.repack ?? false,
       uncensored: parsed.uncensored ?? false,
       unrated: parsed.unrated ?? false,
@@ -149,6 +190,7 @@ class FileParser {
       seasons: parsed.seasons,
       volumes: parsed.volumes,
       episodes: parsed.episodes,
+      date: parsed.date,
       seasonPack: !!(parsed.seasons?.length && !parsed.episodes?.length),
     };
   }

@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { BuiltinDebridServices } from '../../debrid/utils.js';
-import { CacheAndPlaySchema } from '../../db/schemas.js';
 
 const TorBoxApiErrorResponseSchema = z.object({
   success: z.literal(false),
@@ -79,19 +77,3 @@ export const TorBoxApiUsenetDownloadSchema = z.object({
 });
 
 export const TorBoxApiUsenetDownloadLinkSchema = z.string();
-
-export const TorBoxSearchAddonUserDataSchema = z.object({
-  torBoxApiKey: z.string(),
-  searchUserEngines: z.boolean(),
-  onlyShowUserSearchResults: z.boolean(),
-  tmdbAccessToken: z.string().optional(),
-  sources: z
-    .array(z.enum(['torrent', 'usenet']))
-    .min(1, 'At least one source must be configured'),
-  services: BuiltinDebridServices.min(
-    1,
-    'At least one service must be configured'
-  ),
-  cacheAndPlay: CacheAndPlaySchema.optional(),
-  autoRemoveDownloads: z.boolean().optional(),
-});

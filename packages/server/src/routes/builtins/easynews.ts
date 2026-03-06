@@ -18,9 +18,13 @@ import { createResponse } from '../../utils/responses.js';
 const router: Router = Router();
 const logger = createLogger('server');
 
+interface EasynewsManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EasynewsManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -37,9 +41,15 @@ router.get(
   }
 );
 
+interface EasynewsStreamParams {
+  encodedConfig?: string; // optional
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<EasynewsStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
 
     try {
@@ -63,6 +73,15 @@ router.get(
  * NZB endpoint - fetches NZB from Easynews and serves it
  * This endpoint is needed because Easynews requires a POST request to fetch NZBs
  */
+interface EasynewsNzbParams {
+  encodedAuth: string;
+  encodedParams: string;
+  aiostreamsAuth?: string; // optional
+  filename: string;
+  // match Express.Request<ParamsDictionary> to allow chaining of easynewsNzbRateLimiter middleware
+  [key: string]: string | string[] | undefined;
+}
+
 router.get(
   '/nzb/:encodedAuth/:encodedParams{/:aiostreamsAuth}/:filename.nzb',
   easynewsNzbRateLimiter,
@@ -71,7 +90,8 @@ router.get(
       encodedAuth,
       encodedParams,
       aiostreamsAuth: encodedAiostreamsAuth,
-    } = req.params;
+      filename,
+    } = req.params as EasynewsNzbParams;
 
     try {
       // Decode and validate auth credentials

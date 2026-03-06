@@ -1,0 +1,232 @@
+---
+title: Deployment
+description: How to deploy AIOStreams using Docker, ElfHosted, or from source.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+## Docker
+
+[Docker](https://docs.docker.com/get-docker/) is the recommended way to run AIOStreams. Official images are published to both [ghcr.io](https://github.com/Viren070/AIOStreams/pkgs/container/aiostreams) and [Docker Hub](https://hub.docker.com/r/viren070/aiostreams).
+
+Use the `latest` tag for the latest stable release, or `nightly` for the latest commit build.
+
+<Callout type="info">
+  Only **`BASE_URL`** and **`SECRET_KEY`** are required environment variables.
+  All others are optional. See the full list in [Environment
+  Variables](/configuration/environment-variables).
+</Callout>
+
+Rather than running this on a personal device, consider hosting on a server or VPS.
+You can use a [free Oracle VPS](https://guides.viren070.me/selfhosting/oracle) or find cheap options on [LowEndBox](https://lowendbox.com/).
+
+### Docker Compose (recommended)
+
+<Steps>
+  <Step>
+    Download the compose file and sample env:
+
+    ```bash
+    curl -O https://raw.githubusercontent.com/Viren070/AIOStreams/main/compose.yaml
+    curl -o .env https://raw.githubusercontent.com/Viren070/AIOStreams/main/.env.sample
+    ```
+
+  </Step>
+  <Step>
+    Edit `.env` to set at minimum a `SECRET_KEY` (64-character hex string). See [Environment Variables](/configuration/environment-variables).
+  </Step>
+  <Step>
+    Start the container:
+
+    ```bash
+    docker compose up -d
+    ```
+
+  </Step>
+  <Step>
+    Open `http://localhost:3000/stremio/configure` to complete setup.
+  </Step>
+</Steps>
+
+#### Traefik (HTTPS)
+
+Stremio requires HTTPS for addons hosted outside of `localhost`. Traefik is a convenient reverse proxy that can obtain Let's Encrypt certificates automatically.
+
+**Requirements:**
+
+- A domain or subdomain with a CNAME/A record pointing to your server's public IP
+- Port 443 open on the server
+
+<Callout type="info">
+  Free domains are available from [DuckDNS](https://www.duckdns.org/) and
+  [Afraid.org](https://freedns.afraid.org/).
+</Callout>
+
+Merge the following into your `compose.yaml`, replacing `aiostreams.example.com` and `youremail@example.com`:
+
+```yaml
+services:
+  aiostreams:
+    image: ghcr.io/viren070/aiostreams:latest
+    container_name: aiostreams
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    env_file:
+      - .env
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.aiostreams.rule=Host(`aiostreams.example.com`)'
+      - 'traefik.http.routers.aiostreams.entrypoints=websecure'
+      - 'traefik.http.routers.aiostreams.tls.certresolver=letsencrypt'
+    volumes:
+      - ./data:/app/data
+
+  traefik:
+    image: traefik:v3
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - 443:443
+    command:
+      - '--providers.docker=true'
+      - '--providers.docker.exposedbydefault=false'
+      - '--entryPoints.websecure.address=:443'
+      - '--certificatesresolvers.letsencrypt.acme.tlschallenge=true'
+      - '--certificatesresolvers.letsencrypt.acme.email=youremail@example.com'
+      - '--certificatesresolvers.letsencrypt.acme.storage=/config/acme.json'
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - './traefik:/config'
+```
+
+Then run `docker compose up -d`.
+
+#### Torrentio / strem.fun blocks
+
+Torrentio and other `strem.fun` addons block certain server IP ranges (e.g. Oracle VPS), causing 403 errors. You can work around this with a VPN via [gluetun](https://github.com/qdm12/gluetun):
+
+```bash
+ADDON_PROXY=http://gluetun:8080
+ADDON_PROXY_CONFIG=*:false,*.strem.fun:true
+```
+
+#### Multi-addon Compose
+
+For a full compose template that includes popular self-hosted addons (Jackett, Prowlarr, etc.), see [Viren070/stremio-addons-docker-compose-template](https://github.com/Viren070/stremio-addons-docker-compose-template).
+
+### Docker CLI
+
+```bash
+# GitHub Container Registry
+docker run -p 8080:3000 \
+  -e BASE_URL=http://localhost:8080 \
+  -e SECRET_KEY=Your64CharacterHexKeyGoesHere \
+  -v aiostreams-data:/app/data \
+  ghcr.io/viren070/aiostreams:latest
+
+# Docker Hub
+docker run -p 8080:3000 \
+  -e BASE_URL=http://localhost:8080 \
+  -e SECRET_KEY=Your64CharacterHexKeyGoesHere \
+  -v aiostreams-data:/app/data \
+  viren070/aiostreams:latest
+```
+
+Pass additional environment variables with `-e`:
+
+```bash
+docker run -p 8080:3000 \
+  -e BASE_URL=http://localhost:8080 \
+  -e SECRET_KEY=... \
+  -e LOG_LEVEL=debug \
+  viren070/aiostreams:latest
+```
+
+To build from source instead of using a prebuilt image:
+
+```bash
+git clone https://github.com/Viren070/AIOStreams.git
+cd AIOStreams
+docker build -t aiostreams .
+docker run -p 8080:3000 \
+  -e BASE_URL=http://localhost:8080 \
+  -e SECRET_KEY=Your64CharacterHexKeyGoesHere \
+  aiostreams
+```
+
+---
+
+## ElfHosted (paid, managed)
+
+<Callout type="info">
+  Using the link below supports the project — 33% of your AIOStreams
+  subscription goes to the author.
+</Callout>
+
+AIOStreams is available as a [paid product on ElfHosted](https://store.elfhosted.com/product/aiostreams/elf/viren070/). Private instances have Torrentio enabled, avoid rate-limits, and require no self-hosting knowledge.
+
+---
+
+## Other free platforms
+
+These platforms offer free tiers that can run AIOStreams, but they are **not permanent solutions** — they can be revoked or stop working at any time:
+
+| Platform                               | Notes                                                  |
+| -------------------------------------- | ------------------------------------------------------ |
+| [Hugging Face](https://huggingface.co) | Requires a custom `Dockerfile` setting `ENV PORT=7860` |
+| [Koyeb](https://koyeb.com/)            | Free tier available                                    |
+| [Render](https://render.com)           | Free tier available                                    |
+
+---
+
+## From source
+
+<Callout type="warn">
+  Node.js v22 and pnpm v10.15 were used during development. Earlier versions may
+  not work.
+</Callout>
+
+<Steps>
+  <Step>
+    Clone the repository:
+
+    ```bash
+    git clone https://github.com/Viren070/AIOStreams.git
+    cd AIOStreams
+    ```
+
+  </Step>
+  <Step>
+    Install dependencies:
+
+    ```bash
+    pnpm install
+    ```
+
+  </Step>
+  <Step>
+    Build the project:
+
+    ```bash
+    pnpm run build
+    pnpm run metadata --channel=nightly
+    ```
+
+  </Step>
+  <Step>
+    Start the server:
+
+    ```bash
+    pnpm run start
+    ```
+
+  </Step>
+  <Step>
+    Open `http://localhost:3000/stremio/configure`.
+  </Step>
+</Steps>
+
+Change the `PORT` environment variable to use a different port.
