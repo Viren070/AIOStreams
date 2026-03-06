@@ -703,6 +703,7 @@ function Content() {
         >
           <form onSubmit={handleChangePassword} className="space-y-4">
             <PasswordInput
+              id="change-current-password"
               label="Current Password"
               value={changePasswordData.currentPassword}
               required
@@ -715,6 +716,7 @@ function Content() {
               }
             />
             <PasswordInput
+              id="change-new-password"
               label="New Password"
               value={changePasswordData.newPassword}
               required
@@ -727,6 +729,7 @@ function Content() {
               }
             />
             <PasswordInput
+              id="change-confirm-new-password"
               label="Confirm New Password"
               value={changePasswordData.confirmNewPassword}
               required
