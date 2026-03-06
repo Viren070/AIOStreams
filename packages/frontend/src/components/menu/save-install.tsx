@@ -687,7 +687,12 @@ function Content() {
 
         <Modal
           open={changePasswordModal.isOpen}
-          onOpenChange={changePasswordModal.toggle}
+          onOpenChange={(open) => {
+            changePasswordModal.toggle();
+            if (!open) {
+              setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+            }
+          }}
           title="Change Password"
           description={
             <Alert

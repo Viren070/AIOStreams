@@ -436,34 +436,52 @@ export class UserRepository {
         );
       }
 
-      const currentConfig = await this.getUser(uuid, currentPassword);
-      
-      const userRows = await db.query('SELECT password_hash FROM users WHERE uuid = ?', [uuid]);
-      if (userRows.length && await this.verifyUserPassword(newPassword, userRows[0].password_hash)) {
-         throw new APIError(
-            constants.ErrorCode.USER_NEW_PASSWORD_TOO_SIMPLE, 
-            undefined, 
-            'New password cannot be the same as the current password'
-         );
-      }
-
-      const { encryptedConfig, salt: newConfigSalt } = await this.encryptConfig(
-        currentConfig!,
-        newPassword
-      );
-
-      const newPasswordHash = await getTextHash(newPassword);
-
-      const { success, data: newEncryptedPasswordToken } = encryptString(newPassword);
-      if (!success) {
-        throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
-      }
-
       let tx;
       let committed = false;
       try {
         tx = await db.begin();
-        
+
+        const userResult = await tx.execute(
+          'SELECT config, config_salt, password_hash FROM users WHERE uuid = ?',
+          [uuid]
+        );
+
+        if (!userResult.rows.length) {
+          throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+        }
+
+        const userRow = userResult.rows[0];
+
+        if (!(await this.verifyUserPassword(currentPassword, userRow.password_hash))) {
+          throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+        }
+
+        if (await this.verifyUserPassword(newPassword, userRow.password_hash)) {
+          throw new APIError(
+            constants.ErrorCode.USER_NEW_PASSWORD_TOO_SIMPLE,
+            undefined,
+            'New password cannot be the same as the current password'
+          );
+        }
+
+        const currentConfig = await this.decryptConfig(
+          userRow.config,
+          currentPassword,
+          userRow.config_salt
+        );
+
+        const { encryptedConfig, salt: newConfigSalt } = await this.encryptConfig(
+          currentConfig,
+          newPassword
+        );
+
+        const newPasswordHash = await getTextHash(newPassword);
+
+        const { success, data: newEncryptedPasswordToken } = encryptString(newPassword);
+        if (!success) {
+          throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
+        }
+
         await tx.execute(
           'UPDATE users SET password_hash = ?, config = ?, config_salt = ?, updated_at = CURRENT_TIMESTAMP WHERE uuid = ?',
           [newPasswordHash, encryptedConfig, newConfigSalt, uuid]
