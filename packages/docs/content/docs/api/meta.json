@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "search",
+    "user",
     "anime"
   ]
 }

@@ -1,0 +1,173 @@
+---
+title: Troubleshooting
+description: Step-by-step fixes for common AIOStreams issues.
+---
+
+## Results & Filter Issues
+
+<Accordions>
+  <Accordion title="Results appear in standalone addons but not in AIOStreams">
+    This is almost always a filter configuration issue. To diagnose:
+
+    {/* 1. Enable **Advanced Mode** in the **About** menu.
+    2. Go to **Miscellaneous → Statistics**.
+    3. Perform a search — the Statistics page will show exactly which filter removed each stream and why. */}
+
+    <Steps>
+      <Step>
+        Enable **Advanced Mode** in the **About** menu.
+      </Step>
+      <Step>
+        Go to **Miscellaneous → Display → Statistic Streams**.
+      </Step>
+      <Step>
+        Make sure it is enabled, and that `filter` is selected in the **Statistics to Show** dropdown.
+      </Step>
+      <Step>
+        Repeat a search — There will be a few statistic streams at the top / bottom showing you what results were removed by which filters. This will help you identify any filters that are too restrictive or misconfigured.
+      </Step>
+    </Steps>
+
+    Common culprits:
+    - A **Language** filter set to a language most results don't specify (e.g. English results often don't have a language tag, so setting English as required can exclude them).
+    - A **Stream Type** filter set to remove certain types (e.g. P2P, HTTP, Live).
+
+    If a public instance like ElfHosted is used, P2P, HTTP, and Live stream types are **forcefully disabled** by the host — this is not configurable.
+
+  </Accordion>
+
+  <Accordion title="AIOStreams is returning results for the wrong season, episode, or movie">
+    Enable the **Matching** filters to automatically remove mismatched streams:
+
+    <Steps>
+      <Step>Enable **Advanced Mode** in the **About** menu.</Step>
+      <Step>
+        Go to **Filters → Matching**.
+      </Step>
+      <Step>
+        Enable **Title Matching** and provide your **TMDB API Key** in
+        **Services** (free — see [Setup Guide](/configuration/setup)).
+      </Step>
+      <Step>
+        Enable **Season/Episode Matching** for series content.
+      </Step>
+      <Step>Optionally enable **Year Matching** to filter out remakes/reboots.</Step>
+    </Steps>
+
+  </Accordion>
+
+  <Accordion title="Results are very slow to appear">
+    AIOStreams waits for all configured addons to respond before returning results. If one addon is slow, everything is delayed.
+
+    **Fixes:**
+    - Lower each addon's **Timeout** to the maximum you're willing to wait (e.g. 5 000 ms).
+    - Remove addons you rarely need.
+    - Consider using **Groups** to prioritise fast addons — see the [Groups guide](/guides/groups).
+
+  </Accordion>
+</Accordions>
+
+---
+
+## Self-Hosting Issues
+
+<Accordions>
+  <Accordion title="Stremio shows 'Failed to fetch' or refuses to connect">
+    **Cause:** Stremio requires all addon URLs to be served over **HTTPS**. HTTP is not accepted.
+
+    <Steps>
+      <Step>
+        Set up a reverse proxy in front of AIOStreams. Traefik and Caddy can
+        automatically obtain TLS certificates via Let's Encrypt.
+      </Step>
+      <Step>
+        See the [Deployment guide](/getting-started/deployment) for a
+        ready-to-use Docker Compose + Traefik example.
+      </Step>
+      <Step>
+        Verify the certificate is valid by opening{' '}
+        `https://your-domain/stremio/manifest.json` in a browser. You should see
+        a JSON response.
+      </Step>
+      <Step>Reinstall the addon in Stremio using the HTTPS URL.</Step>
+    </Steps>
+
+    <Callout type="info">
+      If you're testing locally, Stremio Web (app.strem.io) accepts HTTP
+      `localhost` URLs but the desktop app and mobile apps require HTTPS for
+      remote URLs.
+    </Callout>
+
+  </Accordion>
+
+  <Accordion title="Configuration disappears after updating or recreating the container">
+    **Cause:** No persistent volume is mounted for AIOStreams' data directory, so the SQLite database is lost when the container is recreated.
+
+    <Steps>
+      <Step>
+        Stop your containers: `docker compose down`
+      </Step>
+      <Step>
+        Add a volume mapping to your `compose.yaml` under the AIOStreams service:
+
+        ```yaml
+        volumes:
+          - ./data:/app/data
+        ```
+      </Step>
+      <Step>
+        Start containers again: `docker compose up -d`
+      </Step>
+    </Steps>
+
+    See the [Deployment guide](/getting-started/deployment) for a complete, production-ready `compose.yaml` example.
+
+  </Accordion>
+
+  <Accordion title="TMDB API calls fail on my VPS (India / Oracle Cloud)">
+    **Cause:** `api.themoviedb.org` is blocked in India. This affects Oracle Cloud VPS instances in Indian regions.
+
+    **Fix:** Route TMDB calls through WARP (or another proxy):
+
+    1. Ensure WARP is running on your VPS (you may already have it for Torrentio).
+    2. Add `api.themoviedb.org:true` to the proxy list in your AIOStreams `.env`.
+    3. If you're running StremThru, add the same entry to the StremThru tunnel configuration in its `.env`.
+
+  </Accordion>
+
+  <Accordion title="'Forbidden URL' error when syncing Stream Expressions">
+    **Cause:** AIOStreams restricts which external URLs can be used for Stream Expression sync by default.
+
+    - **On a public instance:** Ask the host to add your URL to `WHITELISTED_SEL_URLS`.
+    - **Self-hosting:** Add `SEL_SYNC_ACCESS=all` to your `.env` to allow any URL.
+
+  </Accordion>
+
+  <Accordion title="'Forbidden regex' error in filter configuration">
+    **Cause:** AIOStreams restricts arbitrary regex patterns in filters by default.
+
+    - **On a public instance:** Ask the host to add your UUID to `TRUSTED_UUIDS`, or to whitelist your import URL via `WHITELISTED_REGEX_PATTERNS_URLS`.
+    - **Self-hosting:** Add `REGEX_FILTER_ACCESS=all` to your `.env`.
+
+  </Accordion>
+
+  <Accordion title="The AIOStreams container starts but the configure page is blank or errors on load">
+    Check the container logs first:
+
+    ```sh
+    docker compose logs -f aiostreams
+    ```
+
+    Common causes:
+    - **Port conflict** — Another service is using the same port. Change the host port in `compose.yaml`.
+    - **Missing environment variable** — Some features require specific env vars (e.g. `PORT`, `BASE_URL`). See [Environment Variables](/configuration/environment-variables).
+    - **`BASE_URL` mismatch** — `BASE_URL` must match the public URL your browser uses to reach AIOStreams (including the `https://` prefix and no trailing slash).
+
+  </Accordion>
+</Accordions>
+
+---
+
+## Still stuck?
+
+Join the [Discord server](https://discord.viren070.me) and ask in `#support`. Include your container logs and a description of what you've already tried.

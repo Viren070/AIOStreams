@@ -1,0 +1,195 @@
+---
+title: FAQ
+description: Answers to the most commonly asked questions about AIOStreams.
+---
+
+## General
+
+<Accordions>
+  <Accordion title="Why is AIOStreams slower than installing addons individually?">
+    AIOStreams aggregates results from **all** your configured addons before returning them. By default it waits for every addon to respond (or time out) before showing results — if even one addon is slow, the whole response is delayed.
+
+    **Fix:** Lower each addon's timeout to the maximum you're willing to wait. 5 000 ms is a sensible default for most setups. You can adjust this per-addon in the Marketplace configuration popup.
+
+    AIOStreams also offers two alternative fetching strategies:
+
+    - **Dynamic mode** — Returns results as soon as a condition is met (e.g. "5 results received" or "2 seconds elapsed"). This can miss results from slower addons, so use it carefully.
+    - **Groups** — Splits addons into prioritised groups with independent timeouts. See the [Groups guide](/guides/groups).
+
+  </Accordion>
+
+  <Accordion title="Why are results from my standalone addons not showing inside AIOStreams?">
+    If a result appears when an addon is installed directly in Stremio but not inside AIOStreams, it is almost always a **configuration issue**, not a bug.
+
+    AIOStreams is a wrapper — it fetches from the addons _you_ configure and applies _your_ filters. Common causes:
+
+    1. **Filters are removing the result** — Enable **Advanced Mode** in the **About** menu, go to **Miscellaneous → Display → Statistic Streams**, enable it with `filter` selected in the **Statistics to Show** dropdown, then repeat your search. Statistic streams will appear showing which filters removed which results.
+    2. **The addon is not installed or is disabled** — Check the Installed tab in the Addons menu.
+    3. **Stream type is excluded** — Some public instances (e.g. ElfHosted) forcefully disable P2P, HTTP, and Live stream types.
+
+  </Accordion>
+
+  <Accordion title="Why didn't AIOStreams give me more results than standalone addons?">
+    AIOStreams is a wrapper — it pulls from the same addons you'd otherwise install directly. It won't produce _more_ results than those addons would give on their own.
+
+    What it _does_ do is combine all results into a single, consistently sorted, deduplicated list with your filters and formatting applied.
+
+    The exception is AIOStreams' **built-in addons** (Newznab, SeaDex, StremThru Torz, AnimeTosho, TorrentGalaxy, etc.) which are exclusive to AIOStreams and can unlock results you wouldn't otherwise have.
+
+  </Accordion>
+
+  <Accordion title="Why is AIOStreams giving me wrong results (wrong season, episode, or movie)?">
+    AIOStreams doesn't produce incorrect results — it returns whatever the configured addons send back. The same incorrect results would appear if those addons were installed standalone.
+
+    To filter out mismatches, enable the **Matching** filters:
+
+    1. Switch to **Advanced Mode** (toggle in the **About** menu).
+    2. Go to **Filters → Matching**.
+    3. Enable **Title Matching**, **Season/Episode Matching**, and optionally **Year Matching**.
+    4. Provide your **TMDB API Key** in **Services** (free — see the [Setup Guide](/configuration/setup)).
+
+  </Accordion>
+
+  <Accordion title="Is AIOStreams too complicated to use?">
+    There are many options, but you don't have to configure everything yourself. The recommended approach is to import a community template (see the [Setup Guide](/configuration/setup)) which handles most of the configuration for you.
+
+    Most users configure AIOStreams once and rarely touch it afterwards. As long as you understand what each option does and don't click things at random, you're unlikely to run into issues.
+
+    Resources:
+    - [Setup Guide](/configuration/setup) — Template-based step-by-step walkthrough
+    - [Configure Options](/configuration/options) — Full reference for every option
+    - [Discord](https://discord.viren070.me) — Community help in `#support`
+
+  </Accordion>
+
+  <Accordion title="What's the difference between the official TorBox addon and the built-in TorBox Search?">
+    **TorBox Search** is a built-in addon developed specifically for AIOStreams. The official **TorBox** addon is developed by TorBox themselves. Both use the same TorBox Search API, but TorBox Search offers extra capabilities:
+
+    - **Multi-debrid support** — Works with all major debrid services simultaneously (still requires a TorBox API key to access the Search API).
+    - **Pro-only controls** — TorBox Pro users can choose to search Torrents, Usenet, or both; toggle BYOI (Bring Your Own Indexer); and split them into separate addon instances each with independent timeouts.
+
+    **Note:** TorBox Search does not search your TorBox _library_. However, items found via the Search API that are already in your library will be marked as _Library_ streams.
+
+  </Accordion>
+
+  <Accordion title="How does AIOStreams handle marketplace addon updates?">
+    In most cases, automatically — no action required from you.
+
+    - **Server-side changes** apply immediately.
+    - **Breaking configuration changes** (e.g. an addon migrates to a new API) are handled in an AIOStreams update. Your addon will work again once your instance updates.
+    - **New options** appear in the marketplace popup after an AIOStreams update — sensible defaults are usually set automatically.
+
+    In rare cases (like an addon starting to require a new API key) you'll need to enter the new value manually.
+
+  </Accordion>
+
+  <Accordion title="What does 'Use Multiple Instances' mean in addon settings?">
+    When enabled, AIOStreams splits a multi-service addon into separate, independent addon instances — one per service (e.g. `Addon RD`, `Addon PM`, `Addon TB`).
+
+    **Disabled:** One addon handles all services under a single timeout. A slow service can delay or block all results.
+
+    **Enabled:** Each instance runs independently with its own timeout. A slow or failing service won't affect the others, so you get faster results from responsive services.
+
+  </Accordion>
+
+  <Accordion title="What is Service Wrapping?">
+    If an addon supports returning raw/P2P results, AIOStreams can **resolve those results against your configured debrid services internally** — this is called Service Wrapping.
+
+    Benefits:
+    - Fewer API calls to your debrid provider.
+    - You don't need to give your debrid credentials directly to the addon.
+    - AIOStreams handles file selection and playback.
+
+    If an addon only returns debrid-resolved results (e.g. Debridio), enable **Reconfigure Service** instead. Note that this duplicates calls to your debrid provider.
+
+  </Accordion>
+
+  <Accordion title="Should I add AIOMetadata inside AIOStreams?">
+    Generally **not recommended**, especially on public instances.
+
+    AIOMetadata uses a stable UUID-based manifest URL — meaning AIOStreams will cache its responses against the same URL regardless of config changes, so updates in AIOMetadata may not reflect immediately. It also adds an unnecessary extra hop for every metadata/catalog request.
+
+    If you do want it within AIOStreams (e.g. for a local self-hosted setup), add it as a **Custom Addon** and put it at the top of your addon list. After any AIOMetadata config change that alters the manifest, refresh your catalogs and reinstall AIOStreams.
+
+  </Accordion>
+
+  <Accordion title="Am I at risk of a single point of failure by using AIOStreams?">
+    Stable public instances almost never go down, and you can always self-host for full control. You can also install other addons alongside AIOStreams in Stremio — there's no requirement to have only AIOStreams.
+
+    Some users keep a backup AIOStreams instance installed (disabled via StremThru Sidekick) and enable it only if the primary goes down, but most find this unnecessary.
+
+  </Accordion>
+
+  <Accordion title="I'm getting 'Forbidden URL' when trying to sync Stream Expressions">
+    By default, AIOStreams restricts which external URLs can be used for Stream Expression sync.
+
+    - **On a public instance:** Ask the instance host to whitelist your URL via the `WHITELISTED_SEL_URLS` environment variable.
+    - **Self-hosting:** Set `SEL_SYNC_ACCESS=all` in your `.env` to allow all URLs.
+
+  </Accordion>
+
+  <Accordion title="I'm getting a 'Forbidden regex' error">
+    By default, AIOStreams restricts arbitrary regex patterns in filters.
+
+    - **On a public instance:** Ask the host to add you to `TRUSTED_UUIDS`, or to whitelist the import URL via `WHITELISTED_REGEX_PATTERNS_URLS`.
+    - **Self-hosting:** Set `REGEX_FILTER_ACCESS=all` in your `.env`.
+
+  </Accordion>
+
+  <Accordion title="How do I edit my configuration after installation?">
+    In **Stremio**, click the **Configure** button next to the AIOStreams addon — this takes you straight to your configuration page.
+
+    Alternatively, navigate to `https://your-instance/stremio/configure` and click the login icon (bottom-left corner) to sign in with your UUID and password.
+
+    After making changes, go to **Save & Install** and click **Save**.
+
+  </Accordion>
+
+  <Accordion title="When do I need to reinstall AIOStreams after making changes?">
+    Most changes apply immediately after saving without a reinstall. **Only reinstall when a pop-up appears telling you to.**
+
+    The pop-up typically appears when you:
+
+    - Change catalogue names or their order.
+    - Add your **first** addon that provides a new resource type (e.g. your first subtitle addon).
+    - Make any change that alters the resources listed in the manifest.
+
+  </Accordion>
+
+  <Accordion title="How do I back up my configuration?">
+    Go to **Save & Install → Backups** and click **Export** to download a JSON backup.
+
+    To restore or migrate, use **Import** in the same section. Toggle **Exclude Credentials** before sharing the export with others to strip sensitive API keys from the file.
+
+  </Accordion>
+</Accordions>
+
+## Self-Hosting
+
+<Accordions>
+  <Accordion title="Why does Stremio show 'Failed to fetch'?">
+    Stremio (both desktop and web) **requires addon URLs to be served over HTTPS**. If your self-hosted AIOStreams is accessible only over plain HTTP, Stremio will refuse to connect.
+
+    **Fix:** Put a reverse proxy (Traefik, Nginx, Caddy) with a valid TLS certificate in front of AIOStreams. See the [Deployment guide](/getting-started/deployment) for a ready-to-use Traefik example.
+
+  </Accordion>
+
+  <Accordion title="My configuration disappears every time I recreate or update the container">
+    You have not mounted a persistent volume for AIOStreams' data directory. Without it, the SQLite database (which stores all user configurations) is lost when the container is recreated.
+
+    **Fix:** Add a volume mount in your `compose.yaml` as shown in the [Deployment guide](/getting-started/deployment):
+
+    ```yaml
+    volumes:
+      - ./data:/app/data
+    ```
+
+  </Accordion>
+
+  <Accordion title="I'm getting TMDB API errors on my VPS">
+    The TMDB API (`api.themoviedb.org`) is **blocked in India**. This is commonly seen on Oracle VPS instances.
+
+    **Fix:** Route TMDB API calls through WARP by adding `api.themoviedb.org:true` to the proxy list in your `.env`. If you're running StremThru alongside AIOStreams, add it to the StremThru tunnel configuration as well.
+
+  </Accordion>
+</Accordions>

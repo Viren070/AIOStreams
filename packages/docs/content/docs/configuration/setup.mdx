@@ -1,233 +1,415 @@
 ---
-title: Quick Setup Guide
-description: A step-by-step guide to setting up AIOStreams.
+title: Setup Guide
+description: Get AIOStreams up and running from scratch using a community template.
 ---
 
-This guide will not focus too long on explaining everything about AIOStreams, but rather provide a step-by-step guide to setting it up. This setup is intended
-on helping the general user get started with the public instance of AIOStreams quickly and easily. This guide will also only focus on the 'Stream' aspect of AIOStreams, as unless you have a specific need for wrapping multiple addons into one or modifying catalogues,
-its recomemnded to install other types of addons (e.g. subtitles, metadata, etc.) separately.
-
-Although the official public instance of AIOStreams does not allow adding Torrentio, we can get around this by making use of other public AIOStreams instances that do allow it.
-The recommended workflow of combining multiple public AIOStreams instances is using the ElfHosted AIOStreams as your 'main' instance and "wrapping" the other public AIOStreams instance (that has Torrentio) within it.
-
-To start setting up AIOStreams, head over to the [configuration page](https://aiostreams.elfhosted.com/configure).
-
-You will notice that the configuration option is very different to most other addons, this is due to the plethora of options available to you.
-The configuration page is divided into several menus, each with its own set of options. To navigate through the menus, you can either use the arrows in the top right
-or the hamburger menu in the top left.
-
-The first step is to click the big white `Configure` button to move to the `Services` menu.
-
-## Services
-
-Here you will provide credentials for the services you want to use with AIOStreams.
-
-### Debrid Services
-
-If you are not using any debrid services, you can skip this section.
-
-For each debrid service you are using, click the Cogwheel icon at the end of its row to open the configuration menu for that service.
-You will then be able to enter your API key for that service. (Struggling to find your API key? [Click here](/stremio/faq#where-can-i-find-my-debrid-api-key))
-
-If you are using multiple debrid services, make sure to rank them in the order of your preference. AIOStreams uses this during deduplication to prefer results from the higher-ranked services over the lower-ranked ones.
-
-### Other Services
-
-- **RPDB**: This service allows you to have posters with ratings on them. It is not required, and in my opinion, RPDB does not look good so I leave it blank. To use this, you will need to obtain an API key. There is a free tier available. To obtain your API key, see [this question in the FAQ](/stremio/faq#how-do-i-obtain-a-rpdb-api-key)
-- **TMDB**: AIOStreams uses TMDB to obtain metadata for the content you are watching. It uses this for title/year matching and precaching. [Follow these steps to get a TMDB API Key](/stremio/faq#how-to-obtain-a-tmdb-api-key)
-
-You can now move to the next menu, `Addons`.
-
-## Addons
-
-This is where you will configure the addons you want to use with AIOStreams. AIOStreams will not work if you don't install any addons within.
-
-To add an addon, you will want to head to the Marketplace tab. Here you will find a catalogue of over 50 addons that you can install.
-
-There is no need to alter any option when adding an addon from the Marketplace. However, the only option I recommend changing is the timeout.
-The value of timeout controls how long AIOStreams will wait for the addon to respond before giving up. The default value is 10 seconds, meaning if even one of your addons takes up to 10 seconds, AIOStreams has to wait for that to respond before it can show you the results.
-I personally recommend setting timeout to 5 seconds for everything. So simply click `Configure`, adjust the timeout as necessary and then scroll to the bottom and click `Install`.
-
-### Recommended Addons
-
-Here are some addons I recommend adding:
-
-- **Comet**
-- **MediaFusion**
-- **StremThru Torz**
-
-If you need content that you've added to your own debrid service, consider adding:
-
-- **StremThru Store**
-
-If you use TorBox, you should also add:
-
-- **Official TorBox Addon**
-
-### Wrapping Other Public AIOStreams Instances
-
-As mentioned earlier, you can wrap other public AIOStreams instances within ElfHosted AIOStreams to get access to Torrentio. To do this, we will first need to choose another public AIOStreams instance that has Torrentio enabled.
-
-#### Choosing a Public AIOStreams Instance
-
-These are the available public AIOStreams instances that have Torrentio enabled. Choose whichever one you want from the list below and click on the URL to open it in a new tab.
-
-<details>
-<summary>List of available public AIOStreams instances</summary>
-  <div>
-    A list of publicly available AIOStreams instances with at least some level of trustworthiness that allow Torrentio. Use at your own risk.
-
-    <h3> **:rocket: Stable** </h3>
-
-    _Receive updates later but relatively bug-free._
-
-    - **https://aiostreamsfortheweak.nhyira.dev**
-      > Hosted by @nhyyeb , AIOStreams Discord admin.
-    - **https://aiostreams.12312023.xyz/**
-      > Hosted by @a.ves .
-    - **https://aiostreams.stremiofr.com**
-      > Hosted by the StremioFR community.
-
-    <h3> **:crescent_moon: Nightly** </h3>
-
-    _Receive the latest updates early but with a higher (but still low) chance of encountering bugs._
-
-    - **https://aiostreams.viren070.me**
-      > Hosted by @viren_7, the developer.
-    - **https://aiostreams.midnightignite.me**
-      > Hosted by @midnightignite, the TorBox community manager.
-
-  </div>
-</details>
-
-#### Creating the AIOStreams-wrapped Torrentio
-
-Once you have chosen an instance, the only things you want to do in this instance are:
-
-1. Configure any Debrid services you use in the `Services` menu.
-2. Adding Torrentio in the `Addons` menu.
-3. Skip to the last menu - `Save & Install`
-4. Enter in a password to create an account for this instance. Make sure to remember it.
-5. Click `Create`
-6. You should get a success message and you should also see a `Install` button/card.
-7. Click `Install` and this will open a modal with 3 buttons. You want to click the `Copy URL` button.
-
-Now that you have obtained a Manifest URL for an AIOStreams instance that has Torrentio, go back to the previous tab with your ElfHosted AIOStreams.
-
-#### Adding it to ElfHosted AIOStreams
-
-Make sure you are back to your ElfHosted AIOStreams user and not the same one you just created.
-
-1. Head to the `Addons` menu and open the `Marketplace` tab.
-2. Search for `AIOStreams` and you'll see an addon with the description "Wrap AIOStreams within AIOStreams!", click `Configure` on this.
-3. You can leave the name as "AIOStreams" but this means results from Torrentio show up as being from "AIOStreams | Torrentio" in the results. You can set the name to an empty space (" ") if you want it to show up as just "Torrentio" in the results.
-4. Paste the Manifest URL you copied earlier into the `Manifest URL` field.
-5. Click `Install`.
-
-### Catalogues
-
-Heading back to the `Installed` tab on the `Addons` menu, you will see all the addons you have installed. You can click the edit icon (pencil) next to each addon to configure it, the delete icon (trash can) to remove it or toggle the switch to temporarily enable/disable the addon.
-
-Below the list of your addons, you will see the catalogues from the addons you have installed. If you update your addon list, you can click the refresh icon (circular arrows) to update the catalogues.
-
-If you use a debrid service and you've done this correctly, you should see a `... - Other` catalogue. This is from your Torrentio addon. You can disable this catalogue by clicking the switch.
-You can also expand the settings section to see the available modifiers that you can apply to that catalogue - such as hiding it from the home page (and only showing it in the Discover menu) or changing the name of the catalogue.
-
-## Filters
-
-I recommend leaving most of these at defaults for most users except for the following:
-
-- In the `Deduplicator` tab, click the switch to enable it. This will remove duplicate results across all your addons and debrid services. I also recommend setting all options in the `Group Handling` section to `Single Result`.
-- If you prefer results with a specific language, head to the `Language` tab and select your preferred language in the `Preferred Langauges` section.
-- If you prefer HDR/DV results, head to the `Visual Tags` tab and select your preferred visual tags in the `Preferred Visual Tags` section. The order of the tags matters, so if you want HDR to be preferred over DV, make sure to put HDR before DV in the list.
-
-## Sorting
-
-I recommend making the following changes:
-
-1.  While having `Sort Order Type` set to `Global`, select the following from `Sort Criteria`:
-    - `Quality`
-    - `Resolution`
-    - `Language`
-    - `Visual Tag`
-    - `Size`
-    - `Regex Patterns`
-    - `Cached`
-    - `Library`
-    - `Seeder`
-
-2.  Now, order them as follows in the `Order` section using the grab handles: - `Cached` → `Library` → `Resolution` → `Quality` → `Regex Patterns` → `Visual Tag` → `Language` → `Size` → `Seeder`
-
-          <Callout type="info">
-
-    If you are not using any debrid services (i.e. P2P only), then the following order is recommended instead:
-
-          `Resolution` → `Quality` → `Regex Patterns` → `Seeders` → `Visual Tag` → `Language` → `Size`
-
-    </Callout>
-
-## Formatter
-
-This is personal preference, I recommend the `Light Google Drive` formatter. However, you can also join the [Discord server](https://discord.viren070.me) and view the #formats channel and pick one that you like.
-
-To use a custom format from the Discord server, under the `Formatter Selection` section, select `Custom` as your format. This will cause a `Custom Formatter` section to appear.
-The format you chose from the server will have two parts: the `Name` template, and the `Description` template. Copy the 2 separate templates into the respective fields in the `Custom Formatter` section.
-
-The preview section does not affect your configuration, it is merely a preview of how the results will look like with the format you have chosen based on configurable variables.
-
-You can skip the next two menus and go straight to the `Save & Install` menu.
-
-## Save & Install
-
-To finish up your setup, you now need to save your configuration to an account. You will repeat the process that you did earlier when you created the AIOStreams-wrapped Torrentio.
-
-1. In the `Create Configuration` section, enter a password for your configuration. Make sure to remember it.
-2. Click `Create`.
-3. You should get a success message and a UUID will appear - this is eessentially your username, make sure to remember this alongside the password you set earlier.
-4. In the `Install` section, click the `Install` button and this will open a modal with 3 buttons. Now, you can simply install the addon to Stremio by clicking `Stremio`, or if you prefer Stremio Web, you can click `Stremio Web` to install it there. You can also click `Copy URL` to copy the Manifest URL to your clipboard and install it manually.
+This guide walks you through a complete AIOStreams setup — from installing your media client to having a fully configured addon ready to use. It uses a curated community template that handles the bulk of the configuration so you only need to fill in your credentials.
 
 <Callout type="info">
-  Click `Export` in the `Backups` section to download a backup of your
-  configuration. You can use this to restore your configuration later if you
-  need to.
+  **Template Credits**
+
+This guide uses a template built and maintained by
+[Tam-Taro](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting)
+([@tam.taro](https://discord.com) on Discord), who has spent countless hours
+perfecting their Stream Expression Language filtering and sorting. It also
+incorporates [Vidhin's Regex Patterns](https://github.com/Vidhin05/Releases-Regex),
+which bring the Trash Guides release group rankings into AIOStreams.
+
+If you find this useful, consider supporting them:
+
+- Tam-Taro: [ko-fi.com/tamtaro](https://ko-fi.com/tamtaro)
+- Vidhin: [ko-fi.com/vidhin](https://ko-fi.com/vidhin)
+
 </Callout>
 
-Congratulations! You have successfully set up AIOStreams. You can now start using it to watch your favourite content.
-If you have any questions or need help, feel free to join the [Discord server](https://discord.viren070.me) and ask for help in the #support channel.
+<Callout type="info">
+  Just want a reference for every option? See
+  [Configure Options](/configuration/options).
+</Callout>
+
+## Step 1 — Install a Media Client
+
+AIOStreams is primarily designed and maintained for Stremio, but works with other Stremio addon compatible clients as well
+
+<Tabs items={['Stremio', 'Other Clients']}>
+  <Tab value="Stremio">
+    <Steps>
+      <Step>
+        Go to [stremio.com/downloads](https://www.stremio.com/downloads) and
+        download the version for your platform (Stremio supports most platforms, but I would recommend doing the initial setup on a PC or laptop).
+      </Step>
+      <Step>Open Stremio and create a free account, or sign in.</Step>
+      <Step>
+        Go to the **Addons** page (puzzle-piece icon) and uninstall
+        **Watchhub** — it serves ads and is not useful for most setups.
+      </Step>
+    </Steps>
+
+    <Callout type="tip">
+      Stremio is account-based — your addons, watch history, and continue
+      watching all sync automatically. You can do this initial setup on your
+      PC or laptop and then just sign in to the same account on your TV,
+      phone, or any other device and everything will already be there.
+    </Callout>
+
+  </Tab>
+  <Tab value="Other Clients">
+    The following clients also work with AIOStreams — most via Stremio addon
+    compatibility, and Chillio via its own direct protocol. This guide does not
+    cover their individual setup — refer to each client's own documentation /
+    Discord for help getting started.
+
+    | Client                                            | Platforms                              | Discord                                         |
+    | ------------------------------------------------- | -------------------------------------- | ----------------------------------------------- |
+    | [Fusion](https://fusionapp.dev)                   | iPhone, iPad, Mac, Apple TV            | [Join](https://discord.gg/cBWszFBF)             |
+    | [Omni](https://omni.stkc.win/)                    | iPhone, iPad, Apple TV                 | [Join](https://discord.gg/hdPAnA3fck)           |
+    | [RealStreams](https://rstream.app/)               | Android TV, Desktop _(coming soon)_    | [Join](https://discord.gg/pn6UBHwHDq)           |
+    | [Nuvio](https://nuvioapp.space/)                  | Android, Android TV, iOS               | [Join](https://discord.gg/JvAPmadRgX)           |
+    | [Chillio](https://chillio.app/)                   | iPhone, iPad, Apple TV                 | —                                               |
+
+
+    <Callout type="info">
+      **Chillio users:** when installing AIOStreams, select **Chill Link
+      Protocol** (not Stremio) in the install modal.
+    </Callout>
+
+  </Tab>
+</Tabs>
+
+---
+
+## Step 2 — Get a Debrid Service (Optional)
+
+A **debrid service** is a paid service that acts as a middle-man between you and torrents. When you play something, the debrid service downloads and streams it to you over HTTPS at up to 1 Gbps — no seeding required, no ISP notices, and no need for a VPN.
+
+**A debrid service is optional, but recommended.** P2P streams work without one — provided there are enough seeders — but in many countries (including Germany and the United States) torrenting without a VPN exposes you to ISP warnings, throttling, or fines. A debrid service eliminates this risk entirely, since you're only ever downloading over HTTPS from the debrid provider's servers. Using one also gives you:
+
+- Instant streaming of cached torrents at high speeds (4K, HDR, Dolby Atmos without buffering)
+- No reliance on seeders for popular content
+- No VPN required
+
+<Callout type="warn">
+  If you choose to use P2P streams **without** a debrid service and without a
+  VPN, be aware that your ISP can see your torrent traffic. In some countries
+  this can result in warning letters, throttling, or fines. Check the rules in
+  your country before proceeding.
+</Callout>
+
+<Accordions>
+  <Accordion title="Choosing and setting up a debrid service">
+    There are three services worth considering. Click each tab to read more and get set up.
+
+    <Tabs items={['TorBox', 'Real Debrid', 'Premiumize']}>
+      <Tab value="TorBox">
+        **Recommended for most users.**
+
+        TorBox is the best value option: affordable, no IP restrictions (use on
+        as many devices as you want) and accurate cache indicators. The main trade-off is a smaller cache than Real
+        Debrid — very popular content is always cached, but obscure titles may
+        not be.
+
+        TorBox also offers a **$1 / 24-hour trial**
+        of the Pro plan, so you can test it before committing.
+
+        **Referral links — get 7 free days per month purchased (first purchase only):**
+
+        Using a referral link gives you **7 free days per month purchased**, on your first
+        purchase only — subsequent purchases get nothing. For example, buying 12 months = 84 free days.
+        Either click the link and/or enter the code manually at the bottom of [torbox.app/subscription](https://torbox.app/subscription).
+        You can use either:
+
+        - [Tam's referral link](https://torbox.app/subscription?referral=f1cdd3f8-aeee-48f1-849b-64fc7e5aeb3c)
+            ```
+            f1cdd3f8-aeee-48f1-849b-64fc7e5aeb3c
+            ```
+        - [Viren's referral link](https://torbox.app/subscription?referral=9ca21adb-dbcb-4fb0-9195-412a5f3519bc)
+            ```
+            9ca21adb-dbcb-4fb0-9195-412a5f3519bc
+            ```
+
+        **Setup:**
+
+        <Steps>
+          <Step>
+            Go to [torbox.app](https://torbox.app/) and click **Get Started
+            For Free Now** to create an account. Verify your email.
+          </Step>
+          <Step>
+            Open the
+            [Subscription page](https://torbox.app/subscription?referral=f1cdd3f8-aeee-48f1-849b-64fc7e5aeb3c)
+            (referral link — gives 7 free days per month on your first purchase)
+            and choose a plan. A yearly subscription offers the best value.
+          </Step>
+          <Step>
+            Go to **Settings → API** and copy your **API Key** — you'll need
+            it during AIOStreams configuration.
+          </Step>
+        </Steps>
+      </Tab>
+
+      <Tab value="Real Debrid">
+        **Most popular choice.**
+
+        Real Debrid has the largest cache of any debrid service, meaning almost
+        anything popular will already be cached and ready to stream instantly.
+        It has a one-IP-at-a-time restriction (so you can only use it in one
+        location at once) and its cache indicators are less accurate since a
+        2024 API change — but for popular content this rarely matters.
+
+        **Setup:**
+
+        <Steps>
+          <Step>
+            Go to [real-debrid.com](https://real-debrid.com/?id=9483829)
+            (referral link — supports the guide at no extra cost) and click
+            **Sign Up**.
+          </Step>
+          <Step>Go to **Premium Offers** and choose a package.</Step>
+          <Step>
+            Go to **[My Account → API](https://real-debrid.com/apitoken)** and copy your **API Key**.
+          </Step>
+        </Steps>
+      </Tab>
+
+      <Tab value="Premiumize">
+        **Most stable and reliable.**
+
+        Premiumize has a large cache (second only to Real Debrid), accurate
+        cache indicators, and allows several IPs simultaneously. It is more
+        expensive than the alternatives, but it is the most consistent
+        experience.
+
+        **Setup:**
+
+        <Steps>
+          <Step>
+            Go to [premiumize.me](https://www.premiumize.me/) and click **Sign
+            Up**.
+          </Step>
+          <Step>Select your payment method and plan.</Step>
+          <Step>
+            Go to **Account → API** and copy your **API Key**.
+          </Step>
+        </Steps>
+      </Tab>
+    </Tabs>
+
+  </Accordion>
+</Accordions>
+
+---
+
+## Step 3 — Obtain API Keys
+
+The template uses two free API keys for title and season/episode matching — these filter out incorrectly matched streams.
+
+### TMDB (The Movie Database)
+
+<Steps>
+  <Step>
+    Go to [themoviedb.org](https://www.themoviedb.org/) and create a free
+    account (or sign in).
+  </Step>
+  <Step>
+    Open **Account Settings → API** and click **Create** to request a key.
+    Choose **Developer** when asked for the application type.
+
+    <Callout type="tip">
+      None of the information on the form needs to be accurate. You can use a
+      temporary email address, a fake name, and a made-up phone number — none
+      of it is verified.
+    </Callout>
+
+  </Step>
+  <Step>
+    Copy your **API Key** from the API settings page.
+  </Step>
+</Steps>
+
+### TVDB (The TV Database)
+
+<Steps>
+  <Step>
+    Go to [thetvdb.com](https://thetvdb.com/) and create a free account (or
+    sign in).
+  </Step>
+  <Step>
+    Navigate to [API Information](https://thetvdb.com/api-information) and
+    generate a new API key.
+  </Step>
+  <Step>Copy the API key.</Step>
+</Steps>
+
+---
+
+## Step 4 — Open the Template
+
+Select a public instance below and click **Open Template**. This takes you directly to that instance's configuration page with the template pre-loaded.
+
+<Callout type="info">
+  Not sure which instance to pick? See
+  [Public Instances](/getting-started/public-instances) for a comparison.
+  **Yeb's** is the recommended starting point for most users. **ElfHosted** is
+  a reliable and reputable option but disables P2P, HTTP, and Live stream
+  types.
+</Callout>
+
+<TemplateOpener templateUrl="https://git.tamtaro.de/complete.json" defaultChannel="nightly">
+  <Callout type="warn">
+    This template requires the following environment variable to be set on your
+    instance so that its SEL sync and regex URLs are whitelisted:
+
+    ```sh
+    TEMPLATE_URLS=["https://git.tamtaro.de/complete.json"]
+    ```
+
+    Optionally, if your instance is protected by `ADDON_PASSWORD` and you want
+    to avoid per-user URL restrictions, you can also set:
+
+    ```sh
+    SEL_SYNC_ACCESS=all
+    REGEX_FILTER_ACCESS=all
+    ```
+
+    See [Environment Variables](/configuration/environment-variables) for
+    details.
+
+  </Callout>
+</TemplateOpener>
+
+---
+
+## Step 5 — Import the Template
+
+After clicking **Open Template** you will be walked through a short import wizard.
+
+<Steps>
+  <Step>
+    **Select a template** — You will see two options: **Tamtaro Complete SEL
+    Setup** and **Tamtaro Partial SEL Setup**. Select **Complete**. The Partial
+    option is intended for users who already have an existing setup they want to
+    retain parts of. Click **Use Selected** to continue.
+  </Step>
+  <Step>
+    **Select services** — Choose the debrid service(s) you have (e.g. Real
+    Debrid, TorBox). If you are not using any debrid service, click **Skip**.
+    Otherwise select your service(s) and click **Next**.
+  </Step>
+  <Step>
+    **Template inputs** — This step lets you customise the template before it
+    is applied. Every option has a description — read through them and adjust
+    anything you want. Nothing here is required and the defaults are sensible
+    for most users. A few options worth noting:
+
+    - **Preferred Language** — Select your preferred stream language(s). These
+      are placed first in the language ranking. You can fine-tune the full
+      order in Filters → Language after import.
+    - **TorBox Tier** _(TorBox users only)_ — Select your TorBox plan:
+      **Essential**, **Standard**, or **Pro**. This applies the correct size
+      limit for uncached downloads. If you are not on TorBox this option will
+      not appear.
+    - **Core Filtering Engine** — The default (**Standard SEL**) is tuned to
+      remove clutter and show a minimal but sufficient set of results across
+      all scenarios. If you prefer more results, switch to **Extended SEL**.
+
+    Once you are happy with the inputs, click **Next**.
+
+  </Step>
+  <Step>
+    **Credential inputs** — Enter the API keys for any debrid services you
+    selected, plus the TMDB and TVDB API keys from Step 3. Click **Load
+    Template** when done.
+  </Step>
+</Steps>
+
+<Callout type="info">
+  Want to understand what every option does after import? See
+  [Configure Options](/configuration/options).
+</Callout>
+
+---
+
+## Step 6 — Save and Install
+
+After the template loads you will land on the **Save & Install** page.
+
+<Steps>
+  <Step>
+    Under **Create Configuration**, enter a password and click **Create**. If
+    successful you will see **Configuration created successfully** and a UUID
+    will be shown. **Save both your UUID and password somewhere safe — there is
+    no way to recover them if lost.**
+  </Step>
+  <Step>
+    An **Install** card will appear. Click the **Install** button. A modal will
+    pop up with the following options:
+
+    - **Stremio** — Opens the Stremio app and installs the addon directly. Use
+      this if Stremio is installed on the device you are currently on.
+    - **Stremio Web** — Installs via the Stremio web player. Only use this if
+      you are already signed in to Stremio Web — otherwise it will install to
+      a guest account and your progress won't sync.
+    - **Manifest URL** — A text box with a copy button. Use this to install
+      manually: open Stremio, go to **Addons**, click **+ Add Addon**, and
+      paste the URL. _(Not available on all platforms.)_
+
+    <Callout type="info">
+      Chillio users: use the **Protocol** selector on the right of the Install
+      card to switch to **Chill Link Protocol** before clicking Install.
+    </Callout>
+
+  </Step>
+  <Step>
+    A Stremio pop-up will ask whether to install the addon. Click **Install**.
+    You are now set up — click on any title in Stremio and results should
+    appear.
+  </Step>
+</Steps>
+
+<Callout type="info">
+  Click **Export** in the **Backups** section to download a JSON copy of your
+  configuration. You can use this to restore or transfer your setup later.
+</Callout>
+
+---
 
 ## Making Changes
 
-If you ever want to make changes to your configuration, simply click `Configure` within Stremio and it will take you back to the configuration page. You will be asked
-for the password you set earlier (the one for the ElfHosted user, not the one for the AIOStreams-wrapped Torrentio). Enter the password and you will be able to make changes to your configuration.
+To edit your configuration after installation:
 
-Once you've made the changes you want, head back to the `Save & Install` menu and click `Save`. This will update your configuration on the server.
-You usually don't need to reinstall AIOStreams after making changes, but if you make changes to catalogues (name, order, etc.), you will need to reinstall AIOStreams to see the changes take effect.
-Other changes that require a reinstall include adding your first addon that provides a different resource (e.g. installing your first subtitle addon within AIOStreams).
+- In **Stremio**, click **Configure** next to the AIOStreams addon.
+- Or navigate to `https://your-instance/stremio/configure` and log in with your UUID and password.
 
-## Additional Enhancements
+Once you've made your changes, go to **Save & Install** and click **Save**.
 
-### Regex Patterns
+<Callout type="info">
+  Most changes apply immediately without reinstalling. Only reinstall if a
+  pop-up appears telling you to.
+</Callout>
 
-Regex patterns are a powerful way to filter and rank results based on specific criteria. You can make use of regex patterns to ensure that trusted release groups are preferred over others.
-The ability to use regex patterns freely is generally not available on public AIOStreams instances. However, many public instances have allowed [Vidhin's Regex Patterns](https://github.com/Vidhin05/Releases-Regex)
-to be used.
+---
 
-These regex patterns are a set of regex patterns that match the names of popular release groups and rank them higher than others. You'll know if your public AIOStreams instance has these patterns enabled if you see a `Regex Patterns` section in the `Filters` menu, with a note
-saying that "Vidhin's Regex patterns are available for everyone to use". You can simply follow the steps in the GitHub repository linked above to add the regex patterns to your AIOStreams instance.
-This is generally either importing:
+## Next Steps
 
-- `https://raw.githubusercontent.com/Vidhin05/Releases-Regex/main/merged-regexes.json` - For Movies and TV Shows
-- `https://raw.githubusercontent.com/Vidhin05/Releases-Regex/main/merged-anime-regexes.json` - For Movies, TV Shows and Anime
-
-into the `Preferred Regex Patterns` section.
-
-Following this guide, your sort crtieria and formatter are already set up to work with the regex patterns, so you don't need to change anything there. You should start seeing terms like `Remux T1`, `Web T1` etc. in your results. These are indicitative of
-the rank of the release group. T stands for Tier. Some releases will be marked as (Bad). These are releases that are from a release group that is known for poor quality releases.
-
-### Stream Expressions
-
-Stream Expressions are a powerful way to filter out results conditionally. It can be used to make sure the best results are always shown and unecessary results are filtered out based on the context.
-Essentially it smartly removes results based on the available results for the title you are searching for. i.e. removing lower resolution results if there are higher resolution results available, or removing results that are not cached if there are cached results available.
-
-For a set of SEL that you can just import into your setup, I would recommend using Tamtaro's SEL. These can be found in the #setups channel of the [AIOStreams Discord server](https://discord.viren070.me).
-You would just have to import the SEL-only json file into the **Excluded Stream Expressions** section. Adjust your sort criteria as described in the post by Tamtaro and you should be good to go.
+<Cards>
+  <Card
+    title="Configure Options"
+    href="/configuration/options"
+    description="A full reference for every option on the configure page."
+  />
+  <Card
+    title="Guides"
+    href="/guides/groups"
+    description="Groups, Usenet, Scored Sorting, and more."
+  />
+  <Card
+    title="FAQ"
+    href="/faq"
+    description="Common questions answered."
+  />
+  <Card
+    title="Troubleshooting"
+    href="/troubleshooting"
+    description="Step-by-step fixes for common issues."
+  />
+</Cards>

@@ -3,6 +3,6 @@
   "pages": [
     "environment-variables",
     "setup",
-    "ui-configuration"
+    "options"
   ]
 }
