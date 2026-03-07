@@ -207,10 +207,6 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   const channel: 'stable' | 'nightly' | 'dev' =
     status?.channel ?? (version.startsWith('v') ? 'stable' : 'nightly');
   const githubUrl = 'https://github.com/Viren070/AIOStreams';
-  const releasesUrl = 'https://github.com/Viren070/AIOStreams/releases';
-  const stremioGuideUrl =
-    'https://docs.aiostreams.viren070.me/configuration/setup';
-  const configGuideUrl = 'https://docs.aiostreams.viren070.me';
   const discordUrl = 'https://discord.viren070.me';
   const donationModal = useDisclosure(false);
   const customizeModal = useDisclosure(false);
@@ -564,19 +560,19 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
                 <QuickLink
-                  href={configGuideUrl}
-                  icon={<BookOpenIcon className="w-7 h-7" />}
-                >
-                  Configuration Guide
-                </QuickLink>
-                <QuickLink
                   href="https://docs.aiostreams.viren070.me"
                   icon={<BookOpenIcon className="w-7 h-7" />}
                 >
                   Docs
                 </QuickLink>
                 <QuickLink
-                  href={stremioGuideUrl}
+                  href="https://docs.aiostreams.viren070.me/configuration/setup"
+                  icon={<BookOpenIcon className="w-7 h-7" />}
+                >
+                  Setup Guide
+                </QuickLink>
+                <QuickLink
+                  href="https://guides.viren070.me/stremio"
                   icon={<InfoIcon className="w-7 h-7" />}
                 >
                   Stremio Guide
