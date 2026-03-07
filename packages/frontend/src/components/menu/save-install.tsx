@@ -6,6 +6,7 @@ import { applyMigrations, useUserData } from '@/context/userData';
 import {
   createUserConfig,
   deleteUserConfig,
+  changePassword,
   CreateUserResponse,
   APIError,
 } from '@/lib/api';
@@ -94,6 +95,7 @@ function Content() {
     setEncryptedPassword,
   } = useUserData();
   const [newPassword, setNewPassword] = React.useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [createLoading, setCreateLoading] = React.useState(false);
   const [passwordRequirements, setPasswordRequirements] = React.useState<
     string[]
@@ -151,8 +153,12 @@ function Content() {
       requirements.push('Password must be at least 6 characters long');
     }
 
+    if (confirmNewPassword.length > 0 && newPassword !== confirmNewPassword) {
+      requirements.push('Passwords do not match');
+    }
+
     setPasswordRequirements(requirements);
-  }, [newPassword, uuid, password]);
+  }, [newPassword, confirmNewPassword, uuid, password]);
 
   const handleCreate = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -332,6 +338,57 @@ function Content() {
     }
   };
 
+  const changePasswordModal = useDisclosure(false);
+  const [changePasswordLoading, setChangePasswordLoading] = React.useState(false);
+  const [changePasswordData, setChangePasswordData] = React.useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: '',
+  });
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uuid) {
+      toast.error('No UUID found');
+      return;
+    }
+    if (changePasswordData.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters long');
+      return;
+    }
+    if (changePasswordData.newPassword !== changePasswordData.confirmNewPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (changePasswordData.newPassword === changePasswordData.currentPassword) {
+      toast.error('New password cannot be the same as current password');
+      return;
+    }
+    setChangePasswordLoading(true);
+    try {
+      const result = await changePassword(
+        uuid,
+        changePasswordData.currentPassword,
+        changePasswordData.newPassword
+      );
+
+      toast.success(
+        'Password changed successfully. Please reinstall AIOStreams.'
+      );
+      setPassword(changePasswordData.newPassword);
+      setEncryptedPassword(result.encryptedPassword);
+      changePasswordModal.close();
+      setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to change password'
+      );
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
+
+
   return (
     <>
       <div className="flex items-center w-full">
@@ -376,10 +433,22 @@ function Content() {
                   required
                   autoComplete="new-password"
                 />
+                <div className="pt-2">
+                  <PasswordInput
+                    label="Confirm Password"
+                    id="confirm-password"
+                    value={confirmNewPassword}
+                    onValueChange={(value) => setConfirmNewPassword(value)}
+                    placeholder="Re-enter your password"
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
                 <p className="text-sm text-[--muted] mt-1">
                   This is the password you will use to access and update your
-                  configuration later. You cannot change this or reset the
-                  password once set, so please choose wisely, and remember it.
+                  configuration later. You can change your password later using
+                  the Change Password option, but please remember your current
+                  password as it is required to make changes.
                 </p>
               </div>
               <Button
@@ -605,15 +674,95 @@ function Content() {
         >
           <div className="flex items-center gap-3">
             {uuid && (
-              <Button intent="alert" rounded onClick={deleteUserModal.open}>
-                Delete User
-              </Button>
+              <>
+                <Button intent="alert" rounded onClick={changePasswordModal.open}>
+                  Change Password
+                </Button>
+                <Button intent="alert" rounded onClick={deleteUserModal.open}>
+                  Delete User
+                </Button>
+              </>
             )}
             <Button intent="alert" rounded onClick={confirmResetProps.open}>
               Reset Configuration
             </Button>
           </div>
         </SettingsCard>
+
+        <Modal
+          open={changePasswordModal.isOpen}
+          onOpenChange={(open) => {
+            if (changePasswordLoading) return;
+            changePasswordModal.toggle();
+            if (!open) {
+              setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+            }
+          }}
+          title="Change Password"
+          description={
+            <Alert
+              intent="warning"
+              description="Changing your password will invalidate ALL existing installations. You will need to re-install AIOStreams after this change."
+            />
+          }
+        >
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <PasswordInput
+              id="change-current-password"
+              label="Current Password"
+              value={changePasswordData.currentPassword}
+              required
+              placeholder="Enter your current password"
+              onValueChange={(value) =>
+                setChangePasswordData((prev) => ({
+                  ...prev,
+                  currentPassword: value,
+                }))
+              }
+            />
+            <PasswordInput
+              id="change-new-password"
+              label="New Password"
+              value={changePasswordData.newPassword}
+              required
+              placeholder="Enter your new password"
+              onValueChange={(value) =>
+                setChangePasswordData((prev) => ({
+                  ...prev,
+                  newPassword: value,
+                }))
+              }
+            />
+            <PasswordInput
+              id="change-confirm-new-password"
+              label="Confirm New Password"
+              value={changePasswordData.confirmNewPassword}
+              required
+              placeholder="Re-enter your new password"
+              onValueChange={(value) =>
+                setChangePasswordData((prev) => ({
+                  ...prev,
+                  confirmNewPassword: value,
+                }))
+              }
+            />
+            <div className="pt-2 flex justify-end gap-3">
+              <Button
+                type="button"
+                intent="gray-outline"
+                onClick={() => {
+                  if (!changePasswordLoading) changePasswordModal.close();
+                }}
+                disabled={changePasswordLoading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" intent="alert" loading={changePasswordLoading}>
+                Change Password
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         <Modal
           open={deleteUserModal.isOpen}

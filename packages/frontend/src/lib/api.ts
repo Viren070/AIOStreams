@@ -279,6 +279,19 @@ export async function deleteUserConfig(uuid: string, password: string) {
 }
 
 /**
+ * Change user password
+ */
+export async function changePassword(
+  uuid: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  return api<{ encryptedPassword: string }>('POST /user/password', {
+    body: { uuid, currentPassword, newPassword },
+  });
+}
+
+/**
  * Resolve synced items (regex patterns and/or stream expressions) from URLs
  */
 export async function resolveSynced(
