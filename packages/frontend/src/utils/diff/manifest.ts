@@ -224,8 +224,9 @@ function buildAnnotations(
         map.set(pathStr, {
           label: '⚑ CATALOG ORDER',
           className: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+          severity: 'warning',
           description:
-            'Catalog ordering has changed. Stremio clients will display catalogs in the new order after reinstall.',
+            'Catalog ordering has changed. Stremio will display them in the old order until you reinstall.',
         });
       } else if (isCatalogAdd) {
         const catalog = diff.newValue as ManifestCatalog | undefined;
@@ -233,7 +234,8 @@ function buildAnnotations(
         map.set(pathStr, {
           label: '⚑ NEW CATALOG',
           className: 'bg-green-500/10 text-green-400 border-green-500/20',
-          description: `New catalog added: ${label}. Reinstall required for it to appear in Stremio.`,
+          severity: 'critical',
+          description: `"${label}" was added. It won't appear in Stremio until you reinstall.`,
         });
       } else if (isCatalogRemove) {
         const catalog = diff.oldValue as ManifestCatalog | undefined;
@@ -241,7 +243,8 @@ function buildAnnotations(
         map.set(pathStr, {
           label: '⚑ CATALOG REMOVED',
           className: 'bg-red-500/10 text-red-400 border-red-500/20',
-          description: `Catalog removed: ${label}. Reinstall required for it to disappear from Stremio.`,
+          severity: 'critical',
+          description: `"${label}" was removed. It will appear empty or broken in Stremio until you reinstall.`,
         });
       } else if (isCatalogFieldChange) {
         // Find parent catalog for context
@@ -261,12 +264,14 @@ function buildAnnotations(
           map.set(pathStr, {
             label: '⚑ EXTRA REQUIRED',
             className: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+            severity: 'warning',
             description: `An extra parameter's "required" status changed in catalog${ctxLabel ? `: ${ctxLabel}` : ''}.`,
           });
         } else {
           map.set(pathStr, {
             label: '⚑ CATALOG CHANGED',
             className: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+            severity: 'warning',
             description: ctxLabel ? `In catalog: ${ctxLabel}` : undefined,
           });
         }
@@ -284,8 +289,9 @@ function buildAnnotations(
         map.set(pathStr, {
           label: '⚑ NEW ID PREFIXES',
           className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+          severity: 'critical',
           description:
-            'New ID prefixes added at top level. This may indicate support for new content sources. Reinstall required.',
+            'New ID prefixes were added to the manifest. Stremio won\'t know that this install supports these new prefixes, so it won\'t query AIOStreams for matching content until you reinstall.',
         });
       }
       continue;
@@ -297,11 +303,24 @@ function buildAnnotations(
       diff.path.some((p) => p === 'idPrefixes')
     ) {
       if (diff.type === 'ADD' || diff.type === 'CHANGE') {
+        const indexMatch = diff.path[1]?.match(/\[(\d+)\]/);
+        const resourceIndex = indexMatch ? parseInt(indexMatch[1], 10) : -1;
+        const resource =
+          resourceIndex >= 0
+            ? ((newManifest.resources ?? [])[resourceIndex] ??
+              (oldManifest.resources ?? [])[resourceIndex])
+            : undefined;
+        const resourceName =
+          typeof resource === 'string'
+            ? resource
+            : typeof resource?.name === 'string'
+              ? resource.name
+              : 'this resource';
         map.set(pathStr, {
           label: '⚑ NEW ID PREFIXES',
           className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-          description:
-            'New ID prefixes added to a resource. Reinstall required.',
+          severity: 'critical',
+          description: `Stremio won't know that this install supports the new ID prefix(es) for the ${resourceName} resource. Until you reinstall, Stremio won't query AIOStreams for ${resourceName} content with these new prefixes.`,
         });
       }
       continue;
@@ -323,12 +342,27 @@ function buildAnnotations(
       map.set(pathStr, {
         label: '⚑ NEW RESOURCE',
         className: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-        description: `New resource added: ${resourceName}. Reinstall required.`,
+        severity: 'critical',
+        description: `${resourceName} support was added. Stremio won't request ${resourceName} content from AIOStreams until you reinstall — e.g. if subtitles were added, they won't appear until then.`,
       });
     }
   }
 
   return map;
+}
+
+/**
+ * Quick check: does the diff contain any critical or warning annotations?
+ * Used by save.tsx to decide whether to suppress the insignificant-change modal.
+ */
+export function hasSevereManifestChanges(
+  oldManifest: Manifest,
+  newManifest: Manifest
+): boolean {
+  const { annotations } = computeManifestDiff(oldManifest, newManifest);
+  return Array.from(annotations.values()).some(
+    (ann) => ann.severity === 'critical' || ann.severity === 'warning'
+  );
 }
 
 /** True if the new value of an idPrefixes diff contains entries not present before */

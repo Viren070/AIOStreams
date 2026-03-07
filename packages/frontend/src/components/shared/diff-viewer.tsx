@@ -19,6 +19,8 @@ export interface DiffAnnotation {
   className?: string;
   /** Optional tooltip / description shown as a small line below the path. */
   description?: string;
+  /** Severity controls sort order and summary emphasis. */
+  severity?: 'critical' | 'warning' | 'info';
 }
 
 /** Pulls the first `text-{color}-{shade}` token out of a badge className string. */
@@ -74,6 +76,29 @@ export function DiffViewer({
     }
   }, [oldValue, newValue]);
 
+  const sortedDiffs = useMemo(() => {
+    if (!annotations || annotations.size === 0) return diffs;
+    const severityOrder: Record<string, number> = {
+      critical: 0,
+      warning: 1,
+      info: 2,
+    };
+    return [...diffs].sort((a, b) => {
+      const keyA = a.path.join('.').replace(/\.\[/g, '[');
+      const keyB = b.path.join('.').replace(/\.\[/g, '[');
+      const annA = annotations.get(keyA);
+      const annB = annotations.get(keyB);
+      if (annA && !annB) return -1;
+      if (!annA && annB) return 1;
+      if (annA && annB) {
+        const sA = severityOrder[annA.severity ?? 'info'] ?? 3;
+        const sB = severityOrder[annB.severity ?? 'info'] ?? 3;
+        return sA - sB;
+      }
+      return 0;
+    });
+  }, [diffs, annotations]);
+
   if (diffs.length === 0) {
     return (
       <div className="text-center p-4 text-[--muted]">No changes detected.</div>
@@ -93,7 +118,7 @@ export function DiffViewer({
           className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar"
         >
           <div className="space-y-3">
-            {diffs.map((diff, idx) => {
+            {sortedDiffs.map((diff, idx) => {
               const pathKey = diff.path.join('.').replace(/\.\[/g, '[');
               const pathLabel = pathFormatter
                 ? pathFormatter(diff.path)

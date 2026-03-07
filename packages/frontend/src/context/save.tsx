@@ -17,9 +17,12 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { AddonPasswordModal } from '@/components/shared/addon-password-modal';
 import { UserDataDiffViewer } from '@/components/shared/userdata-diff-viewer';
-import { ManifestDiffViewer } from '@/components/shared/manifest-diff-viewer';
+import {
+  ManifestDiffViewer,
+  ManifestChangeSummary,
+} from '@/components/shared/manifest-diff-viewer';
+import { hasSevereManifestChanges } from '../utils/diff/manifest';
 import { Switch } from '@/components/ui/switch';
-import { Alert } from '@/components/ui/alert';
 
 interface SaveContextType {
   handleSave: (options?: {
@@ -28,6 +31,13 @@ interface SaveContextType {
   }) => Promise<void>;
   loading: boolean;
 }
+
+const storageKeys = {
+  allManifestChangesDismissed: (uuid: string) =>
+    `aiostreams-manifest-all-dismissed-${uuid}`,
+  insignificantManifestChangesDismissed: (uuid: string) =>
+    `aiostreams-manifest-insignificant-dismissed-${uuid}`,
+};
 
 const SaveContext = React.createContext<SaveContextType | undefined>(undefined);
 
@@ -47,6 +57,12 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   const [manifestChangedModalOpen, setManifestChangedModalOpen] =
     React.useState(false);
   const [dontShowManifestAgain, setDontShowManifestAgain] =
+    React.useState(false);
+  const [dontShowInsignificantAgain, setDontShowInsignificantAgain] =
+    React.useState(false);
+  const [manifestDiffModalOpen, setManifestDiffModalOpen] =
+    React.useState(false);
+  const [manifestHasSignificantChanges, setManifestHasSignificantChanges] =
     React.useState(false);
 
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
@@ -110,7 +126,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     if (!manifestUrl || !uuid) return;
     try {
       const newManifest = await fetchManifest(manifestUrl);
-      const dismissedKey = `aiostreams-manifest-dismissed-${uuid}`;
+      const dismissedKey = storageKeys.allManifestChangesDismissed(uuid);
       const dismissedManifestStr = localStorage.getItem(dismissedKey);
 
       const currentSavedManifest = savedManifestRef.current;
@@ -122,8 +138,25 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       const isDismissed = dismissedManifestStr === 'true';
 
       if (hasChanged && !isDismissed) {
+        const severe = hasSevereManifestChanges(
+          currentSavedManifest,
+          newManifest
+        );
+        const insignificantKey =
+          storageKeys.insignificantManifestChangesDismissed(uuid);
+        const insignificantDismissed =
+          localStorage.getItem(insignificantKey) === 'true';
+
+        if (!severe && insignificantDismissed) {
+          // Silently accept the insignificant change
+          setSavedManifest(newManifest);
+          return;
+        }
+
+        setManifestHasSignificantChanges(severe);
         setPendingNewManifest(newManifest);
         setDontShowManifestAgain(false);
+        setDontShowInsignificantAgain(false);
         setManifestChangedModalOpen(true);
       } else {
         setSavedManifest(newManifest);
@@ -226,10 +259,20 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
   const handleManifestDismiss = () => {
     if (dontShowManifestAgain && uuid) {
-      localStorage.setItem(`aiostreams-manifest-dismissed-${uuid}`, 'true');
+      localStorage.setItem(
+        storageKeys.allManifestChangesDismissed(uuid),
+        'true'
+      );
+    }
+    if (dontShowInsignificantAgain && uuid && !manifestHasSignificantChanges) {
+      localStorage.setItem(
+        storageKeys.insignificantManifestChangesDismissed(uuid),
+        'true'
+      );
     }
     setSavedManifest(pendingNewManifest);
     setManifestChangedModalOpen(false);
+    setManifestDiffModalOpen(false);
     setTimeout(() => {
       setPendingNewManifest(null);
       setPreSaveManifest(null);
@@ -294,20 +337,42 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
           if (!open) handleManifestDismiss();
         }}
         title="Manifest Changed"
-        description="The manifest of your configuration has changed. This will require a reinstall in Stremio (or your client) to take effect."
-        contentClass="max-w-4xl"
+        description="Your addon manifest has changed since your last install."
+        contentClass="max-w-xl"
       >
         <div className="space-y-4">
-          <Alert
-            intent="warning"
-            isClosable={false}
-            description="Please re-install the addon in your client to apply the changes. Your current installation will continue to work, but certain changes will not take effect until you re-install with the new manifest."
-          />
           {preSaveManifest && pendingNewManifest && (
-            <ManifestDiffViewer
+            <ManifestChangeSummary
               oldManifest={preSaveManifest}
               newManifest={pendingNewManifest}
             />
+          )}
+          {preSaveManifest && pendingNewManifest && (
+            <Button
+              intent="primary"
+              className="w-full text-sm"
+              onClick={() => setManifestDiffModalOpen(true)}
+            >
+              See what changed →
+            </Button>
+          )}
+          {!manifestHasSignificantChanges && (
+            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+              <div className="flex-1">
+                <div className="text-sm font-medium text-white">
+                  Don&apos;t show for insignificant changes
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  Skip this notice when there are no significant manifest
+                  changes
+                </div>
+              </div>
+              <Switch
+                id="dont-show-insignificant-again"
+                value={dontShowInsignificantAgain}
+                onValueChange={setDontShowInsignificantAgain}
+              />
+            </div>
           )}
           <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
             <div className="flex-1">
@@ -315,7 +380,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
                 Don&apos;t show this again
               </div>
               <div className="text-xs text-gray-400 mt-1">
-                Skip this notice for future manifest changes
+                Skip this notice for all future manifest changes
               </div>
             </div>
             <Switch
@@ -330,6 +395,21 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={manifestDiffModalOpen}
+        onOpenChange={setManifestDiffModalOpen}
+        title="What Changed"
+        description="Detailed diff of your manifest changes."
+        contentClass="max-w-4xl"
+      >
+        {preSaveManifest && pendingNewManifest && (
+          <ManifestDiffViewer
+            oldManifest={preSaveManifest}
+            newManifest={pendingNewManifest}
+          />
+        )}
       </Modal>
     </SaveContext.Provider>
   );

@@ -32,7 +32,12 @@ const COLS_CLASS: Record<number, string> = {
   5: 'grid-cols-5',
 };
 
-export function MenuTabs({ tabs, activeTab, onTabChange, defaultMobileOpen = '' }: MenuTabsProps) {
+export function MenuTabs({
+  tabs,
+  activeTab,
+  onTabChange,
+  defaultMobileOpen = '',
+}: MenuTabsProps) {
   const n = tabs.length;
   const currentIndex = tabs.findIndex((t) => t.value === activeTab);
   // Mobile accordion tracks its own open state so it can be fully collapsed.
