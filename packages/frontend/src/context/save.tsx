@@ -206,9 +206,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         currentSavedManifest !== null &&
         JSON.stringify(currentSavedManifest) !== JSON.stringify(newManifest);
 
-      const isDismissed =
-        dismissedManifestStr !== null &&
-        dismissedManifestStr === JSON.stringify(newManifest);
+      const isDismissed = dismissedManifestStr === 'true';
 
       if (hasChanged && !isDismissed) {
         setPendingNewManifest(newManifest);
@@ -331,11 +329,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   );
 
   const handleManifestDismiss = () => {
-    if (dontShowManifestAgain && uuid && pendingNewManifest) {
-      localStorage.setItem(
-        `aiostreams-manifest-dismissed-${uuid}`,
-        JSON.stringify(pendingNewManifest)
-      );
+    if (dontShowManifestAgain && uuid) {
+      localStorage.setItem(`aiostreams-manifest-dismissed-${uuid}`, 'true');
     }
     setSavedManifest(pendingNewManifest);
     setPendingNewManifest(null);
