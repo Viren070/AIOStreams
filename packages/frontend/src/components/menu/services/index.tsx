@@ -97,6 +97,7 @@ function Content() {
         ]}
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        defaultMobileOpen="services"
       />
     </>
   );
