@@ -37,6 +37,32 @@ export function MenuTabs({ tabs, activeTab, onTabChange }: MenuTabsProps) {
   // When an item is opened we still sync the shared tab state (URL params etc.).
   const [mobileOpen, setMobileOpen] = React.useState('');
 
+  // Track each desktop panel's height so the wrapper only occupies the active
+  // panel's height (prevents dead scroll-space from the tallest hidden tab).
+  const [panelHeights, setPanelHeights] = React.useState<number[]>(() =>
+    new Array(n).fill(0)
+  );
+  const panelEls = React.useRef<(HTMLDivElement | null)[]>(
+    new Array(n).fill(null)
+  );
+
+  React.useEffect(() => {
+    const observers = panelEls.current.map((el, i) => {
+      if (!el) return null;
+      const ro = new ResizeObserver(() => {
+        setPanelHeights((prev) => {
+          const next = [...prev];
+          next[i] = el.scrollHeight;
+          return next;
+        });
+      });
+      ro.observe(el);
+      return ro;
+    });
+    return () => observers.forEach((ro) => ro?.disconnect());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n]);
+
   const handleMobileChange = (value: string) => {
     setMobileOpen(value);
     if (value) onTabChange(value);
@@ -97,18 +123,28 @@ export function MenuTabs({ tabs, activeTab, onTabChange }: MenuTabsProps) {
             ))}
           </TabsList>
         </Tabs>
-        <div className="overflow-hidden mt-4">
+        <div
+          className="overflow-hidden mt-4"
+          style={{
+            height:
+              panelHeights[currentIndex] > 0
+                ? panelHeights[currentIndex]
+                : undefined,
+            transition: 'height 300ms ease-in-out',
+          }}
+        >
           <div
-            className="flex transition-transform duration-300 ease-in-out will-change-transform"
+            className="flex items-start transition-transform duration-300 ease-in-out will-change-transform"
             style={{
               width: `${n * 100}%`,
               transform: `translateX(calc(-${currentIndex} / ${n} * 100%))`,
             }}
           >
-            {tabs.map((tab) => (
+            {tabs.map((tab, i) => (
               <div
                 key={tab.value}
                 ref={(el) => {
+                  panelEls.current[i] = el;
                   if (el) el.inert = tab.value !== activeTab;
                 }}
                 className="space-y-4 min-w-0"
