@@ -7,7 +7,6 @@ import {
   constants,
   compileRegex,
   formRegexFromKeywords,
-  safeRegexTest,
 } from '../utils/index.js';
 import { LANGUAGES, StreamType } from '../utils/constants.js';
 import {
@@ -1154,7 +1153,7 @@ class StreamFilterer {
 
     // test many regexes against many attributes and return true if at least one regex matches any attribute
     // and false if no regex matches any attribute
-    const testRegexes = async (stream: ParsedStream, patterns: RegExp[]) => {
+    const testRegexes = (stream: ParsedStream, patterns: RegExp[]): boolean => {
       const file = stream.parsedFile;
       const stringsToTest = [
         stream.filename,
@@ -1165,7 +1164,7 @@ class StreamFilterer {
 
       for (const string of stringsToTest) {
         for (const pattern of patterns) {
-          if (await safeRegexTest(pattern, string)) {
+          if (pattern.test(string)) {
             return true;
           }
         }
@@ -2202,22 +2201,22 @@ class StreamFilterer {
       for (const stream of filterableStreams) {
         regexDecisionsMap.set(stream.id, {
           includedByRegex: includedRegexPatterns
-            ? await testRegexes(stream, includedRegexPatterns)
+            ? testRegexes(stream, includedRegexPatterns)
             : false,
           includedByKeywords: includedKeywordsPattern
-            ? await testRegexes(stream, [includedKeywordsPattern])
+            ? testRegexes(stream, [includedKeywordsPattern])
             : false,
           excludedByRegex: excludedRegexPatterns
-            ? await testRegexes(stream, excludedRegexPatterns)
+            ? testRegexes(stream, excludedRegexPatterns)
             : false,
           requiredByRegex: requiredRegexPatterns
-            ? await testRegexes(stream, requiredRegexPatterns)
+            ? testRegexes(stream, requiredRegexPatterns)
             : true,
           excludedByKeywords: excludedKeywordsPattern
-            ? await testRegexes(stream, [excludedKeywordsPattern])
+            ? testRegexes(stream, [excludedKeywordsPattern])
             : false,
           requiredByKeywords: requiredKeywordsPattern
-            ? await testRegexes(stream, [requiredKeywordsPattern])
+            ? testRegexes(stream, [requiredKeywordsPattern])
             : true,
         });
       }
