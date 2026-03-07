@@ -11,12 +11,12 @@ Search for streams across all enabled and configured sources in your AIOStreams 
 
 ## Query Parameters
 
-| Parameter        | Type     | Required | Description                                                                                                    | Example                                          |
-| ---------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `type`           | string   | ✅       | Type of content — usually `movie` or `series`                                                                  | `movie`                                          |
-| `id`             | string   | ✅       | Media ID. Supports IMDb, TMDb, and other upstream identifiers. For series, include season/episode.             | `tt1234567`, `tmdb:2131:1:3`                     |
-| `requiredFields` | string[] | ❌       | Fields from `SearchApiResult` that must be present. Results missing them are dropped. Repeat for multiple.     | `requiredFields=infoHash&requiredFields=seeders` |
-| `format`         | string   | ❌       | Response format. Use `stremio` to return a Stremio-compatible `streams` array instead of the default envelope. | `stremio`                                        |
+| Parameter        | Type     | Required | Description                                                                                                                                   | Example                                          |
+| ---------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `type`           | string   | ✅       | Type of content — usually `movie` or `series`                                                                                                 | `movie`                                          |
+| `id`             | string   | ✅       | Media ID. Supports IMDb, TMDb, and other upstream identifiers. For series, include season/episode.                                            | `tt1234567`, `tmdb:2131:1:3`                     |
+| `requiredFields` | string[] | ❌       | Fields from `SearchApiResult` that must be present. Results missing them are dropped. Repeat for multiple.                                    | `requiredFields=infoHash&requiredFields=seeders` |
+| `format`         | boolean  | ❌       | When `true`, each result is augmented with Stremio-compatible `name` and `description`. Same envelope; coerced from query (e.g. `true`, `1`). | `true`                                           |
 
 ---
 
@@ -97,7 +97,7 @@ curl -u uuid:password "https://your-instance.example.com/api/v1/search?type=movi
 **Series with Stremio-format response:**
 
 ```http
-GET /api/v1/search?type=series&id=tmdb:2131&format=stremio HTTP/1.1
+GET /api/v1/search?type=series&id=tmdb:2131&format=true HTTP/1.1
 x-aiostreams-user-data: eyJ1c2VySWQiOiAiYWJjZCIsICJwYXNzd29yZCI6ICJzZWNyZXQifQ==
 ```
 
@@ -128,9 +128,9 @@ x-aiostreams-user-data: eyJ1c2VySWQiOiAiYWJjZCIsICJwYXNzd29yZCI6ICJzZWNyZXQifQ==
 | `results` | SearchResult[] | Filtered and sorted stream results          |
 | `errors`  | object[]       | Per-source errors (`title` + `description`) |
 
-### `format=stremio`
+### `format=true`
 
-Returns a Stremio-compatible response with a `streams` array instead of the normal envelope.
+When `format` is truthy, each item in `data.results` is augmented with Stremio-compatible `name` and `description`; the response envelope is unchanged.
 
 ---
 

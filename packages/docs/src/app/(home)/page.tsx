@@ -69,7 +69,7 @@ export default function HomePage() {
             icon={FaFileCode}
           />
           <NavCard
-            href="/api"
+            href="/apis"
             title="API"
             description="HTTP API for search and user data operations."
             icon={FaCode}
