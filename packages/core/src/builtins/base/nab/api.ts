@@ -123,7 +123,14 @@ const createTorznabItemSchema = () =>
         .array(AttributeSchema)
         .optional()
         .transform(
-          (arr) => arr?.reduce((acc, attr) => ({ ...acc, ...attr }), {}) ?? {}
+          (arr) => arr?.reduce((acc, attr) => {
+            for (const key in attr) {
+              acc[key] = acc[key] && typeof acc[key] === 'string' && typeof attr[key] === 'string'
+                ? acc[key] + ',' + attr[key]
+                : attr[key];
+            }
+            return acc;
+          }, {}) ?? {}
         ),
     })
     .transform((item) => ({
