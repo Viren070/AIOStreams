@@ -1,5 +1,11 @@
 'use client';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { MergedCatalog, CatalogModification } from '@aiostreams/core';
 import { removeInvalidPresetReferences } from '@/context/userData';
 import { PageWrapper } from '../shared/page-wrapper';
@@ -79,8 +85,9 @@ import { PiStarFill, PiStarBold } from 'react-icons/pi';
 import { IoExtensionPuzzle } from 'react-icons/io5';
 import { NumberInput } from '../ui/number-input';
 import { useDisclosure } from '@/hooks/disclosure';
-import { useMode } from '@/context/mode';
+import { MenuTabs } from '../shared/menu-tabs';
 import { Select } from '../ui/select';
+import { useMode } from '@/context/mode';
 
 export function AddonsMenu() {
   return (
@@ -97,6 +104,86 @@ function Content() {
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
   const [page, setPage] = useState<'installed' | 'marketplace'>('installed');
+  const [installedTab, setInstalledTab] = useState<'addons' | 'catalogs'>(
+    'addons'
+  );
+  const [catalogLoading, setCatalogLoading] = useState(false);
+
+  const fetchCatalogsData = useCallback(
+    async (hideToast = false) => {
+      setCatalogLoading(true);
+      try {
+        const catalogs = await fetchCatalogs(userData);
+        setUserData((prev) => {
+          const existingMods = prev.catalogModifications || [];
+          const existingIds = new Set(
+            existingMods.map((mod) => `${mod.id}-${mod.type}`)
+          );
+          const modifications = existingMods.map((eMod) => {
+            if (eMod.id.startsWith('aiostreams.merged.')) return eMod;
+            const nMod = catalogs.find(
+              (c) => c.id === eMod.id && c.type === eMod.type
+            );
+            if (nMod) {
+              return {
+                ...eMod,
+                addonName: nMod.addonName,
+                type: nMod.type,
+                hideable: nMod.hideable,
+                searchable: nMod.searchable,
+              };
+            }
+            return eMod;
+          });
+          catalogs.forEach((catalog) => {
+            if (!existingIds.has(`${catalog.id}-${catalog.type}`)) {
+              modifications.push({
+                id: catalog.id,
+                name: catalog.name,
+                type: catalog.type,
+                enabled: true,
+                shuffle: false,
+                usePosterService: !!(
+                  userData.rpdbApiKey ||
+                  userData.topPosterApiKey ||
+                  userData.aioratingsApiKey
+                ),
+                hideable: catalog.hideable,
+                searchable: catalog.searchable,
+                addonName: catalog.addonName,
+              });
+            }
+          });
+          const newCatalogIds = new Set(
+            catalogs.map((c) => `${c.id}-${c.type}`)
+          );
+          const filteredMods = modifications.filter(
+            (mod) =>
+              mod.id.startsWith('aiostreams.merged.') ||
+              newCatalogIds.has(`${mod.id}-${mod.type}`)
+          );
+          return { ...prev, catalogModifications: filteredMods };
+        });
+        if (!hideToast) toast.success('Catalogs fetched successfully');
+      } catch (error) {
+        console.error('Error fetching catalogs:', error);
+        if (error instanceof APIError) {
+          toast.error((error as APIError).message);
+        } else {
+          toast.error('Failed to fetch catalogs');
+        }
+      } finally {
+        setCatalogLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userData.rpdbApiKey, userData.topPosterApiKey, userData.aioratingsApiKey]
+  );
+
+  // Initial catalog fetch - fires once when the menu mounts.
+  useEffect(() => {
+    fetchCatalogsData(true);
+  }, []);
   const [search, setSearch] = useState('');
   // Filter states
   const [categoryFilter, setCategoryFilter] = useState<
@@ -365,100 +452,143 @@ function Content() {
               duration: 0.35,
             }}
             key="installed"
-            className="pt-0 space-y-8 relative z-[4]"
+            className="pt-0 space-y-6 relative z-[4]"
           >
             <>
               <div>
-                <h2>Installed Addons</h2>
+                <h2>Installed</h2>
                 <p className="text-[--muted] text-sm">
-                  Manage your installed addons.
+                  Manage your installed addons and catalog settings.
                 </p>
               </div>
-              <SettingsCard
-                title="My Addons"
-                description="Edit, remove, and reorder your installed addons. Reordering addons may require a reinstall - if it does, a pop-up will tell you."
-              >
-                <DndContext
-                  modifiers={[restrictToVerticalAxis]}
-                  onDragEnd={handleDragEnd}
-                  onDragStart={handleDragStart}
-                  sensors={sensors}
-                >
-                  <SortableContext
-                    items={userData.presets.map((a) => a.instanceId)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-2">
-                      <ul className="space-y-2">
-                        {userData.presets.length === 0 ? (
-                          <li>
-                            <div className="flex flex-col items-center justify-center py-12">
-                              <span className="text-lg text-muted-foreground font-semibold text-center">
-                                Looks like you don't have any addons...
-                                <br />
-                                Add some from the marketplace!
-                              </span>
-                            </div>
-                          </li>
-                        ) : (
-                          userData.presets.map((preset) => {
-                            const presetMetadata =
-                              status?.settings?.presets.find(
-                                (p: any) => p.ID === preset.type
-                              );
-                            return (
-                              <SortableAddonItem
-                                key={preset.instanceId}
-                                preset={preset}
-                                presetMetadata={presetMetadata}
-                                onEdit={() => {
-                                  setModalPreset(presetMetadata);
-                                  setModalInitialValues({
-                                    options: { ...preset.options },
-                                  });
-                                  setModalMode('edit');
-                                  setEditingAddonId(preset.instanceId);
-                                  setModalOpen(true);
-                                }}
-                                onRemove={() => {
-                                  setUserData((prev) => {
-                                    if (!prev) return prev;
-                                    const cloned = structuredClone(prev);
-                                    cloned.presets = cloned.presets.filter(
-                                      (a) => a.instanceId !== preset.instanceId
-                                    );
-                                    return removeInvalidPresetReferences(
-                                      cloned
-                                    );
-                                  });
-                                }}
-                                onToggleEnabled={(v: boolean) => {
-                                  setUserData((prev) => ({
-                                    ...prev,
-                                    presets: prev.presets.map((p) =>
-                                      p.instanceId === preset.instanceId
-                                        ? { ...p, enabled: v }
-                                        : p
-                                    ),
-                                  }));
-                                }}
-                              />
-                            );
-                          })
+              <MenuTabs
+                activeTab={installedTab}
+                onTabChange={(v) => setInstalledTab(v as 'addons' | 'catalogs')}
+                defaultMobileOpen="addons"
+                tabs={[
+                  {
+                    value: 'addons',
+                    label: 'Addons',
+                    icon: <IoExtensionPuzzle className="w-4 h-4" />,
+                    content: (
+                      <div className="space-y-6">
+                        <SettingsCard
+                          title="My Addons"
+                          description="Edit, remove, and reorder your installed addons. Reordering addons may require a reinstall - if it does, a pop-up will tell you."
+                        >
+                          <DndContext
+                            modifiers={[restrictToVerticalAxis]}
+                            onDragEnd={handleDragEnd}
+                            onDragStart={handleDragStart}
+                            sensors={sensors}
+                          >
+                            <SortableContext
+                              items={userData.presets.map((a) => a.instanceId)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="space-y-2">
+                                <ul className="space-y-2">
+                                  {userData.presets.length === 0 ? (
+                                    <li>
+                                      <div className="flex flex-col items-center justify-center py-12">
+                                        <span className="text-lg text-muted-foreground font-semibold text-center">
+                                          Looks like you don't have any
+                                          addons...
+                                          <br />
+                                          Add some from the marketplace!
+                                        </span>
+                                      </div>
+                                    </li>
+                                  ) : (
+                                    userData.presets.map((preset) => {
+                                      const presetMetadata =
+                                        status?.settings?.presets.find(
+                                          (p: any) => p.ID === preset.type
+                                        );
+                                      return (
+                                        <SortableAddonItem
+                                          key={preset.instanceId}
+                                          preset={preset}
+                                          presetMetadata={presetMetadata}
+                                          onEdit={() => {
+                                            setModalPreset(presetMetadata);
+                                            setModalInitialValues({
+                                              options: { ...preset.options },
+                                            });
+                                            setModalMode('edit');
+                                            setEditingAddonId(
+                                              preset.instanceId
+                                            );
+                                            setModalOpen(true);
+                                          }}
+                                          onRemove={() => {
+                                            setUserData((prev) => {
+                                              if (!prev) return prev;
+                                              const cloned =
+                                                structuredClone(prev);
+                                              cloned.presets =
+                                                cloned.presets.filter(
+                                                  (a) =>
+                                                    a.instanceId !==
+                                                    preset.instanceId
+                                                );
+                                              return removeInvalidPresetReferences(
+                                                cloned
+                                              );
+                                            });
+                                          }}
+                                          onToggleEnabled={(v: boolean) => {
+                                            setUserData((prev) => ({
+                                              ...prev,
+                                              presets: prev.presets.map((p) =>
+                                                p.instanceId ===
+                                                preset.instanceId
+                                                  ? { ...p, enabled: v }
+                                                  : p
+                                              ),
+                                            }));
+                                          }}
+                                        />
+                                      );
+                                    })
+                                  )}
+                                </ul>
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        </SettingsCard>
+                        {userData.presets.length > 0 && mode === 'pro' && (
+                          <AddonFetchingBehaviorCard />
                         )}
-                      </ul>
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              </SettingsCard>
-
-              {userData.presets.length > 0 && <CatalogSettingsCard />}
-
-              {userData.presets.length > 0 && <MergedCatalogsCard />}
-
-              {userData.presets.length > 0 && mode === 'pro' && (
-                <AddonFetchingBehaviorCard />
-              )}
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'catalogs',
+                    label: 'Catalogs',
+                    icon: <MdOutlineDataset className="w-4 h-4" />,
+                    content: (
+                      <div className="space-y-6">
+                        {userData.presets.length === 0 ? (
+                          <Card className="p-8 text-center">
+                            <p className="text-[--muted]">
+                              Install some addons first to configure catalogs.
+                            </p>
+                          </Card>
+                        ) : (
+                          <>
+                            <CatalogSettingsCard
+                              loading={catalogLoading}
+                              fetchCatalogsData={fetchCatalogsData}
+                            />
+                            <MergedCatalogsCard />
+                          </>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             </>
           </PageWrapper>
         )}
@@ -1566,94 +1696,14 @@ function AddonFetchingBehaviorCard() {
   );
 }
 
-function CatalogSettingsCard() {
+function CatalogSettingsCard({
+  loading,
+  fetchCatalogsData,
+}: {
+  loading: boolean;
+  fetchCatalogsData: (hideToast?: boolean) => Promise<void>;
+}) {
   const { userData, setUserData } = useUserData();
-  const [loading, setLoading] = useState(false);
-
-  const fetchCatalogsData = async (hideToast = false) => {
-    setLoading(true);
-    try {
-      const catalogs = await fetchCatalogs(userData);
-      setUserData((prev) => {
-        const existingMods = prev.catalogModifications || [];
-        const existingIds = new Set(
-          existingMods.map((mod) => `${mod.id}-${mod.type}`)
-        );
-
-        // first we need to handle existing modifications, to ensure that they keep their order
-        const modifications = existingMods.map((eMod) => {
-          // Skip merged catalogs - they don't come from the API
-          if (eMod.id.startsWith('aiostreams.merged.')) {
-            return eMod;
-          }
-          const nMod = catalogs.find(
-            (c) => c.id === eMod.id && c.type === eMod.type
-          );
-          if (nMod) {
-            return {
-              // keep all the existing attributes, except addonName, type, hideable
-              ...eMod,
-              addonName: nMod.addonName,
-              type: nMod.type,
-              hideable: nMod.hideable,
-              searchable: nMod.searchable,
-            };
-          }
-          return eMod;
-        });
-
-        // Add new catalogs at the bottom
-        catalogs.forEach((catalog) => {
-          if (!existingIds.has(`${catalog.id}-${catalog.type}`)) {
-            modifications.push({
-              id: catalog.id,
-              name: catalog.name,
-              type: catalog.type,
-              enabled: true,
-              shuffle: false,
-              usePosterService: !!(
-                userData.rpdbApiKey ||
-                userData.topPosterApiKey ||
-                userData.aioratingsApiKey
-              ),
-              hideable: catalog.hideable,
-              searchable: catalog.searchable,
-              addonName: catalog.addonName,
-            });
-          }
-        });
-
-        // Filter out modifications for catalogs that no longer exist
-        // BUT keep merged catalogs (they're managed separately)
-        const newCatalogIds = new Set(catalogs.map((c) => `${c.id}-${c.type}`));
-        const filteredMods = modifications.filter((mod) =>
-          newCatalogIds.has(`${mod.id}-${mod.type}`)
-        );
-
-        return {
-          ...prev,
-          catalogModifications: filteredMods,
-        };
-      });
-      if (!hideToast) {
-        toast.success('Catalogs fetched successfully');
-      }
-    } catch (error) {
-      console.error('Error fetching catalogs:', error);
-      if (error instanceof APIError) {
-        toast.error(error.message);
-      } else {
-        toast.error('Failed to fetch catalogs');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch catalogs on mount
-  useEffect(() => {
-    fetchCatalogsData(true);
-  }, []);
 
   const mergedCatalogsCountRef = useRef(userData.mergedCatalogs?.length ?? 0);
   useEffect(() => {
