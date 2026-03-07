@@ -20,6 +20,8 @@ interface MenuTabsProps {
   tabs: MenuTabItem[];
   activeTab: string;
   onTabChange: (value: string) => void;
+  /** Which accordion item to expand by default on mobile. Defaults to none. */
+  defaultMobileOpen?: string;
 }
 
 const COLS_CLASS: Record<number, string> = {
@@ -30,12 +32,12 @@ const COLS_CLASS: Record<number, string> = {
   5: 'grid-cols-5',
 };
 
-export function MenuTabs({ tabs, activeTab, onTabChange }: MenuTabsProps) {
+export function MenuTabs({ tabs, activeTab, onTabChange, defaultMobileOpen = '' }: MenuTabsProps) {
   const n = tabs.length;
   const currentIndex = tabs.findIndex((t) => t.value === activeTab);
   // Mobile accordion tracks its own open state so it can be fully collapsed.
   // When an item is opened we still sync the shared tab state (URL params etc.).
-  const [mobileOpen, setMobileOpen] = React.useState('');
+  const [mobileOpen, setMobileOpen] = React.useState(defaultMobileOpen);
 
   // Track each desktop panel's height so the wrapper only occupies the active
   // panel's height (prevents dead scroll-space from the tallest hidden tab).
