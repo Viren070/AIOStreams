@@ -1,19 +1,55 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { DiffItem, formatValue } from '@/utils/diff';
-import { calculateLineDiff, LineDiff } from '@/utils/text-diff';
+import React, {
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from 'react';
+import { DiffItem, formatValue } from '../../utils/diff/diff';
+import { calculateLineDiff, LineDiff } from '../../utils/diff/text';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs/tabs';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+export interface DiffAnnotation {
+  /** Badge label shown next to the diff type badge. */
+  label: string;
+  /** Tailwind colour classes for the badge, e.g. 'bg-blue-500/10 text-blue-400 border-blue-500/20' */
+  className?: string;
+  /** Optional tooltip / description shown as a small line below the path. */
+  description?: string;
+}
+
+/** Pulls the first `text-{color}-{shade}` token out of a badge className string. */
+function extractTextClass(className?: string): string {
+  const match = className?.match(/\btext-\S+-\d+\b/);
+  return match ? match[0] : 'text-gray-400';
+}
 
 interface DiffViewerProps {
   diffs: DiffItem[];
   valueFormatter?: (value: any) => string;
   oldValue?: any;
   newValue?: any;
+  /** Map from dotted path string (same format as `diff.path.join('.')`) to an annotation. */
+  annotations?: Map<string, DiffAnnotation>;
+  /**
+   * Optional formatter for the path label shown in the visual tab.
+   * Receives the raw path segment array; return a human-readable string.
+   * Defaults to `path.join('.').replace(/\.\[/g, '[')` when omitted.
+   */
+  pathFormatter?: (path: string[]) => string;
 }
 
-export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffViewerProps) {
+export function DiffViewer({
+  diffs,
+  valueFormatter,
+  oldValue,
+  newValue,
+  annotations,
+  pathFormatter,
+}: DiffViewerProps) {
   const format = (val: any) => {
     if (valueFormatter) {
       const formatted = valueFormatter(val);
@@ -52,49 +88,80 @@ export function DiffViewer({ diffs, valueFormatter, oldValue, newValue }: DiffVi
           <TabsTrigger value="json">Raw JSON</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visual" className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+        <TabsContent
+          value="visual"
+          className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar"
+        >
           <div className="space-y-3">
-            {diffs.map((diff, idx) => (
-              <div
-                key={`${diff.path.join('.')}-${diff.type}-${idx}`}
-                className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 relative group"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Badge type={diff.type} />
-                    <span className="font-mono text-sm text-gray-300">
-                      {diff.path.join('.').replace(/\.\[/g, '[')}
-                    </span>
+            {diffs.map((diff, idx) => {
+              const pathKey = diff.path.join('.').replace(/\.\[/g, '[');
+              const pathLabel = pathFormatter
+                ? pathFormatter(diff.path)
+                : pathKey;
+              const annotation = annotations?.get(pathKey);
+              return (
+                <div
+                  key={`${diff.path.join('.')}-${diff.type}-${idx}`}
+                  className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 relative group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge type={diff.type} />
+                      {annotation && (
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${annotation.className ?? 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}
+                        >
+                          {annotation.label}
+                        </span>
+                      )}
+                      <span className="font-mono text-sm text-gray-300">
+                        {pathLabel}
+                      </span>
+                    </div>
+                  </div>
+                  {annotation?.description && (
+                    <div
+                      className={`mb-2 text-xs pl-2 border-l-2 border-current/50 italic ${extractTextClass(annotation.className)}`}
+                    >
+                      {annotation.description}
+                    </div>
+                  )}
+                  <div
+                    className={`grid gap-4 text-sm ${
+                      diff.type === 'CHANGE' ? 'grid-cols-2' : 'grid-cols-1'
+                    }`}
+                  >
+                    {diff.type !== 'ADD' && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-[--muted] uppercase">
+                          Old
+                        </div>
+                        <div className="p-2 bg-red-900/20 text-red-200 rounded break-all border border-red-900/30 font-mono text-xs whitespace-pre-wrap">
+                          {format(diff.oldValue)}
+                        </div>
+                      </div>
+                    )}
+                    {diff.type !== 'REMOVE' && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-[--muted] uppercase">
+                          New
+                        </div>
+                        <div className="p-2 bg-green-900/20 text-green-200 rounded break-all border border-green-900/30 font-mono text-xs whitespace-pre-wrap">
+                          {format(diff.newValue)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div
-                  className={`grid gap-4 text-sm ${
-                    diff.type === 'CHANGE' ? 'grid-cols-2' : 'grid-cols-1'
-                  }`}
-                >
-                  {diff.type !== 'ADD' && (
-                    <div className="space-y-1">
-                      <div className="text-xs text-[--muted] uppercase">Old</div>
-                      <div className="p-2 bg-red-900/20 text-red-200 rounded break-all border border-red-900/30 font-mono text-xs whitespace-pre-wrap">
-                        {format(diff.oldValue)}
-                      </div>
-                    </div>
-                  )}
-                  {diff.type !== 'REMOVE' && (
-                    <div className="space-y-1">
-                      <div className="text-xs text-[--muted] uppercase">New</div>
-                      <div className="p-2 bg-green-900/20 text-green-200 rounded break-all border border-green-900/30 font-mono text-xs whitespace-pre-wrap">
-                        {format(diff.newValue)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </TabsContent>
 
-        <TabsContent value="json" className="relative max-h-[60vh] overflow-hidden rounded-md border border-gray-800 bg-gray-950/50 flex flex-col group">
+        <TabsContent
+          value="json"
+          className="relative max-h-[60vh] overflow-hidden rounded-md border border-gray-800 bg-gray-950/50 flex flex-col group"
+        >
           <JsonDiffContent textDiffs={textDiffs} />
         </TabsContent>
       </Tabs>
@@ -125,17 +192,24 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
     return indices;
   }, [textDiffs]);
 
-  const scrollToChange = useCallback((index: number) => {
-    const lineIndex = changeIndices[index];
-    if (lineIndex !== undefined && lineRefs.current[lineIndex] && scrollContainerRef.current) {
-      const element = lineRefs.current[lineIndex];
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-    setCurrentChangeIndex(index);
-  }, [changeIndices]);
+  const scrollToChange = useCallback(
+    (index: number) => {
+      const lineIndex = changeIndices[index];
+      if (
+        lineIndex !== undefined &&
+        lineRefs.current[lineIndex] &&
+        scrollContainerRef.current
+      ) {
+        const element = lineRefs.current[lineIndex];
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+      setCurrentChangeIndex(index);
+    },
+    [changeIndices]
+  );
 
   const handleNext = () => {
     const nextIndex = (currentChangeIndex + 1) % changeIndices.length;
@@ -143,7 +217,8 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
   };
 
   const handlePrev = () => {
-    const prevIndex = (currentChangeIndex - 1 + changeIndices.length) % changeIndices.length;
+    const prevIndex =
+      (currentChangeIndex - 1 + changeIndices.length) % changeIndices.length;
     scrollToChange(prevIndex);
   };
 
@@ -167,9 +242,9 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
 
   // Check for truncation and show toast
   useEffect(() => {
-    if (textDiffs.some(diff => diff.truncated)) {
+    if (textDiffs.some((diff) => diff.truncated)) {
       toast.warning('Large File Detected: Diff simplified for performance.', {
-        id: 'large-file-warning'
+        id: 'large-file-warning',
       });
     }
   }, [textDiffs]);
@@ -200,17 +275,24 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
           </Button>
         </div>
       )}
-      
-      <div ref={scrollContainerRef} className="overflow-y-auto custom-scrollbar p-4 flex-1 font-mono text-xs">
+
+      <div
+        ref={scrollContainerRef}
+        className="overflow-y-auto custom-scrollbar p-4 flex-1 font-mono text-xs"
+      >
         <div className="flex flex-col">
           {textDiffs.map((line, idx) => (
-            <div 
+            <div
               key={idx}
-              ref={(el) => { lineRefs.current[idx] = el; }}
+              ref={(el) => {
+                lineRefs.current[idx] = el;
+              }}
               className={`flex ${
-                line.type === 'add' ? 'bg-green-900/20 text-green-300' : 
-                line.type === 'remove' ? 'bg-red-900/20 text-red-300' : 
-                'text-gray-400'
+                line.type === 'add'
+                  ? 'bg-green-900/20 text-green-300'
+                  : line.type === 'remove'
+                    ? 'bg-red-900/20 text-red-300'
+                    : 'text-gray-400'
               } ${idx === changeIndices[currentChangeIndex] ? 'ring-1 ring-blue-500/50' : ''}`}
             >
               <div className="w-8 shrink-0 text-right pr-3 select-none text-gray-600 border-r border-gray-800 mr-2">
@@ -220,12 +302,15 @@ function JsonDiffContent({ textDiffs }: { textDiffs: LineDiff[] }) {
                 {line.newLineNumber || ' '}
               </div>
               <pre className="whitespace-pre-wrap break-all flex-1">
-                {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '} {line.content}
+                {line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '}{' '}
+                {line.content}
               </pre>
             </div>
           ))}
           {textDiffs.length === 0 && (
-            <div className="text-center p-4 text-[--muted]">No raw JSON available for comparison.</div>
+            <div className="text-center p-4 text-[--muted]">
+              No raw JSON available for comparison.
+            </div>
           )}
         </div>
       </div>
@@ -239,7 +324,9 @@ function Badge({ type }: { type: string }) {
     ADD: 'bg-green-500/10 text-green-500 border-green-500/20',
     REMOVE: 'bg-red-500/10 text-red-500 border-red-500/20',
   };
-  const colorClass = colors[type as keyof typeof colors] || 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+  const colorClass =
+    colors[type as keyof typeof colors] ||
+    'bg-gray-500/10 text-gray-500 border-gray-500/20';
   return (
     <span
       className={`px-2 py-0.5 text-[10px] font-bold rounded border ${colorClass}`}

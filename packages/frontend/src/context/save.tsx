@@ -11,16 +11,15 @@ import {
   APIError,
   fetchManifest,
 } from '@/lib/api';
-import { getObjectDiff, DiffItem, sortKeys } from '@/utils/diff';
+import { computeUserDataDiff } from '../utils/diff/userData';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { PasswordInput } from '@/components/ui/password-input';
 import { AddonPasswordModal } from '@/components/shared/addon-password-modal';
-import { DiffViewer } from '@/components/shared/diff-viewer';
+import { UserDataDiffViewer } from '@/components/shared/userdata-diff-viewer';
+import { ManifestDiffViewer } from '@/components/shared/manifest-diff-viewer';
 import { Switch } from '@/components/ui/switch';
 import { Alert } from '@/components/ui/alert';
-import { error } from 'console';
 
 interface SaveContextType {
   handleSave: (options?: {
@@ -50,16 +49,11 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   const [dontShowManifestAgain, setDontShowManifestAgain] =
     React.useState(false);
 
-  const [diffData, setDiffData] = React.useState<DiffItem[]>([]);
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
-  const [remoteDiffConfig, setRemoteDiffConfig] =
-    React.useState<UserData | null>(null);
-  const [localDiffConfig, setLocalDiffConfig] = React.useState<UserData | null>(
-    null
-  );
 
   const [savedManifest, setSavedManifest] = React.useState<any>(null);
   const [pendingNewManifest, setPendingNewManifest] = React.useState<any>(null);
+  const [preSaveManifest, setPreSaveManifest] = React.useState<any>(null);
 
   const pendingSkipDiffRef = React.useRef(false);
 
@@ -87,87 +81,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         console.warn('Failed to fetch manifest:', error);
       });
   }, [uuid, encryptedPassword]);
-
-  const resolveId = React.useCallback(
-    (v: string) => {
-      const findAddon = (presets?: UserData['presets']) =>
-        presets?.find((p) => {
-          if (p.instanceId === v) return true;
-          const opts = p.options as Record<string, any>;
-          return opts?.id === v;
-        });
-      const addon =
-        findAddon(userData?.presets) || findAddon(remoteConfig?.presets);
-      if (addon) {
-        const opts = addon.options as Record<string, any>;
-        if (opts?.name && typeof opts.name === 'string') return opts.name;
-      }
-      return v;
-    },
-    [userData?.presets, remoteConfig?.presets]
-  );
-
-  const valueFormatter = React.useCallback(
-    (val: any): string => {
-      const resolveDeep = (v: any): any => {
-        if (typeof v === 'string') return resolveId(v);
-        if (Array.isArray(v)) return v.map(resolveDeep);
-        if (v && typeof v === 'object') {
-          return Object.fromEntries(
-            Object.entries(v).map(([k, value]) => [k, resolveDeep(value)])
-          );
-        }
-        return v;
-      };
-      const resolved = resolveDeep(val);
-      if (typeof resolved === 'object' && resolved !== null) {
-        try {
-          return JSON.stringify(resolved, null, 2);
-        } catch {
-          return '[Circular Reference]';
-        }
-      }
-      return String(resolved);
-    },
-    [resolveId]
-  );
-
-  const resolveNamesInConfig = (
-    conf: UserData | null,
-    presetsSource: UserData['presets']
-  ) => {
-    if (!conf || !conf.groups) return conf;
-    const newConf = { ...conf, groups: { ...conf.groups } };
-    if (newConf.groups.groupings) {
-      newConf.groups.groupings = newConf.groups.groupings.map((g: any) => {
-        if (Array.isArray(g.addons)) {
-          return {
-            ...g,
-            addons: g.addons.map((id: string) => {
-              const find = (list?: any[]) =>
-                list?.find((p) => p.instanceId === id || p.options?.id === id);
-              const item = find(presetsSource);
-              return item?.options?.name || id;
-            }),
-          };
-        }
-        return g;
-      });
-    }
-    return newConf;
-  };
-
-  const filterForDiff = (d: UserData | null) => {
-    if (!d) return d;
-    const filtered: any = { ...d };
-    delete filtered.ip;
-    delete filtered.uuid;
-    delete filtered.addonPassword;
-    delete filtered.trusted;
-    delete filtered.encryptedPassword;
-    delete filtered.showChanges;
-    return sortKeys(filtered) as UserData;
-  };
 
   // Revert all
 
@@ -254,22 +167,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
           const remoteData = await loadUserConfig(uuid, password);
           const remoteConf = remoteData.userData;
 
-          const allPresets = [
-            ...(userData?.presets || []),
-            ...(remoteConf?.presets || []),
-          ];
-
-          const filteredRemote = filterForDiff(remoteConf);
-          const filteredLocal = filterForDiff(userData);
-          const processedRemote = resolveNamesInConfig(
-            filteredRemote,
-            allPresets
-          );
-          const processedLocal = resolveNamesInConfig(
-            filteredLocal,
-            allPresets
-          );
-          const diffs = getObjectDiff(processedRemote, processedLocal);
+          const { diffs } = computeUserDataDiff(remoteConf, userData);
 
           if (diffs.length === 0) {
             toast.info('No changes detected');
@@ -277,9 +175,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
           } else {
             setRemoteConfig(remoteConf);
-            setRemoteDiffConfig(processedRemote);
-            setLocalDiffConfig(processedLocal);
-            setDiffData(diffs);
             if (authenticated) setPasswordModalOpen(false);
             setDiffModalOpen(true);
             setLoading(false);
@@ -300,7 +195,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         }
         if (authenticated) setPasswordModalOpen(false);
 
-        // Check if manifest changed after save
+        // Capture pre-save manifest for the diff view, then check if it changed
+        setPreSaveManifest(savedManifest);
         await checkManifestChange();
       } catch (err) {
         if (err instanceof APIError && err.is('ADDON_PASSWORD_INVALID')) {
@@ -333,8 +229,11 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(`aiostreams-manifest-dismissed-${uuid}`, 'true');
     }
     setSavedManifest(pendingNewManifest);
-    setPendingNewManifest(null);
     setManifestChangedModalOpen(false);
+    setTimeout(() => {
+      setPendingNewManifest(null);
+      setPreSaveManifest(null);
+    }, 300);
   };
 
   return (
@@ -358,14 +257,10 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         onOpenChange={setDiffModalOpen}
         title="Confirm Changes"
         description="Review the changes you are about to make to your configuration."
+        contentClass="max-w-4xl"
       >
         <div className="space-y-4">
-          <DiffViewer
-            diffs={diffData}
-            valueFormatter={valueFormatter}
-            oldValue={remoteDiffConfig}
-            newValue={localDiffConfig}
-          />
+          <UserDataDiffViewer oldConfig={remoteConfig} newConfig={userData} />
           <div className="flex justify-between pt-4">
             <Button intent="alert" onClick={handleRevertAll} disabled={loading}>
               Reset Changes
@@ -400,13 +295,20 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         }}
         title="Manifest Changed"
         description="The manifest of your configuration has changed. This will require a reinstall in Stremio (or your client) to take effect."
+        contentClass="max-w-4xl"
       >
         <div className="space-y-4">
           <Alert
             intent="warning"
             isClosable={false}
-            description="Please re-install the addon in your client to apply the changes. Your current installation will continue to work, but certain changes will not take effect until you re-install with the new manifest. "
+            description="Please re-install the addon in your client to apply the changes. Your current installation will continue to work, but certain changes will not take effect until you re-install with the new manifest."
           />
+          {preSaveManifest && pendingNewManifest && (
+            <ManifestDiffViewer
+              oldManifest={preSaveManifest}
+              newManifest={pendingNewManifest}
+            />
+          )}
           <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
             <div className="flex-1">
               <div className="text-sm font-medium text-white">
