@@ -160,6 +160,63 @@ slice(addon(streams, 'TorBox'), 0, 5)  // first 5 TorBox streams
 
 ---
 
+#### `perGroup()`
+
+Groups streams by an attribute, keeps up to **`n`** streams from each group, then **interleaves** the groups round-robin so results are balanced across all values.
+
+| Parameter         | Type             | Description                                                                                            |
+| ----------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `streams`         | `ParsedStream[]` | Stream list                                                                                            |
+| `attribute`       | `string`         | The stream property to group by (see below)                                                            |
+| `n`               | `number`         | Maximum streams to take from each group (must be a positive integer)                                   |
+| `...filterValues` | `string?`        | Optional group keys to include. If omitted, **all** groups are included. Matching is case-insensitive. |
+
+**Supported attributes:**
+
+| Attribute      | Groups by                                      |
+| -------------- | ---------------------------------------------- |
+| `resolution`   | Video resolution (`2160p`, `1080p`, …)         |
+| `quality`      | Quality tag (`Bluray`, `WEB-DL`, …)            |
+| `encode`       | Encoding format (`H.265`, `AV1`, …)            |
+| `type`         | Stream type (`debrid`, `p2p`, …)               |
+| `service`      | Debrid service ID (`realdebrid`, `torbox`, …)  |
+| `indexer`      | Indexer name (`Torrentio`, `Knightcrawler`, …) |
+| `releaseGroup` | Release group name (`YIFY`, `FLUX`, …)         |
+| `visualTag`    | Visual tag (`DV`, `HDR`, `HDR10+`, …)          |
+| `audioTag`     | Audio format tag (`Atmos`, `DTS-HD MA`, …)     |
+| `audioChannel` | Audio channel layout (`5.1`, `7.1`, …)         |
+| `language`     | Audio language (`English`, `Japanese`, …)      |
+
+Streams with no value for the chosen attribute are bucketed under `'Unknown'` (or `'none'` for `service`).
+
+For multi-value attributes (`visualTag`, `audioTag`, `audioChannel`, `language`) a stream is assigned to the **first** group key that matches the `filterValues` list, or to its first value when no filter is specified. A stream is never included more than once in the output.
+
+**How interleaving works:**
+
+Given streams `[A1, A2, B1, B2, C1]` grouped by resolution with `n=2`:
+
+- Group `2160p`: `[A1, A2]`
+- Group `1080p`: `[B1, B2]`
+- Group `720p`: `[C1]`
+
+Result: `[A1, B1, C1, A2, B2]` — one from each group per round.
+
+```
+// Up to 3 streams per resolution, all resolutions
+perGroup(streams, 'resolution', 3)
+
+// Up to 2 streams per resolution, 4K and 1080p only
+perGroup(streams, 'resolution', 2, '2160p', '1080p')
+
+// Up to 1 stream per debrid service
+perGroup(type(streams, 'debrid'), 'service', 1)
+
+// Top 2 streams from each addon, balanced
+perGroup(streams, 'indexer', 2)
+```
+
+---
+
 #### `values()`
 
 Extracts a numeric property from each stream as an array of numbers. Used with [Math Functions](#math-functions).
