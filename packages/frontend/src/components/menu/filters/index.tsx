@@ -144,6 +144,7 @@ function Content() {
       | 'syncedExcludedRegexUrls'
       | 'syncedIncludedRegexUrls'
       | 'syncedRequiredRegexUrls'
+      | 'syncedRankedRegexUrls'
       | 'syncedPreferredStreamExpressionUrls'
       | 'syncedExcludedStreamExpressionUrls'
       | 'syncedIncludedStreamExpressionUrls'
@@ -154,12 +155,6 @@ function Content() {
       urls: userData[key] || [],
       trusted: userData.trusted,
       syncMode: key.includes('StreamExpression') ? 'sel' : 'regex',
-      onUrlsChange: (urls: string[]) => {
-        setUserData((prev) => ({
-          ...prev,
-          [key]: urls,
-        }));
-      },
     },
   });
 
@@ -2561,15 +2556,7 @@ function Content() {
                       ],
                     }));
                   }}
-                  syncConfig={{
-                    urls: userData.syncedRankedRegexUrls || [],
-                    onUrlsChange: (urls) =>
-                      setUserData((prev) => ({
-                        ...prev,
-                        syncedRankedRegexUrls: urls,
-                      })),
-                    trusted: userData.trusted,
-                  }}
+                  {...getSyncedProps('syncedRankedRegexUrls')}
                 />
               </div>
             </>

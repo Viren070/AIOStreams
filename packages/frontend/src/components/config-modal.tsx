@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/modal';
 import { TextInput } from '@/components/ui/text-input';
 import { Button } from '@/components/ui/button';
 import { loadUserConfig, APIError } from '@/lib/api';
-import { useUserData } from '@/context/userData';
+import { useUserData, applyMigrations } from '@/context/userData';
 import { toast } from 'sonner';
 import { PasswordInput } from './ui/password-input';
 
@@ -34,7 +34,7 @@ export function ConfigModal({
 
     try {
       const result = await loadUserConfig(uuid, password);
-      setUserData(() => result.userData);
+      setUserData(() => applyMigrations(result.userData));
       setUuid(uuid);
       setPassword(password);
       setEncryptedPassword(result.encryptedPassword);
