@@ -672,7 +672,7 @@ function Content() {
           className="lg:bg-red-950/70 border-red-500/20"
           titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-950/20"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {uuid && (
               <>
                 <Button intent="alert" rounded onClick={changePasswordModal.open}>
