@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.3](https://github.com/Viren070/AIOStreams/compare/v2.25.2...v2.25.3) (2026-03-08)
+
+
+### Bug Fixes
+
+* **frontend:** fix Danger Zone buttons overflowing card on narrow screens ([#795](https://github.com/Viren070/AIOStreams/issues/795)) ([d41034b](https://github.com/Viren070/AIOStreams/commit/d41034b2df364871914f764af9f6beb14257bc67))
+
 ## [2.25.2](https://github.com/Viren070/AIOStreams/compare/v2.25.1...v2.25.2) (2026-03-08)
 
 
