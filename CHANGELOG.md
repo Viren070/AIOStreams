@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.25.2](https://github.com/Viren070/AIOStreams/compare/v2.25.1...v2.25.2) (2026-03-08)
+
+
+### Features
+
+* change password + confirm password ([#789](https://github.com/Viren070/AIOStreams/issues/789)) ([c18d9b4](https://github.com/Viren070/AIOStreams/commit/c18d9b42fa021a07d7f2acd28fd081442c76c652))
+* **frontend:** add diff viewer for manifest changes and increase width of diff viewers ([9124df5](https://github.com/Viren070/AIOStreams/commit/9124df5aeabb4a19a0ed4855d5db150170b74008))
+* **frontend:** provide high level summary of manifest changes ([608245a](https://github.com/Viren070/AIOStreams/commit/608245a3566377d73fdbb19ebf3275585542cd99))
+* **frontend:** support auto expand accordion in menu tabs ([1af1ac7](https://github.com/Viren070/AIOStreams/commit/1af1ac706b74ca08be8405fce3c267c88ae7cbb8))
+* **frontend:** use tabs in addons menu ([b7e5a70](https://github.com/Viren070/AIOStreams/commit/b7e5a709db5cd410c47302c8df4fb87a5e3be844))
+
+
+### Bug Fixes
+
+* **anime-database:** allow other types with explicit season info to be included when mapping season ([ac0c939](https://github.com/Viren070/AIOStreams/commit/ac0c9397b8dd1e0a2fc1b76486861b74a2dbce71))
+* **builtins/nab:** merge string torznab:attr instead of overwriting them ([#792](https://github.com/Viren070/AIOStreams/issues/792)) ([59163a0](https://github.com/Viren070/AIOStreams/commit/59163a09b6707c03e753c0db256e8cc10a14bd94))
+* **frontend:** auto expand services accordion ([4209cbe](https://github.com/Viren070/AIOStreams/commit/4209cbef885b01bcf4c558c538b367925f4b0460))
+* **frontend:** make dont show again permanent ([bbcf404](https://github.com/Viren070/AIOStreams/commit/bbcf404ac49961919fd18d21b5f8f7e9574802f2))
+* **frontend:** prevent dead scroll space in menu tabs ([ae232b1](https://github.com/Viren070/AIOStreams/commit/ae232b10c5598096c08bdff56128ab9845fbbf36))
+* **frontend:** update quick links ([c675768](https://github.com/Viren070/AIOStreams/commit/c675768c084d904d86ebe81eb7ad70f16483d02c))
+
+
+### Performance Improvements
+
+* **filterer:** test regex directly for exclude/required/include ([b311a21](https://github.com/Viren070/AIOStreams/commit/b311a2109ee9adc53dabb5a084efcaec65bbe648))
+
 ## [2.25.1](https://github.com/Viren070/AIOStreams/compare/v2.25.0...v2.25.1) (2026-03-06)
 
 
