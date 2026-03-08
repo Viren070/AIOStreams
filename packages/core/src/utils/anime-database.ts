@@ -793,7 +793,12 @@ export class AnimeDatabase {
         return [AnimeType.SPECIAL, AnimeType.OVA, AnimeType.ONA].includes(
           entry.type
         );
-      return entry.type === AnimeType.TV;
+      if (
+        entry.type !== AnimeType.TV &&
+        ((entry.season?.tvdb ?? 0) > 1 || (entry.season?.tmdb ?? 0) > 1)
+      )
+        return true;
+      return [AnimeType.TV].includes(entry.type);
     });
 
     return seasonFiltered.length > 0 ? seasonFiltered : mappingsList;
@@ -831,6 +836,8 @@ export class AnimeDatabase {
     if (!mappingsList?.length) {
       return {};
     }
+
+    logger.debug(`Detailed mappings: ${JSON.stringify(mappingsList, null, 2)}`);
 
     if (mappingsList.length === 1) {
       return {
