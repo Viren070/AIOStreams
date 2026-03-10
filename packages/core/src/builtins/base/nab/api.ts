@@ -105,7 +105,7 @@ const createTorznabItemSchema = () =>
           arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
         ),
       type: z
-        .array(z.enum(["public", "semi-private", "private"]))
+        .array(z.string()) // usually "public", "semi-private" or "private" in Jackett responses
         .optional()
         .transform((arr) => arr?.[0]),
       size: z
