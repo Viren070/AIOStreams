@@ -104,6 +104,10 @@ const createTorznabItemSchema = () =>
         .transform((arr) =>
           arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
         ),
+      type: z
+        .array(z.enum(["public", "semi-private", "private"]))
+        .optional()
+        .transform((arr) => arr?.[0]),
       size: z
         .array(z.string())
         .optional()
@@ -139,6 +143,7 @@ const createTorznabItemSchema = () =>
       guid: item.guid,
       pubDate: item.pubDate,
       jackettindexer: item.jackettindexer,
+      type: item.type,
       size: item.size,
       enclosure: item.enclosure,
       torznab: item['torznab:attr'],
