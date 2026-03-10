@@ -68,6 +68,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
           { label: 'Nzb.life', value: 'https://api.nzb.life/' },
           { label: 'NZBFinder', value: 'https://nzbfinder.ws/' },
           { label: 'NZBgeek', value: 'https://api.nzbgeek.info/' },
+          { label: 'NzbNoob', value: 'https://nzbnoob.com' },
           { label: 'NzbPlanet', value: 'https://api.nzbplanet.net' },
           { label: 'NZBStars', value: 'https://nzbstars.com/' },
           { label: 'SceneNZBs', value: 'https://scenenzbs.com' },
