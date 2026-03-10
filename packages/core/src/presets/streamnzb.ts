@@ -62,9 +62,9 @@ export class StreamNZBPreset extends Preset {
       ).filter((option) => option.id !== 'url'),
       {
         id: 'url',
-        name: 'Instance URL',
+        name: 'Manifest URL',
         description:
-          'Base URL of your StreamNZB instance (e.g. https://streamnzb.example.com)',
+          'Manifest URL to your StreamNZB instance',
         type: 'url',
         required: true,
       },
@@ -91,7 +91,7 @@ export class StreamNZBPreset extends Preset {
       USER_AGENT: 'AIOStreams',
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
-        'Stream via nntp without any additional services, availability checks, failover supports aiostreams builtins.',
+        'Stream via nntp without any additional services.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.USENET_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
