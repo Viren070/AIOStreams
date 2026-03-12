@@ -89,6 +89,9 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
           result.size ??
           (result.torznab?.size ? Number(result.torznab.size) : 0),
         type: 'torrent',
+        private: typeof result?.type === 'string'
+          ? result?.type === 'private'
+          : undefined,
         ...(languages.length > 0 && { languages }),
       });
     }
