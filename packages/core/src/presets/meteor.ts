@@ -238,7 +238,7 @@ export class MeteorPreset extends Preset {
         'seeders',
         'language',
       ],
-    });
+    }, 'urlSafe');
 
     return `${url}/${configString}/manifest.json`;
   }
