@@ -94,7 +94,7 @@ export class MeteorPreset extends Preset {
     return {
       ID: 'meteor',
       NAME: 'Meteor',
-      LOGO: 'https://i.ibb.co/0V90bryY/image.png',
+      LOGO: `${Env.METEOR_URL[0]}/static/icon.png`,
       URL: Env.METEOR_URL[0],
       TIMEOUT: Env.DEFAULT_METEOR_TIMEOUT || Env.DEFAULT_TIMEOUT,
       USER_AGENT: Env.DEFAULT_METEOR_USER_AGENT || Env.DEFAULT_USER_AGENT,
