@@ -59,7 +59,6 @@ export type SyncMode = 'regex' | 'sel';
 
 export interface SyncConfig {
   urls: string[];
-  onUrlsChange: (urls: string[]) => void;
   trusted?: boolean;
   syncMode?: SyncMode;
 }
@@ -672,9 +671,21 @@ interface UrlFetchState {
 export function SyncedUrlInputs({
   syncConfig,
   renderType = 'simple',
+  hideHeader = false,
+  hideList = false,
+  hideAddForm = false,
+  onUrlAdded,
+  existingUrls,
+  className,
 }: {
   syncConfig?: SyncConfig;
   renderType?: 'simple' | 'nameable' | 'ranked';
+  hideHeader?: boolean;
+  hideList?: boolean;
+  hideAddForm?: boolean;
+  onUrlAdded?: (url: string) => void;
+  existingUrls?: string[];
+  className?: string;
 }) {
   const { status } = useStatus();
   const { userData, password } = useUserData();
@@ -764,13 +775,16 @@ export function SyncedUrlInputs({
     }
 
     return () => abortController.abort();
-  }, [syncConfig?.urls?.join(','), userData.uuid, password, syncMode]);
+  }, [JSON.stringify(syncConfig?.urls), userData.uuid, password, syncMode]);
 
   if (!syncConfig) {
     return null;
   }
 
-  const { urls, onUrlsChange, trusted } = syncConfig;
+  const { urls, trusted } = syncConfig;
+
+  // URLs already present as <SYNCED: url> blocks, used for duplicate detection
+  const knownUrls = existingUrls || [];
 
   const validateAndAdd = (url: string) => {
     const allowedUrls = status?.settings?.regexAccess?.urls || [];
@@ -784,7 +798,7 @@ export function SyncedUrlInputs({
       return false;
     }
 
-    if (urls.includes(url)) {
+    if (knownUrls.includes(url)) {
       toast.error('URL is already added');
       return false;
     }
@@ -821,35 +835,39 @@ export function SyncedUrlInputs({
     return true;
   };
 
-  const handleUrlsUpdate = (newUrls: string[]) => {
-    onUrlsChange(newUrls);
-  };
-
   const handleAdd = () => {
     if (!validateAndAdd(newUrl)) return;
 
-    handleUrlsUpdate([...urls, newUrl]);
     setNewUrl('');
+    onUrlAdded?.(newUrl);
   };
 
   return (
-    <div className="mt-4 border-t border-gray-800 pt-4 space-y-3">
-      <div>
-        <h5 className="text-sm font-medium">
-          Synced URLs
-          {urls.length > 0 && (
-            <span className="ml-1.5 text-xs text-[--muted] font-normal">
-              ({urls.length})
-            </span>
-          )}
-        </h5>
-        <p className="text-xs text-[--muted]">
-          Automatically fetch and sync {itemLabel} from URLs
-        </p>
-      </div>
+    <div
+      className={cn(
+        !hideHeader && 'mt-4 border-t border-gray-800 pt-4',
+        'space-y-3',
+        className
+      )}
+    >
+      {!hideHeader && (
+        <div>
+          <h5 className="text-sm font-medium">
+            Synced URLs
+            {knownUrls.length > 0 && (
+              <span className="ml-1.5 text-xs text-[--muted] font-normal">
+                ({knownUrls.length})
+              </span>
+            )}
+          </h5>
+          <p className="text-xs text-[--muted]">
+            Automatically fetch and sync {itemLabel} from URLs
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
-        {urls.length > 0 && (
+        {!hideList && urls.length > 0 && (
           <div className="rounded-md border border-[--brand]/20 bg-[--brand]/5 divide-y divide-[--brand]/10">
             {urls.map((url) => {
               const urlState = fetchedData[url];
@@ -865,18 +883,9 @@ export function SyncedUrlInputs({
                           <FaChevronDown className="text-[10px] text-[--muted] transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </button>
                       </DisclosureTrigger>
-                      <span className="flex-1 truncate font-mono text-xs text-[--muted]">
+                      <span className="flex-1 font-mono text-xs text-[--muted] break-all">
                         {url}
                       </span>
-                      <IconButton
-                        size="sm"
-                        rounded
-                        icon={<FaRegTrashAlt />}
-                        intent="alert-subtle"
-                        onClick={() =>
-                          handleUrlsUpdate(urls.filter((u) => u !== url))
-                        }
-                      />
                     </div>
                     <DisclosureContent>
                       <SyncedPatterns
@@ -893,28 +902,30 @@ export function SyncedUrlInputs({
             })}
           </div>
         )}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={newUrl}
-              placeholder={`https://example.com/${itemLabel}.json`}
-              onValueChange={setNewUrl}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAdd();
-                }
-              }}
+        {!hideAddForm && (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <TextInput
+                value={newUrl}
+                placeholder={`https://example.com/${itemLabel}.json`}
+                onValueChange={setNewUrl}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAdd();
+                  }
+                }}
+              />
+            </div>
+            <IconButton
+              onClick={handleAdd}
+              disabled={!newUrl}
+              icon={<FaPlus />}
+              rounded
+              intent="primary-subtle"
             />
           </div>
-          <IconButton
-            onClick={handleAdd}
-            disabled={!newUrl}
-            icon={<FaPlus />}
-            rounded
-            intent="primary-subtle"
-          />
-        </div>
+        )}
       </div>
     </div>
   );

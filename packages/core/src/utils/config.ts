@@ -459,7 +459,7 @@ export async function validateConfig(
     ...(config.preferredStreamExpressions?.map((e) => e.expression) ?? []),
     ...(config.includedStreamExpressions?.map((e) => e.expression) ?? []),
     ...(config.rankedStreamExpressions?.map((r) => r.expression) ?? []),
-  ];
+  ].filter((expr) => !(expr.startsWith('<SYNCED: ') && expr.endsWith('>')));
 
   for (const expression of expressionsToValidate) {
     try {
@@ -876,7 +876,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
     ...requiredRegexes,
     ...preferredRegexes.map((regex) => regex.pattern),
     ...rankedRegexes.map((regex) => regex.pattern),
-  ];
+  ].filter((pattern) => !(pattern.startsWith('<SYNCED: ') && pattern.endsWith('>')));
 
   if (!regexAllowed && regexes.length > 0) {
     const allowedPatterns = (await RegexAccess.allowedRegexPatterns()).patterns;
@@ -923,12 +923,28 @@ function validateSyncedRegexUrls(
 
   if (isUnrestricted) return;
 
+  const SYNCED_PREFIX = '<SYNCED: ';
+  const SYNCED_SUFFIX = '>';
+
+  // Extract URLs from <SYNCED: url> patterns in expression arrays
+  const extractSyncedUrls = (patterns: (string | { pattern?: string })[]): string[] =>
+    patterns
+      .map((p) => (typeof p === 'string' ? p : p.pattern || ''))
+      .filter((v) => v.startsWith(SYNCED_PREFIX) && v.endsWith(SYNCED_SUFFIX))
+      .map((v) => v.slice(SYNCED_PREFIX.length, -SYNCED_SUFFIX.length).trim());
+
   const allowedUrls = RegexAccess.getAllowedUrls();
   const urlsToCheck = [
     ...(config.syncedIncludedRegexUrls || []),
     ...(config.syncedExcludedRegexUrls || []),
     ...(config.syncedRequiredRegexUrls || []),
     ...(config.syncedPreferredRegexUrls || []),
+    ...(config.syncedRankedRegexUrls || []),
+    ...extractSyncedUrls(config.excludedRegexPatterns || []),
+    ...extractSyncedUrls(config.includedRegexPatterns || []),
+    ...extractSyncedUrls(config.requiredRegexPatterns || []),
+    ...extractSyncedUrls(config.preferredRegexPatterns || []),
+    ...extractSyncedUrls(config.rankedRegexPatterns || []),
   ];
 
   const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
@@ -949,6 +965,18 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
 
   if (isUnrestricted) return;
 
+  const SYNCED_PREFIX = '<SYNCED: ';
+  const SYNCED_SUFFIX = '>';
+
+  // Extract URLs from <SYNCED: url> patterns in expression arrays
+  const extractSyncedUrls = (
+    expressions: (string | { expression?: string })[]
+  ): string[] =>
+    expressions
+      .map((e) => (typeof e === 'string' ? e : e.expression || ''))
+      .filter((v) => v.startsWith(SYNCED_PREFIX) && v.endsWith(SYNCED_SUFFIX))
+      .map((v) => v.slice(SYNCED_PREFIX.length, -SYNCED_SUFFIX.length).trim());
+
   const allowedUrls = SelAccess.getAllowedUrls();
   const urlsToCheck = [
     ...(config.syncedIncludedStreamExpressionUrls || []),
@@ -956,6 +984,11 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
     ...(config.syncedRequiredStreamExpressionUrls || []),
     ...(config.syncedPreferredStreamExpressionUrls || []),
     ...(config.syncedRankedStreamExpressionUrls || []),
+    ...extractSyncedUrls(config.includedStreamExpressions || []),
+    ...extractSyncedUrls(config.excludedStreamExpressions || []),
+    ...extractSyncedUrls(config.requiredStreamExpressions || []),
+    ...extractSyncedUrls(config.preferredStreamExpressions || []),
+    ...extractSyncedUrls(config.rankedStreamExpressions || []),
   ];
 
   const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));

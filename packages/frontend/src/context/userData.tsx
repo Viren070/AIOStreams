@@ -233,6 +233,42 @@ export function applyMigrations(config: any): UserData {
     });
   }
 
+  // migrate synced URLs from legacy arrays into <SYNCED: url> placeholders
+  const syncedTag = (url: string) => `<SYNCED: ${url}>`;
+
+  const migrateSyncedUrls = (
+    legacyKey: string,
+    valuesKey: string,
+    getKey: (item: any) => string,
+    createItem: (url: string) => any
+  ) => {
+    const urls = (config as any)[legacyKey];
+    if (!Array.isArray(urls) || urls.length === 0) return;
+    const values: any[] = Array.isArray((config as any)[valuesKey]) ? (config as any)[valuesKey] : [];
+    for (const url of urls) {
+      if (!values.some((v: any) => v != null && getKey(v) === syncedTag(url))) {
+        values.push(createItem(url));
+      }
+    }
+    (config as any)[valuesKey] = values;
+    delete (config as any)[legacyKey];
+  };
+
+  // included/excluded/required regex
+  for (const type of ['Included', 'Excluded', 'Required']) {
+    migrateSyncedUrls(`synced${type}RegexUrls`, `${type.toLowerCase()}RegexPatterns`, (v) => v, (url) => syncedTag(url));
+  }
+  // preferred regex
+  migrateSyncedUrls('syncedPreferredRegexUrls', 'preferredRegexPatterns', (v) => v.pattern, (url) => ({ name: syncedTag(url), pattern: syncedTag(url) }));
+  // ranked regex
+  migrateSyncedUrls('syncedRankedRegexUrls', 'rankedRegexPatterns', (v) => v.pattern, (url) => ({ pattern: syncedTag(url), name: url, score: 0 }));
+  // included/excluded/required/preferred SEL
+  for (const type of ['Included', 'Excluded', 'Required', 'Preferred']) {
+    migrateSyncedUrls(`synced${type}StreamExpressionUrls`, `${type.toLowerCase()}StreamExpressions`, (v) => v.expression, (url) => ({ expression: syncedTag(url), enabled: true }));
+  }
+  // ranked SEL
+  migrateSyncedUrls('syncedRankedStreamExpressionUrls', 'rankedStreamExpressions', (v) => v.expression, (url) => ({ expression: syncedTag(url), score: 0, enabled: true }));
+
   return config;
 }
 

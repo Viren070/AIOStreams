@@ -264,37 +264,68 @@ export class RegexAccess {
     transform: (item: RegexPatternItem) => U,
     uniqueKey: (item: U) => string
   ): Promise<U[]> {
-    const patterns = await this.resolvePatterns(urls, userData);
-    if (patterns.length === 0) return existing;
 
-    const result = [...existing];
-    const existingSet = new Set(existing.map(uniqueKey));
     const overrides: SyncOverride[] = userData.regexOverrides || [];
 
-    for (const regex of patterns) {
-      const override = overrides.find(
-        (o) =>
-          o.pattern === regex.pattern ||
-          (regex.name && o.originalName === regex.name)
-      );
+    // Helper to process and transform patterns from a URL
+    const processPatterns = async (url: string): Promise<U[]> => {
+      const patterns = await this.resolvePatterns([url], userData);
+      const syncedItems: U[] = [];
+      for (const regex of patterns) {
+        const override = overrides.find(
+          (o) =>
+            o.pattern === regex.pattern ||
+            (regex.name && o.originalName === regex.name)
+        );
 
-      if (override?.disabled) continue;
+        if (override?.disabled) continue;
 
-      const item = transform(
-        override
-          ? {
-              ...regex,
-              name: override.name ?? regex.name,
-              score:
-                override.score !== undefined ? override.score : regex.score,
-            }
-          : regex
-      );
+        const item = transform(
+          override
+            ? {
+                ...regex,
+                name: override.name ?? regex.name,
+                score:
+                  override.score !== undefined ? override.score : regex.score,
+              }
+            : regex
+        );
 
+        syncedItems.push(item);
+      }
+      return syncedItems;
+    };
+
+    const SYNCED_PREFIX = '<SYNCED: ';
+    const SYNCED_SUFFIX = '>';
+    const result: U[] = [];
+    const usedUrls = new Set<string>();
+
+    for (const item of existing) {
       const key = uniqueKey(item);
-      if (!existingSet.has(key)) {
+
+      if (key.startsWith(SYNCED_PREFIX) && key.endsWith(SYNCED_SUFFIX)) {
+        const url = key.slice(SYNCED_PREFIX.length, -SYNCED_SUFFIX.length).trim();
+
+        if (url) {
+          usedUrls.add(url);
+          const syncedItems = await processPatterns(url);
+          result.push(...syncedItems);
+        } else {
+           result.push(item);
+        }
+      } else {
         result.push(item);
-        existingSet.add(key);
+      }
+    }
+
+    // Legacy fallback: append URLs from the `urls` array not already handled above
+    if (urls && urls.length > 0) {
+      for (const url of urls) {
+        if (!usedUrls.has(url)) {
+          const syncedItems = await processPatterns(url);
+          result.push(...syncedItems);
+        }
       }
     }
 
