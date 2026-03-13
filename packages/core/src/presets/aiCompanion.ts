@@ -262,9 +262,10 @@ export class AICompanionPreset extends Preset {
     form.append('max_results', options.maxResults.toString());
 
     const defaultCatalogs = AICompanionPreset.catalogs.map((c) => c.value);
+    // Both arrays are pre-sorted, so JSON.stringify is a safe content comparison
     const changedCatalogs =
-      movieFeedCatalogs !== defaultCatalogs ||
-      seriesFeedCatalogs !== defaultCatalogs;
+      JSON.stringify(movieFeedCatalogs) !== JSON.stringify(defaultCatalogs) ||
+      JSON.stringify(seriesFeedCatalogs) !== JSON.stringify(defaultCatalogs);
     form.append('changed_catalogs', changedCatalogs ? 'true' : 'false');
     movieFeedCatalogs.forEach((catalog: string) =>
       form.append('include_catalogs_movies', catalog)
@@ -272,9 +273,6 @@ export class AICompanionPreset extends Preset {
     seriesFeedCatalogs.forEach((catalog: string) =>
       form.append('include_catalogs_series', catalog)
     );
-
-    form.append('include_catalogs_movies', movieFeedCatalogs.join(','));
-    form.append('include_catalogs_series', seriesFeedCatalogs.join(','));
 
     let manifestUrl: string | undefined = await manifestCache.get(cacheKey);
     if (manifestUrl) {
