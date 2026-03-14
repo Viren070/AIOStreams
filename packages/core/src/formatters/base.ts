@@ -912,6 +912,9 @@ export abstract class BaseFormatter {
               const resolved = resolvedFn(parseValue);
               if (resolved.error === undefined && resolved.result != null) {
                 resolvedKey = String(resolved.result);
+                if (resolvedKey.length === 0) {
+                  return variable; // don't replace empty string keys to avoid replacing every character
+                }
               }
             }
             return variable.replaceAll(resolvedKey, replaceKey);
