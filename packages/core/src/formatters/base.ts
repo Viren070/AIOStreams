@@ -896,7 +896,11 @@ export abstract class BaseFormatter {
             new RegExp(`${findStartChar}\\s*,\\s*${findEndChar}`)
           );
 
-          if (!shouldBeUndefined && key && replaceKey !== undefined) {
+          if (
+            shouldBeUndefined === undefined &&
+            key &&
+            replaceKey !== undefined
+          ) {
             let resolvedKey = key;
             if (key.startsWith('{') && key.endsWith('}') && parseValue) {
               // When the first argument to replace(...) is a {variable} expression, resolve it
