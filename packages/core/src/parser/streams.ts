@@ -442,11 +442,14 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    return stream.url
-      ? decodeURIComponent(stream.url).match(
-          /(?:(?<=btih:)|(?<=[-/[(;:&]))[a-fA-F0-9]{40}(?=$|[-\]\)/:;&?])/
-        )?.[0]
-      : undefined;
+    if (!stream.url) return undefined;
+    try {
+      return decodeURIComponent(stream.url).match(
+        /(?:(?<=btih:)|(?<=[-/[(;:&]))[a-fA-F0-9]{40}(?=$|[-\]\)/:;&?])/
+      )?.[0];
+    } catch {
+      return undefined;
+    }
   }
 
   protected getFileIdx(

@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.25.4](https://github.com/Viren070/AIOStreams/compare/v2.25.3...v2.25.4) (2026-03-12)
+
+
+### Bug Fixes
+
+* **builtins/nab:** determine private flag from type property ([#803](https://github.com/Viren070/AIOStreams/issues/803)) ([94660bc](https://github.com/Viren070/AIOStreams/commit/94660bcd8c10d853b4563553454294f33019ba20))
+* **presets/meteor:** update logo URL ([#812](https://github.com/Viren070/AIOStreams/issues/812)) ([47b104c](https://github.com/Viren070/AIOStreams/commit/47b104c4b5dfa990c9da3b1745fec76e6fb7601a))
+* **presets/meteor:** use urlSafe base64 ([#809](https://github.com/Viren070/AIOStreams/issues/809)) ([89bb403](https://github.com/Viren070/AIOStreams/commit/89bb40328da787685b0408ffc8b2dd7f43b991f3))
+
+## [2.25.3](https://github.com/Viren070/AIOStreams/compare/v2.25.2...v2.25.3) (2026-03-08)
+
+
+### Bug Fixes
+
+* **frontend:** fix Danger Zone buttons overflowing card on narrow screens ([#795](https://github.com/Viren070/AIOStreams/issues/795)) ([d41034b](https://github.com/Viren070/AIOStreams/commit/d41034b2df364871914f764af9f6beb14257bc67))
+
 ## [2.25.2](https://github.com/Viren070/AIOStreams/compare/v2.25.1...v2.25.2) (2026-03-08)
 
 
