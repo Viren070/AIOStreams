@@ -15,9 +15,14 @@ export class OpenPosterDB extends BasePosterService {
     super(apiKey, 'openposterdb');
     const raw = (baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
     try {
+      const parsed = new URL(raw);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`OpenPosterDB base URL must use http or https, got ${parsed.protocol}`);
+      }
       this.baseUrl = raw;
-      this.ownDomains = [new URL(raw).hostname];
-    } catch {
+      this.ownDomains = [parsed.hostname];
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('OpenPosterDB')) throw e;
       throw new Error(`Invalid OpenPosterDB base URL: ${raw}`);
     }
   }
@@ -52,6 +57,10 @@ export class OpenPosterDB extends BasePosterService {
       Env.POSTER_API_KEY_VALIDITY_CACHE_TTL
     );
     return data.valid;
+  }
+
+  protected getCacheKey(type: string, id: string): string {
+    return `${type}-${id}-${this.apiKey}-${this.baseUrl}`;
   }
 
   protected buildPosterUrl(idType: string, idValue: string): string {
