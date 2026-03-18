@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { constants, ServiceId } from '../utils/index.js';
+import { constants, ServiceId, Cache, Env } from '../utils/index.js';
 
 type DebridErrorCode =
   | 'BAD_GATEWAY'
@@ -72,6 +72,75 @@ export class DebridError extends Error {
   }
 }
 
+/**
+ * Codes that are service-level failures (auth, quota, rate-limit) rather than
+ * content-level.
+ */
+const DEBRID_NON_RETRYABLE_CODES = new Set<DebridErrorCode | undefined>([
+  'UNAUTHORIZED',
+  'FORBIDDEN',
+  'TOO_MANY_REQUESTS',
+  'PAYMENT_REQUIRED',
+  'STORE_LIMIT_EXCEEDED',
+  'NOT_IMPLEMENTED',
+]);
+
+/**
+ * Shared cross-service failure cache
+ */
+export class DebridFailureCache {
+  private static getCache() {
+    return Cache.getInstance<
+      string,
+      { message: string; code?: DebridErrorCode; statusCode?: number }
+    >('debrid:failure', 10_000, Env.REDIS_URI ? 'redis' : 'sql');
+  }
+
+  /**
+   * Check whether a known failure is cached for this item and throw if so.
+   */
+  static async check(
+    serviceId: ServiceId,
+    type: 'torrent' | 'usenet',
+    key: string
+  ): Promise<void> {
+    const cached = await DebridFailureCache.getCache().get(
+      `${serviceId}:${type}:${key}`
+    );
+    if (cached) {
+      throw new DebridError(cached.message, {
+        statusCode: cached.statusCode ?? 400,
+        statusText: 'Bad Request',
+        code: cached.code,
+        headers: {},
+        body: null,
+        type: 'api_error',
+      });
+    }
+  }
+
+  /**
+   * Persist a content-level failure so future requests skip this item
+   */
+  static async mark(
+    serviceId: ServiceId,
+    type: 'torrent' | 'usenet',
+    key: string,
+    error: DebridError
+  ): Promise<void> {
+    if (DEBRID_NON_RETRYABLE_CODES.has(error.code)) return;
+    await DebridFailureCache.getCache().set(
+      `${serviceId}:${type}:${key}`,
+      {
+        message: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+      },
+      Env.BUILTIN_DEBRID_ERROR_CACHE_TTL
+    );
+  }
+}
+
 const DebridFileSchema = z.object({
   id: z.number().optional(),
   name: z.string().optional(),
@@ -89,7 +158,9 @@ export interface DebridDownload {
   library?: boolean;
   hash?: string;
   name?: string;
+  private?: boolean;
   size?: number;
+  addedAt?: string;
   status:
     | 'cached'
     | 'downloaded'
@@ -106,9 +177,11 @@ export interface DebridDownload {
 const TitleMetadataSchema = z.object({
   titles: z.array(z.string()),
   year: z.number().optional(),
+  seasonYear: z.number().optional(),
   season: z.number().optional(),
   episode: z.number().optional(),
   absoluteEpisode: z.number().optional(),
+  relativeAbsoluteEpisode: z.number().optional(),
 });
 
 const BasePlaybackInfoSchema = z.object({
@@ -116,15 +189,23 @@ const BasePlaybackInfoSchema = z.object({
   metadata: TitleMetadataSchema.optional(),
   filename: z.string().optional(),
   index: z.number().optional(),
+  fileIndex: z.number().optional(),
+  serviceItemId: z.string().optional(),
 });
 
 const BaseFileInfoSchema = z.object({
   index: z.number().optional(),
+  title: z.string().optional(),
   cacheAndPlay: z.boolean().optional(),
+  autoRemoveDownloads: z.boolean().optional(),
+  serviceItemId: z.string().optional(),
+  fileIndex: z.number().optional(),
 });
 
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
+  downloadUrl: z.string().optional(),
   hash: z.string(),
+  private: z.boolean().optional(),
   sources: z.array(z.string()),
   type: z.literal('torrent'),
 });
@@ -159,24 +240,41 @@ export type ServiceAuth = z.infer<typeof ServiceAuthSchema>;
 
 export type PlaybackInfo = z.infer<typeof PlaybackInfoSchema>;
 export type FileInfo = z.infer<typeof FileInfoSchema>;
+export type TorrentInfo = z.infer<typeof TorrentInfoSchema>;
+export type UsenetInfo = z.infer<typeof UsenetInfoSchema>;
 export type TitleMetadata = z.infer<typeof TitleMetadataSchema>;
 
-export interface DebridService {
-  // Common methods
+interface BaseDebridService {
+  readonly serviceName: ServiceId;
+  readonly capabilities: { torrents: boolean; usenet: boolean };
+
   resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
-    cacheAndPlay: boolean
+    cacheAndPlay: boolean,
+    autoRemoveDownloads?: boolean
   ): Promise<string | undefined>;
 
-  // Torrent specific methods
-  checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]>;
+  refreshLibraryCache?(sources?: ('torrent' | 'nzb')[]): Promise<void>;
+}
+
+export interface TorrentDebridService extends BaseDebridService {
+  checkMagnets(
+    magnets: string[],
+    sid?: string,
+    checkOwned?: boolean
+  ): Promise<DebridDownload[]>;
   listMagnets(): Promise<DebridDownload[]>;
   addMagnet(magnet: string): Promise<DebridDownload>;
+  addTorrent(torrent: string): Promise<DebridDownload>;
+  getMagnet?(magnetId: string): Promise<DebridDownload>;
   generateTorrentLink(link: string, clientIp?: string): Promise<string>;
+  removeMagnet(magnetId: string): Promise<void>;
+  getMagnet?(magnetId: string): Promise<DebridDownload>;
+}
 
-  // Usenet specific methods
-  checkNzbs?(
+export interface UsenetDebridService extends BaseDebridService {
+  checkNzbs(
     nzbs: { name?: string; hash?: string }[],
     checkOwned?: boolean
   ): Promise<DebridDownload[]>;
@@ -187,13 +285,25 @@ export interface DebridService {
     fileId?: string,
     clientIp?: string
   ): Promise<string>;
-
-  // Service info
-  readonly serviceName: ServiceId;
-  readonly supportsUsenet: boolean;
+  removeNzb?(nzbId: string): Promise<void>;
+  getNzb?(nzbId: string): Promise<DebridDownload>;
 }
+
+export type DebridService = TorrentDebridService | UsenetDebridService;
 
 export type DebridServiceConfig = {
   token: string;
   clientIp?: string;
 };
+
+export function isTorrentDebridService(
+  debridService: DebridService
+): debridService is TorrentDebridService {
+  return debridService.capabilities.torrents;
+}
+
+export function isUsenetDebridService(
+  debridService: DebridService
+): debridService is UsenetDebridService {
+  return debridService.capabilities.usenet;
+}

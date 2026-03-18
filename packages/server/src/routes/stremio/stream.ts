@@ -16,10 +16,15 @@ const logger = createLogger('server');
 
 router.use(stremioStreamRateLimiter);
 
+interface StreamParams {
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:type/:id.json',
   async (
-    req: Request,
+    req: Request<StreamParams>,
     res: Response<AIOStreamResponse>,
     next: NextFunction
   ) => {
@@ -49,11 +54,19 @@ router.get(
 
       const disableAutoplay = await aiostreams.shouldStopAutoPlay(type, id);
 
+      const response = await aiostreams.getStreams(id, type);
+      const streamContext = aiostreams.getStreamContext();
+
+      if (!streamContext) {
+        throw new Error('Stream context not available');
+      }
+
       res
         .status(200)
         .json(
           await transformer.transformStreams(
-            await aiostreams.getStreams(id, type),
+            response,
+            streamContext.toFormatterContext(response.data.streams),
             { provideStreamData, disableAutoplay }
           )
         );

@@ -11,6 +11,7 @@ export class NZBHydraPreset extends NewznabPreset {
       constants.NZBDAV_SERVICE,
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
     ] as ServiceId[];
     const options: Option[] = [
       {
@@ -107,21 +108,25 @@ export class NZBHydraPreset extends NewznabPreset {
         ],
       },
       {
+        id: 'initialLimit',
+        name: 'Initial Result Limit',
+        description:
+          'When performing a search, NZBHydra may limit the number of results returned. This option allows you to set a limit to request more results upfront.',
+        type: 'number',
+        default: 250,
+        constraints: {
+          min: 1,
+          max: 10000,
+          forceInUi: false,
+        },
+      },
+      {
         id: 'paginate',
         name: 'Paginate Results',
         description:
           'Enabling this option will make the addon paginate through all available results to provide a more comprehensive set of results. Enabling this can increase the time taken to return results, some endpoints may not support pagination, and this will also increase the number of requests.',
         type: 'boolean',
         default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'checkOwned',
-        name: 'Check Owned NZBs',
-        description:
-          'When searching for NZBs, check if the NZB is already owned (in your library) and mark it as such if so. Note: only applies to nzbDAV/Altmount.',
-        type: 'boolean',
-        default: true,
         showInSimpleMode: false,
       },
       {
@@ -177,9 +182,8 @@ export class NZBHydraPreset extends NewznabPreset {
       apiPath: options.apiPath,
       apiKey: nzbhydraApiKey,
       forceQuerySearch: options.forceQuerySearch ?? true,
-      forceInitialLimit: 10000,
-      checkOwned: options.checkOwned ?? true,
-      paginate: false,
+      forceInitialLimit: options.initialLimit ?? 250,
+      paginate: options.paginate ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

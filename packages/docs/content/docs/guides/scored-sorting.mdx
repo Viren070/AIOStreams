@@ -1,0 +1,98 @@
+---
+title: Scored Sorting
+description: Use Ranked Regexes and Ranked Stream Expressions to assign scores and sort streams precisely.
+---
+
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+**Scored Sorting** is an advanced alternative to index-based "Preferred" sorting. Instead of a stream matching only the first applicable rule, scored sorting lets a stream match **multiple ranked rules** and accumulates a total score from each match — giving you fine-grained, quantitative control over your results.
+
+---
+
+## How It Works
+
+There are two types of ranked filters:
+
+1. **Ranked Regex Filters** — assign scores based on regex patterns matching stream attributes like the filename.
+2. **Ranked Stream Expressions** — use the [SEL](/reference/stream-expressions) to create complex conditional scoring logic.
+
+Unlike Preferred filters (where a stream matches only the _first_ rule), a stream can match **multiple** ranked rules and the scores are summed.
+
+---
+
+## Choosing Your Approach
+
+| Approach                       | Best for                                                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Ranked Regexes only            | Text-pattern-based scoring (release groups, keywords in filenames)                                              |
+| Ranked Stream Expressions only | Property-based scoring (bitrate, resolution, `isAnime`, etc.)                                                   |
+| Both combined                  | Maximum flexibility; note that `regexScore` and `seScore` are separate scores — you must add both sort criteria |
+| Combined with Preferred        | Use Preferred for must-have streams; Ranked for scoring the rest                                                |
+
+**Advanced strategy:** Use Ranked Regexes with a score of `0` to "tag" streams, then use `regexMatched()` in Ranked Stream Expressions to apply conditional scores. This consolidates your final score into `{stream.seScore}`, requiring only one sort criterion.
+
+---
+
+## Setup
+
+<Steps>
+  <Step>
+    **Create ranked rules:**
+
+    Navigate to **Filters → Regex** or **Filters → Stream Expression**, scroll to the **Ranked** section, and add rules. Each rule needs:
+    - **Name** (optional but recommended for formatter display)
+    - **Expression or Regex** — the logic to evaluate
+    - **Score** — points to add (can be negative)
+
+    For SEL expressions, names are extracted from comments: `/* My Rule Name */ expression`
+
+  </Step>
+  <Step>
+    **Update your sort configuration:**
+
+    Go to **Sorting**, add `Stream Expression Score` and/or `Regex Score` criteria, set the order to **descending** (higher scores first), and position them appropriately in your sort list.
+
+  </Step>
+</Steps>
+
+---
+
+## Formatter Variables
+
+### Scores
+
+| Variable               | Description                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| `{stream.regexScore}`  | Raw Regex Filter score                                     |
+| `{stream.seScore}`     | Raw Stream Expression score                                |
+| `{stream.nRegexScore}` | Regex score normalised 0–100 (highest-scored stream = 100) |
+| `{stream.nSeScore}`    | SE score normalised 0–100                                  |
+
+### Matched rule names
+
+| Variable                      | Description                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `{stream.regexMatched}`       | Name of the highest-ranking _Preferred_ regex matched (falls back to first Ranked match) |
+| `{stream.seMatched}`          | Name of the first _Preferred_ SE expression matched                                      |
+| `{stream.rankedRegexMatched}` | Array of all _Ranked_ regex names matched                                                |
+| `{stream.rseMatched}`         | Array of all _Ranked_ SE expression names matched                                        |
+
+### Star ratings
+
+The `::star` and `::pstar` modifiers display a star rating from a 0–100 input — perfect for normalised scores:
+
+```
+{stream.nSeScore::pstar}
+```
+
+A normalised score of `75` displays: `★★★★☆`
+
+---
+
+## Examples
+
+For a practical example using [TRaSH Guides](https://trash-guides.info/) recommendations, see:
+
+- [Vidhin05/Releases-Regex](https://github.com/Vidhin05/Releases-Regex/)

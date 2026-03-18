@@ -1,0 +1,59 @@
+---
+title: Overview
+description: Overview of the AIOStreams REST API.
+---
+
+AIOStreams exposes a REST API that lets you query streams programmatically, look up anime mappings, and more. Responses use a consistent JSON envelope.
+
+**Base Path:** `/api/v1`
+
+---
+
+## Response Envelope
+
+All endpoints return a consistent top-level structure:
+
+```json
+{
+  "success": true,
+  "detail": "optional message",
+  "error": null,
+  "data": { ... }
+}
+```
+
+| Field     | Type           | Description                                    |
+| --------- | -------------- | ---------------------------------------------- |
+| `success` | boolean        | `true` if the request succeeded                |
+| `detail`  | string \| null | Optional informational message                 |
+| `error`   | object \| null | Error object present when `success` is `false` |
+| `data`    | any \| null    | Response payload                               |
+
+**Error object:**
+
+| Field     | Type   | Description                 |
+| --------- | ------ | --------------------------- |
+| `code`    | string | Machine-readable error code |
+| `message` | string | Human-readable description  |
+
+---
+
+## Endpoints
+
+<Cards>
+  <Card
+    title="Search"
+    href="/apis/search"
+    description="Search for streams across all configured sources."
+  />
+  <Card
+    title="User"
+    href="/apis/user"
+    description="Create, retrieve, update, and delete user configurations."
+  />
+  <Card
+    title="Anime"
+    href="/apis/anime"
+    description="Look up anime ID mappings across supported databases."
+  />
+</Cards>

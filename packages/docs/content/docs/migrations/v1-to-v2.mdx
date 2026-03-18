@@ -1,0 +1,141 @@
+---
+title: Migrating from v1 to v2
+description: Step-by-step guide to upgrade your AIOStreams v1 installation to v2.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+AIOStreams v2 is a complete rewrite with a new database system for managing configurations. This guide walks through the changes required to migrate an existing v1 installation.
+
+<Callout type="warn">
+  v1 configurations are **not directly importable** into v2. Before proceeding,
+  take screenshots or detailed notes of your configured addons, filter
+  priorities, and custom formatters.
+</Callout>
+
+---
+
+## 1. Deployment Configuration
+
+### Volume mount (essential)
+
+v2 requires a **persistent volume** to store its SQLite database and other data. Without it, your configuration is lost on every restart.
+
+Mount `/app/data` inside the container to a persistent location on the host:
+
+<Tabs items={['v1 (before)', 'v2 (after)']}>
+  <Tab value="v1 (before)">
+    ```yaml
+    services:
+      aiostreams:
+        image: ghcr.io/viren070/aiostreams:latest
+        container_name: aiostreams
+        restart: unless-stopped
+        ports:
+          - '3000:3000'
+        env_file:
+          - .env
+        healthcheck:
+          test: wget -qO- http://localhost:3000/health
+          interval: 1m
+          timeout: 10s
+          retries: 5
+          start_period: 10s
+    ```
+  </Tab>
+  <Tab value="v2 (after)">
+    ```yaml
+    services:
+      aiostreams:
+        image: ghcr.io/viren070/aiostreams:latest
+        container_name: aiostreams
+        restart: unless-stopped
+        ports:
+          - '3000:3000'
+        env_file:
+          - .env
+        volumes:
+          - ./data:/app/data # ← required
+        # Health check is now built-in; remove or update:
+        # healthcheck:
+        #   test: wget -qO- http://localhost:3000/api/v1/status
+        #   interval: 1m
+        #   timeout: 10s
+        #   retries: 5
+    ```
+  </Tab>
+</Tabs>
+
+### Health check endpoint
+
+The old `/health` endpoint is **removed**. If you need a custom health check, use the new status endpoint:
+
+```
+http://<host>:<port>/api/v1/status
+```
+
+The Docker image includes a built-in health check; removing your custom one is the simplest option.
+
+### Migration steps
+
+<Steps>
+  <Step>Stop your v1 AIOStreams container.</Step>
+  <Step>
+    Update `compose.yaml` to add the volume mount and remove/update the health
+    check.
+  </Step>
+  <Step>Update your environment variables (see below).</Step>
+  
+  <Step>Start the v2 container.</Step>
+</Steps>
+
+---
+
+## 2. Environment Variable Changes
+
+| v1 Variable                                     | v2 Variable                                   | Notes                                                                            |
+| ----------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
+| `API_KEY`                                       | `ADDON_PASSWORD`                              | Renamed                                                                          |
+| `BRANDING`                                      | `CUSTOM_HTML`                                 | Now a runtime variable (was build-time in v1)                                    |
+| `DETERMINISTIC_ADDON_ID`                        | _(removed)_                                   | v2 always uses deterministic IDs                                                 |
+| `SECRET_KEY`                                    | `SECRET_KEY`                                  | **Now requires a 64-character hex string**. Generate with `openssl rand -hex 32` |
+| `DATABASE_URI`                                  | `DATABASE_URI`                                | New. Default: `sqlite:///app/data/db.sqlite`                                     |
+| `LOG_LEVEL`                                     | `LOG_LEVEL`                                   | Expanded: `http`, `verbose`, `silly` added                                       |
+| `SHOW_DIE`                                      | _(removed)_                                   | The die emoji is gone                                                            |
+| `ALIASED_CONFIGURATIONS` (was `CUSTOM_CONFIGS`) | `ALIASED_CONFIGURATIONS`                      | New format: `alias:uuid:encryptedPassword` triplets                              |
+| `DEFAULT_MEDIAFLOW_URL` etc.                    | `DEFAULT_PROXY_URL`, `DEFAULT_PROXY_ID`, etc. | Proxy variables unified                                                          |
+
+<Callout type="warn">
+  `SECRET_KEY` is now strictly validated. If your v1 key was not a 64-character
+  hex string, you must generate a new one. AIOStreams will not start otherwise.
+</Callout>
+
+---
+
+## 3. Custom Formatter Syntax
+
+If you used a custom stream formatter in v1, update the variable names:
+
+| v1 Variable                       | v2 Variable                          | Notes                                                                    |
+| --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
+| `{provider.cached}`               | `{service.cached}`                   | The `provider` object is now `service`                                   |
+| `{stream.personal}`               | `{stream.library}`                   | Renamed                                                                  |
+| `{stream.infoHash}` check for P2P | `{stream.type::=p2p["[P2P]"\|\|""]}` | `infoHash` may now exist on non-P2P streams; use `{stream.type}` instead |
+
+<Steps>
+  <Step>Note your v1 formatter strings before stopping the container.</Step>
+  <Step>
+    After v2 is running, go to the configuration page and recreate your
+    formatters using the updated variable names.
+  </Step>
+  <Step>
+    See the [Custom Formatter reference](/reference/custom-formatter) for a
+    full list of available variables.
+  </Step>
+</Steps>
+
+---
+
+If you run into issues not covered here, join the [AIOStreams Discord](https://discord.viren070.me) for help.

@@ -3,14 +3,20 @@ import {
   NewznabAddon,
   createLogger,
   fromUrlSafeBase64,
+  APIError,
+  constants,
 } from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
 
+interface NewznabManifestParams {
+  encodedConfig?: string; // optional
+}
+
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<NewznabManifestParams>, res: Response, next: NextFunction) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -27,9 +33,15 @@ router.get(
   }
 );
 
+interface NewznabStreamParams {
+  encodedConfig?: string; // optional
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<NewznabStreamParams>, res: Response, next: NextFunction) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

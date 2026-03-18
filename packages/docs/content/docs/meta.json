@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "getting-started",
+    "configuration",
+    "guides",
+    "reference",
+    "faq",
+    "troubleshooting",
+    "apis",
+    "migrations"
+  ]
+}

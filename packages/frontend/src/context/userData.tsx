@@ -4,6 +4,8 @@ import {
   QUALITIES,
   RESOLUTIONS,
   SERVICE_DETAILS,
+  DEFAULT_PRECACHE_SELECTOR,
+  DEFAULT_SMART_DETECT_ATTRIBUTES,
 } from '../../../core/src/utils/constants';
 import { useStatus } from './status';
 
@@ -25,6 +27,16 @@ export function applyMigrations(config: any): UserData {
         config.deduplicator.multiGroupBehaviour = 'keep_all';
         break;
     }
+  }
+
+  if (typeof config.digitalReleaseFilter === 'boolean') {
+    const oldValue = config.digitalReleaseFilter;
+    config.digitalReleaseFilter = {
+      enabled: oldValue,
+      tolerance: 0,
+      requestTypes: ['movie', 'series', 'anime'],
+      addons: [],
+    };
   }
   if (config.titleMatching?.matchYear) {
     config.yearMatching = {
@@ -50,7 +62,7 @@ export function applyMigrations(config: any): UserData {
     config.statistics = {
       enabled: config.showStatistics ?? false,
       position: config.statisticsPosition ?? 'bottom',
-      statsToShow: ['addon', 'filter'],
+      statsToShow: ['addon', 'filter', 'timing'],
       ...(config.statistics ?? {}),
     };
     delete config.showStatistics;
@@ -112,11 +124,20 @@ export function applyMigrations(config: any): UserData {
 
   for (const key of expressionLists) {
     if (Array.isArray((config as any)[key])) {
-      (config as any)[key] = (config as any)[key].map((expr: unknown) =>
-        typeof expr === 'string'
-          ? migrateAnimeQueryTypeInExpression(expr)
-          : expr
-      );
+      (config as any)[key] = (config as any)[key].map((expr: unknown) => {
+        if (typeof expr === 'string') {
+          return migrateAnimeQueryTypeInExpression(expr);
+        }
+        if (typeof expr === 'object' && expr !== null && 'expression' in expr) {
+          return {
+            ...(expr as any),
+            expression: migrateAnimeQueryTypeInExpression(
+              (expr as any).expression
+            ),
+          };
+        }
+        return expr;
+      });
     }
   }
 
@@ -133,9 +154,128 @@ export function applyMigrations(config: any): UserData {
     }));
   }
 
+  if (
+    config.rpdbUseRedirectApi !== undefined &&
+    config.usePosterRedirectApi === undefined
+  ) {
+    config.usePosterRedirectApi = config.rpdbUseRedirectApi;
+    delete config.rpdbUseRedirectApi;
+  }
+
+  // migrate 'rpdb' to 'usePosterService' in all catalog modifications
+  if (Array.isArray(config.catalogModifications)) {
+    for (const mod of config.catalogModifications) {
+      if (mod.usePosterService === undefined && mod.rpdb === true) {
+        mod.usePosterService = true;
+      }
+      delete mod.rpdb;
+    }
+  }
+
+  // migrate alwaysPrecache to precacheCondition, then precacheCondition to precacheSelector
+  if (config.precacheSelector === undefined && config.precacheNextEpisode) {
+    // First handle the old precacheCondition field
+    if (config.precacheCondition !== undefined) {
+      // Convert condition to selector format
+      config.precacheSelector = `${config.precacheCondition} ? uncached(streams) : []`;
+    } else {
+      // Handle even older alwaysPrecache field
+      config.precacheSelector =
+        config.alwaysPrecache === true
+          ? 'true ? uncached(streams) : []'
+          : DEFAULT_PRECACHE_SELECTOR;
+    }
+  }
+  delete config.alwaysPrecache;
+  delete config.precacheCondition;
+
+  // migrate p2pWrap to serviceWrap
+  if (config.p2pWrap !== undefined && config.serviceWrap === undefined) {
+    config.serviceWrap = config.p2pWrap;
+    delete config.p2pWrap;
+  }
+
+  // migrate stream expressions from string[] to {expression, enabled}[]
+  const streamExpressionKeys = [
+    'excludedStreamExpressions',
+    'requiredStreamExpressions',
+    'preferredStreamExpressions',
+    'includedStreamExpressions',
+  ] as const;
+  for (const key of streamExpressionKeys) {
+    if (
+      Array.isArray(config[key]) &&
+      config[key].some((expr: unknown) => typeof expr === 'string')
+    ) {
+      config[key] = config[key].map((expr: unknown) =>
+        typeof expr === 'string' ? { expression: expr, enabled: true } : expr
+      );
+    }
+  }
+
+  // migrate forceToTop at addon level to pinPosition set to 'top'
+  if (config.presets && Array.isArray(config.presets)) {
+    config.presets = config.presets.map((preset: any) => {
+      if (
+        preset.options?.forceToTop === true &&
+        preset.options.pinPosition === undefined
+      ) {
+        delete preset.options.forceToTop;
+        return {
+          ...preset,
+          options: {
+            ...preset.options,
+            pinPosition: 'top',
+          },
+        };
+      }
+      return preset;
+    });
+  }
+
   return config;
 }
-const DefaultUserData: UserData = {
+
+export function removeInvalidPresetReferences(config: UserData) {
+  // remove references to non-existent presets in options:
+  const existingPresetIds = config.presets?.map((preset) => preset.instanceId);
+  if (config.proxy) {
+    config.proxy.proxiedAddons = config.proxy.proxiedAddons?.filter((addon) =>
+      existingPresetIds?.includes(addon)
+    );
+  }
+  if (config.yearMatching) {
+    config.yearMatching.addons = config.yearMatching.addons?.filter((addon) =>
+      existingPresetIds?.includes(addon)
+    );
+  }
+  if (config.titleMatching) {
+    config.titleMatching.addons = config.titleMatching.addons?.filter((addon) =>
+      existingPresetIds?.includes(addon)
+    );
+  }
+  if (config.seasonEpisodeMatching) {
+    config.seasonEpisodeMatching.addons =
+      config.seasonEpisodeMatching.addons?.filter((addon) =>
+        existingPresetIds?.includes(addon)
+      );
+  }
+  if (config.groups?.groupings) {
+    config.groups.groupings = config.groups.groupings.map((group) => ({
+      ...group,
+      addons: group.addons?.filter((addon) =>
+        existingPresetIds?.includes(addon)
+      ),
+    }));
+  }
+  if (config.serviceWrap?.presets) {
+    config.serviceWrap.presets = config.serviceWrap.presets.filter((preset) =>
+      existingPresetIds?.includes(preset)
+    );
+  }
+  return config;
+}
+export const DefaultUserData: UserData = {
   services: Object.values(SERVICE_DETAILS).map((service) => ({
     id: service.id,
     enabled: false,
@@ -156,11 +296,19 @@ const DefaultUserData: UserData = {
         direction: 'desc',
       },
       {
+        key: 'library',
+        direction: 'desc',
+      },
+      {
         key: 'resolution',
         direction: 'desc',
       },
       {
-        key: 'library',
+        key: 'quality',
+        direction: 'desc',
+      },
+      {
+        key: 'streamExpressionScore',
         direction: 'desc',
       },
       {
@@ -197,6 +345,7 @@ const DefaultUserData: UserData = {
       },
     ],
   },
+  posterService: 'rpdb',
   deduplicator: {
     enabled: true,
     keys: ['filename', 'infoHash'],
@@ -204,7 +353,53 @@ const DefaultUserData: UserData = {
     cached: 'single_result',
     uncached: 'per_service',
     p2p: 'single_result',
+    http: 'disabled',
+    live: 'disabled',
+    youtube: 'disabled',
+    external: 'disabled',
+    smartDetectAttributes: DEFAULT_SMART_DETECT_ATTRIBUTES,
+    smartDetectRounding: 10,
+    libraryBehaviour: 'ignore',
   },
+  autoPlay: {
+    enabled: true,
+    method: 'matchingFile',
+    attributes: ['resolution', 'quality', 'releaseGroup'],
+  },
+  cacheAndPlay: {
+    enabled: false,
+    streamTypes: ['usenet'],
+  },
+  statistics: {
+    enabled: false,
+    position: 'bottom',
+    statsToShow: ['addon', 'filter', 'timing'],
+  },
+  digitalReleaseFilter: {
+    enabled: false,
+    tolerance: 0,
+    requestTypes: [],
+    addons: [],
+  },
+  ageRangeTypes: ['usenet'],
+  seasonEpisodeMatching: {
+    addons: [],
+    requestTypes: [],
+  },
+  yearMatching: {
+    addons: [],
+    requestTypes: [],
+  },
+  titleMatching: {
+    addons: [],
+    requestTypes: [],
+  },
+  precacheNextEpisode: false,
+  precacheSingleStream: true,
+  precacheSelector: DEFAULT_PRECACHE_SELECTOR,
+  enableSeadex: true,
+  regexOverrides: [],
+  checkOwned: true,
 };
 
 interface UserDataContextType {

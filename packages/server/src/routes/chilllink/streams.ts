@@ -55,7 +55,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .status(200)
       .json(
         await transformer.transformStreams(
-          await aiostreams.getStreams(stremioId, type)
+          
         )
       );
   } catch (error) {

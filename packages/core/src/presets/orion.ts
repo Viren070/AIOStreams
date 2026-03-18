@@ -64,7 +64,7 @@ export class OrionPreset extends Preset {
         type: 'number',
         default: 10,
         constraints: {
-          max: 50,
+          max: 500,
           min: 1,
         },
       },

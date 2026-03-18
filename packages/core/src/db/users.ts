@@ -37,7 +37,7 @@ export class UserRepository {
         !Env.ADDON_PASSWORD.includes(config.addonPassword || '')
       ) {
         return Promise.reject(
-          new APIError(constants.ErrorCode.USER_INVALID_DETAILS)
+          new APIError(constants.ErrorCode.ADDON_PASSWORD_INVALID)
         );
       }
       config.trusted = false;
@@ -191,6 +191,7 @@ export class UserRepository {
       decryptedConfig.trusted =
         Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
         false;
+      decryptedConfig.uuid = uuid;
       decryptedConfig.ip = undefined;
       logger.info(`Retrieved configuration for user ${uuid}`);
       return applyMigrations(decryptedConfig);
@@ -225,11 +226,7 @@ export class UserRepository {
           Env.ADDON_PASSWORD.length > 0 &&
           !Env.ADDON_PASSWORD.includes(config.addonPassword || '')
         ) {
-          throw new APIError(
-            constants.ErrorCode.USER_INVALID_DETAILS,
-            undefined,
-            'Invalid password'
-          );
+          throw new APIError(constants.ErrorCode.ADDON_PASSWORD_INVALID);
         }
         config.trusted =
           Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
@@ -425,5 +422,96 @@ export class UserRepository {
     }
 
     return uuid;
+  }
+
+  static async changePassword(
+    uuid: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ encryptedPassword: string }> {
+    return txQueue.enqueue(async () => {
+      if (newPassword.length < 6) {
+        return Promise.reject(
+          new APIError(constants.ErrorCode.USER_NEW_PASSWORD_TOO_SHORT)
+        );
+      }
+
+      let tx;
+      let committed = false;
+      try {
+        tx = await db.begin();
+
+        const userResult = await tx.execute(
+          'SELECT config, config_salt, password_hash FROM users WHERE uuid = ?',
+          [uuid]
+        );
+
+        if (!userResult.rows.length) {
+          throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+        }
+
+        const userRow = userResult.rows[0];
+
+        if (!(await this.verifyUserPassword(currentPassword, userRow.password_hash))) {
+          throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+        }
+
+        if (await this.verifyUserPassword(newPassword, userRow.password_hash)) {
+          throw new APIError(
+            constants.ErrorCode.USER_NEW_PASSWORD_TOO_SIMPLE,
+            undefined,
+            'New password cannot be the same as the current password'
+          );
+        }
+
+        const currentConfig = await this.decryptConfig(
+          userRow.config,
+          currentPassword,
+          userRow.config_salt
+        );
+
+        const { encryptedConfig, salt: newConfigSalt } = await this.encryptConfig(
+          currentConfig,
+          newPassword
+        );
+
+        const newPasswordHash = await getTextHash(newPassword);
+
+        const { success, data: newEncryptedPasswordToken } = encryptString(newPassword);
+        if (!success) {
+          throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
+        }
+
+        await tx.execute(
+          'UPDATE users SET password_hash = ?, config = ?, config_salt = ?, updated_at = CURRENT_TIMESTAMP WHERE uuid = ?',
+          [newPasswordHash, encryptedConfig, newConfigSalt, uuid]
+        );
+
+        await tx.commit();
+        committed = true;
+        logger.info(`Changed password for user ${uuid}`);
+
+        return { encryptedPassword: newEncryptedPasswordToken };
+
+      } catch (error) {
+        logger.error(
+          `Failed to change password for user ${uuid}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        if (error instanceof APIError) {
+          throw error;
+        }
+        throw new APIError(constants.ErrorCode.DATABASE_ERROR);
+      } finally {
+        if (tx && !committed) {
+          try {
+            await tx.rollback();
+          } catch (rollbackError) {
+            logger.error(
+              `Failed to rollback transaction for user ${uuid}: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+            );
+          }
+        }
+      }
+    });
   }
 }

@@ -54,7 +54,7 @@ export class StremthruTorzPreset extends StremThruPreset {
       ...baseOptions(
         'StremThru Torz',
         supportedResources,
-        Env.DEFAULT_STREMTHRU_STORE_TIMEOUT,
+        Env.DEFAULT_STREMTHRU_TORZ_TIMEOUT,
         Env.STREMTHRU_TORZ_URL
       ),
       {
@@ -231,6 +231,10 @@ export class StremthruTorzPreset extends StremThruPreset {
 
     // Generate configuration string
     const configString = this.generateConfigString(serviceIds, userData);
+
+    if (!baseUrl.endsWith('/stremio/torz')) {
+      baseUrl += '/stremio/torz';
+    }
 
     // Build final manifest URL
     return `${baseUrl}${configString ? '/' + configString : ''}/manifest.json`;

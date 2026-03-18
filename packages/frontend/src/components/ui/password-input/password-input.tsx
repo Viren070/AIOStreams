@@ -34,7 +34,7 @@ export type PasswordInputProps = Omit<
      * The autoComplete attribute for the password input.
      * @default "current-password"
      */
-    autoComplete?: 'current-password' | 'new-password';
+    autoComplete?: 'current-password' | 'new-password' | 'off';
   };
 
 export const PasswordInput = React.forwardRef<
@@ -117,7 +117,7 @@ export const PasswordInput = React.forwardRef<
               aria-readonly={basicFieldProps.readonly}
               required={basicFieldProps.required}
               onChange={handleOnChange}
-              autoComplete={autoComplete}
+              autoComplete={autoComplete as 'current-password' | 'new-password'}
               {...rest}
               ref={ref}
             />

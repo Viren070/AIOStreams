@@ -1,16 +1,8 @@
-import {
-  createLogger,
-  maskSensitiveInfo,
-  formatDurationAsText,
-} from './logger.js';
+import { createLogger, maskSensitiveInfo } from './logger.js';
+import { formatDurationAsText, formatMilliseconds } from './time.js';
 import { Env } from './env.js';
 
 const logger = createLogger('startup');
-
-const formatMilliseconds = (ms: number): string => {
-  if (ms < 1000) return `${ms}ms`;
-  return formatDurationAsText(ms / 1000);
-};
 
 const parseBlockedItems = (
   envVar: string | undefined
@@ -42,6 +34,72 @@ const logKeyValue = (
 ) => {
   const formattedKey = key.padEnd(20);
   logger.info(`${indent}${formattedKey} ${value}`);
+};
+
+/**
+ * Helper function to log cache TTL configuration for cacheTtls format
+ */
+const logCacheTtl = (cacheName: string, ttlMap: Record<string, number>) => {
+  const indent = '        ';
+  const wildcardTtl = ttlMap['*'];
+  const overrides = Object.entries(ttlMap).filter(([key]) => key !== '*');
+
+  // Determine overall cache status
+  const enabledEntries = Object.values(ttlMap).filter((ttl) => ttl !== -1);
+  const disabledEntries = Object.values(ttlMap).filter((ttl) => ttl === -1);
+
+  let status: string;
+  if (enabledEntries.length === 0) {
+    status = '❌ FULLY DISABLED';
+  } else if (disabledEntries.length === 0) {
+    status = '✅ FULLY ENABLED';
+  } else {
+    status = '🔀 MIXED';
+  }
+
+  logKeyValue(`${cacheName}:`, status);
+
+  if (status.includes('FULLY')) {
+    return;
+  }
+
+  // Always show the wildcard default
+  const wildcardStatus =
+    wildcardTtl === -1 ? '❌ DISABLED' : formatDurationAsText(wildcardTtl);
+  logKeyValue('Default (*):', wildcardStatus, indent);
+
+  // Show specific overrides
+  if (overrides.length > 0) {
+    overrides.forEach(([key, value]) => {
+      const overrideStatus =
+        value === -1 ? '❌ DISABLED' : formatDurationAsText(value);
+      logKeyValue(`${key}:`, overrideStatus, indent);
+    });
+  }
+};
+
+/**
+ * Helper function to log a serviceId:time map (e.g., poll intervals, wait times)
+ */
+const logServiceTimeMap = (
+  mapName: string,
+  timeMap: Record<string, number>
+) => {
+  const indent = '        ';
+  const wildcardTime = timeMap['*'];
+  const overrides = Object.entries(timeMap).filter(([key]) => key !== '*');
+
+  logKeyValue(`${mapName}:`, '');
+
+  if (wildcardTime !== undefined) {
+    logKeyValue('Default (*):', formatMilliseconds(wildcardTime), indent);
+  }
+
+  if (overrides.length > 0) {
+    overrides.forEach(([key, value]) => {
+      logKeyValue(`${key}:`, formatMilliseconds(value), indent);
+    });
+  }
 };
 
 const logStartupInfo = () => {
@@ -143,7 +201,15 @@ const logStartupInfo = () => {
   logSection('CACHE CONFIGURATION', '⚡', () => {
     logKeyValue('Max Cache Size:', Env.DEFAULT_MAX_CACHE_SIZE);
 
-    // Proxy IP Cache
+    // Main cache types that use cacheTtls format
+    logCacheTtl('Manifest Cache', Env.MANIFEST_CACHE_TTL);
+    logCacheTtl('Stream Cache', Env.STREAM_CACHE_TTL);
+    logCacheTtl('Catalog Cache', Env.CATALOG_CACHE_TTL);
+    logCacheTtl('Meta Cache', Env.META_CACHE_TTL);
+    logCacheTtl('Subtitle Cache', Env.SUBTITLE_CACHE_TTL);
+    logCacheTtl('Addon Catalog Cache', Env.ADDON_CATALOG_CACHE_TTL);
+
+    // Legacy cache types that still use simple numbers
     if (Env.PROXY_IP_CACHE_TTL === -1) {
       logKeyValue('Proxy IP Cache:', '❌ DISABLED');
     } else {
@@ -153,64 +219,12 @@ const logStartupInfo = () => {
       );
     }
 
-    // Manifest Cache
-    if (Env.MANIFEST_CACHE_TTL === -1) {
-      logKeyValue('Manifest Cache:', '❌ DISABLED');
+    if (Env.POSTER_API_KEY_VALIDITY_CACHE_TTL === -1) {
+      logKeyValue('Poster API Cache:', '❌ DISABLED');
     } else {
       logKeyValue(
-        'Manifest TTL:',
-        formatDurationAsText(Env.MANIFEST_CACHE_TTL)
-      );
-    }
-
-    // Stream Cache
-    if (Env.STREAM_CACHE_TTL === -1) {
-      logKeyValue('Stream Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue('Stream TTL:', formatDurationAsText(Env.STREAM_CACHE_TTL));
-    }
-
-    // Subtitle Cache
-    if (Env.SUBTITLE_CACHE_TTL === -1) {
-      logKeyValue('Subtitle Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue(
-        'Subtitle TTL:',
-        formatDurationAsText(Env.SUBTITLE_CACHE_TTL)
-      );
-    }
-
-    // Catalog Cache
-    if (Env.CATALOG_CACHE_TTL === -1) {
-      logKeyValue('Catalog Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue('Catalog TTL:', formatDurationAsText(Env.CATALOG_CACHE_TTL));
-    }
-
-    // Meta Cache
-    if (Env.META_CACHE_TTL === -1) {
-      logKeyValue('Meta Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue('Meta TTL:', formatDurationAsText(Env.META_CACHE_TTL));
-    }
-
-    // Addon Catalog Cache
-    if (Env.ADDON_CATALOG_CACHE_TTL === -1) {
-      logKeyValue('Addon Catalog Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue(
-        'Addon Catalog TTL:',
-        formatDurationAsText(Env.ADDON_CATALOG_CACHE_TTL)
-      );
-    }
-
-    // RPDB API Cache
-    if (Env.RPDB_API_KEY_VALIDITY_CACHE_TTL === -1) {
-      logKeyValue('RPDB API Cache:', '❌ DISABLED');
-    } else {
-      logKeyValue(
-        'RPDB API TTL:',
-        formatDurationAsText(Env.RPDB_API_KEY_VALIDITY_CACHE_TTL)
+        'Poster API TTL:',
+        formatDurationAsText(Env.POSTER_API_KEY_VALIDITY_CACHE_TTL)
       );
     }
   });
@@ -310,8 +324,12 @@ const logStartupInfo = () => {
     logKeyValue('Max Groups:', Env.MAX_GROUPS.toString());
     logKeyValue('Max Keyword Filters:', Env.MAX_KEYWORD_FILTERS.toString());
     logKeyValue(
-      'Max Stream Expression Filters:',
-      Env.MAX_STREAM_EXPRESSION_FILTERS.toString()
+      'Max Stream Expressions:',
+      Env.MAX_STREAM_EXPRESSIONS.toString()
+    );
+    logKeyValue(
+      'Max Stream Expressions Characters:',
+      Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS.toString()
     );
     logKeyValue(
       'Timeout Range:',
@@ -702,6 +720,45 @@ const logStartupInfo = () => {
         logKeyValue('    User Agent:', Env.BUILTIN_GDRIVE_USER_AGENT, '     ');
       }
     }
+
+    // Title language scraping config
+    logKeyValue('Title Scraping:', '');
+    const titleLangs = Env.BUILTIN_SCRAPE_TITLE_LANGUAGES as
+      | Record<string, string[]>
+      | undefined;
+    if (titleLangs) {
+      const entries = Object.entries(titleLangs);
+      entries.forEach(([domain, specs]) => {
+        logKeyValue(
+          `  ${domain === '*' ? '*(default):' : `${domain}:`}`,
+          specs.join(', '),
+          '       '
+        );
+      });
+    } else {
+      const legacyAllTitles = Env.BUILTIN_SCRAPE_WITH_ALL_TITLES;
+      const legacyValue = Array.isArray(legacyAllTitles)
+        ? `all titles for: ${legacyAllTitles.join(', ')}`
+        : legacyAllTitles
+          ? 'all titles (global)'
+          : 'primary title only (default)';
+      logKeyValue('  Mode (legacy):', legacyValue, '       ');
+    }
+    logKeyValue(
+      '  Title Limit:',
+      Env.BUILTIN_SCRAPE_TITLE_LIMIT.toString(),
+      '       '
+    );
+
+    // Download timing
+    logServiceTimeMap(
+      'Download Poll Interval',
+      Env.BUILTIN_DOWNLOAD_POLL_INTERVAL
+    );
+    logServiceTimeMap(
+      'Download Max Wait Time',
+      Env.BUILTIN_DOWNLOAD_MAX_WAIT_TIME
+    );
   });
 
   // Addon Sources
@@ -964,6 +1021,23 @@ const logStartupInfo = () => {
       logKeyValue(
         '  User Agent:',
         Env.DEFAULT_DEBRIDIO_WATCHTOWER_USER_AGENT,
+        '     '
+      );
+    }
+
+    // Debridio IC4A
+    logKeyValue('Debridio IC4A:', Env.DEBRIDIO_IC4A_URL);
+    if (Env.DEFAULT_DEBRIDIO_IC4A_TIMEOUT) {
+      logKeyValue(
+        '  Timeout:',
+        formatMilliseconds(Env.DEFAULT_DEBRIDIO_IC4A_TIMEOUT),
+        '     '
+      );
+    }
+    if (Env.DEFAULT_DEBRIDIO_IC4A_USER_AGENT) {
+      logKeyValue(
+        '  User Agent:',
+        Env.DEFAULT_DEBRIDIO_IC4A_USER_AGENT,
         '     '
       );
     }

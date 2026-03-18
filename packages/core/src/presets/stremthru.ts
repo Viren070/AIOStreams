@@ -10,6 +10,7 @@ export const stremthruSpecialCases: Partial<
     `${credentials.email}:${credentials.password}`,
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
+  [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) => credentials,
 };
 
 export class StremThruStreamParser extends StreamParser {
@@ -18,13 +19,6 @@ export class StremThruStreamParser extends StreamParser {
     _currentParsedStream: ParsedStream
   ): boolean | undefined {
     return stream.name?.includes('🔑') ? true : false;
-  }
-
-  protected override getIndexer(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): string | undefined {
-    return undefined;
   }
 
   protected get filenameRegex(): RegExp | undefined {
@@ -39,15 +33,11 @@ export class StremThruStreamParser extends StreamParser {
       stream.description ?? '',
       /📦\s*(\d+(\.\d+)?)\s?(KB|MB|GB|TB)/i
     );
-    if (folderSize && currentParsedStream.size) {
-      if (
-        Math.abs(folderSize - currentParsedStream.size) <=
-        currentParsedStream.size * 0.05
-      ) {
-        return undefined;
-      }
-    }
     return folderSize;
+  }
+
+  protected override get indexerEmojis(): string[] {
+    return ['🔍'];
   }
 }
 

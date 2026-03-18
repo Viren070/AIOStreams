@@ -1,21 +1,20 @@
 import {
   DebridDownload,
-  DebridService,
   DebridServiceConfig,
   PlaybackInfo,
+  UsenetDebridService,
 } from './base.js';
 import { ServiceId, createLogger, fromUrlSafeBase64 } from '../utils/index.js';
 import { NNTPServers, NNTPServersSchema } from '../db/schemas.js';
 
 const logger = createLogger('stremio-nntp');
 
-export class StremioNNTPService implements DebridService {
+export class StremioNNTPService implements UsenetDebridService {
   readonly serviceName: ServiceId = 'stremio_nntp';
+  readonly capabilities = { torrents: false, usenet: true };
   readonly serviceLogger = logger;
 
   private servers: NNTPServers;
-
-  supportsUsenet: boolean = true;
 
   constructor(config: DebridServiceConfig) {
     const parsedConfig = NNTPServersSchema.parse(
@@ -24,17 +23,6 @@ export class StremioNNTPService implements DebridService {
     this.servers = parsedConfig;
   }
 
-  checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  listMagnets(): Promise<DebridDownload[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  addMagnet(magnet: string): Promise<DebridDownload> {
-    throw new Error('Method not implemented.');
-  }
   async checkNzbs(
     nzbs: { name?: string; hash?: string }[],
     checkOwned?: boolean
@@ -55,10 +43,6 @@ export class StremioNNTPService implements DebridService {
     filename: string,
     cacheAndPlay: boolean
   ): Promise<string | undefined> {
-    throw new Error('Method not implemented.');
-  }
-
-  generateTorrentLink(link: string, clientIp?: string): Promise<string> {
     throw new Error('Method not implemented.');
   }
 }

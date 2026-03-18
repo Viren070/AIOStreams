@@ -9,9 +9,14 @@ import {
 const logger = createLogger('server');
 const router: Router = Router();
 
+interface AddonCatalogParams {
+  type: string;
+  id: string;
+}
+
 router.get(
   '/:type/:id.json',
-  async (req: Request, res: Response<AddonCatalogResponse>, next) => {
+  async (req: Request<AddonCatalogParams>, res: Response<AddonCatalogResponse>, next) => {
     if (!req.userData) {
       res.status(200).json({
         addons: [

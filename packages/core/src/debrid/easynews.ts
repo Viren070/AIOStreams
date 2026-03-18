@@ -1,9 +1,9 @@
 import {
   DebridDownload,
   DebridError,
-  DebridService,
   DebridServiceConfig,
   PlaybackInfo,
+  UsenetDebridService,
 } from './base.js';
 import {
   Cache,
@@ -13,6 +13,7 @@ import {
   createLogger,
   fromUrlSafeBase64,
 } from '../utils/index.js';
+import { buildResolveKey } from './utils.js';
 import { NNTPServers, NNTPServersSchema } from '../db/schemas.js';
 import z from 'zod';
 
@@ -23,16 +24,15 @@ const EasynewsAuthSchema = z.object({
   password: z.string(),
 });
 
-export class EasynewsService implements DebridService {
+export class EasynewsService implements UsenetDebridService {
   readonly serviceName: ServiceId = 'easynews';
+  readonly capabilities = { torrents: false, usenet: true };
   readonly serviceLogger = logger;
 
   private auth: z.infer<typeof EasynewsAuthSchema>;
   protected static playbackLinkCache = Cache.getInstance<string, string>(
     'easynews:link'
   );
-
-  supportsUsenet: boolean = true;
 
   constructor(private readonly config: DebridServiceConfig) {
     const auth = EasynewsAuthSchema.parse(
@@ -41,17 +41,6 @@ export class EasynewsService implements DebridService {
     this.auth = auth;
   }
 
-  checkMagnets(magnets: string[], sid?: string): Promise<DebridDownload[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  listMagnets(): Promise<DebridDownload[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  addMagnet(magnet: string): Promise<DebridDownload> {
-    throw new Error('Method not implemented.');
-  }
   async checkNzbs(
     nzbs: { name?: string; hash?: string }[],
     checkOwned?: boolean
@@ -76,7 +65,14 @@ export class EasynewsService implements DebridService {
       throw new Error('Unsupported operation');
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `${this.serviceName}:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${this.config.clientIp}:${this.config.token}`,
+      buildResolveKey(
+        'en:lock',
+        this.serviceName,
+        playbackInfo,
+        filename,
+        this.config.token,
+        this.config.clientIp
+      ),
       () => this._resolve(playbackInfo, filename),
       {
         timeout: 10000,
@@ -146,9 +142,5 @@ export class EasynewsService implements DebridService {
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL
     );
     return finalUrl;
-  }
-
-  generateTorrentLink(link: string, clientIp?: string): Promise<string> {
-    throw new Error('Method not implemented.');
   }
 }

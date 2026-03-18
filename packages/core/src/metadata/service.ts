@@ -1,5 +1,5 @@
 import { DistributedLock } from '../utils/distributed-lock.js';
-import { Metadata } from './utils.js';
+import { deduplicateTitles, Metadata, MetadataTitle } from './utils.js';
 import { TMDBMetadata } from './tmdb.js';
 import { getTraktAliases } from './trakt.js';
 import { IMDBMetadata } from './imdb.js';
@@ -9,6 +9,7 @@ import { AnimeDatabase, IdParser, ParsedId, Env } from '../utils/index.js';
 import { withRetry } from '../utils/general.js';
 import { Meta } from '../db/schemas.js';
 import { TVDBMetadata } from './tvdb.js';
+import { parseDuration } from '../parser/utils.js';
 
 const logger = createLogger('metadata-service');
 
@@ -27,6 +28,11 @@ export class MetadataService {
     this.config = config;
   }
 
+  private isDateInFuture(dateStr: string): boolean {
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) && date > new Date();
+  }
+
   public async getMetadata(
     id: ParsedId,
     type: (typeof TYPES)[number]
@@ -37,21 +43,29 @@ export class MetadataService {
           `metadata:${id.mediaType}:${id.type}:${id.value}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}`,
           async () => {
             const start = Date.now();
-            const titles: string[] = [];
+            const titles: MetadataTitle[] = [];
             let releaseDate: string | undefined;
             let year: number | undefined;
             let yearEnd: number | undefined;
+            let originalLanguage: string | undefined;
+            let runtime: number | undefined;
+            let genres: string[] = [];
             let seasons:
               | {
                   season_number: number;
                   episode_count: number;
                 }[]
               | undefined;
+            let nextAirDate: string | undefined;
+            let lastAiredDate: string | undefined;
+            let firstAiredDate: string | undefined;
 
             // Check anime database first
             const animeEntry = AnimeDatabase.getInstance().getEntryById(
               id.type,
-              id.value
+              id.value,
+              id.season ? Number(id.season) : undefined,
+              id.episode ? Number(id.episode) : undefined
             );
 
             let tmdbId: number | null =
@@ -72,10 +86,13 @@ export class MetadataService {
                   : null;
 
             if (animeEntry) {
-              if (animeEntry.imdb?.title) titles.push(animeEntry.imdb.title);
-              if (animeEntry.trakt?.title) titles.push(animeEntry.trakt.title);
-              if (animeEntry.title) titles.push(animeEntry.title);
-              if (animeEntry.synonyms) titles.push(...animeEntry.synonyms);
+              if (animeEntry.imdb?.title)
+                titles.push({ title: animeEntry.imdb.title });
+              if (animeEntry.trakt?.title)
+                titles.push({ title: animeEntry.trakt.title });
+              if (animeEntry.title) titles.push({ title: animeEntry.title });
+              if (animeEntry.synonyms)
+                titles.push(...animeEntry.synonyms.map((s) => ({ title: s })));
               year = animeEntry.animeSeason?.year ?? undefined;
             }
 
@@ -148,7 +165,7 @@ export class MetadataService {
             ] = (await Promise.allSettled(promises)) as [
               PromiseSettledResult<(Metadata & { tmdbId: string }) | undefined>,
               PromiseSettledResult<(Metadata & { tvdbId: number }) | undefined>,
-              PromiseSettledResult<string[] | undefined>,
+              PromiseSettledResult<MetadataTitle[] | undefined>,
               PromiseSettledResult<Meta | undefined>,
               PromiseSettledResult<Metadata | undefined>,
             ];
@@ -156,17 +173,30 @@ export class MetadataService {
             // Process TMDB results
             if (tmdbResult.status === 'fulfilled' && tmdbResult.value) {
               const tmdbMetadata = tmdbResult.value;
-              logger.debug(`TMDB metadata: ${JSON.stringify(tmdbMetadata)}`);
-              if (tmdbMetadata.title) titles.unshift(tmdbMetadata.title);
-              if (tmdbMetadata.titles) titles.push(...tmdbMetadata.titles);
+              if (tmdbMetadata.title)
+                titles.unshift({ title: tmdbMetadata.title });
+              // Mark TMDB titles as trusted so their language tags are preserved
+              // during deduplication even when lower-quality sources (TVDB, Trakt,
+              // IMDb) return the same title without a language tag.
+              if (tmdbMetadata.titles)
+                titles.push(
+                  ...tmdbMetadata.titles.map((t) => ({
+                    ...t,
+                    trusted: true as const,
+                  }))
+                );
               if (tmdbMetadata.year) year = tmdbMetadata.year;
               if (tmdbMetadata.yearEnd) yearEnd = tmdbMetadata.yearEnd;
+              if (tmdbMetadata.originalLanguage)
+                originalLanguage = tmdbMetadata.originalLanguage;
               if (tmdbMetadata.releaseDate)
                 releaseDate = tmdbMetadata.releaseDate;
               if (tmdbMetadata.seasons)
                 seasons = tmdbMetadata.seasons.sort(
                   (a, b) => a.season_number - b.season_number
                 );
+              if (tmdbMetadata.runtime) runtime = tmdbMetadata.runtime;
+              if (tmdbMetadata.genres) genres = tmdbMetadata.genres;
               tmdbId = tmdbMetadata.tmdbId;
             } else if (tmdbResult.status === 'rejected') {
               logger.warn(
@@ -177,16 +207,68 @@ export class MetadataService {
             // Process TVDB results
             if (tvdbResult.status === 'fulfilled' && tvdbResult.value) {
               const tvdbMetadata = tvdbResult.value;
-              if (tvdbMetadata.title) titles.unshift(tvdbMetadata.title);
+              if (tvdbMetadata.title)
+                titles.unshift({ title: tvdbMetadata.title });
               if (tvdbMetadata.titles) titles.push(...tvdbMetadata.titles);
               if (tvdbMetadata.year) year = tvdbMetadata.year;
               if (tvdbMetadata.yearEnd) yearEnd = tvdbMetadata.yearEnd;
+              if (tvdbMetadata.runtime && !runtime)
+                runtime = tvdbMetadata.runtime;
+              if (
+                tvdbMetadata.nextAirDate &&
+                this.isDateInFuture(tvdbMetadata.nextAirDate)
+              )
+                nextAirDate = tvdbMetadata.nextAirDate;
+              if (tvdbMetadata.lastAiredDate)
+                lastAiredDate = tvdbMetadata.lastAiredDate;
+              if (tvdbMetadata.firstAiredDate)
+                firstAiredDate = tvdbMetadata.firstAiredDate;
               tvdbId = tvdbMetadata.tvdbId;
             } else if (tvdbResult.status === 'rejected') {
               logger.warn(
                 `Failed to fetch TVDB metadata for ${id.fullId}: ${tvdbResult.reason}`
               );
             }
+
+            if (!nextAirDate && type === 'series' && id.season && id.episode) {
+              try {
+                const tmdb = new TMDBMetadata({
+                  accessToken: this.config.tmdbAccessToken,
+                  apiKey: this.config.tmdbApiKey,
+                });
+                let seasonNumber = Number(id.season);
+                let episodeNumber = Number(id.episode);
+                if (animeEntry) {
+                  const originalSeason = seasonNumber;
+                  seasonNumber = animeEntry.tmdb?.seasonNumber ?? seasonNumber;
+                  if (animeEntry.tmdb?.fromEpisode) {
+                    const fromEpisode = Number(animeEntry.tmdb.fromEpisode);
+                    if (
+                      seasonNumber !== originalSeason ||
+                      episodeNumber < fromEpisode
+                    ) {
+                      episodeNumber = fromEpisode + episodeNumber - 1;
+                    }
+                  }
+                }
+                if (tmdbId && seasons) {
+                  const tmdbNextAirDate = await tmdb.getNextEpisodeAirDate(
+                    Number(tmdbId),
+                    seasonNumber,
+                    episodeNumber,
+                    seasons
+                  );
+                  if (tmdbNextAirDate && this.isDateInFuture(tmdbNextAirDate)) {
+                    nextAirDate = tmdbNextAirDate;
+                  }
+                }
+              } catch (error) {
+                logger.debug(
+                  `Failed to get next episode air date from TMDB for ${id.fullId}: ${error}`
+                );
+              }
+            }
+
             // Process Trakt results
             if (traktResult.status === 'fulfilled' && traktResult.value) {
               titles.push(...traktResult.value);
@@ -199,7 +281,8 @@ export class MetadataService {
             // Process IMDb results
             if (imdbResult.status === 'fulfilled' && imdbResult.value) {
               const cinemetaData = imdbResult.value;
-              if (cinemetaData.name) titles.unshift(cinemetaData.name);
+              if (cinemetaData.name)
+                titles.unshift({ title: cinemetaData.name });
               if (cinemetaData.releaseInfo && !year) {
                 if (cinemetaData.releaseInfo) {
                   const parts = cinemetaData.releaseInfo
@@ -261,6 +344,19 @@ export class MetadataService {
                   releaseDate = parsedReleaseDate.toISOString().split('T')[0];
                 }
               }
+              if (cinemetaData.runtime && !runtime) {
+                runtime = parseDuration(
+                  cinemetaData.runtime
+                    .replace('min', 'm')
+                    .replace('hr', 'h')
+                    .replace(' ', '')
+                    .trim()
+                );
+                runtime = runtime ? Math.round(runtime / 60000) : undefined;
+                if (runtime !== undefined && runtime <= 1) {
+                  runtime = undefined;
+                }
+              }
             } else if (imdbResult.status === 'rejected') {
               logger.warn(
                 `Failed to fetch IMDb metadata for ${imdbId}: ${imdbResult.reason}`
@@ -273,17 +369,18 @@ export class MetadataService {
             ) {
               const imdbSuggestionData = imdbSuggestionResult.value;
               if (imdbSuggestionData.title)
-                titles.unshift(imdbSuggestionData.title);
+                titles.unshift({ title: imdbSuggestionData.title });
               if (imdbSuggestionData.year && !year)
                 year = imdbSuggestionData.year;
               if (imdbSuggestionData.yearEnd && !yearEnd)
                 yearEnd = imdbSuggestionData.yearEnd;
+            } else {
+              logger.warn(
+                `Failed to fetch IMDb suggestion data for ${imdbId}: ${imdbSuggestionResult.status === 'rejected' ? imdbSuggestionResult.reason : 'no data'}`
+              );
             }
 
-            // Deduplicate titles, lowercase all before deduplication
-            const uniqueTitles = [
-              ...new Set(titles.map((title) => title.toLowerCase())),
-            ];
+            const uniqueTitles = deduplicateTitles(titles);
 
             if (
               !uniqueTitles.length ||
@@ -291,26 +388,37 @@ export class MetadataService {
             ) {
               throw new Error(`Could not find metadata for ${id.fullId}`);
             }
-            logger.debug(
-              `Found metadata for ${id.fullId} in ${getTimeTakenSincePoint(start)}`,
-              {
-                title: uniqueTitles[0],
-                aliases: uniqueTitles.slice(1).length,
-                year,
-                yearEnd,
-                seasons: seasons?.length,
-              }
-            );
-            return {
-              title: uniqueTitles[0],
+
+            const metadata = {
+              title: uniqueTitles[0].title,
               titles: uniqueTitles,
               year,
               yearEnd,
+              originalLanguage,
               seasons,
               releaseDate,
               tmdbId,
               tvdbId,
+              runtime,
+              genres,
+              nextAirDate,
+              firstAiredDate,
+              lastAiredDate,
             };
+            logger.debug(
+              `Found metadata for ${id.fullId} in ${getTimeTakenSincePoint(start)}`,
+              {
+                ...metadata,
+                titles: metadata.titles.map(
+                  (t) => `${t.title}${t.language ? ` (${t.language})` : ''}`
+                ),
+                seasons: metadata.seasons?.map(
+                  (s) => `{s:${s.season_number},e:${s.episode_count}}`
+                ),
+                titleCount: titles.length,
+              }
+            );
+            return metadata;
           },
           {
             timeout: 10000,

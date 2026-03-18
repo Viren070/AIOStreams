@@ -11,18 +11,18 @@ import {
   Env,
   getSimpleTextHash,
   getTimeTakenSincePoint,
+  formatMilliseconds,
   maskSensitiveInfo,
   Cache,
   ExtrasParser,
   makeUrlLogSafe,
-  AnimeDatabase,
-  ParsedId,
   IdParser,
 } from './utils/index.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from './presets/index.js';
 import {
   AddonCatalog,
+  MergedCatalog,
   Meta,
   MetaPreview,
   ParsedMeta,
@@ -31,7 +31,7 @@ import {
   Subtitle,
 } from './db/schemas.js';
 import { createProxy } from './proxy/index.js';
-import { RPDB } from './utils/rpdb.js';
+import { createPosterService } from './poster/index.js';
 import { FeatureControl } from './utils/feature.js';
 import Proxifier from './streams/proxifier.js';
 import StreamLimiter from './streams/limiter.js';
@@ -42,17 +42,32 @@ import {
   StreamDeduplicator as Deduplicator,
   StreamPrecomputer as Precomputer,
   StreamUtils,
+  StreamContext,
+  populateNzbFallbacks,
+  preloadStreams,
 } from './streams/index.js';
+import { resolveServiceWrappedStreams } from './streams/serviceWrapper.js';
+import type { ServiceWrapServiceTiming } from './streams/serviceWrapper.js';
+import type { PrecomputeSubTimings } from './streams/precomputer.js';
 import { getAddonName } from './utils/general.js';
-import { TMDBMetadata } from './metadata/tmdb.js';
 import { Metadata } from './metadata/utils.js';
+import { StreamSelector } from './parser/streamExpression.js';
+
 const logger = createLogger('core');
 
 const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
+
+type MergedCatalogSkipState = {
+  sourceSkips: Record<string, number>; // What skip to send to each upstream source
+};
+const mergedCatalogCache = Cache.getInstance<string, MergedCatalogSkipState>(
+  'merged_catalog'
+);
+
 const precacheCache = Cache.getInstance<string, boolean>(
   'precache',
   undefined,
-  'memory'
+  Env.REDIS_URI ? 'redis' : 'memory'
 );
 
 export interface AIOStreamsError {
@@ -90,6 +105,7 @@ export class AIOStreams {
   private deduplicator: Deduplicator;
   private sorter: Sorter;
   private precomputer: Precomputer;
+  private streamContext: StreamContext | null = null;
 
   private addonInitialisationErrors: {
     addon: Addon | Preset;
@@ -174,11 +190,20 @@ export class AIOStreams {
       }
     );
 
+    const context = StreamContext.create(type, id, this.userData);
+    // Store context for later retrieval
+    this.streamContext = context;
+
+    this.filterer.resetFilterTimings();
+    this.precomputer.resetPrecomputeTimings();
+
+    const fetchStart = Date.now();
     const {
       streams,
       errors,
       statistics: addonStatistics,
-    } = await this.fetcher.fetch(supportedAddons, type, id);
+    } = await this.fetcher.fetch(supportedAddons, context);
+    const fetchMs = Date.now() - fetchStart;
 
     if (
       this.userData.statistics?.enabled &&
@@ -195,8 +220,19 @@ export class AIOStreams {
       }))
     );
 
-    const processResults = await this._processStreams(streams, type, id);
+    const processResults = await this._processStreams(
+      streams,
+      context,
+      false,
+      this.userData.nzbFailover?.enabled && !preCaching
+        ? {
+            count: this.userData.nzbFailover.count ?? 3,
+            position: this.userData.nzbFailover.position ?? 'last',
+          }
+        : undefined
+    );
     let finalStreams = processResults.streams;
+    const pipelineTimings = processResults.timings;
     errors.push(...processResults.errors);
 
     // if this.userData.precacheNextEpisode is true, start a new thread to request the next episode, check if
@@ -217,7 +253,7 @@ export class AIOStreams {
       }
       if (precache) {
         setImmediate(() => {
-          this.precacheNextEpisode(type, id).catch((error) => {
+          this.precacheNextEpisode(context).catch((error) => {
             logger.error('Error during precaching:', {
               error: error instanceof Error ? error.message : String(error),
               type,
@@ -225,6 +261,70 @@ export class AIOStreams {
             });
           });
         });
+      }
+    }
+
+    // preload selected streams
+    if (this.userData.preloadStreams?.enabled && !preCaching) {
+      // Skip if the same user has already triggered a preload for this item recently
+      let shouldPreload = true;
+      if (Env.PRELOAD_MIN_INTERVAL > 0) {
+        const preloadCooldownKey = `preload-${type}-${id}-${this.userData.uuid}`;
+        const recentlyPreloaded = await precacheCache.get(
+          preloadCooldownKey,
+          false
+        );
+        if (recentlyPreloaded) {
+          logger.info(
+            `Preload for ${type} ${id} skipped — within cooldown (${precacheCache.getTTL(preloadCooldownKey)} seconds left).`
+          );
+          shouldPreload = false;
+        } else {
+          await precacheCache.set(
+            preloadCooldownKey,
+            true,
+            Env.PRELOAD_MIN_INTERVAL
+          );
+        }
+      }
+
+      if (shouldPreload) {
+        const preloadSelector =
+          this.userData.preloadStreams.selector ??
+          constants.DEFAULT_PRELOAD_SELECTOR;
+        const streamSelector = new StreamSelector(
+          context.toExpressionContext()
+        );
+        let streamsToPreload: ParsedStream[];
+        const preloadSingleStream =
+          this.userData.preloadStreams?.singleStream !== false;
+        try {
+          streamsToPreload = (
+            await streamSelector.select(finalStreams, preloadSelector)
+          )
+            .filter((s) => s.url)
+            .slice(0, preloadSingleStream ? 1 : Env.MAX_BACKGROUND_PINGS);
+        } catch (selectorError) {
+          logger.warn('Preload selector evaluation failed', {
+            selector: preloadSelector,
+            error:
+              selectorError instanceof Error
+                ? selectorError.message
+                : String(selectorError),
+          });
+          streamsToPreload = [];
+        }
+        if (streamsToPreload.length > 0) {
+          setImmediate(() => {
+            preloadStreams(streamsToPreload).catch((error) => {
+              logger.error('Error during stream preloading:', {
+                error: error instanceof Error ? error.message : String(error),
+                type,
+                id,
+              });
+            });
+          });
+        }
       }
     }
 
@@ -275,6 +375,180 @@ export class AIOStreams {
         }
       }
     }
+
+    if (
+      this.userData.statistics?.enabled &&
+      this.userData.statistics?.statsToShow?.includes('timing')
+    ) {
+      const filterTimings = this.filterer.getFilterTimings();
+      const accumulatedPrecompute = this.precomputer.getPrecomputeTimings();
+      // totalMs uses pipeline-phase timings only (fetchMs already contains the fetcher filter/precompute)
+      const totalMs =
+        fetchMs +
+        pipelineTimings.serviceWrapMs +
+        pipelineTimings.filterMs +
+        pipelineTimings.deduplicationMs +
+        pipelineTimings.precomputeMs +
+        pipelineTimings.sortMs +
+        pipelineTimings.limitMs +
+        pipelineTimings.selMs;
+
+      const fmtMs = (ms: number) => formatMilliseconds(ms);
+
+      {
+        const lines: string[] = [
+          `📥 Fetch: ${fmtMs(fetchMs)}`,
+          `🔗 Service Wrap: ${fmtMs(pipelineTimings.serviceWrapMs)}`,
+        ];
+        // Show accumulated filter total (fetcher + optional re-filter pass)
+        if (filterTimings.totalMs > 0) {
+          lines.push(`🔍 Filter: ${fmtMs(filterTimings.totalMs)}`);
+        }
+        lines.push(
+          `🔄 Dedup: ${fmtMs(pipelineTimings.deduplicationMs)}`,
+          // Show accumulated precompute total (fetcher + optional pipeline pass)
+          `⚙️ Precompute: ${fmtMs(accumulatedPrecompute.totalMs)}`,
+          `📊 Sort: ${fmtMs(pipelineTimings.sortMs)}`,
+          `✂️ Limit: ${fmtMs(pipelineTimings.limitMs)}`,
+          `🎯 SEL: ${fmtMs(pipelineTimings.selMs)}`,
+          `${'─'.repeat(20)}`,
+          `⏱️ Total: ~${fmtMs(totalMs)}`
+        );
+        statistics.push({
+          title: '⏱️ Pipeline Timing',
+          description: lines.join('\n'),
+        });
+      }
+
+      if (filterTimings.calls > 0) {
+        const lines: string[] = [
+          `⏱️ Total: ${fmtMs(filterTimings.totalMs)} (${filterTimings.calls} call${filterTimings.calls > 1 ? 's' : ''})`,
+          `${'─'.repeat(20)}`,
+          `📝 Metadata: ${fmtMs(filterTimings.metadataMs)}`,
+          `⚡ Expressions: ${fmtMs(filterTimings.expressionMs)}`,
+          `🔨 Regex compile: ${fmtMs(filterTimings.regexCompileMs)}`,
+          `🧪 Regex test: ${fmtMs(filterTimings.regexTestMs)}`,
+          `🌪️ Filter pass: ${fmtMs(filterTimings.filterPassMs)}`,
+        ];
+        const { phases } = filterTimings;
+        const phaseRows: Array<[string, typeof phases.titleMatch, string]> = [
+          ['Title match', phases.titleMatch, '🔤'],
+          ['Year match', phases.yearMatch, '📅'],
+          ['Season/Ep', phases.seasonEpisodeMatch, '📺'],
+        ];
+        const activePhases = phaseRows.filter(
+          ([, p]) => (p as typeof phases.titleMatch).count > 0
+        );
+        if (activePhases.length > 0) {
+          lines.push(``, `🔍 Per-stream phases:`);
+          for (const [label, p, emoji] of activePhases) {
+            const phase = p as typeof phases.titleMatch;
+            lines.push(`  ${emoji} ${label}: ${fmtMs(phase.totalMs)}`);
+          }
+        }
+        statistics.push({
+          title: '🔍 Filter Breakdown',
+          description: lines.join('\n'),
+        });
+      }
+
+      if (accumulatedPrecompute.totalMs > 0) {
+        const sub = accumulatedPrecompute;
+        const fetcherPrecomputeMs =
+          accumulatedPrecompute.totalMs - pipelineTimings.precomputeMs;
+        const rows: Array<[string, number, string]> = [
+          ['Preferred regex', sub.preferredRegexMs, '⭐'],
+          ['Ranked regex', sub.rankedRegexMs, '📈'],
+          ['Ranked SEL', sub.rankedSELMs, '🎯'],
+          ['Preferred SEL', sub.preferredSELMs, '✨'],
+        ];
+        const activeRows = rows.filter(([, ms]) => (ms as number) > 0);
+        if (activeRows.length > 0) {
+          const lines: string[] = [
+            `⏱️ Total: ${fmtMs(accumulatedPrecompute.totalMs)}`,
+          ];
+          if (fetcherPrecomputeMs > 0 && pipelineTimings.precomputeMs > 0) {
+            lines.push(
+              `    • Fetcher: ${fmtMs(fetcherPrecomputeMs)}`,
+              `    • Pipeline: ${fmtMs(pipelineTimings.precomputeMs)}`
+            );
+          }
+          lines.push(`${'─'.repeat(20)}`);
+          for (const [label, ms, emoji] of activeRows) {
+            lines.push(`${emoji} ${label}: ${fmtMs(ms as number)}`);
+          }
+          statistics.push({
+            title: '⚙️ Precompute Breakdown',
+            description: lines.join('\n'),
+          });
+        }
+      }
+
+      if (
+        pipelineTimings.serviceWrapMs > 0 &&
+        pipelineTimings.serviceWrapTimings
+      ) {
+        const entries = Object.entries(pipelineTimings.serviceWrapTimings);
+        if (entries.length > 0) {
+          const lines: string[] = [
+            `⏱️ Total: ${fmtMs(pipelineTimings.serviceWrapMs)} (${entries.length} service${entries.length > 1 ? 's' : ''})`,
+            `${'─'.repeat(20)}`,
+          ];
+          for (let i = 0; i < entries.length; i++) {
+            const [serviceId, t] = entries[i];
+            const shortName =
+              (
+                constants.SERVICE_DETAILS as Record<
+                  string,
+                  { shortName?: string }
+                >
+              )[serviceId]?.shortName ?? serviceId;
+            let statusStr = '';
+            if (t.hasError) {
+              statusStr = ' | ❌ Error';
+            } else {
+              const cachedStr =
+                t.cachedCount > 0 ? ` | ✅ ${t.cachedCount} cached` : '';
+              const uncachedStr =
+                t.uncachedCount > 0 ? ` | ⏳ ${t.uncachedCount} uncached` : '';
+              statusStr = `${cachedStr}${uncachedStr}`;
+            }
+
+            lines.push(
+              `☁️ ${shortName} (${t.torrentsIn} torrents${statusStr})`,
+              `    • Magnet check: ${fmtMs(t.magnetCheckMs)}`,
+              `    • Processing: ${fmtMs(t.processingMs)}`,
+              `    • Total: ${fmtMs(t.totalMs)}`
+            );
+            if (i < entries.length - 1) {
+              lines.push(``);
+            }
+          }
+          statistics.push({
+            title: '🔗 Service Wrap Breakdown',
+            description: lines.join('\n'),
+          });
+        }
+      }
+    }
+
+    // Optional: let presets react to final stream list (e.g. report order back to addon)
+    const byPresetType = new Map<string, ParsedStream[]>();
+    for (const s of finalStreams) {
+      const type = s.addon?.preset?.type ?? '';
+      if (type) {
+        const list = byPresetType.get(type) ?? [];
+        list.push(s);
+        byPresetType.set(type, list);
+      }
+    }
+    for (const [presetType, list] of byPresetType) {
+      const PresetClass = PresetManager.fromId(presetType);
+      if (typeof PresetClass.onStreamsReady === 'function') {
+        PresetClass.onStreamsReady(list);
+      }
+    }
+
     // return the final list of streams, followed by the error streams.
     logger.info(
       `Returning ${finalStreams.length} streams and ${errors.length} errors and ${statistics.length} statistic`
@@ -289,91 +563,188 @@ export class AIOStreams {
     };
   }
 
+  /**
+   * Get the stream context created during the last getStreams call.
+   * This provides access to metadata and other contextual information.
+   * The context can be used to create a FormatterContext with streams data.
+   *
+   * @returns The StreamContext or null if getStreams hasn't been called yet
+   */
+  public getStreamContext(): StreamContext | null {
+    return this.streamContext;
+  }
+
+  /**
+   * Fetches raw catalog items from a specific addon without applying any modifications.
+   * Returns the raw items from the upstream addon.
+   */
+  private async fetchRawCatalogItems(
+    addonInstanceId: string,
+    catalogId: string,
+    type: string,
+    parsedExtras?: ExtrasParser
+  ): Promise<{
+    success: boolean;
+    items: MetaPreview[];
+    error?: { title: string; description: string };
+  }> {
+    const addon = this.getAddon(addonInstanceId);
+
+    if (!addon) {
+      const initError = (
+        this.addonInitialisationErrors as { addon: Preset; error: string }[]
+      ).find((e) => addonInstanceId.startsWith(e.addon.instanceId || ''));
+      if (initError) {
+        return {
+          success: false,
+          items: [],
+          error: {
+            title: `[❌] ${initError.error}`,
+            description: `Addon ${addonInstanceId} failed to initialise. Try reinstalling/disabling/uninstalling the addon.`,
+          },
+        };
+      }
+      return {
+        success: false,
+        items: [],
+        error: {
+          title: `Addon ${addonInstanceId} not found. Try reinstalling the addon.`,
+          description: 'Addon not found',
+        },
+      };
+    }
+
+    // Check for type override in modifications
+    let actualType = type;
+    const modification = this.userData.catalogModifications?.find(
+      (mod) =>
+        mod.id === `${addonInstanceId}.${catalogId}` &&
+        (mod.type === type || mod.overrideType === type)
+    );
+    if (modification?.overrideType) {
+      actualType = modification.type;
+    }
+
+    if (parsedExtras?.genre === 'None') {
+      parsedExtras.genre = undefined;
+    }
+    const extrasString = parsedExtras?.toString();
+
+    try {
+      const start = Date.now();
+      const catalog = await new Wrapper(addon).getCatalog(
+        actualType,
+        catalogId,
+        extrasString
+      );
+      logger.info(
+        `Received catalog ${catalogId} of type ${actualType} from ${addon.name} in ${getTimeTakenSincePoint(start)}`
+      );
+      return { success: true, items: catalog };
+    } catch (error) {
+      return {
+        success: false,
+        items: [],
+        error: {
+          title: `[❌] ${addon.name}`,
+          description: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+  }
+
   public async getCatalog(
     type: string,
     id: string,
     extras?: string
   ): Promise<AIOStreamsResponse<MetaPreview[]>> {
-    // step 1
-    // get the addon index from the id
     logger.info(`Handling catalog request`, { type, id, extras });
-    const start = Date.now();
+
+    if (id.startsWith('aiostreams.merged.')) {
+      return this.getMergedCatalog(type, id, extras);
+    }
+
+    // Get the addon instance id and actual catalog id from the id
     const addonInstanceId = id.split('.', 2)[0];
-    const addon = this.getAddon(addonInstanceId);
-    if (!addon) {
-      logger.error(`Addon ${addonInstanceId} not found`);
-      return {
-        success: false,
-        data: [],
-        errors: [
-          {
-            title: `Addon ${addonInstanceId} not found. Try reinstalling the addon.`,
-            description: 'Addon not found',
-          },
-        ],
-      };
-    }
-
-    // step 2
-    // get the actual catalog id from the id
     const actualCatalogId = id.split('.').slice(1).join('.');
-    let modification;
-    if (this.userData.catalogModifications) {
-      modification = this.userData.catalogModifications.find(
-        (mod) =>
-          mod.id === id && (mod.type === type || mod.overrideType === type)
-      );
-    }
-    if (modification?.overrideType) {
-      // reset the type from the request (which is the overriden type) to the actual type
-      type = modification.type;
-    }
-    const parsedExtras = new ExtrasParser(extras);
-    logger.debug(`Parsed extras: ${JSON.stringify(parsedExtras)}`);
-    if (parsedExtras.genre === 'None') {
-      logger.debug(`Genre extra is None, removing genre extra`);
-      parsedExtras.genre = undefined;
-    }
-    const extrasString = parsedExtras.toString();
 
-    // step 3
-    // get the catalog from the addon
-    let catalog;
-    try {
-      catalog = await new Wrapper(addon).getCatalog(
-        type,
-        actualCatalogId,
-        extrasString
-      );
-    } catch (error) {
+    const parsedExtras = new ExtrasParser(extras);
+
+    // Fetch raw catalog items
+    const result = await this.fetchRawCatalogItems(
+      addonInstanceId,
+      actualCatalogId,
+      type,
+      parsedExtras
+    );
+
+    if (!result.success) {
+      // If there's a skip in extras, return empty on error (pagination end)
       if (extras && extras.includes('skip')) {
-        return {
-          success: true,
-          data: [],
-          errors: [],
-        };
+        return { success: true, data: [], errors: [] };
       }
       return {
         success: false,
         data: [],
-        errors: [
-          {
-            title: `[❌] ${addon.name}`,
-            description: error instanceof Error ? error.message : String(error),
-          },
-        ],
+        errors: result.error ? [result.error] : [],
       };
     }
 
-    logger.info(
-      `Received catalog ${actualCatalogId} of type ${type} from ${addon.name} in ${getTimeTakenSincePoint(start)}`
+    // // Use extras as part of cache key so different extras get different shuffle
+    const shuffleCacheKey = `${type}-${actualCatalogId}-${parsedExtras?.toString() || ''}-${this.userData.uuid}`;
+
+    // Apply catalog modifications (shuffle, reverse, RPDB, etc.)
+    const catalog = await this.applyCatalogModifications(
+      result.items,
+      id,
+      type,
+      parsedExtras,
+      shuffleCacheKey
     );
 
-    // apply catalog modifications
-    if (modification?.shuffle && !(extras && extras.includes('search'))) {
-      // shuffle the catalog array if it is not a search
-      const cacheKey = `shuffle-${type}-${actualCatalogId}-${extras}-${this.userData.uuid}`;
-      const cachedShuffle = await shuffleCache.get(cacheKey);
+    return { success: true, data: catalog, errors: [] };
+  }
+
+  /**
+   * Applies catalog modifications like shuffle, reverse, RPDB posters, etc.
+   * Used by getCatalog for standalone catalogs and getMergedCatalog for source catalogs.
+   */
+  private async applyCatalogModifications(
+    items: MetaPreview[],
+    catalogId: string,
+    type: string,
+    parsedExtras?: ExtrasParser,
+    shuffleCacheKey?: string
+  ): Promise<MetaPreview[]> {
+    let catalog = [...items];
+    const isSearch = parsedExtras?.search;
+
+    const modification = this.userData.catalogModifications?.find(
+      (mod) =>
+        mod.id === catalogId && (mod.type === type || mod.overrideType === type)
+    );
+    const applyShuffle = modification?.shuffle && !isSearch && shuffleCacheKey;
+    const applyReverse = !applyShuffle && modification?.reverse && !isSearch;
+
+    logger.debug(`Applying catalog modifications`, {
+      catalogId,
+      type,
+      modificationFound: !!modification,
+      posterService:
+        modification?.usePosterService === true &&
+        this.userData.posterService !== 'none'
+          ? this.userData.posterService
+          : false,
+      shuffle: !!applyShuffle,
+      reverse: !!applyReverse,
+    });
+
+    // Apply shuffle if enabled (not for search requests)
+    if (applyShuffle) {
+      // const actualCatalogId = catalogId.split('.').slice(1).join('.');
+      // // Use extras as part of cache key so different extras get different shuffle
+      // const cacheKey = `${type}-${actualCatalogId}-${parsedExtras?.toString() || ''}-${this.userData.uuid}`;
+      const cachedShuffle = await shuffleCache.get(shuffleCacheKey);
       if (cachedShuffle) {
         catalog = cachedShuffle;
       } else {
@@ -383,59 +754,504 @@ export class AIOStreams {
         }
         if (modification.persistShuffleFor) {
           await shuffleCache.set(
-            cacheKey,
+            shuffleCacheKey,
             catalog,
             modification.persistShuffleFor * 3600
           );
         }
       }
-    } else if (
-      modification?.reverse &&
-      !(extras && extras.includes('search'))
-    ) {
+    } else if (applyReverse) {
       catalog = catalog.reverse();
     }
 
-    const rpdbApiKey =
-      modification?.rpdb && this.userData.rpdbApiKey
-        ? this.userData.rpdbApiKey
-        : undefined;
-    const rpdbApi = rpdbApiKey ? new RPDB(rpdbApiKey) : undefined;
+    // Apply poster modifications (usePosterService only if modification has usePosterService enabled)
+    const applyPosterService = modification?.usePosterService === true;
+    catalog = await this.applyPosterModifications(
+      catalog,
+      type,
+      applyPosterService
+    );
 
-    catalog = await Promise.all(
-      catalog.map(async (item) => {
-        // Apply RPDB poster modification
-        if (rpdbApiKey && item.poster) {
+    return catalog;
+  }
+
+  private async getMergedCatalog(
+    type: string,
+    id: string,
+    extras?: string
+  ): Promise<AIOStreamsResponse<MetaPreview[]>> {
+    const start = Date.now();
+    const mergedCatalog = this.userData.mergedCatalogs?.find(
+      (mc) => mc.id === id
+    );
+
+    if (!mergedCatalog) {
+      logger.error(`Merged catalog ${id} not found`);
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `Merged catalog ${id} not found`,
+            description: 'Try reinstalling the addon.',
+          },
+        ],
+      };
+    }
+
+    if (mergedCatalog.type !== type) {
+      logger.error(
+        `Merged catalog ${id} type mismatch: expected ${mergedCatalog.type}, got ${type}`
+      );
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `Type mismatch for merged catalog ${id}`,
+            description: `Expected ${mergedCatalog.type}, got ${type}`,
+          },
+        ],
+      };
+    }
+
+    const parsedExtras = new ExtrasParser(extras);
+    const requestedSkip = parsedExtras.skip || 0;
+    const isSearchRequest = !!parsedExtras.search;
+    const requestedGenre = parsedExtras.genre;
+
+    // Build base cache key from extras (excluding skip) and merged catalog config
+    const extrasForCacheKey = new ExtrasParser(extras);
+    extrasForCacheKey.skip = undefined;
+    const extrasCacheKeyPart = extrasForCacheKey.toString();
+
+    // Include a hash of the merged catalog config in the cache key
+    const configHash = getSimpleTextHash(
+      JSON.stringify({
+        catalogIds: mergedCatalog.catalogIds,
+        deduplicationMethods: mergedCatalog.deduplicationMethods,
+        mergeMethod: mergedCatalog.mergeMethod,
+      })
+    );
+    const baseCacheKey = `${id}-${this.userData.uuid}-${configHash}${extrasCacheKeyPart ? `-${extrasCacheKeyPart}` : ''}`;
+    const skipCacheKey = `${baseCacheKey}-skip=${requestedSkip}`;
+
+    let skipState: MergedCatalogSkipState | undefined;
+
+    if (requestedSkip === 0) {
+      // For skip=0, always start fresh with all sources at skip=0
+      skipState = { sourceSkips: {} };
+      for (const encodedCatalogId of mergedCatalog.catalogIds) {
+        skipState.sourceSkips[encodedCatalogId] = 0;
+      }
+    } else {
+      skipState = await mergedCatalogCache.get(skipCacheKey);
+      if (!skipState) {
+        // No cached state for this skip value - either cache expired or invalid skip
+        // Return empty to signal end of pagination
+        logger.warn(
+          `No cached state for merged catalog ${id} at skip=${requestedSkip}. ` +
+            `Cache may have expired or skip value is invalid.`
+        );
+        return { success: true, data: [], errors: [] };
+      }
+    }
+
+    // Track next skip values for each source (to store for the next page)
+    const nextSourceSkips: Record<string, number> = {
+      ...skipState.sourceSkips,
+    };
+
+    const fetchPromises = mergedCatalog.catalogIds.map(
+      async (encodedCatalogId: string) => {
+        logger.debug(`Handling merged catalog source`, { encodedCatalogId });
+        const params = new URLSearchParams(encodedCatalogId);
+        const catalogId = params.get('id');
+        const catalogType = params.get('type');
+        if (!catalogId || !catalogType) {
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: false,
+            skipped: false,
+          };
+        }
+
+        const addonInstanceId = catalogId.split('.', 2)[0];
+        const actualCatalogId = catalogId.split('.').slice(1).join('.');
+
+        // Smart filtering: check if this source supports the requested extras
+        const catalogExtras = this.getCatalogExtras(
+          addonInstanceId,
+          actualCatalogId,
+          catalogType
+        );
+
+        // If search is requested but catalog doesn't support search, skip it
+        if (
+          isSearchRequest &&
+          !catalogExtras?.some((e) => e.name === 'search')
+        ) {
+          logger.debug(
+            `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support search`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: true,
+            skipped: true,
+          };
+        }
+
+        // If genre is requested, check if catalog supports it and has the genre option
+        if (requestedGenre && requestedGenre !== 'None') {
+          const genreExtra = catalogExtras?.find((e) => e.name === 'genre');
+          if (!genreExtra) {
+            logger.debug(
+              `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support genre extra`
+            );
+            return {
+              encodedCatalogId,
+              items: [],
+              fetched: 0,
+              success: true,
+              skipped: true,
+            };
+          }
+          // If the genre extra has specific options, check if the requested genre is available
+          if (genreExtra.options && genreExtra.options.length > 0) {
+            const hasGenre = genreExtra.options.some(
+              (opt) => opt === requestedGenre || opt === null // null can mean "all genres"
+            );
+            if (!hasGenre) {
+              logger.debug(
+                `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't have genre "${requestedGenre}"`
+              );
+              return {
+                encodedCatalogId,
+                items: [],
+                fetched: 0,
+                success: true,
+                skipped: true,
+              };
+            }
+          }
+        }
+
+        const sourceSkip = skipState!.sourceSkips[encodedCatalogId] || 0;
+        const supportsSkip = catalogExtras?.some((e) => e.name === 'skip');
+
+        // If this catalog doesn't support skip and we've already fetched from it once,
+        // mark it as exhausted to prevent returning the same items repeatedly
+        if (!supportsSkip && sourceSkip > 0) {
+          logger.debug(
+            `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: doesn't support skip and already fetched (exhausted)`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: true,
+            skipped: true,
+          };
+        }
+
+        // Build source extras - copy all extras and set the appropriate skip for this source
+        // Only include skip if the catalog supports it
+        const sourceExtras = new ExtrasParser(extras);
+        if (supportsSkip) {
+          sourceExtras.skip = sourceSkip > 0 ? sourceSkip : undefined;
+        } else {
+          sourceExtras.skip = undefined; // Don't send skip to catalogs that don't support it
+        }
+
+        // now check whether the catalog requires an extra but we dont have it - in which case we skip it
+        const requiredExtras = catalogExtras?.filter((e) => e.isRequired);
+        if (requiredExtras && requiredExtras.length > 0) {
+          for (const reqExtra of requiredExtras) {
+            if (!sourceExtras.has(reqExtra.name)) {
+              logger.debug(
+                `Skipping source ${encodedCatalogId} for merged catalog ${mergedCatalog.name}: missing required extra "${reqExtra.name}"`
+              );
+              return {
+                encodedCatalogId,
+                items: [],
+                fetched: 0,
+                success: true,
+                skipped: true,
+              };
+            }
+          }
+        }
+
+        logger.debug('Fetching merged catalog source', {
+          encodedCatalogId,
+          addonInstanceId,
+          catalogType,
+          constructedExtras: sourceExtras.toString(),
+        });
+
+        const result = await this.fetchRawCatalogItems(
+          addonInstanceId,
+          actualCatalogId,
+          catalogType,
+          sourceExtras
+        );
+
+        if (!result.success) {
+          logger.warn(
+            `Failed to fetch source catalog ${encodedCatalogId} for merged catalog ${mergedCatalog.name} at skip=${requestedSkip}: ${
+              result.error
+                ? maskSensitiveInfo(result.error.description || '')
+                : 'Unknown error'
+            }`
+          );
+          return {
+            encodedCatalogId,
+            items: [],
+            fetched: 0,
+            success: false,
+            skipped: false,
+          };
+        }
+
+        return {
+          encodedCatalogId,
+          items: result.items,
+          fetched: result.items.length,
+          success: true,
+          skipped: false,
+        };
+      }
+    );
+
+    logger.debug(
+      `Fetching merged catalog ${mergedCatalog.name} at skip=${requestedSkip}`,
+      {
+        upstreamAddons: fetchPromises.length,
+      }
+    );
+
+    const fetchResults = await Promise.all(fetchPromises);
+
+    // Check if ALL non-skipped sources failed
+    const nonSkippedResults = fetchResults.filter((r) => !r.skipped);
+    const allFailed =
+      nonSkippedResults.length > 0 &&
+      nonSkippedResults.every((r) => !r.success);
+    if (allFailed) {
+      logger.error(
+        `All sources failed for merged catalog ${mergedCatalog.name}`
+      );
+      return {
+        success: false,
+        data: [],
+        errors: [
+          {
+            title: `All sources failed for merged catalog ${mergedCatalog.name}`,
+            description:
+              'Unable to fetch items from any source catalog. Please try again later.',
+          },
+        ],
+      };
+    }
+
+    // Collect items per source for merge method processing
+    const itemsBySource: MetaPreview[][] = [];
+    for (const { encodedCatalogId, items, fetched, skipped } of fetchResults) {
+      // Don't update skip tracking for skipped sources - they weren't queried
+      if (skipped) continue;
+
+      // Update next skip for this source (current skip + items returned)
+      nextSourceSkips[encodedCatalogId] =
+        (skipState.sourceSkips[encodedCatalogId] || 0) + fetched;
+      itemsBySource.push(items);
+    }
+
+    // Apply merge method
+    let allItems: MetaPreview[] = this.applyMergeMethod(
+      itemsBySource,
+      mergedCatalog.mergeMethod
+    );
+
+    logger.debug(
+      `Merged catalog ${mergedCatalog.name} collected ${allItems.length} items before deduplication`
+    );
+
+    // Deduplicate the collected items
+    allItems = this.deduplicateMergedCatalog(
+      allItems,
+      mergedCatalog.deduplicationMethods
+    );
+
+    const shuffleCacheKey = `${baseCacheKey}-skip=${requestedSkip}-shuffle`;
+
+    // Apply catalog modifications (shuffle, reverse, RPDB) to the merged catalog
+    allItems = await this.applyCatalogModifications(
+      allItems,
+      id,
+      type,
+      parsedExtras,
+      shuffleCacheKey
+    );
+
+    // Calculate the next skip value (current skip + items we're returning)
+    const nextSkip = requestedSkip + allItems.length;
+
+    // Cache the state for the next page (keyed by the next skip value)
+    // This creates a chain: skip=0 stores state for skip=35, skip=35 stores state for skip=73, etc.
+    if (allItems.length > 0) {
+      const nextSkipCacheKey = `${baseCacheKey}-skip=${nextSkip}`;
+      await mergedCatalogCache.set(
+        nextSkipCacheKey,
+        { sourceSkips: nextSourceSkips },
+        3600 // 1 hour expiry, this should be fine
+      );
+    }
+
+    logger.info(
+      `Merged catalog ${mergedCatalog.name} fetched ${allItems.length} items at skip=${requestedSkip}, next skip=${nextSkip} in ${getTimeTakenSincePoint(start)}`
+    );
+
+    return { success: true, data: allItems, errors: [] };
+  }
+
+  /**
+   * Applies merge method to combine items from multiple source catalogs.
+   */
+  private applyMergeMethod(
+    itemsBySource: MetaPreview[][],
+    method?: MergedCatalog['mergeMethod']
+  ): MetaPreview[] {
+    const mergeMethod = method || 'sequential';
+
+    switch (mergeMethod) {
+      case 'interleave': {
+        // Interleave: take 1st from each source, then 2nd from each, etc.
+        const result: MetaPreview[] = [];
+        const maxLength = Math.max(
+          0,
+          ...itemsBySource.map((arr) => arr.length)
+        );
+        for (let i = 0; i < maxLength; i++) {
+          for (const sourceItems of itemsBySource) {
+            if (i < sourceItems.length) {
+              result.push(sourceItems[i]);
+            }
+          }
+        }
+        return result;
+      }
+
+      case 'imdbRating': {
+        // Merge all and sort by IMDB rating (descending)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const ratingA = parseFloat(a.imdbRating?.toString() ?? '0');
+          const ratingB = parseFloat(b.imdbRating?.toString() ?? '0');
+          if (isNaN(ratingA) && isNaN(ratingB)) return 0;
+          if (isNaN(ratingA)) return 1;
+          if (isNaN(ratingB)) return -1;
+          return ratingB - ratingA;
+        });
+      }
+
+      case 'releaseDateAsc': {
+        // Merge all and sort by release date (oldest first)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const yearA = this.extractYear(a.releaseInfo);
+          const yearB = this.extractYear(b.releaseInfo);
+          return yearA - yearB;
+        });
+      }
+
+      case 'releaseDateDesc': {
+        // Merge all and sort by release date (newest first)
+        const allItems = itemsBySource.flat();
+        return allItems.sort((a, b) => {
+          const yearA = this.extractYear(a.releaseInfo);
+          const yearB = this.extractYear(b.releaseInfo);
+          return yearB - yearA;
+        });
+      }
+
+      case 'sequential':
+      default:
+        // Just concatenate in order of catalogIds
+        return itemsBySource.flat();
+    }
+  }
+
+  /**
+   * Extracts a year from releaseInfo which can be a number (year) or string (year or year-year range).
+   * For ranges like "2020-2024", returns the first year.
+   */
+  private extractYear(releaseInfo: number | string | undefined | null): number {
+    if (releaseInfo === undefined || releaseInfo === null) return 0;
+    if (typeof releaseInfo === 'number') return releaseInfo;
+    // Handle string formats: "2020" or "2020-2024"
+    const match = String(releaseInfo).match(/^(\d{4})/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  /**
+   * Gets the extras configuration for a specific catalog from an addon's manifest.
+   * Used to determine what extras (search, genre, etc.) a catalog supports.
+   */
+  private getCatalogExtras(
+    addonInstanceId: string,
+    catalogId: string,
+    catalogType: string
+  ): Manifest['catalogs'][number]['extra'] | undefined {
+    const manifest = this.manifests[addonInstanceId];
+    if (!manifest) return undefined;
+
+    const catalog = manifest.catalogs?.find(
+      (c) => c.id === catalogId && c.type === catalogType
+    );
+    return catalog?.extra;
+  }
+
+  /**
+   * Applies poster modifications to catalog items.
+   * @param items - The catalog items to modify
+   * @param type - The catalog type (movie, series, etc.)
+   * @param applyRpdb - Whether to apply RPDB poster modifications (requires user to have API key configured)
+   */
+  private async applyPosterModifications(
+    items: MetaPreview[],
+    type: string,
+    applyPosterService: boolean = true
+  ): Promise<MetaPreview[]> {
+    const posterApi = applyPosterService
+      ? createPosterService(this.userData)
+      : null;
+
+    return Promise.all(
+      items.map(async (item) => {
+        if (posterApi && item.poster) {
           let posterUrl = item.poster;
-          if (posterUrl.includes('api.ratingposterdb.com')) {
-            // already a RPDB poster, do nothing
-          } else if (
-            this.userData.rpdbUseRedirectApi !== false &&
-            Env.BASE_URL
-          ) {
-            const id = (item as any).imdb_id || item.id;
-            const url = new URL(Env.BASE_URL);
-            url.pathname = '/api/v1/rpdb';
-            url.searchParams.set('id', id);
-            url.searchParams.set('type', type);
-            url.searchParams.set('fallback', item.poster);
-            url.searchParams.set('apiKey', rpdbApiKey);
-            posterUrl = url.toString();
+          if (posterApi.isPosterFromThisService(posterUrl)) {
+            // already a poster from this service, do nothing
+          } else if (this.userData.usePosterRedirectApi) {
+            const itemId = (item as any).imdb_id || item.id;
+            posterUrl = posterApi.buildRedirectUrl(itemId, type, item.poster);
           } else {
-            const rpdbPosterUrl = await rpdbApi!.getPosterUrl(
+            const servicePosterUrl = await posterApi.getPosterUrl(
               type,
               (item as any).imdb_id || item.id,
               false
             );
-            if (rpdbPosterUrl) {
-              posterUrl = rpdbPosterUrl;
+            if (servicePosterUrl) {
+              posterUrl = servicePosterUrl;
             }
           }
-
           item.poster = posterUrl;
         }
 
-        // Apply poster enhancement
         if (this.userData.enhancePosters && Math.random() < 0.2) {
           item.poster = Buffer.from(
             constants.DEFAULT_POSTERS[
@@ -451,8 +1267,36 @@ export class AIOStreams {
         return item;
       })
     );
+  }
 
-    return { success: true, data: catalog, errors: [] };
+  private deduplicateMergedCatalog(
+    items: MetaPreview[],
+    methods?: ('id' | 'title')[]
+  ): MetaPreview[] {
+    if (!methods || methods.length === 0) {
+      return items;
+    }
+
+    const seenIds = new Set<string>();
+    const seenTitles = new Set<string>();
+
+    return items.filter((item) => {
+      const itemIds = [item.id, (item as any).imdb_id].filter(Boolean);
+      const title = (item.name || item.id).toLowerCase();
+
+      const isDuplicateById =
+        methods.includes('id') && itemIds.some((id) => seenIds.has(id));
+      const isDuplicateByTitle =
+        methods.includes('title') && seenTitles.has(title);
+
+      if (isDuplicateById || isDuplicateByTitle) {
+        return false;
+      }
+
+      itemIds.forEach((id) => seenIds.add(id));
+      seenTitles.add(title);
+      return true;
+    });
   }
 
   public async getMeta(
@@ -546,16 +1390,22 @@ export class AIOStreams {
           addonName: candidate.addon.name,
           addonInstanceId: candidate.instanceId,
         });
-        meta.links = this.convertDiscoverDeepLinks(meta.links);
+        if (this.userData.usePosterServiceForMeta) {
+          await this.applyPosterModifications([meta], type, true);
+        } else {
+          meta.links = this.convertDiscoverDeepLinks(meta.links);
+        }
 
         if (meta.videos) {
+          const context = StreamContext.create(type, id, this.userData);
+          this.streamContext = context;
           meta.videos = await Promise.all(
             meta.videos.map(async (video) => {
               if (!video.streams) {
                 return video;
               }
               video.streams = (
-                await this._processStreams(video.streams, type, id, true)
+                await this._processStreams(video.streams, context, true)
               ).streams;
               return video;
             })
@@ -731,14 +1581,76 @@ export class AIOStreams {
       return;
     }
 
+    const serviceWrap = this.userData.serviceWrap;
+
     for (const preset of this.userData.presets.filter((p) => p.enabled)) {
       try {
-        const addons = await PresetManager.fromId(preset.type).generateAddons(
-          this.userData,
-          preset.options
-        );
+        const Preset = PresetManager.fromId(preset.type);
+        if (Preset.METADATA.DISABLED) {
+          throw new Error(
+            `${Preset.METADATA.NAME} has been ${Preset.METADATA.DISABLED.removed ? 'removed' : 'disabled'}: ${Preset.METADATA.DISABLED.reason}`
+          );
+        }
+
+        // Determine if P2P wrap applies to this preset
+        const shouldServiceWrap =
+          serviceWrap?.enabled &&
+          Preset.METADATA.SUPPORTED_STREAM_TYPES.includes(
+            constants.P2P_STREAM_TYPE
+          ) &&
+          !Preset.METADATA.BUILTIN &&
+          (!serviceWrap.presets ||
+            serviceWrap.presets.length === 0 ||
+            serviceWrap.presets.includes(preset.instanceId));
+
+        // When Service Wrap is active, only generate normal addons for services
+        // that are NOT builtin-supported (since builtin services will be handled
+        // by resolveServiceWrappedStreams through the service-wrapped addon).
+        // This avoids redundant debrid addons.
+        const normalUserData = shouldServiceWrap
+          ? {
+              ...this.userData,
+              services: (this.userData.services ?? []).filter(
+                (s) =>
+                  !(
+                    constants.BUILTIN_SUPPORTED_SERVICES as readonly string[]
+                  ).includes(s.id)
+              ),
+              presets: this.userData.presets?.map((p) =>
+                p.instanceId === preset.instanceId
+                  ? {
+                      ...p,
+                      options: {
+                        ...p.options,
+                        // only keep non-builtin specified services.
+                        services: p.options.services?.filter(
+                          (s: string) =>
+                            !(
+                              constants.BUILTIN_SUPPORTED_SERVICES as readonly string[]
+                            ).includes(s)
+                        ),
+                      },
+                    }
+                  : p
+              ),
+            }
+          : this.userData;
+
+        const options = shouldServiceWrap
+          ? { ...preset.options, services: [] }
+          : preset.options;
+
+        const addons = await Preset.generateAddons(normalUserData, options);
+
+        // When service wrapping, don't add addons that fell into P2P mode
+        // due to having no usable services — those would be unmarked duplicates
+        // of the serviceWrapped addon we generate below.
+        const filteredAddons = shouldServiceWrap
+          ? addons.filter((a) => a.identifier !== 'p2p')
+          : addons;
+
         this.addons.push(
-          ...addons.map(
+          ...filteredAddons.map(
             (a): Addon => ({
               ...a,
               preset: {
@@ -751,6 +1663,55 @@ export class AIOStreams {
             })
           )
         );
+
+        // Service Wrap: generate the P2P-mode addon for this preset
+        // so its torrent results can be resolved through builtin debrid services
+        if (shouldServiceWrap) {
+          try {
+            // Generate addons with no services, forcing the preset into P2P mode
+            const p2pUserData: UserData = {
+              ...this.userData,
+              services: [], // empty services → preset falls into P2P codepath
+              presets: this.userData.presets?.map((p) =>
+                p.instanceId === preset.instanceId
+                  ? {
+                      ...p,
+                      options: {
+                        ...p.options,
+                        services: [], // remove specified services to avoid errors.
+                      },
+                    }
+                  : p
+              ),
+            };
+            const p2pOptions = { ...preset.options, services: [] };
+            const p2pAddons = await Preset.generateAddons(
+              p2pUserData,
+              p2pOptions
+            );
+            // Only keep addons that are actually P2P (not debrid addons from presets that don't care about services)
+            this.addons.push(
+              ...p2pAddons.map(
+                (a): Addon => ({
+                  ...a,
+                  preset: {
+                    ...a.preset,
+                    id: preset.instanceId,
+                  },
+                  instanceId: `${preset.instanceId}${getSimpleTextHash(`servicewrap-${a.identifier ?? ''}`).slice(0, 4)}`,
+                  serviceWrapped: true,
+                })
+              )
+            );
+            logger.info(
+              `Service Wrap: generated ${p2pAddons.length} P2P-mode addon(s) for preset ${Preset.METADATA.NAME}`
+            );
+          } catch (error) {
+            logger.warn(
+              `Service Wrap: failed to generate P2P addons for ${Preset.METADATA.NAME}: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        }
       } catch (error) {
         if (this.options?.skipFailedAddons !== false) {
           this.addonInitialisationErrors.push({
@@ -995,6 +1956,42 @@ export class AIOStreams {
       }
     }
 
+    // Build set of source catalog IDs that are part of enabled merged catalogs
+    // This is done BEFORE overrideType is applied so we use the original catalog types
+    const catalogsInMergedCatalogs = new Set<string>();
+    if (this.userData.mergedCatalogs?.length) {
+      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
+        (mc) => mc.enabled !== false
+      );
+      for (const mc of enabledMergedCatalogs) {
+        for (const encodedCatalogId of mc.catalogIds) {
+          const params = new URLSearchParams(encodedCatalogId);
+          const catalogId = params.get('id');
+          const catalogType = params.get('type');
+          if (catalogId && catalogType) {
+            catalogsInMergedCatalogs.add(`${catalogId}-${catalogType}`);
+          }
+        }
+      }
+    }
+
+    // Add enabled merged catalogs to finalCatalogs BEFORE sorting
+    // so they participate in the natural catalogModifications-based sort
+    if (this.userData.mergedCatalogs?.length) {
+      const enabledMergedCatalogs = this.userData.mergedCatalogs.filter(
+        (mc) => mc.enabled !== false
+      );
+      for (const mc of enabledMergedCatalogs) {
+        const mergedExtras = this.buildMergedCatalogExtras(mc.catalogIds);
+        this.finalCatalogs.push({
+          id: mc.id,
+          name: mc.name,
+          type: mc.type,
+          extra: mergedExtras.length > 0 ? mergedExtras : undefined,
+        });
+      }
+    }
+
     if (this.userData.catalogModifications) {
       this.finalCatalogs = this.finalCatalogs
         // Sort catalogs based on catalogModifications order, with non-modified catalogs at the end
@@ -1020,12 +2017,29 @@ export class AIOStreams {
           // If both are in modifications, sort by their order in modifications
           return aModIndex - bModIndex;
         })
-        // filter out any catalogs that are disabled
+        // filter out any catalogs that are disabled OR are source catalogs of enabled merged catalogs
         .filter((catalog) => {
+          // Don't filter out merged catalogs themselves
+          if (catalog.id.startsWith('aiostreams.merged.')) {
+            const modification = this.userData.catalogModifications!.find(
+              (mod) => mod.id === catalog.id && mod.type === catalog.type
+            );
+            return modification?.enabled !== false;
+          }
+
+          // Check if this catalog is a source of an enabled merged catalog
+          const key = `${catalog.id}-${catalog.type}`;
+          if (catalogsInMergedCatalogs.has(key)) {
+            logger.debug(
+              `Filtering out catalog ${catalog.id} of type ${catalog.type} as it is part of an enabled merged catalog`
+            );
+            return false;
+          }
+
           const modification = this.userData.catalogModifications!.find(
             (mod) => mod.id === catalog.id && mod.type === catalog.type
           );
-          return modification?.enabled !== false; // only if explicity disabled i.e. enabled is true or undefined
+          return modification?.enabled !== false; // only if explicitly disabled i.e. enabled is true or undefined
         })
         // rename any catalogs if necessary and apply the onlyOnDiscover modification
         .map((catalog) => {
@@ -1035,7 +2049,24 @@ export class AIOStreams {
           if (modification?.name) {
             catalog.name = modification.name;
           }
-          if (modification?.onlyOnDiscover) {
+
+          // checking that no extras are required already
+          // if its a non genre extra, then its just not possible as it would lead to having 2 required extras.
+          // if it is the genre extra that is required, then there isnt a need to apply the modification as its already only on discover
+          // if there are no extras, we can also apply the modification
+          const canApplyOnlyOnDiscover = catalog.extra
+            ? catalog.extra.every((e) => !e.isRequired)
+            : true;
+          // checking that a search extra exists and is not required already
+          const canApplyOnlyOnSearch = catalog.extra?.some(
+            (e) => e.name === 'search' && !e.isRequired
+          );
+          // we can only disable search if the search extra is not required. if it is required, disabling can lead to unexpected behavior
+          const canDisableSearch = catalog.extra?.some(
+            (e) => e.name === 'search' && !e.isRequired
+          );
+
+          if (modification?.onlyOnDiscover && canApplyOnlyOnDiscover) {
             // A few cases
             // the catalog already has genres. In which case we set isRequired for the genre extra to true
             // and also add a new genre with name 'None' to the top - if isRequried was previously false.
@@ -1062,16 +2093,140 @@ export class AIOStreams {
                 isRequired: true,
               });
             }
+          } else if (modification?.onlyOnSearch && canApplyOnlyOnSearch) {
+            const searchExtra = catalog.extra?.find((e) => e.name === 'search');
+            if (searchExtra) {
+              searchExtra.isRequired = true;
+            }
           }
           if (modification?.overrideType !== undefined) {
             catalog.type = modification.overrideType;
           }
-          if (modification?.disableSearch) {
+          if (modification?.disableSearch && canDisableSearch) {
             catalog.extra = catalog.extra?.filter((e) => e.name !== 'search');
           }
           return catalog;
         });
     }
+  }
+
+  /**
+   * Builds the extras array for a merged catalog by analyzing the source catalogs' manifest definitions.
+   * - Only adds an extra (like skip, search, genre) if at least one source catalog supports it
+   * - Merges options arrays (e.g., genre options) from all sources
+   * - Sets isRequired to true only if ALL sources have isRequired=true for that extra
+   */
+  private buildMergedCatalogExtras(catalogIds: string[]): Array<{
+    name: string;
+    isRequired?: boolean;
+    options?: (string | null)[] | null;
+    optionsLimit?: number;
+  }> {
+    // Track extras by name: { appearances: number, allRequired: boolean, options: Set, optionsLimit: max }
+    const extrasMap = new Map<
+      string,
+      {
+        appearances: number;
+        allRequired: boolean;
+        options: Set<string | null>;
+        optionsLimit?: number;
+      }
+    >();
+
+    let sourceCatalogCount = 0;
+
+    for (const encodedCatalogId of catalogIds) {
+      const params = new URLSearchParams(encodedCatalogId);
+      const catalogId = params.get('id');
+      const catalogType = params.get('type');
+      if (!catalogId || !catalogType) continue;
+
+      // Parse the catalog ID to get addon instance ID and actual catalog ID
+      const addonInstanceId = catalogId.split('.', 2)[0];
+      const actualCatalogId = catalogId.split('.').slice(1).join('.');
+
+      // Get the manifest for this addon
+      const manifest = this.manifests[addonInstanceId];
+      if (!manifest) continue;
+
+      // Find the catalog definition in the manifest
+      const catalogDef = manifest.catalogs.find(
+        (c) => c.id === actualCatalogId && c.type === catalogType
+      );
+      if (!catalogDef) continue;
+
+      sourceCatalogCount++;
+
+      // Process each extra from this catalog
+      if (catalogDef.extra) {
+        for (const extra of catalogDef.extra) {
+          const existing = extrasMap.get(extra.name);
+          if (existing) {
+            existing.appearances++;
+            // allRequired stays true only if this one is also required
+            existing.allRequired =
+              existing.allRequired && extra.isRequired === true;
+            // Merge options
+            if (extra.options) {
+              for (const opt of extra.options) {
+                existing.options.add(opt);
+              }
+            }
+            // Take the maximum optionsLimit
+            if (extra.optionsLimit !== undefined) {
+              existing.optionsLimit = Math.max(
+                existing.optionsLimit ?? 0,
+                extra.optionsLimit
+              );
+            }
+          } else {
+            extrasMap.set(extra.name, {
+              appearances: 1,
+              allRequired: extra.isRequired === true,
+              options: new Set(extra.options ?? []),
+              optionsLimit: extra.optionsLimit,
+            });
+          }
+        }
+      }
+    }
+
+    // Build the final extras array
+    const mergedExtras: Array<{
+      name: string;
+      isRequired?: boolean;
+      options?: (string | null)[] | null;
+      optionsLimit?: number;
+    }> = [];
+
+    for (const [name, data] of extrasMap) {
+      const extra: {
+        name: string;
+        isRequired?: boolean;
+        options?: (string | null)[] | null;
+        optionsLimit?: number;
+      } = { name };
+
+      // isRequired is true only if ALL source catalogs that have this extra have it as required
+      // If not all catalogs have this extra, it's effectively not required since some don't need it
+      if (data.appearances === sourceCatalogCount && data.allRequired) {
+        extra.isRequired = true;
+      }
+
+      // Include options if any were collected
+      if (data.options.size > 0) {
+        extra.options = Array.from(data.options);
+      }
+
+      // Include optionsLimit if set
+      if (data.optionsLimit !== undefined) {
+        extra.optionsLimit = data.optionsLimit;
+      }
+
+      mergedExtras.push(extra);
+    }
+
+    return mergedExtras;
   }
 
   public getResources(): StrictManifestResource[] {
@@ -1313,24 +2468,6 @@ export class AIOStreams {
     });
   }
 
-  private async getMetadata(parsedId: ParsedId): Promise<Metadata | undefined> {
-    try {
-      const metadata = await new TMDBMetadata({
-        accessToken: this.userData.tmdbAccessToken,
-        apiKey: this.userData.tmdbApiKey,
-      }).getMetadata(parsedId);
-      return metadata;
-    } catch (error) {
-      logger.warn(
-        `Error getting metadata for ${parsedId.fullId}, will not be able to precache next season if necessary`,
-        {
-          error: error instanceof Error ? error.message : String(error),
-        }
-      );
-      return undefined;
-    }
-  }
-
   private _getNextEpisode(
     currentSeason: number | undefined,
     currentEpisode: number,
@@ -1364,36 +2501,160 @@ export class AIOStreams {
 
   private async _processStreams(
     streams: ParsedStream[],
-    type: string,
-    id: string,
-    isMeta: boolean = false
-  ): Promise<{ streams: ParsedStream[]; errors: AIOStreamsError[] }> {
+    context: StreamContext,
+    isMeta: boolean = false,
+    nzbFailoverOpts?: {
+      count: number;
+      position: 'beforeLimiting' | 'beforeSEL' | 'last';
+    }
+  ): Promise<{
+    streams: ParsedStream[];
+    errors: AIOStreamsError[];
+    timings: {
+      metaFilterMs: number;
+      serviceWrapMs: number;
+      serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+      filterMs: number;
+      deduplicationMs: number;
+      precomputeMs: number;
+      precomputeSubTimings?: PrecomputeSubTimings;
+      sortMs: number;
+      limitMs: number;
+      selMs: number;
+    };
+  }> {
+    const { type, id, queryType } = context;
     let processedStreams = streams;
     let errors: AIOStreamsError[] = [];
 
+    let metaFilterMs = 0;
+    let serviceWrapMs = 0;
+    let serviceWrapTimings:
+      | Record<string, ServiceWrapServiceTiming>
+      | undefined;
+    let filterMs = 0;
+    let deduplicationMs = 0;
+    let precomputeMs = 0;
+    let precomputeSubTimings: PrecomputeSubTimings | undefined;
+    let sortMs = 0;
+    let limitMs = 0;
+    let selMs = 0;
+
     if (isMeta) {
       // Run SeaDex precompute before filter so seadex() works in Included SEL
-      await this.precomputer.precomputeSeaDexOnly(processedStreams, id);
-      processedStreams = await this.filterer.filter(processedStreams, type, id);
+      await this.precomputer.precomputeSeaDexOnly(processedStreams, context);
+      const metaFilterStart = Date.now();
+      processedStreams = await this.filterer.filter(processedStreams, context);
+      metaFilterMs = Date.now() - metaFilterStart;
     }
 
-    processedStreams = await this.deduplicator.deduplicate(processedStreams);
-
-    if (isMeta) {
-      // Run preferred matching after filter
-      await this.precomputer.precomputePreferred(processedStreams, type, id);
-    }
-
-    let finalStreams = await this.filterer.applyStreamExpressionFilters(
-      await this.limiter.limit(
-        await this.sorter.sort(
-          processedStreams,
-          AnimeDatabase.getInstance().isAnime(id) ? 'anime' : type
-        )
-      ),
-      type,
-      id
+    // Resolve service-wrapped P2P streams through debrid services.
+    // This runs after the initial filter pass (which lets P2P streams through
+    // when serviceWrap is enabled) so that the streams can be converted to debrid.
+    // Capture existing stream IDs before service wrapping so we can skip
+    // per-stream precomputation for streams already precomputed in the fetcher.
+    const preServiceWrapIds = new Set(processedStreams.map((s) => s.id));
+    const serviceWrapStart = Date.now();
+    const resolvedResults = await resolveServiceWrappedStreams(
+      processedStreams,
+      context,
+      this.userData,
+      this.addons
     );
+    serviceWrapMs = Date.now() - serviceWrapStart;
+    processedStreams = resolvedResults.streams;
+    errors.push(...resolvedResults.errors);
+    if (resolvedResults.serviceTimings) {
+      serviceWrapTimings = resolvedResults.serviceTimings;
+    }
+
+    // Re-run filters on streams that were just service-wrapped.
+    // They now have debrid-specific info (service, cached status, etc.)
+    // that wasn't available during the first filter pass.
+    if (resolvedResults.hasNewStreams) {
+      const filterStart = Date.now();
+      processedStreams = await this.filterer.filter(processedStreams, context);
+      filterMs = Date.now() - filterStart;
+    }
+
+    const dedupStart = Date.now();
+    processedStreams = await this.deduplicator.deduplicate(processedStreams);
+    deduplicationMs = Date.now() - dedupStart;
+
+    if (isMeta || resolvedResults.hasNewStreams) {
+      // When service wrapping added new streams and we're not in meta mode,
+      // existing streams were already precomputed in the fetcher — skip
+      // per-stream regex/keyword ops for them.
+      const skipPerStreamIds =
+        !isMeta && resolvedResults.hasNewStreams
+          ? preServiceWrapIds
+          : undefined;
+      const precomputeStart = Date.now();
+      precomputeSubTimings = await this.precomputer.precomputePreferred(
+        processedStreams,
+        context,
+        skipPerStreamIds
+      );
+      precomputeMs = Date.now() - precomputeStart;
+    }
+
+    const sortStart = Date.now();
+    let finalStreams = await this.sorter.sort(processedStreams, context);
+    sortMs = Date.now() - sortStart;
+
+    // NZB failover: beforeLimiting position - widest pool (after sort, before limit+SEL)
+    if (nzbFailoverOpts?.position === 'beforeLimiting') {
+      await populateNzbFallbacks(
+        finalStreams,
+        nzbFailoverOpts.count,
+        this.userData.uuid
+      ).catch((error) => {
+        logger.error('Error during NZB failover population (beforeLimiting):', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
+
+    const limitStart = Date.now();
+    finalStreams = await this.limiter.limit(finalStreams);
+    limitMs = Date.now() - limitStart;
+
+    // NZB failover: beforeSEL position - after limiting, before SEL expression filters
+    if (nzbFailoverOpts?.position === 'beforeSEL') {
+      await populateNzbFallbacks(
+        finalStreams,
+        nzbFailoverOpts.count,
+        this.userData.uuid
+      ).catch((error) => {
+        logger.error('Error during NZB failover population (beforeSEL):', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
+
+    const selStart = Date.now();
+    finalStreams = await this.filterer.applyStreamExpressionFilters(
+      finalStreams,
+      context
+    );
+    selMs = Date.now() - selStart;
+
+    // NZB failover: last position (default) - after limiting and SEL, cleanest pool
+    if (!nzbFailoverOpts?.position || nzbFailoverOpts.position === 'last') {
+      if (nzbFailoverOpts) {
+        await populateNzbFallbacks(
+          finalStreams,
+          nzbFailoverOpts.count,
+          this.userData.uuid
+        ).catch((error) => {
+          logger.error('Error during NZB failover population (last):', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      }
+    }
+
+    this.filterer.generateFilterSummary(streams, finalStreams, type, id);
 
     const { streams: proxiedStreams, error } =
       await this.proxifier.proxify(finalStreams);
@@ -1408,6 +2669,9 @@ export class AIOStreams {
       if (stream.parsedFile) {
         stream.parsedFile.visualTags = stream.parsedFile.visualTags.filter(
           (tag) => !constants.FAKE_VISUAL_TAGS.includes(tag as any)
+        );
+        stream.parsedFile.languages = stream.parsedFile.languages.filter(
+          (lang) => !['Original'].includes(lang as any)
         );
       }
       return stream;
@@ -1429,49 +2693,26 @@ export class AIOStreams {
       finalStreams = streamsWithExternalDownloads;
     }
 
-    return { streams: finalStreams, errors };
+    return {
+      streams: finalStreams,
+      errors,
+      timings: {
+        metaFilterMs,
+        serviceWrapMs,
+        serviceWrapTimings,
+        filterMs,
+        deduplicationMs,
+        precomputeMs,
+        precomputeSubTimings,
+        sortMs,
+        limitMs,
+        selMs,
+      },
+    };
   }
 
-  private async _fetchAndHandleRedirects(stream: ParsedStream, id: string) {
-    const wrapper = new Wrapper(stream.addon);
-    if (!stream.url) {
-      throw new Error(`Stream URL is undefined`);
-    }
-    const initialResponse = await wrapper.makeRequest(stream.url, {
-      timeout: 30000,
-      rawOptions: { redirect: 'manual' },
-    });
-
-    // If it's a redirect, handle it
-    if (initialResponse.status >= 300 && initialResponse.status < 400) {
-      const redirectUrl = initialResponse.headers.get('Location');
-      if (!redirectUrl) {
-        throw new Error(
-          `Redirect response (${initialResponse.status}) has no Location header.`
-        );
-      }
-
-      const absoluteRedirectUrl = new URL(redirectUrl, stream.url).toString();
-      const originalHost = new URL(stream.url).host;
-      const redirectHost = new URL(absoluteRedirectUrl).host;
-
-      if (redirectHost !== originalHost) {
-        throw new Error(
-          `Host mismatch during redirect: original (${originalHost}) vs redirect (${redirectHost}). Not following.`
-        );
-      }
-
-      logger.debug(
-        `Following same-domain redirect to ${makeUrlLogSafe(absoluteRedirectUrl)} for precaching ${id}`
-      );
-      return wrapper.makeRequest(absoluteRedirectUrl, { timeout: 30000 });
-    }
-
-    return initialResponse;
-  }
-
-  private async precacheNextEpisode(type: string, id: string) {
-    const parsedId = IdParser.parse(id, type);
+  private async precacheNextEpisode(context: StreamContext) {
+    const { type, id, parsedId } = context;
     if (!parsedId) {
       return;
     }
@@ -1484,7 +2725,7 @@ export class AIOStreams {
       return;
     }
 
-    const metadata = await this.getMetadata(parsedId);
+    const metadata = await context.getMetadata();
 
     const { season: seasonToPrecache, episode: episodeToPrecache } =
       this._getNextEpisode(currentSeason, currentEpisode, metadata);
@@ -1506,7 +2747,9 @@ export class AIOStreams {
     // modify userData to remove the excludeUncached filter
     const userData = structuredClone(this.userData);
     userData.excludeUncached = false;
+    // ensure default fetching is used as time does not matter for a background precache
     userData.groups = undefined;
+    userData.dynamicAddonFetching = { enabled: false };
     this.setUserData(userData);
 
     const nextStreamsResponse = await this.getStreams(precacheId, type, true);
@@ -1517,56 +2760,59 @@ export class AIOStreams {
       return;
     }
 
-    const serviceStreams = nextStreamsResponse.data.streams.filter(
-      (stream) => stream.service
-    );
-    const shouldPrecache =
-      serviceStreams.every((stream) => stream.service?.cached === false) ||
-      this.userData.alwaysPrecache;
+    const nextStreams = nextStreamsResponse.data.streams;
 
-    if (!shouldPrecache) {
+    // Evaluate precache selector on the next episode's streams
+    let selectedStreams: ParsedStream[] = [];
+    const selector =
+      this.userData.precacheSelector || constants.DEFAULT_PRECACHE_SELECTOR;
+    try {
+      const streamSelector = new StreamSelector(context.toExpressionContext());
+      selectedStreams = await streamSelector.select(nextStreams, selector);
+      logger.debug(`Precache selector evaluated`, {
+        selector,
+        resultCount: selectedStreams.length,
+      });
+    } catch (error) {
+      logger.error(`Failed to evaluate precache selector`, {
+        selector,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    if (selectedStreams.length === 0) {
       logger.debug(
-        `Skipping precaching ${id} as all streams are cached or Always Precache is disabled`
+        `Skipping precaching ${id} as precache selector returned no streams`
       );
       return;
     }
 
-    const firstUncachedStream = serviceStreams.find(
-      (stream) => stream.service?.cached === false
-    );
-    if (!firstUncachedStream || !firstUncachedStream.url) {
-      logger.debug(
-        `Skipping precaching ${id} as no uncached streams were found or it had no URL`
-      );
+    const singleStreamOnly = this.userData.precacheSingleStream !== false;
+    const streamsToCache = selectedStreams
+      .filter((s) => s.url)
+      .slice(0, singleStreamOnly ? 1 : Env.MAX_BACKGROUND_PINGS);
+
+    if (streamsToCache.length === 0) {
+      logger.debug(`Skipping precaching ${id} as no selected stream had a URL`);
       return;
     }
 
     logger.debug(
-      `Selected following stream for precaching:\n${firstUncachedStream.originalName}\n${firstUncachedStream.originalDescription}`
+      `Precaching ${streamsToCache.length} stream(s) for ${id} (${type})`
     );
 
-    try {
-      const response = await this._fetchAndHandleRedirects(
-        firstUncachedStream,
-        precacheId
-      );
-      logger.debug(`Response: ${response.status} ${response.statusText}`);
-      if (!response.ok) {
-        throw new Error(
-          `Final Response not OK: ${response.status} ${response.statusText}`
-        );
-      }
-      const cacheKey = `precache-${type}-${id}-${this.userData.uuid}`;
-      await precacheCache.set(
-        cacheKey,
-        true,
-        Env.PRECACHE_NEXT_EPISODE_MIN_INTERVAL
-      );
-      logger.info(`Successfully precached a stream for ${id} (${type})`);
-    } catch (error) {
-      logger.error(`Error pinging url of first uncached stream`, {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    const cacheKey = `precache-${type}-${id}-${this.userData.uuid}`;
+    await precacheCache.set(
+      cacheKey,
+      true,
+      Env.PRECACHE_NEXT_EPISODE_MIN_INTERVAL
+    );
+
+    // preloadStreams handles concurrency limiting and per-stream error logging
+    await preloadStreams(streamsToCache);
+
+    logger.info(
+      `Successfully precached ${streamsToCache.length} stream(s) for ${id} (${type})`
+    );
   }
 }

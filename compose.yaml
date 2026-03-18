@@ -9,9 +9,3 @@ services:
       - .env
     volumes:
       - ./data:/app/data
-    healthcheck:
-      test: wget -qO- http://localhost:3000/api/v1/status
-      interval: 1m
-      timeout: 10s
-      retries: 5
-      start_period: 10s

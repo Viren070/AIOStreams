@@ -7,6 +7,7 @@ export enum ErrorCode {
   USER_INVALID_CONFIG = 'USER_INVALID_CONFIG',
   USER_NEW_PASSWORD_TOO_SHORT = 'USER_NEW_PASSWORD_TOO_SHORT',
   USER_NEW_PASSWORD_TOO_SIMPLE = 'USER_NEW_PASSWORD_TOO_SIMPLE',
+  ADDON_PASSWORD_INVALID = 'ADDON_PASSWORD_INVALID',
   // Database
   DATABASE_ERROR = 'DATABASE_ERROR',
   // Encryption
@@ -54,6 +55,10 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
   [ErrorCode.USER_NEW_PASSWORD_TOO_SIMPLE]: {
     statusCode: 400,
     message: 'New password is too simple',
+  },
+  [ErrorCode.ADDON_PASSWORD_INVALID]: {
+    statusCode: 401,
+    message: 'Invalid addon password',
   },
   [ErrorCode.DATABASE_ERROR]: {
     statusCode: 500,
@@ -132,21 +137,28 @@ const API_VERSION = 1;
 
 export const REDIS_PREFIX = 'aiostreams:';
 
+export const DEFAULT_PRECACHE_SELECTOR =
+  'count(cached(streams)) == 0 ? uncached(streams) : []';
+
+export const DEFAULT_PRELOAD_SELECTOR = 'slice(streams, 0, 2)';
+
 export const GDRIVE_FORMATTER = 'gdrive';
 export const LIGHT_GDRIVE_FORMATTER = 'lightgdrive';
 export const MINIMALISTIC_GDRIVE_FORMATTER = 'minimalisticgdrive';
 export const TORRENTIO_FORMATTER = 'torrentio';
 export const TORBOX_FORMATTER = 'torbox';
 export const PRISM_FORMATTER = 'prism';
+export const TAMTARO_FORMATTER = 'tamtaro';
 export const CUSTOM_FORMATTER = 'custom';
 
 export const FORMATTERS = [
   GDRIVE_FORMATTER,
+  PRISM_FORMATTER,
+  TAMTARO_FORMATTER,
   LIGHT_GDRIVE_FORMATTER,
   MINIMALISTIC_GDRIVE_FORMATTER,
   TORRENTIO_FORMATTER,
   TORBOX_FORMATTER,
-  PRISM_FORMATTER,
   CUSTOM_FORMATTER,
 ] as const;
 
@@ -162,22 +174,27 @@ export const FORMATTER_DETAILS: Record<FormatterType, FormatterDetail> = {
     name: 'Google Drive',
     description: 'Uses the formatting from the Stremio GDrive addon',
   },
+  [PRISM_FORMATTER]: {
+    id: PRISM_FORMATTER,
+    name: 'Prism',
+    description: 'An aesthetic formatter with every detail within 5 lines.',
+  },
+  [TAMTARO_FORMATTER]: {
+    id: TAMTARO_FORMATTER,
+    name: 'Tamtaro',
+    description:
+      "From Tamtaro's setup. Minimal and clean, yet comprehensive for stream selection. Smartly detects status for cached (⚡/⏳), proxied (⛊/⛉), library (☁︎/▤), and season packs (⧉/◧). The last line in sᴍᴀʟʟ ᴄᴀᴘs highlights special attributes like Usenet's health (☑ ɴᴢʙ), SeaDex (ᴀʟᴛ/ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ), SEL scores (ʀᴇᴍᴜx ᴛ𝟷 ₁,₉₅₀), networks (ɴᴇᴛғʟɪx) and special editions (ᴅɪʀᴇᴄᴛᴏʀ's ᴄᴜᴛ).",
+  },
   [LIGHT_GDRIVE_FORMATTER]: {
     id: LIGHT_GDRIVE_FORMATTER,
     name: 'Light Google Drive',
     description:
       'A lighter version of the GDrive formatter, focused on asthetics',
   },
-  [PRISM_FORMATTER]: {
-    id: PRISM_FORMATTER,
-    name: 'Prism',
-    description: 'An aesthetic formatter with every detail within 5 lines.',
-  },
   [MINIMALISTIC_GDRIVE_FORMATTER]: {
     id: MINIMALISTIC_GDRIVE_FORMATTER,
-    name: 'Minimalistic Google Drive',
-    description:
-      'A minimalistic formatter for Google Drive which shows only the bare minimum',
+    name: 'Minimalistic',
+    description: 'A minimalistic formatter which shows only the bare minimum',
   },
   [TORRENTIO_FORMATTER]: {
     id: TORRENTIO_FORMATTER,
@@ -213,6 +230,7 @@ const EASYNEWS_SERVICE = 'easynews';
 const NZBDAV_SERVICE = 'nzbdav';
 const ALTMOUNT_SERVICE = 'altmount';
 const STREMIO_NNTP_SERVICE = 'stremio_nntp';
+const STREMTHRU_NEWZ_SERVICE = 'stremthru_newz';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -230,6 +248,7 @@ const SERVICES = [
   NZBDAV_SERVICE,
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
+  STREMTHRU_NEWZ_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -246,6 +265,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
+  STREMTHRU_NEWZ_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -712,10 +732,50 @@ const SERVICE_DETAILS: Record<
       },
     ],
   },
+  [STREMTHRU_NEWZ_SERVICE]: {
+    id: STREMTHRU_NEWZ_SERVICE,
+    name: 'StremThru Newz',
+    shortName: 'ST',
+    knownNames: ['ST', 'StremThru Newz', 'StremThruNewz'],
+    signUpText:
+      'Stream usenet content via [StremThru](https://github.com/MunifTanjim/stremthru).',
+    credentials: [
+      {
+        id: 'url',
+        name: 'StremThru URL',
+        description:
+          'The base URL of your StremThru instance used for requests e.g. http://stremthru:8080 or https://stremthru.mydomain.com',
+        type: 'string',
+        required: true,
+      },
+      {
+        id: 'authToken',
+        name: 'Auth Token',
+        description:
+          'Your StremThru authentication token from `STREMTHRU_AUTH`',
+        type: 'password',
+        required: true,
+      },
+      {
+        id: 'note',
+        name: 'Tip',
+        description:
+          'If you are self-hosting both StremThru and AIOStreams, consider using the internal URL of StremThru (e.g., http://stremthru:8080) to avoid potential network issues. Your playback URLs generated by StremThru will use the `STREMTHRU_BASE_URL` environment variable.',
+        type: 'alert',
+        intent: 'info',
+      },
+    ],
+  },
 };
 
 const TOP_LEVEL_OPTION_DETAILS: Record<
-  'tmdbApiKey' | 'tmdbAccessToken' | 'rpdbApiKey' | 'tvdbApiKey',
+  | 'tmdbApiKey'
+  | 'tmdbAccessToken'
+  | 'rpdbApiKey'
+  | 'tvdbApiKey'
+  | 'topPosterApiKey'
+  | 'aioratingsApiKey'
+  | 'aioratingsProfileId',
   {
     name: string;
     description: string;
@@ -736,10 +796,25 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     description:
       'Get your free API key from [here](https://ratingposterdb.com/api-key/) for posters with ratings.',
   },
+  topPosterApiKey: {
+    name: 'Top Poster API Key',
+    description:
+      'Get your free API key from [here](https://api.top-streaming.stream/user/register) for posters with ratings.',
+  },
   tvdbApiKey: {
     name: 'TVDB API Key',
     description:
       'Sign up for a free API Key at [TVDB](https://www.thetvdb.com/api-information) and then get it from your [dashboard](https://www.thetvdb.com/dashboard/account/apikeys).',
+  },
+  aioratingsApiKey: {
+    name: 'AIOratings API Key',
+    description:
+      'Get your API key from [here](https://aioratings.com) for custom posters with ratings.',
+  },
+  aioratingsProfileId: {
+    name: 'AIOratings Profile ID',
+    description:
+      'Use "default" for the default profile, or enter a custom profile UUID from your AIOratings dashboard.',
   },
 };
 
@@ -748,6 +823,45 @@ export const DEDUPLICATOR_KEYS = [
   'infoHash',
   'smartDetect',
 ] as const;
+
+export const DEDUPLICATOR_LIBRARY_BEHAVIOURS = [
+  'ignore',
+  'prefer',
+  'exclusive',
+] as const;
+
+export const SMART_DETECT_ATTRIBUTES = [
+  'size',
+  'bitrate',
+  'resolution',
+  'quality',
+  'encode',
+  'releaseGroup',
+  'edition',
+  'remastered',
+  'network',
+  'container',
+  'visualTags',
+  'audioTags',
+  'audioChannels',
+  'languages',
+] as const;
+
+export type SmartDetectAttribute = (typeof SMART_DETECT_ATTRIBUTES)[number];
+
+export const DEFAULT_SMART_DETECT_ATTRIBUTES: SmartDetectAttribute[] = [
+  'size',
+  'resolution',
+  'quality',
+  'visualTags',
+  'audioTags',
+  'audioChannels',
+  'languages',
+  'encode',
+  'edition',
+  'network',
+  'remastered',
+];
 
 export const AUTO_PLAY_ATTRIBUTES = [
   'service',
@@ -867,6 +981,7 @@ const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
 // Passthrough stages that can be selectively bypassed
 const PASSTHROUGH_STAGES = [
   'filter', // bypass main filtering (shouldKeepStream)
+  'language', // bypass language filtering specifically
   'dedup', // bypass deduplication
   'limit', // bypass result limiting
   'excluded', // bypass excluded stream expressions
@@ -908,11 +1023,18 @@ const SORT_CRITERIA = [
   'library',
   'keyword',
   'streamExpressionMatched',
+  'streamExpressionScore',
+  'regexScore',
   'seadex',
+  'bitrate',
+  'releaseGroup',
 ] as const;
 
 export const MIN_SIZE = 0;
 export const MAX_SIZE = 100 * 1000 * 1000 * 1000; // 100GB
+
+export const MIN_BITRATE = 0;
+export const MAX_BITRATE = 250 * 1000 * 1000; // 250 Mbps
 
 export const MIN_SEEDERS = 0;
 export const MAX_SEEDERS = 1000;
@@ -1088,13 +1210,14 @@ export const SORT_CRITERIA_DETAILS: Record<
       'Streams that match any of your keywords are preferred',
   },
   streamExpressionMatched: {
-    name: 'Stream Expression Matched',
+    name: 'Stream Expressions',
     defaultDirection: 'desc',
-    description: 'Whether the stream matches any of your stream expressions',
+    description:
+      'Whether the stream matches any of your preferred stream expressions',
     ascendingDescription:
-      'Streams that do not match your stream expressions are preferred while the ones that do are ranked by the order of your stream expressions',
+      'Streams that do not match your preferred stream expressions are preferred while the ones that do are ranked by the order of your preferred stream expressions',
     descendingDescription:
-      'Streams that match your stream expressions are preferred and ranked by the order of your stream expressions',
+      'Streams that match your preferred stream expressions are preferred and ranked by the order of your preferred stream expressions',
   },
   seadex: {
     name: 'SeaDex',
@@ -1104,6 +1227,37 @@ export const SORT_CRITERIA_DETAILS: Record<
     ascendingDescription: 'Streams that are not listed on SeaDex are preferred',
     descendingDescription:
       'Streams that are marked as the Best release on SeaDex are preferred, followed by the Alternative release',
+  },
+  bitrate: {
+    name: 'Bitrate (Estimate)',
+    defaultDirection: 'desc',
+    description: 'Sort by the bitrate of the stream',
+    ascendingDescription: 'Streams with lower bitrate are preferred',
+    descendingDescription: 'Streams with higher bitrate are preferred',
+  },
+  regexScore: {
+    name: 'Ranked Regex Score',
+    defaultDirection: 'desc',
+    description: 'Sort by the computed score from ranked regex patterns',
+    ascendingDescription: 'Streams with lower regex scores are preferred',
+    descendingDescription: 'Streams with higher regex scores are preferred',
+  },
+  streamExpressionScore: {
+    name: 'Stream Expression Score',
+    defaultDirection: 'desc',
+    description: 'Sort by the computed score from ranked stream expressions',
+    ascendingDescription: 'Streams with lower expression scores are preferred',
+    descendingDescription:
+      'Streams with higher expression scores are preferred',
+  },
+  releaseGroup: {
+    name: 'Release Group',
+    defaultDirection: 'desc',
+    description: 'Sort by the release group of the stream',
+    ascendingDescription:
+      'Streams that are not in your preferred release group list are preferred',
+    descendingDescription:
+      'Streams that are in your preferred release group list are preferred',
   },
 } as const;
 
@@ -1116,6 +1270,7 @@ export const ARCHIVE_STREAM_TYPE = 'archive' as const;
 export const USENET_STREAM_TYPE = 'usenet' as const;
 export const DEBRID_STREAM_TYPE = 'debrid' as const;
 export const HTTP_STREAM_TYPE = 'http' as const;
+export const INFO_STREAM_TYPE = 'info' as const;
 export const EXTERNAL_STREAM_TYPE = 'external' as const;
 export const YOUTUBE_STREAM_TYPE = 'youtube' as const;
 export const ERROR_STREAM_TYPE = 'error' as const;
@@ -1133,6 +1288,7 @@ const STREAM_TYPES = [
   YOUTUBE_STREAM_TYPE,
   ERROR_STREAM_TYPE,
   STATISTIC_STREAM_TYPE,
+  INFO_STREAM_TYPE,
 ] as const;
 
 export type StreamType = (typeof STREAM_TYPES)[number];
@@ -1250,6 +1406,7 @@ const LANGUAGES = [
   'Dual Audio',
   'Dubbed',
   'Multi',
+  'Original',
   'Unknown',
 ] as const;
 
@@ -1320,6 +1477,7 @@ export {
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
+  STREMTHRU_NEWZ_SERVICE,
   SERVICE_DETAILS,
   TOP_LEVEL_OPTION_DETAILS,
   HEADERS_FOR_IP_FORWARDING,

@@ -3,6 +3,9 @@ import { RedisClientType } from 'redis';
 import { TransactionQueue } from '../db/queue.js';
 import { Cache, Env, REDIS_PREFIX } from './index.js';
 import { createLogger } from './logger.js';
+import { Time } from './time.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 const logger = createLogger('distributed-lock');
 const lockPrefix = `${REDIS_PREFIX}lock:`;
@@ -11,7 +14,8 @@ export interface LockOptions {
   timeout?: number;
   ttl?: number;
   retryInterval?: number;
-  type?: 'memory' | 'sql' | 'redis';
+  type?: 'memory' | 'sql' | 'redis' | 'file';
+  lockDir?: string; // Required for file-based locks
 }
 
 export interface LockResult<T> {
@@ -22,6 +26,9 @@ export interface LockResult<T> {
 interface StoredResult<T> {
   value?: T;
   error?: string;
+  errorCode?: string;
+  errorType?: string;
+  errorStatusCode?: number;
 }
 
 export class DistributedLock {
@@ -65,6 +72,19 @@ export class DistributedLock {
       if (Env.REDIS_URI) {
         this.redis = Cache.getRedisClient();
         this.subRedis = this.redis.duplicate();
+
+        this.subRedis.on('error', (err: any) => {
+          logger.error(`Redis subscriber client error: ${err.message || err}`);
+        });
+
+        this.subRedis.on('reconnecting', () => {
+          logger.warn('Redis subscriber client reconnecting');
+        });
+
+        this.subRedis.on('end', () => {
+          logger.warn('Redis subscriber connection closed');
+        });
+
         await this.subRedis.connect();
         logger.debug('DistributedLock initialised with Redis backend.');
       } else {
@@ -86,6 +106,10 @@ export class DistributedLock {
       return this.withMemoryLock(key, fn, options);
     }
 
+    if (options.type === 'file') {
+      return this.withFileLock(key, fn, options);
+    }
+
     return this.redis && options.type !== 'sql'
       ? this.withRedisLock(key, fn, options)
       : this.withSqlLock(key, fn, options);
@@ -96,7 +120,7 @@ export class DistributedLock {
     fn: () => Promise<T>,
     options: LockOptions
   ): Promise<LockResult<T>> {
-    const { timeout = 30000, ttl = 60000 } = options;
+    const { timeout = 30 * Time.Second, ttl = Time.Minute } = options;
     const owner = Math.random().toString(36).substring(2);
     const redisKey = `${lockPrefix}${key}`;
     const doneChannel = `${redisKey}:done`;
@@ -118,6 +142,10 @@ export class DistributedLock {
         await this.redis!.publish(doneChannel, JSON.stringify(storedResult));
       } catch (e: any) {
         const errorResult: StoredResult<T> = { error: e.message || 'Error' };
+        if (e.code !== undefined) errorResult.errorCode = String(e.code);
+        if (e.type !== undefined) errorResult.errorType = String(e.type);
+        if (e.statusCode !== undefined)
+          errorResult.errorStatusCode = Number(e.statusCode);
         await this.redis!.publish(doneChannel, JSON.stringify(errorResult));
         throw e;
       } finally {
@@ -147,7 +175,14 @@ export class DistributedLock {
           logger.warn(
             `Received error result for key: ${key} from lock holder.`
           );
-          reject(new Error(storedResult.error));
+          const err = new Error(storedResult.error);
+          if (storedResult.errorCode !== undefined)
+            (err as any).code = storedResult.errorCode;
+          if (storedResult.errorType !== undefined)
+            (err as any).type = storedResult.errorType;
+          if (storedResult.errorStatusCode !== undefined)
+            (err as any).statusCode = storedResult.errorStatusCode;
+          reject(err);
         } else {
           logger.debug(`Received cached result for key: ${key} via pub/sub.`);
           resolve({ result: storedResult.value!, cached: true });
@@ -190,7 +225,7 @@ export class DistributedLock {
     fn: () => Promise<T>,
     options: LockOptions
   ): Promise<LockResult<T>> {
-    const { timeout = 30000, ttl = 60000 } = options;
+    const { timeout = 30 * Time.Second, ttl = Time.Minute } = options;
     const owner = Math.random().toString(36).substring(2);
 
     // Clean up expired locks
@@ -297,13 +332,140 @@ export class DistributedLock {
     });
   }
 
+  private async withFileLock<T>(
+    key: string,
+    fn: () => Promise<T>,
+    options: LockOptions
+  ): Promise<LockResult<T>> {
+    const {
+      timeout = 30 * Time.Second,
+      ttl = 5 * Time.Minute,
+      lockDir,
+    } = options;
+
+    if (!lockDir) {
+      throw new Error('lockDir is required for file-based locks');
+    }
+
+    const owner = Math.random().toString(36).substring(2);
+    const lockPath = path.join(lockDir, `${key}.lock`);
+    const STALE_TIMEOUT = ttl;
+
+    const acquireLock = async (): Promise<boolean> => {
+      try {
+        // Check if lock file exists
+        const lockExists = await fs
+          .access(lockPath)
+          .then(() => true)
+          .catch(() => false);
+
+        if (lockExists) {
+          // Check if lock is stale
+          const stats = await fs.stat(lockPath);
+          const lockAge = Date.now() - stats.mtimeMs;
+
+          if (lockAge > STALE_TIMEOUT) {
+            logger.warn(
+              `Stale file lock detected for key ${key} (${Math.round(lockAge / 1000)}s old), removing...`
+            );
+            await fs.unlink(lockPath).catch(() => {});
+          } else {
+            logger.debug(
+              `File lock exists for key ${key} (${Math.round(lockAge / 1000)}s old), another process is syncing`
+            );
+            return false;
+          }
+        }
+
+        // Try to create lock file (atomic operation)
+        await fs.mkdir(path.dirname(lockPath), { recursive: true });
+        await fs.writeFile(
+          lockPath,
+          JSON.stringify({
+            owner,
+            pid: process.pid,
+            timestamp: Date.now(),
+          }),
+          { flag: 'wx' } // Fail if file exists
+        );
+
+        return true;
+      } catch (error: any) {
+        if (error.code === 'EEXIST') {
+          logger.debug(`File lock for key ${key} created by another process`);
+          return false;
+        }
+        logger.error(`Error acquiring file lock for key ${key}:`, error);
+        return false;
+      }
+    };
+
+    const releaseLock = async () => {
+      try {
+        await fs.unlink(lockPath);
+        logger.debug(`Released file lock for key: ${key}`);
+      } catch (error) {
+        logger.debug(
+          `Error releasing file lock for key ${key} (may already be released):`,
+          error
+        );
+      }
+    };
+
+    if (await acquireLock()) {
+      logger.debug(`File lock acquired for key: ${key}`);
+      let result: T;
+      try {
+        result = await fn();
+      } catch (e: any) {
+        throw e;
+      } finally {
+        await releaseLock();
+      }
+      return { result, cached: false };
+    }
+
+    logger.debug(
+      `Waiting for file lock on key ${key} to be released by another process...`
+    );
+
+    return new Promise<LockResult<T>>((resolve, reject) => {
+      const startTime = Date.now();
+      const checkInterval = options.retryInterval || 500;
+
+      const timeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        const errorMessage = `Timed out waiting for file lock on key: ${key}`;
+        logger.error(errorMessage);
+        reject(new Error(errorMessage));
+      }, timeout);
+
+      // Poll for lock release
+      const pollInterval = setInterval(async () => {
+        const exists = await fs
+          .access(lockPath)
+          .then(() => true)
+          .catch(() => false);
+
+        // Lock was released
+        if (!exists) {
+          clearTimeout(timeoutId);
+          clearInterval(pollInterval);
+          logger.debug(`File lock released for key ${key}`);
+          // We mark cached=true to indicate we waited for another process
+          resolve({ result: undefined as any, cached: true });
+        }
+      }, checkInterval);
+    });
+  }
+
   private async withSqlLock<T>(
     key: string,
     fn: () => Promise<T>,
     options: LockOptions
   ): Promise<LockResult<T>> {
     const db = DB.getInstance();
-    const { timeout = 30000, ttl = 60000 } = options;
+    const { timeout = 30 * Time.Second, ttl = Time.Minute } = options;
     const { retryInterval = db.isSQLite() ? 250 : 100 } = options;
     const owner = Math.random().toString(36).substring(2);
     const expiresAt = Date.now() + ttl;
@@ -372,9 +534,14 @@ export class DistributedLock {
         await TransactionQueue.getInstance().enqueue(async () => {
           const tx = await db.begin();
           try {
+            const errorEntry: StoredResult<T> = { error: e.message || 'Error' };
+            if (e.code !== undefined) errorEntry.errorCode = String(e.code);
+            if (e.type !== undefined) errorEntry.errorType = String(e.type);
+            if (e.statusCode !== undefined)
+              errorEntry.errorStatusCode = Number(e.statusCode);
             await tx.execute(
               `UPDATE distributed_locks SET result = ? WHERE key = ? AND owner = ?`,
-              [JSON.stringify({ error: e.message || 'Error' }), key, owner]
+              [JSON.stringify(errorEntry), key, owner]
             );
             await tx.commit();
           } catch (err) {
@@ -410,7 +577,14 @@ export class DistributedLock {
         const storedResult: StoredResult<T> = JSON.parse(lock[0].result);
         if (storedResult.error) {
           logger.warn(`Polled error result for key: ${key} from SQL lock.`);
-          throw new Error(storedResult.error);
+          const err = new Error(storedResult.error);
+          if (storedResult.errorCode !== undefined)
+            (err as any).code = storedResult.errorCode;
+          if (storedResult.errorType !== undefined)
+            (err as any).type = storedResult.errorType;
+          if (storedResult.errorStatusCode !== undefined)
+            (err as any).statusCode = storedResult.errorStatusCode;
+          throw err;
         }
         logger.debug(`Polled cached result for key: ${key} from SQL lock.`);
         return { result: storedResult.value!, cached: true };

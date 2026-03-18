@@ -8,6 +8,7 @@ import {
 } from '../utils/index.js';
 import FileParser from './file.js';
 import { parseAgeString, parseDuration } from './utils.js';
+import { mergeParsedFiles, arrayMerge } from './merge.js';
 const logger = createLogger('parser');
 
 class StreamParser {
@@ -75,7 +76,7 @@ class StreamParser {
       type: 'http',
       proxied: this.isProxied(stream),
       url: this.applyUrlModifications(stream.url ?? undefined),
-      nzbUrl: stream.nzbUrl ?? undefined,
+      nzbUrl: stream.nzbUrl || undefined,
       tarUrls: stream.tarUrls ?? undefined,
       tgzUrls: stream.tgzUrls ?? undefined,
       '7zipUrls': stream['7zipUrls'] ?? undefined,
@@ -96,6 +97,13 @@ class StreamParser {
     parsedStream.error = this.getError(stream, parsedStream);
     if (parsedStream.error) {
       parsedStream.type = constants.ERROR_STREAM_TYPE;
+      return parsedStream;
+    }
+
+    const infoStream = this.isInfoStream(stream);
+    if (infoStream) {
+      parsedStream.message = infoStream;
+      parsedStream.type = constants.INFO_STREAM_TYPE;
       return parsedStream;
     }
 
@@ -123,6 +131,15 @@ class StreamParser {
     }
     parsedStream.size = this.getSize(stream, parsedStream);
     parsedStream.folderSize = this.getFolderSize(stream, parsedStream);
+    if (
+      parsedStream.size &&
+      parsedStream.folderSize &&
+      Math.abs(parsedStream.size - parsedStream.folderSize) /
+        parsedStream.size <
+        0.05
+    ) {
+      parsedStream.folderSize = undefined;
+    }
     parsedStream.indexer = this.getIndexer(stream, parsedStream);
     parsedStream.service = this.getService(stream, parsedStream);
     parsedStream.duration = this.getDuration(stream, parsedStream);
@@ -133,6 +150,7 @@ class StreamParser {
     );
     parsedStream.library = this.getInLibrary(stream, parsedStream);
     parsedStream.age = this.getAge(stream, parsedStream);
+    parsedStream.bitrate = this.getBitrate(stream, parsedStream);
     parsedStream.message = this.getMessage(stream, parsedStream);
 
     parsedStream.parsedFile = this.getParsedFile(stream, parsedStream);
@@ -144,9 +162,19 @@ class StreamParser {
       fileIdx:
         stream.fileIdx ?? this.getFileIdx(stream, parsedStream) ?? undefined,
       private: this.isPrivate(stream, parsedStream),
+      freeleech: this.isFreeleech(stream, parsedStream),
     };
 
+    parsedStream.extra = this.getExtras(stream, parsedStream);
+
     return parsedStream;
+  }
+
+  protected getExtras(
+    _stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): ParsedStream['extra'] {
+    return undefined;
   }
 
   protected getRandomId(): string {
@@ -254,7 +282,24 @@ class StreamParser {
         return match[1];
       }
     }
+    if (typeof stream.behaviorHints?.folderName === 'string') {
+      return stream.behaviorHints.folderName;
+    }
     return undefined;
+  }
+
+  protected getResolution(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    return undefined; //
+  }
+
+  protected getReleaseGroup(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    return undefined; //
   }
 
   protected getSize(
@@ -282,13 +327,24 @@ class StreamParser {
       size = Math.round(size);
     }
 
-    return size;
+    if (Number.isFinite(size) && size > 0) {
+      return size;
+    }
   }
 
   protected getFolderSize(
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
+    if (
+      (stream.behaviorHints?.folderSize !== undefined &&
+        typeof stream.behaviorHints?.folderSize === 'number') ||
+      typeof stream.behaviorHints?.folderSize === 'string'
+    ) {
+      return (
+        bytes.parse(stream.behaviorHints?.folderSize.toString()) ?? undefined
+      );
+    }
     return undefined;
   }
 
@@ -341,6 +397,13 @@ class StreamParser {
     return false;
   }
 
+  protected isFreeleech(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): boolean | undefined {
+    return false;
+  }
+
   protected getIndexer(
     stream: Stream,
     currentParsedStream: ParsedStream
@@ -354,6 +417,10 @@ class StreamParser {
       return match[1].trim();
     }
 
+    return undefined;
+  }
+
+  protected isInfoStream(stream: Stream): string | undefined {
     return undefined;
   }
 
@@ -375,9 +442,14 @@ class StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    return stream.url
-      ? stream.url.match(/(?<=[-/[(;:&])[a-fA-F0-9]{40}(?=[-\]\)/:;&])/)?.[0]
-      : undefined;
+    if (!stream.url) return undefined;
+    try {
+      return decodeURIComponent(stream.url).match(
+        /(?:(?<=btih:)|(?<=[-/[(;:&]))[a-fA-F0-9]{40}(?=$|[-\]\)/:;&?])/
+      )?.[0];
+    } catch {
+      return undefined;
+    }
   }
 
   protected getFileIdx(
@@ -392,6 +464,20 @@ class StreamParser {
     currentParsedStream: ParsedStream
   ): number | undefined {
     return parseDuration(stream.description || '');
+  }
+
+  protected getBitrate(
+    _: Stream,
+    currentParsedStream: ParsedStream
+  ): number | undefined {
+    if (currentParsedStream.size && currentParsedStream.duration) {
+      const sizeBits = currentParsedStream.size * 8;
+      const durationSeconds = currentParsedStream.duration / 1000;
+      if (durationSeconds > 0) {
+        return Math.round(sizeBits / durationSeconds);
+      }
+    }
+    return undefined;
   }
 
   protected getStreamType(
@@ -440,6 +526,10 @@ class StreamParser {
     throw new Error('Invalid stream, missing a required stream property');
   }
 
+  /**
+   * Parses the filename and folder name from the stream, merges the results,
+   * and applies season-pack detection heuristics.
+   */
   protected getParsedFile(
     stream: Stream,
     parsedStream: ParsedStream
@@ -450,45 +540,42 @@ class StreamParser {
     const fileParsed = parsedStream.filename
       ? FileParser.parse(parsedStream.filename)
       : undefined;
-    function arrayFallback<T>(
-      arr1: T[] | undefined,
-      arr2: T[] | undefined
-    ): T[] | undefined {
-      return arr1?.length ? arr1 : arr2?.length ? arr2 : undefined;
-    }
-    function arrayMerge<T>(arr1: T[] | undefined, arr2: T[] | undefined): T[] {
-      return Array.from(new Set([...(arr1 ?? []), ...(arr2 ?? [])]));
-    }
-    return {
-      title: folderParsed?.title || fileParsed?.title,
-      year: fileParsed?.year || folderParsed?.year,
-      seasons: arrayFallback(fileParsed?.seasons, folderParsed?.seasons),
-      episodes: arrayFallback(fileParsed?.episodes, folderParsed?.episodes),
-      resolution: fileParsed?.resolution || folderParsed?.resolution,
-      quality: fileParsed?.quality || folderParsed?.quality,
-      encode: fileParsed?.encode || folderParsed?.encode,
-      releaseGroup: fileParsed?.releaseGroup || folderParsed?.releaseGroup,
-      edition: fileParsed?.edition || folderParsed?.edition,
-      remastered: fileParsed?.remastered || folderParsed?.remastered,
-      repack: fileParsed?.repack || folderParsed?.repack,
-      uncensored: fileParsed?.uncensored || folderParsed?.uncensored,
-      unrated: fileParsed?.unrated || folderParsed?.unrated,
-      upscaled: fileParsed?.upscaled || folderParsed?.upscaled,
-      network: fileParsed?.network || folderParsed?.network,
-      container: fileParsed?.container || folderParsed?.container,
-      extension: fileParsed?.extension || folderParsed?.extension,
-      visualTags: arrayMerge(folderParsed?.visualTags, fileParsed?.visualTags),
-      audioTags: arrayMerge(folderParsed?.audioTags, fileParsed?.audioTags),
-      audioChannels: arrayMerge(
-        folderParsed?.audioChannels,
-        fileParsed?.audioChannels
-      ),
+
+    const merged = mergeParsedFiles(fileParsed, folderParsed, {
+      // Overrides to include any info we can extract from the stream description
+      resolution:
+        this.getResolution(stream, parsedStream) ||
+        fileParsed?.resolution ||
+        folderParsed?.resolution,
+      releaseGroup:
+        this.getReleaseGroup(stream, parsedStream) ||
+        fileParsed?.releaseGroup ||
+        folderParsed?.releaseGroup,
       languages: arrayMerge(
         arrayMerge(folderParsed?.languages, fileParsed?.languages),
         this.getLanguages(stream, parsedStream)
       ),
-      seasonPack: folderParsed?.seasonPack || fileParsed?.seasonPack,
-    };
+    });
+
+    if (!merged) return undefined;
+
+    // Detect season pack based on folder size being significantly larger than file size
+    if (
+      !merged.seasonPack &&
+      merged.episodes &&
+      merged.episodes.length > 0 &&
+      parsedStream.folderSize &&
+      parsedStream.size &&
+      parsedStream.folderSize > parsedStream.size * 2
+    ) {
+      merged.seasonPack = true;
+    }
+    // Detect season pack when more than 5 episodes are present
+    if (!merged.seasonPack && merged.episodes && merged.episodes.length > 5) {
+      merged.seasonPack = true;
+    }
+
+    return merged;
   }
 
   /**
@@ -579,13 +666,13 @@ class StreamParser {
   ): ParsedStream['service'] | undefined {
     const cleanString = string.replace(/web-?dl/i, '');
     const services = constants.SERVICE_DETAILS;
-    const cachedSymbols = ['+', '⚡', '🚀', 'cached'];
-    const uncachedSymbols = ['⏳', 'download', 'UNCACHED'];
+    const cachedSymbols = ['+', '⚡', '🚀', 'cached', '🌩️'];
+    const uncachedSymbols = ['⏳', 'download', 'UNCACHED', '☁️'];
     let streamService: ParsedStream['service'] | undefined;
     Object.values(services).forEach((service) => {
       // for each service, generate a regexp which creates a regex with all known names separated by |
       const regex = new RegExp(
-        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡+/|\\)\\]_.-]|$|\n)`,
+        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️+/|\\)\\]_.-]|$|\n)`,
         'im'
       );
       // check if the string contains the regex

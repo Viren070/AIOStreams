@@ -19,8 +19,8 @@ import {
   extractTrackersFromMagnet,
   validateInfoHash,
 } from '../utils/debrid.js';
-import { createQueryLimit, useAllTitles } from '../utils/general.js';
-import { createHash } from 'crypto';
+import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import { hashNzbUrl } from '../../debrid/utils.js';
 
 export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
   url: z.string(),
@@ -202,7 +202,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     }
 
     const queries = this.buildQueries(parsedId, metadata, {
-      useAllTitles: useAllTitles(this.userData.url),
+      titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
     });
     if (queries.length === 0) {
       return [];
@@ -231,9 +231,9 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
+    const metadata = await this.getSearchMetadata();
     const results = await this.performSearch('torrent', parsedId, metadata);
     if (results.length === 0) return [];
 
@@ -269,10 +269,8 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     return torrents;
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
+    const metadata = await this.getSearchMetadata();
     const results = await this.performSearch('usenet', parsedId, metadata);
     if (results.length === 0) return [];
 
@@ -285,7 +283,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       if (seenNzbs.has(nzbUrl)) continue;
       seenNzbs.add(nzbUrl);
 
-      const hash = createHash('md5').update(nzbUrl).digest('hex');
+      const hash = hashNzbUrl(nzbUrl);
 
       nzbs.push({
         hash,

@@ -1,0 +1,87 @@
+name: Dev Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch name or PR number (e.g. my-feature or 42)'
+        required: true
+        type: string
+      tag:
+        description: 'Override the image tag (optional, default: pr-<N> or <branch-name>)'
+        required: false
+        type: string
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Resolve ref and tag
+        id: resolve
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "$INPUT_REF" =~ ^[0-9]+$ ]]; then
+            RESOLVED_REF="refs/pull/${INPUT_REF}/merge"
+            DEFAULT_TAG="pr-${INPUT_REF}"
+          else
+            RESOLVED_REF="${INPUT_REF}"
+            # Strip conventional prefixes (feat/, fix/, chore/, etc.), then sanitise
+            STRIPPED=$(echo "$INPUT_REF" | sed -E 's|^[a-z]+/||')
+            SAFE=$(echo "$STRIPPED" | tr '/' '-' | tr -cd 'a-zA-Z0-9._-' | sed 's/^-*//')
+            DEFAULT_TAG="${SAFE}"
+          fi
+
+          FINAL_TAG="${INPUT_TAG:-$DEFAULT_TAG}"
+
+          echo "ref=${RESOLVED_REF}" >> $GITHUB_OUTPUT
+          echo "tag=${FINAL_TAG}" >> $GITHUB_OUTPUT
+          echo "Resolved ref: ${RESOLVED_REF}, tag: ghcr.io/${{ github.repository_owner }}/aiostreams:${FINAL_TAG}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.resolve.outputs.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Get commit hash
+        id: commit
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Generate metadata
+        run: node scripts/generateMetadata.cjs --channel=dev --ref=${{ steps.resolve.outputs.tag }} --commit=${{ steps.commit.outputs.sha }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          push: true
+          context: .
+          file: ./Dockerfile
+          tags: ghcr.io/viren070/aiostreams:${{ steps.resolve.outputs.tag }}

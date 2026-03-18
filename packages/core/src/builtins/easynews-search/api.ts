@@ -13,6 +13,7 @@ import {
   formatZodError,
   makeRequest,
   NzbProxyManager,
+  DistributedLock,
 } from '../../utils/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 import { VIDEO_FILE_EXTENSIONS } from '../../debrid/utils.js';
@@ -365,7 +366,25 @@ export class EasynewsApi {
     });
 
     const url = `${EASYNEWS_BASE}/2.0/search/solr-search/?${params.toString()}`;
+    const lockKey = `easynews-search:${url}`;
 
+    const { result } = await DistributedLock.getInstance().withLock(
+      lockKey,
+      () => this._performSearch(query, page, perPage, url),
+      {
+        timeout: Env.BUILTIN_EASYNEWS_SEARCH_TIMEOUT ?? 30000,
+        ttl: (Env.BUILTIN_EASYNEWS_SEARCH_TIMEOUT ?? 30000) + 1000,
+      }
+    );
+    return result;
+  }
+
+  private async _performSearch(
+    query: string,
+    page: number,
+    perPage: number,
+    url: string
+  ): Promise<ParsedSearchResponse> {
     logger.debug(`Searching Easynews page ${page} for: ${query}`);
 
     try {

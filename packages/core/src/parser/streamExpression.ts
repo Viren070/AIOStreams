@@ -9,9 +9,15 @@ import bytes from 'bytes';
 import { formatZodError } from '../utils/config.js';
 import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
+import { parseBitrate } from './utils.js';
+import { createLogger } from '../utils/logger.js';
+import { ExpressionContext } from '../streams/context.js';
+
+const logger = createLogger('stream-expression');
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
+  protected _pinInstructions: Map<string, 'top' | 'bottom'> = new Map();
 
   constructor() {
     // only allow comparison and logical operators
@@ -40,7 +46,7 @@ export abstract class StreamExpressionEngine {
         asinh: false,
         acosh: false,
         atanh: false,
-        sqrt: false,
+        sqrt: true,
         log: false,
         ln: false,
         lg: false,
@@ -53,9 +59,9 @@ export abstract class StreamExpressionEngine {
         exp: false,
         length: false,
         in: true,
-        random: false,
-        min: true,
-        max: true,
+        random: true,
+        min: false,
+        max: false,
         assignment: false,
         fndef: false,
         cbrt: false,
@@ -69,16 +75,370 @@ export abstract class StreamExpressionEngine {
     this.setupParserFunctions();
   }
 
+  protected setupExpressionContextConstants(context: ExpressionContext) {
+    this.parser.consts.queryType = context.queryType ?? '';
+    this.parser.consts.isAnime = context.isAnime ?? false;
+    this.parser.consts.season = context.season ?? -1;
+    this.parser.consts.episode = context.episode ?? -1;
+    this.parser.consts.genres = context.genres ?? [];
+    this.parser.consts.title = context.title ?? '';
+    this.parser.consts.year = context.year ?? 0;
+    this.parser.consts.yearEnd = context.yearEnd ?? 0;
+    this.parser.consts.daysSinceRelease = context.daysSinceRelease ?? -1;
+    this.parser.consts.runtime = context.runtime ?? 0;
+    this.parser.consts.absoluteEpisode = context.absoluteEpisode ?? -1;
+    this.parser.consts.originalLanguage = context.originalLanguage ?? '';
+    this.parser.consts.hasSeaDex = context.hasSeaDex ?? false;
+    this.parser.consts.hasNextEpisode = context.hasNextEpisode ?? false;
+    this.parser.consts.daysUntilNextEpisode =
+      context.daysUntilNextEpisode ?? -1;
+    this.parser.consts.daysSinceFirstAired = context.daysSinceFirstAired ?? -1;
+    this.parser.consts.daysSinceLastAired = context.daysSinceLastAired ?? -1;
+    this.parser.consts.latestSeason = context.latestSeason ?? -1;
+    this.parser.consts.ongoingSeason =
+      context.hasNextEpisode && context.season === context.latestSeason;
+  }
+
+  public getPinInstructions(): Map<string, 'top' | 'bottom'> {
+    return this._pinInstructions;
+  }
+
   private setupParserFunctions() {
+    this.setupMathFunctions();
+    this.setupStreamFunctions();
+  }
+
+  private setupMathFunctions() {
+    type NumberInput = number[] | number;
+
+    const toNumberArray = (
+      args: NumberInput,
+      rest: number[],
+      functionName: string
+    ): number[] => {
+      const arr = Array.isArray(args) ? args : [args, ...rest];
+      if (!Array.isArray(arr)) {
+        throw new Error(
+          `${functionName} requires  a number or array of numbers`
+        );
+      }
+      if (arr.some((n) => typeof n !== 'number' || isNaN(n))) {
+        throw new Error(
+          `${functionName} requires all values to be valid numbers`
+        );
+      }
+      return arr;
+    };
+
+    const eMath = {
+      mean(numbers: number[]): number {
+        if (numbers.length === 0) return 0;
+        let sum = 0;
+        for (let i = 0; i < numbers.length; i++) {
+          sum += numbers[i];
+        }
+        return sum / numbers.length;
+      },
+      variance(numbers: number[]): number {
+        if (numbers.length === 0) return 0;
+        const m = eMath.mean(numbers);
+        let sumSquaredDiff = 0;
+        for (let i = 0; i < numbers.length; i++) {
+          const diff = numbers[i] - m;
+          sumSquaredDiff += diff * diff;
+        }
+        return sumSquaredDiff / numbers.length;
+      },
+      sort(numbers: number[]): number[] {
+        return [...numbers].sort((a, b) => a - b);
+      },
+      percentile(numbers: number[], p: number): number {
+        if (numbers.length === 0) return 0;
+        if (numbers.length === 1) return numbers[0];
+
+        const sorted = eMath.sort(numbers);
+        if (p === 0) return sorted[0];
+        if (p === 100) return sorted[sorted.length - 1];
+
+        const pos = ((sorted.length - 1) * p) / 100;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+
+        if (rest === 0 || base === sorted.length - 1) {
+          return sorted[base];
+        }
+        return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+      },
+    };
+
+    this.parser.functions.max = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'max');
+      if (values.length === 0) return 0;
+      let max = values[0];
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] > max) max = values[i];
+      }
+      return max;
+    };
+
+    this.parser.functions.min = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'min');
+      if (values.length === 0) return 0;
+      let min = values[0];
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < min) min = values[i];
+      }
+      return min;
+    };
+
+    this.parser.functions.avg = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      return eMath.mean(toNumberArray(args, rest, 'avg'));
+    };
+
+    this.parser.functions.mean = this.parser.functions.avg;
+
+    this.parser.functions.sum = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'sum');
+      if (values.length === 0) return 0;
+      let sum = 0;
+      for (let i = 0; i < values.length; i++) {
+        sum += values[i];
+      }
+      return sum;
+    };
+
+    this.parser.functions.percentile = function (
+      numbers: number[],
+      p: number
+    ): number {
+      const values = toNumberArray(numbers, [], 'percentile');
+      if (typeof p !== 'number' || isNaN(p)) {
+        throw new Error('Percentile value must be a number');
+      }
+      if (p < 0 || p > 100) {
+        throw new Error('Percentile must be between 0 and 100');
+      }
+      return eMath.percentile(values, p);
+    };
+
+    this.parser.functions.q1 = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'q1');
+      return eMath.percentile(values, 25);
+    };
+
+    this.parser.functions.median = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'median');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return values[0];
+
+      const sorted = eMath.sort(values);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
+    this.parser.functions.q2 = this.parser.functions.median;
+
+    this.parser.functions.q3 = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'q3');
+      return eMath.percentile(values, 75);
+    };
+
+    this.parser.functions.iqr = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'iqr');
+      const q3 = eMath.percentile(values, 75);
+      const q1 = eMath.percentile(values, 25);
+      return q3 - q1;
+    };
+
+    this.parser.functions.variance = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'variance');
+      return eMath.variance(values);
+    };
+
+    this.parser.functions.stddev = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'stddev');
+      return Math.sqrt(eMath.variance(values));
+    };
+
+    this.parser.functions.range = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'range');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return 0;
+
+      let min = values[0];
+      let max = values[0];
+
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < min) min = values[i];
+        if (values[i] > max) max = values[i];
+      }
+
+      return max - min;
+    };
+
+    this.parser.functions.mode = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'mode');
+      if (values.length === 0) return 0;
+      if (values.length === 1) return values[0];
+
+      const frequency: Record<number, number> = {};
+      let maxFreq = 0;
+      let mode = values[0];
+
+      for (let i = 0; i < values.length; i++) {
+        const val = values[i];
+        frequency[val] = (frequency[val] || 0) + 1;
+        if (frequency[val] > maxFreq) {
+          maxFreq = frequency[val];
+          mode = val;
+        }
+      }
+      return mode;
+    };
+
+    this.parser.functions.skewness = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'skewness');
+      if (values.length < 3) return 0;
+
+      const mean = eMath.mean(values);
+      const variance = eMath.variance(values);
+      const stdDev = Math.sqrt(variance);
+
+      if (stdDev === 0) return 0;
+
+      let sumCubedDiff = 0;
+      for (let i = 0; i < values.length; i++) {
+        const diff = values[i] - mean;
+        sumCubedDiff += diff * diff * diff;
+      }
+
+      const n = values.length;
+      return sumCubedDiff / n / (stdDev * stdDev * stdDev);
+    };
+
+    this.parser.functions.kurtosis = function (
+      args: NumberInput,
+      ...rest: number[]
+    ): number {
+      const values = toNumberArray(args, rest, 'kurtosis');
+      if (values.length < 4) return 0;
+
+      const mean = eMath.mean(values);
+      const variance = eMath.variance(values);
+      const stdDev = Math.sqrt(variance);
+
+      if (stdDev === 0) return 0;
+
+      let sumFourthPower = 0;
+      for (let i = 0; i < values.length; i++) {
+        const diff = values[i] - mean;
+        sumFourthPower += diff * diff * diff * diff;
+      }
+
+      const n = values.length;
+      return sumFourthPower / n / (variance * variance) - 3;
+    };
+  }
+
+  private setupStreamFunctions() {
+    this.parser.functions.values = function (
+      streams: ParsedStream[],
+      attr: string
+    ) {
+      if (!Array.isArray(streams)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+      if (typeof attr !== 'string') {
+        throw new Error('You must provide a string path for the attribute');
+      }
+
+      const getStreamProperty = (
+        stream: ParsedStream,
+        key: string
+      ): number | undefined => {
+        switch (key) {
+          case 'bitrate':
+            return stream.bitrate;
+          case 'size':
+            return stream.size;
+          case 'folderSize':
+            return stream.folderSize;
+          case 'age':
+            return stream.age;
+          case 'duration':
+            return stream.duration;
+          case 'seeders':
+            return stream.torrent?.seeders;
+          case 'seScore':
+            return stream.streamExpressionScore;
+          case 'regexScore':
+            return stream.regexScore;
+          default:
+            throw new Error(`Invalid attribute for values: '${key}'`);
+        }
+      };
+
+      return streams
+        .map((stream) => getStreamProperty(stream, attr))
+        .filter((val) => typeof val === 'number' && !isNaN(val));
+    };
+
     this.parser.functions.regexMatched = function (
       streams: ParsedStream[],
       ...regexNames: string[]
     ) {
       if (regexNames.length === 0) {
-        return streams.filter((stream) => stream.regexMatched);
+        return streams.filter(
+          (stream) => stream.regexMatched || stream.rankedRegexesMatched?.length
+        );
       }
       return streams.filter((stream) =>
-        regexNames.some((regexName) => stream.regexMatched?.name === regexName)
+        regexNames.some(
+          (regexName) =>
+            stream.regexMatched?.name === regexName ||
+            stream.rankedRegexesMatched?.some((r) => r === regexName)
+        )
       );
     };
 
@@ -99,6 +459,54 @@ export abstract class StreamExpressionEngine {
         }
         return true;
       });
+    };
+
+    this.parser.functions.seMatched = function (
+      streams: ParsedStream[],
+      ...seNames: string[]
+    ) {
+      if (seNames.length === 0) {
+        return streams.filter((stream) => stream.streamExpressionMatched);
+      }
+      return streams.filter((stream) =>
+        seNames.some(
+          (seName) => stream.streamExpressionMatched?.name === seName
+        )
+      );
+    };
+
+    this.parser.functions.seMatchedInRange = function (
+      streams: ParsedStream[],
+      min: number,
+      max: number
+    ) {
+      return streams.filter((stream) => {
+        if (!stream.streamExpressionMatched) {
+          return false;
+        } else if (
+          stream.streamExpressionMatched.index < min ||
+          stream.streamExpressionMatched.index > max
+        ) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.rseMatched = function (
+      streams: ParsedStream[],
+      ...rseNames: string[]
+    ) {
+      if (rseNames.length === 0) {
+        return streams.filter(
+          (stream) => stream.rankedStreamExpressionsMatched?.length
+        );
+      }
+      return streams.filter((stream) =>
+        rseNames.some((rseName) =>
+          stream.rankedStreamExpressionsMatched?.some((r) => r === rseName)
+        )
+      );
     };
 
     this.parser.functions.indexer = function (
@@ -361,12 +769,16 @@ export abstract class StreamExpressionEngine {
       if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
         throw new Error('Your streams input must be an array of streams');
       } else if (
-        typeof minSize !== 'number' &&
-        typeof maxSize !== 'number' &&
-        typeof minSize !== 'string' &&
-        typeof maxSize !== 'string'
+        (minSize !== undefined &&
+          typeof minSize !== 'number' &&
+          typeof minSize !== 'string') ||
+        (maxSize !== undefined &&
+          typeof maxSize !== 'number' &&
+          typeof maxSize !== 'string')
       ) {
-        throw new Error('Min and max size must be a number');
+        throw new Error('Min and max size must be a number or string');
+      } else if (minSize === undefined && maxSize === undefined) {
+        throw new Error('You must provide at least one size boundary');
       }
       // use the bytes library to ensure we get a number
       const minSizeInBytes =
@@ -378,6 +790,49 @@ export abstract class StreamExpressionEngine {
           return false;
         }
         if (maxSize && maxSizeInBytes && (stream.size ?? 0) > maxSizeInBytes) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.bitrate = function (
+      streams: ParsedStream[],
+      minBitrate?: string | number,
+      maxBitrate?: string | number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minBitrate !== undefined &&
+          typeof minBitrate !== 'number' &&
+          typeof minBitrate !== 'string') ||
+        (maxBitrate !== undefined &&
+          typeof maxBitrate !== 'number' &&
+          typeof maxBitrate !== 'string')
+      ) {
+        throw new Error('Min and max bitrate must be a number or string');
+      } else if (minBitrate === undefined && maxBitrate === undefined) {
+        throw new Error('You must provide at least one bitrate boundary');
+      }
+
+      const minBps =
+        typeof minBitrate === 'string' ? parseBitrate(minBitrate) : minBitrate;
+      const maxBps =
+        typeof maxBitrate === 'string' ? parseBitrate(maxBitrate) : maxBitrate;
+
+      if (typeof minBitrate === 'string' && minBps === undefined) {
+        throw new Error(`Invalid min bitrate: ${minBitrate}`);
+      }
+      if (typeof maxBitrate === 'string' && maxBps === undefined) {
+        throw new Error(`Invalid max bitrate: ${maxBitrate}`);
+      }
+
+      return streams.filter((stream) => {
+        if (minBps !== undefined && (stream.bitrate ?? 0) < minBps) {
+          return false;
+        }
+        if (maxBps !== undefined && (stream.bitrate ?? 0) > maxBps) {
           return false;
         }
         return true;
@@ -459,16 +914,34 @@ export abstract class StreamExpressionEngine {
         throw new Error(
           "Please use one of 'totalStreams' or 'previousStreams' as the first argument"
         );
-      } else if (
-        releaseGroups.length === 0 ||
-        releaseGroups.some((r) => typeof r !== 'string')
-      ) {
-        throw new Error(
-          'You must provide one or more release group string parameters'
-        );
+      } else if (releaseGroups.some((r) => typeof r !== 'string')) {
+        throw new Error('All provided release groups must be strings');
       }
       return streams.filter((stream) =>
-        releaseGroups.some((r) => stream.parsedFile?.releaseGroup === r)
+        releaseGroups.length === 0
+          ? !!stream.parsedFile?.releaseGroup
+          : releaseGroups.some((r) => stream.parsedFile?.releaseGroup === r)
+      );
+    };
+
+    this.parser.functions.seasonPack = function (
+      streams: ParsedStream[],
+      mode: 'seasonPack' | 'onlySeasons' = 'onlySeasons'
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (mode !== 'seasonPack' && mode !== 'onlySeasons') {
+        throw new Error("Mode must be either 'seasonPack' or 'onlySeasons'");
+      }
+
+      return streams.filter((stream) =>
+        mode === 'seasonPack'
+          ? stream.parsedFile?.seasonPack
+          : // when there are only seasons and no episodes
+            stream.parsedFile?.seasons &&
+            stream.parsedFile?.seasons.length > 0 &&
+            (!stream.parsedFile.episodes ||
+              !stream.parsedFile?.episodes?.length)
       );
     };
 
@@ -511,6 +984,60 @@ export abstract class StreamExpressionEngine {
 
       // Return all SeaDex releases (includes group fallback matches)
       return streams.filter((stream) => stream.seadex?.isSeadex === true);
+    };
+
+    this.parser.functions.seScore = function (
+      streams: ParsedStream[],
+      minScore?: number,
+      maxScore?: number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minScore !== undefined && typeof minScore !== 'number') ||
+        (maxScore !== undefined && typeof maxScore !== 'number')
+      ) {
+        throw new Error('Score boundaries must be numbers if provided');
+      }
+      return streams.filter((stream) => {
+        const score = stream.streamExpressionScore;
+        if (score === undefined) return false;
+        if (minScore !== undefined && score < minScore) {
+          return false;
+        }
+        if (maxScore !== undefined && score > maxScore) {
+          return false;
+        }
+        return true;
+      });
+    };
+
+    this.parser.functions.streamExpressionScore = this.parser.functions.seScore;
+
+    this.parser.functions.regexScore = function (
+      streams: ParsedStream[],
+      minScore?: number,
+      maxScore?: number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minScore !== undefined && typeof minScore !== 'number') ||
+        (maxScore !== undefined && typeof maxScore !== 'number')
+      ) {
+        throw new Error('Score boundaries must be numbers if provided');
+      }
+      return streams.filter((stream) => {
+        const score = stream.regexScore;
+        if (score === undefined) return false;
+        if (minScore !== undefined && score < minScore) {
+          return false;
+        }
+        if (maxScore !== undefined && score > maxScore) {
+          return false;
+        }
+        return true;
+      });
     };
 
     this.parser.functions.message = function (
@@ -627,6 +1154,154 @@ export abstract class StreamExpressionEngine {
       }
       return streams.slice(start, end);
     };
+
+    this.parser.functions.perGroup = function (
+      streams: ParsedStream[],
+      attribute: string,
+      n: number,
+      ...filterValues: string[]
+    ): ParsedStream[] {
+      if (!Array.isArray(streams)) {
+        throw new Error('perGroup: first argument must be an array of streams');
+      }
+      if (typeof attribute !== 'string' || attribute.length === 0) {
+        throw new Error(
+          'perGroup: second argument must be a non-empty attribute string'
+        );
+      }
+      if (
+        typeof n !== 'number' ||
+        !Number.isFinite(n) ||
+        !Number.isInteger(n) ||
+        n < 1
+      ) {
+        throw new Error('perGroup: third argument must be a positive integer');
+      }
+      if (filterValues.some((v) => typeof v !== 'string')) {
+        throw new Error('perGroup: filter values must be strings');
+      }
+
+      const normalised = filterValues.map((v) => v.toLowerCase());
+
+      /** Return the group keys for a stream under the chosen attribute. */
+      const getKeys = (stream: ParsedStream): string[] => {
+        switch (attribute) {
+          case 'resolution':
+            return [stream.parsedFile?.resolution?.toLowerCase() || 'unknown'];
+          case 'quality':
+            return [stream.parsedFile?.quality?.toLowerCase() || 'unknown'];
+          case 'encode':
+            return [stream.parsedFile?.encode?.toLowerCase() || 'unknown'];
+          case 'type':
+            return [stream.type.toLowerCase()];
+          case 'service':
+            return [(stream.service?.id || 'none').toLowerCase()];
+          case 'indexer':
+            return [(stream.indexer || 'unknown').toLowerCase()];
+          case 'releaseGroup':
+            return [
+              (stream.parsedFile?.releaseGroup || 'unknown').toLowerCase(),
+            ];
+          case 'visualTag':
+            return (
+              stream.parsedFile?.visualTags.length
+                ? stream.parsedFile.visualTags
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'audioTag':
+            return (
+              stream.parsedFile?.audioTags.length
+                ? stream.parsedFile.audioTags
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'audioChannel':
+            return (
+              stream.parsedFile?.audioChannels?.length
+                ? stream.parsedFile.audioChannels
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          case 'language':
+            return (
+              stream.parsedFile?.languages?.length
+                ? stream.parsedFile.languages
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
+          default:
+            throw new Error(
+              `perGroup: unsupported attribute '${attribute}'. Supported: resolution, quality, encode, type, service, indexer, releaseGroup, visualTag, audioTag, audioChannel, language`
+            );
+        }
+      };
+
+      const buckets = new Map<string, ParsedStream[]>();
+      const groupOrder: string[] = [];
+      // Deduplicate across groups (for multi-value attributes a stream could
+      // match multiple groups)
+      const added = new Set<string>();
+
+      for (const stream of streams) {
+        const keys = getKeys(stream);
+        let assignedKey: string | undefined;
+        if (normalised.length > 0) {
+          assignedKey = keys.find((k) => normalised.includes(k));
+        } else {
+          assignedKey = keys[0];
+        }
+        if (assignedKey === undefined) continue; // filtered out
+
+        if (!buckets.has(assignedKey)) {
+          buckets.set(assignedKey, []);
+          groupOrder.push(assignedKey);
+        }
+        const bucket = buckets.get(assignedKey)!;
+        if (bucket.length < n && !added.has(stream.id)) {
+          bucket.push(stream);
+          added.add(stream.id);
+        }
+      }
+
+      // interleave the buckets
+      const result: ParsedStream[] = [];
+      let round = 0;
+      while (result.length < added.size) {
+        let anyAdded = false;
+        for (const key of groupOrder) {
+          const bucket = buckets.get(key)!;
+          if (round < bucket.length) {
+            result.push(bucket[round]);
+            anyAdded = true;
+          }
+        }
+        if (!anyAdded) break;
+        round++;
+      }
+
+      return result;
+    };
+
+    this.parser.functions.pin = (
+      matchedStreams: ParsedStream[],
+      position: string = 'top',
+      returnMatched: boolean = false
+    ) => {
+      if (
+        !Array.isArray(matchedStreams) ||
+        matchedStreams.some((stream) => !stream.type)
+      ) {
+        throw new Error(
+          'The first argument must be a filtered subset of streams to pin'
+        );
+      }
+      if (position !== 'top' && position !== 'bottom') {
+        throw new Error("Position must be 'top' or 'bottom'");
+      }
+
+      for (const stream of matchedStreams) {
+        this._pinInstructions.set(stream.id, position as 'top' | 'bottom');
+      }
+
+      return returnMatched ? matchedStreams : [];
+    };
   }
 
   protected async evaluateCondition(condition: string): Promise<any> {
@@ -635,12 +1310,21 @@ export abstract class StreamExpressionEngine {
         reject(new Error('Condition parsing timed out'));
       }, 1);
 
+      const start = Date.now();
       try {
         const result = this.parser.evaluate(condition);
         clearTimeout(timeout);
+        const elapsed = Date.now() - start;
+        logger.silly(
+          `Expression evaluated in ${elapsed}ms: "${condition.length > 100 ? condition.substring(0, 100) + '...' : condition}"`
+        );
         resolve(result);
       } catch (error) {
         clearTimeout(timeout);
+        const elapsed = Date.now() - start;
+        logger.debug(
+          `Expression failed after ${elapsed}ms: "${condition.length > 100 ? condition.substring(0, 100) + '...' : condition}"`
+        );
         if (error instanceof Error) {
           error.message = `Expression could not be evaluated: ${error.message}`;
         }
@@ -796,11 +1480,9 @@ export class GroupConditionEvaluator extends StreamExpressionEngine {
 }
 
 export class StreamSelector extends StreamExpressionEngine {
-  private queryType: string;
-  constructor(queryType: string) {
+  constructor(context: ExpressionContext) {
     super();
-    this.queryType = queryType;
-    this.parser.consts.queryType = queryType;
+    this.setupExpressionContextConstants(context);
   }
 
   async select(
@@ -831,7 +1513,7 @@ export class StreamSelector extends StreamExpressionEngine {
   }
 
   static async testSelect(condition: string): Promise<ParsedStream[]> {
-    const parser = new StreamSelector('movie');
+    const parser = new StreamSelector({ queryType: 'movie' });
     const streams = [
       parser.createTestStream({ type: 'debrid' }),
       parser.createTestStream({ type: 'debrid' }),
@@ -842,4 +1524,26 @@ export class StreamSelector extends StreamExpressionEngine {
     ];
     return await parser.select(streams, condition);
   }
+}
+
+/**
+ * Extracts names from comments in a stream expression.
+ * Names are extracted from block comments that don't start with #.
+ * @param expression The stream expression to extract names from
+ * @returns Array of extracted names, or undefined if none found
+ */
+export function extractNamesFromExpression(
+  expression: string,
+  ignoreHashPrefixed = true
+): string[] | undefined {
+  const regex = /\/\*\s*(.*?)\s*\*\//g;
+  const names: string[] = [];
+  let match;
+  while ((match = regex.exec(expression)) !== null) {
+    const content = match[1];
+    if (!content.startsWith('#') || !ignoreHashPrefixed) {
+      names.push(content);
+    }
+  }
+  return names.length > 0 ? names : undefined;
 }

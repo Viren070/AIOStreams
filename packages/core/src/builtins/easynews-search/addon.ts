@@ -18,8 +18,8 @@ import {
   BaseDebridConfigSchema,
   SearchMetadata,
 } from '../base/debrid.js';
-import { createQueryLimit, useAllTitles } from '../utils/general.js';
-import { createHash } from 'crypto';
+import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import { hashNzbUrl } from '../../debrid/utils.js';
 import EasynewsApi, {
   EasynewsApiError,
   EasynewsSearchItem,
@@ -72,6 +72,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
             constants.ALTMOUNT_SERVICE,
             constants.STREMIO_NNTP_SERVICE,
             constants.EASYNEWS_SERVICE,
+            constants.STREMTHRU_NEWZ_SERVICE,
           ].includes(s.id)
       )
     ) {
@@ -88,10 +89,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     this.api = new EasynewsApi(auth.username, auth.password);
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
     // validate aiostreams auth if provided
     if (this.userData.aiostreamsAuth) {
       try {
@@ -102,6 +100,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     }
     const queryLimit = createQueryLimit();
 
+    const metadata = await this.getSearchMetadata();
     if (!metadata.primaryTitle) {
       return [];
     }
@@ -109,7 +108,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     const queries = this.buildQueries(parsedId, metadata, {
       addYear: parsedId.mediaType === 'movie',
       addSeasonEpisode: parsedId.mediaType === 'series',
-      useAllTitles: useAllTitles(EASYNEWS_BASE),
+      titleLanguages: getTitleLanguagesForUrl(EASYNEWS_BASE, this.id),
     });
 
     if (queries.length === 0) {
@@ -186,7 +185,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
 
       return {
         confirmed: false,
-        hash: createHash('md5').update(nzbUrl).digest('hex'),
+        hash: hashNzbUrl(nzbUrl),
         nzb: nzbUrl,
         easynewsUrl,
         age,
@@ -207,10 +206,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
   /**
    * Search for torrents - not applicable for Easynews
    */
-  protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<Torrent[]> {
+  protected async _searchTorrents(parsedId: ParsedId): Promise<Torrent[]> {
     return [];
   }
 }

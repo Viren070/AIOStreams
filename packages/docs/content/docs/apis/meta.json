@@ -1,0 +1,9 @@
+{
+  "title": "API",
+  "pages": [
+    "index",
+    "search",
+    "user",
+    "anime"
+  ]
+}

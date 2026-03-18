@@ -1,0 +1,93 @@
+---
+title: Anime
+description: Look up anime ID mappings across all supported databases.
+---
+
+`GET /api/v1/anime`
+
+Resolves an anime identifier from one database to its mappings across other supported databases. Uses the internal AIOStreams anime database (aggregated from AniDB, AniList, TVDB, TMDB, MAL, Kitsu, and more).
+
+This endpoint does not require authentication.
+
+---
+
+## Query Parameters
+
+| Parameter | Type             | Required | Description                                                                                      | Example     |
+| --------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------ | ----------- |
+| `idType`  | string           | ✅       | The identifier type you are querying with. See accepted values below.                            | `imdbId`    |
+| `idValue` | string \| number | ✅       | The value of the identifier.                                                                     | `tt0388629` |
+| `season`  | number           | ❌       | Season number (for series). Helps disambiguate entries with multiple seasons mapped differently. | `1`         |
+| `episode` | number           | ❌       | Episode number (for series).                                                                     | `5`         |
+
+### Accepted `idType` values
+
+| Value              | Database       |
+| ------------------ | -------------- |
+| `animePlanetId`    | Anime-Planet   |
+| `animecountdownId` | AnimeCountdown |
+| `anidbId`          | AniDB          |
+| `anilistId`        | AniList        |
+| `anisearchId`      | AniSearch      |
+| `imdbId`           | IMDb           |
+| `kitsuId`          | Kitsu          |
+| `livechartId`      | LiveChart      |
+| `malId`            | MyAnimeList    |
+| `notifyMoeId`      | Notify.moe     |
+| `simklId`          | Simkl          |
+| `themoviedbId`     | TMDB           |
+| `thetvdbId`        | TVDB           |
+| `traktId`          | Trakt          |
+
+---
+
+## Example Requests
+
+**Look up by IMDb ID:**
+
+```http
+GET /api/v1/anime?idType=imdbId&idValue=tt0388629
+```
+
+```bash
+curl "https://your-instance.example.com/api/v1/anime?idType=imdbId&idValue=tt0388629"
+```
+
+**Look up a specific season of a series:**
+
+```bash
+curl "https://your-instance.example.com/api/v1/anime?idType=imdbId&idValue=tt0388629&season=2&episode=1"
+```
+
+---
+
+## Response
+
+```json
+{
+  "success": true,
+  "detail": "OK",
+  "error": null,
+  "data": {
+    /* AnimeDatabase mapping entry, or null if not found */
+  }
+}
+```
+
+Returns `null` in `data` if no mapping entry was found for the provided identifier.
+
+---
+
+## Error Response
+
+```json
+{
+  "success": false,
+  "detail": null,
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "Invalid idType"
+  },
+  "data": null
+}
+```

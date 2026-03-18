@@ -11,9 +11,17 @@ import { SocialIcon } from './social-icon';
 import { PasswordInput } from '../ui/password-input';
 import { Button } from '../ui/button';
 import { IconButton } from '../ui/button';
-import { FaKey, FaChevronUp, FaChevronDown, FaArrowLeft } from 'react-icons/fa';
+import {
+  FaKey,
+  FaChevronUp,
+  FaChevronDown,
+  FaArrowLeft,
+  FaGear,
+  FaPlus,
+  FaServer,
+  FaTrashCan,
+} from 'react-icons/fa6';
 import { Modal } from '../ui/modal';
-import { FaPlus, FaServer, FaTrashCan } from 'react-icons/fa6';
 // this component, accepts an option and returns a component that renders the option.
 // string - TextInput
 // number - NumberInput
@@ -27,12 +35,14 @@ interface TemplateOptionProps {
   option: Option;
   value: any;
   disabled?: boolean;
+  trusted?: boolean;
   onChange: (value: any) => void;
 }
 
 const TemplateOption: React.FC<TemplateOptionProps> = ({
   option,
   value,
+  trusted,
   onChange,
   disabled,
 }) => {
@@ -61,7 +71,12 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
       return (
         <div className="flex items-center justify-center w-full gap-6 mt-2">
           {socials?.map((social) => (
-            <SocialIcon key={social.id} id={social.id} url={social.url} />
+            <SocialIcon
+              key={social.id}
+              id={social.id}
+              url={social.url}
+              trusted={trusted}
+            />
           ))}
         </div>
       );
@@ -78,12 +93,13 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         <div>
           <PasswordInput
             label={name}
-            value={forcedValue ?? value ?? defaultValue}
+            value={forcedValue ?? value ?? defaultValue ?? ''}
             onValueChange={(value: string) =>
               onChange(emptyIsUndefined ? value || undefined : value)
             }
             required={required}
             disabled={isDisabled}
+            autoComplete="off"
             minLength={
               constraints?.forceInUi !== false ? constraints?.min : undefined
             }
@@ -103,7 +119,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         <div>
           <TextInput
             label={name}
-            value={forcedValue ?? value ?? defaultValue}
+            value={forcedValue ?? value ?? defaultValue ?? ''}
             onValueChange={(value: string) =>
               onChange(emptyIsUndefined ? value || undefined : value)
             }
@@ -127,10 +143,10 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
       return (
         <div>
           <NumberInput
-            value={forcedValue ?? value ?? defaultValue}
+            value={forcedValue ?? value ?? defaultValue ?? undefined}
             label={name}
             onValueChange={(value: number, valueAsString: string) =>
-              onChange(value)
+              onChange(isNaN(value) ? undefined : value)
             }
             required={required}
             step={
@@ -141,6 +157,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
                 : 1
             }
             disabled={isDisabled}
+            clampValueOnBlur={false}
             min={
               constraints?.forceInUi !== false ? constraints?.min : undefined
             }
@@ -251,7 +268,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
             <TextInput
               label="Custom"
               // The text input shows the custom value.
-              value={effectiveValue}
+              value={effectiveValue ?? ''}
               onValueChange={handleCustomInputChange}
               required={required}
               disabled={isDisabled}
@@ -307,7 +324,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         <div>
           <TextInput
             label={name}
-            value={forcedValue ?? value ?? defaultValue}
+            value={forcedValue ?? value ?? defaultValue ?? ''}
             onValueChange={(value: string) =>
               onChange(emptyIsUndefined ? value || undefined : value)
             }
@@ -390,6 +407,93 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
               )}
             </div>
           </div>
+        </div>
+      );
+    }
+    case 'subsection': {
+      const [modalOpen, setModalOpen] = useState(false);
+      const subOptions = (option.subOptions ?? []) as Option[];
+      const currentValue = (forcedValue ??
+        value ??
+        defaultValue ??
+        {}) as Record<string, any>;
+
+      // Local state for editing within the modal
+      const [localValue, setLocalValue] =
+        useState<Record<string, any>>(currentValue);
+
+      // Reset local state when modal opens
+      const handleOpenModal = () => {
+        setLocalValue(currentValue);
+        setModalOpen(true);
+      };
+
+      const handleLocalChange = (subOptionId: string, subValue: any) => {
+        setLocalValue((prev) => ({
+          ...prev,
+          [subOptionId]: subValue,
+        }));
+      };
+
+      const handleSave = () => {
+        onChange(localValue);
+        setModalOpen(false);
+      };
+
+      const handleCancel = () => {
+        setLocalValue(currentValue);
+        setModalOpen(false);
+      };
+
+      return (
+        <div>
+          <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+            <div className="flex-1">
+              <h4 className="font-medium mb-1">{name}</h4>
+              {description && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <MarkdownLite>{description}</MarkdownLite>
+                </p>
+              )}
+            </div>
+            <IconButton
+              icon={<FaGear />}
+              intent="primary-outline"
+              onClick={handleOpenModal}
+              // className="shrink-0"
+              disabled={isDisabled}
+              title={`Configure ${name}`}
+            />
+          </div>
+          <Modal
+            open={modalOpen}
+            onOpenChange={(open) => !open && handleCancel()}
+            title={name}
+          >
+            <div className="space-y-4">
+              {subOptions.map(
+                (subOption: Option): React.JSX.Element => (
+                  <TemplateOption
+                    key={subOption.id}
+                    option={subOption}
+                    value={localValue[subOption.id]}
+                    onChange={(subValue) =>
+                      handleLocalChange(subOption.id, subValue)
+                    }
+                    disabled={isDisabled}
+                  />
+                )
+              )}
+              <Button
+                type="button"
+                intent="primary"
+                className="w-full"
+                onClick={handleSave}
+              >
+                Save
+              </Button>
+            </div>
+          </Modal>
         </div>
       );
     }
@@ -582,7 +686,7 @@ function NNTPServersInput({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <TextInput
                     label="Host"
-                    value={server.host}
+                    value={server.host ?? ''}
                     onValueChange={(v) => handleServerChange(index, 'host', v)}
                     placeholder="news.example.com"
                     required
@@ -597,7 +701,7 @@ function NNTPServersInput({
                   />
                   <TextInput
                     label="Username"
-                    value={server.username}
+                    value={server.username ?? ''}
                     onValueChange={(v) =>
                       handleServerChange(index, 'username', v)
                     }
@@ -606,7 +710,7 @@ function NNTPServersInput({
                   />
                   <PasswordInput
                     label="Password"
-                    value={server.password}
+                    value={server.password ?? ''}
                     onValueChange={(v) =>
                       handleServerChange(index, 'password', v)
                     }

@@ -12,6 +12,7 @@ const REDIS_TIMEOUT = Env.REDIS_TIMEOUT;
 export interface CacheBackend<K, V> {
   get(key: K, updateTTL?: boolean): Promise<V | undefined>;
   set(key: K, value: V, ttl: number, forceWrite?: boolean): Promise<void>;
+  flush(): Promise<void>;
   delete(key: K): Promise<boolean>;
   update(key: K, value: V): Promise<void>;
   clear(): Promise<void>;
@@ -127,6 +128,10 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
 
   async waitUntilReady(): Promise<void> {
     return Promise.resolve();
+  }
+
+  async flush(): Promise<void> {
+    // Memory writes are synchronous — nothing to flush
   }
 }
 
@@ -352,13 +357,16 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
+
+  async flush(): Promise<void> {
+    await RedisCacheBackend.flushWriteBuffer();
+  }
 }
 
 // SQL cache implementation
 export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private db: DB;
   private prefix: string;
-  private maxSize: number;
   static maintenanceStarted: boolean = false;
 
   private static writeBuffer: Map<string, { value: any; ttl: number }> =
@@ -368,13 +376,9 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private static batchSize: number = 100;
   private static flushIntervalTime: number = 2000;
 
-  constructor(
-    prefix: string = '',
-    maxSize: number = Env.DEFAULT_MAX_CACHE_SIZE
-  ) {
+  constructor(prefix: string = '', _: number) {
     this.db = DB.getInstance();
     this.prefix = prefix;
-    this.maxSize = maxSize;
     this.startMaintenance();
     SQLCacheBackend.startFlushInterval();
   }
@@ -401,9 +405,16 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
 
     try {
       const countResult = await db.query('SELECT COUNT(*) as count FROM cache');
-      let currentSize = countResult[0].count;
-      const overflow =
-        currentSize + bufferToFlush.size - Env.DEFAULT_MAX_CACHE_SIZE;
+      let currentSize = Number(countResult[0].count);
+      let overflow = currentSize + bufferToFlush.size - Env.SQL_CACHE_MAX_SIZE;
+      if (overflow > 0) {
+        const removed = await SQLCacheBackend.flushStaleEntries(db);
+        logger.debug(
+          `Removed ${removed} stale entries from SQL cache during flush.`
+        );
+        currentSize -= removed;
+        overflow -= removed;
+      }
 
       if (overflow > 0) {
         logger.debug(`Cache overflow detected. Evicting ${overflow} items.`);
@@ -456,19 +467,26 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     }
   }
 
+  private static async flushStaleEntries(db: DB): Promise<number> {
+    return db
+      .execute('DELETE FROM cache WHERE expires_at < ?', [Date.now()])
+      .then((result) => {
+        const count = result.changed || result.rowCount || 0;
+        if (Number.isFinite(count)) return count;
+        return 0;
+      });
+  }
+
   private startMaintenance() {
     if (SQLCacheBackend.maintenanceStarted) return;
     logger.debug('Starting SQL cache maintenance');
     SQLCacheBackend.maintenanceStarted = true;
     setInterval(
       () => {
-        this.db
-          .execute('DELETE FROM cache WHERE expires_at < ?', [Date.now()])
-          .then((result) => {
-            logger.debug(
-              `${result.changed || result.rowCount || 0} stale entries removed from SQL cache`
-            );
-          })
+        SQLCacheBackend.flushStaleEntries(this.db)
+          .then((removed) =>
+            logger.debug(`${removed} stale entries removed from SQL cache`)
+          )
           .catch((err) => {
             logger.error(`Error during SQL cache maintenance: ${err}`);
           });
@@ -632,6 +650,10 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       throw new Error('Database is not initialized');
     }
     return Promise.resolve();
+  }
+
+  async flush(): Promise<void> {
+    await SQLCacheBackend.flushWriteBuffer();
   }
 }
 

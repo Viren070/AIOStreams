@@ -13,7 +13,28 @@ import {
   SearchResponse,
   SearchResultItem,
 } from './api.js';
-import { createQueryLimit, useAllTitles } from '../../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+} from '../../utils/general.js';
+import { LANGUAGES } from '../../../utils/constants.js';
+
+/**
+ * Parse a comma-separated language string from a newznab/torznab attribute
+ * into an array of canonical AIOStreams language names.
+ */
+export function parseNabLanguages(
+  value: string | number | boolean | undefined
+): string[] {
+  if (typeof value !== 'string' || !value) return [];
+  return value
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .filter((v): v is (typeof LANGUAGES)[number] => {
+      return LANGUAGES.includes(v as any);
+    });
+}
 
 export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   url: z.string(),
@@ -21,12 +42,13 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   apiPath: z.string().optional(),
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
-  forceInitialLimit: z.number().optional(),
+  forceInitialLimit: z.number().min(1).max(10000).optional(),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
 interface SearchResultMetadata {
   searchType: 'id' | 'query';
+  capabilities: Capabilities;
 }
 
 export abstract class BaseNabAddon<
@@ -146,10 +168,11 @@ export abstract class BaseNabAddon<
         )
           ? false
           : !queryParams.season && !queryParams.ep,
-        useAllTitles: useAllTitles(this.userData.url),
+        titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
       });
       searchType = 'query';
     }
+    queryParams.extended = '1';
     let results: SearchResultItem<A['namespace']>[] = [];
     if (queries.length > 0) {
       this.logger.debug('Performing queries', { queries });
@@ -173,6 +196,7 @@ export abstract class BaseNabAddon<
       results: results,
       meta: {
         searchType,
+        capabilities,
       },
     };
   }

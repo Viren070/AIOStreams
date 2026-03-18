@@ -104,6 +104,10 @@ const createTorznabItemSchema = () =>
         .transform((arr) =>
           arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
         ),
+      type: z
+        .array(z.string()) // usually "public", "semi-private" or "private" in Jackett responses
+        .optional()
+        .transform((arr) => arr?.[0]),
       size: z
         .array(z.string())
         .optional()
@@ -123,7 +127,14 @@ const createTorznabItemSchema = () =>
         .array(AttributeSchema)
         .optional()
         .transform(
-          (arr) => arr?.reduce((acc, attr) => ({ ...acc, ...attr }), {}) ?? {}
+          (arr) => arr?.reduce((acc, attr) => {
+            for (const key in attr) {
+              acc[key] = acc[key] && typeof acc[key] === 'string' && typeof attr[key] === 'string'
+                ? acc[key] + ',' + attr[key]
+                : attr[key];
+            }
+            return acc;
+          }, {}) ?? {}
         ),
     })
     .transform((item) => ({
@@ -132,6 +143,7 @@ const createTorznabItemSchema = () =>
       guid: item.guid,
       pubDate: item.pubDate,
       jackettindexer: item.jackettindexer,
+      type: item.type,
       size: item.size,
       enclosure: item.enclosure,
       torznab: item['torznab:attr'],
@@ -225,20 +237,39 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   private readonly searchCache: Cache<string, SearchResponse<N>>;
   private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
   private readonly logger: Logger;
+  private readonly params: Record<string, string>;
+  private readonly userAgent: string;
+  private readonly httpProxy: string | undefined;
 
   constructor(
     public readonly namespace: N,
     logger: Logger,
     private readonly baseUrl: string,
     private readonly apiKey?: string,
-    private readonly apiPath: string = '/api'
+    private readonly apiPath: string = '/api',
+    params: Record<string, string | number | boolean> = {}
   ) {
     this.logger = logger;
     this.baseUrl = this.removeTrailingSlash(baseUrl);
     this.apiPath = this.removeTrailingSlash(apiPath);
+    this.params = Object.fromEntries(
+      Object.entries(params).map(([key, value]) => [key, String(value)])
+    );
+    const apiPathUrl = new URL(this.baseUrl + this.apiPath);
+    // append any search params from the apiPath to this.params
+    if (apiPathUrl.search) {
+      apiPathUrl.searchParams.forEach((value, key) => {
+        if (!(key in this.params)) {
+          this.params[key] = value;
+        }
+      });
+      this.apiPath = apiPathUrl.pathname;
+    }
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
+    this.userAgent = Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT;
+    this.httpProxy = Env.BUILTIN_NAB_HTTP_PROXY?.get(namespace);
 
     // Create the appropriate schema based on namespace
     if (namespace === 'torznab') {
@@ -321,7 +352,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
   }
 
   public async getCapabilities(): Promise<Capabilities> {
-    const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps`;
+    const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps&${JSON.stringify(this.params)}`;
     return this.capabilitiesCache.wrap(
       () => this.request('caps', CapabilitiesSchema, undefined, 3000),
       cacheKey,
@@ -333,7 +364,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     searchFunction: string = 'search',
     params: Record<string, string | number | boolean> = {}
   ): Promise<SearchResponse<N>> {
-    const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}`;
+    const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
 
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
@@ -353,10 +384,15 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
 
   private removeTrailingSlash = (path: string) =>
     path.endsWith('/') ? path.slice(0, -1) : path;
-  private getHeaders = () => ({
-    'Content-Type': 'application/xml',
-    'User-Agent': Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT,
-  });
+
+  private getHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/xml',
+      Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
+      'User-Agent': this.userAgent,
+    };
+    return headers;
+  };
 
   private async request<T>(
     func: string,
@@ -364,7 +400,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     params: Record<string, string | number | boolean> = {},
     timeout?: number
   ): Promise<T> {
-    const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}`;
+    const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
       () => this._request(func, schema, params, timeout),
@@ -390,6 +426,11 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         Object.entries(params).map(([k, v]) => [k, String(v)])
       ),
     });
+    for (const [key, value] of Object.entries(this.params)) {
+      if (!searchParams.has(key)) {
+        searchParams.set(key, value);
+      }
+    }
     if (this.apiKey) searchParams.set('apikey', this.apiKey);
     url.search = searchParams.toString();
     const urlString = url.toString();
@@ -401,6 +442,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         method: 'GET',
         headers: this.getHeaders(),
         timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
+        forceProxy: this.httpProxy,
       });
 
       const data = await response.text();

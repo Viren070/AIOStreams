@@ -19,7 +19,7 @@ import {
   validateInfoHash,
 } from '../utils/debrid.js';
 import { Env } from '../../utils/env.js';
-import { createQueryLimit, useAllTitles } from '../utils/general.js';
+import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
 
 const logger = createLogger('torrent-galaxy');
 
@@ -47,24 +47,21 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
     this.api = new TorrentGalaxyAPI();
   }
 
-  protected async _searchNzbs(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
-  ): Promise<NZB[]> {
+  protected async _searchNzbs(_parsedId: ParsedId): Promise<NZB[]> {
     return [];
   }
 
   protected async _searchTorrents(
-    parsedId: ParsedId,
-    metadata: SearchMetadata
+    parsedId: ParsedId
   ): Promise<UnprocessedTorrent[]> {
     const queryLimit = createQueryLimit();
+    const metadata = await this.getSearchMetadata();
     if (!metadata.primaryTitle) {
       return [];
     }
 
     const queries = this.buildQueries(parsedId, metadata, {
-      useAllTitles: useAllTitles(torrentGalaxyUrl),
+      titleLanguages: getTitleLanguagesForUrl(torrentGalaxyUrl, this.id),
     });
     if (metadata.imdbId) {
       queries.push(metadata.imdbId);

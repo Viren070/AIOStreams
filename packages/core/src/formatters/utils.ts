@@ -18,6 +18,72 @@ export function formatBytes(
   return value + ' ' + sizes[i];
 }
 
+export function formatSmartBytes(bytes: number, k: 1024 | 1000): string {
+  if (bytes === 0) return '0 B';
+  const sizes =
+    k === 1024
+      ? ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+      : ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const rawValue = bytes / Math.pow(k, i);
+  const integerPart = Math.floor(rawValue);
+
+  let value: number;
+  let formattedValue: string;
+
+  if (integerPart >= 100) {
+    value = Math.round(rawValue);
+    formattedValue = value.toString();
+  } else if (integerPart >= 10) {
+    value = parseFloat(rawValue.toFixed(1));
+    formattedValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+  } else {
+    value = parseFloat(rawValue.toFixed(2));
+    formattedValue = value.toString();
+  }
+
+  return formattedValue + ' ' + sizes[i];
+}
+
+export function formatBitrate(bitrate: number, round: boolean = false): string {
+  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
+  const k = 1000;
+  const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
+  );
+  let value = bitrate / Math.pow(k, i);
+  value = round ? Math.round(value) : parseFloat(value.toFixed(2));
+  return `${value} ${sizes[i]}`;
+}
+
+export function formatSmartBitrate(bitrate: number): string {
+  if (!Number.isFinite(bitrate) || bitrate <= 0) return '0 bps';
+  const k = 1000;
+  const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.max(0, Math.floor(Math.log(bitrate) / Math.log(k)))
+  );
+  const rawValue = bitrate / Math.pow(k, i);
+  const integerPart = Math.floor(rawValue);
+
+  let value: number;
+  let formattedValue: string;
+  if (integerPart >= 100) {
+    value = Math.round(rawValue);
+    formattedValue = value.toString();
+  } else if (integerPart >= 10) {
+    value = parseFloat(rawValue.toFixed(1));
+    formattedValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+  } else {
+    value = parseFloat(rawValue.toFixed(2));
+    formattedValue = value.toString();
+  }
+  return `${formattedValue} ${sizes[i]}`;
+}
+
 export function formatDuration(durationInMs: number): string {
   const seconds = Math.floor(durationInMs / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -83,6 +149,50 @@ export function languageToCode(language: string): string | undefined {
     return selectedLang.iso_639_1.toUpperCase();
   }
   return undefined;
+}
+
+export function iso6391ToLanguage(code: string): string | undefined {
+  const langs = FULL_LANGUAGE_MAPPING.filter(
+    (lang) => lang.iso_639_1?.toLowerCase() === code.toLowerCase()
+  );
+
+  if (langs.length === 0) {
+    return undefined;
+  }
+
+  const selectedLang = langs.find((lang) => lang.flag_priority) ?? langs[0];
+  return (selectedLang.internal_english_name || selectedLang.english_name)
+    .split(/;|\(/)[0]
+    .trim();
+}
+
+/**
+ * Convert an ISO 3166-1 country code (e.g. "US", "ES", "RU") to an ISO 639-1
+ * language code (e.g. "en", "es", "ru"). Returns undefined if no mapping found.
+ */
+export function iso31661ToIso6391(countryCode: string): string | undefined {
+  const entry =
+    FULL_LANGUAGE_MAPPING.find(
+      (lang) =>
+        lang.iso_3166_1?.toLowerCase() === countryCode.toLowerCase() &&
+        lang.flag_priority
+    ) ??
+    FULL_LANGUAGE_MAPPING.find(
+      (lang) => lang.iso_3166_1?.toLowerCase() === countryCode.toLowerCase()
+    );
+  return entry?.iso_639_1 || undefined;
+}
+
+/**
+ * Convert an ISO 639-2/3 language code (e.g. "eng", "spa", "jpn") to an
+ * ISO 639-1 language code (e.g. "en", "es", "ja"). Returns undefined if
+ * no mapping found.
+ */
+export function iso6392ToIso6391(code: string): string | undefined {
+  const entry = FULL_LANGUAGE_MAPPING.find(
+    (lang) => (lang as any).iso_639_2?.toLowerCase() === code.toLowerCase()
+  );
+  return entry?.iso_639_1 || undefined;
 }
 
 export function emojiToLanguage(emoji: string): string | undefined {

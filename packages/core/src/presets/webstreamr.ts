@@ -118,34 +118,38 @@ export class WebStreamrPreset extends Preset {
 
     const providers = [
       {
-        label: '🌐 Multi (4KHDHub, VixSrc)',
+        label: '🌐 Multi',
         value: 'multi',
       },
       {
-        label: '🇺🇸 English (PrimeWire, Soaper, VidSrc, XPrime)',
+        label: '🇺🇸 English',
         value: 'en',
       },
       {
         label:
-          '🇩🇪 German (Einschalten, KinoGer, MegaKino, MeineCloud, StreamKiste)',
+          '🇩🇪 German',
         value: 'de',
       },
       {
         label:
-          '🇪🇸 Castilian Spanish (CineHDPlus, Cuevana, HomeCine, VerHdLink)',
+          '🇪🇸 Castilian Spanish',
         value: 'es',
       },
       {
-        label: '🇫🇷 French (Frembed, FrenchCloud, Movix)',
+        label: '🇫🇷 French',
         value: 'fr',
       },
       {
-        label: '🇮🇹 Italian (Eurostreaming, MostraGuarda, VixSrc)',
+        label: '🇮🇳 Hindi',
+        value: 'hi',
+      },
+      {
+        label: '🇮🇹 Italian',
         value: 'it',
       },
       {
         label:
-          '🇲🇽 Latin American Spanish (CineHDPlus, Cuevana, HomeCine, VerHdLink)',
+          '🇲🇽 Latin American Spanish',
         value: 'mx',
       },
     ];

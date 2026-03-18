@@ -1,8 +1,16 @@
-import { Button } from '../ui/button';
+import { Button, IconButton } from '../ui/button';
 import { useMenu } from '@/context/menu';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
+import { BiSave } from 'react-icons/bi';
+import { useSave } from '@/context/save';
+import { useUserData } from '@/context/userData';
+import React from 'react';
 
-export function PageControls() {
+interface PageControlsProps {
+  middleContent?: React.ReactNode;
+}
+
+export function PageControls({ middleContent }: PageControlsProps) {
   const {
     setSelectedMenu,
     selectedMenu,
@@ -11,9 +19,12 @@ export function PageControls() {
     firstMenu,
     lastMenu,
   } = useMenu();
+  const { handleSave, loading: saveLoading } = useSave();
+  const { uuid, password } = useUserData();
+  const isLoggedIn = !!(uuid && password);
 
   return (
-    <div className="flex flex-1 gap-4">
+    <div className="flex flex-1 gap-2 items-center">
       <Button
         leftIcon={<FaArrowLeft />}
         intent="white"
@@ -43,6 +54,17 @@ export function PageControls() {
       >
         Previous
       </Button>
+      {middleContent}
+      {isLoggedIn && (
+        <IconButton
+          icon={<BiSave />}
+          intent="white-outline"
+          rounded
+          size="md"
+          loading={saveLoading}
+          onClick={() => handleSave()}
+        />
+      )}
       <Button
         rightIcon={<FaArrowRight />}
         intent="white"

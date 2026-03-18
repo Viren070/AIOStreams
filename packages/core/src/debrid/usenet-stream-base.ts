@@ -8,15 +8,22 @@ import {
   DistributedLock,
   fromUrlSafeBase64,
   formatZodError,
+  Time,
 } from '../utils/index.js';
-import { isVideoFile, selectFileInTorrentOrNZB } from './utils.js';
 import {
-  DebridService,
+  isVideoFile,
+  selectFileInTorrentOrNZB,
+  hashNzbUrl,
+  buildResolveKey,
+} from './utils.js';
+import {
   DebridServiceConfig,
   DebridDownload,
   PlaybackInfo,
   DebridError,
   DebridFile,
+  UsenetDebridService,
+  DebridFailureCache,
 } from './base.js';
 import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
 import z, { ZodError } from 'zod';
@@ -40,6 +47,7 @@ const HistorySlotSchema = z.object({
   category: z.string().optional(),
   storage: z.string().nullable().optional(),
   fail_message: z.string().optional(),
+  bytes: z.number().int().optional(),
 });
 
 const HistoryResponseSchema = z.object({
@@ -68,6 +76,7 @@ const transformHistorySlot = (slot: z.infer<typeof HistorySlotSchema>) => ({
   category: slot.category,
   storage: slot.storage,
   failMessage: slot.fail_message,
+  bytes: slot.bytes,
 });
 
 const transformHistoryResponse = (
@@ -406,28 +415,39 @@ export interface UsenetStreamServiceConfig {
   apiUrl: string;
   apiKey: string;
   aiostreamsAuth?: string;
+  cacheAndPlayOptions?: {
+    pollingInterval?: number;
+    maxWaitTime?: number;
+  };
 }
 
+enum Category {
+  MOVIES = 'Movies',
+  TV = 'TV',
+  UNCATEGORIZED = 'uncategorized',
+}
 /**
  * Base class for streaming usenet services (NzbDAV, Altmount).
  * These services accept NZBs via a SABnzbd-compatible API and stream content
  * directly from usenet providers via WebDAV, rather than downloading to disk.
  */
-export abstract class UsenetStreamService implements DebridService {
+export abstract class UsenetStreamService implements UsenetDebridService {
   protected readonly webdavClient: WebDAVClient;
   protected readonly api: SABnzbdApi;
-  protected static playbackLinkCache = Cache.getInstance<string, string>(
+  protected static resolveCache = Cache.getInstance<string, string>(
     'usenet-stream:link'
   );
   protected static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'usenet-stream:library'
   );
 
-  readonly supportsUsenet = true;
   abstract readonly serviceName: ServiceId;
+  readonly capabilities = { torrents: false, usenet: true };
 
   protected readonly auth: UsenetStreamServiceConfig;
   protected readonly serviceLogger: Logger;
+  protected readonly pollInterval: number;
+  protected readonly maxWaitTime: number;
   protected static readonly MIN_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
   protected static readonly MAX_DEPTH = 6;
 
@@ -447,21 +467,26 @@ export abstract class UsenetStreamService implements DebridService {
 
   constructor(
     protected readonly config: DebridServiceConfig,
-    auth: UsenetStreamServiceConfig,
+    serviceConfig: UsenetStreamServiceConfig,
     serviceName: ServiceId
   ) {
-    this.auth = auth;
+    this.auth = serviceConfig;
     this.serviceLogger = createLogger(serviceName);
-    this.webdavClient = createClient(auth.webdavUrl, {
-      username: auth.webdavUser,
-      password: auth.webdavPassword,
+    this.webdavClient = createClient(serviceConfig.webdavUrl, {
+      username: serviceConfig.webdavUser,
+      password: serviceConfig.webdavPassword,
     });
     this.api = new SABnzbdApi(
-      auth.apiUrl,
-      auth.apiKey,
+      serviceConfig.apiUrl,
+      serviceConfig.apiKey,
       serviceName,
       this.serviceLogger
     );
+
+    this.pollInterval =
+      serviceConfig.cacheAndPlayOptions?.pollingInterval ?? Time.Second * 2;
+    this.maxWaitTime =
+      serviceConfig.cacheAndPlayOptions?.maxWaitTime ?? Time.Second * 90;
   }
 
   protected async collectFiles(
@@ -564,35 +589,114 @@ export abstract class UsenetStreamService implements DebridService {
     return { files: allFiles, depth: currentDepth };
   }
 
-  public async listMagnets(): Promise<DebridDownload[]> {
-    throw new Error('Unsupported operation');
+  /**
+   * Get a specific NZB item by its folder name (serviceItemId).
+   * Lists files within the folder via WebDAV to populate the files array.
+   */
+  public async getNzb(nzbId: string): Promise<DebridDownload> {
+    // nzbId is the folder basename (used as serviceItemId)
+    for (const category of [
+      Category.UNCATEGORIZED,
+      Category.TV,
+      Category.MOVIES,
+    ]) {
+      const contentPath = `${this.getContentPathPrefix()}/${category}/${nzbId}`;
+      try {
+        const stat = await this.webdavClient.stat(contentPath);
+        const statData = 'data' in stat ? stat.data : stat;
+        if (statData.type === 'directory') {
+          const { files: allFiles } = await this.collectFiles(contentPath);
+          const debridFiles: DebridFile[] = allFiles.map((file, index) => ({
+            id: index,
+            name: file.basename,
+            size: file.size,
+            path: file.filename,
+            index,
+          }));
+
+          return {
+            id: nzbId,
+            name: nzbId,
+            hash: nzbId,
+            status: 'downloaded',
+            size: debridFiles.reduce((sum, f) => sum + f.size, 0),
+            files: debridFiles,
+          };
+        }
+      } catch {
+        // Not found in this category, try next
+      }
+    }
+
+    throw new DebridError(`NZB item not found: ${nzbId}`, {
+      statusCode: 404,
+      statusText: 'Not found',
+      code: 'NOT_FOUND',
+      headers: {},
+      body: { nzbId },
+      type: 'api_error',
+    });
   }
 
-  public async checkMagnets(
-    magnets: string[],
-    sid?: string
-  ): Promise<DebridDownload[]> {
-    throw new Error('Unsupported operation');
-  }
-
-  public async addMagnet(magnet: string): Promise<DebridDownload> {
-    throw new Error('Unsupported operation');
-  }
-
-  public async generateTorrentLink(
-    link: string,
-    clientIp?: string
-  ): Promise<string> {
-    throw new Error('Unsupported operation');
+  private async listWebdavFolders(path: string): Promise<FileStat[]> {
+    let contents: FileStat[];
+    const start = Date.now();
+    try {
+      contents = (await this.webdavClient.getDirectoryContents(
+        path
+      )) as FileStat[];
+    } catch (error: any) {
+      const status = typeof error.status === 'number' ? error.status : 500;
+      throw new DebridError(
+        `Failed to list WebDAV directory: ${(error as Error).message}`,
+        {
+          statusCode: status,
+          statusText: status
+            ? error.message.match(/response: \d+ (.*)/)?.[1] ||
+              'Internal Server Error'
+            : 'Internal Server Error',
+          code: convertStatusCodeToError(status),
+          headers: {},
+          type: 'api_error',
+        }
+      );
+    }
+    const directories = contents.filter((item) => item.type === 'directory');
+    this.serviceLogger.debug(`Listed WebDAV folders at ${path}`, {
+      count: directories.length,
+      time: getTimeTakenSincePoint(start),
+    });
+    return directories;
   }
 
   public async listNzbs(): Promise<DebridDownload[]> {
     const cacheKey = `${this.serviceName}:${this.config.token}`;
 
+    // Check for stale cache before acquiring the lock
+    const cached = await UsenetStreamService.libraryCache.get(cacheKey);
+    if (cached) {
+      const remainingTTL =
+        await UsenetStreamService.libraryCache.getTTL(cacheKey);
+      if (remainingTTL !== null && remainingTTL > 0) {
+        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
+        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+          this.serviceLogger.debug(
+            `Library cache for ${this.serviceName} is stale (age: ${age}s), triggering background refresh`
+          );
+          this.refreshNzbsInBackground(cacheKey).catch((err) =>
+            this.serviceLogger.error(
+              `Background library refresh failed for ${this.serviceName}`,
+              err
+            )
+          );
+        }
+        return cached;
+      }
+    }
+
     const { result } = await DistributedLock.getInstance().withLock(
       `uss:library:${cacheKey}`,
       async () => {
-        const start = Date.now();
         const cachedNzbs = await UsenetStreamService.libraryCache.get(cacheKey);
         if (cachedNzbs) {
           this.serviceLogger.debug(
@@ -601,39 +705,7 @@ export abstract class UsenetStreamService implements DebridService {
           return cachedNzbs;
         }
 
-        // const path = `${this.getContentPathPrefix()}/${UsenetStreamService.AIOSTREAMS_CATEGORY}`;
-        // const contents = (await this.webdavClient.getDirectoryContents(
-        //   path
-        // )) as FileStat[];
-        // const nzbs = contents.map((item, index) => ({
-        //   id: index,
-        //   status: 'cached' as const,
-        //   hash: item.basename,
-        //   size: item.size,
-        //   files: [],
-        // }));
-        // this.serviceLogger.debug(`Listed NZBs from WebDAV`, {
-        //   count: nzbs.length,
-        //   time: getTimeTakenSincePoint(start),
-        // });
-        const history = await this.api.history();
-        const nzbs: DebridDownload[] = history.slots.map((slot, index) => ({
-          id: index,
-          status: slot.status !== 'failed' ? 'cached' : 'failed',
-          name: slot.name,
-        }));
-        this.serviceLogger.debug(`Listed NZBs from history`, {
-          count: nzbs.length,
-          time: getTimeTakenSincePoint(start),
-        });
-        await UsenetStreamService.libraryCache.set(
-          cacheKey,
-          nzbs,
-          Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
-          true
-        );
-
-        return nzbs;
+        return this.fetchAndCacheNzbs(cacheKey);
       },
       {
         type: 'memory',
@@ -641,6 +713,152 @@ export abstract class UsenetStreamService implements DebridService {
       }
     );
     return result;
+  }
+
+  private async fetchAndCacheNzbs(cacheKey: string): Promise<DebridDownload[]> {
+    const start = Date.now();
+
+    const historyPromise = this.api.history({ limit: 1000 });
+    const webdavTvPromise = this.listWebdavFolders(
+      `${this.getContentPathPrefix()}/${Category.TV}`
+    );
+    const webdavMoviesPromise = this.listWebdavFolders(
+      `${this.getContentPathPrefix()}/${Category.MOVIES}`
+    );
+    const webdavUncategorizedPromise = this.listWebdavFolders(
+      `${this.getContentPathPrefix()}/${Category.UNCATEGORIZED}`
+    );
+
+    const [history, webdavTv, webdavMovies, webdavUncategorized] =
+      await Promise.allSettled([
+        historyPromise,
+        webdavTvPromise,
+        webdavMoviesPromise,
+        webdavUncategorizedPromise,
+      ]);
+
+    if (history.status === 'rejected') {
+      throw history.reason;
+    }
+
+    if (
+      webdavTv.status === 'rejected' ||
+      webdavMovies.status === 'rejected' ||
+      webdavUncategorized.status === 'rejected'
+    ) {
+      const error =
+        webdavTv.status === 'rejected'
+          ? webdavTv.reason
+          : webdavMovies.status === 'rejected'
+            ? webdavMovies.reason
+            : webdavUncategorized.status === 'rejected'
+              ? webdavUncategorized.reason
+              : null;
+
+      const status = typeof error.status === 'number' ? error.status : 500;
+      if (status === 401) {
+        throw new DebridError(`Could not access WebDAV: Unauthorized`, {
+          statusCode: 401,
+          statusText: 'Unauthorized',
+          code: 'UNAUTHORIZED',
+          headers: {},
+          body: null,
+          type: 'api_error',
+        });
+      }
+
+      this.serviceLogger.warn(
+        `Failed to list WebDAV folders, library listing may be inaccurate`,
+        {
+          error: (error as Error).message,
+        }
+      );
+    }
+
+    const historyData = history.status === 'fulfilled' ? history.value : null;
+    const webdavTvData =
+      webdavTv.status === 'fulfilled' ? webdavTv.value : null;
+    const webdavMoviesData =
+      webdavMovies.status === 'fulfilled' ? webdavMovies.value : null;
+    const webdavUncategorizedData =
+      webdavUncategorized.status === 'fulfilled'
+        ? webdavUncategorized.value
+        : null;
+
+    const webdavFiles = [
+      ...(webdavTvData ?? []),
+      ...(webdavMoviesData ?? []),
+      ...(webdavUncategorizedData ?? []),
+    ];
+    const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
+      const matchingSlot = historyData?.slots.find(
+        (slot) => slot.name === file.basename
+      );
+      return {
+        id: file.basename,
+        status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
+        name: file.basename,
+        size: file.size > 0 ? file.size : (matchingSlot?.bytes ?? 0),
+        hash: file.basename,
+        addedAt: file.lastmod ?? undefined,
+        files: [],
+      };
+    });
+
+    // Also include failed entries from history that don't have WebDAV folders
+    // so they can be detected and filtered out by processNZBs
+    if (historyData?.slots) {
+      const webdavNames = new Set(webdavFiles.map((file) => file.basename));
+      for (const slot of historyData.slots) {
+        if (
+          slot.status === 'failed' &&
+          slot.name &&
+          !webdavNames.has(slot.name)
+        ) {
+          nzbs.push({
+            id: nzbs.length,
+            status: 'failed',
+            name: slot.name,
+            size: slot.bytes ?? 0,
+            hash: slot.name,
+            files: [],
+          });
+        }
+      }
+    }
+
+    this.serviceLogger.debug(`Listed NZBs from combined history and WebDAV`, {
+      count: nzbs.length,
+      time: getTimeTakenSincePoint(start),
+    });
+    await UsenetStreamService.libraryCache.set(
+      cacheKey,
+      nzbs,
+      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      true
+    );
+
+    return nzbs;
+  }
+
+  private async refreshNzbsInBackground(cacheKey: string): Promise<void> {
+    const lockKey = `uss:library:refresh:${cacheKey}`;
+    await DistributedLock.getInstance().withLock(
+      lockKey,
+      async () => {
+        await UsenetStreamService.libraryCache.delete(cacheKey);
+        return this.fetchAndCacheNzbs(cacheKey);
+      },
+      { type: 'memory', timeout: 1000 }
+    );
+  }
+
+  public async refreshLibraryCache(
+    sources?: ('torrent' | 'nzb')[]
+  ): Promise<void> {
+    const cacheKey = `${this.serviceName}:${this.config.token}`;
+    await UsenetStreamService.libraryCache.delete(cacheKey);
+    await this.fetchAndCacheNzbs(cacheKey);
   }
 
   public async checkNzbs(
@@ -696,11 +914,19 @@ export abstract class UsenetStreamService implements DebridService {
       throw new Error('Unsupported operation');
     }
     const { result } = await DistributedLock.getInstance().withLock(
-      `${this.serviceName}:resolve:${playbackInfo.hash}:${playbackInfo.metadata?.season}:${playbackInfo.metadata?.episode}:${playbackInfo.metadata?.absoluteEpisode}:${filename}:${this.config.clientIp}:${this.config.token}`,
+      buildResolveKey(
+        'uss:lock',
+        this.serviceName,
+        playbackInfo,
+        filename,
+        this.config.token,
+        this.config.clientIp,
+        { cacheAndPlay }
+      ),
       () => this._resolve(playbackInfo, filename),
       {
-        timeout: 120000,
-        ttl: 10000,
+        timeout: this.maxWaitTime + this.pollInterval,
+        ttl: this.maxWaitTime + this.pollInterval + 10000,
       }
     );
     return result;
@@ -712,23 +938,47 @@ export abstract class UsenetStreamService implements DebridService {
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
 
-    const cacheKey = `${this.serviceName}:${this.config.token}:${this.config.clientIp}:${JSON.stringify(playbackInfo)}`;
+    const cacheKey = buildResolveKey(
+      'uss:cache',
+      this.serviceName,
+      playbackInfo,
+      filename,
+      this.config.token,
+      this.config.clientIp
+    );
 
-    const cachedLink =
-      await UsenetStreamService.playbackLinkCache.get(cacheKey);
+    const cachedResponse = await UsenetStreamService.resolveCache.get(cacheKey);
 
-    if (cachedLink) {
-      this.serviceLogger.debug(`Using cached link for ${nzb}`);
-      return cachedLink;
+    if (cachedResponse) {
+      this.serviceLogger.debug(`Using cached stream URL for ${nzb}`);
+      return cachedResponse;
+    }
+
+    // Check global failure cache
+    if (nzb) {
+      await DebridFailureCache.check(
+        this.serviceName,
+        'usenet',
+        hashNzbUrl(nzb, false)
+      );
     }
 
     this.serviceLogger.debug(`Resolving NZB`, {
       hash,
       filename,
       nzbUrl: maskSensitiveInfo(nzb),
+      serviceItemId: playbackInfo.serviceItemId,
+      fileIndex: playbackInfo.fileIndex,
     });
 
-    const category = metadata?.season || metadata?.episode ? 'TV' : 'Movies';
+    // For catalog items with serviceItemId, the serviceItemId IS the folder name (basename)
+    // We need to search both TV and Movies categories to find it
+    if (playbackInfo.serviceItemId && !nzb) {
+      return this._resolveLibraryItem(playbackInfo, filename, cacheKey);
+    }
+
+    const category =
+      metadata?.season || metadata?.episode ? Category.TV : Category.MOVIES;
     const expectedFolderName = this.getExpectedFolderName(playbackInfo);
 
     // Check if content already exists at the expected path
@@ -773,16 +1023,42 @@ export abstract class UsenetStreamService implements DebridService {
 
     // Only add NZB if content doesn't already exist
     if (!alreadyExists) {
-      const addResult = await this.api.addUrl(
-        nzb,
-        category,
-        expectedFolderName
-      );
-      nzoId = addResult.nzoId;
+      try {
+        const addResult = await this.api.addUrl(
+          nzb,
+          category,
+          expectedFolderName
+        );
+        nzoId = addResult.nzoId;
+      } catch (addError) {
+        throw addError;
+      }
+    }
 
+    // If we added the NZB (not already existing), wait for it to complete
+    if (!alreadyExists && nzoId) {
       // Poll history until download is complete
       const pollStartTime = Date.now();
-      const slot = await this.api.waitForHistorySlot(nzoId, category);
+      let slot: ReturnType<typeof transformHistorySlot>;
+      try {
+        slot = await this.api.waitForHistorySlot(
+          nzoId,
+          category,
+          this.maxWaitTime,
+          this.pollInterval
+        );
+      } catch (error) {
+        if (!(error instanceof DebridError)) {
+          throw error;
+        }
+        DebridFailureCache.mark(
+          this.serviceName,
+          'usenet',
+          hashNzbUrl(nzb, false),
+          error
+        ).catch(() => {});
+        throw error;
+      }
 
       // Use slot.storage as source of truth for the content path
       jobName = slot.storage ? basename(slot.storage) : slot.name || filename;
@@ -854,7 +1130,32 @@ export abstract class UsenetStreamService implements DebridService {
 
     let selectedFile;
 
-    if (debridFiles.length === 1) {
+    if (playbackInfo.fileIndex !== undefined) {
+      // Direct file index specified (e.g. from catalog meta)
+      selectedFile = debridFiles.find(
+        (f) => f.index === playbackInfo.fileIndex
+      );
+      if (!selectedFile) {
+        throw new DebridError(
+          `File with index ${playbackInfo.fileIndex} not found`,
+          {
+            statusCode: 400,
+            statusText: 'File not found',
+            code: 'NO_MATCHING_FILE',
+            headers: {},
+            body: {
+              fileIndex: playbackInfo.fileIndex,
+              availableFiles: debridFiles.map((f) => f.index),
+            },
+            type: 'api_error',
+          }
+        );
+      }
+      this.serviceLogger.debug(`Using specified fileIndex`, {
+        fileIndex: playbackInfo.fileIndex,
+        fileName: selectedFile.name,
+      });
+    } else if (debridFiles.length === 1) {
       selectedFile = debridFiles[0];
     } else {
       // Parse all file names for matching
@@ -908,7 +1209,149 @@ export abstract class UsenetStreamService implements DebridService {
     this.serviceLogger.debug(`Generated playback link`, { playbackLink });
 
     // Cache the result
-    await UsenetStreamService.playbackLinkCache.set(
+    await UsenetStreamService.resolveCache.set(
+      cacheKey,
+      playbackLink,
+      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
+      true
+    );
+
+    return playbackLink;
+  }
+
+  /**
+   * Resolve a library item by serviceItemId (folder name) and optionally fileIndex.
+   * For nzbdav/altmount, serviceItemId is the folder basename, and we search
+   * both TV and Movies categories to find it.
+   */
+  protected async _resolveLibraryItem(
+    playbackInfo: PlaybackInfo & { type: 'usenet' },
+    filename: string,
+    cacheKey: string
+  ): Promise<string | undefined> {
+    const folderName = playbackInfo.serviceItemId!;
+
+    // Search both categories for the folder
+    let contentPath: string | undefined;
+    for (const category of [
+      Category.UNCATEGORIZED,
+      Category.TV,
+      Category.MOVIES,
+    ]) {
+      const candidatePath = `${this.getContentPathPrefix()}/${category}/${folderName}`;
+      try {
+        const stat = await this.webdavClient.stat(candidatePath);
+        const statData = 'data' in stat ? stat.data : stat;
+        if (statData.type === 'directory') {
+          contentPath = candidatePath;
+          break;
+        }
+      } catch {
+        // Not found in this category, try next
+      }
+    }
+
+    if (!contentPath) {
+      throw new DebridError(`Library item folder not found: ${folderName}`, {
+        statusCode: 404,
+        statusText: 'Not found',
+        code: 'NOT_FOUND',
+        headers: {},
+        body: { folderName },
+        type: 'api_error',
+      });
+    }
+
+    this.serviceLogger.debug(`Found library item folder`, { contentPath });
+
+    const { files: allFiles, depth } = await this.collectFiles(contentPath);
+
+    if (allFiles.length === 0) {
+      throw new DebridError('No files found in library item', {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'NO_MATCHING_FILE',
+        headers: {},
+        body: { contentPath },
+        type: 'api_error',
+      });
+    }
+
+    const debridFiles: DebridFile[] = allFiles.map((file, index) => ({
+      id: index,
+      name: file.basename,
+      size: file.size,
+      path: file.filename,
+      index,
+    }));
+
+    this.serviceLogger.debug(`Collected files from library item`, {
+      contentPath,
+      depth,
+      count: debridFiles.length,
+      files: debridFiles.map((f) => f.name),
+    });
+
+    let selectedFile: DebridFile | undefined;
+
+    if (playbackInfo.fileIndex !== undefined) {
+      // Direct file index specified from catalog
+      selectedFile = debridFiles.find(
+        (f) => f.index === playbackInfo.fileIndex
+      );
+      if (!selectedFile) {
+        throw new DebridError(
+          `File with index ${playbackInfo.fileIndex} not found`,
+          {
+            statusCode: 400,
+            statusText: 'File not found',
+            code: 'NO_MATCHING_FILE',
+            headers: {},
+            body: {
+              fileIndex: playbackInfo.fileIndex,
+              availableFiles: debridFiles.map((f) => f.index),
+            },
+            type: 'api_error',
+          }
+        );
+      }
+      this.serviceLogger.debug(`Using specified fileIndex for library item`, {
+        fileIndex: playbackInfo.fileIndex,
+        fileName: selectedFile.name,
+      });
+    } else if (debridFiles.length === 1) {
+      selectedFile = debridFiles[0];
+    } else {
+      // Fallback: pick the largest video file
+      const videoFiles = debridFiles.filter((f) => isVideoFile(f));
+      if (videoFiles.length > 0) {
+        selectedFile = videoFiles.reduce((a, b) => (a.size > b.size ? a : b));
+      } else {
+        selectedFile = debridFiles.reduce((a, b) => (a.size > b.size ? a : b));
+      }
+    }
+
+    if (!selectedFile) {
+      throw new DebridError('No matching file found in library item', {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'NO_MATCHING_FILE',
+        headers: {},
+        body: { availableFiles: debridFiles.map((f) => f.name) },
+        type: 'api_error',
+      });
+    }
+
+    this.serviceLogger.debug(`Selected file from library item`, {
+      chosenFile: selectedFile.name,
+      chosenPath: selectedFile.path,
+      availableFiles: debridFiles.length,
+    });
+
+    const filePath = selectedFile.path || `${contentPath}/${selectedFile.name}`;
+    const playbackLink = `${this.getPublicWebdavUrlWithAuth()}${filePath}`;
+
+    await UsenetStreamService.resolveCache.set(
       cacheKey,
       playbackLink,
       Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,

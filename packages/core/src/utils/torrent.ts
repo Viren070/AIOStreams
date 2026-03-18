@@ -19,6 +19,7 @@ interface TorrentMetadata {
   hash: string;
   files: DebridFile[];
   sources: string[];
+  private?: boolean;
 }
 
 export class TorrentClient {
@@ -176,7 +177,7 @@ export class TorrentClient {
         logger.debug(
           `No info hash found in torrent: ${JSON.stringify(parsedTorrent)}`
         );
-        metadata = { hash: downloadUrl, files: [], sources };
+        metadata = { hash: downloadUrl, files: [], sources, private: false };
         throw new Error('No info hash found in torrent');
       }
 
@@ -196,6 +197,7 @@ export class TorrentClient {
           })
         ),
         sources,
+        private: !!parsedTorrent.info?.private,
       };
     } else {
       throw new Error(

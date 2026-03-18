@@ -4,6 +4,7 @@ import StreamSorter from './sorter.js';
 import StreamDeduplicator from './deduplicator.js';
 import StreamPrecomputer from './precomputer.js';
 import StreamUtils from './utils.js';
+import { StreamContext, ExtendedMetadata } from './context.js';
 
 export {
   StreamFetcher,
@@ -12,4 +13,25 @@ export {
   StreamDeduplicator,
   StreamPrecomputer,
   StreamUtils,
+  StreamContext,
 };
+
+export type { ExtendedMetadata };
+
+export { resolveServiceWrappedStreams } from './serviceWrapper.js';
+export type {
+  ServiceWrapResult,
+  ServiceWrapError,
+  ServiceWrapServiceTiming,
+} from './serviceWrapper.js';
+
+export type { PrecomputeSubTimings } from './precomputer.js';
+
+export {
+  populateNzbFallbacks,
+  getNzbFallbacks,
+  isNzbRetryableError,
+} from './nzbFailover.js';
+export type { NzbFallback } from './nzbFailover.js';
+
+export { preloadStreams, pingStream } from './preload.js';

@@ -1,6 +1,10 @@
 import winston from 'winston';
 import moment from 'moment-timezone';
 import { Env } from './env.js';
+import { getTimeTakenSincePoint, formatDurationAsText } from './time.js';
+
+// Re-export for backward compatibility
+export { getTimeTakenSincePoint, formatDurationAsText };
 
 // Map log levels to their full names
 const levelMap: { [key: string]: string } = {
@@ -46,10 +50,13 @@ const moduleMap: { [key: string]: string } = {
   'metadata-service': '🔍  METADATA',
   torrent: '👤  TORRENT',
   knaben: '🔍  KNABEN',
+  eztv: '📺  EZTV',
   'torrent-galaxy': '🌐  TGx',
   templates: '📄  TEMPLATES',
   nzbdav: '📂  NZBDAV',
   altmount: '📂  ALTMOUNT',
+  seadex: '🌊  SEADEX',
+  'stream-expression': '✨ SEL',
 };
 
 // Define colors for each log level using full names
@@ -147,46 +154,4 @@ export function maskSensitiveInfo(message: string) {
     return message;
   }
   return '<redacted>';
-}
-
-export const getTimeTakenSincePoint = (point: number) => {
-  const timeNow = new Date().getTime();
-  const duration = timeNow - point;
-  if (duration < 1000) {
-    return `${duration.toFixed(2)}ms`;
-  }
-  return formatDurationAsText(duration / 1000);
-};
-
-export function formatDurationAsText(seconds: number): string {
-  if (seconds < 0) {
-    return 'Invalid input';
-  }
-  if (seconds === 0) {
-    return '0s';
-  }
-  if (seconds < 60) {
-    return seconds % 1 === 0 ? `${seconds}s` : `${seconds.toFixed(2)}s`;
-  }
-
-  const timeUnits = [
-    { unit: 'w', secondsInUnit: 604800 },
-    { unit: 'd', secondsInUnit: 86400 },
-    { unit: 'h', secondsInUnit: 3600 },
-    { unit: 'm', secondsInUnit: 60 },
-    { unit: 's', secondsInUnit: 1 },
-  ];
-
-  let remainingSeconds = seconds;
-  const parts: string[] = [];
-
-  for (const { unit, secondsInUnit } of timeUnits) {
-    if (remainingSeconds >= secondsInUnit) {
-      const value = Math.floor(remainingSeconds / secondsInUnit);
-      parts.push(`${value}${unit}`);
-      remainingSeconds %= secondsInUnit;
-    }
-  }
-
-  return parts.slice(0, 2).join(' ');
 }

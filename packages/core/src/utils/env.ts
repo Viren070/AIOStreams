@@ -18,6 +18,8 @@ import * as constants from './constants.js';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import bytes from 'bytes';
+import UserAgent from 'user-agents';
+import { parseTime, Time } from './time.js';
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -65,48 +67,51 @@ const commaSeparated = makeExactValidator<string[]>((x) => {
   return parsed;
 });
 
-const regexes = makeValidator((x) => {
-  // json array of string
-  const parsed = JSON.parse(x);
-  if (!Array.isArray(parsed)) {
-    throw new EnvError('Regexes must be an array');
-  }
-  // each element must be a string
-  parsed.forEach((x) => {
+const time = (unit: 's' | 'ms' = 'ms') =>
+  makeValidator<number>((input: string) => {
+    if (/^\-?\d+$/.test(input.trim())) {
+      const value = Number(input.trim());
+      return value;
+    }
+    const ms = parseTime(input);
+    if (ms === null) {
+      throw new EnvError(`Invalid time input: "${input}"`);
+    }
+    return unit === 's' ? Math.floor(ms / 1000) : ms;
+  });
+
+// comma separated list of key:url where key is in choices
+const httpProxyMap = <T extends string>(choices: readonly T[]) =>
+  makeExactValidator<Map<T, string>>((x: string): Map<T, string> => {
     if (typeof x !== 'string') {
-      throw new EnvError('Regexes must be an array of strings');
+      throw new EnvError('HTTP Proxy Map must be a string');
     }
-    try {
-      new RegExp(x);
-    } catch (e) {
-      throw new EnvError(`Invalid regex pattern: ${x}`);
-    }
-  });
-  return parsed;
-});
+    const proxyMap = new Map<T, string>();
 
-const namedRegexes = makeValidator((x) => {
-  // array of objects with properties name and pattern
-  const parsed = JSON.parse(x);
-  if (!Array.isArray(parsed)) {
-    throw new EnvError('Named regexes must be an array');
-  }
-  // each element must be an object with properties name and pattern
-  parsed.forEach((x) => {
-    if (typeof x !== 'object' || !x.name || !x.pattern) {
-      throw new EnvError(
-        'Named regexes must be an array of objects with properties name and pattern'
-      );
+    const entries = x.split(',').map((entry) => entry.trim());
+    for (const entry of entries) {
+      const tokens = entry.split(':');
+      const key = tokens.shift()?.trim();
+      const value = tokens.join(':').trim();
+      if (!key || !value) {
+        throw new EnvError(`Invalid HTTP Proxy Map entry: "${entry}"`);
+      }
+      if (!choices.includes(key as (typeof choices)[number])) {
+        throw new EnvError(
+          `Invalid HTTP Proxy Map key: "${key}". Must be one of: ${choices.join(', ')}`
+        );
+      }
+      try {
+        new URL(value);
+      } catch {
+        throw new EnvError(
+          `Invalid HTTP Proxy Map value: "${value}". Must be a valid URL.`
+        );
+      }
+      proxyMap.set(key as T, value);
     }
-    try {
-      new RegExp(x.pattern);
-    } catch (e) {
-      throw new EnvError(`Invalid regex pattern: ${x.pattern}`);
-    }
+    return proxyMap;
   });
-
-  return parsed;
-});
 
 const removeTrailingSlash = (x: string) =>
   x.endsWith('/') ? x.slice(0, -1) : x;
@@ -140,6 +145,21 @@ const urlOrUrlList = makeExactValidator<readonly string[]>((x) => {
     }
     throw new EnvError('Preset URLs must be an array of URLs or a single URL');
   }
+});
+
+const strOrStrList = makeExactValidator<readonly string[]>((x) => {
+  try {
+    const parsed = JSON.parse(x);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((item) => typeof item === 'string')
+    ) {
+      return Object.freeze(parsed);
+    }
+  } catch (e) {
+    return Object.freeze([x]);
+  }
+  throw new EnvError('Value must be a string or an array of strings');
 });
 
 const url = makeValidator((x) => {
@@ -181,12 +201,56 @@ export const forcedPort = makeValidator<string>((input: string) => {
   return coerced.toString();
 });
 
+const parseUserAgent = (input: string): string => {
+  if (['false', 'none', ''].includes(input.toLowerCase().trim()))
+    return 'false';
+  const filters =
+    typeof process.env.RANDOM_USER_AGENT_FILTERS === 'string'
+      ? JSON.parse(process.env.RANDOM_USER_AGENT_FILTERS)
+      : undefined;
+  return input
+    .replace(/{version}/g, metadata?.version || 'unknown')
+    .replace(/{random}/g, new UserAgent(filters).toString());
+};
 const userAgent = makeValidator((x) => {
   if (typeof x !== 'string') {
     throw new Error('User agent must be a string');
   }
   // replace {version} with the version of the addon
-  return x.replace(/{version}/g, metadata?.version || 'unknown');
+  return parseUserAgent(x);
+});
+
+const userAgentMappings = makeValidator<Map<string, string>>((x) => {
+  if (typeof x !== 'string') {
+    throw new EnvError('User agent mappings must be a string');
+  }
+  const mappings = new Map<string, string>();
+
+  const regex = /([a-zA-Z0-9.-\\*]+):([^,]*(?:,[^a-zA-Z0-9.-][^,]*)*)/g;
+
+  let match;
+  let hasMatches = false;
+
+  while ((match = regex.exec(x)) !== null) {
+    hasMatches = true;
+    const hostname = match[1].trim();
+    const userAgent = match[2].trim();
+
+    if (!hostname || !userAgent) {
+      throw new EnvError(
+        `User agent mappings must be in the format hostname:useragent (got "${match[0]}")`
+      );
+    }
+
+    mappings.set(hostname, parseUserAgent(userAgent));
+  }
+
+  if (!hasMatches) {
+    throw new EnvError(
+      'User agent mappings must be in the format hostname:useragent,hostname:useragent,...'
+    );
+  }
+  return mappings;
 });
 
 // comma separated list of alias:uuid
@@ -275,6 +339,47 @@ const boolOrList = makeValidator((x) => {
   return x.split(',').map((x) => x.trim());
 });
 
+/**
+ * Parses a comma-separated title-language map string.
+ * Format: `*:default,original,germanindexer.com:de,default`
+ *
+ * Each group starts with `domain:firstValue`. Subsequent comma-separated tokens
+ * without a colon are additional values for the current domain.
+ * `*` is the catch-all wildcard applied to all unmatched hostnames.
+ *
+ * Valid spec values:
+ *   - `default`  – use the primary (service-level) title
+ *   - `all`      – use all alternative titles up to BUILTIN_SCRAPE_TITLE_LIMIT
+ *   - `original` – use titles in the TMDB original language
+ *   - ISO 639-1  – use titles tagged with that language code (e.g. `de`, `fr`)
+ */
+const titleLangMap = makeValidator<Record<string, string[]> | undefined>(
+  (x) => {
+    if (typeof x !== 'string' || !x.trim()) return undefined;
+    const keySpecMap: Record<string, string[]> = {};
+    let currentKey: string | null = null;
+    for (const token of x
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)) {
+      const colonIdx = token.indexOf(':');
+      if (colonIdx !== -1) {
+        currentKey = token.slice(0, colonIdx).trim().toLowerCase();
+        const firstSpec = token
+          .slice(colonIdx + 1)
+          .trim()
+          .toLowerCase();
+        if (currentKey) {
+          keySpecMap[currentKey] = firstSpec ? [firstSpec] : [];
+        }
+      } else if (currentKey) {
+        keySpecMap[currentKey].push(token.toLowerCase());
+      }
+    }
+    return Object.keys(keySpecMap).length ? keySpecMap : undefined;
+  }
+);
+
 const urlMappings = makeValidator<Record<string, string>>((x) => {
   // json object with string properties
   const parsed = JSON.parse(x);
@@ -301,6 +406,56 @@ const urlMappings = makeValidator<Record<string, string>>((x) => {
   return mappings;
 });
 
+const cacheTtls = (defaultWildcard: number = 300) =>
+  makeValidator<Record<string, number>>((x) => {
+    if (typeof x !== 'string') {
+      throw new EnvError('Cache TTLs must be a string');
+    }
+
+    // If just a number, apply to wildcard
+    if (/^\-?\d+$/.test(x.trim())) {
+      const value = Number(x.trim());
+      if (value !== -1 && (value <= 0 || !Number.isInteger(value))) {
+        throw new EnvError(
+          'Cache TTL value must be -1 (disabled) or a positive integer'
+        );
+      }
+      return { '*': value };
+    }
+
+    const ttlMap: Record<string, number> = {};
+    let hasWildcard = false;
+
+    x.split(',').forEach((entry) => {
+      const [key, valueStr] = entry.split(':').map((s) => s.trim());
+      if (!key || !valueStr) {
+        throw new EnvError(
+          'Cache TTLs must be a comma separated list of key:value pairs'
+        );
+      }
+      const value = Number(valueStr);
+      if (
+        Number.isNaN(value) ||
+        (value !== -1 && (value <= 0 || !Number.isInteger(value)))
+      ) {
+        throw new EnvError(
+          'Cache TTL value must be -1 (disabled) or a positive integer'
+        );
+      }
+      if (key === '*') {
+        hasWildcard = true;
+      }
+      ttlMap[key] = value;
+    });
+
+    // If no wildcard is specified, add the default
+    if (!hasWildcard) {
+      ttlMap['*'] = defaultWildcard;
+    }
+
+    return ttlMap;
+  });
+
 const boolOrChoice = <T extends string>(choices: T[]) =>
   makeValidator<boolean | T>((input: string) => {
     input = input.trim();
@@ -315,6 +470,98 @@ const boolOrChoice = <T extends string>(choices: T[]) =>
     );
   });
 
+export const BUILTIN_DOWNLOAD_POLL_INTERVAL_DEFAULTS: Record<string, number> = {
+  nzbdav: 2 * Time.Second,
+  altmount: 2 * Time.Second,
+  stremthru_newz: 2 * Time.Second,
+  '*': 10 * Time.Second,
+};
+
+export const BUILTIN_DOWNLOAD_MAX_WAIT_TIME_DEFAULTS: Record<string, number> = {
+  nzbdav: 90 * Time.Second,
+  altmount: 90 * Time.Second,
+  stremthru_newz: 90 * Time.Second,
+  '*': 120 * Time.Second,
+};
+
+const serviceTimeMap = (defaults: Record<string, number>) =>
+  makeExactValidator<Record<string, number>>(
+    (x: string): Record<string, number> => {
+      if (typeof x !== 'string' || !x.trim()) {
+        throw new EnvError('Service time map must be a non-empty string');
+      }
+
+      const map: Record<string, number> = {};
+      let hasUserWildcard = false;
+
+      const entries = x
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      for (const entry of entries) {
+        const colonIdx = entry.indexOf(':');
+        if (colonIdx === -1) {
+          throw new EnvError(
+            `Invalid service time map entry: "${entry}". Expected format: serviceId:<time> (e.g., torbox:10s, *:2m)`
+          );
+        }
+        const key = entry.slice(0, colonIdx).trim();
+        const timeStr = entry.slice(colonIdx + 1).trim();
+        if (!key || !timeStr) {
+          throw new EnvError(
+            `Invalid service time map entry: "${entry}". Both key and time value are required.`
+          );
+        }
+        if (key !== '*' && !constants.SERVICES.includes(key as any)) {
+          throw new EnvError(
+            `Invalid service ID: "${key}". Must be one of: ${constants.SERVICES.join(', ')}, or * for all services.`
+          );
+        }
+        let ms: number;
+        if (/^\d+$/.test(timeStr)) {
+          ms = Number(timeStr);
+        } else {
+          try {
+            ms = parseTime(timeStr);
+          } catch {
+            throw new EnvError(
+              `Invalid time value "${timeStr}" for service "${key}". Use a human-readable format (e.g., 10s, 2m) or milliseconds.`
+            );
+          }
+        }
+        if (ms < 0 || !Number.isInteger(ms)) {
+          throw new EnvError(
+            `Time value for service "${key}" must be a non-negative integer.`
+          );
+        }
+        if (key === '*') hasUserWildcard = true;
+        map[key] = ms;
+      }
+
+      // If user specified wildcard, don't apply our per-service defaults — their wildcard covers everything
+      if (!hasUserWildcard) {
+        for (const [defaultKey, defaultValue] of Object.entries(defaults)) {
+          if (!(defaultKey in map)) {
+            map[defaultKey] = defaultValue;
+          }
+        }
+      }
+
+      return map;
+    }
+  );
+
+/**
+ * Resolves the effective time value for a given service from a serviceTimeMap.
+ * Checks for a service-specific entry first, then falls back to the wildcard `*`.
+ */
+export function resolveServiceTime(
+  map: Record<string, number>,
+  serviceId: string
+): number {
+  return map[serviceId] ?? map['*'] ?? 0;
+}
+
 export const Env = cleanEnv(process.env, {
   VERSION: readonly({
     default: metadata?.version || 'unknown',
@@ -323,6 +570,11 @@ export const Env = cleanEnv(process.env, {
   TAG: readonly({
     default: metadata?.tag || 'unknown',
     desc: 'Tag of the addon',
+  }),
+  CHANNEL: readonly({
+    default: (metadata?.channel as 'stable' | 'nightly' | 'dev') || 'stable',
+    choices: ['stable', 'nightly', 'dev'],
+    desc: 'Build channel of the addon',
   }),
   DESCRIPTION: readonly({
     default: metadata?.description || 'unknown',
@@ -403,6 +655,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Custom HTML for the addon',
   }),
+  FEATURED_TEMPLATE_IDS: commaSeparated({
+    default: [],
+    desc: 'Comma-separated list of up to 2 template IDs to feature on the about page. Defaults to the first 2 available templates when unset.',
+  }),
   ALTERNATE_DESIGN: bool({
     default: false,
     desc: 'Alternate design for the frontend.',
@@ -480,6 +736,10 @@ export const Env = cleanEnv(process.env, {
     default: true,
     desc: 'Enable the search API. If true, the search API will be enabled.',
   }),
+  ZYCLOPS_HEALTH_PROXY_ENDPOINT: url({
+    default: 'https://zyclops.elfhosted.com',
+    desc: 'Base URL of the Zyclops health proxy endpoint used by the Newznab preset.',
+  }),
   ANIME_DB_LEVEL_OF_DETAIL: str({
     default: 'required',
     desc: 'Detail level for the anime database. none: no anime database, required: only load the required databases, full: load all data',
@@ -504,6 +764,10 @@ export const Env = cleanEnv(process.env, {
   ANIME_DB_EXTENDED_ANITRAKT_TV_REFRESH_INTERVAL: num({
     default: 24 * 60 * 60 * 1000, // 24 hours
     desc: 'Interval for refreshing the Extended Anitrakt TV in milliseconds',
+  }),
+  ANIME_DB_ANIME_LIST_REFRESH_INTERVAL: num({
+    default: 7 * 24 * 60 * 60 * 1000, // 7 days
+    desc: 'Interval for refreshing the Anime Lists XML in milliseconds',
   }),
   // logging settings
   LOG_SENSITIVE_INFO: bool({
@@ -566,8 +830,8 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default user agent for the addon',
   }),
 
-  HOSTNAME_USER_AGENT_OVERRIDES: str({
-    default: '*.strem.fun:Stremio',
+  HOSTNAME_USER_AGENT_OVERRIDES: userAgentMappings({
+    default: undefined,
     desc: 'Comma separated list of hostname:useragent pairs. Takes priority over any other user agent settings.',
   }),
 
@@ -575,65 +839,81 @@ export const Env = cleanEnv(process.env, {
     default: 100000,
     desc: 'Default max cache size for a cache instance',
   }),
+  SQL_CACHE_MAX_SIZE: num({
+    default: 100000,
+    desc: 'Max size for the SQL cache',
+  }),
   PROXY_IP_CACHE_TTL: num({
     default: 900,
     desc: 'Cache TTL for proxy IPs',
   }),
-  MANIFEST_CACHE_TTL: num({
-    default: 21600,
+  MANIFEST_CACHE_TTL: cacheTtls(21600)({
+    default: { '*': 21600 },
     desc: 'Cache TTL for manifest files',
   }),
   MANIFEST_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of manifest items to cache',
   }),
-  SUBTITLE_CACHE_TTL: num({
-    default: 300,
+  SUBTITLE_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for subtitle files',
   }),
   SUBTITLE_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of subtitle items to cache',
   }),
-  STREAM_CACHE_TTL: num({
-    default: -1,
+  STREAM_CACHE_TTL: cacheTtls(-1)({
+    default: { '*': -1 },
     desc: 'Cache TTL for stream files. If -1, no caching will be done.',
   }),
   STREAM_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of stream items to cache',
   }),
-  CATALOG_CACHE_TTL: num({
-    default: 300,
+  CATALOG_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for catalog files',
   }),
   CATALOG_CACHE_MAX_SIZE: num({
     default: 1000,
     desc: 'Max number of catalog items to cache',
   }),
-  META_CACHE_TTL: num({
-    default: 300,
+  META_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
   }),
   META_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of metadata items to cache',
   }),
-  ADDON_CATALOG_CACHE_TTL: num({
-    default: 300,
+  ADDON_CATALOG_CACHE_TTL: cacheTtls(300)({
+    default: { '*': 300 },
     desc: 'Cache TTL for addon catalog files',
   }),
   ADDON_CATALOG_CACHE_MAX_SIZE: num({
     default: undefined,
     desc: 'Max number of addon catalog items to cache',
   }),
-  RPDB_API_KEY_VALIDITY_CACHE_TTL: num({
+  POSTER_API_KEY_VALIDITY_CACHE_TTL: num({
     default: 604800, // 7 days
-    desc: 'Cache TTL for RPDB API key validity',
+    desc: 'Cache TTL for poster API key validity',
   }),
 
   PRECACHE_NEXT_EPISODE_MIN_INTERVAL: num({
     default: 86400, // 24 hours
     desc: 'Minimum interval for precaching the next episode of the current episode in seconds. i.e. the minimum wait before attempting to precache the same next episode again.',
+  }),
+  PRELOAD_MIN_INTERVAL: num({
+    default: 3600, // 1 hour
+    desc: 'Minimum interval between preload operations for the same item (type + id) per user in seconds. Set to 0 to disable the cooldown.',
+  }),
+  MAX_BACKGROUND_PINGS: num({
+    default: 2,
+    desc: 'Maximum number of streams that can be pinged in a single background operation (preload or multi-stream precache).',
+  }),
+  PRELOAD_STREAMS_CONCURRENCY: num({
+    default: 5,
+    desc: 'Concurrency limit for simultaneous stream preload requests.',
   }),
 
   // configuration settings
@@ -647,30 +927,85 @@ export const Env = cleanEnv(process.env, {
     default: 30,
     desc: 'Max number of keyword filters',
   }),
-  MAX_STREAM_EXPRESSION_FILTERS: num({
-    default: 30,
-    desc: 'Max number of condition filters',
+  MAX_STREAM_EXPRESSIONS: num({
+    default: 200,
+    desc: 'Max total number of stream expressions across all filter types (ranked, preferred, excluded, required, included)',
+  }),
+  MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS: num({
+    default: 50000,
+    desc: 'Max total character count across all stream expressions',
+  }),
+  MAX_NZB_FAILOVER_COUNT: num({
+    default: 5,
+    desc: 'Maximum number of NZB failover attempts a user can configure. Controls the upper bound for the nzbFailover.count setting.',
   }),
   MAX_GROUPS: num({
     default: 20,
     desc: 'Max number of groups',
   }),
+  MAX_MERGED_CATALOG_SOURCES: num({
+    default: 10,
+    desc: 'Max number of source catalogs in a single merged catalog',
+  }),
+  MAX_SEL_LENGTH: num({
+    default: 3000,
+    desc: 'Max length of stream expression language strings',
+  }),
+  MAX_FORMATTER_TEMPLATE_LENGTH: num({
+    default: 5000,
+    desc: 'Max length of formatter template strings',
+  }),
 
   ALLOWED_REGEX_PATTERNS: json<string[]>({
     default: [],
-    desc: 'Allowed regex patterns',
+    desc: '[DEPRECATED: use WHITELISTED_REGEX_PATTERNS] Allowed regex patterns',
   }),
   ALLOWED_REGEX_PATTERNS_URLS: json<string[]>({
     default: undefined,
-    desc: 'Comma separated list of allowed regex patterns URLs',
+    desc: '[DEPRECATED: use WHITELISTED_REGEX_PATTERNS_URLS] Comma separated list of allowed regex patterns URLs',
   }),
   ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL: num({
     default: 86400000,
-    desc: 'Interval for refreshing regex patterns from URLs in milliseconds',
+    desc: '[DEPRECATED: use WHITELISTED_SYNC_REFRESH_INTERVAL] Interval for refreshing regex patterns from URLs in milliseconds',
   }),
   ALLOWED_REGEX_PATTERNS_DESCRIPTION: str({
     default: undefined,
-    desc: 'Description of the allowed regex patterns',
+    desc: '[DEPRECATED: use WHITELISTED_REGEX_PATTERNS_DESCRIPTION] Description of the allowed regex patterns',
+  }),
+
+  WHITELISTED_REGEX_PATTERNS: json<string[]>({
+    default: undefined,
+    desc: 'Whitelisted regex patterns (JSON array of strings). Falls back to ALLOWED_REGEX_PATTERNS.',
+  }),
+  WHITELISTED_REGEX_PATTERNS_URLS: json<string[]>({
+    default: undefined,
+    desc: 'Whitelisted regex pattern sync URLs (JSON array of URL strings). Falls back to ALLOWED_REGEX_PATTERNS_URLS.',
+  }),
+  WHITELISTED_REGEX_PATTERNS_DESCRIPTION: str({
+    default: undefined,
+    desc: 'Description of the whitelisted regex patterns. Falls back to ALLOWED_REGEX_PATTERNS_DESCRIPTION.',
+  }),
+  WHITELISTED_SYNC_REFRESH_INTERVAL: num({
+    default: undefined,
+    desc: 'Refresh interval for synced URLs (regex and SEL) in seconds. Falls back to ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL (converted from ms to s). Default: 86400 (24h).',
+  }),
+  WHITELISTED_SEL_URLS: json<string[]>({
+    default: undefined,
+    desc: 'Whitelisted stream expression (SEL) sync URLs (JSON array of URL strings). Non-trusted users can only sync from these URLs.',
+  }),
+  SEL_SYNC_ACCESS: str({
+    default: 'trusted',
+    desc: 'Who can use SEL sync URLs. "all" = anyone can sync from any URL, "trusted" = only trusted users can sync from any URL (non-trusted users limited to WHITELISTED_SEL_URLS)',
+    choices: ['all', 'trusted'],
+  }),
+
+  TEMPLATE_URLS: json<string[]>({
+    default: [],
+    desc: 'Remote template URLs to fetch and cache locally (JSON array of URL strings). Templates are downloaded once and refreshed periodically.',
+  }),
+  TEMPLATE_REFRESH_INTERVAL: num({
+    default: 86400,
+    desc: 'Interval in seconds to refresh remote templates. Default: 86400 (24 hours). Set to 0 to disable automatic refresh.',
   }),
 
   MAX_TIMEOUT: num({
@@ -703,6 +1038,10 @@ export const Env = cleanEnv(process.env, {
     desc: 'Increased timeout for manifest requests',
   }),
 
+  BACKGROUND_RESOURCE_REQUESTS_ENABLED: bool({
+    default: true,
+    desc: 'Enable background resource requests',
+  }),
   BACKGROUND_RESOURCE_REQUEST_TIMEOUT: num({
     default: undefined,
     desc: 'Timeout for background resource requests, uses your maximum timeout if not set',
@@ -946,8 +1285,12 @@ export const Env = cleanEnv(process.env, {
   }),
 
   COMET_URL: urlOrUrlList({
-    default: ['https://comet.elfhosted.com'],
+    default: ['https://comet.feels.legal'],
     desc: 'Comet URL',
+  }),
+  COMET_PUBLIC_API_TOKEN: strOrStrList({
+    default: undefined,
+    desc: 'Comet public API token',
   }),
   FORCE_COMET_HOSTNAME: host({
     default: undefined,
@@ -969,6 +1312,20 @@ export const Env = cleanEnv(process.env, {
   DEFAULT_COMET_USER_AGENT: userAgent({
     default: undefined,
     desc: 'Default Comet user agent',
+  }),
+
+  // Meteor settings
+  METEOR_URL: urlOrUrlList({
+    default: ['https://meteorfortheweebs.midnightignite.me'],
+    desc: 'Meteor URL',
+  }),
+  DEFAULT_METEOR_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Meteor timeout',
+  }),
+  DEFAULT_METEOR_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Meteor user agent',
   }),
 
   // MediaFusion settings
@@ -1200,6 +1557,19 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default Debridio Watchtower user agent',
   }),
 
+  DEBRIDIO_IC4A_URL: url({
+    default: 'https://ic4a.lb.debridio.com',
+    desc: 'Debridio IC4A URL',
+  }),
+  DEFAULT_DEBRIDIO_IC4A_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Debridio IC4A timeout',
+  }),
+  DEFAULT_DEBRIDIO_IC4A_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Debridio IC4A user agent',
+  }),
+
   // StremThru Store settings
   STREMTHRU_STORE_URL: urlOrUrlList({
     default: ['https://stremthru.13377001.xyz/stremio/store'],
@@ -1268,7 +1638,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   SOOTIO_URL: urlOrUrlList({
-    default: ['https://sootio.elfhosted.com'],
+    default: ['https://sooti.click'],
     desc: 'Sootio URL',
   }),
   DEFAULT_SOOTIO_TIMEOUT: num({
@@ -1510,6 +1880,20 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default Argentina TV user agent',
   }),
 
+  // Brazuca Torrents settings
+  BRAZUCA_TORRENTS_URL: url({
+    default: 'https://94c8cb9f702d-brazuca-torrents.baby-beamup.club',
+    desc: 'Brazuca Torrents URL',
+  }),
+  DEFAULT_BRAZUCA_TORRENTS_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Brazuca Torrents timeout',
+  }),
+  DEFAULT_BRAZUCA_TORRENTS_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Brazuca Torrents user agent',
+  }),
+
   SUBDL_URL: url({
     default: 'https://subdl.strem.top',
     desc: 'SubDL URL',
@@ -1589,7 +1973,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   SUBHERO_URL: url({
-    default: 'https://subhero.onrender.com',
+    default: 'https://subhero.chromeknight.dev',
     desc: 'SubHero URL',
   }),
   DEFAULT_SUBHERO_TIMEOUT: num({
@@ -1706,6 +2090,10 @@ export const Env = cleanEnv(process.env, {
     default: 'https://stremthru.13377001.xyz',
     desc: 'Builtin StremThru URL',
   }),
+  TORBOX_USENET_VIA_STREMTHRU: bool({
+    default: false,
+    desc: 'Route TorBox entirely through StremThru for both torrent and usenet operations instead of using the TorBox API directly for usenet operations.',
+  }),
   BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL: num({
     default: 60 * 30, // 30 minutes
     desc: 'Builtin Debrid instant availability cache TTL',
@@ -1714,9 +2102,29 @@ export const Env = cleanEnv(process.env, {
     default: 60 * 60, // 1 hour
     desc: 'Builtin Debrid playback link cache TTL',
   }),
+  BUILTIN_DEBRID_ERROR_CACHE_TTL: time('s')({
+    default: 1 * 60 * 60, // 1 hour
+    desc: 'How long globally confirmed content-level failures (e.g. NZB or torrent download status = failed/invalid) are cached to prevent redundant retries across all users.',
+  }),
   BUILTIN_DEBRID_LIBRARY_CACHE_TTL: num({
-    default: 60 * 5, // 5 minutes
-    desc: 'Builtin Debrid NZB list cache TTL',
+    default: 60 * 60 * 24 * 7, // 7 days
+    desc: 'Builtin Debrid library list cache TTL (listMagnets/listNzbs)',
+  }),
+  BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD: num({
+    default: 60 * 10, // 10 minutes
+    desc: 'Time after which cached library data is considered stale and will be refreshed in the background while still serving the cached data (stale-while-revalidate)',
+  }),
+  BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT: num({
+    default: 1,
+    desc: 'Maximum number of items to fetch per page when listing library items (listMagnets/listNzbs) for StremThru. Max 500 for StremThru, 1000 for TorBox.',
+  }),
+  BUILTIN_DEBRID_LIBRARY_PAGE_SIZE: num({
+    default: 500,
+    desc: 'Maximum number of items to fetch per page when listing library items (listMagnets/listNzbs). Max 500 for StremThru, 1000 for TorBox.',
+  }),
+  BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL: bool({
+    default: true,
+    desc: 'Use torrent URLs instead of magnets for better private tracker integration',
   }),
   BUILTIN_DEBRID_METADATA_STORE: str({
     choices: ['redis', 'sql', 'memory'],
@@ -1731,9 +2139,27 @@ export const Env = cleanEnv(process.env, {
     default: 1 * 24 * 60 * 60, // 1 day
     desc: 'Builtin Debrid playback link validity',
   }),
+  BUILTIN_DOWNLOAD_POLL_INTERVAL: serviceTimeMap(
+    BUILTIN_DOWNLOAD_POLL_INTERVAL_DEFAULTS
+  )({
+    default: { ...BUILTIN_DOWNLOAD_POLL_INTERVAL_DEFAULTS },
+    desc: 'Comma-separated serviceId:<time> map for download poll intervals. Supports wildcard (*). Example: torbox:15s,nzbdav:3s,*:10s. If * is specified, per-service defaults are not applied.',
+  }),
+  BUILTIN_DOWNLOAD_MAX_WAIT_TIME: serviceTimeMap(
+    BUILTIN_DOWNLOAD_MAX_WAIT_TIME_DEFAULTS
+  )({
+    default: { ...BUILTIN_DOWNLOAD_MAX_WAIT_TIME_DEFAULTS },
+    desc: 'Comma-separated serviceId:<time> map for maximum wait times before timeout. Supports wildcard (*). Example: torbox:3m,nzbdav:90s,*:2m. If * is specified, per-service defaults are not applied.',
+  }),
   BUILTIN_SCRAPE_WITH_ALL_TITLES: boolOrList({
     default: false,
     desc: 'Whether to use alternative titles during scraping for built-in addons. Set to true, false, or a comma separated list of hostnames',
+  }),
+  BUILTIN_SCRAPE_TITLE_LANGUAGES: titleLangMap<
+    Record<string, string[]> | undefined
+  >({
+    default: undefined,
+    desc: 'Fine-grained control over which titles are used when scraping built-in addons. Comma-separated list of domain:spec entries, where domain is a hostname or * for the default, and spec is one of: default (primary title), all (all titles up to limit), original (TMDB original-language titles), or an ISO 639-1 code (e.g. de, fr). Takes precedence over BUILTIN_SCRAPE_WITH_ALL_TITLES. Example: *:default,original,germanindexer.com:de,default',
   }),
   BUILTIN_SCRAPE_TITLE_LIMIT: num({
     default: 3,
@@ -1827,13 +2253,17 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Builtin Torznab/Newznab user agent',
   }),
+  BUILTIN_NAB_HTTP_PROXY: httpProxyMap(['torznab', 'newznab'])({
+    default: undefined,
+    desc: 'HTTP proxy for Torzab/Newznab indexers, overrides ADDON_PROXY and ADDON_PROXY_CONFIG',
+  }),
   BUILTIN_NAB_MAX_PAGES: num({
     default: 5,
     desc: 'Maximum number of pages to fetch from Torznab/Newznab indexers during pagination',
   }),
 
   BUILTIN_ZILEAN_URL: url({
-    default: 'https://zilean.elfhosted.com',
+    default: 'https://zileanfortheweebs.midnightignite.me',
     desc: 'Builtin Zilean URL',
   }),
   BUILTIN_DEFAULT_ZILEAN_TIMEOUT: num({
@@ -1857,6 +2287,15 @@ export const Env = cleanEnv(process.env, {
   BUILTIN_DEFAULT_NEKOBT_TIMEOUT: num({
     default: undefined,
     desc: 'Builtin NekoBT timeout',
+  }),
+
+  BUILTIN_SEADEX_URL: url({
+    default: 'https://releases.moe',
+    desc: 'Builtin SeaDex URL',
+  }),
+  BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL: num({
+    default: 24 * 60 * 60, // 24 hours
+    desc: 'Builtin SeaDex dataset refresh interval in seconds',
   }),
 
   BUILTIN_BITMAGNET_URL: url({
@@ -1931,6 +2370,10 @@ export const Env = cleanEnv(process.env, {
     default: 30000, // 30 seconds
     desc: 'Builtin Knaben Search timeout',
   }),
+  BUILTIN_KNABEN_DOWNLOAD_TORRENTS: bool({
+    default: true,
+    desc: 'Whether to attempt downloading torrents for results from Knaben without an infohash. Set to false to skip results that require downloading the .torrent file',
+  }),
   BUILTIN_KNABEN_SEARCH_CACHE_TTL: num({
     default: 7 * 24 * 60 * 60, // 7 days
     desc: 'Builtin Knaben Search cache TTL',
@@ -1970,6 +2413,28 @@ export const Env = cleanEnv(process.env, {
     default: 5,
     desc: 'The maximum number of pages to fetch.',
   }),
+
+  BUILTIN_EZTV_URL: url({
+    default: 'https://eztvx.to',
+    desc: 'Builtin EZTV API URL',
+  }),
+  BUILTIN_DEFAULT_EZTV_TIMEOUT: num({
+    default: undefined,
+    desc: 'Builtin EZTV timeout',
+  }),
+  BUILTIN_EZTV_SEARCH_TIMEOUT: num({
+    default: 30000, // 30 seconds
+    desc: 'Builtin EZTV Search timeout',
+  }),
+  BUILTIN_EZTV_SEARCH_CACHE_TTL: num({
+    default: 7 * 24 * 60 * 60, // 7 days
+    desc: 'Builtin EZTV Search cache TTL',
+  }),
+  BUILTIN_EZTV_MAX_PAGES: num({
+    default: 5,
+    desc: 'Maximum number of pages to fetch for EZTV searches',
+  }),
+
   // Rate limiting settings
   DISABLE_RATE_LIMITS: bool({
     default: false,

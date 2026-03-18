@@ -108,12 +108,13 @@ export class SubHeroPreset extends Preset {
     return {
       ID: 'subhero',
       NAME: 'SubHero',
-      LOGO: `https://images.icon-icons.com/3606/PNG/512/sculpture_statue_texture_futuristic_art_geometry_organic_abstract_shape_explode_shae_icon_226539.png`,
+      LOGO: `https://subhero.chromeknight.dev/static/logo4x4.png`,
       URL: Env.SUBHERO_URL,
       TIMEOUT: Env.DEFAULT_SUBHERO_TIMEOUT || Env.DEFAULT_TIMEOUT,
       USER_AGENT: Env.DEFAULT_SUBHERO_USER_AGENT || Env.DEFAULT_USER_AGENT,
       SUPPORTED_SERVICES: [],
-      DESCRIPTION: 'Subtitles provided & scraped by Wyzie API',
+      DESCRIPTION:
+        'Subtitles with language filtering, caching, file format conversion and more. Powered by Wyzie API.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,

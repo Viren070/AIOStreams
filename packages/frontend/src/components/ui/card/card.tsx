@@ -79,15 +79,15 @@ CardTitle.displayName = 'CardTitle';
  * CardDescription
  * -----------------------------------------------------------------------------------------------*/
 
-export type CardDescriptionProps = React.ComponentPropsWithoutRef<'p'>;
+export type CardDescriptionProps = React.ComponentPropsWithoutRef<'div'>;
 
 export const CardDescription = React.forwardRef<
-  HTMLParagraphElement,
+  HTMLDivElement,
   CardDescriptionProps
 >((props, ref) => {
   const { className, ...rest } = props;
   return (
-    <p
+    <div
       ref={ref}
       className={cn(CardAnatomy.description(), className)}
       {...rest}

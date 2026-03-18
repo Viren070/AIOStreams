@@ -213,4 +213,50 @@ router.delete('/', async (req, res, next) => {
     }
   }
 });
+
+
+// change password
+router.post('/password', async (req, res, next) => {
+  const { uuid, currentPassword, newPassword } = {
+    ...req.body,
+    uuid: req.uuid || req.body.uuid,
+  };
+
+  if (!uuid || !currentPassword || !newPassword) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'uuid, currentPassword and newPassword are required'
+      )
+    );
+    return;
+  }
+
+  try {
+    const { encryptedPassword } = await UserRepository.changePassword(
+      uuid,
+      currentPassword,
+      newPassword
+    );
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Password changed successfully',
+        data: {
+          encryptedPassword,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
 export default router;

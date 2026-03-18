@@ -113,11 +113,15 @@ export class NuvioStreamsPreset extends Preset {
       },
       {
         value: 'vidzee',
-        label: 'Vidzee',
+        label: 'VidZee',
       },
       {
         value: 'vidsrc',
-        label: 'Vidsrc',
+        label: 'VidSrc',
+      },
+      {
+        value: 'vixsrc',
+        label: 'VixSrc',
       },
       {
         value: 'mp4hydra',

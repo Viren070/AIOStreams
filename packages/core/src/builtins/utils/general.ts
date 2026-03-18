@@ -4,6 +4,8 @@ import { Env } from '../../utils/env.js';
 import { createLogger } from '../../utils/index.js';
 import pLimit from 'p-limit';
 
+const logger = createLogger('builtin:scrape');
+
 export const createQueryLimit = () =>
   pLimit(Env.BUILTIN_SCRAPE_QUERY_CONCURRENCY);
 
@@ -25,20 +27,121 @@ export function calculateAbsoluteEpisode(
 
 /**
  * Determines whether to use all titles for scraping based on the environment variable.
- *
- * Env.BUILTIN_SCRAPE_WITH_ALL_TITLES can be:
- *   - an array: in which case, if the hostname of the given URL is in the array, returns true.
- *   - a boolean: returns its truthiness.
- *   - undefined: returns false.
- *
- * @param url - The URL whose hostname is checked against the array (if applicable).
- * @returns {boolean} - True if all titles should be used for the given URL, false otherwise.
+ * @deprecated Use getTitleLanguagesForUrl instead.
  */
-export function useAllTitles(url: string): boolean {
+function useAllTitles(url: string): boolean {
   if (Array.isArray(Env.BUILTIN_SCRAPE_WITH_ALL_TITLES)) {
     return Env.BUILTIN_SCRAPE_WITH_ALL_TITLES.includes(new URL(url).hostname);
   }
   return !!Env.BUILTIN_SCRAPE_WITH_ALL_TITLES;
+}
+
+/**
+ * Extracts indexer name(s) from a URL using known aggregator URL patterns:
+ *   - Jackett:   /api/v2.0/indexers/<name>/results/torznab/...
+ *   - NZBHydra2: ?indexers=<name1>,<name2>,...
+ *
+ * Returns an array of lowercase indexer names, or an empty array if none found.
+ */
+function extractIndexerNames(url: string): string[] {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return [];
+  }
+
+  // Jackett: /api/v2.0/indexers/<name>/results/...
+  const jackettMatch = parsed.pathname.match(
+    /\/api\/v2\.0\/indexers\/([^/]+)\/results\//i
+  );
+  if (jackettMatch) {
+    return [decodeURIComponent(jackettMatch[1]).toLowerCase()];
+  }
+
+  // NZBHydra2: ?indexers=name1,name2,...
+  const indexersParam = parsed.searchParams.get('indexers');
+  if (indexersParam) {
+    return indexersParam
+      .split(',')
+      .map((n) => n.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+/**
+ * Returns the list of title language specs to use when building scrape queries
+ * for the given URL. Consults BUILTIN_SCRAPE_TITLE_LANGUAGES first (new system),
+ * then falls back to BUILTIN_SCRAPE_WITH_ALL_TITLES (legacy).
+ *
+ * Returned specs are resolved in buildQueries:
+ *   - `default`  – primary (service-level) title
+ *   - `all`      – all titles up to BUILTIN_SCRAPE_TITLE_LIMIT
+ *   - `original` – TMDB original-language titles
+ *   - ISO 639-1  – titles tagged with that language (e.g. 'de', 'fr')
+ *
+ * Match priority (highest first):
+ *   exact hostname > indexer name (Jackett/Hydra) > addon ID > wildcard (*)
+ *
+ * @param url - The URL whose hostname is matched against the config.
+ * @param addonId - Optional addon ID (e.g. 'newznab', 'knaben') checked after indexer names, before wildcard.
+ */
+export function getTitleLanguagesForUrl(
+  url: string,
+  addonId?: string
+): string[] {
+  const config = Env.BUILTIN_SCRAPE_TITLE_LANGUAGES as
+    | Record<string, string[]>
+    | undefined;
+
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    hostname = url;
+  }
+
+  let specs: string[] | undefined;
+  let source: string;
+
+  if (config !== undefined) {
+    if (config[hostname]?.length) {
+      specs = config[hostname];
+      source = 'hostname match';
+    } else {
+      const indexerNames = extractIndexerNames(url);
+      const matchedIndexer = indexerNames.find((n) => config[n]?.length);
+      if (matchedIndexer) {
+        specs = config[matchedIndexer];
+        source = `indexer name match (${matchedIndexer})`;
+      } else if (addonId && config[addonId]?.length) {
+        specs = config[addonId];
+        source = 'addon ID match';
+      } else if (config['*']?.length) {
+        specs = config['*'];
+        source = 'wildcard (*)';
+      } else {
+        source = 'legacy fallback (no matching entry)';
+      }
+    }
+  } else {
+    source = 'legacy fallback (BUILTIN_SCRAPE_TITLE_LANGUAGES not set)';
+  }
+
+  if (!specs) {
+    specs = useAllTitles(url) ? ['all'] : ['default'];
+  }
+
+  logger.debug(`Title language spec resolved`, {
+    hostname,
+    addonId,
+    specs,
+    source,
+  });
+
+  return specs;
 }
 
 export const bgRefreshCache = Cache.getInstance<string, number>(
