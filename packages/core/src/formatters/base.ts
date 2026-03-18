@@ -809,7 +809,8 @@ export abstract class BaseFormatter {
         result = this.applySingleModifier(
           result,
           lastModMatched,
-          fullStringModifiers
+          fullStringModifiers,
+          parseValue
         );
         if (result === undefined) {
           let getErrorResult = () => {
@@ -851,7 +852,8 @@ export abstract class BaseFormatter {
     mod: string,
     fullStringModifiers: {
       mod_tzlocale: string | undefined;
-    }
+    },
+    parseValue?: ParseValue
   ): string | boolean | any[] | undefined {
     const _mod = mod;
     mod = mod.toLowerCase();
@@ -949,8 +951,34 @@ export abstract class BaseFormatter {
             new RegExp(`${findStartChar}\\s*,\\s*${findEndChar}`)
           );
 
-          if (!shouldBeUndefined && key && replaceKey !== undefined)
-            return variable.replaceAll(key, replaceKey);
+          if (
+            shouldBeUndefined === undefined &&
+            key &&
+            replaceKey !== undefined
+          ) {
+            let resolvedKey = key;
+            if (key.startsWith('{') && key.endsWith('}') && parseValue) {
+              // When the first argument to replace(...) is a {variable} expression, resolve it
+              // before using it as the search key. For example:
+              //   replace({config.addonName}, 'NewName')
+              // will first resolve {config.addonName} to its current value and then replace all
+              // occurrences of that resolved value with 'NewName'.
+              const innerVar = resolvedKey.slice(1, -1);
+              const resolvedFn = this.parseModifiedVariable(
+                innerVar,
+                fullStringModifiers
+              );
+              const resolved = resolvedFn(parseValue);
+              if (resolved.error !== undefined || resolved.result == null) {
+                return variable;
+              }
+              resolvedKey = String(resolved.result);
+              if (resolvedKey.length === 0) {
+                return variable; // don't replace empty string keys to avoid replacing every character
+              }
+            }
+            return variable.replaceAll(resolvedKey, replaceKey);
+          }
         }
         case mod.startsWith('remove(') && mod.endsWith(')'): {
           const content = _mod.substring(7, _mod.length - 1);
