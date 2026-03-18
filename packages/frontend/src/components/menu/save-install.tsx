@@ -117,7 +117,6 @@ function Content() {
   const [installProtocol, setInstallProtocol] = React.useState('stremio');
   const [addonPasswordModalOpen, setAddonPasswordModalOpen] =
     React.useState(false);
-  const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
     description: `Are you sure you want to reset your configuration? This will clear all your settings${uuid ? ` but keep your user account` : ''}. This action cannot be undone.`,

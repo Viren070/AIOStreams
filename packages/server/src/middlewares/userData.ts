@@ -24,12 +24,6 @@ const VALID_RESOURCES = [
   'streams',
 ];
 
-interface UserDataParams {
-  uuid?: string;
-  encryptedPassword?: string;
-  // match Express.Request<ParamsDictionary> to keep middleware flexible
-  [key: string]: string | string[] | undefined;
-}
 
 export const userDataMiddleware = async (
   req: Request<UserDataParams>,
