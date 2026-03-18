@@ -28,7 +28,8 @@ export class OpenPosterDB extends BasePosterService {
   }
 
   public async validateApiKey(): Promise<boolean> {
-    const cached = await this.apiKeyValidationCache.get(this.apiKey);
+    const cacheKey = `${this.baseUrl}:${this.apiKey}`;
+    const cached = await this.apiKeyValidationCache.get(cacheKey);
     if (cached) {
       return cached;
     }
@@ -52,7 +53,7 @@ export class OpenPosterDB extends BasePosterService {
     }
 
     this.apiKeyValidationCache.set(
-      this.apiKey,
+      cacheKey,
       data.valid,
       Env.POSTER_API_KEY_VALIDITY_CACHE_TTL
     );
