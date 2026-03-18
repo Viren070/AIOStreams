@@ -185,7 +185,6 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         ...(result.newznab?.language
           ? parseNabLanguages(result.newznab.language)
           : []),
-        ...(result.newznab?.subs ? parseNabLanguages(result.newznab.subs) : []),
       ];
       const nzb: NZB = {
         confirmed: meta.searchType === 'id',
