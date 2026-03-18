@@ -55,7 +55,7 @@ export class OpenPosterDB extends BasePosterService {
   }
 
   protected buildPosterUrl(idType: string, idValue: string): string {
-    return `${this.baseUrl}/${this.apiKey}/${idType}/poster-default/${idValue}.jpg?fallback=true`;
+    return `${this.baseUrl}/${this.apiKey}/${idType}/poster-default/${idValue}.jpg`;
   }
 
   protected appendRedirectParams(url: URL): void {
