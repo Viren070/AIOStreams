@@ -960,10 +960,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         filename: torrentOrNzb.file.name,
         folderSize: torrentOrNzb.size,
       },
-      ...(torrentOrNzb.languages &&
-        torrentOrNzb.languages.length > 0 && {
-          languages: torrentOrNzb.languages,
-        }),
+      parsedMediaInfo: torrentOrNzb.parsedMediaInfo,
     };
   }
 

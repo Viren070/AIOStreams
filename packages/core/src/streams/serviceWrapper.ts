@@ -6,6 +6,7 @@ import {
   getSimpleTextHash,
   encryptString,
   BuiltinServiceId,
+  mergeParsedMediaInfos,
 } from '../utils/index.js';
 import {
   Torrent,
@@ -476,6 +477,35 @@ async function buildDebridStreams(
           private: isPrivate,
         },
       };
+
+      const parsedMediaInfo = mergeParsedMediaInfos(
+        original?.parsedFile,
+        result.parsedMediaInfo
+      );
+      if (result.parsedMediaInfo && parsedMediaInfo) {
+        debridStream.parsedFile = {
+          ...debridStream.parsedFile,
+          ...parsedMediaInfo,
+          languages: parsedMediaInfo.languages?.length
+            ? parsedMediaInfo.languages
+            : (debridStream.parsedFile?.languages ?? []),
+          subtitles: parsedMediaInfo.subtitles?.length
+            ? parsedMediaInfo.subtitles
+            : (debridStream.parsedFile?.subtitles ?? []),
+          audioChannels: parsedMediaInfo.audioChannels?.length
+            ? parsedMediaInfo.audioChannels
+            : (debridStream.parsedFile?.audioChannels ?? []),
+          visualTags: parsedMediaInfo.visualTags?.length
+            ? parsedMediaInfo.visualTags
+            : (debridStream.parsedFile?.visualTags ?? []),
+          audioTags: parsedMediaInfo.audioTags?.length
+            ? parsedMediaInfo.audioTags
+            : (debridStream.parsedFile?.audioTags ?? []),
+        };
+        debridStream.duration =
+          parsedMediaInfo.duration ?? debridStream.duration;
+        debridStream.bitrate = parsedMediaInfo.bitrate ?? debridStream.bitrate;
+      }
 
       // if folder size within 5% of file size, remove folder size to avoid redundant information.
       if (

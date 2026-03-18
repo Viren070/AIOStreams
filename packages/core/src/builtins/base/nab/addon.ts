@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { ParsedId } from '../../../utils/id-parser.js';
-import { Env, getTimeTakenSincePoint } from '../../../utils/index.js';
+import {
+  Env,
+  getTimeTakenSincePoint,
+  normaliseLanguage,
+  normaliseParsedMediaInfo,
+  ParsedMediaInfo,
+} from '../../../utils/index.js';
 import { Logger } from 'winston';
 import {
   BaseDebridAddon,
@@ -17,7 +23,6 @@ import {
   createQueryLimit,
   getTitleLanguagesForUrl,
 } from '../../utils/general.js';
-import { LANGUAGES } from '../../../utils/constants.js';
 
 /**
  * Parse a comma-separated language string from a newznab/torznab attribute
@@ -27,13 +32,29 @@ export function parseNabLanguages(
   value: string | number | boolean | undefined
 ): string[] {
   if (typeof value !== 'string' || !value) return [];
+
+  const seen = new Set<string>();
   return value
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean)
-    .filter((v): v is (typeof LANGUAGES)[number] => {
-      return LANGUAGES.includes(v as any);
+    .map((v) => normaliseLanguage(v))
+    .filter((v): v is string => !!v)
+    .filter((v) => {
+      if (seen.has(v)) return false;
+      seen.add(v);
+      return true;
     });
+}
+
+export function parseNabParsedFileInfo(args: {
+  audioLanguages?: string | number | boolean;
+  subtitleLanguages?: string | number | boolean;
+}): ParsedMediaInfo | undefined {
+  return normaliseParsedMediaInfo({
+    languages: parseNabLanguages(args.audioLanguages),
+    subtitles: parseNabLanguages(args.subtitleLanguages),
+  });
 }
 
 export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({

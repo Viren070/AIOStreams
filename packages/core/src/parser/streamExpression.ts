@@ -709,6 +709,36 @@ export abstract class StreamExpressionEngine {
       );
     };
 
+    this.parser.functions.subtitle = function (
+      streams: ParsedStream[],
+      ...subtitles: string[]
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        subtitles.length === 0 ||
+        subtitles.some((s) => typeof s !== 'string')
+      ) {
+        throw new Error(
+          'You must provide one or more subtitle string parameters'
+        );
+      }
+      return streams.filter((stream) =>
+        subtitles
+          .map((s) => s.toLowerCase())
+          .some((s) =>
+            (stream.parsedFile?.subtitles?.length
+              ? stream.parsedFile.subtitles
+              : ['Unknown']
+            )
+              ?.map((sub) => sub.toLowerCase())
+              .includes(s)
+          )
+      );
+    };
+
+    this.parser.functions.subtitles = this.parser.functions.subtitle;
+
     this.parser.functions.seeders = function (
       streams: ParsedStream[],
       minSeeders?: number,
@@ -1226,9 +1256,15 @@ export abstract class StreamExpressionEngine {
                 ? stream.parsedFile.languages
                 : ['Unknown']
             ).map((v) => v.toLowerCase());
+          case 'subtitle':
+            return (
+              stream.parsedFile?.subtitles?.length
+                ? stream.parsedFile.subtitles
+                : ['Unknown']
+            ).map((v) => v.toLowerCase());
           default:
             throw new Error(
-              `perGroup: unsupported attribute '${attribute}'. Supported: resolution, quality, encode, type, service, indexer, releaseGroup, visualTag, audioTag, audioChannel, language`
+              `perGroup: unsupported attribute '${attribute}'. Supported: resolution, quality, encode, type, service, indexer, releaseGroup, visualTag, audioTag, audioChannel, language, subtitle`
             );
         }
       };
@@ -1368,6 +1404,7 @@ export abstract class StreamExpressionEngine {
         audioTags: ['AAC'],
         audioChannels: ['2.0'],
         languages: ['English'],
+        subtitles: [],
       },
       size: 1073741824, // 1GB in bytes
       folderSize: 2147483648, // 2GB in bytes

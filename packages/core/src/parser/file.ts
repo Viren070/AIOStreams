@@ -169,6 +169,7 @@ class FileParser {
       resolution,
       quality,
       languages,
+      subtitles: [],
       encode,
       audioChannels,
       audioTags,

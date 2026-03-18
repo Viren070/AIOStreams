@@ -5,13 +5,55 @@ import {
   Resource,
   Stream,
   ParsedStream,
+  ParsedFile,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { Env, SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
+import { arrayMerge } from '../parser/merge.js';
 
 export class TorrentioParser extends StreamParser {
+  private getLastDescriptionLine(stream: Stream): string {
+    const description = stream.description || '';
+    const lines = description
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return lines[lines.length - 1] || '';
+  }
+
+  private hasMultiSubsMarker(stream: Stream): boolean {
+    return this.getLastDescriptionLine(stream).includes('Multi Subs');
+  }
+
+  private getMultiSubsSubtitleLanguages(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string[] {
+    if (!this.hasMultiSubsMarker(stream)) {
+      return [];
+    }
+
+    const lastLine = this.getLastDescriptionLine(stream);
+    const markerIndex = lastLine.indexOf('Multi Subs');
+    if (markerIndex === -1) {
+      return [];
+    }
+
+    const segment = lastLine.slice(markerIndex);
+    const subtitleLanguages = super.getLanguages(
+      {
+        ...stream,
+        description: segment,
+        name: segment,
+      },
+      currentParsedStream
+    );
+
+    return [...new Set(subtitleLanguages)];
+  }
+
   override getFolder(stream: Stream): string | undefined {
     const description = stream.description || stream.title;
     if (!description) {
@@ -43,10 +85,27 @@ export class TorrentioParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string[] {
-    if (stream.description?.includes('Multi Subs')) {
+    if (this.hasMultiSubsMarker(stream)) {
       return [];
     }
     return super.getLanguages(stream, currentParsedStream);
+  }
+
+  protected override getParsedFile(
+    stream: Stream,
+    parsedStream: ParsedStream
+  ): ParsedFile | undefined {
+    const parsedFile = super.getParsedFile(stream, parsedStream);
+    if (!parsedFile) {
+      return undefined;
+    }
+
+    const subtitles = this.getMultiSubsSubtitleLanguages(stream, parsedStream);
+    if (subtitles.length > 0) {
+      parsedFile.subtitles = arrayMerge(parsedFile.subtitles, subtitles);
+    }
+
+    return parsedFile;
   }
 }
 

@@ -330,11 +330,14 @@ export class StremThruService
           size: Math.round(
             item.files.reduce((acc, file) => acc + file.size, 0)
           ),
-          files: item.files.map((file) => ({
-            name: file.name,
-            size: file.size,
-            index: file.index,
-          })),
+          files: item.files.map((file) => {
+            return {
+              name: file.name,
+              size: file.size,
+              index: file.index,
+              mediaInfo: (file as any).media_info,
+            };
+          }),
         }));
 
         newResults.forEach((item) => {

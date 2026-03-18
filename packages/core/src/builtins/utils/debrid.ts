@@ -2,6 +2,8 @@ import {
   BuiltinServiceId,
   createLogger,
   getTimeTakenSincePoint,
+  mergeParsedMediaInfos,
+  parseMediaInfo,
 } from '../../utils/index.js';
 import {
   BuiltinDebridServices,
@@ -369,12 +371,18 @@ async function processTorrentsForDebridService(
       : { name: torrent.title, size: torrent.size, index: -1 };
 
     if (file) {
+      const parsedMediaInfo = mergeParsedMediaInfos(
+        parseMediaInfo(file.mediaInfo),
+        torrent.parsedMediaInfo
+      );
+
       results.push({
         ...torrent,
         title: torrent.title ?? magnetCheckResult?.name,
         size: magnetCheckResult?.size || torrent.size,
         indexer: torrent.library ? undefined : torrent.indexer,
         file,
+        parsedMediaInfo,
         service: {
           id: service.id,
           cached:

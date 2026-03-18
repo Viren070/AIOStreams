@@ -40,6 +40,7 @@ function richerParsedFile(
     'audioTags',
     'audioChannels',
     'languages',
+    'subtitles',
     'seasonPack',
   ];
   const fileParsedRichness = importantFields.reduce(
@@ -113,6 +114,7 @@ export function mergeParsedFiles(
       fileParsed?.audioChannels
     ),
     languages: arrayMerge(folderParsed?.languages, fileParsed?.languages),
+    subtitles: arrayMerge(folderParsed?.subtitles, fileParsed?.subtitles),
     subbed: fileParsed?.subbed || folderParsed?.subbed || false,
     dubbed: fileParsed?.dubbed || folderParsed?.dubbed || false,
     seasonPack,

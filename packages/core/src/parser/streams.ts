@@ -470,7 +470,11 @@ class StreamParser {
     _: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
-    if (currentParsedStream.size && currentParsedStream.duration) {
+    if (
+      currentParsedStream.size &&
+      currentParsedStream.duration &&
+      !currentParsedStream.bitrate
+    ) {
       const sizeBits = currentParsedStream.size * 8;
       const durationSeconds = currentParsedStream.duration / 1000;
       if (durationSeconds > 0) {

@@ -11,7 +11,7 @@ import {
   BaseNabAddon,
   NabAddonConfigSchema,
   NabAddonConfig,
-  parseNabLanguages,
+  parseNabParsedFileInfo,
 } from '../base/nab/addon.js';
 
 const logger = createLogger('torznab');
@@ -60,12 +60,10 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
       if (seenTorrents.has(infoHash ?? downloadUrl!)) continue;
       seenTorrents.add(infoHash ?? downloadUrl!);
 
-      const languages = [
-        ...(result.torznab?.language
-          ? parseNabLanguages(result.torznab.language)
-          : []),
-        ...(result.torznab?.subs ? parseNabLanguages(result.torznab.subs) : []),
-      ];
+      const parsedMediaInfo = parseNabParsedFileInfo({
+        audioLanguages: result.torznab?.language,
+        subtitleLanguages: result.torznab?.subs,
+      });
 
       torrents.push({
         confirmed: meta.searchType === 'id',
@@ -89,10 +87,11 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
           result.size ??
           (result.torznab?.size ? Number(result.torznab.size) : 0),
         type: 'torrent',
-        private: typeof result?.type === 'string'
-          ? result?.type === 'private'
-          : undefined,
-        ...(languages.length > 0 && { languages }),
+        private:
+          typeof result?.type === 'string'
+            ? result?.type === 'private'
+            : undefined,
+        parsedMediaInfo,
       });
     }
 

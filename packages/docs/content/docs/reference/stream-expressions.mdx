@@ -186,10 +186,11 @@ Groups streams by an attribute, keeps up to **`n`** streams from each group, the
 | `audioTag`     | Audio format tag (`Atmos`, `DTS-HD MA`, …)     |
 | `audioChannel` | Audio channel layout (`5.1`, `7.1`, …)         |
 | `language`     | Audio language (`English`, `Japanese`, …)      |
+| `subtitle`     | Subtitle language (`English`, `Japanese`, …)   |
 
 Streams with no value for the chosen attribute are bucketed under `'Unknown'` (or `'none'` for `service`).
 
-For multi-value attributes (`visualTag`, `audioTag`, `audioChannel`, `language`) a stream is assigned to the **first** group key that matches the `filterValues` list, or to its first value when no filter is specified. A stream is never included more than once in the output.
+For multi-value attributes (`visualTag`, `audioTag`, `audioChannel`, `language`, `subtitle`) a stream is assigned to the **first** group key that matches the `filterValues` list, or to its first value when no filter is specified. A stream is never included more than once in the output.
 
 **How interleaving works:**
 
@@ -332,6 +333,17 @@ Filter by audio language (e.g. `'English'`, `'Spanish'`).
 
 ```
 language(streams, 'English')
+```
+
+---
+
+#### `subtitle()` / `subtitles()`
+
+Filter by subtitle language (e.g. `'English'`, `'Spanish'`).
+
+```
+subtitle(streams, 'English')
+subtitles(streams, 'English')
 ```
 
 ---

@@ -14,7 +14,7 @@ import {
   BaseNabAddon,
   NabAddonConfigSchema,
   NabAddonConfig,
-  parseNabLanguages,
+  parseNabParsedFileInfo,
 } from '../base/nab/addon.js';
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 import type { BuiltinServiceId } from '../../utils/index.js';
@@ -181,12 +181,10 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         Math.abs(new Date().getTime() - new Date(date).getTime()) /
           (1000 * 60 * 60)
       );
-      const languages = [
-        ...(result.newznab?.language
-          ? parseNabLanguages(result.newznab.language)
-          : []),
-        ...(result.newznab?.subs ? parseNabLanguages(result.newznab.subs) : []),
-      ];
+      const parsedMediaInfo = parseNabParsedFileInfo({
+        audioLanguages: result.newznab?.language,
+        subtitleLanguages: result.newznab?.subs,
+      });
       const nzb: NZB = {
         confirmed: meta.searchType === 'id',
         hash: md5,
@@ -202,7 +200,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           enclosure?.length ??
           0,
         type: 'usenet',
-        ...(languages.length > 0 && { languages }),
+        parsedMediaInfo,
       };
 
       if (zyclopsHealth) {

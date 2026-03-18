@@ -837,8 +837,6 @@ export class AnimeDatabase {
       return {};
     }
 
-    logger.debug(`Detailed mappings: ${JSON.stringify(mappingsList, null, 2)}`);
-
     if (mappingsList.length === 1) {
       return {
         mappings: mappingsList[0],

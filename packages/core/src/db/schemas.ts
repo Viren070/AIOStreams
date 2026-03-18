@@ -885,6 +885,7 @@ export const ParsedFileSchema = z.object({
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
   languages: z.array(z.string()),
+  subtitles: z.array(z.string()).optional(),
   subbed: z.boolean().optional(),
   dubbed: z.boolean().optional(),
   title: z.string().optional(),
@@ -965,7 +966,9 @@ export const ParsedStreamSchema = z.object({
       cached: z.boolean(),
     })
     .optional(),
+  /**Duration in milliseconds */
   duration: z.number().optional(),
+  /**Bitrate in bps */
   bitrate: z.number().optional(),
   library: z.boolean().optional(),
   seadex: z

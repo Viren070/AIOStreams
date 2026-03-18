@@ -42,6 +42,7 @@ Modifiers are chained with `::`:
 | `{stream.quality}`                 | string   | Quality tag (e.g. `Bluray`, `WEB-DL`)                                     |
 | `{stream.resolution}`              | string   | Video resolution (e.g. `1080p`, `2160p`)                                  |
 | `{stream.languages}`               | string[] | Available audio languages                                                 |
+| `{stream.subtitles}`               | string[] | Available subtitle languages                                              |
 | `{stream.subbed}`                  | boolean  | Whether the release has subtitles                                         |
 | `{stream.dubbed}`                  | boolean  | Whether the release is dubbed                                             |
 | `{stream.seeders}`                 | number   | Torrent seeder count                                                      |
@@ -53,12 +54,19 @@ Modifiers are chained with `::`:
 | `{stream.infoHash}`                | string   | Torrent info hash                                                         |
 | `{stream.message}`                 | string   | Additional status message                                                 |
 | `{stream.languageEmojis}`          | string[] | Languages as emoji flags                                                  |
+| `{stream.subtitleEmojis}`          | string[] | Subtitles as emoji flags                                                  |
 | `{stream.languageCodes}`           | string[] | Languages as ISO 639 codes                                                |
+| `{stream.subtitleCodes}`           | string[] | Subtitles as ISO 639 codes                                                |
 | `{stream.smallLanguageCodes}`      | string[] | Languages as small-caps codes                                             |
+| `{stream.smallSubtitleCodes}`      | string[] | Subtitles as small-caps codes                                             |
 | `{stream.uLanguages}`              | string[] | Languages also in your language settings                                  |
+| `{stream.uSubtitles}`              | string[] | Subtitles also in your language settings                                  |
 | `{stream.uLanguageEmojis}`         | string[] | Same, as emoji flags                                                      |
+| `{stream.uSubtitleEmojis}`         | string[] | Same (subtitles), as emoji flags                                          |
 | `{stream.uLanguageCodes}`          | string[] | Same, as ISO 639 codes                                                    |
+| `{stream.uSubtitleCodes}`          | string[] | Same (subtitles), as ISO 639 codes                                        |
 | `{stream.uSmallLanguageCodes}`     | string[] | Same, as small-caps codes                                                 |
+| `{stream.uSmallSubtitleCodes}`     | string[] | Same (subtitles), as small-caps codes                                     |
 | `{stream.visualTags}`              | string[] | Visual tags (e.g. `HDR`, `DV`, `HDR10`)                                   |
 | `{stream.audioTags}`               | string[] | Audio tags (e.g. `Atmos`, `DTS-HD MA`)                                    |
 | `{stream.audioChannels}`           | string[] | Detected audio channels (e.g. `5.1`)                                      |

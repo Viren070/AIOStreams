@@ -8,6 +8,7 @@ import {
   getSimpleTextHash,
   encryptString,
   toUrlSafeBase64,
+  ParsedMediaInfo,
 } from '../utils/index.js';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -136,7 +137,7 @@ interface BaseFile {
   indexer?: string;
   seeders?: number;
   group?: string;
-  languages?: string[]; // languages extracted from indexer attributes (e.g. newznab/torznab)
+  parsedMediaInfo?: ParsedMediaInfo;
   age?: number; // age in hours
   downloadvolumefactor?: number; // multiplier for the download volume that counts toward the user’s account on the tracker
   duration?: number; // duration in seconds

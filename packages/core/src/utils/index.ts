@@ -12,6 +12,7 @@ export * from './http.js';
 export * as constants from './constants.js';
 export * from './config.js';
 export * from './languages.js';
+export * from './media-info.js';
 export * from './dsu.js';
 export * from './startup.js';
 export * from './extras.js';
