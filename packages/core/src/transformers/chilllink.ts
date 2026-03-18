@@ -1,5 +1,4 @@
 import { ParsedStream, Resource, UserData } from '../db/index.js';
-import { createFormatter, FormatterContext } from '../formatters/index.js';
 import { AIOStreamsError, AIOStreamsResponse } from '../main.js';
 import { z } from 'zod';
 import { StreamType } from '../utils/constants.js';
@@ -48,12 +47,6 @@ export class ChillLinkTransformer {
     response: AIOStreamsResponse<{
       streams: ParsedStream[];
       statistics: { title: string; description: string }[];
-    }>,
-    formatterContext: FormatterContext
-  ): Promise<ChillLinkResponseData> {
-    const { data, errors } = response;
-
-    const formatter = createFormatter(formatterContext);
 
     const results = await Promise.all(
       data.streams.map(async (stream) =>
