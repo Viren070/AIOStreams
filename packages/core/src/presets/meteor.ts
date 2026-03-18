@@ -209,36 +209,47 @@ export class MeteorPreset extends Preset {
       debridServices.push({ service: 'torrent', apiKey: '' });
     }
 
-    const configString = this.base64EncodeJSON({
-      debridService:
-        debridServices.length === 1 ? debridServices[0].service : undefined,
-      debridApiKey:
-        debridServices.length === 1 ? debridServices[0].apiKey : undefined,
-      debridServices: debridServices.length > 1 ? debridServices : undefined,
-      cachedOnly: false,
-      removeTrash: options.removeTrash ?? false,
-      removeSamples: false,
-      removeAdult: false,
-      exclude3D: false,
-      enableSeaDex: false,
-      minSeeders: 0,
-      maxResults: 0,
-      maxResultsPerRes: 0,
-      maxSize: 0,
-      resolutions: [],
-      languages: { preferred: [], required: [], exclude: [] },
-      resultFormat: ['title', 'quality', 'size', 'audio'],
-      sortOrder: [
-        'pack',
-        'cached',
-        'seadex',
-        'resolution',
-        'size',
-        'quality',
-        'seeders',
-        'language',
-      ],
-    }, 'urlSafe');
+    const configString = this.base64EncodeJSON(
+      {
+        debridService:
+          debridServices.length === 1 ? debridServices[0].service : undefined,
+        debridApiKey:
+          debridServices.length === 1 ? debridServices[0].apiKey : undefined,
+        debridServices: debridServices.length > 1 ? debridServices : undefined,
+        cachedOnly: false,
+        removeTrash: options.removeTrash ?? false,
+        removeSamples: false,
+        removeAdult: false,
+        exclude3D: false,
+        enableSeaDex: false,
+        minSeeders: 0,
+        maxResults: 0,
+        maxResultsPerRes: 0,
+        maxSize: 0,
+        resolutions: [],
+        languages: { preferred: [], required: [], exclude: [] },
+        resultFormat: [
+          'title',
+          'quality',
+          'size',
+          'audio',
+          'audiolang',
+          'source',
+          'seeders',
+        ],
+        sortOrder: [
+          'pack',
+          'cached',
+          'seadex',
+          'resolution',
+          'size',
+          'quality',
+          'seeders',
+          'language',
+        ],
+      },
+      'urlSafe'
+    );
 
     return `${url}/${configString}/manifest.json`;
   }
