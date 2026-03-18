@@ -592,7 +592,7 @@ export const UserDataSchema = z.object({
   aioratingsApiKey: z.string().optional(),
   aioratingsProfileId: z.string().optional(),
   openposterdbApiKey: z.string().optional(),
-  openposterdbUrl: z.string().url().optional(),
+  openposterdbUrl: z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional()),
   posterService: z
     .enum(['rpdb', 'top-poster', 'aioratings', 'openposterdb', 'none'])
     .optional(),
