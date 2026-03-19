@@ -18,24 +18,23 @@ class StreamNZBStreamParser extends StreamParser {
     return { failoverId };
   }
 
+  protected getMessage(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): string | undefined {
+    const cached = (stream.behaviorHints as { cached?: boolean } | undefined)
+      ?.cached;
+    if (cached === true) return 'AvailNZB 💚';
+  }
+
   protected override getService(
     stream: Stream,
     currentParsedStream: ParsedStream
   ): ParsedStream['service'] | undefined {
     const base = super.getService(stream, currentParsedStream);
-    const cached = (stream.behaviorHints as { cached?: boolean } | undefined)
-      ?.cached;
-    if (cached === true) {
-      return base
-        ? { ...base, cached: true }
-        : { id: constants.STREMIO_NNTP_SERVICE, cached: true };
-    }
-    if (cached === false) {
-      return base
-        ? { ...base, cached: false }
-        : { id: constants.STREMIO_NNTP_SERVICE, cached: false };
-    }
-    return base;
+    return base
+      ? { ...base, cached: true }
+      : { id: constants.STREMIO_NNTP_SERVICE, cached: true };
   }
 
   protected getStreamType(
