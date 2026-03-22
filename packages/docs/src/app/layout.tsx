@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Provider } from '@/components/provider';
-import { Banner } from 'fumadocs-ui/components/banner';
 import Script from 'next/script';
 import './global.css';
 
@@ -40,10 +39,6 @@ export default function Layout({ children }: LayoutProps<'/'>) {
             `}</Script>
           </>
         )}
-        <Banner id="docs-wip">
-          ⚠️ These docs are currently under construction and may not be fully
-          accurate.
-        </Banner>
         <Provider>{children}</Provider>
       </body>
     </html>
