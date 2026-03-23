@@ -44,6 +44,7 @@ import { SubSourcePreset } from './subsource.js';
 import { SubDLPreset } from './subdl.js';
 import { AISearchPreset } from './aiSearch.js';
 import { FKStreamPreset } from './fkstream.js';
+import { FlixStreamsPreset } from './flixStreams.js';
 import { AIOSubtitlePreset } from './aiosubtitle.js';
 import { SubHeroPreset } from './subhero.js';
 import { StreamAsiaPreset } from './streamasia.js';
@@ -122,6 +123,7 @@ let PRESET_LIST: string[] = [
   'nuvio-streams',
   'webstreamr',
   'hdhub',
+  'flix-streams',
   'astream',
   'brazuca-torrents',
   'streamasia',
@@ -228,6 +230,8 @@ export class PresetManager {
         return StreamFusionPreset;
       case 'fkstream':
         return FKStreamPreset;
+      case 'flix-streams':
+        return FlixStreamsPreset;
       case 'anime-kitsu':
         return AnimeKitsuPreset;
       case 'nuvio-streams':
