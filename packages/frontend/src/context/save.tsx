@@ -21,7 +21,10 @@ import {
   ManifestDiffViewer,
   ManifestChangeSummary,
 } from '@/components/shared/manifest-diff-viewer';
-import { hasSevereManifestChanges } from '../utils/diff/manifest';
+import {
+  hasSevereManifestChanges,
+  hasAnyManifestChanges,
+} from '../utils/diff/manifest';
 import { Switch } from '@/components/ui/switch';
 
 interface SaveContextType {
@@ -133,7 +136,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
       const hasChanged =
         currentSavedManifest !== null &&
-        JSON.stringify(currentSavedManifest) !== JSON.stringify(newManifest);
+        hasAnyManifestChanges(currentSavedManifest, newManifest);
 
       const isDismissed = dismissedManifestStr === 'true';
 

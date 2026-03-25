@@ -118,8 +118,10 @@ function diffCatalogsKeyed(
     new Set(oldKeys).size !== oldCatalogs.length ||
     new Set(newKeys).size !== newCatalogs.length
   ) {
-    return getObjectDiff({ catalogs: oldCatalogs }, { catalogs: newCatalogs })
-      .map((d) => ({ ...d })); // already prefixed with 'catalogs'
+    return getObjectDiff(
+      { catalogs: oldCatalogs },
+      { catalogs: newCatalogs }
+    ).map((d) => ({ ...d })); // already prefixed with 'catalogs'
   }
 
   const oldMap = new Map(oldCatalogs.map((c) => [getKey(c), c]));
@@ -177,6 +179,69 @@ function diffCatalogsKeyed(
   return diffs;
 }
 
+/**
+ * Groups individual idPrefix ADD/REMOVE diffs (e.g. `resources[0].idPrefixes[1]`)
+ * into a single diff per parent array (e.g. `resources[0].idPrefixes`), and
+ * filters out order-only CHANGE diffs on idPrefixes arrays (order is a no-op in Stremio).
+ */
+function groupAndFilterIdPrefixDiffs(diffs: DiffItem[]): DiffItem[] {
+  const result: DiffItem[] = [];
+  const addGroups = new Map<string, { parentPath: string[]; values: any[] }>();
+  const removeGroups = new Map<
+    string,
+    { parentPath: string[]; values: any[] }
+  >();
+
+  for (const diff of diffs) {
+    const lastSeg = diff.path[diff.path.length - 1] ?? '';
+    const parentSeg = diff.path[diff.path.length - 2];
+    const isIdPrefixElement =
+      parentSeg === 'idPrefixes' && /^\[\d+\]$/.test(lastSeg);
+
+    if (isIdPrefixElement && diff.type === 'ADD') {
+      const parentPath = diff.path.slice(0, -1);
+      const key = parentPath.join('\0');
+      if (!addGroups.has(key)) addGroups.set(key, { parentPath, values: [] });
+      addGroups.get(key)!.values.push(diff.newValue);
+      continue;
+    }
+
+    if (isIdPrefixElement && diff.type === 'REMOVE') {
+      const parentPath = diff.path.slice(0, -1);
+      const key = parentPath.join('\0');
+      if (!removeGroups.has(key))
+        removeGroups.set(key, { parentPath, values: [] });
+      removeGroups.get(key)!.values.push(diff.oldValue);
+      continue;
+    }
+
+    // Filter array-to-array CHANGE diffs on idPrefixes. When getObjectDiff
+    // compares two string arrays via the keyed path, the only CHANGE it emits
+    // at the array level is an order-change diff (individual element additions/
+    // removals are emitted as REMOVE/ADD at the element level, handled above).
+    // idPrefixes order is irrelevant to Stremio, so these order CHANGEs are no-ops.
+    if (
+      diff.type === 'CHANGE' &&
+      diff.path[diff.path.length - 1] === 'idPrefixes' &&
+      Array.isArray(diff.oldValue) &&
+      Array.isArray(diff.newValue)
+    ) {
+      continue;
+    }
+
+    result.push(diff);
+  }
+
+  for (const [, { parentPath, values }] of addGroups) {
+    result.push({ path: parentPath, type: 'ADD', newValue: values });
+  }
+  for (const [, { parentPath, values }] of removeGroups) {
+    result.push({ path: parentPath, type: 'REMOVE', oldValue: values });
+  }
+
+  return result;
+}
+
 export function computeManifestDiff(
   oldManifest: Manifest,
   newManifest: Manifest
@@ -186,8 +251,11 @@ export function computeManifestDiff(
   const newNorm = normaliseManifest(newManifest);
   const { catalogs: _oc, ...oldRest } = oldNorm as any;
   const { catalogs: _nc, ...newRest } = newNorm as any;
-  void _oc; void _nc;
-  const nonCatalogDiffs = getObjectDiff(oldRest, newRest);
+  void _oc;
+  void _nc;
+  const nonCatalogDiffs = groupAndFilterIdPrefixDiffs(
+    getObjectDiff(oldRest, newRest)
+  );
 
   // Diff catalogs separately with a composite type:id key so reordering is
   // detected correctly even when multiple catalogs share the same id.
@@ -291,7 +359,7 @@ function buildAnnotations(
           className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
           severity: 'critical',
           description:
-            'New ID prefixes were added to the manifest. Stremio won\'t know that this install supports these new prefixes, so it won\'t query AIOStreams for matching content until you reinstall.',
+            "New ID prefixes were added to the manifest. Stremio won't know that this install supports these new prefixes, so it won't query AIOStreams for matching content until you reinstall.",
         });
       }
       continue;
@@ -349,6 +417,19 @@ function buildAnnotations(
   }
 
   return map;
+}
+
+/**
+ * Returns true when computeManifestDiff produces at least one diff after
+ * filtering no-op changes (e.g. idPrefixes reordering).
+ * Use this instead of raw JSON.stringify comparison to avoid spurious modals.
+ */
+export function hasAnyManifestChanges(
+  oldManifest: Manifest,
+  newManifest: Manifest
+): boolean {
+  const { diffs } = computeManifestDiff(oldManifest, newManifest);
+  return diffs.length > 0;
 }
 
 /**
