@@ -64,8 +64,9 @@ export async function getTraktAliases(
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
-          'trakt-api-version': '1',
-          'trakt-api-key': Env.TRAKT_CLIENT_ID,
+          'User-Agent': Env.DEFAULT_USER_AGENT,
+          'trakt-api-version': '2',
+          'trakt-api-key': Env.TRAKT_CLIENT_ID ?? '',
         },
       }
     );
