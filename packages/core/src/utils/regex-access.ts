@@ -105,6 +105,18 @@ export class RegexAccess {
    */
   public static addAllowedUrls(urls: string[]): void {
     this.manager.addAllowedUrls(urls);
+    Promise.all(urls.map((url) => this.getPatternsForUrl(url)))
+      .then((results) => {
+        const patterns = results.flat();
+        if (patterns.length > 0) {
+          this.manager.addItems(patterns);
+        }
+      })
+      .catch((err) =>
+        logger.warn(
+          `Failed to pre-fetch regex patterns from allowed URLs: ${err}`
+        )
+      );
   }
 
   /**
