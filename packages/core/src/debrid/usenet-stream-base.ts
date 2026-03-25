@@ -1329,13 +1329,40 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     } else if (debridFiles.length === 1) {
       selectedFile = debridFiles[0];
     } else {
-      // Fallback: pick the largest video file
-      const videoFiles = debridFiles.filter((f) => isVideoFile(f));
-      if (videoFiles.length > 0) {
-        selectedFile = videoFiles.reduce((a, b) => (a.size > b.size ? a : b));
-      } else {
-        selectedFile = debridFiles.reduce((a, b) => (a.size > b.size ? a : b));
+      const title = playbackInfo.title ?? '';
+      const allStrings = [title, ...debridFiles.map((f) => f.name ?? '')];
+      const parseResults: ParsedResult[] = allStrings.map((string) =>
+        parseTorrentTitle(string)
+      );
+      const parsedFiles = new Map<string, ParsedResult>();
+      for (const [index, result] of parseResults.entries()) {
+        parsedFiles.set(allStrings[index], result);
       }
+
+      const nzbInfo = {
+        type: 'usenet' as const,
+        nzb: '',
+        hash: playbackInfo.hash,
+        title,
+        metadata: playbackInfo.metadata,
+        size: debridFiles.reduce((sum, f) => sum + f.size, 0),
+      };
+
+      const debridDownload: DebridDownload = {
+        id: serviceItemId,
+        hash: playbackInfo.hash,
+        name: playbackInfo.title,
+        status: 'downloaded' as const,
+        files: debridFiles,
+      };
+
+      // Select a file based on the available metadata and files
+      selectedFile = await selectFileInTorrentOrNZB(
+        nzbInfo,
+        debridDownload,
+        parsedFiles,
+        playbackInfo.metadata
+      );
     }
 
     if (!selectedFile) {
