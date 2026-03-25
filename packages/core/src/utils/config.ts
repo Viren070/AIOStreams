@@ -834,71 +834,55 @@ export function applyMigrations(config: any): UserData {
 }
 
 async function validateRegexes(config: UserData, skipErrors: boolean = false) {
-  let excludedRegexes: string[] = [];
-  let includedRegexes: string[] = [];
-  let requiredRegexes: string[] = [];
-  let preferredRegexes: { name: string; pattern: string; score?: number }[] =
-    [];
-  let rankedRegexes: { name?: string; pattern: string; score: number }[] = [];
-
+  // Resolve synced URL patterns for validation only — does not modify config.
+  let synced = {
+    excluded: [] as string[],
+    included: [] as string[],
+    required: [] as string[],
+    preferred: [] as { name: string; pattern: string; score?: number }[],
+    ranked: [] as { name?: string; pattern: string; score: number }[],
+  };
   try {
-    const result = await RegexAccess.resolveSyncedRegexesForValidation(config);
-    excludedRegexes = result.excluded;
-    includedRegexes = result.included;
-    requiredRegexes = result.required;
-    preferredRegexes = result.preferred;
-    rankedRegexes = result.ranked;
+    synced = await RegexAccess.resolveSyncedRegexesForValidation(config);
   } catch (error) {
-    if (!skipErrors) {
-      throw error;
-    }
+    if (!skipErrors) throw error;
     logger.warn(`Failed to resolve synced regex patterns: ${error}`);
-    // Use the patterns from the config directly
-    excludedRegexes = config.excludedRegexPatterns || [];
-    includedRegexes = config.includedRegexPatterns || [];
-    requiredRegexes = config.requiredRegexPatterns || [];
-    preferredRegexes = config.preferredRegexPatterns || [];
-    rankedRegexes = config.rankedRegexPatterns || [];
   }
 
-  const regexAllowed = await RegexAccess.isRegexAllowed({
-    ...config,
-    excludedRegexPatterns: excludedRegexes,
-    includedRegexPatterns: includedRegexes,
-    requiredRegexPatterns: requiredRegexes,
-    preferredRegexPatterns: preferredRegexes,
-    rankedRegexPatterns: rankedRegexes,
-  });
-
+  // All patterns to validate: synced (from URLs) + direct (from config), deduplicated.
   const regexes = [
-    ...excludedRegexes,
-    ...includedRegexes,
-    ...requiredRegexes,
-    ...preferredRegexes.map((regex) => regex.pattern),
-    ...rankedRegexes.map((regex) => regex.pattern),
+    ...new Set([
+      ...synced.excluded,
+      ...(config.excludedRegexPatterns || []),
+      ...synced.included,
+      ...(config.includedRegexPatterns || []),
+      ...synced.required,
+      ...(config.requiredRegexPatterns || []),
+      ...synced.preferred.map((r) => r.pattern),
+      ...(config.preferredRegexPatterns || []).map((r) => r.pattern),
+      ...synced.ranked.map((r) => r.pattern),
+      ...(config.rankedRegexPatterns || []).map((r) => r.pattern),
+    ]),
   ];
 
-  if (!regexAllowed && regexes.length > 0) {
-    const allowedPatterns = (await RegexAccess.allowedRegexPatterns()).patterns;
-    const allowedRegexes = regexes.filter((regex) =>
-      allowedPatterns.includes(regex)
-    );
-    if (allowedRegexes.length === 0) {
-      if (!skipErrors) {
+  if (regexes.length === 0) return;
+
+  const regexAllowed = await RegexAccess.isRegexAllowed(config, regexes);
+
+  if (!regexAllowed) {
+    if (!skipErrors) {
+      const allowedPatterns = (await RegexAccess.allowedRegexPatterns()).patterns;
+      const notAllowed = regexes.filter((r) => !allowedPatterns.includes(r));
+      if (notAllowed.length === regexes.length) {
         throw new Error(
           'You do not have permission to use regex filters, please remove them from your config'
         );
       }
-      return;
+      throw new Error(
+        `You are only permitted to use specific regex patterns, you have ${notAllowed.length} / ${regexes.length} regexes that are not allowed. Please remove them from your config.`
+      );
     }
-    if (allowedRegexes.length !== regexes.length) {
-      if (!skipErrors) {
-        throw new Error(
-          `You are only permitted to use specific regex patterns, you have ${regexes.length - allowedRegexes.length} / ${regexes.length} regexes that are not allowed. Please remove them from your config.`
-        );
-      }
-      return;
-    }
+    return;
   }
 
   await Promise.all(
