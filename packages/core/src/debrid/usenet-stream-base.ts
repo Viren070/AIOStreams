@@ -424,8 +424,10 @@ export interface UsenetStreamServiceConfig {
 enum Category {
   MOVIES = 'Movies',
   TV = 'TV',
-  UNCATEGORIZED = 'uncategorized',
 }
+
+const CATEGORIES_CACHE_TTL = Time.Hour;
+
 /**
  * Base class for streaming usenet services (NzbDAV, Altmount).
  * These services accept NZBs via a SABnzbd-compatible API and stream content
@@ -439,6 +441,9 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   );
   protected static libraryCache = Cache.getInstance<string, DebridDownload[]>(
     'usenet-stream:library'
+  );
+  protected static categoriesCache = Cache.getInstance<string, string[]>(
+    'usenet-stream:categories'
   );
 
   abstract readonly serviceName: ServiceId;
@@ -590,50 +595,62 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   }
 
   /**
-   * Get a specific NZB item by its folder name (serviceItemId).
-   * Lists files within the folder via WebDAV to populate the files array.
+   * Get a specific NZB item by its serviceItemId ("category/basename" or
+   * legacy bare basename). Lists files within the folder via WebDAV.
    */
   public async getNzb(nzbId: string): Promise<DebridDownload> {
-    // nzbId is the folder basename (used as serviceItemId)
-    for (const category of [
-      Category.UNCATEGORIZED,
-      Category.TV,
-      Category.MOVIES,
-    ]) {
-      const contentPath = `${this.getContentPathPrefix()}/${category}/${nzbId}`;
-      try {
-        const stat = await this.webdavClient.stat(contentPath);
-        const statData = 'data' in stat ? stat.data : stat;
-        if (statData.type === 'directory') {
-          const { files: allFiles } = await this.collectFiles(contentPath);
-          const debridFiles: DebridFile[] = allFiles.map((file, index) => ({
-            id: index,
-            name: file.basename,
-            size: file.size,
-            path: file.filename,
-            index,
-          }));
+    const contentPath = await this.resolveContentPath(nzbId);
+    const folderName = basename(contentPath);
+    const { files: allFiles } = await this.collectFiles(contentPath);
+    const debridFiles: DebridFile[] = allFiles.map((file, index) => ({
+      id: index,
+      name: file.basename,
+      size: file.size,
+      path: file.filename,
+      index,
+    }));
+    return {
+      id: nzbId,
+      name: folderName,
+      hash: folderName,
+      status: 'downloaded',
+      size: debridFiles.reduce((sum, f) => sum + f.size, 0),
+      files: debridFiles,
+    };
+  }
 
-          return {
-            id: nzbId,
-            name: nzbId,
-            hash: nzbId,
-            status: 'downloaded',
-            size: debridFiles.reduce((sum, f) => sum + f.size, 0),
-            files: debridFiles,
-          };
-        }
+  /**
+   * Resolve a "category/basename" id (or legacy bare basename) to an absolute
+   * WebDAV content path. For category-qualified ids the path is constructed
+   * directly; for bare basenames all dynamic categories are searched.
+   */
+  private async resolveContentPath(id: string): Promise<string> {
+    const prefix = this.getContentPathPrefix();
+
+    if (id.includes('/')) {
+      // New format: id already encodes the exact category
+      return `${prefix}/${id}`;
+    }
+
+    // Legacy / bare basename: search all dynamic categories
+    const categories = await this.getCategories();
+    for (const category of categories) {
+      const candidatePath = `${prefix}/${category}/${id}`;
+      try {
+        const stat = await this.webdavClient.stat(candidatePath);
+        const statData = 'data' in stat ? stat.data : stat;
+        if (statData.type === 'directory') return candidatePath;
       } catch {
-        // Not found in this category, try next
+        // not in this category
       }
     }
 
-    throw new DebridError(`NZB item not found: ${nzbId}`, {
+    throw new DebridError(`NZB item not found: ${id}`, {
       statusCode: 404,
       statusText: 'Not found',
       code: 'NOT_FOUND',
       headers: {},
-      body: { nzbId },
+      body: { id },
       type: 'api_error',
     });
   }
@@ -667,6 +684,54 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       time: getTimeTakenSincePoint(start),
     });
     return directories;
+  }
+
+  /**
+   * Fetch the category folders under the content path prefix by listing the
+   * base WebDAV directory.
+   */
+  private async getCategories(): Promise<string[]> {
+    const cacheKey = `${this.serviceName}:${this.config.token}:categories`;
+    const cached = await UsenetStreamService.categoriesCache.get(cacheKey);
+    if (cached) return cached;
+
+    const prefix = this.getContentPathPrefix();
+    try {
+      const contents = (await this.webdavClient.getDirectoryContents(
+        prefix
+      )) as FileStat[];
+      const categories = contents
+        .filter((item) => item.type === 'directory')
+        .map((item) => item.basename);
+      await UsenetStreamService.categoriesCache.set(
+        cacheKey,
+        categories,
+        CATEGORIES_CACHE_TTL,
+        true
+      );
+      this.serviceLogger.debug(`Fetched WebDAV categories`, {
+        prefix,
+        categories,
+      });
+      return categories;
+    } catch (error: any) {
+      const status = typeof error.status === 'number' ? error.status : 500;
+      if (status === 401) {
+        throw new DebridError(`Could not access WebDAV: Unauthorized`, {
+          statusCode: 401,
+          statusText: 'Unauthorized',
+          code: 'UNAUTHORIZED',
+          headers: {},
+          body: null,
+          type: 'api_error',
+        });
+      }
+      this.serviceLogger.warn(
+        `Failed to list WebDAV categories, falling back to empty list`,
+        { error: (error as Error).message }
+      );
+      return [];
+    }
   }
 
   public async listNzbs(): Promise<DebridDownload[]> {
@@ -717,85 +782,55 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
   private async fetchAndCacheNzbs(cacheKey: string): Promise<DebridDownload[]> {
     const start = Date.now();
+    const prefix = this.getContentPathPrefix();
 
-    const historyPromise = this.api.history({ limit: 1000 });
-    const webdavTvPromise = this.listWebdavFolders(
-      `${this.getContentPathPrefix()}/${Category.TV}`
+    const [historyData, categories] = await Promise.all([
+      this.api.history({ limit: 1000 }),
+      this.getCategories(),
+    ]);
+
+    const categoryResults = await Promise.allSettled(
+      categories.map((cat) =>
+        this.listWebdavFolders(`${prefix}/${cat}`).then((files) => ({
+          cat,
+          files,
+        }))
+      )
     );
-    const webdavMoviesPromise = this.listWebdavFolders(
-      `${this.getContentPathPrefix()}/${Category.MOVIES}`
-    );
-    const webdavUncategorizedPromise = this.listWebdavFolders(
-      `${this.getContentPathPrefix()}/${Category.UNCATEGORIZED}`
-    );
 
-    const [history, webdavTv, webdavMovies, webdavUncategorized] =
-      await Promise.allSettled([
-        historyPromise,
-        webdavTvPromise,
-        webdavMoviesPromise,
-        webdavUncategorizedPromise,
-      ]);
-
-    if (history.status === 'rejected') {
-      throw history.reason;
-    }
-
-    if (
-      webdavTv.status === 'rejected' ||
-      webdavMovies.status === 'rejected' ||
-      webdavUncategorized.status === 'rejected'
-    ) {
-      const error =
-        webdavTv.status === 'rejected'
-          ? webdavTv.reason
-          : webdavMovies.status === 'rejected'
-            ? webdavMovies.reason
-            : webdavUncategorized.status === 'rejected'
-              ? webdavUncategorized.reason
-              : null;
-
-      const status = typeof error.status === 'number' ? error.status : 500;
-      if (status === 401) {
-        throw new DebridError(`Could not access WebDAV: Unauthorized`, {
-          statusCode: 401,
-          statusText: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-          headers: {},
-          body: null,
-          type: 'api_error',
+    const categoryFiles: { category: string; file: FileStat }[] = [];
+    for (const result of categoryResults) {
+      if (result.status === 'fulfilled') {
+        for (const file of result.value.files) {
+          categoryFiles.push({ category: result.value.cat, file });
+        }
+      } else {
+        const err = result.reason;
+        const status = typeof err?.status === 'number' ? err.status : 500;
+        if (status === 401) {
+          throw new DebridError(`Could not access WebDAV: Unauthorized`, {
+            statusCode: 401,
+            statusText: 'Unauthorized',
+            code: 'UNAUTHORIZED',
+            headers: {},
+            body: null,
+            type: 'api_error',
+          });
+        }
+        this.serviceLogger.warn(`Failed to list WebDAV category`, {
+          error: (err as Error).message,
         });
       }
-
-      this.serviceLogger.warn(
-        `Failed to list WebDAV folders, library listing may be inaccurate`,
-        {
-          error: (error as Error).message,
-        }
-      );
     }
 
-    const historyData = history.status === 'fulfilled' ? history.value : null;
-    const webdavTvData =
-      webdavTv.status === 'fulfilled' ? webdavTv.value : null;
-    const webdavMoviesData =
-      webdavMovies.status === 'fulfilled' ? webdavMovies.value : null;
-    const webdavUncategorizedData =
-      webdavUncategorized.status === 'fulfilled'
-        ? webdavUncategorized.value
-        : null;
-
-    const webdavFiles = [
-      ...(webdavTvData ?? []),
-      ...(webdavMoviesData ?? []),
-      ...(webdavUncategorizedData ?? []),
-    ];
-    const nzbs: DebridDownload[] = webdavFiles.map((file, index) => {
+    const nzbs: DebridDownload[] = categoryFiles.map(({ category, file }) => {
       const matchingSlot = historyData?.slots.find(
         (slot) => slot.name === file.basename
       );
       return {
-        id: file.basename,
+        // id = "category/basename" so _resolveLibraryItem can reconstruct the
+        // exact WebDAV path
+        id: `${category}/${file.basename}`,
         status: matchingSlot?.status !== 'failed' ? 'cached' : 'failed',
         name: file.basename,
         size: file.size > 0 ? file.size : (matchingSlot?.bytes ?? 0),
@@ -808,7 +843,9 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     // Also include failed entries from history that don't have WebDAV folders
     // so they can be detected and filtered out by processNZBs
     if (historyData?.slots) {
-      const webdavNames = new Set(webdavFiles.map((file) => file.basename));
+      const webdavNames = new Set(
+        categoryFiles.map(({ file }) => file.basename)
+      );
       for (const slot of historyData.slots) {
         if (
           slot.status === 'failed' &&
@@ -1220,47 +1257,17 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   }
 
   /**
-   * Resolve a library item by serviceItemId (folder name) and optionally fileIndex.
-   * For nzbdav/altmount, serviceItemId is the folder basename, and we search
-   * both TV and Movies categories to find it.
+   * Resolve a library item by serviceItemId and optionally fileIndex.
+   * serviceItemId is "category/basename" (new format) or a bare basename
+   * (legacy). resolveContentPath handles both cases.
    */
   protected async _resolveLibraryItem(
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string,
     cacheKey: string
   ): Promise<string | undefined> {
-    const folderName = playbackInfo.serviceItemId!;
-
-    // Search both categories for the folder
-    let contentPath: string | undefined;
-    for (const category of [
-      Category.UNCATEGORIZED,
-      Category.TV,
-      Category.MOVIES,
-    ]) {
-      const candidatePath = `${this.getContentPathPrefix()}/${category}/${folderName}`;
-      try {
-        const stat = await this.webdavClient.stat(candidatePath);
-        const statData = 'data' in stat ? stat.data : stat;
-        if (statData.type === 'directory') {
-          contentPath = candidatePath;
-          break;
-        }
-      } catch {
-        // Not found in this category, try next
-      }
-    }
-
-    if (!contentPath) {
-      throw new DebridError(`Library item folder not found: ${folderName}`, {
-        statusCode: 404,
-        statusText: 'Not found',
-        code: 'NOT_FOUND',
-        headers: {},
-        body: { folderName },
-        type: 'api_error',
-      });
-    }
+    const serviceItemId = playbackInfo.serviceItemId!;
+    const contentPath = await this.resolveContentPath(serviceItemId);
 
     this.serviceLogger.debug(`Found library item folder`, { contentPath });
 
