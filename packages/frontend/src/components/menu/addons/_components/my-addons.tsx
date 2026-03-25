@@ -338,9 +338,6 @@ export function MyAddons({
         selectedIds.has(p.instanceId) ? { ...p, enabled } : p
       ),
     }));
-    toast.info(
-      `${enabled ? 'Enabled' : 'Disabled'} ${selectedIds.size} addon(s)`
-    );
   };
 
   const confirmBatchDelete = useConfirmationDialog({
@@ -356,7 +353,6 @@ export function MyAddons({
         );
         return removeInvalidPresetReferences(cloned);
       });
-      toast.info(`Deleted ${selectedIds.size} addon(s)`);
       setSelectedIds(new Set());
     },
   });
@@ -386,7 +382,6 @@ export function MyAddons({
         return { ...p, options: newOptions };
       }),
     }));
-    toast.info(`Updated ${selectedIds.size} addon(s)`);
     batchEditModal.close();
   };
 
