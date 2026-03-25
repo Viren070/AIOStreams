@@ -418,10 +418,10 @@ class StreamFilterer {
 
     if (requestedMetadata?.title) {
       yearWithinTitle = requestedMetadata.title.match(
-        /\b(19\d{2}|20[012]\d{1})\b/
+        /\b(19\d{2}|20\d{2})\b/
       )?.[0];
       if (yearWithinTitle) {
-        yearWithinTitleRegex = new RegExp(`${yearWithinTitle[0]}`, 'g');
+        yearWithinTitleRegex = new RegExp(yearWithinTitle, 'g');
       }
       logger.info(`Using metadata from context`, {
         id,
@@ -852,12 +852,11 @@ class StreamFilterer {
 
       let streamYear = stream.parsedFile?.year;
       if (yearWithinTitleRegex && yearWithinTitle) {
-        const yearStr = yearWithinTitle;
         const filenameWithoutYear = stream.filename
           ? stream.filename.replace(yearWithinTitleRegex, '')
           : undefined;
         const foldernameWithoutYear = stream.folderName
-          ? stream.folderName.replace(yearStr, '')
+          ? stream.folderName.replace(yearWithinTitle, '')
           : undefined;
 
         const strings = [filenameWithoutYear, foldernameWithoutYear].filter(
