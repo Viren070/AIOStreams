@@ -186,8 +186,9 @@ export function ReorderModal({
     >
       <div className="space-y-4">
         <p className="text-sm text-[--muted]">
-          Drag addons to change their priority order. Addons higher in the list
-          have higher priority when fetching streams.
+          Drag addons to change their priority. Addons higher in the list have
+          higher priority during deduplication and also controls sorting{' '}
+          <b>when sorting by the addon criterion</b>.
         </p>
         <DndContext
           modifiers={[restrictToVerticalAxis]}
