@@ -874,6 +874,11 @@ class StreamFilterer {
             break;
           }
         }
+
+        if (streamYear === yearWithinTitle) {
+          streamYear = undefined;
+          if (stream.parsedFile) stream.parsedFile.year = undefined;
+        }
       }
 
       if (!streamYear) {
