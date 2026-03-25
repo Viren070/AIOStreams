@@ -180,25 +180,6 @@ export class StreamContext {
       return;
     }
 
-    const needsMetadata =
-      this.userData.bitrate?.useMetadataRuntime ||
-      this.userData.titleMatching?.enabled ||
-      (this.userData.digitalReleaseFilter?.enabled &&
-        ['movie', 'series', 'anime'].includes(this.type)) ||
-      this.userData.yearMatching?.enabled ||
-      this.userData.seasonEpisodeMatching?.enabled ||
-      // Always fetch if user might need genres in expressions
-      this.userData.excludedStreamExpressions?.length ||
-      this.userData.requiredStreamExpressions?.length ||
-      this.userData.includedStreamExpressions?.length ||
-      (this.userData.precacheNextEpisode && this.type === 'series');
-
-    if (!needsMetadata || !this.parsedId) {
-      this._metadataFetched = true;
-      return;
-    }
-
-    const metadataStart = Date.now();
     this._metadataPromise = (async () => {
       try {
         const service = new MetadataService({
