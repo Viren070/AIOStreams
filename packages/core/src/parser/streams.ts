@@ -650,19 +650,24 @@ class StreamParser {
     if (!match) return 0;
     const value = parseFloat(match[1]);
     const unit = match[3];
-
+    let result = 0;
     switch (unit.toUpperCase()) {
       case 'TB':
-        return value * k * k * k * k;
+        result = value * k * k * k * k;
+        break;
       case 'GB':
-        return value * k * k * k;
+        result = value * k * k * k;
+        break;
       case 'MB':
-        return value * k * k;
+        result = value * k * k;
+        break;
       case 'KB':
-        return value * k;
+        result = value * k;
+        break;
       default:
         return 0;
     }
+    return Math.round(result);
   }
 
   protected parseServiceData(
