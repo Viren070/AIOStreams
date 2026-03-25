@@ -158,6 +158,7 @@ const PresetSchema = z.object({
   instanceId: z.string().min(1), // uniquely identifies the preset in a given list of presets
   enabled: z.boolean(),
   options: z.record(z.string().min(1), z.any()),
+  category: z.string().optional(), // user-defined category for organising addons in the UI
 });
 
 export type PresetObject = z.infer<typeof PresetSchema>;
@@ -677,6 +678,7 @@ export const UserDataSchema = z.object({
     .optional(),
   services: ServiceList.optional(),
   presets: PresetList,
+  addonCategoryColors: z.record(z.string(), z.string()).optional(), // maps custom category name → colour key
   catalogModifications: z.array(CatalogModification).optional(),
   mergedCatalogs: z.array(MergedCatalog).optional(),
   externalDownloads: z.boolean().optional(),
