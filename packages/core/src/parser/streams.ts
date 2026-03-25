@@ -493,6 +493,10 @@ class StreamParser {
       return 'live';
     }
 
+    if (stream.externalUrl) {
+      return 'external';
+    }
+
     if (service?.id === constants.EASYNEWS_SERVICE) {
       return 'usenet';
     } else if (service) {
@@ -506,10 +510,6 @@ class StreamParser {
 
     if (stream.infoHash) {
       return 'p2p';
-    }
-
-    if (stream.externalUrl) {
-      return 'external';
     }
 
     if (stream.ytId) {
