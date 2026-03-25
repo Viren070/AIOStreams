@@ -19,6 +19,7 @@ import {
 } from '@aiostreams/core';
 import { streamApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { ApiResponse, createResponse } from '../../utils/responses.js';
+import { syncUserDataUrls } from '../../utils/syncUserData.js';
 import { z, ZodError } from 'zod';
 const router: Router = Router();
 
@@ -79,6 +80,7 @@ router.get(
           );
           if (userData) {
             userData.trusted = false;
+            userData.uuid = undefined;
             logger.debug(`Using encodedUserData for Search API request`);
           }
         } catch (error: any) {
@@ -161,6 +163,7 @@ router.get(
         throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
       }
       userData.ip = req.userIp;
+      userData = await syncUserDataUrls(userData);
       try {
         userData = await validateConfig(userData, {
           skipErrorsFromAddonsOrProxies: true,
