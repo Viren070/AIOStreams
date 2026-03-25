@@ -15,6 +15,7 @@ import {
   FaKey,
   FaChevronUp,
   FaChevronDown,
+  FaChevronRight,
   FaArrowLeft,
   FaGear,
   FaPlus,
@@ -57,6 +58,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
     forced,
     default: defaultValue,
     intent,
+    subsectionIntent,
     socials,
     oauth,
     emptyIsUndefined = false,
@@ -445,6 +447,138 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         setModalOpen(false);
       };
 
+      const modalContent = (
+        <Modal
+          open={modalOpen}
+          onOpenChange={(open) => !open && handleCancel()}
+          title={name}
+        >
+          <div className="space-y-4">
+            {subOptions.map(
+              (subOption: Option): React.JSX.Element => (
+                <TemplateOption
+                  key={subOption.id}
+                  option={subOption}
+                  value={localValue[subOption.id]}
+                  onChange={(subValue) =>
+                    handleLocalChange(subOption.id, subValue)
+                  }
+                  disabled={isDisabled}
+                />
+              )
+            )}
+            <Button
+              type="button"
+              intent="primary"
+              className="w-full"
+              onClick={handleSave}
+            >
+              Save
+            </Button>
+          </div>
+        </Modal>
+      );
+
+      if (subsectionIntent === 'block') {
+        return (
+          <div>
+            <button
+              type="button"
+              onClick={handleOpenModal}
+              disabled={isDisabled}
+              className="w-full text-left bg-[--background] border border-[--border] rounded-[--radius] px-4 py-3 hover:bg-[--subtle] transition-colors disabled:opacity-50 disabled:pointer-events-none shadow-sm"
+            >
+              <div className="font-semibold text-sm">{name}</div>
+              {description && (
+                <div className="text-xs text-[--muted] mt-1">
+                  <MarkdownLite>{description}</MarkdownLite>
+                </div>
+              )}
+            </button>
+            {modalContent}
+          </div>
+        );
+      }
+
+      if (subsectionIntent === 'inline') {
+        return (
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <span className="font-medium text-sm">{name}</span>
+                {description && (
+                  <div className="text-xs text-[--muted] mt-0.5">
+                    <MarkdownLite>{description}</MarkdownLite>
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                intent="gray-outline"
+                size="sm"
+                onClick={handleOpenModal}
+                disabled={isDisabled}
+                className="shrink-0"
+              >
+                Open
+              </Button>
+            </div>
+            {modalContent}
+          </div>
+        );
+      }
+
+      if (subsectionIntent === 'link') {
+        return (
+          <div>
+            <button
+              type="button"
+              onClick={handleOpenModal}
+              disabled={isDisabled}
+              className="group text-left disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-[--brand] group-hover:underline">
+                {name}
+                <FaChevronRight className="w-3 h-3 opacity-60 transition-transform group-hover:translate-x-0.5" />
+              </span>
+              {description && (
+                <div className="text-xs text-[--muted] mt-0.5">
+                  <MarkdownLite>{description}</MarkdownLite>
+                </div>
+              )}
+            </button>
+            {modalContent}
+          </div>
+        );
+      }
+
+      if (subsectionIntent === 'banner') {
+        return (
+          <div>
+            <button
+              type="button"
+              onClick={handleOpenModal}
+              disabled={isDisabled}
+              className="w-full text-left border-l-4 border-[--brand] bg-[--subtle] px-4 py-3 rounded-r-[--radius] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-sm">{name}</div>
+                  {description && (
+                    <div className="text-xs text-[--muted] mt-0.5">
+                      <MarkdownLite>{description}</MarkdownLite>
+                    </div>
+                  )}
+                </div>
+                <FaChevronRight className="w-3 h-3 text-[--muted] shrink-0" />
+              </div>
+            </button>
+            {modalContent}
+          </div>
+        );
+      }
+
+      // default intent
       return (
         <div>
           <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
@@ -460,40 +594,11 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
               icon={<FaGear />}
               intent="primary-outline"
               onClick={handleOpenModal}
-              // className="shrink-0"
               disabled={isDisabled}
               title={`Configure ${name}`}
             />
           </div>
-          <Modal
-            open={modalOpen}
-            onOpenChange={(open) => !open && handleCancel()}
-            title={name}
-          >
-            <div className="space-y-4">
-              {subOptions.map(
-                (subOption: Option): React.JSX.Element => (
-                  <TemplateOption
-                    key={subOption.id}
-                    option={subOption}
-                    value={localValue[subOption.id]}
-                    onChange={(subValue) =>
-                      handleLocalChange(subOption.id, subValue)
-                    }
-                    disabled={isDisabled}
-                  />
-                )
-              )}
-              <Button
-                type="button"
-                intent="primary"
-                className="w-full"
-                onClick={handleSave}
-              >
-                Save
-              </Button>
-            </div>
-          </Modal>
+          {modalContent}
         </div>
       );
     }

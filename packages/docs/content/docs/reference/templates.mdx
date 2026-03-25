@@ -104,7 +104,7 @@ Inputs are defined in `metadata.inputs`. They appear in a dialog before the temp
 
 #### Subsections
 
-A `subsection` renders as a button that opens a modal containing `subOptions`. Values are accessed with dot notation: `inputs.<subsectionId>.<subOptionId>`.
+A `subsection` renders as a trigger that opens a modal containing `subOptions`. Values are accessed with dot notation: `inputs.<subsectionId>.<subOptionId>`.
 
 ```json
 {
@@ -120,6 +120,27 @@ A `subsection` renders as a button that opens a modal containing `subOptions`. V
 ```
 
 Use in config as `{{inputs.proxy.url}}`.
+
+The optional `subsectionIntent` field controls the visual appearance of the trigger:
+
+| Value | Appearance |
+| --- | --- |
+| `"default"` (or omitted) | Gray card with a gear icon button on the right |
+| `"block"` | Full-width clickable panel — name in bold, description in grey below |
+| `"inline"` | Name and description on the left, compact **Open** button on the right — matches the style of other option types |
+| `"link"` | Brand-coloured underlined text link with a small arrow — no card or background. Good for optional/secondary subsections that should not draw attention |
+| `"banner"` | Full-width card with a brand-coloured left accent border and a chevron on the right. Visually prominent without being as heavy as a button |
+
+```json
+{
+  "id": "proxy",
+  "name": "Proxy Settings",
+  "description": "Optional proxy configuration.",
+  "type": "subsection",
+  "subsectionIntent": "inline",
+  "subOptions": [...]
+}
+```
 
 #### Alert
 
