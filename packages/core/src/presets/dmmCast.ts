@@ -7,31 +7,35 @@ import {
   AIOStream,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, RESOURCES } from '../utils/index.js';
+import { constants, Env, RESOURCES, ServiceId } from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class DMMCastStreamParser extends StreamParser {
-  protected override getFilename(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): string | undefined {
-    let filename = stream.description
-      ? stream.description
-          .split('\n')
-          .map((line) => line.replace(/-$/, ''))
-          .filter((line) => !line.includes('📦'))
-          .join('')
-      : stream.behaviorHints?.filename?.trim();
-    return filename;
-  }
-
   protected override getMessage(
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    if (!stream.description?.includes('📦')) {
+    if (stream.description?.includes('Cast a file')) {
       currentParsedStream.filename = undefined;
-      return `${stream.name} - ${stream.description}`;
+      return stream.description;
+    }
+    return undefined;
+  }
+
+  protected getService(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): ParsedStream['service'] | undefined {
+    const debrid = /(TB|RD)/g.exec(`${stream.name} - ${stream.description}`);
+    const map: Record<string, ServiceId> = {
+      RD: 'realdebrid',
+      TB: 'torbox',
+    };
+    if (debrid) {
+      return {
+        id: map[debrid[1]],
+        cached: true,
+      };
     }
     return undefined;
   }
@@ -40,7 +44,8 @@ class DMMCastStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): boolean {
-    if (stream.name?.includes('Yours')) {
+    const lastLine = stream.description?.split('\n')?.at(-1)?.trim();
+    if (lastLine?.includes('Yours')) {
       return true;
     }
     return false;
