@@ -891,6 +891,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
               this.userData.cacheAndPlay?.enabled &&
               this.userData.cacheAndPlay?.streamTypes?.includes('torrent'),
             autoRemoveDownloads: this.userData.autoRemoveDownloads,
+            serviceItemId: torrentOrNzb.serviceItemId,
           }
         : {
             type: 'usenet',
@@ -906,6 +907,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
               this.userData.cacheAndPlay?.enabled &&
               this.userData.cacheAndPlay?.streamTypes?.includes('usenet'),
             autoRemoveDownloads: this.userData.autoRemoveDownloads,
+            serviceItemId: torrentOrNzb.serviceItemId,
           }
       : undefined;
 

@@ -160,6 +160,7 @@ export interface UnprocessedTorrent extends BaseFile {
   downloadUrl?: string;
   sources: string[];
   private?: boolean;
+  serviceItemId?: string;
 }
 
 export interface NZB extends BaseFile {
@@ -168,6 +169,7 @@ export interface NZB extends BaseFile {
   nzb: string;
   easynewsUrl?: string;
   zyclopsHealth?: string;
+  serviceItemId?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {
@@ -177,6 +179,7 @@ export interface TorrentWithSelectedFile extends Torrent {
     cached: boolean;
     library: boolean;
   };
+  serviceItemId?: string;
 }
 
 export interface NZBWithSelectedFile extends NZB {
@@ -186,6 +189,7 @@ export interface NZBWithSelectedFile extends NZB {
     cached: boolean;
     library: boolean;
   };
+  serviceItemId?: string;
 }
 
 interface SelectionOptions {

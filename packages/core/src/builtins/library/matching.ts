@@ -105,6 +105,7 @@ export function matchTorrents(
       library: true,
       confirmed: true,
       indexer: sourceServiceId,
+      serviceItemId: item.id.toString(),
     });
   }
 
@@ -134,6 +135,7 @@ export function matchNzbs(
       library: true,
       confirmed: true,
       indexer: sourceServiceId,
+      serviceItemId: item.id.toString(),
     });
   }
 
