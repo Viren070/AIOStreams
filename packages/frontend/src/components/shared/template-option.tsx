@@ -59,6 +59,7 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
     default: defaultValue,
     intent,
     subsectionIntent,
+    buttonIntent,
     socials,
     oauth,
     emptyIsUndefined = false,
@@ -500,6 +501,29 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         );
       }
 
+      if (subsectionIntent === 'pill') {
+        return (
+          <div>
+            <Button
+              type="button"
+              rounded
+              intent={(buttonIntent as any) ?? 'white-subtle'}
+              size="md"
+              onClick={handleOpenModal}
+              disabled={isDisabled}
+              className="w-full"
+            >
+              {name}
+            </Button>
+            {description && (
+              <div className="text-xs text-[--muted] mt-2">
+                <MarkdownLite>{description}</MarkdownLite>
+              </div>
+            )}
+          </div>
+        );
+      }
+
       if (subsectionIntent === 'inline') {
         return (
           <div>
@@ -514,7 +538,8 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
               </div>
               <Button
                 type="button"
-                intent="gray-outline"
+                rounded
+                intent={(buttonIntent as any) ?? 'white'}
                 size="sm"
                 onClick={handleOpenModal}
                 disabled={isDisabled}

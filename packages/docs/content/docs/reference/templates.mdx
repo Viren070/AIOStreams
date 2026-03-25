@@ -128,8 +128,22 @@ The optional `subsectionIntent` field controls the visual appearance of the trig
 | `"default"` (or omitted) | Gray card with a gear icon button on the right |
 | `"block"` | Full-width clickable panel — name in bold, description in grey below |
 | `"inline"` | Name and description on the left, compact **Open** button on the right — matches the style of other option types |
+| `"pill"` | Full-width rounded pill button showing the option name — description rendered below |
 | `"link"` | Brand-coloured underlined text link with a small arrow — no card or background. Good for optional/secondary subsections that should not draw attention |
 | `"banner"` | Full-width card with a brand-coloured left accent border and a chevron on the right. Visually prominent without being as heavy as a button |
+
+For intents that render a `Button` (`"inline"` and `"pill"`), the optional `buttonIntent` field overrides the button's colour/style. Accepts any Button intent value (e.g. `"primary"`, `"gray-outline"`, `"white-subtle"`). Defaults to `"white"` for `inline` and `"white-subtle"` for `pill`.
+
+```json
+{
+  "id": "advanced",
+  "name": "Advanced Settings",
+  "type": "subsection",
+  "subsectionIntent": "pill",
+  "buttonIntent": "primary-subtle",
+  "subOptions": [...]
+}
+```
 
 ```json
 {

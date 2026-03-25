@@ -264,7 +264,10 @@ const OptionDefinition = z.looseObject({
       'alert-basic',
     ])
     .optional(),
-  subsectionIntent: z.enum(['default', 'block', 'inline', 'link', 'banner']).optional(),
+  subsectionIntent: z
+    .enum(['default', 'block', 'inline', 'pill', 'link', 'banner'])
+    .optional(),
+  buttonIntent: z.string().optional(),
   socials: z
     .array(
       z.object({
