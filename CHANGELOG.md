@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.26.0](https://github.com/Viren070/AIOStreams/compare/v2.25.4...v2.26.0) (2026-03-25)
+
+
+### Features
+
+* add `subsectionIntent` for TemplateOption ([7d29942](https://github.com/Viren070/AIOStreams/commit/7d29942f4b93dbd2af641bf51eedcb898cd4b637))
+* **core/formatter:** add subtitle fields ([03df4ba](https://github.com/Viren070/AIOStreams/commit/03df4ba03ec2e1a192d0865bc299685641c1c3a9))
+* **core/formatters:** support variable resolution in replace() first argument ([#793](https://github.com/Viren070/AIOStreams/issues/793)) ([0de87f1](https://github.com/Viren070/AIOStreams/commit/0de87f13f42f959cf41665a3406f8fab9707758c))
+* **frontend:** redesign my addons card, allowing batch editing, deleting, toggling, categorisation, and searching ([4652ef1](https://github.com/Viren070/AIOStreams/commit/4652ef1314ed1a426dfa24887e298ad29741f2ea)), closes [#816](https://github.com/Viren070/AIOStreams/issues/816) [#659](https://github.com/Viren070/AIOStreams/issues/659) [#570](https://github.com/Viren070/AIOStreams/issues/570)
+* parse media info from stremthru ([03df4ba](https://github.com/Viren070/AIOStreams/commit/03df4ba03ec2e1a192d0865bc299685641c1c3a9)), closes [#235](https://github.com/Viren070/AIOStreams/issues/235)
+* **sel:** add `subtitle()` function and `subtitle` `perGroup()` attributem, ([03df4ba](https://github.com/Viren070/AIOStreams/commit/03df4ba03ec2e1a192d0865bc299685641c1c3a9))
+* **TemplateOption:** add `pill` subsectionIntent and `buttonIntent` field ([59c6954](https://github.com/Viren070/AIOStreams/commit/59c69548b9c45cdd0eff8e8c728a3e0c6424803e))
+
+
+### Bug Fixes
+
+* always fetch metadata ([11f5cd4](https://github.com/Viren070/AIOStreams/commit/11f5cd4ef8769506369652c6e49b117514a337cb))
+* **builtins/library:** pass item ID for stream results ([bc1fbaa](https://github.com/Viren070/AIOStreams/commit/bc1fbaa2a883a9d2bfdf5390c75be645d331a282))
+* expand year range for yearWithinTitle ([da36c00](https://github.com/Viren070/AIOStreams/commit/da36c00af1ced383b987203584ea47ecd7cb1429))
+* **frontend/manifest-diff:** group idPrefixes changes, filter out order changes, and dont show modal on no effective changes ([29e4006](https://github.com/Viren070/AIOStreams/commit/29e40066c26da0ca212458cf02fab71a6e3de4fa))
+* give externalUrl field priority in type ([33d73bd](https://github.com/Viren070/AIOStreams/commit/33d73bdff53d45a9c47b307247b4543d4c336dd7))
+* if no year present after removing title year, treat as undefined ([a57c2c1](https://github.com/Viren070/AIOStreams/commit/a57c2c17867d42df55e9e9172f84589d36de7c47))
+* **metadata/trakt:** set version header to 2 and add user agent ([1eeb034](https://github.com/Viren070/AIOStreams/commit/1eeb034402525070b766fa4b3c2f211e8de3b415)), closes [#837](https://github.com/Viren070/AIOStreams/issues/837)
+* **presets/dmmCast:** update stream parser ([31b8832](https://github.com/Viren070/AIOStreams/commit/31b88323f690b7bd5c75a474f3857e9003910d52))
+* **presets/meteor:** include source, seeders, and audiolang in format config ([e818475](https://github.com/Viren070/AIOStreams/commit/e81847536d50d522531194ca04f3d7ae983e0037))
+* **presets/streamnzb:** make everything cached, show availability via message ([#828](https://github.com/Viren070/AIOStreams/issues/828)) ([830e915](https://github.com/Viren070/AIOStreams/commit/830e9152a3d166ed03256913a41c82b85205a797))
+* round bytes when extracting from string ([e361341](https://github.com/Viren070/AIOStreams/commit/e361341c6efc78d4f92bb6f7be682451cac640a2))
+* **server:** resolve synced URLs on search API route ([85adf28](https://github.com/Viren070/AIOStreams/commit/85adf2875c9a410c457869065d2bf60daa0ddf37)), closes [#836](https://github.com/Viren070/AIOStreams/issues/836)
+* trigger pre-fetch to ensure synced patterns are always present ([190a895](https://github.com/Viren070/AIOStreams/commit/190a8954ad0d13788f444a347d4b16aeda74a8fa))
+* **usenet-stream-base:** automatically select correct file when no fileIndex provided for library item ([f6cdc0b](https://github.com/Viren070/AIOStreams/commit/f6cdc0b8e31a759818151f53badb1a7aeccf645b))
+* **usenet-stream-base:** make categories dynamic and include category in ID to ensure correct path is chosen ([7e4e4fc](https://github.com/Viren070/AIOStreams/commit/7e4e4fc2f7fef55b611449eda5484736d6a4ff56))
+* validate all patterns ([68e5e2f](https://github.com/Viren070/AIOStreams/commit/68e5e2fd5fe1d521dd9020efb0d86c4ffe59117a))
+
 ## [2.25.4](https://github.com/Viren070/AIOStreams/compare/v2.25.3...v2.25.4) (2026-03-12)
 
 
