@@ -235,9 +235,17 @@ export function MyAddons({
     const defaults = defaultOrder.filter((c) => allCategories.has(c));
     const customs = [...allCategories.keys()]
       .filter((c) => !defaultOrder.includes(c as any))
-      .sort();
+      .sort((a, b) => {
+        const indexA = userData.presets.findIndex(
+          (p) => getEffectiveCategory(p, presetMetadataMap) === a
+        );
+        const indexB = userData.presets.findIndex(
+          (p) => getEffectiveCategory(p, presetMetadataMap) === b
+        );
+        return indexA - indexB;
+      });
     return [...defaults, ...customs];
-  }, [allCategories]);
+  }, [allCategories, userData.presets, presetMetadataMap]);
 
   // Filtered presets
   const filteredPresets = useMemo(() => {
