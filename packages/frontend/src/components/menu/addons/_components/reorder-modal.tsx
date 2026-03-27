@@ -50,13 +50,15 @@ function SortableReorderItem({ item }: { item: ReorderItem }) {
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg border bg-[var(--background)] cursor-move select-none ${
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg border bg-[var(--background)] select-none ${
         isDragging ? 'shadow-lg border-[--brand]/50' : 'border-[--border]'
       } ${!item.enabled ? 'opacity-50' : ''}`}
       {...attributes}
-      {...listeners}
     >
-      <div className="flex items-center justify-center w-5 text-sm font-mono text-[--muted] flex-shrink-0">
+      <div
+        className="flex items-center justify-center w-5 text-sm font-mono text-[--muted] flex-shrink-0 cursor-move touch-none"
+        {...listeners}
+      >
         <svg
           className="w-4 h-4 text-[--muted]"
           fill="none"
