@@ -25,6 +25,7 @@ import {
   FaEdit,
   FaUndo,
   FaChevronDown,
+  FaMapPin,
 } from 'react-icons/fa';
 
 // Helpers
@@ -62,6 +63,9 @@ export interface SyncConfig {
   onUrlsChange: (urls: string[]) => void;
   trusted?: boolean;
   syncMode?: SyncMode;
+  onInsertPlaceholder?: (url: string) => void;
+  onRemovePlaceholder?: (url: string) => void;
+  hasPlaceholder?: (url: string) => boolean;
 }
 
 interface SyncedPatternValue {
@@ -822,6 +826,11 @@ export function SyncedUrlInputs({
   };
 
   const handleUrlsUpdate = (newUrls: string[]) => {
+    // When a URL is removed, also remove its inline placeholder
+    const removedUrls = urls.filter((u) => !newUrls.includes(u));
+    for (const removedUrl of removedUrls) {
+      syncConfig.onRemovePlaceholder?.(removedUrl);
+    }
     onUrlsChange(newUrls);
   };
 
@@ -854,7 +863,8 @@ export function SyncedUrlInputs({
             {urls.map((url) => {
               const urlState = fetchedData[url];
               return (
-                <Disclosure key={url} type="single" collapsible>
+                <div key={url} data-synced-url={url}>
+                <Disclosure type="single" collapsible>
                   <DisclosureItem value="items">
                     <div className="flex items-center gap-2 p-2 px-3 text-sm">
                       <DisclosureTrigger>
@@ -865,9 +875,36 @@ export function SyncedUrlInputs({
                           <FaChevronDown className="text-[10px] text-[--muted] transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </button>
                       </DisclosureTrigger>
-                      <span className="flex-1 truncate font-mono text-xs text-[--muted]">
+                      <span className="flex-1 break-all font-mono text-xs text-[--muted]">
                         {url}
                       </span>
+                      {syncConfig.onInsertPlaceholder && (
+                        <Tooltip
+                          trigger={
+                            <IconButton
+                              size="sm"
+                              rounded
+                              icon={<FaMapPin />}
+                              intent={
+                                syncConfig.hasPlaceholder?.(url)
+                                  ? 'primary'
+                                  : 'primary-subtle'
+                              }
+                              onClick={() => {
+                                if (syncConfig.hasPlaceholder?.(url)) {
+                                  syncConfig.onRemovePlaceholder?.(url);
+                                } else {
+                                  syncConfig.onInsertPlaceholder!(url);
+                                }
+                              }}
+                            />
+                          }
+                        >
+                          {syncConfig.hasPlaceholder?.(url)
+                            ? 'Remove from inline'
+                            : 'Place inline'}
+                        </Tooltip>
+                      )}
                       <IconButton
                         size="sm"
                         rounded
@@ -889,6 +926,7 @@ export function SyncedUrlInputs({
                     </DisclosureContent>
                   </DisclosureItem>
                 </Disclosure>
+                </div>
               );
             })}
           </div>
