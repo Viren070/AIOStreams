@@ -122,10 +122,10 @@ function renderItemsWithPlaceholders<T>(
   getField: (item: T) => string,
   onItemsChange: (items: T[]) => void,
   renderItem: (item: T, index: number) => React.ReactNode,
-  options?: { iconPosition?: 'inside' | 'outside' },
+  options?: { syncEnabled?: boolean; iconPosition?: 'inside' | 'outside' },
 ): React.ReactNode[] {
   return items.map((item, index) => {
-    const url = parseSyncedUrl(getField(item));
+    const url = options?.syncEnabled ? parseSyncedUrl(getField(item)) : null;
     if (url) {
       return (
         <PlaceholderRow
@@ -354,7 +354,7 @@ export function TextInputs({
             />
           </div>
         </div>
-      ), { iconPosition: 'inside' })}
+      ), { syncEnabled: !!syncConfig, iconPosition: 'inside' })}
       <ListFooter
         onAdd={() => onValuesChange([...values, ''])}
         onImportClick={modal.open}
@@ -473,7 +473,7 @@ export function ToggleableTextInputs({
             />
           </div>
         </div>
-      ))}
+      ), { syncEnabled: !!syncConfig })}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { expression: '', enabled: true }])
@@ -591,7 +591,7 @@ export function TwoTextInputs({
             />
           </div>
         </div>
-      ), { iconPosition: 'inside' })}
+      ), { syncEnabled: !!syncConfig, iconPosition: 'inside' })}
       <ListFooter
         onAdd={() => onValuesChange([...values, { name: '', value: '' }])}
         onImportClick={modal.open}
@@ -721,7 +721,7 @@ export function RankedExpressionInputs({
             />
           </div>
         </div>
-      ))}
+      ), { syncEnabled: !!syncConfig })}
       <ListFooter
         onAdd={() =>
           onValuesChange([
@@ -854,7 +854,7 @@ export function RankedRegexInputs({
             </div>
           </div>
         </div>
-      ), { iconPosition: 'inside' })}
+      ), { syncEnabled: !!syncConfig, iconPosition: 'inside' })}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { pattern: '', name: '', score: 0 }])
