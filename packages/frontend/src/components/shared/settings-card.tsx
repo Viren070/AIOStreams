@@ -73,6 +73,7 @@ export function SettingsCard({
     <>
       <Card
         ref={cardRef}
+        data-settings-card
         className={cn(
           'group/settings-card relative lg:bg-gray-950/70',
           className

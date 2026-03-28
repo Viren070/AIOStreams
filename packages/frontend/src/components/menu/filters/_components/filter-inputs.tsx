@@ -61,7 +61,7 @@ function PlaceholderRow<T>({
   iconPosition?: 'inside' | 'outside';
 }) {
   const handleJumpToUrl = useCallback((e: React.MouseEvent) => {
-    const container = (e.currentTarget as HTMLElement).closest('[class*="group/settings-card"]');
+    const container = (e.currentTarget as HTMLElement).closest('[data-settings-card]');
     const row = (container ?? document).querySelector(`[data-synced-url="${CSS.escape(url)}"]`);
     if (!row) return;
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
