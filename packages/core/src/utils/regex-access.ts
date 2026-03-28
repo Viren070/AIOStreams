@@ -277,7 +277,7 @@ export class RegexAccess {
     existing: U[],
     userData: UserData,
     transform: (item: RegexPatternItem) => U,
-    uniqueKey: (item: U) => string
+    getField: (item: U) => string
   ): Promise<U[]> {
     const validUrls = urls?.length
       ? this.validateUrls(urls, userData)
@@ -285,7 +285,7 @@ export class RegexAccess {
 
     if (validUrls.length === 0) {
       const cleaned = existing.filter(
-        (item) => !parseSyncedUrl(uniqueKey(item))
+        (item) => !parseSyncedUrl(getField(item))
       );
       return cleaned.length === existing.length ? existing : cleaned;
     }
@@ -306,7 +306,6 @@ export class RegexAccess {
 
     const overrides: SyncOverride[] = userData.regexOverrides || [];
     const result: U[] = [];
-    const existingSet = new Set<string>();
     const resolvedInlineUrls = new Set<string>();
 
     const pushPatterns = (patterns: RegexPatternItem[]) => {
@@ -319,7 +318,7 @@ export class RegexAccess {
 
         if (override?.disabled) continue;
 
-        const item = transform(
+        result.push(transform(
           override
             ? {
                 ...regex,
@@ -328,19 +327,12 @@ export class RegexAccess {
                   override.score !== undefined ? override.score : regex.score,
               }
             : regex
-        );
-
-        const key = uniqueKey(item);
-        if (!existingSet.has(key)) {
-          result.push(item);
-          existingSet.add(key);
-        }
+        ));
       }
     };
 
     for (const item of existing) {
-      const raw = uniqueKey(item);
-      const placeholderUrl = parseSyncedUrl(raw);
+      const placeholderUrl = parseSyncedUrl(getField(item));
 
       if (placeholderUrl) {
         if (validUrlSet.has(placeholderUrl)) {
@@ -350,11 +342,7 @@ export class RegexAccess {
         continue;
       }
 
-      const key = uniqueKey(item);
-      if (!existingSet.has(key)) {
-        result.push(item);
-        existingSet.add(key);
-      }
+      result.push(item);
     }
 
     for (const url of validUrls) {

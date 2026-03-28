@@ -168,7 +168,7 @@ export class SelAccess {
     existing: U[],
     userData: UserData,
     transform: (item: StreamExpressionItem) => U,
-    uniqueKey: (item: U) => string
+    getField: (item: U) => string
   ): Promise<U[]> {
     const validUrls = urls?.length
       ? this.validateUrls(urls, userData)
@@ -176,7 +176,7 @@ export class SelAccess {
 
     if (validUrls.length === 0) {
       const cleaned = existing.filter(
-        (item) => !parseSyncedUrl(uniqueKey(item))
+        (item) => !parseSyncedUrl(getField(item))
       );
       return cleaned.length === existing.length ? existing : cleaned;
     }
@@ -192,7 +192,6 @@ export class SelAccess {
 
     const overrides: SyncOverride[] = userData.selOverrides || [];
     const result: U[] = [];
-    const existingSet = new Set<string>();
     const resolvedInlineUrls = new Set<string>();
 
     const pushExpressions = (expressions: StreamExpressionItem[]) => {
@@ -205,18 +204,12 @@ export class SelAccess {
           ? this._applySelOverride(expr, override)
           : expr;
 
-        const item = transform(overriddenExpr);
-        const key = uniqueKey(item);
-        if (!existingSet.has(key)) {
-          result.push(item);
-          existingSet.add(key);
-        }
+        result.push(transform(overriddenExpr));
       }
     };
 
     for (const item of existing) {
-      const raw = uniqueKey(item);
-      const placeholderUrl = parseSyncedUrl(raw);
+      const placeholderUrl = parseSyncedUrl(getField(item));
 
       if (placeholderUrl) {
         if (validUrlSet.has(placeholderUrl)) {
@@ -226,11 +219,7 @@ export class SelAccess {
         continue;
       }
 
-      const key = uniqueKey(item);
-      if (!existingSet.has(key)) {
-        result.push(item);
-        existingSet.add(key);
-      }
+      result.push(item);
     }
 
     for (const url of validUrls) {

@@ -78,6 +78,7 @@ function PlaceholderRow<T>({
     <Tooltip trigger={
       <button
         type="button"
+        aria-label="Jump to synced URL"
         onClick={handleJumpToUrl}
         className="h-6 w-6 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0"
       >

@@ -2657,40 +2657,7 @@ function Content() {
                       ],
                     }));
                   }}
-                  syncConfig={{
-                    urls: userData.syncedRankedRegexUrls || [],
-                    onUrlsChange: (urls) =>
-                      setUserData((prev) => ({
-                        ...prev,
-                        syncedRankedRegexUrls: urls,
-                      })),
-                    trusted: userData.trusted,
-                    onInsertPlaceholder: (url) => {
-                      const entry = buildPlaceholderEntry('rankedRegexPatterns', url);
-                      setUserData((prev) => ({
-                        ...prev,
-                        rankedRegexPatterns: [...(prev.rankedRegexPatterns || []), entry],
-                      }));
-                    },
-                    onRemovePlaceholder: (url) => {
-                      const placeholder = makeSyncedPlaceholder(url);
-                      setUserData((prev) => {
-                        const arr = prev.rankedRegexPatterns;
-                        if (!Array.isArray(arr)) return prev;
-                        const filtered = arr.filter(
-                          (entry) => entry.pattern !== placeholder
-                        );
-                        if (filtered.length === arr.length) return prev;
-                        return { ...prev, rankedRegexPatterns: filtered };
-                      });
-                    },
-                    hasPlaceholder: (url) => {
-                      const placeholder = makeSyncedPlaceholder(url);
-                      return (userData.rankedRegexPatterns || []).some(
-                        (entry) => entry.pattern === placeholder
-                      );
-                    },
-                  }}
+                  {...getSyncedProps('syncedRankedRegexUrls')}
                 />
               </div>
             </>
