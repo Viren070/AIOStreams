@@ -52,11 +52,13 @@ function PlaceholderRow<T>({
   index,
   onItemsChange,
   url,
+  iconPosition,
 }: {
   items: T[];
   index: number;
   onItemsChange: (items: T[]) => void;
   url: string;
+  iconPosition?: 'inside' | 'outside';
 }) {
   const handleJumpToUrl = useCallback((e: React.MouseEvent) => {
     const container = (e.currentTarget as HTMLElement).closest('[class*="group/settings-card"]');
@@ -72,24 +74,31 @@ function PlaceholderRow<T>({
     }, 400);
   }, [url]);
 
+  const linkButton = (
+    <Tooltip trigger={
+      <button
+        type="button"
+        onClick={handleJumpToUrl}
+        className="h-6 w-6 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+      >
+        <FaLink className="text-[--brand] text-base" />
+      </button>
+    }>
+      Jump to synced URL
+    </Tooltip>
+  );
+
   return (
     <div className="flex gap-2 items-end">
-      <div className="flex items-center pb-2">
-        <Tooltip trigger={
-          <button
-            type="button"
-            onClick={handleJumpToUrl}
-            className="h-6 w-6 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <FaLink className="text-[--brand] text-base" />
-          </button>
-        }>
-          Jump to synced URL
-        </Tooltip>
-      </div>
+      {iconPosition !== 'inside' && (
+        <div className="flex items-center pb-2">
+          {linkButton}
+        </div>
+      )}
       <div className="flex-1 relative w-full space-y-1">
         <label className="text-base w-fit font-semibold self-start">Synced URL</label>
-        <div className="flex items-center w-full rounded-[--radius] bg-[--paper] border border-[--border] shadow-sm h-10 px-3 opacity-75">
+        <div className="flex items-center gap-2 w-full rounded-[--radius] bg-[--paper] border border-[--border] shadow-sm h-10 px-3 opacity-75">
+          {iconPosition === 'inside' && linkButton}
           <span className="text-sm text-[--muted] font-mono break-all leading-snug py-1">
             {url}
           </span>
@@ -112,6 +121,7 @@ function renderItemsWithPlaceholders<T>(
   getField: (item: T) => string,
   onItemsChange: (items: T[]) => void,
   renderItem: (item: T, index: number) => React.ReactNode,
+  options?: { iconPosition?: 'inside' | 'outside' },
 ): React.ReactNode[] {
   return items.map((item, index) => {
     const url = parseSyncedUrl(getField(item));
@@ -123,6 +133,7 @@ function renderItemsWithPlaceholders<T>(
           index={index}
           onItemsChange={onItemsChange}
           url={url}
+          iconPosition={options?.iconPosition}
         />
       );
     }
@@ -342,7 +353,7 @@ export function TextInputs({
             />
           </div>
         </div>
-      ))}
+      ), { iconPosition: 'inside' })}
       <ListFooter
         onAdd={() => onValuesChange([...values, ''])}
         onImportClick={modal.open}
@@ -579,7 +590,7 @@ export function TwoTextInputs({
             />
           </div>
         </div>
-      ))}
+      ), { iconPosition: 'inside' })}
       <ListFooter
         onAdd={() => onValuesChange([...values, { name: '', value: '' }])}
         onImportClick={modal.open}
@@ -842,7 +853,7 @@ export function RankedRegexInputs({
             </div>
           </div>
         </div>
-      ))}
+      ), { iconPosition: 'inside' })}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { pattern: '', name: '', score: 0 }])
