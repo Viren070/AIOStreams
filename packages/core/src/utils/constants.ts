@@ -183,7 +183,7 @@ export const FORMATTER_DETAILS: Record<FormatterType, FormatterDetail> = {
     id: TAMTARO_FORMATTER,
     name: 'Tamtaro',
     description:
-      "From Tamtaro's setup. Minimal and clean, yet comprehensive for stream selection. Smartly detects status for cached (⚡/⏳), proxied (⛊/⛉), library (☁︎/▤), and season packs (⧉/◧). The last line in sᴍᴀʟʟ ᴄᴀᴘs highlights special attributes like Usenet's health (☑ ɴᴢʙ), SeaDex (ᴀʟᴛ/ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ), SEL scores (ʀᴇᴍᴜx ᴛ𝟷 ₁,₉₅₀), networks (ɴᴇᴛғʟɪx) and special editions (ᴅɪʀᴇᴄᴛᴏʀ's ᴄᴜᴛ).",
+      "From Tamtaro's setup. Smartly detects status for cached (⚡/⏳), proxied (⛊/⛉), library (☁︎/✎), season packs (❖/◈) and HDR/DV (✦/✧). The last line in sᴍᴀʟʟ ᴄᴀᴘs displays your preferred language options, Usenet's health (☑ ɴᴢʙ), SeaDex (ᴀʟᴛ/ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ), networks, special editions and attributes via ranked stream expressions.",
   },
   [LIGHT_GDRIVE_FORMATTER]: {
     id: LIGHT_GDRIVE_FORMATTER,
