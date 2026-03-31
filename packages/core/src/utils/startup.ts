@@ -1135,6 +1135,19 @@ const logStartupInfo = () => {
       );
     }
 
+    // HdHub
+    logKeyValue('HdHub:', Env.HDHUB_URL);
+    if (Env.DEFAULT_HDHUB_TIMEOUT) {
+      logKeyValue(
+        '  Timeout:',
+        formatMilliseconds(Env.DEFAULT_HDHUB_TIMEOUT),
+        '     '
+      );
+    }
+    if (Env.DEFAULT_HDHUB_USER_AGENT) {
+      logKeyValue('  User Agent:', Env.DEFAULT_HDHUB_USER_AGENT, '     ');
+    }
+
     // DMM Cast (Note: no URL env var, only timeout and user agent)
     if (Env.DEFAULT_DMM_CAST_TIMEOUT || Env.DEFAULT_DMM_CAST_USER_AGENT) {
       logKeyValue('DMM Cast:', 'Configuration only');
