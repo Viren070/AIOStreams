@@ -1,4 +1,4 @@
-import { Addon, Option, UserData } from '../db/index.js';
+import { Addon, Option, PresetMetadata, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import {
   Cache,
@@ -53,7 +53,7 @@ export class AICompanionPreset extends Preset {
       value: 'trending',
     },
   ];
-  static override get METADATA() {
+  static override get METADATA(): PresetMetadata {
     const supportedResources = [constants.CATALOG_RESOURCE];
 
     const options: Option[] = [
@@ -177,6 +177,12 @@ export class AICompanionPreset extends Preset {
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,
       CATEGORY: constants.PresetCategory.META_CATALOGS,
+      DISABLED: {
+        reason:
+          'Addon is archived. "This repository is archived. I highly recommend Stremio AI Search or AIOMetadata to continue using LLMs for content search."',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 
