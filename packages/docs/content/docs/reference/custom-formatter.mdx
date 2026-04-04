@@ -29,82 +29,151 @@ Modifiers are chained with `::`:
 
 ### Stream
 
-| Variable                           | Type     | Description                                                               |
-| ---------------------------------- | -------- | ------------------------------------------------------------------------- |
-| `{stream.proxied}`                 | boolean  | Whether the stream is proxied (e.g. MediaFlow)                            |
-| `{stream.type}`                    | string   | Type: `debrid`, `usenet`, `http`, `live`, `youtube`, `p2p`                |
-| `{stream.filename}`                | string   | Filename of the stream or media file                                      |
-| `{stream.folderName}`              | string   | Folder name (usually only specific addons)                                |
-| `{stream.size}`                    | number   | File size in bytes                                                        |
-| `{stream.bitrate}`                 | number   | Bitrate in bits per second                                                |
-| `{stream.folderSize}`              | number   | Folder/torrent size in bytes                                              |
-| `{stream.library}`                 | boolean  | Whether from a personal Debrid library                                    |
-| `{stream.quality}`                 | string   | Quality tag (e.g. `Bluray`, `WEB-DL`)                                     |
-| `{stream.resolution}`              | string   | Video resolution (e.g. `1080p`, `2160p`)                                  |
-| `{stream.languages}`               | string[] | Available audio languages                                                 |
-| `{stream.subtitles}`               | string[] | Available subtitle languages                                              |
-| `{stream.subbed}`                  | boolean  | Whether the release has subtitles                                         |
-| `{stream.dubbed}`                  | boolean  | Whether the release is dubbed                                             |
-| `{stream.seeders}`                 | number   | Torrent seeder count                                                      |
-| `{stream.private}`                 | boolean  | `true` if from a private tracker                                          |
-| `{stream.freeleech}`               | boolean  | `true` if the torrent is freeleech                                        |
-| `{stream.age}`                     | string   | Human-readable age since release                                          |
-| `{stream.ageHours}`                | number   | Age in hours                                                              |
-| `{stream.duration}`                | number   | Media duration in seconds                                                 |
-| `{stream.infoHash}`                | string   | Torrent info hash                                                         |
-| `{stream.message}`                 | string   | Additional status message                                                 |
-| `{stream.languageEmojis}`          | string[] | Languages as emoji flags                                                  |
-| `{stream.subtitleEmojis}`          | string[] | Subtitles as emoji flags                                                  |
-| `{stream.languageCodes}`           | string[] | Languages as ISO 639 codes                                                |
-| `{stream.subtitleCodes}`           | string[] | Subtitles as ISO 639 codes                                                |
-| `{stream.smallLanguageCodes}`      | string[] | Languages as small-caps codes                                             |
-| `{stream.smallSubtitleCodes}`      | string[] | Subtitles as small-caps codes                                             |
-| `{stream.uLanguages}`              | string[] | Languages also in your language settings                                  |
-| `{stream.uSubtitles}`              | string[] | Subtitles also in your language settings                                  |
-| `{stream.uLanguageEmojis}`         | string[] | Same, as emoji flags                                                      |
-| `{stream.uSubtitleEmojis}`         | string[] | Same (subtitles), as emoji flags                                          |
-| `{stream.uLanguageCodes}`          | string[] | Same, as ISO 639 codes                                                    |
-| `{stream.uSubtitleCodes}`          | string[] | Same (subtitles), as ISO 639 codes                                        |
-| `{stream.uSmallLanguageCodes}`     | string[] | Same, as small-caps codes                                                 |
-| `{stream.uSmallSubtitleCodes}`     | string[] | Same (subtitles), as small-caps codes                                     |
-| `{stream.visualTags}`              | string[] | Visual tags (e.g. `HDR`, `DV`, `HDR10`)                                   |
-| `{stream.audioTags}`               | string[] | Audio tags (e.g. `Atmos`, `DTS-HD MA`)                                    |
-| `{stream.audioChannels}`           | string[] | Detected audio channels (e.g. `5.1`)                                      |
-| `{stream.releaseGroup}`            | string   | Name of the release group                                                 |
-| `{stream.encode}`                  | string   | Encoding format (e.g. `x264`, `HEVC`)                                     |
-| `{stream.editions}`                | string[] | Special editions (e.g. `Director's Cut`)                                  |
-| `{stream.repack}`                  | boolean  | Whether the release is a repack                                           |
-| `{stream.regraded}`                | boolean  | Whether the content is regraded                                           |
-| `{stream.uncensored}`              | boolean  | Whether the content is uncensored                                         |
-| `{stream.unrated}`                 | boolean  | Whether the content is unrated                                            |
-| `{stream.upscaled}`                | boolean  | Whether the content has been upscaled                                     |
-| `{stream.network}`                 | string   | Source network (e.g. `Netflix`, `Disney+`)                                |
-| `{stream.container}`               | string   | File container format (e.g. `mkv`, `mp4`)                                 |
-| `{stream.extension}`               | string   | File extension (e.g. `.mkv`, `.iso`)                                      |
-| `{stream.indexer}`                 | string   | Source indexer                                                            |
-| `{stream.title}`                   | string   | Media title extracted from filename                                       |
-| `{stream.year}`                    | string   | Year extracted from filename                                              |
-| `{stream.date}`                    | string   | Date extracted from filename                                              |
-| `{stream.seasonPack}`              | boolean  | `true` if part of a season pack                                           |
-| `{stream.seasonEpisode}`           | string[] | Pre-formatted season/episode strings (e.g. `['S01', 'E05']`)              |
-| `{stream.seasons}`                 | number[] | Detected season numbers                                                   |
-| `{stream.formattedSeasons}`        | string   | Formatted season string (e.g. `S01` or `S01-05`)                          |
-| `{stream.folderSeasons}`           | number[] | Seasons from folder name (when different)                                 |
-| `{stream.formattedFolderSeasons}`  | string   | Formatted seasons from folder name                                        |
-| `{stream.episodes}`                | number[] | Detected episode numbers                                                  |
-| `{stream.formattedEpisodes}`       | string   | Formatted episode string (e.g. `E01` or `E01-05`)                         |
-| `{stream.folderEpisodes}`          | number[] | Episodes from folder name (when different)                                |
-| `{stream.formattedFolderEpisodes}` | string   | Formatted episodes from folder name                                       |
-| `{stream.seadex}`                  | boolean  | Whether listed as best/alt on SeaDex                                      |
-| `{stream.seadexBest}`              | boolean  | Whether listed as a _best_ release on SeaDex                              |
-| `{stream.regexMatched}`            | string   | Name of the highest-priority matched preferred regex                      |
-| `{stream.rankedRegexMatched}`      | string[] | All matched Ranked Regex Filter names (sorted)                            |
-| `{stream.regexScore}`              | number   | Score from matched Regex Filter                                           |
-| `{stream.nRegexScore}`             | number   | Regex score normalised to 0–100                                           |
-| `{stream.seScore}`                 | number   | Score from matched Stream Expression sort rule                            |
-| `{stream.nSeScore}`                | number   | Stream Expression score normalised to 0–100                               |
-| `{stream.seMatched}`               | string   | Name of the Preferred Stream Expression that matched (from first comment) |
-| `{stream.rseMatched}`              | string[] | Names of all Ranked Stream Expressions that matched                       |
+#### Source
+
+| Variable            | Type    | Description                                                       |
+| ------------------- | ------- | ----------------------------------------------------------------- |
+| `{stream.type}`     | string  | Type: `debrid`, `usenet`, `http`, `live`, `youtube`, `p2p`        |
+| `{stream.proxied}`  | boolean | Whether the stream is proxied (e.g. MediaFlow)                    |
+| `{stream.library}`  | boolean | Whether the file is already in your "library" e.g. debrid account |
+| `{stream.indexer}`  | string  | Source indexer                                                    |
+| `{stream.message}`  | string  | Additional status message                                         |
+| `{stream.infoHash}` | string  | Torrent info hash                                                 |
+
+#### File
+
+| Variable              | Type   | Description                                |
+| --------------------- | ------ | ------------------------------------------ |
+| `{stream.filename}`   | string | Filename of the stream or media file       |
+| `{stream.folderName}` | string | Folder name (usually only specific addons) |
+| `{stream.size}`       | number | File size in bytes                         |
+| `{stream.folderSize}` | number | Folder/torrent size in bytes               |
+| `{stream.bitrate}`    | number | Bitrate in bits per second                 |
+| `{stream.duration}`   | number | Media duration in seconds                  |
+| `{stream.container}`  | string | File container format (e.g. `mkv`, `mp4`)  |
+| `{stream.extension}`  | string | File extension (e.g. `.mkv`, `.iso`)       |
+
+#### Video
+
+| Variable               | Type     | Description                                 |
+| ---------------------- | -------- | ------------------------------------------- |
+| `{stream.quality}`     | string   | Quality tag (e.g. `Bluray`, `WEB-DL`)       |
+| `{stream.resolution}`  | string   | Video resolution (e.g. `1080p`, `2160p`)    |
+| `{stream.visualTags}`  | string[] | Visual tags (e.g. `HDR`, `DV`, `HDR10+`)    |
+| `{stream.encode}`      | string   | Encoding format (e.g. `HEVC`, `AVC`, `AV1`) |
+| `{stream.network}`     | string   | Source network (e.g. `Netflix`, `Disney+`)  |
+| `{stream.hasChapters}` | boolean  | Whether the file contains chapters          |
+
+#### Audio
+
+| Variable                 | Type     | Description                                   |
+| ------------------------ | -------- | --------------------------------------------- |
+| `{stream.audioTags}`     | string[] | Audio tags (e.g. `Atmos`, `DTS-HD MA`, `DD+`) |
+| `{stream.audioChannels}` | string[] | Audio channels (e.g. `5.1`, `7.1`)            |
+
+#### Languages
+
+| Variable                       | Type     | Description                                                                                           |
+| ------------------------------ | -------- | ----------------------------------------------------------------------------------------------------- |
+| `{stream.languages}`           | string[] | Languages extracted from filename or audio track info                                                 |
+| `{stream.languageEmojis}`      | string[] | `languages` as emoji flags                                                                            |
+| `{stream.languageCodes}`       | string[] | `languages` as ISO 639 codes                                                                          |
+| `{stream.smallLanguageCodes}`  | string[] | `languages` as small-caps codes                                                                       |
+| `{stream.uLanguages}`          | string[] | `languages` filtered to those you have configured (preferred, required, or included but not excluded) |
+| `{stream.uLanguageEmojis}`     | string[] | `uLanguages` as emoji flags                                                                           |
+| `{stream.uLanguageCodes}`      | string[] | `uLanguages` as ISO 639 codes                                                                         |
+| `{stream.uSmallLanguageCodes}` | string[] | `uLanguages` as small-caps codes                                                                      |
+| `{stream.dubbed}`              | boolean  | Whether the release is dubbed                                                                         |
+
+#### Subtitles
+
+| Variable                       | Type     | Description                                                                                           |
+| ------------------------------ | -------- | ----------------------------------------------------------------------------------------------------- |
+| `{stream.subtitles}`           | string[] | Embedded subtitle languages (when known — see note below)                                             |
+| `{stream.subtitleEmojis}`      | string[] | `subtitles` as emoji flags                                                                            |
+| `{stream.subtitleCodes}`       | string[] | `subtitles` as ISO 639 codes                                                                          |
+| `{stream.smallSubtitleCodes}`  | string[] | `subtitles` as small-caps codes                                                                       |
+| `{stream.uSubtitles}`          | string[] | `subtitles` filtered to those you have configured (preferred, required, or included but not excluded) |
+| `{stream.uSubtitleEmojis}`     | string[] | `uSubtitles` as emoji flags                                                                           |
+| `{stream.uSubtitleCodes}`      | string[] | `uSubtitles` as ISO 639 codes                                                                         |
+| `{stream.uSmallSubtitleCodes}` | string[] | `uSubtitles` as small-caps codes                                                                      |
+| `{stream.subbed}`              | boolean  | Whether the release has subtitles                                                                     |
+
+<Callout type="info">
+  **`languages` vs `subtitles`**
+
+`languages` and `subtitles` behave differently depending on what information is available for a stream.
+
+**When accurate media info is available**, `languages` contains audio track languages and `subtitles` contains embedded subtitle languages. This is the case for:
+
+- Debrid results from built-in and service-wrapped addons that have `media_info` from StremThru (crowdsourced/probed via FFmpeg)
+- Torznab/Newznab results from indexers that provide separate audio/subtitle metadata
+- nekoBT results (all results have accurate audio/subtitle info)
+- Torrentio anime results (subtitles field may be populated)
+
+**In all other cases**, `subtitles` is empty and `languages` contains every language found in the filename — including subtitle-only languages (e.g. a filename containing `Eng.Sub` will add `English` to `languages`, not `subtitles`). This is a known limitation of filename-only parsing.
+
+</Callout>
+
+#### Release
+
+| Variable                | Type     | Description                              |
+| ----------------------- | -------- | ---------------------------------------- |
+| `{stream.title}`        | string   | Media title extracted from filename      |
+| `{stream.year}`         | string   | Year extracted from filename             |
+| `{stream.date}`         | string   | Date extracted from filename             |
+| `{stream.releaseGroup}` | string   | Name of the release group                |
+| `{stream.editions}`     | string[] | Special editions (e.g. `Director's Cut`) |
+| `{stream.repack}`       | boolean  | Whether the release is a repack          |
+| `{stream.regraded}`     | boolean  | Whether the content is regraded          |
+| `{stream.uncensored}`   | boolean  | Whether the content is uncensored        |
+| `{stream.unrated}`      | boolean  | Whether the content is unrated           |
+| `{stream.upscaled}`     | boolean  | Whether the content has been upscaled    |
+
+#### Season / Episode
+
+| Variable                           | Type     | Description                                                  |
+| ---------------------------------- | -------- | ------------------------------------------------------------ |
+| `{stream.seasonPack}`              | boolean  | `true` if part of a season pack                              |
+| `{stream.seasons}`                 | number[] | Detected season numbers                                      |
+| `{stream.formattedSeasons}`        | string   | Formatted season string (e.g. `S01` or `S01-05`)             |
+| `{stream.folderSeasons}`           | number[] | Seasons from folder name (when different from filename)      |
+| `{stream.formattedFolderSeasons}`  | string   | Formatted seasons from folder name                           |
+| `{stream.episodes}`                | number[] | Detected episode numbers                                     |
+| `{stream.formattedEpisodes}`       | string   | Formatted episode string (e.g. `E01` or `E01-05`)            |
+| `{stream.folderEpisodes}`          | number[] | Episodes from folder name (when different from filename)     |
+| `{stream.formattedFolderEpisodes}` | string   | Formatted episodes from folder name                          |
+| `{stream.seasonEpisode}`           | string[] | Pre-formatted season/episode strings (e.g. `['S01', 'E05']`) |
+
+#### P2P / Tracker
+
+| Variable             | Type    | Description                        |
+| -------------------- | ------- | ---------------------------------- |
+| `{stream.seeders}`   | number  | Torrent seeder count               |
+| `{stream.private}`   | boolean | `true` if from a private tracker   |
+| `{stream.freeleech}` | boolean | `true` if the torrent is freeleech |
+| `{stream.age}`       | string  | Human-readable age since release   |
+| `{stream.ageHours}`  | number  | Age in hours                       |
+
+#### Anime
+
+| Variable              | Type    | Description                                  |
+| --------------------- | ------- | -------------------------------------------- |
+| `{stream.seadex}`     | boolean | Whether listed as best/alt on SeaDex         |
+| `{stream.seadexBest}` | boolean | Whether listed as a _best_ release on SeaDex |
+
+#### Scoring
+
+| Variable                      | Type     | Description                                                               |
+| ----------------------------- | -------- | ------------------------------------------------------------------------- |
+| `{stream.regexMatched}`       | string   | Name of the highest-priority matched preferred regex                      |
+| `{stream.rankedRegexMatched}` | string[] | All matched Ranked Regex Filter names (sorted)                            |
+| `{stream.regexScore}`         | number   | Score from matched Regex Filter                                           |
+| `{stream.nRegexScore}`        | number   | Regex score normalised to 0–100                                           |
+| `{stream.seScore}`            | number   | Score from matched Stream Expression sort rule                            |
+| `{stream.nSeScore}`           | number   | Stream Expression score normalised to 0–100                               |
+| `{stream.seMatched}`          | string   | Name of the Preferred Stream Expression that matched (from first comment) |
+| `{stream.rseMatched}`         | string[] | Names of all Ranked Stream Expressions that matched                       |
 
 ### Service
 
