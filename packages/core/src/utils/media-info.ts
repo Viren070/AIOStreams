@@ -228,24 +228,35 @@ function normaliseEncode(
 }
 
 function normaliseResolution(
-  height: unknown,
-  width: unknown
+  width: unknown,
+  height: unknown
 ): string | undefined {
-  const numericHeight = typeof height === 'number' ? height : undefined;
-  const numericWidth = typeof width === 'number' ? width : undefined;
+  const h =
+    typeof height === 'number' && height > 0 ? Math.round(height) : undefined;
+  const w =
+    typeof width === 'number' && width > 0 ? Math.round(width) : undefined;
 
-  const candidates = [numericHeight, numericWidth]
-    .filter((value): value is number => typeof value === 'number' && value > 0)
-    .map((value) => Math.round(value));
+  if (!h && !w) return undefined;
 
-  if (candidates.length === 0) return undefined;
+  const heightLevels = [2160, 1440, 1080, 720, 576, 480, 360, 240, 144];
 
-  const detected = Math.min(...candidates);
-  const levels = [2160, 1440, 1080, 720, 576, 480, 360, 240, 144];
-  const closest = levels.reduce((prev, curr) =>
-    Math.abs(curr - detected) < Math.abs(prev - detected) ? curr : prev
+  if (h && w) {
+    const widthThresholds = [3840, 2560, 1920, 1280, 1024, 854, 640, 426, 256];
+    const idx = widthThresholds.reduce(
+      (bestIdx, wLevel, i) =>
+        Math.abs(wLevel - w) < Math.abs(widthThresholds[bestIdx] - w)
+          ? i
+          : bestIdx,
+      0
+    );
+    return `${heightLevels[idx]}p`;
+  }
+
+  // Single dimension (e.g. height extracted from a "Np" string): use height thresholds.
+  const ref = w ?? h!;
+  const closest = heightLevels.reduce((prev, curr) =>
+    Math.abs(curr - ref) < Math.abs(prev - ref) ? curr : prev
   );
-
   return `${closest}p`;
 }
 
@@ -294,7 +305,7 @@ export function normaliseParsedMediaInfo(
   if (parsedMediaInfo.resolution) {
     const match = parsedMediaInfo.resolution.toLowerCase().match(/(\d+)p/);
     resolution = match
-      ? normaliseResolution(Number.parseInt(match[1], 10), undefined)
+      ? normaliseResolution(undefined, Number.parseInt(match[1], 10))
       : undefined;
   }
 
@@ -349,7 +360,7 @@ export function parseMediaInfo(
 
   const visualTags = normaliseVisualTags(info.video);
   const encode = normaliseEncode(info.video);
-  const resolution = normaliseResolution(info.video?.h, info.video?.w);
+  const resolution = normaliseResolution(info.video?.w, info.video?.h);
   const duration =
     typeof info.format?.dur === 'number' &&
     Number.isFinite(info.format.dur) &&
