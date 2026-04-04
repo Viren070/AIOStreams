@@ -21,12 +21,13 @@ export function PosterServices() {
           { label: 'RPDB', value: 'rpdb' },
           { label: 'Top Poster', value: 'top-poster' },
           { label: 'AIOratings', value: 'aioratings' },
+          { label: 'OpenPosterDB', value: 'openposterdb' },
         ]}
         value={userData.posterService || 'rpdb'}
         onValueChange={(v) => {
           setUserData((prev) => ({
             ...prev,
-            posterService: v as 'rpdb' | 'top-poster' | 'aioratings' | 'none',
+            posterService: v as 'rpdb' | 'top-poster' | 'aioratings' | 'openposterdb' | 'none',
           }));
         }}
         defaultValue="rpdb"
@@ -130,6 +131,46 @@ export function PosterServices() {
         </>
       )}
 
+      {userData.posterService === 'openposterdb' && (
+        <>
+          <PasswordInput
+            autoComplete="off"
+            label="OpenPosterDB API Key"
+            help={
+              <span>
+                Get your API Key from{' '}
+                <a
+                  href="https://openposterdb.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  here
+                </a>
+              </span>
+            }
+            value={userData.openposterdbApiKey}
+            onValueChange={(v) => {
+              setUserData((prev) => ({ ...prev, openposterdbApiKey: v }));
+            }}
+          />
+          <TextInput
+            label="OpenPosterDB URL"
+            help={
+              <span>
+                Custom base URL for OpenPosterDB. Leave empty to use the
+                default.
+              </span>
+            }
+            value={userData.openposterdbUrl || ''}
+            placeholder="https://openposterdb.com"
+            onValueChange={(v) => {
+              setUserData((prev) => ({ ...prev, openposterdbUrl: v }));
+            }}
+          />
+        </>
+      )}
+
       <Switch
         label="Use Poster Service for Library/Continue Watching"
         side="right"
@@ -141,7 +182,8 @@ export function PosterServices() {
           userData.posterService === 'none' ||
           (!userData.rpdbApiKey &&
             !userData.topPosterApiKey &&
-            !userData.aioratingsApiKey)
+            !userData.aioratingsApiKey &&
+            !userData.openposterdbApiKey)
         }
         help={
           <span>
@@ -159,7 +201,8 @@ export function PosterServices() {
           userData.posterService === 'none' ||
           (!userData.rpdbApiKey &&
             !userData.topPosterApiKey &&
-            !userData.aioratingsApiKey)
+            !userData.aioratingsApiKey &&
+            !userData.openposterdbApiKey)
         }
         help={
           <span>
