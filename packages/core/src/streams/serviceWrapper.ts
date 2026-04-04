@@ -501,6 +501,8 @@ async function buildDebridStreams(
           audioTags: parsedMediaInfo.audioTags?.length
             ? parsedMediaInfo.audioTags
             : (debridStream.parsedFile?.audioTags ?? []),
+          hasChapters:
+            parsedMediaInfo.hasChapters ?? debridStream.parsedFile?.hasChapters,
         };
         debridStream.duration =
           parsedMediaInfo.duration ?? debridStream.duration;

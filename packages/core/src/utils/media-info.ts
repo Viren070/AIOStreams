@@ -11,6 +11,7 @@ export interface ParsedMediaInfo {
   bitrate?: number;
   encode?: string;
   resolution?: string;
+  hasChapters?: boolean;
 }
 
 type MediaInfoAudioTrack = {
@@ -321,6 +322,7 @@ export function normaliseParsedMediaInfo(
       ? { duration: parsedMediaInfo.duration }
       : {}),
     ...(parsedMediaInfo?.bitrate ? { bitrate: parsedMediaInfo.bitrate } : {}),
+    ...(parsedMediaInfo?.hasChapters ? { hasChapters: true } : {}),
   };
 
   return Object.keys(result).length > 0 ? result : undefined;
@@ -375,7 +377,7 @@ export function parseMediaInfo(
       ? info.format.br
       : undefined;
 
-  return normaliseParsedMediaInfo({
+  const normalised = normaliseParsedMediaInfo({
     languages,
     subtitles,
     audioTags,
@@ -385,7 +387,10 @@ export function parseMediaInfo(
     resolution,
     duration,
     bitrate,
+    hasChapters: info.has_chapters === true,
   });
+
+  return normalised;
 }
 
 export function mergeParsedMediaInfo(
@@ -407,6 +412,7 @@ export function mergeParsedMediaInfo(
     resolution: preferred?.resolution ?? base?.resolution,
     duration: preferred?.duration ?? base?.duration,
     bitrate: preferred?.bitrate ?? base?.bitrate,
+    hasChapters: preferred?.hasChapters ?? base?.hasChapters,
   });
 
   return merged;

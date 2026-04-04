@@ -101,6 +101,7 @@ export interface ParseValue {
     uncensored: boolean;
     unrated: boolean;
     upscaled: boolean;
+    hasChapters: boolean;
     network: string | null;
     container: string | null;
     extension: string | null;
@@ -497,6 +498,7 @@ export abstract class BaseFormatter {
         uncensored: stream.parsedFile?.uncensored ?? false,
         unrated: stream.parsedFile?.unrated ?? false,
         upscaled: stream.parsedFile?.upscaled ?? false,
+        hasChapters: stream.parsedFile?.hasChapters ?? false,
         network: stream.parsedFile?.network || null,
         container: stream.parsedFile?.container || null,
         extension: stream.parsedFile?.extension || null,

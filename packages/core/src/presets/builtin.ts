@@ -84,6 +84,7 @@ export class BuiltinStreamParser extends StreamParser {
         providedParsedMediaInfo?.encode ||
         fileParsed?.encode ||
         folderParsed?.encode,
+      hasChapters: providedParsedMediaInfo?.hasChapters,
     });
 
     if (!merged) return undefined;
