@@ -7,6 +7,17 @@ export const formatZodError = (error: ZodError) => {
   return z.prettifyError(error);
 };
 
+/** A limited set of allowed input types for templates. We limit because we are manually rendering the options
+ * and not using the TemplateOption component. Perhaps this could be refactored so we are not duplicating logic.
+ */
+export const ALLOWED_INPUT_TYPES = [
+  'string',
+  'password',
+  'custom-nntp-servers',
+] as const satisfies readonly Option['type'][];
+
+export type AllowedInputType = (typeof ALLOWED_INPUT_TYPES)[number];
+
 export const TemplateSchema = z.object({
   metadata: z.object({
     id: z
@@ -57,7 +68,7 @@ export interface TemplateInput {
   path: string | string[];
   label: string;
   description?: string;
-  type: 'string' | 'password';
+  type: AllowedInputType;
   required: boolean;
   value: string;
 }

@@ -678,7 +678,7 @@ const encodeServers = (servers: NNTPServers): string | undefined => {
   return Buffer.from(JSON.stringify(servers)).toString('base64');
 };
 
-interface NNTPServersInputProps {
+export interface NNTPServersInputProps {
   name: string;
   description?: string;
   value: string | undefined;
@@ -686,7 +686,7 @@ interface NNTPServersInputProps {
   disabled?: boolean;
 }
 
-function NNTPServersInput({
+export function NNTPServersInput({
   name,
   description,
   value,

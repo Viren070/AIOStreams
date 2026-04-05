@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Template, Option, StatusResponse } from '@aiostreams/core';
+import { Template, Option, StatusResponse, ServiceId } from '@aiostreams/core';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
   applyTemplateConditionals,
@@ -203,10 +203,29 @@ export function useTemplateWizard({
         }
       });
 
-      if (selectedSvcs.length > 0 && migratedData.services) {
-        migratedData.services = migratedData.services.filter((s: any) =>
-          selectedSvcs.includes(s.id)
-        );
+      if (selectedSvcs.length > 0) {
+        if (!migratedData.services) migratedData.services = [];
+
+        const services = migratedData.services;
+
+        selectedSvcs.forEach((svcId) => {
+          const existing = services.find((s: any) => s.id === svcId);
+          if (!existing) {
+            services.push({
+              id: svcId as ServiceId,
+              enabled: true,
+              credentials: {},
+            });
+          } else if (!existing.enabled) {
+            existing.enabled = true;
+          }
+        });
+
+        services.forEach((s: any) => {
+          if (!selectedSvcs.includes(s.id)) {
+            s.enabled = false;
+          }
+        });
       }
 
       resolveCredentialRefs(migratedData, resolvedValues);
