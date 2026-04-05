@@ -156,7 +156,7 @@ export class StremioTransformer {
   async transformStreams(
     response: AIOStreamsResponse<{
       streams: ParsedStream[];
-      statistics: { title: string; description: string }[];
+      statistics: { title: string; description: string; forced?: boolean }[];
     }>,
     formatterContext: FormatterContext,
     options?: { provideStreamData?: boolean; disableAutoplay?: boolean }
@@ -197,16 +197,31 @@ export class StremioTransformer {
       );
     }
 
+    const toStatisticStream = (statistic: { title: string; description: string }) => ({
+      name: statistic.title,
+      description: statistic.description,
+      externalUrl: 'https://github.com/Viren070/AIOStreams',
+      streamData: {
+        type: constants.STATISTIC_STREAM_TYPE,
+      },
+    });
+
+    const forcedStats = statistics.filter((s) => s.forced);
+    const userStats = statistics.filter((s) => !s.forced);
+
+    const position = this.userData.statistics?.position || 'bottom';
+
+    // Forced stats always surface regardless of user config, but respect position
+    if (forcedStats.length > 0) {
+      if (position === 'bottom') {
+        transformedStreams.push(...forcedStats.map(toStatisticStream));
+      } else {
+        transformedStreams.unshift(...forcedStats.map(toStatisticStream));
+      }
+    }
+
     if (this.userData.statistics?.enabled) {
-      let position = this.userData.statistics?.position || 'bottom';
-      let statisticStreams = statistics.map((statistic) => ({
-        name: statistic.title,
-        description: statistic.description,
-        externalUrl: 'https://github.com/Viren070/AIOStreams',
-        streamData: {
-          type: constants.STATISTIC_STREAM_TYPE,
-        },
-      }));
+      const statisticStreams = userStats.map(toStatisticStream);
       if (position === 'bottom') {
         transformedStreams.push(...statisticStreams);
       } else {

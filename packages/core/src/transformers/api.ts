@@ -74,7 +74,7 @@ export class ApiTransformer {
   async transformStreams(
     response: AIOStreamsResponse<{
       streams: ParsedStream[];
-      statistics: { title: string; description: string }[];
+      statistics: { title: string; description: string; forced?: boolean }[];
     }>,
     requiredFields: SearchApiResultField[]
   ): Promise<SearchApiResponseData> {
