@@ -157,11 +157,15 @@ export class AIOStreams {
   ): Promise<
     AIOStreamsResponse<{
       streams: ParsedStream[];
-      statistics: { title: string; description: string }[];
+      statistics: { title: string; description: string; forced?: boolean }[];
     }>
   > {
     logger.info(`Handling stream request`, { type, id });
-    const statistics: { title: string; description: string }[] = [];
+    const statistics: {
+      title: string;
+      description: string;
+      forced?: boolean;
+    }[] = [];
     // get a list of all addons that support the stream resource with the given type and id.
     const supportedAddons = [];
     for (const [instanceId, addonResources] of Object.entries(
@@ -234,6 +238,36 @@ export class AIOStreams {
     let finalStreams = processResults.streams;
     const pipelineTimings = processResults.timings;
     errors.push(...processResults.errors);
+
+    // Force-remove disabled stream types (instance-level override, bypasses user config)
+    if (FeatureControl.disabledStreamTypes.size > 0) {
+      const removedByType = new Map<string, number>();
+      finalStreams = finalStreams.filter((stream) => {
+        if (FeatureControl.disabledStreamTypes.has(stream.type)) {
+          removedByType.set(
+            stream.type,
+            (removedByType.get(stream.type) ?? 0) + 1
+          );
+          return false;
+        }
+        return true;
+      });
+      if (removedByType.size > 0) {
+        const total = [...removedByType.values()].reduce((a, b) => a + b, 0);
+        const lines: string[] = [
+          `⚠️ The following stream types have been disabled by the instance owner.`,
+          `📌 Disabled Stream Types (${total})`,
+        ];
+        for (const [type, count] of removedByType.entries()) {
+          lines.push(`    • ${count}× ${type}`);
+        }
+        statistics.push({
+          title: '🚫 Removal Reasons',
+          description: lines.join('\n').trim(),
+          forced: true,
+        });
+      }
+    }
 
     // if this.userData.precacheNextEpisode is true, start a new thread to request the next episode, check if
     // all provider streams are uncached, and only if so, then send a request to the first uncached stream in the list.

@@ -1,10 +1,11 @@
 import { Env } from './env.js';
+import { StreamType } from './constants.js';
 
 const DEFAULT_REASON = 'Disabled by owner of the instance';
 
 /**
  * Manages instance-level feature controls:
- *   - Disabled hosts, addons, and services
+ *   - Disabled hosts, addons, services, and stream types
  *   - Regex filter access level
  */
 export class FeatureControl {
@@ -39,6 +40,16 @@ export class FeatureControl {
       }
     }
     return map;
+  })();
+
+  public static readonly disabledStreamTypes: Set<StreamType> = (() => {
+    const set = new Set<StreamType>();
+    if (Env.DISABLED_STREAM_TYPES) {
+      for (const type of Env.DISABLED_STREAM_TYPES) {
+        set.add(type as StreamType);
+      }
+    }
+    return set;
   })();
 
   public static readonly regexFilterAccess: 'none' | 'trusted' | 'all' =

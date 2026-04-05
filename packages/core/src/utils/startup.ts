@@ -356,11 +356,13 @@ const logStartupInfo = () => {
   const blockedHosts = parseBlockedItems(Env.DISABLED_HOSTS);
   const blockedAddons = parseBlockedItems(Env.DISABLED_ADDONS);
   const blockedServices = parseBlockedItems(Env.DISABLED_SERVICES);
+  const disabledStreamTypes = Env.DISABLED_STREAM_TYPES ?? [];
 
   if (
     blockedHosts.length > 0 ||
     blockedAddons.length > 0 ||
-    blockedServices.length > 0
+    blockedServices.length > 0 ||
+    disabledStreamTypes.length > 0
   ) {
     logSection('BLOCKED ITEMS', '🚫', () => {
       if (blockedHosts.length > 0) {
@@ -388,6 +390,12 @@ const logStartupInfo = () => {
         });
       } else {
         logKeyValue('Blocked Services:', '❌ None');
+      }
+
+      if (disabledStreamTypes.length > 0) {
+        logKeyValue('Disabled Stream Types:', disabledStreamTypes.join(', '));
+      } else {
+        logKeyValue('Disabled Stream Types:', '❌ None');
       }
     });
   }

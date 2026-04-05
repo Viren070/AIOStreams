@@ -47,7 +47,7 @@ export class ChillLinkTransformer {
   async transformStreams(
     response: AIOStreamsResponse<{
       streams: ParsedStream[];
-      statistics: { title: string; description: string }[];
+      statistics: { title: string; description: string; forced?: boolean }[];
     }>,
     formatterContext: FormatterContext
   ): Promise<ChillLinkResponseData> {
