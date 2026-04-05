@@ -43,6 +43,7 @@ export function TemplateCredentialInputsStep({
           processedTemplate.inputs.map((input) => {
             return (
               <InputRenderer
+                key={input.key}
                 type={input.type}
                 value={inputValues[input.key] || ''}
                 onValueChange={(newValue) => {
