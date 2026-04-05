@@ -43,7 +43,6 @@ export function TemplateCredentialInputsStep({
           processedTemplate.inputs.map((input) => {
             return (
               <InputRenderer
-                key={input.key}
                 type={input.type}
                 value={inputValues[input.key] || ''}
                 onValueChange={(newValue) => {
@@ -83,7 +82,6 @@ export function TemplateCredentialInputsStep({
 
 interface InputRendererProps {
   type: TemplateInput['type'];
-  key: string;
   value: string;
   onValueChange: (value: string) => void;
   label: string;
@@ -94,20 +92,21 @@ interface InputRendererProps {
 
 function InputRenderer({
   type,
-  key,
   value,
   onValueChange,
   label,
   description,
+  required,
   placeholder,
 }: InputRendererProps) {
   return (
-    <React.Fragment key={key}>
+    <>
       {type === 'string' ? (
         <TextInput
           value={value}
           onValueChange={onValueChange}
           label={label}
+          required={required}
           placeholder={placeholder}
         />
       ) : type === 'password' ? (
@@ -115,6 +114,7 @@ function InputRenderer({
           value={value}
           onValueChange={onValueChange}
           label={label}
+          required={required}
           placeholder={placeholder}
         />
       ) : type === 'custom-nntp-servers' ? (
@@ -130,6 +130,6 @@ function InputRenderer({
           {description}
         </MarkdownLite>
       )}
-    </React.Fragment>
+    </>
   );
 }
