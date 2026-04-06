@@ -153,7 +153,6 @@ let PRESET_LIST: string[] = [
   'ai-search',
   'more-like-this',
   'content-deep-dive',
-  'hdhub',
 ].filter(Boolean);
 
 export class PresetManager {
