@@ -103,6 +103,63 @@ import {
   defaultDeduplicatorMultiGroupBehaviour,
 } from './_components/filter-utils';
 import type { SyncConfig } from './_components/synced-patterns';
+import { UserData } from '@aiostreams/core';
+
+/** Create a `<SYNCED: url>` placeholder string. */
+function makeSyncedPlaceholder(url: string): string {
+  return `<SYNCED: ${url}>`;
+}
+
+/** Maps synced-URL config keys to their corresponding values array keys. */
+const SYNCED_URL_TO_VALUES_KEY: Record<string, keyof UserData> = {
+  syncedPreferredRegexUrls: 'preferredRegexPatterns',
+  syncedExcludedRegexUrls: 'excludedRegexPatterns',
+  syncedIncludedRegexUrls: 'includedRegexPatterns',
+  syncedRequiredRegexUrls: 'requiredRegexPatterns',
+  syncedRankedRegexUrls: 'rankedRegexPatterns',
+  syncedPreferredStreamExpressionUrls: 'preferredStreamExpressions',
+  syncedExcludedStreamExpressionUrls: 'excludedStreamExpressions',
+  syncedIncludedStreamExpressionUrls: 'includedStreamExpressions',
+  syncedRequiredStreamExpressionUrls: 'requiredStreamExpressions',
+  syncedRankedStreamExpressionUrls: 'rankedStreamExpressions',
+};
+
+/** Build a placeholder entry shaped for the given values array type. */
+function buildPlaceholderEntry(valuesKey: keyof UserData, url: string): any {
+  const placeholder = makeSyncedPlaceholder(url);
+  switch (valuesKey) {
+    // string[]
+    case 'excludedRegexPatterns':
+    case 'includedRegexPatterns':
+    case 'requiredRegexPatterns':
+      return placeholder;
+    // {name, pattern}[]
+    case 'preferredRegexPatterns':
+      return { name: '', pattern: placeholder };
+    // {pattern, name?, score}[]
+    case 'rankedRegexPatterns':
+      return { pattern: placeholder, name: '', score: 0 };
+    // {expression, enabled}[]
+    case 'excludedStreamExpressions':
+    case 'includedStreamExpressions':
+    case 'requiredStreamExpressions':
+    case 'preferredStreamExpressions':
+      return { expression: placeholder, enabled: true };
+    // {expression, score, enabled}[]
+    case 'rankedStreamExpressions':
+      return { expression: placeholder, score: 0, enabled: true };
+    default:
+      return placeholder;
+  }
+}
+
+/** Extract the placeholder-carrying field (pattern/expression/string) from a values entry. */
+function extractFieldForPlaceholder(_valuesKey: keyof UserData, entry: any): string {
+  if (typeof entry === 'string') return entry;
+  if (entry?.pattern !== undefined) return entry.pattern;
+  if (entry?.expression !== undefined) return entry.expression;
+  return '';
+}
 
 export function FiltersMenu() {
   return (
@@ -144,24 +201,63 @@ function Content() {
       | 'syncedExcludedRegexUrls'
       | 'syncedIncludedRegexUrls'
       | 'syncedRequiredRegexUrls'
+      | 'syncedRankedRegexUrls'
       | 'syncedPreferredStreamExpressionUrls'
       | 'syncedExcludedStreamExpressionUrls'
       | 'syncedIncludedStreamExpressionUrls'
       | 'syncedRequiredStreamExpressionUrls'
       | 'syncedRankedStreamExpressionUrls'
-  ): { syncConfig: SyncConfig } => ({
-    syncConfig: {
-      urls: userData[key] || [],
-      trusted: userData.trusted,
-      syncMode: key.includes('StreamExpression') ? 'sel' : 'regex',
-      onUrlsChange: (urls: string[]) => {
-        setUserData((prev) => ({
-          ...prev,
-          [key]: urls,
-        }));
+  ): { syncConfig: SyncConfig } => {
+    const valuesKey = SYNCED_URL_TO_VALUES_KEY[key];
+    return {
+      syncConfig: {
+        urls: userData[key] || [],
+        trusted: userData.trusted,
+        syncMode: key.includes('StreamExpression') ? 'sel' : 'regex',
+        onUrlsChange: (urls: string[]) => {
+          setUserData((prev) => ({
+            ...prev,
+            [key]: urls,
+          }));
+        },
+        onInsertPlaceholder: valuesKey
+          ? (url: string) => {
+              const entry = buildPlaceholderEntry(valuesKey, url);
+              setUserData((prev) => ({
+                ...prev,
+                [valuesKey]: [...((prev as any)[valuesKey] || []), entry],
+              }));
+            }
+          : undefined,
+        onRemovePlaceholder: valuesKey
+          ? (url: string) => {
+              const placeholder = makeSyncedPlaceholder(url);
+              setUserData((prev) => {
+                const arr = (prev as any)[valuesKey];
+                if (!Array.isArray(arr)) return prev;
+                const filtered = arr.filter(
+                  (entry: any) =>
+                    extractFieldForPlaceholder(valuesKey, entry) !== placeholder
+                );
+                if (filtered.length === arr.length) return prev;
+                return { ...prev, [valuesKey]: filtered };
+              });
+            }
+          : undefined,
+        hasPlaceholder: valuesKey
+          ? (url: string) => {
+              const placeholder = makeSyncedPlaceholder(url);
+              const arr = (userData as any)[valuesKey];
+              if (!Array.isArray(arr)) return false;
+              return arr.some(
+                (entry: any) =>
+                  extractFieldForPlaceholder(valuesKey, entry) === placeholder
+              );
+            }
+          : undefined,
       },
-    },
-  });
+    };
+  };
 
   useEffect(() => {
     // set default preferred filters if they are undefined
@@ -2561,15 +2657,7 @@ function Content() {
                       ],
                     }));
                   }}
-                  syncConfig={{
-                    urls: userData.syncedRankedRegexUrls || [],
-                    onUrlsChange: (urls) =>
-                      setUserData((prev) => ({
-                        ...prev,
-                        syncedRankedRegexUrls: urls,
-                      })),
-                    trusted: userData.trusted,
-                  }}
+                  {...getSyncedProps('syncedRankedRegexUrls')}
                 />
               </div>
             </>

@@ -425,3 +425,10 @@ export interface SyncOverride {
   exprNames?: string[];
   disabled?: boolean;
 }
+
+/** Parse a `<SYNCED: url>` placeholder, returning the URL or null. */
+export function parseSyncedUrl(value: string): string | null {
+  if (!value.startsWith('<SYNCED: ') || !value.endsWith('>')) return null;
+  const url = value.slice(9, -1).trim();
+  return url.length > 0 ? url : null;
+}

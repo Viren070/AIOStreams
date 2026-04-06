@@ -28,6 +28,7 @@ import {
   createPosterService,
   APIError,
 } from './index.js';
+import { parseSyncedUrl } from './sync.js';
 import { z, ZodError } from 'zod';
 import {
   ExitConditionEvaluator,
@@ -298,6 +299,7 @@ export async function validateConfig(
 
   validateSyncedRegexUrls(config, options?.skipErrorsFromAddonsOrProxies);
   validateSyncedSelUrls(config, options?.skipErrorsFromAddonsOrProxies);
+  validateSyncedPlaceholders(config);
 
   let excludedStreamExpressions: { expression: string; enabled: boolean }[] =
     [];
@@ -459,7 +461,7 @@ export async function validateConfig(
     ...(config.preferredStreamExpressions?.map((e) => e.expression) ?? []),
     ...(config.includedStreamExpressions?.map((e) => e.expression) ?? []),
     ...(config.rankedStreamExpressions?.map((r) => r.expression) ?? []),
-  ];
+  ].filter((expr) => !parseSyncedUrl(expr));
 
   for (const expression of expressionsToValidate) {
     try {
@@ -863,7 +865,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
       ...synced.ranked.map((r) => r.pattern),
       ...(config.rankedRegexPatterns || []).map((r) => r.pattern),
     ]),
-  ];
+  ].filter((pattern) => !parseSyncedUrl(pattern));
 
   if (regexes.length === 0) return;
 
@@ -913,6 +915,7 @@ function validateSyncedRegexUrls(
     ...(config.syncedExcludedRegexUrls || []),
     ...(config.syncedRequiredRegexUrls || []),
     ...(config.syncedPreferredRegexUrls || []),
+    ...(config.syncedRankedRegexUrls || []),
   ];
 
   const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
@@ -950,6 +953,48 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
         `Forbidden URL(s) in stream expression sync configuration: ${invalidUrls.join(', ')}`
       );
     }
+  }
+}
+
+/**
+ * Validate that every `<SYNCED: url>` placeholder in a values array
+ * references a URL present in the corresponding synced URLs array.
+ */
+function validateSyncedPlaceholders(config: UserData) {
+  const checks: { valuesKey: keyof UserData; syncedKey: keyof UserData; extract: (item: any) => string }[] = [
+    { valuesKey: 'excludedRegexPatterns', syncedKey: 'syncedExcludedRegexUrls', extract: (v) => v },
+    { valuesKey: 'includedRegexPatterns', syncedKey: 'syncedIncludedRegexUrls', extract: (v) => v },
+    { valuesKey: 'requiredRegexPatterns', syncedKey: 'syncedRequiredRegexUrls', extract: (v) => v },
+    { valuesKey: 'preferredRegexPatterns', syncedKey: 'syncedPreferredRegexUrls', extract: (v) => v.pattern },
+    { valuesKey: 'rankedRegexPatterns', syncedKey: 'syncedRankedRegexUrls', extract: (v) => v.pattern },
+    { valuesKey: 'excludedStreamExpressions', syncedKey: 'syncedExcludedStreamExpressionUrls', extract: (v) => v.expression },
+    { valuesKey: 'includedStreamExpressions', syncedKey: 'syncedIncludedStreamExpressionUrls', extract: (v) => v.expression },
+    { valuesKey: 'requiredStreamExpressions', syncedKey: 'syncedRequiredStreamExpressionUrls', extract: (v) => v.expression },
+    { valuesKey: 'preferredStreamExpressions', syncedKey: 'syncedPreferredStreamExpressionUrls', extract: (v) => v.expression },
+    { valuesKey: 'rankedStreamExpressions', syncedKey: 'syncedRankedStreamExpressionUrls', extract: (v) => v.expression },
+  ];
+
+  const invalid: string[] = [];
+
+  for (const { valuesKey, syncedKey, extract } of checks) {
+    const values = (config as any)[valuesKey] as any[] | undefined;
+    if (!values?.length) continue;
+
+    const syncedUrls = new Set<string>((config as any)[syncedKey] ?? []);
+
+    for (const entry of values) {
+      const field = extract(entry);
+      const url = parseSyncedUrl(field);
+      if (url && !syncedUrls.has(url)) {
+        invalid.push(url);
+      }
+    }
+  }
+
+  if (invalid.length > 0) {
+    throw new Error(
+      `Found synced placeholder(s) referencing URL(s) not in the synced URLs list: ${invalid.join(', ')}`
+    );
   }
 }
 
