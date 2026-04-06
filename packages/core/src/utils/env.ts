@@ -1832,6 +1832,19 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default WebStreamr user agent',
   }),
 
+  HDHUB_URL: url({
+    default: 'https://hdhub.thevolecitor.qzz.io',
+    desc: 'Base URL for the HdHub Stremio Addon',
+  }),
+  DEFAULT_HDHUB_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default timeout for the HdHub Stremio Addon',
+  }),
+  DEFAULT_HDHUB_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default user agent for the HdHub Stremio Addon',
+  }),
+
   TMDB_ADDON_URL: url({
     default: 'https://tmdb.elfhosted.com',
     desc: 'TMDB Addon URL',

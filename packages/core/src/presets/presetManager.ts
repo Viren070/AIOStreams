@@ -75,6 +75,7 @@ import { NekoBtPreset } from './nekoBt.js';
 import { EasynewsSearchPreset } from './easynewsSearch.js';
 import { SeaDexPreset } from './seadex.js';
 import { StreamNZBPreset } from './streamnzb.js';
+import { HdHubPreset } from './hdhub.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -120,6 +121,7 @@ let PRESET_LIST: string[] = [
   'dmm-cast',
   'nuvio-streams',
   'webstreamr',
+  'hdhub',
   'astream',
   'brazuca-torrents',
   'streamasia',
@@ -151,6 +153,7 @@ let PRESET_LIST: string[] = [
   'ai-search',
   'more-like-this',
   'content-deep-dive',
+  'hdhub',
 ].filter(Boolean);
 
 export class PresetManager {
@@ -320,6 +323,8 @@ export class PresetManager {
         return EasynewsSearchPreset;
       case 'streamnzb':
         return StreamNZBPreset;
+      case 'hdhub':
+        return HdHubPreset;
       default:
         throw new Error(`Preset ${id} not found`);
     }
