@@ -25,7 +25,8 @@ import {
   hashNzbUrl,
 } from '../../debrid/index.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
-import { preprocessTitle, normaliseTitle } from '../../parser/utils.js';
+import { preprocessTitle, normaliseTitle, extractInfoHashFromMagnet } from '../../parser/utils.js';
+export { extractInfoHashFromMagnet };
 
 const logger = createLogger('debrid');
 
@@ -43,12 +44,6 @@ export function extractTrackersFromMagnet(magnet: string): string[] {
   return new URL(magnet.replace('&amp;', '&')).searchParams
     .getAll('tr')
     .filter((tracker) => tracker.trim() !== '');
-}
-
-export function extractInfoHashFromMagnet(magnet: string): string | undefined {
-  return magnet
-    .match(/(?:urn(?::|%3A)btih(?::|%3A))([a-f0-9]{40})/i)?.[1]
-    ?.toLowerCase();
 }
 
 export async function processTorrents(

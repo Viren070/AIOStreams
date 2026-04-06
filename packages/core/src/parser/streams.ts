@@ -7,8 +7,13 @@ import {
   FULL_LANGUAGE_MAPPING,
 } from '../utils/index.js';
 import FileParser from './file.js';
-import { parseAgeString, parseDuration } from './utils.js';
+import {
+  parseAgeString,
+  parseDuration,
+  extractInfoHashFromMagnet,
+} from './utils.js';
 import { mergeParsedFiles, arrayMerge } from './merge.js';
+
 const logger = createLogger('parser');
 
 class StreamParser {
@@ -69,6 +74,10 @@ class StreamParser {
       return { skip: true };
     }
     stream.description = stream.description || stream.title;
+    if (stream.url && stream.url.startsWith('magnet:')) {
+      stream.infoHash = extractInfoHashFromMagnet(stream.url);
+      stream.url = undefined;
+    }
 
     let parsedStream: ParsedStream = {
       id: this.getRandomId(),
@@ -503,7 +512,6 @@ class StreamParser {
       return 'debrid';
     }
 
-    // return 'http';
     if (stream.url) {
       return 'http';
     }
