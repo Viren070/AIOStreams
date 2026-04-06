@@ -104,6 +104,11 @@ export class DB {
         connectionString: this.uri.url.toString(),
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 2000,
+        keepAlive: true,
+        keepAliveInitialDelayMillis: 10000,
+      });
+      pool.on('error', (err) => {
+        logger.error('Unexpected error on idle PostgreSQL client', err);
       });
       this.db = pool;
       this.uri.dialect = 'postgres';
