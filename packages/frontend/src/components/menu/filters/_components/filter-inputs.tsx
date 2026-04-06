@@ -60,31 +60,42 @@ function PlaceholderRow<T>({
   url: string;
   iconPosition?: 'inside' | 'outside';
 }) {
-  const handleJumpToUrl = useCallback((e: React.MouseEvent) => {
-    const container = (e.currentTarget as HTMLElement).closest('[data-settings-card]');
-    const row = (container ?? document).querySelector(`[data-synced-url="${CSS.escape(url)}"]`);
-    if (!row) return;
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Open the disclosure if it's closed
-    setTimeout(() => {
-      const trigger = row.querySelector<HTMLButtonElement>('[data-radix-collection-item]');
-      if (trigger?.dataset.state !== 'open') {
-        trigger?.click();
-      }
-    }, 400);
-  }, [url]);
+  const handleJumpToUrl = useCallback(
+    (e: React.MouseEvent) => {
+      const container = (e.currentTarget as HTMLElement).closest(
+        '[data-settings-card]'
+      );
+      const row = (container ?? document).querySelector(
+        `[data-synced-url="${CSS.escape(url)}"]`
+      );
+      if (!row) return;
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Open the disclosure if it's closed
+      setTimeout(() => {
+        const trigger = row.querySelector<HTMLButtonElement>(
+          '[data-radix-collection-item]'
+        );
+        if (trigger?.dataset.state !== 'open') {
+          trigger?.click();
+        }
+      }, 400);
+    },
+    [url]
+  );
 
   const linkButton = (
-    <Tooltip trigger={
-      <button
-        type="button"
-        aria-label="Jump to synced URL"
-        onClick={handleJumpToUrl}
-        className="h-6 w-6 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0"
-      >
-        <FaLink className="text-[--brand] text-base" />
-      </button>
-    }>
+    <Tooltip
+      trigger={
+        <button
+          type="button"
+          aria-label="Jump to synced URL"
+          onClick={handleJumpToUrl}
+          className="h-6 w-6 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+        >
+          <FaLink className="text-[--brand] text-base" />
+        </button>
+      }
+    >
       Jump to synced URL
     </Tooltip>
   );
@@ -92,12 +103,12 @@ function PlaceholderRow<T>({
   return (
     <div className="flex gap-2 items-end">
       {iconPosition !== 'inside' && (
-        <div className="flex items-center pb-2">
-          {linkButton}
-        </div>
+        <div className="flex items-center pb-2">{linkButton}</div>
       )}
       <div className="flex-1 relative w-full space-y-1">
-        <label className="text-base w-fit font-semibold self-start">Synced URL</label>
+        <label className="text-base w-fit font-semibold self-start">
+          Synced URL
+        </label>
         <div className="flex items-center gap-2 w-full rounded-[--radius] bg-[--paper] border border-[--border] shadow-sm h-10 px-3 opacity-75">
           {iconPosition === 'inside' && linkButton}
           <span className="text-sm text-[--muted] font-mono break-all leading-snug py-1">
@@ -122,7 +133,7 @@ function renderItemsWithPlaceholders<T>(
   getField: (item: T) => string,
   onItemsChange: (items: T[]) => void,
   renderItem: (item: T, index: number) => React.ReactNode,
-  options?: { syncEnabled?: boolean; iconPosition?: 'inside' | 'outside' },
+  options?: { syncEnabled?: boolean; iconPosition?: 'inside' | 'outside' }
 ): React.ReactNode[] {
   return items.map((item, index) => {
     const url = options?.syncEnabled ? parseSyncedUrl(getField(item)) : null;
@@ -336,25 +347,31 @@ export function TextInputs({
 
   return (
     <SettingsCard title={label} description={help} key={label}>
-      {renderItemsWithPlaceholders(values, (v) => v, onValuesChange, (value, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={value}
-              label={itemName}
-              placeholder={placeholder}
-              onValueChange={(newValue) => handleValueChange(newValue, index)}
-            />
+      {renderItemsWithPlaceholders(
+        values,
+        (v) => v,
+        onValuesChange,
+        (value, index) => (
+          <div key={index} className="flex gap-2">
+            <div className="flex-1">
+              <TextInput
+                value={value}
+                label={itemName}
+                placeholder={placeholder}
+                onValueChange={(newValue) => handleValueChange(newValue, index)}
+              />
+            </div>
+            <div className="flex gap-1 items-end pb-1">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex gap-1 items-end pb-1">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ), { syncEnabled: !!syncConfig, iconPosition: 'inside' })}
+        ),
+        { syncEnabled: !!syncConfig, iconPosition: 'inside' }
+      )}
       <ListFooter
         onAdd={() => onValuesChange([...values, ''])}
         onImportClick={modal.open}
@@ -442,38 +459,46 @@ export function ToggleableTextInputs({
 
   return (
     <SettingsCard title={title} description={description}>
-      {renderItemsWithPlaceholders(values, (v) => v.expression, onValuesChange, (value, index) => (
-        <div key={index} className="flex gap-2 items-end">
-          <div className="flex items-center pb-0.5">
-            <Checkbox
-              value={value.enabled ?? true}
-              defaultValue={true}
-              size="lg"
-              onValueChange={(v) => {
-                if (onEnabledChange) {
-                  onEnabledChange(v === true, index);
+      {renderItemsWithPlaceholders(
+        values,
+        (v) => v.expression,
+        onValuesChange,
+        (value, index) => (
+          <div key={index} className="flex gap-2 items-end">
+            <div className="flex items-center pb-0.5">
+              <Checkbox
+                value={value.enabled ?? true}
+                defaultValue={true}
+                size="lg"
+                onValueChange={(v) => {
+                  if (onEnabledChange) {
+                    onEnabledChange(v === true, index);
+                  }
+                }}
+              />
+            </div>
+            <div className="flex-1">
+              <TextInput
+                value={value.expression}
+                label="Expression"
+                placeholder={placeholder}
+                disabled={value.enabled === false}
+                onValueChange={(newValue) =>
+                  onExpressionChange(newValue, index)
                 }
-              }}
-            />
+              />
+            </div>
+            <div className="flex gap-1 items-end pb-1">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <TextInput
-              value={value.expression}
-              label="Expression"
-              placeholder={placeholder}
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onExpressionChange(newValue, index)}
-            />
-          </div>
-          <div className="flex gap-1 items-end pb-1">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ), { syncEnabled: !!syncConfig })}
+        ),
+        { syncEnabled: !!syncConfig }
+      )}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { expression: '', enabled: true }])
@@ -565,33 +590,39 @@ export function TwoTextInputs({
 
   return (
     <SettingsCard title={title} description={description}>
-      {renderItemsWithPlaceholders(values, (v) => v.value, onValuesChange, (value, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="flex-1">
-            <TextInput
-              value={value.name}
-              label={keyName}
-              placeholder={keyPlaceholder}
-              onValueChange={(newValue) => onKeyChange(newValue, index)}
-            />
+      {renderItemsWithPlaceholders(
+        values,
+        (v) => v.value,
+        onValuesChange,
+        (value, index) => (
+          <div key={index} className="flex gap-2">
+            <div className="flex-1">
+              <TextInput
+                value={value.name}
+                label={keyName}
+                placeholder={keyPlaceholder}
+                onValueChange={(newValue) => onKeyChange(newValue, index)}
+              />
+            </div>
+            <div className="flex-1">
+              <TextInput
+                value={value.value}
+                label={valueName}
+                placeholder={valuePlaceholder}
+                onValueChange={(newValue) => onValueChange(newValue, index)}
+              />
+            </div>
+            <div className="flex gap-1 items-end pb-1">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex-1">
-            <TextInput
-              value={value.value}
-              label={valueName}
-              placeholder={valuePlaceholder}
-              onValueChange={(newValue) => onValueChange(newValue, index)}
-            />
-          </div>
-          <div className="flex gap-1 items-end pb-1">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ), { syncEnabled: !!syncConfig, iconPosition: 'inside' })}
+        ),
+        { syncEnabled: !!syncConfig, iconPosition: 'inside' }
+      )}
       <ListFooter
         onAdd={() => onValuesChange([...values, { name: '', value: '' }])}
         onImportClick={modal.open}
@@ -678,50 +709,60 @@ export function RankedExpressionInputs({
 
   return (
     <SettingsCard title={title} description={description}>
-      {renderItemsWithPlaceholders(values, (v) => v.expression, onValuesChange, (value, index) => (
-        <div key={index} className="flex gap-2 items-end">
-          <div className="flex items-center pb-0.5">
-            <Checkbox
-              value={value.enabled ?? true}
-              defaultValue={true}
-              size="lg"
-              onValueChange={(v) => {
-                if (onEnabledChange) {
-                  onEnabledChange(v === true, index);
+      {renderItemsWithPlaceholders(
+        values,
+        (v) => v.expression,
+        onValuesChange,
+        (value, index) => (
+          <div key={index} className="flex gap-2 items-end">
+            <div className="flex items-center pb-0.5">
+              <Checkbox
+                value={value.enabled ?? true}
+                defaultValue={true}
+                size="lg"
+                onValueChange={(v) => {
+                  if (onEnabledChange) {
+                    onEnabledChange(v === true, index);
+                  }
+                }}
+              />
+            </div>
+            <div className="flex-[3]">
+              <TextInput
+                value={value.expression}
+                label="Expression"
+                placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+                disabled={value.enabled === false}
+                onValueChange={(newValue) =>
+                  onExpressionChange(newValue, index)
                 }
-              }}
-            />
+              />
+            </div>
+            <div className="flex-1 min-w-[100px]">
+              <NumberInput
+                value={value.score || 0}
+                defaultValue={0}
+                label="Score"
+                disabled={value.enabled === false}
+                onValueChange={(newValue) =>
+                  onScoreChange(newValue || 0, index)
+                }
+                min={-1_000_000}
+                max={1_000_000}
+                step={50}
+              />
+            </div>
+            <div className="pb-1 gap-1 flex items-end">
+              <ItemActions
+                items={values}
+                index={index}
+                onItemsChange={onValuesChange}
+              />
+            </div>
           </div>
-          <div className="flex-[3]">
-            <TextInput
-              value={value.expression}
-              label="Expression"
-              placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onExpressionChange(newValue, index)}
-            />
-          </div>
-          <div className="flex-1 min-w-[100px]">
-            <NumberInput
-              value={value.score || 0}
-              defaultValue={0}
-              label="Score"
-              disabled={value.enabled === false}
-              onValueChange={(newValue) => onScoreChange(newValue || 0, index)}
-              min={-1_000_000}
-              max={1_000_000}
-              step={50}
-            />
-          </div>
-          <div className="pb-1 gap-1 flex items-end">
-            <ItemActions
-              items={values}
-              index={index}
-              onItemsChange={onValuesChange}
-            />
-          </div>
-        </div>
-      ), { syncEnabled: !!syncConfig })}
+        ),
+        { syncEnabled: !!syncConfig }
+      )}
       <ListFooter
         onAdd={() =>
           onValuesChange([
@@ -811,50 +852,56 @@ export function RankedRegexInputs({
 
   return (
     <SettingsCard title={title} description={description}>
-      {renderItemsWithPlaceholders(values, (v) => v.pattern, onValuesChange, (value, index) => (
-        <div
-          key={index}
-          className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
-        >
-          <div className="w-full">
-            <TextInput
-              value={value.pattern}
-              label="Pattern"
-              placeholder="Regex Pattern"
-              onValueChange={(newValue) => onPatternChange(newValue, index)}
-            />
-          </div>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
+      {renderItemsWithPlaceholders(
+        values,
+        (v) => v.pattern,
+        onValuesChange,
+        (value, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
+          >
+            <div className="w-full">
               <TextInput
-                value={value.name || ''}
-                label="Name"
-                placeholder="Name (Optional)"
-                onValueChange={(newValue) => onNameChange(newValue, index)}
+                value={value.pattern}
+                label="Pattern"
+                placeholder="Regex Pattern"
+                onValueChange={(newValue) => onPatternChange(newValue, index)}
               />
             </div>
-            <div className="w-[20%] min-w-[100px]">
-              <NumberInput
-                value={value.score}
-                label="Score"
-                onValueChange={(newValue) =>
-                  onScoreChange(newValue ?? 0, index)
-                }
-                min={-1_000_000}
-                max={1_000_000}
-                step={50}
-              />
-            </div>
-            <div className="flex gap-1 pb-1">
-              <ItemActions
-                items={values}
-                index={index}
-                onItemsChange={onValuesChange}
-              />
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <TextInput
+                  value={value.name || ''}
+                  label="Name"
+                  placeholder="Name (Optional)"
+                  onValueChange={(newValue) => onNameChange(newValue, index)}
+                />
+              </div>
+              <div className="w-[20%] min-w-[100px]">
+                <NumberInput
+                  value={value.score}
+                  label="Score"
+                  onValueChange={(newValue) =>
+                    onScoreChange(newValue ?? 0, index)
+                  }
+                  min={-1_000_000}
+                  max={1_000_000}
+                  step={50}
+                />
+              </div>
+              <div className="flex gap-1 pb-1">
+                <ItemActions
+                  items={values}
+                  index={index}
+                  onItemsChange={onValuesChange}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ), { syncEnabled: !!syncConfig, iconPosition: 'inside' })}
+        ),
+        { syncEnabled: !!syncConfig, iconPosition: 'inside' }
+      )}
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { pattern: '', name: '', score: 0 }])

@@ -126,13 +126,11 @@ export class WebStreamrPreset extends Preset {
         value: 'en',
       },
       {
-        label:
-          '🇩🇪 German',
+        label: '🇩🇪 German',
         value: 'de',
       },
       {
-        label:
-          '🇪🇸 Castilian Spanish',
+        label: '🇪🇸 Castilian Spanish',
         value: 'es',
       },
       {
@@ -148,8 +146,7 @@ export class WebStreamrPreset extends Preset {
         value: 'it',
       },
       {
-        label:
-          '🇲🇽 Latin American Spanish',
+        label: '🇲🇽 Latin American Spanish',
         value: 'mx',
       },
     ];

@@ -20,7 +20,11 @@ interface MetaParams {
 
 router.get(
   '/:type/:id.json',
-  async (req: Request<MetaParams>, res: Response<MetaResponse>, next: NextFunction) => {
+  async (
+    req: Request<MetaParams>,
+    res: Response<MetaResponse>,
+    next: NextFunction
+  ) => {
     if (!req.userData) {
       res.status(200).json({
         meta: StremioTransformer.createErrorMeta({

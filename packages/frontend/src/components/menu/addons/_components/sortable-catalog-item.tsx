@@ -17,11 +17,7 @@ import {
   AccordionItem,
 } from '../../../ui/accordion';
 import { BiEdit } from 'react-icons/bi';
-import {
-  LuChevronsUp,
-  LuChevronsDown,
-  LuMerge,
-} from 'react-icons/lu';
+import { LuChevronsUp, LuChevronsDown, LuMerge } from 'react-icons/lu';
 import {
   TbSearch,
   TbSearchOff,

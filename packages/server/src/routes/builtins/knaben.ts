@@ -1,5 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { KnabenAddon, fromUrlSafeBase64, createLogger, APIError, constants } from '@aiostreams/core';
+import {
+  KnabenAddon,
+  fromUrlSafeBase64,
+  createLogger,
+  APIError,
+  constants,
+} from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -10,7 +16,11 @@ interface KnabenManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<KnabenManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<KnabenManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
     try {
       const manifest = new KnabenAddon(
@@ -34,7 +44,11 @@ interface KnabenStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<KnabenStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<KnabenStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

@@ -27,7 +27,12 @@ export function PosterServices() {
         onValueChange={(v) => {
           setUserData((prev) => ({
             ...prev,
-            posterService: v as 'rpdb' | 'top-poster' | 'aioratings' | 'openposterdb' | 'none',
+            posterService: v as
+              | 'rpdb'
+              | 'top-poster'
+              | 'aioratings'
+              | 'openposterdb'
+              | 'none',
           }));
         }}
         defaultValue="rpdb"

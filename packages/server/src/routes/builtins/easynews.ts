@@ -24,7 +24,11 @@ interface EasynewsManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<EasynewsManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<EasynewsManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -49,7 +53,11 @@ interface EasynewsStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<EasynewsStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<EasynewsStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

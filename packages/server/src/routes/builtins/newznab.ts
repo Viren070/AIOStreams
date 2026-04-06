@@ -16,7 +16,11 @@ interface NewznabManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<NewznabManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<NewznabManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -41,7 +45,11 @@ interface NewznabStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<NewznabStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<NewznabStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

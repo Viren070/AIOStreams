@@ -873,7 +873,8 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
 
   if (!regexAllowed) {
     if (!skipErrors) {
-      const allowedPatterns = (await RegexAccess.allowedRegexPatterns()).patterns;
+      const allowedPatterns = (await RegexAccess.allowedRegexPatterns())
+        .patterns;
       const notAllowed = regexes.filter((r) => !allowedPatterns.includes(r));
       if (notAllowed.length === regexes.length) {
         throw new Error(
@@ -961,17 +962,61 @@ function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
  * references a URL present in the corresponding synced URLs array.
  */
 function validateSyncedPlaceholders(config: UserData) {
-  const checks: { valuesKey: keyof UserData; syncedKey: keyof UserData; extract: (item: any) => string }[] = [
-    { valuesKey: 'excludedRegexPatterns', syncedKey: 'syncedExcludedRegexUrls', extract: (v) => v },
-    { valuesKey: 'includedRegexPatterns', syncedKey: 'syncedIncludedRegexUrls', extract: (v) => v },
-    { valuesKey: 'requiredRegexPatterns', syncedKey: 'syncedRequiredRegexUrls', extract: (v) => v },
-    { valuesKey: 'preferredRegexPatterns', syncedKey: 'syncedPreferredRegexUrls', extract: (v) => v.pattern },
-    { valuesKey: 'rankedRegexPatterns', syncedKey: 'syncedRankedRegexUrls', extract: (v) => v.pattern },
-    { valuesKey: 'excludedStreamExpressions', syncedKey: 'syncedExcludedStreamExpressionUrls', extract: (v) => v.expression },
-    { valuesKey: 'includedStreamExpressions', syncedKey: 'syncedIncludedStreamExpressionUrls', extract: (v) => v.expression },
-    { valuesKey: 'requiredStreamExpressions', syncedKey: 'syncedRequiredStreamExpressionUrls', extract: (v) => v.expression },
-    { valuesKey: 'preferredStreamExpressions', syncedKey: 'syncedPreferredStreamExpressionUrls', extract: (v) => v.expression },
-    { valuesKey: 'rankedStreamExpressions', syncedKey: 'syncedRankedStreamExpressionUrls', extract: (v) => v.expression },
+  const checks: {
+    valuesKey: keyof UserData;
+    syncedKey: keyof UserData;
+    extract: (item: any) => string;
+  }[] = [
+    {
+      valuesKey: 'excludedRegexPatterns',
+      syncedKey: 'syncedExcludedRegexUrls',
+      extract: (v) => v,
+    },
+    {
+      valuesKey: 'includedRegexPatterns',
+      syncedKey: 'syncedIncludedRegexUrls',
+      extract: (v) => v,
+    },
+    {
+      valuesKey: 'requiredRegexPatterns',
+      syncedKey: 'syncedRequiredRegexUrls',
+      extract: (v) => v,
+    },
+    {
+      valuesKey: 'preferredRegexPatterns',
+      syncedKey: 'syncedPreferredRegexUrls',
+      extract: (v) => v.pattern,
+    },
+    {
+      valuesKey: 'rankedRegexPatterns',
+      syncedKey: 'syncedRankedRegexUrls',
+      extract: (v) => v.pattern,
+    },
+    {
+      valuesKey: 'excludedStreamExpressions',
+      syncedKey: 'syncedExcludedStreamExpressionUrls',
+      extract: (v) => v.expression,
+    },
+    {
+      valuesKey: 'includedStreamExpressions',
+      syncedKey: 'syncedIncludedStreamExpressionUrls',
+      extract: (v) => v.expression,
+    },
+    {
+      valuesKey: 'requiredStreamExpressions',
+      syncedKey: 'syncedRequiredStreamExpressionUrls',
+      extract: (v) => v.expression,
+    },
+    {
+      valuesKey: 'preferredStreamExpressions',
+      syncedKey: 'syncedPreferredStreamExpressionUrls',
+      extract: (v) => v.expression,
+    },
+    {
+      valuesKey: 'rankedStreamExpressions',
+      syncedKey: 'syncedRankedStreamExpressionUrls',
+      extract: (v) => v.expression,
+    },
   ];
 
   const invalid: string[] = [];

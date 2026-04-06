@@ -18,7 +18,11 @@ interface TorrentGalaxyManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<TorrentGalaxyManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<TorrentGalaxyManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -43,7 +47,11 @@ interface TorrentGalaxyStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<TorrentGalaxyStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<TorrentGalaxyStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

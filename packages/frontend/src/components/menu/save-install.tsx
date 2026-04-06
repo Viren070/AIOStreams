@@ -339,7 +339,8 @@ function Content() {
   };
 
   const changePasswordModal = useDisclosure(false);
-  const [changePasswordLoading, setChangePasswordLoading] = React.useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] =
+    React.useState(false);
   const [changePasswordData, setChangePasswordData] = React.useState({
     currentPassword: '',
     newPassword: '',
@@ -356,7 +357,9 @@ function Content() {
       toast.error('New password must be at least 6 characters long');
       return;
     }
-    if (changePasswordData.newPassword !== changePasswordData.confirmNewPassword) {
+    if (
+      changePasswordData.newPassword !== changePasswordData.confirmNewPassword
+    ) {
       toast.error('New passwords do not match');
       return;
     }
@@ -378,7 +381,11 @@ function Content() {
       setPassword(changePasswordData.newPassword);
       setEncryptedPassword(result.encryptedPassword);
       changePasswordModal.close();
-      setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+      setChangePasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: '',
+      });
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to change password'
@@ -387,7 +394,6 @@ function Content() {
       setChangePasswordLoading(false);
     }
   };
-
 
   return (
     <>
@@ -675,7 +681,11 @@ function Content() {
           <div className="flex flex-wrap items-center gap-3">
             {uuid && (
               <>
-                <Button intent="alert" rounded onClick={changePasswordModal.open}>
+                <Button
+                  intent="alert"
+                  rounded
+                  onClick={changePasswordModal.open}
+                >
                   Change Password
                 </Button>
                 <Button intent="alert" rounded onClick={deleteUserModal.open}>
@@ -695,7 +705,11 @@ function Content() {
             if (changePasswordLoading) return;
             changePasswordModal.toggle();
             if (!open) {
-              setChangePasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+              setChangePasswordData({
+                currentPassword: '',
+                newPassword: '',
+                confirmNewPassword: '',
+              });
             }
           }}
           title="Change Password"
@@ -757,7 +771,11 @@ function Content() {
               >
                 Cancel
               </Button>
-              <Button type="submit" intent="alert" loading={changePasswordLoading}>
+              <Button
+                type="submit"
+                intent="alert"
+                loading={changePasswordLoading}
+              >
                 Change Password
               </Button>
             </div>

@@ -214,7 +214,6 @@ router.delete('/', async (req, res, next) => {
   }
 });
 
-
 // change password
 router.post('/password', async (req, res, next) => {
   const { uuid, currentPassword, newPassword } = {

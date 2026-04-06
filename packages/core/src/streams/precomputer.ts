@@ -248,7 +248,10 @@ class StreamPrecomputer {
       const matched: string[] = [];
       let totalScore = 0;
       for (const { regex, pattern, name, score } of regexes) {
-        if (regex.test(stream.filename) ||(stream.folderName && regex.test(stream.folderName))) {
+        if (
+          regex.test(stream.filename) ||
+          (stream.folderName && regex.test(stream.folderName))
+        ) {
           if (name) matched.push(name);
           totalScore += score;
         }

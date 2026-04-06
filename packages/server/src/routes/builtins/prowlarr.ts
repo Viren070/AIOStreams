@@ -1,5 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { ProwlarrAddon, fromUrlSafeBase64, createLogger, APIError, constants } from '@aiostreams/core';
+import {
+  ProwlarrAddon,
+  fromUrlSafeBase64,
+  createLogger,
+  APIError,
+  constants,
+} from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -10,7 +16,11 @@ interface ProwlarrManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<ProwlarrManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<ProwlarrManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
 
     try {
@@ -35,7 +45,11 @@ interface ProwlarrStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<ProwlarrStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<ProwlarrStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

@@ -154,7 +154,10 @@ function buildPlaceholderEntry(valuesKey: keyof UserData, url: string): any {
 }
 
 /** Extract the placeholder-carrying field (pattern/expression/string) from a values entry. */
-function extractFieldForPlaceholder(_valuesKey: keyof UserData, entry: any): string {
+function extractFieldForPlaceholder(
+  _valuesKey: keyof UserData,
+  entry: any
+): string {
   if (typeof entry === 'string') return entry;
   if (entry?.pattern !== undefined) return entry.pattern;
   if (entry?.expression !== undefined) return entry.expression;

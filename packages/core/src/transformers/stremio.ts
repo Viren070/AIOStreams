@@ -197,7 +197,10 @@ export class StremioTransformer {
       );
     }
 
-    const toStatisticStream = (statistic: { title: string; description: string }) => ({
+    const toStatisticStream = (statistic: {
+      title: string;
+      description: string;
+    }) => ({
       name: statistic.title,
       description: statistic.description,
       externalUrl: 'https://github.com/Viren070/AIOStreams',

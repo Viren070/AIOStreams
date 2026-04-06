@@ -48,17 +48,17 @@ export function getObjectDiff(
     'addonPassword',
   ]);
 
-  if ((obj1 == null) && (obj2 == null)) return diffs;
+  if (obj1 == null && obj2 == null) return diffs;
 
   // Treat empty objects/arrays as equal to null/undefined to avoid ghost diffs
   if (isEmptyValue(obj1) && isEmptyValue(obj2)) return diffs;
 
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
     if (obj1 === obj2) return [];
-    
+
     try {
       if (JSON.stringify(obj1) === JSON.stringify(obj2)) return [];
-    } catch(e) {
+    } catch (e) {
       console.warn('Fast array comparison failed:', e);
     }
 
@@ -70,7 +70,8 @@ export function getObjectDiff(
       if (!isObject(item)) {
         return String(item);
       }
-      if (isCatalogModifications && item.id && item.type) return `${item.id}_${item.type}`;
+      if (isCatalogModifications && item.id && item.type)
+        return `${item.id}_${item.type}`;
       if (item.instanceId) return item.instanceId;
       if (item.id) return item.id;
       if (item.pattern) return item.pattern;
@@ -99,8 +100,8 @@ export function getObjectDiff(
     const keys2 = obj2.map(getKey);
 
     const canKey =
-      keys1.every(k => k !== null) &&
-      keys2.every(k => k !== null) &&
+      keys1.every((k) => k !== null) &&
+      keys2.every((k) => k !== null) &&
       new Set(keys1).size === obj1.length &&
       new Set(keys2).size === obj2.length;
 
@@ -129,25 +130,27 @@ export function getObjectDiff(
         if (item?.addons && Array.isArray(item.addons)) {
           const firstAddon = item.addons[0] || '';
           const count = item.addons.length;
-          const summary = firstAddon ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})` : '';
+          const summary = firstAddon
+            ? ` (${firstAddon}${count > 1 ? ` +${count - 1}` : ''})`
+            : '';
           return `Group: ${item.condition || 'true'}${summary}`;
         }
         if (item?.name) {
           if (isCatalogModifications && item.type) {
-             return `${item.name} (${item.type})`;
+            return `${item.name} (${item.type})`;
           }
           return item.name;
         }
-        return item?.options?.name || item?.instanceId || item?.id || key; 
+        return item?.options?.name || item?.instanceId || item?.id || key;
       };
 
       oldMap.forEach((val, key) => {
         if (!newMap.has(key)) {
           const originalIndex = obj1.findIndex((i: any) => getKey(i) === key);
           diffs.push({
-            path: [...path, `[${originalIndex}]`], 
+            path: [...path, `[${originalIndex}]`],
             type: 'REMOVE',
-            oldValue: isPresets ? `Deleted: ${getLabel(key)}` : val
+            oldValue: isPresets ? `Deleted: ${getLabel(key)}` : val,
           });
         }
       });
@@ -158,7 +161,7 @@ export function getObjectDiff(
           diffs.push({
             path: [...path, `[${newIndex}]`],
             type: 'ADD',
-            newValue: val
+            newValue: val,
           });
         } else {
           const oldVal = oldMap.get(key);
@@ -166,21 +169,22 @@ export function getObjectDiff(
         }
       });
 
-      const intersectionOld = oldOrder.filter(key => newOrder.includes(key));
-      const intersectionNew = newOrder.filter(key => oldOrder.includes(key));
+      const intersectionOld = oldOrder.filter((key) => newOrder.includes(key));
+      const intersectionNew = newOrder.filter((key) => oldOrder.includes(key));
 
-      const isOrderChanged = intersectionOld.length !== intersectionNew.length || 
-                             intersectionOld.some((key, i) => key !== intersectionNew[i]);
-      
+      const isOrderChanged =
+        intersectionOld.length !== intersectionNew.length ||
+        intersectionOld.some((key, i) => key !== intersectionNew[i]);
+
       if (isOrderChanged) {
         diffs.push({
           path: [...path],
           type: 'CHANGE',
           oldValue: oldOrder.map(getLabel),
-          newValue: newOrder.map(getLabel)
+          newValue: newOrder.map(getLabel),
         });
       }
-      
+
       return diffs;
     }
 
@@ -252,12 +256,11 @@ export function getObjectDiff(
 
   if (!isObject(obj1) || !isObject(obj2)) {
     if (obj1 === obj2) return diffs;
-    
+
     try {
-        if (JSON.stringify(obj1) === JSON.stringify(obj2)) return diffs;
-    } catch {
-    }
-    
+      if (JSON.stringify(obj1) === JSON.stringify(obj2)) return diffs;
+    } catch {}
+
     return [
       {
         path,
@@ -274,7 +277,7 @@ export function getObjectDiff(
   for (const key of keys1) {
     if (ignoredKeys.has(key)) continue;
     if (!Object.prototype.hasOwnProperty.call(obj2, key)) {
-       if (obj1[key] == null || isEmptyValue(obj1[key])) continue;
+      if (obj1[key] == null || isEmptyValue(obj1[key])) continue;
       diffs.push({
         path: [...path, key],
         type: 'REMOVE',
@@ -287,10 +290,10 @@ export function getObjectDiff(
 
   for (const key of keys2) {
     if (ignoredKeys.has(key)) continue;
-    
+
     if (!Object.prototype.hasOwnProperty.call(obj1, key)) {
       if (obj2[key] == null || isEmptyValue(obj2[key])) continue;
-      
+
       diffs.push({
         path: [...path, key],
         type: 'ADD',
@@ -312,4 +315,3 @@ export function formatValue(value: any): string {
   }
   return String(value);
 }
-

@@ -15,11 +15,7 @@ import { Card } from '../../ui/card';
 import { TextInput } from '../../ui/text-input';
 import { SearchIcon } from 'lucide-react';
 import { StaticTabs } from '../../ui/tabs';
-import {
-  LuDownload,
-  LuGlobe,
-  LuSettings,
-} from 'react-icons/lu';
+import { LuDownload, LuGlobe, LuSettings } from 'react-icons/lu';
 import { AnimatePresence } from 'framer-motion';
 import { PageControls } from '../../shared/page-controls';
 import { Select } from '../../ui/select';
@@ -353,9 +349,7 @@ function Content() {
               </div>
               <MenuTabs
                 activeTab={installedTab}
-                onTabChange={(v) =>
-                  setInstalledTab(v as 'addons' | 'catalogs')
-                }
+                onTabChange={(v) => setInstalledTab(v as 'addons' | 'catalogs')}
                 defaultMobileOpen="addons"
                 tabs={[
                   {

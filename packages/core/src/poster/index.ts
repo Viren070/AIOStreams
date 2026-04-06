@@ -12,7 +12,12 @@ import { AIOratings } from './aioratings.js';
 import { OpenPosterDB } from './openposterdb.js';
 import type { UserData } from '../db/schemas.js';
 
-export type PosterServiceType = 'rpdb' | 'top-poster' | 'aioratings' | 'openposterdb' | 'none';
+export type PosterServiceType =
+  | 'rpdb'
+  | 'top-poster'
+  | 'aioratings'
+  | 'openposterdb'
+  | 'none';
 
 /**
  * All known poster service domains. Used to check if a poster URL

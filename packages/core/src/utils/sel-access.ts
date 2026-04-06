@@ -1,7 +1,12 @@
 import z from 'zod';
 import { UserData } from '../db/schemas.js';
 import { Env } from './env.js';
-import { SyncManager, type SyncOverride, type FetchResult, parseSyncedUrl } from './sync.js';
+import {
+  SyncManager,
+  type SyncOverride,
+  type FetchResult,
+  parseSyncedUrl,
+} from './sync.js';
 import { extractNamesFromExpression } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
 
@@ -170,9 +175,7 @@ export class SelAccess {
     transform: (item: StreamExpressionItem) => U,
     getField: (item: U) => string
   ): Promise<U[]> {
-    const validUrls = urls?.length
-      ? this.validateUrls(urls, userData)
-      : [];
+    const validUrls = urls?.length ? this.validateUrls(urls, userData) : [];
 
     if (validUrls.length === 0) {
       const cleaned = existing.filter(

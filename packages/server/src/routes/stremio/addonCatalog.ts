@@ -16,7 +16,11 @@ interface AddonCatalogParams {
 
 router.get(
   '/:type/:id.json',
-  async (req: Request<AddonCatalogParams>, res: Response<AddonCatalogResponse>, next) => {
+  async (
+    req: Request<AddonCatalogParams>,
+    res: Response<AddonCatalogResponse>,
+    next
+  ) => {
     if (!req.userData) {
       res.status(200).json({
         addons: [

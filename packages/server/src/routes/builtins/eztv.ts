@@ -1,5 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { EztvAddon, fromUrlSafeBase64, APIError, constants } from '@aiostreams/core';
+import {
+  EztvAddon,
+  fromUrlSafeBase64,
+  APIError,
+  constants,
+} from '@aiostreams/core';
 
 const router: Router = Router();
 
@@ -9,7 +14,11 @@ interface EztvManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<EztvManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<EztvManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
     try {
       const manifest = new EztvAddon(

@@ -1,7 +1,12 @@
 import z from 'zod';
 import { UserData } from '../db/schemas.js';
 import { Env } from './env.js';
-import { SyncManager, type SyncOverride, type FetchResult, parseSyncedUrl } from './sync.js';
+import {
+  SyncManager,
+  type SyncOverride,
+  type FetchResult,
+  parseSyncedUrl,
+} from './sync.js';
 import { createLogger } from './logger.js';
 
 const logger = createLogger('core');
@@ -279,9 +284,7 @@ export class RegexAccess {
     transform: (item: RegexPatternItem) => U,
     getField: (item: U) => string
   ): Promise<U[]> {
-    const validUrls = urls?.length
-      ? this.validateUrls(urls, userData)
-      : [];
+    const validUrls = urls?.length ? this.validateUrls(urls, userData) : [];
 
     if (validUrls.length === 0) {
       const cleaned = existing.filter(
@@ -318,16 +321,18 @@ export class RegexAccess {
 
         if (override?.disabled) continue;
 
-        result.push(transform(
-          override
-            ? {
-                ...regex,
-                name: override.name ?? regex.name,
-                score:
-                  override.score !== undefined ? override.score : regex.score,
-              }
-            : regex
-        ));
+        result.push(
+          transform(
+            override
+              ? {
+                  ...regex,
+                  name: override.name ?? regex.name,
+                  score:
+                    override.score !== undefined ? override.score : regex.score,
+                }
+              : regex
+          )
+        );
       }
     };
 

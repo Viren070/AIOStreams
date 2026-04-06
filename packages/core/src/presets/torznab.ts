@@ -118,7 +118,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
         id: 'initialLimit',
         name: 'Initial Result Limit',
         description:
-          "Sets the maximum results to return. Leave blank to use the optimal default limit. Only use this if you need to restrict results.",
+          'Sets the maximum results to return. Leave blank to use the optimal default limit. Only use this if you need to restrict results.',
         type: 'number',
         required: false,
         showInSimpleMode: false,

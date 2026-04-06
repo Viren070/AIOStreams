@@ -452,7 +452,12 @@ export class UserRepository {
 
         const userRow = userResult.rows[0];
 
-        if (!(await this.verifyUserPassword(currentPassword, userRow.password_hash))) {
+        if (
+          !(await this.verifyUserPassword(
+            currentPassword,
+            userRow.password_hash
+          ))
+        ) {
           throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
         }
 
@@ -470,14 +475,13 @@ export class UserRepository {
           userRow.config_salt
         );
 
-        const { encryptedConfig, salt: newConfigSalt } = await this.encryptConfig(
-          currentConfig,
-          newPassword
-        );
+        const { encryptedConfig, salt: newConfigSalt } =
+          await this.encryptConfig(currentConfig, newPassword);
 
         const newPasswordHash = await getTextHash(newPassword);
 
-        const { success, data: newEncryptedPasswordToken } = encryptString(newPassword);
+        const { success, data: newEncryptedPasswordToken } =
+          encryptString(newPassword);
         if (!success) {
           throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
         }
@@ -492,7 +496,6 @@ export class UserRepository {
         logger.info(`Changed password for user ${uuid}`);
 
         return { encryptedPassword: newEncryptedPasswordToken };
-
       } catch (error) {
         logger.error(
           `Failed to change password for user ${uuid}: ${error instanceof Error ? error.message : String(error)}`

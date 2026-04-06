@@ -1,4 +1,9 @@
-import { UserData, RegexAccess, SelAccess, createLogger } from '@aiostreams/core';
+import {
+  UserData,
+  RegexAccess,
+  SelAccess,
+  createLogger,
+} from '@aiostreams/core';
 
 const logger = createLogger('server');
 
@@ -79,11 +84,16 @@ export async function syncUserDataUrls(userData: UserData): Promise<UserData> {
       userData.syncedPreferredStreamExpressionUrls,
       userData.preferredStreamExpressions || [],
       userData,
-      (item) => ({ expression: item.expression, enabled: item.enabled ?? true }),
+      (item) => ({
+        expression: item.expression,
+        enabled: item.enabled ?? true,
+      }),
       (item) => item.expression
     );
   } catch (error: any) {
-    logger.warn(`Failed to sync preferred stream expressions: ${error.message}`);
+    logger.warn(
+      `Failed to sync preferred stream expressions: ${error.message}`
+    );
   }
 
   try {
@@ -91,7 +101,10 @@ export async function syncUserDataUrls(userData: UserData): Promise<UserData> {
       userData.syncedExcludedStreamExpressionUrls,
       userData.excludedStreamExpressions || [],
       userData,
-      (item) => ({ expression: item.expression, enabled: item.enabled ?? true }),
+      (item) => ({
+        expression: item.expression,
+        enabled: item.enabled ?? true,
+      }),
       (item) => item.expression
     );
   } catch (error: any) {
@@ -103,7 +116,10 @@ export async function syncUserDataUrls(userData: UserData): Promise<UserData> {
       userData.syncedRequiredStreamExpressionUrls,
       userData.requiredStreamExpressions || [],
       userData,
-      (item) => ({ expression: item.expression, enabled: item.enabled ?? true }),
+      (item) => ({
+        expression: item.expression,
+        enabled: item.enabled ?? true,
+      }),
       (item) => item.expression
     );
   } catch (error: any) {
@@ -115,7 +131,10 @@ export async function syncUserDataUrls(userData: UserData): Promise<UserData> {
       userData.syncedIncludedStreamExpressionUrls,
       userData.includedStreamExpressions || [],
       userData,
-      (item) => ({ expression: item.expression, enabled: item.enabled ?? true }),
+      (item) => ({
+        expression: item.expression,
+        enabled: item.enabled ?? true,
+      }),
       (item) => item.expression
     );
   } catch (error: any) {

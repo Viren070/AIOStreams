@@ -56,5 +56,14 @@ export function useValidationModal(): UseValidationModal {
     setProceedLabel('Proceed');
   };
 
-  return { show, template, data, onProceed, proceedLabel, open, close, setOnProceed };
+  return {
+    show,
+    template,
+    data,
+    onProceed,
+    proceedLabel,
+    open,
+    close,
+    setOnProceed,
+  };
 }

@@ -16,7 +16,11 @@ interface TorboxManifestParams {
 
 router.get(
   '/:encodedConfig/manifest.json',
-  async (req: Request<TorboxManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<TorboxManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
     try {
       const manifest = new TorBoxSearchAddon(
@@ -40,7 +44,11 @@ interface TorboxStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<TorboxStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<TorboxStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
 
     try {

@@ -62,8 +62,7 @@ export class StreamNZBPreset extends Preset {
       {
         id: 'url',
         name: 'Manifest URL',
-        description:
-          'Manifest URL to your StreamNZB instance',
+        description: 'Manifest URL to your StreamNZB instance',
         type: 'url',
         required: true,
       },
@@ -89,8 +88,7 @@ export class StreamNZBPreset extends Preset {
       TIMEOUT: Env.DEFAULT_TIMEOUT,
       USER_AGENT: 'AIOStreams',
       SUPPORTED_SERVICES: [],
-      DESCRIPTION:
-        'Stream via nntp without any additional services.',
+      DESCRIPTION: 'Stream via nntp without any additional services.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.USENET_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
@@ -137,7 +135,10 @@ export class StreamNZBPreset extends Preset {
     const body = {
       streams: streams.map((s) => ({
         name: s.filename ?? s.originalName,
-        failoverId: (typeof s.extra?.failoverId === 'string' ? s.extra.failoverId : undefined) ?? s.id,
+        failoverId:
+          (typeof s.extra?.failoverId === 'string'
+            ? s.extra.failoverId
+            : undefined) ?? s.id,
       })),
     };
     logger.debug(

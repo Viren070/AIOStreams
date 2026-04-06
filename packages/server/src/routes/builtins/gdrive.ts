@@ -1,5 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { createLogger, fromUrlSafeBase64, GDriveAddon, APIError, constants } from '@aiostreams/core';
+import {
+  createLogger,
+  fromUrlSafeBase64,
+  GDriveAddon,
+  APIError,
+  constants,
+} from '@aiostreams/core';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -10,7 +16,11 @@ interface GDriveManifestParams {
 
 router.get(
   '{/:encodedConfig}/manifest.json',
-  async (req: Request<GDriveManifestParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<GDriveManifestParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig } = req.params;
     const config = encodedConfig
       ? JSON.parse(fromUrlSafeBase64(encodedConfig))
@@ -60,7 +70,11 @@ interface GDriveCatalogParams {
 
 router.get(
   '/:encodedConfig/catalog/:type/:id{/:extras}.json',
-  async (req: Request<GDriveCatalogParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<GDriveCatalogParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id, extras } = req.params;
     const config = JSON.parse(fromUrlSafeBase64(encodedConfig));
 
@@ -84,7 +98,11 @@ interface GDriveStreamParams {
 
 router.get(
   '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<GDriveStreamParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<GDriveStreamParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { encodedConfig, type, id } = req.params;
     const config = JSON.parse(fromUrlSafeBase64(encodedConfig));
 

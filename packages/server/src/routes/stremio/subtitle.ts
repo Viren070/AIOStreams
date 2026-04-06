@@ -20,7 +20,11 @@ interface SubtitleParams {
 
 router.get(
   '/:type/:id{/:extras}.json',
-  async (req: Request<SubtitleParams>, res: Response<SubtitleResponse>, next: NextFunction) => {
+  async (
+    req: Request<SubtitleParams>,
+    res: Response<SubtitleResponse>,
+    next: NextFunction
+  ) => {
     if (!req.userData) {
       res.status(200).json(
         StremioTransformer.createDynamicError('subtitles', {

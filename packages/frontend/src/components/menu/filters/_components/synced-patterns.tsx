@@ -864,68 +864,68 @@ export function SyncedUrlInputs({
               const urlState = fetchedData[url];
               return (
                 <div key={url} data-synced-url={url}>
-                <Disclosure type="single" collapsible>
-                  <DisclosureItem value="items">
-                    <div className="flex items-center gap-2 p-2 px-3 text-sm">
-                      <DisclosureTrigger>
-                        <button
-                          type="button"
-                          className="group flex items-center"
-                        >
-                          <FaChevronDown className="text-[10px] text-[--muted] transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                        </button>
-                      </DisclosureTrigger>
-                      <span className="flex-1 break-all font-mono text-xs text-[--muted]">
-                        {url}
-                      </span>
-                      {syncConfig.onInsertPlaceholder && (
-                        <Tooltip
-                          trigger={
-                            <IconButton
-                              size="sm"
-                              rounded
-                              icon={<FaMapPin />}
-                              intent={
-                                syncConfig.hasPlaceholder?.(url)
-                                  ? 'primary'
-                                  : 'primary-subtle'
-                              }
-                              onClick={() => {
-                                if (syncConfig.hasPlaceholder?.(url)) {
-                                  syncConfig.onRemovePlaceholder?.(url);
-                                } else {
-                                  syncConfig.onInsertPlaceholder!(url);
+                  <Disclosure type="single" collapsible>
+                    <DisclosureItem value="items">
+                      <div className="flex items-center gap-2 p-2 px-3 text-sm">
+                        <DisclosureTrigger>
+                          <button
+                            type="button"
+                            className="group flex items-center"
+                          >
+                            <FaChevronDown className="text-[10px] text-[--muted] transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                          </button>
+                        </DisclosureTrigger>
+                        <span className="flex-1 break-all font-mono text-xs text-[--muted]">
+                          {url}
+                        </span>
+                        {syncConfig.onInsertPlaceholder && (
+                          <Tooltip
+                            trigger={
+                              <IconButton
+                                size="sm"
+                                rounded
+                                icon={<FaMapPin />}
+                                intent={
+                                  syncConfig.hasPlaceholder?.(url)
+                                    ? 'primary'
+                                    : 'primary-subtle'
                                 }
-                              }}
-                            />
+                                onClick={() => {
+                                  if (syncConfig.hasPlaceholder?.(url)) {
+                                    syncConfig.onRemovePlaceholder?.(url);
+                                  } else {
+                                    syncConfig.onInsertPlaceholder!(url);
+                                  }
+                                }}
+                              />
+                            }
+                          >
+                            {syncConfig.hasPlaceholder?.(url)
+                              ? 'Remove from inline'
+                              : 'Place inline'}
+                          </Tooltip>
+                        )}
+                        <IconButton
+                          size="sm"
+                          rounded
+                          icon={<FaRegTrashAlt />}
+                          intent="alert-subtle"
+                          onClick={() =>
+                            handleUrlsUpdate(urls.filter((u) => u !== url))
                           }
-                        >
-                          {syncConfig.hasPlaceholder?.(url)
-                            ? 'Remove from inline'
-                            : 'Place inline'}
-                        </Tooltip>
-                      )}
-                      <IconButton
-                        size="sm"
-                        rounded
-                        icon={<FaRegTrashAlt />}
-                        intent="alert-subtle"
-                        onClick={() =>
-                          handleUrlsUpdate(urls.filter((u) => u !== url))
-                        }
-                      />
-                    </div>
-                    <DisclosureContent>
-                      <SyncedPatterns
-                        renderType={renderType}
-                        syncMode={syncMode}
-                        syncedValues={urlState?.values ?? []}
-                        isLoading={urlState?.isLoading ?? true}
-                        fetchError={urlState?.error ?? null}
-                      />
-                    </DisclosureContent>
-                  </DisclosureItem>
-                </Disclosure>
+                        />
+                      </div>
+                      <DisclosureContent>
+                        <SyncedPatterns
+                          renderType={renderType}
+                          syncMode={syncMode}
+                          syncedValues={urlState?.values ?? []}
+                          isLoading={urlState?.isLoading ?? true}
+                          fetchError={urlState?.error ?? null}
+                        />
+                      </DisclosureContent>
+                    </DisclosureItem>
+                  </Disclosure>
                 </div>
               );
             })}

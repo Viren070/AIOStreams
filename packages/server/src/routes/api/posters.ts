@@ -22,7 +22,7 @@ const searchParams = z.object({
 });
 
 interface PosterServiceParams {
-  service: string
+  service: string;
 }
 /**
  * Combined poster redirect handler.
@@ -31,7 +31,11 @@ interface PosterServiceParams {
  */
 router.get(
   '/:service',
-  async (req: Request<PosterServiceParams>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<PosterServiceParams>,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { success, data, error } = searchParams.safeParse(req.query);
       if (!success) {

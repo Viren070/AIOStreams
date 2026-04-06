@@ -17,7 +17,9 @@ export class OpenPosterDB extends BasePosterService {
     try {
       const parsed = new URL(raw);
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new Error(`OpenPosterDB base URL must use http or https, got ${parsed.protocol}`);
+        throw new Error(
+          `OpenPosterDB base URL must use http or https, got ${parsed.protocol}`
+        );
       }
       this.baseUrl = raw;
       this.ownDomains = [parsed.hostname];
