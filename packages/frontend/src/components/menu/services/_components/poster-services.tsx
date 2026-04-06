@@ -19,7 +19,7 @@ export function PosterServices() {
         options={[
           { label: 'None', value: 'none' },
           { label: 'RPDB', value: 'rpdb' },
-          { label: 'Top Poster', value: 'top-poster' },
+          { label: 'TOP Posters', value: 'top-poster' },
           { label: 'AIOratings', value: 'aioratings' },
           { label: 'OpenPosterDB', value: 'openposterdb' },
         ]}
@@ -60,17 +60,17 @@ export function PosterServices() {
       {userData.posterService === 'top-poster' && (
         <PasswordInput
           autoComplete="off"
-          label="Top Poster API Key"
+          label="TOP Posters API Key"
           help={
             <span>
               Get your API Key from{' '}
               <a
-                href="https://api.top-streaming.stream/user/register"
+                href="https://api.top-posters.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[--brand] hover:underline"
               >
-                here
+                TOP Posters
               </a>
             </span>
           }
