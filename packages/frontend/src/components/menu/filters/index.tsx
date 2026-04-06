@@ -3564,6 +3564,25 @@ function Content() {
                       />
                     </div>
                   </div>
+                  <Switch
+                    label="Show Info Stream When Filtered"
+                    side="right"
+                    defaultValue={true}
+                    disabled={!userData.digitalReleaseFilter?.enabled}
+                    value={
+                      userData.digitalReleaseFilter?.showInfoOnFilter ?? true
+                    }
+                    moreHelp="When the digital release filter triggers, show an info stream."
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        digitalReleaseFilter: {
+                          ...prev.digitalReleaseFilter,
+                          showInfoOnFilter: value,
+                        },
+                      }));
+                    }}
+                  />
                 </SettingsCard>
                 <SettingsCard
                   title="SeaDex Integration"

@@ -374,12 +374,14 @@ export const DefaultUserData: UserData = {
     enabled: false,
     position: 'bottom',
     statsToShow: ['addon', 'filter', 'timing'],
+    showFilterStatsOnNoStreams: true,
   },
   digitalReleaseFilter: {
     enabled: false,
     tolerance: 0,
     requestTypes: [],
     addons: [],
+    showInfoOnFilter: true,
   },
   ageRangeTypes: ['usenet'],
   seasonEpisodeMatching: {

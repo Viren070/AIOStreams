@@ -87,6 +87,61 @@ export interface AIOStreamsOptions {
   bypassManifestCache?: boolean;
 }
 
+type StatEntry = { title: string; description: string; forced?: boolean };
+
+type PipelineTimings = {
+  metaFilterMs: number;
+  serviceWrapMs: number;
+  serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+  filterMs: number;
+  deduplicationMs: number;
+  precomputeMs: number;
+  precomputeSubTimings?: PrecomputeSubTimings;
+  sortMs: number;
+  limitMs: number;
+  selMs: number;
+};
+
+/** Split a flat filter-details array into per-📌-header groups. */
+function splitByPin(details: string[]): string[][] {
+  const groups: string[][] = [];
+  let currentGroup: string[] = [];
+  for (const line of details) {
+    if (line.trim().startsWith('📌')) {
+      if (currentGroup.length > 0) groups.push(currentGroup);
+      currentGroup = [line];
+    } else {
+      currentGroup.push(line);
+    }
+  }
+  if (currentGroup.length > 0) groups.push(currentGroup);
+  return groups;
+}
+
+/**
+ * Push filter statistic entries (removal reasons + included reasons) into `statistics`.
+ * Groups whose header matches an entry in `excludeHeaders` are silently skipped.
+ */
+function pushFilterStats(
+  statistics: StatEntry[],
+  filterDetails: string[],
+  includedDetails: string[],
+  forced: boolean,
+  excludeHeaders: string[] = []
+): void {
+  const push = (details: string[], title: string) => {
+    for (const group of splitByPin(details)) {
+      const header = group[0]?.trim() ?? '';
+      if (excludeHeaders.some((ex) => header.startsWith(`📌 ${ex}`))) continue;
+      const entry: StatEntry = { title, description: group.join('\n').trim() };
+      if (forced) entry.forced = true;
+      statistics.push(entry);
+    }
+  };
+  if (filterDetails.length > 0) push(filterDetails, '🔍 Removal Reasons');
+  if (includedDetails.length > 0) push(includedDetails, '🔍 Included Reasons');
+}
+
 export class AIOStreams {
   private userData: UserData;
   private options: AIOStreamsOptions | undefined;
@@ -362,52 +417,109 @@ export class AIOStreams {
       }
     }
 
+    statistics.push(
+      ...this.buildStatistics(finalStreams, fetchMs, pipelineTimings)
+    );
+
+    // Optional: let presets react to final stream list (e.g. report order back to addon)
+    const byPresetType = new Map<string, ParsedStream[]>();
+    for (const s of finalStreams) {
+      const type = s.addon?.preset?.type ?? '';
+      if (type) {
+        const list = byPresetType.get(type) ?? [];
+        list.push(s);
+        byPresetType.set(type, list);
+      }
+    }
+    for (const [presetType, list] of byPresetType) {
+      const PresetClass = PresetManager.fromId(presetType);
+      if (typeof PresetClass.onStreamsReady === 'function') {
+        PresetClass.onStreamsReady(list);
+      }
+    }
+
+    // return the final list of streams, followed by the error streams.
+    logger.info(
+      `Returning ${finalStreams.length} streams and ${errors.length} errors and ${statistics.length} statistic`
+    );
+    return {
+      success: true,
+      data: {
+        streams: finalStreams,
+        statistics: statistics,
+      },
+      errors: errors,
+    };
+  }
+
+  private buildStatistics(
+    finalStreams: ParsedStream[],
+    fetchMs: number,
+    pipelineTimings: PipelineTimings
+  ): StatEntry[] {
+    const statistics: StatEntry[] = [];
+    const fmtMs = (ms: number) => formatMilliseconds(ms);
+
+    const filterStats = this.filterer.getFilterStatistics();
     const { filterDetails, includedDetails } =
       this.filterer.getFormattedFilterDetails();
 
-    // append formatted filter statistics to the statistics array
-    // Helper to split details array into groups by 📌
-    function splitByPin(details: string[]): string[][] {
-      const groups: string[][] = [];
-      let currentGroup: string[] = [];
-      for (const line of details) {
-        if (line.trim().startsWith('📌')) {
-          if (currentGroup.length > 0) {
-            groups.push(currentGroup);
-          }
-          currentGroup = [line];
-        } else {
-          currentGroup.push(line);
-        }
-      }
-      if (currentGroup.length > 0) {
-        groups.push(currentGroup);
-      }
-      return groups;
-    }
+    // exclude digital release filter from normal filter status
+    // if that info was already displayed.
+    const excludeFromStats: string[] =
+      (this.userData.digitalReleaseFilter?.showInfoOnFilter ?? true) &&
+      filterStats.removed.noDigitalRelease.total > 0
+        ? ['No Digital Release']
+        : [];
 
     if (
       this.userData.statistics?.enabled &&
       this.userData.statistics?.statsToShow?.includes('filter')
     ) {
-      if (filterDetails.length > 0) {
-        const removalGroups = splitByPin(filterDetails);
-        for (const group of removalGroups) {
-          statistics.push({
-            title: '🔍 Removal Reasons',
-            description: group.join('\n').trim(),
-          });
-        }
-      }
-      if (includedDetails.length > 0) {
-        const includedGroups = splitByPin(includedDetails);
-        for (const group of includedGroups) {
-          statistics.push({
-            title: '🔍 Included Reasons',
-            description: group.join('\n').trim(),
-          });
-        }
-      }
+      pushFilterStats(
+        statistics,
+        filterDetails,
+        includedDetails,
+        false,
+        excludeFromStats
+      );
+    }
+
+    // Forced digital release filter info stream - shown regardless of statistics settings
+    if (
+      (this.userData.digitalReleaseFilter?.showInfoOnFilter ?? false) &&
+      filterStats.removed.noDigitalRelease.total > 0
+    ) {
+      statistics.push({
+        title: '📅 Digital Release Filter',
+        description: [
+          `⚠️ There is no digital release available for this media yet.`,
+          finalStreams.length > 0
+            ? '🔎 There are still streams present, this may be\ndue to any passthrough that is configured (addon level, SEL etc.)'
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        forced: true,
+      });
+    }
+
+    // Forced filter stats when 0 streams remain - only if not already shown above
+    const alreadyShowingFilterStats =
+      this.userData.statistics?.enabled &&
+      this.userData.statistics?.statsToShow?.includes('filter');
+    if (
+      this.userData.statistics?.showFilterStatsOnNoStreams !== false &&
+      finalStreams.length === 0 &&
+      !alreadyShowingFilterStats
+    ) {
+      pushFilterStats(
+        statistics,
+        filterDetails,
+        includedDetails,
+        true,
+        excludeFromStats
+      );
     }
 
     if (
@@ -426,8 +538,6 @@ export class AIOStreams {
         pipelineTimings.sortMs +
         pipelineTimings.limitMs +
         pipelineTimings.selMs;
-
-      const fmtMs = (ms: number) => formatMilliseconds(ms);
 
       {
         const lines: string[] = [
@@ -566,35 +676,7 @@ export class AIOStreams {
       }
     }
 
-    // Optional: let presets react to final stream list (e.g. report order back to addon)
-    const byPresetType = new Map<string, ParsedStream[]>();
-    for (const s of finalStreams) {
-      const type = s.addon?.preset?.type ?? '';
-      if (type) {
-        const list = byPresetType.get(type) ?? [];
-        list.push(s);
-        byPresetType.set(type, list);
-      }
-    }
-    for (const [presetType, list] of byPresetType) {
-      const PresetClass = PresetManager.fromId(presetType);
-      if (typeof PresetClass.onStreamsReady === 'function') {
-        PresetClass.onStreamsReady(list);
-      }
-    }
-
-    // return the final list of streams, followed by the error streams.
-    logger.info(
-      `Returning ${finalStreams.length} streams and ${errors.length} errors and ${statistics.length} statistic`
-    );
-    return {
-      success: true,
-      data: {
-        streams: finalStreams,
-        statistics: statistics,
-      },
-      errors: errors,
-    };
+    return statistics;
   }
 
   /**

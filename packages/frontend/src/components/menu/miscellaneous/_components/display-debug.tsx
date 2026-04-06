@@ -68,6 +68,22 @@ export function DisplayDebug() {
             }));
           }}
         />
+        <Switch
+          label="Show Filter Stats on No Streams"
+          side="right"
+          defaultValue={true}
+          value={userData.statistics?.showFilterStatsOnNoStreams ?? true}
+          moreHelp="When filtering results in 0 streams, show filter removal statistics as forced streams regardless of your statistics settings. Use this if you normally don't want to see filter stats, but want to know why no streams are available when that happens."
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              statistics: {
+                ...prev.statistics,
+                showFilterStatsOnNoStreams: value,
+              },
+            }));
+          }}
+        />
       </SettingsCard>
 
       <SettingsCard

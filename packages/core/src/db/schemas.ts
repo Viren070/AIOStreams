@@ -458,6 +458,7 @@ export const UserDataSchema = z.object({
       tolerance: z.number().min(0).max(365).optional(),
       requestTypes: z.array(z.string()).optional(),
       addons: z.array(z.string()).optional(),
+      showInfoOnFilter: z.boolean().optional(),
     })
     .optional(),
   enableSeadex: z.boolean().optional(),
@@ -620,6 +621,7 @@ export const UserDataSchema = z.object({
       enabled: z.boolean().optional(),
       position: z.enum(['top', 'bottom']).optional(),
       statsToShow: z.array(z.enum(['addon', 'filter', 'timing'])).optional(),
+      showFilterStatsOnNoStreams: z.boolean().optional(),
     })
     .optional(),
   tmdbAccessToken: z.string().optional(),
