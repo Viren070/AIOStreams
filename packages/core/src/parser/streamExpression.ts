@@ -975,6 +975,23 @@ export abstract class StreamExpressionEngine {
       );
     };
 
+    this.parser.functions.multiEpisode = function (
+      streams: ParsedStream[],
+      minEpisodes: number = 2
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (typeof minEpisodes !== 'number' || minEpisodes < 1) {
+        throw new Error('minEpisodes must be a positive number');
+      }
+
+      return streams.filter(
+        (stream) =>
+          stream.parsedFile?.episodes &&
+          stream.parsedFile.episodes.length >= minEpisodes
+      );
+    };
+
     this.parser.functions.addon = function (
       streams: ParsedStream[],
       ...addons: string[]
