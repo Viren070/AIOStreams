@@ -23,7 +23,7 @@ export type PosterServiceType = 'rpdb' | 'top-poster' | 'aioratings' | 'openpost
  */
 export const ALL_POSTER_SERVICE_DOMAINS = [
   'api.ratingposterdb.com',
-  'api.top-streaming.stream',
+  'api.top-posters.com',
   'apiv2.aioratings.com',
 ];
 
