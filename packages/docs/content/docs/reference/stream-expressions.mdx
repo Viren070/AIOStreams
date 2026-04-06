@@ -470,6 +470,31 @@ seasonPack(streams, 'onlySeasons')  // ambiguous packs without episode reference
 
 ---
 
+#### `multiEpisode()`
+
+Filter for streams that contain multiple episodes (e.g. `S01E01-E08`). Unlike `seasonPack('onlySeasons')`, this catches multi-episode files where episode numbers are present in the title. Unlike `seasonPack('seasonPack')`, it does **not** exclude single episodes selected from a cached season pack folder.
+
+| Parameter     | Type             | Description                                                     |
+| ------------- | ---------------- | --------------------------------------------------------------- |
+| `streams`     | `ParsedStream[]` | Stream list                                                     |
+| `minEpisodes` | `number?`        | Minimum number of episodes required to match. Defaults to `2`. |
+
+```
+multiEpisode(streams)     // streams with 2+ episodes
+multiEpisode(streams, 3)  // streams with 3+ episodes
+```
+
+Combined with `seasonPack('onlySeasons')`, this covers all season pack variants:
+
+| Stream type                                   | `seasonPack('onlySeasons')` | `multiEpisode` |
+| --------------------------------------------- | :-------------------------: | :------------: |
+| Pure season pack `S01` (no episode info)       |              ✅              |       —        |
+| Multi-episode pack `S01E01-E08`               |              ❌              |       ✅        |
+| Single episode `S01E01`                        |              —              |       ✅ kept   |
+| Single episode selected from cached pack folder |              —              |       ✅ kept   |
+
+---
+
 #### `addon()`
 
 Filter by addon name (case-sensitive).
