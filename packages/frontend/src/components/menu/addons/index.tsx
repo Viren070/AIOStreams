@@ -53,8 +53,14 @@ function Content() {
   );
   const [catalogLoading, setCatalogLoading] = useState(false);
 
+  const userDataRef = useRef(userData);
+  useEffect(() => {
+    userDataRef.current = userData;
+  });
+
   const fetchCatalogsData = useCallback(
     async (hideToast = false) => {
+      const userData = userDataRef.current;
       setCatalogLoading(true);
       try {
         const catalogs = await fetchCatalogs(userData);
@@ -120,8 +126,7 @@ function Content() {
         setCatalogLoading(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userData.rpdbApiKey, userData.topPosterApiKey, userData.aioratingsApiKey]
+    []
   );
 
   // Initial catalog fetch - fires once when the menu mounts.
