@@ -6,7 +6,7 @@ import {
   SubtitleSchema,
   UserData,
 } from '../db/index.js';
-import { AIOStreamsResponse } from '../main.js';
+import { AIOStreamsResponse } from '../main/types.js';
 import { generateBingeGroup } from './utils.js';
 
 export interface SearchApiResponseData {

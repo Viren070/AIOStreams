@@ -1,6 +1,7 @@
 export * from './utils/index.js';
 export * from './db/index.js';
-export * from './main.js';
+export * from './main/types.js';
+export * from './main/index.js';
 export * from './parser/index.js';
 export * from './formatters/index.js';
 export * from './transformers/index.js';
@@ -33,5 +34,5 @@ export {
   populateNzbFallbacks,
   getNzbFallbacks,
   isNzbRetryableError,
-} from './streams/nzbFailover.js';
-export type { NzbFallback } from './streams/nzbFailover.js';
+} from './main/nzbFailover.js';
+export type { NzbFallback } from './main/nzbFailover.js';

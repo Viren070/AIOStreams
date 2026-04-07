@@ -1,6 +1,6 @@
 import { ParsedStream, Resource, UserData } from '../db/index.js';
 import { createFormatter, FormatterContext } from '../formatters/index.js';
-import { AIOStreamsError, AIOStreamsResponse } from '../main.js';
+import { AIOStreamsError, AIOStreamsResponse } from '../main/types.js';
 import { z } from 'zod';
 import { StreamType } from '../utils/constants.js';
 import { Env } from '../utils/env.js';

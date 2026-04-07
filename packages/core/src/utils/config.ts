@@ -8,7 +8,7 @@ import {
   Group,
   PresetMetadata,
 } from '../db/schemas.js';
-import { AIOStreams } from '../main.js';
+import { AIOStreams } from '../main/index.js';
 import { Preset, PresetManager } from '../presets/index.js';
 import { createProxy } from '../proxy/index.js';
 import { TMDBMetadata } from '../metadata/tmdb.js';

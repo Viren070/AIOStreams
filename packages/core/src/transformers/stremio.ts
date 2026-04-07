@@ -18,7 +18,7 @@ import {
   ParsedMeta,
 } from '../db/index.js';
 import { createFormatter, FormatterContext } from '../formatters/index.js';
-import { AIOStreamsError, AIOStreamsResponse } from '../main.js';
+import { AIOStreamsError, AIOStreamsResponse } from '../main/types.js';
 import { Cache, createLogger, getTimeTakenSincePoint } from '../utils/index.js';
 import { generateBingeGroup } from './utils.js';
 

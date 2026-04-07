@@ -18,7 +18,7 @@ import {
   FileInfo,
 } from '../debrid/index.js';
 import { processTorrents } from '../builtins/utils/debrid.js';
-import { StreamContext } from './context.js';
+import { StreamContext } from '../streams/context.js';
 import { parseTorrentTitle } from '@viren070/parse-torrent-title';
 import { PresetManager } from '../presets/presetManager.js';
 
@@ -389,7 +389,6 @@ async function buildDebridStreams(
         ''
       )
       .replace(/[^\p{L}\p{N}+]/gu, '')
-
       .toLowerCase()
       .trim();
   };

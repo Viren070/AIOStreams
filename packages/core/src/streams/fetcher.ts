@@ -5,7 +5,7 @@ import {
   getAddonName,
   getTimeTakenSincePoint,
 } from '../utils/index.js';
-import { Wrapper } from '../wrapper.js';
+import { Wrapper } from '../main/wrapper.js';
 import {
   ExitConditionEvaluator,
   GroupConditionEvaluator,
