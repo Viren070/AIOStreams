@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.27.0](https://github.com/Viren070/AIOStreams/compare/v2.26.0...v2.27.0) (2026-04-06)
+
+
+### Features
+
+* add option to show filter stats on 0 streams ([874fa11](https://github.com/Viren070/AIOStreams/commit/874fa116bae3e1a0e1690b58a50835b9bc8ef942))
+* add option to show info stream when digital release filter triggers ([874fa11](https://github.com/Viren070/AIOStreams/commit/874fa116bae3e1a0e1690b58a50835b9bc8ef942)), closes [#817](https://github.com/Viren070/AIOStreams/issues/817)
+* allow disabling stream types ([#593](https://github.com/Viren070/AIOStreams/issues/593)) ([c54e4c0](https://github.com/Viren070/AIOStreams/commit/c54e4c0f2814095a3be1946be1249d99907c1d2e))
+* allow inline reordering of synced URL expression filters ([#852](https://github.com/Viren070/AIOStreams/issues/852)) ([8adf2ef](https://github.com/Viren070/AIOStreams/commit/8adf2ef4a67fa5787e1e8e07ffdc23c6d2a27998))
+* **core/formatter:** sort visual tags, audio tags, and audio channels by user pref ([#722](https://github.com/Viren070/AIOStreams/issues/722)) ([9ed93da](https://github.com/Viren070/AIOStreams/commit/9ed93da92ef239c30d632596d9e841f61e9ec54a))
+* **media-info:** extract `hasChapters` and expose as formatter field. ([338fc29](https://github.com/Viren070/AIOStreams/commit/338fc29614fcc14022fe7d05ef21df0dab94ce3d))
+* **poster:** add openposterdb as poster service ([#821](https://github.com/Viren070/AIOStreams/issues/821)) ([bdd65a3](https://github.com/Viren070/AIOStreams/commit/bdd65a3f6858dc2ff4857a4110cf35ab15c5d122))
+* **presets:** add HdHub preset ([#856](https://github.com/Viren070/AIOStreams/issues/856)) ([408ca22](https://github.com/Viren070/AIOStreams/commit/408ca223833a71cfb6cabc5ea3c608f121d8f39a))
+* **sel:** add multiEpisode filter function ([#798](https://github.com/Viren070/AIOStreams/issues/798)) ([e297ca9](https://github.com/Viren070/AIOStreams/commit/e297ca921fbc2e03edf1dc0644ce350f88795451))
+
+
+### Bug Fixes
+
+* **db/postgres:** handle pool error events and enable keepAlive ([ae5db0a](https://github.com/Viren070/AIOStreams/commit/ae5db0a556694976ff33273535fc944fdb9be577))
+* extract hash from magnet URL in `url` field ([fe8fb3a](https://github.com/Viren070/AIOStreams/commit/fe8fb3acba3cb3c19d94fd518c08de62819ff9e4))
+* **frontend/TemplateOption:** ensure modal is always rendered for subsection and create SubsectionTrigger component ([4975224](https://github.com/Viren070/AIOStreams/commit/4975224edc5eb0a38932ab50a58934189ddfd0d6))
+* **frontend/templates:** handle stremio NNTP server input and improve service handling ([#568](https://github.com/Viren070/AIOStreams/issues/568)) ([9f07fe3](https://github.com/Viren070/AIOStreams/commit/9f07fe319e9fd2df2bb1ff2a13902d0bda9d88d0))
+* **frontend:** only drag on handle for addon reorder modal ([e2415e4](https://github.com/Viren070/AIOStreams/commit/e2415e494cbce6803146c96b78dd4c1a06623c46))
+* **frontend:** order categories by order of appearance in list ([fa848b4](https://github.com/Viren070/AIOStreams/commit/fa848b4be08870c0e02bdd438bcddf5690869b3a))
+* **frontend:** use ref for userData in catalog fetch ([3e2a775](https://github.com/Viren070/AIOStreams/commit/3e2a775f3dcba3dd3e06427da74d55c8049398aa))
+* match ranked regexes against `folderName` too ([#846](https://github.com/Viren070/AIOStreams/issues/846)) ([3aa25e8](https://github.com/Viren070/AIOStreams/commit/3aa25e8ce4a82a797b91dbc18a6ecad061aaec6a))
+* **media-info:** prefer width when determining resolution ([d43aef6](https://github.com/Viren070/AIOStreams/commit/d43aef694e1589149549c4f4db8a15c530d97107))
+* **posters/top-posters:** update domain, add user agent for validation request, and update UI text ([#868](https://github.com/Viren070/AIOStreams/issues/868)) ([77c0b4c](https://github.com/Viren070/AIOStreams/commit/77c0b4c536f3f6e4262156fec0350408504efc9a)), closes [#768](https://github.com/Viren070/AIOStreams/issues/768)
+* **presets:** remove duplicate hdhub preset ([b54f130](https://github.com/Viren070/AIOStreams/commit/b54f130cc08b46c32097faa3b7e238531449ef3a))
+
 ## [2.26.0](https://github.com/Viren070/AIOStreams/compare/v2.25.4...v2.26.0) (2026-03-25)
 
 
