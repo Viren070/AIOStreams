@@ -38,8 +38,8 @@ importers:
         specifier: github:viren070/torbox-sdk-js#dist
         version: https://codeload.github.com/viren070/torbox-sdk-js/tar.gz/82fb4eb14ccd3a0372fb445f796fa49527960cdd
       '@viren070/parse-torrent-title':
-        specifier: ^0.7.3
-        version: 0.7.3
+        specifier: ^0.7.4
+        version: 0.7.4
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -2854,8 +2854,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@viren070/parse-torrent-title@0.7.3':
-    resolution: {integrity: sha512-K16YxFNPXBOFLUoE7PLyjtzQi68ZbBDvmesFRzs4b9St2RSdOebw7Af0Wzo2fcHyqMo5k19yW8T9l+ctQfsF2A==}
+  '@viren070/parse-torrent-title@0.7.4':
+    resolution: {integrity: sha512-HOXoLeRgRoNmY7tvg5NGnpGJDCtCw4j66ZxSIMvI6tv0u5qT1tObjeMK/J9yDIqB+fvcvPYIBByDcC05+bkyvQ==}
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -5495,6 +5495,7 @@ packages:
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
+    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
     hasBin: true
 
   prelude-ls@1.2.1:
@@ -8780,7 +8781,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@viren070/parse-torrent-title@0.7.3': {}
+  '@viren070/parse-torrent-title@0.7.4': {}
 
   '@vitest/expect@2.1.9':
     dependencies:
