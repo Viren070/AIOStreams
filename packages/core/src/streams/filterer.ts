@@ -874,7 +874,10 @@ class StreamFilterer {
           }
         }
 
-        if (streamYear === yearWithinTitle) {
+        if (
+          streamYear === yearWithinTitle &&
+          yearWithinTitle !== requestedMetadata.year.toString()
+        ) {
           streamYear = undefined;
           if (stream.parsedFile) stream.parsedFile.year = undefined;
         }
