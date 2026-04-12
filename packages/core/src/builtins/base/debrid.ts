@@ -885,7 +885,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           const daysSince = Math.floor(
             (now.getTime() - airDate.getTime()) / (1000 * 60 * 60 * 24)
           );
-          if (daysSince <= 1) {
+          if (daysSince >= 0 && daysSince <= 1) {
             searchMetadata.recentCacheTTL = Env.BUILTIN_SEARCH_RECENT_TTL;
           }
         }
