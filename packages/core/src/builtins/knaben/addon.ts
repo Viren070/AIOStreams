@@ -78,12 +78,15 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
     const searchPromises = queries.map((q) =>
       queryLimit(async () => {
         const start = Date.now();
-        const { hits } = await this.api.search({
-          query: q,
-          categories,
-          size: 300,
-          hideUnsafe: false,
-        });
+        const { hits } = await this.api.search(
+          {
+            query: q,
+            categories,
+            size: 300,
+            hideUnsafe: false,
+          },
+          metadata.recentCacheTTL
+        );
         logger.info(
           `Knaben search for ${q} took ${getTimeTakenSincePoint(start)}`,
           {

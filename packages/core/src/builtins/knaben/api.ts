@@ -121,7 +121,10 @@ class KnabenAPI {
     };
   }
 
-  async search(options: KnabenSearchOptions): Promise<KnabenSearchResponse> {
+  async search(
+    options: KnabenSearchOptions,
+    recentCacheTTL?: number
+  ): Promise<KnabenSearchResponse> {
     const body = KnabenSearchOptionsRequest.parse(options);
     const cacheKey = JSON.stringify(options);
 
@@ -130,6 +133,7 @@ class KnabenAPI {
       searchCacheKey: cacheKey,
       bgCacheKey: `knaben:${cacheKey}`,
       cacheTTL: Env.BUILTIN_KNABEN_SEARCH_CACHE_TTL,
+      recentCacheTTL,
       fetchFn: () =>
         this.request<KnabenSearchResponse>('', {
           schema: KnabenSearchResponse,

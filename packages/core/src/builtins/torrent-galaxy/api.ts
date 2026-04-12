@@ -95,7 +95,8 @@ class TorrentGalaxyAPI {
   }
 
   async search(
-    options: TorrentGalaxySearchOptions
+    options: TorrentGalaxySearchOptions,
+    recentCacheTTL?: number
   ): Promise<TorrentGalaxySearchResponse> {
     let queryParams = new URLSearchParams();
     if (options.page) {
@@ -107,6 +108,7 @@ class TorrentGalaxyAPI {
       searchCacheKey: cacheKey,
       bgCacheKey: `tgx:${cacheKey}`,
       cacheTTL: Env.BUILTIN_TORRENT_GALAXY_SEARCH_CACHE_TTL,
+      recentCacheTTL,
       fetchFn: () =>
         this.request<TorrentGalaxySearchResponse>(
           `/get-posts/keywords:${encodeURIComponent(options.query)}:format:json`,

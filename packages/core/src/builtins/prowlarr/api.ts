@@ -153,12 +153,14 @@ class ProwlarrApi {
     type,
     limit,
     offset,
+    recentCacheTTL,
   }: {
     query: string;
     indexerIds: number[];
     type: 'search';
     limit?: number;
     offset?: number;
+    recentCacheTTL?: number;
   }): Promise<ProwlarrApiResponse<ProwlarrApiSearchItem[]>> {
     const cacheKey = `${this.baseUrl}:${type}:${query}:${indexerIds.join(',')}:${limit}:${offset}`;
 
@@ -167,6 +169,7 @@ class ProwlarrApi {
       searchCacheKey: cacheKey,
       bgCacheKey: `prowlarr:${cacheKey}`,
       cacheTTL: Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL,
+      recentCacheTTL,
       fetchFn: () =>
         this.request<ProwlarrApiSearchItem[]>(
           'search',

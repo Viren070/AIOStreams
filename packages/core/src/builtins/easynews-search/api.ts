@@ -232,7 +232,10 @@ export class EasynewsApi {
    * Search for content with optional pagination
    * Returns results along with download server info
    */
-  async search(options: EasynewsSearchOptions): Promise<EasynewsSearchResult> {
+  async search(
+    options: EasynewsSearchOptions,
+    recentCacheTTL?: number
+  ): Promise<EasynewsSearchResult> {
     const cacheKey = JSON.stringify(options);
 
     return searchWithBackgroundRefresh({
@@ -240,6 +243,7 @@ export class EasynewsApi {
       searchCacheKey: cacheKey,
       bgCacheKey: `easynews:${cacheKey}`,
       cacheTTL: Env.BUILTIN_EASYNEWS_SEARCH_CACHE_TTL ?? 300,
+      recentCacheTTL,
       fetchFn: () => this.performSearchWithPagination(options),
       isEmptyResult: (result) => result.results.length === 0,
       logger,

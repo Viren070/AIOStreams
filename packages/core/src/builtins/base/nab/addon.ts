@@ -199,13 +199,13 @@ export abstract class BaseNabAddon<
       this.logger.debug('Performing queries', { queries });
       const searchPromises = queries.map((q) =>
         queryLimit(() =>
-          this.fetchResults(searchFunction, { ...queryParams, q })
+          this.fetchResults(searchFunction, { ...queryParams, q }, metadata.recentCacheTTL)
         )
       );
       const allResults = await Promise.all(searchPromises);
       results = allResults.flat();
     } else {
-      results = await this.fetchResults(searchFunction, queryParams);
+      results = await this.fetchResults(searchFunction, queryParams, metadata.recentCacheTTL);
     }
     this.logger.info(
       `Completed search for ${capabilities.server.title} in ${getTimeTakenSincePoint(start)}`,
@@ -256,13 +256,14 @@ export abstract class BaseNabAddon<
 
   private async fetchResults(
     searchFunction: string,
-    params: Record<string, string>
+    params: Record<string, string>,
+    recentCacheTTL?: number
   ): Promise<SearchResultItem<A['namespace']>[]> {
     const queryLimit = createQueryLimit();
     const maxPages = Env.BUILTIN_NAB_MAX_PAGES;
 
     const initialResponse: SearchResponse<A['namespace']> =
-      await this.api.search(searchFunction, params);
+      await this.api.search(searchFunction, params, recentCacheTTL);
     let allResults = [...initialResponse.results];
 
     this.logger.debug('Initial search response', {
@@ -321,10 +322,11 @@ export abstract class BaseNabAddon<
             const offset = initialOffset + limit * (i + 1);
             return queryLimit(
               () =>
-                this.api.search(searchFunction, {
-                  ...params,
-                  offset: offset.toString(),
-                }) as Promise<SearchResponse<A['namespace']>>
+                this.api.search(
+                  searchFunction,
+                  { ...params, offset: offset.toString() },
+                  recentCacheTTL
+                ) as Promise<SearchResponse<A['namespace']>>
             );
           });
 
@@ -358,10 +360,8 @@ export abstract class BaseNabAddon<
       while (pageCount < maxPages) {
         const response: SearchResponse<A['namespace']> = await this.api.search(
           searchFunction,
-          {
-            ...params,
-            offset: currentOffset.toString(),
-          }
+          { ...params, offset: currentOffset.toString() },
+          recentCacheTTL
         );
 
         if (response.results.length === 0) {

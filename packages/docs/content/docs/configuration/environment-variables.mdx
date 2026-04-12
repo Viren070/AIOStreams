@@ -66,6 +66,8 @@ AIOStreams is configured via environment variables. When using Docker Compose, t
 | `BUILTIN_GET_TORRENT_CONCURRENCY`               | `100`                            | Concurrency for torrent metadata fetch tasks                                                                |
 | `BUILTIN_GET_TORRENT_LAZILY`                    | `true`                           | Fetch non-magnet torrents in the background instead of blocking the search                                  |
 | `BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL`   | `86400`                          | Minimum interval between background cache refreshes (seconds)                                               |
+| `BUILTIN_SEARCH_RECENT_ENABLED`                 | `false`                          | When enabled, episodes that aired within the last day use `BUILTIN_SEARCH_RECENT_TTL`                       |
+| `BUILTIN_SEARCH_RECENT_TTL`                     | `600`                            | Short cache TTL (seconds) for recently aired episodes when `BUILTIN_SEARCH_RECENT_ENABLED` is true          |
 
 ### Prowlarr
 

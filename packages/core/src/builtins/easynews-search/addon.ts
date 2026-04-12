@@ -121,10 +121,10 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
       queryLimit(async () => {
         const start = Date.now();
         try {
-          const result = await this.api.search({
-            query,
-            paginate: this.userData.paginate,
-          });
+          const result = await this.api.search(
+            { query, paginate: this.userData.paginate },
+            metadata.recentCacheTTL
+          );
           logger.info(
             `Easynews search for "${query}" took ${getTimeTakenSincePoint(start)}`,
             { results: result.results.length }
