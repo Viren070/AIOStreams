@@ -4,8 +4,6 @@ import {
   constants,
   Env,
   ExtrasParser,
-  IdParser,
-  Cache,
   makeUrlLogSafe,
 } from '../utils/index.js';
 import { getAddonName } from '../utils/general.js';
@@ -894,62 +892,4 @@ export async function getAddonCatalog(
     };
   }
   return { success: true, data: addonCatalogs, errors: [] };
-}
-
-export async function shouldStopAutoPlay(
-  ctx: AIOStreamsContext,
-  type: string,
-  id: string
-): Promise<boolean> {
-  if (
-    !ctx.userData.areYouStillThere?.enabled ||
-    !ctx.userData.uuid ||
-    type !== 'series'
-  ) {
-    return false;
-  }
-  logger.info(`Determining if autoplay should be stopped`, {
-    type,
-    id,
-    uuid: ctx.userData.uuid,
-  });
-  let disableAutoplay = false;
-  const cfg = ctx.userData.areYouStillThere;
-  const threshold = cfg.episodesBeforeCheck ?? 3;
-  const cooldownMs = (cfg.cooldownMinutes ?? 60) * 60 * 1000;
-  const cache = Cache.getInstance<string, { count: number; lastAt: number }>(
-    'ays',
-    10000,
-    Env.REDIS_URI ? undefined : 'sql'
-  );
-  const parsed = IdParser.parse(id, type);
-  const baseSeriesKey = parsed
-    ? `${parsed.type}:${parsed.value}`
-    : id.split(':')[0] || id;
-  const key = `${ctx.userData.uuid}:${baseSeriesKey}`;
-  logger.debug(`Formed AYS cache key: ${key}`);
-  const now = Date.now();
-  const prev = (await cache.get(key)) || { count: 0, lastAt: 0 };
-  const withinWindow = now - prev.lastAt <= cooldownMs;
-  const nextCount = withinWindow ? prev.count + 1 : 1;
-  if (nextCount >= threshold) {
-    disableAutoplay = true;
-    await cache.set(
-      key,
-      { count: 0, lastAt: now },
-      Math.ceil(cooldownMs / 1000)
-    );
-  } else {
-    await cache.set(
-      key,
-      { count: nextCount, lastAt: now },
-      Math.ceil(cooldownMs / 1000)
-    );
-  }
-  logger.info(`Autoplay disable check result`, {
-    disableAutoplay,
-    count: nextCount,
-    withinWindow,
-  });
-  return disableAutoplay;
 }

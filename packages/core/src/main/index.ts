@@ -4,7 +4,7 @@ import {
   StrictManifestResource,
   UserData,
 } from '../db/index.js';
-import { Env } from '../utils/index.js';
+import { Cache, createLogger, Env, IdParser } from '../utils/index.js';
 import Proxifier from '../streams/proxifier.js';
 import StreamLimiter from '../streams/limiter.js';
 import {
@@ -28,8 +28,9 @@ import {
   getMeta as _getMeta,
   getSubtitles as _getSubtitles,
   getAddonCatalog as _getAddonCatalog,
-  shouldStopAutoPlay as _shouldStopAutoPlay,
 } from './resources.js';
+
+const logger = createLogger('core');
 
 export class AIOStreams {
   private ctx: AIOStreamsContext;
@@ -86,8 +87,8 @@ export class AIOStreams {
     return _getStreams(this.ctx, id, type, preCaching);
   }
 
-  public getStreamContext(): StreamContext | null {
-    return this.ctx.streamContext;
+  public async getCatalog(type: string, id: string, extras?: string) {
+    return _getCatalog(this.ctx, type, id, extras);
   }
 
   public async getMeta(type: string, id: string) {
@@ -100,6 +101,10 @@ export class AIOStreams {
 
   public async getAddonCatalog(type: string, id: string) {
     return _getAddonCatalog(this.ctx, type, id);
+  }
+
+  public getStreamContext(): StreamContext | null {
+    return this.ctx.streamContext;
   }
 
   public getResources(): StrictManifestResource[] {
@@ -122,10 +127,56 @@ export class AIOStreams {
   }
 
   public async shouldStopAutoPlay(type: string, id: string) {
-    return _shouldStopAutoPlay(this.ctx, type, id);
-  }
-
-  public async getCatalog(type: string, id: string, extras?: string) {
-    return _getCatalog(this.ctx, type, id, extras);
+    if (
+      !this.ctx.userData.areYouStillThere?.enabled ||
+      !this.ctx.userData.uuid ||
+      type !== 'series'
+    ) {
+      return false;
+    }
+    logger.info(`Determining if autoplay should be stopped`, {
+      type,
+      id,
+      uuid: this.ctx.userData.uuid,
+    });
+    let disableAutoplay = false;
+    const cfg = this.ctx.userData.areYouStillThere;
+    const threshold = cfg.episodesBeforeCheck ?? 3;
+    const cooldownMs = (cfg.cooldownMinutes ?? 60) * 60 * 1000;
+    const cache = Cache.getInstance<string, { count: number; lastAt: number }>(
+      'ays',
+      10000,
+      Env.REDIS_URI ? undefined : 'sql'
+    );
+    const parsed = IdParser.parse(id, type);
+    const baseSeriesKey = parsed
+      ? `${parsed.type}:${parsed.value}`
+      : id.split(':')[0] || id;
+    const key = `${this.ctx.userData.uuid}:${baseSeriesKey}`;
+    logger.debug(`Formed AYS cache key: ${key}`);
+    const now = Date.now();
+    const prev = (await cache.get(key)) || { count: 0, lastAt: 0 };
+    const withinWindow = now - prev.lastAt <= cooldownMs;
+    const nextCount = withinWindow ? prev.count + 1 : 1;
+    if (nextCount >= threshold) {
+      disableAutoplay = true;
+      await cache.set(
+        key,
+        { count: 0, lastAt: now },
+        Math.ceil(cooldownMs / 1000)
+      );
+    } else {
+      await cache.set(
+        key,
+        { count: nextCount, lastAt: now },
+        Math.ceil(cooldownMs / 1000)
+      );
+    }
+    logger.info(`Autoplay disable check result`, {
+      disableAutoplay,
+      count: nextCount,
+      withinWindow,
+    });
+    return disableAutoplay;
   }
 }
