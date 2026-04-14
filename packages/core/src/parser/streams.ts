@@ -538,6 +538,13 @@ class StreamParser {
     throw new Error('Invalid stream, missing a required stream property');
   }
 
+  protected getParsedFileMergeOverrides(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): Partial<ParsedFile> {
+    return {};
+  }
+
   /**
    * Parses the filename and folder name from the stream, merges the results,
    * and applies season-pack detection heuristics.
@@ -567,6 +574,7 @@ class StreamParser {
         arrayMerge(folderParsed?.languages, fileParsed?.languages),
         this.getLanguages(stream, parsedStream)
       ),
+      ...this.getParsedFileMergeOverrides(stream, parsedStream),
     });
 
     if (!merged) return undefined;
@@ -608,27 +616,28 @@ class StreamParser {
       ...(nameMatches ? [...new Set(nameMatches)] : []),
     ];
     const languages = flags
-      .map((flag) => {
-        const possibleLanguages = FULL_LANGUAGE_MAPPING.filter(
-          (language) => language.flag === flag
-        );
-
-        const language =
-          possibleLanguages.find((l) => l.flag_priority) ||
-          possibleLanguages[0];
-        const languageName = (
-          language?.internal_english_name || language?.english_name
-        )
-          ?.split('(')?.[0]
-          ?.trim();
-
-        if (languageName && constants.LANGUAGES.includes(languageName as any)) {
-          return languageName;
-        }
-        return undefined;
-      })
+      .map((flag) => this.convertFlagToLanguage(flag))
       .filter((language) => language !== undefined);
     return languages;
+  }
+
+  protected convertFlagToLanguage(flag: string): string | undefined {
+    const possibleLanguages = FULL_LANGUAGE_MAPPING.filter(
+      (language) => language.flag === flag
+    );
+
+    const language =
+      possibleLanguages.find((l) => l.flag_priority) || possibleLanguages[0];
+    const languageName = (
+      language?.internal_english_name || language?.english_name
+    )
+      ?.split('(')?.[0]
+      ?.trim();
+
+    if (languageName && constants.LANGUAGES.includes(languageName as any)) {
+      return languageName;
+    }
+    return undefined;
   }
 
   protected convertISO6392ToLanguage(code: string): string | undefined {
@@ -683,13 +692,13 @@ class StreamParser {
   ): ParsedStream['service'] | undefined {
     const cleanString = string.replace(/web-?dl/i, '');
     const services = constants.SERVICE_DETAILS;
-    const cachedSymbols = ['+', '⚡', '🚀', 'cached', '🌩️'];
+    const cachedSymbols = ['+', '⚡', '🚀', 'cached', '🌩️', '📫'];
     const uncachedSymbols = ['⏳', 'download', 'UNCACHED', '☁️'];
     let streamService: ParsedStream['service'] | undefined;
     Object.values(services).forEach((service) => {
       // for each service, generate a regexp which creates a regex with all known names separated by |
       const regex = new RegExp(
-        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️+/|\\)\\]_.-]|$|\n)`,
+        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️📫+/|\\)\\]_.-]|$|\n)`,
         'im'
       );
       // check if the string contains the regex
