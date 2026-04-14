@@ -5,13 +5,63 @@ import {
   Resource,
   ParsedStream,
   Stream,
+  ParsedFile,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
 
+class MeteorStreamParser extends StreamParser {
+  protected getInLibrary(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): boolean {
+    return stream.name?.includes('📫') ?? false;
+  }
+  protected getParsedFileMergeOverrides(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): Partial<ParsedFile> {
+    const overrides: Partial<ParsedFile> = {};
+
+    // Matches one or more flag emojis (each is two regional indicator chars) after an indicator emoji
+    const getFlagRegex = (indicator: string) =>
+      new RegExp(`${indicator}\\s*((?:[\\u{1F1E6}-\\u{1F1FF}]{2}\\s*)+)`, 'u');
+    const audioRegex = getFlagRegex('🌐');
+    const subtitleRegex = getFlagRegex('💬');
+
+    const audioMatch = stream.description?.match(audioRegex);
+    const subtitleMatch = stream.description?.match(subtitleRegex);
+
+    if (audioMatch) {
+      const audioLangs = audioMatch[1]
+        .split(' ')
+        .map((part) => this.convertFlagToLanguage(part.trim()))
+        .filter((lang) => lang !== undefined) as string[];
+      if (audioLangs.length > 0) {
+        overrides.languages = audioLangs;
+      }
+    }
+
+    if (subtitleMatch) {
+      const subtitleLangs = subtitleMatch[1]
+        .split(' ')
+        .map((part) => this.convertFlagToLanguage(part.trim()))
+        .filter((lang) => lang !== undefined) as string[];
+      if (subtitleLangs.length > 0) {
+        overrides.subtitles = subtitleLangs;
+      }
+    }
+
+    return overrides;
+  }
+}
+
 export class MeteorPreset extends Preset {
+  static override getParser(): typeof StreamParser {
+    return MeteorStreamParser;
+  }
   static override get METADATA() {
     const supportedServices: ServiceId[] = [
       constants.REALDEBRID_SERVICE,
@@ -24,7 +74,11 @@ export class MeteorPreset extends Preset {
       constants.OFFCLOUD_SERVICE,
     ];
 
-    const supportedResources = [constants.STREAM_RESOURCE];
+    const supportedResources = [
+      constants.STREAM_RESOURCE,
+      constants.META_RESOURCE,
+      constants.CATALOG_RESOURCE,
+    ];
 
     const options: Option[] = [
       ...baseOptions(
@@ -33,32 +87,6 @@ export class MeteorPreset extends Preset {
         Env.DEFAULT_METEOR_TIMEOUT,
         Env.METEOR_URL
       ),
-      {
-        id: 'includeP2P',
-        name: 'Include P2P',
-        description: 'Include P2P results, even if a debrid service is enabled',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'removeTrash',
-        name: 'Remove Trash',
-        description: 'Remove trash from results',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'When using multiple services, use a different Meteor addon for each service, rather than using one instance for all services',
-        type: 'boolean',
-        default: false,
-        required: false,
-        showInSimpleMode: false,
-      },
       {
         id: 'services',
         name: 'Services',
@@ -89,12 +117,118 @@ export class MeteorPreset extends Preset {
         ],
         default: [],
       },
+      {
+        id: 'yourMedia',
+        type: 'subsection',
+        subsectionIntent: 'pill',
+        name: 'Your Media',
+        description: '',
+        showInSimpleMode: false,
+        subOptions: [
+          {
+            id: 'enabled',
+            name: 'Enabled',
+            description:
+              'Show media you already have in your library via catalogs',
+            type: 'boolean',
+            default: false,
+          },
+          {
+            id: 'legacyMode',
+            name: 'Legacy Mode',
+            description:
+              'Meteor will match items in your catalogs to movies/shows and combine duplicate entries together. Enable this to disable this behaviour, this removes covers, descriptions, and other metadata from the results,  use this if you encounter issues with items not being matched correctly, or if you simply prefer no metadata',
+            type: 'boolean',
+            default: false,
+          },
+          {
+            id: 'sources',
+            name: 'Sources',
+            description:
+              'The types of content to use as sources for Your Media  results',
+            type: 'multi-select',
+            options: [
+              { label: 'Torrents', value: 'torrent' },
+              { label: 'WebDLs', value: 'webdl' },
+              { label: 'Usenet', value: 'usenet' },
+            ],
+            default: ['torrent'],
+          },
+          {
+            id: 'showStreams',
+            name: 'Show Streams',
+            description:
+              'Show streams for media you already have in your library together with regular search results.',
+            type: 'boolean',
+            default: false,
+          },
+        ],
+      },
+      {
+        id: 'usenet',
+        type: 'subsection',
+        subsectionIntent: 'pill',
+        name: 'Usenet',
+        description: '',
+        showInSimpleMode: false,
+        subOptions: [
+          {
+            id: 'usenetAlerts',
+            name: 'TorBox Pro Only',
+            description: 'Requires TorBox Pro subscription',
+            type: 'alert',
+            intent: 'info',
+          },
+          {
+            id: 'enabled',
+            name: 'Enabled',
+            description: 'Enable Usenet results',
+            type: 'boolean',
+            default: false,
+          },
+          {
+            id: 'customSearchEngines',
+            name: 'Custom Search Engines',
+            description:
+              'Enable the use of custom user search engines that you have added to your TorBox account',
+            type: 'boolean',
+            default: false,
+            showInSimpleMode: false,
+          },
+        ],
+      },
+      {
+        id: 'includeP2P',
+        name: 'Include P2P',
+        description: 'Include P2P results, even if a debrid service is enabled',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'removeTrash',
+        name: 'Remove Trash',
+        description: 'Remove trash from results',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'useMultipleInstances',
+        name: 'Use Multiple Instances',
+        description:
+          'When using multiple services, use a different Meteor addon for each service, rather than using one instance for all services',
+        type: 'boolean',
+        default: false,
+        required: false,
+        showInSimpleMode: false,
+      },
     ];
 
     return {
       ID: 'meteor',
       NAME: 'Meteor',
-      LOGO: `${Env.METEOR_URL[0]}/static/icon.png`,
+      LOGO: `https://meteorfortheweebs.midnightignite.me/static/icon.png`,
       URL: Env.METEOR_URL[0],
       TIMEOUT: Env.DEFAULT_METEOR_TIMEOUT || Env.DEFAULT_TIMEOUT,
       USER_AGENT: Env.DEFAULT_METEOR_USER_AGENT || Env.DEFAULT_USER_AGENT,
@@ -104,6 +238,7 @@ export class MeteorPreset extends Preset {
       SUPPORTED_STREAM_TYPES: [
         constants.P2P_STREAM_TYPE,
         constants.DEBRID_STREAM_TYPE,
+        constants.USENET_STREAM_TYPE,
       ],
       SUPPORTED_RESOURCES: supportedResources,
     };
@@ -218,6 +353,12 @@ export class MeteorPreset extends Preset {
         debridServices: debridServices.length > 1 ? debridServices : undefined,
         cachedOnly: false,
         removeTrash: options.removeTrash ?? false,
+        enableYourMedia: options.yourMedia?.enabled ?? false,
+        yourMediaLegacyMode: options.yourMedia?.legacyMode ?? false,
+        showYourMediaStreams: options.yourMedia?.showStreams ?? false,
+        yourMediaSources: options.yourMedia?.sources ?? ['torrent'],
+        enableUsenet: options.usenet?.enabled ?? false,
+        usenetCustomEngines: options.usenet?.customSearchEngines ?? false,
         removeSamples: false,
         removeAdult: false,
         exclude3D: false,
@@ -233,9 +374,10 @@ export class MeteorPreset extends Preset {
           'quality',
           'size',
           'audio',
-          'audiolang',
-          'source',
           'seeders',
+          'source',
+          'sublang',
+          'audiolang',
         ],
         sortOrder: [
           'pack',
