@@ -149,7 +149,7 @@ const AddonSchema = z.object({
   pinPosition: z.enum(['top', 'bottom']).optional(),
   serviceWrapped: z.boolean().optional(),
   headers: z.record(z.string().min(1), z.string().min(1)).optional(),
-  ip: z.union([z.ipv4(), z.ipv6()]).optional(),
+  ip: z.string().optional(),
 });
 
 // preset objects are transformed into addons by a preset transformer.
@@ -365,7 +365,7 @@ export const UserDataSchema = z.object({
   trusted: z.boolean().optional(),
   showChanges: z.boolean().optional(),
   addonPassword: z.string().optional(),
-  ip: z.union([z.ipv4(), z.ipv6()]).optional(),
+  ip: z.string().optional(),
   addonName: z.string().min(1).max(300).optional(),
   addonLogo: z.string().url().optional(),
   addonBackground: z.string().url().optional(),
