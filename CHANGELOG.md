@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.27.1](https://github.com/Viren070/AIOStreams/compare/v2.27.0...v2.27.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* account for release year being same as year in title ([2e6478b](https://github.com/Viren070/AIOStreams/commit/2e6478b137100f1ee4c6a7b86ff88d6371de1ad4))
+* add square brackets to separator pattern ([0626ba2](https://github.com/Viren070/AIOStreams/commit/0626ba2e9c16708a55e409db7f330f802587cd7c))
+* **core:** loosen IP validator to string ([d6ef2db](https://github.com/Viren070/AIOStreams/commit/d6ef2db5da5ba9b46eed251525fe810bf3695057))
+* **parser/streams:** update service parser ([105714b](https://github.com/Viren070/AIOStreams/commit/105714bce9bf478737e74218e806f1f090fbc6ca))
+* **presets/meteor:** add custom parser for library parsing and custom language / subtitle parsing ([a50391d](https://github.com/Viren070/AIOStreams/commit/a50391d3638bc8cbb9700d6877c41c955dfe6db2))
+* **presets/meteor:** add usenet and your media options, update types and resources ([a50391d](https://github.com/Viren070/AIOStreams/commit/a50391d3638bc8cbb9700d6877c41c955dfe6db2))
+* **presets/meteor:** hardcode logo URL ([a50391d](https://github.com/Viren070/AIOStreams/commit/a50391d3638bc8cbb9700d6877c41c955dfe6db2))
+* **transformers/api:** include statistics in response ([510ac9d](https://github.com/Viren070/AIOStreams/commit/510ac9dd8e89e786c5b8464e3cc068165d980baf))
+
 ## [2.27.0](https://github.com/Viren070/AIOStreams/compare/v2.26.0...v2.27.0) (2026-04-06)
 
 
