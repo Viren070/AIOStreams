@@ -65,15 +65,22 @@ x-aiostreams-user-data: <base64(userDataJSON)>
 
 ### Data Object
 
-| Field     | Type           | Description                                   |
-| --------- | -------------- | --------------------------------------------- |
-| `results` | SearchResult[] | Array of search results                       |
-| `errors`  | object[]       | Per-source errors that occurred during search |
+| Field        | Type           | Description                                             |
+| ------------ | -------------- | ------------------------------------------------------- |
+| `results`    | SearchResult[] | Array of search results                                 |
+| `filtered`   | number         | Number of results removed by `requiredFields` filtering |
+| `statistics` | object[]       | Statistic entries generated during search/filtering     |
+| `errors`     | object[]       | Per-source errors that occurred during search           |
 
 Each error in `errors` has:
 
 - `title` — short error title
 - `description` — detailed description
+
+Each entry in `statistics` has:
+
+- `title` — short statistic title
+- `description` — detailed statistic message
 
 ---
 
@@ -113,9 +120,11 @@ x-aiostreams-user-data: eyJ1c2VySWQiOiAiYWJjZCIsICJwYXNzd29yZCI6ICJzZWNyZXQifQ==
   "detail": null,
   "error": null,
   "data": {
+    "filtered": 0,
     "results": [
       /* SearchResult[] */
     ],
+    "statistics": [],
     "errors": []
   }
 }
@@ -123,10 +132,12 @@ x-aiostreams-user-data: eyJ1c2VySWQiOiAiYWJjZCIsICJwYXNzd29yZCI6ICJzZWNyZXQifQ==
 
 #### Data Object
 
-| Field     | Type           | Description                                 |
-| --------- | -------------- | ------------------------------------------- |
-| `results` | SearchResult[] | Filtered and sorted stream results          |
-| `errors`  | object[]       | Per-source errors (`title` + `description`) |
+| Field        | Type           | Description                                             |
+| ------------ | -------------- | ------------------------------------------------------- |
+| `results`    | SearchResult[] | Filtered and sorted stream results                      |
+| `filtered`   | number         | Number of results removed by `requiredFields` filtering |
+| `statistics` | object[]       | Statistic entries (`title` + `description`)             |
+| `errors`     | object[]       | Per-source errors (`title` + `description`)             |
 
 ### `format=true`
 
