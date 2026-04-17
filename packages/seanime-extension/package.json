@@ -1,0 +1,16 @@
+{
+  "name": "@aiostreams/seanime-extension",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "build": "node ./scripts/build-extensions.mjs",
+    "typecheck": "pnpm run typecheck:torrent && pnpm run typecheck:plugin",
+    "typecheck:torrent": "tsc -p ./src/extensions/aiostreams-torrent-provider/tsconfig.json",
+    "typecheck:plugin": "tsc -p ./src/extensions/aiostreams-plugin/tsconfig.json"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.3",
+    "typescript": "^5.8.3"
+  }
+}

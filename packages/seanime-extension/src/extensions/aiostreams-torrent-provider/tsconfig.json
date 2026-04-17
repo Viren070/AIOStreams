@@ -1,0 +1,5 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "files": ["../../types/bundles/anime-torrent-provider.d.ts"],
+  "include": ["./main.ts", "../../lib/**/*.ts"]
+}

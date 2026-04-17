@@ -1,0 +1,133 @@
+{
+  "id": "aiostreams-plugin",
+  "name": "AIOStreams",
+  "version": "0.3.0",
+  "manifestURI": "",
+  "language": "typescript",
+  "type": "plugin",
+  "description": "Stream content from AIOStreams directly in Seanime. Supports all streams with URLs.",
+  "author": "Viren070",
+  "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/aiostreams-light.png",
+  "lang": "multi",
+  "payloadURI": "",
+  "isDevelopment": true,
+  "website": "https://docs.aiostreams.viren070.me",
+  "readme": "https://github.com/Viren070/seanime-extensions",
+  "notes": "You need an existing AIOStreams instance and configuration to use this plugin.",
+  "userConfig": {
+    "version": 1,
+    "requiresConfig": false,
+    "fields": [
+      {
+        "type": "text",
+        "name": "manifestUrl",
+        "label": "Manifest URL",
+        "default": ""
+      },
+      {
+        "type": "select",
+        "name": "searchId",
+        "label": "Preferred Media ID",
+        "default": "imdbId",
+        "options": [
+          {
+            "value": "imdbId",
+            "label": "IMDb ID (recommended)"
+          },
+          {
+            "value": "kitsuId",
+            "label": "Kitsu ID"
+          },
+          {
+            "value": "anilistId",
+            "label": "AniList ID"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "name": "cacheTtl",
+        "label": "Cache TTL (minutes, 0 to disable)",
+        "default": "30"
+      },
+      {
+        "type": "text",
+        "name": "downloadLocation",
+        "label": "Download location",
+        "default": "$DOWNLOAD",
+        "description": "Where to save downloaded files. Supported variables: $DOWNLOAD, $DESKTOP, $DOCUMENT, $HOME. You can also append a subdirectory, e.g. $DOWNLOAD/AIOStreams"
+      },
+      {
+        "type": "select",
+        "name": "playerMode",
+        "label": "Preferred player",
+        "default": "desktop",
+        "options": [
+          {
+            "value": "desktop",
+            "label": "Desktop media player"
+          },
+          {
+            "value": "external",
+            "label": "External player link"
+          }
+        ]
+      },
+      {
+        "type": "switch",
+        "name": "autoPlayFirstStream",
+        "label": "Auto-play first stream when results load",
+        "default": "false"
+      },
+      {
+        "type": "switch",
+        "name": "autoOpenResults",
+        "label": "Auto-open results on episode card click (experimental)",
+        "default": "false"
+      },
+      {
+        "type": "switch",
+        "name": "showAnimePageButton",
+        "label": "Show \"AIOStreams\" button on anime details page",
+        "default": "true"
+      },
+      {
+        "type": "switch",
+        "name": "showEpisodeContextMenu",
+        "label": "Add \"Stream with AIOStreams\" to episode card right-click menu",
+        "default": "true"
+      },
+      {
+        "type": "switch",
+        "name": "showEpisodeGridMenu",
+        "label": "Add \"Stream with AIOStreams\" to episode grid (3-dot) menu",
+        "default": "true"
+      }
+    ]
+  },
+  "plugin": {
+    "version": "1",
+    "permissions": {
+      "scopes": [
+        "storage",
+        "playback",
+        "system",
+        "anilist"
+      ],
+      "allow": {
+        "networkAccess": {
+          "allowedDomains": [
+            "*"
+          ],
+          "reasoning": "This is mandatory as we need to be able to fetch from any AIOStreams instance you configure."
+        },
+        "readPaths": [
+          "**/*"
+        ],
+        "writePaths": [
+          "**/*"
+        ]
+      }
+    }
+  }
+}

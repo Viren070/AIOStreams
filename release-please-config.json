@@ -15,6 +15,25 @@
         "release-please-config.json"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
+    },
+    "packages/seanime-extension": {
+      "release-type": "node",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "skip-github-release": true,
+      "pull-request-title-pattern": "chore: release seanime-extension ${version}",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "packages/seanime-extension/src/extensions/aiostreams-plugin/manifest.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/seanime-extension/src/extensions/aiostreams-torrent-provider/manifest.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   }
 }

@@ -1,0 +1,65 @@
+{
+  "id": "aiostreams-torrent-provider",
+  "name": "AIOStreams",
+  "version": "0.3.0",
+  "manifestURI": "",
+  "language": "typescript",
+  "type": "anime-torrent-provider",
+  "description": "AIOStreams bridge for Seanime anime torrent search.",
+  "author": "Viren070",
+  "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/aiostreams-light.png",
+  "lang": "multi",
+  "payloadURI": "",
+  "website": "https://docs.aiostreams.viren070.me",
+  "readme": "https://github.com/Viren070/seanime-extensions",
+  "notes": "You need an existing AIOStreams instance and configuration to use this plugin.",
+  "isDevelopment": true,
+  "userConfig": {
+    "requiresConfig": true,
+    "version": 1,
+    "fields": [
+      {
+        "name": "manifestUrl",
+        "label": "AIOStreams Manifest URL",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "searchId",
+        "label": "AIOStreams Search ID",
+        "type": "select",
+        "default": "imdbId",
+        "options": [
+          {
+            "label": "IMDb ID",
+            "value": "imdbId"
+          },
+          {
+            "label": "Kitsu ID",
+            "value": "kitsuId"
+          },
+          {
+            "label": "AniList ID",
+            "value": "anilistId"
+          }
+        ]
+      },
+      {
+        "name": "resultFormat",
+        "label": "Result Name Format",
+        "type": "select",
+        "default": "formatter",
+        "options": [
+          {
+            "label": "Filename",
+            "value": "filename"
+          },
+          {
+            "label": "Formatter",
+            "value": "formatter"
+          }
+        ]
+      }
+    ]
+  }
+}
