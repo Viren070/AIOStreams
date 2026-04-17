@@ -3,6 +3,7 @@
   "release-type": "simple",
   "bump-minor-pre-major": true,
   "include-v-in-tag": true,
+  "separate-pull-requests": true,
   "packages": {
     ".": {
       "release-type": "node",
@@ -12,7 +13,8 @@
         ".gitignore",
         ".release-please-manifest.json",
         "compose.yaml",
-        "release-please-config.json"
+        "release-please-config.json",
+        "packages/seanime-extension"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
@@ -21,7 +23,7 @@
       "include-component-in-tag": true,
       "include-v-in-tag": true,
       "skip-github-release": true,
-      "pull-request-title-pattern": "chore: release seanime-extension ${version}",
+      "pull-request-title-pattern": "chore(seanime-extension): release ${version}",
       "extra-files": [
         {
           "type": "json",
