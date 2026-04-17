@@ -1273,6 +1273,7 @@ const StatusResponseSchema = z.object({
       trustedUrls: z.array(z.string()).optional(),
     }),
     loggingSensitiveInfo: z.boolean(),
+    seanimeExtensionVersion: z.string().or(z.null()),
     tmdbApiAvailable: z.boolean(),
     forced: z.object({
       proxy: z.object({

@@ -24,13 +24,6 @@ import { Modal } from '../ui/modal';
 import { Switch } from '../ui/switch';
 import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '../ui/accordion';
-import { Select } from '@/components/ui/select';
 import { PasswordInput } from '../ui/password-input';
 import { useMenu } from '@/context/menu';
 import {
@@ -58,7 +51,7 @@ function ModalOptionButton({
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col items-center gap-4 rounded-xl border-2 border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-800/30 p-6 text-center transition-all hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5 hover:shadow-lg hover:shadow-brand-400/20 hover:ring-1 hover:ring-brand-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
+      className="group relative flex flex-col items-center gap-4 rounded-xl border-2 border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-800/30 p-6 text-center transition-all hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
     >
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg transition-transform group-hover:scale-110">
         {icon}
@@ -70,6 +63,397 @@ function ModalOptionButton({
         </p>
       </div>
     </button>
+  );
+}
+
+interface AppCardProps {
+  logoSrc: string;
+  name: string;
+  description: string;
+  onClick: () => void;
+  unofficial?: boolean;
+  beta?: boolean;
+}
+
+function AppCard({
+  logoSrc,
+  name,
+  description,
+  onClick,
+  unofficial,
+  beta,
+}: AppCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative flex items-center gap-3 rounded-xl border-2 border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-800/30 p-3 text-left transition-all hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
+    >
+      <div className="flex-shrink-0 h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center">
+        <img
+          src={logoSrc}
+          alt={name}
+          className="h-full w-full object-contain"
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium text-white">{name}</span>
+          {beta && (
+            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+              Beta
+            </span>
+          )}
+          {unofficial && (
+            <span className="rounded-full border border-gray-600 bg-gray-800/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
+              Unofficial
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+      </div>
+    </button>
+  );
+}
+
+interface CreateConfigCardProps {
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  passwordRequirements: string[];
+  newPassword: string;
+  confirmNewPassword: string;
+  onNewPasswordChange: (value: string) => void;
+  onConfirmNewPasswordChange: (value: string) => void;
+  createLoading: boolean;
+}
+
+function CreateConfigCard({
+  onSubmit,
+  passwordRequirements,
+  newPassword,
+  confirmNewPassword,
+  onNewPasswordChange,
+  onConfirmNewPasswordChange,
+  createLoading,
+}: CreateConfigCardProps) {
+  return (
+    <SettingsCard
+      title="Create Configuration"
+      description="Set up your personalised addon configuration"
+    >
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          {passwordRequirements.length > 0 && newPassword?.length > 0 && (
+            <Alert
+              intent="alert"
+              title="Password Requirements"
+              description={
+                <ul className="list-disc list-inside">
+                  {passwordRequirements.map((requirement) => (
+                    <li key={requirement}>{requirement}</li>
+                  ))}
+                </ul>
+              }
+            />
+          )}
+          <PasswordInput
+            label="Password"
+            id="password"
+            value={newPassword}
+            onValueChange={onNewPasswordChange}
+            placeholder="Enter a password to protect your configuration"
+            required
+            autoComplete="new-password"
+          />
+          <div className="pt-2">
+            <PasswordInput
+              label="Confirm Password"
+              id="confirm-password"
+              value={confirmNewPassword}
+              onValueChange={onConfirmNewPasswordChange}
+              placeholder="Re-enter your password"
+              required
+              autoComplete="new-password"
+            />
+          </div>
+          <p className="text-sm text-[--muted] mt-1">
+            This is the password you will use to access and update your
+            configuration later. You can change your password later using the
+            Change Password option, but please remember your current password as
+            it is required to make changes.
+          </p>
+        </div>
+        <Button intent="white" type="submit" loading={createLoading} rounded>
+          Create
+        </Button>
+      </form>
+    </SettingsCard>
+  );
+}
+
+interface SaveConfigCardProps {
+  uuid: string;
+  onCopyUuid: () => void;
+  onSave: (e: React.FormEvent<HTMLFormElement>) => void;
+  saveLoading: boolean;
+  showChanges: boolean;
+  onShowChangesChange: (value: boolean) => void;
+}
+
+function SaveConfigCard({
+  uuid,
+  onCopyUuid,
+  onSave,
+  saveLoading,
+  showChanges,
+  onShowChangesChange,
+}: SaveConfigCardProps) {
+  return (
+    <SettingsCard
+      title="Save Configuration"
+      description="Save your configuration to your account by clicking Save below."
+    >
+      <div className="flex items-start gap-1">
+        <Alert
+          intent="info"
+          isClosable={false}
+          description={
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-md text-[--primary]">
+                  Your UUID: <span className="font-bold">{uuid}</span>
+                </span>
+                <BiCopy
+                  className="min-h-5 min-w-5 cursor-pointer"
+                  onClick={onCopyUuid}
+                />
+              </div>
+              <p className="text-sm text-[--muted]">
+                Save your UUID and password - you'll need them to update your
+                configuration later
+              </p>
+            </div>
+          }
+          className="flex-1"
+        />
+      </div>
+      <form onSubmit={onSave}>
+        <div className="flex items-center justify-between gap-4 mt-4">
+          <Button type="submit" intent="white" loading={saveLoading} rounded>
+            Save
+          </Button>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-changes"
+              label="Show changes before saving"
+              value={showChanges}
+              onValueChange={onShowChangesChange}
+            />
+          </div>
+        </div>
+      </form>
+    </SettingsCard>
+  );
+}
+
+interface InstallCardProps {
+  baseUrl: string;
+  uuid: string;
+  encryptedPassword: string;
+  encodedManifest: string;
+  manifestUrl: string;
+  onCopyManifestUrl: () => void;
+  onOpenChillio: () => void;
+  onOpenSeanime: () => void;
+}
+
+function InstallCard({
+  baseUrl,
+  uuid,
+  encryptedPassword,
+  encodedManifest,
+  manifestUrl,
+  onCopyManifestUrl,
+  onOpenChillio,
+  onOpenSeanime,
+}: InstallCardProps) {
+  return (
+    <SettingsCard
+      title="Installation Options"
+      description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you — otherwise, you do not need to reinstall."
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5 rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+          <div className="flex items-center gap-4 border-b border-gray-700/50 pb-4">
+            <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
+              <img
+                src="https://raw.githubusercontent.com/Stremio/stremio-brand/refs/heads/master/logos/PNG/stremio-logo-800px.png"
+                alt="Stremio"
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Stremio</h3>
+              <p className="text-sm text-gray-400">
+                Install to Stremio or other Stremio addon compatible clients
+                using the Manifest URL.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              onClick={() =>
+                window.open(
+                  `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
+                )
+              }
+              intent="primary"
+              className="w-full shadow-md"
+            >
+              Install to Stremio
+            </Button>
+            <Button
+              onClick={() =>
+                window.open(
+                  `https://web.stremio.com/#/addons?addon=${encodedManifest}`
+                )
+              }
+              intent="gray-outline"
+              className="w-full"
+            >
+              Install to Stremio Web
+            </Button>
+          </div>
+
+          <div className="space-y-1.5 mt-2">
+            <label className="text-xs font-medium text-gray-400 ml-1">
+              Direct Manifest URL
+            </label>
+            <div className="flex items-center gap-2">
+              <TextInput
+                type="text"
+                readOnly
+                value={manifestUrl}
+                className="flex-1 font-mono text-sm bg-black/20"
+                onClick={(e) => e.currentTarget.select()}
+              />
+              <Button
+                onClick={onCopyManifestUrl}
+                intent="primary"
+                className="shrink-0 px-3"
+                aria-label="Copy install link"
+              >
+                <CopyIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col rounded-xl border border-gray-700 bg-gray-800/10 p-5">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="h-px bg-gray-700 flex-1"></div>
+            Other apps
+            <div className="h-px bg-gray-700 flex-1"></div>
+          </h3>
+
+          <div className="flex flex-col gap-3">
+            <AppCard
+              logoSrc="https://link.chillio.app/app-icon.png"
+              name="Chillio"
+              description="Via ChillLink protocol"
+              onClick={onOpenChillio}
+            />
+            <AppCard
+              logoSrc="https://seanime.app/seanime-logo.png"
+              name="Seanime"
+              description="Anime-focused client"
+              beta
+              onClick={onOpenSeanime}
+            />
+          </div>
+        </div>
+      </div>
+    </SettingsCard>
+  );
+}
+
+interface BackupCardProps {
+  onExportOpen: () => void;
+  onImportOpen: () => void;
+  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  importFileRef: React.RefObject<HTMLInputElement | null>;
+}
+
+function BackupCard({
+  onExportOpen,
+  onImportOpen,
+  onImport,
+  importFileRef,
+}: BackupCardProps) {
+  return (
+    <SettingsCard
+      title="Backups"
+      description="Export your settings or restore from a backup file"
+    >
+      <div className="flex flex-wrap gap-3">
+        <Button onClick={onExportOpen} leftIcon={<UploadIcon />} intent="gray">
+          Export
+        </Button>
+        <input
+          type="file"
+          accept=".json"
+          className="hidden"
+          id="import-file"
+          onChange={onImport}
+          ref={importFileRef}
+        />
+        <Button
+          onClick={onImportOpen}
+          leftIcon={<DownloadIcon />}
+          intent="gray"
+        >
+          Import
+        </Button>
+      </div>
+    </SettingsCard>
+  );
+}
+
+interface DangerZoneCardProps {
+  hasUser: boolean;
+  onChangePasswordOpen: () => void;
+  onDeleteUserOpen: () => void;
+  onResetOpen: () => void;
+}
+
+function DangerZoneCard({
+  hasUser,
+  onChangePasswordOpen,
+  onDeleteUserOpen,
+  onResetOpen,
+}: DangerZoneCardProps) {
+  return (
+    <SettingsCard
+      title="Danger Zone"
+      description="Perform potentially destructive actions that cannot be undone"
+      className="lg:bg-red-950/70 border-red-500/20"
+      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-950/20"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        {hasUser && (
+          <>
+            <Button intent="alert" rounded onClick={onChangePasswordOpen}>
+              Change Password
+            </Button>
+            <Button intent="alert" rounded onClick={onDeleteUserOpen}>
+              Delete User
+            </Button>
+          </>
+        )}
+        <Button intent="alert" rounded onClick={onResetOpen}>
+          Reset Configuration
+        </Button>
+      </div>
+    </SettingsCard>
   );
 }
 
@@ -102,8 +486,8 @@ function Content() {
   >([]);
   const { status } = useStatus();
   const baseUrl = status?.settings?.baseUrl || window.location.origin;
+  const seanimeExtensionVersion = status?.settings?.seanimeExtensionVersion;
   const importFileRef = React.useRef<HTMLInputElement>(null);
-  const installModal = useDisclosure(false);
   const deleteUserModal = useDisclosure(false);
   const [confirmDeletionPassword, setConfirmDeletionPassword] =
     React.useState('');
@@ -114,7 +498,8 @@ function Content() {
   const importMenuModal = useDisclosure(false);
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
     React.useState(true);
-  const [installProtocol, setInstallProtocol] = React.useState('stremio');
+  const chillLinkModal = useDisclosure(false);
+  const seanimeModal = useDisclosure(false);
   const [addonPasswordModalOpen, setAddonPasswordModalOpen] =
     React.useState(false);
   const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
@@ -298,17 +683,41 @@ function Content() {
     : '';
   const encodedManifest = encodeURIComponent(manifestUrl);
 
+  const hasSeanimePersonalUrl =
+    !!uuid && !!encryptedPassword && uuidRegex.test(uuid);
+
+  const seanimePluginUrl = hasSeanimePersonalUrl
+    ? `${baseUrl}/seanime/${uuid}/${encryptedPassword}/extensions/aiostreams-plugin.json`
+    : `${baseUrl}/seanime/extensions/aiostreams-plugin.json`;
+  const seanimeProviderUrl = hasSeanimePersonalUrl
+    ? `${baseUrl}/seanime/${uuid}/${encryptedPassword}/extensions/aiostreams-torrent-provider.json`
+    : `${baseUrl}/seanime/extensions/aiostreams-torrent-provider.json`;
   const copyManifestUrl = async () => {
     await copyToClipboard(manifestUrl, {
-      successMessage: 'Manifest URL copied to clipboard',
-      errorMessage: 'Failed to copy manifest URL',
+      onSuccess: () => toast.success('Manifest URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy manifest URL'),
     });
   };
 
   const copyChillLinkUrl = async () => {
     await copyToClipboard(chillLinkUrl, {
-      successMessage: 'ChillLink URL copied to clipboard',
-      errorMessage: 'Failed to copy ChillLink URL',
+      onSuccess: () => toast.success('ChillLink URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy ChillLink URL'),
+    });
+  };
+
+  const copySeanimePluginUrl = async () => {
+    await copyToClipboard(seanimePluginUrl, {
+      onSuccess: () => toast.success('Plugin URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy URL'),
+    });
+  };
+
+  const copySeanimeProviderUrl = async () => {
+    await copyToClipboard(seanimeProviderUrl, {
+      onSuccess: () =>
+        toast.success('Torrent provider URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy URL'),
     });
   };
 
@@ -411,293 +820,62 @@ function Content() {
 
       <div className="space-y-4 mt-6">
         {!uuid ? (
-          <SettingsCard
-            title="Create Configuration"
-            description="Set up your personalised addon configuration"
-          >
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                {passwordRequirements.length > 0 && newPassword?.length > 0 && (
-                  <Alert
-                    intent="alert"
-                    title="Password Requirements"
-                    description={
-                      <ul className="list-disc list-inside">
-                        {passwordRequirements.map((requirement) => (
-                          <li key={requirement}>{requirement}</li>
-                        ))}
-                      </ul>
-                    }
-                  />
-                )}
-                <PasswordInput
-                  label="Password"
-                  id="password"
-                  value={newPassword}
-                  onValueChange={(value) => setNewPassword(value)}
-                  placeholder="Enter a password to protect your configuration"
-                  required
-                  autoComplete="new-password"
-                />
-                <div className="pt-2">
-                  <PasswordInput
-                    label="Confirm Password"
-                    id="confirm-password"
-                    value={confirmNewPassword}
-                    onValueChange={(value) => setConfirmNewPassword(value)}
-                    placeholder="Re-enter your password"
-                    required
-                    autoComplete="new-password"
-                  />
-                </div>
-                <p className="text-sm text-[--muted] mt-1">
-                  This is the password you will use to access and update your
-                  configuration later. You can change your password later using
-                  the Change Password option, but please remember your current
-                  password as it is required to make changes.
-                </p>
-              </div>
-              <Button
-                intent="white"
-                type="submit"
-                loading={createLoading}
-                rounded
-              >
-                Create
-              </Button>
-            </form>
-          </SettingsCard>
+          <CreateConfigCard
+            onSubmit={handleCreate}
+            passwordRequirements={passwordRequirements}
+            newPassword={newPassword}
+            confirmNewPassword={confirmNewPassword}
+            onNewPasswordChange={setNewPassword}
+            onConfirmNewPasswordChange={setConfirmNewPassword}
+            createLoading={createLoading}
+          />
         ) : (
           <>
-            <SettingsCard
-              title="Save Configuration"
-              description="Save your configuration to your account by clicking Update below."
-            >
-              <div className="flex items-start gap-1">
-                <Alert
-                  intent="info"
-                  isClosable={false}
-                  description={
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-md text-[--primary]">
-                          Your UUID: <span className="font-bold">{uuid}</span>
-                        </span>
-                        <BiCopy
-                          className="min-h-5 min-w-5 cursor-pointer"
-                          onClick={() =>
-                            copyToClipboard(uuid, {
-                              successMessage: 'UUID copied to clipboard',
-                            })
-                          }
-                        />
-                      </div>
-                      <p className="text-sm text-[--muted]">
-                        Save your UUID and password - you'll need them to update
-                        your configuration later
-                      </p>
-                    </div>
-                  }
-                  className="flex-1"
-                />
-              </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSaveContext();
-                }}
-              >
-                <div className="flex items-center justify-between gap-4 mt-4">
-                  <Button
-                    type="submit"
-                    intent="white"
-                    loading={saveLoading}
-                    rounded
-                  >
-                    Save
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="show-changes"
-                      label="Show changes before saving"
-                      value={userData?.showChanges ?? false}
-                      onValueChange={(val) =>
-                        setUserData((prev) => ({ ...prev, showChanges: val }))
-                      }
-                    />
-                  </div>
-                </div>
-              </form>
-            </SettingsCard>
+            <SaveConfigCard
+              uuid={uuid}
+              onCopyUuid={() =>
+                copyToClipboard(uuid, {
+                  onSuccess: () => toast.success('UUID copied to clipboard'),
+                  onError: () => toast.error('Failed to copy UUID'),
+                })
+              }
+              onSave={(e) => {
+                e.preventDefault();
+                handleSaveContext();
+              }}
+              saveLoading={saveLoading}
+              showChanges={userData?.showChanges ?? false}
+              onShowChangesChange={(val) =>
+                setUserData((prev) => ({ ...prev, showChanges: val }))
+              }
+            />
 
-            {/* <SettingsCard
-              title="Install"
-              description="Choose how you want to install your personalized addon. If a reinstall is necessary, a pop-up will tell you - otherwise, you do not need to reinstall."
-            >
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  onClick={() =>
-                    window.open(
-                      `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
-                    )
-                  }
-                >
-                  Stremio Desktop
-                </Button>
-                <Button
-                  onClick={() =>
-                    window.open(
-                      `https://web.stremio.com/#/addons?addon=${encodedManifest}`
-                    )
-                  }
-                >
-                  Stremio Web
-                </Button>
-                <Button onClick={copyManifestUrl}>Copy URL</Button>
-              </div>
-            </SettingsCard> */}
-
-            <SettingsCard
-              title="Install"
-              description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you - otherwise, you do not need to reinstall."
-            >
-              <div className="flex justify-between items-center">
-                <Button intent="white" rounded onClick={installModal.open}>
-                  Install
-                </Button>
-                <div className="w-40">
-                  <Select
-                    options={[
-                      { label: 'Stremio', value: 'stremio' },
-                      { label: 'ChillLink', value: 'chilllink' },
-                    ]}
-                    value={installProtocol}
-                    onValueChange={setInstallProtocol}
-                  />
-                </div>
-              </div>
-
-              <Modal
-                open={installModal.isOpen}
-                onOpenChange={installModal.toggle}
-                title={`Install to ${installProtocol === 'stremio' ? 'Stremio' : 'Chillio'}`}
-                description="Install your addon"
-              >
-                <div className="flex flex-col gap-4">
-                  {installProtocol === 'stremio' && (
-                    <>
-                      <Button
-                        onClick={() =>
-                          window.open(
-                            `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
-                          )
-                        }
-                        intent="primary"
-                        className="w-full"
-                      >
-                        Stremio
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          window.open(
-                            `https://web.stremio.com/#/addons?addon=${encodedManifest}`
-                          )
-                        }
-                        intent="primary"
-                        className="w-full"
-                      >
-                        Stremio Web
-                      </Button>
-                    </>
-                  )}
-
-                  <div className="flex items-center gap-2 mt-2">
-                    <TextInput
-                      type="text"
-                      readOnly
-                      value={
-                        installProtocol === 'stremio'
-                          ? manifestUrl
-                          : chillLinkUrl
-                      }
-                      className="flex-1 rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400"
-                      onClick={(e) => e.currentTarget.select()}
-                    />
-                    <Button
-                      onClick={
-                        installProtocol === 'stremio'
-                          ? copyManifestUrl
-                          : copyChillLinkUrl
-                      }
-                      intent="primary"
-                      className="shrink-0 px-3"
-                      aria-label="Copy URL"
-                    >
-                      <CopyIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Modal>
-            </SettingsCard>
+            <InstallCard
+              baseUrl={baseUrl}
+              uuid={uuid}
+              encryptedPassword={encryptedPassword ?? ''}
+              encodedManifest={encodedManifest}
+              manifestUrl={manifestUrl}
+              onCopyManifestUrl={copyManifestUrl}
+              onOpenChillio={chillLinkModal.open}
+              onOpenSeanime={seanimeModal.open}
+            />
           </>
         )}
 
-        <SettingsCard
-          title="Backups"
-          description="Export your settings or restore from a backup file"
-        >
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={exportMenuModal.open}
-              leftIcon={<UploadIcon />}
-              intent="gray"
-            >
-              Export
-            </Button>
-            <input
-              type="file"
-              accept=".json"
-              className="hidden"
-              id="import-file"
-              onChange={handleImport}
-              ref={importFileRef}
-            />
-            <Button
-              onClick={importMenuModal.open}
-              leftIcon={<DownloadIcon />}
-              intent="gray"
-            >
-              Import
-            </Button>
-          </div>
-        </SettingsCard>
+        <BackupCard
+          onExportOpen={exportMenuModal.open}
+          onImportOpen={importMenuModal.open}
+          onImport={handleImport}
+          importFileRef={importFileRef}
+        />
 
-        <SettingsCard
-          title="Danger Zone"
-          description="Perform potentially destructive actions that cannot be undone"
-          className="lg:bg-red-950/70 border-red-500/20"
-          titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-950/20"
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            {uuid && (
-              <>
-                <Button
-                  intent="alert"
-                  rounded
-                  onClick={changePasswordModal.open}
-                >
-                  Change Password
-                </Button>
-                <Button intent="alert" rounded onClick={deleteUserModal.open}>
-                  Delete User
-                </Button>
-              </>
-            )}
-            <Button intent="alert" rounded onClick={confirmResetProps.open}>
-              Reset Configuration
-            </Button>
-          </div>
-        </SettingsCard>
+        <DangerZoneCard
+          hasUser={!!uuid}
+          onChangePasswordOpen={changePasswordModal.open}
+          onDeleteUserOpen={deleteUserModal.open}
+          onResetOpen={confirmResetProps.open}
+        />
 
         <Modal
           open={changePasswordModal.isOpen}
@@ -834,6 +1012,145 @@ function Content() {
             </div>
           </form>
         </Modal>
+        {/* ChillLink modal */}
+        <Modal
+          open={chillLinkModal.isOpen}
+          onOpenChange={chillLinkModal.toggle}
+          title="Install in Chillio"
+          description="Add your AIOStreams addon via the ChillLink protocol"
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <TextInput
+                type="text"
+                readOnly
+                value={chillLinkUrl}
+                className="flex-1"
+                onClick={(e) => e.currentTarget.select()}
+              />
+              <Button
+                onClick={copyChillLinkUrl}
+                intent="primary"
+                className="shrink-0 px-3"
+                aria-label="Copy ChillLink URL"
+              >
+                <CopyIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Seanime modal */}
+        <Modal
+          open={seanimeModal.isOpen}
+          onOpenChange={seanimeModal.toggle}
+          title="Install in Seanime"
+          description="Stream AIOStreams content directly within Seanime"
+        >
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-gray-400">
+                Seanime integration is in{' '}
+                <span className="font-medium text-amber-300">beta</span>
+              </span>
+              <span className="text-gray-400">
+                Extension version:{' '}
+                <span className="font-medium text-gray-200">
+                  {seanimeExtensionVersion
+                    ? `v${seanimeExtensionVersion}`
+                    : 'Unavailable'}
+                </span>
+              </span>
+            </div>
+
+            <p className="text-xs text-gray-400">
+              In Seanime, go to{' '}
+              <span className="text-gray-200">
+                Extensions → Add Extensions → Install from URL
+              </span>
+              . Install one of the two extensions below — choose based on how
+              you use AIOStreams.
+            </p>
+
+            {/* Plugin option */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-white">
+                  AIOStreams Plugin{' '}
+                  <span className="text-xs text-gray-500 font-normal">
+                    — recommended for most
+                  </span>
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Best for debrid, usenet, or any URL-based streams. Adds a
+                  dedicated results panel to Seanime.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={seanimePluginUrl}
+                  className="flex-1"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={copySeanimePluginUrl}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy plugin URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              {!hasSeanimePersonalUrl && (
+                <p className="text-xs text-gray-500">
+                  After installing, open the extension settings and enter your
+                  Manifest URL.
+                </p>
+              )}
+            </div>
+
+            <div className="border-t border-gray-700/60" />
+
+            {/* Torrent provider option */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-white">
+                  AIOStreams Torrent Provider
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  For native torrent integration. Best if you only use P2P or
+                  want Seanime to handle debrid itself.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={seanimeProviderUrl}
+                  className="flex-1"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={copySeanimeProviderUrl}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy torrent provider URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              {!hasSeanimePersonalUrl && (
+                <p className="text-xs text-gray-500">
+                  After installing, open the extension settings and enter your
+                  Manifest URL.
+                </p>
+              )}
+            </div>
+          </div>
+        </Modal>
+
         <ConfirmationDialog {...confirmDelete} />
         <ConfirmationDialog {...confirmResetProps} />
 

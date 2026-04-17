@@ -28,6 +28,7 @@ import {
   manifest as chillLinkManifest,
   streams as chillLinkStreams,
 } from './routes/chilllink/index.js';
+import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import {
   gdrive,
   torboxSearch,
@@ -150,6 +151,12 @@ chillLinkRouter.use('/manifest', chillLinkManifest);
 chillLinkRouter.use('/streams', chillLinkStreams);
 
 app.use('/chilllink/:uuid/:encryptedPassword', chillLinkRouter);
+
+const seanimeRouter = express.Router({ mergeParams: true });
+seanimeRouter.use(corsMiddleware);
+seanimeRouter.use(seanimeExtensionsRouter);
+
+app.use('/seanime', seanimeRouter);
 
 const builtinsRouter = express.Router();
 builtinsRouter.use(internalMiddleware);

@@ -10,6 +10,7 @@ import { StatusResponse } from '@aiostreams/core';
 import { encryptString } from '@aiostreams/core';
 import { RegexAccess, FeatureControl } from '@aiostreams/core';
 import { createResponse } from '../../utils/responses.js';
+import { getSeanimeExtensionVersion } from '../../utils/seanime.js';
 
 const router: Router = Router();
 
@@ -54,6 +55,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         trustedUrls: SelAccess.getAllowedUrls(),
       },
       loggingSensitiveInfo: Env.LOG_SENSITIVE_INFO,
+      seanimeExtensionVersion: getSeanimeExtensionVersion(),
       forced: {
         proxy: {
           enabled: Env.FORCE_PROXY_ENABLED ?? null,
