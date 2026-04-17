@@ -827,8 +827,10 @@ function SnippetsButton() {
                 className="sm:ml-4 flex-shrink-0"
                 onClick={async () => {
                   await copyToClipboard(snippet.value, {
-                    successMessage: 'Snippet copied to clipboard',
-                    errorMessage: 'Failed to copy snippet to clipboard',
+                    onSuccess: () =>
+                      toast.success('Snippet copied to clipboard'),
+                    onError: () =>
+                      toast.error('Failed to copy snippet to clipboard'),
                   });
                 }}
                 title="Copy snippet"

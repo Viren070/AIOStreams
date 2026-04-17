@@ -49,10 +49,8 @@ function OAuthCallbackContent() {
   const handleCopy = async () => {
     if (code) {
       await copyToClipboard(code, {
-        successMessage: 'Copied!',
-        errorMessage: 'Failed to copy',
-        description:
-          'The authorization code has been copied to your clipboard.',
+        onSuccess: () => toast.success('Copied!'),
+        onError: () => toast.error('Failed to copy'),
       });
     }
   };

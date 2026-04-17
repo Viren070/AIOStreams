@@ -140,8 +140,8 @@ function processInlineMarkdown(text: string, stopPropagation: boolean) {
                 e.stopPropagation();
               }
               await copyToClipboard(match.slice(1, -1), {
-                successMessage: 'Copied to clipboard',
-                errorMessage: 'Failed to copy to clipboard',
+                onSuccess: () => toast.success('Copied to clipboard'),
+                onError: () => toast.error('Failed to copy to clipboard'),
               });
             }}
             className="bg-muted px-1 py-0.5 rounded text-[--brand] font-mono text-xs break-all cursor-pointer"

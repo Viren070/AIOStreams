@@ -104,6 +104,7 @@ import {
 } from './_components/filter-utils';
 import type { SyncConfig } from './_components/synced-patterns';
 import { UserData } from '@aiostreams/core';
+import { toast } from 'sonner';
 
 /** Create a `<SYNCED: url>` placeholder string. */
 function makeSyncedPlaceholder(url: string): string {
@@ -3677,7 +3678,9 @@ function Content() {
                       icon={<FaRegCopy />}
                       onClick={() =>
                         copyToClipboard(url, {
-                          successMessage: 'URL copied to clipboard',
+                          onSuccess: () =>
+                            toast.success('URL copied to clipboard'),
+                          onError: () => toast.error('Failed to copy URL'),
                         })
                       }
                     />
@@ -3719,7 +3722,9 @@ function Content() {
                       icon={<FaRegCopy />}
                       onClick={() =>
                         copyToClipboard(url, {
-                          successMessage: 'URL copied to clipboard',
+                          onSuccess: () =>
+                            toast.success('URL copied to clipboard'),
+                          onError: () => toast.error('Failed to copy URL'),
                         })
                       }
                     />
