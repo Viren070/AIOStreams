@@ -19,6 +19,22 @@ class MeteorStreamParser extends StreamParser {
   ): boolean {
     return stream.name?.includes('📫') ?? false;
   }
+
+  protected getStreamType(
+    stream: Stream,
+    service: ParsedStream['service'],
+    currentParsedStream: ParsedStream
+  ): ParsedStream['type'] {
+    const type = super.getStreamType(stream, service, currentParsedStream);
+    if (currentParsedStream.indexer?.startsWith('Usenet')) {
+      currentParsedStream.indexer = currentParsedStream.indexer
+        .replace('Usenet:', '')
+        .trim();
+      return constants.USENET_STREAM_TYPE;
+    }
+    return type;
+  }
+
   protected getParsedFileMergeOverrides(
     stream: Stream,
     currentParsedStream: ParsedStream
