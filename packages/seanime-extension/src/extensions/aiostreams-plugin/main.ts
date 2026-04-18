@@ -943,11 +943,17 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     });
 
     const reopenPanelHandlerId = ctx.eventHandler("aio-reopen-panel", () => {
-      const hasResults = wvState.get().results.length > 0;
-      if (!hasResults && !wvState.get().error) {
+      const st = wvState.get();
+      const hasResults = st.results.length > 0;
+      if (!hasResults && !st.error) {
         ctx.toast.info("No previous results to show.");
         return;
       }
+
+      if (st.autoPlay) {
+        wvState.set({ ...st, autoPlay: false });
+      }
+
       showResults();
       tray.close();
     });
