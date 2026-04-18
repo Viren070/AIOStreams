@@ -153,7 +153,7 @@ function init() {
       }
       if (
         parsedId.episode &&
-        ["malId", "kitsuId"].includes(parsedId.type) &&
+        ["malId", "kitsuId", "anilistId", "anidbId"].includes(parsedId.type) &&
         !episodeOffsetApplied
       ) {
         const fromEpisode =
@@ -333,8 +333,12 @@ function init() {
 html,body{height:100%;width:100%;overflow:hidden;background-color:transparent !important;color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;font-size:14px;-webkit-font-smoothing:antialiased}
 .panel{position:absolute;inset:0;display:flex;flex-direction:column;background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);border-radius:14px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.6),0 0 0 1px rgba(0,0,0,0.4);overflow:hidden;animation:slideIn .32s cubic-bezier(0.16,1,0.3,1) both}
 .panel.is-leaving{animation:slideOut .24s cubic-bezier(0.7,0,0.84,0) both}
+.panel.mobile{border-radius:16px 16px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(0,0,0,0.4);animation:slideInUp .32s cubic-bezier(0.16,1,0.3,1) both}
+.panel.mobile.is-leaving{animation:slideOutDown .24s cubic-bezier(0.7,0,0.84,0) both}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(60px);opacity:0}}
+@keyframes slideInUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes slideOutDown{from{transform:translateY(0);opacity:1}to{transform:translateY(60px);opacity:0}}
 .hdr{display:flex;align-items:flex-start;gap:8px;padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0}
 .hdr-body{flex:1;min-width:0}
 .hdr-row{display:flex;align-items:center;gap:8px}
@@ -351,8 +355,8 @@ html,body{height:100%;width:100%;overflow:hidden;background-color:transparent !i
 .card{border:1px solid rgba(255,255,255,0.07);border-radius:10px;background:rgba(255,255,255,0.022);margin-bottom:6px;overflow:hidden;transition:border-color .15s}
 .card:hover{border-color:rgba(255,255,255,0.13)}
 .card-top{padding:11px 12px 9px}
-.card-name{font-size:14px;font-weight:500;line-height:1.45;color:#e2e8f0;white-space:pre-line;word-break:break-word}
-.card-desc{font-size:13px;line-height:1.5;color:rgba(255,255,255,0.58);white-space:pre-line;word-break:break-word;margin-top:4px}
+.card-name{font-size:15px;font-weight:500;line-height:1.45;color:#e2e8f0;white-space:pre-line;word-break:break-word}
+.card-desc{font-size:14px;line-height:1.5;color:rgba(255,255,255,0.58);white-space:pre-line;word-break:break-word;margin-top:4px}
 .card-actions{display:flex;gap:5px;padding:0 10px 10px}
 .btn-p{flex:1;height:38px;border-radius:6px;border:none;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;background:rgb(97,82,223);color:#fff;position:relative;overflow:hidden;transition:opacity .12s;font-family:inherit}
 .btn-p:disabled{opacity:.5;cursor:not-allowed}
@@ -568,10 +572,11 @@ function render(s){
 }
 W.on('state',function(s){
   var p=document.getElementById('panel');
-  if(p&&p.classList.contains('is-leaving'))return;
+  if(p) p.classList.remove('is-leaving');
   render(s);
 });
 W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.classList.add('is-leaving');});
+W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)return;if(m)p.classList.add('mobile');else p.classList.remove('mobile');});
 </script>
 </body>
 </html>`;
@@ -612,16 +617,17 @@ W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.class
     const downloadRecords: DownloadRecord[] = [];
 
     const ANIM_MS = 280;
+    const VP_WIDTH = 520;
 
     const resultsWv = ctx.newWebview({
       slot: "fixed",
-      width: "460px",
+      width: `${VP_WIDTH}px`,
       height: "98vh",
       hidden: true,
       zIndex: 100000,
-      style: "color-scheme: dark; background: transparent;",
+      style:
+        `color-scheme: dark; background: transparent; left: calc(100vw - ${VP_WIDTH}px - 10px); top: 10px`,
       window: {
-        draggable: true,
         defaultPosition: "top-right",
         frameless: true,
       },
@@ -630,14 +636,123 @@ W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.class
     resultsWv.setContent(() => getResultsHtml());
     resultsWv.channel.sync("state", wvState);
 
+    const mobileState = ctx.state<boolean>(false);
+    resultsWv.channel.sync("mobile-mode", mobileState);
+
     let pendingHideCancel: (() => void) | null = null;
+    let lastAppliedMobile = false;
+    let viewportWidth = 0;
+    let viewportHeight = 0;
+    let suppressOutsideCloseUntil = 0;
+    try {
+      const size = ctx.dom.viewport.getSize();
+      viewportWidth = size.width;
+      viewportHeight = size.height;
+    } catch {}
+
+    function isMobileViewport(): boolean {
+      return viewportWidth < 768;
+    }
+
+    // Returns true if setOptions was actually called. Callers that follow up
+    // with show() use the return value to decide whether to wait for the
+    // iframe to re-render at the new size before revealing it.
+    function applyViewportSize(): boolean {
+      const mobile = isMobileViewport();
+      if (mobile === lastAppliedMobile) return false;
+      lastAppliedMobile = mobile;
+      mobileState.set(mobile);
+      try {
+        resultsWv.setOptions(
+          mobile
+            ? {
+                width: "calc(100vw - 20px)",
+                height: "95dvh",
+                style:
+                  "color-scheme: dark; background: transparent; left: 10px; top: calc(100dvh - 95dvh)",
+                window: { frameless: true, defaultPosition: "bottom-left" },
+              }
+            : {
+                width: `${VP_WIDTH}px`,
+                height: "98vh",
+                style:
+                  `color-scheme: dark; background: transparent; left: calc(100vw - ${VP_WIDTH}px - 10px); top: 10px`,
+                window: { frameless: true, defaultPosition: "top-right" },
+              },
+        );
+      } catch {}
+      return true;
+    }
+
+    try {
+      ctx.dom.viewport.onResize((size) => {
+        viewportWidth = size.width;
+        viewportHeight = size.height;
+        applyViewportSize();
+      });
+    } catch {}
+
+    function getPanelRect(): {
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+    } {
+      const width = lastAppliedMobile ? Math.max(viewportWidth - 20, 0) : VP_WIDTH;
+      const height = lastAppliedMobile
+        ? Math.max(Math.round(viewportHeight * 0.95), 0)
+        : Math.max(Math.round(viewportHeight * 0.98), 0);
+      const left = lastAppliedMobile
+        ? 10
+        : Math.max(viewportWidth - width - 10, 0);
+      const top = lastAppliedMobile
+        ? Math.max(viewportHeight - height, 0)
+        : 10;
+      return {
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+      };
+    }
+
+    function handleOutsideClick(event: any): void {
+      if (resultsWv.isHidden()) return;
+      if (Date.now() < suppressOutsideCloseUntil) return;
+
+      const x = Number(event?.clientX);
+      const y = Number(event?.clientY);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+      const rect = getPanelRect();
+      const inside =
+        x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      if (!inside) {
+        hideResultsAnimated();
+      }
+    }
+
+    try {
+      ctx.dom.observe("body", (elements) => {
+        for (const el of elements) {
+          if (el.attributes["data-aio-outside-click"]) continue;
+          el.setAttribute("data-aio-outside-click", "1");
+          el.addEventListener("click", handleOutsideClick);
+        }
+      });
+    } catch {}
 
     function showResults(): void {
       if (pendingHideCancel) {
         pendingHideCancel();
         pendingHideCancel = null;
       }
-      resultsWv.show();
+      suppressOutsideCloseUntil = Date.now() + 250;
+      if (applyViewportSize()) {
+        ctx.setTimeout(() => resultsWv.show(), 150);
+      } else {
+        resultsWv.show();
+      }
     }
 
     function hideResultsAnimated(): void {
@@ -673,12 +788,15 @@ W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.class
         return;
       }
 
-      const playPromise = ctx.playback.streamUsingMediaPlayer(
-        windowTitle,
-        result.url,
-        anime,
-        ep.aniDBEpisode,
-      );
+      const playPromise =
+        playerMode === "builtin"
+          ? ctx.videoCore.playStream(result.url, ep.aniDBEpisode, anime)
+          : ctx.playback.streamUsingMediaPlayer(
+              windowTitle,
+              result.url,
+              anime,
+              ep.aniDBEpisode,
+            );
 
       playPromise
         .then(() => {
@@ -757,7 +875,7 @@ W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.class
 
       ctx.downloader.watch(
         downloadId,
-        (progress: $ui.DownloadProgress | undefined) => {
+        (progress: $downloader.DownloadProgress | undefined) => {
           if (!progress) return;
           const { percentage, speed, error } = progress;
           const status = progress.status;
@@ -1106,9 +1224,9 @@ W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.class
       return v === "true";
     }
 
-    function getPlayerModePref(): "desktop" | "external" {
+    function getPlayerModePref(): "desktop" | "builtin" | "external" {
       const mode = ($getUserPreference("playerMode") ?? "").trim();
-      if (mode === "desktop" || mode === "external") {
+      if (mode === "desktop" || mode === "builtin" || mode === "external") {
         return mode;
       }
 

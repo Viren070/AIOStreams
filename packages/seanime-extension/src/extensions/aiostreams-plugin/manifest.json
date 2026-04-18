@@ -61,8 +61,12 @@
         "type": "select",
         "name": "playerMode",
         "label": "Preferred player",
-        "default": "desktop",
+        "default": "builtin",
         "options": [
+          {
+            "value": "builtin",
+            "label": "Built-in player"
+          },
           {
             "value": "desktop",
             "label": "Desktop media player"
