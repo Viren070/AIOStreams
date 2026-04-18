@@ -28,12 +28,12 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "src/extensions/aiostreams-plugin/manifest.json",
+          "path": "packages/seanime-extension/src/extensions/aiostreams-plugin/manifest.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "src/extensions/aiostreams-torrent-provider/manifest.json",
+          "path": "packages/seanime-extension/src/extensions/aiostreams-torrent-provider/manifest.json",
           "jsonpath": "$.version"
         }
       ]
