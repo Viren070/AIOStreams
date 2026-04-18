@@ -4,6 +4,7 @@
   "bump-minor-pre-major": true,
   "include-v-in-tag": true,
   "separate-pull-requests": true,
+  "always-update": true,
   "packages": {
     ".": {
       "release-type": "node",
@@ -27,12 +28,12 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "packages/seanime-extension/src/extensions/aiostreams-plugin/manifest.json",
+          "path": "src/extensions/aiostreams-plugin/manifest.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "packages/seanime-extension/src/extensions/aiostreams-torrent-provider/manifest.json",
+          "path": "src/extensions/aiostreams-torrent-provider/manifest.json",
           "jsonpath": "$.version"
         }
       ]
