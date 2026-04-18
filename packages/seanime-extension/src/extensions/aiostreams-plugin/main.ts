@@ -2,11 +2,11 @@ import {
   AIOStreamsSearchApiResult,
   AIOStreamsAnimeEntry,
   ParsedId,
-} from "../../lib/aiostreams";
+} from '../../lib/aiostreams';
 
 function init() {
   $ui.register((ctx) => {
-    const SK_CACHE_STORE = "aio_cache";
+    const SK_CACHE_STORE = 'aio_cache';
 
     interface StreamResult {
       infoHash: string | null;
@@ -110,7 +110,7 @@ function init() {
 
     function enrichParsedIdWithAnimeEntry(
       parsedId: ParsedId,
-      animeEntry: AIOStreamsAnimeEntry,
+      animeEntry: AIOStreamsAnimeEntry
     ): void {
       let episodeOffsetApplied = false;
       const imdbId = animeEntry?.mappings?.imdbId;
@@ -125,12 +125,12 @@ function init() {
             m.start !== undefined &&
             m.end !== undefined &&
             episodeNum >= m.start &&
-            episodeNum <= m.end,
+            episodeNum <= m.end
         );
         if (mapping) {
           const mappedSeason = mapping.tvdbSeason;
           const shouldApplyEpisodeOffset =
-            imdbId && ["tt1528406"].includes(imdbId);
+            imdbId && ['tt1528406'].includes(imdbId);
           if (
             mappedSeason &&
             shouldApplyEpisodeOffset &&
@@ -153,7 +153,7 @@ function init() {
       }
       if (
         parsedId.episode &&
-        ["malId", "kitsuId", "anilistId", "anidbId"].includes(parsedId.type) &&
+        ['malId', 'kitsuId', 'anilistId', 'anidbId'].includes(parsedId.type) &&
         !episodeOffsetApplied
       ) {
         const fromEpisode =
@@ -167,21 +167,21 @@ function init() {
     function applyPreferredMapping(
       parsedId: ParsedId,
       animeEntry: AIOStreamsAnimeEntry,
-      preferred: "imdbId" | "kitsuId" | "anilistId",
+      preferred: 'imdbId' | 'kitsuId' | 'anilistId'
     ): ParsedId {
-      if (preferred === "kitsuId" && animeEntry.mappings?.kitsuId) {
-        parsedId.type = "kitsuId";
+      if (preferred === 'kitsuId' && animeEntry.mappings?.kitsuId) {
+        parsedId.type = 'kitsuId';
         parsedId.value = String(animeEntry.mappings.kitsuId);
         return parsedId;
       }
-      if (preferred === "anilistId" && animeEntry.mappings?.anilistId) {
-        parsedId.type = "anilistId";
+      if (preferred === 'anilistId' && animeEntry.mappings?.anilistId) {
+        parsedId.type = 'anilistId';
         parsedId.value = String(animeEntry.mappings.anilistId);
         return parsedId;
       }
       if (animeEntry.mappings?.imdbId) {
         enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
-        parsedId.type = "imdbId";
+        parsedId.type = 'imdbId';
         parsedId.value = String(animeEntry.mappings.imdbId);
       }
       return parsedId;
@@ -189,15 +189,15 @@ function init() {
 
     function formatIdForSearch(id: ParsedId): string {
       switch (id.type) {
-        case "anidbId":
+        case 'anidbId':
           return `anidb:${id.value}`;
-        case "anilistId":
+        case 'anilistId':
           return `anilist:${id.value}`;
-        case "malId":
+        case 'malId':
           return `mal:${id.value}`;
-        case "kitsuId":
+        case 'kitsuId':
           return `kitsu:${id.value}`;
-        case "imdbId":
+        case 'imdbId':
           return String(id.value);
         default:
           return `${id.type}:${id.value}`;
@@ -206,17 +206,17 @@ function init() {
 
     function parseManifestUrl(manifestUrl: string): ParsedManifestCredentials {
       const clean = manifestUrl.trim();
-      if (!clean) throw new Error("Manifest URL is required");
+      if (!clean) throw new Error('Manifest URL is required');
 
       const parsed = new URL(clean);
-      const segments = parsed.pathname.split("/").filter(Boolean);
+      const segments = parsed.pathname.split('/').filter(Boolean);
 
       if (
         segments.length < 4 ||
-        segments[0] !== "stremio" ||
-        segments[segments.length - 1] !== "manifest.json"
+        segments[0] !== 'stremio' ||
+        segments[segments.length - 1] !== 'manifest.json'
       ) {
-        throw new Error("Invalid manifest URL format");
+        throw new Error('Invalid manifest URL format');
       }
 
       const uuid = decodeURIComponent(segments[1]);
@@ -224,13 +224,13 @@ function init() {
       const baseUrl = `${parsed.protocol}//${parsed.host}`;
 
       if (!uuid || !passwordToken)
-        throw new Error("Manifest URL is missing uuid or password token");
+        throw new Error('Manifest URL is missing uuid or password token');
 
       return { baseUrl, uuid, passwordToken };
     }
 
     function getCacheTtlMinutes(): number {
-      const v = $getUserPreference("cacheTtl");
+      const v = $getUserPreference('cacheTtl');
       if (!v) return 30;
       const n = parseInt(v, 10);
       return isNaN(n) || n < 0 ? 30 : n;
@@ -243,26 +243,26 @@ function init() {
       type: string,
       id: string,
       season?: number,
-      episode?: number,
+      episode?: number
     ): Promise<{
       errors: StatEntry[];
       results: AIOStreamsSearchApiResult[];
       statistics?: StatEntry[];
     }> {
-      const fullId = `${id}${season !== undefined ? `:${season}` : ""}${episode !== undefined ? `:${episode}` : ""}`;
-      const params = new URLSearchParams({ type, id: fullId, format: "true" });
+      const fullId = `${id}${season !== undefined ? `:${season}` : ''}${episode !== undefined ? `:${episode}` : ''}`;
+      const params = new URLSearchParams({ type, id: fullId, format: 'true' });
       const url = `${baseUrl}/api/v1/search?${params}`;
       const encodedAuth = CryptoJS.enc.Base64.stringify(
-        CryptoJS.enc.Utf8.parse(`${uuid}:${passwordToken}`),
+        CryptoJS.enc.Utf8.parse(`${uuid}:${passwordToken}`)
       );
       const response = await fetch(url, {
-        method: "GET",
+        method: 'GET',
         headers: { Authorization: `Basic ${encodedAuth}` },
-        credentials: "include",
+        credentials: 'include',
       });
       const json = await response.json();
       if (!json.success)
-        throw new Error(json.error?.message ?? "Unknown error");
+        throw new Error(json.error?.message ?? 'Unknown error');
       return json.data;
     }
 
@@ -271,17 +271,17 @@ function init() {
       uuid: string,
       passwordToken: string,
       idType: string,
-      idValue: string | number,
+      idValue: string | number
     ): Promise<AIOStreamsAnimeEntry | null> {
       const params = new URLSearchParams({ idType, idValue: String(idValue) });
       const url = `${baseUrl}/api/v1/anime?${params}`;
       const encodedAuth = CryptoJS.enc.Base64.stringify(
-        CryptoJS.enc.Utf8.parse(`${uuid}:${passwordToken}`),
+        CryptoJS.enc.Utf8.parse(`${uuid}:${passwordToken}`)
       );
       const response = await fetch(url, {
-        method: "GET",
+        method: 'GET',
         headers: { Authorization: `Basic ${encodedAuth}` },
-        credentials: "include",
+        credentials: 'include',
       });
       if (response.status === 204) return null;
       const json = await response.json();
@@ -298,7 +298,7 @@ function init() {
       if (ttl === 0) return null;
       const store =
         $storage.get<Record<string, { results: StreamResult[]; ts: number }>>(
-          SK_CACHE_STORE,
+          SK_CACHE_STORE
         ) ?? {};
       const entry = store[key];
       if (!entry) return null;
@@ -311,7 +311,7 @@ function init() {
       if (ttl === 0) return;
       const store =
         $storage.get<Record<string, { results: StreamResult[]; ts: number }>>(
-          SK_CACHE_STORE,
+          SK_CACHE_STORE
         ) ?? {};
       store[key] = { results, ts: Date.now() };
       $storage.set(SK_CACHE_STORE, store);
@@ -588,7 +588,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       results: [],
       loading: false,
       error: null,
-      episodeInfo: "",
+      episodeInfo: '',
       timeTakenMs: null,
       fromCache: false,
       errors: [],
@@ -608,7 +608,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       index: number;
       filename: string;
       filePath: string;
-      status: "downloading" | "completed" | "error" | "cancelled";
+      status: 'downloading' | 'completed' | 'error' | 'cancelled';
       error?: string;
       startedAt: number;
       completedAt?: number;
@@ -620,24 +620,23 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     const VP_WIDTH = 520;
 
     const resultsWv = ctx.newWebview({
-      slot: "fixed",
+      slot: 'fixed',
       width: `${VP_WIDTH}px`,
-      height: "98vh",
+      height: '98vh',
       hidden: true,
       zIndex: 100000,
-      style:
-        `color-scheme: dark; background: transparent; left: calc(100vw - ${VP_WIDTH}px - 10px); top: 10px`,
+      style: `color-scheme: dark; background: transparent; left: calc(100vw - ${VP_WIDTH}px - 10px); top: 10px`,
       window: {
-        defaultPosition: "top-right",
+        defaultPosition: 'top-right',
         frameless: true,
       },
     });
 
     resultsWv.setContent(() => getResultsHtml());
-    resultsWv.channel.sync("state", wvState);
+    resultsWv.channel.sync('state', wvState);
 
     const mobileState = ctx.state<boolean>(false);
-    resultsWv.channel.sync("mobile-mode", mobileState);
+    resultsWv.channel.sync('mobile-mode', mobileState);
 
     let pendingHideCancel: (() => void) | null = null;
     let lastAppliedMobile = false;
@@ -666,19 +665,18 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         resultsWv.setOptions(
           mobile
             ? {
-                width: "calc(100vw - 20px)",
-                height: "95dvh",
+                width: 'calc(100vw - 20px)',
+                height: '95dvh',
                 style:
-                  "color-scheme: dark; background: transparent; left: 10px; top: calc(100dvh - 95dvh)",
-                window: { frameless: true, defaultPosition: "bottom-left" },
+                  'color-scheme: dark; background: transparent; left: 10px; top: calc(100dvh - 95dvh)',
+                window: { frameless: true, defaultPosition: 'bottom-left' },
               }
             : {
                 width: `${VP_WIDTH}px`,
-                height: "98vh",
-                style:
-                  `color-scheme: dark; background: transparent; left: calc(100vw - ${VP_WIDTH}px - 10px); top: 10px`,
-                window: { frameless: true, defaultPosition: "top-right" },
-              },
+                height: '98vh',
+                style: `color-scheme: dark; background: transparent; left: calc(100vw - ${VP_WIDTH}px - 10px); top: 10px`,
+                window: { frameless: true, defaultPosition: 'top-right' },
+              }
         );
       } catch {}
       return true;
@@ -698,16 +696,16 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       right: number;
       bottom: number;
     } {
-      const width = lastAppliedMobile ? Math.max(viewportWidth - 20, 0) : VP_WIDTH;
+      const width = lastAppliedMobile
+        ? Math.max(viewportWidth - 20, 0)
+        : VP_WIDTH;
       const height = lastAppliedMobile
         ? Math.max(Math.round(viewportHeight * 0.95), 0)
         : Math.max(Math.round(viewportHeight * 0.98), 0);
       const left = lastAppliedMobile
         ? 10
         : Math.max(viewportWidth - width - 10, 0);
-      const top = lastAppliedMobile
-        ? Math.max(viewportHeight - height, 0)
-        : 10;
+      const top = lastAppliedMobile ? Math.max(viewportHeight - height, 0) : 10;
       return {
         left,
         top,
@@ -733,11 +731,11 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     }
 
     try {
-      ctx.dom.observe("body", (elements) => {
+      ctx.dom.observe('body', (elements) => {
         for (const el of elements) {
-          if (el.attributes["data-aio-outside-click"]) continue;
-          el.setAttribute("data-aio-outside-click", "1");
-          el.addEventListener("click", handleOutsideClick);
+          if (el.attributes['data-aio-outside-click']) continue;
+          el.setAttribute('data-aio-outside-click', '1');
+          el.addEventListener('click', handleOutsideClick);
         }
       });
     } catch {}
@@ -757,7 +755,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
     function hideResultsAnimated(): void {
       if (pendingHideCancel) pendingHideCancel();
-      resultsWv.channel.send("close-anim", {});
+      resultsWv.channel.send('close-anim', {});
       pendingHideCancel = ctx.setTimeout(() => {
         resultsWv.hide();
         pendingHideCancel = null;
@@ -765,7 +763,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     }
 
     ctx.screen.onNavigate((e) => {
-      if (e.pathname !== "/entry") {
+      if (e.pathname !== '/entry') {
         hideResultsAnimated();
       }
     });
@@ -778,24 +776,24 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       if (!anime || !ep) return;
 
       const playerMode = getPlayerModePref();
-      const title = anime.title?.userPreferred ?? "Unknown";
+      const title = anime.title?.userPreferred ?? 'Unknown';
       const windowTitle = `${title} - Episode ${ep.episodeNumber}`;
 
-      if (playerMode === "external") {
+      if (playerMode === 'external') {
         ctx.externalPlayerLink.open(result.url, anime.id, ep.episodeNumber);
         hideResultsAnimated();
-        resultsWv.channel.send("play-error", { index }); // Removes the loading spinner
+        resultsWv.channel.send('play-error', { index }); // Removes the loading spinner
         return;
       }
 
       const playPromise =
-        playerMode === "builtin"
+        playerMode === 'builtin'
           ? ctx.videoCore.playStream(result.url, ep.aniDBEpisode, anime)
           : ctx.playback.streamUsingMediaPlayer(
               windowTitle,
               result.url,
               anime,
-              ep.aniDBEpisode,
+              ep.aniDBEpisode
             );
 
       playPromise
@@ -804,7 +802,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         })
         .catch((err: Error) => {
           ctx.toast.error(`Playback error: ${err.message}`);
-          resultsWv.channel.send("play-error", { index });
+          resultsWv.channel.send('play-error', { index });
           const st = wvState.get();
           if (st.autoPlay) {
             wvState.set({ ...st, autoPlay: false });
@@ -812,16 +810,16 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         });
     }
 
-    resultsWv.channel.on("play", (data: { index: number }) => {
+    resultsWv.channel.on('play', (data: { index: number }) => {
       playStreamAtIndex(data.index);
     });
 
-    resultsWv.channel.on("copy-stream", (data: { text: string }) => {
+    resultsWv.channel.on('copy-stream', (data: { text: string }) => {
       ctx.dom.clipboard.write(data.text);
-      ctx.toast.success("Copied to clipboard!");
+      ctx.toast.success('Copied to clipboard!');
     });
 
-    resultsWv.channel.on("download", (data: { index: number }) => {
+    resultsWv.channel.on('download', (data: { index: number }) => {
       if (activeDownloadIndices.has(data.index)) return;
 
       const sessionId = resultsSessionId;
@@ -831,20 +829,20 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
       let filename =
         result.filename ??
-        url.split("/").pop()?.split("?")[0]?.split("#")[0] ??
-        "";
-      if (!filename || !filename.includes(".")) {
-        const sanitised = (result.name ?? "download").replace(
+        url.split('/').pop()?.split('?')[0]?.split('#')[0] ??
+        '';
+      if (!filename || !filename.includes('.')) {
+        const sanitised = (result.name ?? 'download').replace(
           /[/\\:*?"<>|]/g,
-          "_",
+          '_'
         );
-        filename = sanitised + ".mp4";
+        filename = sanitised + '.mp4';
       }
 
       const baseDir = result.folderName
         ? $filepath.join(
             resolveDownloadDir(),
-            result.folderName.replace(/[/\\:*?"<>|]/g, "_"),
+            result.folderName.replace(/[/\\:*?"<>|]/g, '_')
           )
         : resolveDownloadDir();
       const filePath = $filepath.join(baseDir, filename);
@@ -854,17 +852,17 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         index: data.index,
         filename,
         filePath,
-        status: "downloading",
+        status: 'downloading',
         startedAt: Date.now(),
       };
       downloadRecords.unshift(record);
       if (downloadRecords.length > 8) downloadRecords.splice(8);
 
       // Send initial state to webview immediately so the button updates
-      resultsWv.channel.send("download-progress", {
+      resultsWv.channel.send('download-progress', {
         index: data.index,
         sessionId,
-        status: "downloading",
+        status: 'downloading',
         percentage: 0,
         filename,
         filePath,
@@ -881,7 +879,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
           const status = progress.status;
 
           // Forward live progress to webview
-          resultsWv.channel.send("download-progress", {
+          resultsWv.channel.send('download-progress', {
             index: data.index,
             sessionId,
             status,
@@ -893,60 +891,60 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
           });
 
           if (
-            status === "completed" ||
-            status === "error" ||
-            status === "cancelled"
+            status === 'completed' ||
+            status === 'error' ||
+            status === 'cancelled'
           ) {
             activeDownloadIndices.delete(data.index);
-            record.status = status as DownloadRecord["status"];
+            record.status = status as DownloadRecord['status'];
             record.completedAt = Date.now();
             if (error) record.error = error;
             tray.update();
 
-            if (status === "completed") {
+            if (status === 'completed') {
               ctx.toast.success(`Downloaded to: ${filePath}`);
-            } else if (status === "error") {
-              ctx.toast.error(`Download failed: ${error ?? "Unknown error"}`);
+            } else if (status === 'error') {
+              ctx.toast.error(`Download failed: ${error ?? 'Unknown error'}`);
             }
           }
-        },
+        }
       );
     });
 
-    resultsWv.channel.on("close", (_: unknown) => {
+    resultsWv.channel.on('close', (_: unknown) => {
       hideResultsAnimated();
     });
 
     function getCacheStats(): { count: number } {
       const store =
         $storage.get<Record<string, { results: StreamResult[]; ts: number }>>(
-          SK_CACHE_STORE,
+          SK_CACHE_STORE
         ) ?? {};
       return { count: Object.keys(store).length };
     }
 
     function getConfigureUrl(): string | null {
-      const url = ($getUserPreference("manifestUrl") ?? "").trim();
+      const url = ($getUserPreference('manifestUrl') ?? '').trim();
       if (!url) return null;
       try {
         parseManifestUrl(url);
       } catch {
         return null;
       }
-      return url.replace(/\/manifest\.json(\?.*)?$/, "/configure$1");
+      return url.replace(/\/manifest\.json(\?.*)?$/, '/configure$1');
     }
 
-    const clearCacheHandlerId = ctx.eventHandler("aio-clear-cache", () => {
+    const clearCacheHandlerId = ctx.eventHandler('aio-clear-cache', () => {
       clearCache();
-      ctx.toast.success("AIOStreams cache cleared!");
+      ctx.toast.success('AIOStreams cache cleared!');
       tray.update();
     });
 
-    const reopenPanelHandlerId = ctx.eventHandler("aio-reopen-panel", () => {
+    const reopenPanelHandlerId = ctx.eventHandler('aio-reopen-panel', () => {
       const st = wvState.get();
       const hasResults = st.results.length > 0;
       if (!hasResults && !st.error) {
-        ctx.toast.info("No previous results to show.");
+        ctx.toast.info('No previous results to show.');
         return;
       }
 
@@ -958,16 +956,16 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       tray.close();
     });
 
-    const refreshHandlerId = ctx.eventHandler("aio-refresh-tray", () => {
+    const refreshHandlerId = ctx.eventHandler('aio-refresh-tray', () => {
       tray.update();
     });
 
     const tray = ctx.newTray({
       iconUrl:
-        "https://cdn.jsdelivr.net/gh/selfhst/icons/png/aiostreams-light.png",
+        'https://cdn.jsdelivr.net/gh/selfhst/icons/png/aiostreams-light.png',
       withContent: true,
-      width: "260px",
-      minHeight: "80px",
+      width: '260px',
+      minHeight: '80px',
     });
 
     tray.onOpen(() => tray.update());
@@ -980,48 +978,48 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         lastState.results.length > 0 || lastState.error !== null;
 
       const items: unknown[] = [
-        tray.text("AIOStreams", {
-          style: { fontWeight: "600", fontSize: "14px" },
+        tray.text('AIOStreams', {
+          style: { fontWeight: '600', fontSize: '14px' },
         }),
         tray.text(
           stats.count === 0
-            ? "Cache is empty"
-            : `${stats.count} cached ${stats.count === 1 ? "lookup" : "lookups"}`,
-          { style: { fontSize: "12px", color: "rgba(255,255,255,0.5)" } },
+            ? 'Cache is empty'
+            : `${stats.count} cached ${stats.count === 1 ? 'lookup' : 'lookups'}`,
+          { style: { fontSize: '12px', color: 'rgba(255,255,255,0.5)' } }
         ),
       ];
 
       if (hasLastResults) {
         items.push(
-          tray.button("Reopen last results", {
+          tray.button('Reopen last results', {
             onClick: reopenPanelHandlerId,
-            intent: "primary-subtle",
-            size: "sm",
-          }),
+            intent: 'primary-subtle',
+            size: 'sm',
+          })
         );
       }
 
       items.push(
-        tray.button("Clear Cache", {
+        tray.button('Clear Cache', {
           onClick: clearCacheHandlerId,
-          intent: "gray-subtle",
-          size: "sm",
-        }),
+          intent: 'gray-subtle',
+          size: 'sm',
+        })
       );
 
       if (configureUrl) {
         items.push(
-          tray.anchor("Configure", {
+          tray.anchor('Configure', {
             href: configureUrl,
-            target: "_blank",
-            style: { fontSize: "12px", color: "rgb(125,140,255)" },
-          }),
+            target: '_blank',
+            style: { fontSize: '12px', color: 'rgb(125,140,255)' },
+          })
         );
       } else {
         items.push(
-          tray.text("Manifest URL not configured", {
-            style: { fontSize: "12px", color: "rgb(248,113,113)" },
-          }),
+          tray.text('Manifest URL not configured', {
+            style: { fontSize: '12px', color: 'rgb(248,113,113)' },
+          })
         );
       }
 
@@ -1037,32 +1035,32 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     async function fetchStreams(
       anime: $app.AL_BaseAnime,
       episodeNumber: number,
-      aniDBEpisode: string,
+      aniDBEpisode: string
     ): Promise<void> {
-      const manifestUrl = $getUserPreference("manifestUrl") ?? "";
-      const searchId = ($getUserPreference("searchId") ?? "imdbId") as
-        | "imdbId"
-        | "kitsuId"
-        | "anilistId";
+      const manifestUrl = $getUserPreference('manifestUrl') ?? '';
+      const searchId = ($getUserPreference('searchId') ?? 'imdbId') as
+        | 'imdbId'
+        | 'kitsuId'
+        | 'anilistId';
 
       let creds: ParsedManifestCredentials;
       try {
         creds = parseManifestUrl(manifestUrl);
       } catch {
         ctx.toast.error(
-          "AIOStreams manifest URL is invalid or missing. Configure it in the extension settings.",
+          'AIOStreams manifest URL is invalid or missing. Configure it in the extension settings.'
         );
         return;
       }
 
-      const animeTitle = anime.title?.userPreferred ?? "Unknown";
+      const animeTitle = anime.title?.userPreferred ?? 'Unknown';
       const episodeInfo = `${animeTitle} \xb7 Episode ${episodeNumber}`;
-      const mediaType = anime.format === "MOVIE" ? "movie" : "series";
+      const mediaType = anime.format === 'MOVIE' ? 'movie' : 'series';
 
       pendingAnime.set(anime);
       pendingEp.set({ episodeNumber, aniDBEpisode });
 
-      const autoPlay = prefBool("autoPlayFirstStream", false);
+      const autoPlay = prefBool('autoPlayFirstStream', false);
 
       resultsSessionId = Math.random().toString(36).slice(2);
       activeDownloadIndices.clear();
@@ -1083,7 +1081,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
       const startTime = Date.now();
 
-      console.log("Received request for streams:", {
+      console.log('Received request for streams:', {
         animeId: anime.id,
         episodeNumber,
         aniDBEpisode,
@@ -1091,7 +1089,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       });
 
       const parsedId: ParsedId = {
-        type: "anilistId",
+        type: 'anilistId',
         value: String(anime.id),
         episode: episodeNumber,
       };
@@ -1101,19 +1099,19 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
           creds.baseUrl,
           creds.uuid,
           creds.passwordToken,
-          "anilistId",
-          anime.id,
+          'anilistId',
+          anime.id
         );
         if (animeEntry) {
           applyPreferredMapping(parsedId, animeEntry, searchId);
-          console.log("Fetched anime details from AIOStreams:", animeEntry, {
+          console.log('Fetched anime details from AIOStreams:', animeEntry, {
             mappedId: parsedId,
           });
         }
       } catch (err: unknown) {
         console.warn(
-          "Failed to fetch anime details from AIOStreams, falling back to AniList ID search",
-          err,
+          'Failed to fetch anime details from AIOStreams, falling back to AniList ID search',
+          err
         );
         // Non-fatal — fall back to AniList ID
       }
@@ -1131,7 +1129,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       const cacheKey = getCacheKey(parsedId);
       const cachedResults = getCached(cacheKey);
       if (cachedResults) {
-        console.log("cache HIT for", cacheKey, cachedResults);
+        console.log('cache HIT for', cacheKey, cachedResults);
         wvState.set({
           results: cachedResults,
           loading: false,
@@ -1160,7 +1158,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
           mediaType,
           formatIdForSearch(parsedId),
           parsedId.season,
-          parsedId.episode,
+          parsedId.episode
         );
         const results = searchResponse.results.map(toStreamResult);
         setCached(cacheKey, results);
@@ -1181,7 +1179,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
           playStreamAtIndex(0);
         }
       } catch (err: unknown) {
-        console.error("Error fetching streams from AIOStreams:", err);
+        console.error('Error fetching streams from AIOStreams:', err);
         const msg = err instanceof Error ? err.message : String(err);
         wvState.set({
           results: [],
@@ -1201,22 +1199,22 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
     function resolveDownloadDir(): string {
       const pref = (
-        $getUserPreference("downloadLocation") ?? "$DOWNLOAD"
+        $getUserPreference('downloadLocation') ?? '$DOWNLOAD'
       ).trim();
       if (!pref) return $osExtra.downloadDir();
 
       const replacements: Array<[string, () => string]> = [
-        ["$DOWNLOAD", () => $osExtra.downloadDir()],
-        ["$DESKTOP", () => $osExtra.desktopDir()],
-        ["$DOCUMENT", () => $osExtra.documentsDir()],
-        ["$HOME", () => $os.homeDir()],
+        ['$DOWNLOAD', () => $osExtra.downloadDir()],
+        ['$DESKTOP', () => $osExtra.desktopDir()],
+        ['$DOCUMENT', () => $osExtra.documentsDir()],
+        ['$HOME', () => $os.homeDir()],
       ];
 
       for (const [token, getBase] of replacements) {
         if (pref.startsWith(token)) {
           const base = getBase();
           if (!base) continue;
-          const rest = pref.slice(token.length).replace(/^[/\\]/, "");
+          const rest = pref.slice(token.length).replace(/^[/\\]/, '');
           return rest ? $filepath.join(base, rest) : base;
         }
       }
@@ -1226,37 +1224,37 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
     function prefBool(key: string, def: boolean): boolean {
       const v = $getUserPreference(key);
-      if (v === undefined || v === null || v === "") return def;
-      return v === "true";
+      if (v === undefined || v === null || v === '') return def;
+      return v === 'true';
     }
 
-    function getPlayerModePref(): "desktop" | "builtin" | "external" {
-      const mode = ($getUserPreference("playerMode") ?? "").trim();
-      if (mode === "desktop" || mode === "builtin" || mode === "external") {
+    function getPlayerModePref(): 'desktop' | 'builtin' | 'external' {
+      const mode = ($getUserPreference('playerMode') ?? '').trim();
+      if (mode === 'desktop' || mode === 'builtin' || mode === 'external') {
         return mode;
       }
 
-      if (prefBool("useExternalPlayer", false)) {
-        return "external";
+      if (prefBool('useExternalPlayer', false)) {
+        return 'external';
       }
 
-      return "desktop";
+      return 'desktop';
     }
 
     const episodePalette = ctx.newCommandPalette({
-      placeholder: "Select an episode...",
+      placeholder: 'Select an episode...',
     });
 
     const animeBtn = ctx.action.newAnimePageButton({
-      label: "AIOStreams",
-      tooltipText: "Stream with AIOStreams",
+      label: 'AIOStreams',
+      tooltipText: 'Stream with AIOStreams',
     });
-    if (prefBool("showAnimePageButton", true)) {
+    if (prefBool('showAnimePageButton', true)) {
       animeBtn.mount();
     }
     animeBtn.onClick(async ({ media }) => {
       animeBtn.setLoading(true);
-      console.log("Anime page button clicked for", media);
+      console.log('Anime page button clicked for', media);
       try {
         const entry = await ctx.anime.getAnimeEntry(media.id);
         const entryEpisodes = entry?.episodes ?? [];
@@ -1264,28 +1262,28 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         let items: {
           value: string;
           label: string;
-          filterType: "includes";
+          filterType: 'includes';
           onSelect: () => void;
         }[];
 
         const getEpisodeTitle = (ep: $app.Anime_Episode): string => {
           const base = `Episode ${ep.episodeNumber}`;
           const title = ep.displayTitle ?? ep.episodeTitle;
-          return `${base}${title ? ` \u2013 ${title}` : ""}`;
+          return `${base}${title ? ` \u2013 ${title}` : ''}`;
         };
 
         if (entryEpisodes.length > 0) {
           items = entryEpisodes.map((ep) => ({
             value: String(ep.episodeNumber),
             label: getEpisodeTitle(ep),
-            filterType: "includes" as const,
+            filterType: 'includes' as const,
             onSelect: () => {
               episodePalette.close();
 
               fetchStreams(
                 media,
                 ep.episodeNumber,
-                ep.aniDBEpisode ?? String(ep.episodeNumber),
+                ep.aniDBEpisode ?? String(ep.episodeNumber)
               );
             },
           }));
@@ -1299,7 +1297,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
             return {
               value: String(n),
               label: `Episode ${n}`,
-              filterType: "includes" as const,
+              filterType: 'includes' as const,
               onSelect: () => {
                 episodePalette.close();
                 fetchStreams(media, n, String(n));
@@ -1311,7 +1309,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         episodePalette.setItems(items);
         episodePalette.open();
       } catch {
-        ctx.toast.error("Could not load episodes.");
+        ctx.toast.error('Could not load episodes.');
       } finally {
         animeBtn.setLoading(false);
       }
@@ -1320,53 +1318,53 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     function registerItem(
       item:
         | ReturnType<typeof ctx.action.newEpisodeGridItemMenuItem>
-        | ReturnType<typeof ctx.action.newEpisodeCardContextMenuItem>,
+        | ReturnType<typeof ctx.action.newEpisodeCardContextMenuItem>
     ) {
       item.mount();
       item.onClick((event) => {
         const episode = event.episode;
-        if ("number" in episode) {
+        if ('number' in episode) {
           ctx.toast.error(
-            "Onlinestream episodes are not supported by AIOStreams.",
+            'Onlinestream episodes are not supported by AIOStreams.'
           );
           return;
         }
         const anime = episode.baseAnime;
         if (!anime) {
-          ctx.toast.error("Could not determine anime for this episode.");
+          ctx.toast.error('Could not determine anime for this episode.');
           return;
         }
         fetchStreams(
           anime,
           episode.episodeNumber,
-          episode.aniDBEpisode ?? String(episode.episodeNumber),
+          episode.aniDBEpisode ?? String(episode.episodeNumber)
         );
       });
     }
 
-    if (prefBool("showEpisodeContextMenu", true)) {
+    if (prefBool('showEpisodeContextMenu', true)) {
       registerItem(
         ctx.action.newEpisodeCardContextMenuItem({
-          label: "Stream with AIOStreams",
-        }),
+          label: 'Stream with AIOStreams',
+        })
       );
     }
 
-    if (prefBool("showEpisodeGridMenu", true)) {
+    if (prefBool('showEpisodeGridMenu', true)) {
       const gridTypes = [
-        "debridstream",
-        "library",
-        "torrentstream",
-        "undownloaded",
-        "medialinks",
-        "mediastream",
+        'debridstream',
+        'library',
+        'torrentstream',
+        'undownloaded',
+        'medialinks',
+        'mediastream',
       ] as const;
       for (const gridType of gridTypes) {
         registerItem(
           ctx.action.newEpisodeGridItemMenuItem({
-            label: "Stream with AIOStreams",
+            label: 'Stream with AIOStreams',
             type: gridType,
-          }),
+          })
         );
       }
     }
@@ -1374,20 +1372,20 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
     const attachAutoOpenObserver = (selector: string) => {
       ctx.dom.observe(selector, (elements) => {
         for (const el of elements) {
-          if (el.attributes["data-aio-observed"]) continue;
-          el.setAttribute("data-aio-observed", "1");
+          if (el.attributes['data-aio-observed']) continue;
+          el.setAttribute('data-aio-observed', '1');
 
-          const mediaId = parseInt(el.attributes["data-media-id"] ?? "0", 10);
+          const mediaId = parseInt(el.attributes['data-media-id'] ?? '0', 10);
           const episodeNumber = parseInt(
-            el.attributes["data-episode-number"] ?? "0",
-            10,
+            el.attributes['data-episode-number'] ?? '0',
+            10
           );
           if (!mediaId || !episodeNumber) continue;
 
-          el.addEventListener("click", () => {
+          el.addEventListener('click', () => {
             const anime = $anilist.getAnime(mediaId);
             if (!anime) {
-              ctx.toast.error("AIOStreams: Could not identify anime");
+              ctx.toast.error('AIOStreams: Could not identify anime');
               return;
             }
             fetchStreams(anime, episodeNumber, String(episodeNumber));
@@ -1396,9 +1394,9 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       });
     };
 
-    if (prefBool("autoOpenResults", false)) {
-      attachAutoOpenObserver("[data-episode-card]");
-      attachAutoOpenObserver("[data-episode-grid-item]");
+    if (prefBool('autoOpenResults', false)) {
+      attachAutoOpenObserver('[data-episode-card]');
+      attachAutoOpenObserver('[data-episode-grid-item]');
     }
   });
 }

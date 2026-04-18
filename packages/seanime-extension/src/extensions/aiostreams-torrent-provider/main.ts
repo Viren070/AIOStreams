@@ -1,30 +1,30 @@
-import { AIOStreamsAPI, parseManifestUrl } from "../../lib/aiostreams";
+import { AIOStreamsAPI, parseManifestUrl } from '../../lib/aiostreams';
 import {
   applyPreferredMapping,
   createParsedIdFromSmartSearch,
   formatIdForSearch,
   PreferredSearchId,
-} from "../../lib/provider/anime-id";
+} from '../../lib/provider/anime-id';
 import {
   toAnimeTorrent,
   ResultFormat,
-} from "../../lib/provider/torrent-mapper";
+} from '../../lib/provider/torrent-mapper';
 
 class Provider {
   // aiostreamsBaseUrl = "{{baseUrl}}";
   // aiostreamsUuid = "{{uuid}}";
   // aiostreamsPassword = "{{password}}";
-  aiostreamsManifestUrl = "{{manifestUrl}}";
+  aiostreamsManifestUrl = '{{manifestUrl}}';
 
-  searchId = "{{searchId}}";
-  resultFormat = "{{resultFormat}}";
+  searchId = '{{searchId}}';
+  resultFormat = '{{resultFormat}}';
 
   getSettings(): AnimeProviderSettings {
     return {
       canSmartSearch: true,
-      smartSearchFilters: ["episodeNumber"],
+      smartSearchFilters: ['episodeNumber'],
       supportsAdult: true,
-      type: "special",
+      type: 'special',
     };
   }
 
@@ -35,24 +35,24 @@ class Provider {
   async smartSearch(opts: AnimeSmartSearchOptions): Promise<AnimeTorrent[]> {
     const id = createParsedIdFromSmartSearch(opts);
     if (!id) {
-      console.warn("No valid media ID for smart search", opts);
+      console.warn('No valid media ID for smart search', opts);
       return [];
     }
 
     const { baseUrl, uuid, encryptedPassword } = parseManifestUrl(
-      this.aiostreamsManifestUrl,
+      this.aiostreamsManifestUrl
     );
 
     const aiostreams = new AIOStreamsAPI(baseUrl, uuid, encryptedPassword);
 
-    const type = opts.media.format === "TV" ? "series" : "movie";
+    const type = opts.media.format === 'TV' ? 'series' : 'movie';
     const animeEntry = await aiostreams.anime(id.type, id.value);
 
     if (animeEntry) {
       applyPreferredMapping(
         id,
         animeEntry,
-        $getUserPreference("searchId") as PreferredSearchId,
+        $getUserPreference('searchId') as PreferredSearchId
       );
     }
 
@@ -60,25 +60,22 @@ class Provider {
       type,
       formatIdForSearch(id),
       id.season,
-      id.episode,
+      id.episode
     );
 
     return response.results
       .map((item) =>
-        toAnimeTorrent(
-          item,
-          $getUserPreference("resultFormat") as ResultFormat,
-        ),
+        toAnimeTorrent(item, $getUserPreference('resultFormat') as ResultFormat)
       )
       .filter((torrent) => torrent.infoHash);
   }
 
   async getTorrentInfoHash(torrent: AnimeTorrent): Promise<string> {
-    return torrent.infoHash || "";
+    return torrent.infoHash || '';
   }
 
   async getTorrentMagnetLink(torrent: AnimeTorrent): Promise<string> {
-    return torrent.magnetLink || "";
+    return torrent.magnetLink || '';
   }
 
   async getLatest(): Promise<AnimeTorrent[]> {
