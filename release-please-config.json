@@ -23,7 +23,6 @@
       "release-type": "node",
       "include-component-in-tag": true,
       "include-v-in-tag": true,
-      "skip-github-release": true,
       "pull-request-title-pattern": "chore(seanime-extension): release ${version}",
       "extra-files": [
         {
