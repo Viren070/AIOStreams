@@ -317,9 +317,15 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       }
     }
 
-    return [
+    const streams = [
       createLibraryStream(item, service, narrowedItemType, fileIndex, file),
     ];
+
+    await fileInfoStore()?.flush();
+
+    const proxied = await this._applyServiceProxying(streams, [service.id]);
+
+    return [...proxied.streams, ...proxied.errorStreams];
   }
 
   /**
@@ -381,6 +387,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
     }
 
     const streams: Stream[] = [];
+    const streamServiceIds: Array<BuiltinServiceId | undefined> = [];
 
     const encryptedStoreAuths = this.userData.services.reduce(
       (acc, service) => {
@@ -433,6 +440,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
           videoSize: torrent.size,
         },
       });
+      streamServiceIds.push(service.id);
     }
 
     for (const nzb of nzbs) {
@@ -470,6 +478,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
           videoSize: nzb.size,
         },
       });
+      streamServiceIds.push(service.id);
     }
 
     // Flush fileInfo store so all playback URLs are resolvable before any
@@ -487,10 +496,13 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
             this.userData.sources
           )
         );
+        streamServiceIds.push(undefined);
       }
     }
 
-    return streams;
+    const proxied = await this._applyServiceProxying(streams, streamServiceIds);
+
+    return [...proxied.streams, ...proxied.errorStreams];
   }
 
   protected async _searchTorrents(
