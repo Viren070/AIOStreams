@@ -33,6 +33,7 @@ import {
 import { UserData } from '@aiostreams/core';
 import { useSave } from '@/context/save';
 import { AddonPasswordModal } from '@/components/shared/addon-password-modal';
+import { FiExternalLink } from 'react-icons/fi';
 
 // Reusable modal option button component
 interface ModalOptionButtonProps {
@@ -73,6 +74,9 @@ interface AppCardProps {
   onClick: () => void;
   unofficial?: boolean;
   beta?: boolean;
+  author?: string;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 function AppCard({
@@ -82,11 +86,19 @@ function AppCard({
   onClick,
   unofficial,
   beta,
+  author,
+  disabled,
+  disabledReason,
 }: AppCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group relative flex items-center gap-3 rounded-xl border-2 border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-800/30 p-3 text-left transition-all hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
+      disabled={disabled}
+      className={`group relative flex items-center gap-3 rounded-xl border-2 border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-800/30 p-3 text-left transition-all focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400 ${
+        disabled
+          ? 'cursor-not-allowed opacity-60'
+          : 'hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5'
+      }`}
     >
       <div className="flex-shrink-0 h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center">
         <img
@@ -110,6 +122,14 @@ function AppCard({
           )}
         </div>
         <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+        {author && (
+          <p className="text-[11px] text-gray-500 mt-0.5">
+            Integration author: {author}
+          </p>
+        )}
+        {disabledReason && (
+          <p className="text-[11px] text-amber-300 mt-1">{disabledReason}</p>
+        )}
       </div>
     </button>
   );
@@ -263,6 +283,10 @@ interface InstallCardProps {
   onCopyManifestUrl: () => void;
   onOpenChillio: () => void;
   onOpenSeanime: () => void;
+  onOpenJellyfin: () => void;
+  onOpenAniyomi: () => void;
+  disableSeanimeCard?: boolean;
+  seanimeDisabledReason?: string;
 }
 
 function InstallCard({
@@ -274,14 +298,67 @@ function InstallCard({
   onCopyManifestUrl,
   onOpenChillio,
   onOpenSeanime,
+  onOpenJellyfin,
+  onOpenAniyomi,
+  disableSeanimeCard,
+  seanimeDisabledReason,
 }: InstallCardProps) {
+  const stremioCardRef = React.useRef<HTMLDivElement>(null);
+  const [stremioCardHeight, setStremioCardHeight] = React.useState<
+    number | null
+  >(null);
+  const [isDesktop, setIsDesktop] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const updateViewport = () => setIsDesktop(mediaQuery.matches);
+    updateViewport();
+
+    mediaQuery.addEventListener('change', updateViewport);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateViewport);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!isDesktop) {
+      setStremioCardHeight(null);
+      return;
+    }
+
+    const element = stremioCardRef.current;
+    if (!element) return;
+
+    const updateHeight = () => {
+      setStremioCardHeight(element.getBoundingClientRect().height);
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(element);
+
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [isDesktop]);
+
   return (
     <SettingsCard
       title="Installation Options"
       description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you — otherwise, you do not need to reinstall."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5 rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start">
+        <div
+          ref={stremioCardRef}
+          className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5 rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner"
+        >
           <div className="flex items-center gap-4 border-b border-gray-700/50 pb-4">
             <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
               <img
@@ -348,14 +425,21 @@ function InstallCard({
           </div>
         </div>
 
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col rounded-xl border border-gray-700 bg-gray-800/10 p-5">
+        <div
+          className="lg:col-span-5 xl:col-span-4 flex flex-col rounded-xl border border-gray-700 bg-gray-800/10 p-5 lg:overflow-hidden"
+          style={
+            isDesktop && stremioCardHeight
+              ? { maxHeight: `${stremioCardHeight}px` }
+              : undefined
+          }
+        >
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <div className="h-px bg-gray-700 flex-1"></div>
             Other apps
             <div className="h-px bg-gray-700 flex-1"></div>
           </h3>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 flex-1 min-h-0 lg:overflow-y-auto pr-1">
             <AppCard
               logoSrc="https://link.chillio.app/app-icon.png"
               name="Chillio"
@@ -368,6 +452,24 @@ function InstallCard({
               description="Anime-focused client"
               beta
               onClick={onOpenSeanime}
+              disabled={disableSeanimeCard}
+              disabledReason={seanimeDisabledReason}
+            />
+            <AppCard
+              logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
+              name="Jellyfin"
+              description="Via Gelato plugin"
+              unofficial
+              author="lostb1t"
+              onClick={onOpenJellyfin}
+            />
+            <AppCard
+              logoSrc="https://aniyomi.org/img/logo-128px.png"
+              name="Aniyomi / Animiru"
+              description="Extension-based integration"
+              unofficial
+              author="worldInColors"
+              onClick={onOpenAniyomi}
             />
           </div>
         </div>
@@ -486,7 +588,18 @@ function Content() {
   >([]);
   const { status } = useStatus();
   const baseUrl = status?.settings?.baseUrl || window.location.origin;
-  const seanimeExtensionVersion = status?.settings?.seanimeExtensionVersion;
+  const hasStatus = !!status;
+  const searchApiDisabled = status?.settings?.searchApiDisabled ?? false;
+  const seanimeExtensionVersion =
+    status?.settings?.seanimeExtensionVersion ?? null;
+  const isSeanimeVersionUnavailable =
+    hasStatus && !searchApiDisabled && !seanimeExtensionVersion;
+  const disableSeanimeCard = searchApiDisabled || isSeanimeVersionUnavailable;
+  const seanimeDisabledReason = searchApiDisabled
+    ? 'Requires Search API (disabled on this instance)'
+    : isSeanimeVersionUnavailable
+      ? 'Unavailable on this instance. Please ask your instance hoster.'
+      : undefined;
   const importFileRef = React.useRef<HTMLInputElement>(null);
   const deleteUserModal = useDisclosure(false);
   const [confirmDeletionPassword, setConfirmDeletionPassword] =
@@ -500,6 +613,8 @@ function Content() {
     React.useState(true);
   const chillLinkModal = useDisclosure(false);
   const seanimeModal = useDisclosure(false);
+  const jellyfinModal = useDisclosure(false);
+  const aniyomiModal = useDisclosure(false);
   const [addonPasswordModalOpen, setAddonPasswordModalOpen] =
     React.useState(false);
   const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
@@ -859,6 +974,10 @@ function Content() {
               onCopyManifestUrl={copyManifestUrl}
               onOpenChillio={chillLinkModal.open}
               onOpenSeanime={seanimeModal.open}
+              onOpenJellyfin={jellyfinModal.open}
+              onOpenAniyomi={aniyomiModal.open}
+              disableSeanimeCard={disableSeanimeCard}
+              seanimeDisabledReason={seanimeDisabledReason}
             />
           </>
         )}
@@ -1148,6 +1267,57 @@ function Content() {
                 </p>
               )}
             </div>
+          </div>
+        </Modal>
+
+        <Modal
+          open={jellyfinModal.isOpen}
+          onOpenChange={jellyfinModal.toggle}
+          title="AIOStreams for Jellyfin"
+          description="Install the Gelato plugin to bring AIOStreams to Jellyfin"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">
+              Gelato is an unofficial Jellyfin plugin that brings Stremio addons
+              into Jellyfin.
+            </p>
+            <Button
+              intent="primary"
+              className="w-full"
+              leftIcon={<FiExternalLink />}
+              onClick={() =>
+                window.open('https://github.com/lostb1t/Gelato', '_blank')
+              }
+            >
+              Open Gelato on GitHub
+            </Button>
+          </div>
+        </Modal>
+
+        <Modal
+          open={aniyomiModal.isOpen}
+          onOpenChange={aniyomiModal.toggle}
+          title="AIOStreams for Aniyomi / Animiru"
+          description="Install the extension to use AIOStreams in Aniyomi and Animiru"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">
+              This unofficial extension brings AIOStreams support to Aniyomi and
+              forks (e.g. Animiru).
+            </p>
+            <Button
+              intent="primary"
+              className="w-full"
+              leftIcon={<FiExternalLink />}
+              onClick={() =>
+                window.open(
+                  'https://github.com/worldInColors/aiostreams-extension',
+                  '_blank'
+                )
+              }
+            >
+              Open extension on GitHub
+            </Button>
           </div>
         </Modal>
 
