@@ -55,6 +55,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         trustedUrls: SelAccess.getAllowedUrls(),
       },
       loggingSensitiveInfo: Env.LOG_SENSITIVE_INFO,
+      searchApiDisabled: !Env.ENABLE_SEARCH_API,
       seanimeExtensionVersion: getSeanimeExtensionVersion(),
       forced: {
         proxy: {
