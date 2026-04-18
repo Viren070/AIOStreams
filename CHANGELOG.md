@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.27.2](https://github.com/Viren070/AIOStreams/compare/v2.27.1...v2.27.2) (2026-04-18)
+
+
+### Features
+
+* add seanime routes and redesign save & install menu ([7d5150e](https://github.com/Viren070/AIOStreams/commit/7d5150e197044406cf47d30c6bb9372372ebfe17))
+* **frontend:** add unofficial app cards and disable seanime card if search api disabled ([9dd1ccf](https://github.com/Viren070/AIOStreams/commit/9dd1ccf24f0bb6f9c537ddfa72f600524c12bd2c))
+* **seanime-extension:** add files and update scripts, configs, and dockerfiles ([74395c8](https://github.com/Viren070/AIOStreams/commit/74395c85e7da2e30df100c2c2377bd23931e35fa))
+
+
+### Bug Fixes
+
+* **builtins/library:** apply service proxying to catalog streams ([5892a6b](https://github.com/Viren070/AIOStreams/commit/5892a6be5f6b389fbac8d529dd0f9628d528fb68))
+* **frontend/clipboard:** improve clipboard handling ([ce429bb](https://github.com/Viren070/AIOStreams/commit/ce429bb300b58cc3612dcd461df5f3180c6c2460))
+* **presets/meteor:** parse usenet stream type ([d4f75e8](https://github.com/Viren070/AIOStreams/commit/d4f75e8c415ea1637f09f24fc1e9099da0e5d327))
+
 ## [2.27.1](https://github.com/Viren070/AIOStreams/compare/v2.27.0...v2.27.1) (2026-04-16)
 
 
