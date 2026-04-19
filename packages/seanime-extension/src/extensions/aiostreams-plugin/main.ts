@@ -1228,8 +1228,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       }
 
       const animeTitle = anime.title?.userPreferred ?? 'Unknown';
-      const episodeInfo = `${animeTitle} \xb7 Episode ${episodeNumber}`;
-      const mediaType = anime.format === 'MOVIE' ? 'movie' : 'series';
+      const isMovie = String(anime.format ?? '').toUpperCase() === 'MOVIE';
+      const episodeInfo = isMovie
+        ? animeTitle
+        : `${animeTitle} \xb7 Episode ${episodeNumber}`;
+      const mediaType = isMovie ? 'movie' : 'series';
 
       pendingAnime.set(anime);
       pendingEp.set({ episodeNumber, aniDBEpisode });
@@ -1269,7 +1272,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       const parsedId: ParsedId = {
         type: 'anilistId',
         value: String(anime.id),
-        episode: episodeNumber,
+        episode: isMovie ? undefined : episodeNumber,
       };
       const originalId = { ...parsedId };
 
@@ -1285,6 +1288,10 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
         animeLookupMs = Date.now() - animeLookupStart;
         if (animeEntry) {
           applyPreferredMapping(parsedId, animeEntry, searchId);
+          if (isMovie) {
+            parsedId.season = undefined;
+            parsedId.episode = undefined;
+          }
           console.log('Fetched anime details from AIOStreams:', animeEntry, {
             mappedId: parsedId,
           });
@@ -1299,9 +1306,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       }
 
       const lookup: LookupInfo = {
-        original: `${originalId.type}: ${originalId.value}${originalId.episode ? ` · E${originalId.episode}` : ''}${anime.format ? ` (${anime.format})` : ''}`,
-        resolved: `${parsedId.type}: ${parsedId.value}${parsedId.season ? ` · S${parsedId.season}` : ''}${parsedId.episode ? ` · E${parsedId.episode}` : ''}${mediaType ? ` (${mediaType})` : ''}`,
-        stremioId: formatIdForSearch(parsedId),
+        original: `${originalId.type}: ${originalId.value}${originalId.episode !== undefined ? ` · E${originalId.episode}` : ''}${anime.format ? ` (${anime.format})` : ''}`,
+        resolved: `${parsedId.type}: ${parsedId.value}${parsedId.season !== undefined ? ` · S${parsedId.season}` : ''}${parsedId.episode !== undefined ? ` · E${parsedId.episode}` : ''}${mediaType ? ` (${mediaType})` : ''}`,
+        stremioId: `${formatIdForSearch(parsedId)}${parsedId.season !== undefined ? `:${parsedId.season}` : ''}${parsedId.episode !== undefined ? `:${parsedId.episode}` : ''}`,
       };
 
       // Check cache
