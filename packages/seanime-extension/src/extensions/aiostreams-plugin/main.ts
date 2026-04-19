@@ -35,12 +35,9 @@ function init() {
     }
 
     interface LookupInfo {
-      type: string;
-      value: string;
-      season?: number;
-      episode?: number;
-      mediaType: string;
-      stremioId?: string;
+      original: string;
+      resolved: string;
+      stremioId: string;
     }
 
     interface WebviewState {
@@ -49,6 +46,8 @@ function init() {
       error: string | null;
       episodeInfo: string;
       timeTakenMs: number | null;
+      animeLookupMs: number | null;
+      searchMs: number | null;
       fromCache: boolean;
       errors: StatEntry[];
       statistics: StatEntry[];
@@ -435,7 +434,7 @@ html,body{height:100%;width:100%;overflow:hidden;background-color:transparent !i
 </div>
 
 <script>
-var W=window.webview,rs=[],playIdx=-1,_d={timeTakenMs:null,fromCache:false,errors:[],statistics:[],lookup:null,sessionId:''},dlState={},_lastEpisodeInfo='';
+var W=window.webview,rs=[],playIdx=-1,_d={timeTakenMs:null,animeLookupMs:null,searchMs:null,fromCache:false,errors:[],statistics:[],lookup:null,sessionId:''},dlState={},_lastEpisodeInfo='';
 function esc(s){if(!s&&s!==0)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(ms){return ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';}
 function close_(){W.send('close',{});}
@@ -465,19 +464,27 @@ function openOverlay(){
   var lk=_d.lookup;
   if(lk){
     html+='<div class="ov-sec"><div class="ov-sec-label">Lookup</div>';
-    html+='<div class="ov-item"><div class="ov-item-title">Media ID</div><div class="ov-item-desc">'+esc(lk.type)+': '+esc(lk.value)+'</div></div>';
-    html+='<div class="ov-item"><div class="ov-item-title">Type</div><div class="ov-item-desc">'+esc(lk.mediaType)+'</div></div>';
-    if(lk.season!=null||lk.episode!=null){
-      var se=(lk.season!=null?'S'+lk.season:'')+(lk.episode!=null?(lk.season!=null?' \u00b7 ':'')+'E'+lk.episode:'');
-      html+='<div class="ov-item"><div class="ov-item-title">Season / Episode</div><div class="ov-item-desc">'+esc(se)+'</div></div>';
+    if(lk.original){
+      html+='<div class="ov-item"><div class="ov-item-title">Original Media</div><div class="ov-item-desc">'+esc(lk.original)+'</div></div>';
+    }
+    if(lk.resolved){
+      html+='<div class="ov-item"><div class="ov-item-title">Resolved Media</div><div class="ov-item-desc">'+esc(lk.resolved)+'</div></div>';
     }
     if(lk.stremioId){
       html+='<div class="ov-item"><div class="ov-item-title">Stremio ID</div><div class="ov-item-desc">'+esc(lk.stremioId)+'</div></div>';
     }
     html+='</div>';
   }
-  if(_d.timeTakenMs!=null){
-    html+='<div class="ov-sec"><div class="ov-sec-label">Timing</div><div class="ov-item"><div class="ov-item-title">Fetch Time</div><div class="ov-item-desc">'+fmt(_d.timeTakenMs)+(_d.fromCache?' \u2014 served from cache':'')+'</div></div></div>';
+  if(_d.animeLookupMs!=null||_d.searchMs!=null||_d.fromCache){
+    html+='<div class="ov-sec"><div class="ov-sec-label">Timing</div>';
+    if(_d.animeLookupMs!=null){
+      html+='<div class="ov-item"><div class="ov-item-title">Anime Lookup</div><div class="ov-item-desc">'+fmt(_d.animeLookupMs)+'</div></div>';
+    }
+    var searchDesc=_d.searchMs!=null?fmt(_d.searchMs):(_d.fromCache?'Served from cache':null);
+    if(searchDesc){
+      html+='<div class="ov-item"><div class="ov-item-title">Stream Search</div><div class="ov-item-desc">'+esc(searchDesc)+'</div></div>';
+    }
+    html+='</div>';
   }
   var errs=_d.errors||[];
   if(errs.length){
@@ -502,7 +509,7 @@ function render(s){
       SB=document.getElementById('sub'),RB=document.getElementById('ref-btn'),
       FT=document.getElementById('footer'),FTT=document.getElementById('footer-time'),
       FB=document.getElementById('footer-btn');
-  _d={timeTakenMs:s.timeTakenMs,fromCache:!!s.fromCache,errors:s.errors||[],statistics:s.statistics||[],lookup:s.lookup||null,sessionId:s.sessionId||''};
+  _d={timeTakenMs:s.timeTakenMs,animeLookupMs:s.animeLookupMs!=null?s.animeLookupMs:null,searchMs:s.searchMs!=null?s.searchMs:null,fromCache:!!s.fromCache,errors:s.errors||[],statistics:s.statistics||[],lookup:s.lookup||null,sessionId:s.sessionId||''};
   if(s.episodeInfo)SB.textContent=s.episodeInfo;
   if(s.loading){
     L.style.display='flex';R.style.display='none';E.style.display='none';
@@ -596,6 +603,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       error: null,
       episodeInfo: '',
       timeTakenMs: null,
+      animeLookupMs: null,
+      searchMs: null,
       fromCache: false,
       errors: [],
       statistics: [],
@@ -627,13 +636,18 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
     const downloadRecords: DownloadRecord[] = [];
     let lastCacheKey: string | null = null;
 
-    const clearFinishedHandlerId = ctx.eventHandler('aio-clear-finished', () => {
-      const toRemove = downloadRecords.filter(r => r.status !== 'downloading');
-      for (const r of toRemove) {
-        downloadRecords.splice(downloadRecords.indexOf(r), 1);
+    const clearFinishedHandlerId = ctx.eventHandler(
+      'aio-clear-finished',
+      () => {
+        const toRemove = downloadRecords.filter(
+          (r) => r.status !== 'downloading'
+        );
+        for (const r of toRemove) {
+          downloadRecords.splice(downloadRecords.indexOf(r), 1);
+        }
+        tray.update();
       }
-      tray.update();
-    });
+    );
 
     const ANIM_MS = 280;
     const VP_WIDTH = 520;
@@ -1230,6 +1244,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
         error: null,
         episodeInfo,
         timeTakenMs: null,
+        animeLookupMs: null,
+        searchMs: null,
         fromCache: false,
         errors: [],
         statistics: [],
@@ -1240,6 +1256,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       showResults();
 
       const startTime = Date.now();
+      let animeLookupMs: number | null = null;
+      let searchMs: number | null = null;
 
       console.log('Received request for streams:', {
         animeId: anime.id,
@@ -1253,7 +1271,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
         value: String(anime.id),
         episode: episodeNumber,
       };
+      const originalId = { ...parsedId };
 
+      const animeLookupStart = Date.now();
       try {
         const animeEntry = await aioAnime(
           creds.baseUrl,
@@ -1262,6 +1282,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           'anilistId',
           anime.id
         );
+        animeLookupMs = Date.now() - animeLookupStart;
         if (animeEntry) {
           applyPreferredMapping(parsedId, animeEntry, searchId);
           console.log('Fetched anime details from AIOStreams:', animeEntry, {
@@ -1269,6 +1290,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           });
         }
       } catch (err: unknown) {
+        animeLookupMs = Date.now() - animeLookupStart;
         console.warn(
           'Failed to fetch anime details from AIOStreams, falling back to AniList ID search',
           err
@@ -1277,11 +1299,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       }
 
       const lookup: LookupInfo = {
-        type: parsedId.type,
-        value: String(parsedId.value),
-        season: parsedId.season,
-        episode: parsedId.episode,
-        mediaType,
+        original: `${originalId.type}: ${originalId.value}${originalId.episode ? ` · E${originalId.episode}` : ''}${anime.format ? ` (${anime.format})` : ''}`,
+        resolved: `${parsedId.type}: ${parsedId.value}${parsedId.season ? ` · S${parsedId.season}` : ''}${parsedId.episode ? ` · E${parsedId.episode}` : ''}${mediaType ? ` (${mediaType})` : ''}`,
         stremioId: formatIdForSearch(parsedId),
       };
 
@@ -1297,6 +1316,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           error: null,
           episodeInfo,
           timeTakenMs: Date.now() - startTime,
+          animeLookupMs,
+          searchMs: null,
           fromCache: true,
           errors: [],
           statistics: [],
@@ -1311,6 +1332,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       }
 
       // Fetch from API
+      const searchStart = Date.now();
       try {
         const searchResponse = await aioSearch(
           creds.baseUrl,
@@ -1321,6 +1343,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           parsedId.season,
           parsedId.episode
         );
+        searchMs = Date.now() - searchStart;
         const results = searchResponse.results.map(toStreamResult);
         setCached(cacheKey, results);
         wvState.set({
@@ -1329,6 +1352,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           error: null,
           episodeInfo,
           timeTakenMs: Date.now() - startTime,
+          animeLookupMs,
+          searchMs,
           fromCache: false,
           errors: searchResponse.errors ?? [],
           statistics: searchResponse.statistics ?? [],
@@ -1340,6 +1365,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           playStreamAtIndex(0);
         }
       } catch (err: unknown) {
+        searchMs = Date.now() - searchStart;
         console.error('Error fetching streams from AIOStreams:', err);
         const msg = err instanceof Error ? err.message : String(err);
         wvState.set({
@@ -1348,6 +1374,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           error: msg,
           episodeInfo,
           timeTakenMs: Date.now() - startTime,
+          animeLookupMs,
+          searchMs,
           fromCache: false,
           errors: [],
           statistics: [],
