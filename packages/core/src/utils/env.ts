@@ -1963,6 +1963,19 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default AI Search user agent',
   }),
 
+  FLIX_STREAMS_URL: url({
+    default: 'https://flixnest.app/flix-streams',
+    desc: 'Flix-Streams URL',
+  }),
+  DEFAULT_FLIX_STREAMS_TIMEOUT: num({
+    default: 10000,
+    desc: 'Default Flix-Streams timeout',
+  }),
+  DEFAULT_FLIX_STREAMS_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Flix-Streams user agent',
+  }),
+
   FKSTREAM_URL: url({
     default: 'https://streamio.fankai.fr',
     desc: 'FKStream URL',

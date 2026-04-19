@@ -1485,6 +1485,19 @@ const logStartupInfo = () => {
     logKeyValue('  User Agent:', Env.DEFAULT_AI_SEARCH_USER_AGENT, '     ');
   }
 
+  // Flix-Streams
+  logKeyValue('Flix-Streams:', Env.FLIX_STREAMS_URL);
+  if (Env.DEFAULT_FLIX_STREAMS_TIMEOUT) {
+    logKeyValue(
+      '  Timeout:',
+      formatMilliseconds(Env.DEFAULT_FLIX_STREAMS_TIMEOUT),
+      '     '
+    );
+  }
+  if (Env.DEFAULT_FLIX_STREAMS_USER_AGENT) {
+    logKeyValue('  User Agent:', Env.DEFAULT_FLIX_STREAMS_USER_AGENT, '     ');
+  }
+
   // FKStream
   logKeyValue('FKStream:', Env.FKSTREAM_URL);
   if (Env.DEFAULT_FKSTREAM_TIMEOUT) {
