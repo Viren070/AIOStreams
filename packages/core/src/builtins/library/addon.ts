@@ -417,6 +417,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
         type: 'torrent',
         hash: torrent.hash ?? '',
         sources: torrent.sources ?? [],
+        serviceItemId: torrent.serviceItemId,
         cacheAndPlay: false,
         autoRemoveDownloads: false,
       };
@@ -456,6 +457,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
         type: 'usenet',
         hash: nzb.hash ?? nzb.title ?? '',
         nzb: '',
+        serviceItemId: nzb.serviceItemId,
         cacheAndPlay: false,
         autoRemoveDownloads: false,
       };
