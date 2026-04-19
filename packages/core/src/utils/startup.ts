@@ -1135,6 +1135,15 @@ const logStartupInfo = () => {
       );
     }
 
+    logKeyValue('Baguettio:', Env.BAGUETTIO_URL);
+    if (Env.DEFAULT_BAGUETTIO_TIMEOUT) {
+      logKeyValue(
+        '  Timeout:',
+        formatMilliseconds(Env.DEFAULT_BAGUETTIO_TIMEOUT),
+        '     '
+      );
+    }
+
     // HdHub
     logKeyValue('HdHub:', Env.HDHUB_URL);
     if (Env.DEFAULT_HDHUB_TIMEOUT) {

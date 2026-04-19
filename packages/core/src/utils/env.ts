@@ -1845,6 +1845,19 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default user agent for the HdHub Stremio Addon',
   }),
 
+  BAGUETTIO_URL: url({
+    default: 'https://baguettio.org',
+    desc: 'Default Baguettio URL',
+  }),
+  DEFAULT_BAGUETTIO_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default Baguettio timeout',
+  }),
+  DEFAULT_BAGUETTIO_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default Baguettio user agent',
+  }),
+
   TMDB_ADDON_URL: url({
     default: 'https://tmdb.elfhosted.com',
     desc: 'TMDB Addon URL',
