@@ -343,7 +343,7 @@ html,body{height:100%;width:100%;overflow:hidden;background-color:transparent !i
 .hdr-body{flex:1;min-width:0}
 .hdr-row{display:flex;align-items:center;gap:8px}
 .hdr-title{font-size:14px;font-weight:700;letter-spacing:.01em;color:#e2e8f0}
-.badge{background:rgb(97,82,223);color:#fff;border-radius:999px;padding:0 8px;font-size:10px;font-weight:700;display:none;line-height:18px}
+
 .hdr-sub{font-size:12px;color:rgba(255,255,255,0.38);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xbtn{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:5px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .12s,color .12s;margin-top:-2px}
 .xbtn:hover{background:rgba(255,255,255,0.07);color:#e2e8f0}
@@ -397,20 +397,24 @@ html,body{height:100%;width:100%;overflow:hidden;background-color:transparent !i
   <div class="hdr-body">
     <div class="hdr-row">
       <span class="hdr-title">AIOStreams</span>
-      <span id="cnt" class="badge"></span>
     </div>
     <div id="sub" class="hdr-sub">Fetching streams...</div>
   </div>
-  <button class="xbtn" onclick="close_()">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
+  <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;margin-top:-2px">
+    <button class="xbtn" id="ref-btn" onclick="refresh_()" title="Refresh" style="display:none">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+    <button class="xbtn" onclick="close_()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
 </div>
 
 <div class="body">
   <div id="loading" class="center"><div class="spin"></div><span>Fetching streams...</span></div>
   <div id="results" style="display:none"></div>
   <div id="empty" class="center" style="display:none">No streams found</div>
-  <div id="err" class="center" style="display:none"><span class="err-txt" id="err-msg"></span></div>
+  <div id="err" class="center" style="display:none"><span class="err-txt" id="err-msg"></span><button class="btn-p" style="flex:none;width:auto;padding:0 20px;font-size:13px;height:34px;margin-top:4px" onclick="retry_()">Try Again</button></div>
 </div>
 
 <div class="footer" id="footer">
@@ -435,6 +439,8 @@ var W=window.webview,rs=[],playIdx=-1,_d={timeTakenMs:null,fromCache:false,error
 function esc(s){if(!s&&s!==0)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(ms){return ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';}
 function close_(){W.send('close',{});}
+function retry_(){W.send('retry',{});}
+function refresh_(){W.send('refresh',{});}
 function updateDlBtn(i){var b=document.getElementById('dl-'+i);if(!b)return;var s=dlState[i];if(!s){b.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';b.disabled=false;b.className='btn-i';b.title='Download';return;}if(s.status==='downloading'){b.innerHTML='<span class="dl-pct">'+(s.percentage<1?'\u22ef':Math.round(s.percentage)+'%')+'</span>';b.disabled=true;b.className='btn-i';b.title=s.filename?'Downloading \u2014 '+s.filename:'Downloading...';return;}if(s.status==='completed'){b.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';b.disabled=false;b.className='btn-i dl-ok';b.title='Saved \u2014 '+s.filePath;return;}b.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>';b.disabled=false;b.className='btn-i dl-err';b.title=(s.error||'Download failed')+' \u2014 click to retry';}
 function play(i){
   if(playIdx!==-1)return;playIdx=i;
@@ -493,21 +499,21 @@ function closeOverlay(){document.getElementById('overlay').classList.remove('ope
 function render(s){
   var L=document.getElementById('loading'),R=document.getElementById('results'),
       E=document.getElementById('empty'),ER=document.getElementById('err'),
-      SB=document.getElementById('sub'),CN=document.getElementById('cnt'),
+      SB=document.getElementById('sub'),RB=document.getElementById('ref-btn'),
       FT=document.getElementById('footer'),FTT=document.getElementById('footer-time'),
       FB=document.getElementById('footer-btn');
   _d={timeTakenMs:s.timeTakenMs,fromCache:!!s.fromCache,errors:s.errors||[],statistics:s.statistics||[],lookup:s.lookup||null,sessionId:s.sessionId||''};
   if(s.episodeInfo)SB.textContent=s.episodeInfo;
   if(s.loading){
     L.style.display='flex';R.style.display='none';E.style.display='none';
-    ER.style.display='none';CN.style.display='none';FT.style.display='none';
+    ER.style.display='none';FT.style.display='none';if(RB)RB.style.display='none';
     var lt=L.querySelector('span');if(lt)lt.textContent='Fetching streams\u2026';
     return;
   }
   if(s.autoPlay&&!s.error&&s.results&&s.results.length>0){
     var lt2=L.querySelector('span');if(lt2)lt2.textContent='Starting playback\u2026';
     L.style.display='flex';R.style.display='none';E.style.display='none';
-    ER.style.display='none';CN.style.display='none';FT.style.display='none';
+    ER.style.display='none';FT.style.display='none';if(RB)RB.style.display='none';
     return;
   }
   L.style.display='none';
@@ -515,7 +521,7 @@ function render(s){
   var showFooter=s.timeTakenMs!=null||(s.errors&&s.errors.length>0)||(s.statistics&&s.statistics.length>0)||!!s.lookup;
   if(showFooter){
     FT.style.display='flex';
-    FTT.textContent=s.timeTakenMs!=null?'Fetched in '+fmt(s.timeTakenMs)+(s.fromCache?' (cached)':''):'';
+    var rc=s.results?s.results.length:0;FTT.textContent=s.timeTakenMs!=null?(s.fromCache?'Cached':'Fetched')+' '+rc+' result'+(rc!==1?'s':'')+' in '+fmt(s.timeTakenMs):'';
     var ec=s.errors?s.errors.length:0,sc=s.statistics?s.statistics.length:0;
     var parts=[];
     if(ec>0)parts.push(ec+' error'+(ec!==1?'s':''));
@@ -532,14 +538,13 @@ function render(s){
   }
   if(s.error){
     ER.style.display='flex';document.getElementById('err-msg').textContent=s.error;
-    R.style.display='none';E.style.display='none';CN.style.display='none';
+    R.style.display='none';E.style.display='none';
     return;
   }
-  ER.style.display='none';
+  ER.style.display='none';if(RB)RB.style.display='flex';
   rs=s.results||[];playIdx=-1;if(s.episodeInfo&&s.episodeInfo!==_lastEpisodeInfo){dlState={};_lastEpisodeInfo=s.episodeInfo;}
-  if(rs.length===0){E.style.display='flex';R.style.display='none';CN.style.display='none';return;}
+  if(rs.length===0){E.style.display='flex';R.style.display='none';return;}
   E.style.display='none';
-  CN.textContent=String(rs.length);CN.style.display='inline';
   var COPY='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   var DL='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   var PLAY='<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
@@ -577,6 +582,7 @@ W.on('state',function(s){
 });
 W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.classList.add('is-leaving');});
 W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)return;if(m)p.classList.add('mobile');else p.classList.remove('mobile');});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document.getElementById('overlay').classList.contains('open')){closeOverlay();}else{close_();}}});
 </script>
 </body>
 </html>`;
@@ -612,9 +618,22 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       error?: string;
       startedAt: number;
       completedAt?: number;
+      percentage: number;
+      downloadId: string;
+      dismissHandlerId: string;
+      cancelHandlerId: string;
     }
     const activeDownloadIndices = new Set<number>();
     const downloadRecords: DownloadRecord[] = [];
+    let lastCacheKey: string | null = null;
+
+    const clearFinishedHandlerId = ctx.eventHandler('aio-clear-finished', () => {
+      const toRemove = downloadRecords.filter(r => r.status !== 'downloading');
+      for (const r of toRemove) {
+        downloadRecords.splice(downloadRecords.indexOf(r), 1);
+      }
+      tray.update();
+    });
 
     const ANIM_MS = 280;
     const VP_WIDTH = 520;
@@ -848,12 +867,35 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       const filePath = $filepath.join(baseDir, filename);
       activeDownloadIndices.add(data.index);
 
+      const downloadId = ctx.downloader.download(url, filePath);
+
+      const dismissHandlerId = ctx.eventHandler(
+        `aio-dismiss-${downloadId}`,
+        () => {
+          const idx = downloadRecords.findIndex(
+            (r) => r.downloadId === downloadId
+          );
+          if (idx !== -1) downloadRecords.splice(idx, 1);
+          tray.update();
+        }
+      );
+      const cancelHandlerId = ctx.eventHandler(
+        `aio-cancel-${downloadId}`,
+        () => {
+          ctx.downloader.cancel(downloadId);
+        }
+      );
+
       const record: DownloadRecord = {
         index: data.index,
         filename,
         filePath,
         status: 'downloading',
         startedAt: Date.now(),
+        percentage: 0,
+        downloadId,
+        dismissHandlerId,
+        cancelHandlerId,
       };
       downloadRecords.unshift(record);
       if (downloadRecords.length > 8) downloadRecords.splice(8);
@@ -869,14 +911,13 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
       });
       tray.update();
 
-      const downloadId = ctx.downloader.download(url, filePath);
-
       ctx.downloader.watch(
         downloadId,
         (progress: $downloader.DownloadProgress | undefined) => {
           if (!progress) return;
           const { percentage, speed, error } = progress;
           const status = progress.status;
+          record.percentage = percentage ?? 0;
 
           // Forward live progress to webview
           resultsWv.channel.send('download-progress', {
@@ -913,6 +954,30 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
     resultsWv.channel.on('close', (_: unknown) => {
       hideResultsAnimated();
+    });
+
+    resultsWv.channel.on('retry', (_: unknown) => {
+      const anime = pendingAnime.get();
+      const ep = pendingEp.get();
+      if (anime && ep) {
+        fetchStreams(anime, ep.episodeNumber, ep.aniDBEpisode);
+      }
+    });
+
+    resultsWv.channel.on('refresh', (_: unknown) => {
+      if (lastCacheKey) {
+        const store =
+          $storage.get<Record<string, { results: StreamResult[]; ts: number }>>(
+            SK_CACHE_STORE
+          ) ?? {};
+        delete store[lastCacheKey];
+        $storage.set(SK_CACHE_STORE, store);
+      }
+      const anime = pendingAnime.get();
+      const ep = pendingEp.get();
+      if (anime && ep) {
+        fetchStreams(anime, ep.episodeNumber, ep.aniDBEpisode);
+      }
     });
 
     function getCacheStats(): { count: number } {
@@ -1007,12 +1072,107 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
         })
       );
 
+      if (downloadRecords.length > 0) {
+        items.push(
+          tray.div([], {
+            style: {
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              marginTop: '2px',
+              marginBottom: '2px',
+            },
+          })
+        );
+        const hasFinished = downloadRecords.some(
+          (r) => r.status !== 'downloading'
+        );
+        items.push(
+          tray.flex(
+            [
+              tray.text('Downloads', {
+                style: {
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: 'rgba(255,255,255,0.4)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                },
+              }),
+              ...(hasFinished
+                ? [
+                    tray.button('Clear done', {
+                      onClick: clearFinishedHandlerId,
+                      intent: 'gray-subtle',
+                      size: 'sm',
+                    }),
+                  ]
+                : []),
+            ],
+            {
+              style: {
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              },
+            }
+          )
+        );
+
+        for (const record of downloadRecords) {
+          const isActive = record.status === 'downloading';
+          const badgeText = isActive
+            ? `${Math.round(record.percentage)}%`
+            : record.status === 'completed'
+              ? 'Done'
+              : record.status === 'error'
+                ? 'Error'
+                : 'Stopped';
+          const badgeIntent: 'info' | 'success' | 'alert' | 'gray' = isActive
+            ? 'info'
+            : record.status === 'completed'
+              ? 'success'
+              : record.status === 'error'
+                ? 'alert'
+                : 'gray';
+
+          items.push(
+            tray.flex(
+              [
+                tray.text(record.filename, {
+                  className: 'text-xs truncate min-w-0 flex-1 text-[--gray]',
+                }),
+                tray.flex(
+                  [
+                    tray.badge({ text: badgeText, intent: badgeIntent }),
+                    tray.button(isActive ? 'Stop' : '×', {
+                      onClick: isActive
+                        ? record.cancelHandlerId
+                        : record.dismissHandlerId,
+                      intent: 'gray-subtle',
+                      size: 'sm',
+                    }),
+                  ],
+                  {
+                    style: {
+                      gap: '4px',
+                      alignItems: 'center',
+                      flexShrink: '0',
+                    },
+                  }
+                ),
+              ],
+              { style: { alignItems: 'center', gap: '6px', width: '100%' } }
+            )
+          );
+        }
+      }
+
       if (configureUrl) {
         items.push(
-          tray.anchor('Configure', {
+          tray.anchor({
+            text: 'Configure',
             href: configureUrl,
             target: '_blank',
-            style: { fontSize: '12px', color: 'rgb(125,140,255)' },
+            className:
+              'bg-gray-100 border border-transparent hover:bg-gray-200 active:bg-gray-300 dark:bg-opacity-10 dark:hover:bg-opacity-20 text-[rgb(125,140,255)] text-sm font-medium px-3 py-1.5 rounded-md transition-colors no-underline inline-flex items-center justify-center',
           })
         );
       } else {
@@ -1127,6 +1287,7 @@ W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)retu
 
       // Check cache
       const cacheKey = getCacheKey(parsedId);
+      lastCacheKey = cacheKey;
       const cachedResults = getCached(cacheKey);
       if (cachedResults) {
         console.log('cache HIT for', cacheKey, cachedResults);
