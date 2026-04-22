@@ -1,0 +1,40 @@
+{
+  "id": "stremio-custom-source",
+  "name": "Stremio Custom Source",
+  "version": "0.6.0",
+  "manifestURI": "",
+  "language": "typescript",
+  "type": "custom-source",
+  "description": "Exposes a Stremio addon catalog as a Seanime custom source. Intended to be paired with an AIOStreams stream provider.",
+  "author": "Viren070",
+  "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons/png/aiostreams-light.png",
+  "lang": "multi",
+  "payloadURI": "",
+  "isDevelopment": true,
+  "website": "https://docs.aiostreams.viren070.me",
+  "readme": "https://github.com/Viren070/AIOStreams/tree/main/packages/seanime-extension",
+  "userConfig": {
+    "requiresConfig": true,
+    "version": 1,
+    "fields": [
+      {
+        "name": "manifestUrl",
+        "label": "Stremio Addon Manifest URL",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "catalogType",
+        "label": "Catalog Type",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "catalogId",
+        "label": "Catalog ID",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  }
+}
