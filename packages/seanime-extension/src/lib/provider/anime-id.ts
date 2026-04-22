@@ -44,6 +44,8 @@ export function formatIdForSearch(id: ParsedId): string {
       return `kitsu:${id.value}`;
     case "imdbId":
       return String(id.value);
+    case "stremioId":
+      return String(id.value);
     default:
       return `${id.type}:${id.value}`;
   }
@@ -124,7 +126,7 @@ export function enrichParsedIdWithAnimeEntry(
 
   if (
     parsedId.episode &&
-    ["malId", "kitsuId"].includes(parsedId.type) &&
+    ["malId", "kitsuId", "anilistId", "anidbId"].includes(parsedId.type) &&
     !episodeOffsetApplied
   ) {
     const fromEpisode =

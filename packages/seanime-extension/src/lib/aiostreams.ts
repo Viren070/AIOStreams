@@ -1,8 +1,8 @@
-type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 type Endpoint = `${Method} /${string}` | `/${string}`;
 
-type RequestOptions = Omit<RequestInit, "body" | "method"> & {
+type RequestOptions = Omit<RequestInit, 'body' | 'method'> & {
   body?: Record<string, unknown> | FormData | string;
   query?: Record<
     string,
@@ -48,7 +48,7 @@ interface AIOStreamsSearchApiResult {
   url: string | null;
   nzbUrl: string | null;
   rarUrls: AIOStreamsSource[] | null;
-  "7zipUrls": AIOStreamsSource[] | null;
+  '7zipUrls': AIOStreamsSource[] | null;
   zipUrls: AIOStreamsSource[] | null;
   tarUrls: AIOStreamsSource[] | null;
   tgzUrls: AIOStreamsSource[] | null;
@@ -91,20 +91,20 @@ interface SearchApiResponse {
 }
 
 enum AnimeType {
-  TV = "TV",
-  SPECIAL = "SPECIAL",
-  OVA = "OVA",
-  MOVIE = "MOVIE",
-  ONA = "ONA",
-  UNKNOWN = "UNKNOWN",
+  TV = 'TV',
+  SPECIAL = 'SPECIAL',
+  OVA = 'OVA',
+  MOVIE = 'MOVIE',
+  ONA = 'ONA',
+  UNKNOWN = 'UNKNOWN',
 }
 
 enum AnimeSeason {
-  WINTER = "WINTER",
-  SPRING = "SPRING",
-  SUMMER = "SUMMER",
-  FALL = "FALL",
-  UNDEFINED = "UNDEFINED",
+  WINTER = 'WINTER',
+  SPRING = 'SPRING',
+  SUMMER = 'SUMMER',
+  FALL = 'FALL',
+  UNDEFINED = 'UNDEFINED',
 }
 
 interface AnimeListMapping {
@@ -118,20 +118,21 @@ interface AnimeListMapping {
 }
 
 const ID_TYPES = [
-  "animePlanetId",
-  "animecountdownId",
-  "anidbId",
-  "anilistId",
-  "anisearchId",
-  "imdbId",
-  "kitsuId",
-  "livechartId",
-  "malId",
-  "notifyMoeId",
-  "simklId",
-  "themoviedbId",
-  "thetvdbId",
-  "traktId",
+  'animePlanetId',
+  'animecountdownId',
+  'anidbId',
+  'anilistId',
+  'anisearchId',
+  'imdbId',
+  'kitsuId',
+  'livechartId',
+  'malId',
+  'notifyMoeId',
+  'simklId',
+  'themoviedbId',
+  'thetvdbId',
+  'traktId',
+  'stremioId',
 ] as const;
 
 type IdType = (typeof ID_TYPES)[number];
@@ -216,10 +217,10 @@ class APIError extends Error {
     code: string,
     message: string,
     detail: string | null = null,
-    issues?: any,
+    issues?: any
   ) {
     super(message);
-    this.name = "APIError";
+    this.name = 'APIError';
     this.status = status;
     this.code = code;
     this.detail = detail;
@@ -239,20 +240,20 @@ class AIOStreamsAPI {
   constructor(
     baseUrl: string,
     private uuid: string,
-    private password: string,
+    private password: string
   ) {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.baseUrl = baseUrl.replace(/\/$/, '');
   }
 
   async search(
     type: string,
     id: string,
     season?: number,
-    episode?: number,
+    episode?: number
   ): Promise<SearchApiResponse> {
-    const fullId = `${id}${season !== undefined ? `:${season}` : ""}${episode !== undefined ? `:${episode}` : ""}`;
+    const fullId = `${id}${season !== undefined ? `:${season}` : ''}${episode !== undefined ? `:${episode}` : ''}`;
 
-    return this.request<SearchApiResponse>("/search", {
+    return this.request<SearchApiResponse>('/search', {
       query: {
         type,
         id: fullId,
@@ -265,9 +266,9 @@ class AIOStreamsAPI {
     idType: IdType,
     idValue: string | number,
     season?: number,
-    episode?: number,
+    episode?: number
   ): Promise<AIOStreamsAnimeEntry | null> {
-    return this.request<AIOStreamsAnimeEntry>("/anime", {
+    return this.request<AIOStreamsAnimeEntry>('/anime', {
       query: {
         idType,
         idValue,
@@ -279,16 +280,16 @@ class AIOStreamsAPI {
 
   private async request<T>(
     endpoint: Endpoint,
-    options: RequestOptions = {},
+    options: RequestOptions = {}
   ): Promise<T> {
     const { body, query, ...fetchOptions } = options;
 
     // Parse endpoint for method and path
-    const [method, path] = endpoint.includes(" /")
-      ? (endpoint.split(" /") as [Method, string])
-      : (["GET", endpoint.slice(1)] as [Method, string]);
+    const [method, path] = endpoint.includes(' /')
+      ? (endpoint.split(' /') as [Method, string])
+      : (['GET', endpoint.slice(1)] as [Method, string]);
 
-    let queryString = "";
+    let queryString = '';
     if (query) {
       const parts: string[] = [];
       for (const [key, value] of Object.entries(query)) {
@@ -302,7 +303,7 @@ class AIOStreamsAPI {
         }
       }
       if (parts.length > 0) {
-        queryString = `?${parts.join("&")}`;
+        queryString = `?${parts.join('&')}`;
       }
     }
 
@@ -315,13 +316,13 @@ class AIOStreamsAPI {
 
     const authString = `${this.uuid}:${this.password}`;
     const encodedAuth = CryptoJS.enc.Base64.stringify(
-      CryptoJS.enc.Utf8.parse(authString),
+      CryptoJS.enc.Utf8.parse(authString)
     );
-    headers["Authorization"] = `Basic ${encodedAuth}`;
+    headers['Authorization'] = `Basic ${encodedAuth}`;
 
     const request: RequestInit = {
       method,
-      credentials: "include",
+      credentials: 'include',
       ...fetchOptions,
       headers,
     };
@@ -329,10 +330,10 @@ class AIOStreamsAPI {
     if (body !== undefined) {
       if (body instanceof FormData) {
         request.body = body;
-      } else if (typeof body === "string") {
+      } else if (typeof body === 'string') {
         request.body = body;
       } else {
-        headers["Content-Type"] = "application/json";
+        headers['Content-Type'] = 'application/json';
         request.body = JSON.stringify(body);
       }
     }
@@ -343,33 +344,33 @@ class AIOStreamsAPI {
       return null as T;
     }
 
-    let contentType = "";
+    let contentType = '';
     const responseHeaders = response.headers as unknown;
     if (
-      typeof responseHeaders === "object" &&
+      typeof responseHeaders === 'object' &&
       responseHeaders !== null &&
-      "get" in (responseHeaders as { get?: unknown }) &&
-      typeof (responseHeaders as { get?: unknown }).get === "function"
+      'get' in (responseHeaders as { get?: unknown }) &&
+      typeof (responseHeaders as { get?: unknown }).get === 'function'
     ) {
       contentType =
         (responseHeaders as { get: (name: string) => string | null }).get(
-          "Content-Type",
-        ) ?? "";
+          'Content-Type'
+        ) ?? '';
     } else {
       const h = responseHeaders as Record<string, string>;
-      contentType = h["Content-Type"] ?? h["content-type"] ?? "";
+      contentType = h['Content-Type'] ?? h['content-type'] ?? '';
     }
-    if (!contentType.includes("application/json")) {
+    if (!contentType.includes('application/json')) {
       throw new Error(
-        `Expected JSON response but got ${contentType} response of ${response.status} ${response.statusText}`,
+        `Expected JSON response but got ${contentType} response of ${response.status} ${response.statusText}`
       );
     }
 
-    const json: APIResponse<T> = await response.json();
+    const json = (await response.json()) as APIResponse<T>;
 
     if (!json.success) {
-      const errorCode = json.error?.code || "UNKNOWN_ERROR";
-      const errorMessage = json.error?.message || "An unknown error occurred";
+      const errorCode = json.error?.code || 'UNKNOWN_ERROR';
+      const errorMessage = json.error?.message || 'An unknown error occurred';
       const detail = json.detail;
       const issues = json.error?.issues;
 
@@ -378,7 +379,7 @@ class AIOStreamsAPI {
         errorCode,
         errorMessage,
         detail,
-        issues,
+        issues
       );
     }
 
@@ -395,9 +396,9 @@ function parseManifestUrl(url: string): {
     const parsedUrl = new URL(url);
 
     // Expecting URL format // <baseUrl>/stremio/<uuid>/<encryptedPassword>/manifest.json
-    const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
-    if (pathSegments.length < 4 || pathSegments[0] !== "stremio") {
-      throw new Error("Invalid manifest URL format");
+    const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
+    if (pathSegments.length < 4 || pathSegments[0] !== 'stremio') {
+      throw new Error('Invalid manifest URL format');
     }
 
     const uuid = pathSegments[1];
@@ -406,7 +407,7 @@ function parseManifestUrl(url: string): {
     return { baseUrl, uuid, encryptedPassword };
   } catch (error) {
     throw new Error(
-      `Failed to parse manifest URL: ${error instanceof Error ? error.message : String(error)}`,
+      `Failed to parse manifest URL: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }

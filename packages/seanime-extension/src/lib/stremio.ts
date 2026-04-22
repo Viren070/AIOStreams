@@ -1,8 +1,8 @@
-type StremioMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+type StremioMethod = 'GET';
 
 type StremioEndpoint = `${StremioMethod} /${string}` | `/${string}`;
 
-type StremioRequestOptions = Omit<RequestInit, "body" | "method"> & {
+type StremioRequestOptions = Omit<RequestInit, 'body' | 'method'> & {
   body?: Record<string, unknown> | FormData | string;
   query?: Record<
     string,
@@ -28,6 +28,7 @@ export interface ManifestCatalog {
   id: string;
   name: string;
   extra?: ManifestExtra[];
+  [key: string]: unknown;
 }
 
 export interface AddonCatalogDefinition {
@@ -84,7 +85,7 @@ export interface Stream {
   servers?: string[] | null;
   rarUrls?: Source[] | null;
   zipUrls?: Source[] | null;
-  "7zipUrls"?: Source[] | null;
+  '7zipUrls'?: Source[] | null;
   tgzUrls?: Source[] | null;
   tarUrls?: Source[] | null;
   ytId?: string | null;
@@ -118,7 +119,7 @@ export interface StreamResponse {
 
 export interface Trailer {
   source: string;
-  type: "Trailer" | "Clip" | "Teaser";
+  type: 'Trailer' | 'Clip' | 'Teaser';
   [key: string]: unknown;
 }
 
@@ -146,10 +147,11 @@ export interface MetaVideo {
 
 export interface MetaPreview {
   id: string;
+  imdb_id?: string;
   type: string;
   name?: string | null;
   poster?: string | null;
-  posterShape?: "square" | "poster" | "landscape" | "regular";
+  posterShape?: 'square' | 'poster' | 'landscape' | 'regular';
   genres?: string[] | null;
   imdbRating?: string | number | null;
   releaseInfo?: string | number | null;
@@ -186,7 +188,7 @@ export interface CatalogResponse {
 }
 
 export interface AddonCatalog {
-  transportName: "http";
+  transportName: 'http';
   transportUrl: string;
   manifest: Manifest;
   [key: string]: unknown;
@@ -213,90 +215,107 @@ export class Stremio {
     this.baseUrl = this.getBaseUrl(manifestUrl);
   }
 
+  /**
+   * Fetches metadata for a specific type and ID. This would be the same `id` and `type`
+   * that appears in the MetaPreview item in a catalog response.
+   *
+   * @param type The type of the media (e.g., "anime", "movie").
+   * @param id The unique identifier of the media.
+   * @returns A promise that resolves to the metadata response.
+   */
   async getMeta(type: string, id: string): Promise<MetaResponse> {
     return this.request<MetaResponse>(
-      `GET /meta/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`,
+      `/meta/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`
     );
   }
 
+  /**
+   * Fetches a catalog for a specific type and ID. The `id` and `type` can be anything,
+   * They can be obtained from the Manifest's `catalogs` field,
+   *
+   * @param type The type of the media (e.g., "anime", "movie").
+   * @param id The unique identifier of the catalog.
+   * @param extras Additional parameters for the catalog request.
+   * @returns A promise that resolves to the catalog response.
+   */
   async getCatalog(
     type: string,
     id: string,
-    extras?: Extras,
+    extras?: Extras
   ): Promise<CatalogResponse> {
     const extrasSegment = this.toExtrasSegment(extras);
-    const suffix = extrasSegment ? `/${extrasSegment}` : "";
+    const suffix = extrasSegment ? `/${extrasSegment}` : '';
 
     return this.request<CatalogResponse>(
-      `GET /catalog/${encodeURIComponent(type)}/${encodeURIComponent(id)}${suffix}.json`,
+      `/catalog/${encodeURIComponent(type)}/${encodeURIComponent(id)}${suffix}.json`
     );
   }
 
   async getStreams(type: string, id: string): Promise<StreamResponse> {
     return this.request<StreamResponse>(
-      `GET /stream/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`,
+      `/stream/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`
     );
   }
 
   async getSubtitles(
     type: string,
     id: string,
-    extras: Extras,
+    extras: Extras
   ): Promise<SubtitleResponse> {
     const extrasSegment = this.toExtrasSegment(extras);
-    const suffix = extrasSegment ? `/${extrasSegment}` : "";
+    const suffix = extrasSegment ? `/${extrasSegment}` : '';
 
     return this.request<SubtitleResponse>(
-      `GET /subtitles/${encodeURIComponent(type)}/${encodeURIComponent(id)}${suffix}.json`,
+      `/subtitles/${encodeURIComponent(type)}/${encodeURIComponent(id)}${suffix}.json`
     );
   }
 
   async getAddonCatalog(
     type: string,
-    id: string,
+    id: string
   ): Promise<AddonCatalogResponse> {
     return this.request<AddonCatalogResponse>(
-      `GET /addon_catalog/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`,
+      `/addon_catalog/${encodeURIComponent(type)}/${encodeURIComponent(id)}.json`
     );
   }
 
   async getManifest(): Promise<Manifest> {
-    return this.request<Manifest>("GET /manifest.json");
+    return this.request<Manifest>('GET /manifest.json');
   }
 
   private getBaseUrl(manifestUrl: string): string {
-    const clean = manifestUrl.trim().replace(/\/$/, "");
+    const clean = manifestUrl.trim().replace(/\/$/, '');
 
-    if (clean.endsWith("/manifest.json")) {
-      return clean.slice(0, -"/manifest.json".length);
+    if (clean.endsWith('/manifest.json')) {
+      return clean.slice(0, -'/manifest.json'.length);
     }
 
     return clean;
   }
 
   private toExtrasSegment(extras?: Extras): string {
-    if (!extras) return "";
+    if (!extras) return '';
 
     const parts: string[] = [];
     for (const [key, value] of Object.entries(extras)) {
       if (value === undefined || value === null) continue;
       parts.push(
-        `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
+        `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`
       );
     }
 
-    return parts.join("&");
+    return parts.join('&');
   }
 
   private async request<T>(
     endpoint: StremioEndpoint,
-    options: StremioRequestOptions = {},
+    options: StremioRequestOptions = {}
   ): Promise<T> {
     const { body, query, ...fetchOptions } = options;
 
-    const [method, path] = endpoint.includes(" /")
-      ? (endpoint.split(" /") as [StremioMethod, string])
-      : (["GET", endpoint.slice(1)] as [StremioMethod, string]);
+    const [method, path] = endpoint.includes(' /')
+      ? (endpoint.split(' /') as [StremioMethod, string])
+      : (['GET', endpoint.slice(1)] as [StremioMethod, string]);
 
     const queryString = this.toQueryString(query);
     const url = `${this.baseUrl}/${path}${queryString}`;
@@ -314,10 +333,10 @@ export class Stremio {
     if (body !== undefined) {
       if (body instanceof FormData) {
         request.body = body;
-      } else if (typeof body === "string") {
+      } else if (typeof body === 'string') {
         request.body = body;
       } else {
-        headers["Content-Type"] = "application/json";
+        headers['Content-Type'] = 'application/json';
         request.body = JSON.stringify(body);
       }
     }
@@ -326,7 +345,7 @@ export class Stremio {
 
     if (!response.ok) {
       throw new Error(
-        `Request failed: ${response.status} ${response.statusText}`,
+        `Request failed: ${response.status} ${response.statusText}`
       );
     }
 
@@ -337,8 +356,8 @@ export class Stremio {
     return (await response.json()) as T;
   }
 
-  private toQueryString(query?: StremioRequestOptions["query"]): string {
-    if (!query) return "";
+  private toQueryString(query?: StremioRequestOptions['query']): string {
+    if (!query) return '';
 
     const parts: string[] = [];
     for (const [key, value] of Object.entries(query)) {
@@ -353,6 +372,6 @@ export class Stremio {
       }
     }
 
-    return parts.length > 0 ? `?${parts.join("&")}` : "";
+    return parts.length > 0 ? `?${parts.join('&')}` : '';
   }
 }
