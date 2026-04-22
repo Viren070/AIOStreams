@@ -16,7 +16,7 @@
   "notes": "You need an existing AIOStreams instance and configuration to use this plugin.",
   "userConfig": {
     "version": 1,
-    "requiresConfig": false,
+    "requiresConfig": true,
     "fields": [
       {
         "type": "text",

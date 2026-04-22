@@ -77,6 +77,7 @@ router.get(
     manifest.id += `-${hash}`;
     manifest.name = catalogData.name;
     manifest.icon = catalogData.addonLogo;
+    delete manifest.userConfig;
 
     res.setHeader('Content-Type', 'application/json');
     res.status(200).json(manifest);

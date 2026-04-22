@@ -115,13 +115,14 @@ export function applySeanimeManifestRuntimeConfig(
   manifest.manifestURI = manifestURI;
   manifest.website = website;
 
-  if (stremioManifestUrl) {
-    const manifestUrlField = manifest.userConfig?.fields?.find(
+  if (stremioManifestUrl && manifest.userConfig) {
+    const manifestUrlField = manifest.userConfig.fields?.find(
       (f) => f.name === 'manifestUrl'
     );
     if (manifestUrlField) {
       manifestUrlField.default = stremioManifestUrl;
     }
+    manifest.userConfig.requiresConfig = false;
   }
 
   const networkAccess = manifest.plugin?.permissions?.allow?.networkAccess;
