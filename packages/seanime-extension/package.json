@@ -1,7 +1,7 @@
 {
   "name": "@aiostreams/seanime-extension",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "build": "node ./scripts/build-extensions.mjs",
