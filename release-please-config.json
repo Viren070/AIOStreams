@@ -35,6 +35,11 @@
           "path": "src/extensions/aiostreams-torrent-provider/manifest.json",
           "jsonpath": "$.version"
         }
+        {
+          "type": "json",
+          "path": "src/extensions/stremio-custom-source/manifest.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }
