@@ -56,12 +56,16 @@ class Provider implements CustomSource {
     // the stored reference. Copy everything into plain local variables first.
     const storeData = $store.getOrSet(cacheKey, () => ({
       items: [] as Meta[],
+      seenIds: [] as string[],
       lastSkip: 0,
       reachedEnd: false,
     }));
     const items: Meta[] = Array.isArray(storeData.items)
       ? [...(storeData.items as Meta[])]
       : [];
+    const seenIds: Set<string> = new Set(
+      Array.isArray(storeData.seenIds) ? (storeData.seenIds as string[]) : []
+    );
     let lastSkip: number =
       typeof storeData.lastSkip === 'number' ? storeData.lastSkip : 0;
     let reachedEnd: boolean = !!storeData.reachedEnd;
@@ -71,6 +75,9 @@ class Provider implements CustomSource {
     console.log(
       `Requesting page ${page} (items ${startIdx} to ${endIdx}) for search "${trimmedSearch}"`
     );
+
+    const MAX_NO_PROGRESS = 10;
+    let noProgressCount = 0;
 
     // Fetch more items if we don't have enough to fulfill the page,
     // and we haven't reached the end of the catalog yet.
@@ -95,7 +102,26 @@ class Provider implements CustomSource {
         if (batch.length === 0) {
           reachedEnd = true;
         } else {
-          items.push(...batch);
+          const newItems = batch.filter((m) => m.id && !seenIds.has(m.id));
+          if (newItems.length === 0) {
+            noProgressCount++;
+            console.log(
+              `All ${batch.length} items were duplicates (no-progress streak: ${noProgressCount}/${MAX_NO_PROGRESS})`
+            );
+            if (noProgressCount >= MAX_NO_PROGRESS) {
+              console.log(
+                'Too many consecutive duplicate batches, stopping fetch'
+              );
+              reachedEnd = true;
+            }
+          } else {
+            noProgressCount = 0;
+            for (const m of newItems) seenIds.add(m.id);
+            items.push(...newItems);
+            console.log(
+              `Added ${newItems.length} new items (${batch.length - newItems.length} duplicates skipped)`
+            );
+          }
           lastSkip += batch.length;
 
           // If the addon doesn't support skipping, we can only fetch the first batch
@@ -107,7 +133,12 @@ class Provider implements CustomSource {
       }
 
       // Save updated state back to the store for subsequent page requests
-      $store.set(cacheKey, { items, lastSkip, reachedEnd });
+      $store.set(cacheKey, {
+        items,
+        seenIds: Array.from(seenIds),
+        lastSkip,
+        reachedEnd,
+      });
     }
 
     // Extract exactly the slice Seanime requested
