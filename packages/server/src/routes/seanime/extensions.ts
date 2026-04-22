@@ -5,6 +5,7 @@ import {
   createLogger,
   decryptString,
   Env,
+  getSimpleTextHash,
   UserRepository,
 } from '@aiostreams/core';
 import {
@@ -12,9 +13,75 @@ import {
   isValidSeanimeExtensionId,
   readSeanimeExtensionManifest,
 } from '../../utils/seanime.js';
+import z from 'zod';
 
 const logger = createLogger('server');
 const router: Router = Router({ mergeParams: true });
+
+const catalogDataSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  name: z.string(),
+  addonManifestUrl: z.url(),
+  addonLogo: z.url(),
+});
+
+interface CustomSourceParams {
+  encodedCatalogData: string;
+}
+
+router.get(
+  '/extensions/:encodedCatalogData/stremio-custom-source.json',
+  (req: Request<CustomSourceParams>, res: Response, next: NextFunction) => {
+    const { encodedCatalogData } = req.params;
+    let catalogData: z.infer<typeof catalogDataSchema>;
+    try {
+      const decoded = Buffer.from(encodedCatalogData, 'base64url').toString(
+        'utf-8'
+      );
+      catalogData = catalogDataSchema.parse(JSON.parse(decoded));
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid encoded catalog data' });
+      return;
+    }
+
+    const manifest = readSeanimeExtensionManifest('stremio-custom-source');
+    if (!manifest) {
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+      return;
+    }
+
+    const thisUrl = `${Env.BASE_URL}/seanime/extensions/${encodedCatalogData}/stremio-custom-source.json`;
+
+    applySeanimeManifestRuntimeConfig(manifest, {
+      manifestURI: thisUrl,
+      website: catalogData.addonManifestUrl.replace(
+        '/manifest.json',
+        '/configure'
+      ),
+      baseUrl: Env.BASE_URL,
+      stremioManifestUrl: catalogData.addonManifestUrl,
+    });
+
+    if (manifest.payload) {
+      manifest.payload = manifest.payload
+        .replace(/{{\s*catalogId\s*}}/g, catalogData.id)
+        .replace(/{{\s*catalogType\s*}}/g, catalogData.type)
+        .replace(/{{\s*manifestUrl\s*}}/g, catalogData.addonManifestUrl);
+    }
+
+    const hash = getSimpleTextHash(
+      `${catalogData.addonManifestUrl}-${catalogData.id}-${catalogData.type}`
+    ).slice(0, 16);
+
+    manifest.id += `-${hash}`;
+    manifest.name = catalogData.name;
+    manifest.icon = catalogData.addonLogo;
+
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).json(manifest);
+  }
+);
 
 interface ExtensionManifestRequestParams {
   extensionId: string;

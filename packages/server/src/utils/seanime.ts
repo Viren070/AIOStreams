@@ -11,6 +11,8 @@ const seanimeExtDistRoot = path.join(
 );
 
 interface SeanimeExtensionManifest {
+  name: string;
+  id: string;
   manifestURI: string;
   version: string;
   website: string;
@@ -26,6 +28,7 @@ interface SeanimeExtensionManifest {
       description?: string;
     }>;
   };
+  payload?: string;
   plugin?: {
     version: string;
     permissions: {
@@ -53,6 +56,7 @@ interface ApplySeanimeManifestRuntimeConfigParams {
 const SEANIME_EXTENSION_IDS = [
   'aiostreams-plugin',
   'aiostreams-torrent-provider',
+  'stremio-custom-source',
 ] as const;
 
 export type SeanimeExtensionId = (typeof SEANIME_EXTENSION_IDS)[number];
