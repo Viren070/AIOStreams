@@ -79,7 +79,7 @@ export function buildStatistics(
 
   // Forced digital release filter info stream - shown regardless of statistics settings
   if (
-    (userData.digitalReleaseFilter?.showInfoOnFilter ?? false) &&
+    (userData.digitalReleaseFilter?.showInfoOnFilter ?? true) &&
     filterStats.removed.noDigitalRelease.total > 0
   ) {
     statistics.push({
