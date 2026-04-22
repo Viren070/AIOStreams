@@ -1,4 +1,4 @@
-import { AIOStreamsAPI, parseManifestUrl } from '../../lib/aiostreams';
+import { AIOStreamsAPI, parseManifestUrl, ParsedId } from '../../lib/aiostreams';
 import {
   applyPreferredMapping,
   createParsedIdFromSmartSearch,
@@ -9,6 +9,7 @@ import {
   toAnimeTorrent,
   ResultFormat,
 } from '../../lib/provider/torrent-mapper';
+import { unwrapSeanimeMediaId, tryDecodeStremioLocalId } from '../../lib/stremio-id';
 
 class Provider {
   // aiostreamsBaseUrl = "{{baseUrl}}";
@@ -33,27 +34,46 @@ class Provider {
   }
 
   async smartSearch(opts: AnimeSmartSearchOptions): Promise<AnimeTorrent[]> {
-    const id = createParsedIdFromSmartSearch(opts);
+    const { baseUrl, uuid, encryptedPassword } = parseManifestUrl(
+      this.aiostreamsManifestUrl
+    );
+    const aiostreams = new AIOStreamsAPI(baseUrl, uuid, encryptedPassword);
+    const type = opts.media.format === 'TV' ? 'series' : 'movie';
+
+    let id: ParsedId | null = null;
+
+    const localId = unwrapSeanimeMediaId(opts.media.id);
+    const decoded = tryDecodeStremioLocalId(localId);
+    if (decoded) {
+      id = {
+        type: 'stremioId',
+        value: decoded.stremioId,
+        episode: decoded.metaType !== 'movie' ? opts.episodeNumber : undefined,
+      };
+    }
+
+    if (!id) {
+      id = createParsedIdFromSmartSearch(opts);
+    }
+
     if (!id) {
       console.warn('No valid media ID for smart search', opts);
       return [];
     }
 
-    const { baseUrl, uuid, encryptedPassword } = parseManifestUrl(
-      this.aiostreamsManifestUrl
-    );
-
-    const aiostreams = new AIOStreamsAPI(baseUrl, uuid, encryptedPassword);
-
-    const type = opts.media.format === 'TV' ? 'series' : 'movie';
-    const animeEntry = await aiostreams.anime(id.type, id.value);
-
-    if (animeEntry) {
-      applyPreferredMapping(
-        id,
-        animeEntry,
-        $getUserPreference('searchId') as PreferredSearchId
-      );
+    if (id.type !== 'stremioId') {
+      const animeEntry = await aiostreams.anime(id.type, id.value);
+      if (animeEntry) {
+        applyPreferredMapping(
+          id,
+          animeEntry,
+          $getUserPreference('searchId') as PreferredSearchId
+        );
+        if (type === 'movie') {
+          id.season = undefined;
+          id.episode = undefined;
+        }
+      }
     }
 
     const response = await aiostreams.search(

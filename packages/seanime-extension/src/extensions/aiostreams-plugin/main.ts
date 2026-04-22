@@ -198,11 +198,86 @@ function init() {
           return `kitsu:${id.value}`;
         case 'imdbId':
           return String(id.value);
+        case 'stremioId':
+          return String(id.value);
         default:
           return `${id.type}:${id.value}`;
       }
     }
 
+    function parseStremioId(stremioId: string): {
+      season?: number;
+      episode?: number;
+      baseId: string;
+    } {
+      // Schemes where base ID is scheme:number (e.g. kitsu:12312)
+      const prefixedSchemes = [
+        'kitsu:',
+        'mal:',
+        'anilist:',
+        'tmdb:',
+        'tvdb:',
+        'anidb:',
+        'simkl:',
+      ];
+
+      const colonIdx = stremioId.indexOf(':');
+      if (colonIdx === -1) return { baseId: stremioId };
+
+      // IMDb: tt1234567[:season[:episode]]
+      if (/^tt\d+/.test(stremioId)) {
+        const baseId = stremioId.slice(0, colonIdx);
+        const rest = stremioId
+          .slice(colonIdx + 1)
+          .split(':')
+          .map(Number);
+        if (rest.length === 1 && Number.isFinite(rest[0]))
+          return { baseId, episode: rest[0] };
+        if (
+          rest.length >= 2 &&
+          Number.isFinite(rest[0]) &&
+          Number.isFinite(rest[1])
+        )
+          return { baseId, season: rest[0], episode: rest[1] };
+        return { baseId };
+      }
+
+      // Prefixed numeric schemes: scheme:baseNum[:episode] or scheme:baseNum[:season:episode]
+      const scheme = prefixedSchemes.find((s) => stremioId.startsWith(s));
+      if (scheme) {
+        const afterScheme = stremioId.slice(scheme.length);
+        const parts = afterScheme.split(':');
+        const baseId = `${scheme}${parts[0]}`;
+        const rest = parts.slice(1).map(Number);
+        if (rest.length === 0) return { baseId };
+        if (rest.length === 1 && Number.isFinite(rest[0]))
+          return { baseId, episode: rest[0] };
+        if (
+          rest.length >= 2 &&
+          Number.isFinite(rest[0]) &&
+          Number.isFinite(rest[1])
+        )
+          return { baseId, season: rest[0], episode: rest[1] };
+        return { baseId };
+      }
+
+      // Unknown scheme: strip trailing numeric segments
+      const parts = stremioId.split(':');
+      const nums: number[] = [];
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const n = Number(parts[i]);
+        if (!Number.isFinite(n)) break;
+        nums.unshift(n);
+      }
+      if (nums.length === 0) return { baseId: stremioId };
+      if (nums.length === 1)
+        return { episode: nums[0], baseId: parts.slice(0, -1).join(':') };
+      return {
+        season: nums[nums.length - 2],
+        episode: nums[nums.length - 1],
+        baseId: parts.slice(0, -2).join(':'),
+      };
+    }
     function parseManifestUrl(manifestUrl: string): ParsedManifestCredentials {
       const clean = manifestUrl.trim();
       if (!clean) throw new Error('Manifest URL is required');
@@ -614,10 +689,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
     });
 
     const pendingAnime = ctx.state<$app.AL_BaseAnime | null>(null);
-    const pendingEp = ctx.state<{
-      episodeNumber: number;
-      aniDBEpisode: string;
-    } | null>(null);
+    const pendingEp = ctx.state<$app.Anime_Episode | number | null>(null);
 
     interface DownloadRecord {
       index: number;
@@ -807,13 +879,18 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       const anime = pendingAnime.get();
       const ep = pendingEp.get();
       if (!anime || !ep) return;
+      const episodeNumber = typeof ep === 'number' ? ep : ep.episodeNumber;
+      const aniDBEpisode =
+        typeof ep === 'number'
+          ? String(ep)
+          : (ep.aniDBEpisode ?? String(ep.episodeNumber));
 
       const playerMode = getPlayerModePref();
       const title = anime.title?.userPreferred ?? 'Unknown';
-      const windowTitle = `${title} - Episode ${ep.episodeNumber}`;
+      const windowTitle = `${title} - Episode ${episodeNumber}`;
 
       if (playerMode === 'external') {
-        ctx.externalPlayerLink.open(result.url, anime.id, ep.episodeNumber);
+        ctx.externalPlayerLink.open(result.url, anime.id, episodeNumber);
         hideResultsAnimated();
         resultsWv.channel.send('play-error', { index }); // Removes the loading spinner
         return;
@@ -821,12 +898,12 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
 
       const playPromise =
         playerMode === 'builtin'
-          ? ctx.videoCore.playStream(result.url, ep.aniDBEpisode, anime)
+          ? ctx.videoCore.playStream(result.url, aniDBEpisode, anime)
           : ctx.playback.streamUsingMediaPlayer(
               windowTitle,
               result.url,
               anime,
-              ep.aniDBEpisode
+              aniDBEpisode
             );
 
       playPromise
@@ -974,7 +1051,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       const anime = pendingAnime.get();
       const ep = pendingEp.get();
       if (anime && ep) {
-        fetchStreams(anime, ep.episodeNumber, ep.aniDBEpisode);
+        fetchStreams(anime, ep);
       }
     });
 
@@ -990,7 +1067,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       const anime = pendingAnime.get();
       const ep = pendingEp.get();
       if (anime && ep) {
-        fetchStreams(anime, ep.episodeNumber, ep.aniDBEpisode);
+        fetchStreams(anime, ep);
       }
     });
 
@@ -1208,9 +1285,10 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
 
     async function fetchStreams(
       anime: $app.AL_BaseAnime,
-      episodeNumber: number,
-      aniDBEpisode: string
+      episode: $app.Anime_Episode | number
     ): Promise<void> {
+      const episodeNumber =
+        typeof episode === 'number' ? episode : episode.episodeNumber;
       const manifestUrl = $getUserPreference('manifestUrl') ?? '';
       const searchId = ($getUserPreference('searchId') ?? 'imdbId') as
         | 'imdbId'
@@ -1235,7 +1313,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       const mediaType = isMovie ? 'movie' : 'series';
 
       pendingAnime.set(anime);
-      pendingEp.set({ episodeNumber, aniDBEpisode });
+      pendingEp.set(episode);
 
       const autoPlay = prefBool('autoPlayFirstStream', false);
 
@@ -1265,51 +1343,97 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       console.log('Received request for streams:', {
         animeId: anime.id,
         episodeNumber,
-        aniDBEpisode,
         searchId,
       });
 
-      const parsedId: ParsedId = {
-        type: 'anilistId',
-        value: String(anime.id),
-        episode: isMovie ? undefined : episodeNumber,
-      };
+      console.log('Full anime object:', anime);
+      console.log('Full episode object:', episode);
+
+      let parsedId: ParsedId | null = null;
+
+      if (
+        anime.siteUrl?.startsWith('ext_custom_source_stremio-custom-source')
+      ) {
+        const parts = anime.siteUrl.split('|');
+        if (parts.length === 3) {
+          try {
+            const decoded = CryptoJS.enc.Utf8.stringify(
+              CryptoJS.enc.Base64.parse(parts[2])
+            );
+            const parsed = JSON.parse(decoded);
+            if (parsed && typeof parsed === 'object') {
+              if (parsed.type !== 'series') {
+                parsedId = {
+                  type: 'stremioId',
+                  value: parsed.imdb_id || parsed.id,
+                };
+              } else {
+                const epMapping = parsed.episodes?.[String(episodeNumber)];
+                const parsedStremioId = parseStremioId(epMapping ?? '');
+                parsedId = {
+                  type: 'stremioId',
+                  value: parsedStremioId?.baseId,
+                  season: parsedStremioId?.season,
+                  episode: parsedStremioId?.episode,
+                };
+              }
+            }
+          } catch (err) {
+            console.warn(
+              'Failed to parse custom source ID, falling back to AniList ID',
+              err
+            );
+          }
+        }
+      }
+      if (!parsedId) {
+        parsedId = {
+          type: 'anilistId',
+          value: String(anime.id),
+          episode: isMovie ? undefined : episodeNumber,
+        };
+      }
       const originalId = { ...parsedId };
 
-      const animeLookupStart = Date.now();
-      try {
-        const animeEntry = await aioAnime(
-          creds.baseUrl,
-          creds.uuid,
-          creds.passwordToken,
-          'anilistId',
-          anime.id
-        );
-        animeLookupMs = Date.now() - animeLookupStart;
-        if (animeEntry) {
-          applyPreferredMapping(parsedId, animeEntry, searchId);
-          if (isMovie) {
-            parsedId.season = undefined;
-            parsedId.episode = undefined;
+      if (parsedId.type !== 'stremioId') {
+        const animeLookupStart = Date.now();
+        try {
+          const animeEntry = await aioAnime(
+            creds.baseUrl,
+            creds.uuid,
+            creds.passwordToken,
+            'anilistId',
+            anime.id
+          );
+          animeLookupMs = Date.now() - animeLookupStart;
+          if (animeEntry) {
+            applyPreferredMapping(parsedId, animeEntry, searchId);
+            if (isMovie) {
+              parsedId.season = undefined;
+              parsedId.episode = undefined;
+            }
+            console.log('Fetched anime details from AIOStreams:', animeEntry, {
+              mappedId: parsedId,
+            });
           }
-          console.log('Fetched anime details from AIOStreams:', animeEntry, {
-            mappedId: parsedId,
-          });
+        } catch (err: unknown) {
+          animeLookupMs = Date.now() - animeLookupStart;
+          console.warn(
+            'Failed to fetch anime details from AIOStreams, falling back to AniList ID search',
+            err
+          );
+          // Non-fatal — fall back to AniList ID
         }
-      } catch (err: unknown) {
-        animeLookupMs = Date.now() - animeLookupStart;
-        console.warn(
-          'Failed to fetch anime details from AIOStreams, falling back to AniList ID search',
-          err
-        );
-        // Non-fatal — fall back to AniList ID
       }
 
       const lookup: LookupInfo = {
-        original: `${originalId.type}: ${originalId.value}${originalId.episode !== undefined ? ` · E${originalId.episode}` : ''}${anime.format ? ` (${anime.format})` : ''}`,
+        original: `${originalId.type}: ${originalId.value}${originalId.season !== undefined ? ` · S${originalId.season}` : ''}${originalId.episode !== undefined ? ` · E${originalId.episode}` : ''}${anime.format ? ` (${anime.format})` : ''}`,
         resolved: `${parsedId.type}: ${parsedId.value}${parsedId.season !== undefined ? ` · S${parsedId.season}` : ''}${parsedId.episode !== undefined ? ` · E${parsedId.episode}` : ''}${mediaType ? ` (${mediaType})` : ''}`,
         stremioId: `${formatIdForSearch(parsedId)}${parsedId.season !== undefined ? `:${parsedId.season}` : ''}${parsedId.episode !== undefined ? `:${parsedId.episode}` : ''}`,
       };
+      if (parsedId.type === 'stremioId') {
+        lookup.resolved = `—`;
+      }
 
       // Check cache
       const cacheKey = getCacheKey(parsedId);
@@ -1476,11 +1600,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
             onSelect: () => {
               episodePalette.close();
 
-              fetchStreams(
-                media,
-                ep.episodeNumber,
-                ep.aniDBEpisode ?? String(ep.episodeNumber)
-              );
+              fetchStreams(media, ep);
             },
           }));
         } else {
@@ -1496,7 +1616,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
               filterType: 'includes' as const,
               onSelect: () => {
                 episodePalette.close();
-                fetchStreams(media, n, String(n));
+                fetchStreams(media, n);
               },
             };
           });
@@ -1530,11 +1650,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
           ctx.toast.error('Could not determine anime for this episode.');
           return;
         }
-        fetchStreams(
-          anime,
-          episode.episodeNumber,
-          episode.aniDBEpisode ?? String(episode.episodeNumber)
-        );
+        fetchStreams(anime, episode);
       });
     }
 
@@ -1584,7 +1700,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
               ctx.toast.error('AIOStreams: Could not identify anime');
               return;
             }
-            fetchStreams(anime, episodeNumber, String(episodeNumber));
+            fetchStreams(anime, episodeNumber);
           });
         }
       });
