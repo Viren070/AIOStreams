@@ -492,36 +492,6 @@ export function buildResources(ctx: AIOStreamsContext): void {
     ctx.supportedResources[instanceId] = addonResources;
   }
 
-  logger.verbose(
-    `Parsed all catalogs and determined the following catalogs: ${JSON.stringify(
-      ctx.finalCatalogs.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-      }))
-    )}`
-  );
-
-  logger.verbose(
-    `Parsed all addon catalogs and determined the following catalogs: ${JSON.stringify(
-      ctx.finalAddonCatalogs?.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-      }))
-    )}`
-  );
-
-  logger.verbose(
-    `Parsed all resources and determined the following resources: ${JSON.stringify(
-      ctx.finalResources.map((r) => ({
-        name: r.name,
-        types: r.types,
-        idPrefixes: r.idPrefixes,
-      }))
-    )}`
-  );
-
   // if meta resource exists, add aiostreamserror to idPrefixes only if idPrefixes is defined
   const metaResource = ctx.finalResources.find((r) => r.name === 'meta');
   if (metaResource) {
