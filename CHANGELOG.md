@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.27.3](https://github.com/Viren070/AIOStreams/compare/v2.27.2...v2.27.3) (2026-04-22)
+
+
+### Features
+
+* add configurator for stremio custom source seanime extension ([27ab582](https://github.com/Viren070/AIOStreams/commit/27ab582746e4b9c59a8a91f5538eafe48e0a6834))
+* **presets:** add Baguettio ([#869](https://github.com/Viren070/AIOStreams/issues/869)) ([c440502](https://github.com/Viren070/AIOStreams/commit/c4405024ad830c69fbe036a1e3203355712b7afa))
+* **presets:** add Flix-Streams ([#845](https://github.com/Viren070/AIOStreams/issues/845)) ([4496934](https://github.com/Viren070/AIOStreams/commit/4496934167c4295bb5591ce200fe3a21e7445f10))
+
+
+### Bug Fixes
+
+* **builtins/library:** attach serviceItemId in skip processing path ([a58d0aa](https://github.com/Viren070/AIOStreams/commit/a58d0aa37527910a9a0dcfd2c29288deab8d1bb9))
+* consistently fallback to true for showOnFilter for digital release filter ([49ba1e2](https://github.com/Viren070/AIOStreams/commit/49ba1e2db021a456b8db89f121c06c278682a01a))
+* **seanime-extensions:** use consistent requiresConfig value ([d9d100c](https://github.com/Viren070/AIOStreams/commit/d9d100c2a3aca75697eda4652b9f9783fbdf0127))
+
 ## [2.27.2](https://github.com/Viren070/AIOStreams/compare/v2.27.1...v2.27.2) (2026-04-18)
 
 
