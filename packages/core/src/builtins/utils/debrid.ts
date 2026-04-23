@@ -25,7 +25,11 @@ import {
   hashNzbUrl,
 } from '../../debrid/index.js';
 import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
-import { preprocessTitle, normaliseTitle, extractInfoHashFromMagnet } from '../../parser/utils.js';
+import {
+  preprocessTitle,
+  normaliseTitle,
+  extractInfoHashFromMagnet,
+} from '../../parser/utils.js';
 export { extractInfoHashFromMagnet };
 
 const logger = createLogger('debrid');

@@ -21,8 +21,8 @@ function deselectCurrent(): () => void {
   }
 
   switch (active?.tagName?.toUpperCase()) {
-    case "INPUT":
-    case "TEXTAREA":
+    case 'INPUT':
+    case 'TEXTAREA':
       (active as HTMLInputElement | HTMLTextAreaElement).blur();
       break;
     default:
@@ -32,7 +32,7 @@ function deselectCurrent(): () => void {
 
   selection.removeAllRanges();
   return () => {
-    if (selection.type === "Caret") selection.removeAllRanges();
+    if (selection.type === 'Caret') selection.removeAllRanges();
     if (selection.rangeCount === 0) {
       ranges.forEach((range) => selection.addRange(range));
     }
@@ -74,27 +74,27 @@ export async function copyToClipboard(
     selection = document.getSelection();
 
     if (!selection) {
-      throw new Error("Unable to get document selection");
+      throw new Error('Unable to get document selection');
     }
 
-    mark = document.createElement("span");
+    mark = document.createElement('span');
     mark.textContent = text;
 
     // Accessibility: Prevent screen readers from announcing the hidden copy payload
-    mark.setAttribute("aria-hidden", "true");
+    mark.setAttribute('aria-hidden', 'true');
 
-    mark.style.all = "unset";
-    mark.style.position = "fixed";
-    mark.style.top = "0";
-    mark.style.clip = "rect(0, 0, 0, 0)";
-    mark.style.whiteSpace = "pre";
+    mark.style.all = 'unset';
+    mark.style.position = 'fixed';
+    mark.style.top = '0';
+    mark.style.clip = 'rect(0, 0, 0, 0)';
+    mark.style.whiteSpace = 'pre';
 
-    mark.style.userSelect = "text";
-    (mark.style as unknown as Record<string, string>).MozUserSelect = "text";
-    (mark.style as unknown as Record<string, string>).msUserSelect = "text";
-    mark.style.userSelect = "text";
+    mark.style.userSelect = 'text';
+    (mark.style as unknown as Record<string, string>).MozUserSelect = 'text';
+    (mark.style as unknown as Record<string, string>).msUserSelect = 'text';
+    mark.style.userSelect = 'text';
 
-    mark.addEventListener("copy", (e: ClipboardEvent) => {
+    mark.addEventListener('copy', (e: ClipboardEvent) => {
       e.stopPropagation();
     });
 
@@ -103,9 +103,9 @@ export async function copyToClipboard(
     range.selectNodeContents(mark);
     selection.addRange(range);
 
-    const successful = document.execCommand("copy");
+    const successful = document.execCommand('copy');
     if (!successful) {
-      throw new Error("copy command was unsuccessful");
+      throw new Error('copy command was unsuccessful');
     }
   } catch (err) {
     try {
@@ -113,19 +113,19 @@ export async function copyToClipboard(
         window as unknown as Window & {
           clipboardData: { setData(format: string, data: string): void };
         }
-      ).clipboardData.setData("text", text);
+      ).clipboardData.setData('text', text);
     } catch (err2) {
       const copyKey =
-        (/mac os x/i.test(navigator.userAgent) ? "⌘" : "Ctrl") + "+C";
+        (/mac os x/i.test(navigator.userAgent) ? '⌘' : 'Ctrl') + '+C';
       window.prompt(`Copy to clipboard: ${copyKey}, Enter`, text);
 
-      const error = new Error("Copy failed - user prompt shown");
+      const error = new Error('Copy failed - user prompt shown');
       onError?.(error);
       return;
     }
   } finally {
     if (selection) {
-      if (typeof selection.removeRange === "function" && range) {
+      if (typeof selection.removeRange === 'function' && range) {
         selection.removeRange(range);
       } else {
         selection.removeAllRanges();

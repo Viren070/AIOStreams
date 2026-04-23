@@ -1,13 +1,13 @@
-import { AIOStreamsAnimeEntry, ParsedId } from "../aiostreams";
+import { AIOStreamsAnimeEntry, ParsedId } from '../aiostreams';
 
-export type PreferredSearchId = "imdbId" | "kitsuId" | "anilistId";
+export type PreferredSearchId = 'imdbId' | 'kitsuId' | 'anilistId';
 
 export function createParsedIdFromSmartSearch(
-  opts: AnimeSmartSearchOptions,
+  opts: AnimeSmartSearchOptions
 ): ParsedId | null {
   if (opts.anidbAID) {
     return {
-      type: "anidbId",
+      type: 'anidbId',
       value: String(opts.anidbAID),
       episode: opts.episodeNumber,
     };
@@ -15,7 +15,7 @@ export function createParsedIdFromSmartSearch(
 
   if (opts.media.id) {
     return {
-      type: "anilistId",
+      type: 'anilistId',
       value: String(opts.media.id),
       episode: opts.episodeNumber,
     };
@@ -23,7 +23,7 @@ export function createParsedIdFromSmartSearch(
 
   if (opts.media.idMal) {
     return {
-      type: "malId",
+      type: 'malId',
       value: String(opts.media.idMal),
       episode: opts.episodeNumber,
     };
@@ -34,17 +34,17 @@ export function createParsedIdFromSmartSearch(
 
 export function formatIdForSearch(id: ParsedId): string {
   switch (id.type) {
-    case "anidbId":
+    case 'anidbId':
       return `anidb:${id.value}`;
-    case "anilistId":
+    case 'anilistId':
       return `anilist:${id.value}`;
-    case "malId":
+    case 'malId':
       return `mal:${id.value}`;
-    case "kitsuId":
+    case 'kitsuId':
       return `kitsu:${id.value}`;
-    case "imdbId":
+    case 'imdbId':
       return String(id.value);
-    case "stremioId":
+    case 'stremioId':
       return String(id.value);
     default:
       return `${id.type}:${id.value}`;
@@ -54,23 +54,23 @@ export function formatIdForSearch(id: ParsedId): string {
 export function applyPreferredMapping(
   parsedId: ParsedId,
   animeEntry: AIOStreamsAnimeEntry,
-  preferred: PreferredSearchId,
+  preferred: PreferredSearchId
 ): ParsedId {
-  if (preferred === "kitsuId" && animeEntry.mappings?.kitsuId) {
-    parsedId.type = "kitsuId";
+  if (preferred === 'kitsuId' && animeEntry.mappings?.kitsuId) {
+    parsedId.type = 'kitsuId';
     parsedId.value = String(animeEntry.mappings.kitsuId);
     return parsedId;
   }
 
-  if (preferred === "anilistId" && animeEntry.mappings?.anilistId) {
-    parsedId.type = "anilistId";
+  if (preferred === 'anilistId' && animeEntry.mappings?.anilistId) {
+    parsedId.type = 'anilistId';
     parsedId.value = String(animeEntry.mappings.anilistId);
     return parsedId;
   }
 
   if (animeEntry.mappings?.imdbId) {
     enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
-    parsedId.type = "imdbId";
+    parsedId.type = 'imdbId';
     parsedId.value = String(animeEntry.mappings.imdbId);
   }
 
@@ -79,7 +79,7 @@ export function applyPreferredMapping(
 
 export function enrichParsedIdWithAnimeEntry(
   parsedId: ParsedId,
-  animeEntry: AIOStreamsAnimeEntry,
+  animeEntry: AIOStreamsAnimeEntry
 ): void {
   let episodeOffsetApplied = false;
   const imdbId = animeEntry?.mappings?.imdbId;
@@ -95,12 +95,12 @@ export function enrichParsedIdWithAnimeEntry(
         m.start !== undefined &&
         m.end !== undefined &&
         episodeNum >= m.start &&
-        episodeNum <= m.end,
+        episodeNum <= m.end
     );
 
     if (mapping) {
       const mappedSeason = mapping.tvdbSeason;
-      const shouldApplyEpisodeOffset = imdbId && ["tt1528406"].includes(imdbId);
+      const shouldApplyEpisodeOffset = imdbId && ['tt1528406'].includes(imdbId);
 
       if (
         mappedSeason &&
@@ -126,7 +126,7 @@ export function enrichParsedIdWithAnimeEntry(
 
   if (
     parsedId.episode &&
-    ["malId", "kitsuId", "anilistId", "anidbId"].includes(parsedId.type) &&
+    ['malId', 'kitsuId', 'anilistId', 'anidbId'].includes(parsedId.type) &&
     !episodeOffsetApplied
   ) {
     const fromEpisode =

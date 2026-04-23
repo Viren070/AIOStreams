@@ -1,16 +1,16 @@
-import { AIOStreamsSearchApiResult } from "../aiostreams";
+import { AIOStreamsSearchApiResult } from '../aiostreams';
 
-export type ResultFormat = "filename" | "formatter";
+export type ResultFormat = 'filename' | 'formatter';
 
 export function toAnimeTorrent(
   result: AIOStreamsSearchApiResult,
-  resultFormat: ResultFormat,
+  resultFormat: ResultFormat
 ): AnimeTorrent {
   const date = toISODateFromHours(result.age);
 
-  let name = result.folderName ?? result.filename ?? "";
-  if (resultFormat === "formatter") {
-    name = [result.name, result.description].filter(Boolean).join("\n");
+  let name = result.folderName ?? result.filename ?? '';
+  if (resultFormat === 'formatter') {
+    name = [result.name, result.description].filter(Boolean).join('\n');
   }
 
   return {
@@ -20,8 +20,8 @@ export function toAnimeTorrent(
     seeders: result.seeders ?? 0,
     leechers: 0,
     downloadCount: 0,
-    formattedSize: "",
-    link: result.url ?? "",
+    formattedSize: '',
+    link: result.url ?? '',
     magnetLink: buildMagnetLink(result) ?? undefined,
     infoHash: result.infoHash ?? undefined,
     resolution: result.parsedFile?.resolution,
@@ -36,7 +36,7 @@ export function toAnimeTorrent(
 }
 
 export function buildMagnetLink(
-  result: AIOStreamsSearchApiResult,
+  result: AIOStreamsSearchApiResult
 ): string | null {
   if (!result.infoHash) return null;
 

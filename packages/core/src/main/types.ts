@@ -35,7 +35,11 @@ export interface AIOStreamsOptions {
   bypassManifestCache?: boolean;
 }
 
-export type StatEntry = { title: string; description: string; forced?: boolean };
+export type StatEntry = {
+  title: string;
+  description: string;
+  forced?: boolean;
+};
 
 export type PipelineTimings = {
   metaFilterMs: number;
