@@ -32,30 +32,13 @@
         "options": [
           {
             "value": "imdbId",
-            "label": "IMDb ID (recommended)"
+            "label": "IMDb ID"
           },
           {
             "value": "kitsuId",
             "label": "Kitsu ID"
-          },
-          {
-            "value": "anilistId",
-            "label": "AniList ID"
           }
         ]
-      },
-      {
-        "type": "text",
-        "name": "cacheTtl",
-        "label": "Cache TTL (minutes, 0 to disable)",
-        "default": "30"
-      },
-      {
-        "type": "text",
-        "name": "downloadLocation",
-        "label": "Download location",
-        "default": "$DOWNLOAD",
-        "description": "Where to save downloaded files. Supported variables: $DOWNLOAD, $DESKTOP, $DOCUMENT, $HOME. You can also append a subdirectory, e.g. $DOWNLOAD/AIOStreams"
       },
       {
         "type": "select",
@@ -78,9 +61,22 @@
         ]
       },
       {
+        "type": "text",
+        "name": "downloadLocation",
+        "label": "Download location",
+        "default": "$DOWNLOAD",
+        "description": "Where to save downloaded files. Supported variables: $DOWNLOAD, $DESKTOP, $DOCUMENT, $HOME. You can also append a subdirectory, e.g. $DOWNLOAD/AIOStreams"
+      },
+      {
+        "type": "text",
+        "name": "cacheTtl",
+        "label": "Cache TTL (minutes, 0 to disable)",
+        "default": "30"
+      },
+      {
         "type": "switch",
         "name": "autoPlayFirstStream",
-        "label": "Auto-play first stream when results load",
+        "label": "Auto-play first stream",
         "default": "false"
       },
       {
@@ -88,12 +84,6 @@
         "name": "showAnimeTab",
         "label": "Show \"AIOStreams\" tab on anime details page",
         "default": "true"
-      },
-      {
-        "type": "switch",
-        "name": "autoOpenResults",
-        "label": "Auto-open results on episode card click (experimental)",
-        "default": "false"
       },
       {
         "type": "switch",
@@ -112,6 +102,12 @@
         "name": "showEpisodeGridMenu",
         "label": "Add \"Stream with AIOStreams\" to episode grid (3-dot) menu",
         "default": "true"
+      },
+      {
+        "type": "switch",
+        "name": "autoOpenResults",
+        "label": "Auto-open results on any episode card click",
+        "default": "false"
       }
     ]
   },
