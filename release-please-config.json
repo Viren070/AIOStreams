@@ -15,7 +15,8 @@
         ".release-please-manifest.json",
         "compose.yaml",
         "release-please-config.json",
-        "packages/seanime-extensions"
+        "packages/seanime-extensions",
+        "packages/seanime-extension"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
