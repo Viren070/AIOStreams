@@ -15,15 +15,15 @@
         ".release-please-manifest.json",
         "compose.yaml",
         "release-please-config.json",
-        "packages/seanime-extension"
+        "packages/seanime-extensions"
       ],
       "pull-request-title-pattern": "chore: release ${version}"
     },
-    "packages/seanime-extension": {
+    "packages/seanime-extensions": {
       "release-type": "node",
       "include-component-in-tag": true,
       "include-v-in-tag": true,
-      "pull-request-title-pattern": "chore(seanime-extension): release ${version}",
+      "pull-request-title-pattern": "chore(seanime-extensions): release ${version}",
       "extra-files": [
         {
           "type": "json",

@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const seanimeExtDistRoot = path.join(
   __dirname,
-  '../../../seanime-extension/dist'
+  '../../../seanime-extensions/dist'
 );
 
 interface SeanimeExtensionManifest {
