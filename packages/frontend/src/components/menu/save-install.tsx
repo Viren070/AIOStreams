@@ -1829,8 +1829,7 @@ function Content() {
               <span className="text-gray-200">
                 Extensions → Add Extensions → Install from URL
               </span>
-              . Install one of the two extensions below — choose based on how
-              you use AIOStreams.
+              . Install one of the two extensions below.
             </p>
 
             {/* Plugin option */}
@@ -1843,8 +1842,8 @@ function Content() {
                   </span>
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Best for debrid, usenet, or any URL-based streams. Adds a
-                  dedicated results panel to Seanime.
+                  Adds a dedicated results panel and tab to Seanime. Works with
+                  any URL or P2P based stream.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1881,8 +1880,8 @@ function Content() {
                   AIOStreams Torrent Provider
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  For native torrent integration. Best if you only use P2P or
-                  want Seanime to handle debrid itself.
+                  For native torrent integration. Only use this if you want a
+                  simpler extension and/or want Seanime to handle debrid.
                 </p>
               </div>
               <div className="flex items-center gap-2">
