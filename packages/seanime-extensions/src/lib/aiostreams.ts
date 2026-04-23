@@ -59,7 +59,7 @@ interface AIOStreamsSearchApiResult {
   folderSize: number | null;
   message: string | null;
   library: boolean;
-  type: string;
+  type: 'http' | 'usenet' | 'debrid' | 'live' | 'info' | 'p2p' | 'external';
   indexer: string | null;
   addon: string | null;
   duration: number | null;
