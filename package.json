@@ -14,7 +14,7 @@
     "docs:build": "pnpm -F docs run build",
     "docs:dev": "pnpm -F docs run dev",
     "build:watch": "tsc --build --watch",
-    "seanime-extension:build": "pnpm -F seanime-extension build",
+    "seanime-extension:build": "pnpm -F seanime-extensions build",
     "start": "node packages/server/dist/server",
     "start:addon": "pnpm run start",
     "start:dev": "cross-env NODE_ENV=development tsx watch packages/server/src/server.ts",
