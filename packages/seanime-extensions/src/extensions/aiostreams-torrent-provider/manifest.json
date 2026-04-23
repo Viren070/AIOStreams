@@ -1,7 +1,7 @@
 {
   "id": "aiostreams-torrent-provider",
   "name": "AIOStreams",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "manifestURI": "",
   "language": "typescript",
   "type": "anime-torrent-provider",
