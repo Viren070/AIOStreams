@@ -1,80 +1,83 @@
 declare type SearchResult = {
-    id: string
-    title: string
-    url: string
-    subOrDub: SubOrDub
-}
+  id: string;
+  title: string;
+  url: string;
+  subOrDub: SubOrDub;
+};
 
-declare type SubOrDub = "sub" | "dub" | "both"
+declare type SubOrDub = 'sub' | 'dub' | 'both';
 
 declare type EpisodeDetails = {
-    id: string
-    number: number
-    url: string
-    title?: string
-}
+  id: string;
+  number: number;
+  url: string;
+  title?: string;
+};
 
 declare type EpisodeServer = {
-    server: string
-    headers: { [key: string]: string }
-    videoSources: VideoSource[]
-}
+  server: string;
+  headers: { [key: string]: string };
+  videoSources: VideoSource[];
+};
 
-declare type VideoSourceType = "mp4" | "m3u8" | "unknown"
+declare type VideoSourceType = 'mp4' | 'm3u8' | 'unknown';
 
 declare type VideoSource = {
-    url: string
-    type: VideoSourceType
-    quality: string
-    label?: string
-    subtitles: VideoSubtitle[]
-}
+  url: string;
+  type: VideoSourceType;
+  quality: string;
+  label?: string;
+  subtitles: VideoSubtitle[];
+};
 
 declare type VideoSubtitle = {
-    id: string
-    url: string
-    language: string
-    isDefault: boolean
-}
+  id: string;
+  url: string;
+  language: string;
+  isDefault: boolean;
+};
 
 declare interface Media {
-    id: number
-    idMal?: number
-    status?: string
-    format?: string
-    englishTitle?: string
-    romajiTitle?: string
-    episodeCount?: number
-    absoluteSeasonOffset?: number
-    synonyms: string[]
-    isAdult: boolean
-    startDate?: FuzzyDate
+  id: number;
+  idMal?: number;
+  status?: string;
+  format?: string;
+  englishTitle?: string;
+  romajiTitle?: string;
+  episodeCount?: number;
+  absoluteSeasonOffset?: number;
+  synonyms: string[];
+  isAdult: boolean;
+  startDate?: FuzzyDate;
 }
 
 declare interface FuzzyDate {
-    year: number
-    month?: number
-    day?: number
+  year: number;
+  month?: number;
+  day?: number;
 }
 
 declare type SearchOptions = {
-    media: Media
-    query: string
-    dub: boolean
-    year?: number
-}
+  media: Media;
+  query: string;
+  dub: boolean;
+  year?: number;
+};
 
 declare type Settings = {
-    episodeServers: string[]
-    supportsDub: boolean
-}
+  episodeServers: string[];
+  supportsDub: boolean;
+};
 
 declare abstract class AnimeProvider {
-    search(opts: SearchOptions): Promise<SearchResult[]>
+  search(opts: SearchOptions): Promise<SearchResult[]>;
 
-    findEpisodes(id: string): Promise<EpisodeDetails[]>
+  findEpisodes(id: string): Promise<EpisodeDetails[]>;
 
-    findEpisodeServer(episode: EpisodeDetails, server: string): Promise<EpisodeServer>
+  findEpisodeServer(
+    episode: EpisodeDetails,
+    server: string
+  ): Promise<EpisodeServer>;
 
-    getSettings(): Settings
+  getSettings(): Settings;
 }
