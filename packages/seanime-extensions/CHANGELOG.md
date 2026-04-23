@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.7.0...seanime-extensions-v0.8.0) (2026-04-23)
+
+
+### Features
+
+* **seanime-extensions/aiostreams-plugin:** register entry episode tab ([9109cf1](https://github.com/Viren070/AIOStreams/commit/9109cf1af6fb022d1a817663219032e365e87515))
+* **seanime-extensions/aiostreams-plugin:** use torrent stream APIs for P2P streams ([9109cf1](https://github.com/Viren070/AIOStreams/commit/9109cf1af6fb022d1a817663219032e365e87515))
+
+
+### Bug Fixes
+
+* **seanime-extensions/aiostreams-plugin:** assume no prefix is tracker when building magnet ([65e6d78](https://github.com/Viren070/AIOStreams/commit/65e6d78089d264bd367b7c54d12af4f98b3cb033))
+* **seanime-extensions/aiostreams-plugin:** handle tracker: prefix in sources when building magnet ([9109cf1](https://github.com/Viren070/AIOStreams/commit/9109cf1af6fb022d1a817663219032e365e87515))
+* **seanime-extensions/aiostreams-plugin:** open externalUrl links in browser ([9109cf1](https://github.com/Viren070/AIOStreams/commit/9109cf1af6fb022d1a817663219032e365e87515))
+
 ## [0.7.0](https://github.com/Viren070/AIOStreams/compare/seanime-extension-v0.6.0...seanime-extension-v0.7.0) (2026-04-22)
 
 
