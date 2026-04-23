@@ -122,7 +122,13 @@ export function parseStremioId(stremioId: string): {
   baseId: string;
 } {
   const prefixedSchemes = [
-    'kitsu:', 'mal:', 'anilist:', 'tmdb:', 'tvdb:', 'anidb:', 'simkl:',
+    'kitsu:',
+    'mal:',
+    'anilist:',
+    'tmdb:',
+    'tvdb:',
+    'anidb:',
+    'simkl:',
   ];
 
   const colonIdx = stremioId.indexOf(':');
@@ -130,10 +136,17 @@ export function parseStremioId(stremioId: string): {
 
   if (/^tt\d+/.test(stremioId)) {
     const baseId = stremioId.slice(0, colonIdx);
-    const rest = stremioId.slice(colonIdx + 1).split(':').map(Number);
+    const rest = stremioId
+      .slice(colonIdx + 1)
+      .split(':')
+      .map(Number);
     if (rest.length === 1 && Number.isFinite(rest[0]))
       return { baseId, episode: rest[0] };
-    if (rest.length >= 2 && Number.isFinite(rest[0]) && Number.isFinite(rest[1]))
+    if (
+      rest.length >= 2 &&
+      Number.isFinite(rest[0]) &&
+      Number.isFinite(rest[1])
+    )
       return { baseId, season: rest[0], episode: rest[1] };
     return { baseId };
   }
@@ -147,7 +160,11 @@ export function parseStremioId(stremioId: string): {
     if (rest.length === 0) return { baseId };
     if (rest.length === 1 && Number.isFinite(rest[0]))
       return { baseId, episode: rest[0] };
-    if (rest.length >= 2 && Number.isFinite(rest[0]) && Number.isFinite(rest[1]))
+    if (
+      rest.length >= 2 &&
+      Number.isFinite(rest[0]) &&
+      Number.isFinite(rest[1])
+    )
       return { baseId, season: rest[0], episode: rest[1] };
     return { baseId };
   }

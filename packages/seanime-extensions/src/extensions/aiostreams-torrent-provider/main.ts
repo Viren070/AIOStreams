@@ -1,4 +1,8 @@
-import { AIOStreamsAPI, parseManifestUrl, ParsedId } from '../../lib/aiostreams';
+import {
+  AIOStreamsAPI,
+  parseManifestUrl,
+  ParsedId,
+} from '../../lib/aiostreams';
 import {
   applyPreferredMapping,
   createParsedIdFromSmartSearch,
@@ -9,7 +13,10 @@ import {
   toAnimeTorrent,
   ResultFormat,
 } from '../../lib/provider/torrent-mapper';
-import { unwrapSeanimeMediaId, tryDecodeStremioLocalId } from '../../lib/stremio-id';
+import {
+  unwrapSeanimeMediaId,
+  tryDecodeStremioLocalId,
+} from '../../lib/stremio-id';
 
 class Provider {
   // aiostreamsBaseUrl = "{{baseUrl}}";

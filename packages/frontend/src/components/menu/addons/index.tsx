@@ -58,76 +58,71 @@ function Content() {
     userDataRef.current = userData;
   });
 
-  const fetchCatalogsData = useCallback(
-    async (hideToast = false) => {
-      const userData = userDataRef.current;
-      setCatalogLoading(true);
-      try {
-        const catalogs = await fetchCatalogs(userData);
-        setUserData((prev) => {
-          const existingMods = prev.catalogModifications || [];
-          const existingIds = new Set(
-            existingMods.map((mod) => `${mod.id}-${mod.type}`)
+  const fetchCatalogsData = useCallback(async (hideToast = false) => {
+    const userData = userDataRef.current;
+    setCatalogLoading(true);
+    try {
+      const catalogs = await fetchCatalogs(userData);
+      setUserData((prev) => {
+        const existingMods = prev.catalogModifications || [];
+        const existingIds = new Set(
+          existingMods.map((mod) => `${mod.id}-${mod.type}`)
+        );
+        const modifications = existingMods.map((eMod) => {
+          if (eMod.id.startsWith('aiostreams.merged.')) return eMod;
+          const nMod = catalogs.find(
+            (c) => c.id === eMod.id && c.type === eMod.type
           );
-          const modifications = existingMods.map((eMod) => {
-            if (eMod.id.startsWith('aiostreams.merged.')) return eMod;
-            const nMod = catalogs.find(
-              (c) => c.id === eMod.id && c.type === eMod.type
-            );
-            if (nMod) {
-              return {
-                ...eMod,
-                addonName: nMod.addonName,
-                type: nMod.type,
-                hideable: nMod.hideable,
-                searchable: nMod.searchable,
-              };
-            }
-            return eMod;
-          });
-          catalogs.forEach((catalog) => {
-            if (!existingIds.has(`${catalog.id}-${catalog.type}`)) {
-              modifications.push({
-                id: catalog.id,
-                name: catalog.name,
-                type: catalog.type,
-                enabled: true,
-                shuffle: false,
-                usePosterService: !!(
-                  userData.rpdbApiKey ||
-                  userData.topPosterApiKey ||
-                  userData.aioratingsApiKey
-                ),
-                hideable: catalog.hideable,
-                searchable: catalog.searchable,
-                addonName: catalog.addonName,
-              });
-            }
-          });
-          const newCatalogIds = new Set(
-            catalogs.map((c) => `${c.id}-${c.type}`)
-          );
-          const filteredMods = modifications.filter(
-            (mod) =>
-              mod.id.startsWith('aiostreams.merged.') ||
-              newCatalogIds.has(`${mod.id}-${mod.type}`)
-          );
-          return { ...prev, catalogModifications: filteredMods };
+          if (nMod) {
+            return {
+              ...eMod,
+              addonName: nMod.addonName,
+              type: nMod.type,
+              hideable: nMod.hideable,
+              searchable: nMod.searchable,
+            };
+          }
+          return eMod;
         });
-        if (!hideToast) toast.success('Catalogs fetched successfully');
-      } catch (error) {
-        console.error('Error fetching catalogs:', error);
-        if (error instanceof APIError) {
-          toast.error((error as APIError).message);
-        } else {
-          toast.error('Failed to fetch catalogs');
-        }
-      } finally {
-        setCatalogLoading(false);
+        catalogs.forEach((catalog) => {
+          if (!existingIds.has(`${catalog.id}-${catalog.type}`)) {
+            modifications.push({
+              id: catalog.id,
+              name: catalog.name,
+              type: catalog.type,
+              enabled: true,
+              shuffle: false,
+              usePosterService: !!(
+                userData.rpdbApiKey ||
+                userData.topPosterApiKey ||
+                userData.aioratingsApiKey
+              ),
+              hideable: catalog.hideable,
+              searchable: catalog.searchable,
+              addonName: catalog.addonName,
+            });
+          }
+        });
+        const newCatalogIds = new Set(catalogs.map((c) => `${c.id}-${c.type}`));
+        const filteredMods = modifications.filter(
+          (mod) =>
+            mod.id.startsWith('aiostreams.merged.') ||
+            newCatalogIds.has(`${mod.id}-${mod.type}`)
+        );
+        return { ...prev, catalogModifications: filteredMods };
+      });
+      if (!hideToast) toast.success('Catalogs fetched successfully');
+    } catch (error) {
+      console.error('Error fetching catalogs:', error);
+      if (error instanceof APIError) {
+        toast.error((error as APIError).message);
+      } else {
+        toast.error('Failed to fetch catalogs');
       }
-    },
-    []
-  );
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
 
   // Initial catalog fetch - fires once when the menu mounts.
   useEffect(() => {
