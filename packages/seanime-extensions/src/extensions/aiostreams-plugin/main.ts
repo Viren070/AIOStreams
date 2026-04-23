@@ -70,11 +70,11 @@ function init() {
       const torrentName = result.folderName ?? result.filename;
       if (torrentName) magnet += `&dn=${encodeURIComponent(torrentName)}`;
       if (result.sources) {
-        result.sources.forEach((src) => {
-          if (src.startsWith('tracker:')) {
-            magnet += `&tr=${encodeURIComponent(src.slice('tracker:'.length))}`;
-          }
-        });
+        result.sources
+          .filter((src) => !src.startsWith('dht:'))
+          .forEach((src) => {
+            magnet += `&tr=${encodeURIComponent(src.startsWith('tracker:') ? src.slice('tracker:'.length) : src)}`;
+          });
       }
       return magnet;
     }
