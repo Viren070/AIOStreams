@@ -85,6 +85,12 @@
       },
       {
         "type": "switch",
+        "name": "showAnimeTab",
+        "label": "Show \"AIOStreams\" tab on anime details page",
+        "default": "true"
+      },
+      {
+        "type": "switch",
         "name": "autoOpenResults",
         "label": "Auto-open results on episode card click (experimental)",
         "default": "false"
@@ -93,7 +99,7 @@
         "type": "switch",
         "name": "showAnimePageButton",
         "label": "Show \"AIOStreams\" button on anime details page",
-        "default": "true"
+        "default": "false"
       },
       {
         "type": "switch",

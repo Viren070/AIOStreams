@@ -27,6 +27,7 @@ function init() {
       type: string;
       seadexBest: boolean | null;
       magnetLink: string | null;
+      fileIdx: number | null;
     }
 
     interface StatEntry {
@@ -64,12 +65,15 @@ function init() {
 
     function buildMagnetLink(result: AIOStreamsSearchApiResult): string | null {
       if (!result.infoHash) return null;
+
       let magnet = `magnet:?xt=urn:btih:${result.infoHash}`;
       const torrentName = result.folderName ?? result.filename;
       if (torrentName) magnet += `&dn=${encodeURIComponent(torrentName)}`;
       if (result.sources) {
         result.sources.forEach((src) => {
-          magnet += `&tr=${encodeURIComponent(src)}`;
+          if (src.startsWith('tracker:')) {
+            magnet += `&tr=${encodeURIComponent(src.slice('tracker:'.length))}`;
+          }
         });
       }
       return magnet;
@@ -95,6 +99,7 @@ function init() {
         type: r.type,
         seadexBest: r.seadexBest ?? null,
         magnetLink: buildMagnetLink(r),
+        fileIdx: r.fileIdx ?? null,
       };
     }
 
@@ -526,7 +531,7 @@ function openExt(i){
   var r=rs[i];
   if(r&&r.externalUrl) window.open(r.externalUrl, '_blank');
 }
-function copyStream(i){var r=rs[i];if(!r)return;var t=r.url||r.magnetLink||'';if(t)W.send('copy-stream',{text:t});}
+function copyStream(i){var r=rs[i];if(!r)return;var t=r.url||r.magnetLink||r.externalUrl||'';if(t)W.send('copy-stream',{text:t});}
 function downloadStream(i){if(dlState[i]&&dlState[i].status==='downloading')return;W.send('download',{index:i});}
 W.on('play-error',function(d){
   var idx=d&&d.index!=null?d.index:playIdx;playIdx=-1;
@@ -634,18 +639,19 @@ function render(s){
   var html='';
   for(var i=0;i<rs.length;i++){
     var r=rs[i];
-    var isUrl=!!r.url,isExt=!!r.externalUrl&&!r.url,isTorr=!!r.infoHash&&!r.url&&!r.externalUrl;
+    var URL_TYPES=['http','usenet','debrid','live','info'];
     var acts='';
-    if(isUrl){
+    if(URL_TYPES.indexOf(r.type)!==-1){
       acts='<button class="btn-p" id="pb-'+i+'" onclick="play('+i+')"><span class="lbl">'+PLAY+' Play</span></button>';
       acts+='<button class="btn-i" onclick="copyStream('+i+')" title="Copy URL">'+COPY+'</button>';
       acts+='<button class="btn-i" id="dl-'+i+'" onclick="downloadStream('+i+')" title="Download">'+DL+'</button>';
-    } else if(isExt){
+    }else if(r.type==='p2p'){
+      acts='<button class="btn-p" id="pb-'+i+'" onclick="play('+i+')"><span class="lbl">'+PLAY+' Play</span></button>';
+      if(r.magnetLink)acts+='<button class="btn-i" onclick="copyStream('+i+')" title="Copy Magnet">'+COPY+'</button>';
+    }else if(r.type==='external'){
       acts='<button class="btn-p ext" onclick="openExt('+i+')"><span class="lbl">'+EXT+' Open in Browser</span></button>';
-      acts+='<button class="btn-i" onclick="copyStream('+i+')" title="Copy URL">'+COPY+'</button>';
-    } else if(isTorr&&r.magnetLink){
-      acts='<button class="btn-p p2p" onclick="copyStream('+i+')"><span class="lbl">'+COPY+' Copy Magnet</span></button>';
-    } else {
+      if(r.externalUrl)acts+='<button class="btn-i" onclick="copyStream('+i+')" title="Copy URL">'+COPY+'</button>';
+    }else{
       acts='<div style="color:#f87171;background:rgba(248,113,113,0.1);border:1px dashed rgba(248,113,113,0.3);border-radius:6px;padding:5px 0;font-size:12px;text-align:center;width:100%">Unsupported stream format</div>';
     }
     html+='<div class="card"><div class="card-top">';
@@ -875,7 +881,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
 
     function playStreamAtIndex(index: number): void {
       const result = wvState.get().results[index];
-      if (!result?.url) return;
+      if (!result) return;
       const anime = pendingAnime.get();
       const ep = pendingEp.get();
       if (!anime || !ep) return;
@@ -889,35 +895,111 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       const title = anime.title?.userPreferred ?? 'Unknown';
       const windowTitle = `${title} - Episode ${episodeNumber}`;
 
-      if (playerMode === 'external') {
-        ctx.externalPlayerLink.open(result.url, anime.id, episodeNumber);
-        hideResultsAnimated();
-        resultsWv.channel.send('play-error', { index }); // Removes the loading spinner
-        return;
-      }
+      const urlTypes = ['http', 'usenet', 'debrid', 'live', 'info'] as const;
+      const isUrlType = (urlTypes as readonly string[]).includes(result.type);
 
-      const playPromise =
-        playerMode === 'builtin'
-          ? ctx.videoCore.playStream(result.url, aniDBEpisode, anime)
-          : ctx.playback.streamUsingMediaPlayer(
-              windowTitle,
-              result.url,
-              anime,
-              aniDBEpisode
-            );
+      if (isUrlType) {
+        if (!result.url) return;
 
-      playPromise
-        .then(() => {
+        if (playerMode === 'external') {
+          ctx.externalPlayerLink.open(result.url, anime.id, episodeNumber);
           hideResultsAnimated();
-        })
-        .catch((err: Error) => {
-          ctx.toast.error(`Playback error: ${err.message}`);
           resultsWv.channel.send('play-error', { index });
-          const st = wvState.get();
-          if (st.autoPlay) {
-            wvState.set({ ...st, autoPlay: false });
+          return;
+        }
+
+        const playPromise =
+          playerMode === 'builtin'
+            ? ctx.videoCore.playStream(result.url, aniDBEpisode, anime)
+            : ctx.playback.streamUsingMediaPlayer(
+                windowTitle,
+                result.url,
+                anime,
+                aniDBEpisode
+              );
+
+        playPromise
+          .then(() => {
+            hideResultsAnimated();
+          })
+          .catch((err: Error) => {
+            ctx.toast.error(`Playback error: ${err.message}`);
+            resultsWv.channel.send('play-error', { index });
+            const st = wvState.get();
+            if (st.autoPlay) {
+              wvState.set({ ...st, autoPlay: false });
+            }
+          });
+      } else if (result.type === 'p2p') {
+        if (!result.infoHash) return;
+
+        if (!ctx.torrentstream.isEnabled()) {
+          ctx.toast.error('Torrent streaming is not enabled');
+          resultsWv.channel.send('play-error', { index });
+          return;
+        }
+
+        const torrentstreamPlaybackType: $ui.TorrentstreamPlaybackType =
+          playerMode === 'builtin'
+            ? 'nativeplayer'
+            : playerMode === 'external'
+              ? 'externalPlayerLink'
+              : 'default';
+
+        const torrent: $app.HibikeTorrent_AnimeTorrent = {
+          name: result.folderName ?? result.filename ?? '',
+          date: '',
+          size: result.size ?? 0,
+          formattedSize: '',
+          seeders: result.seeders ?? 0,
+          leechers: 0,
+          downloadCount: 0,
+          link: result.magnetLink ?? '',
+          downloadUrl: result.magnetLink ?? '',
+          magnetLink: result.magnetLink ?? undefined,
+          infoHash: result.infoHash,
+          isBestRelease: false,
+          confirmed: false,
+        };
+
+        let clientId: string | undefined = undefined;
+        if (torrentstreamPlaybackType === 'nativeplayer') {
+          const clientIds = $app.getClientIds();
+          const platforms = clientIds.map((id) => $app.getClientPlatform(id));
+          clientId = clientIds.find((id, idx) => platforms[idx] === 'denshi');
+          if (!clientId) {
+            ctx.toast.error(
+              'No active compatible client found. Need Denshi client, but only found: ' +
+                platforms.join(', ')
+            );
+            resultsWv.channel.send('play-error', { index });
+            return;
           }
-        });
+        }
+
+        ctx.torrentstream
+          .startStream({
+            mediaId: anime.id,
+            episodeNumber,
+            aniDbEpisode: aniDBEpisode,
+            fileIndex: result.fileIdx ?? undefined,
+            autoSelect: result.fileIdx == null,
+            playbackType: torrentstreamPlaybackType,
+            torrent,
+            clientId,
+          })
+          .then(() => {
+            hideResultsAnimated();
+          })
+          .catch((err: Error) => {
+            ctx.toast.error(`Torrent stream error: ${err.message}`);
+            resultsWv.channel.send('play-error', { index });
+            const st = wvState.get();
+            if (st.autoPlay) {
+              wvState.set({ ...st, autoPlay: false });
+            }
+          });
+      }
     }
 
     resultsWv.channel.on('play', (data: { index: number }) => {
@@ -1569,7 +1651,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       label: 'AIOStreams',
       tooltipText: 'Stream with AIOStreams',
     });
-    if (prefBool('showAnimePageButton', true)) {
+    if (prefBool('showAnimePageButton', false)) {
       animeBtn.mount();
     }
     animeBtn.onClick(async ({ media }) => {
@@ -1709,6 +1791,47 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
     if (prefBool('autoOpenResults', false)) {
       attachAutoOpenObserver('[data-episode-card]');
       attachAutoOpenObserver('[data-episode-grid-item]');
+    }
+
+    if (prefBool('showAnimeTab', true)) {
+      const { name, icon, getIsOpen } = ctx.anime.registerEntryEpisodeTab({
+        name: 'AIOStreams',
+        icon: 'https://cdn.jsdelivr.net/gh/selfhst/icons/png/aiostreams-light.png',
+        shouldShow(event) {
+          return true;
+        },
+        onEpisodeCollection(event) {
+          const { mediaId, episodeCollection } = event;
+          console.log(
+            'Received episode collection for mediaId',
+            mediaId,
+            episodeCollection
+          );
+          return episodeCollection;
+        },
+        async onSelectEpisode(event) {
+          const { mediaId, episodeNumber, aniDbEpisode, episode } = event;
+
+          let ep: $app.Anime_Episode | number = episode || episodeNumber;
+          let anime: $app.AL_BaseAnime | undefined = undefined;
+          if (episode?.baseAnime) {
+            anime = episode.baseAnime;
+          } else if (mediaId) {
+            const entry = await ctx.anime.getAnimeEntry(mediaId);
+            if (entry) {
+              anime = entry.media;
+            } else {
+              anime = $anilist.getAnime(mediaId);
+            }
+          }
+          if (!anime) {
+            ctx.toast.error('AIOStreams: Could not identify anime');
+            return;
+          }
+
+          fetchStreams(anime, ep);
+        },
+      });
     }
   });
 }
