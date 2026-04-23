@@ -494,6 +494,51 @@ declare namespace $app {
 
     rules?: Array<Anime_AutoDownloaderRule>;
     profiles?: Array<Anime_AutoDownloaderProfile>;
+    isSimulation: boolean;
+  }
+
+  /**
+   * @event AutoDownloaderRunCompletedEvent
+   * @file internal/library/autodownloader/hook_events.go
+   * @description
+   * AutoDownloaderRunCompletedEvent is triggered when the autodownloader finishes a run.
+   */
+  function onAutoDownloaderRunCompleted(
+    cb: (event: AutoDownloaderRunCompletedEvent) => void
+  ): void;
+
+  interface AutoDownloaderRunCompletedEvent {
+    next(): void;
+
+    rules?: Array<Anime_AutoDownloaderRule>;
+    profiles?: Array<Anime_AutoDownloaderProfile>;
+    isSimulation: boolean;
+    downloadedCount: number;
+    queuedCount: number;
+    delayedCount: number;
+  }
+
+  /**
+   * @event AutoDownloaderBeforeFetchTorrentsEvent
+   * @file internal/library/autodownloader/hook_events.go
+   * @description
+   * AutoDownloaderBeforeFetchTorrentsEvent is triggered before the autodownloader fetches torrents from providers.
+   * Prevent default to skip native provider retrieval.
+   */
+  function onAutoDownloaderBeforeFetchTorrents(
+    cb: (event: AutoDownloaderBeforeFetchTorrentsEvent) => void
+  ): void;
+
+  interface AutoDownloaderBeforeFetchTorrentsEvent {
+    next(): void;
+
+    preventDefault(): void;
+
+    rules?: Array<Anime_AutoDownloaderRule>;
+    profiles?: Array<Anime_AutoDownloaderProfile>;
+    providerIds?: Array<string>;
+    defaultProvider: string;
+    torrents?: Array<AutoDownloader_NormalizedTorrent>;
   }
 
   /**
@@ -517,7 +562,8 @@ declare namespace $app {
    * @file internal/library/autodownloader/hook_events.go
    * @description
    * AutoDownloaderMatchVerifiedEvent is triggered when a torrent is verified to follow a rule.
-   * Prevent default to abort the download if the match is found.
+   * Changing MatchFound or Episode lets the hook override the verified result.
+   * Prevent default to reject the match.
    */
   function onAutoDownloaderMatchVerified(
     cb: (event: AutoDownloaderMatchVerifiedEvent) => void
@@ -537,6 +583,30 @@ declare namespace $app {
   }
 
   /**
+   * @event AutoDownloaderBestCandidateSelectedEvent
+   * @file internal/library/autodownloader/hook_events.go
+   * @description
+   * AutoDownloaderBestCandidateSelectedEvent is triggered when the best candidate for an episode is selected.
+   * Prevent default to skip handling the episode.
+   */
+  function onAutoDownloaderBestCandidateSelected(
+    cb: (event: AutoDownloaderBestCandidateSelectedEvent) => void
+  ): void;
+
+  interface AutoDownloaderBestCandidateSelectedEvent {
+    next(): void;
+
+    preventDefault(): void;
+
+    rule?: Anime_AutoDownloaderRule;
+    episode: number;
+    candidates?: Array<AutoDownloader_Candidate>;
+    candidate?: AutoDownloader_Candidate;
+    existingItem?: Models_AutoDownloaderItem;
+    isSimulation: boolean;
+  }
+
+  /**
    * @event AutoDownloaderSettingsUpdatedEvent
    * @file internal/library/autodownloader/hook_events.go
    * @description
@@ -550,6 +620,29 @@ declare namespace $app {
     next(): void;
 
     settings?: Models_AutoDownloaderSettings;
+  }
+
+  /**
+   * @event AutoDownloaderBeforeQueueDelayedTorrentEvent
+   * @file internal/library/autodownloader/hook_events.go
+   * @description
+   * AutoDownloaderBeforeQueueDelayedTorrentEvent is triggered when the autodownloader is about to queue a torrent with delay.
+   * Prevent default to skip the delayed queue behavior.
+   */
+  function onAutoDownloaderBeforeQueueDelayedTorrent(
+    cb: (event: AutoDownloaderBeforeQueueDelayedTorrentEvent) => void
+  ): void;
+
+  interface AutoDownloaderBeforeQueueDelayedTorrentEvent {
+    next(): void;
+
+    preventDefault(): void;
+
+    candidate?: AutoDownloader_Candidate;
+    rule?: Anime_AutoDownloaderRule;
+    episode: number;
+    delayMinutes: number;
+    isSimulation: boolean;
   }
 
   /**
@@ -570,14 +663,18 @@ declare namespace $app {
 
     torrent?: AutoDownloader_NormalizedTorrent;
     rule?: Anime_AutoDownloaderRule;
+    episode: number;
+    score: number;
     items?: Array<Models_AutoDownloaderItem>;
+    existingItem?: Models_AutoDownloaderItem;
+    isSimulation: boolean;
   }
 
   /**
    * @event AutoDownloaderAfterDownloadTorrentEvent
    * @file internal/library/autodownloader/hook_events.go
    * @description
-   * AutoDownloaderAfterDownloadTorrentEvent is triggered when the autodownloader has downloaded a torrent.
+   * AutoDownloaderAfterDownloadTorrentEvent is triggered after the autodownloader queues or downloads a torrent.
    */
   function onAutoDownloaderAfterDownloadTorrent(
     cb: (event: AutoDownloaderAfterDownloadTorrentEvent) => void
@@ -588,6 +685,11 @@ declare namespace $app {
 
     torrent?: AutoDownloader_NormalizedTorrent;
     rule?: Anime_AutoDownloaderRule;
+    episode: number;
+    score: number;
+    downloaded: boolean;
+    item?: Models_AutoDownloaderItem;
+    isSimulation: boolean;
   }
 
   /**
@@ -599,7 +701,8 @@ declare namespace $app {
    * @file internal/continuity/hook_events.go
    * @description
    * WatchHistoryItemRequestedEvent is triggered when a watch history item is requested.
-   * Prevent default to skip getting the watch history item from the file cache, in this case the event should have a valid WatchHistoryItem object or set it to nil to indicate that the watch history item was not found.
+   * Prevent default to skip getting the watch history item from the file cache, in this case the event should have a valid WatchHistoryItem object
+   *     or set it to nil to indicate that the watch history item was not found.
    */
   function onWatchHistoryItemRequested(
     cb: (event: WatchHistoryItemRequestedEvent) => void
@@ -732,6 +835,45 @@ declare namespace $app {
   }
 
   /**
+   * @event DebridAddTorrentRequestedEvent
+   * @file internal/debrid/client/hook_events.go
+   * @description
+   * DebridAddTorrentRequestedEvent is triggered when Seanime is about to add a torrent to the debrid provider.
+   * Prevent default to bypass the native add call and provide TorrentItemID yourself.
+   */
+  function onDebridAddTorrentRequested(
+    cb: (event: DebridAddTorrentRequestedEvent) => void
+  ): void;
+
+  interface DebridAddTorrentRequestedEvent {
+    next(): void;
+
+    preventDefault(): void;
+
+    options?: Debrid_AddTorrentOptions;
+    destination: string;
+    mediaId: number;
+    torrentItemId: string;
+  }
+
+  /**
+   * @event DebridAddTorrentEvent
+   * @file internal/debrid/client/hook_events.go
+   * @description
+   * DebridAddTorrentEvent is triggered after Seanime adds a torrent to the debrid provider and queues it locally.
+   */
+  function onDebridAddTorrent(cb: (event: DebridAddTorrentEvent) => void): void;
+
+  interface DebridAddTorrentEvent {
+    next(): void;
+
+    options?: Debrid_AddTorrentOptions;
+    destination: string;
+    mediaId: number;
+    torrentItemId: string;
+  }
+
+  /**
    * @event DebridLocalDownloadRequestedEvent
    * @file internal/debrid/client/hook_events.go
    * @description
@@ -753,6 +895,43 @@ declare namespace $app {
   }
 
   /**
+   * @event DebridLocalDownloadStartedEvent
+   * @file internal/debrid/client/hook_events.go
+   * @description
+   * DebridLocalDownloadStartedEvent is triggered right after Seanime accepts a local debrid download.
+   */
+  function onDebridLocalDownloadStarted(
+    cb: (event: DebridLocalDownloadStartedEvent) => void
+  ): void;
+
+  interface DebridLocalDownloadStartedEvent {
+    next(): void;
+
+    torrentItemId: string;
+    torrentName: string;
+    destination: string;
+    downloadUrl: string;
+  }
+
+  /**
+   * @event DebridLocalDownloadCompletedEvent
+   * @file internal/debrid/client/hook_events.go
+   * @description
+   * DebridLocalDownloadCompletedEvent is triggered when Seanime finishes a local debrid download.
+   */
+  function onDebridLocalDownloadCompleted(
+    cb: (event: DebridLocalDownloadCompletedEvent) => void
+  ): void;
+
+  interface DebridLocalDownloadCompletedEvent {
+    next(): void;
+
+    torrentItemId: string;
+    torrentName: string;
+    destination: string;
+  }
+
+  /**
    * @package discordrpc_presence
    */
 
@@ -760,10 +939,10 @@ declare namespace $app {
    * @event DiscordPresenceAnimeActivityRequestedEvent
    * @file internal/discordrpc/presence/hook_events.go
    * @description
-   * DiscordPresenceAnimeActivityRequestedEvent is triggered when anime activity is requested, after the [animeActivity] is processed, and right before the activity is sent to queue.
-   * There is no guarantee as to when or if the activity will be successfully sent to discord.
-   * Note that this event is triggered every 6 seconds or so, avoid heavy processing or perform it only when the activity is changed.
-   * Prevent default to stop the activity from being sent to discord.
+   * DiscordPresenceAnimeActivityRequestedEvent is triggered when anime activity is requested, after the [animeActivity] is processed, and right
+   *     before the activity is sent to queue. There is no guarantee as to when or if the activity will be successfully sent to discord. Note that
+   *     this event is triggered every 6 seconds or so, avoid heavy processing or perform it only when the activity is changed. Prevent default to
+   *     stop the activity from being sent to discord.
    */
   function onDiscordPresenceAnimeActivityRequested(
     cb: (event: DiscordPresenceAnimeActivityRequestedEvent) => void
@@ -803,10 +982,10 @@ declare namespace $app {
    * @event DiscordPresenceMangaActivityRequestedEvent
    * @file internal/discordrpc/presence/hook_events.go
    * @description
-   * DiscordPresenceMangaActivityRequestedEvent is triggered when manga activity is requested, after the [mangaActivity] is processed, and right before the activity is sent to queue.
-   * There is no guarantee as to when or if the activity will be successfully sent to discord.
-   * Note that this event is triggered every 6 seconds or so, avoid heavy processing or perform it only when the activity is changed.
-   * Prevent default to stop the activity from being sent to discord.
+   * DiscordPresenceMangaActivityRequestedEvent is triggered when manga activity is requested, after the [mangaActivity] is processed, and right
+   *     before the activity is sent to queue. There is no guarantee as to when or if the activity will be successfully sent to discord. Note that
+   *     this event is triggered every 6 seconds or so, avoid heavy processing or perform it only when the activity is changed. Prevent default to
+   *     stop the activity from being sent to discord.
    */
   function onDiscordPresenceMangaActivityRequested(
     cb: (event: DiscordPresenceMangaActivityRequestedEvent) => void
@@ -884,9 +1063,8 @@ declare namespace $app {
    * @event HydrateOnlinestreamFillerDataRequestedEvent
    * @file internal/library/fillermanager/hook_events.go
    * @description
-   * HydrateOnlinestreamFillerDataRequestedEvent is triggered when the filler manager requests to hydrate the filler data for online streaming episodes.
-   * This is used by the online streaming episode list.
-   * Prevent default to skip the default behavior and return your own data.
+   * HydrateOnlinestreamFillerDataRequestedEvent is triggered when the filler manager requests to hydrate the filler data for online streaming
+   *     episodes. This is used by the online streaming episode list. Prevent default to skip the default behavior and return your own data.
    */
   function onHydrateOnlinestreamFillerDataRequested(
     cb: (event: HydrateOnlinestreamFillerDataRequestedEvent) => void
@@ -1225,9 +1403,9 @@ declare namespace $app {
    * @file internal/api/metadata/hook_events.go
    * @description
    * AnimeEpisodeMetadataEvent is triggered when anime episode metadata is available and is about to be returned.
-   * In the current implementation, episode metadata is requested for display purposes. It is used to get a more complete metadata object since the original AnimeMetadata object is not complete.
-   * This event is triggered after [AnimeEpisodeMetadataRequestedEvent].
-   * If the modified episode metadata is nil, an empty EpisodeMetadata object will be returned.
+   * In the current implementation, episode metadata is requested for display purposes. It is used to get a more complete metadata object since the
+   *     original AnimeMetadata object is not complete. This event is triggered after [AnimeEpisodeMetadataRequestedEvent]. If the modified episode
+   *     metadata is nil, an empty EpisodeMetadata object will be returned.
    */
   function onAnimeEpisodeMetadata(
     cb: (event: AnimeEpisodeMetadataEvent) => void
@@ -1624,8 +1802,8 @@ declare namespace $app {
    * PlaybackLocalFileDetailsRequestedEvent is triggered when the local files details for a specific path are requested.
    * This event is triggered right after the media player loads an episode.
    * The playback manager uses the local files details to track the progress, propose next episodes, etc.
-   * In the current implementation, the details are fetched by selecting the local file from the database and making requests to retrieve the media and anime list entry.
-   * Prevent default to skip the default fetching and override the details.
+   * In the current implementation, the details are fetched by selecting the local file from the database and making requests to retrieve the media
+   *     and anime list entry. Prevent default to skip the default fetching and override the details.
    */
   function onPlaybackLocalFileDetailsRequested(
     cb: (event: PlaybackLocalFileDetailsRequestedEvent) => void
@@ -1649,7 +1827,8 @@ declare namespace $app {
    * @description
    * PlaybackStreamDetailsRequestedEvent is triggered when the stream details are requested.
    * Prevent default to skip the default fetching and override the details.
-   * In the current implementation, the details are fetched by selecting the anime from the anime collection. If nothing is found, the stream is still tracked.
+   * In the current implementation, the details are fetched by selecting the anime from the anime collection. If nothing is found, the stream is
+   *     still tracked.
    */
   function onPlaybackStreamDetailsRequested(
     cb: (event: PlaybackStreamDetailsRequestedEvent) => void
@@ -1899,6 +2078,46 @@ declare namespace $app {
     localFile?: Anime_LocalFile;
     mediaId: number;
     episode: number;
+  }
+
+  /**
+   * @package torrent
+   */
+
+  /**
+   * @event TorrentSearchRequestedEvent
+   * @file internal/torrents/torrent/hook_events.go
+   * @description
+   * TorrentSearchRequestedEvent is triggered before Seanime searches anime torrents.
+   * Prevent default to skip the native search and return SearchData.
+   */
+  function onTorrentSearchRequested(
+    cb: (event: TorrentSearchRequestedEvent) => void
+  ): void;
+
+  interface TorrentSearchRequestedEvent {
+    next(): void;
+
+    preventDefault(): void;
+
+    options: Torrent_AnimeSearchOptions;
+    searchData?: Torrent_SearchData;
+  }
+
+  /**
+   * @event TorrentSearchEvent
+   * @file internal/torrents/torrent/hook_events.go
+   * @description
+   * TorrentSearchEvent is triggered after Seanime assembles the torrent search response.
+   * Handlers can mutate SearchData before it is cached and returned.
+   */
+  function onTorrentSearch(cb: (event: TorrentSearchEvent) => void): void;
+
+  interface TorrentSearchEvent {
+    next(): void;
+
+    options: Torrent_AnimeSearchOptions;
+    searchData?: Torrent_SearchData;
   }
 
   /**
@@ -3640,6 +3859,16 @@ declare namespace $app {
   }
 
   /**
+   * - Filepath: internal/library/autodownloader/autodownloader.go
+   * @description
+   *  Candidate represents a potential torrent to download with its score
+   */
+  interface AutoDownloader_Candidate {
+    Torrent?: AutoDownloader_NormalizedTorrent;
+    Score: number;
+  }
+
+  /**
    * - Filepath: internal/library/autodownloader/autodownloader_torrent.go
    */
   interface AutoDownloader_NormalizedTorrent {
@@ -3717,6 +3946,36 @@ declare namespace $app {
   interface Continuity_WatchHistoryItemResponse {
     item?: Continuity_WatchHistoryItem;
     found: boolean;
+  }
+
+  /**
+   * - Filepath: internal/debrid/debrid/debrid.go
+   */
+  interface Debrid_AddTorrentOptions {
+    magnetLink: string;
+    infoHash: string;
+    /**
+     * Real-Debrid only, ID, IDs, or "all"
+     */
+    selectFileId: string;
+  }
+
+  /**
+   * - Filepath: internal/debrid/debrid/debrid.go
+   */
+  interface Debrid_CachedFile {
+    size: number;
+    name: string;
+  }
+
+  /**
+   * - Filepath: internal/debrid/debrid/debrid.go
+   */
+  interface Debrid_TorrentItemInstantAvailability {
+    /**
+     * Key is the file ID (or index)
+     */
+    cachedFiles?: Record<string, Debrid_CachedFile>;
   }
 
   /**
@@ -4017,4 +4276,74 @@ declare namespace $app {
     | 'paused'
     | 'other'
     | 'stopped';
+
+  /**
+   * - Filepath: internal/torrents/torrent/search.go
+   */
+  interface Torrent_AnimeSearchOptions {
+    Provider: string;
+    Type: Torrent_AnimeSearchType;
+    Media?: AL_BaseAnime;
+    Query: string;
+    Batch: boolean;
+    EpisodeNumber: number;
+    BestReleases: boolean;
+    Resolution: string;
+    IncludeSpecialProviders: boolean;
+    SkipPreviews: boolean;
+  }
+
+  /**
+   * - Filepath: internal/torrents/torrent/search.go
+   */
+  export type Torrent_AnimeSearchType = 'smart' | 'simple';
+
+  /**
+   * - Filepath: internal/torrents/torrent/search.go
+   */
+  interface Torrent_Preview {
+    /**
+     * nil if batch
+     */
+    episode?: Anime_Episode;
+    torrent?: HibikeTorrent_AnimeTorrent;
+  }
+
+  /**
+   * - Filepath: internal/torrents/torrent/search.go
+   */
+  interface Torrent_SearchData {
+    /**
+     * Torrents found
+     */
+    torrents?: Array<HibikeTorrent_AnimeTorrent>;
+    /**
+     * TorrentPreview for each torrent
+     */
+    previews?: Array<Torrent_Preview>;
+    /**
+     * Torrent metadata
+     */
+    torrentMetadata?: Record<string, Torrent_TorrentMetadata>;
+    /**
+     * Debrid instant availability
+     */
+    debridInstantAvailability?: Record<
+      string,
+      Debrid_TorrentItemInstantAvailability
+    >;
+    /**
+     * Animap media
+     */
+    animeMetadata?: Metadata_AnimeMetadata;
+    includedSpecialProviders?: Array<string>;
+  }
+
+  /**
+   * - Filepath: internal/torrents/torrent/search.go
+   */
+  interface Torrent_TorrentMetadata {
+    distance: number;
+    metadata?: $habari.Metadata;
+  }
 }
