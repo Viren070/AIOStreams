@@ -278,8 +278,14 @@ export class YastreamPreset extends Preset {
       info: boolean;
       poster: 'rpdb' | 'erdb' | 'xrdb';
     }
+    const kisskhCatalogs = Array.isArray(options.kisskhCatalogs)
+      ? options.kisskhCatalogs
+      : [];
+    const onetouchtvCatalogs = Array.isArray(options.onetouchtvCatalogs)
+      ? options.onetouchtvCatalogs
+      : [];
     const userConfig: UserConfig = {
-      catalogs: [options.kisskhCatalogs, options.onetouchtvCatalogs].flat(),
+      catalogs: [...kisskhCatalogs, ...onetouchtvCatalogs],
       stream: [],
       catalog: [],
       nsfw: options.nsfw,
@@ -287,12 +293,12 @@ export class YastreamPreset extends Preset {
       poster: options.poster,
     };
     // catalogs
-    if (options.kisskhCatalogs) {
+    if (kisskhCatalogs.length > 0) {
       userConfig.catalogs.push('kisskh.series.Search');
       userConfig.catalogs.push('kisskh.movies.Search');
       userConfig.catalog.push(Provider.KISSKH);
     }
-    if (options.onetouchtvCatalogs) {
+    if (onetouchtvCatalogs.length > 0) {
       userConfig.catalogs.push('onetouchtv.series.Search');
       userConfig.catalog.push(Provider.ONETOUCHTV);
     }
