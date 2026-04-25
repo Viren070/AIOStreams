@@ -855,7 +855,7 @@ const logStartupInfo = () => {
     }
 
     // Torrentio
-    logKeyValue('Torrentio:', Env.TORRENTIO_URL);
+    logKeyValue('Torrentio:', Env.TORRENTIO_URL.join(', '));
     if (Env.DEFAULT_TORRENTIO_TIMEOUT) {
       logKeyValue(
         '  Timeout:',
