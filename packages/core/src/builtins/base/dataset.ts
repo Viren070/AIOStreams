@@ -66,6 +66,15 @@ export abstract class BaseDataset {
         this.logger.info('Loaded dataset from file');
         // Reset retry count on successful load
         this.syncRetryCount = 0;
+
+        const stat = await fs.stat(this.DATA_PATH);
+        const ageMs = Date.now() - stat.mtimeMs;
+        if (ageMs > this.REFRESH_INTERVAL_MS) {
+          this.logger.info(
+            `Dataset is stale (${Math.round(ageMs / 1000)}s old, interval: ${this.REFRESH_INTERVAL_MS / 1000}s), syncing now...`
+          );
+          await this.syncWithRetry();
+        }
       } catch (error) {
         this.logger.error('Failed to load dataset, forcing resync...:', error);
         await this.syncWithRetry();
