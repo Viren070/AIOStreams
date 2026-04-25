@@ -460,7 +460,6 @@ function InstallCard({
               logoSrc="https://seanime.app/seanime-logo.png"
               name="Seanime"
               description="Anime-focused client"
-              beta
               onClick={onOpenSeanime}
               disabled={disableSeanimeCard}
               disabledReason={seanimeDisabledReason}
