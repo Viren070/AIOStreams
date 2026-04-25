@@ -43,12 +43,18 @@ export type SortCriterion = z.infer<typeof SortCriterion>;
 const StreamTypes = z.enum(constants.STREAM_TYPES);
 const Languages = z.enum(constants.LANGUAGES);
 
+const FormatterTemplateShape = z.object({
+  name: z.string().max(Env.MAX_FORMATTER_TEMPLATE_LENGTH),
+  description: z.string().max(Env.MAX_FORMATTER_TEMPLATE_LENGTH),
+});
+
 const Formatter = z.object({
   id: z.enum(constants.FORMATTERS),
-  definition: z
+  definitions: z
     .object({
-      name: z.string().max(Env.MAX_FORMATTER_TEMPLATE_LENGTH),
-      description: z.string().max(Env.MAX_FORMATTER_TEMPLATE_LENGTH),
+      custom: FormatterTemplateShape.optional(),
+      overrides: z.record(z.string(), FormatterTemplateShape).optional(),
+      saved: z.record(z.string(), FormatterTemplateShape).optional(),
     })
     .optional(),
 });

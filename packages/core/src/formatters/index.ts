@@ -3,7 +3,7 @@ export * from './predefined.js';
 export * from './custom.js';
 export * from './utils.js';
 
-import { BaseFormatter, FormatterConfig, FormatterContext } from './base.js';
+import { BaseFormatter, FormatterContext } from './base.js';
 import {
   TorrentioFormatter,
   TorboxFormatter,
@@ -14,10 +14,24 @@ import {
   TamtaroFormatter,
 } from './predefined.js';
 import { CustomFormatter } from './custom.js';
-import { UserData } from '../db/schemas.js';
 
 export function createFormatter(ctx: FormatterContext): BaseFormatter {
-  switch (ctx.userData.formatter.id) {
+  const { formatter } = ctx.userData;
+
+  if (formatter.id === 'custom') {
+    if (!formatter?.definitions?.custom) {
+      throw new Error('Definition is required for custom formatter');
+    }
+    return CustomFormatter.fromConfig(formatter.definitions.custom, ctx);
+  }
+
+  // A per-formatter override replaces the built-in template while keeping the id.
+  const perIdOverride = formatter?.definitions?.overrides?.[formatter.id];
+  if (perIdOverride) {
+    return CustomFormatter.fromConfig(perIdOverride, ctx);
+  }
+
+  switch (formatter.id) {
     case 'torrentio':
       return new TorrentioFormatter(ctx);
     case 'torbox':
@@ -32,12 +46,7 @@ export function createFormatter(ctx: FormatterContext): BaseFormatter {
       return new PrismFormatter(ctx);
     case 'tamtaro':
       return new TamtaroFormatter(ctx);
-    case 'custom':
-      if (!ctx.userData.formatter.definition) {
-        throw new Error('Definition is required for custom formatter');
-      }
-      return CustomFormatter.fromConfig(ctx.userData.formatter.definition, ctx);
     default:
-      throw new Error(`Unknown formatter type: ${ctx.userData.formatter.id}`);
+      throw new Error(`Unknown formatter type: ${formatter.id}`);
   }
 }

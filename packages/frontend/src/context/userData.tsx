@@ -233,6 +233,14 @@ export function applyMigrations(config: any): UserData {
     });
   }
 
+  if (config.formatter && config.formatter.definition) {
+    config.formatter.definitions = {
+      ...(config.formatter.definitions ?? {}),
+      custom: config.formatter.definition,
+    };
+    delete config.formatter.definition;
+  }
+
   return config;
 }
 
