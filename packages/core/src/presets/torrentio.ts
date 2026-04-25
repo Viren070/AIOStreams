@@ -161,6 +161,10 @@ export class TorrentioPreset extends Preset {
       label: 'AniDex',
     },
     {
+      value: 'nekobt',
+      label: 'NekoBT',
+    },
+    {
       value: 'rutor',
       label: 'Rutor',
     },
@@ -175,6 +179,10 @@ export class TorrentioPreset extends Preset {
     {
       value: 'bludv',
       label: 'BluDV',
+    },
+    {
+      value: 'micoleaodublado',
+      label: 'MicoLeaoDublado',
     },
     {
       value: 'torrent9',
