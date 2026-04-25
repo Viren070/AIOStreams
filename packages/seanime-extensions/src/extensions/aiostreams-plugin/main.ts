@@ -1643,6 +1643,43 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document
       return 'desktop';
     }
 
+    function parseSemVersion(version: string): {
+      major: number;
+      minor: number;
+      patch: number;
+    } {
+      const match = version.match(/^v?(\d+)\.(\d+)\.(\d+)/);
+      if (!match) {
+        throw new Error(`Invalid version format: ${version}`);
+      }
+      return {
+        major: parseInt(match[1], 10),
+        minor: parseInt(match[2], 10),
+        patch: parseInt(match[3], 10),
+      };
+    }
+
+    const versionRequired = { major: 3, minor: 7, patch: 0 };
+
+    function doVersionCheck(): void {
+      const ver = $app.getVersion as unknown as string;
+      const { major, minor, patch } = parseSemVersion(ver);
+
+      if (
+        major < versionRequired.major ||
+        (major === versionRequired.major && minor < versionRequired.minor) ||
+        (major === versionRequired.major &&
+          minor === versionRequired.minor &&
+          patch < versionRequired.patch)
+      ) {
+        throw new Error(
+          `AIOStreams plugin requires Seanime v${versionRequired.major}.${versionRequired.minor}.${versionRequired.patch} or higher. Current version: ${ver}. Please update Seanime to use this plugin.`
+        );
+      }
+    }
+
+    doVersionCheck();
+
     const episodePalette = ctx.newCommandPalette({
       placeholder: 'Select an episode...',
     });
