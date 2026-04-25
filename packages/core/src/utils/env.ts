@@ -1394,8 +1394,8 @@ export const Env = cleanEnv(process.env, {
   }),
 
   // Torrentio settings
-  TORRENTIO_URL: url({
-    default: 'https://torrentio.strem.fun',
+  TORRENTIO_URL: urlOrUrlList({
+    default: ['https://torrentio.strem.fun'],
     desc: 'Torrentio URL',
   }),
   DEFAULT_TORRENTIO_TIMEOUT: num({
