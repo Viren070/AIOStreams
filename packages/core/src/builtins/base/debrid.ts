@@ -639,6 +639,16 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         if (nonImdbEpisodesBefore > 0) {
           absoluteEpisode += nonImdbEpisodesBefore;
         }
+
+        if (relativeAbsoluteEpisode) {
+          const nonImdbEpisodesBeforeRelative =
+            animeEntry.imdb.nonImdbEpisodes.filter(
+              (ep) => ep < relativeAbsoluteEpisode!
+            ).length;
+          if (nonImdbEpisodesBeforeRelative > 0) {
+            relativeAbsoluteEpisode += nonImdbEpisodesBeforeRelative;
+          }
+        }
       }
     }
 

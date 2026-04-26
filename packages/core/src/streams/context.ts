@@ -250,6 +250,16 @@ export class StreamContext {
             if (nonImdbEpisodesBefore > 0) {
               absoluteEpisode += nonImdbEpisodesBefore;
             }
+
+            if (relativeAbsoluteEpisode) {
+              const nonImdbEpisodesBeforeRelative =
+                this.animeEntry.imdb.nonImdbEpisodes.filter(
+                  (ep: number) => ep < relativeAbsoluteEpisode!
+                ).length;
+              if (nonImdbEpisodesBeforeRelative > 0) {
+                relativeAbsoluteEpisode += nonImdbEpisodesBeforeRelative;
+              }
+            }
           }
         }
 
