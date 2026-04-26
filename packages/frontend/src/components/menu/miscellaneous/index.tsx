@@ -5,10 +5,11 @@ import { PageControls } from '../../shared/page-controls';
 import { MenuTabs } from '../../shared/menu-tabs';
 import { useMode } from '@/context/mode';
 import { FaRocket, FaPlay, FaEye } from 'react-icons/fa';
-import { FiSettings } from 'react-icons/fi';
+import { FiSettings, FiLink } from 'react-icons/fi';
 import { BackgroundOptimization } from './_components/background-optimization';
 import { PlaybackBehavior } from './_components/playback-behavior';
 import { DisplayDebug } from './_components/display-debug';
+import { ParentConfig } from './_components/parent-config';
 
 export function MiscellaneousMenu() {
   return (
@@ -26,7 +27,7 @@ function Content() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('misc-tab');
-    if (tab && ['background', 'playback', 'display'].includes(tab)) {
+    if (tab && ['background', 'playback', 'display', 'parent'].includes(tab)) {
       setActiveTab(tab);
     }
   }, []);
@@ -98,6 +99,12 @@ function Content() {
                   </p>
                 </div>
               ),
+          },
+          {
+            value: 'parent',
+            label: 'Parent Config',
+            icon: <FiLink className="w-4 h-4" />,
+            content: <ParentConfig />,
           },
         ]}
         activeTab={activeTab}

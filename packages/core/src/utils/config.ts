@@ -1411,3 +1411,169 @@ async function validateProxy(
   }
   return proxy;
 }
+
+// ---------------------------------------------------------------------------
+// Config inheritance / parent merging
+// ---------------------------------------------------------------------------
+
+// prettier-ignore
+const FILTER_FIELDS: (keyof UserData)[] = [
+  'excludedResolutions', 'includedResolutions', 'requiredResolutions', 'preferredResolutions',
+  'excludedQualities', 'includedQualities', 'requiredQualities', 'preferredQualities',
+  'excludedLanguages', 'includedLanguages', 'requiredLanguages', 'preferredLanguages',
+  'excludedVisualTags', 'includedVisualTags', 'requiredVisualTags', 'preferredVisualTags',
+  'excludedAudioTags', 'includedAudioTags', 'requiredAudioTags', 'preferredAudioTags',
+  'excludedAudioChannels', 'includedAudioChannels', 'requiredAudioChannels', 'preferredAudioChannels',
+  'excludedStreamTypes', 'includedStreamTypes', 'requiredStreamTypes', 'preferredStreamTypes',
+  'excludedEncodes', 'includedEncodes', 'requiredEncodes', 'preferredEncodes',
+  'excludedRegexPatterns', 'includedRegexPatterns', 'requiredRegexPatterns',
+  'preferredRegexPatterns', 'rankedRegexPatterns', 'regexOverrides', 'selOverrides',
+  'syncedPreferredRegexUrls', 'syncedExcludedRegexUrls', 'syncedIncludedRegexUrls',
+  'syncedRequiredRegexUrls', 'syncedRankedRegexUrls',
+  'syncedPreferredStreamExpressionUrls', 'syncedExcludedStreamExpressionUrls',
+  'syncedIncludedStreamExpressionUrls', 'syncedRequiredStreamExpressionUrls',
+  'syncedRankedStreamExpressionUrls',
+  'excludedStreamExpressions', 'requiredStreamExpressions', 'preferredStreamExpressions',
+  'includedStreamExpressions', 'rankedStreamExpressions',
+  'excludedKeywords', 'includedKeywords', 'requiredKeywords', 'preferredKeywords',
+  'excludedReleaseGroups', 'includedReleaseGroups', 'requiredReleaseGroups', 'preferredReleaseGroups',
+  'enableSeadex', 'excludeSeasonPacks',
+  'excludeCached', 'excludeCachedFromAddons', 'excludeCachedFromServices',
+  'excludeCachedFromStreamTypes', 'excludeCachedMode',
+  'excludeUncached', 'excludeUncachedFromAddons', 'excludeUncachedFromServices',
+  'excludeUncachedFromStreamTypes', 'excludeUncachedMode',
+  'excludeSeederRange', 'includeSeederRange', 'requiredSeederRange', 'seederRangeTypes',
+  'excludeAgeRange', 'includeAgeRange', 'requiredAgeRange', 'ageRangeTypes',
+  'digitalReleaseFilter', 'size', 'bitrate',
+];
+
+// prettier-ignore
+const SORTING_FIELDS: (keyof UserData)[] = [
+  'sortCriteria', 'deduplicator', 'resultLimits',
+];
+
+// prettier-ignore
+const FORMATTER_FIELDS: (keyof UserData)[] = [
+  'formatter', 'appliedTemplates',
+];
+
+// prettier-ignore
+const PROXY_FIELDS: (keyof UserData)[] = [
+  'proxy',
+];
+
+// prettier-ignore
+const METADATA_FIELDS: (keyof UserData)[] = [
+  'tmdbApiKey', 'tmdbAccessToken', 'tvdbApiKey',
+  'rpdbApiKey', 'topPosterApiKey', 'aioratingsApiKey', 'aioratingsProfileId',
+  'openposterdbApiKey', 'openposterdbUrl', 'posterService',
+  'usePosterRedirectApi', 'usePosterServiceForMeta',
+];
+
+// prettier-ignore
+const MISC_FIELDS: (keyof UserData)[] = [
+  'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
+  'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
+  'hideErrors', 'hideErrorsForResources', 'titleMatching', 'yearMatching',
+  'seasonEpisodeMatching', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
+  'addonName', 'addonLogo', 'addonBackground', 'addonDescription', 'addonPassword',
+  'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
+  'randomiseResults', 'enhanceResults', 'enhancePosters',
+];
+
+function applyBinarySection(
+  result: UserData,
+  parent: UserData,
+  strategy: 'inherit' | 'override',
+  fields: (keyof UserData)[]
+): void {
+  if (strategy !== 'inherit') return;
+  for (const field of fields) {
+    if (parent[field] !== undefined) {
+      (result as any)[field] = parent[field];
+    } else {
+      delete (result as any)[field];
+    }
+  }
+}
+
+export function mergeConfigs(parent: UserData, child: UserData): UserData {
+  const strategies = child.parentConfig?.mergeStrategies;
+  const result: UserData = { ...child };
+
+  // Presets & groups
+  const presetsMerge = strategies?.presets ?? 'inherit';
+  if (presetsMerge === 'inherit') {
+    result.presets = parent.presets;
+    result.groups = parent.groups;
+  } else if (presetsMerge === 'extend') {
+    const merged = [...(parent.presets ?? [])];
+    for (const cp of child.presets ?? []) {
+      const idx = merged.findIndex((p) => p.instanceId === cp.instanceId);
+      if (idx >= 0) merged[idx] = cp;
+      else merged.push(cp);
+    }
+    result.presets = merged;
+    result.groups = child.groups ?? parent.groups;
+  }
+  // 'override': keep child's presets already in result
+
+  // Services
+  const servicesMerge = strategies?.services ?? 'inherit';
+  if (servicesMerge === 'inherit') {
+    result.services = parent.services;
+  } else if (servicesMerge === 'extend') {
+    const merged = [...(parent.services ?? [])];
+    for (const cs of child.services ?? []) {
+      const idx = merged.findIndex((s) => s.id === cs.id);
+      if (cs.enabled === false && idx >= 0) {
+        merged.splice(idx, 1);
+      } else if (idx >= 0) {
+        merged[idx] = cs;
+      } else {
+        merged.push(cs);
+      }
+    }
+    result.services = merged;
+  }
+  // 'override': keep child's services already in result
+
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.filters ?? 'inherit',
+    FILTER_FIELDS
+  );
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.sorting ?? 'inherit',
+    SORTING_FIELDS
+  );
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.formatter ?? 'inherit',
+    FORMATTER_FIELDS
+  );
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.proxy ?? 'inherit',
+    PROXY_FIELDS
+  );
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.metadata ?? 'inherit',
+    METADATA_FIELDS
+  );
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.misc ?? 'inherit',
+    MISC_FIELDS
+  );
+
+  return result;
+}

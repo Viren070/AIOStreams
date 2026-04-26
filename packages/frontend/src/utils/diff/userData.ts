@@ -11,6 +11,9 @@ export function filterForDiff(d: UserData | null): UserData | null {
   delete filtered.trusted;
   delete filtered.encryptedPassword;
   delete filtered.showChanges;
+  if (filtered.parentConfig?.password) {
+    filtered.parentConfig = { ...filtered.parentConfig, password: '[hidden]' };
+  }
   return sortKeys(filtered) as UserData;
 }
 

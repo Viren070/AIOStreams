@@ -258,4 +258,36 @@ router.post('/password', async (req, res, next) => {
   }
 });
 
+// verify a UUID + password pair (used when linking a parent config)
+router.post('/verify', async (req, res, next) => {
+  const { uuid, password } = req.body;
+  if (typeof uuid !== 'string' || typeof password !== 'string') {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'uuid and password must be strings'
+      )
+    );
+    return;
+  }
+
+  try {
+    const { createdAt } = await UserRepository.verifyUser(uuid, password);
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Credentials verified successfully',
+        data: { uuid, createdAt },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
 export default router;

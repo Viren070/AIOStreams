@@ -270,6 +270,18 @@ export async function updateUserConfig(
 }
 
 /**
+ * Verify a UUID + password pair (used when linking a parent config)
+ */
+export async function verifyParentConfig(
+  uuid: string,
+  password: string
+): Promise<{ uuid: string; createdAt: string }> {
+  return api<{ uuid: string; createdAt: string }>('POST /user/verify', {
+    body: { uuid, password },
+  });
+}
+
+/**
  * Delete user
  */
 export async function deleteUserConfig(uuid: string, password: string) {

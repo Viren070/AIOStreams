@@ -543,3 +543,23 @@ export function useUserData() {
   }
   return context;
 }
+
+export function useParentInheritance() {
+  const { userData } = useUserData();
+  const parentConfig = userData?.parentConfig;
+  const strategies = parentConfig?.mergeStrategies;
+
+  function isInherited(
+    section: 'presets' | 'services' | 'filters' | 'sorting' | 'formatter' | 'proxy' | 'metadata' | 'misc'
+  ): boolean {
+    if (!parentConfig) return false;
+    const strategy = strategies?.[section] ?? 'inherit';
+    return strategy === 'inherit';
+  }
+
+  return {
+    hasParent: !!parentConfig,
+    parentUuid: parentConfig?.uuid,
+    isInherited,
+  };
+}

@@ -365,8 +365,31 @@ export const CacheAndPlaySchema = z
 
 export type CacheAndPlay = z.infer<typeof CacheAndPlaySchema>;
 
+const MergeStrategy = z.enum(['inherit', 'extend', 'override']);
+const BinaryMergeStrategy = z.enum(['inherit', 'override']);
+
+export const ParentConfigSchema = z.object({
+  uuid: z.string().uuid(),
+  password: z.string().min(1),
+  mergeStrategies: z
+    .object({
+      presets: MergeStrategy.default('inherit'),
+      services: MergeStrategy.default('inherit'),
+      filters: BinaryMergeStrategy.default('inherit'),
+      sorting: BinaryMergeStrategy.default('inherit'),
+      formatter: BinaryMergeStrategy.default('inherit'),
+      proxy: BinaryMergeStrategy.default('inherit'),
+      metadata: BinaryMergeStrategy.default('inherit'),
+      misc: BinaryMergeStrategy.default('inherit'),
+    })
+    .optional(),
+});
+
+export type ParentConfig = z.infer<typeof ParentConfigSchema>;
+
 export const UserDataSchema = z.object({
   uuid: z.string().uuid().optional(),
+  parentConfig: ParentConfigSchema.optional(),
   encryptedPassword: z.string().min(1).optional(),
   trusted: z.boolean().optional(),
   showChanges: z.boolean().optional(),

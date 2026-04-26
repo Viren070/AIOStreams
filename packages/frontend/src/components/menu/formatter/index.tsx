@@ -3,6 +3,8 @@ import { PageWrapper } from '../../shared/page-wrapper';
 import { PageControls } from '../../shared/page-controls';
 import { FormatterSelection } from './formatter-selection';
 import { FormatterPreview } from './formatter-preview';
+import { useParentInheritance } from '@/context/userData';
+import { InheritedBadge } from '../../shared/inherited-badge';
 
 export function FormatterMenu() {
   return (
@@ -13,11 +15,15 @@ export function FormatterMenu() {
 }
 
 function Content() {
+  const { isInherited, hasParent } = useParentInheritance();
   return (
     <>
       <div className="flex items-center w-full">
         <div>
-          <h2>Formatter</h2>
+          <div className="flex items-center gap-2">
+            <h2>Formatter</h2>
+            {hasParent && isInherited('formatter') && <InheritedBadge section="formatter" />}
+          </div>
           <p className="text-[--muted]">Format your streams to your liking.</p>
         </div>
         <div className="hidden lg:block lg:ml-auto">

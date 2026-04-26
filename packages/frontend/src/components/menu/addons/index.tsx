@@ -9,7 +9,8 @@ import React, {
 import { CatalogModification } from '@aiostreams/core';
 import { PageWrapper } from '../../shared/page-wrapper';
 import { useStatus } from '@/context/status';
-import { useUserData } from '@/context/userData';
+import { useUserData, useParentInheritance } from '@/context/userData';
+import { InheritedBadge } from '../../shared/inherited-badge';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
 import { TextInput } from '../../ui/text-input';
@@ -47,6 +48,7 @@ function Content() {
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
+  const { isInherited, hasParent } = useParentInheritance();
   const [page, setPage] = useState<'installed' | 'marketplace'>('installed');
   const [installedTab, setInstalledTab] = useState<'addons' | 'catalogs'>(
     'addons'
@@ -342,7 +344,10 @@ function Content() {
           >
             <>
               <div>
-                <h2>Installed</h2>
+                <div className="flex items-center gap-2">
+                  <h2>Installed</h2>
+                  {hasParent && isInherited('presets') && <InheritedBadge section="presets" />}
+                </div>
                 <p className="text-[--muted] text-sm">
                   Manage your installed addons and catalog settings.
                 </p>

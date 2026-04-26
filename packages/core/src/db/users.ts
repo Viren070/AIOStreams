@@ -13,6 +13,7 @@ import {
   verifyHash,
   validateConfig,
   applyMigrations,
+  mergeConfigs,
 } from '../utils/index.js';
 
 const APIError = constants.APIError;
@@ -129,21 +130,95 @@ export class UserRepository {
     password: string
   ): Promise<UserData | null> {
     try {
+      let config = await this.loadRawUser(uuid, password);
+
+      if (config.parentConfig?.uuid) {
+        try {
+          const parent = await this.loadRawUser(
+            config.parentConfig.uuid,
+            config.parentConfig.password
+          );
+          config = mergeConfigs(parent, config);
+          logger.info(
+            `Merged parent config ${config.parentConfig!.uuid} for user ${uuid}`
+          );
+        } catch (e) {
+          logger.warn(
+            `Could not load parent config ${config.parentConfig!.uuid} for user ${uuid}: ${e instanceof Error ? e.message : String(e)}`
+          );
+        }
+      }
+
+      logger.info(`Retrieved configuration for user ${uuid}`);
+      return config;
+    } catch (error) {
+      if (error instanceof APIError) return Promise.reject(error);
+      logger.error(
+        `Error retrieving user ${uuid}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return Promise.reject(new APIError(constants.ErrorCode.DATABASE_ERROR));
+    }
+  }
+
+  private static async loadRawUser(
+    uuid: string,
+    password: string
+  ): Promise<UserData> {
+    const result = await db.query(
+      'SELECT config, config_salt, password_hash FROM users WHERE uuid = ?',
+      [uuid]
+    );
+
+    if (!result.length || !result[0].config) {
+      return Promise.reject(
+        new APIError(constants.ErrorCode.USER_INVALID_DETAILS)
+      );
+    }
+
+    await db.execute(
+      'UPDATE users SET accessed_at = CURRENT_TIMESTAMP WHERE uuid = ?',
+      [uuid]
+    );
+
+    const isValid = await this.verifyUserPassword(
+      password,
+      result[0].password_hash
+    );
+    if (!isValid) {
+      return Promise.reject(
+        new APIError(constants.ErrorCode.USER_INVALID_DETAILS)
+      );
+    }
+
+    const decryptedConfig = await this.decryptConfig(
+      result[0].config,
+      password,
+      result[0].config_salt
+    );
+
+    decryptedConfig.trusted =
+      Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
+      false;
+    decryptedConfig.uuid = uuid;
+    decryptedConfig.ip = undefined;
+    return applyMigrations(decryptedConfig);
+  }
+
+  static async verifyUser(
+    uuid: string,
+    password: string
+  ): Promise<{ createdAt: string }> {
+    try {
       const result = await db.query(
-        'SELECT config, config_salt, password_hash FROM users WHERE uuid = ?',
+        'SELECT password_hash, created_at FROM users WHERE uuid = ?',
         [uuid]
       );
 
-      if (!result.length || !result[0].config) {
+      if (!result.length) {
         return Promise.reject(
           new APIError(constants.ErrorCode.USER_INVALID_DETAILS)
         );
       }
-
-      await db.execute(
-        'UPDATE users SET accessed_at = CURRENT_TIMESTAMP WHERE uuid = ?',
-        [uuid]
-      );
 
       const isValid = await this.verifyUserPassword(
         password,
@@ -155,49 +230,11 @@ export class UserRepository {
         );
       }
 
-      const decryptedConfig = await this.decryptConfig(
-        result[0].config,
-        password,
-        result[0].config_salt
-      );
-
-      // try {
-      //   // skip errors, and dont decrypt credentials either, as this would make
-      //   // encryption pointless
-      //   validatedConfig = await validateConfig(decryptedConfig, true, false);
-      // } catch (error: any) {
-      //   return Promise.reject(
-      //     new APIError(
-      //       constants.ErrorCode.USER_INVALID_CONFIG,
-      //       undefined,
-      //       error.message
-      //     )
-      //   );
-      // }
-      // const {
-      //   success,
-      //   data: validatedConfig,
-      //   error,
-      // } = UserDataSchema.safeParse(decryptedConfig);
-      // if (!success) {
-      //   return Promise.reject(
-      //     new APIError(
-      //       constants.ErrorCode.USER_INVALID_CONFIG,
-      //       undefined,
-      //       formatZodError(error)
-      //     )
-      //   );
-      // }
-      decryptedConfig.trusted =
-        Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
-        false;
-      decryptedConfig.uuid = uuid;
-      decryptedConfig.ip = undefined;
-      logger.info(`Retrieved configuration for user ${uuid}`);
-      return applyMigrations(decryptedConfig);
+      return { createdAt: result[0].created_at };
     } catch (error) {
+      if (error instanceof APIError) return Promise.reject(error);
       logger.error(
-        `Error retrieving user ${uuid}: ${error instanceof Error ? error.message : String(error)}`
+        `Error verifying user ${uuid}: ${error instanceof Error ? error.message : String(error)}`
       );
       return Promise.reject(new APIError(constants.ErrorCode.DATABASE_ERROR));
     }
@@ -220,6 +257,10 @@ export class UserRepository {
 
         if (!currentUser.rows.length) {
           throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+        }
+
+        if (config.parentConfig?.uuid === uuid) {
+          throw new APIError(constants.ErrorCode.PARENT_CONFIG_SELF_REFERENCE);
         }
 
         if (

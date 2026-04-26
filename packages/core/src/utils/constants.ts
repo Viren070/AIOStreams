@@ -8,6 +8,7 @@ export enum ErrorCode {
   USER_NEW_PASSWORD_TOO_SHORT = 'USER_NEW_PASSWORD_TOO_SHORT',
   USER_NEW_PASSWORD_TOO_SIMPLE = 'USER_NEW_PASSWORD_TOO_SIMPLE',
   ADDON_PASSWORD_INVALID = 'ADDON_PASSWORD_INVALID',
+  PARENT_CONFIG_SELF_REFERENCE = 'PARENT_CONFIG_SELF_REFERENCE',
   // Database
   DATABASE_ERROR = 'DATABASE_ERROR',
   // Encryption
@@ -59,6 +60,10 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
   [ErrorCode.ADDON_PASSWORD_INVALID]: {
     statusCode: 401,
     message: 'Invalid addon password',
+  },
+  [ErrorCode.PARENT_CONFIG_SELF_REFERENCE]: {
+    statusCode: 400,
+    message: 'A config cannot inherit from itself',
   },
   [ErrorCode.DATABASE_ERROR]: {
     statusCode: 500,

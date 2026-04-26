@@ -4,7 +4,8 @@ import { PageControls } from '../shared/page-controls';
 import { PageWrapper } from '../shared/page-wrapper';
 import { SettingsCard } from '../shared/settings-card';
 import { Combobox } from '../ui/combobox';
-import { useUserData } from '@/context/userData';
+import { useUserData, useParentInheritance } from '@/context/userData';
+import { InheritedBadge } from '../shared/inherited-badge';
 import { IconButton } from '../ui/button';
 import { MenuTabs } from '../shared/menu-tabs';
 import {
@@ -649,6 +650,7 @@ export function SortingMenu() {
 
 function Content() {
   const { userData, setUserData } = useUserData();
+  const { isInherited, hasParent } = useParentInheritance();
   const [activeTab, setActiveTab] = useState('global');
 
   useEffect(() => {
@@ -704,7 +706,10 @@ function Content() {
     <>
       <div className="flex items-center w-full">
         <div>
-          <h2>Sorting</h2>
+          <div className="flex items-center gap-2">
+            <h2>Sorting</h2>
+            {hasParent && isInherited('sorting') && <InheritedBadge section="sorting" />}
+          </div>
           <p className="text-[--muted]">
             Configure how your streams are sorted and organised.
           </p>

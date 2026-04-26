@@ -65,6 +65,8 @@ import { Slider } from '../../ui/slider/slider';
 import MarkdownLite from '../../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@/utils/clipboard';
+import { useParentInheritance } from '@/context/userData';
+import { InheritedBadge } from '../../shared/inherited-badge';
 
 import { FilterSettings } from './_components/filter-settings';
 import {
@@ -180,6 +182,7 @@ function Content() {
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
+  const { isInherited, hasParent } = useParentInheritance();
   const allowedRegexModal = useDisclosure(false);
   const allowedRegexUrlsModal = useDisclosure(false);
   const whitelistedSelUrlsModal = useDisclosure(false);
@@ -316,7 +319,10 @@ function Content() {
           <SettingsNavCard>
             <div className="flex flex-col gap-4 md:flex-row justify-between items-center">
               <div className="space-y-1 my-2 px-2">
-                <h4 className="text-center md:text-left">Filters</h4>
+                <div className="flex items-center gap-2 justify-center md:justify-start">
+                  <h4>Filters</h4>
+                  {hasParent && isInherited('filters') && <InheritedBadge section="filters" />}
+                </div>
               </div>
               <div></div>
             </div>

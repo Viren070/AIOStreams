@@ -5,6 +5,8 @@ import { PageControls } from '../../shared/page-controls';
 import { MenuTabs } from '../../shared/menu-tabs';
 import { useMode } from '@/context/mode';
 import { FiServer, FiSettings, FiDatabase, FiImage } from 'react-icons/fi';
+import { useParentInheritance } from '@/context/userData';
+import { InheritedBadge } from '../../shared/inherited-badge';
 import { StreamServices } from './_components/stream-services';
 import { BuiltinSettings } from './_components/builtin-settings';
 import { MetadataServices } from './_components/metadata-services';
@@ -20,6 +22,7 @@ export function ServicesMenu() {
 
 function Content() {
   const { mode } = useMode();
+  const { isInherited, hasParent } = useParentInheritance();
   const [activeTab, setActiveTab] = useState('services');
 
   useEffect(() => {
@@ -45,7 +48,10 @@ function Content() {
     <>
       <div className="flex items-center w-full">
         <div>
-          <h2>Services</h2>
+          <div className="flex items-center gap-2">
+            <h2>Services</h2>
+            {hasParent && isInherited('services') && <InheritedBadge section="services" />}
+          </div>
           <p className="text-[--muted]">
             Configure your debrid, metadata, and poster services.
           </p>
