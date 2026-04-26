@@ -1,4 +1,5 @@
 import {
+  Addon,
   Option,
   ParsedFile,
   ParsedStream,
@@ -248,6 +249,21 @@ export class NekoBtPreset extends TorznabPreset {
         ],
       },
       {
+        id: 'searchMode',
+        name: 'Search Mode',
+        description:
+          'The search mode to use when querying the nekoBT endpoint. **Note**: `Both` will result in two addons being created, one for each search mode.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'both',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Forced Query', value: 'query' },
+          { label: 'Both', value: 'both' },
+        ],
+      },
+      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
@@ -299,7 +315,7 @@ export class NekoBtPreset extends TorznabPreset {
       apiKey: options.apiKey,
       apiPath: '/api',
       paginate: false,
-      forceQuerySearch: true,
+      forceQuerySearch: options.forceQuerySearch ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
