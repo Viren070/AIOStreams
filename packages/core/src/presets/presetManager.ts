@@ -47,6 +47,7 @@ import { FKStreamPreset } from './fkstream.js';
 import { FlixStreamsPreset } from './flixStreams.js';
 import { AIOSubtitlePreset } from './aiosubtitle.js';
 import { SubHeroPreset } from './subhero.js';
+import { YastreamPreset } from './yastream.js';
 import { StreamAsiaPreset } from './streamasia.js';
 import { MoreLikeThisPreset } from './moreLikeThis.js';
 import { GDriveAPI } from '../builtins/gdrive/index.js';
@@ -128,6 +129,7 @@ let PRESET_LIST: string[] = [
   'flix-streams',
   'astream',
   'brazuca-torrents',
+  'yastream',
   'streamasia',
   'usa-tv',
   'argentina-tv',
@@ -280,6 +282,8 @@ export class PresetManager {
         return AIOSubtitlePreset;
       case 'subhero':
         return SubHeroPreset;
+      case 'yastream':
+        return YastreamPreset;
       case 'streamasia':
         return StreamAsiaPreset;
       case 'more-like-this':

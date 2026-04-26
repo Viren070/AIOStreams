@@ -2028,6 +2028,19 @@ export const Env = cleanEnv(process.env, {
     desc: 'Default SubHero user agent',
   }),
 
+  YASTREAM_URL: url({
+    default: 'https://yastream.tamthai.de',
+    desc: 'yastream URL',
+  }),
+  DEFAULT_YASTREAM_TIMEOUT: num({
+    default: undefined,
+    desc: 'Default yastream timeout',
+  }),
+  DEFAULT_YASTREAM_USER_AGENT: userAgent({
+    default: undefined,
+    desc: 'Default yastream user agent',
+  }),
+
   STREAMASIA_URL: url({
     default: 'https://stremio-dramacool-addon.xyz',
     desc: 'StreamAsia URL',

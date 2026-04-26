@@ -1546,6 +1546,19 @@ const logStartupInfo = () => {
     logKeyValue('  User Agent:', Env.DEFAULT_SUBHERO_USER_AGENT, '     ');
   }
 
+  // yastream
+  logKeyValue('yastream:', Env.YASTREAM_URL);
+  if (Env.DEFAULT_YASTREAM_TIMEOUT) {
+    logKeyValue(
+      '  Timeout:',
+      formatMilliseconds(Env.DEFAULT_YASTREAM_TIMEOUT),
+      '     '
+    );
+  }
+  if (Env.DEFAULT_YASTREAM_USER_AGENT) {
+    logKeyValue('  User Agent:', Env.DEFAULT_YASTREAM_USER_AGENT, '     ');
+  }
+
   // StreamAsia
   logKeyValue('StreamAsia:', Env.STREAMASIA_URL);
   if (Env.DEFAULT_STREAMASIA_TIMEOUT) {
