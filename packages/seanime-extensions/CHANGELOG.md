@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.0...seanime-extensions-v0.8.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* **seanime-extensions/aiostreams-plugin:** add version check ([db6e5e4](https://github.com/Viren070/AIOStreams/commit/db6e5e4fd91fc761d7692b37978d4d0dac6934ff))
+
 ## [0.8.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.7.0...seanime-extensions-v0.8.0) (2026-04-23)
 
 
