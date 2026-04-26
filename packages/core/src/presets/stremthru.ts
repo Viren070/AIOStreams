@@ -1,4 +1,4 @@
-import { Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Option, ParsedFile, ParsedStream, Stream, UserData } from '../db/index.js';
 import { StreamParser } from '../parser/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { Preset } from './preset.js';
@@ -38,6 +38,44 @@ export class StremThruStreamParser extends StreamParser {
 
   protected override get indexerEmojis(): string[] {
     return ['🔍'];
+  }
+
+  protected getParsedFileMergeOverrides(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): Partial<ParsedFile> {
+    const overrides: Partial<ParsedFile> = {};
+
+    // Matches one or more flag emojis (each is two regional indicator chars) after an indicator emoji
+    const getFlagRegex = (indicator: string) =>
+      new RegExp(`${indicator}\\s*((?:[\\u{1F1E6}-\\u{1F1FF}]{2}\\s*)+)`, 'u');
+    const audioRegex = getFlagRegex('🎙️');
+    const subtitleRegex = getFlagRegex('💬');
+
+    const audioMatch = stream.description?.match(audioRegex);
+    const subtitleMatch = stream.description?.match(subtitleRegex);
+
+    if (audioMatch) {
+      const audioLangs = audioMatch[1]
+        .split(' ')
+        .map((part) => this.convertFlagToLanguage(part.trim()))
+        .filter((lang) => lang !== undefined) as string[];
+      if (audioLangs.length > 0) {
+        overrides.languages = audioLangs;
+      }
+    }
+
+    if (subtitleMatch) {
+      const subtitleLangs = subtitleMatch[1]
+        .split(' ')
+        .map((part) => this.convertFlagToLanguage(part.trim()))
+        .filter((lang) => lang !== undefined) as string[];
+      if (subtitleLangs.length > 0) {
+        overrides.subtitles = subtitleLangs;
+      }
+    }
+
+    return overrides;
   }
 }
 
