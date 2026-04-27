@@ -175,20 +175,22 @@ AIOStreams is configured via environment variables. When using Docker Compose, t
 
 For each service, you can set a `DEFAULT_` value (pre-filled in the UI but user-editable) or a `FORCED_` value (overrides user settings and is hidden from the UI).
 
-| Service     | Variables                                                                           |
-| ----------- | ----------------------------------------------------------------------------------- |
-| Real-Debrid | `DEFAULT_REALDEBRID_API_KEY`, `FORCED_REALDEBRID_API_KEY`                           |
-| AllDebrid   | `DEFAULT_ALLDEBRID_API_KEY`, `FORCED_ALLDEBRID_API_KEY`                             |
-| Premiumize  | `DEFAULT_PREMIUMIZE_API_KEY`, `FORCED_PREMIUMIZE_API_KEY`                           |
-| Debrid-Link | `DEFAULT_DEBRIDLINK_API_KEY`, `FORCED_DEBRIDLINK_API_KEY`                           |
-| TorBox      | `DEFAULT_TORBOX_API_KEY`, `FORCED_TORBOX_API_KEY`                                   |
-| OffCloud    | `DEFAULT_OFFCLOUD_API_KEY/EMAIL/PASSWORD`, `FORCED_OFFCLOUD_API_KEY/EMAIL/PASSWORD` |
-| Put.io      | `DEFAULT_PUTIO_CLIENT_ID/SECRET`, `FORCED_PUTIO_CLIENT_ID/SECRET`                   |
-| EasyNews    | `DEFAULT_EASYNEWS_USERNAME/PASSWORD`, `FORCED_EASYNEWS_USERNAME/PASSWORD`           |
-| EasyDebrid  | `DEFAULT_EASYDEBRID_API_KEY`, `FORCED_EASYDEBRID_API_KEY`                           |
-| Debrider    | `DEFAULT_DEBRIDER_API_KEY`, `FORCED_DEBRIDER_API_KEY`                               |
-| PikPak      | `DEFAULT_PIKPAK_EMAIL/PASSWORD`, `FORCED_PIKPAK_EMAIL/PASSWORD`                     |
-| Seedr       | `DEFAULT_SEEDR_ENCODED_TOKEN`, `FORCED_SEEDR_ENCODED_TOKEN`                         |
+| Variable                      | Description                                          |
+| ----------------------------- | ---------------------------------------------------- |
+| `DEFAULT_SERVICE_CREDENTIALS` | Pre-filled credentials for any service, one per line |
+| `FORCED_SERVICE_CREDENTIALS`  | Forced credentials for any service, one per line     |
+
+Format: `serviceId.credentialId=value`, one entry per line. Use `\n` if your environment does not support multiline values.
+
+Available service IDs: `realdebrid`, `alldebrid`, `premiumize`, `debridlink`, `torbox`, `offcloud`, `putio`, `easynews`, `easydebrid`, `debrider`, `pikpak`, `seedr`, `nzbdav`, `altmount`, `stremthru_newz`
+
+Credential IDs vary by service (e.g. `apiKey`, `username`, `password`, `clientId`, `encodedToken`). Check your config export or [`SERVICE_DETAILS` in the source](https://github.com/Viren070/AIOStreams/blob/main/packages/core/src/utils/constants.ts) for the exact IDs.
+
+```
+DEFAULT_SERVICE_CREDENTIALS="realdebrid.apiKey=your_api_key
+easynews.username=your_username
+easynews.password=your_password"
+```
 
 Also available for metadata:
 

@@ -44,11 +44,45 @@ export const formatZodError = (error: ZodError) => {
   return z.prettifyError(error);
 };
 
+function parseServiceCredentials(
+  raw: string | undefined
+): Map<string, Map<string, string>> {
+  const result = new Map<string, Map<string, string>>();
+  if (!raw) return result;
+  const normalized = raw.replace(/\\n/g, '\n');
+  for (const line of normalized.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const dotIdx = trimmed.indexOf('.');
+    const eqIdx = trimmed.indexOf('=');
+    if (dotIdx === -1 || eqIdx === -1 || dotIdx > eqIdx) continue;
+    const serviceId = trimmed.slice(0, dotIdx).trim();
+    const credentialId = trimmed.slice(dotIdx + 1, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1);
+    if (!serviceId || !credentialId) continue;
+    if (!result.has(serviceId)) result.set(serviceId, new Map());
+    result.get(serviceId)!.set(credentialId, value);
+  }
+  return result;
+}
+
+const parsedDefaultServiceCredentials = parseServiceCredentials(
+  Env.DEFAULT_SERVICE_CREDENTIALS
+);
+const parsedForcedServiceCredentials = parseServiceCredentials(
+  Env.FORCED_SERVICE_CREDENTIALS
+);
+
 function getServiceCredentialDefault(
   serviceId: constants.ServiceId,
   credentialId: string
 ) {
-  // env mapping
+  const fromUnified = parsedDefaultServiceCredentials
+    .get(serviceId)
+    ?.get(credentialId);
+  if (fromUnified !== undefined) return fromUnified;
+
+  // legacy per-service env vars
   switch (serviceId) {
     case constants.REALDEBRID_SERVICE:
       switch (credentialId) {
@@ -141,7 +175,12 @@ function getServiceCredentialForced(
   serviceId: constants.ServiceId,
   credentialId: string
 ) {
-  // env mapping
+  const fromUnified = parsedForcedServiceCredentials
+    .get(serviceId)
+    ?.get(credentialId);
+  if (fromUnified !== undefined) return fromUnified;
+
+  // legacy per-service env vars
   switch (serviceId) {
     case constants.REALDEBRID_SERVICE:
       switch (credentialId) {

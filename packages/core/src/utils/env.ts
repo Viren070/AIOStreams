@@ -1138,7 +1138,16 @@ export const Env = cleanEnv(process.env, {
     desc: 'Encrypt StremThru URLs',
   }),
 
-  // service settings
+  // unified service credentials
+  DEFAULT_SERVICE_CREDENTIALS: str({
+    default: undefined,
+    desc: 'Default credentials for services. Format: one "serviceId.credentialId=value" per line. Values may contain any characters including commas and equals signs.',
+  }),
+  FORCED_SERVICE_CREDENTIALS: str({
+    default: undefined,
+    desc: 'Forced credentials for services (overrides user settings). Same format as DEFAULT_SERVICE_CREDENTIALS.',
+  }),
+
   DEFAULT_REALDEBRID_API_KEY: str({
     default: undefined,
     desc: 'Default RealDebrid API key',
