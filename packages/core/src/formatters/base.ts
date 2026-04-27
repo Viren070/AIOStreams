@@ -1035,13 +1035,16 @@ export abstract class BaseFormatter {
           return result;
         }
         case mod.startsWith('truncate(') && mod.endsWith(')'): {
-          // Extract N from truncate(N)
           const inside = _mod.substring('truncate('.length, _mod.length - 1);
           const n = parseInt(inside, 10);
           if (!isNaN(n) && n >= 0) {
-            if (variable.length > n) {
-              // Truncate to N characters and remove trailing whitespace
-              const truncated = variable.slice(0, n).replace(/\s+$/, '');
+            const graphemes = [...new Intl.Segmenter().segment(variable)];
+            if (graphemes.length > n) {
+              const truncated = graphemes
+                .slice(0, n)
+                .map((s) => s.segment)
+                .join('')
+                .replace(/\s+$/, '');
               return truncated + '…';
             }
             return variable;
