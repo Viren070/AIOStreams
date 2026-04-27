@@ -247,6 +247,12 @@ export async function loadUserConfig(uuid: string, password: string) {
   );
 }
 
+export async function loadRawUserConfig(uuid: string, password: string) {
+  return api<LoadUserResponse>(
+    `GET /user?uuid=${uuid}&password=${encodeURIComponent(password)}&raw=true`
+  );
+}
+
 /**
  * Create user configuration
  */

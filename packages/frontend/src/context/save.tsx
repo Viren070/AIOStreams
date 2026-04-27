@@ -6,7 +6,7 @@ import { useUserData, DefaultUserData } from './userData';
 import { useStatus } from './status';
 import { useMenu } from './menu';
 import {
-  loadUserConfig,
+  loadRawUserConfig,
   updateUserConfig,
   APIError,
   fetchManifest,
@@ -200,7 +200,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       if (!shouldSkipDiff && userData?.showChanges) {
         setLoading(true);
         try {
-          const remoteData = await loadUserConfig(uuid, password);
+          const remoteData = await loadRawUserConfig(uuid, password);
           const remoteConf = remoteData.userData;
 
           const { diffs } = computeUserDataDiff(remoteConf, userData);

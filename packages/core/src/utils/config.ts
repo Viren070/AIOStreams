@@ -1525,10 +1525,9 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
   } else if (servicesMerge === 'extend') {
     const merged = [...(parent.services ?? [])];
     for (const cs of child.services ?? []) {
+      if (cs.enabled === false) continue;
       const idx = merged.findIndex((s) => s.id === cs.id);
-      if (cs.enabled === false && idx >= 0) {
-        merged.splice(idx, 1);
-      } else if (idx >= 0) {
+      if (idx >= 0) {
         merged[idx] = cs;
       } else {
         merged.push(cs);

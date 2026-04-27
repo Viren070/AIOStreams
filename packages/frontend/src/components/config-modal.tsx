@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from '@/components/ui/modal';
 import { TextInput } from '@/components/ui/text-input';
 import { Button } from '@/components/ui/button';
-import { loadUserConfig, APIError } from '@/lib/api';
+import { loadRawUserConfig, APIError } from '@/lib/api';
 import { useUserData } from '@/context/userData';
 import { toast } from 'sonner';
 import { PasswordInput } from './ui/password-input';
@@ -33,7 +33,7 @@ export function ConfigModal({
     setLoading(true);
 
     try {
-      const result = await loadUserConfig(uuid, password);
+      const result = await loadRawUserConfig(uuid, password);
       setUserData(() => result.userData);
       setUuid(uuid);
       setPassword(password);

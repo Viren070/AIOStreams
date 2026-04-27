@@ -125,6 +125,23 @@ export class UserRepository {
   // with api use, we are given the password
   // GET /user should also return
 
+  static async getRawUser(
+    uuid: string,
+    password: string
+  ): Promise<UserData | null> {
+    try {
+      const config = await this.loadRawUser(uuid, password);
+      logger.info(`Retrieved raw configuration for user ${uuid}`);
+      return config;
+    } catch (error) {
+      if (error instanceof APIError) return Promise.reject(error);
+      logger.error(
+        `Error retrieving user ${uuid}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return Promise.reject(new APIError(constants.ErrorCode.DATABASE_ERROR));
+    }
+  }
+
   static async getUser(
     uuid: string,
     password: string

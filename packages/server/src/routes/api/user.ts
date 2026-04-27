@@ -57,9 +57,10 @@ router.head('/', async (req, res, next) => {
 
 // getting user details
 router.get('/', async (req, res, next) => {
-  const { uuid, password } = {
+  const { uuid, password, raw } = {
     uuid: req.uuid || req.query.uuid,
     password: req.query.password,
+    raw: req.query.raw,
   };
   if (typeof uuid !== 'string' || typeof password !== 'string') {
     next(
@@ -73,7 +74,10 @@ router.get('/', async (req, res, next) => {
   }
   let userData = null;
   try {
-    userData = await UserRepository.getUser(uuid, password);
+    userData =
+      raw === 'true'
+        ? await UserRepository.getRawUser(uuid, password)
+        : await UserRepository.getUser(uuid, password);
   } catch (error: any) {
     if (error instanceof APIError) {
       next(error);
