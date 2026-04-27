@@ -93,7 +93,8 @@ class EztvAPI {
   }
 
   async getTorrents(
-    options: EztvGetTorrentsOptions
+    options: EztvGetTorrentsOptions,
+    recentCacheTTL?: number
   ): Promise<EztvGetTorrentsResponse> {
     const parsed = EztvGetTorrentsOptions.parse(options);
     const cacheKey = JSON.stringify(parsed);
@@ -103,6 +104,7 @@ class EztvAPI {
       searchCacheKey: cacheKey,
       bgCacheKey: `eztv:${cacheKey}`,
       cacheTTL: Env.BUILTIN_EZTV_SEARCH_CACHE_TTL,
+      recentCacheTTL,
       fetchFn: () =>
         this.request<EztvGetTorrentsResponse>('/api/get-torrents', {
           schema: EztvGetTorrentsResponseSchema,

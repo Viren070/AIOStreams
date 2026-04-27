@@ -2246,6 +2246,14 @@ export const Env = cleanEnv(process.env, {
     default: 1 * 24 * 60 * 60, // 1 day
     desc: 'Minimum interval between background refreshes for built-in addon search caches. Triggered during normal searches.',
   }),
+  BUILTIN_SEARCH_RECENT_ENABLED: bool({
+    default: false,
+    desc: 'When enabled, built-in scraper search results for episodes that aired within the last day are cached with a short TTL (BUILTIN_SEARCH_RECENT_TTL) instead of the normal per-scraper TTL, so new torrents are discovered quickly around release day.',
+  }),
+  BUILTIN_SEARCH_RECENT_TTL: num({
+    default: 10 * 60, // 10 minutes
+    desc: 'Short search cache TTL (seconds) applied to recently aired episodes when BUILTIN_SEARCH_RECENT_ENABLED is true.',
+  }),
 
   BUILTIN_GDRIVE_CLIENT_ID: str({
     default: undefined,

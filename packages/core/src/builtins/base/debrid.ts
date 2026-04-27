@@ -40,6 +40,7 @@ import {
 import { processTorrents, processNZBs } from '../utils/debrid.js';
 import { calculateAbsoluteEpisode } from '../utils/general.js';
 import { MetadataService } from '../../metadata/service.js';
+import { TMDBMetadata } from '../../metadata/tmdb.js';
 import { MetadataTitle } from '../../metadata/utils.js';
 import { Logger } from 'winston';
 import pLimit from 'p-limit';
@@ -60,6 +61,10 @@ export interface SearchMetadata extends TitleMetadata {
   titlesWithLang?: MetadataTitle[];
   /** ISO 639-1 code of the content's original language (from TMDB). */
   originalLanguage?: string;
+  /** Short cache TTL (seconds) to use instead of the normal per-scraper TTL.
+   *  Set when BUILTIN_SEARCH_RECENT_ENABLED is true and the episode aired within
+   *  the last day, so new torrents are discovered quickly around release day. */
+  recentCacheTTL?: number;
 }
 
 export const BaseDebridConfigSchema = z.object({
@@ -682,6 +687,42 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       tvdbId: metadata.tvdbId ?? null,
       isAnime: animeEntry ? true : false,
     };
+
+    if (
+      Env.BUILTIN_SEARCH_RECENT_ENABLED &&
+      searchMetadata.tmdbId != null &&
+      parsedId.season &&
+      parsedId.episode &&
+      type !== 'movie'
+    ) {
+      try {
+        const tmdb = new TMDBMetadata({
+          accessToken: this.userData.tmdbReadAccessToken,
+          apiKey: this.userData.tmdbApiKey,
+        });
+        const episodeDetails = await tmdb.getEpisodeDetails(
+          searchMetadata.tmdbId,
+          Number(parsedId.season),
+          Number(parsedId.episode)
+        );
+        if (episodeDetails?.airDate) {
+          const airDate = new Date(episodeDetails.airDate);
+          airDate.setHours(0, 0, 0, 0);
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const daysSince = Math.floor(
+            (now.getTime() - airDate.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          if (daysSince >= 0 && daysSince <= 1) {
+            searchMetadata.recentCacheTTL = Env.BUILTIN_SEARCH_RECENT_TTL;
+          }
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Could not fetch episode air date for cache TTL decision: ${error}`
+        );
+      }
+    }
 
     this.logger.debug(
       `Got search metadata for ${parsedId.type}:${parsedId.value} in ${getTimeTakenSincePoint(start)}`,

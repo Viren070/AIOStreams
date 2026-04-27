@@ -73,16 +73,28 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
       return [];
     }
 
+    const { recentCacheTTL } = await this.getSearchMetadata();
+    const effectiveTTL =
+      recentCacheTTL ?? Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL;
+
     const cacheKey = this.getCacheKey(parsedId, 'torrent');
     const cachedTorrents = await this.searchCache.get(cacheKey);
 
     if (cachedTorrents && this.useCache) {
-      logger.info(
-        `Found ${cachedTorrents.length} (cached) torrents for ${parsedId.type}:${parsedId.value}`
+      if (
+        recentCacheTTL == null ||
+        (await this.searchCache.getTTL(cacheKey)) <= effectiveTTL
+      ) {
+        logger.info(
+          `Found ${cachedTorrents.length} (cached) torrents for ${parsedId.type}:${parsedId.value}`
+        );
+        return cachedTorrents
+          .filter((t) => t.hash)
+          .map((t) => this.torrentToUnprocessed(t));
+      }
+      logger.debug(
+        `Cache entry for ${cacheKey} predates release day, re-fetching`
       );
-      return cachedTorrents
-        .filter((t) => t.hash)
-        .map((t) => this.torrentToUnprocessed(t));
     }
 
     const start = Date.now();
@@ -139,7 +151,7 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
             (this.userData.searchUserEngines &&
               Env.BUILTIN_TORBOX_SEARCH_CACHE_PER_USER_SEARCH_ENGINE)
         ),
-        Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL
+        effectiveTTL
       );
     }
 
@@ -158,16 +170,28 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
       return [];
     }
 
+    const { recentCacheTTL } = await this.getSearchMetadata();
+    const effectiveTTL =
+      recentCacheTTL ?? Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL;
+
     const cacheKey = this.getCacheKey(parsedId, 'usenet');
     const cachedTorrents = await this.searchCache.get(cacheKey);
 
     if (cachedTorrents && this.useCache) {
-      logger.info(
-        `Found ${cachedTorrents.length} (cached) NZBs for ${parsedId.type}:${parsedId.value}`
+      if (
+        recentCacheTTL == null ||
+        (await this.searchCache.getTTL(cacheKey)) <= effectiveTTL
+      ) {
+        logger.info(
+          `Found ${cachedTorrents.length} (cached) NZBs for ${parsedId.type}:${parsedId.value}`
+        );
+        return cachedTorrents
+          .filter((t) => t.nzb)
+          .map((t) => this.torrentToNzb(t));
+      }
+      logger.debug(
+        `Cache entry for ${cacheKey} predates release day, re-fetching`
       );
-      return cachedTorrents
-        .filter((t) => t.nzb)
-        .map((t) => this.torrentToNzb(t));
     }
 
     const start = Date.now();
@@ -218,11 +242,7 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
     }
 
     if (this.useCache) {
-      await this.searchCache.set(
-        cacheKey,
-        filteredTorrents,
-        Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL
-      );
+      await this.searchCache.set(cacheKey, filteredTorrents, effectiveTTL);
     }
 
     return filteredTorrents

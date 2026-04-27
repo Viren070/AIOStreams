@@ -159,6 +159,10 @@ interface SearchWithBgRefreshOptions<T> {
   fetchFn: () => Promise<T>;
   isEmptyResult: (result: T) => boolean;
   logger: Logger;
+  /** Short cache TTL (seconds) that overrides the normal TTL. Set when
+   *  BUILTIN_SEARCH_RECENT_ENABLED is true and the episode aired within the
+   *  last day so new torrents are discovered quickly around release day. */
+  recentCacheTTL?: number;
 }
 
 /**
@@ -187,11 +191,38 @@ export async function searchWithBackgroundRefresh<T>(
     fetchFn,
     isEmptyResult,
     logger,
+    recentCacheTTL,
   } = options;
+
+  const effectiveTTL = recentCacheTTL ?? cacheTTL;
+  const isRecent = recentCacheTTL != null;
 
   const cachedResult = await searchCache.get(searchCacheKey);
 
   if (cachedResult !== undefined) {
+    if (isRecent) {
+      // The cached entry may have been written before the episode aired (when
+      // the long TTL was appropriate). If its remaining TTL exceeds the short
+      // recent TTL it is stale relative to release-day semantics, fetch fresh
+      // synchronously so this request gets up-to-date results.
+      const remainingTTL = await searchCache.getTTL(searchCacheKey);
+      if (remainingTTL > effectiveTTL) {
+        logger.debug(
+          `Cache entry for ${searchCacheKey} predates release day (remaining=${remainingTTL}s > recentTTL=${effectiveTTL}s), fetching fresh`
+        );
+        const freshResult = await fetchFn();
+        if (!isEmptyResult(freshResult)) {
+          await searchCache.set(searchCacheKey, freshResult, effectiveTTL);
+          await bgRefreshCache.set(
+            bgCacheKey,
+            Date.now(),
+            Env.BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL
+          );
+        }
+        return freshResult;
+      }
+    }
+
     triggerBackgroundRefresh({
       searchCache,
       searchCacheKey,
@@ -200,6 +231,7 @@ export async function searchWithBackgroundRefresh<T>(
       fetchFn,
       isEmptyResult,
       logger,
+      recentCacheTTL,
     });
     return cachedResult;
   }
@@ -208,7 +240,7 @@ export async function searchWithBackgroundRefresh<T>(
 
   // Don't cache empty results
   if (!isEmptyResult(result)) {
-    await searchCache.set(searchCacheKey, result, cacheTTL);
+    await searchCache.set(searchCacheKey, result, effectiveTTL);
     await bgRefreshCache.set(
       bgCacheKey,
       Date.now(),
@@ -231,6 +263,7 @@ function triggerBackgroundRefresh<T>(options: {
   fetchFn: () => Promise<T>;
   isEmptyResult: (result: T) => boolean;
   logger: Logger;
+  recentCacheTTL?: number;
 }): void {
   const {
     searchCacheKey,
@@ -240,6 +273,7 @@ function triggerBackgroundRefresh<T>(options: {
     fetchFn,
     isEmptyResult,
     logger,
+    recentCacheTTL,
   } = options;
 
   (async () => {
@@ -259,7 +293,12 @@ function triggerBackgroundRefresh<T>(options: {
 
       // Update cache if result is not empty
       if (!isEmptyResult(freshResult)) {
-        await searchCache.set(searchCacheKey, freshResult, cacheTTL, true);
+        await searchCache.set(
+          searchCacheKey,
+          freshResult,
+          recentCacheTTL ?? cacheTTL,
+          true
+        );
         await bgRefreshCache.set(
           bgCacheKey,
           now,
