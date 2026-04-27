@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.28.0](https://github.com/Viren070/AIOStreams/compare/v2.27.3...v2.28.0) (2026-04-27)
+
+
+### Features
+
+* add `REMOVED_ADDONS` to hide addons from marketplace ([1993e01](https://github.com/Viren070/AIOStreams/commit/1993e0122fc61cb2a5a7417b55033b1d6a3d3472)), closes [#611](https://github.com/Viren070/AIOStreams/issues/611)
+* add parent/child config linking ([2cadd66](https://github.com/Viren070/AIOStreams/commit/2cadd66795bfe492fd7ade8461339dba67a6c7df))
+* add subtitle filter and sort settings ([4c450ab](https://github.com/Viren070/AIOStreams/commit/4c450ab6c0101025279f7a47ef9fb11bf2dbb28d)), closes [#332](https://github.com/Viren070/AIOStreams/issues/332)
+* add unified DEFAULT_SERVICE_CREDENTIALS and FORCED_SERVICE_CREDENTIALS env vars, deprecating service specific env vars ([6878fed](https://github.com/Viren070/AIOStreams/commit/6878fed2cd1aae98b909aae69d1bfadef33215f6))
+* allow overiding built-in formats, seeing code from UI ([67d631f](https://github.com/Viren070/AIOStreams/commit/67d631f63e2da02537086fce0fe8df6dc824a21a))
+* **frontend:** allow saving formatters in config ([67d631f](https://github.com/Viren070/AIOStreams/commit/67d631f63e2da02537086fce0fe8df6dc824a21a))
+* **presets/nekoBt:** add search mode setting ([16a9a94](https://github.com/Viren070/AIOStreams/commit/16a9a94b289ca1fdcf499525a1af261f061ef152))
+* **presets/stremthru:** parse audio and subtitle languages ([#898](https://github.com/Viren070/AIOStreams/issues/898)) ([65a8a60](https://github.com/Viren070/AIOStreams/commit/65a8a60b04eae272686f8c5c4a9ce0bc60969cfd))
+* **presets/torrentio:** support URL list for env var ([c7bc486](https://github.com/Viren070/AIOStreams/commit/c7bc4863aaa7c68545b0a17e5ec435b30bcdf622)), closes [#892](https://github.com/Viren070/AIOStreams/issues/892)
+* **presets:** add yastream marketplace preset ([#896](https://github.com/Viren070/AIOStreams/issues/896)) ([dfae452](https://github.com/Viren070/AIOStreams/commit/dfae4523d92e98fb41401325d5c6777edfd73b4c))
+
+
+### Bug Fixes
+
+* apply non-imdb episode check to relative absolute episode ([6f39d65](https://github.com/Viren070/AIOStreams/commit/6f39d65c122cf25637e42f97d1416f260ff39b9c))
+* **builtins/dataset:** trigger sync if local data is stale ([9999eb9](https://github.com/Viren070/AIOStreams/commit/9999eb99f957baca08f1ab2b7fc95ec8787632c8))
+* **builtins/torrent-galaxy:** use string instead of url for `t` field. ([2f0b265](https://github.com/Viren070/AIOStreams/commit/2f0b265a55642f01fd81117b9abb470245097ebe))
+* **config:** ignore non-enabled services in merge ([ae8e4b4](https://github.com/Viren070/AIOStreams/commit/ae8e4b4d4b7ab2f1d4176441c830b124ad7c5df7))
+* **core/formatter:** use grapheme segmentation in truncate to avoid splitting emoji ([274eb41](https://github.com/Viren070/AIOStreams/commit/274eb41faf8adb977ee432bef7d085310caa3760))
+* **debrid/torbox:** mark direct unpack state as downloaded ([6e02fa2](https://github.com/Viren070/AIOStreams/commit/6e02fa2d1b1f9edf6d5946800679bafce13336df)), closes [#903](https://github.com/Viren070/AIOStreams/issues/903)
+* **debrid:** log full error for torbox when it cannot be parsed and fix rate limit check being too loose ([61183c9](https://github.com/Viren070/AIOStreams/commit/61183c99fabcc5e6994ad21809c9e7453a220691))
+* don't use merged user data to frontend ([ae8e4b4](https://github.com/Viren070/AIOStreams/commit/ae8e4b4d4b7ab2f1d4176441c830b124ad7c5df7))
+* **frontend:** remove beta tag from seanime ([2c6da1a](https://github.com/Viren070/AIOStreams/commit/2c6da1a9d30cedea5c6f749fb8745e23e99fe4b7))
+* **frontend:** update seanime modal ([0e5f246](https://github.com/Viren070/AIOStreams/commit/0e5f246f51e13ddc0a1e3ab08cd5aa7dbf02d655))
+* **presets/mediafusion:** set max_streams to 100 ([9f3cda5](https://github.com/Viren070/AIOStreams/commit/9f3cda5c3f3d15c4af23df2d79c92151dcda158c))
+
 ## [2.27.3](https://github.com/Viren070/AIOStreams/compare/v2.27.2...v2.27.3) (2026-04-22)
 
 
