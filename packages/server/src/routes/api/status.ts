@@ -95,14 +95,22 @@ const statusInfo = async (): Promise<StatusResponse> => {
       },
       presets: PresetManager.getPresetList().map((preset) => ({
         ...preset,
-        DISABLED: FeatureControl.disabledAddons.has(preset.ID)
+        DISABLED: FeatureControl.removedAddons.has(preset.ID)
           ? {
               reason:
-                FeatureControl.disabledAddons.get(preset.ID) ||
-                'Disabled by owner of the instance',
+                FeatureControl.removedAddons.get(preset.ID) ||
+                'Removed by owner of the instance',
+              removed: true,
               disabled: true,
             }
-          : preset.DISABLED,
+          : FeatureControl.disabledAddons.has(preset.ID)
+            ? {
+                reason:
+                  FeatureControl.disabledAddons.get(preset.ID) ||
+                  'Disabled by owner of the instance',
+                disabled: true,
+              }
+            : preset.DISABLED,
       })),
       services: getEnvironmentServiceDetails(),
       limits: {

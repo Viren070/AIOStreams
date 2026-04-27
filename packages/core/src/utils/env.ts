@@ -609,6 +609,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Comma separated list of disabled addons in format of addon:reason',
   }),
+  REMOVED_ADDONS: str({
+    default: undefined,
+    desc: 'Comma separated list of removed addons in format of addon:reason — hidden from marketplace and errors on save',
+  }),
   DISABLED_SERVICES: str({
     default: undefined,
     desc: 'Comma separated list of disabled services in format of service:reason',

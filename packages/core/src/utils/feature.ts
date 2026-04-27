@@ -31,6 +31,17 @@ export class FeatureControl {
     return map;
   })();
 
+  private static readonly _removedAddons: Map<string, string> = (() => {
+    const map = new Map<string, string>();
+    if (Env.REMOVED_ADDONS) {
+      for (const entry of Env.REMOVED_ADDONS.split(',')) {
+        const [addon, ...reasonParts] = entry.split(':');
+        map.set(addon, reasonParts.join(':') || DEFAULT_REASON);
+      }
+    }
+    return map;
+  })();
+
   private static readonly _disabledServices: Map<string, string> = (() => {
     const map = new Map<string, string>();
     if (Env.DISABLED_SERVICES) {
@@ -61,6 +72,10 @@ export class FeatureControl {
 
   public static get disabledAddons() {
     return this._disabledAddons;
+  }
+
+  public static get removedAddons() {
+    return this._removedAddons;
   }
 
   public static get disabledServices() {

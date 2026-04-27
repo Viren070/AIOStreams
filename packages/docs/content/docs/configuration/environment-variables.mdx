@@ -278,12 +278,13 @@ Configure a proxy for requests AIOStreams makes to upstream addons (e.g. to bypa
 
 ## Feature Control
 
-| Variable                | Default | Description                                                         |
-| ----------------------- | ------- | ------------------------------------------------------------------- |
-| `DISABLE_SELF_SCRAPING` | `true`  | Prevent this instance from being added as an addon to itself        |
-| `DISABLED_HOSTS`        | —       | `host:reason` pairs to block specific hostnames from being added    |
-| `DISABLED_ADDONS`       | —       | `addonID:reason` pairs to hide addons from the marketplace          |
-| `DISABLED_SERVICES`     | —       | `service:reason` pairs to hide services from the configuration page |
+| Variable                | Default | Description                                                                                                                      |
+| ----------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `DISABLE_SELF_SCRAPING` | `true`  | Prevent this instance from being added as an addon to itself                                                                     |
+| `DISABLED_HOSTS`        | —       | `host:reason` pairs to block specific hostnames from being added                                                                 |
+| `DISABLED_ADDONS`       | —       | `addonID:reason` pairs to show addons as disabled in the marketplace (users cannot add them, errors on save and stream requests) |
+| `REMOVED_ADDONS`        | —       | `addonID:reason` pairs to hide addons from the marketplace entirely (same as above but hidden from marketplace too)              |
+| `DISABLED_SERVICES`     | —       | `service:reason` pairs to hide services from the configuration page                                                              |
 
 ---
 

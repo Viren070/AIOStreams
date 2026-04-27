@@ -196,6 +196,15 @@ export function validateAddon(ctx: AIOStreamsContext, addon: Addon): void {
   }
   if (
     addon.preset.type &&
+    FeatureControl.removedAddons.has(addon.preset.type)
+  ) {
+    throw new Error(
+      `Addon ${getAddonName(addon)} has been removed: ${FeatureControl.removedAddons.get(
+        addon.preset.type
+      )}`
+    );
+  } else if (
+    addon.preset.type &&
     FeatureControl.disabledAddons.has(addon.preset.type)
   ) {
     throw new Error(
