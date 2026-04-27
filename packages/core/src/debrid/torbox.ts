@@ -381,7 +381,13 @@ export class TorboxDebridService
         eta: usenetDownload.eta,
         active: usenetDownload.active,
       });
-      if (usenetDownload.downloadFinished && usenetDownload.downloadPresent) {
+      if (
+        usenetDownload.downloadFinished &&
+        (usenetDownload.downloadPresent ||
+          usenetDownload.downloadState
+            ?.toLowerCase()
+            .startsWith('direct unpack: completed'))
+      ) {
         status = 'downloaded';
       } else if (
         usenetDownload.progress &&
