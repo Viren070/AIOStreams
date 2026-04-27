@@ -25,7 +25,7 @@ const TorrentGalaxySearchResultSchema = z
     a: z.number(), // unix timestamp i.e. age
     c: z.string(), // category e.g. Movies
     s: z.number(), // size
-    t: z.url().nullable(), // poster URL
+    t: z.string().nullable(), // poster URL
     u: z.string(), // user
     se: z.number(), // seeders
     le: z.number(), // leechers
