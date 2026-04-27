@@ -19,6 +19,7 @@ import {
   MdHdrOn,
   MdMovieFilter,
   MdPerson,
+  MdSubtitles,
   MdSurroundSound,
   MdTextFields,
   MdVideoLibrary,
@@ -107,6 +108,8 @@ import {
 import type { SyncConfig } from './_components/synced-patterns';
 import { UserData } from '@aiostreams/core';
 import { toast } from 'sonner';
+import { Popover } from '@/components/ui/popover';
+import { AiOutlineExclamationCircle } from 'react-icons/ai';
 
 /** Create a `<SYNCED: url>` placeholder string. */
 function makeSyncedPlaceholder(url: string): string {
@@ -321,7 +324,9 @@ function Content() {
               <div className="space-y-1 my-2 px-2">
                 <div className="flex items-center gap-2 justify-center md:justify-start">
                   <h4>Filters</h4>
-                  {hasParent && isInherited('filters') && <InheritedBadge section="filters" />}
+                  {hasParent && isInherited('filters') && (
+                    <InheritedBadge section="filters" />
+                  )}
                 </div>
               </div>
               <div></div>
@@ -383,6 +388,10 @@ function Content() {
               <TabsTrigger value="language">
                 <FaLanguage className="text-lg mr-3" />
                 Language
+              </TabsTrigger>
+              <TabsTrigger value="subtitle">
+                <MdSubtitles className="text-lg mr-3" />
+                Subtitle
               </TabsTrigger>
               <TabsTrigger value="seeders">
                 <MdPerson className="text-lg mr-3" />
@@ -993,6 +1002,124 @@ function Content() {
                   setUserData((prev) => ({
                     ...prev,
                     includedLanguages: included,
+                  }))
+                }
+                options={LANGUAGES.map((language) => ({
+                  name: language
+                    .split(' ')
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' '),
+                  value: language,
+                }))}
+              />
+            </>
+          </TabsContent>
+          <TabsContent value="subtitle" className="space-y-4">
+            <>
+              <HeadingWithPageControls heading="Subtitle" />
+
+              <Alert
+                intent="warning"
+                title="Difference between Language and Subtitle filters"
+                description={
+                  <div className="text-sm">
+                    Languages and subtitles behave differently depending on what
+                    information is available for a stream.
+                    <br />
+                    <br />
+                    <span className="inline-flex items-center gap-1">
+                      When accurate media info is available
+                      <Popover
+                        className="text-sm "
+                        trigger={
+                          <AiOutlineExclamationCircle className="transition-opacity opacity-45 hover:opacity-90 inline-block cursor-pointer" />
+                        }
+                      >
+                        <div className="max-w-sm">
+                          <div className="font-medium">
+                            Accurate media info is available for:
+                          </div>
+                          <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
+                            <li>
+                              Certain results from built-in or service-wrapped
+                              addons
+                            </li>
+                            <li>
+                              Certain results from StremThru Torz/Store and
+                              Meteor
+                            </li>
+                            <li>
+                              Torznab/Newznab results from indexers that provide
+                              separate audio/subtitle metadata
+                            </li>
+                            <li>
+                              <strong>nekoBT</strong> results (all results have
+                              accurate audio/subtitle info)
+                            </li>
+                            <li>
+                              <strong>Torrentio</strong> anime results
+                              (subtitles field may be populated)
+                            </li>
+                          </ul>
+                        </div>
+                      </Popover>
+                    </span>
+                    {', '}
+                    <code className="bg-base-200 px-1 py-0.5 rounded">
+                      languages
+                    </code>{' '}
+                    contains audio track languages and{' '}
+                    <code className="bg-base-200 px-1 py-0.5 rounded">
+                      subtitles
+                    </code>{' '}
+                    contains embedded subtitle languages.
+                    <br />
+                    <br />
+                    In all other cases,{' '}
+                    <code className="bg-base-200 px-1 py-0.5 rounded">
+                      subtitles
+                    </code>{' '}
+                    is empty and{' '}
+                    <code className="bg-base-200 px-1 py-0.5 rounded">
+                      languages
+                    </code>{' '}
+                    contains every language found in the filename &mdash;
+                    including subtitle-only languages (e.g. a filename
+                    containing &quot;Eng.Sub&quot; will add English to
+                    languages, not subtitles). This is a known limitation of
+                    filename-only parsing.
+                  </div>
+                }
+              />
+
+              <FilterSettings<Language>
+                filterName="Subtitles"
+                preferredOptions={userData.preferredSubtitles || []}
+                requiredOptions={userData.requiredSubtitles || []}
+                excludedOptions={userData.excludedSubtitles || []}
+                includedOptions={userData.includedSubtitles || []}
+                onPreferredChange={(preferred) =>
+                  setUserData((prev) => ({
+                    ...prev,
+                    preferredSubtitles: preferred,
+                  }))
+                }
+                onRequiredChange={(required) =>
+                  setUserData((prev) => ({
+                    ...prev,
+                    requiredSubtitles: required,
+                  }))
+                }
+                onExcludedChange={(excluded) =>
+                  setUserData((prev) => ({
+                    ...prev,
+                    excludedSubtitles: excluded,
+                  }))
+                }
+                onIncludedChange={(included) =>
+                  setUserData((prev) => ({
+                    ...prev,
+                    includedSubtitles: included,
                   }))
                 }
                 options={LANGUAGES.map((language) => ({

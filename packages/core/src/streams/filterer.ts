@@ -59,6 +59,8 @@ export interface FilterStatistics {
     requiredAudioChannel: Reason;
     excludedLanguage: Reason;
     requiredLanguage: Reason;
+    excludedSubtitle: Reason;
+    requiredSubtitle: Reason;
     excludedReleaseGroup: Reason;
     requiredReleaseGroup: Reason;
     excludedCached: Reason;
@@ -85,6 +87,7 @@ export interface FilterStatistics {
     audioTag: Reason;
     audioChannel: Reason;
     language: Reason;
+    subtitle: Reason;
     streamType: Reason;
     releaseGroup: Reason;
     size: Reason;
@@ -161,6 +164,8 @@ class StreamFilterer {
         requiredAudioChannel: { total: 0, details: {} },
         excludedLanguage: { total: 0, details: {} },
         requiredLanguage: { total: 0, details: {} },
+        excludedSubtitle: { total: 0, details: {} },
+        requiredSubtitle: { total: 0, details: {} },
         excludedReleaseGroup: { total: 0, details: {} },
         requiredReleaseGroup: { total: 0, details: {} },
         excludedCached: { total: 0, details: {} },
@@ -187,6 +192,7 @@ class StreamFilterer {
         audioTag: { total: 0, details: {} },
         audioChannel: { total: 0, details: {} },
         language: { total: 0, details: {} },
+        subtitle: { total: 0, details: {} },
         streamType: { total: 0, details: {} },
         releaseGroup: { total: 0, details: {} },
         size: { total: 0, details: {} },
@@ -1295,6 +1301,7 @@ class StreamFilterer {
       const file = stream.parsedFile;
 
       const skipLanguageFiltering = shouldPassthroughStage(stream, 'language');
+      const skipSubtitleFiltering = shouldPassthroughStage(stream, 'subtitle');
 
       if (originalLanguage && LANGUAGES.includes(originalLanguage as any)) {
         if (
@@ -1434,6 +1441,23 @@ class StreamFilterer {
           (file?.languages.length ? file.languages : ['Unknown']).includes(lang)
         );
         this.incrementIncludedReason('language', lang!);
+        return true;
+      }
+
+      if (
+        !skipSubtitleFiltering &&
+        this.userData.includedSubtitles?.some((lang) =>
+          (file?.subtitles?.length ? file.subtitles : ['Unknown']).includes(
+            lang
+          )
+        )
+      ) {
+        const lang = this.userData.includedSubtitles.find((lang) =>
+          (file?.subtitles?.length ? file.subtitles : ['Unknown']).includes(
+            lang
+          )
+        );
+        this.incrementIncludedReason('subtitle', lang!);
         return true;
       }
 
@@ -1774,6 +1798,36 @@ class StreamFilterer {
         this.incrementRemovalReason(
           'requiredLanguage',
           file?.languages.length ? file.languages.join(', ') : 'Unknown'
+        );
+        return false;
+      }
+
+      // subtitles
+      if (
+        !skipSubtitleFiltering &&
+        this.userData.excludedSubtitles?.length &&
+        (file?.subtitles?.length ? file.subtitles : ['Unknown']).every((sub) =>
+          this.userData.excludedSubtitles!.includes(sub as any)
+        )
+      ) {
+        this.incrementRemovalReason(
+          'excludedSubtitle',
+          file?.subtitles?.length ? file.subtitles.join(', ') : 'Unknown'
+        );
+        return false;
+      }
+
+      if (
+        !skipSubtitleFiltering &&
+        this.userData.requiredSubtitles &&
+        this.userData.requiredSubtitles.length > 0 &&
+        !this.userData.requiredSubtitles.some((sub) =>
+          (file?.subtitles?.length ? file.subtitles : ['Unknown']).includes(sub)
+        )
+      ) {
+        this.incrementRemovalReason(
+          'requiredSubtitle',
+          file?.subtitles?.length ? file.subtitles.join(', ') : 'Unknown'
         );
         return false;
       }

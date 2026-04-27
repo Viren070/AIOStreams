@@ -1460,6 +1460,7 @@ const FILTER_FIELDS: (keyof UserData)[] = [
   'excludedResolutions', 'includedResolutions', 'requiredResolutions', 'preferredResolutions',
   'excludedQualities', 'includedQualities', 'requiredQualities', 'preferredQualities',
   'excludedLanguages', 'includedLanguages', 'requiredLanguages', 'preferredLanguages',
+  'excludedSubtitles', 'includedSubtitles', 'requiredSubtitles', 'preferredSubtitles',
   'excludedVisualTags', 'includedVisualTags', 'requiredVisualTags', 'preferredVisualTags',
   'excludedAudioTags', 'includedAudioTags', 'requiredAudioTags', 'preferredAudioTags',
   'excludedAudioChannels', 'includedAudioChannels', 'requiredAudioChannels', 'preferredAudioChannels',

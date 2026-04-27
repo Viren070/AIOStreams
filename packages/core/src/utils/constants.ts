@@ -987,6 +987,7 @@ const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
 const PASSTHROUGH_STAGES = [
   'filter', // bypass main filtering (shouldKeepStream)
   'language', // bypass language filtering specifically
+  'subtitle', // bypass subtitle filtering specifically
   'dedup', // bypass deduplication
   'limit', // bypass result limiting
   'excluded', // bypass excluded stream expressions
@@ -1012,6 +1013,7 @@ const SORT_CRITERIA = [
   'quality',
   'resolution',
   'language',
+  'subtitle',
   'visualTag',
   'audioTag',
   'audioChannel',
@@ -1089,6 +1091,15 @@ export const SORT_CRITERIA_DETAILS: Record<
       'Streams that are not in your preferred language list are preferred',
     descendingDescription:
       'Streams that are in your preferred language list are preferred',
+  },
+  subtitle: {
+    name: 'Subtitle',
+    description: 'Sort by the subtitle of the stream',
+    defaultDirection: 'desc',
+    ascendingDescription:
+      'Streams that are not in your preferred subtitle list are preferred',
+    descendingDescription:
+      'Streams that are in your preferred subtitle list are preferred',
   },
   visualTag: {
     name: 'Visual Tag',

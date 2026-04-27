@@ -348,6 +348,10 @@ export const DefaultUserData: UserData = {
         direction: 'desc',
       },
       {
+        key: 'subtitle',
+        direction: 'desc',
+      },
+      {
         key: 'size',
         direction: 'desc',
       },
@@ -550,7 +554,15 @@ export function useParentInheritance() {
   const strategies = parentConfig?.mergeStrategies;
 
   function isInherited(
-    section: 'presets' | 'services' | 'filters' | 'sorting' | 'formatter' | 'proxy' | 'metadata' | 'misc'
+    section:
+      | 'presets'
+      | 'services'
+      | 'filters'
+      | 'sorting'
+      | 'formatter'
+      | 'proxy'
+      | 'metadata'
+      | 'misc'
   ): boolean {
     if (!parentConfig) return false;
     const strategy = strategies?.[section] ?? 'inherit';

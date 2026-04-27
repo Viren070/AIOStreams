@@ -293,6 +293,22 @@ class StreamSorter {
           }
           return multiplier * -minLanguageIndex;
         }
+        case 'subtitle': {
+          let minSubtitleIndex = userData.preferredSubtitles?.length;
+          if (minSubtitleIndex === undefined) {
+            return 0;
+          }
+          const effectiveSubtitles = stream.parsedFile?.subtitles?.length
+            ? stream.parsedFile.subtitles
+            : ['Unknown'];
+          for (const subtitle of effectiveSubtitles) {
+            const idx = userData.preferredSubtitles?.indexOf(subtitle as any);
+            if (idx !== undefined && idx !== -1 && idx < minSubtitleIndex) {
+              minSubtitleIndex = idx;
+            }
+          }
+          return multiplier * -minSubtitleIndex;
+        }
         case 'regexPatterns':
           return (
             multiplier *

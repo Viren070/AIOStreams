@@ -330,13 +330,25 @@ export abstract class BaseFormatter {
         )
       ),
     ];
+    const userSpecifiedSubtitles = [
+      ...new Set(
+        getFieldValues('subtitles').map((lang) =>
+          lang === 'Original' && this.formatterContext.originalLanguage
+            ? this.formatterContext.originalLanguage
+            : lang
+        )
+      ),
+    ];
 
-    const buildLanguageVariants = (values: string[] | undefined) => {
-      const sortedValues = sortByUserPreference(values, userSpecifiedLanguages);
+    const buildLanguageVariants = (
+      values: string[] | undefined,
+      userSpecifiedValues: string[]
+    ) => {
+      const sortedValues = sortByUserPreference(values, userSpecifiedValues);
 
       const userValues = sortedValues
         ? sortedValues.filter((value) =>
-            userSpecifiedLanguages.includes(value as any)
+            userSpecifiedValues.includes(value as any)
           )
         : null;
 
@@ -400,10 +412,14 @@ export abstract class BaseFormatter {
     };
 
     const languageVariants = buildLanguageVariants(
-      stream.parsedFile?.languages
+      stream.parsedFile?.languages,
+      userSpecifiedLanguages
     );
     const subtitleVariants = buildLanguageVariants(
-      stream.parsedFile?.subtitles
+      stream.parsedFile?.subtitles,
+      userSpecifiedSubtitles?.length
+        ? userSpecifiedSubtitles
+        : userSpecifiedLanguages
     );
     const sortedAudioChannels = sortByUserPreference(
       stream.parsedFile?.audioChannels,
