@@ -381,6 +381,10 @@ export const ParentConfigSchema = z.object({
       proxy: BinaryMergeStrategy.default('inherit'),
       metadata: BinaryMergeStrategy.default('inherit'),
       misc: BinaryMergeStrategy.default('inherit'),
+        branding: BinaryMergeStrategy.default('inherit'),
+      fieldOverrides: z
+        .record(z.string(), z.enum(['inherit', 'override', 'extend']))
+        .optional(),
     })
     .optional(),
 });

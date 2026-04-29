@@ -37,6 +37,7 @@ import {
 } from '../parser/streamExpression.js';
 import { createLogger } from './logger.js';
 import { TVDBMetadata } from '../metadata/tvdb.js';
+import { FIELD_META } from './fieldMeta.js';
 
 const logger = createLogger('core');
 
@@ -1484,7 +1485,7 @@ const FILTER_FIELDS: (keyof UserData)[] = [
   'excludeUncachedFromStreamTypes', 'excludeUncachedMode',
   'excludeSeederRange', 'includeSeederRange', 'requiredSeederRange', 'seederRangeTypes',
   'excludeAgeRange', 'includeAgeRange', 'requiredAgeRange', 'ageRangeTypes',
-  'digitalReleaseFilter', 'size', 'bitrate',
+  'digitalReleaseFilter', 'size', 'bitrate', 'titleMatching', 'yearMatching', 'seasonEpisodeMatching'
 ];
 
 // prettier-ignore
@@ -1514,19 +1515,54 @@ const METADATA_FIELDS: (keyof UserData)[] = [
 const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
   'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
-  'hideErrors', 'hideErrorsForResources', 'titleMatching', 'yearMatching',
-  'seasonEpisodeMatching', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
+  'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
   'addonPassword', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
   'randomiseResults', 'enhanceResults', 'enhancePosters',
+];
+
+// prettier-ignore
+const BRANDING_FIELDS: (keyof UserData)[] = [
+  'addonName', 'addonLogo', 'addonBackground', 'addonDescription',
 ];
 
 // Personal fields are never inherited — always use the child's own values.
 // Includes per-user identity and per-instance state that has no meaning across configs.
 // prettier-ignore
 const PERSONAL_FIELDS: (keyof UserData)[] = [
-  'addonName', 'addonLogo', 'addonBackground', 'addonDescription',
   'appliedTemplates',
 ];
+
+/**
+ * Merges two arrays using "override by identity" semantics:
+ * - Parent entries are the base.
+ * - Child entries whose identity matches a parent entry replace it.
+ * - Child entries with no matching parent entry are appended.
+ * - For primitive arrays (no identityKey), deduplication by value is used.
+ */
+function extendList(
+  parentArr: any[],
+  childArr: any[],
+  identityKey?: string
+): any[] {
+  if (!identityKey) {
+    const seen = new Set(parentArr);
+    const result = [...parentArr];
+    for (const item of childArr) {
+      if (!seen.has(item)) {
+        result.push(item);
+        seen.add(item);
+      }
+    }
+    return result;
+  }
+  const merged = [...parentArr];
+  for (const item of childArr) {
+    const idx = merged.findIndex((p) => p[identityKey] === item[identityKey]);
+    if (idx >= 0) merged[idx] = item;
+    else merged.push(item);
+  }
+  return merged;
+}
 
 function applyBinarySection(
   result: UserData,
@@ -1620,6 +1656,12 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
     strategies?.misc ?? 'inherit',
     MISC_FIELDS
   );
+  applyBinarySection(
+    result,
+    parent,
+    strategies?.branding ?? 'inherit',
+    BRANDING_FIELDS
+  );
 
   // Personal fields always come from the child regardless of merge strategies.
   for (const field of PERSONAL_FIELDS) {
@@ -1627,6 +1669,41 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
       (result as any)[field] = child[field];
     } else {
       delete (result as any)[field];
+    }
+  }
+
+  // Per-field overrides - applied last so they win over group strategies.
+  const fieldOverrides = strategies?.fieldOverrides ?? {};
+  for (const [fieldKey, override] of Object.entries(fieldOverrides)) {
+    const field = fieldKey as keyof typeof FIELD_META;
+    const meta = FIELD_META[field];
+    if (!meta) continue; // ignore unknown or non-inheritable fields
+
+    if (override === 'inherit') {
+      if (parent[field] !== undefined) {
+        (result as any)[field] = parent[field];
+      } else {
+        delete (result as any)[field];
+      }
+    } else if (override === 'override') {
+      if (child[field] !== undefined) {
+        (result as any)[field] = child[field];
+      } else {
+        delete (result as any)[field];
+      }
+    } else if (override === 'extend') {
+      if (meta.type !== 'list') continue; // extend is only valid for list fields
+      const parentVal = (parent[field] as any[] | undefined) ?? [];
+      const childVal = (child[field] as any[] | undefined) ?? [];
+      if (parentVal.length === 0 && childVal.length === 0) {
+        delete (result as any)[field];
+      } else {
+        (result as any)[field] = extendList(
+          parentVal,
+          childVal,
+          meta.identityKey
+        );
+      }
     }
   }
 
