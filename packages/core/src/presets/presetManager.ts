@@ -163,21 +163,44 @@ let PRESET_LIST: string[] = [
 
 export class PresetManager {
   static getPresetList(): PresetMinimalMetadata[] {
-    return PRESET_LIST.map((presetId) => this.fromId(presetId).METADATA).map(
-      (metadata: PresetMetadata) => ({
-        ID: metadata.ID,
-        NAME: metadata.NAME,
-        LOGO: metadata.LOGO,
-        DESCRIPTION: metadata.DESCRIPTION,
-        SUPPORTED_RESOURCES: metadata.SUPPORTED_RESOURCES,
-        SUPPORTED_STREAM_TYPES: metadata.SUPPORTED_STREAM_TYPES,
-        SUPPORTED_SERVICES: metadata.SUPPORTED_SERVICES,
-        OPTIONS: metadata.OPTIONS,
-        BUILTIN: metadata.BUILTIN,
-        DISABLED: metadata.DISABLED,
-        CATEGORY: metadata.CATEGORY,
+    return PRESET_LIST.map((presetId) =>
+      this.toMinimalMetadata(this.fromId(presetId).METADATA)
+    );
+  }
+
+  static async getPresetListDynamic(): Promise<PresetMinimalMetadata[]> {
+    return Promise.all(
+      PRESET_LIST.map(async (presetId) => {
+        const preset = this.fromId(presetId);
+        let metadata = preset.METADATA;
+        if (typeof (preset as any).getDynamicMetadata === 'function') {
+          try {
+            metadata = await (preset as any).getDynamicMetadata();
+          } catch {
+            metadata = preset.METADATA;
+          }
+        }
+        return this.toMinimalMetadata(metadata);
       })
     );
+  }
+
+  private static toMinimalMetadata(
+    metadata: PresetMetadata
+  ): PresetMinimalMetadata {
+    return {
+      ID: metadata.ID,
+      NAME: metadata.NAME,
+      LOGO: metadata.LOGO,
+      DESCRIPTION: metadata.DESCRIPTION,
+      SUPPORTED_RESOURCES: metadata.SUPPORTED_RESOURCES,
+      SUPPORTED_STREAM_TYPES: metadata.SUPPORTED_STREAM_TYPES,
+      SUPPORTED_SERVICES: metadata.SUPPORTED_SERVICES,
+      OPTIONS: metadata.OPTIONS,
+      BUILTIN: metadata.BUILTIN,
+      DISABLED: metadata.DISABLED,
+      CATEGORY: metadata.CATEGORY,
+    };
   }
 
   static fromId(id: string): typeof Preset {
