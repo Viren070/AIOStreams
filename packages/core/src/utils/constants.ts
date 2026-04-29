@@ -9,6 +9,7 @@ export enum ErrorCode {
   USER_NEW_PASSWORD_TOO_SIMPLE = 'USER_NEW_PASSWORD_TOO_SIMPLE',
   ADDON_PASSWORD_INVALID = 'ADDON_PASSWORD_INVALID',
   PARENT_CONFIG_SELF_REFERENCE = 'PARENT_CONFIG_SELF_REFERENCE',
+  PARENT_CONFIG_UNAVAILABLE = 'PARENT_CONFIG_UNAVAILABLE',
   // Database
   DATABASE_ERROR = 'DATABASE_ERROR',
   // Encryption
@@ -64,6 +65,10 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
   [ErrorCode.PARENT_CONFIG_SELF_REFERENCE]: {
     statusCode: 400,
     message: 'A config cannot inherit from itself',
+  },
+  [ErrorCode.PARENT_CONFIG_UNAVAILABLE]: {
+    statusCode: 400,
+    message: 'The parent config could not be loaded',
   },
   [ErrorCode.DATABASE_ERROR]: {
     statusCode: 500,

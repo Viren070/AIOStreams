@@ -43,10 +43,35 @@ export class UserRepository {
       }
       config.trusted = false;
       config.ip = undefined;
+
+      let configToValidate: UserData = config;
+      if (config.parentConfig?.uuid) {
+        let parent: UserData;
+        try {
+          const rawParent = await this.getRawUser(
+            config.parentConfig.uuid,
+            config.parentConfig.password
+          );
+          if (!rawParent) throw new Error('Parent config not found');
+          parent = rawParent;
+        } catch (error) {
+          return Promise.reject(
+            new APIError(
+              constants.ErrorCode.PARENT_CONFIG_UNAVAILABLE,
+              undefined,
+              error instanceof APIError ? error.message : String(error)
+            )
+          );
+        }
+        const merged = mergeConfigs(parent, config);
+        merged.trusted = parent.trusted || config.trusted;
+        configToValidate = merged;
+      }
+
       try {
         // don't skip errors, but don't decrypt credentials
         // as we need to store the encrypted version
-        validatedConfig = await validateConfig(config, {
+        validatedConfig = await validateConfig(configToValidate, {
           skipErrorsFromAddonsOrProxies: false,
           decryptValues: false,
           // when creating a user, time isnt a concern
@@ -67,8 +92,10 @@ export class UserRepository {
 
       const uuid = await this.generateUUID();
 
+      // If a parent config was merged for validation, save the child's own config.
+      // Mutations from validateConfig (forced credentials, proxy) are re-applied at stream time.
       const { encryptedConfig, salt: configSalt } = await this.encryptConfig(
-        validatedConfig,
+        config.parentConfig?.uuid ? config : validatedConfig,
         password
       );
       const hashedPassword = await getTextHash(password);
@@ -290,9 +317,24 @@ export class UserRepository {
           Env.TRUSTED_UUIDS?.split(',').some((u) => new RegExp(u).test(uuid)) ??
           false;
         config.ip = undefined;
+
+        let configToValidate: UserData = config;
+        if (config.parentConfig?.uuid) {
+          const rawParent = await this.getRawUser(
+            config.parentConfig.uuid,
+            config.parentConfig.password
+          );
+          if (!rawParent) {
+            throw new APIError(constants.ErrorCode.PARENT_CONFIG_UNAVAILABLE);
+          }
+          const merged = mergeConfigs(rawParent, config);
+          merged.trusted = rawParent.trusted || config.trusted;
+          configToValidate = merged;
+        }
+
         let validatedConfig: UserData;
         try {
-          validatedConfig = await validateConfig(config, {
+          validatedConfig = await validateConfig(configToValidate, {
             skipErrorsFromAddonsOrProxies: false,
             decryptValues: false,
             // when updating a user, time isnt a concern
@@ -312,8 +354,10 @@ export class UserRepository {
         if (!isValid) {
           throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
         }
+        // If a parent config was merged for validation, save the child's own config.
+        // Mutations from validateConfig (forced credentials, proxy) are re-applied at stream time.
         const { encryptedConfig } = await this.encryptConfig(
-          validatedConfig,
+          config.parentConfig?.uuid ? config : validatedConfig,
           password,
           currentUser.rows[0].config_salt
         );

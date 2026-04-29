@@ -1494,7 +1494,7 @@ const SORTING_FIELDS: (keyof UserData)[] = [
 
 // prettier-ignore
 const FORMATTER_FIELDS: (keyof UserData)[] = [
-  'formatter', 'appliedTemplates',
+  'formatter',
 ];
 
 // prettier-ignore
@@ -1516,9 +1516,16 @@ const MISC_FIELDS: (keyof UserData)[] = [
   'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
   'hideErrors', 'hideErrorsForResources', 'titleMatching', 'yearMatching',
   'seasonEpisodeMatching', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
-  'addonName', 'addonLogo', 'addonBackground', 'addonDescription', 'addonPassword',
-  'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
+  'addonPassword', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
   'randomiseResults', 'enhanceResults', 'enhancePosters',
+];
+
+// Personal fields are never inherited — always use the child's own values.
+// Includes per-user identity and per-instance state that has no meaning across configs.
+// prettier-ignore
+const PERSONAL_FIELDS: (keyof UserData)[] = [
+  'addonName', 'addonLogo', 'addonBackground', 'addonDescription',
+  'appliedTemplates',
 ];
 
 function applyBinarySection(
@@ -1613,6 +1620,15 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
     strategies?.misc ?? 'inherit',
     MISC_FIELDS
   );
+
+  // Personal fields always come from the child regardless of merge strategies.
+  for (const field of PERSONAL_FIELDS) {
+    if (child[field] !== undefined) {
+      (result as any)[field] = child[field];
+    } else {
+      delete (result as any)[field];
+    }
+  }
 
   return result;
 }

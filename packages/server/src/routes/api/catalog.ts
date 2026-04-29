@@ -9,6 +9,8 @@ import {
   validateConfig,
   APIError,
   constants,
+  UserRepository,
+  mergeConfigs,
 } from '@aiostreams/core';
 
 const router: Router = Router();
@@ -20,8 +22,33 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   const { userData } = req.body;
   try {
     let validatedUserData: UserData;
+
+    let configToValidate: UserData = userData;
+    if (userData.parentConfig?.uuid) {
+      let parent: UserData;
+      try {
+        const rawParent = await UserRepository.getRawUser(
+          userData.parentConfig.uuid,
+          userData.parentConfig.password
+        );
+        if (!rawParent) throw new Error('Parent config not found');
+        parent = rawParent;
+      } catch (error) {
+        return Promise.reject(
+          new APIError(
+            constants.ErrorCode.PARENT_CONFIG_UNAVAILABLE,
+            undefined,
+            error instanceof APIError ? error.message : String(error)
+          )
+        );
+      }
+      const merged = mergeConfigs(parent, userData);
+      merged.trusted = parent.trusted || userData.trusted;
+      configToValidate = merged;
+    }
+
     try {
-      validatedUserData = await validateConfig(userData, {
+      validatedUserData = await validateConfig(configToValidate, {
         skipErrorsFromAddonsOrProxies: false,
         decryptValues: true,
         increasedManifestTimeout: true,
