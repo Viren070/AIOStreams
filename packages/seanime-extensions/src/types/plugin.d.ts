@@ -163,6 +163,22 @@ declare namespace $ui {
     fetch(url: string, options?: FetchOptions): Promise<FetchResponse>;
 
     /**
+     * Runtime-local cache helpers for short-lived plugin UI work.
+     */
+    cache: Cache;
+
+    /**
+     * Declarative settings helpers backed by $store and $storage when storage is available.
+     */
+    settings: Settings;
+
+    /**
+     * Lightweight UI-runtime jobs for debounce, polling, and singleflight work.
+     * Use cron for calendar-style scheduled jobs.
+     */
+    jobs: Jobs;
+
+    /**
      * Registers an event handler for the plugin.
      * @param eventName - The unique event identifier to register the handler for.
      * @param handler - The handler to register.
@@ -218,6 +234,101 @@ declare namespace $ui {
      * Video Core for controlling the built-in player
      */
     videoCore: VideoCore;
+  }
+  interface CacheOptions {
+    /** Time to keep the entry in milliseconds. Omit or set 0 to keep it until removed or plugin unload. */
+    ttl?: number;
+  }
+
+  interface Cache {
+    get<T = any>(key: string, fallback?: T): T | undefined;
+
+    set<T = any>(key: string, value: T, options?: CacheOptions | number): T;
+
+    has(key: string): boolean;
+
+    remove(key: string): boolean;
+
+    delete(key: string): boolean;
+
+    clear(): void;
+
+    getOrSet<T = any>(
+      key: string,
+      loader: () => T | Promise<T>,
+      options?: CacheOptions | number
+    ): T | Promise<T>;
+
+    getOrLoad<T = any>(
+      key: string,
+      loader: () => T | Promise<T>,
+      options?: CacheOptions | number
+    ): T | Promise<T>;
+
+    remember<T = any>(
+      key: string,
+      loader: () => T | Promise<T>,
+      options?: CacheOptions | number
+    ): T | Promise<T>;
+
+    size(): number;
+  }
+
+  interface DefinedSettings<T extends Record<string, any>> {
+    key: string;
+    defaults: T;
+
+    get(): T;
+
+    get<K extends keyof T>(path: K, fallback?: T[K]): T[K];
+
+    get<V = any>(path: string, fallback?: V): V;
+
+    set(value: Partial<T>): T;
+
+    set<K extends keyof T>(path: K, value: T[K]): T;
+
+    set(path: string, value: any): T;
+
+    save(value?: Partial<T>): T;
+
+    reset(): T;
+
+    fieldRef<K extends keyof T>(path: K): FieldRef<T[K]>;
+
+    fieldRef<V = any>(path: string): FieldRef<V>;
+
+    watch(callback: (value: T) => void): () => void;
+  }
+
+  interface Settings {
+    define<T extends Record<string, any>>(
+      name: string,
+      defaults: T
+    ): DefinedSettings<T>;
+  }
+
+  interface PollOptions {
+    immediate?: boolean;
+  }
+
+  interface Jobs {
+    singleflight<T = any>(key: string, fn: () => T | Promise<T>): Promise<T>;
+
+    debounce(key: string, fn: () => void, delay: number): () => void;
+
+    poll(
+      key: string,
+      fn: () => void | Promise<void>,
+      interval: number,
+      options?: PollOptions
+    ): () => void;
+
+    cancel(key: string): boolean;
+
+    cancelAll(): void;
+
+    isRunning(key: string): boolean;
   }
 
   interface State<T> {
@@ -1864,6 +1975,21 @@ declare namespace $ui {
      * Note: To clear the anime entry cache, use $anilist.clearCache() (requires 'anilist' permission).
      */
     clearEpisodeMetadataCache(): void;
+
+    /**
+     * Clears the server-side episode collection cache without clearing metadata provider cache.
+     */
+    clearEpisodeCollectionCache(): void;
+
+    /**
+     * Clears the server-side missing episodes cache.
+     */
+    clearMissingEpisodesCache(): void;
+
+    /**
+     * Clears the server-side schedule cache.
+     */
+    clearScheduleCache(): void;
   }
 
   interface Manga {
@@ -2245,6 +2371,14 @@ declare namespace $ui {
   }
 
   interface AutoSelect {
+    /**
+     * Searches for anime torrents using the saved auto select profile, falling back to the default provider when no profile is saved.
+     */
+    search(
+      media: $app.AL_BaseAnime,
+      episodeNumber: number
+    ): Promise<$app.HibikeTorrent_AnimeTorrent[]>;
+
     /**
      * Gets the saved auto select profile.
      */
@@ -2915,6 +3049,43 @@ declare namespace $database {
     /**
      * Deletes an auto downloader rule
      * @param id - The id of the auto downloader rule in the database
+     */
+    function remove(id: number): void;
+  }
+  namespace autoDownloaderProfiles {
+    /**
+     * Gets all auto downloader profiles
+     */
+    function getAll(): $app.Anime_AutoDownloaderProfile[];
+
+    /**
+     * Gets an auto downloader profile by the database id
+     * @param id - The id of the auto downloader profile in the database
+     * @returns The auto downloader profile
+     */
+    function get(id: number): $app.Anime_AutoDownloaderProfile | undefined;
+
+    /**
+     * Inserts an auto downloader profile
+     * @param profile - The auto downloader profile to insert
+     */
+    function insert(
+      profile: Omit<$app.Anime_AutoDownloaderProfile, 'dbId'>
+    ): void;
+
+    /**
+     * Updates an auto downloader profile
+     * @param id - The id of the auto downloader profile in the database
+     * @param profile - The auto downloader profile to update
+     */
+    function update(
+      id: number,
+      profile: Omit<$app.Anime_AutoDownloaderProfile, 'dbId'>
+    ): void;
+
+    /**
+     * Deletes an auto downloader profile
+     * @param id - The id of the auto downloader profile in the database
      */
     function remove(id: number): void;
   }
@@ -3834,4 +4005,28 @@ declare namespace $ui {
      */
     playLocalFile(path: string): Promise<void>;
   }
+}
+
+declare namespace $debug {
+  const enabled: boolean;
+
+  function log(...values: any[]): void;
+
+  function info(...values: any[]): void;
+
+  function warn(...values: any[]): void;
+
+  function error(...values: any[]): void;
+
+  function debug(...values: any[]): void;
+
+  function inspect(...values: any[]): void;
+
+  function mark(...values: any[]): void;
+
+  function time(label?: string): void;
+
+  function timeEnd(label?: string): void;
+
+  function clear(): void;
 }

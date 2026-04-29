@@ -112,6 +112,20 @@ declare function $unmarshalJSON(data: any, dst: any): void;
  */
 declare function $getUserPreference(key: string): string | undefined;
 
+declare namespace $shared {
+  /**
+   * Registers a shared helper factory during plugin init.
+   * The factory is re-run in each hook or UI runtime that calls `use`.
+   */
+  function define<T = any>(name: string, factory: () => T): void;
+
+  /**
+   * Instantiates a shared helper inside the current runtime.
+   * Keep the returned value in a local variable if you want to reuse it inside the same callback.
+   */
+  function use<T = any>(name: string): T;
+}
+
 /**
  * Habari
  */
