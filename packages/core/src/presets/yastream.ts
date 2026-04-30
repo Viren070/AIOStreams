@@ -295,7 +295,7 @@ export class YastreamPreset extends Preset {
     // catalogs
     if (kisskhCatalogs.length > 0) {
       userConfig.catalogs.push('kisskh.series.Search');
-      userConfig.catalogs.push('kisskh.movies.Search');
+      userConfig.catalogs.push('kisskh.movie.Search');
       userConfig.catalog.push(Provider.KISSKH);
     }
     if (onetouchtvCatalogs.length > 0) {
