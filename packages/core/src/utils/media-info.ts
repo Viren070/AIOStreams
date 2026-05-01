@@ -18,12 +18,14 @@ type MediaInfoAudioTrack = {
   codec?: unknown;
   profile?: unknown;
   lang?: unknown;
+  title?: unknown;
   ch_layout?: unknown;
   ch?: unknown;
 };
 
 type MediaInfoSubtitleTrack = {
   lang?: unknown;
+  title?: unknown;
 };
 
 type MediaInfoVideo = {
@@ -74,6 +76,30 @@ const LANGUAGE_ALIAS_MAP: Record<string, string> = {
 const LANGUAGE_BY_NAME = new Map<string, string>(
   constants.LANGUAGES.map((lang) => [lang.toLowerCase(), lang])
 );
+
+const TITLE_LANG_OVERRIDES: Array<{
+  lang: string;
+  pattern: RegExp;
+  override: string;
+}> = [{ lang: 'spa', pattern: /latin/i, override: 'es-MX' }];
+
+function applyTitleOverride(
+  normalisedLang: string,
+  title: string | undefined
+): string {
+  if (!title) return normalisedLang;
+  const match = TITLE_LANG_OVERRIDES.find(
+    (entry) => entry.lang === normalisedLang && entry.pattern.test(title)
+  );
+  return match ? match.override : normalisedLang;
+}
+
+function resolveTrackLang(lang: unknown, title: unknown): string | undefined {
+  if (typeof lang !== 'string') return undefined;
+  const normCode = normaliseLanguageCode(lang);
+  const titleStr = typeof title === 'string' ? title : undefined;
+  return applyTitleOverride(normCode, titleStr);
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -338,10 +364,10 @@ export function parseMediaInfo(
   const subtitleTracks = Array.isArray(info.subtitle) ? info.subtitle : [];
 
   const languages = normaliseLanguageList(
-    audioTracks.map((track) => track.lang)
+    audioTracks.map((track) => resolveTrackLang(track.lang, track.title))
   );
   const subtitles = normaliseLanguageList(
-    subtitleTracks.map((track) => track.lang)
+    subtitleTracks.map((track) => resolveTrackLang(track.lang, track.title))
   );
 
   const audioTags = [
