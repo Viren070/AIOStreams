@@ -48,10 +48,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "Dist contents:"
+          ls -la packages/seanime-extensions/dist/
+
           for dir in packages/seanime-extensions/dist/*/; do
             id=$(basename "$dir")
+            echo "Uploading $id ..."
             gh release upload seanime-extensions-latest \
               "$dir/manifest.json#${id}-manifest.json" \
               --repo ${{ github.repository }} \
               --clobber
+            echo "Upload finished for $id (exit $?)"
           done
+
+          echo "Done. Release assets:"
+          gh release view seanime-extensions-latest --repo ${{ github.repository }} --json assets --jq '.assets[].name'
