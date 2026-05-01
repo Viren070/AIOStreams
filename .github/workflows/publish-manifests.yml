@@ -54,8 +54,9 @@ jobs:
           for dir in packages/seanime-extensions/dist/*/; do
             id=$(basename "$dir")
             echo "Uploading $id ..."
+            cp "$dir/manifest.json" "${id}-manifest.json"
             gh release upload seanime-extensions-latest \
-              "$dir/manifest.json#${id}-manifest.json" \
+              "${id}-manifest.json" \
               --repo ${{ github.repository }} \
               --clobber
             echo "Upload finished for $id (exit $?)"
