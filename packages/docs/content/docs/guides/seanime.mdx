@@ -1,0 +1,121 @@
+---
+title: Seanime Extensions
+description: A guide on using AIOStreams in Seanime.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+AIOStreams comes with three extensions that integrate directly with Seanime.
+This guide covers what each extension does and how to install it.
+
+## Extensions
+
+### AIOStreams Plugin
+
+The recommended extension for most users. It uses Seanime's plugin system to add a dedicated results panel that
+preserves all your AIOStreams sorting and formatting exactly as configured. You can open the panel from a variety of
+triggers; by default it adds an **AIOStreams** tab alongside the standard **Torrent Streaming** / **Online Streaming** /
+**Debrid Streaming** tabs.
+
+Supports any URL or P2P-based stream (debrid and usenet included). Stremio NNTP streams are not supported.
+
+<Callout type="warn">
+  Requires the Search API. [Instances](/getting-started/public-instances) that disable it (e.g. the **Public ElfHosted Instance**) cannot be used with this extension.
+</Callout>
+
+### AIOStreams Torrent Provider
+
+Adds AIOStreams as a torrent provider inside Seanime's **Torrent Streaming** / **Debrid Streaming** tab. Only the
+torrents surfaced by AIOStreams are used - any debrid configured in AIOStreams itself is ignored. Seanime's own debrid
+support handles debrid playback.
+
+<Callout type="warn">
+  Requires the Search API. [Instances](/getting-started/public-instances) that disable it (e.g. the **Public ElfHosted Instance**) cannot be used with this extension.
+</Callout>
+<Callout type="info">
+  This extension was developed before the Plugin system supported torrent streaming. Now that it does, the Torrent
+  Provider may be deprecated in a future release. The **AIOStreams Plugin** is preferred.
+</Callout>
+
+### Stremio Custom Source
+
+Exposes a Stremio addon catalogue as a Seanime custom source — useful for anime catalogues as well as standard
+movie/series ones. It does not provide streams on its own; pair it with the **AIOStreams Plugin**, which can serve
+streams for any custom source.
+
+---
+
+## Installation
+
+<Steps>
+  <Step>
+    Configure AIOStreams as normal (e.g. using [the setup guide](/configuration/setup/)).
+  </Step>
+  <Step>
+    On the **Save & Install** page, under the **Other Apps** section, click **Seanime**.
+  </Step>
+</Steps>
+
+Then follow the steps for your extension:
+
+<Tabs items={['Plugin', 'Torrent Provider', 'Stremio Custom Source']}>
+  <Tab value="Plugin">
+    <Steps>
+      <Step>
+        Copy the **Manifest URL** shown at the top of the Seanime pop-up.
+      </Step>
+      <Step>
+        In Seanime, go to **Extensions** → **Add Extensions**. Paste the URL next to **Install from URL** and click **Find**.
+      </Step>
+      <Step>
+        Once found, install it and then click **Grant** → **Grant permissions** to approve the required permissions.
+      </Step>
+      <Step>
+        To adjust settings, click the **Preferences** icon (to the left of the three-dot menu) on the extension card.
+        Available options include preferred player (built-in, desktop, or external link), search ID (IMDb or Kitsu),
+        auto-play behaviour, and which triggers to show.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab value="Torrent Provider">
+    <Steps>
+      <Step>
+        Copy the **Manifest URL** for the `AIOStreams Torrent Provider` shown on the Seanime pop-up.
+      </Step>
+      <Step>
+        In Seanime, go to **Extensions** → **Add Extensions**. Paste the URL next to **Install from URL** and click **Find**, then install.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab value="Stremio Custom Source">
+    <Callout type="info">
+      A single Custom Source Extension in Seanime is limited to one list, so each catalogue gets its own extension instance.
+    </Callout>
+    <Steps>
+      <Step>
+        Under **Stremio Custom Source**, click **Configure**.
+      </Step>
+      <Step>
+        Enter a Stremio addon manifest URL to import catalogues from. If your catalogues are already in AIOStreams, click
+        **Continue** without changing the pre-filled URL. Otherwise, replace it with another addon's manifest URL (e.g. your
+        AIOMetadata URL) before continuing.
+      </Step>
+      <Step>
+        Review the detected catalogues, select the ones you want, optionally rename them, then click **Continue with X catalogues**.
+      </Step>
+      <Step>
+        Copy the resulting JSON (in the format `{"urls": ["url1", "url2", ...]}`).
+      </Step>
+      <Step>
+        In Seanime, go to **Extensions** → **Add Extensions**. Paste the JSON to the left of **Import from repository** and
+        click **Import all**. Scroll to the bottom and click **Install all**.
+      </Step>
+      <Callout type="idea">
+        If you want to uninstall a lot of these custom sources at once, rather than doing this individually in Seanime, which can become quite 
+        cumbersome, you can delete the relevant `stremio-custom-source-******.json` files under the `extensions` folder in your [Seanime data directory](https://seanime.app/docs/config#data-directory). 
+      </Callout>
+    </Steps>
+  </Tab>
+</Tabs>
