@@ -32,7 +32,7 @@ export class YastreamPreset extends Preset {
             label: 'Korean Series',
           },
           {
-            value: 'kisskh.movies.Korean',
+            value: 'kisskh.movie.Korean',
             label: 'Korean Movies',
           },
           {
@@ -40,7 +40,7 @@ export class YastreamPreset extends Preset {
             label: 'Chinese Series',
           },
           {
-            value: 'kisskh.movies.Chinese',
+            value: 'kisskh.movie.Chinese',
             label: 'Chinese Movies',
           },
           {
@@ -48,7 +48,7 @@ export class YastreamPreset extends Preset {
             label: 'US Series',
           },
           {
-            value: 'kisskh.movies.US',
+            value: 'kisskh.movie.US',
             label: 'US Movies',
           },
           {
@@ -56,7 +56,7 @@ export class YastreamPreset extends Preset {
             label: 'Thai Series',
           },
           {
-            value: 'kisskh.movies.Thai',
+            value: 'kisskh.movie.Thai',
             label: 'Thai Movies',
           },
           {
@@ -64,7 +64,7 @@ export class YastreamPreset extends Preset {
             label: 'Philippine Series',
           },
           {
-            value: 'kisskh.movies.Philippine',
+            value: 'kisskh.movie.Philippine',
             label: 'Philippine Movies',
           },
           {
@@ -72,7 +72,7 @@ export class YastreamPreset extends Preset {
             label: 'Japanese Series',
           },
           {
-            value: 'kisskh.movies.Japanese',
+            value: 'kisskh.movie.Japanese',
             label: 'Japanese Movies',
           },
           {
@@ -80,7 +80,7 @@ export class YastreamPreset extends Preset {
             label: 'Hongkong Series',
           },
           {
-            value: 'kisskh.movies.Hongkong',
+            value: 'kisskh.movie.Hongkong',
             label: 'Hongkong Movies',
           },
           {
@@ -88,7 +88,7 @@ export class YastreamPreset extends Preset {
             label: 'Taiwanese Series',
           },
           {
-            value: 'kisskh.movies.Taiwanese',
+            value: 'kisskh.movie.Taiwanese',
             label: 'Taiwanese Movies',
           },
         ],
@@ -295,7 +295,7 @@ export class YastreamPreset extends Preset {
     // catalogs
     if (kisskhCatalogs.length > 0) {
       userConfig.catalogs.push('kisskh.series.Search');
-      userConfig.catalogs.push('kisskh.movies.Search');
+      userConfig.catalogs.push('kisskh.movie.Search');
       userConfig.catalog.push(Provider.KISSKH);
     }
     if (onetouchtvCatalogs.length > 0) {
