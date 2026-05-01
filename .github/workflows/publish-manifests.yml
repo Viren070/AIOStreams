@@ -1,0 +1,57 @@
+name: Publish Seanime Extension Manifests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/seanime-extensions/src/**/*.ts'
+      - 'packages/seanime-extensions/scripts/**'
+      - 'packages/seanime-extensions/package.json'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @aiostreams/seanime-extensions
+
+      - name: Build extensions
+        run: pnpm --filter @aiostreams/seanime-extensions run build
+
+      - name: Ensure release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view seanime-extensions-latest --repo ${{ github.repository }} 2>/dev/null || \
+            gh release create seanime-extensions-latest \
+              --repo ${{ github.repository }} \
+              --title "Seanime Extensions" \
+              --notes "Compiled Seanime extension manifests. Updated automatically on each push to main." \
+              --prerelease
+
+      - name: Upload manifests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for dir in packages/seanime-extensions/dist/*/; do
+            id=$(basename "$dir")
+            gh release upload seanime-extensions-latest \
+              "$dir/manifest.json#${id}-manifest.json" \
+              --repo ${{ github.repository }} \
+              --clobber
+          done
