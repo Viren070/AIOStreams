@@ -5,6 +5,7 @@ import {
   createLogger,
   Env,
   FULL_LANGUAGE_MAPPING,
+  getLanguageDisplayName,
 } from '../utils/index.js';
 import FileParser from './file.js';
 import {
@@ -628,23 +629,18 @@ class StreamParser {
 
     const language =
       possibleLanguages.find((l) => l.flag_priority) || possibleLanguages[0];
-    const languageName = (
-      language?.internal_english_name || language?.english_name
-    )
-      ?.split('(')?.[0]
-      ?.trim();
-
-    if (languageName && constants.LANGUAGES.includes(languageName as any)) {
-      return languageName;
-    }
-    return undefined;
+    if (!language) return undefined;
+    const languageName = getLanguageDisplayName(language);
+    return constants.LANGUAGES.includes(languageName as any)
+      ? languageName
+      : undefined;
   }
 
   protected convertISO6392ToLanguage(code: string): string | undefined {
     const lang = FULL_LANGUAGE_MAPPING.find(
       (language) => language.iso_639_2 === code
     );
-    return lang?.english_name?.split('(')?.[0]?.trim();
+    return lang ? getLanguageDisplayName(lang) : undefined;
   }
 
   protected getInLibrary(

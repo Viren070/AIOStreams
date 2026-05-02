@@ -1,8 +1,11 @@
 import { PARSE_REGEX } from './regex.js';
 import { ParsedFile } from '../db/schemas.js';
 import { Parser, handlers } from '@viren070/parse-torrent-title';
-import { FULL_LANGUAGE_MAPPING } from '../utils/languages.js';
-import { LANGUAGES, RESOLUTIONS } from '../utils/constants.js';
+import { RESOLUTIONS } from '../utils/constants.js';
+import {
+  mapLanguageCode,
+  convertLangCodeToName,
+} from '../utils/language-utils.js';
 
 function matchPattern(
   filename: string,
@@ -55,46 +58,6 @@ function matchMultiplePatterns(
   return Object.entries(patterns)
     .filter(([_, pattern]) => pattern.test(filename))
     .map(([tag]) => tag);
-}
-
-export function mapLanguageCode(code: string): string {
-  switch (code.toLowerCase()) {
-    case 'zh-tw':
-    case 'zh-hans':
-      return 'zh';
-    case 'es-419':
-      return 'es-MX';
-    default:
-      return code;
-  }
-}
-
-export function convertLangCodeToName(code: string): string | undefined {
-  const parts = code.split('-');
-  const possibleLangs = FULL_LANGUAGE_MAPPING.filter((language) => {
-    if (parts.length === 2) {
-      return (
-        language.iso_639_1?.toLowerCase() === parts[0].toLowerCase() &&
-        language.iso_3166_1?.toLowerCase() === parts[1].toLowerCase()
-      );
-    } else {
-      return language.iso_639_1?.toLowerCase() === parts[0].toLowerCase();
-    }
-  });
-  let chosenLang =
-    possibleLangs.find((lang) => lang.flag_priority) || possibleLangs[0];
-  if (chosenLang) {
-    const candidateLang = (
-      chosenLang.internal_english_name || chosenLang.english_name
-    )
-      .split(/;|\(/)[0]
-      .trim();
-    if (LANGUAGES.includes(candidateLang as any)) {
-      return candidateLang;
-    } else {
-      return undefined;
-    }
-  }
 }
 
 class FileParser {

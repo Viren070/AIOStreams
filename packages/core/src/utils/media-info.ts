@@ -1,5 +1,5 @@
 import * as constants from './constants.js';
-import { FULL_LANGUAGE_MAPPING } from './languages.js';
+import { normaliseLanguage, normaliseLangCode } from './language-utils.js';
 
 export interface ParsedMediaInfo {
   languages?: string[];
@@ -50,33 +50,6 @@ export type MediaInfo = {
   has_chapters?: boolean;
 };
 
-const LANGUAGE_ALIAS_MAP: Record<string, string> = {
-  fre: 'fra',
-  ger: 'deu',
-  cze: 'ces',
-  slo: 'slk',
-  rum: 'ron',
-  dut: 'nld',
-  gre: 'ell',
-  alb: 'sqi',
-  baq: 'eus',
-  bur: 'mya',
-  chi: 'zho',
-  per: 'fas',
-  arm: 'hye',
-  geo: 'kat',
-  ice: 'isl',
-  mac: 'mkd',
-  mao: 'mri',
-  may: 'msa',
-  tib: 'bod',
-  wel: 'cym',
-};
-
-const LANGUAGE_BY_NAME = new Map<string, string>(
-  constants.LANGUAGES.map((lang) => [lang.toLowerCase(), lang])
-);
-
 const TITLE_LANG_OVERRIDES: Array<{
   lang: string;
   pattern: RegExp;
@@ -96,7 +69,7 @@ function applyTitleOverride(
 
 function resolveTrackLang(lang: unknown, title: unknown): string | undefined {
   if (typeof lang !== 'string') return undefined;
-  const normCode = normaliseLanguageCode(lang);
+  const normCode = normaliseLangCode(lang);
   const titleStr = typeof title === 'string' ? title : undefined;
   return applyTitleOverride(normCode, titleStr);
 }
@@ -108,56 +81,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function asMediaInfo(value: unknown): MediaInfo | undefined {
   if (!isObject(value)) return undefined;
   return value as MediaInfo;
-}
-
-function normaliseLanguageCode(code: string): string {
-  const lower = code.toLowerCase().trim();
-  if (!lower) return lower;
-  return LANGUAGE_ALIAS_MAP[lower] ?? lower;
-}
-
-export function normaliseLanguage(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const raw = value.trim();
-  if (!raw) return undefined;
-
-  const byName = LANGUAGE_BY_NAME.get(raw.toLowerCase());
-  if (byName) return byName;
-
-  const code = normaliseLanguageCode(raw);
-  const parts = code.split('-');
-
-  const possible = FULL_LANGUAGE_MAPPING.filter((lang) => {
-    if (parts.length === 2) {
-      return (
-        lang.iso_639_1?.toLowerCase() === parts[0] &&
-        lang.iso_3166_1?.toLowerCase() === parts[1]
-      );
-    }
-
-    return (
-      lang.iso_639_1?.toLowerCase() === parts[0] ||
-      lang.iso_639_2?.toLowerCase() === parts[0]
-    );
-  });
-
-  const chosen = possible.find((lang) => lang.flag_priority) ?? possible[0];
-  if (!chosen) return undefined;
-
-  const candidate = (chosen.internal_english_name || chosen.english_name)
-    ?.split(/;|\(/)[0]
-    ?.trim();
-
-  if (
-    candidate &&
-    constants.LANGUAGES.includes(
-      candidate as (typeof constants.LANGUAGES)[number]
-    )
-  ) {
-    return candidate;
-  }
-
-  return undefined;
 }
 
 function normaliseLanguageList(values: unknown[]): string[] {

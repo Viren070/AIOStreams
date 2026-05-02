@@ -1,7 +1,7 @@
 import { Headers } from 'undici';
 import { Env, Cache, makeRequest, ParsedId, IdType } from '../utils/index.js';
 import { deduplicateTitles, Metadata, MetadataTitle } from './utils.js';
-import { iso31661ToIso6391 } from '../formatters/utils.js';
+import { iso31661ToIso6391 } from '../utils/language-utils.js';
 import { z } from 'zod';
 
 export type TMDBIdType = 'imdb_id' | 'tmdb_id' | 'tvdb_id';

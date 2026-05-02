@@ -7,11 +7,10 @@ import {
   formatBitrate,
   formatDuration,
   formatHours,
-  languageToCode,
-  languageToEmoji,
   makeSmall,
   formatSmartBitrate,
 } from './utils.js';
+import { languageToCode, languageToEmoji } from '../utils/language-utils.js';
 import { Env } from '../utils/env.js';
 
 const logger = createLogger('formatter');

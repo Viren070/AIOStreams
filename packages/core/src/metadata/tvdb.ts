@@ -1,7 +1,7 @@
 import { createLogger } from '../utils/logger.js';
 import { Cache, Env, formatZodError, ParsedId } from '../utils/index.js';
 import { Metadata, MetadataTitle } from './utils.js';
-import { iso6392ToIso6391 } from '../formatters/utils.js';
+import { iso6392ToIso6391 } from '../utils/language-utils.js';
 import { makeRequest } from '../utils/http.js';
 import { z, ZodError } from 'zod';
 

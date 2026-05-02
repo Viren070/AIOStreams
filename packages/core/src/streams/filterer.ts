@@ -20,12 +20,8 @@ import {
   titleMatchWithLang,
 } from '../parser/utils.js';
 import { partial_ratio } from 'fuzzball';
-import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
-import {
-  formatBitrate,
-  formatBytes,
-  iso6391ToLanguage,
-} from '../formatters/utils.js';
+import { formatBitrate, formatBytes } from '../formatters/utils.js';
+import { iso6391ToLanguage } from '../utils/language-utils.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
 

@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
       './ptt.js': './ptt',
       './regex.js': './regex',
       '../utils/languages.js': '../utils/languages',
+      './languages.js': './languages',
+      './constants.js': './constants',
+      '../utils/language-utils.js': '../utils/language-utils',
       '../utils/constants.js': '../utils/constants',
     };
     return config;
@@ -26,6 +29,9 @@ const nextConfig: NextConfig = {
       // 'fs': false,
       './regex.js': `${pathToCoreFromFrontend}/parser/regex`,
       '../utils/languages.js': `${pathToCoreFromFrontend}/utils/languages`,
+      './languages.js': `${pathToCoreFromFrontend}/utils/languages`,
+      './constants.js': `${pathToCoreFromFrontend}/utils/constants`,
+      '../utils/language-utils.js': `${pathToCoreFromFrontend}/utils/language-utils.js`,
       '../utils/constants.js': `${pathToCoreFromFrontend}/utils/constants`,
     },
   },
