@@ -183,6 +183,7 @@ const languageEmojiMap: Record<string, string> = {
   russian: '🇷🇺',
   arabic: '🇸🇦',
   portuguese: '🇵🇹',
+  'portuguese (brazil)': '🇧🇷',
   spanish: '🇪🇸',
   french: '🇫🇷',
   german: '🇩🇪',

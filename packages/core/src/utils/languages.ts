@@ -1146,6 +1146,7 @@ export const FULL_LANGUAGE_MAPPING = [
     iso_3166_1: 'BR',
     flag: '🇧🇷',
     english_name: 'Portuguese (Brazil)',
+    internal_english_name: 'Portuguese (Brazil)',
     name: 'Português',
   },
 

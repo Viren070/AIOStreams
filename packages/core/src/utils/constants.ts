@@ -1383,6 +1383,7 @@ const LANGUAGES = [
   'Russian',
   'Arabic',
   'Portuguese',
+  'Portuguese (Brazil)',
   'Spanish',
   'French',
   'German',

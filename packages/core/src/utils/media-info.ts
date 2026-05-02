@@ -54,7 +54,10 @@ const TITLE_LANG_OVERRIDES: Array<{
   lang: string;
   pattern: RegExp;
   override: string;
-}> = [{ lang: 'spa', pattern: /latin/i, override: 'es-MX' }];
+}> = [
+  { lang: 'spa', pattern: /latin/i, override: 'es-MX' },
+  { lang: 'por', pattern: /brazilian/i, override: 'pt-BR' },
+];
 
 function applyTitleOverride(
   normalisedLang: string,
