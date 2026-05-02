@@ -131,7 +131,8 @@ export function MainSidebar() {
   useRegisterQuickAction(
     {
       id: 'toggle-mode',
-      label: mode === 'pro' ? 'Switch to Noob mode' : 'Switch to Pro mode',
+      label:
+        mode === 'pro' ? 'Switch to Simple mode' : 'Switch to Advanced mode',
       icon: <BiCog />,
       keywords: ['mode', 'pro', 'noob', 'beginner', 'advanced'],
       onSelect: () => setMode(mode === 'pro' ? 'noob' : 'pro'),
