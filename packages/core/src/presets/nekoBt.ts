@@ -128,23 +128,38 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
     if (!parsedStream.filename && !parsedStream.folderName) {
       return undefined;
     }
+    const addBackAutoTitleTags =
+      this.addon.preset.options.leaveAutoTitleTagsInFilename ?? false;
+    let titleTag = '';
 
     const filenameTags = this.extractTagsFromString(
       parsedStream.filename ?? ''
     );
     if (parsedStream.filename && Object.keys(filenameTags).length > 0) {
-      parsedStream.filename = parsedStream.filename
-        .replace(NekoBtStreamParser.TAGS_REGEX, '')
-        .trim();
+      const titleTagMatch = parsedStream.filename.match(
+        NekoBtStreamParser.TAGS_REGEX
+      );
+      if (titleTagMatch) {
+        titleTag = titleTagMatch[0];
+        parsedStream.filename = parsedStream.filename
+          .replace(NekoBtStreamParser.TAGS_REGEX, '')
+          .trim();
+      }
     }
 
     const folderTags = this.extractTagsFromString(
       parsedStream.folderName ?? ''
     );
     if (parsedStream.folderName && Object.keys(folderTags).length > 0) {
-      parsedStream.folderName = parsedStream.folderName
-        .replace(NekoBtStreamParser.TAGS_REGEX, '')
-        .trim();
+      const titleTagMatch = parsedStream.folderName.match(
+        NekoBtStreamParser.TAGS_REGEX
+      );
+      if (titleTagMatch) {
+        titleTag = titleTagMatch[0];
+        parsedStream.folderName = parsedStream.folderName
+          .replace(NekoBtStreamParser.TAGS_REGEX, '')
+          .trim();
+      }
     }
 
     const fileMetadata: Record<string, any> | undefined =
@@ -200,6 +215,12 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
             parsedFile.subtitles.push(lang);
           }
         });
+    }
+
+    // add back after parsing so it is not interfering with filename parsing.
+    if (addBackAutoTitleTags && titleTag) {
+      parsedStream.filename =
+        `${parsedStream.filename ?? ''} ${titleTag}`.trim();
     }
 
     return parsedFile;
@@ -288,6 +309,14 @@ export class NekoBtPreset extends TorznabPreset {
         type: 'boolean',
         default: false,
         showInSimpleMode: false,
+      },
+      {
+        id: 'leaveAutoTitleTagsInFilename',
+        name: 'Leave Auto Title Tags in Filename',
+        description:
+          'By default, [nekoBT auto title tags](https://wiki.nekobt.to/info/metadata/#auto-titles) (e.g. {Tags: ...}) are stripped from the filename after taking what we can. Enabling this option will leave them in. This may be useful if you want to use info that is not parsed (e.g. Sub level, MTL/OTL/HS tags) via regex.',
+        type: 'boolean',
+        default: false,
       },
       {
         id: 'socials',
