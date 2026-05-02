@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { PageWrapper } from '../../shared/page-wrapper';
 import { PageControls } from '../../shared/page-controls';
 import { MenuTabs } from '../../shared/menu-tabs';
 import { useMode } from '@/context/mode';
+import { useSubTab } from '@/context/sub-tab';
 import { FaRocket, FaPlay, FaEye } from 'react-icons/fa';
 import { FiSettings, FiLink } from 'react-icons/fi';
 import { BackgroundOptimization } from './_components/background-optimization';
@@ -21,24 +21,7 @@ export function MiscellaneousMenu() {
 
 function Content() {
   const { mode } = useMode();
-  const [activeTab, setActiveTab] = useState('background');
-
-  // check query params for a specific tab to open
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('misc-tab');
-    if (tab && ['background', 'playback', 'display', 'parent'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, []);
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    const params = new URLSearchParams(window.location.search);
-    params.set('misc-tab', value);
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, '', newUrl);
-  };
+  const { tab: activeTab, setTab: handleTabChange } = useSubTab('miscellaneous');
 
   return (
     <>

@@ -15,6 +15,7 @@ type SettingsCardProps = {
   className?: string;
   action?: React.ReactNode;
   titleClassName?: string;
+  id?: string;
 };
 
 export function SettingsNavCard({ title, children }: SettingsCardProps) {
@@ -56,6 +57,7 @@ export function SettingsCard({
   className,
   titleClassName,
   action,
+  id,
 }: SettingsCardProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -73,9 +75,11 @@ export function SettingsCard({
     <>
       <Card
         ref={cardRef}
+        id={id}
         data-settings-card
         className={cn(
-          'group/settings-card relative lg:bg-gray-950/70',
+          'group/settings-card relative lg:bg-gray-950/70 scroll-mt-24',
+          'data-[command-target=true]:ring-2 data-[command-target=true]:ring-brand-500 data-[command-target=true]:ring-offset-2 data-[command-target=true]:ring-offset-[--background] transition-shadow',
           className
         )}
         onMouseMove={handleMouseMove}

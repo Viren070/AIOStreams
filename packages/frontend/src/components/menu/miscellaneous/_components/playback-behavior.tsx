@@ -23,6 +23,7 @@ export function PlaybackBehavior() {
     <>
       <SettingsCard
         title="Auto Play"
+        id="autoPlay"
         description={
           <div className="space-y-2">
             <p>
@@ -115,6 +116,7 @@ export function PlaybackBehavior() {
 
       <SettingsCard
         title="Are you still there?"
+        id="areYouStillThere"
         description="Stop autoplay after a number of consecutive episodes so the player returns to stream selection."
       >
         <Switch

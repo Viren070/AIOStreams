@@ -22,6 +22,7 @@ import { PageControls } from '../../shared/page-controls';
 import { Select } from '../../ui/select';
 import { MenuTabs } from '../../shared/menu-tabs';
 import { useMode } from '@/context/mode';
+import { useSubTab } from '@/context/sub-tab';
 import { IoExtensionPuzzle } from 'react-icons/io5';
 import { MdOutlineDataset, MdSubtitles } from 'react-icons/md';
 import { RiFolderDownloadFill } from 'react-icons/ri';
@@ -50,9 +51,7 @@ function Content() {
   const { userData, setUserData } = useUserData();
   const { isInherited, hasParent } = useParentInheritance();
   const [page, setPage] = useState<'installed' | 'marketplace'>('installed');
-  const [installedTab, setInstalledTab] = useState<'addons' | 'catalogs'>(
-    'addons'
-  );
+  const { tab: installedTab, setTab: setInstalledTab } = useSubTab('addons');
   const [catalogLoading, setCatalogLoading] = useState(false);
 
   const userDataRef = useRef(userData);
@@ -354,7 +353,7 @@ function Content() {
               </div>
               <MenuTabs
                 activeTab={installedTab}
-                onTabChange={(v) => setInstalledTab(v as 'addons' | 'catalogs')}
+                onTabChange={(v) => setInstalledTab(v)}
                 defaultMobileOpen="addons"
                 tabs={[
                   {

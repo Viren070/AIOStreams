@@ -11,6 +11,7 @@ export function MetadataServices() {
   return (
     <>
       <SettingsCard
+        id="tmdb"
         title="TMDB"
         description={`Optionally provide your TMDB API Key and Read Access Token here. AIOStreams only needs one of them for title matching and its recommended and precaching to be able to
            determine when to move to the next season. Some addons in the marketplace will require one or the other too.`}
@@ -69,6 +70,7 @@ export function MetadataServices() {
       </SettingsCard>
 
       <SettingsCard
+        id="tvdbApiKey"
         title="TVDB"
         description="Provide your TVDB API key to also fetch metadata from TVDB."
       >

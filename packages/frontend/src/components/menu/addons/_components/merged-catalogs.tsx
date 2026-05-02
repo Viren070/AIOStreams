@@ -253,6 +253,7 @@ export function MergedCatalogsCard() {
   return (
     <SettingsCard
       title="Merged Catalogs"
+      id="mergedCatalogs"
       description="Combine multiple catalogs into a single merged catalog. Useful for creating custom collections from different sources."
       action={
         <IconButton

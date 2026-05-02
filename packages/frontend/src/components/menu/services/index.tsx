@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { PageWrapper } from '../../shared/page-wrapper';
+import { useSubTab } from '@/context/sub-tab';
 import { PageControls } from '../../shared/page-controls';
 import { MenuTabs } from '../../shared/menu-tabs';
 import { useMode } from '@/context/mode';
@@ -23,26 +23,7 @@ export function ServicesMenu() {
 function Content() {
   const { mode } = useMode();
   const { isInherited, hasParent } = useParentInheritance();
-  const [activeTab, setActiveTab] = useState('services');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('service-tab');
-    if (tab && ['services', 'builtin', 'metadata', 'posters'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, []);
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    const params = new URLSearchParams(window.location.search);
-    params.set('service-tab', value);
-    window.history.replaceState(
-      {},
-      '',
-      `${window.location.pathname}?${params.toString()}`
-    );
-  };
+  const { tab: activeTab, setTab: handleTabChange } = useSubTab('services');
 
   return (
     <>

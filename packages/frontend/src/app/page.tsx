@@ -24,6 +24,10 @@ import { LuffyError } from '@/components/shared/luffy-error';
 import { TextGenerateEffect } from '@/components/shared/text-generate-effect';
 import { OptionsProvider } from '@/context/options';
 import { ModeProvider } from '@/context/mode';
+import { SubTabProvider } from '@/context/sub-tab';
+import { QuickActionsProvider } from '@/context/quick-actions';
+import { CommandPaletteProvider } from '@/context/command-palette';
+import { CommandPalette } from '@/components/shared/command-palette';
 
 function ErrorOverlay({ error }: { error: string | null }) {
   return (
@@ -55,26 +59,33 @@ function AppContent() {
 
   return (
     <MenuProvider>
-      <SaveProvider>
-        <AppSidebarProvider>
-          <AppLayout withSidebar sidebarSize="slim">
-            <AppLayoutSidebar>
-              <MainSidebar />
-            </AppLayoutSidebar>
-            <AppLayout>
-              <AppLayoutContent>
-                <div data-main-layout-container className="h-auto">
-                  <TopNavbar />
-                  <div data-main-layout-content>
-                    <MenuContent />
-                  </div>
-                </div>
-              </AppLayoutContent>
-            </AppLayout>
-          </AppLayout>
-        </AppSidebarProvider>
-      </SaveProvider>
-      <Toaster />
+      <SubTabProvider>
+        <QuickActionsProvider>
+          <CommandPaletteProvider>
+            <SaveProvider>
+              <AppSidebarProvider>
+                <AppLayout withSidebar sidebarSize="slim">
+                  <AppLayoutSidebar>
+                    <MainSidebar />
+                  </AppLayoutSidebar>
+                  <AppLayout>
+                    <AppLayoutContent>
+                      <div data-main-layout-container className="h-auto">
+                        <TopNavbar />
+                        <div data-main-layout-content>
+                          <MenuContent />
+                        </div>
+                      </div>
+                    </AppLayoutContent>
+                  </AppLayout>
+                </AppLayout>
+              </AppSidebarProvider>
+            </SaveProvider>
+            <CommandPalette />
+            <Toaster />
+          </CommandPaletteProvider>
+        </QuickActionsProvider>
+      </SubTabProvider>
     </MenuProvider>
   );
 }

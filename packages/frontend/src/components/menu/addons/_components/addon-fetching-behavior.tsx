@@ -96,6 +96,7 @@ export function AddonFetchingBehaviorCard() {
   return (
     <SettingsCard
       title="Addon Fetching Strategy"
+      id="fetchStrategy"
       description="Choose how streams are fetched from your addons"
     >
       <Select

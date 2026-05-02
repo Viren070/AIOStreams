@@ -74,8 +74,11 @@ const FIELD_GROUPS: FieldGroup[] = [
   'branding',
 ];
 
-// All inheritable field keys, pre-sorted by label within their group
+// All inheritable field keys, pre-sorted by label within their group.
+// Fields with ignoreForParentConfig are command-palette-only and cannot be
+// individually overridden here.
 const ALL_FIELD_KEYS = Object.entries(FIELD_META)
+  .filter(([, meta]) => !meta.ignoreForParentConfig)
   .map(([key]) => key as keyof typeof FIELD_META)
   .sort((a, b) =>
     (FIELD_META[a]?.label ?? a).localeCompare(FIELD_META[b]?.label ?? b)
@@ -477,6 +480,7 @@ export function ParentConfig() {
       {!parentConfig ? (
         <SettingsCard
           title="Link a Parent Config"
+          id="parentConfig"
           description="Inherit settings from another config at runtime. Any changes made to the parent are immediately reflected here."
         >
           <form onSubmit={handleLink} className="space-y-3">
@@ -508,6 +512,7 @@ export function ParentConfig() {
         <>
           <SettingsCard
             title="Parent Config"
+            id="parentConfig"
             description="Settings from the parent config are merged into this config at runtime."
             action={
               <Button

@@ -29,6 +29,9 @@ function parseSyncedUrl(value: string): string | null {
   return url.length > 0 ? url : null;
 }
 
+function toId(val: string) {
+  return val.charAt(0).toLowerCase() + val.slice(1).replace(/\s+/g, '');
+}
 // Shared helpers
 
 /** Download `data` as a JSON file. */
@@ -293,6 +296,7 @@ function ListFooter({
 // TextInputs
 
 export type TextInputProps = {
+  fieldName?: string;
   itemName: string;
   label: string;
   help: string;
@@ -304,6 +308,7 @@ export type TextInputProps = {
 };
 
 export function TextInputs({
+  fieldName,
   itemName,
   label,
   help,
@@ -346,7 +351,12 @@ export function TextInputs({
   );
 
   return (
-    <SettingsCard title={label} description={help} key={label}>
+    <SettingsCard
+      id={fieldName ?? toId(label)}
+      title={label}
+      description={help}
+      key={label}
+    >
       {renderItemsWithPlaceholders(
         values,
         (v) => v,
@@ -394,6 +404,7 @@ export function TextInputs({
 export type ToggleableTextInputProps = {
   title: string;
   description: string;
+  fieldName?: string;
   values: { expression: string; enabled: boolean }[];
   onValuesChange: (values: { expression: string; enabled: boolean }[]) => void;
   onExpressionChange: (expression: string, index: number) => void;
@@ -404,6 +415,7 @@ export type ToggleableTextInputProps = {
 
 export function ToggleableTextInputs({
   title,
+  fieldName,
   description,
   values,
   onValuesChange,
@@ -458,7 +470,11 @@ export function ToggleableTextInputs({
   );
 
   return (
-    <SettingsCard title={title} description={description}>
+    <SettingsCard
+      id={fieldName ?? toId(title)}
+      title={title}
+      description={description}
+    >
       {renderItemsWithPlaceholders(
         values,
         (v) => v.expression,
@@ -644,6 +660,7 @@ export function TwoTextInputs({
 
 export type RankedExpressionInputProps = {
   title: string;
+  fieldName?: string;
   description: string;
   values: { expression: string; score: number; enabled: boolean }[];
   onValuesChange: (
@@ -657,6 +674,7 @@ export type RankedExpressionInputProps = {
 
 export function RankedExpressionInputs({
   title,
+  fieldName,
   description,
   values,
   onValuesChange,
@@ -708,7 +726,11 @@ export function RankedExpressionInputs({
   );
 
   return (
-    <SettingsCard title={title} description={description}>
+    <SettingsCard
+      id={fieldName ?? toId(title)}
+      title={title}
+      description={description}
+    >
       {renderItemsWithPlaceholders(
         values,
         (v) => v.expression,

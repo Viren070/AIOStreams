@@ -10,7 +10,8 @@ import { useMenu } from '@/context/menu';
 import { Button, IconButton } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/disclosure';
 import { DonationModal } from '@/components/shared/donation-modal';
-import { BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
+import { BiLogInCircle, BiLogOutCircle, BiSearch } from 'react-icons/bi';
+import { useCommandPalette } from '@/context/command-palette';
 import { ConfigModal } from '@/components/config-modal';
 import { useUserData } from '@/context/userData';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ export function TopNavbar(props: TopNavbarProps) {
   const isOffline = !serverStatus.status;
   const { userData, setUserData, uuid, setUuid, password, setPassword } =
     useUserData();
+  const { open: openCommandPalette } = useCommandPalette();
 
   const confirmClearConfig = useConfirmationDialog({
     title: 'Sign Out',
@@ -61,10 +63,15 @@ export function TopNavbar(props: TopNavbarProps) {
             className="flex items-center w-full gap-3"
           >
             <AppSidebarTrigger />
-            <div
-              data-top-navbar-content-separator
-              className="flex flex-1"
-            ></div>
+            <button
+              type="button"
+              onClick={() => openCommandPalette()}
+              aria-label="Search settings"
+              className="flex-1 flex items-center gap-2 h-9 px-3 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors text-sm truncate"
+            >
+              <BiSearch className="text-base shrink-0" />
+              <span className="flex-1 text-left">Search...</span>
+            </button>
             {selectedMenu !== 'about' ? (
               <div className="flex items-center gap-2 lg:hidden">
                 <PageControls
@@ -93,7 +100,7 @@ export function TopNavbar(props: TopNavbarProps) {
                 />
               </div>
             ) : (
-              <div className="block lg:hidden absolute top-0 right-4">
+              <div className="block lg:hidden">
                 <Button
                   intent="primary-subtle"
                   size="md"

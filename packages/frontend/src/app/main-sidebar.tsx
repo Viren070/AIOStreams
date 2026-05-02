@@ -23,7 +23,10 @@ import {
   BiHeart,
   BiLogOutCircle,
   BiLogInCircle,
+  BiSearch,
 } from 'react-icons/bi';
+import { useCommandPalette } from '@/context/command-palette';
+import { useRegisterQuickAction } from '@/context/quick-actions';
 import { useRouter, usePathname } from 'next/navigation';
 import { useDisclosure } from '@/hooks/disclosure';
 import {
@@ -37,6 +40,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useOptions } from '@/context/options';
 import { useMode } from '@/context/mode';
 import { DonationModal } from '@/components/shared/donation-modal';
+import { useSave } from '@/context/save';
 
 type MenuItem = VerticalMenuItem & {
   id: MenuId;
@@ -75,7 +79,12 @@ export function MainSidebar() {
   }, [pathname]);
 
   const { status, error, loading } = useStatus();
-  const { mode } = useMode();
+  const { mode, setMode } = useMode();
+  const { open: openCommandPalette } = useCommandPalette();
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const shortcutLabel = isMac ? '⌘K' : 'Ctrl K';
 
   const confirmClearConfig = useConfirmationDialog({
     title: 'Sign Out',
@@ -86,6 +95,49 @@ export function MainSidebar() {
       user.setPassword(null);
     },
   });
+
+  const isSignedIn = Boolean(user.uuid && user.password);
+
+  useRegisterQuickAction(
+    isSignedIn
+      ? {
+          id: 'sign-out',
+          label: 'Sign Out',
+          icon: <BiLogOutCircle />,
+          keywords: ['logout', 'log out'],
+          onSelect: () => confirmClearConfig.open(),
+        }
+      : {
+          id: 'sign-in',
+          label: 'Sign In',
+          icon: <BiLogInCircle />,
+          keywords: ['login', 'log in'],
+          onSelect: () => signInModal.open(),
+        },
+    [isSignedIn, confirmClearConfig, signInModal]
+  );
+
+  useRegisterQuickAction(
+    {
+      id: 'donate',
+      label: 'Donate',
+      icon: <BiHeart />,
+      keywords: ['support', 'sponsor'],
+      onSelect: () => donationModal.open(),
+    },
+    [donationModal]
+  );
+
+  useRegisterQuickAction(
+    {
+      id: 'toggle-mode',
+      label: mode === 'pro' ? 'Switch to Noob mode' : 'Switch to Pro mode',
+      icon: <BiCog />,
+      keywords: ['mode', 'pro', 'noob', 'beginner', 'advanced'],
+      onSelect: () => setMode(mode === 'pro' ? 'noob' : 'pro'),
+    },
+    [mode, setMode]
+  );
 
   const topMenuItems: MenuItem[] = [
     {
@@ -113,32 +165,32 @@ export function MainSidebar() {
       id: 'filters',
     },
     ...(mode === 'pro'
-      ? [
+      ? ([
           {
             name: 'Sorting',
             iconType: BiSort,
             isCurrent: selectedMenu === 'sorting',
-            id: 'sorting',
+            id: 'sorting' as const,
           },
-        ]
-      : []),
+        ] as MenuItem[])
+      : ([] as MenuItem[])),
     {
       name: 'Formatter',
       iconType: BiPen,
       isCurrent: selectedMenu === 'formatter',
-      id: 'formatter',
+      id: 'formatter' as const,
     },
     {
       name: 'Proxy',
       iconType: BiServer,
       isCurrent: selectedMenu === 'proxy',
-      id: 'proxy',
+      id: 'proxy' as const,
     },
     {
       name: 'Miscellaneous',
       iconType: BiCog,
       isCurrent: selectedMenu === 'miscellaneous',
-      id: 'miscellaneous',
+      id: 'miscellaneous' as const,
     },
     ...(isOptionsEnabled
       ? [
@@ -146,7 +198,7 @@ export function MainSidebar() {
             name: 'Fun',
             iconType: BiSmile,
             isCurrent: selectedMenu === 'fun',
-            id: 'fun',
+            id: 'fun' as const,
           },
         ]
       : []),
@@ -154,7 +206,7 @@ export function MainSidebar() {
       name: 'Save & Install',
       iconType: BiSave,
       isCurrent: selectedMenu === 'save-install',
-      id: 'save-install',
+      id: 'save-install' as const,
     },
   ];
 
@@ -239,6 +291,46 @@ export function MainSidebar() {
                     : status.tag
                   : ''}
               </span>
+            )}
+          </div>
+          <div
+            className={cn('mb-3', isCollapsed ? 'flex justify-center' : 'px-4')}
+          >
+            {isCollapsed ? (
+              <Tooltip
+                side="right"
+                trigger={
+                  <button
+                    type="button"
+                    onClick={() => {
+                      openCommandPalette();
+                      ctx.setOpen(false);
+                    }}
+                    className="group/search flex w-11 h-10 items-center justify-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-0"
+                    aria-label="Search settings"
+                  >
+                    <BiSearch className="text-base shrink-0" />
+                  </button>
+                }
+              >
+                Search settings ({shortcutLabel})
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  openCommandPalette();
+                  ctx.setOpen(false);
+                }}
+                className="group/search flex w-full h-9 items-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-3 text-sm"
+                aria-label="Search settings"
+              >
+                <BiSearch className="text-base shrink-0" />
+                <span className="flex-1 text-left">Search settings…</span>
+                <kbd className="font-mono text-xs px-1.5 py-0.5 rounded border border-[--border] bg-[--background] text-[--muted] leading-none">
+                  {shortcutLabel}
+                </kbd>
+              </button>
             )}
           </div>
           <VerticalMenu

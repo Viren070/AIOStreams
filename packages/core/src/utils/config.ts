@@ -1677,7 +1677,7 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
   for (const [fieldKey, override] of Object.entries(fieldOverrides)) {
     const field = fieldKey as keyof typeof FIELD_META;
     const meta = FIELD_META[field];
-    if (!meta) continue; // ignore unknown or non-inheritable fields
+    if (!meta || meta.ignoreForParentConfig) continue;
 
     if (override === 'inherit') {
       if (parent[field] !== undefined) {

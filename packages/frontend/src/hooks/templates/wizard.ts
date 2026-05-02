@@ -1,7 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Template, Option, StatusResponse, ServiceId } from '@aiostreams/core';
+import {
+  Template,
+  Option,
+  StatusResponse,
+  ServiceId,
+  MenuId,
+} from '@aiostreams/core';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
   applyTemplateConditionals,
@@ -34,7 +40,7 @@ export interface UseTemplateWizardParams {
   setUserData: (updater: (prev: any) => any) => void;
   validationModal: UseValidationModal;
   templateValidations: Record<string, TemplateValidation>;
-  setSelectedMenu: (menu: string) => void;
+  setSelectedMenu: (menu: MenuId) => void;
   onOpenChange: (open: boolean) => void;
   mode: Mode;
 }

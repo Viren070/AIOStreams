@@ -13,6 +13,7 @@ export function DisplayDebug() {
     <>
       <SettingsCard
         title="Statistic Streams"
+        id="statistics"
         description="AIOStreams will return the statistics of stream fetches and response times for each addon if enabled."
       >
         <Switch
@@ -88,6 +89,7 @@ export function DisplayDebug() {
 
       <SettingsCard
         title="External Downloads"
+        id="externalDownloads"
         description="Adds a stream that automatically opens the stream in your browser below every stream for easier downloading"
       >
         <Switch
@@ -103,7 +105,7 @@ export function DisplayDebug() {
         />
       </SettingsCard>
 
-      <SettingsCard title="Hide Errors">
+      <SettingsCard id="hideErrors" title="Hide Errors">
         <Switch
           label="Hide Errors"
           help="AIOStreams will attempt to return the errors in responses to streams, catalogs etc. Turning this on will hide the errors."

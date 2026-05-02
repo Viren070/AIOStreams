@@ -15,6 +15,7 @@ export function BackgroundOptimization() {
     <>
       <SettingsCard
         title="Pre-cache Next Episode"
+        id="precacheNextEpisode"
         description={
           <>
             Fetches the next episode&apos;s streams in the background and pings
@@ -140,6 +141,7 @@ export function BackgroundOptimization() {
 
       <SettingsCard
         title="Preload Streams"
+        id="preloadStreams"
         description={
           <>
             Automatically sends HTTP requests to selected streams so they start

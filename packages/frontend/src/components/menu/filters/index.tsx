@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { PageWrapper } from '../../shared/page-wrapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { SettingsNavCard } from '../../shared/settings-card';
@@ -67,6 +67,7 @@ import MarkdownLite from '../../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@/utils/clipboard';
 import { useParentInheritance } from '@/context/userData';
+import { useSubTab } from '@/context/sub-tab';
 import { InheritedBadge } from '../../shared/inherited-badge';
 
 import { FilterSettings } from './_components/filter-settings';
@@ -181,7 +182,7 @@ export function FiltersMenu() {
 }
 
 function Content() {
-  const [tab, setTab] = useState('cache');
+  const { tab, setTab } = useSubTab('filters');
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
@@ -189,20 +190,8 @@ function Content() {
   const allowedRegexModal = useDisclosure(false);
   const allowedRegexUrlsModal = useDisclosure(false);
   const whitelistedSelUrlsModal = useDisclosure(false);
-  // check query params for a specific filter tab to open
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const filter = params.get('filter');
-    if (filter) {
-      setTab(filter);
-    }
-  }, []);
   const handleTabChange = (value: string) => {
     setTab(value);
-    const params = new URLSearchParams(window.location.search);
-    params.set('filter', value);
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, '', newUrl);
   };
 
   const getSyncedProps = (
@@ -403,7 +392,7 @@ function Content() {
               </TabsTrigger>
               {mode === 'pro' && (
                 <>
-                  <TabsTrigger value="title-matching">
+                  <TabsTrigger value="matching">
                     <FaEquals className="text-lg mr-3" />
                     Matching
                   </TabsTrigger>
@@ -461,11 +450,16 @@ function Content() {
         </TabsList>
 
         <div className="space-y-0 relative">
-          <TabsContent value="cache" className="space-y-4">
+          <TabsContent
+            id="filter-tab-cache"
+            value="cache"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Cache" />
               <div className="space-y-4">
                 <SettingsCard
+                  id="excludeUncached"
                   title="Uncached"
                   description="Control the exclusion of uncached results"
                 >
@@ -573,6 +567,7 @@ function Content() {
                   </div>
                 </SettingsCard>
                 <SettingsCard
+                  id="excludeCached"
                   title="Cached"
                   description="Control the exclusion of cached results"
                 >
@@ -681,7 +676,11 @@ function Content() {
             </>
           </TabsContent>
 
-          <TabsContent value="resolution" className="space-y-4">
+          <TabsContent
+            id="filter-tab-resolution"
+            value="resolution"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Resolution" />
               <FilterSettings<Resolution>
@@ -723,7 +722,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="quality" className="space-y-4">
+          <TabsContent
+            id="filter-tab-quality"
+            value="quality"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Quality" />
               <FilterSettings<Quality>
@@ -765,7 +768,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="encode" className="space-y-4">
+          <TabsContent
+            id="filter-tab-encode"
+            value="encode"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Encode" />
               <FilterSettings<Encode>
@@ -807,7 +814,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="stream-type" className="space-y-4">
+          <TabsContent
+            id="filter-tab-stream-type"
+            value="stream-type"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Stream Type" />
               <FilterSettings<StreamType>
@@ -849,7 +860,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="visual-tag" className="space-y-4">
+          <TabsContent
+            id="filter-tab-visual-tag"
+            value="visual-tag"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Visual Tag" />
               <FilterSettings<VisualTag>
@@ -891,7 +906,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="audio-tag" className="space-y-4">
+          <TabsContent
+            id="filter-tab-audio-tag"
+            value="audio-tag"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Audio Tag" />
               <FilterSettings<AudioTag>
@@ -931,7 +950,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="audio-channel" className="space-y-4">
+          <TabsContent
+            id="filter-tab-audio-channel"
+            value="audio-channel"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Audio Channel" />
               <FilterSettings<AudioChannel>
@@ -971,7 +994,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="language" className="space-y-4">
+          <TabsContent
+            id="filter-tab-language"
+            value="language"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Language" />
               <FilterSettings<Language>
@@ -1014,7 +1041,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="subtitle" className="space-y-4">
+          <TabsContent
+            id="filter-tab-subtitle"
+            value="subtitle"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Subtitle" />
 
@@ -1132,7 +1163,11 @@ function Content() {
               />
             </>
           </TabsContent>
-          <TabsContent value="seeders" className="space-y-4">
+          <TabsContent
+            id="filter-tab-seeders"
+            value="seeders"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Seeders" />
               <SettingsCard
@@ -1416,7 +1451,7 @@ function Content() {
               </SettingsCard>
             </>
           </TabsContent>
-          <TabsContent value="age" className="space-y-4">
+          <TabsContent id="filter-tab-age" value="age" className="space-y-4">
             <>
               <HeadingWithPageControls heading="Age" />
               <SettingsCard
@@ -1709,11 +1744,16 @@ function Content() {
               </SettingsCard>
             </>
           </TabsContent>
-          <TabsContent value="title-matching" className="space-y-4">
+          <TabsContent
+            id="filter-tab-matching"
+            value="matching"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Matching" />
               <div className="space-y-4">
                 <SettingsCard
+                  id="titleMatching"
                   title="Title Matching"
                   description="Any streams which don't specifically match the requested title will be filtered out. You can optionally choose to only apply it to specific request types and addons. This requires a TMDB Read Access Token to be set in the Services menu."
                 >
@@ -1858,6 +1898,7 @@ function Content() {
                 </SettingsCard>
 
                 <SettingsCard
+                  id="yearMatching"
                   title="Year Matching"
                   description="Any streams which don't specifically match the requested year will be filtered out. You can optionally choose to only apply it to specific request types and addons"
                 >
@@ -1971,6 +2012,7 @@ function Content() {
                 </SettingsCard>
 
                 <SettingsCard
+                  id="seasonEpisodeMatching"
                   title="Season/Episode Matching"
                   description="Any streams which don't specifically match the requested season/episode will be filtered out. You can optionally choose to only apply it to specific request types and addons"
                 >
@@ -2059,7 +2101,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="stream-expression" className="space-y-4">
+          <TabsContent
+            id="filter-tab-stream-expression"
+            value="stream-expression"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Stream Expression" />
               <div className="mb-4">
@@ -2448,7 +2494,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="keyword" className="space-y-4">
+          <TabsContent
+            id="filter-tab-keyword"
+            value="keyword"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Keyword" />
               <div className="mb-4">
@@ -2513,7 +2563,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="release-group" className="space-y-4">
+          <TabsContent
+            id="filter-tab-release-group"
+            value="release-group"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Release Group" />
               <div className="mb-4">
@@ -2574,7 +2628,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="regex" className="space-y-4">
+          <TabsContent
+            id="filter-tab-regex"
+            value="regex"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Regex" />
               <div className="mb-4">
@@ -2661,6 +2719,7 @@ function Content() {
               <div className="space-y-4">
                 {mode === 'pro' && (
                   <TextInputs
+                    fieldName="requiredRegexPatterns"
                     label="Required Regex"
                     help="Streams that do not match any of these regular expressions will be excluded"
                     itemName="Regex"
@@ -2676,6 +2735,7 @@ function Content() {
                 )}
                 <TextInputs
                   label="Excluded Regex"
+                  fieldName="excludedRegexPatterns"
                   help="Streams that match any of these regular expressions will be excluded"
                   itemName="Regex"
                   values={userData.excludedRegexPatterns || []}
@@ -2690,6 +2750,7 @@ function Content() {
                 {mode === 'pro' && (
                   <TextInputs
                     label="Included Regex"
+                    fieldName="includedRegexPatterns"
                     help="Streams that match any of these regular expressions will be included, ignoring other exclude/required filters"
                     itemName="Regex"
                     values={userData.includedRegexPatterns || []}
@@ -2799,7 +2860,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="bitrate" className="space-y-4">
+          <TabsContent
+            id="filter-tab-bitrate"
+            value="bitrate"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Bitrate" />
               <div className="mb-4">
@@ -2984,7 +3049,7 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="size" className="space-y-4">
+          <TabsContent id="filter-tab-size" value="size" className="space-y-4">
             <>
               <HeadingWithPageControls heading="Size" />
               <div className="mb-4">
@@ -3125,7 +3190,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="limit" className="space-y-4">
+          <TabsContent
+            id="filter-tab-limit"
+            value="limit"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Result Limits" />
               <SettingsCard description="Apply limits to specific kinds of results">
@@ -3274,7 +3343,11 @@ function Content() {
               </SettingsCard>
             </>
           </TabsContent>
-          <TabsContent value="deduplicator" className="space-y-4">
+          <TabsContent
+            id="filter-tab-deduplicator"
+            value="deduplicator"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Deduplicator" />
               <div className="mb-4">
@@ -3578,7 +3651,11 @@ function Content() {
               </div>
             </>
           </TabsContent>
-          <TabsContent value="miscellaneous" className="space-y-4">
+          <TabsContent
+            id="filter-tab-miscellaneous"
+            value="miscellaneous"
+            className="space-y-4"
+          >
             <>
               <HeadingWithPageControls heading="Miscellaneous" />
               <div className="mb-4">
@@ -3588,6 +3665,7 @@ function Content() {
               </div>
               <div className="space-y-4">
                 <SettingsCard
+                  id="digitalReleaseFilter"
                   title="Digital Release Filter"
                   description="This will filter out all results for movies that are determined to not have a digital release."
                 >
@@ -3719,6 +3797,7 @@ function Content() {
                   />
                 </SettingsCard>
                 <SettingsCard
+                  id="enableSeadex"
                   title="SeaDex Integration"
                   description="Fetch SeaDex data (releases.moe) for anime to identify best quality releases."
                 >
@@ -3734,6 +3813,7 @@ function Content() {
                 </SettingsCard>
                 {mode === 'pro' && userData.excludeSeasonPacks && (
                   <SettingsCard
+                    id="excludeSeasonPacks"
                     title="Exclude Season Packs"
                     description="Whether to filter out results that contain entire seasons."
                   >

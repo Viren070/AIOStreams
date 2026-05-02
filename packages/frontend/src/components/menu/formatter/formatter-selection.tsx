@@ -255,6 +255,7 @@ export function FormatterSelection() {
     <>
       <SettingsCard
         title="Formatter Selection"
+        id="formatter"
         description="Choose how your streams should be formatted"
       >
         <div className="flex items-center gap-3 flex-wrap">
