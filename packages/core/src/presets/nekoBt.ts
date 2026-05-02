@@ -17,6 +17,17 @@ import { TorznabPreset } from './torznab.js';
 export class NekoBtStreamParser extends BuiltinStreamParser {
   private static TAGS_REGEX = /\{Tags:\s*([^}]*)\}\s*$/i;
 
+  // nekoBT omits the dash in regional language codes; map them to proper BCP 47
+  private static LANG_CODE_MAP: Record<string, string> = {
+    frfr: 'fr-FR',
+    ptbr: 'pt-BR',
+    ptpt: 'pt-PT',
+    eses: 'es-ES',
+    es419: 'es-419',
+    zhhans: 'zh-Hans',
+    zhhant: 'zh-TW',
+  };
+
   // Video quality mapping (indexes per nekoBT comment)
   // Each index corresponds to the numeric ID used by nekoBT tags.
   // aiostreamsName maps to one of the canonical QUALITIES where possible.
@@ -57,6 +68,10 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
     { name: 'VC1' },
   ];
 
+  private static normalizeNekoBtLangCode(code: string): string {
+    return NekoBtStreamParser.LANG_CODE_MAP[code.toLowerCase()] ?? code;
+  }
+
   private extractTagsFromString(input: string): Record<string, any> {
     const result: Record<string, any> = {};
     if (!input) return result;
@@ -80,8 +95,8 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
       } else if (/^C\d+$/.test(token)) {
         const idx = parseInt(token.slice(1), 10);
         result.codecTag = NekoBtStreamParser.VIDEO_CODEC_MAP[idx] ?? undefined;
-      } else if (/^[AFS]-/.test(token)) {
-        // language tags like A-en or F-en,jp
+      } else if (/^[AFS]=/.test(token)) {
+        // language tags like A=en or F=en,jp
         const kind = token[0];
         const langs =
           token
@@ -161,6 +176,7 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
       }
       // audio languages
       [...(fileMetadata.audioLanguages ?? [])]
+        .map(NekoBtStreamParser.normalizeNekoBtLangCode)
         .map(mapLanguageCode)
         .map(convertLangCodeToName)
         .forEach((lang: string | undefined) => {
@@ -175,6 +191,7 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
         ...(fileMetadata.fansubLanguages ?? []),
         ...(fileMetadata.subtitleLanguages ?? []),
       ]
+        .map(NekoBtStreamParser.normalizeNekoBtLangCode)
         .map(mapLanguageCode)
         .map(convertLangCodeToName)
         .forEach((lang: string | undefined) => {
