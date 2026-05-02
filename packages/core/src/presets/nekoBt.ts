@@ -6,10 +6,7 @@ import {
   Stream,
   UserData,
 } from '../db/index.js';
-import {
-  convertLangCodeToName,
-  mapLanguageCode,
-} from '../utils/language-utils.js';
+import { convertLangCodeToName, mapLanguageCode } from '../utils/languages.js';
 import StreamParser from '../parser/streams.js';
 import { Env, constants } from '../utils/index.js';
 import { BuiltinStreamParser } from './builtin.js';

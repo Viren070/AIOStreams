@@ -14,7 +14,7 @@ import {
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
-import { iso6391ToLanguage } from '../utils/language-utils.js';
+import { iso6391ToLanguage } from '../utils/languages.js';
 
 const logger = createLogger('stream-context');
 

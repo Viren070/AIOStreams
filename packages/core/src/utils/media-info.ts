@@ -1,5 +1,5 @@
 import * as constants from './constants.js';
-import { normaliseLanguage, normaliseLangCode } from './language-utils.js';
+import { normaliseLanguage, normaliseLangCode } from './languages.js';
 
 export interface ParsedMediaInfo {
   languages?: string[];

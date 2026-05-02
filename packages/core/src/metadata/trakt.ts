@@ -9,7 +9,7 @@ import {
   Env,
 } from '../utils/index.js';
 import { MetadataTitle } from './utils.js';
-import { iso31661ToIso6391 } from '../utils/language-utils.js';
+import { iso31661ToIso6391 } from '../utils/languages.js';
 
 const traktAliasCache = Cache.getInstance<string, MetadataTitle[]>(
   'trakt-aliases'

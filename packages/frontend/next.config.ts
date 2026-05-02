@@ -15,10 +15,11 @@ const nextConfig: NextConfig = {
       fs: false,
       './ptt.js': './ptt',
       './regex.js': './regex',
-      '../utils/languages.js': '../utils/languages',
       './languages.js': './languages',
+      './language-list.js': './language-list',
+      '../utils/languages.js': '../utils/languages',
+      '../utils/language-list.js': '../utils/language-list',
       './constants.js': './constants',
-      '../utils/language-utils.js': '../utils/language-utils',
       '../utils/constants.js': '../utils/constants',
     };
     return config;
@@ -28,10 +29,11 @@ const nextConfig: NextConfig = {
     resolveAlias: {
       // 'fs': false,
       './regex.js': `${pathToCoreFromFrontend}/parser/regex`,
-      '../utils/languages.js': `${pathToCoreFromFrontend}/utils/languages`,
       './languages.js': `${pathToCoreFromFrontend}/utils/languages`,
+      './language-list.js': `${pathToCoreFromFrontend}/utils/language-list.js`,
+      '../utils/languages.js': `${pathToCoreFromFrontend}/utils/languages`,
+      '../utils/language-list.js': `${pathToCoreFromFrontend}/utils/language-list.js`,
       './constants.js': `${pathToCoreFromFrontend}/utils/constants`,
-      '../utils/language-utils.js': `${pathToCoreFromFrontend}/utils/language-utils.js`,
       '../utils/constants.js': `${pathToCoreFromFrontend}/utils/constants`,
     },
   },
