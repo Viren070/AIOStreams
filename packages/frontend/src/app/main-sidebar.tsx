@@ -52,14 +52,12 @@ export function MainSidebar() {
   const isCollapsed = !ctx.isBelowBreakpoint && !expandedSidebar;
   const { selectedMenu, setSelectedMenu } = useMenu();
   const pathname = usePathname();
-  const { isOptionsEnabled, enableOptions } = useOptions();
+  const { isOptionsEnabled, toggleOptions } = useOptions();
   const donationModal = useDisclosure(false);
 
   const user = useUserData();
   const signInModal = useDisclosure(false);
   const [initialUuid, setInitialUuid] = React.useState<string | null>(null);
-
-  const clickHistory = React.useRef<number[]>([]);
 
   React.useEffect(() => {
     const uuidMatch = pathname.match(
@@ -187,12 +185,6 @@ export function MainSidebar() {
       isCurrent: selectedMenu === 'proxy',
       id: 'proxy' as const,
     },
-    {
-      name: 'Miscellaneous',
-      iconType: BiCog,
-      isCurrent: selectedMenu === 'miscellaneous',
-      id: 'miscellaneous' as const,
-    },
     ...(isOptionsEnabled
       ? [
           {
@@ -203,6 +195,12 @@ export function MainSidebar() {
           },
         ]
       : []),
+    {
+      name: 'Miscellaneous',
+      iconType: BiCog,
+      isCurrent: selectedMenu === 'miscellaneous',
+      id: 'miscellaneous' as const,
+    },
     {
       name: 'Save & Install',
       iconType: BiSave,
@@ -260,16 +258,7 @@ export function MainSidebar() {
             <div
               className="flex items-center gap-2"
               onClick={() => {
-                const now = Date.now();
-                const clicks = clickHistory.current.filter(
-                  (time) => now - time < 5000
-                );
-                clicks.push(now);
-                clickHistory.current = clicks;
-                if (clicks.length >= 10) {
-                  clickHistory.current = [];
-                  enableOptions();
-                }
+                toggleOptions();
               }}
             >
               <img

@@ -1,8 +1,15 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from 'react';
 import { useMode } from './mode';
 import { MENU_IDS, type MenuId } from '../../../core/src/utils/fieldMeta';
+import { useOptions } from './options';
 
 const VALID_MENUS = MENU_IDS;
 
@@ -30,12 +37,21 @@ const MenuContext = createContext<MenuContextType>({
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
   const { mode } = useMode();
-  const menus: MenuId[] = (VALID_MENUS as readonly MenuId[]).filter((menu) => {
+
+  const { isOptionsEnabled } = useOptions();
+
+  const menus = useMemo(() => {
+    let availableMenus = VALID_MENUS as readonly MenuId[];
     if (mode === 'noob') {
-      return !PRO_ONLY_MENUS.includes(menu);
+      availableMenus = availableMenus.filter(
+        (menu) => !PRO_ONLY_MENUS.includes(menu)
+      );
     }
-    return true;
-  });
+    if (!isOptionsEnabled) {
+      availableMenus = availableMenus.filter((menu) => menu !== 'fun');
+    }
+    return availableMenus;
+  }, [mode, isOptionsEnabled]);
 
   // Get initial menu from URL or default to 'about'
   const initialMenu = (() => {

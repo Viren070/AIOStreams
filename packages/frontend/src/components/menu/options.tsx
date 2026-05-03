@@ -3,6 +3,7 @@ import { PageWrapper } from '../shared/page-wrapper';
 import { SettingsCard } from '../shared/settings-card';
 import { Switch } from '../ui/switch';
 import { useUserData } from '@/context/userData';
+import { PageControls } from '../shared/page-controls';
 
 export function OptionsMenu() {
   return (
@@ -15,10 +16,17 @@ export function OptionsMenu() {
 function Content() {
   const { userData, setUserData } = useUserData();
   return (
-    <div className="flex flex-col w-full gap-4">
-      <div>
-        <h2>Options</h2>
-        <p className="text-[--muted]">{':)'}</p>
+    <>
+      <div className="flex items-center w-full">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2>Options</h2>
+          </div>
+          <p className="text-[--muted]">{':)'}</p>
+        </div>
+        <div className="hidden lg:block lg:ml-auto">
+          <PageControls />
+        </div>
       </div>
 
       <SettingsCard title="Fun" className="w-full">
@@ -58,6 +66,6 @@ function Content() {
           />
         </div>
       </SettingsCard>
-    </div>
+    </>
   );
 }

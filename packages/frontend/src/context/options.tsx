@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 
 interface OptionsContextType {
   isOptionsEnabled: boolean;
-  enableOptions: () => void;
+  toggleOptions: () => void;
 }
 
 const OptionsContext = createContext<OptionsContextType | undefined>(undefined);
@@ -10,12 +10,12 @@ const OptionsContext = createContext<OptionsContextType | undefined>(undefined);
 export function OptionsProvider({ children }: { children: React.ReactNode }) {
   const [isOptionsEnabled, setIsOptionsEnabled] = useState(false);
 
-  const enableOptions = () => {
-    setIsOptionsEnabled(true);
+  const toggleOptions = () => {
+    setIsOptionsEnabled((prev) => !prev);
   };
 
   return (
-    <OptionsContext.Provider value={{ isOptionsEnabled, enableOptions }}>
+    <OptionsContext.Provider value={{ isOptionsEnabled, toggleOptions }}>
       {children}
     </OptionsContext.Provider>
   );
