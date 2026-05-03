@@ -87,11 +87,14 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
     const maxPages = Env.BUILTIN_EZTV_MAX_PAGES;
 
     // Perform initial search
-    const initialResponse = await this.api.getTorrents({
-      imdbId: imdbIdWithoutTt,
-      limit: 100,
-      page: 1,
-    });
+    const initialResponse = await this.api.getTorrents(
+      {
+        imdbId: imdbIdWithoutTt,
+        limit: 100,
+        page: 1,
+      },
+      metadata.recentCacheTTL
+    );
 
     let allTorrents = [...initialResponse.torrents];
 
@@ -117,11 +120,14 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
         const pagePromises = Array.from({ length: pagesToFetch }, (_, i) => {
           const pageNumber = i + 2; // Start from page 2 since we already fetched page 1
           return queryLimit(() =>
-            this.api.getTorrents({
-              imdbId: imdbIdWithoutTt,
-              limit: 100,
-              page: pageNumber,
-            })
+            this.api.getTorrents(
+              {
+                imdbId: imdbIdWithoutTt,
+                limit: 100,
+                page: pageNumber,
+              },
+              metadata.recentCacheTTL
+            )
           );
         });
 

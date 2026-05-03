@@ -79,10 +79,13 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
 
         // First fetch to get total and page size
         logger.debug(`Fetching first page for query "${q}"`);
-        const firstPageResponse = await this.api.search({
-          query: q,
-          page: 1,
-        });
+        const firstPageResponse = await this.api.search(
+          {
+            query: q,
+            page: 1,
+          },
+          metadata.recentCacheTTL
+        );
 
         const { total, pageSize } = firstPageResponse;
         let allResults = [...firstPageResponse.results];
@@ -116,10 +119,13 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
 
         // Fetch all remaining pages in parallel
         const pagePromises = pageNumbers.map(async (pageNum) => {
-          const { results } = await this.api.search({
-            query: q,
-            page: pageNum,
-          });
+          const { results } = await this.api.search(
+            {
+              query: q,
+              page: pageNum,
+            },
+            metadata.recentCacheTTL
+          );
           logger.debug(`Fetched page ${pageNum} for query "${q}"`, {
             newResults: results.length,
           });
