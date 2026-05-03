@@ -56,6 +56,23 @@ export function cleanNzbUrl(url: string): string {
  * Compute an MD5 hash of a cleaned NZB URL.
  */
 export function hashNzbUrl(url: string, clean: boolean = true): string {
+  try {
+    const u = new URL(url);
+    const pathName = u.pathname.replace(/\/$/, '');
+    if (pathName.endsWith('/api')) {
+      const t = u.searchParams.get('t');
+      const id = u.searchParams.get('id');
+      if (t === 'get' && id) {
+        const keys = Array.from(u.searchParams.keys());
+        for (const key of keys) {
+          if (key !== 't' && key !== 'id') {
+            u.searchParams.delete(key);
+          }
+        }
+        return createHash('md5').update(u.toString()).digest('hex');
+      }
+    }
+  } catch {}
   return createHash('md5')
     .update(clean ? cleanNzbUrl(url) : url)
     .digest('hex');
