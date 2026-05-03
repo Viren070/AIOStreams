@@ -105,9 +105,13 @@ function Content() {
           }
         });
         const newCatalogIds = new Set(catalogs.map((c) => `${c.id}-${c.type}`));
+        const mergedCatalogIds = new Set(
+          (prev.mergedCatalogs || []).map((mc) => mc.id)
+        );
         const filteredMods = modifications.filter(
           (mod) =>
-            mod.id.startsWith('aiostreams.merged.') ||
+            (mod.id.startsWith('aiostreams.merged.') &&
+              mergedCatalogIds.has(mod.id)) ||
             newCatalogIds.has(`${mod.id}-${mod.type}`)
         );
         return { ...prev, catalogModifications: filteredMods };
@@ -345,7 +349,9 @@ function Content() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2>Installed</h2>
-                  {hasParent && isInherited('presets') && <InheritedBadge section="presets" />}
+                  {hasParent && isInherited('presets') && (
+                    <InheritedBadge section="presets" />
+                  )}
                 </div>
                 <p className="text-[--muted] text-sm">
                   Manage your installed addons and catalog settings.

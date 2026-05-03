@@ -246,6 +246,9 @@ export function MergedCatalogsCard() {
     setUserData((prev) => ({
       ...prev,
       mergedCatalogs: (prev.mergedCatalogs || []).filter((mc) => mc.id !== id),
+      catalogModifications: (prev.catalogModifications || []).filter(
+        (mod) => mod.id !== id
+      ),
     }));
     toast.success('Merged catalog deleted');
   };
