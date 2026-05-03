@@ -120,6 +120,11 @@ export function normaliseLanguage(value: unknown): string | undefined {
     : undefined;
 }
 
+// Languages where the ISO 639-1 code is not sufficient to disambiguate between multiple languages with the same name
+// so we append the country code in those cases.
+const AMBIGIOUS_LANGUAGES = new Set(
+  ['Latino', 'Portuguese (Brazil)'].map((lang) => lang.toLowerCase())
+);
 /**
  * Convert a LANGUAGES display name (e.g. "Portuguese") to an
  * upper-case ISO 639-1 code (e.g. "PT"). Returns undefined if unrecognised.
@@ -140,7 +145,12 @@ export function languageToCode(language: string): string | undefined {
   if (possibleLangs.length === 0) return undefined;
   const selectedLang =
     possibleLangs.find((lang) => lang.flag_priority) ?? possibleLangs[0];
-  return selectedLang?.iso_639_1?.toUpperCase();
+  if (
+    AMBIGIOUS_LANGUAGES.has(getLanguageDisplayName(selectedLang).toLowerCase())
+  ) {
+    return `${selectedLang.iso_639_1?.toUpperCase()}-${selectedLang.iso_3166_1?.toUpperCase()}`;
+  }
+  return selectedLang.iso_639_1?.toUpperCase();
 }
 
 /** Convert an ISO 639-1 code (e.g. "pt") to a display name. */

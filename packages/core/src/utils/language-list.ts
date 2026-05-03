@@ -1,4 +1,15 @@
-export const FULL_LANGUAGE_MAPPING = [
+interface LanguageEntry {
+  iso_639_1: string | null;
+  iso_639_2: string;
+  iso_3166_1: string | null;
+  flag: string;
+  english_name: string;
+  internal_english_name?: string;
+  name: string;
+  flag_priority?: boolean;
+}
+
+export const FULL_LANGUAGE_MAPPING: LanguageEntry[] = [
   // A
   {
     iso_639_1: 'aa',
