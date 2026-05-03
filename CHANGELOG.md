@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.2](https://github.com/Viren070/AIOStreams/compare/v2.29.1...v2.29.2) (2026-05-03)
+
+
+### Bug Fixes
+
+* fix hashNzbUrl for newznab api t=get ([e659578](https://github.com/Viren070/AIOStreams/commit/e6595784ded71d3b5e23819e90f196aec63846ec))
+
 ## [2.29.1](https://github.com/Viren070/AIOStreams/compare/v2.29.0...v2.29.1) (2026-05-03)
 
 
