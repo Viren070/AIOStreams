@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.29.1](https://github.com/Viren070/AIOStreams/compare/v2.29.0...v2.29.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* append iso 3166-1 to lang code in certain cases ([7264ad7](https://github.com/Viren070/AIOStreams/commit/7264ad71626ae053a27fe8483317f448b33d218b))
+* ensure stale merged catalog references are not kept ([d2bd1ac](https://github.com/Viren070/AIOStreams/commit/d2bd1acbc6c09eef2cfeb47b10f63ebf36bee5f7)), closes [#878](https://github.com/Viren070/AIOStreams/issues/878)
+* **frontend:** remove unused code, add missing page controls ([baff369](https://github.com/Viren070/AIOStreams/commit/baff369e88421ce702f0e0c5481a7cff0b581fad))
+
 ## [2.29.0](https://github.com/Viren070/AIOStreams/compare/v2.28.0...v2.29.0) (2026-05-02)
 
 
