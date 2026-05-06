@@ -511,8 +511,11 @@ export async function validateConfig(
     }
   }
 
-  // validate precache selector
-  if (config.precacheSelector) {
+  // validate precache selector (only when the feature is enabled — the
+  // selector is otherwise dormant, and evaluating it on every request just
+  // pollutes logs with `SEL Expression evaluated...` for users who have the
+  // "Pre-cache Next Episode" toggle off; closes #913)
+  if (config.precacheSelector && config.precacheNextEpisode) {
     try {
       await StreamSelector.testSelect(config.precacheSelector);
     } catch (error) {
