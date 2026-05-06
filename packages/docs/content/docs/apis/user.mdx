@@ -56,16 +56,25 @@ curl -X HEAD "https://your-instance.example.com/api/v1/user?uuid=xxxxxxxx-xxxx-x
 
 ## Get User
 
-`GET /api/v1/user`
+`POST /api/v1/user/load`
 
-Returns the full user configuration and an encrypted copy of the password for use in subsequent requests.
+Returns the full user configuration and an encrypted copy of the password for use in subsequent requests. Prefer this form over `GET /api/v1/user` — the password is sent in the JSON body so it never appears in URLs, HTTP access logs, browser history, or `Referer` headers.
 
-### Query Parameters
+### Request Body
 
-| Parameter  | Type   | Required | Description                 |
-| ---------- | ------ | -------- | --------------------------- |
-| `uuid`     | string | ✅       | UUID (or alias) of the user |
-| `password` | string | ✅       | User's plaintext password   |
+```json
+{
+  "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "password": "mypassword",
+  "raw": false
+}
+```
+
+| Field      | Type    | Required | Description                                                                                |
+| ---------- | ------- | -------- | ------------------------------------------------------------------------------------------ |
+| `uuid`     | string  | ✅       | UUID (or alias) of the user                                                                |
+| `password` | string  | ✅       | User's plaintext password                                                                  |
+| `raw`      | boolean | ❌       | When `true`, returns the raw stored config without server-side hydration. Defaults to `false`. |
 
 ### Response `200`
 
@@ -85,6 +94,33 @@ Returns the full user configuration and an encrypted copy of the password for us
 | ------------------- | ------ | ------------------------------------------------------------------------------------------ |
 | `userData`          | object | Full user configuration object                                                             |
 | `encryptedPassword` | string | Server-encrypted password — pass this back in the manifest URL instead of the raw password |
+
+### Example
+
+```bash
+curl -X POST "https://your-instance.example.com/api/v1/user/load" \
+  -H "Content-Type: application/json" \
+  -d '{"uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "password": "mypassword"}'
+```
+
+---
+
+## Get User (deprecated)
+
+`GET /api/v1/user`
+
+<Callout type="warn">
+  **Deprecated.** This form puts the password in the query string, so it ends up in HTTP access logs, browser history, and `Referer` headers. Use `POST /api/v1/user/load` instead. See [#926](https://github.com/Viren070/AIOStreams/issues/926).
+</Callout>
+
+Returns the same payload as `POST /api/v1/user/load`. Kept for backward compatibility with existing automation; the server logs a deprecation warning on every call.
+
+### Query Parameters
+
+| Parameter  | Type   | Required | Description                 |
+| ---------- | ------ | -------- | --------------------------- |
+| `uuid`     | string | ✅       | UUID (or alias) of the user |
+| `password` | string | ✅       | User's plaintext password   |
 
 ### Example
 

@@ -239,18 +239,20 @@ interface GDriveTokenResponse {
 }
 
 /**
- * Load user configuration
+ * Load user configuration. Uses POST /user/load instead of GET /user so
+ * the password rides in the request body — keeping it out of HTTP access
+ * logs, browser history, and Referer headers (issue #926).
  */
 export async function loadUserConfig(uuid: string, password: string) {
-  return api<LoadUserResponse>(
-    `GET /user?uuid=${uuid}&password=${encodeURIComponent(password)}`
-  );
+  return api<LoadUserResponse>('POST /user/load', {
+    body: { uuid, password },
+  });
 }
 
 export async function loadRawUserConfig(uuid: string, password: string) {
-  return api<LoadUserResponse>(
-    `GET /user?uuid=${uuid}&password=${encodeURIComponent(password)}&raw=true`
-  );
+  return api<LoadUserResponse>('POST /user/load', {
+    body: { uuid, password, raw: true },
+  });
 }
 
 /**
