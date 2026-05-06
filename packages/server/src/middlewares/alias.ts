@@ -21,7 +21,10 @@ export function resolveUuidAliasForUserApi(
         req.uuid = configuration?.uuid;
       }
     }
-  } else if (method === 'PUT' || method === 'DELETE') {
+  } else if (method === 'PUT' || method === 'DELETE' || method === 'POST') {
+    // POST is included for /api/v1/user/load (and incidentally /verify,
+    // /password) so aliases work there too. POST /api/v1/user (create)
+    // has no `uuid` in the body so the lookup below no-ops.
     const value = (req.body ?? {}).uuid;
     if (typeof value === 'string' && !uuidRegex.test(value)) {
       const configuration = Env.ALIASED_CONFIGURATIONS.get(value);

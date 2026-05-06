@@ -55,13 +55,20 @@ router.head('/', async (req, res, next) => {
   }
 });
 
-// getting user details
-router.get('/', async (req, res, next) => {
-  const { uuid, password, raw } = {
-    uuid: req.uuid || req.query.uuid,
-    password: req.query.password,
-    raw: req.query.raw,
-  };
+// Shared handler used by both `GET /` (deprecated, query string) and
+// `POST /load` (preferred, JSON body). The GET form leaks the password
+// into HTTP access logs, browser history, Referer headers, etc. — see
+// issue #926. POST /load lets the password ride in the request body so
+// reverse proxies don't log it. The GET handler is kept for backward
+// compatibility (the API is public; users may have automation hitting
+// it) and emits a deprecation warning on each call.
+async function handleGetUserDetails(
+  uuid: unknown,
+  password: unknown,
+  raw: unknown,
+  next: (err?: any) => void,
+  res: any
+) {
   if (typeof uuid !== 'string' || typeof password !== 'string') {
     next(
       new APIError(
@@ -75,7 +82,7 @@ router.get('/', async (req, res, next) => {
   let userData = null;
   try {
     userData =
-      raw === 'true'
+      raw === 'true' || raw === true
         ? await UserRepository.getRawUser(uuid, password)
         : await UserRepository.getUser(uuid, password);
   } catch (error: any) {
@@ -110,6 +117,43 @@ router.get('/', async (req, res, next) => {
         encryptedPassword: encryptedPassword,
       },
     })
+  );
+}
+
+// getting user details (DEPRECATED form — password rides in the query
+// string and ends up in HTTP access logs / browser history / Referer
+// headers, see #926). Kept for backward compatibility with existing
+// clients and documented automation; new callers should use
+// `POST /api/v1/user/load`.
+router.get('/', async (req, res, next) => {
+  logger.warn(
+    'Deprecated: GET /api/v1/user exposes the password in the request URL ' +
+      '(visible in HTTP access logs, browser history, Referer headers). ' +
+      'Use POST /api/v1/user/load instead. See https://github.com/Viren070/AIOStreams/issues/926'
+  );
+  await handleGetUserDetails(
+    req.uuid || req.query.uuid,
+    req.query.password,
+    req.query.raw,
+    next,
+    res
+  );
+});
+
+// getting user details — preferred form: password is in the JSON body
+// so it never appears in URLs, access logs, or Referer headers.
+router.post('/load', async (req, res, next) => {
+  const body = (req.body ?? {}) as {
+    uuid?: unknown;
+    password?: unknown;
+    raw?: unknown;
+  };
+  await handleGetUserDetails(
+    req.uuid || body.uuid,
+    body.password,
+    body.raw,
+    next,
+    res
   );
 });
 
