@@ -166,12 +166,13 @@ class StreamPrecomputer {
 
     // Initialize all streams with a score of 0
     const streamScores = new Map<string, number>();
-    const streamExpressionNames = new Map<string, string[]>();
     for (const stream of streams) {
       streamScores.set(stream.id, 0);
     }
 
-    // Evaluate each ranked expression and accumulate scores
+    // Evaluate each ranked expression and accumulate scores.
+    // Write rankedStreamExpressionsMatched onto each stream as we go so that
+    // subsequent expressions can query prior matches via rseMatched().
     for (const { expression, score, enabled } of this.userData
       .rankedStreamExpressions) {
       if (enabled === false) {
@@ -180,18 +181,17 @@ class StreamPrecomputer {
 
       try {
         const selectedStreams = await selector.select(streams, expression);
+        const exprNames = extractNamesFromExpression(expression);
 
         // Add the score to each matched stream
         for (const stream of selectedStreams) {
           const currentScore = streamScores.get(stream.id) ?? 0;
           streamScores.set(stream.id, currentScore + score);
-          const exprNames = extractNamesFromExpression(expression);
           if (exprNames) {
-            const existingNames = streamExpressionNames.get(stream.id) || [];
-            streamExpressionNames.set(stream.id, [
-              ...existingNames,
+            stream.rankedStreamExpressionsMatched = [
+              ...(stream.rankedStreamExpressionsMatched ?? []),
               ...exprNames,
-            ]);
+            ];
           }
         }
       } catch (error) {
@@ -206,9 +206,6 @@ class StreamPrecomputer {
     // Apply the computed scores to the streams
     for (const stream of streams) {
       stream.streamExpressionScore = streamScores.get(stream.id) ?? 0;
-      stream.rankedStreamExpressionsMatched = streamExpressionNames.get(
-        stream.id
-      );
     }
 
     const nonZeroScores = streams.filter(
