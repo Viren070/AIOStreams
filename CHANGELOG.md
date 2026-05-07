@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.29.3](https://github.com/Viren070/AIOStreams/compare/v2.29.2...v2.29.3) (2026-05-07)
+
+
+### Bug Fixes
+
+* **builtins/knaben:** remove restrictions on virusDetection field ([fb14a04](https://github.com/Viren070/AIOStreams/commit/fb14a04e050f49383b6e6a4693a84783ee3adaad))
+* **frontend/modal:** prevent dismissal when an inner select/popover was open on touch ([11dd0ae](https://github.com/Viren070/AIOStreams/commit/11dd0ae987ffed7f464eaa47607d43ac2256b016))
+* **frontend:** fix template update dismissal behaviour ([0ebbb02](https://github.com/Viren070/AIOStreams/commit/0ebbb02dd5fe0292d9d399dd223b9c390237a05c))
+* **frontend:** layout issue with placeholder synced URL ([2f639e1](https://github.com/Viren070/AIOStreams/commit/2f639e11a612966ae7472ae0fc814c1f6cb4ae7f))
+* **precomputer:** make rseMatched() see prior expression matches ([#933](https://github.com/Viren070/AIOStreams/issues/933)) ([412c09e](https://github.com/Viren070/AIOStreams/commit/412c09e84582d21a14aeada83eef15e1ff4b8e14)), closes [#932](https://github.com/Viren070/AIOStreams/issues/932)
+* synced URL overrides not persisting after updates ([#931](https://github.com/Viren070/AIOStreams/issues/931)) ([d5ded1a](https://github.com/Viren070/AIOStreams/commit/d5ded1a68498335a4d2c3c7a31627e8fd3c2e0c3))
+
 ## [2.29.2](https://github.com/Viren070/AIOStreams/compare/v2.29.1...v2.29.2) (2026-05-03)
 
 
