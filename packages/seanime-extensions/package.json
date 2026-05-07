@@ -11,7 +11,7 @@
     "typecheck:custom-source": "tsc -p ./src/extensions/aiostreams-custom-source/tsconfig.json"
   },
   "devDependencies": {
-    "esbuild": "^0.25.3",
-    "typescript": "^5.8.3"
+    "esbuild": "^0.25.12",
+    "typescript": "^5.9.3"
   }
 }

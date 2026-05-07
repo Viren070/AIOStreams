@@ -44,27 +44,27 @@ jobs:
           echo "Resolved ref: ${RESOLVED_REF}, tag: ghcr.io/${{ github.repository_owner }}/aiostreams:${FINAL_TAG}"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ steps.resolve.outputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
 
@@ -76,7 +76,7 @@ jobs:
         run: node scripts/generateMetadata.cjs --channel=dev --ref=${{ steps.resolve.outputs.tag }} --commit=${{ steps.commit.outputs.sha }}
 
       - name: Build & Push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max

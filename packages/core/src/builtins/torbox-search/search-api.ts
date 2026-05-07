@@ -1,4 +1,4 @@
-import { fetch, RequestInit, Response } from 'undici';
+import { fetch, RequestInit, Response, Headers } from 'undici';
 import { z } from 'zod';
 import {
   TorBoxApiResponseSchema,
