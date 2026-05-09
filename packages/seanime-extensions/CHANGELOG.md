@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.1...seanime-extensions-v0.8.2) (2026-05-09)
+
+
+### Bug Fixes
+
+* **seanime-extensions/aiostreams-plugin:** adjust overview/details card styling to match stream cards ([0de2a55](https://github.com/Viren070/AIOStreams/commit/0de2a55443f8d240994cfcc350291615e50275df))
+* **seanime-extensions/aiostreams-plugin:** prefer meta type for mediaType from stremio custom source ([b28201b](https://github.com/Viren070/AIOStreams/commit/b28201bc8943b96252228cb33c5ff362e7fb215c))
+* **seanime-extensions/stremio-custom-source:** handle non-series videos (e.g. movie collections) ([b28201b](https://github.com/Viren070/AIOStreams/commit/b28201bc8943b96252228cb33c5ff362e7fb215c)), closes [#930](https://github.com/Viren070/AIOStreams/issues/930)
+
 ## [0.8.1](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.0...seanime-extensions-v0.8.1) (2026-04-26)
 
 

@@ -1,7 +1,7 @@
 {
   "id": "aiostreams-plugin",
   "name": "AIOStreams",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "manifestURI": "",
   "language": "typescript",
   "type": "plugin",
