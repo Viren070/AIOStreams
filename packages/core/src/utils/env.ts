@@ -2463,7 +2463,7 @@ export const Env = cleanEnv(process.env, {
   }),
 
   BUILTIN_TORRENT_GALAXY_URL: url({
-    default: 'https://torrentgalaxy.space',
+    default: 'https://torrentgalaxy.one',
     desc: 'Builtin Torrent Galaxy URL',
   }),
   BUILTIN_DEFAULT_TORRENT_GALAXY_TIMEOUT: num({
