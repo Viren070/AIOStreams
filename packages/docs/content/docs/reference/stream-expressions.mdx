@@ -526,6 +526,30 @@ seadex(streams, 'best')
 
 ---
 
+#### `keyword()` / `keywords()`
+
+Filter streams by one or more keywords. Uses the same matching logic as the Keyword UI filters (Required / Excluded / Included / Preferred Keywords): keywords are escaped and joined into a single case-insensitive regex with the same word-boundary heuristics, and tested against each stream's filename, folder name, indexer, and parsed release group.
+
+Useful when you want fine-grained keyword filtering inside an SEL expression (e.g. inside a group, ranked stream expression, or precompute selector) without affecting the global keyword filters.
+
+| Parameter     | Type             | Description                                                                                     |
+| ------------- | ---------------- | ----------------------------------------------------------------------------------------------- |
+| `streams`     | `ParsedStream[]` | Stream list                                                                                     |
+| `...keywords` | `string`         | One or more keyword strings. Whitespace inside a keyword matches separators like `.`, `_`, `-`. |
+
+```
+keyword(streams, 'remux', 'dts-hd')
+keywords(streams, 'extended cut')   // matches "extended.cut", "extended-cut", "extended_cut", etc.
+```
+
+To exclude streams matching the keywords, combine with [`negate()`](#negate):
+
+```
+negate(keyword(streams, 'cam', 'hdcam'), streams)
+```
+
+---
+
 #### `regexMatched()`
 
 Filter for streams that matched a preferred or ranked regex filter.

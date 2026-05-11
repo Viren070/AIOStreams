@@ -39,13 +39,29 @@ export async function compileRegex(
   );
 }
 
-export async function formRegexFromKeywords(
-  keywords: string[]
-): Promise<RegExp> {
-  const pattern = `/(?:^|(?<![^ \\[(_\\-.]))(${keywords
+// Build the raw pattern string used to match a list of keywords against stream
+// attributes. Exposed separately so synchronous callers (e.g. the SEL parser,
+// which cannot await) can produce the exact same regex shape as the async
+// `formRegexFromKeywords` helper used by the keyword UI filters.
+export function buildKeywordRegexPattern(keywords: string[]): string {
+  return `/(?:^|(?<![^ \\[(_\\-.]))(${keywords
     .map((filter) => filter.replace(/[-[\]{}()*+?.,\\^$]/g, '\\$&'))
     .map((filter) => filter.replace(/\s/g, '[\\s.\\-_]?'))
     .join('|')})(?=[ \\)\\]_.-]|$)/i`;
+}
 
-  return await compileRegex(pattern);
+export async function formRegexFromKeywords(
+  keywords: string[]
+): Promise<RegExp> {
+  return await compileRegex(buildKeywordRegexPattern(keywords));
+}
+
+// Synchronous variant of `formRegexFromKeywords`. Produces an identical regex
+// to the async version (same pattern + flags) but bypasses the async regex
+// cache so it can be called from synchronous contexts such as SEL function
+// implementations.
+export function formRegexFromKeywordsSync(keywords: string[]): RegExp {
+  const { regex, flags } = parseRegex(buildKeywordRegexPattern(keywords));
+  const cleanedFlags = flags.includes('n') ? flags.replace('n', '') : flags;
+  return new RegExp(regex, cleanedFlags || undefined);
 }

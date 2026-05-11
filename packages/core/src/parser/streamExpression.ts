@@ -12,6 +12,7 @@ import { PASSTHROUGH_STAGES } from '../utils/constants.js';
 import { parseBitrate } from './utils.js';
 import { createLogger } from '../utils/logger.js';
 import { ExpressionContext } from '../streams/context.js';
+import { formRegexFromKeywordsSync } from '../utils/regex.js';
 
 const logger = createLogger('stream-expression');
 
@@ -460,6 +461,37 @@ export abstract class StreamExpressionEngine {
         return true;
       });
     };
+
+    // Filter streams by keywords using the same regex shape as the Keyword UI
+    // filters (Required / Excluded / Included / Preferred Keywords). Keywords
+    // are tested against the same stream attributes as those filters:
+    // filename, folderName, indexer, and parsed releaseGroup.
+    this.parser.functions.keyword = function (
+      streams: ParsedStream[],
+      ...keywords: string[]
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        keywords.length === 0 ||
+        keywords.some((k) => typeof k !== 'string')
+      ) {
+        throw new Error(
+          'You must provide one or more keyword string parameters'
+        );
+      }
+      const pattern = formRegexFromKeywordsSync(keywords);
+      return streams.filter((stream) => {
+        const stringsToTest = [
+          stream.filename,
+          stream.parsedFile?.releaseGroup,
+          stream.indexer,
+          stream.folderName,
+        ].filter((v): v is string => v !== undefined);
+        return stringsToTest.some((s) => pattern.test(s));
+      });
+    };
+    this.parser.functions.keywords = this.parser.functions.keyword;
 
     this.parser.functions.seMatched = function (
       streams: ParsedStream[],
