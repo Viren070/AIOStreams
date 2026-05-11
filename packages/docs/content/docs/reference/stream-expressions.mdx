@@ -528,47 +528,29 @@ seadex(streams, 'best')
 
 #### `keyword()` / `keywords()`
 
-Filter streams by one or more keywords. Uses the same matching logic as the Keyword UI filters (Required / Excluded / Included / Preferred Keywords): keywords are escaped and joined into a single case-insensitive regex with the same word-boundary heuristics, and tested against each stream's filename, folder name, indexer, and parsed release group.
+Filter streams by one or more keywords. Uses the same matching logic as the Keyword UI filters (Required / Excluded / Included / Preferred Keywords): keywords are escaped and joined into a single case-insensitive regex with the same word-boundary heuristics. You explicitly choose which stream attribute(s) the keywords are tested against.
 
 Useful when you want fine-grained keyword filtering inside an SEL expression (e.g. inside a group, ranked stream expression, or precompute selector) without affecting the global keyword filters.
 
-| Parameter     | Type             | Description                                                                                     |
-| ------------- | ---------------- | ----------------------------------------------------------------------------------------------- |
-| `streams`     | `ParsedStream[]` | Stream list                                                                                     |
-| `...keywords` | `string`         | One or more keyword strings. Whitespace inside a keyword matches separators like `.`, `_`, `-`. |
+| Parameter     | Type             | Description                                                                                                                                  |
+| ------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `streams`     | `ParsedStream[]` | Stream list                                                                                                                                  |
+| `attributes`  | `string`         | Comma-separated attribute names that the keywords should be tested against. Use `'all'` or `'*'` to match every attribute. Case-insensitive. |
+| `...keywords` | `string`         | One or more keyword strings. Whitespace inside a keyword matches separators like `.`, `_`, `-`.                                              |
+
+**Accepted attribute names:** `filename`, `folderName`, `indexer`, `releaseGroup` — the same set the Keyword UI filters check.
 
 ```
-keyword(streams, 'remux', 'dts-hd')
-keywords(streams, 'extended cut')   // matches "extended.cut", "extended-cut", "extended_cut", etc.
+keyword(streams, 'filename', 'remux')                      // match 'remux' only in filenames
+keyword(streams, 'filename,releaseGroup', 'flux', 'ntb')   // multiple attributes, multiple keywords
+keywords(streams, 'all', 'extended cut')                   // match every attribute (= UI keyword filter behavior)
+keyword(streams, '*', 'remux')                             // shorthand for 'all'
 ```
 
 To exclude streams matching the keywords, combine with [`negate()`](#negate):
 
 ```
-negate(keyword(streams, 'cam', 'hdcam'), streams)
-```
-
-Use [`keywordIn()`](#keywordin--keywordsin) when you want to restrict matching to specific stream attributes.
-
----
-
-#### `keywordIn()` / `keywordsIn()`
-
-Like [`keyword()`](#keyword--keywords), but lets you control which stream attribute(s) the keywords are tested against. By default `keyword()` tests every supported attribute; `keywordIn()` lets you narrow that down — e.g. to match a keyword only in the filename or only in the release group.
-
-| Parameter     | Type             | Description                                                                                                                             |
-| ------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `streams`     | `ParsedStream[]` | Stream list                                                                                                                             |
-| `attributes`  | `string`         | Comma-separated attribute names. Use `'all'` or `'*'` to match all (equivalent to [`keyword()`](#keyword--keywords)). Case-insensitive. |
-| `...keywords` | `string`         | One or more keyword strings (same semantics as `keyword()`).                                                                            |
-
-**Accepted attribute names:** `filename`, `folderName`, `indexer`, `releaseGroup`
-
-```
-keywordIn(streams, 'filename', 'remux')                       // only match the filename
-keywordIn(streams, 'filename,releaseGroup', 'flux', 'ntb')    // multiple attributes
-keywordsIn(streams, 'indexer', 'rarbg')                       // only match the indexer
-keywordIn(streams, 'all', 'remux')                            // identical to keyword(streams, 'remux')
+negate(keyword(streams, 'all', 'cam', 'hdcam'), streams)
 ```
 
 ---

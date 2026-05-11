@@ -462,96 +462,97 @@ export abstract class StreamExpressionEngine {
       });
     };
 
-    // Stream attributes that the keyword UI filters (Required / Excluded /
-    // Included / Preferred Keywords) are tested against. These are also the
-    // attributes the SEL `keyword()` / `keywordIn()` functions support.
-    const KEYWORD_ATTRIBUTES = [
-      'filename',
-      'folderName',
-      'indexer',
-      'releaseGroup',
-    ] as const;
-    type KeywordAttribute = (typeof KEYWORD_ATTRIBUTES)[number];
-
-    const getKeywordAttribute = (
-      stream: ParsedStream,
-      attribute: KeywordAttribute
-    ): string | undefined => {
-      switch (attribute) {
-        case 'filename':
-          return stream.filename;
-        case 'folderName':
-          return stream.folderName;
-        case 'indexer':
-          return stream.indexer;
-        case 'releaseGroup':
-          return stream.parsedFile?.releaseGroup;
-      }
-    };
-
-    const parseKeywordAttributes = (
-      raw: string,
-      functionName: string
-    ): KeywordAttribute[] => {
-      if (typeof raw !== 'string' || raw.trim().length === 0) {
-        throw new Error(
-          `${functionName}: attributes must be a non-empty string`
-        );
-      }
-      const trimmed = raw.trim();
-      if (trimmed === '*' || trimmed.toLowerCase() === 'all') {
-        return [...KEYWORD_ATTRIBUTES];
-      }
-      const parts = trimmed
-        .split(',')
-        .map((part) => part.trim())
-        .filter((part) => part.length > 0);
-      if (parts.length === 0) {
-        throw new Error(
-          `${functionName}: attributes must contain at least one attribute name`
-        );
-      }
-      const resolved: KeywordAttribute[] = [];
-      const seen = new Set<KeywordAttribute>();
-      for (const part of parts) {
-        const match = KEYWORD_ATTRIBUTES.find(
-          (attr) => attr.toLowerCase() === part.toLowerCase()
-        );
-        if (!match) {
-          throw new Error(
-            `${functionName}: invalid attribute '${part}'. Allowed values: ${KEYWORD_ATTRIBUTES.join(
-              ', '
-            )} (or 'all' / '*' for all)`
-          );
-        }
-        if (!seen.has(match)) {
-          seen.add(match);
-          resolved.push(match);
-        }
-      }
-      return resolved;
-    };
-
-    const filterStreamsByKeywords = (
+    // Filter streams by one or more keywords, restricted to the specified
+    // stream attribute(s). Uses the same regex shape as the Keyword UI
+    // filters (Required / Excluded / Included / Preferred Keywords) so the
+    // matching behavior is identical -- the only difference is that the user
+    // chooses which attributes to test against.
+    //
+    // `attributes` is a comma-separated string of attribute names. Allowed
+    // values: 'filename', 'folderName', 'indexer', 'releaseGroup' (the same
+    // set the Keyword UI filters check). Use 'all' or '*' to match every
+    // attribute.
+    this.parser.functions.keyword = function (
       streams: ParsedStream[],
-      keywords: string[],
-      attributes: KeywordAttribute[],
-      functionName: string
-    ): ParsedStream[] => {
+      attributes: string,
+      ...keywords: string[]
+    ) {
+      const ALLOWED_ATTRIBUTES = [
+        'filename',
+        'folderName',
+        'indexer',
+        'releaseGroup',
+      ] as const;
+      type KeywordAttribute = (typeof ALLOWED_ATTRIBUTES)[number];
+
       if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
         throw new Error('Your streams input must be an array of streams');
-      } else if (
+      }
+      if (typeof attributes !== 'string' || attributes.trim().length === 0) {
+        throw new Error(
+          "keyword: attributes must be a non-empty string (comma-separated, or 'all' / '*')"
+        );
+      }
+      if (
         keywords.length === 0 ||
         keywords.some((k) => typeof k !== 'string')
       ) {
         throw new Error(
-          `${functionName}: you must provide one or more keyword string parameters`
+          'keyword: you must provide one or more keyword string parameters'
         );
       }
+
+      const trimmed = attributes.trim();
+      let resolved: KeywordAttribute[];
+      if (trimmed === '*' || trimmed.toLowerCase() === 'all') {
+        resolved = [...ALLOWED_ATTRIBUTES];
+      } else {
+        resolved = [];
+        const seen = new Set<KeywordAttribute>();
+        for (const part of trimmed
+          .split(',')
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0)) {
+          const match = ALLOWED_ATTRIBUTES.find(
+            (attr) => attr.toLowerCase() === part.toLowerCase()
+          );
+          if (!match) {
+            throw new Error(
+              `keyword: invalid attribute '${part}'. Allowed values: ${ALLOWED_ATTRIBUTES.join(
+                ', '
+              )} (or 'all' / '*' for all)`
+            );
+          }
+          if (!seen.has(match)) {
+            seen.add(match);
+            resolved.push(match);
+          }
+        }
+        if (resolved.length === 0) {
+          throw new Error(
+            'keyword: attributes must contain at least one attribute name'
+          );
+        }
+      }
+
       const pattern = formRegexFromKeywordsSync(keywords);
       return streams.filter((stream) => {
-        for (const attribute of attributes) {
-          const value = getKeywordAttribute(stream, attribute);
+        for (const attribute of resolved) {
+          let value: string | undefined;
+          switch (attribute) {
+            case 'filename':
+              value = stream.filename;
+              break;
+            case 'folderName':
+              value = stream.folderName;
+              break;
+            case 'indexer':
+              value = stream.indexer;
+              break;
+            case 'releaseGroup':
+              value = stream.parsedFile?.releaseGroup;
+              break;
+          }
           if (value !== undefined && pattern.test(value)) {
             return true;
           }
@@ -559,38 +560,7 @@ export abstract class StreamExpressionEngine {
         return false;
       });
     };
-
-    // Filter streams by keywords using the same regex shape as the Keyword UI
-    // filters (Required / Excluded / Included / Preferred Keywords). Keywords
-    // are tested against all four supported stream attributes (filename,
-    // folderName, indexer, parsed releaseGroup) -- the same set those UI
-    // filters cover. Use `keywordIn()` to restrict the match to a subset.
-    this.parser.functions.keyword = function (
-      streams: ParsedStream[],
-      ...keywords: string[]
-    ) {
-      return filterStreamsByKeywords(
-        streams,
-        keywords,
-        [...KEYWORD_ATTRIBUTES],
-        'keyword'
-      );
-    };
     this.parser.functions.keywords = this.parser.functions.keyword;
-
-    // Filter streams by keywords, restricting which stream attribute(s) the
-    // keywords are tested against. `attributes` is a comma-separated string
-    // of attribute names (e.g. 'filename', 'filename,releaseGroup'). Use
-    // 'all' or '*' to match the default behavior of `keyword()`.
-    this.parser.functions.keywordIn = function (
-      streams: ParsedStream[],
-      attributes: string,
-      ...keywords: string[]
-    ) {
-      const attrs = parseKeywordAttributes(attributes, 'keywordIn');
-      return filterStreamsByKeywords(streams, keywords, attrs, 'keywordIn');
-    };
-    this.parser.functions.keywordsIn = this.parser.functions.keywordIn;
 
     this.parser.functions.seMatched = function (
       streams: ParsedStream[],
