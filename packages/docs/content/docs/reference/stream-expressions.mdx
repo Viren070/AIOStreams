@@ -548,6 +548,29 @@ To exclude streams matching the keywords, combine with [`negate()`](#negate):
 negate(keyword(streams, 'cam', 'hdcam'), streams)
 ```
 
+Use [`keywordIn()`](#keywordin--keywordsin) when you want to restrict matching to specific stream attributes.
+
+---
+
+#### `keywordIn()` / `keywordsIn()`
+
+Like [`keyword()`](#keyword--keywords), but lets you control which stream attribute(s) the keywords are tested against. By default `keyword()` tests every supported attribute; `keywordIn()` lets you narrow that down — e.g. to match a keyword only in the filename or only in the release group.
+
+| Parameter     | Type             | Description                                                                                                                             |
+| ------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `streams`     | `ParsedStream[]` | Stream list                                                                                                                             |
+| `attributes`  | `string`         | Comma-separated attribute names. Use `'all'` or `'*'` to match all (equivalent to [`keyword()`](#keyword--keywords)). Case-insensitive. |
+| `...keywords` | `string`         | One or more keyword strings (same semantics as `keyword()`).                                                                            |
+
+**Accepted attribute names:** `filename`, `folderName`, `indexer`, `releaseGroup`
+
+```
+keywordIn(streams, 'filename', 'remux')                       // only match the filename
+keywordIn(streams, 'filename,releaseGroup', 'flux', 'ntb')    // multiple attributes
+keywordsIn(streams, 'indexer', 'rarbg')                       // only match the indexer
+keywordIn(streams, 'all', 'remux')                            // identical to keyword(streams, 'remux')
+```
+
 ---
 
 #### `regexMatched()`
