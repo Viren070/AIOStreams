@@ -405,8 +405,8 @@ export class NewznabPreset extends BuiltinAddonPreset {
         enabled: true,
         backbones: options.zyclopsHealthProxy.backbones,
         providerHosts: providerHosts,
-        showUnknown: options.zyclopsHealthProxy.showUnknown,
-        singleIp: options.zyclopsHealthProxy.singleIp,
+        showUnknown: options.zyclopsHealthProxy.showUnknown ?? false,
+        singleIp: options.zyclopsHealthProxy.singleIp ?? true,
       };
     }
     const config: Record<string, any> = {
