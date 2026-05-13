@@ -219,6 +219,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   usePosterServiceForMeta: { label: 'Use Poster Service for Meta', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
 
   autoPlay: { label: 'Auto Play', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'playback' },
+  cleanRedirectOutput: { label: 'Clean Filename Redirect', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'playback', keywords: ['infuse', 'subtitles', 'redirect'] },
   areYouStillThere: { label: 'Are You Still There?', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'playback' },
   statistics: { label: 'Statistics', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'display' },
   hideErrors: { label: 'Hide Errors', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'display' },

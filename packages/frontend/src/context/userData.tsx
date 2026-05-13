@@ -293,6 +293,10 @@ export const DefaultUserData: UserData = {
   formatter: {
     id: 'gdrive',
   },
+  cleanRedirectOutput: {
+    enabled: false,
+    redirectCode: 307,
+  },
   preferredQualities: Object.values(QUALITIES),
   preferredResolutions: Object.values(RESOLUTIONS),
   excludedQualities: ['CAM', 'SCR', 'TS', 'TC'],

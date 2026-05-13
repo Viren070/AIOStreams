@@ -3,6 +3,7 @@
   "pages": [
     "groups",
     "usenet",
+    "clean-filename-redirect",
     "scored-sorting",
     "seanime",
     "development"

@@ -9,6 +9,7 @@ import {
   IdParser,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
+import { wrapStreamsWithCleanRedirectGate } from '../../utils/cleanRedirect.js';
 
 const router: Router = Router();
 
@@ -61,15 +62,20 @@ router.get(
         throw new Error('Stream context not available');
       }
 
-      res
-        .status(200)
-        .json(
-          await transformer.transformStreams(
-            response,
-            streamContext.toFormatterContext(response.data.streams),
-            { provideStreamData, disableAutoplay }
-          )
-        );
+      let transformed = await transformer.transformStreams(
+        response,
+        streamContext.toFormatterContext(response.data.streams),
+        { provideStreamData, disableAutoplay }
+      );
+
+      transformed = wrapStreamsWithCleanRedirectGate(
+        transformed,
+        response.data.streams,
+        req.userData,
+        req
+      );
+
+      res.status(200).json(transformed);
     } catch (error) {
       let errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
