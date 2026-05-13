@@ -7,6 +7,7 @@ import {
   getTimeTakenSincePoint,
   createLogger,
   makeRequest,
+  makeUrlLogSafe,
 } from '../../../utils/index.js';
 import { Parser } from 'xml2js';
 import { Logger } from 'winston';
@@ -439,7 +440,9 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     url.search = searchParams.toString();
     const urlString = url.toString();
 
-    this.logger.info(`Making ${this.namespace} request to: ${urlString}`);
+    this.logger.info(
+      `Making ${this.namespace} request to: ${makeUrlLogSafe(urlString)}`
+    );
 
     try {
       const response = await makeRequest(urlString, {
@@ -479,7 +482,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
 
       const parsedResult = schema.parse(result);
       this.logger.debug(
-        `Completed ${this.namespace} request for ${urlString} in ${getTimeTakenSincePoint(start)}`
+        `Completed ${this.namespace} request for ${makeUrlLogSafe(urlString)} in ${getTimeTakenSincePoint(start)}`
       );
       return parsedResult;
     } catch (error) {
