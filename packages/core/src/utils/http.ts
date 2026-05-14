@@ -32,7 +32,7 @@ export class PossibleRecursiveRequestError extends Error {
 }
 export function makeUrlLogSafe(url: string) {
   // for each component of the path, if it is longer than 10 characters, mask it
-  // and replace the query params of key 'password' with '****'
+  // and replace the query params of key 'password' or 'apikey' (case-insensitive) with '****'
   return url
     .split('/')
     .map((component) => {
@@ -112,10 +112,10 @@ export async function makeRequest(url: string, options: RequestOptions) {
     !options.ignoreRecursion
   ) {
     logger.warn(
-      `Detected possible recursive requests to ${urlObj.toString()}. Current count: ${currentCount}. Blocking request.`
+      `Detected possible recursive requests to ${makeUrlLogSafe(urlObj.toString())}. Current count: ${currentCount}. Blocking request.`
     );
     throw new PossibleRecursiveRequestError(
-      `Possible recursive request to ${urlObj.toString()}`
+      `Possible recursive request to ${makeUrlLogSafe(urlObj.toString())}`
     );
   }
   if (currentCount > 0) {
