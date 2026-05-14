@@ -31,8 +31,48 @@ export class PossibleRecursiveRequestError extends Error {
   }
 }
 export function makeUrlLogSafe(url: string) {
-  // for each component of the path, if it is longer than 10 characters, mask it
-  // and replace the query params of key 'password' or 'apikey' (case-insensitive) with '****'
+  // Redact 'password' and 'apikey' (case-insensitive) in query and fragment
+  // params, plus userinfo. Falls back to legacy regex stripping if URL parsing
+  // fails (e.g. already-truncated log fragments).
+  const secretKeys = new Set(['password', 'apikey']);
+
+  try {
+    const urlObj = new URL(url);
+
+    if (urlObj.username) urlObj.username = '****';
+    if (urlObj.password) urlObj.password = '****';
+
+    const redactedParams = new URLSearchParams();
+    urlObj.searchParams.forEach((value, key) => {
+      redactedParams.append(
+        key,
+        secretKeys.has(key.toLowerCase()) ? '****' : value
+      );
+    });
+    urlObj.search = redactedParams.toString();
+
+    if (urlObj.hash) {
+      const hash = urlObj.hash.slice(1);
+      const hashParams = new URLSearchParams(hash);
+      let changed = false;
+
+      for (const key of Array.from(hashParams.keys())) {
+        if (secretKeys.has(key.toLowerCase())) {
+          hashParams.set(key, '****');
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        urlObj.hash = hashParams.toString();
+      }
+    }
+
+    url = urlObj.toString();
+  } catch {
+    // Fall back to legacy string handling below.
+  }
+
   return url
     .split('/')
     .map((component) => {
@@ -42,7 +82,7 @@ export function makeUrlLogSafe(url: string) {
       return component;
     })
     .join('/')
-    .replace(/(?<![^?&])(password=[^&]+)/g, 'password=****')
+    .replace(/(?<![^?&])(password=[^&]+)/gi, 'password=****')
     .replace(/(?<![^?&])(apikey=[^&]+)/gi, 'apikey=****');
 }
 
@@ -132,8 +172,14 @@ export async function makeRequest(url: string, options: RequestOptions) {
     dispatcher = getProxyAgent(Env.ADDON_PROXY![proxyIndex]);
   }
 
+  const requestMode = useProxy
+    ? 'proxied'
+    : options.forceProxy
+      ? `forced proxied (${makeUrlLogSafe(options.forceProxy)})`
+      : 'direct';
+
   logger.debug(
-    `Making a ${useProxy ? 'proxied' : options.forceProxy ? 'forced proxied (' + options.forceProxy + ')' : 'direct'}${proxyIndex !== -1 ? ` (proxy ${proxyIndex + 1})` : ''} request to ${makeUrlLogSafe(
+    `Making a ${requestMode}${proxyIndex !== -1 ? ` (proxy ${proxyIndex + 1})` : ''} request to ${makeUrlLogSafe(
       urlObj.toString()
     )} with forwarded ip ${maskSensitiveInfo(options.forwardIp ?? 'none')} and headers ${maskSensitiveInfo(JSON.stringify(Object.fromEntries(headers)))}`
   );
