@@ -1,0 +1,16 @@
+---
+title: Clean Filename Redirect
+description: Use a clean initial playback filename for external player subtitle matching.
+---
+
+# Clean Filename Redirect
+
+Clean Filename Redirect rewrites HTTP stream URLs through a lightweight AIOStreams endpoint that includes a cleaned filename in the URL path, then redirects to the original stream URL.
+
+This is useful for external players such as Infuse, where subtitle matching may rely on the initial playback filename.
+
+This feature does not proxy video traffic. AIOStreams only returns an HTTP redirect; the media is still fetched from the original provider, debrid service, or CDN URL.
+
+Recommended redirect code: 307.
+
+Default: disabled.

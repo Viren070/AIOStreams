@@ -115,6 +115,49 @@ export function PlaybackBehavior() {
       </SettingsCard>
 
       <SettingsCard
+        title="Clean Filename Redirect"
+        id="cleanRedirectOutput"
+        description="Rewrite HTTP stream URLs through a lightweight redirect endpoint with a clean filename in the initial playback path."
+      >
+        <Switch
+          label="Enable"
+          side="right"
+          value={userData.cleanRedirectOutput?.enabled ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              cleanRedirectOutput: {
+                ...prev.cleanRedirectOutput,
+                enabled: value,
+                redirectCode: prev.cleanRedirectOutput?.redirectCode ?? 307,
+              },
+            }));
+          }}
+        />
+        <Select
+          label="Redirect Status Code"
+          help="HTTP redirect code used by the clean filename redirect endpoint. 307 is recommended."
+          disabled={!userData.cleanRedirectOutput?.enabled}
+          options={[
+            { label: '302 Found', value: '302' },
+            { label: '307 Temporary Redirect - recommended', value: '307' },
+            { label: '308 Permanent Redirect', value: '308' },
+          ]}
+          value={String(userData.cleanRedirectOutput?.redirectCode ?? 307)}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              cleanRedirectOutput: {
+                ...prev.cleanRedirectOutput,
+                enabled: prev.cleanRedirectOutput?.enabled ?? false,
+                redirectCode: Number(value) as 302 | 307 | 308,
+              },
+            }));
+          }}
+        />
+      </SettingsCard>
+
+      <SettingsCard
         title="Are you still there?"
         id="areYouStillThere"
         description="Stop autoplay after a number of consecutive episodes so the player returns to stream selection."

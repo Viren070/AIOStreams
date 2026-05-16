@@ -72,6 +72,17 @@ const StreamProxyConfig = z.object({
 
 export type StreamProxyConfig = z.infer<typeof StreamProxyConfig>;
 
+const CleanRedirectOutputConfig = z.object({
+  enabled: z.boolean().optional(),
+  redirectCode: z
+    .union([z.literal(302), z.literal(307), z.literal(308)])
+    .optional(),
+});
+
+export type CleanRedirectOutputConfig = z.infer<
+  typeof CleanRedirectOutputConfig
+>;
+
 const ResultLimitOptions = z.object({
   global: z.number().min(1).optional(),
   service: z.number().min(1).optional(),
@@ -381,7 +392,7 @@ export const ParentConfigSchema = z.object({
       proxy: BinaryMergeStrategy.default('inherit'),
       metadata: BinaryMergeStrategy.default('inherit'),
       misc: BinaryMergeStrategy.default('inherit'),
-        branding: BinaryMergeStrategy.default('inherit'),
+      branding: BinaryMergeStrategy.default('inherit'),
       fieldOverrides: z
         .record(z.string(), z.enum(['inherit', 'override', 'extend']))
         .optional(),
@@ -646,6 +657,10 @@ export const UserDataSchema = z.object({
   usePosterServiceForMeta: z.boolean().optional(),
   formatter: Formatter,
   proxy: StreamProxyConfig.optional(),
+  cleanRedirectOutput: CleanRedirectOutputConfig.optional().default({
+    enabled: false,
+    redirectCode: 307,
+  }),
   resultLimits: ResultLimitOptions.optional(),
   size: SizeFilterOptions.optional(),
   bitrate: BitrateFilterOptions.optional(),

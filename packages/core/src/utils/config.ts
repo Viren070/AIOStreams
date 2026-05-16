@@ -1515,6 +1515,7 @@ const METADATA_FIELDS: (keyof UserData)[] = [
 const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
   'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
+  'cleanRedirectOutput',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
   'addonPassword', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
   'randomiseResults', 'enhanceResults', 'enhancePosters',
