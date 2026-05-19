@@ -121,8 +121,17 @@ export async function ensureConfigAccessKey(): Promise<void> {
   if (process.env.CONFIG_ACCESS_KEY !== undefined) return; // env-managed
 
   const legacy = process.env.ADDON_PASSWORD;
-  if (legacy && legacy.length > 0) {
-    await settingsStore.set(CONFIG_ACCESS_KEY_SETTING, legacy, 'system:auth');
+  const passwords = legacy
+    ?.split(',')
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  if (legacy && legacy.length > 0 && passwords && passwords.length > 0) {
+    await settingsStore.set(
+      CONFIG_ACCESS_KEY_SETTING,
+      passwords[0],
+      'system:auth'
+    );
     if (!appConfig.api.authRequired) {
       await settingsStore.set(AUTH_REQUIRED_SETTING, true, 'system:auth');
     }
