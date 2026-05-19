@@ -150,10 +150,10 @@ export async function ensureConfigAccessKey(): Promise<void> {
 
 /**
  * Enforce the config-write gate. When the gate is active, the config must
- * carry the current access key in its `accessToken` field. Throws
+ * carry the current access key in its `accessKey` field. Throws
  * ADDON_PASSWORD_INVALID otherwise. No-op when the gate is disabled.
  */
-export function assertConfigAccessKey(config: { accessToken?: string }): void {
+export function assertConfigAccessKey(config: { accessKey?: string }): void {
   let key = getConfigAccessKey();
   if (!key) {
     if (appConfig.api.authRequired) {
@@ -165,7 +165,7 @@ export function assertConfigAccessKey(config: { accessToken?: string }): void {
       return;
     }
   }
-  if (!config.accessToken || !constantTimeEquals(config.accessToken, key)) {
+  if (!config.accessKey || !constantTimeEquals(config.accessKey, key)) {
     throw new APIError(ErrorCode.ADDON_PASSWORD_INVALID);
   }
 }

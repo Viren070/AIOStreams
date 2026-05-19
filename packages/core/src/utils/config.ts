@@ -489,6 +489,16 @@ export function applyMigrations(config: any): UserData {
     delete config.addonPassword;
   }
   if (
+    config &&
+    config.accessToken !== undefined &&
+    config.accessKey === undefined
+  ) {
+    config.accessKey = config.accessToken;
+  }
+  if (config && config.accessToken !== undefined) {
+    delete config.accessToken;
+  }
+  if (
     config.deduplicator &&
     typeof config.deduplicator.multiGroupBehaviour === 'string'
   ) {
@@ -1344,7 +1354,7 @@ const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
   'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
-  'accessToken', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
+  'accessKey', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
   'randomiseResults', 'enhanceResults', 'enhancePosters',
 ];
 

@@ -23,6 +23,16 @@ export function applyMigrations(config: any): UserData {
     delete config.addonPassword;
   }
   if (
+    config &&
+    config.accessToken !== undefined &&
+    config.accessKey === undefined
+  ) {
+    config.accessKey = config.accessToken;
+  }
+  if (config && config.accessToken !== undefined) {
+    delete config.accessToken;
+  }
+  if (
     config.deduplicator &&
     typeof config.deduplicator.multiGroupBehaviour === 'string'
   ) {
