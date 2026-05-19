@@ -281,7 +281,7 @@ export const userAgentMap = z
     z.string().transform((value, ctx) => {
       const out: Record<string, string> = {};
       if (!value.trim()) return out;
-      const regex = /([a-zA-Z0-9.\-*]+):([^,]*(?:,[^a-zA-Z0-9.\-][^,]*)*)/g;
+      const regex = /([a-zA-Z0-9.\-*]+):([^,]*(?:,[^a-zA-Z0-9.\-*][^,]*)*)/g;
       let match;
       let any = false;
       while ((match = regex.exec(value)) !== null) {
