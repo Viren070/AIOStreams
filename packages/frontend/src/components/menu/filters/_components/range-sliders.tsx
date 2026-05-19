@@ -1,4 +1,3 @@
-'use client';
 import { Slider } from '../../../ui/slider/slider';
 import { NumberInput } from '../../../ui/number-input';
 import {

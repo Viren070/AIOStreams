@@ -1,4 +1,4 @@
-import { Parser } from 'expr-eval';
+﻿import { Parser } from 'expr-eval';
 import {
   ParsedStream,
   ParsedStreams,
@@ -10,7 +10,7 @@ import { formatZodError } from '../utils/config.js';
 import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
 import { parseBitrate } from './utils.js';
-import { createLogger } from '../utils/logger.js';
+import { createLogger } from '../logging/logger.js';
 import { ExpressionContext } from '../streams/context.js';
 import { formRegexFromKeywordsSync } from '../utils/regex.js';
 
@@ -1120,6 +1120,8 @@ export abstract class StreamExpressionEngine {
       filterType?: string
     ) {
       if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        const nonStream = streams.find((s) => typeof s !== 'object' || !s.type);
+        console.error('Invalid stream object:', nonStream);
         throw new Error('Your streams input must be an array of streams');
       }
 

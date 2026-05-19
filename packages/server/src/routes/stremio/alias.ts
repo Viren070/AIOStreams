@@ -1,4 +1,9 @@
-import { APIError, constants, createLogger, Env } from '@aiostreams/core';
+import {
+  APIError,
+  config as appConfig,
+  constants,
+  createLogger,
+} from '@aiostreams/core';
 import { Router, Request, Response } from 'express';
 
 const logger = createLogger('server');
@@ -18,7 +23,7 @@ router.get(
       wildcardPath = wildcardPath.join('/');
     }
 
-    const configuration = Env.ALIASED_CONFIGURATIONS.get(alias);
+    const configuration = appConfig.api.aliasedConfigurations[alias];
     if (!configuration || !configuration.uuid || !configuration.password) {
       throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
     }

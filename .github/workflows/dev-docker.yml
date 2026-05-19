@@ -13,12 +13,12 @@ on:
         type: string
 
 jobs:
-  build:
-    name: build
+  setup:
+    name: Resolve ref
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
+    outputs:
+      ref: ${{ steps.resolve.outputs.ref }}
+      tag: ${{ steps.resolve.outputs.tag }}
     steps:
       - name: Resolve ref and tag
         id: resolve
@@ -43,11 +43,27 @@ jobs:
           echo "tag=${FINAL_TAG}" >> $GITHUB_OUTPUT
           echo "Resolved ref: ${RESOLVED_REF}, tag: ghcr.io/${{ github.repository_owner }}/aiostreams:${FINAL_TAG}"
 
-      - name: Checkout
-        uses: actions/checkout@v6
+  build:
+    name: build (${{ matrix.suffix }})
+    needs: setup
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ steps.resolve.outputs.ref }}
+          ref: ${{ needs.setup.outputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
@@ -57,14 +73,10 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Node
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
 
@@ -73,15 +85,59 @@ jobs:
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Generate metadata
-        run: node scripts/generateMetadata.cjs --channel=dev --ref=${{ steps.resolve.outputs.tag }} --commit=${{ steps.commit.outputs.sha }}
+        run: node scripts/generateMetadata.cjs --channel=dev --ref=${{ needs.setup.outputs.tag }} --commit=${{ steps.commit.outputs.sha }}
 
       - name: Build & Push
+        id: build
         uses: docker/build-push-action@v7
         with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           context: .
           file: ./Dockerfile
-          tags: ghcr.io/viren070/aiostreams:${{ steps.resolve.outputs.tag }}
+          outputs: type=image,name=ghcr.io/viren070/aiostreams,push-by-digest=true,name-canonical=true
+          cache-from: type=gha,scope=${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
+
+      - name: Export digest
+        run: echo "${{ steps.build.outputs.digest }}" > "/tmp/${{ matrix.suffix }}"
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: /tmp/${{ matrix.suffix }}
+          archive: false
+          retention-days: 1
+
+  merge:
+    name: Merge manifests
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Create and push manifest
+        env:
+          TAG: ${{ needs.setup.outputs.tag }}
+        run: |
+          docker buildx imagetools create \
+            -t "ghcr.io/viren070/aiostreams:${TAG}" \
+            "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/amd64)" \
+            "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/arm64)"

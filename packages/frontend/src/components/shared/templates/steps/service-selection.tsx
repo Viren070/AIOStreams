@@ -1,4 +1,3 @@
-'use client';
 import React from 'react';
 import { StatusResponse } from '@aiostreams/core';
 import { CheckIcon } from 'lucide-react';

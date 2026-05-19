@@ -6,11 +6,13 @@ import {
   StremioTransformer,
 } from '@aiostreams/core';
 import { stremioCatalogRateLimiter } from '../../middlewares/ratelimit.js';
+import { trackResource } from '../../middlewares/analytics.js';
 
 const logger = createLogger('server');
 const router: Router = Router();
 
 router.use(stremioCatalogRateLimiter);
+router.use(trackResource('catalog'));
 
 interface CatalogParams {
   type: string;

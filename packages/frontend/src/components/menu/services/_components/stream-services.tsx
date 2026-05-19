@@ -1,4 +1,3 @@
-'use client';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { useState, useEffect } from 'react';

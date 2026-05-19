@@ -1,4 +1,3 @@
-'use client';
 import React, { useState } from 'react';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';

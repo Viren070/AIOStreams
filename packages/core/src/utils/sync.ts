@@ -1,10 +1,9 @@
-import z from 'zod';
-import { Env } from './env.js';
+﻿import z from 'zod';
 import { makeRequest } from './http.js';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 import { Cache } from './cache.js';
 
-const logger = createLogger('core');
+const logger = createLogger('sync');
 
 /**
  * Configuration for a SyncManager instance.
@@ -91,7 +90,12 @@ export class SyncManager<T extends Record<string, any>> {
     if (!this._initialisationPromise) {
       this._initialisationPromise = this._refresh().then(() => {
         logger.info(
-          `[${this.config.cacheKey}] Initialised with ${this._accumulatedKeys.size} items.`
+          {
+            items: this._accumulatedKeys.size,
+            type: this.config.cacheKey,
+            refreshInterval: this.config.refreshInterval,
+          },
+          `initialised sync manager`
         );
         if (this.config.refreshInterval > 0) {
           this._refreshInterval = setInterval(
@@ -181,7 +185,12 @@ export class SyncManager<T extends Record<string, any>> {
     const newCount = this._accumulatedKeys.size - initialCount;
     if (newCount > 0) {
       logger.info(
-        `[${this.config.cacheKey}] Accumulated ${newCount} new items. Total: ${this._accumulatedKeys.size}`
+        {
+          newCount,
+          total: this._accumulatedKeys.size,
+          type: this.config.cacheKey,
+        },
+        `accumulated new items`
       );
     }
   }
@@ -196,13 +205,17 @@ export class SyncManager<T extends Record<string, any>> {
       if (this.isValidUrl(url)) {
         this._allowedUrls.add(url);
       } else {
-        logger.warn(`[${this.config.cacheKey}] Skipping invalid URL: ${url}`);
+        logger.warn(
+          { url, type: this.config.cacheKey },
+          'skipping invalid URL'
+        );
       }
     }
     const newCount = this._allowedUrls.size - initialCount;
     if (newCount > 0) {
       logger.info(
-        `[${this.config.cacheKey}] Added ${newCount} new allowed URLs. Total: ${this._allowedUrls.size}`
+        { newCount, total: this._allowedUrls.size, type: this.config.cacheKey },
+        `added ${newCount} new allowed URLs`
       );
     }
   }
@@ -233,8 +246,6 @@ export class SyncManager<T extends Record<string, any>> {
     return this._allowedUrls.has(url);
   }
 
-  // ─── Private ────────────────────────────────────────────────────────────────
-
   /**
    * Refresh items from all configured + dynamic URLs.
    */
@@ -246,7 +257,8 @@ export class SyncManager<T extends Record<string, any>> {
     if (allUrls.length === 0) return;
 
     logger.debug(
-      `[${this.config.cacheKey}] Refreshing from ${allUrls.length} URLs...`
+      { count: allUrls.length, type: this.config.cacheKey },
+      'refresh started for all URLs'
     );
 
     const results = await Promise.allSettled(
@@ -260,7 +272,8 @@ export class SyncManager<T extends Record<string, any>> {
           })
           .catch((err) => {
             logger.error(
-              `[${this.config.cacheKey}] Background refresh failed for ${url}: ${err.message}`
+              { url, type: this.config.cacheKey, error: err.message },
+              'background refresh failed'
             );
             return [] as T[];
           })
@@ -280,7 +293,13 @@ export class SyncManager<T extends Record<string, any>> {
    * Fetch items from a URL.
    */
   private async _fetchWithRetry(url: string): Promise<T[]> {
-    logger.debug(`[${this.config.cacheKey}] Fetching from ${url}`);
+    logger.debug(
+      {
+        type: this.config.cacheKey,
+        url,
+      },
+      'fetching from URL'
+    );
 
     try {
       const response = await makeRequest(url, {
@@ -362,7 +381,8 @@ export class SyncManager<T extends Record<string, any>> {
       );
     } catch (error: any) {
       logger.error(
-        `[${this.config.cacheKey}] Failed to fetch from ${url}: ${error.message}`
+        { url, type: this.config.cacheKey, error: error.message },
+        'failed to fetch from URL'
       );
       throw error;
     }
@@ -374,44 +394,7 @@ export class SyncManager<T extends Record<string, any>> {
   protected _convertValuesArray(values: string[]): T[] {
     return values.map((v) => this.config.convertValue(v) as T);
   }
-
-  /**
-   * Find a matching override for an item.
-   */
-  private _findOverride(
-    item: T,
-    overrides?: SyncOverride[]
-  ): SyncOverride | undefined {
-    if (!overrides?.length) return undefined;
-
-    // Match by pattern/expression or by originalName
-    const itemPattern = (item as any).pattern ?? (item as any).expression ?? '';
-    const itemName = (item as any).name ?? '';
-
-    return overrides.find(
-      (o) =>
-        o.pattern === itemPattern ||
-        o.expression === itemPattern ||
-        (itemName && o.originalName === itemName)
-    );
-  }
-
-  /**
-   * Apply an override to an item (rename, re-score).
-   */
-  private _applyOverride(item: T, override: SyncOverride): T {
-    const result = { ...item };
-    if (override.name !== undefined) {
-      (result as any).name = override.name;
-    }
-    if (override.score !== undefined) {
-      (result as any).score = override.score;
-    }
-    return result;
-  }
 }
-
-// ─── Override Type ────────────────────────────────────────────────────────────
 
 export interface SyncOverride {
   /** For regex overrides */

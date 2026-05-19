@@ -7,8 +7,9 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { createLogger, Env } from '../utils/index.js';
+import { createLogger } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 const logger = createLogger('core');
@@ -108,7 +109,8 @@ export class StreamAsiaPreset extends Preset {
       ...baseOptions(
         'StreamAsia',
         supportedResources,
-        Env.DEFAULT_STREAMASIA_TIMEOUT
+        appConfig.presets.streamasia.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'ddlCatalogs',
@@ -308,10 +310,14 @@ there is no need to provide these details here.
     return {
       ID: 'streamasia',
       NAME: 'StreamAsia',
-      LOGO: `${Env.STREAMASIA_URL}/static/addon_logo_monochrome.png`,
-      URL: Env.STREAMASIA_URL,
-      TIMEOUT: Env.DEFAULT_STREAMASIA_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_STREAMASIA_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.streamasia.url[0] ?? ''}/static/addon_logo_monochrome.png`,
+      URL: appConfig.presets.streamasia.url,
+      TIMEOUT:
+        appConfig.presets.streamasia.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.streamasia.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'Watch asian drama, movies and variety shows from various sources',
@@ -379,7 +385,7 @@ there is no need to provide these details here.
     options: Record<string, any>,
     serviceIds: ServiceId[]
   ) {
-    const url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }

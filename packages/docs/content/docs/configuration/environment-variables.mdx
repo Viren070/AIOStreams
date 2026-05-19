@@ -1,373 +1,1138 @@
 ---
 title: Environment Variables
-description: Complete reference for all AIOStreams environment variables.
+description: Complete reference for AIOStreams environment variables and runtime settings.
 ---
 
-AIOStreams is configured via environment variables. When using Docker Compose, these go in your `.env` file. A fully documented sample is available at [`.env.sample`](https://github.com/Viren070/AIOStreams/blob/main/.env.sample).
+import { Callout } from 'fumadocs-ui/components/callout';
 
----
+AIOStreams has two kinds of configuration:
 
-## Essential Setup
+- **Bootstrap variables** — read from the environment **only**, before the
+  database is available. They configure the things needed to start the process
+  (server, database, encryption, operator auth, logging). These **must**
+  be set as environment variables and **cannot** be changed in the dashboard.
+- **Runtime settings** — everything else. These are stored in the database and
+  are **best configured in the dashboard** (Settings page) where they can be
+  edited live, validated, and changed without redeploying. Every runtime
+  setting still has a matching environment variable: **if that variable is set,
+  it becomes a locked override** — the value is forced and the field is shown as
+  read-only in the UI. Leave it unset to manage the setting from the dashboard.
 
-| Variable         | Default                     | Description                                                                                         |
-| ---------------- | --------------------------- | --------------------------------------------------------------------------------------------------- |
-| `ADDON_NAME`     | `"AIOStreams"`              | Display name for your addon instance                                                                |
-| `ADDON_ID`       | `"aiostreams.viren070.com"` | Unique addon identifier                                                                             |
-| `PORT`           | `3000`                      | Port the server listens on                                                                          |
-| `BASE_URL`       | —                           | **Required.** Public URL of your instance (e.g. `https://aiostreams.example.com`)                   |
-| `SECRET_KEY`     | —                           | **Required.** 64-character hex string used to encrypt configs. Generate with `openssl rand -hex 32` |
-| `ADDON_PASSWORD` | —                           | Password to protect your instance. Supports multiple comma-separated values                         |
-| `DATABASE_URI`   | `sqlite://./data/db.sqlite` | Database connection URI. Supports SQLite and PostgreSQL                                             |
-| `REDIS_URI`      | —                           | Redis URI for shared caching (only needed for multi-instance deployments)                           |
-
-<Callout type="warn">
-  `SECRET_KEY` is required and must be a 64-character hexadecimal string.
-  AIOStreams will refuse to start without it.
+<Callout type="info">
+  Recommended approach: set only the **bootstrap** variables in your `.env`,
+  then configure everything else from the dashboard. The
+  [`.env.sample`](https://github.com/Viren070/AIOStreams/blob/main/.env.sample)
+  intentionally only contains bootstrap variables for this reason. Use
+  environment overrides for runtime settings only when you need to lock a value
 </Callout>
 
 ---
 
-## Authentication & Authorisation
+## Bootstrap Variables (environment-only)
 
-| Variable                                 | Default   | Description                                                                                   |
-| ---------------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `AIOSTREAMS_AUTH`                        | —         | Comma-separated `user:password` pairs for the built-in proxy (e.g. `user1:pass1,user2:pass2`) |
-| `AIOSTREAMS_AUTH_ADMINS`                 | —         | Comma-separated usernames (from `AIOSTREAMS_AUTH`) that have admin access                     |
-| `TRUSTED_UUIDS`                          | —         | Comma-separated list of UUIDs that are considered "trusted"                                   |
-| `REGEX_FILTER_ACCESS`                    | `trusted` | Who can use regex filters: `none`, `trusted`, or `all`                                        |
-| `SEL_SYNC_ACCESS`                        | `trusted` | Who can sync SEL expressions from arbitrary URLs: `all` or `trusted`                          |
-| `WHITELISTED_REGEX_PATTERNS`             | —         | JSON array of regex pattern strings available to all users                                    |
-| `WHITELISTED_REGEX_PATTERNS_URLS`        | —         | JSON array of URLs to fetch whitelisted patterns from                                         |
-| `WHITELISTED_REGEX_PATTERNS_DESCRIPTION` | —         | Markdown description shown alongside whitelisted patterns                                     |
-| `WHITELISTED_SEL_URLS`                   | —         | JSON array of SEL sync URLs that non-trusted users can sync from                              |
-| `WHITELISTED_SYNC_REFRESH_INTERVAL`      | `86400`   | How often sync URL content is refreshed (seconds)                                             |
+These are validated at startup and cannot be set from the dashboard.
+
+### Essential
+
+| Variable                    | Default                     | Description                                                                                                                                                                                                                                    |
+| --------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BASE_URL`                  | —                           | **Required.** Public URL of your instance, including protocol (e.g. `https://aiostreams.example.com`).                                                                                                                                         |
+| `SECRET_KEY`                | —                           | **Required.** 64-character hex string used to encrypt stored configurations. Generate with `openssl rand -hex 32`. Cannot be changed after first run. The legacy alias `SESSION_SECRET` is still accepted for one minor release.               |
+| `PORT`                      | `3000`                      | Port the server listens on.                                                                                                                                                                                                                    |
+| `DATABASE_URI`              | `sqlite://./data/db.sqlite` | Database connection URI. Supports SQLite and PostgreSQL (`postgres://user:pass@host:port/db`).                                                                                                                                                 |
+| `REDIS_URI`                 | —                           | Redis URI for shared caching. Recommended for multi-instance deployments; single-container setups can leave this unset.                                                                                                                        |
+| `REDIS_TIMEOUT`             | `5000`                      | Redis client connect timeout in milliseconds.                                                                                                                                                                                                  |
+| `SETTINGS_REFRESH_INTERVAL` | `30`                        | How often (seconds) each instance polls the DB settings version and reloads runtime config if another instance changed a setting via the dashboard. Keeps multi-instance deployments consistent. Set `0` to disable on single-instance setups. |
+| `INTERNAL_URL`              | `http://localhost:${PORT}`  | Internal URL used for communication with built-in addons. The default is fine for almost all setups.                                                                                                                                           |
+
+<Callout type="warn">
+  `SECRET_KEY` is required and must be a 64-character hexadecimal string.
+  AIOStreams will refuse to start without it, and changing it after first run
+  makes existing encrypted configurations undecryptable.
+</Callout>
+
+### Operator Authentication
+
+| Variable                            | Default | Description                                                                                                                 |
+| ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `AIOSTREAMS_AUTH`                   | —       | Comma-separated `username:password` pairs for the AIOStreams instance (currently used by the built-in proxy and NZB proxy). |
+| `AIOSTREAMS_AUTH_ADMINS`            | —       | Comma-separated usernames (from `AIOSTREAMS_AUTH`) that are admins. If unset, all users are admins.                         |
+| `AIOSTREAMS_AUTH_CONNECTIONS_LIMIT` | —       | Comma-separated `username:limit` connection limits (`-1` / `0` for unlimited) for the built-in proxy.                       |
+
+### Logging
+
+These configure the logger
+
+| Variable                 | Default    | Description                                                               |
+| ------------------------ | ---------- | ------------------------------------------------------------------------- |
+| `LOG_LEVEL`              | `info`     | `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly`.             |
+| `LOG_FORMAT`             | `json`     | `text` or `json`. `json` is recommended for production.                   |
+| `LOG_BUFFER_MAX_BYTES`   | `67108864` | Max bytes of recent log lines kept in memory for the dashboard Logs page. |
+| `LOG_BUFFER_MAX_ENTRIES` | `200000`   | Hard cap on recent log lines kept in memory for the dashboard Logs page.  |
+
+### Runtime / Build
+
+| Variable                   | Default      | Description                                                             |
+| -------------------------- | ------------ | ----------------------------------------------------------------------- |
+| `NODE_ENV`                 | `production` | `production`, `development`, or `test`.                                 |
+| `SYSTEM_LIFECYCLE_ENABLED` | `false`      | Allow the dashboard System page to restart/stop the AIOStreams process. |
 
 ---
 
-## Built-in Addons
+# Runtime Settings
+
+Everything below is **stored in the database and editable from the dashboard
+Settings page**. The sections, groups, and labels mirror the dashboard exactly.
+Set the listed environment variable only if you want to lock that value (it will
+appear read-only in the UI). Defaults shown are the built-in defaults used when
+neither the environment variable nor a stored value is present.
+
+{/* BEGIN GENERATED ENV REFERENCE */}
+
+{/* This section is auto-generated by scripts/gen-env-docs.ts from the
+    config schemas. Do not edit by hand — run `pnpm run gen:env-docs`. */}
+
+## Core
 
 ### General
 
-| Variable                                        | Default                          | Description                                                                                                 |
-| ----------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `BUILTIN_STREMTHRU_URL`                         | `https://stremthru.13377001.xyz` | StremThru URL for built-in Debrid integrations                                                              |
-| `BUILTIN_SCRAPE_WITH_ALL_TITLES`                | `false`                          | Use alternative titles for text queries. `true` = all, `false` = primary only, or comma-separated hostnames |
-| `BUILTIN_SCRAPE_TITLE_LANGUAGES`                | —                                | Fine-grained per-indexer title language control. See `.env.sample` for format                               |
-| `BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL` | `1800`                           | Cache TTL for debrid cache status (seconds)                                                                 |
-| `BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL`        | `3600`                           | Cache TTL for debrid playback links (seconds)                                                               |
-| `BUILTIN_DEBRID_ERROR_CACHE_TTL`                | `3600`                           | Cache TTL for content-level failures (seconds)                                                              |
-| `BUILTIN_DEBRID_LIBRARY_CACHE_TTL`              | `604800`                         | Cache TTL for debrid library list (seconds)                                                                 |
-| `BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD`        | `600`                            | Stale threshold for background library refresh (seconds)                                                    |
-| `BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL`       | `true`                           | Use torrent download URLs instead of magnets                                                                |
-| `MAX_NZB_FAILOVER_COUNT`                        | `5`                              | Max NZB failover attempts users can configure                                                               |
-| `BUILTIN_DOWNLOAD_POLL_INTERVAL`                | see sample                       | Per-service download poll intervals (e.g. `torbox:15s,nzbdav:3s,*:10s`)                                     |
-| `BUILTIN_DOWNLOAD_MAX_WAIT_TIME`                | see sample                       | Per-service max wait times before timeout                                                                   |
-| `BUILTIN_GET_TORRENT_TIMEOUT`                   | `5000`                           | Timeout for fetching torrent metadata from a URL (ms)                                                       |
-| `BUILTIN_GET_TORRENT_CONCURRENCY`               | `100`                            | Concurrency for torrent metadata fetch tasks                                                                |
-| `BUILTIN_GET_TORRENT_LAZILY`                    | `true`                           | Fetch non-magnet torrents in the background instead of blocking the search                                  |
-| `BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL`   | `86400`                          | Minimum interval between background cache refreshes (seconds)                                               |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `AIOSTREAMS_AUTH_REQUIRED` | Auth Required | boolean | `false` | When true, /stremio/configure requires a valid login session (any user in AIOSTREAMS_AUTH) and the config-write gate (CONFIG_ACCESS_KEY) is enforced. When false, the config page is public. |
+| `CONFIG_ACCESS_KEY` | Config Access Key | string | *(unset)* | Single key embedded in a config and checked on create/update/serve. If unset while authRequired is true, one is generated and persisted automatically. Rotating it invalidates every existing config until re-saved. _(secret)_ |
+| `SESSION_TTL_SECONDS` | Session TTL Seconds | duration | `86400` | Lifetime of a login session before the user must log in again. Defaults to 24 hours (1d). |
+| `ALIASED_CONFIGURATIONS` | Aliased Configurations | map | *(unset)* | Map of aliases to &#123;uuid, password&#125; accessible at /stremio/u/&lt;alias&gt;/manifest.json. Env-supplied form: comma-separated `alias:uuid:password` entries. _(secret)_ |
+| `ENABLE_SEARCH_API` | Enable Search API | boolean | `true` | When true, the /api/search endpoint is mounted and reachable. _(restart required)_ |
+| `PROVIDE_STREAM_DATA` | Provide Stream Data | boolOrList | — | Whether stream metadata is included in Stremio stream responses. `null` (default) auto-detects from User-Agent (AIOStreams/* always gets it). `true`/`false` overrides for everyone. An IP list enables it only for matching request IPs. |
+| `EXPOSE_USER_COUNT` | Expose User Count | boolean | `false` | Include the total user count on the public status endpoint. |
+| `STREMIO_ADDONS_CONFIG_ISSUER` | Stremio Addons Config Issuer | string | `https://stremio-addons.net` | Issuer URL declared in the manifest for the Stremio Addons Config integration. |
+| `STREMIO_ADDONS_CONFIG_SIGNATURE` | Stremio Addons Config Signature | string | *(unset)* | Signed JWT for the Stremio Addons Config integration. Both issuer and signature must be set for the manifest field to be emitted. _(secret)_ |
+| `TRUSTED_IPS` | Trusted Ips | json | `["172.17.0.0/16","127.0.0.1/32","::1/128"]` | Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting. |
 
-### Prowlarr
+### Branding
 
-| Variable                              | Description                                    |
-| ------------------------------------- | ---------------------------------------------- |
-| `BUILTIN_PROWLARR_URL`                | Default Prowlarr URL (hidden from users)       |
-| `BUILTIN_PROWLARR_API_KEY`            | Default Prowlarr API key (hidden from users)   |
-| `BUILTIN_PROWLARR_INDEXERS`           | Comma-separated list of allowed indexers       |
-| `BUILTIN_PROWLARR_SEARCH_CACHE_TTL`   | Cache TTL for search results (default: 604800) |
-| `BUILTIN_PROWLARR_INDEXERS_CACHE_TTL` | Cache TTL for indexer list (default: 1209600)  |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ADDON_NAME` | Addon Name | string | `AIOStreams` | Display name shown in the manifest and UI. |
+| `ADDON_ID` | Addon ID | string | `com.aiostreams.viren070` | Reverse-DNS identifier published in the manifest. _(restart required)_ |
+| `CUSTOM_HTML` | Custom Html | string | — | Optional HTML injected into the configuration page. |
+| `ALTERNATE_DESIGN` | Alternate Design | boolean | `false` | Switches the frontend to the alternate design (different logo and theme). |
 
-### Jackett
+### Templates
 
-| Variable                  | Description                                 |
-| ------------------------- | ------------------------------------------- |
-| `BUILTIN_JACKETT_URL`     | Default Jackett URL (hidden from users)     |
-| `BUILTIN_JACKETT_API_KEY` | Default Jackett API key (hidden from users) |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `FEATURED_TEMPLATE_IDS` | Featured Ids | list | — | Up to 2 template IDs featured on the about page. Defaults to the first 2 available templates when unset. |
+| `TEMPLATE_URLS` | Urls | list | — | Remote template URLs to fetch and cache locally. Templates are downloaded once and refreshed on the schedule below. |
+| `TEMPLATE_REFRESH_INTERVAL` | Refresh Interval | duration | `86400` | How often remote templates are refreshed (accepts e.g. "12h", "1d"). Set to 0 to disable automatic refresh. |
 
-### NZBHydra2
+### Metadata
 
-| Variable                   | Description                                   |
-| -------------------------- | --------------------------------------------- |
-| `BUILTIN_NZBHYDRA_URL`     | Default NZBHydra2 URL (hidden from users)     |
-| `BUILTIN_NZBHYDRA_API_KEY` | Default NZBHydra2 API key (hidden from users) |
+#### TMDB
 
-### Knaben
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TMDB_ACCESS_TOKEN` | TMDB › Access Token | string | *(unset)* | TMDB Read Access Token used for strict title matching. _(secret)_ |
+| `TMDB_API_KEY` | TMDB › API Key | string | *(unset)* | TMDB API key used for strict title matching. _(secret)_ |
 
-| Variable                           | Description                                                        |
-| ---------------------------------- | ------------------------------------------------------------------ |
-| `BUILTIN_KNABEN_SEARCH_TIMEOUT`    | Timeout for Knaben search requests (default: 30000 ms)             |
-| `BUILTIN_KNABEN_SEARCH_CACHE_TTL`  | Cache TTL for Knaben results (default: 604800)                     |
-| `BUILTIN_KNABEN_DOWNLOAD_TORRENTS` | Whether to download .torrent files for results without an infohash |
+#### TVDB
 
-### Torrent Galaxy
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TVDB_API_KEY` | TVDB › API Key | string | *(unset)* | TVDB API key used for fetching metadata. _(secret)_ |
 
-| Variable                                  | Description                                      |
-| ----------------------------------------- | ------------------------------------------------ |
-| `BUILTIN_TORRENT_GALAXY_URL`              | TGx URL (default: `https://torrentgalaxy.one`) |
-| `BUILTIN_TORRENT_GALAXY_SEARCH_TIMEOUT`   | Timeout for TGx searches (default: 30000 ms)     |
-| `BUILTIN_TORRENT_GALAXY_SEARCH_CACHE_TTL` | Cache TTL (default: 604800)                      |
-| `BUILTIN_TORRENT_GALAXY_PAGE_LIMIT`       | Max pages to fetch (default: 5)                  |
+#### Trakt
 
-### \*znab (Torznab / Newznab)
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TRAKT_CLIENT_ID` | Trakt › Client ID | string | — | Trakt client ID used for fetching aliases. |
+| `FETCH_TRAKT_ALIASES` | Trakt › Fetch Aliases | boolean | `true` | Enable fetching aliases from Trakt. |
 
-| Variable                             | Default   | Description                                                          |
-| ------------------------------------ | --------- | -------------------------------------------------------------------- |
-| `BUILTIN_NAB_SEARCH_TIMEOUT`         | `30000`   | Search request timeout (ms)                                          |
-| `BUILTIN_NAB_SEARCH_CACHE_TTL`       | `604800`  | Search results cache TTL (seconds)                                   |
-| `BUILTIN_NAB_CAPABILITIES_CACHE_TTL` | `1209600` | Indexer capabilities cache TTL (seconds)                             |
-| `BUILTIN_NAB_MAX_PAGES`              | `5`       | Max pages to fetch per search                                        |
-| `BUILTIN_NAB_USER_AGENT`             | —         | Override the User-Agent for \*znab requests                          |
-| `BUILTIN_NAB_HTTP_PROXY`             | —         | Per-namespace HTTP proxy override (e.g. `torznab:http://proxy:8118`) |
+#### Anime DB
 
-### TorBox Search
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ANIME_DB_LEVEL_OF_DETAIL` | Anime DB › Level Of Detail | enum | `required` | "none" disables the anime DB; "required" loads only required mappings; "full" loads everything. _(restart required)_ |
+| `ANIME_DB_FRIBB_MAPPINGS_REFRESH_INTERVAL` | Anime DB › Refresh › Fribb Mappings | duration | `86400` | Refresh interval for the Fribb anime mappings (seconds; accepts e.g. "1d"). _(restart required)_ |
+| `ANIME_DB_MANAMI_DB_REFRESH_INTERVAL` | Anime DB › Refresh › Manami DB | duration | `604800` | Refresh interval for the Manami anime offline database. _(restart required)_ |
+| `ANIME_DB_KITSU_IMDB_MAPPING_REFRESH_INTERVAL` | Anime DB › Refresh › Kitsu Imdb Mapping | duration | `86400` | Refresh interval for the Kitsu↔IMDB mapping. _(restart required)_ |
+| `ANIME_DB_EXTENDED_ANITRAKT_MOVIES_REFRESH_INTERVAL` | Anime DB › Refresh › Extended Anitrakt Movies | duration | `86400` | Refresh interval for the Extended Anitrakt movies dataset. _(restart required)_ |
+| `ANIME_DB_EXTENDED_ANITRAKT_TV_REFRESH_INTERVAL` | Anime DB › Refresh › Extended Anitrakt Tv | duration | `86400` | Refresh interval for the Extended Anitrakt TV dataset. _(restart required)_ |
+| `ANIME_DB_ANIME_LIST_REFRESH_INTERVAL` | Anime DB › Refresh › Anime List | duration | `604800` | Refresh interval for the Anime List XML dataset. _(restart required)_ |
 
-| Variable                                             | Default  | Description                                                 |
-| ---------------------------------------------------- | -------- | ----------------------------------------------------------- |
-| `BUILTIN_TORBOX_SEARCH_SEARCH_API_TIMEOUT`           | `30000`  | Timeout for TorBox Search API (ms)                          |
-| `BUILTIN_TORBOX_SEARCH_CACHE_PER_USER_SEARCH_ENGINE` | `false`  | Cache results per-user when user search engines are enabled |
-| `BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL`         | `604800` | Cache TTL for search results (seconds)                      |
+### Logging
 
-### Stremio GDrive
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `LOG_SENSITIVE_INFO` | Log Sensitive Info | boolean | `false` | When true, sensitive values may appear in logs. Use only for debugging. _(restart required)_ |
 
-| Variable                         | Description                                       |
-| -------------------------------- | ------------------------------------------------- |
-| `BUILTIN_GDRIVE_CLIENT_ID`       | OAuth2 Client ID for Google Drive integration     |
-| `BUILTIN_GDRIVE_CLIENT_SECRET`   | OAuth2 Client Secret for Google Drive integration |
-| `BUILTIN_GDRIVE_PAGE_SIZE_LIMIT` | Max Drive API results per query (default: 1000)   |
+## Network
 
-### Bitmagnet
+### HTTP
 
-| Variable                | Description                                              |
-| ----------------------- | -------------------------------------------------------- |
-| `BUILTIN_BITMAGNET_URL` | URL of a Bitmagnet instance to enable in the marketplace |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_USER_AGENT` | Default User Agent | string | `AIOStreams/{version}` | Default User-Agent header for outbound HTTP requests. Supports `{version}` and `{random}` placeholders. _(restart required)_ |
+| `AIOSTREAMS_USER_AGENT` | Aiostreams User Agent | string | `AIOStreams/{version}` | User-Agent identifying AIOStreams to upstream services. Supports `{version}` and `{random}` placeholders. _(restart required)_ |
+| `HOSTNAME_USER_AGENT_OVERRIDES` | Hostname User Agent Overrides | map | — | Per-hostname User-Agent overrides. Env shape: `host1:ua1,host2:ua2,...`. Takes priority over the default user agents. |
+| `ADDON_PROXY` | Addon Proxy | list | — | Outbound HTTP proxy URL(s) used when fetching addon endpoints. |
+| `ADDON_PROXY_CONFIG` | Addon Proxy Config | map | — | Per-hostname proxy enablement / index. Env shape: `host1:bool\|index,host2:bool\|index,...`. Index references `addonProxy` when configured as a list. |
+| `REQUEST_URL_MAPPINGS` | Request URL Mappings | map | — | Origin-level URL rewrites applied to outbound requests. JSON object of `{origin: replacement}` URLs. |
 
-### SeaDex
+### Proxy
 
-| Variable                                  | Default                | Description                                |
-| ----------------------------------------- | ---------------------- | ------------------------------------------ |
-| `BUILTIN_SEADEX_URL`                      | `https://releases.moe` | SeaDex URL                                 |
-| `BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL` | `86400`                | Refresh interval for SeaDex data (seconds) |
+#### Encryption
 
-### Other Built-in Addons
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ENCRYPT_MEDIAFLOW_URLS` | Encryption › Mediaflow | boolean | `true` | Encrypt MediaFlow proxy URLs surfaced to clients. |
+| `ENCRYPT_STREMTHRU_URLS` | Encryption › Stremthru | boolean | `true` | Encrypt StremThru proxy URLs surfaced to clients. |
 
-| Variable                 | Default                                       | Description    |
-| ------------------------ | --------------------------------------------- | -------------- |
-| `BUILTIN_ZILEAN_URL`     | `https://zileanfortheweebs.midnightignite.me` | Zilean URL     |
-| `BUILTIN_ANIMETOSHO_URL` | `https://feed.animetosho.org`                 | AnimeTosho URL |
-| `BUILTIN_NEKOBT_URL`     | `https://nekobt.to/api/torznab`               | NekoBT URL     |
+#### Default
 
----
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_PROXY_ENABLED` | Default › Enabled | json | — | When set, used as the default proxy enabled state for new users. |
+| `DEFAULT_PROXY_ID` | Default › ID | string | — | Default proxy service identifier. |
+| `DEFAULT_PROXY_URL` | Default › URL | json | — | Default proxy URL. |
+| `DEFAULT_PROXY_PUBLIC_URL` | Default › Public URL | json | — | Public-facing default proxy URL surfaced to clients (when different from the internal one). |
+| `DEFAULT_PROXY_CREDENTIALS` | Default › Credentials | string | *(unset)* | Credentials for the default proxy. _(secret)_ |
+| `DEFAULT_PROXY_PUBLIC_IP` | Default › Public IP | string | — | Public IP of the default proxy. |
+| `DEFAULT_PROXY_PROXIED_SERVICES` | Default › Proxied Services | json | — | List of serviceIds to proxy by default. JSON array of strings. |
 
-## Anime Database
+#### Force
 
-| Variable                                             | Default     | Description                                                              |
-| ---------------------------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| `ANIME_DB_LEVEL_OF_DETAIL`                           | `required`  | Detail level for the local anime database: `none`, `required`, or `full` |
-| `ANIME_DB_FRIBB_MAPPINGS_REFRESH_INTERVAL`           | `86400000`  | Refresh interval for Fribb mappings (ms)                                 |
-| `ANIME_DB_MANAMI_DB_REFRESH_INTERVAL`                | `604800000` | Refresh interval for Manami DB (ms)                                      |
-| `ANIME_DB_KITSU_IMDB_MAPPING_REFRESH_INTERVAL`       | `86400000`  | Refresh interval for Kitsu→IMDb mappings (ms)                            |
-| `ANIME_DB_EXTENDED_ANITRAKT_MOVIES_REFRESH_INTERVAL` | `86400000`  | Refresh interval for AniTrakt movie mappings (ms)                        |
-| `ANIME_DB_EXTENDED_ANITRAKT_TV_REFRESH_INTERVAL`     | `86400000`  | Refresh interval for AniTrakt TV mappings (ms)                           |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `FORCE_PROXY_ENABLED` | Force › Enabled | json | — | Override user choice of whether the proxy is enabled. |
+| `FORCE_PROXY_ID` | Force › ID | string | — | Override user choice of proxy service identifier. |
+| `FORCE_PROXY_URL` | Force › URL | json | — | Override user choice of proxy URL. |
+| `FORCE_PROXY_PUBLIC_URL` | Force › Public URL | json | — | Override user choice of proxy public URL. |
+| `FORCE_PROXY_CREDENTIALS` | Force › Credentials | string | *(unset)* | Override user choice of proxy credentials. _(secret)_ |
+| `FORCE_PROXY_PUBLIC_IP` | Force › Public IP | string | — | Override user choice of proxy public IP. |
+| `FORCE_PROXY_DISABLE_PROXIED_ADDONS` | Force › Disable Proxied Addons | boolean | `false` | When forcing a proxy, also disable any addons that already proxy themselves. |
+| `FORCE_PROXY_PROXIED_SERVICES` | Force › Proxied Services | json | — | List of serviceIds to force-proxy. JSON array of strings. |
 
----
+#### IP
 
-## Debrid & Service API Keys
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PROXY_IP_CACHE_TTL` | IP › Cache TTL | number | `900` | Cache TTL for resolved proxy IPs (seconds). |
 
-For each service, you can set a `DEFAULT_` value (pre-filled in the UI but user-editable) or a `FORCED_` value (overrides user settings and is hidden from the UI).
+### NZB Proxy
 
-| Variable                      | Description                                          |
-| ----------------------------- | ---------------------------------------------------- |
-| `DEFAULT_SERVICE_CREDENTIALS` | Pre-filled credentials for any service, one per line |
-| `FORCED_SERVICE_CREDENTIALS`  | Forced credentials for any service, one per line     |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `NZB_PROXY_PUBLIC_ENABLED` | Public Enabled | boolean | `false` | Enable the public/generic NZB proxy endpoint. Disabled by default for security. _(restart required)_ |
+| `NZB_PROXY_EASYNEWS_ENABLED` | Easynews Enabled | boolean | `false` | Enable the Easynews-specific NZB proxy endpoint. _(restart required)_ |
+| `NZB_PROXY_MAX_SIZE` | Max Size | size | `20000000` | Maximum size of NZBs that can be proxied. Accepts plain bytes or `20MB`-style strings. |
+| `NZB_PROXY_RATE_LIMIT_WINDOW` | Rate Limit Window | number | `3600` | Sliding window for the NZB proxy rate limit (seconds). _(restart required)_ |
+| `NZB_PROXY_RATE_LIMIT_PER_USER` | Rate Limit Per User | number | `100` | Maximum NZB proxy requests per user per window. _(restart required)_ |
+| `ZYCLOPS_HEALTH_PROXY_ENDPOINT` | Zyclops Health Proxy Endpoint | string | `https://zyclops.elfhosted.com` | Base URL of the Zyclops health proxy used by the Newznab preset. |
 
-Format: `serviceId.credentialId=value`, one entry per line. Use `\n` if your environment does not support multiline values.
+### Rate Limits
 
-Available service IDs: `realdebrid`, `alldebrid`, `premiumize`, `debridlink`, `torbox`, `offcloud`, `putio`, `easynews`, `easydebrid`, `debrider`, `pikpak`, `seedr`, `nzbdav`, `altmount`, `stremthru_newz`
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `RATE_LIMIT_STORE` | Store | enum | `memory` | Backend used to track rate-limit counters. _(restart required)_ |
+| `DISABLE_RATE_LIMITS` | Disabled | boolean | `false` | When true, all rate limiters are disabled. _(restart required)_ |
 
-Credential IDs vary by service (e.g. `apiKey`, `username`, `password`, `clientId`, `encodedToken`). Check your config export or [`SERVICE_DETAILS` in the source](https://github.com/Viren070/AIOStreams/blob/main/packages/core/src/utils/constants.ts) for the exact IDs.
+#### Static
 
-```
-DEFAULT_SERVICE_CREDENTIALS="realdebrid.apiKey=your_api_key
-easynews.username=your_username
-easynews.password=your_password"
-```
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STATIC_RATE_LIMIT_WINDOW` | Static › Window | number | `5` | Sliding-window length (seconds) for the static file rate limiter. _(restart required)_ |
+| `STATIC_RATE_LIMIT_MAX_REQUESTS` | Static › Max Requests | number | `200` | Maximum requests per IP within the window for the static file rate limiter. _(restart required)_ |
 
-Also available for metadata:
+#### User API
 
-| Variable              | Description                                      |
-| --------------------- | ------------------------------------------------ |
-| `TMDB_ACCESS_TOKEN`   | TMDB access token for title matching             |
-| `TMDB_API_KEY`        | TMDB API key                                     |
-| `TRAKT_CLIENT_ID`     | Trakt client ID for alias lookups                |
-| `FETCH_TRAKT_ALIASES` | Whether to fetch Trakt aliases (default: `true`) |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `USER_API_RATE_LIMIT_WINDOW` | User API › Window | number | `5` | Sliding-window length (seconds) for the user API rate limiter. _(restart required)_ |
+| `USER_API_RATE_LIMIT_MAX_REQUESTS` | User API › Max Requests | number | `5` | Maximum requests per IP within the window for the user API rate limiter. _(restart required)_ |
 
----
+#### Stream API
 
-## Stream Proxy (MediaFlow / StremThru)
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREAM_API_RATE_LIMIT_WINDOW` | Stream API › Window | number | `10` | Sliding-window length (seconds) for the stream API rate limiter. _(restart required)_ |
+| `STREAM_API_RATE_LIMIT_MAX_REQUESTS` | Stream API › Max Requests | number | `5` | Maximum requests per IP within the window for the stream API rate limiter. _(restart required)_ |
 
-These control the default stream proxy shown to users. `DEFAULT_` values are pre-filled. `FORCE_` values override and hide the option.
+#### Format API
 
-| Variable                             | Default     | Description                                                         |
-| ------------------------------------ | ----------- | ------------------------------------------------------------------- |
-| `DEFAULT_PROXY_ID`                   | `mediaflow` | Proxy type: `mediaflow` or `stremthru`                              |
-| `DEFAULT_PROXY_URL`                  | —           | URL of your proxy instance                                          |
-| `DEFAULT_PROXY_PUBLIC_URL`           | —           | Public URL of your proxy instance (if different)                    |
-| `DEFAULT_PROXY_CREDENTIALS`          | —           | Credentials in `username:password` format                           |
-| `DEFAULT_PROXY_PUBLIC_IP`            | —           | Public IP of the proxy                                              |
-| `DEFAULT_PROXY_PROXIED_SERVICES`     | —           | JSON array of service IDs to proxy (e.g. `["realdebrid","torbox"]`) |
-| `DEFAULT_PROXY_ENABLED`              | —           | Default enabled state                                               |
-| `FORCE_PROXY_ID`                     | —           | Force proxy type                                                    |
-| `FORCE_PROXY_URL`                    | —           | Force proxy URL                                                     |
-| `FORCE_PROXY_CREDENTIALS`            | —           | Force proxy credentials                                             |
-| `FORCE_PROXY_ENABLED`                | —           | Force proxy on/off                                                  |
-| `FORCE_PROXY_DISABLE_PROXIED_ADDONS` | `false`     | Disable the "Proxied Addons" feature                                |
-| `ENCRYPT_MEDIAFLOW_URLS`             | `true`      | Encrypt MediaFlow streaming URLs                                    |
-| `ENCRYPT_STREMTHRU_URLS`             | `true`      | Encrypt StremThru streaming URLs                                    |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `FORMAT_API_RATE_LIMIT_WINDOW` | Format API › Window | number | `5` | Sliding-window length (seconds) for the format API rate limiter. _(restart required)_ |
+| `FORMAT_API_RATE_LIMIT_MAX_REQUESTS` | Format API › Max Requests | number | `30` | Maximum requests per IP within the window for the format API rate limiter. _(restart required)_ |
 
----
+#### Catalog API
 
-## Outgoing Addon Proxy
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `CATALOG_API_RATE_LIMIT_WINDOW` | Catalog API › Window | number | `5` | Sliding-window length (seconds) for the catalog API rate limiter. _(restart required)_ |
+| `CATALOG_API_RATE_LIMIT_MAX_REQUESTS` | Catalog API › Max Requests | number | `5` | Maximum requests per IP within the window for the catalog API rate limiter. _(restart required)_ |
 
-Configure a proxy for requests AIOStreams makes to upstream addons (e.g. to bypass Torrentio IP blocks).
+#### Anime API
 
-| Variable             | Description                                                                    |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `ADDON_PROXY`        | Proxy URL, e.g. `http://warp:1080`. Can be a JSON array for multiple proxies   |
-| `ADDON_PROXY_CONFIG` | Comma-separated rules `domain:bool_or_index` (e.g. `*:false,*.strem.fun:true`) |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ANIME_API_RATE_LIMIT_WINDOW` | Anime API › Window | number | `60` | Sliding-window length (seconds) for the anime API rate limiter. _(restart required)_ |
+| `ANIME_API_RATE_LIMIT_MAX_REQUESTS` | Anime API › Max Requests | number | `120` | Maximum requests per IP within the window for the anime API rate limiter. _(restart required)_ |
 
----
+#### Stremio Stream
 
-## Caching
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMIO_STREAM_RATE_LIMIT_WINDOW` | Stremio Stream › Window | number | `15` | Sliding-window length (seconds) for the Stremio stream rate limiter. _(restart required)_ |
+| `STREMIO_STREAM_RATE_LIMIT_MAX_REQUESTS` | Stremio Stream › Max Requests | number | `10` | Maximum requests per IP within the window for the Stremio stream rate limiter. _(restart required)_ |
 
-| Variable                              | Default  | Description                                                            |
-| ------------------------------------- | -------- | ---------------------------------------------------------------------- |
-| `DEFAULT_MAX_CACHE_SIZE`              | `100000` | Max items in any cache instance                                        |
-| `PROXY_IP_CACHE_TTL`                  | `900`    | TTL for proxy public IP cache (seconds). `-1` disables                 |
-| `MANIFEST_CACHE_TTL`                  | `21600`  | Manifest cache TTL (seconds)                                           |
-| `SUBTITLE_CACHE_TTL`                  | `300`    | Subtitle cache TTL (seconds)                                           |
-| `STREAM_CACHE_TTL`                    | `-1`     | Stream cache TTL. Supports per-addon rules (e.g. `*:-1,torrentio:300`) |
-| `CATALOG_CACHE_TTL`                   | `300`    | Catalog cache TTL (seconds)                                            |
-| `META_CACHE_TTL`                      | `300`    | Meta cache TTL (seconds)                                               |
-| `ADDON_CATALOG_CACHE_TTL`             | `300`    | Addon catalog cache TTL (seconds)                                      |
-| `POSTER_API_KEY_VALIDITY_CACHE_TTL`   | `604800` | TTL for poster service API key validation cache (seconds)              |
-| `BACKGROUND_RESOURCE_REQUEST_TIMEOUT` | —        | Timeout for background resource requests (ms)                          |
+#### Stremio Catalog
 
----
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMIO_CATALOG_RATE_LIMIT_WINDOW` | Stremio Catalog › Window | number | `5` | Sliding-window length (seconds) for the Stremio catalog rate limiter. _(restart required)_ |
+| `STREMIO_CATALOG_RATE_LIMIT_MAX_REQUESTS` | Stremio Catalog › Max Requests | number | `30` | Maximum requests per IP within the window for the Stremio catalog rate limiter. _(restart required)_ |
 
-## Customisation & Access Control
+#### Stremio Manifest
 
-| Variable                 | Description                                                             |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `CUSTOM_HTML`            | HTML snippet displayed at the top of the configuration page             |
-| `FEATURED_TEMPLATE_IDS`  | Comma-separated template IDs to pin in the "About" section (max 2)      |
-| `ALTERNATE_DESIGN`       | Enable alternate AIOStreams logo design (default: `false`)              |
-| `ALIASED_CONFIGURATIONS` | Comma-separated `alias:uuid:encryptedPassword` vanity URL triplets      |
-| `PROVIDE_STREAM_DATA`    | `true`, `false`, or comma-separated IPs to control stream data exposure |
-| `ENABLE_SEARCH_API`      | Enable the `/api/v1/search` endpoint (default: `true`)                  |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMIO_MANIFEST_RATE_LIMIT_WINDOW` | Stremio Manifest › Window | number | `5` | Sliding-window length (seconds) for the Stremio manifest rate limiter. _(restart required)_ |
+| `STREMIO_MANIFEST_RATE_LIMIT_MAX_REQUESTS` | Stremio Manifest › Max Requests | number | `5` | Maximum requests per IP within the window for the Stremio manifest rate limiter. _(restart required)_ |
 
----
+#### Stremio Subtitle
 
-## Remote Templates
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMIO_SUBTITLE_RATE_LIMIT_WINDOW` | Stremio Subtitle › Window | number | `5` | Sliding-window length (seconds) for the Stremio subtitle rate limiter. _(restart required)_ |
+| `STREMIO_SUBTITLE_RATE_LIMIT_MAX_REQUESTS` | Stremio Subtitle › Max Requests | number | `10` | Maximum requests per IP within the window for the Stremio subtitle rate limiter. _(restart required)_ |
 
-| Variable                    | Default | Description                                                                   |
-| --------------------------- | ------- | ----------------------------------------------------------------------------- |
-| `TEMPLATE_URLS`             | `[]`    | JSON array of URLs to fetch remote templates from                             |
-| `TEMPLATE_REFRESH_INTERVAL` | `86400` | How often remote templates are refreshed (seconds). `0` disables auto-refresh |
+#### Stremio Meta
 
----
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMIO_META_RATE_LIMIT_WINDOW` | Stremio Meta › Window | number | `5` | Sliding-window length (seconds) for the Stremio meta rate limiter. _(restart required)_ |
+| `STREMIO_META_RATE_LIMIT_MAX_REQUESTS` | Stremio Meta › Max Requests | number | `15` | Maximum requests per IP within the window for the Stremio meta rate limiter. _(restart required)_ |
 
-## Feature Control
+#### Easynews NZB
 
-| Variable                | Default | Description                                                                                                                      |
-| ----------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `DISABLE_SELF_SCRAPING` | `true`  | Prevent this instance from being added as an addon to itself                                                                     |
-| `DISABLED_HOSTS`        | —       | `host:reason` pairs to block specific hostnames from being added                                                                 |
-| `DISABLED_ADDONS`       | —       | `addonID:reason` pairs to show addons as disabled in the marketplace (users cannot add them, errors on save and stream requests) |
-| `REMOVED_ADDONS`        | —       | `addonID:reason` pairs to hide addons from the marketplace entirely (same as above but hidden from marketplace too)              |
-| `DISABLED_SERVICES`     | —       | `service:reason` pairs to hide services from the configuration page                                                              |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `EASYNEWS_NZB_RATE_LIMIT_WINDOW` | Easynews NZB › Window | number | `60` | Sliding-window length (seconds) for the Easynews NZB rate limiter. _(restart required)_ |
+| `EASYNEWS_NZB_RATE_LIMIT_MAX_REQUESTS` | Easynews NZB › Max Requests | number | `15` | Maximum requests per IP within the window for the Easynews NZB rate limiter. _(restart required)_ |
 
----
+#### Login
 
-## Logging
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `LOGIN_RATE_LIMIT_WINDOW` | Login › Window | number | `300` | Sliding-window length (seconds) for the login rate limiter. _(restart required)_ |
+| `LOGIN_RATE_LIMIT_MAX_REQUESTS` | Login › Max Requests | number | `5` | Maximum requests per IP within the window for the login rate limiter. _(restart required)_ |
 
-| Variable             | Default   | Options                                                      |
-| -------------------- | --------- | ------------------------------------------------------------ |
-| `LOG_LEVEL`          | `http`    | `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly` |
-| `LOG_FORMAT`         | `text`    | `text` or `json`                                             |
-| `LOG_SENSITIVE_INFO` | `true`    | Include API keys/sensitive data in logs                      |
-| `LOG_TIMEZONE`       | `Etc/UTC` | IANA timezone string (e.g. `Europe/London`)                  |
+## Content
 
----
+### Services
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_SERVICE_CREDENTIALS` | Default Credentials | map | *(unset)* | Default credentials pre-filled into user configurations when not provided. Format: one `serviceId.credentialId=value` entry per line (use `\n` if your environment cannot store multiline values). Service IDs: `realdebrid`, `alldebrid`, `premiumize`, `debridlink`, `torbox`, `offcloud`, `putio`, `easynews`, `easydebrid`, `debrider`, `pikpak`, `seedr`, `nzbdav`, `altmount`, `stremthru_newz`. Credential IDs vary by service (e.g. `apiKey`, `username`, `password`, `clientId`, `encodedToken`). Example: `realdebrid.apiKey=xxx` / `easynews.username=user` / `easynews.password=pass`. _(secret)_ |
+| `FORCED_SERVICE_CREDENTIALS` | Forced Credentials | map | *(unset)* | Credentials that override whatever the user has configured and are hidden from the configuration UI. Same `serviceId.credentialId=value` per-line format and service/credential IDs as DEFAULT_SERVICE_CREDENTIALS. _(secret)_ |
+
+### Presets
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_TIMEOUT` | Default Timeout | number | `7000` | Fallback timeout for preset stream fetching when a preset does not set its own (milliseconds). |
+
+#### Comet
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `COMET_URL` | Comet › URL | list | `["https://comet.feels.legal"]` | Upstream URL(s) for the Comet addon. |
+| `DEFAULT_COMET_TIMEOUT` | Comet › Default Timeout | number | — | Default timeout for the Comet addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_COMET_USER_AGENT` | Comet › Default User Agent | json | — | Default User-Agent for the Comet addon. Supports `{version}`/`{random}` placeholders. |
+| `COMET_PUBLIC_API_TOKEN` | Comet › Public API Token | json | *(unset)* | Public API token(s) used by Comet. JSON array or single string. _(secret)_ |
+
+#### Meteor
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `METEOR_URL` | Meteor › URL | list | `["https://meteorfortheweebs.midnightignite.me"]` | Upstream URL(s) for the Meteor addon. |
+| `DEFAULT_METEOR_TIMEOUT` | Meteor › Default Timeout | number | — | Default timeout for the Meteor addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_METEOR_USER_AGENT` | Meteor › Default User Agent | json | — | Default User-Agent for the Meteor addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Mediafusion
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `MEDIAFUSION_URL` | Mediafusion › URL | list | `["https://mediafusion.elfhosted.com"]` | Upstream URL(s) for the MediaFusion addon. |
+| `DEFAULT_MEDIAFUSION_TIMEOUT` | Mediafusion › Default Timeout | number | — | Default timeout for the MediaFusion addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_MEDIAFUSION_USER_AGENT` | Mediafusion › Default User Agent | json | — | Default User-Agent for the MediaFusion addon. Supports `{version}`/`{random}` placeholders. |
+| `MEDIAFUSION_API_PASSWORD` | Mediafusion › API Password | string | *(unset)* | API password sent to MediaFusion. _(secret)_ |
+| `MEDIAFUSION_DEFAULT_USE_CACHED_RESULTS_ONLY` | Mediafusion › Default Use Cached Results Only | boolean | `true` | Default value of MediaFusion's "cached results only" toggle. |
+| `MEDIAFUSION_FORCED_USE_CACHED_RESULTS_ONLY` | Mediafusion › Forced Use Cached Results Only | json | — | When set, overrides users' "cached results only" toggle. |
+
+#### Jackettio
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `JACKETTIO_URL` | Jackettio › URL | list | `["https://jackettio.elfhosted.com"]` | Upstream URL(s) for the Jackettio addon. |
+| `DEFAULT_JACKETTIO_TIMEOUT` | Jackettio › Default Timeout | number | — | Default timeout for the Jackettio addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_JACKETTIO_USER_AGENT` | Jackettio › Default User Agent | json | — | Default User-Agent for the Jackettio addon. Supports `{version}`/`{random}` placeholders. |
+| `DEFAULT_JACKETTIO_INDEXERS` | Jackettio › Default Indexers | list | `["eztv","thepiratebay","therarbg","yts"]` | Default indexer list applied when creating Jackettio configs. JSON array of strings. |
+| `DEFAULT_JACKETTIO_STREMTHRU_URL` | Jackettio › Default Stremthru URL | string | `https://stremthru.13377001.xyz` | Default StremThru URL passed to new Jackettio configs. |
+
+#### Torrentio
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TORRENTIO_URL` | Torrentio › URL | list | `["https://torrentio.strem.fun"]` | Upstream URL(s) for the Torrentio addon. |
+| `DEFAULT_TORRENTIO_TIMEOUT` | Torrentio › Default Timeout | number | — | Default timeout for the Torrentio addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TORRENTIO_USER_AGENT` | Torrentio › Default User Agent | json | — | Default User-Agent for the Torrentio addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Orion
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ORION_STREMIO_ADDON_URL` | Orion › URL | list | `["https://5a0d1888fa64-orion.baby-beamup.club"]` | Upstream URL(s) for the Orion addon. |
+| `DEFAULT_ORION_TIMEOUT` | Orion › Default Timeout | number | — | Default timeout for the Orion addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_ORION_USER_AGENT` | Orion › Default User Agent | json | — | Default User-Agent for the Orion addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Peerflix
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PEERFLIX_URL` | Peerflix › URL | list | `["https://addon.peerflix.mov"]` | Upstream URL(s) for the Peerflix addon. |
+| `DEFAULT_PEERFLIX_TIMEOUT` | Peerflix › Default Timeout | number | — | Default timeout for the Peerflix addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_PEERFLIX_USER_AGENT` | Peerflix › Default User Agent | json | — | Default User-Agent for the Peerflix addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Torbox
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TORBOX_STREMIO_URL` | Torbox › URL | list | `["https://stremio.torbox.app"]` | Upstream URL(s) for the Torbox addon. |
+| `DEFAULT_TORBOX_TIMEOUT` | Torbox › Default Timeout | number | — | Default timeout for the Torbox addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TORBOX_USER_AGENT` | Torbox › Default User Agent | json | — | Default User-Agent for the Torbox addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Easynews
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `EASYNEWS_URL` | Easynews › URL | list | `["https://ea627ddf0ee7-easynews.baby-beamup.club"]` | Upstream URL(s) for the Easynews addon. |
+| `DEFAULT_EASYNEWS_TIMEOUT` | Easynews › Default Timeout | number | — | Default timeout for the Easynews addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_EASYNEWS_USER_AGENT` | Easynews › Default User Agent | json | — | Default User-Agent for the Easynews addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Easynews Plus
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `EASYNEWS_PLUS_URL` | Easynews Plus › URL | list | `["https://b89262c192b0-stremio-easynews-addon.baby-beamup.club"]` | Upstream URL(s) for the Easynews+ addon. |
+| `DEFAULT_EASYNEWS_PLUS_TIMEOUT` | Easynews Plus › Default Timeout | number | — | Default timeout for the Easynews+ addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_EASYNEWS_PLUS_USER_AGENT` | Easynews Plus › Default User Agent | json | — | Default User-Agent for the Easynews+ addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Easynews Plus Plus
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `EASYNEWS_PLUS_PLUS_URL` | Easynews Plus Plus › URL | list | `["https://easynews-cloudflare-worker.jqrw92fchz.workers.dev"]` | Upstream URL(s) for the Easynews++ addon. |
+| `DEFAULT_EASYNEWS_PLUS_PLUS_TIMEOUT` | Easynews Plus Plus › Default Timeout | number | — | Default timeout for the Easynews++ addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_EASYNEWS_PLUS_PLUS_USER_AGENT` | Easynews Plus Plus › Default User Agent | json | — | Default User-Agent for the Easynews++ addon. Supports `{version}`/`{random}` placeholders. |
+| `EASYNEWS_PLUS_PLUS_PUBLIC_URL` | Easynews Plus Plus › Public URL | json | — | Public-facing URL surfaced to clients (when different from the internal one). |
+
+#### Debridio
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEBRIDIO_URL` | Debridio › URL | list | `["https://addon.debridio.com"]` | Upstream URL(s) for the Debridio addon. |
+| `DEFAULT_DEBRIDIO_TIMEOUT` | Debridio › Default Timeout | number | — | Default timeout for the Debridio addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DEBRIDIO_USER_AGENT` | Debridio › Default User Agent | json | — | Default User-Agent for the Debridio addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Debridio TVDB
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEBRIDIO_TVDB_URL` | Debridio TVDB › URL | list | `["https://tvdb-addon.debridio.com"]` | Upstream URL(s) for the Debridio TVDB addon. |
+| `DEFAULT_DEBRIDIO_TVDB_TIMEOUT` | Debridio TVDB › Default Timeout | number | — | Default timeout for the Debridio TVDB addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DEBRIDIO_TVDB_USER_AGENT` | Debridio TVDB › Default User Agent | json | — | Default User-Agent for the Debridio TVDB addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Debridio TMDB
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEBRIDIO_TMDB_URL` | Debridio TMDB › URL | list | `["https://tmdb-addon.debridio.com"]` | Upstream URL(s) for the Debridio TMDB addon. |
+| `DEFAULT_DEBRIDIO_TMDB_TIMEOUT` | Debridio TMDB › Default Timeout | number | — | Default timeout for the Debridio TMDB addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DEBRIDIO_TMDB_USER_AGENT` | Debridio TMDB › Default User Agent | json | — | Default User-Agent for the Debridio TMDB addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Debridio Tv
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEBRIDIO_TV_URL` | Debridio Tv › URL | list | `["https://tv.lb.debridio.com"]` | Upstream URL(s) for the Debridio TV addon. |
+| `DEFAULT_DEBRIDIO_TV_TIMEOUT` | Debridio Tv › Default Timeout | number | — | Default timeout for the Debridio TV addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DEBRIDIO_TV_USER_AGENT` | Debridio Tv › Default User Agent | json | — | Default User-Agent for the Debridio TV addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Debridio Watchtower
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEBRIDIO_WATCHTOWER_URL` | Debridio Watchtower › URL | list | `["https://wt-addon.debridio.com"]` | Upstream URL(s) for the Debridio Watchtower addon. |
+| `DEFAULT_DEBRIDIO_WATCHTOWER_TIMEOUT` | Debridio Watchtower › Default Timeout | number | — | Default timeout for the Debridio Watchtower addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DEBRIDIO_WATCHTOWER_USER_AGENT` | Debridio Watchtower › Default User Agent | json | — | Default User-Agent for the Debridio Watchtower addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Debridio Ic4a
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEBRIDIO_IC4A_URL` | Debridio Ic4a › URL | list | `["https://ic4a.lb.debridio.com"]` | Upstream URL(s) for the Debridio IC4A addon. |
+| `DEFAULT_DEBRIDIO_IC4A_TIMEOUT` | Debridio Ic4a › Default Timeout | number | — | Default timeout for the Debridio IC4A addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DEBRIDIO_IC4A_USER_AGENT` | Debridio Ic4a › Default User Agent | json | — | Default User-Agent for the Debridio IC4A addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Stremthru Store
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMTHRU_STORE_URL` | Stremthru Store › URL | list | `["https://stremthru.13377001.xyz/stremio/store"]` | Upstream URL(s) for the StremThru Store addon. |
+| `DEFAULT_STREMTHRU_STORE_TIMEOUT` | Stremthru Store › Default Timeout | number | — | Default timeout for the StremThru Store addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_STREMTHRU_STORE_USER_AGENT` | Stremthru Store › Default User Agent | json | — | Default User-Agent for the StremThru Store addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Stremthru Torz
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREMTHRU_TORZ_URL` | Stremthru Torz › URL | list | `["https://stremthru.13377001.xyz/stremio/torz"]` | Upstream URL(s) for the StremThru Torz addon. |
+| `DEFAULT_STREMTHRU_TORZ_TIMEOUT` | Stremthru Torz › Default Timeout | number | — | Default timeout for the StremThru Torz addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_STREMTHRU_TORZ_USER_AGENT` | Stremthru Torz › Default User Agent | json | — | Default User-Agent for the StremThru Torz addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Streamfusion
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_STREAMFUSION_URL` | Streamfusion › URL | list | `["https://stream-fusion.stremiofr.com"]` | Upstream URL(s) for the StreamFusion addon. |
+| `DEFAULT_STREAMFUSION_TIMEOUT` | Streamfusion › Default Timeout | number | — | Default timeout for the StreamFusion addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_STREAMFUSION_USER_AGENT` | Streamfusion › Default User Agent | json | — | Default User-Agent for the StreamFusion addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Sootio
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `SOOTIO_URL` | Sootio › URL | list | `["https://sooti.click"]` | Upstream URL(s) for the Sootio addon. |
+| `DEFAULT_SOOTIO_TIMEOUT` | Sootio › Default Timeout | number | — | Default timeout for the Sootio addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_SOOTIO_USER_AGENT` | Sootio › Default User Agent | json | — | Default User-Agent for the Sootio addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Dmm Cast
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_DMM_CAST_TIMEOUT` | Dmm Cast › Default Timeout | number | — | Default timeout for the DMM Cast addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DMM_CAST_USER_AGENT` | Dmm Cast › Default User Agent | json | — | Default User-Agent for the DMM Cast addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Opensubtitles
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `OPENSUBTITLES_URL` | Opensubtitles › URL | list | `["https://opensubtitles-v3.strem.io"]` | Upstream URL(s) for the OpenSubtitles addon. |
+| `DEFAULT_OPENSUBTITLES_TIMEOUT` | Opensubtitles › Default Timeout | number | — | Default timeout for the OpenSubtitles addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_OPENSUBTITLES_USER_AGENT` | Opensubtitles › Default User Agent | json | — | Default User-Agent for the OpenSubtitles addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Opensubtitles V3 Plus
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `OPENSUBTITLES_V3_PLUS_URL` | Opensubtitles V3 Plus › URL | list | `["https://opensubtitles.stremio.homes"]` | Upstream URL(s) for the OpenSubtitles V3+ addon. |
+| `DEFAULT_OPENSUBTITLES_V3_PLUS_TIMEOUT` | Opensubtitles V3 Plus › Default Timeout | number | — | Default timeout for the OpenSubtitles V3+ addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_OPENSUBTITLES_V3_PLUS_USER_AGENT` | Opensubtitles V3 Plus › Default User Agent | json | — | Default User-Agent for the OpenSubtitles V3+ addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Marvel Universe
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `MARVEL_UNIVERSE_URL` | Marvel Universe › URL | list | `["https://addon-marvel.onrender.com"]` | Upstream URL(s) for the Marvel Universe addon. |
+| `DEFAULT_MARVEL_CATALOG_TIMEOUT` | Marvel Universe › Default Timeout | number | — | Default timeout for the Marvel Universe addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_MARVEL_CATALOG_USER_AGENT` | Marvel Universe › Default User Agent | json | — | Default User-Agent for the Marvel Universe addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Dc Universe
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DC_UNIVERSE_URL` | Dc Universe › URL | list | `["https://addon-dc-cq85.onrender.com"]` | Upstream URL(s) for the DC Universe addon. |
+| `DEFAULT_DC_UNIVERSE_TIMEOUT` | Dc Universe › Default Timeout | number | — | Default timeout for the DC Universe addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DC_UNIVERSE_USER_AGENT` | Dc Universe › Default User Agent | json | — | Default User-Agent for the DC Universe addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Star Wars Universe
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_STAR_WARS_UNIVERSE_URL` | Star Wars Universe › URL | list | `["https://addon-star-wars-u9e3.onrender.com"]` | Upstream URL(s) for the Star Wars Universe addon. |
+| `DEFAULT_STAR_WARS_UNIVERSE_TIMEOUT` | Star Wars Universe › Default Timeout | number | — | Default timeout for the Star Wars Universe addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_STAR_WARS_UNIVERSE_USER_AGENT` | Star Wars Universe › Default User Agent | json | — | Default User-Agent for the Star Wars Universe addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Anime Kitsu
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ANIME_KITSU_URL` | Anime Kitsu › URL | list | `["https://anime-kitsu.strem.fun"]` | Upstream URL(s) for the Anime Kitsu addon. |
+| `DEFAULT_ANIME_KITSU_TIMEOUT` | Anime Kitsu › Default Timeout | number | — | Default timeout for the Anime Kitsu addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_ANIME_KITSU_USER_AGENT` | Anime Kitsu › Default User Agent | json | — | Default User-Agent for the Anime Kitsu addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Nuvio Streams
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `NUVIOSTREAMS_URL` | Nuvio Streams › URL | list | `["https://nuviostreams.hayd.uk"]` | Upstream URL(s) for the NuvioStreams addon. |
+| `DEFAULT_NUVIOSTREAMS_TIMEOUT` | Nuvio Streams › Default Timeout | number | — | Default timeout for the NuvioStreams addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_NUVIOSTREAMS_USER_AGENT` | Nuvio Streams › Default User Agent | json | — | Default User-Agent for the NuvioStreams addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Torrent Catalogs
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TORRENT_CATALOGS_URL` | Torrent Catalogs › URL | list | `["https://torrent-catalogs.strem.fun"]` | Upstream URL(s) for the Torrent Catalogs addon. |
+| `DEFAULT_TORRENT_CATALOGS_TIMEOUT` | Torrent Catalogs › Default Timeout | number | — | Default timeout for the Torrent Catalogs addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TORRENT_CATALOGS_USER_AGENT` | Torrent Catalogs › Default User Agent | json | — | Default User-Agent for the Torrent Catalogs addon. Supports `{version}`/`{random}` placeholders. |
+
+#### TMDB Collections
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TMDB_COLLECTIONS_URL` | TMDB Collections › URL | list | `["https://61ab9c85a149-tmdb-collections.baby-beamup.club"]` | Upstream URL(s) for the TMDB Collections addon. |
+| `DEFAULT_TMDB_COLLECTIONS_TIMEOUT` | TMDB Collections › Default Timeout | number | — | Default timeout for the TMDB Collections addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TMDB_COLLECTIONS_USER_AGENT` | TMDB Collections › Default User Agent | json | — | Default User-Agent for the TMDB Collections addon. Supports `{version}`/`{random}` placeholders. |
+
+#### RPDB Catalogs
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `RPDB_CATALOGS_URL` | RPDB Catalogs › URL | list | `["https://1fe84bc728af-rpdb.baby-beamup.club"]` | Upstream URL(s) for the RPDB Catalogs addon. |
+| `DEFAULT_RPDB_CATALOGS_TIMEOUT` | RPDB Catalogs › Default Timeout | number | — | Default timeout for the RPDB Catalogs addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_RPDB_CATALOGS_USER_AGENT` | RPDB Catalogs › Default User Agent | json | — | Default User-Agent for the RPDB Catalogs addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Streaming Catalogs
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREAMING_CATALOGS_URL` | Streaming Catalogs › URL | list | `["https://7a82163c306e-stremio-netflix-catalog-addon.baby-beamup.club"]` | Upstream URL(s) for the Streaming Catalogs addon. |
+| `DEFAULT_STREAMING_CATALOGS_TIMEOUT` | Streaming Catalogs › Default Timeout | number | — | Default timeout for the Streaming Catalogs addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_STREAMING_CATALOGS_USER_AGENT` | Streaming Catalogs › Default User Agent | json | — | Default User-Agent for the Streaming Catalogs addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Anime Catalogs
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ANIME_CATALOGS_URL` | Anime Catalogs › URL | list | `["https://1fe84bc728af-stremio-anime-catalogs.baby-beamup.club"]` | Upstream URL(s) for the Anime Catalogs addon. |
+| `DEFAULT_ANIME_CATALOGS_TIMEOUT` | Anime Catalogs › Default Timeout | number | — | Default timeout for the Anime Catalogs addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_ANIME_CATALOGS_USER_AGENT` | Anime Catalogs › Default User Agent | json | — | Default User-Agent for the Anime Catalogs addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Doctor Who Universe
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DOCTOR_WHO_UNIVERSE_URL` | Doctor Who Universe › URL | list | `["https://new-who.onrender.com"]` | Upstream URL(s) for the Doctor Who Universe addon. |
+| `DEFAULT_DOCTOR_WHO_UNIVERSE_TIMEOUT` | Doctor Who Universe › Default Timeout | number | — | Default timeout for the Doctor Who Universe addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_DOCTOR_WHO_UNIVERSE_USER_AGENT` | Doctor Who Universe › Default User Agent | json | — | Default User-Agent for the Doctor Who Universe addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Webstreamr
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `WEBSTREAMR_URL` | Webstreamr › URL | list | `["https://webstreamr.hayd.uk"]` | Upstream URL(s) for the WebStreamr addon. |
+| `DEFAULT_WEBSTREAMR_TIMEOUT` | Webstreamr › Default Timeout | number | — | Default timeout for the WebStreamr addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_WEBSTREAMR_USER_AGENT` | Webstreamr › Default User Agent | json | — | Default User-Agent for the WebStreamr addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Hdhub
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `HDHUB_URL` | Hdhub › URL | list | `["https://hdhub.thevolecitor.qzz.io"]` | Upstream URL(s) for the HdHub addon. |
+| `DEFAULT_HDHUB_TIMEOUT` | Hdhub › Default Timeout | number | — | Default timeout for the HdHub addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_HDHUB_USER_AGENT` | Hdhub › Default User Agent | json | — | Default User-Agent for the HdHub addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Baguettio
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BAGUETTIO_URL` | Baguettio › URL | list | `["https://baguettio.org"]` | Upstream URL(s) for the Baguettio addon. |
+| `DEFAULT_BAGUETTIO_TIMEOUT` | Baguettio › Default Timeout | number | — | Default timeout for the Baguettio addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_BAGUETTIO_USER_AGENT` | Baguettio › Default User Agent | json | — | Default User-Agent for the Baguettio addon. Supports `{version}`/`{random}` placeholders. |
+
+#### TMDB Addon
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TMDB_ADDON_URL` | TMDB Addon › URL | list | `["https://tmdb.elfhosted.com"]` | Upstream URL(s) for the TMDB Addon addon. |
+| `DEFAULT_TMDB_ADDON_TIMEOUT` | TMDB Addon › Default Timeout | number | — | Default timeout for the TMDB Addon addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TMDB_ADDON_USER_AGENT` | TMDB Addon › Default User Agent | json | — | Default User-Agent for the TMDB Addon addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Torrents DB
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TORRENTS_DB_URL` | Torrents DB › URL | list | `["https://torrentsdb.com"]` | Upstream URL(s) for the Torrents DB addon. |
+| `DEFAULT_TORRENTS_DB_TIMEOUT` | Torrents DB › Default Timeout | number | — | Default timeout for the Torrents DB addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TORRENTS_DB_USER_AGENT` | Torrents DB › Default User Agent | json | — | Default User-Agent for the Torrents DB addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Usa Tv
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `USA_TV_URL` | Usa Tv › URL | list | `["https://848b3516657c-usatv.baby-beamup.club"]` | Upstream URL(s) for the USA TV addon. |
+| `DEFAULT_USA_TV_TIMEOUT` | Usa Tv › Default Timeout | number | — | Default timeout for the USA TV addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_USA_TV_USER_AGENT` | Usa Tv › Default User Agent | json | — | Default User-Agent for the USA TV addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Argentina Tv
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ARGENTINA_TV_URL` | Argentina Tv › URL | list | `["https://848b3516657c-argentinatv.baby-beamup.club"]` | Upstream URL(s) for the Argentina TV addon. |
+| `DEFAULT_ARGENTINA_TV_TIMEOUT` | Argentina Tv › Default Timeout | number | — | Default timeout for the Argentina TV addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_ARGENTINA_TV_USER_AGENT` | Argentina Tv › Default User Agent | json | — | Default User-Agent for the Argentina TV addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Brazuca Torrents
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BRAZUCA_TORRENTS_URL` | Brazuca Torrents › URL | list | `["https://94c8cb9f702d-brazuca-torrents.baby-beamup.club"]` | Upstream URL(s) for the Brazuca Torrents addon. |
+| `DEFAULT_BRAZUCA_TORRENTS_TIMEOUT` | Brazuca Torrents › Default Timeout | number | — | Default timeout for the Brazuca Torrents addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_BRAZUCA_TORRENTS_USER_AGENT` | Brazuca Torrents › Default User Agent | json | — | Default User-Agent for the Brazuca Torrents addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Subdl
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `SUBDL_URL` | Subdl › URL | list | `["https://subdl.strem.top"]` | Upstream URL(s) for the SubDL addon. |
+| `DEFAULT_SUBDL_TIMEOUT` | Subdl › Default Timeout | number | — | Default timeout for the SubDL addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_SUBDL_USER_AGENT` | Subdl › Default User Agent | json | — | Default User-Agent for the SubDL addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Subsource
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `SUBSOURCE_URL` | Subsource › URL | list | `["https://subsource.strem.top"]` | Upstream URL(s) for the SubSource addon. |
+| `DEFAULT_SUBSOURCE_TIMEOUT` | Subsource › Default Timeout | number | — | Default timeout for the SubSource addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_SUBSOURCE_USER_AGENT` | Subsource › Default User Agent | json | — | Default User-Agent for the SubSource addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Ai Search
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `AI_SEARCH_URL` | Ai Search › URL | list | `["https://stremio.itcon.au"]` | Upstream URL(s) for the AI Search addon. |
+| `DEFAULT_AI_SEARCH_TIMEOUT` | Ai Search › Default Timeout | number | — | Default timeout for the AI Search addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_AI_SEARCH_USER_AGENT` | Ai Search › Default User Agent | json | — | Default User-Agent for the AI Search addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Flix Streams
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `FLIX_STREAMS_URL` | Flix Streams › URL | list | `["https://flixnest.app/flix-streams"]` | Upstream URL(s) for the Flix-Streams addon. |
+| `DEFAULT_FLIX_STREAMS_TIMEOUT` | Flix Streams › Default Timeout | number | — | Default timeout for the Flix-Streams addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_FLIX_STREAMS_USER_AGENT` | Flix Streams › Default User Agent | json | — | Default User-Agent for the Flix-Streams addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Fkstream
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `FKSTREAM_URL` | Fkstream › URL | list | `["https://streamio.fankai.fr"]` | Upstream URL(s) for the FKStream addon. |
+| `DEFAULT_FKSTREAM_TIMEOUT` | Fkstream › Default Timeout | number | — | Default timeout for the FKStream addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_FKSTREAM_USER_AGENT` | Fkstream › Default User Agent | json | — | Default User-Agent for the FKStream addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Aio Subtitle
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `AIOSUBTITLE_URL` | Aio Subtitle › URL | list | `["https://3b4bbf5252c4-aio-streaming.baby-beamup.club"]` | Upstream URL(s) for the AIOSubtitle addon. |
+| `DEFAULT_AIOSUBTITLE_TIMEOUT` | Aio Subtitle › Default Timeout | number | — | Default timeout for the AIOSubtitle addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_AIOSUBTITLE_USER_AGENT` | Aio Subtitle › Default User Agent | json | — | Default User-Agent for the AIOSubtitle addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Subhero
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `SUBHERO_URL` | Subhero › URL | list | `["https://subhero.chromeknight.dev"]` | Upstream URL(s) for the SubHero addon. |
+| `DEFAULT_SUBHERO_TIMEOUT` | Subhero › Default Timeout | number | — | Default timeout for the SubHero addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_SUBHERO_USER_AGENT` | Subhero › Default User Agent | json | — | Default User-Agent for the SubHero addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Yastream
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `YASTREAM_URL` | Yastream › URL | list | `["https://yastream.tamthai.de"]` | Upstream URL(s) for the yastream addon. |
+| `DEFAULT_YASTREAM_TIMEOUT` | Yastream › Default Timeout | number | — | Default timeout for the yastream addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_YASTREAM_USER_AGENT` | Yastream › Default User Agent | json | — | Default User-Agent for the yastream addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Streamasia
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREAMASIA_URL` | Streamasia › URL | list | `["https://stremio-dramacool-addon.xyz"]` | Upstream URL(s) for the StreamAsia addon. |
+| `DEFAULT_STREAMASIA_TIMEOUT` | Streamasia › Default Timeout | number | — | Default timeout for the StreamAsia addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_STREAMASIA_USER_AGENT` | Streamasia › Default User Agent | json | — | Default User-Agent for the StreamAsia addon. Supports `{version}`/`{random}` placeholders. |
+
+#### More Like This
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `MORE_LIKE_THIS_URL` | More Like This › URL | list | `["https://bbab4a35b833-more-like-this.baby-beamup.club"]` | Upstream URL(s) for the More Like This addon. |
+| `DEFAULT_MORE_LIKE_THIS_TIMEOUT` | More Like This › Default Timeout | number | — | Default timeout for the More Like This addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_MORE_LIKE_THIS_USER_AGENT` | More Like This › Default User Agent | json | — | Default User-Agent for the More Like This addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Content Deep Dive
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `CONTENT_DEEP_DIVE_URL` | Content Deep Dive › URL | list | `["https://stremio-content-deepdive-addon-dc8f7b513289.herokuapp.com"]` | Upstream URL(s) for the Content Deep Dive addon. |
+| `DEFAULT_CONTENT_DEEP_DIVE_TIMEOUT` | Content Deep Dive › Default Timeout | number | — | Default timeout for the Content Deep Dive addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_CONTENT_DEEP_DIVE_USER_AGENT` | Content Deep Dive › Default User Agent | json | — | Default User-Agent for the Content Deep Dive addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Ai Companion
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `AI_COMPANION_URL` | Ai Companion › URL | list | `["https://ai-companion.saladprecedestretch123.uk"]` | Upstream URL(s) for the AI Companion addon. |
+| `DEFAULT_AI_COMPANION_TIMEOUT` | Ai Companion › Default Timeout | number | — | Default timeout for the AI Companion addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_AI_COMPANION_USER_AGENT` | Ai Companion › Default User Agent | json | — | Default User-Agent for the AI Companion addon. Supports `{version}`/`{random}` placeholders. |
+
+#### Astream
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ASTREAM_URL` | Astream › URL | list | `["https://astream.stremiofr.com"]` | Upstream URL(s) for the AStream addon. |
+| `DEFAULT_ASTREAM_TIMEOUT` | Astream › Default Timeout | number | — | Default timeout for the AStream addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_ASTREAM_USER_AGENT` | Astream › Default User Agent | json | — | Default User-Agent for the AStream addon. Supports `{version}`/`{random}` placeholders. |
+
+### Built-ins
+
+#### Stremthru
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_STREMTHRU_URL` | Stremthru › URL | string | `https://stremthru.13377001.xyz` | Base URL of the StremThru instance used by the built-in addons. |
+| `TORBOX_USENET_VIA_STREMTHRU` | Stremthru › Torbox Usenet Via Stremthru | boolean | `false` | Route Torbox usenet operations entirely through StremThru rather than the Torbox API. _(restart required)_ |
+
+#### Debrid
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL` | Debrid › Instant Availability Cache TTL | duration | `1800` | Cache TTL for instant-availability checks. |
+| `BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL` | Debrid › Playback Link Cache TTL | duration | `3600` | Cache TTL for resolved playback links. |
+| `BUILTIN_DEBRID_ERROR_CACHE_TTL` | Debrid › Error Cache TTL | duration | `3600` | How long content-level failures (e.g. download status = failed/invalid) are cached globally to suppress retries. |
+| `BUILTIN_DEBRID_LIBRARY_CACHE_TTL` | Debrid › Library Cache TTL | duration | `604800` | Cache TTL for library list results (listMagnets/listNzbs). |
+| `BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD` | Debrid › Library Stale Threshold | duration | `600` | Time after which cached library data is treated as stale (background refresh while serving cached data). |
+| `BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT` | Debrid › Library Page Limit | number | `1` | Maximum pages fetched per listMagnets / listNzbs request. |
+| `BUILTIN_DEBRID_LIBRARY_PAGE_SIZE` | Debrid › Library Page Size | number | `500` | Maximum items per page when listing library items. StremThru caps at 500, Torbox at 1000. |
+| `BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL` | Debrid › Use Torrent Download URL | boolean | `true` | Prefer .torrent URLs over magnets for better private-tracker compatibility. |
+| `BUILTIN_DEBRID_METADATA_STORE` | Debrid › Metadata Store | json | — | Backend used to persist debrid metadata. Defaults to the platform-default when unset. _(restart required)_ |
+| `BUILTIN_DEBRID_FILEINFO_STORE` | Debrid › Fileinfo Store | json | `true` | Backend (or `true`/`false`) used for the debrid fileinfo store. _(restart required)_ |
+| `BUILTIN_PLAYBACK_LINK_VALIDITY` | Debrid › Playback Link Validity | duration | `86400` | How long a generated playback link is treated as valid (seconds). |
+| `BUILTIN_DOWNLOAD_POLL_INTERVAL` | Debrid › Download Poll Interval | map | `{"nzbdav":2000,"altmount":2000,"stremthru_newz":2000,"*":10000}` | Per-service download-status poll interval. Env shape: `service:duration,...`. Wildcard `*` covers unlisted services. |
+| `BUILTIN_DOWNLOAD_MAX_WAIT_TIME` | Debrid › Download Max Wait Time | map | `{"nzbdav":90000,"altmount":90000,"stremthru_newz":90000,"*":120000}` | Per-service maximum wait time before timing out a download check. Env shape: `service:duration,...`. |
+
+#### Scrape
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_SCRAPE_WITH_ALL_TITLES` | Scrape › With All Titles | boolOrList | `false` | By default, built-in addons only use the primary title for text-based queries. `true` enables all alternative titles for every indexer; `false` (default) uses the primary title only; a comma-separated hostname list (e.g. `jackett,knaben.org`) enables it only for those indexers. Superseded per-indexer by BUILTIN_SCRAPE_TITLE_LANGUAGES. |
+| `BUILTIN_SCRAPE_TITLE_LANGUAGES` | Scrape › Title Languages | map | — | Fine-grained alternative-title control, per indexer hostname, indexer name, or addon type. Supersedes BUILTIN_SCRAPE_WITH_ALL_TITLES. Format: `<key>:<spec>[,<spec>...][,<key>:<spec>...]`. Keys (checked in priority order): exact indexer hostname (e.g. `my-indexer.com`); auto-extracted indexer name (Jackett `/api/v2.0/indexers/<name>/...`, NZBHydra2 `?indexers=<name>`); addon-id (`newznab`, `torznab`, `easynews`, `knaben`, `prowlarr`, `torrent-galaxy`); `*` wildcard fallback. Specs: `default` (primary/English-style title), `all` (all alternative titles up to BUILTIN_SCRAPE_TITLE_LIMIT), `original` (TMDB original-language title), `<lang>` (ISO 639-1 code, e.g. `de`, `fr`). Multiple specs under one key are combined (duplicates removed); only the highest-priority matching key applies; always falls back to the primary title. Examples: `*:default,original` — every indexer gets default + TMDB original-language title. `*:default,newznab:default,original,de` — newznab indexers query English + original + German, others English only. `*:default,germanindexer.com:de,default` — germanindexer.com queries German + English, all others English only. |
+| `BUILTIN_SCRAPE_TITLE_LIMIT` | Scrape › Title Limit | number | `3` | Maximum alternative titles used per scrape. |
+| `BUILTIN_SCRAPE_QUERY_CONCURRENCY` | Scrape › Query Concurrency | number | `5` | Maximum concurrent scrape queries. |
+
+#### Get Torrent
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_GET_TORRENT_TIMEOUT` | Get Torrent › Timeout | number | `5000` | Timeout for fetching torrent files. |
+| `BUILTIN_GET_TORRENT_CONCURRENCY` | Get Torrent › Concurrency | number | `100` | Maximum concurrent torrent fetches. |
+| `BUILTIN_GET_TORRENT_LAZILY` | Get Torrent › Lazily | boolean | `true` | Fetch torrents lazily in the background. First search returns immediately with available results. |
+
+#### Torrent
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_TORRENT_METADATA_CACHE_TTL` | Torrent › Metadata Cache TTL | duration | `604800` | Cache TTL for torrent metadata. |
+| `BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL` | Torrent › Minimum Background Refresh Interval | duration | `86400` | Minimum interval between background search-cache refreshes triggered during normal searches. |
+
+#### GDrive
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_GDRIVE_CLIENT_ID` | GDrive › Client ID | string | — | OAuth client ID for the Google Drive built-in addon. |
+| `BUILTIN_GDRIVE_CLIENT_SECRET` | GDrive › Client Secret | string | *(unset)* | OAuth client secret for the Google Drive built-in addon. _(secret)_ |
+| `BUILTIN_GDRIVE_TIMEOUT` | GDrive › Timeout | number | — | Timeout for Google Drive requests. |
+| `BUILTIN_GDRIVE_USER_AGENT` | GDrive › User Agent | string | — | User-Agent for Google Drive requests. |
+| `BUILTIN_GDRIVE_PAGE_SIZE_LIMIT` | GDrive › Page Size Limit | number | `1000` | Maximum items per page from Google Drive API. |
+
+#### Torbox Search
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_TORBOX_SEARCH_TIMEOUT` | Torbox Search › Timeout | number | — | Timeout for Torbox Search requests. |
+| `BUILTIN_TORBOX_SEARCH_USER_AGENT` | Torbox Search › User Agent | string | — | User-Agent for Torbox Search requests. |
+| `BUILTIN_TORBOX_SEARCH_SEARCH_API_TIMEOUT` | Torbox Search › Search API Timeout | number | `30000` | Timeout for the Torbox /search API. |
+| `BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL` | Torbox Search › Search API Cache TTL | duration | `604800` | Cache TTL for /search responses. |
+| `BUILTIN_TORBOX_SEARCH_METADATA_CACHE_TTL` | Torbox Search › Metadata Cache TTL | duration | `1209600` | Cache TTL for Torbox Search metadata. |
+| `BUILTIN_TORBOX_SEARCH_CACHE_PER_USER_SEARCH_ENGINE` | Torbox Search › Cache Per User Search Engine | boolean | `false` | Cache search results separately per user when they bring their own search engine. |
+
+#### NAB
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_NAB_SEARCH_TIMEOUT` | NAB › Search Timeout | number | `30000` | Timeout for Newznab/Torznab search calls. |
+| `BUILTIN_NAB_SEARCH_CACHE_TTL` | NAB › Search Cache TTL | duration | `604800` | Cache TTL for Newznab/Torznab search results. |
+| `BUILTIN_NAB_CAPABILITIES_CACHE_TTL` | NAB › Capabilities Cache TTL | duration | `1209600` | Cache TTL for Newznab/Torznab capabilities responses. |
+| `BUILTIN_NAB_USER_AGENT` | NAB › User Agent | string | — | User-Agent for Newznab/Torznab requests. |
+| `BUILTIN_NAB_HTTP_PROXY` | NAB › HTTP Proxy | map | — | Per-protocol HTTP proxy override (`torznab:URL,newznab:URL`). Overrides the global addon proxy. |
+| `BUILTIN_NAB_MAX_PAGES` | NAB › Max Pages | number | `5` | Maximum pages to fetch when paginating Newznab/Torznab results. |
+
+#### Zilean
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_ZILEAN_URL` | Zilean › URL | string | `https://zileanfortheweebs.midnightignite.me` | Base URL for the Zilean built-in addon. |
+| `BUILTIN_DEFAULT_ZILEAN_TIMEOUT` | Zilean › Timeout | number | — | Timeout for Zilean requests. |
+
+#### Animetosho
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_ANIMETOSHO_URL` | Animetosho › URL | string | `https://feed.animetosho.org` | Base URL for the AnimeTosho built-in addon. |
+| `BUILTIN_DEFAULT_ANIMETOSHO_TIMEOUT` | Animetosho › Timeout | number | — | Timeout for AnimeTosho requests. |
+
+#### Nekobt
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_NEKOBT_URL` | Nekobt › URL | string | `https://nekobt.to/api/torznab` | Base URL for the NekoBT built-in addon. |
+| `BUILTIN_DEFAULT_NEKOBT_TIMEOUT` | Nekobt › Timeout | number | — | Timeout for NekoBT requests. |
+
+#### Seadex
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_SEADEX_URL` | Seadex › URL | string | `https://releases.moe` | Base URL for the SeaDex built-in addon. |
+| `BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL` | Seadex › Dataset Refresh Interval | duration | `86400` | How often the SeaDex dataset is refreshed. _(restart required)_ |
+
+#### Bitmagnet
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_BITMAGNET_URL` | Bitmagnet › URL | json | — | Base URL for the Bitmagnet built-in addon. |
+| `BUILTIN_DEFAULT_BITMAGNET_TIMEOUT` | Bitmagnet › Timeout | number | — | Timeout for Bitmagnet requests. |
+
+#### Jackett
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_JACKETT_URL` | Jackett › URL | json | — | Base URL for the Jackett built-in addon. |
+| `BUILTIN_JACKETT_API_KEY` | Jackett › API Key | string | *(unset)* | API key for the Jackett built-in addon. _(secret)_ |
+| `BUILTIN_DEFAULT_JACKETT_TIMEOUT` | Jackett › Timeout | number | — | Timeout for Jackett requests. |
+
+#### Nzbhydra
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_NZBHYDRA_URL` | Nzbhydra › URL | json | — | Base URL for the NZBHydra built-in addon. |
+| `BUILTIN_NZBHYDRA_API_KEY` | Nzbhydra › API Key | string | *(unset)* | API key for the NZBHydra built-in addon. _(secret)_ |
+| `BUILTIN_DEFAULT_NZBHYDRA_TIMEOUT` | Nzbhydra › Timeout | number | — | Timeout for NZBHydra requests. |
+
+#### Prowlarr
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_PROWLARR_URL` | Prowlarr › URL | json | — | Base URL for the Prowlarr built-in addon. |
+| `BUILTIN_PROWLARR_API_KEY` | Prowlarr › API Key | string | *(unset)* | API key for the Prowlarr built-in addon. _(secret)_ |
+| `BUILTIN_PROWLARR_INDEXERS` | Prowlarr › Indexers | list | — | Comma-separated list of Prowlarr indexers to query. |
+| `BUILTIN_DEFAULT_PROWLARR_TIMEOUT` | Prowlarr › Default Timeout | number | — | Default timeout for Prowlarr requests. |
+| `BUILTIN_PROWLARR_SEARCH_TIMEOUT` | Prowlarr › Search Timeout | number | `30000` | Timeout for Prowlarr search requests. |
+| `BUILTIN_PROWLARR_SEARCH_CACHE_TTL` | Prowlarr › Search Cache TTL | duration | `604800` | Cache TTL for Prowlarr search results. |
+| `BUILTIN_PROWLARR_INDEXERS_CACHE_TTL` | Prowlarr › Indexers Cache TTL | duration | `1209600` | Cache TTL for the Prowlarr indexers list. |
+
+#### Knaben
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_DEFAULT_KNABEN_TIMEOUT` | Knaben › Default Timeout | number | — | Default timeout for Knaben requests. |
+| `BUILTIN_KNABEN_SEARCH_TIMEOUT` | Knaben › Search Timeout | number | `30000` | Timeout for Knaben search requests. |
+| `BUILTIN_KNABEN_DOWNLOAD_TORRENTS` | Knaben › Download Torrents | boolean | `true` | When true, attempt to fetch .torrent files for Knaben results without an infohash. |
+| `BUILTIN_KNABEN_SEARCH_CACHE_TTL` | Knaben › Search Cache TTL | duration | `604800` | Cache TTL for Knaben search results. |
+
+#### Easynews
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_EASYNEWS_SEARCH_TIMEOUT` | Easynews › Search Timeout | number | `30000` | Timeout for Easynews search requests. |
+| `BUILTIN_EASYNEWS_SEARCH_CACHE_TTL` | Easynews › Search Cache TTL | duration | `3600` | Cache TTL for Easynews search results. Defaults to 1h since Easynews content rotates more frequently. |
+| `BUILTIN_EASYNEWS_SEARCH_MAX_PAGES` | Easynews › Max Pages | number | `5` | Maximum pages fetched when paginating Easynews search results. |
+
+#### Torrent Galaxy
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_TORRENT_GALAXY_URL` | Torrent Galaxy › URL | string | `https://torrentgalaxy.one` | Base URL for the Torrent Galaxy built-in addon. |
+| `BUILTIN_DEFAULT_TORRENT_GALAXY_TIMEOUT` | Torrent Galaxy › Default Timeout | number | — | Default timeout for Torrent Galaxy requests. |
+| `BUILTIN_TORRENT_GALAXY_SEARCH_TIMEOUT` | Torrent Galaxy › Search Timeout | number | `30000` | Timeout for Torrent Galaxy search requests. |
+| `BUILTIN_TORRENT_GALAXY_SEARCH_CACHE_TTL` | Torrent Galaxy › Search Cache TTL | duration | `604800` | Cache TTL for Torrent Galaxy search results. |
+| `BUILTIN_TORRENT_GALAXY_PAGE_LIMIT` | Torrent Galaxy › Page Limit | number | `5` | Maximum pages fetched when paginating Torrent Galaxy results. |
+
+#### Eztv
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BUILTIN_EZTV_URL` | Eztv › URL | string | `https://eztvx.to` | Base URL for the EZTV built-in addon. |
+| `BUILTIN_DEFAULT_EZTV_TIMEOUT` | Eztv › Default Timeout | number | — | Default timeout for EZTV requests. |
+| `BUILTIN_EZTV_SEARCH_TIMEOUT` | Eztv › Search Timeout | number | `30000` | Timeout for EZTV search requests. |
+| `BUILTIN_EZTV_SEARCH_CACHE_TTL` | Eztv › Search Cache TTL | duration | `604800` | Cache TTL for EZTV search results. |
+| `BUILTIN_EZTV_MAX_PAGES` | Eztv › Max Pages | number | `5` | Maximum pages fetched when paginating EZTV results. |
+
+### Posters
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `POSTER_API_KEY_VALIDITY_CACHE_TTL` | API Key Validity Cache TTL | number | `604800` | How long an RPDB / poster-API key validity check is cached (seconds). |
+
+### Resources
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `STREAM_URL_MAPPINGS` | Stream URL Mappings | map | — | Origin-level rewrites applied to stream URLs returned to clients. JSON object of `{origin: replacement}` URLs. |
+
+#### Timeouts
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `MANIFEST_TIMEOUT` | Timeouts › Manifest | number | `3000` | Timeout for `/manifest.json` fetches (milliseconds). Slower manifest operations use the increased timeout below. |
+| `MANIFEST_INCREASED_TIMEOUT` | Timeouts › Manifest Increased | number | `10000` | Extended timeout used during slower manifest operations (milliseconds). |
+| `META_TIMEOUT` | Timeouts › Meta | number | `30000` | Timeout for `/meta` requests (milliseconds). |
+| `CATALOG_TIMEOUT` | Timeouts › Catalog | number | `30000` | Timeout for `/catalog/*` fetches (milliseconds). |
+
+#### Precache
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PRECACHE_NEXT_EPISODE_MIN_INTERVAL` | Precache › Next Episode Min Interval | duration | `86400` | Minimum interval before re-attempting to precache the same next episode (accepts e.g. "30m", "1h"). |
+
+#### Preload
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PRELOAD_MIN_INTERVAL` | Preload › Min Interval | duration | `3600` | Minimum interval between preload operations for the same item per user (0 disables the cooldown). |
+| `PRELOAD_STREAMS_CONCURRENCY` | Preload › Streams Concurrency | number | `5` | Maximum simultaneous stream preload requests. |
+
+#### Background
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BACKGROUND_RESOURCE_REQUESTS_ENABLED` | Background › Enabled | boolean | `true` | Issue resource requests in the background to keep caches warm. |
+| `BACKGROUND_RESOURCE_REQUEST_TIMEOUT` | Background › Timeout | number | — | Timeout for background resource requests (milliseconds). When unset, the maximum HTTP timeout is used. |
+
+#### Cache
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DEFAULT_MAX_CACHE_SIZE` | Cache › Default Max Size | number | `100000` | Default maximum number of items per cache instance. _(restart required)_ |
+| `SQL_CACHE_MAX_SIZE` | Cache › Sql Max Size | number | `100000` | Maximum number of items in the shared SQL cache. _(restart required)_ |
+| `MANIFEST_CACHE_TTL` | Cache › Manifest › TTL | map | `{"*":21600}` | Per-key cache TTL for manifest responses (seconds; -1 disables). Env shape: integer or `key:value,...`. |
+| `MANIFEST_CACHE_MAX_SIZE` | Cache › Manifest › Max Size | number | — | Maximum number of cached manifests. _(restart required)_ |
+| `SUBTITLE_CACHE_TTL` | Cache › Subtitle › TTL | map | `{"*":300}` | Per-key cache TTL for subtitle responses (seconds; -1 disables). |
+| `SUBTITLE_CACHE_MAX_SIZE` | Cache › Subtitle › Max Size | number | — | Maximum number of cached subtitle responses. _(restart required)_ |
+| `STREAM_CACHE_TTL` | Cache › Stream › TTL | map | `{"*":-1}` | Per-key cache TTL for stream responses (seconds; -1 disables, the default). |
+| `STREAM_CACHE_MAX_SIZE` | Cache › Stream › Max Size | number | — | Maximum number of cached stream responses. _(restart required)_ |
+| `CATALOG_CACHE_TTL` | Cache › Catalog › TTL | map | `{"*":300}` | Per-key cache TTL for catalog responses (seconds; -1 disables). |
+| `CATALOG_CACHE_MAX_SIZE` | Cache › Catalog › Max Size | number | `1000` | Maximum number of cached catalog responses. _(restart required)_ |
+| `META_CACHE_TTL` | Cache › Meta › TTL | map | `{"*":300}` | Per-key cache TTL for meta responses (seconds; -1 disables). |
+| `META_CACHE_MAX_SIZE` | Cache › Meta › Max Size | number | — | Maximum number of cached meta responses. _(restart required)_ |
+| `ADDON_CATALOG_CACHE_TTL` | Cache › Addon Catalog › TTL | map | `{"*":300}` | Per-key cache TTL for addon-catalog responses (seconds; -1 disables). |
+| `ADDON_CATALOG_CACHE_MAX_SIZE` | Cache › Addon Catalog › Max Size | number | — | Maximum number of cached addon-catalog responses. _(restart required)_ |
 
 ## Limits
 
-| Variable                                  | Default | Description                                                              |
-| ----------------------------------------- | ------- | ------------------------------------------------------------------------ |
-| `MAX_ADDONS`                              | `15`    | Max addons per configuration                                             |
-| `MAX_GROUPS`                              | `20`    | Max groups per configuration                                             |
-| `MAX_KEYWORD_FILTERS`                     | `30`    | Max keyword filters per configuration                                    |
-| `MAX_STREAM_EXPRESSIONS`                  | `200`   | Max total stream expressions across all filter types                     |
-| `MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS` | `50000` | Max total character count across all stream expressions                  |
-| `MAX_SEL_LENGTH`                          | `3000`  | Max character length of a single SEL expression                          |
-| `MAX_FORMATTER_TEMPLATE_LENGTH`           | `5000`  | Max character length for formatter templates                             |
-| `MAX_BACKGROUND_PINGS`                    | `2`     | Max streams that can be pinged in a single background operation          |
-| `PRELOAD_STREAMS_CONCURRENCY`             | `5`     | Concurrency for stream preload requests                                  |
-| `MAX_TIMEOUT`                             | `50000` | Maximum addon timeout override (ms)                                      |
-| `MIN_TIMEOUT`                             | `1000`  | Minimum addon timeout override (ms)                                      |
-| `DEFAULT_TIMEOUT`                         | `7000`  | Default request timeout (ms)                                             |
-| `PRECACHE_NEXT_EPISODE_MIN_INTERVAL`      | `86400` | Minimum interval between precache attempts of the same episode (seconds) |
-| `PRELOAD_MIN_INTERVAL`                    | `3600`  | Minimum interval between preload operations for the same item (seconds)  |
+### User Limits
 
----
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `MAX_ADDONS` | Max Addons | number | `15` | Maximum number of addons a user configuration can install. |
+| `MAX_KEYWORD_FILTERS` | Max Keyword Filters | number | `30` | Maximum number of keyword filters per keyword filter group. |
+| `MAX_FORMATTER_TEMPLATE_LENGTH` | Max Formatter Template Length | number | `5000` | Maximum length (characters) of a single formatter template string. Enforced during config validation. |
+| `MAX_NZB_FAILOVER_COUNT` | Max NZB Failover Count | number | `5` | Maximum NZB failover attempts a user can configure. |
+| `MAX_GROUPS` | Max Groups | number | `20` | Maximum number of stream groups in a user configuration. |
+| `MAX_MERGED_CATALOG_SOURCES` | Max Merged Catalog Sources | number | `10` | Maximum source catalogs in a single merged catalog. |
+| `MAX_BACKGROUND_PINGS` | Max Background Pings | number | `2` | Maximum streams pinged in a background preload/precache operation. |
 
-## Rate Limits
+#### Timeouts
 
-| Variable                                               | Default (window/max) | Description                               |
-| ------------------------------------------------------ | -------------------- | ----------------------------------------- |
-| `DISABLE_RATE_LIMITS`                                  | `false`              | Disable all rate limits (not recommended) |
-| `STATIC_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`           | `5s / 75`            | Static file serving                       |
-| `USER_API_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`         | `5s / 5`             | User API                                  |
-| `STREAM_API_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`       | `5s / 10`            | Stream API                                |
-| `FORMAT_API_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`       | `5s / 30`            | Format API                                |
-| `CATALOG_API_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`      | `5s / 5`             | Catalog API                               |
-| `ANIME_API_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`        | `60s / 120`          | Anime API                                 |
-| `STREMIO_STREAM_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`   | `15s / 10`           | Stremio stream endpoint                   |
-| `STREMIO_CATALOG_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`  | `5s / 30`            | Stremio catalog endpoint                  |
-| `STREMIO_MANIFEST_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS` | `5s / 5`             | Stremio manifest endpoint                 |
-| `STREMIO_SUBTITLE_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS` | `5s / 10`            | Stremio subtitle endpoint                 |
-| `STREMIO_META_RATE_LIMIT_WINDOW` / `_MAX_REQUESTS`     | `5s / 15`            | Stremio meta endpoint                     |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `MIN_TIMEOUT` | Timeouts › Min Timeout | number | `1000` | Lower bound (milliseconds) for any user-configurable HTTP timeout. |
+| `MAX_TIMEOUT` | Timeouts › Max Timeout | number | `50000` | Upper bound (milliseconds) for any user-configurable HTTP timeout. |
 
----
+#### Regex
 
-## Inactive User Pruning
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `REGEX_FILTER_ACCESS` | Regex › Access | enum | `trusted` | Who can use regex filters: "none", "trusted" (only trusted UUIDs), or "all". |
+| `WHITELISTED_REGEX_PATTERNS` | Regex › Patterns | list | — | Regex patterns whitelisted for non-trusted users. |
+| `WHITELISTED_REGEX_PATTERNS_URLS` | Regex › Patterns Urls | list | — | URLs from which to fetch additional whitelisted regex patterns periodically. |
+| `WHITELISTED_REGEX_PATTERNS_DESCRIPTION` | Regex › Patterns Description | string | — | Free-form description shown alongside the whitelisted regex patterns. |
 
-| Variable         | Default | Description                                              |
-| ---------------- | ------- | -------------------------------------------------------- |
-| `PRUNE_INTERVAL` | `86400` | How often to check for inactive users (seconds)          |
-| `PRUNE_MAX_DAYS` | `-1`    | Days of inactivity before pruning. `-1` disables pruning |
+#### SEL
 
----
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `SEL_SYNC_ACCESS` | SEL › Access | enum | `trusted` | "all" = anyone can sync from any URL; "trusted" = non-trusted users limited to whitelisted SEL URLs. |
+| `WHITELISTED_SEL_URLS` | SEL › Urls | list | — | Stream Expression Language sync URLs that non-trusted users may use. |
+| `MAX_STREAM_EXPRESSIONS` | SEL › Max Expressions | number | `200` | Maximum total stream expressions across all filter types. |
+| `MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS` | SEL › Max Expression Characters | number | `50000` | Maximum total character count across all stream expressions. |
+| `MAX_SEL_LENGTH` | SEL › Max Expression Length | number | `3000` | Maximum length (characters) of a single stream expression. Enforced during config validation. |
 
-## URL Mappings
+#### Sync
 
-| Variable               | Description                                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------------------------- |
-| `REQUEST_URL_MAPPINGS` | JSON map to reroute outgoing requests (e.g. `{"https://ext.example.com": "http://localhost:3000"}`) |
-| `STREAM_URL_MAPPINGS`  | JSON map to rewrite stream URLs returned to clients                                                 |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `WHITELISTED_SYNC_REFRESH_INTERVAL` | Sync › Refresh Interval | duration | `86400` | How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h"). _(restart required)_ |
 
----
+#### Disabled
 
-## External Addon URLs & Timeouts
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DISABLED_ADDONS` | Disabled › Addons | map | — | Map of disabled addon IDs to a reason. Env-supplied form: comma-separated "addon:reason" entries. |
+| `REMOVED_ADDONS` | Disabled › Removed Addons | map | — | Map of removed addon IDs (hidden from marketplace; errors on save) to a reason. Env-supplied form: comma-separated "addon:reason" entries. |
+| `DISABLED_SERVICES` | Disabled › Services | map | — | Map of disabled service IDs to a reason. Env-supplied form: comma-separated "service:reason" entries. |
+| `DISABLED_HOSTS` | Disabled › Hosts | map | — | Map of disabled hostnames to a reason. Env-supplied form: comma-separated "host:reason" entries. |
+| `DISABLED_STREAM_TYPES` | Disabled › Stream Types | list | — | Stream types that should never be returned to clients (e.g. p2p, http, live). |
 
-For each supported third-party addon, you can configure a default URL and timeout via `<ADDON_NAME>_URL` and `DEFAULT_<ADDON_NAME>_TIMEOUT`. Examples:
+#### Self Scraping
 
-| Variable              | Default                                         |
-| --------------------- | ----------------------------------------------- |
-| `TORRENTIO_URL`       | `https://torrentio.strem.fun/`                  |
-| `COMET_URL`           | `https://comet.feels.legal/`                    |
-| `MEDIAFUSION_URL`     | `https://mediafusion.elfhosted.com/`            |
-| `JACKETTIO_URL`       | `https://jackettio.elfhosted.com/`              |
-| `STREMTHRU_STORE_URL` | `https://stremthru.13377001.xyz/stremio/store/` |
-| `METEOR_URL`          | `https://meteorfortheweebs.midnightignite.me`   |
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DISABLE_SELF_SCRAPING` | Self Scraping › Disabled | boolean | `true` | When true, addons cannot scrape the same AIOStreams instance. |
 
-Refer to the [`.env.sample`](https://github.com/Viren070/AIOStreams/blob/main/.env.sample) for the complete list. Most addons also support `FORCE_<ADDON>_HOSTNAME`, `FORCE_<ADDON>_PORT`, and `FORCE_<ADDON>_PROTOCOL` overrides for reverse proxy scenarios.
+#### Trusted
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `TRUSTED_UUIDS` | Trusted › Uuids | string | — | Comma-separated list of trusted user UUIDs. Trusted users may use regex filters and bypass certain access policies. |
+
+### Recursion
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `RECURSION_THRESHOLD_LIMIT` | Threshold Limit | number | `60` | Maximum number of requests to the same URL within the threshold window before marking the chain as recursive. |
+| `RECURSION_THRESHOLD_WINDOW` | Threshold Window | duration | `10` | Time window for the recursion threshold (seconds; accepts e.g. "30s", "1m"). |
+
+### Tasks
+
+#### Pruning
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PRUNE_INTERVAL` | Pruning › Interval | duration | `86400` | How often to run the inactive-user pruning task (accepts e.g. "12h", "1d"). _(restart required)_ |
+| `PRUNE_MAX_DAYS` | Pruning › Max Days | number | `-1` | Days of inactivity before a user is pruned. Use -1 to disable pruning entirely. |
+
+## Other
+
+### Analytics
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ANALYTICS_ENABLED` | Enabled | boolean | `true` | When false, all request analytics collection is disabled — zero events are written. |
+| `USER_ANALYTICS_ENABLED` | User Analytics Enabled | boolean | `false` | When enabled, the configure-page "Stats" tab is available to every authenticated user. Adds one event per addon per stream request. |
+| `ANALYTICS_EVENT_RETENTION_DAYS` | Event Retention Days | number | `7` | How many days of raw per-request analytics events to keep before the rollup task prunes them. The per-user Stats tab is limited to this window. |
+| `ANALYTICS_DAILY_RETENTION_DAYS` | Daily Retention Days | number | `90` | How many days of aggregated daily analytics to keep. |
+
+{/* END GENERATED ENV REFERENCE */}

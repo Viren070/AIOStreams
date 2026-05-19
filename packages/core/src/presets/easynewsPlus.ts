@@ -1,7 +1,8 @@
 import { PresetMetadata } from '../db/index.js';
 import { EasynewsPreset } from './easynews.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
+import { config as appConfig } from '../config/index.js';
 
 export class EasynewsPlusPreset extends EasynewsPreset {
   static override get METADATA(): PresetMetadata {
@@ -11,10 +12,13 @@ export class EasynewsPlusPreset extends EasynewsPreset {
       NAME: 'Easynews+',
       DESCRIPTION:
         'Easynews+ provides content from Easynews & includes a search catalog',
-      URL: Env.EASYNEWS_PLUS_URL,
-      TIMEOUT: Env.DEFAULT_EASYNEWS_PLUS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.easynewsPlus.url,
+      TIMEOUT:
+        appConfig.presets.easynewsPlus.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_EASYNEWS_PLUS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.easynewsPlus.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_RESOURCES: [
         ...super.METADATA.SUPPORTED_RESOURCES,
         constants.CATALOG_RESOURCE,
@@ -28,7 +32,8 @@ export class EasynewsPlusPreset extends EasynewsPreset {
             constants.CATALOG_RESOURCE,
             constants.META_RESOURCE,
           ],
-          Env.DEFAULT_EASYNEWS_PLUS_TIMEOUT || Env.DEFAULT_TIMEOUT
+          appConfig.presets.easynewsPlus.defaultTimeout ??
+            appConfig.presets.defaultTimeout
         ),
         {
           id: 'socials',

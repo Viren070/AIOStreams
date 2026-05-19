@@ -6,10 +6,10 @@ import {
 import { z } from 'zod';
 import {
   createLogger,
-  Env,
   getTimeTakenSincePoint,
   ParsedId,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import KnabenAPI, { KnabenCategory, knabenApiUrl } from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import {
@@ -117,7 +117,7 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
         );
         continue;
       }
-      if (!hash && hit.link && !Env.BUILTIN_KNABEN_DOWNLOAD_TORRENTS) {
+      if (!hash && hit.link && !appConfig.builtins.knaben.downloadTorrents) {
         continue;
       }
       if (seenTorrents.has(hash ?? hit.link ?? '')) {

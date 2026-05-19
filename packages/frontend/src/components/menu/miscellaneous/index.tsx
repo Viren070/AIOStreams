@@ -1,4 +1,3 @@
-'use client';
 import { PageWrapper } from '../../shared/page-wrapper';
 import { PageControls } from '../../shared/page-controls';
 import { MenuTabs } from '../../shared/menu-tabs';
@@ -21,7 +20,8 @@ export function MiscellaneousMenu() {
 
 function Content() {
   const { mode } = useMode();
-  const { tab: activeTab, setTab: handleTabChange } = useSubTab('miscellaneous');
+  const { tab: activeTab, setTab: handleTabChange } =
+    useSubTab('miscellaneous');
 
   return (
     <>

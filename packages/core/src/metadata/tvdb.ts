@@ -1,5 +1,5 @@
-import { createLogger } from '../utils/logger.js';
-import { Cache, Env, formatZodError, ParsedId } from '../utils/index.js';
+﻿import { createLogger } from '../logging/logger.js';
+import { Cache, appConfig, formatZodError, ParsedId } from '../utils/index.js';
 import { Metadata, MetadataTitle } from './utils.js';
 import { iso6392ToIso6391 } from '../utils/languages.js';
 import { makeRequest } from '../utils/http.js';
@@ -157,7 +157,7 @@ export class TVDBMetadata {
   private idCache = Cache.getInstance<string, string>('tvdb:id-map');
 
   public constructor(config: TVDBMetadataConfig) {
-    const apiKey = config.apiKey || Env.TVDB_API_KEY;
+    const apiKey = config.apiKey || appConfig.metadata.tvdb.apiKey;
     if (!apiKey) {
       throw new Error('TVDB API key is not set');
     }
@@ -311,7 +311,7 @@ class TVDBApi {
   constructor(apiKey: string) {
     this.headers = {
       'Content-Type': 'application/json',
-      'User-Agent': Env.DEFAULT_USER_AGENT,
+      'User-Agent': appConfig.http.defaultUserAgent,
       Accept: 'application/json',
     };
     this.apiKey = apiKey;
@@ -428,7 +428,7 @@ class TVDBApi {
         method,
         headers: this.headers,
         body: body ? JSON.stringify(body) : undefined,
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
       });
 
       const data = (await response.json()) as unknown;

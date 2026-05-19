@@ -7,8 +7,9 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 export class TorrentsDbParser extends StreamParser {
@@ -140,7 +141,8 @@ export class TorrentsDbPreset extends Preset {
       ...baseOptions(
         'TorrentsDB',
         supportedResources,
-        Env.DEFAULT_TORRENTS_DB_TIMEOUT
+        appConfig.presets.torrentsDb.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'mediaTypes',
@@ -211,10 +213,14 @@ export class TorrentsDbPreset extends Preset {
     return {
       ID: 'torrents-db',
       NAME: 'TorrentsDB',
-      LOGO: `${Env.TORRENTS_DB_URL}/icon.svg`,
-      URL: Env.TORRENTS_DB_URL,
-      TIMEOUT: Env.DEFAULT_TORRENTS_DB_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_TORRENTS_DB_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.torrentsDb.url[0] ?? ''}/icon.svg`,
+      URL: appConfig.presets.torrentsDb.url,
+      TIMEOUT:
+        appConfig.presets.torrentsDb.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.torrentsDb.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       REQUIRES_SERVICE: false,
       DESCRIPTION: 'Provides torrent streams from scraped torrent providers.',
@@ -303,7 +309,7 @@ export class TorrentsDbPreset extends Preset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
-    const url = options.url || this.METADATA.URL;
+    const url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

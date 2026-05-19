@@ -1,5 +1,3 @@
-'use client';
-
 import * as React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import {

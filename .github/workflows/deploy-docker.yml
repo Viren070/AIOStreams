@@ -9,42 +9,25 @@ on:
         type: string
 
 jobs:
-  build:
-    name: build
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
     permissions:
-      packages: write
       contents: read
+    outputs:
+      tags: ${{ steps.tags.outputs.tags }}
+      channel: ${{ steps.tags.outputs.channel }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{inputs.ref}}
+          ref: ${{ inputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Calculate Image Tags
+      - name: Calculate tags
+        id: tags
         env:
-          INPUT_REF: ${{inputs.ref}}
+          INPUT_REF: ${{ inputs.ref }}
         run: |
           declare TAGS=""
           case "${INPUT_REF}" in
@@ -64,6 +47,7 @@ jobs:
           *)
             echo "Invalid Input Ref: ${INPUT_REF}"
             exit 1
+            ;;
           esac
 
           if [[ -z "${TAGS}" ]]; then
@@ -71,45 +55,123 @@ jobs:
             exit 1
           fi
 
-          {
-            echo 'DOCKER_IMAGE_TAGS<<EOF'
-            for tag in ${TAGS}; do
-            echo "viren070/aiostreams:${tag}"
-            echo "ghcr.io/viren070/aiostreams:${tag}"
-            done
-            echo EOF
-          } >> "${GITHUB_ENV}"
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
 
-          echo "TAGS=${TAGS}" >> "${GITHUB_ENV}"
+  build:
+    name: build (${{ matrix.suffix }})
+    needs: setup
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-          echo "CHANNEL=${CHANNEL}" >> "${GITHUB_ENV}"
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-          cat "${GITHUB_ENV}"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Node
-        uses: actions/setup-node@v6
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       - name: Generate metadata
-        run: |
-          node scripts/generateMetadata.cjs --channel=${{env.CHANNEL}}
+        run: node scripts/generateMetadata.cjs --channel=${{ needs.setup.outputs.channel }}
 
       - name: Build & Push
+        id: build
         uses: docker/build-push-action@v6
         with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           context: .
           file: ./Dockerfile
-          tags: ${{env.DOCKER_IMAGE_TAGS}}
+          outputs: type=image,name=ghcr.io/viren070/aiostreams,push-by-digest=true,name-canonical=true
+          cache-from: type=gha,scope=${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
+
+      - name: Export digest
+        run: echo "${{ steps.build.outputs.digest }}" > "/tmp/${{ matrix.suffix }}"
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: /tmp/${{ matrix.suffix }}
+          archive: false
+          retention-days: 1
+
+  merge:
+    name: Merge manifests
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Create and push manifests
+        env:
+          TAGS: ${{ needs.setup.outputs.tags }}
+        run: |
+          for tag in ${TAGS}; do
+            docker buildx imagetools create \
+              -t "viren070/aiostreams:${tag}" \
+              -t "ghcr.io/viren070/aiostreams:${tag}" \
+              "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/amd64)" \
+              "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/arm64)"
+          done
 
       - name: Send Discord Notification
         env:
-          CHANNEL: ${{env.CHANNEL}}
-          TAGS: ${{env.TAGS}}
+          CHANNEL: ${{ needs.setup.outputs.channel }}
+          TAGS: ${{ needs.setup.outputs.tags }}
         run: |
           # Determine role based on channel
           if [ "$CHANNEL" = "stable" ]; then

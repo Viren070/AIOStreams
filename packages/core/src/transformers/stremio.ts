@@ -1,4 +1,5 @@
-import { constants, Env } from '../index.js';
+﻿import { constants } from '../index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   Meta,
   MetaPreview,
@@ -356,7 +357,7 @@ export class StremioTransformer {
   }
   static createErrorStream(options: ErrorOptions = {}): AIOStream {
     const {
-      errorTitle = `[❌] ${Env.ADDON_NAME}`,
+      errorTitle = `[❌] ${appConfig.branding.addonName}`,
       errorDescription = 'Unknown error',
       errorUrl = 'https://github.com/Viren070/AIOStreams',
     } = options;
@@ -390,7 +391,7 @@ export class StremioTransformer {
 
   static createErrorMeta(options: ErrorOptions = {}): MetaPreview {
     const {
-      errorTitle = `[❌] ${Env.ADDON_NAME} - Error`,
+      errorTitle = `[❌] ${appConfig.branding.addonName} - Error`,
       errorDescription = 'Unknown error',
     } = options;
     return {
@@ -403,7 +404,7 @@ export class StremioTransformer {
 
   static createErrorAddonCatalog(options: ErrorOptions = {}): AddonCatalog {
     const {
-      errorTitle = `[❌] ${Env.ADDON_NAME} - Error`,
+      errorTitle = `[❌] ${appConfig.branding.addonName} - Error`,
       errorDescription = 'Unknown error',
     } = options;
     return {

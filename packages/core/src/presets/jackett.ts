@@ -1,5 +1,5 @@
-import { Option, UserData } from '../db/index.js';
-import { Env, constants } from '../utils/index.js';
+﻿import { Option, UserData } from '../db/index.js';
+import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
 
@@ -21,10 +21,12 @@ export class JackettPreset extends TorznabPreset {
         description: 'The timeout for this addon',
         type: 'number',
         required: true,
-        default: Env.BUILTIN_DEFAULT_JACKETT_TIMEOUT || Env.DEFAULT_TIMEOUT,
+        default:
+          appConfig.builtins.jackett.timeout ??
+          appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -43,7 +45,7 @@ export class JackettPreset extends TorznabPreset {
         default: undefined,
         emptyIsUndefined: true,
       },
-      ...(Env.BUILTIN_JACKETT_URL && Env.BUILTIN_JACKETT_API_KEY
+      ...(appConfig.builtins.jackett.url && appConfig.builtins.jackett.apiKey
         ? [
             {
               id: 'notRequiredNote',
@@ -61,9 +63,10 @@ export class JackettPreset extends TorznabPreset {
         name: 'Jackett URL',
         description: 'The URL of the Jackett instance',
         type: 'url',
-        required: !Env.BUILTIN_JACKETT_URL || !Env.BUILTIN_JACKETT_API_KEY,
+        required:
+          !appConfig.builtins.jackett.url || !appConfig.builtins.jackett.apiKey,
         showInSimpleMode:
-          Env.BUILTIN_JACKETT_URL && Env.BUILTIN_JACKETT_API_KEY
+          appConfig.builtins.jackett.url && appConfig.builtins.jackett.apiKey
             ? false
             : undefined,
       },
@@ -72,9 +75,10 @@ export class JackettPreset extends TorznabPreset {
         name: 'Jackett API Key',
         description: 'The API key for the Jackett instance',
         type: 'password',
-        required: !Env.BUILTIN_JACKETT_URL || !Env.BUILTIN_JACKETT_API_KEY,
+        required:
+          !appConfig.builtins.jackett.url || !appConfig.builtins.jackett.apiKey,
         showInSimpleMode:
-          Env.BUILTIN_JACKETT_URL && Env.BUILTIN_JACKETT_API_KEY
+          appConfig.builtins.jackett.url && appConfig.builtins.jackett.apiKey
             ? false
             : undefined,
       },
@@ -117,9 +121,10 @@ export class JackettPreset extends TorznabPreset {
       ID: 'jackett',
       NAME: 'Jackett',
       LOGO: 'https://raw.githubusercontent.com/Jackett/Jackett/refs/heads/master/src/Jackett.Common/Content/jacket_medium.png',
-      URL: `${Env.INTERNAL_URL}/builtins/torznab`,
-      TIMEOUT: Env.BUILTIN_DEFAULT_JACKETT_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/torznab`],
+      TIMEOUT:
+        appConfig.builtins.jackett.timeout ?? appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION: 'An addon to get debrid results from a Jackett instance.',
       OPTIONS: options,
@@ -141,8 +146,8 @@ export class JackettPreset extends TorznabPreset {
       jackettUrl = options.jackettUrl;
       jackettApiKey = options.jackettApiKey;
     } else {
-      jackettUrl = Env.BUILTIN_JACKETT_URL;
-      jackettApiKey = Env.BUILTIN_JACKETT_API_KEY;
+      jackettUrl = appConfig.builtins.jackett.url;
+      jackettApiKey = appConfig.builtins.jackett.apiKey;
     }
 
     if (!jackettUrl || !jackettApiKey) {
@@ -158,6 +163,6 @@ export class JackettPreset extends TorznabPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
+    return `${appConfig.bootstrap.internalUrl}/builtins/torznab/${configString}/manifest.json`;
   }
 }

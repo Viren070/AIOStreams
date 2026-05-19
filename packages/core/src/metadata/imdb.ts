@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { Cache, makeRequest, Env, TYPES } from '../utils/index.js';
+﻿import { z } from 'zod';
+import { Cache, makeRequest, TYPES } from '../utils/index.js';
 import { Metadata } from './utils.js';
 import { Meta, MetaSchema } from '../db/schemas.js';
 
@@ -56,7 +56,7 @@ export class IMDBMetadata {
       let yearEnd = NaN;
 
       if (cinemetaData.releaseInfo) {
-        const parts = cinemetaData.releaseInfo.toString().split(/[-–—]/);
+        const parts = cinemetaData.releaseInfo.toString().split(/[-—]/);
         const start = parts[0]?.trim();
         const end = parts[1]?.trim();
 
@@ -112,7 +112,7 @@ export class IMDBMetadata {
     let yearEnd: number | undefined = undefined;
     const yearString = item.yr;
     if (yearString) {
-      const years = yearString.split(/[-–—]/).map((y) => y.trim());
+      const years = yearString.split(/[-—]/).map((y) => y.trim());
       if (years.length > 1) {
         yearEnd = Number(years[1]);
       }

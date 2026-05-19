@@ -1,8 +1,5 @@
-'use client';
 import { Button } from '@/components/ui/button/button';
 import { cn } from '@/components/ui/core/styling';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import React from 'react';
 
 interface LuffyErrorProps {
@@ -23,8 +20,6 @@ export const LuffyError: React.FC<LuffyErrorProps> = (props) => {
     ...rest
   } = props;
 
-  const router = useRouter();
-
   return (
     <>
       <div
@@ -39,15 +34,11 @@ export const LuffyError: React.FC<LuffyErrorProps> = (props) => {
             data-luffy-error-image-container
             className="size-[8rem] mx-auto flex-none rounded-[--radius-md] object-cover object-center relative overflow-hidden"
           >
-            <Image
+            <img
               data-luffy-error-image
               src="/logo.png"
               alt={''}
-              fill
-              quality={100}
-              priority
-              sizes="10rem"
-              className="object-contain object-top"
+              className="absolute inset-0 w-full h-full object-contain object-top"
             />
           </div>
         }
@@ -59,7 +50,7 @@ export const LuffyError: React.FC<LuffyErrorProps> = (props) => {
               <Button
                 data-luffy-error-content-button-refresh
                 intent="warning-subtle"
-                onClick={() => router.refresh()}
+                onClick={() => window.location.reload()}
               >
                 Retry
               </Button>

@@ -1,4 +1,4 @@
-import { PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
+﻿import { PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
 import { CometPreset } from './comet.js';
 import { MeteorPreset } from './meteor.js';
 import { CustomPreset } from './custom.js';
@@ -58,7 +58,6 @@ import { GoogleOAuth } from '../builtins/gdrive/api.js';
 import { TorBoxSearchPreset } from './torboxSearch.js';
 import { TorznabPreset } from './torznab.js';
 import { AStreamPreset } from './aStream.js';
-import { Env } from '../utils/env.js';
 import { ZileanPreset } from './zilean.js';
 import { AnimeToshoPreset } from './animetosho.js';
 import { NewznabPreset } from './newznab.js';

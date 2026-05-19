@@ -1,16 +1,16 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import {
   Cache,
   DistributedLock,
-  Env,
   formatZodError,
   getTimeTakenSincePoint,
   createLogger,
   makeRequest,
   makeUrlLogSafe,
 } from '../../../utils/index.js';
+import { config as appConfig } from '../../../config/index.js';
 import { Parser } from 'xml2js';
-import { Logger } from 'winston';
+import type { Logger } from '../../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../../utils/general.js';
 
 // --- Generic Custom Error ---
@@ -273,8 +273,10 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
-    this.userAgent = Env.BUILTIN_NAB_USER_AGENT ?? Env.DEFAULT_USER_AGENT;
-    this.httpProxy = Env.BUILTIN_NAB_HTTP_PROXY?.get(namespace);
+    this.userAgent =
+      appConfig.builtins.nab.userAgent ?? appConfig.http.defaultUserAgent;
+    this.httpProxy =
+      appConfig.builtins.nab.httpProxy?.[namespace as 'torznab' | 'newznab'];
 
     // Create the appropriate schema based on namespace
     if (namespace === 'torznab') {
@@ -361,7 +363,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     return this.capabilitiesCache.wrap(
       () => this.request('caps', CapabilitiesSchema, undefined, 3000),
       cacheKey,
-      Env.BUILTIN_NAB_CAPABILITIES_CACHE_TTL
+      appConfig.builtins.nab.capabilitiesCacheTtl
     );
   }
 
@@ -375,7 +377,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
       searchCacheKey: cacheKey,
       bgCacheKey: `nab:${cacheKey}`,
-      cacheTTL: Env.BUILTIN_NAB_SEARCH_CACHE_TTL,
+      cacheTTL: appConfig.builtins.nab.searchCacheTtl,
       fetchFn: () =>
         this.request(
           searchFunction,
@@ -410,8 +412,8 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       lockKey,
       () => this._request(func, schema, params, timeout),
       {
-        timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
-        ttl: (timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT) + 1000,
+        timeout: timeout ?? appConfig.builtins.nab.searchTimeout,
+        ttl: (timeout ?? appConfig.builtins.nab.searchTimeout) + 1000,
       }
     );
     return result;
@@ -448,7 +450,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       const response = await makeRequest(urlString, {
         method: 'GET',
         headers: this.getHeaders(),
-        timeout: timeout ?? Env.BUILTIN_NAB_SEARCH_TIMEOUT,
+        timeout: timeout ?? appConfig.builtins.nab.searchTimeout,
         forceProxy: this.httpProxy,
       });
 

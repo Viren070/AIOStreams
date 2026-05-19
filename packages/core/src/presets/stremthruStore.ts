@@ -7,8 +7,8 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import { StremThruPreset, StremThruStreamParser } from './stremthru.js';
 
@@ -16,28 +16,6 @@ class StremthruStoreStreamParser extends StremThruStreamParser {
   protected override applyUrlModifications(
     url: string | undefined
   ): string | undefined {
-    if (!url) {
-      return url;
-    }
-    if (
-      Env.FORCE_STREMTHRU_STORE_HOSTNAME !== undefined ||
-      Env.FORCE_STREMTHRU_STORE_PORT !== undefined ||
-      Env.FORCE_STREMTHRU_STORE_PROTOCOL !== undefined
-    ) {
-      // modify the URL according to settings, needed when using a local URL for requests but a public stream URL is needed.
-      const urlObj = new URL(url);
-
-      if (Env.FORCE_STREMTHRU_STORE_PROTOCOL !== undefined) {
-        urlObj.protocol = Env.FORCE_STREMTHRU_STORE_PROTOCOL;
-      }
-      if (Env.FORCE_STREMTHRU_STORE_PORT !== undefined) {
-        urlObj.port = Env.FORCE_STREMTHRU_STORE_PORT.toString();
-      }
-      if (Env.FORCE_STREMTHRU_STORE_HOSTNAME !== undefined) {
-        urlObj.hostname = Env.FORCE_STREMTHRU_STORE_HOSTNAME;
-      }
-      return urlObj.toString();
-    }
     return super.applyUrlModifications(url);
   }
 
@@ -83,8 +61,9 @@ export class StremthruStorePreset extends StremThruPreset {
       ...baseOptions(
         'StremThru Store',
         supportedResources,
-        Env.DEFAULT_STREMTHRU_STORE_TIMEOUT,
-        Env.STREMTHRU_STORE_URL
+        appConfig.presets.stremthruStore.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.stremthruStore.url ?? undefined
       ),
       {
         id: 'services',
@@ -150,10 +129,13 @@ export class StremthruStorePreset extends StremThruPreset {
       ID: 'stremthruStore',
       NAME: 'StremThru Store',
       LOGO: 'https://emojiapi.dev/api/v1/sparkles/256.png',
-      URL: Env.STREMTHRU_STORE_URL[0],
-      TIMEOUT: Env.DEFAULT_STREMTHRU_STORE_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.stremthruStore.url,
+      TIMEOUT:
+        appConfig.presets.stremthruStore.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_STREMTHRU_STORE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.stremthruStore.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'Access your debrid library through catalogs and streams.',
       OPTIONS: options,
@@ -219,7 +201,7 @@ export class StremthruStorePreset extends StremThruPreset {
     options: Record<string, any>,
     serviceId: ServiceId | undefined
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

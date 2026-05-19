@@ -1,6 +1,7 @@
-import { Router, Request, Response, NextFunction } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import {
   APIError,
+  config as appConfig,
   constants,
   createLogger,
   decryptString,
@@ -51,7 +52,7 @@ router.get(
       return;
     }
 
-    const thisUrl = `${Env.BASE_URL}/seanime/extensions/${encodedCatalogData}/stremio-custom-source.json`;
+    const thisUrl = `${appConfig.bootstrap.baseUrl}/seanime/extensions/${encodedCatalogData}/stremio-custom-source.json`;
 
     applySeanimeManifestRuntimeConfig(manifest, {
       manifestURI: thisUrl,
@@ -59,7 +60,7 @@ router.get(
         '/manifest.json',
         '/configure'
       ),
-      baseUrl: Env.BASE_URL,
+      baseUrl: appConfig.bootstrap.baseUrl,
       stremioManifestUrl: catalogData.addonManifestUrl,
     });
 
@@ -115,9 +116,9 @@ router.get(
     }
 
     applySeanimeManifestRuntimeConfig(manifest, {
-      manifestURI: `${Env.BASE_URL}/seanime/extensions/${extensionId}.json`,
-      website: `${Env.BASE_URL}/stremio/configure`,
-      baseUrl: Env.BASE_URL,
+      manifestURI: `${appConfig.bootstrap.baseUrl}/seanime/extensions/${extensionId}.json`,
+      website: `${appConfig.bootstrap.baseUrl}/stremio/configure`,
+      baseUrl: appConfig.bootstrap.baseUrl,
     });
 
     res.setHeader('Content-Type', 'application/json');
@@ -155,7 +156,7 @@ router.get(
       /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
     let uuid: string;
     if (!uuidRegex.test(uuidOrAlias)) {
-      const alias = Env.ALIASED_CONFIGURATIONS.get(uuidOrAlias);
+      const alias = appConfig.api.aliasedConfigurations[uuidOrAlias];
       if (alias) {
         uuid = alias.uuid;
       } else {
@@ -192,11 +193,11 @@ router.get(
     }
 
     // Pre-populate the manifestUrl field default with the user's Stremio manifest URL
-    const stremioManifestUrl = `${Env.BASE_URL}/stremio/${uuid}/${encryptedPassword}/manifest.json`;
+    const stremioManifestUrl = `${appConfig.bootstrap.baseUrl}/stremio/${uuid}/${encryptedPassword}/manifest.json`;
     applySeanimeManifestRuntimeConfig(manifest, {
-      manifestURI: `${Env.BASE_URL}/seanime/${uuid}/${encryptedPassword}/extensions/${extensionId}.json`,
+      manifestURI: `${appConfig.bootstrap.baseUrl}/seanime/${uuid}/${encryptedPassword}/extensions/${extensionId}.json`,
       website: stremioManifestUrl.replace('/manifest.json', '/configure'),
-      baseUrl: Env.BASE_URL,
+      baseUrl: appConfig.bootstrap.baseUrl,
       stremioManifestUrl,
     });
 

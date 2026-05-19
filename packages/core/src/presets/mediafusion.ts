@@ -7,8 +7,9 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { createLogger, Env, getSimpleTextHash } from '../utils/index.js';
+import { createLogger, getSimpleTextHash } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 const logger = createLogger('core');
@@ -159,8 +160,9 @@ export class MediaFusionPreset extends Preset {
       ...baseOptions(
         'MediaFusion',
         supportedResources,
-        Env.DEFAULT_MEDIAFUSION_TIMEOUT,
-        Env.MEDIAFUSION_URL
+        appConfig.presets.mediafusion.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.mediafusion.url ?? undefined
       ),
       {
         id: 'useCachedResultsOnly',
@@ -168,8 +170,8 @@ export class MediaFusionPreset extends Preset {
         description:
           "Only show results that are already cached in MediaFusion's database from previous searches. This disables live searching, making requests faster but potentially showing fewer results.",
         type: 'boolean',
-        forced: Env.MEDIAFUSION_FORCED_USE_CACHED_RESULTS_ONLY,
-        default: Env.MEDIAFUSION_DEFAULT_USE_CACHED_RESULTS_ONLY,
+        forced: appConfig.presets.mediafusion.forcedUseCachedResultsOnly,
+        default: appConfig.presets.mediafusion.defaultUseCachedResultsOnly,
         showInSimpleMode: false,
       },
       {
@@ -313,9 +315,13 @@ export class MediaFusionPreset extends Preset {
       ID: 'mediafusion',
       NAME: 'MediaFusion',
       LOGO: `https://raw.githubusercontent.com/mhdzumair/MediaFusion/refs/heads/main/resources/images/mediafusion_logo.png`,
-      URL: Env.MEDIAFUSION_URL[0],
-      TIMEOUT: Env.DEFAULT_MEDIAFUSION_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_MEDIAFUSION_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.mediafusion.url,
+      TIMEOUT:
+        appConfig.presets.mediafusion.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.mediafusion.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'Universal Stremio Add-on for Movies, Series, Live TV & Sports Events',
@@ -405,7 +411,7 @@ export class MediaFusionPreset extends Preset {
     options: Record<string, any>,
     encodedUserData: string
   ) {
-    const url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }
@@ -540,7 +546,7 @@ export class MediaFusionPreset extends Preset {
           'SDR',
           'Unknown',
         ],
-        api_password: Env.MEDIAFUSION_API_PASSWORD,
+        api_password: appConfig.presets.mediafusion.apiPassword,
         mediaflow_config: null,
         rpdb_config: null,
         live_search_streams: !options.useCachedResultsOnly,

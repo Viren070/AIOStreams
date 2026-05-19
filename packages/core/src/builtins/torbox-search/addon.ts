@@ -5,8 +5,8 @@ import {
   getTimeTakenSincePoint,
   ParsedId,
   Cache,
-  Env,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import { IdType } from '../../utils/id-parser.js';
 import TorboxSearchApi, {
   TorboxSearchApiError,
@@ -54,7 +54,7 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
   private get useCache(): boolean {
     return (
       !this.userData.searchUserEngines ||
-      Env.BUILTIN_TORBOX_SEARCH_CACHE_PER_USER_SEARCH_ENGINE
+      appConfig.builtins.torboxSearch.cachePerUserSearchEngine
     );
   }
 
@@ -137,9 +137,9 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
           (t) =>
             !t.userSearch ||
             (this.userData.searchUserEngines &&
-              Env.BUILTIN_TORBOX_SEARCH_CACHE_PER_USER_SEARCH_ENGINE)
+              appConfig.builtins.torboxSearch.cachePerUserSearchEngine)
         ),
-        Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL
+        appConfig.builtins.torboxSearch.searchApiCacheTtl
       );
     }
 
@@ -221,7 +221,7 @@ export class TorBoxSearchAddon extends BaseDebridAddon<TorBoxSearchAddonConfig> 
       await this.searchCache.set(
         cacheKey,
         filteredTorrents,
-        Env.BUILTIN_TORBOX_SEARCH_SEARCH_API_CACHE_TTL
+        appConfig.builtins.torboxSearch.searchApiCacheTtl
       );
     }
 

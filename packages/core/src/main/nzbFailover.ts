@@ -1,4 +1,4 @@
-import { Cache, Env, createLogger } from '../utils/index.js';
+﻿import { Cache, appConfig, createLogger } from '../utils/index.js';
 import { ParsedStream } from '../db/schemas.js';
 import { DebridError } from '../debrid/base.js';
 import { hashNzbUrl, buildFallbackKey } from '../debrid/utils.js';
@@ -18,7 +18,7 @@ function nzbFallbackCache() {
   return Cache.getInstance<string, NzbFallback[]>(
     'nzb-fallback',
     1_000_000_000,
-    Env.REDIS_URI ? 'redis' : 'sql'
+    appConfig.bootstrap.redisUri ? 'redis' : 'sql'
   );
 }
 
@@ -64,7 +64,7 @@ export async function populateNzbFallbacks(
     uuid,
     deduped.map((s) => s.nzbUrl!).join('|')
   );
-  const ttl = Env.BUILTIN_PLAYBACK_LINK_VALIDITY;
+  const ttl = appConfig.builtins.debrid.playbackLinkValidity;
   await nzbFallbackCache().set(listKey, fullList, ttl);
 
   logger.debug(`Stored NZB fallback list under key ${listKey}`);

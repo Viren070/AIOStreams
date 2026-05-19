@@ -1,7 +1,7 @@
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../index.js';
 
 export class BrazucaTorrentsParser extends StreamParser {
@@ -56,7 +56,8 @@ export class BrazucaTorrentsPreset extends Preset {
       ...baseOptions(
         'Brazuca Torrents',
         supportedResources,
-        Env.DEFAULT_BRAZUCA_TORRENTS_TIMEOUT
+        appConfig.presets.brazucaTorrents.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
     ];
 
@@ -64,10 +65,13 @@ export class BrazucaTorrentsPreset extends Preset {
       ID: 'brazuca-torrents',
       NAME: 'Brazuca Torrents',
       LOGO: 'https://i.imgur.com/KVpfrAk.png',
-      URL: Env.BRAZUCA_TORRENTS_URL,
-      TIMEOUT: Env.DEFAULT_BRAZUCA_TORRENTS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.brazucaTorrents.url,
+      TIMEOUT:
+        appConfig.presets.brazucaTorrents.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_BRAZUCA_TORRENTS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.brazucaTorrents.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Fornece streams de filmes e series dublados de provedores de torrent',
@@ -90,7 +94,7 @@ export class BrazucaTorrentsPreset extends Preset {
   ): Addon {
     const baseUrl = options.url
       ? new URL(options.url).origin
-      : this.METADATA.URL;
+      : this.DEFAULT_URL;
 
     const url = options.url?.endsWith('/manifest.json')
       ? options.url

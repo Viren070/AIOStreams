@@ -7,8 +7,8 @@ import {
   Stream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import { StremThruPreset } from './stremthru.js';
 
@@ -53,31 +53,6 @@ class CometStreamParser extends StreamParser {
       return stream.description;
     }
   }
-  override applyUrlModifications(url: string | undefined): string | undefined {
-    if (!url) {
-      return url;
-    }
-    if (
-      Env.FORCE_COMET_HOSTNAME !== undefined ||
-      Env.FORCE_COMET_PORT !== undefined ||
-      Env.FORCE_COMET_PROTOCOL !== undefined
-    ) {
-      // modify the URL according to settings, needed when using a local URL for requests but a public stream URL is needed.
-      const urlObj = new URL(url);
-
-      if (Env.FORCE_COMET_PROTOCOL !== undefined) {
-        urlObj.protocol = Env.FORCE_COMET_PROTOCOL;
-      }
-      if (Env.FORCE_COMET_PORT !== undefined) {
-        urlObj.port = Env.FORCE_COMET_PORT.toString();
-      }
-      if (Env.FORCE_COMET_HOSTNAME !== undefined) {
-        urlObj.hostname = Env.FORCE_COMET_HOSTNAME;
-      }
-      return urlObj.toString();
-    }
-    return super.applyUrlModifications(url);
-  }
 }
 
 export class CometPreset extends StremThruPreset {
@@ -104,8 +79,9 @@ export class CometPreset extends StremThruPreset {
       ...baseOptions(
         'Comet',
         supportedResources,
-        Env.DEFAULT_COMET_TIMEOUT,
-        Env.COMET_URL
+        appConfig.presets.comet.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.comet.url ?? undefined
       ),
       {
         id: 'includeP2P',
@@ -196,9 +172,13 @@ export class CometPreset extends StremThruPreset {
       ID: 'comet',
       NAME: 'Comet',
       LOGO: 'https://raw.githubusercontent.com/g0ldyy/comet/refs/heads/main/comet/assets/icon.png',
-      URL: Env.COMET_URL[0],
-      TIMEOUT: Env.DEFAULT_COMET_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_COMET_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.comet.url,
+      TIMEOUT:
+        appConfig.presets.comet.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.comet.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: "Stremio's fastest Torrent/Debrid addon",
       OPTIONS: options,
@@ -296,7 +276,7 @@ export class CometPreset extends StremThruPreset {
     options: Record<string, any>,
     services: ServiceId[]
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }
@@ -327,15 +307,15 @@ export class CometPreset extends StremThruPreset {
     });
 
     let token: string | undefined = undefined;
-    if (Env.COMET_PUBLIC_API_TOKEN) {
-      const cometUrlIndex = Env.COMET_URL.findIndex(
+    const publicApiTokens = appConfig.presets.comet.publicApiToken;
+    if (publicApiTokens && publicApiTokens.length > 0) {
+      const cometUrls = appConfig.presets.comet.url ?? [];
+      const cometUrlIndex = cometUrls.findIndex(
         (cometUrl) => cometUrl.replace(/\/$/, '') === url
       );
       token =
         cometUrlIndex !== -1
-          ? Env.COMET_PUBLIC_API_TOKEN[
-              Math.min(cometUrlIndex, Env.COMET_PUBLIC_API_TOKEN.length - 1)
-            ]
+          ? publicApiTokens[Math.min(cometUrlIndex, publicApiTokens.length - 1)]
           : undefined;
     }
 

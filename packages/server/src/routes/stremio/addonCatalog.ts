@@ -6,8 +6,12 @@ import {
   StremioTransformer,
 } from '@aiostreams/core';
 
+import { trackResource } from '../../middlewares/analytics.js';
+
 const logger = createLogger('server');
 const router: Router = Router();
+
+router.use(trackResource('addon_catalog'));
 
 interface AddonCatalogParams {
   type: string;

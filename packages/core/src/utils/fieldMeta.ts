@@ -20,6 +20,7 @@ export const MENU_IDS = [
   'proxy',
   'fun',
   'miscellaneous',
+  'stats',
   'save-install',
 ] as const;
 export type MenuId = (typeof MENU_IDS)[number];
@@ -239,7 +240,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   autoRemoveDownloads: { label: 'Auto Remove Downloads', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   checkOwned: { label: 'Check Owned', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
 
-  addonPassword: { label: 'Addon Password', group: 'misc', type: 'scalar', menu: 'save-install' },
+  accessToken: { label: 'Config Access Token', group: 'misc', type: 'scalar', menu: 'save-install' },
   showChanges: { label: 'Show Changes', group: 'misc', type: 'scalar', menu: 'save-install' },
 
   addonName: { label: 'Addon Name', group: 'branding', type: 'scalar', menu: 'about', keywords: ['branding'] },

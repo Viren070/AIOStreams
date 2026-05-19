@@ -1,4 +1,4 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getDataFolder } from './general.js';
@@ -6,10 +6,12 @@ import { Template, TemplateSchema } from '../db/schemas.js';
 import { ZodError } from 'zod';
 import { formatZodError, applyMigrations } from './config.js';
 import { RegexAccess } from './regex-access.js';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 import { SelAccess } from './sel-access.js';
-import { Env } from './env.js';
+import { config as appConfig } from '../config/index.js';
 import { makeRequest } from './http.js';
+import { TaskManager } from '../tasks/index.js';
+import { subscribeToConfig } from '../config/index.js';
 
 const logger = createLogger('templates');
 
@@ -25,9 +27,6 @@ export class TemplateManager {
 
   /** Templates fetched from TEMPLATE_URLS (kept separate so refreshes can swap them). */
   private static remoteTemplates: Template[] = [];
-
-  /** Timer handle for the periodic refresh. */
-  private static refreshTimer: ReturnType<typeof setInterval> | undefined;
 
   static getTemplates(): Template[] {
     return TemplateManager.templates;
@@ -66,19 +65,31 @@ export class TemplateManager {
     this.registerTrustedAccess(this.templates);
 
     const errors = [...builtinTemplates.errors, ...customTemplates.errors];
-    logger.info(`Loaded templates`, {
-      totalTemplates: this.templates.length,
-      detectedTemplates: builtinTemplates.detected + customTemplates.detected,
-      builtinTemplates: builtinTemplates.loaded,
-      customTemplates: customTemplates.loaded,
-      remoteTemplates: this.remoteTemplates.length,
-      errors: errors.length,
-    });
+    // logger.info(`Loaded templates`, {
+    //   totalTemplates: this.templates.length,
+    //   detectedTemplates: builtinTemplates.detected + customTemplates.detected,
+    //   builtinTemplates: builtinTemplates.loaded,
+    //   customTemplates: customTemplates.loaded,
+    //   remoteTemplates: this.remoteTemplates.length,
+    //   errors: errors.length,
+    // });
+    logger.info(
+      {
+        total: this.templates.length,
+        detected: builtinTemplates.detected + customTemplates.detected,
+        builtin: builtinTemplates.loaded,
+        custom: customTemplates.loaded,
+        remote: this.remoteTemplates.length,
+        errors: errors.length,
+      },
+      'loaded templates'
+    );
 
     if (errors.length > 0) {
-      logger.error(
-        `Errors loading templates: \n${errors.map((e) => `  ${e.file} - ${e.error}`).join('\n')}`
-      );
+      logger.warn(`could not load some templates due to errors`, {
+        count: errors.length,
+        errors: errors,
+      });
     }
 
     // Schedule periodic refresh if configured
@@ -86,13 +97,10 @@ export class TemplateManager {
   }
 
   /**
-   * Stop the periodic refresh timer (e.g. for graceful shutdown).
+   * Stop the periodic refresh (e.g. for graceful shutdown).
    */
   static stopRefresh(): void {
-    if (this.refreshTimer) {
-      clearInterval(this.refreshTimer);
-      this.refreshTimer = undefined;
-    }
+    TaskManager.unregister('template-remote-refresh');
   }
 
   // ---------------------------------------------------------------------------
@@ -160,11 +168,12 @@ export class TemplateManager {
    * Each URL is fetched independently — failures are logged and skipped.
    */
   private static async fetchRemoteTemplates(): Promise<Template[]> {
-    const templateUrls = Env.TEMPLATE_URLS || [];
+    const templateUrls = appConfig.templates.urls || [];
     if (templateUrls.length === 0) return [];
 
     logger.info(
-      `Fetching templates from ${templateUrls.length} remote URL(s)...`
+      { count: templateUrls.length },
+      `fetching templates from remote URL(s)`
     );
 
     const results = await Promise.allSettled(
@@ -178,7 +187,8 @@ export class TemplateManager {
         templates.push(...result.value);
       } else {
         logger.error(
-          `Failed to fetch templates from ${templateUrls[i]}: ${result.reason}`
+          { url: templateUrls[i], error: result.reason },
+          'failed to fetch templates from URL'
         );
       }
     }
@@ -192,7 +202,7 @@ export class TemplateManager {
   private static async fetchTemplatesFromUrl(url: string): Promise<Template[]> {
     const response = await makeRequest(url, {
       method: 'GET',
-      headers: { 'User-Agent': Env.DEFAULT_USER_AGENT },
+      headers: { 'User-Agent': appConfig.http.defaultUserAgent },
       timeout: 30000,
     });
 
@@ -220,13 +230,20 @@ export class TemplateManager {
         });
       } catch (err) {
         logger.error(
-          `Failed to validate template from ${url}: ${err instanceof ZodError ? formatZodError(err) : err}`
+          { url, error: err },
+          `failed to validate template from URL`
         );
       }
     }
 
     if (templates.length > 0) {
-      logger.info(`Fetched ${templates.length} template(s) from ${url}`);
+      logger.info(
+        {
+          url,
+          templates: templates.length,
+        },
+        `fetched templates from URL`
+      );
     }
 
     return templates;
@@ -237,58 +254,120 @@ export class TemplateManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Schedule periodic re-fetching of TEMPLATE_URLS.
-   * On each tick the remote templates are re-fetched, the full list is
-   * rebuilt (custom + remote + builtin), and trusted access is re-registered.
+   * Re-fetch remote templates and rebuild the full template list. Extracted
+   * from `scheduleRefresh` so the TaskManager can call it on demand from the
+   * dashboard.
+   */
+  public static async refreshRemoteTemplates(): Promise<{ count: number }> {
+    logger.info('Refreshing remote templates...');
+    const freshRemote = await this.fetchRemoteTemplates();
+
+    const builtinTemplatePath = path.join(RESOURCE_DIR, 'templates');
+    const customTemplatesPath = path.join(getDataFolder(), 'templates');
+
+    const builtinTemplates = this.loadTemplatesFromPath(
+      builtinTemplatePath,
+      'builtin'
+    );
+    const customTemplates = this.loadTemplatesFromPath(
+      customTemplatesPath,
+      'custom'
+    );
+
+    this.remoteTemplates = freshRemote;
+    this.templates = this.deduplicateTemplates([
+      ...customTemplates.templates,
+      ...this.remoteTemplates,
+      ...builtinTemplates.templates,
+    ]);
+    this.registerTrustedAccess(this.templates);
+
+    logger.info(
+      { count: this.templates.length },
+      `remote template refresh complete`
+    );
+    return { count: this.templates.length };
+  }
+
+  /** Tracks whether the config-change subscription has been wired up. */
+  private static configSubscribed = false;
+
+  /**
+   * Register the remote-refresh task with the central TaskManager and wire up
+   * a one-time subscription so that UI-driven changes to TEMPLATE_URLS /
+   * TEMPLATE_REFRESH_INTERVAL re-register the task (with the new interval)
+   * and kick an immediate refresh.
+   *
+   * The task is always registered so it shows up on the dashboard even when
+   * no URLs are configured yet — its `run` is a no-op in that case.
    */
   private static scheduleRefresh(): void {
-    const intervalSec = Env.TEMPLATE_REFRESH_INTERVAL;
-    const templateUrls = Env.TEMPLATE_URLS || [];
-    if (intervalSec <= 0 || templateUrls.length === 0) return;
-
-    // Clear any previous timer (safety)
-    this.stopRefresh();
-
-    logger.info(`Scheduling remote template refresh every ${intervalSec}s`);
-
-    this.refreshTimer = setInterval(async () => {
-      try {
-        logger.info('Refreshing remote templates...');
-        const freshRemote = await this.fetchRemoteTemplates();
-
-        // Reload file-based templates in case the hoster changed them too
-        const builtinTemplatePath = path.join(RESOURCE_DIR, 'templates');
-        const customTemplatesPath = path.join(getDataFolder(), 'templates');
-
-        const builtinTemplates = this.loadTemplatesFromPath(
-          builtinTemplatePath,
-          'builtin'
-        );
-        const customTemplates = this.loadTemplatesFromPath(
-          customTemplatesPath,
-          'custom'
-        );
-
-        this.remoteTemplates = freshRemote;
-
-        this.templates = this.deduplicateTemplates([
-          ...customTemplates.templates,
-          ...this.remoteTemplates,
-          ...builtinTemplates.templates,
-        ]);
-
-        this.registerTrustedAccess(this.templates);
-
+    this.registerRefreshTask();
+    if (!this.configSubscribed) {
+      this.configSubscribed = true;
+      subscribeToConfig(async ({ changed }) => {
+        if (
+          !changed.has('templates.urls') &&
+          !changed.has('templates.refreshInterval')
+        ) {
+          return;
+        }
         logger.info(
-          `Remote template refresh complete — ${this.templates.length} total templates`
+          { changed: [...changed] },
+          're-scheduling remote template refresh after config change'
         );
-      } catch (err) {
-        logger.error(`Remote template refresh failed: ${err}`);
-      }
-    }, intervalSec * 1000);
+        this.registerRefreshTask();
+        // Kick an immediate refresh so newly-added URLs take effect without
+        // waiting for the next scheduled tick.
+        if ((appConfig.templates.urls ?? []).length > 0) {
+          try {
+            await this.refreshRemoteTemplates();
+          } catch (err) {
+            logger.error(
+              { err: err instanceof Error ? err.message : String(err) },
+              'immediate template refresh after config change failed'
+            );
+          }
+        }
+      });
+    }
+  }
 
-    // Don't prevent process exit
-    this.refreshTimer.unref();
+  /**
+   * (Re)register the `template-remote-refresh` task with the current interval.
+   * Always registers — even when no URLs are configured — so the dashboard can
+   * surface the task and users can trigger it manually. Switches between
+   * `scheduled` and `manual` kinds based on whether URLs + a positive interval
+   * are configured.
+   */
+  private static registerRefreshTask(): void {
+    const intervalSec = appConfig.templates.refreshInterval;
+    const templateUrls = appConfig.templates.urls || [];
+    const scheduled = intervalSec > 0 && templateUrls.length > 0;
+
+    TaskManager.register({
+      id: 'template-remote-refresh',
+      label: 'Template remote refresh',
+      description:
+        'Re-fetch remote template definitions and rebuild the merged template list.',
+      category: 'templates',
+      kind: scheduled ? 'scheduled' : 'manual',
+      intervalMs: scheduled ? intervalSec * 1000 : undefined,
+      enabled: true,
+      destructive: false,
+      multiReplica: 'all',
+      run: async () => {
+        if ((appConfig.templates.urls ?? []).length === 0) {
+          return { ok: true, message: 'no remote template URLs configured' };
+        }
+        const { count } = await this.refreshRemoteTemplates();
+        return { ok: true, message: `${count} templates loaded` };
+      },
+    });
+
+    if (scheduled) {
+      logger.info({ intervalSec }, 'scheduled remote template refresh');
+    }
   }
 
   // ---------------------------------------------------------------------------

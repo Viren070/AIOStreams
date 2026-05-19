@@ -7,9 +7,9 @@ import {
   BuiltinServiceId,
   constants,
   encryptString,
-  Env,
   getSimpleTextHash,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import {
   NZB,
   UnprocessedTorrent,
@@ -379,7 +379,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       await metadataStore().set(
         metadataId,
         titleMetadata,
-        Env.BUILTIN_PLAYBACK_LINK_VALIDITY,
+        appConfig.builtins.debrid.playbackLinkValidity,
         true
       );
     } catch {

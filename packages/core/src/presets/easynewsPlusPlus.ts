@@ -1,7 +1,8 @@
 import { ParsedStream, PresetMetadata, Stream } from '../db/index.js';
 import { EasynewsPreset, EasynewsParser } from './easynews.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class EasynewsPlusPlusParser extends EasynewsParser {
@@ -39,15 +40,19 @@ export class EasynewsPlusPlusPreset extends EasynewsPreset {
       ID: 'easynewsPlusPlus',
       NAME: 'Easynews++',
       DESCRIPTION: 'Easynews++ provides content from Easynews',
-      URL: Env.EASYNEWS_PLUS_PLUS_URL,
-      TIMEOUT: Env.DEFAULT_EASYNEWS_PLUS_PLUS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.easynewsPlusPlus.url,
+      TIMEOUT:
+        appConfig.presets.easynewsPlusPlus.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_EASYNEWS_PLUS_PLUS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.easynewsPlusPlus.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       OPTIONS: [
         ...baseOptions(
           'Easynews++',
           super.METADATA.SUPPORTED_RESOURCES,
-          Env.DEFAULT_EASYNEWS_PLUS_PLUS_TIMEOUT || Env.DEFAULT_TIMEOUT
+          appConfig.presets.easynewsPlusPlus.defaultTimeout ??
+            appConfig.presets.defaultTimeout
         ),
         {
           id: 'mediaTypes',
@@ -107,7 +112,7 @@ export class EasynewsPlusPlusPreset extends EasynewsPreset {
       strictTitleMatching: options.strictTitleMatching ? 'on' : 'off',
       baseUrl: options.url
         ? new URL(options.url).origin
-        : Env.EASYNEWS_PLUS_PLUS_URL,
+        : (appConfig.presets.easynewsPlusPlus.publicUrl ?? this.DEFAULT_URL),
       preferredLanguage: '',
       sortingPreference: 'quality_first',
       showQualities: '4k,1080p,720p,480p',

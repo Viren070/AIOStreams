@@ -1,8 +1,9 @@
-import rateLimit, { MemoryStore, ipKeyGenerator } from 'express-rate-limit';
+﻿import rateLimit, { MemoryStore, ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
 import { RedisStore } from 'rate-limit-redis';
 import {
   Env,
+  appConfig,
   createLogger,
   constants,
   APIError,
@@ -17,12 +18,14 @@ const createRateLimiter = (
   maxRequests: number,
   prefix: string = ''
 ) => {
-  if (Env.DISABLE_RATE_LIMITS) {
+  if (appConfig.rateLimits.disabled) {
     return (req: Request, res: Response, next: NextFunction) => next();
   }
-  const redisClient = Env.REDIS_URI ? Cache.getRedisClient() : undefined;
+  const redisClient = appConfig.bootstrap.redisUri
+    ? Cache.getRedisClient()
+    : undefined;
   const store =
-    redisClient && Env.RATE_LIMIT_STORE === 'redis'
+    redisClient && appConfig.rateLimits.store === 'redis'
       ? new RedisStore({
           prefix: `${REDIS_PREFIX}rate-limit:`,
           sendCommand: (...args: string[]) => redisClient.sendCommand(args),
@@ -34,6 +37,7 @@ const createRateLimiter = (
     standardHeaders: true,
     legacyHeaders: false,
     store,
+    validate: { creationStack: false },
     keyGenerator: (req: Request) => {
       const ip = req.requestIp || req.userIp || req.ip;
       const ipKey = ip ? ipKeyGenerator(ip) : '';
@@ -58,75 +62,88 @@ const createRateLimiter = (
   });
 };
 
-const userApiRateLimiter = createRateLimiter(
-  Env.USER_API_RATE_LIMIT_WINDOW * 1000,
-  Env.USER_API_RATE_LIMIT_MAX_REQUESTS,
+/**
+ * Each limiter reads `appConfig.rateLimits.*`, which is unavailable at
+ * module-load time. Wrap the construction so the underlying express-rate-limit
+ * instance is built on the first incoming request (after `initialiseConfig()`
+ * has resolved) and reused thereafter.
+ */
+const lazyLimiter = (
+  resolve: () => { window: number; maxRequests: number },
+  prefix: string
+) => {
+  let limiter: ReturnType<typeof createRateLimiter> | null = null;
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!limiter) {
+      const { window, maxRequests } = resolve();
+      limiter = createRateLimiter(window * 1000, maxRequests, prefix);
+    }
+    return limiter(req, res, next);
+  };
+};
+
+const userApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.userApi,
   'user-api'
 );
 
-const streamApiRateLimiter = createRateLimiter(
-  Env.STREAM_API_RATE_LIMIT_WINDOW * 1000,
-  Env.STREAM_API_RATE_LIMIT_MAX_REQUESTS,
+const streamApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.streamApi,
   'stream-api'
 );
 
-const formatApiRateLimiter = createRateLimiter(
-  Env.FORMAT_API_RATE_LIMIT_WINDOW * 1000,
-  Env.FORMAT_API_RATE_LIMIT_MAX_REQUESTS,
+const formatApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.formatApi,
   'format-api'
 );
 
-const catalogApiRateLimiter = createRateLimiter(
-  Env.CATALOG_API_RATE_LIMIT_WINDOW * 1000,
-  Env.CATALOG_API_RATE_LIMIT_MAX_REQUESTS,
+const catalogApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.catalogApi,
   'catalog-api'
 );
 
-const animeApiRateLimiter = createRateLimiter(
-  Env.ANIME_API_RATE_LIMIT_WINDOW * 1000,
-  Env.ANIME_API_RATE_LIMIT_MAX_REQUESTS,
+const animeApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.animeApi,
   'anime-api'
 );
 
-const stremioStreamRateLimiter = createRateLimiter(
-  Env.STREMIO_STREAM_RATE_LIMIT_WINDOW * 1000,
-  Env.STREMIO_STREAM_RATE_LIMIT_MAX_REQUESTS,
+const stremioStreamRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.stremioStream,
   'stremio-stream'
 );
 
-const stremioCatalogRateLimiter = createRateLimiter(
-  Env.STREMIO_CATALOG_RATE_LIMIT_WINDOW * 1000,
-  Env.STREMIO_CATALOG_RATE_LIMIT_MAX_REQUESTS,
+const stremioCatalogRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.stremioCatalog,
   'stremio-catalog'
 );
 
-const stremioManifestRateLimiter = createRateLimiter(
-  Env.STREMIO_MANIFEST_RATE_LIMIT_WINDOW * 1000,
-  Env.STREMIO_MANIFEST_RATE_LIMIT_MAX_REQUESTS,
+const stremioManifestRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.stremioManifest,
   'stremio-manifest'
 );
 
-const stremioSubtitleRateLimiter = createRateLimiter(
-  Env.STREMIO_SUBTITLE_RATE_LIMIT_WINDOW * 1000,
-  Env.STREMIO_SUBTITLE_RATE_LIMIT_MAX_REQUESTS,
+const stremioSubtitleRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.stremioSubtitle,
   'stremio-subtitle'
 );
 
-const stremioMetaRateLimiter = createRateLimiter(
-  Env.STREMIO_META_RATE_LIMIT_WINDOW * 1000,
-  Env.STREMIO_META_RATE_LIMIT_MAX_REQUESTS,
+const stremioMetaRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.stremioMeta,
   'stremio-meta'
 );
 
-const staticRateLimiter = createRateLimiter(
-  Env.STATIC_RATE_LIMIT_WINDOW * 1000,
-  Env.STATIC_RATE_LIMIT_MAX_REQUESTS,
+const loginRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.login,
+  'auth-login'
+);
+
+const staticRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.static,
   'static'
 );
 
-const easynewsNzbRateLimiter = createRateLimiter(
-  Env.EASYNEWS_NZB_RATE_LIMIT_WINDOW * 1000,
-  Env.EASYNEWS_NZB_RATE_LIMIT_MAX_REQUESTS,
+const easynewsNzbRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.easynewsNzb,
   'easynews-nzb'
 );
 
@@ -143,4 +160,5 @@ export {
   stremioMetaRateLimiter,
   staticRateLimiter,
   easynewsNzbRateLimiter,
+  loginRateLimiter,
 };

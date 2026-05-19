@@ -9,9 +9,9 @@ import { ParsedId } from '../../utils/id-parser.js';
 import {
   constants,
   createLogger,
-  Env,
   getTimeTakenSincePoint,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import { NZB, Torrent } from '../../debrid/index.js';
 import {
   BaseDebridAddon,
@@ -177,7 +177,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     const nzbs: NZB[] = uniqueItems.map((item) => {
       const nzbUrl = this.api.generateNzbUrl(
         item,
-        Env.BASE_URL,
+        appConfig.bootstrap.baseUrl,
         this.encodedAiostreamsAuth
       );
       const age = this.api.calculateAge(item.posted);

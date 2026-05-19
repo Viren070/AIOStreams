@@ -6,6 +6,7 @@ import {
   ExtrasParser,
   makeUrlLogSafe,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { getAddonName } from '../utils/general.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from '../presets/index.js';
@@ -35,6 +36,14 @@ import {
   applyPosterModifications,
   convertDiscoverDeepLinks,
 } from './catalog.js';
+import {
+  hmac,
+  sampleConfigFeatures,
+  track,
+  userAnalyticsEnabled,
+  type AnalyticsServiceBreakdown,
+} from '../analytics/index.js';
+import type { AddonDispositionMap } from '../streams/fetcher.js';
 
 const logger = createLogger('core');
 
@@ -57,8 +66,8 @@ async function pingStreamUrls(streams: ParsedStream[]): Promise<void> {
     logger.debug('No streams to ping');
     return;
   }
-  logger.info(`Pinging ${eligible.length} stream URLs`);
-  const limit = pLimit(Env.PRELOAD_STREAMS_CONCURRENCY);
+  logger.debug({ count: eligible.length }, 'pinging stream urls');
+  const limit = pLimit(appConfig.resources.preload.streamsConcurrency);
   await Promise.all(
     eligible.map((stream) =>
       limit(async () => {
@@ -214,9 +223,7 @@ function getNextEpisode(
   if (episodeCount && currentEpisode === episodeCount) {
     const nextSeasonNumber = currentSeason + 1;
     if (metadata?.seasons?.find((s) => s.season_number === nextSeasonNumber)) {
-      logger.debug(
-        `Current episode is the last of season ${currentSeason}, moving to S${nextSeasonNumber}E01.`
-      );
+      logger.debug({ currentSeason, nextSeason: nextSeasonNumber }, 'current episode is last of season, advancing to next');
       season = nextSeasonNumber;
       episode = 1;
     }
@@ -318,9 +325,7 @@ export async function processStreams(
       nzbFailoverOpts.count,
       ctx.userData.uuid
     ).catch((error) => {
-      logger.error('Error during NZB failover population (beforeLimiting):', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error({ err: error instanceof Error ? error.message : String(error), position: 'beforeLimiting' }, 'error during nzb failover population');
     });
   }
 
@@ -334,9 +339,7 @@ export async function processStreams(
       nzbFailoverOpts.count,
       ctx.userData.uuid
     ).catch((error) => {
-      logger.error('Error during NZB failover population (beforeSEL):', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error({ err: error instanceof Error ? error.message : String(error), position: 'beforeSEL' }, 'error during nzb failover population');
     });
   }
 
@@ -354,9 +357,7 @@ export async function processStreams(
         nzbFailoverOpts.count,
         ctx.userData.uuid
       ).catch((error) => {
-        logger.error('Error during NZB failover population (last):', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        logger.error({ err: error instanceof Error ? error.message : String(error), position: 'last' }, 'error during nzb failover population');
       });
     }
   }
@@ -391,9 +392,7 @@ export async function processStreams(
         );
       }
     }
-    logger.info(
-      `Added ${streamsWithExternalDownloads.length - finalStreams.length} external downloads to streams`
-    );
+    logger.debug({ added: streamsWithExternalDownloads.length - finalStreams.length }, 'added external download streams');
     finalStreams = streamsWithExternalDownloads;
   }
 
@@ -437,14 +436,10 @@ async function precacheNextEpisode(
     seasonToPrecache?.toString(),
     episodeToPrecache?.toString()
   );
-  logger.info(`Pre-caching next episode`, {
-    titleId: parsedId.value,
-    currentSeason,
-    currentEpisode,
-    episodeToPrecache,
-    seasonToPrecache,
-    precacheId,
-  });
+  logger.debug(
+    { titleId: parsedId.value, currentSeason, currentEpisode, episodeToPrecache, seasonToPrecache, precacheId },
+    'pre-caching next episode'
+  );
 
   // Temporarily mutate userData to remove excludeUncached filter for background precache.
   // Preserve original to restore after getStreams returns.
@@ -459,9 +454,7 @@ async function precacheNextEpisode(
   ctx.userData = originalUserData;
 
   if (!nextStreamsResponse.success) {
-    logger.error(`Failed to get streams during precaching ${id}`, {
-      error: nextStreamsResponse.errors,
-    });
+    logger.error({ id, errors: nextStreamsResponse.errors }, 'failed to get streams during precaching');
     return;
   }
 
@@ -473,50 +466,105 @@ async function precacheNextEpisode(
   try {
     const streamSelector = new StreamSelector(context.toExpressionContext());
     selectedStreams = await streamSelector.select(nextStreams, selector);
-    logger.debug(`Precache selector evaluated`, {
-      selector,
-      resultCount: selectedStreams.length,
-    });
+    logger.debug({ selector, resultCount: selectedStreams.length }, 'precache selector evaluated');
   } catch (error) {
-    logger.error(`Failed to evaluate precache selector`, {
-      selector,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logger.error({ selector, err: error instanceof Error ? error.message : String(error) }, 'failed to evaluate precache selector');
   }
 
   if (selectedStreams.length === 0) {
-    logger.debug(
-      `Skipping precaching ${id} as precache selector returned no streams`
-    );
+    logger.debug({ id }, 'skipping precaching, precache selector returned no streams');
     return;
   }
 
   const singleStreamOnly = ctx.userData.precacheSingleStream !== false;
   const streamsToCache = selectedStreams
     .filter((s) => s.url)
-    .slice(0, singleStreamOnly ? 1 : Env.MAX_BACKGROUND_PINGS);
+    .slice(0, singleStreamOnly ? 1 : appConfig.userLimits.maxBackgroundPings);
 
   if (streamsToCache.length === 0) {
-    logger.debug(`Skipping precaching ${id} as no selected stream had a URL`);
+    logger.debug({ id }, 'skipping precaching, no selected stream had a url');
     return;
   }
 
-  logger.debug(
-    `Precaching ${streamsToCache.length} stream(s) for ${id} (${type})`
-  );
+  logger.debug({ count: streamsToCache.length, id, type }, 'precaching streams');
 
   const cacheKey = `precache-${type}-${id}-${ctx.userData.uuid}`;
   await precacheCache.set(
     cacheKey,
     true,
-    Env.PRECACHE_NEXT_EPISODE_MIN_INTERVAL
+    appConfig.resources.precache.nextEpisodeMinInterval
   );
 
   await pingStreamUrls(streamsToCache);
 
-  logger.info(
-    `Successfully precached ${streamsToCache.length} stream(s) for ${id} (${type})`
-  );
+  logger.debug({ count: streamsToCache.length, id, type }, 'precaching complete');
+}
+
+/**
+ * Emit one `addon_contribution` event per addon for the current stream
+ * request. Gated by the per-user analytics flag and only fires when the
+ * request has an attributable user (no anonymous attribution). All work is
+ * O(addons + finalStreams) and stays on the hot path's caller (no I/O).
+ */
+function emitAddonContributions(args: {
+  ctx: AIOStreamsContext;
+  dispositions: AddonDispositionMap;
+  byManifestUrl: Map<string, ParsedStream[]>;
+}): void {
+  if (!userAnalyticsEnabled()) return;
+  const uuid = args.ctx.userData?.uuid;
+  if (!uuid) return; // anonymous/probe traffic — nothing to attribute
+  let uuidHash: string;
+  try {
+    uuidHash = hmac(uuid);
+  } catch {
+    return;
+  }
+
+  for (const [manifestUrl, info] of args.dispositions) {
+    const survivors = args.byManifestUrl.get(manifestUrl) ?? [];
+
+    // Build per-service breakdown over the surviving streams.
+    let serviceBreakdown: AnalyticsServiceBreakdown | null = null;
+    if (survivors.length > 0) {
+      const map: AnalyticsServiceBreakdown = {};
+      for (const s of survivors) {
+        const id = s.service?.id ?? 'none';
+        const slot = map[id] ?? { ok: 0, cached: 0, uncached: 0 };
+        slot.ok += 1;
+        if (s.service) {
+          if (s.service.cached) slot.cached += 1;
+          else slot.uncached += 1;
+        }
+        map[id] = slot;
+      }
+      serviceBreakdown = map;
+    }
+
+    let addonName: string | null = null;
+    if (info.addon.name) {
+      addonName = info.addon.name;
+      if (info.addon.displayIdentifier) {
+        addonName += ` (${info.addon.displayIdentifier})`;
+      }
+    }
+    track({
+      event_type: 'addon_contribution',
+      resource: 'stream',
+      uuid_hash: uuidHash,
+      preset_id: info.addon.preset?.type ?? null,
+      addon_instance_hash: hmac(manifestUrl),
+      addon_name: addonName,
+      url_overridden: false,
+      status: info.status,
+      error_kind: info.errorKind ?? null,
+      latency_ms: info.latencyMs || null,
+      result_count: info.rawCount,
+      final_count: survivors.length,
+      disposition: info.disposition,
+      service_breakdown: serviceBreakdown,
+    });
+  }
 }
 
 export async function getStreams(
@@ -530,18 +578,13 @@ export async function getStreams(
     statistics: { title: string; description: string; forced?: boolean }[];
   }>
 > {
-  logger.info(`Handling stream request`, { type, id });
+  logger.debug({ type, id }, 'handling stream request');
   const statistics: { title: string; description: string; forced?: boolean }[] =
     [];
 
   const supportedAddons = getAddonsForResource(ctx, 'stream', type, id);
 
-  logger.info(
-    `Found ${supportedAddons.length} addons that support the stream resource`,
-    {
-      supportedAddons: supportedAddons.map((a) => a.name),
-    }
-  );
+  logger.debug({ count: supportedAddons.length, addons: supportedAddons.map((a) => a.name) }, 'found addons for stream resource');
 
   const context = StreamContext.create(type, id, ctx.userData);
   ctx.streamContext = context;
@@ -554,6 +597,7 @@ export async function getStreams(
     streams,
     errors,
     statistics: addonStatistics,
+    dispositions,
   } = await ctx.fetcher.fetch(supportedAddons, context);
   const fetchMs = Date.now() - fetchStart;
 
@@ -621,9 +665,7 @@ export async function getStreams(
     const cacheKey = `precache-${type}-${id}-${ctx.userData.uuid}`;
     const cachedNextEpisode = await precacheCache.get(cacheKey, false);
     if (cachedNextEpisode) {
-      logger.info(
-        `The current request for ${type} ${id} has already had the next episode precached within the last ${Env.PRECACHE_NEXT_EPISODE_MIN_INTERVAL} seconds (${precacheCache.getTTL(cacheKey)} seconds left). Skipping precaching.`
-      );
+      logger.debug({ type, id, ttl: precacheCache.getTTL(cacheKey) }, 'skipping precache, already precached recently');
       precache = false;
     } else {
       precache = true;
@@ -643,22 +685,20 @@ export async function getStreams(
 
   if (ctx.userData.preloadStreams?.enabled && !preCaching) {
     let shouldPreload = true;
-    if (Env.PRELOAD_MIN_INTERVAL > 0) {
+    if (appConfig.resources.preload.minInterval > 0) {
       const preloadCooldownKey = `preload-${type}-${id}-${ctx.userData.uuid}`;
       const recentlyPreloaded = await precacheCache.get(
         preloadCooldownKey,
         false
       );
       if (recentlyPreloaded) {
-        logger.info(
-          `Preload for ${type} ${id} skipped — within cooldown (${precacheCache.getTTL(preloadCooldownKey)} seconds left).`
-        );
+        logger.debug({ type, id, ttl: precacheCache.getTTL(preloadCooldownKey) }, 'preload skipped, within cooldown');
         shouldPreload = false;
       } else {
         await precacheCache.set(
           preloadCooldownKey,
           true,
-          Env.PRELOAD_MIN_INTERVAL
+          appConfig.resources.preload.minInterval
         );
       }
     }
@@ -676,7 +716,10 @@ export async function getStreams(
           await streamSelector.select(finalStreams, preloadSelector)
         )
           .filter((s) => s.url)
-          .slice(0, preloadSingleStream ? 1 : Env.MAX_BACKGROUND_PINGS);
+          .slice(
+            0,
+            preloadSingleStream ? 1 : appConfig.userLimits.maxBackgroundPings
+          );
       } catch (selectorError) {
         logger.warn('Preload selector evaluation failed', {
           selector: preloadSelector,
@@ -715,12 +758,19 @@ export async function getStreams(
   );
 
   const byPresetType = new Map<string, ParsedStream[]>();
+  const byManifestUrl = new Map<string, ParsedStream[]>();
   for (const s of finalStreams) {
     const t = s.addon?.preset?.type ?? '';
     if (t) {
       const list = byPresetType.get(t) ?? [];
       list.push(s);
       byPresetType.set(t, list);
+    }
+    const m = s.addon?.manifestUrl;
+    if (m) {
+      const list = byManifestUrl.get(m) ?? [];
+      list.push(s);
+      byManifestUrl.set(m, list);
     }
   }
   for (const [presetType, list] of byPresetType) {
@@ -730,9 +780,30 @@ export async function getStreams(
     }
   }
 
-  logger.info(
-    `Returning ${finalStreams.length} streams and ${errors.length} errors and ${statistics.length} statistic`
-  );
+  emitAddonContributions({
+    ctx,
+    dispositions,
+    byManifestUrl,
+  });
+
+  if (ctx.userData?.uuid) {
+    const serviceIds: string[] = [];
+    for (const s of ctx.userData.services ?? []) {
+      if (s.enabled !== false && s.id) serviceIds.push(s.id);
+    }
+    const presetTypes: string[] = [];
+    for (const p of ctx.userData.presets ?? []) {
+      if (p.enabled !== false && p.type) presetTypes.push(p.type);
+    }
+    sampleConfigFeatures({
+      uuid: ctx.userData.uuid,
+      serviceIds,
+      formatterId: ctx.userData.formatter?.id ?? null,
+      presetTypes,
+    });
+  }
+
+  logger.debug({ streams: finalStreams.length, errors: errors.length, statistics: statistics.length }, 'stream request complete');
   return {
     success: true,
     data: { streams: finalStreams, statistics },
@@ -745,32 +816,22 @@ export async function getMeta(
   type: string,
   id: string
 ): Promise<AIOStreamsResponse<ParsedMeta | null>> {
-  logger.info(`Handling meta request`, { type, id });
+  logger.debug({ type, id }, 'handling meta request');
 
   const candidates = getMetaCandidates(ctx, type, id);
 
   if (candidates.length === 0) {
-    logger.warn(`No supported addon was found for the requested meta`, {
-      type,
-      id,
-    });
+    logger.warn({ type, id }, 'no supported addon found for meta request');
     return { success: false, data: null, errors: [] };
   }
 
   const errors: Array<{ title: string; description: string }> = [];
 
   for (const candidate of candidates) {
-    logger.info(`Trying addon for meta resource`, {
-      addonName: candidate.addon.name,
-      addonInstanceId: candidate.instanceId,
-      reason: candidate.reason,
-    });
+    logger.debug({ addon: candidate.addon.name, instanceId: candidate.instanceId, reason: candidate.reason }, 'trying addon for meta resource');
     try {
       const meta = await new Wrapper(candidate.addon).getMeta(type, id);
-      logger.info(`Successfully got meta from addon`, {
-        addonName: candidate.addon.name,
-        addonInstanceId: candidate.instanceId,
-      });
+      logger.debug({ addon: candidate.addon.name, instanceId: candidate.instanceId }, 'successfully got meta from addon');
       if (ctx.userData.usePosterServiceForMeta) {
         await applyPosterModifications(ctx, [meta], type, true);
       } else {
@@ -793,10 +854,7 @@ export async function getMeta(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      logger.warn(`Failed to get meta from addon ${candidate.addon.name}`, {
-        error: errorMessage,
-        reason: candidate.reason,
-      });
+      logger.warn({ addon: candidate.addon.name, err: errorMessage, reason: candidate.reason }, 'failed to get meta from addon');
       if (candidate.reason === 'general type support') continue;
       errors.push({
         title: `[❌] ${candidate.addon.name}`,
@@ -805,10 +863,7 @@ export async function getMeta(
     }
   }
 
-  logger.error(
-    `All ${candidates.length} candidate addons failed for meta request`,
-    { type, id }
-  );
+  logger.error({ candidates: candidates.length, type, id }, 'all candidate addons failed for meta request');
   return { success: false, data: null, errors };
 }
 
@@ -818,7 +873,7 @@ export async function getSubtitles(
   id: string,
   extras?: string
 ): Promise<AIOStreamsResponse<Subtitle[]>> {
-  logger.info(`Handling subtitle request`, { type, id, extras });
+  logger.debug({ type, id, extras }, 'handling subtitle request');
 
   const supportedAddons = getAddonsForResource(ctx, 'subtitles', type, id);
   const parsedExtras = new ExtrasParser(extras);
@@ -857,7 +912,7 @@ export async function getAddonCatalog(
   type: string,
   id: string
 ): Promise<AIOStreamsResponse<AddonCatalog[]>> {
-  logger.info(`getAddonCatalog: ${id}`);
+  logger.debug({ type, id }, 'handling addon catalog request');
   const addonInstanceId = id.split('.', 2)[0];
   const addon = ctx.addons.find((a) => a.instanceId === addonInstanceId);
   if (!addon) {

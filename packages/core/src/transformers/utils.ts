@@ -1,4 +1,5 @@
-import { constants, Env } from '../index.js';
+﻿import { constants } from '../index.js';
+import { config as appConfig } from '../config/index.js';
 import { ParsedStream, UserData } from '../db/index.js';
 
 /**
@@ -80,7 +81,7 @@ export function generateBingeGroup(
       return true;
     });
 
-  let bingeGroup = Env.ADDON_ID;
+  let bingeGroup = appConfig.branding.addonId;
 
   switch (autoPlaySettings.method) {
     case 'matchingFile':

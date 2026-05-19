@@ -7,7 +7,8 @@ import {
   UserData,
 } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   debridioSocialOption,
   debridioApiKeyOption,
@@ -87,7 +88,8 @@ export class DebridioTvPreset extends Preset {
       ...baseOptions(
         'Debridio TV',
         supportedResources,
-        Env.DEFAULT_DEBRIDIO_TV_TIMEOUT
+        appConfig.presets.debridioTv.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       debridioApiKeyOption,
       {
@@ -115,9 +117,13 @@ export class DebridioTvPreset extends Preset {
       ID: 'debridio-tv',
       NAME: 'Debridio TV',
       LOGO: debridioLogo,
-      URL: Env.DEBRIDIO_TV_URL,
-      TIMEOUT: Env.DEFAULT_DEBRIDIO_TV_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_DEBRIDIO_TV_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.debridioTv.url,
+      TIMEOUT:
+        appConfig.presets.debridioTv.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.debridioTv.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Live streaming of a wide variety of channels.',
       OPTIONS: options,
@@ -142,11 +148,11 @@ export class DebridioTvPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
-    let url = this.METADATA.URL;
+    let url = this.DEFAULT_URL;
     if (options.url?.endsWith('/manifest.json')) {
       url = options.url;
     } else {
-      let baseUrl = this.METADATA.URL;
+      let baseUrl = this.DEFAULT_URL;
       if (options.url) {
         baseUrl = new URL(options.url).origin;
       }
@@ -190,7 +196,7 @@ export class DebridioTvPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

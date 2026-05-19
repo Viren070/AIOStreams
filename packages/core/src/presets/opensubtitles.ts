@@ -1,11 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import {
-  constants,
-  Env,
-  RESOURCES,
-  SUBTITLES_RESOURCE,
-} from '../utils/index.js';
+import { constants, RESOURCES, SUBTITLES_RESOURCE } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class OpenSubtitlesPreset extends Preset {
   static override get METADATA() {
@@ -14,7 +10,8 @@ export class OpenSubtitlesPreset extends Preset {
       ...baseOptions(
         'OpenSubtitles',
         supportedResources,
-        Env.DEFAULT_OPENSUBTITLES_TIMEOUT
+        appConfig.presets.opensubtitles.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
     ];
 
@@ -22,10 +19,13 @@ export class OpenSubtitlesPreset extends Preset {
       ID: 'opensubtitles',
       NAME: 'OpenSubtitles v3',
       LOGO: 'https://iwf1.com/scrapekod/icons/service.subtitles.opensubtitles_by_opensubtitles_dualsub.png',
-      URL: Env.OPENSUBTITLES_URL,
-      TIMEOUT: Env.DEFAULT_OPENSUBTITLES_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.opensubtitles.url,
+      TIMEOUT:
+        appConfig.presets.opensubtitles.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_OPENSUBTITLES_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.opensubtitles.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'OpenSubtitles addon',
       OPTIONS: options,
@@ -48,7 +48,7 @@ export class OpenSubtitlesPreset extends Preset {
   ): Addon {
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${Env.OPENSUBTITLES_URL}/manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,

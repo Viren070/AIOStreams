@@ -1,0 +1,9 @@
+export { LogsPage } from '@/app/dashboard/logs/logs-page';
+export { SettingsPage } from '@/app/dashboard/settings/settings-page';
+export { AnalyticsPage } from '@/app/dashboard/analytics/analytics-page';
+export { SystemPage } from '@/app/dashboard/system/system-page';
+export { UsersPage } from '@/app/dashboard/users/users-page';
+export { ProxyPage } from '@/app/dashboard/proxy/proxy-page';
+export { TasksPage } from '@/app/dashboard/tasks/tasks-page';
+export { CachePage } from '@/app/dashboard/cache/cache-page';
+export { DashboardHome } from '@/app/dashboard/overview/overview-page';

@@ -1,4 +1,3 @@
-'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useUserData, removeInvalidPresetReferences } from '@/context/userData';
 import { useStatus } from '@/context/status';
@@ -12,7 +11,6 @@ import TemplateOption from '../../../shared/template-option';
 import { useDisclosure } from '@/hooks/disclosure';
 import { useMode } from '@/context/mode';
 import { toast } from 'sonner';
-import Image from 'next/image';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { BiEdit, BiTrash } from 'react-icons/bi';
 import {
@@ -1089,11 +1087,10 @@ function AddonListItem({
         {/* Logo */}
         <div className="relative flex-shrink-0 h-8 w-8 hidden sm:block">
           {logo ? (
-            <Image
+            <img
               src={logo}
               alt={presetMetadata?.NAME || ''}
-              fill
-              className="w-full h-full object-contain rounded-md"
+              className="absolute inset-0 w-full h-full object-contain rounded-md"
             />
           ) : presetMetadata?.ID === 'custom' ? (
             <PlusIcon className="w-full h-full object-contain text-[--brand]" />

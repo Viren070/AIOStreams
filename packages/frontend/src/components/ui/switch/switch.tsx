@@ -1,5 +1,3 @@
-'use client';
-
 import { hiddenInputStyles } from '@/components/ui/input';
 import { Popover } from '@/components/ui/popover';
 import * as SwitchPrimitive from '@radix-ui/react-switch';

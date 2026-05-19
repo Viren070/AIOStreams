@@ -2,10 +2,10 @@ import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import {
   constants,
-  Env,
   HTTP_STREAM_TYPE,
   LIVE_STREAM_TYPE,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import StreamParser from '../parser/streams.js';
 
 const wyzieLanguageOptions = [
@@ -625,7 +625,8 @@ export class FlixStreamsPreset extends Preset {
       ...baseOptions(
         'Flix-Streams',
         supportedResources,
-        Env.DEFAULT_FLIX_STREAMS_TIMEOUT || 10000
+        appConfig.presets.flixStreams.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       supporterHint,
       supporterTokenOption,
@@ -649,9 +650,13 @@ export class FlixStreamsPreset extends Preset {
       ID: 'flix-streams',
       NAME: 'Flix-Streams',
       LOGO: 'https://flixnest.app/flix-streams/static/icon.png',
-      URL: Env.FLIX_STREAMS_URL,
-      TIMEOUT: Env.DEFAULT_FLIX_STREAMS_TIMEOUT || 10000,
-      USER_AGENT: Env.DEFAULT_FLIX_STREAMS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.flixStreams.url,
+      TIMEOUT:
+        appConfig.presets.flixStreams.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.flixStreams.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'All-in-one Flix addon for movies, series, anime, live TV, and sports.',
@@ -692,7 +697,7 @@ export class FlixStreamsPreset extends Preset {
       return options.url;
     }
 
-    const url = String(options.url || this.METADATA.URL).replace(/\/$/, '');
+    const url = String(options.url || this.DEFAULT_URL).replace(/\/$/, '');
     const config = this.buildConfig(options);
     const configToken = this.base64EncodeJSON(config, 'urlSafe');
 

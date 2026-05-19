@@ -1,4 +1,4 @@
-import {
+﻿import {
   Addon,
   Option,
   ParsedFile,
@@ -8,7 +8,7 @@ import {
 } from '../db/index.js';
 import { convertLangCodeToName, mapLanguageCode } from '../utils/languages.js';
 import StreamParser from '../parser/streams.js';
-import { Env, constants } from '../utils/index.js';
+import { appConfig, constants } from '../utils/index.js';
 import { BuiltinStreamParser } from './builtin.js';
 import { baseOptions } from './preset.js';
 import { StremThruPreset } from './stremthru.js';
@@ -237,7 +237,7 @@ export class NekoBtPreset extends TorznabPreset {
       ...baseOptions(
         'nekoBT',
         supportedResources,
-        Env.BUILTIN_DEFAULT_NEKOBT_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.builtins.nekobt.timeout ?? appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url' && option.id !== 'resources'),
       {
         id: 'apiKey',
@@ -326,7 +326,7 @@ export class NekoBtPreset extends TorznabPreset {
         socials: [
           {
             id: 'website',
-            url: Env.BUILTIN_NEKOBT_URL.replace('/api/torznab', ''),
+            url: appConfig.builtins.nekobt.url.replace('/api/torznab', ''),
           },
         ],
       },
@@ -336,9 +336,10 @@ export class NekoBtPreset extends TorznabPreset {
       ID: 'neko-bt',
       NAME: 'nekoBT',
       LOGO: 'https://avatars.githubusercontent.com/u/221218851?v=4',
-      URL: Env.BUILTIN_NEKOBT_URL,
-      TIMEOUT: Env.BUILTIN_DEFAULT_NEKOBT_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [appConfig.builtins.nekobt.url],
+      TIMEOUT:
+        appConfig.builtins.nekobt.timeout ?? appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION: 'An addon to get debrid results from nekoBT.',
       OPTIONS: options,
@@ -353,7 +354,7 @@ export class NekoBtPreset extends TorznabPreset {
     services: constants.ServiceId[],
     options: Record<string, any>
   ): string {
-    const nekoBtUrl = this.METADATA.URL;
+    const nekoBtUrl = this.DEFAULT_URL;
 
     const config = {
       ...this.getBaseConfig(userData, services),
@@ -365,6 +366,6 @@ export class NekoBtPreset extends TorznabPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
+    return `${appConfig.bootstrap.internalUrl}/builtins/torznab/${configString}/manifest.json`;
   }
 }

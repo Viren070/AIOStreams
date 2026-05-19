@@ -1,4 +1,3 @@
-'use client';
 import React from 'react';
 import { Option } from '@aiostreams/core';
 import { Button } from '../../../ui/button';

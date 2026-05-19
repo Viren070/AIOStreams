@@ -1,3 +1,4 @@
+﻿import { config as appConfig } from '../config/index.js';
 import {
   randomBytes,
   createCipheriv,
@@ -8,8 +9,7 @@ import {
 } from 'crypto';
 import { genSalt, hash, compare } from 'bcrypt';
 import { deflateSync, inflateSync } from 'zlib';
-import { Env } from './index.js';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 import { fromUrlSafeBase64, toUrlSafeBase64 } from './general.js';
 const logger = createLogger('crypto');
 
@@ -90,7 +90,7 @@ export function isEncrypted(data: string): boolean {
  */
 export function encryptString(data: string, secretKey?: Buffer): Response {
   if (!secretKey) {
-    secretKey = Buffer.from(Env.SECRET_KEY, 'hex');
+    secretKey = Buffer.from(appConfig.bootstrap.secretKey, 'hex');
   }
   try {
     const compressed = compressData(data);
@@ -118,7 +118,7 @@ export function encryptString(data: string, secretKey?: Buffer): Response {
  */
 export function decryptString(data: string, secretKey?: Buffer): Response {
   if (!secretKey) {
-    secretKey = Buffer.from(Env.SECRET_KEY, 'hex');
+    secretKey = Buffer.from(appConfig.bootstrap.secretKey, 'hex');
   }
   try {
     if (!isEncrypted(data)) {

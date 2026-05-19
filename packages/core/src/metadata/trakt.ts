@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import {
   AnimeDatabase,
   Cache,
@@ -7,6 +7,7 @@ import {
   ParsedId,
   formatZodError,
   Env,
+  appConfig,
 } from '../utils/index.js';
 import { MetadataTitle } from './utils.js';
 import { iso31661ToIso6391 } from '../utils/languages.js';
@@ -64,9 +65,9 @@ export async function getTraktAliases(
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': Env.DEFAULT_USER_AGENT,
+          'User-Agent': appConfig.http.defaultUserAgent,
           'trakt-api-version': '2',
-          'trakt-api-key': Env.TRAKT_CLIENT_ID ?? '',
+          'trakt-api-key': appConfig.metadata.trakt.clientId ?? '',
         },
       }
     );

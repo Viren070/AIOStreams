@@ -1,4 +1,3 @@
-'use client';
 import React from 'react';
 import * as constants from '../../../../../core/src/utils/constants';
 import { BUILTIN_FORMATTER_DEFINITIONS } from '../../../../../core/src/utils/formatter-definitions';

@@ -45,7 +45,7 @@ export function getObjectDiff(
     'encryptedPassword',
     'showChanges',
     'ip',
-    'addonPassword',
+    'accessToken',
   ]);
 
   if (obj1 == null && obj2 == null) return diffs;

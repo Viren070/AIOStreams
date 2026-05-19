@@ -1,5 +1,3 @@
-'use client';
-
 import { cva, VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { useContext } from 'react';
@@ -22,7 +20,7 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
     [
       'UI-VerticalMenu__item',
       'group/verticalMenu_item relative flex flex-none truncate items-center w-full font-medium rounded-[--radius] transition cursor-pointer',
-      'hover:bg-[--subtle] hover:text-[--foreground]',
+      'hover:text-[--foreground]',
       'focus-visible:bg-[--subtle] outline-none text-[--muted]',
       'data-[current=true]:bg-[--subtle] data-[current=true]:text-[--foreground]',
     ],
@@ -32,9 +30,16 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
           true: 'justify-center',
           false: null,
         },
+        isSidebar: {
+          // Sidebar items are pill-shaped and have no hover background —
+          // the icon grows/tilts instead (see itemIcon).
+          true: 'rounded-full',
+          false: 'hover:bg-[--subtle]',
+        },
       },
       defaultVariants: {
         collapsed: false,
+        isSidebar: false,
       },
     }
   ),
@@ -51,10 +56,15 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
           true: 'justify-center',
           false: null,
         },
+        isSidebar: {
+          true: '',
+          false: null,
+        },
       },
       defaultVariants: {
         size: 'md',
         collapsed: false,
+        isSidebar: false,
       },
     }
   ),
@@ -89,7 +99,7 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
   itemIcon: cva(
     [
       'UI-VerticalMenu__itemIcon',
-      'flex-shrink-0 mr-3',
+      'flex-shrink-0 mr-3 transition',
       'text-[--muted] text-xl',
       'group-hover/verticalMenu_item:text-[--foreground]',
       'group-data-[current=true]/verticalMenu_item:text-[--foreground]',
@@ -105,9 +115,14 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
           true: 'mr-0',
           false: null,
         },
+        isSidebar: {
+          true: 'group-hover/verticalMenu_item:scale-[1.05] group-hover/verticalMenu_item:-rotate-2',
+          false: null,
+        },
       },
       defaultVariants: {
         size: 'md',
+        isSidebar: false,
       },
     }
   ),
@@ -121,6 +136,7 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
 const __VerticalMenuContext = React.createContext<
   Pick<VerticalMenuProps, 'onItemSelect'> & {
     collapsed?: boolean;
+    isSidebar?: boolean;
   }
 >({});
 
@@ -128,7 +144,7 @@ export type VerticalMenuItem = {
   name: string;
   iconType?: React.ElementType;
   isCurrent?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   addon?: React.ReactNode;
   subContent?: React.ReactNode;
 };
@@ -148,6 +164,11 @@ export type VerticalMenuProps = React.ComponentPropsWithRef<'div'> &
      * Callback fired when an item is selected.
      */
     onItemSelect?: (item: VerticalMenuItem) => void;
+    /**
+     * Sidebar styling: pill-shaped items, no hover background, the icon
+     * grows/tilts on hover instead.
+     */
+    isSidebar?: boolean;
   };
 
 export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
@@ -167,20 +188,24 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
       itemTooltipProps,
       className,
       items,
+      isSidebar: _isSidebar1,
       ...rest
     } = props;
 
-    const { onItemSelect: _onItemSelect, collapsed: _collapsed2 } = useContext(
-      __VerticalMenuContext
-    );
+    const {
+      onItemSelect: _onItemSelect,
+      collapsed: _collapsed2,
+      isSidebar: _isSidebar2,
+    } = useContext(__VerticalMenuContext);
 
     const collapsed = _collapsed1 ?? _collapsed2 ?? false;
+    const isSidebar = _isSidebar1 ?? _isSidebar2 ?? false;
 
     const handleItemClick =
       (item: VerticalMenuItem) => (e: React.MouseEvent<HTMLElement>) => {
         onItemSelect?.(item);
         _onItemSelect?.(item);
-        item.onClick?.();
+        item.onClick?.(e);
       };
 
     const ItemContentWrapper = React.useCallback(
@@ -202,14 +227,14 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
           <div
             data-vertical-menu-item={item.name}
             className={cn(
-              VerticalMenuAnatomy.itemContent({ size, collapsed }),
+              VerticalMenuAnatomy.itemContent({ size, collapsed, isSidebar }),
               itemContentClass
             )}
           >
             {item.iconType && (
               <item.iconType
                 className={cn(
-                  VerticalMenuAnatomy.itemIcon({ size, collapsed }),
+                  VerticalMenuAnatomy.itemIcon({ size, collapsed, isSidebar }),
                   itemIconClass
                 )}
                 aria-hidden="true"
@@ -221,7 +246,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
           </div>
         </ItemContentWrapper>
       ),
-      [collapsed, size, itemContentClass, itemIconClass]
+      [collapsed, size, itemContentClass, itemIconClass, isSidebar]
     );
 
     return (
@@ -235,6 +260,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
           value={{
             onItemSelect,
             collapsed: _collapsed1 ?? false,
+            isSidebar: _isSidebar1 ?? false,
           }}
         >
           {items.map((item, idx) => {
@@ -243,7 +269,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                 {!item.subContent ? (
                   <button
                     className={cn(
-                      VerticalMenuAnatomy.item({ collapsed }),
+                      VerticalMenuAnatomy.item({ collapsed, isSidebar }),
                       itemClass
                     )}
                     data-current={item.isCurrent}
@@ -258,7 +284,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                       <DisclosureTrigger>
                         <button
                           className={cn(
-                            VerticalMenuAnatomy.item({ collapsed }),
+                            VerticalMenuAnatomy.item({ collapsed, isSidebar }),
                             itemClass,
                             VerticalMenuAnatomy.parentItem(),
                             parentItemClass

@@ -9,10 +9,10 @@ import {
 import { Preset, baseOptions } from './preset.js';
 import {
   constants,
-  Env,
   HTTP_STREAM_TYPE,
   LIVE_STREAM_TYPE,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
 
 class AStreamStreamParser extends StreamParser {
@@ -81,7 +81,8 @@ export class AStreamPreset extends Preset {
       ...baseOptions(
         'AStream',
         supportedResources,
-        Env.DEFAULT_ASTREAM_TIMEOUT
+        appConfig.presets.astream.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'language',
@@ -129,9 +130,13 @@ export class AStreamPreset extends Preset {
       ID: 'astream',
       NAME: 'AStream',
       LOGO: `https://raw.githubusercontent.com/Dydhzo/astream/refs/heads/main/astream/assets/astream-logo.jpg`,
-      URL: Env.ASTREAM_URL,
-      TIMEOUT: Env.DEFAULT_ASTREAM_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_ASTREAM_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.astream.url,
+      TIMEOUT:
+        appConfig.presets.astream.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.astream.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: "Addon non officiel pour accéder au contenu d'Anime-Sama",
       OPTIONS: options,
@@ -176,7 +181,7 @@ export class AStreamPreset extends Preset {
     if (options.url?.endsWith('/manifest.json')) {
       return options.url;
     }
-    const url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
 
     if (
       (options.tmdbEnabled || options.tmdbEpisodeMapping) &&

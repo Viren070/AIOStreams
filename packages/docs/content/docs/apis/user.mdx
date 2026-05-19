@@ -13,9 +13,21 @@ Manage AIOStreams user accounts and configurations. A **user** is identified by 
 
 ---
 
+## Authentication
+
+All endpoints except `HEAD /api/v1/user` and `POST /api/v1/user` (create) authenticate via the standard **HTTP Basic** scheme:
+
+```
+Authorization: Basic base64(<uuid>:<password>)
+```
+
+The `<password>` may be either the raw user password or the `encryptedPassword` token returned by `POST /api/v1/user` and `GET /api/v1/user` — the server transparently decrypts encrypted tokens.
+
+---
+
 ## UUID Aliases
 
-Wherever a UUID is accepted, you may supply a configured **alias** (a human-readable name mapped to a UUID via the `ALIASED_CONFIGURATIONS` environment variable) instead. The alias is resolved to the real UUID before processing.
+Wherever a UUID is accepted (including as the username in the `Authorization` header), you may supply a configured **alias** (a human-readable name mapped to a UUID via the `ALIASED_CONFIGURATIONS` environment variable) instead. The alias is resolved to the real UUID before processing.
 
 ---
 
@@ -60,12 +72,15 @@ curl -X HEAD "https://your-instance.example.com/api/v1/user?uuid=xxxxxxxx-xxxx-x
 
 Returns the full user configuration and an encrypted copy of the password for use in subsequent requests.
 
+### Authentication
+
+Requires `Authorization: Basic base64(uuid:password)`.
+
 ### Query Parameters
 
-| Parameter  | Type   | Required | Description                 |
-| ---------- | ------ | -------- | --------------------------- |
-| `uuid`     | string | ✅       | UUID (or alias) of the user |
-| `password` | string | ✅       | User's plaintext password   |
+| Parameter | Type    | Required | Description                                                                  |
+| --------- | ------- | -------- | ---------------------------------------------------------------------------- |
+| `raw`     | boolean | ❌       | When `true`, returns the stored config without merging the parent config in. |
 
 ### Response `200`
 
@@ -89,7 +104,8 @@ Returns the full user configuration and an encrypted copy of the password for us
 ### Example
 
 ```bash
-curl "https://your-instance.example.com/api/v1/user?uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&password=mypassword"
+curl "https://your-instance.example.com/api/v1/user" \
+  -H "Authorization: Basic $(echo -n 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:mypassword' | base64)"
 ```
 
 ---
@@ -149,21 +165,21 @@ curl -X POST "https://your-instance.example.com/api/v1/user" \
 
 Replaces the stored configuration for an existing user. The request must include the full updated `config` object — partial updates are not supported.
 
+### Authentication
+
+Requires `Authorization: Basic base64(uuid:password)`.
+
 ### Request Body
 
 ```json
 {
-  "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "password": "mypassword",
   "config": { }
 }
 ```
 
-| Field      | Type   | Required | Description                           |
-| ---------- | ------ | -------- | ------------------------------------- |
-| `uuid`     | string | ✅       | UUID (or alias) of the user to update |
-| `password` | string | ✅       | Current password                      |
-| `config`   | object | ✅       | Full replacement configuration object |
+| Field    | Type   | Required | Description                           |
+| -------- | ------ | -------- | ------------------------------------- |
+| `config` | object | ✅       | Full replacement configuration object |
 
 ### Response `200`
 
@@ -183,8 +199,9 @@ Replaces the stored configuration for an existing user. The request must include
 
 ```bash
 curl -X PUT "https://your-instance.example.com/api/v1/user" \
+  -H "Authorization: Basic $(echo -n 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:mypassword' | base64)" \
   -H "Content-Type: application/json" \
-  -d '{"uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "password": "mypassword", "config": { }}'
+  -d '{"config": { }}'
 ```
 
 ---
@@ -195,19 +212,9 @@ curl -X PUT "https://your-instance.example.com/api/v1/user" \
 
 Permanently deletes a user and their configuration. This action is irreversible.
 
-### Request Body
+### Authentication
 
-```json
-{
-  "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "password": "mypassword"
-}
-```
-
-| Field      | Type   | Required | Description                           |
-| ---------- | ------ | -------- | ------------------------------------- |
-| `uuid`     | string | ✅       | UUID (or alias) of the user to delete |
-| `password` | string | ✅       | Current password                      |
+Requires `Authorization: Basic base64(uuid:password)`.
 
 ### Response `200`
 
@@ -224,6 +231,5 @@ Permanently deletes a user and their configuration. This action is irreversible.
 
 ```bash
 curl -X DELETE "https://your-instance.example.com/api/v1/user" \
-  -H "Content-Type: application/json" \
-  -d '{"uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "password": "mypassword"}'
+  -H "Authorization: Basic $(echo -n 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:mypassword' | base64)"
 ```

@@ -1,5 +1,5 @@
-import { Option, UserData } from '../db/index.js';
-import { Env, constants } from '../utils/index.js';
+﻿import { Option, UserData } from '../db/index.js';
+import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
 
@@ -21,10 +21,12 @@ export class BitmagnetPreset extends TorznabPreset {
         description: 'The timeout for this addon',
         type: 'number',
         required: true,
-        default: Env.BUILTIN_DEFAULT_BITMAGNET_TIMEOUT || Env.DEFAULT_TIMEOUT,
+        default:
+          appConfig.builtins.bitmagnet.timeout ??
+          appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -82,9 +84,11 @@ export class BitmagnetPreset extends TorznabPreset {
       ID: 'bitmagnet',
       NAME: 'Bitmagnet',
       LOGO: 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/bitmagnet.png',
-      URL: `${Env.INTERNAL_URL}/builtins/torznab`,
-      TIMEOUT: Env.BUILTIN_DEFAULT_BITMAGNET_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/torznab`],
+      TIMEOUT:
+        appConfig.builtins.bitmagnet.timeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
         'An addon to get debrid results from Bitmagnet, a self-hosted BitTorrent indexer and DHT crawler.',
@@ -92,7 +96,7 @@ export class BitmagnetPreset extends TorznabPreset {
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
       BUILTIN: true,
-      DISABLED: !Env.BUILTIN_BITMAGNET_URL
+      DISABLED: !appConfig.builtins.bitmagnet.url
         ? {
             reason: 'Not configured',
             disabled: true,
@@ -106,19 +110,19 @@ export class BitmagnetPreset extends TorznabPreset {
     services: constants.ServiceId[],
     options: Record<string, any>
   ): string {
-    if (!Env.BUILTIN_BITMAGNET_URL) {
+    if (!appConfig.builtins.bitmagnet.url) {
       throw new Error('The Bitmagnet URL is not set');
     }
 
     const config = {
       ...this.getBaseConfig(userData, services),
-      url: `${Env.BUILTIN_BITMAGNET_URL.replace(/\/$/, '')}/torznab`,
+      url: `${appConfig.builtins.bitmagnet.url.replace(/\/$/, '')}/torznab`,
       apiPath: '/api',
       forceQuerySearch: true,
       paginate: options.paginate ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
+    return `${appConfig.bootstrap.internalUrl}/builtins/torznab/${configString}/manifest.json`;
   }
 }

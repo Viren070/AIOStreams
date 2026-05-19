@@ -1,5 +1,5 @@
 import { Cache } from '../../utils/cache.js';
-import { Env } from '../../utils/env.js';
+import { config as appConfig } from '../../config/index.js';
 import {
   formatZodError,
   makeRequest,
@@ -74,7 +74,7 @@ const EztvGetTorrentsOptions = z.object({
 
 type EztvGetTorrentsOptions = z.infer<typeof EztvGetTorrentsOptions>;
 
-const API_BASE_URL = Env.BUILTIN_EZTV_URL;
+const getApiBaseUrl = () => appConfig.builtins.eztv.url;
 
 class EztvAPI {
   private headers: Record<string, string>;
@@ -87,7 +87,7 @@ class EztvAPI {
   constructor() {
     this.headers = {
       'Content-Type': 'application/json',
-      'User-Agent': Env.DEFAULT_USER_AGENT,
+      'User-Agent': appConfig.http.defaultUserAgent,
       Accept: 'application/json',
     };
   }
@@ -102,11 +102,11 @@ class EztvAPI {
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
       bgCacheKey: `eztv:${cacheKey}`,
-      cacheTTL: Env.BUILTIN_EZTV_SEARCH_CACHE_TTL,
+      cacheTTL: appConfig.builtins.eztv.searchCacheTtl,
       fetchFn: () =>
         this.request<EztvGetTorrentsResponse>('/api/get-torrents', {
           schema: EztvGetTorrentsResponseSchema,
-          timeout: Env.BUILTIN_EZTV_SEARCH_TIMEOUT,
+          timeout: appConfig.builtins.eztv.searchTimeout,
           queryParams: new URLSearchParams({
             imdb_id: parsed.imdbId,
             limit: String(parsed.limit ?? 100),
@@ -127,7 +127,7 @@ class EztvAPI {
     }
   ): Promise<T> {
     const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = new URL(path, API_BASE_URL);
+    const url = new URL(path, getApiBaseUrl());
     if (options.queryParams) {
       url.search = options.queryParams.toString();
     }
@@ -137,8 +137,9 @@ class EztvAPI {
       lockKey,
       () => this._request(endpoint, options),
       {
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
-        ttl: (options.timeout ?? Env.MAX_TIMEOUT) + 1000,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
+        ttl:
+          (options.timeout ?? appConfig.userLimits.timeouts.maxTimeout) + 1000,
       }
     );
     return result;
@@ -154,7 +155,7 @@ class EztvAPI {
   ): Promise<T> {
     const { schema } = options;
     const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = new URL(path, API_BASE_URL);
+    const url = new URL(path, getApiBaseUrl());
     if (options.queryParams) {
       url.search = options.queryParams.toString();
     }
@@ -165,7 +166,7 @@ class EztvAPI {
       const response = await makeRequest(url.toString(), {
         method: 'GET',
         headers: this.headers,
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
       });
 
       if (!response.ok) {
@@ -194,6 +195,6 @@ class EztvAPI {
   }
 }
 
-export { API_BASE_URL as eztvApiUrl };
+export { getApiBaseUrl as getEztvApiUrl };
 export type { EztvGetTorrentsOptions, EztvGetTorrentsResponse, EztvTorrent };
 export default EztvAPI;

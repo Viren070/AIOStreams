@@ -2,11 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import {
   createLogger,
   getTimeTakenSincePoint,
-  maskSensitiveInfo,
   makeUrlLogSafe,
 } from '@aiostreams/core';
 
-const logger = createLogger('server');
+const logger = createLogger('http');
 
 export const loggerMiddleware = (
   req: Request,
@@ -15,35 +14,17 @@ export const loggerMiddleware = (
 ) => {
   const startTime = Date.now();
 
-  // Log incoming request
-  logger.http({
-    type: 'request',
-    method: req.method,
-    path: makeUrlLogSafe(req.originalUrl),
-    query: Object.keys(req.query).length ? req.query : undefined,
-    ip: req.userIp ? maskSensitiveInfo(req.userIp) : undefined,
-    contentType: req.get('content-type'),
-    userAgent: req.get('user-agent'),
-    formatted: `${req.method} ${makeUrlLogSafe(req.originalUrl)}${req.userIp ? ` - u:${maskSensitiveInfo(req.userIp)}` : ''}${req.requestIp ? ` - r:${maskSensitiveInfo(req.requestIp)}` : ''} - ${req.get('content-type')} - ${req.get('user-agent')}`,
-  });
+  const ip = req.userIp ?? undefined;
+  const path = makeUrlLogSafe(req.originalUrl);
 
-  // Capture response finish event
+  logger.debug({ method: req.method, path, ip }, 'incoming request');
+
   res.on('finish', () => {
-    // Calculate duration after response is sent
     const duration = getTimeTakenSincePoint(startTime);
-
-    // Log response details
-    logger.http({
-      type: 'response',
-      method: req.method,
-      path: makeUrlLogSafe(req.originalUrl),
-      statusCode: res.statusCode,
-      duration,
-      ip: req.userIp ? maskSensitiveInfo(req.userIp) : undefined,
-      contentType: res.get('content-type'),
-      contentLength: res.get('content-length'),
-      formatted: `${req.method} ${makeUrlLogSafe(req.originalUrl)}${req.userIp ? ` - u: ${maskSensitiveInfo(req.userIp)}` : ''}${req.requestIp ? ` - r: ${maskSensitiveInfo(req.requestIp)}` : ''} - Response: ${res.statusCode} - ${duration}`,
-    });
+    logger.debug(
+      { method: req.method, path, status: res.statusCode, duration, ip },
+      'request complete'
+    );
   });
 
   next();

@@ -1,4 +1,3 @@
-'use client';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '../../ui/button';
 import { NumberInput } from '../../ui/number-input';

@@ -1,7 +1,8 @@
-import fs from 'fs/promises';
+﻿import fs from 'fs/promises';
 import path from 'path';
-import { Logger } from 'winston';
+import type { Logger } from '../../logging/logger.js';
 import { DistributedLock } from '../../utils/distributed-lock.js';
+import { TaskManager } from '../../tasks/index.js';
 
 export interface BaseDatasetConfig {
   dataPath: string;
@@ -9,6 +10,9 @@ export interface BaseDatasetConfig {
   maxSyncRetries?: number;
   lockTimeoutMs?: number;
   logger: Logger;
+  taskId: string;
+  taskLabel?: string;
+  taskDescription?: string;
 }
 
 export abstract class BaseDataset {
@@ -21,9 +25,12 @@ export abstract class BaseDataset {
   protected logger: Logger;
 
   protected initialisationPromise: Promise<void> | null = null;
-  protected refreshInterval: NodeJS.Timeout | null = null;
   protected syncRetryCount: number = 0;
   protected syncRetryTimeout: NodeJS.Timeout | null = null;
+
+  protected readonly taskId: string;
+  protected readonly taskLabel?: string;
+  protected readonly taskDescription?: string;
 
   constructor(config: BaseDatasetConfig) {
     this.DATA_PATH = config.dataPath;
@@ -36,6 +43,9 @@ export abstract class BaseDataset {
     this.MAX_SYNC_RETRIES = config.maxSyncRetries ?? 1;
     this.LOCK_TIMEOUT_MS = config.lockTimeoutMs ?? 300000; // 5 minutes
     this.logger = config.logger;
+    this.taskId = config.taskId;
+    this.taskLabel = config.taskLabel;
+    this.taskDescription = config.taskDescription;
   }
 
   public async initialise(): Promise<void> {
@@ -167,14 +177,23 @@ export abstract class BaseDataset {
   }
 
   protected startSyncInterval() {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
-    this.refreshInterval = setInterval(() => {
-      this.syncWithRetry().catch((err) => {
-        this.logger.error('Background sync failed:', err);
-      });
-    }, this.REFRESH_INTERVAL_MS);
+    TaskManager.register({
+      id: this.taskId,
+      label: this.taskLabel ?? this.taskId,
+      description:
+        this.taskDescription ??
+        `Refresh dataset stored at ${path.basename(this.DATA_PATH)}`,
+      category: 'data-sync',
+      kind: 'scheduled',
+      intervalMs: this.REFRESH_INTERVAL_MS,
+      enabled: true,
+      destructive: false,
+      multiReplica: 'single',
+      run: async () => {
+        await this.syncWithRetry();
+        return { ok: true, message: 'sync complete' };
+      },
+    });
   }
 
   /**

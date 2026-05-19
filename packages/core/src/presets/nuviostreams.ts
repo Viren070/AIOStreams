@@ -7,8 +7,9 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
 
 class NuvioStreamsStreamParser extends StreamParser {
@@ -161,7 +162,8 @@ export class NuvioStreamsPreset extends Preset {
       ...baseOptions(
         'Nuvio Streams',
         supportedResources,
-        Env.DEFAULT_NUVIOSTREAMS_TIMEOUT
+        appConfig.presets.nuvioStreams.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'scraperApiKey',
@@ -229,9 +231,13 @@ export class NuvioStreamsPreset extends Preset {
       ID: 'nuvio-streams',
       NAME: 'Nuvio Streams',
       LOGO: 'https://raw.githubusercontent.com/tapframe/NuvioStreaming/main/assets/titlelogo.png',
-      URL: Env.NUVIOSTREAMS_URL,
-      TIMEOUT: Env.DEFAULT_NUVIOSTREAMS_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_NUVIOSTREAMS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.nuvioStreams.url,
+      TIMEOUT:
+        appConfig.presets.nuvioStreams.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.nuvioStreams.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Free high quality streaming using multiple providers. ',
       OPTIONS: options,
@@ -273,7 +279,7 @@ export class NuvioStreamsPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useMemo, useState } from 'react';
 import {
   CommandDialog,
@@ -13,6 +11,8 @@ import {
 import { useCommandPalette } from '@/context/command-palette';
 import { useQuickActions } from '@/context/quick-actions';
 import { useMode } from '@/context/mode';
+import { useStatus } from '@/context/status';
+import { useUserData } from '@/context/userData';
 import { FIELD_META, type MenuId } from '../../../../core/src/utils/fieldMeta';
 import {
   BiInfoCircle,
@@ -24,6 +24,7 @@ import {
   BiServer,
   BiCog,
   BiSave,
+  BiBarChartAlt2,
 } from 'react-icons/bi';
 
 const MENU_ITEMS: Array<{
@@ -31,6 +32,9 @@ const MENU_ITEMS: Array<{
   label: string;
   icon: React.ReactNode;
   proOnly?: boolean;
+  /** When true, the entry is only shown if (a) the instance owner has
+   *  per-user analytics on, and (b) the user is signed in. */
+  requiresStats?: boolean;
 }> = [
   { id: 'about', label: 'About', icon: <BiInfoCircle /> },
   { id: 'services', label: 'Services', icon: <BiCloud /> },
@@ -40,6 +44,12 @@ const MENU_ITEMS: Array<{
   { id: 'formatter', label: 'Formatter', icon: <BiPen /> },
   { id: 'proxy', label: 'Proxy', icon: <BiServer /> },
   { id: 'miscellaneous', label: 'Miscellaneous', icon: <BiCog /> },
+  {
+    id: 'stats',
+    label: 'Stats',
+    icon: <BiBarChartAlt2 />,
+    requiresStats: true,
+  },
   { id: 'save-install', label: 'Save & Install', icon: <BiSave /> },
 ];
 
@@ -75,6 +85,7 @@ const MENU_LABELS: Record<MenuId, string> = {
   fun: 'Options',
   filters: 'Filters',
   sorting: 'Sorting',
+  stats: 'Stats',
   formatter: 'Formatter',
   proxy: 'Proxy',
   miscellaneous: 'Miscellaneous',
@@ -132,12 +143,21 @@ export function CommandPalette() {
   const { isOpen, close, navigate } = useCommandPalette();
   const { actions: quickActions } = useQuickActions();
   const { mode } = useMode();
+  const { status } = useStatus();
+  const user = useUserData();
+  const statsAvailable =
+    status?.settings.userAnalyticsEnabled === true &&
+    Boolean(user.uuid && user.password);
   const [query, setQuery] = useState('');
   const isEmpty = query.trim().length === 0;
 
   const visibleMenus = useMemo(
-    () => MENU_ITEMS.filter((m) => mode === 'pro' || !m.proOnly),
-    [mode]
+    () =>
+      MENU_ITEMS.filter(
+        (m) =>
+          (mode === 'pro' || !m.proOnly) && (!m.requiresStats || statsAvailable)
+      ),
+    [mode, statsAvailable]
   );
 
   const searchResults = useMemo((): SearchResult[] => {

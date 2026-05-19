@@ -1,6 +1,6 @@
-import z from 'zod';
+﻿import z from 'zod';
 import { UserData } from '../db/schemas.js';
-import { Env } from './env.js';
+import { config } from '../config/index.js';
 import {
   SyncManager,
   type SyncOverride,
@@ -8,7 +8,7 @@ import {
   parseSyncedUrl,
 } from './sync.js';
 import { extractNamesFromExpression } from '../parser/streamExpression.js';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 
 const logger = createLogger('core');
 
@@ -42,14 +42,9 @@ export class SelAccess {
    */
   private static get manager(): SyncManager<StreamExpressionItem> {
     if (!this._instance) {
-      const configuredUrls = Env.WHITELISTED_SEL_URLS || [];
+      const configuredUrls = config.userLimits.sel.urls;
 
-      // WHITELISTED_SYNC_REFRESH_INTERVAL (seconds), fallback to old ms value converted to seconds
-      const refreshInterval =
-        Env.WHITELISTED_SYNC_REFRESH_INTERVAL ??
-        Math.floor(
-          (Env.ALLOWED_REGEX_PATTERNS_URLS_REFRESH_INTERVAL ?? 86400000) / 1000
-        );
+      const refreshInterval = config.userLimits.sync.refreshInterval;
 
       this._instance = new SyncManager<StreamExpressionItem>({
         cacheKey: 'sel-expressions',
@@ -84,9 +79,9 @@ export class SelAccess {
    * - `trusted` → trusted users can use any URL; others limited to whitelisted SEL URLs
    */
   public static validateUrls(urls: string[], userData?: UserData): string[] {
+    const access = config.userLimits.sel.access;
     const isUnrestricted =
-      Env.SEL_SYNC_ACCESS === 'all' ||
-      (Env.SEL_SYNC_ACCESS === 'trusted' && userData?.trusted);
+      access === 'all' || (access === 'trusted' && userData?.trusted);
 
     if (isUnrestricted) return urls;
 
@@ -141,7 +136,7 @@ export class SelAccess {
             url,
             items: [] as StreamExpressionItem[],
             error:
-              Env.SEL_SYNC_ACCESS === 'trusted' && !userData?.trusted
+              config.userLimits.sel.access === 'trusted' && !userData?.trusted
                 ? 'This URL is not in the allowed list. Contact the instance owner to whitelist it, or ask to be marked as a trusted user.'
                 : 'This URL is not allowed by the server configuration.',
           } satisfies FetchResult<StreamExpressionItem>;

@@ -8,6 +8,7 @@ declare global {
       userIp?: string;
       requestIp?: string;
       uuid?: string;
+      user?: { username: string; isAdmin: boolean };
     }
   }
 }

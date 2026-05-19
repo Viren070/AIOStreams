@@ -1,5 +1,3 @@
-'use client';
-
 import React, {
   createContext,
   useCallback,
@@ -71,11 +69,20 @@ export function CommandPaletteProvider({
     // which may be inside a display:none container.
     const findVisible = (id: string): HTMLElement | null => {
       const all = document.querySelectorAll<HTMLElement>('#' + CSS.escape(id));
-      console.log(`[cmd] querySelectorAll #${id} found ${all.length} element(s)`);
+      console.log(
+        `[cmd] querySelectorAll #${id} found ${all.length} element(s)`
+      );
       for (const el of all) {
         const op = el.offsetParent;
         const rect = el.getBoundingClientRect();
-        console.log(`[cmd]   candidate:`, el, `offsetParent:`, op, `rect:`, rect);
+        console.log(
+          `[cmd]   candidate:`,
+          el,
+          `offsetParent:`,
+          op,
+          `rect:`,
+          rect
+        );
       }
       for (const el of all) {
         if (el.offsetParent !== null) return el;
@@ -94,7 +101,9 @@ export function CommandPaletteProvider({
         }
       }
       if (!el) {
-        console.log(`[cmd] t+${elapsed.toFixed(0)}ms — no visible element found yet`);
+        console.log(
+          `[cmd] t+${elapsed.toFixed(0)}ms — no visible element found yet`
+        );
         if (elapsed < 1200) {
           requestAnimationFrame(findAndScroll);
         } else {
@@ -103,7 +112,13 @@ export function CommandPaletteProvider({
         return;
       }
 
-      console.log(`[cmd] t+${elapsed.toFixed(0)}ms — visible element found:`, el.id, el, 'rect:', el.getBoundingClientRect());
+      console.log(
+        `[cmd] t+${elapsed.toFixed(0)}ms — visible element found:`,
+        el.id,
+        el,
+        'rect:',
+        el.getBoundingClientRect()
+      );
 
       // If the element is inside an inert panel (e.g. inactive MenuTabs tab),
       // keep polling until the panel becomes active.
@@ -119,19 +134,31 @@ export function CommandPaletteProvider({
 
       if (inertAncestor) {
         wasInert = true;
-        console.log(`[cmd] t+${elapsed.toFixed(0)}ms — element is inert via ancestor:`, inertAncestor);
+        console.log(
+          `[cmd] t+${elapsed.toFixed(0)}ms — element is inert via ancestor:`,
+          inertAncestor
+        );
         if (elapsed < 1200) {
           requestAnimationFrame(findAndScroll);
         } else {
-          console.warn('[cmd] timed out waiting for element to leave inert state', ids);
+          console.warn(
+            '[cmd] timed out waiting for element to leave inert state',
+            ids
+          );
         }
         return;
       }
 
-      console.log(`[cmd] t+${elapsed.toFixed(0)}ms — element is active (wasInert=${wasInert}), proceeding`);
+      console.log(
+        `[cmd] t+${elapsed.toFixed(0)}ms — element is active (wasInert=${wasInert}), proceeding`
+      );
 
       const doHighlight = () => {
-        console.log(`[cmd] doHighlight firing, el:`, el!.id, el!.getBoundingClientRect());
+        console.log(
+          `[cmd] doHighlight firing, el:`,
+          el!.id,
+          el!.getBoundingClientRect()
+        );
         el!.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (previousHighlightRef.current) {
           previousHighlightRef.current.removeAttribute('data-command-target');

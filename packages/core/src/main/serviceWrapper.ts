@@ -1,8 +1,8 @@
-import { Addon, ParsedStream, UserData } from '../db/schemas.js';
+﻿import { Addon, ParsedStream, UserData } from '../db/schemas.js';
 import {
   constants,
   createLogger,
-  Env,
+  appConfig,
   getSimpleTextHash,
   encryptString,
   BuiltinServiceId,
@@ -144,13 +144,12 @@ export async function resolveServiceWrappedStreams(
   }
 
   if (reconfigureStreams.length > 0) {
-    logger.info(
-      `Reconfigure Service: found ${reconfigureStreams.length} debrid streams with infoHash for re-processing`
-    );
+    logger.debug({ count: reconfigureStreams.length }, 'reconfigure service: found debrid streams with infohash');
   }
 
-  logger.info(
-    `Resolving ${wrappedP2PStreams.length} wrapped external torrent and ${reconfigureStreams.length} reconfigure streams through debrid services`
+  logger.debug(
+    { wrapped: wrappedP2PStreams.length, reconfigure: reconfigureStreams.length },
+    'resolving streams through debrid services'
   );
 
   // Build BuiltinDebridServices from user's service configuration
@@ -225,7 +224,7 @@ export async function resolveServiceWrappedStreams(
   await metadataStore().set(
     metadataId,
     metadataToStore,
-    Env.BUILTIN_PLAYBACK_LINK_VALIDITY,
+    appConfig.builtins.debrid.playbackLinkValidity,
     true
   );
 
@@ -250,8 +249,9 @@ export async function resolveServiceWrappedStreams(
     metadata
   );
 
-  logger.info(
-    `Resolved ${debridStreams.length} debrid streams from ${wrappedP2PStreams.length} wrapped torrent + ${reconfigureStreams.length} reconfigure streams`
+  logger.debug(
+    { debrid: debridStreams.length, wrapped: wrappedP2PStreams.length, reconfigure: reconfigureStreams.length },
+    'resolved debrid streams'
   );
 
   return {
@@ -293,9 +293,7 @@ function buildDebridServices(userData: UserData): BuiltinDebridServices {
         });
       }
     } catch (error) {
-      logger.warn(
-        `Failed to get credential for service ${service.id}: ${error}`
-      );
+      logger.warn({ serviceId: service.id, err: error instanceof Error ? (error as Error).message : String(error) }, 'failed to get credential for service');
     }
   }
 
@@ -329,9 +327,7 @@ function buildAndDeduplicateTorrents(streams: ParsedStream[]): Torrent[] {
     }
   }
 
-  logger.info(
-    `Deduplicated ${torrents.length} torrents to ${uniqueTorrents.length} unique torrents`
-  );
+  logger.debug({ from: torrents.length, to: uniqueTorrents.length }, 'deduplicated torrents');
 
   return uniqueTorrents;
 }

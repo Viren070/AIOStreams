@@ -273,16 +273,19 @@ Select a public instance below and click **Open Template**. This takes you direc
     TEMPLATE_URLS=["https://git.tamtaro.de/complete.json"]
     ```
 
-    Optionally, if your instance is protected by `ADDON_PASSWORD` and you want
-    to avoid per-user URL restrictions, you can also set:
+    Optionally, if your instance is access-controlled (login required via
+    `AIOSTREAMS_AUTH` / `AIOSTREAMS_AUTH_REQUIRED`) and you want to avoid
+    per-user URL restrictions, you can also set the **SEL sync access** and
+    **Regex filter access** to `all`. These (and `TEMPLATE_URLS`) are now
+    runtime settings configurable from the dashboard Settings page, or via the
+    matching environment variables:
 
     ```sh
     SEL_SYNC_ACCESS=all
     REGEX_FILTER_ACCESS=all
     ```
 
-    See [Environment Variables](/configuration/environment-variables) for
-    details.
+    See [Environment Variables](/configuration/environment-variables) for details
 
   </Callout>
 </TemplateOpener>

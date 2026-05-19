@@ -1,4 +1,3 @@
-'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as constants from '../../../../../core/src/utils/constants';
 import { ParsedStream } from '../../../../../core/src/db/schemas';

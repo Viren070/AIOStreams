@@ -1,7 +1,7 @@
-import { NewznabPreset } from './newznab.js';
+﻿import { NewznabPreset } from './newznab.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { Option, UserData } from '../db/index.js';
-import { Env } from '../utils/index.js';
+import { appConfig } from '../utils/index.js';
 
 export class NZBHydraPreset extends NewznabPreset {
   static override get METADATA() {
@@ -27,10 +27,10 @@ export class NZBHydraPreset extends NewznabPreset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.BUILTIN_DEFAULT_NZBHYDRA_TIMEOUT,
+        default: appConfig.builtins.nzbhydra.timeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -65,7 +65,7 @@ export class NZBHydraPreset extends NewznabPreset {
         default: [],
       },
 
-      ...(Env.BUILTIN_NZBHYDRA_URL && Env.BUILTIN_NZBHYDRA_API_KEY
+      ...(appConfig.builtins.nzbhydra.url && appConfig.builtins.nzbhydra.apiKey
         ? [
             {
               id: 'notRequiredNote',
@@ -82,7 +82,9 @@ export class NZBHydraPreset extends NewznabPreset {
         name: 'NZBHydra URL',
         description: 'Provide the URL to the NZBHydra endpoint ',
         type: 'url',
-        required: !Env.BUILTIN_NZBHYDRA_URL || !Env.BUILTIN_NZBHYDRA_API_KEY,
+        required:
+          !appConfig.builtins.nzbhydra.url ||
+          !appConfig.builtins.nzbhydra.apiKey,
       },
       {
         id: 'nzbhydraApiKey',
@@ -90,7 +92,9 @@ export class NZBHydraPreset extends NewznabPreset {
         description:
           'The password for the NZBHydra API. This is used to authenticate with the NZBHydra endpoint.',
         type: 'password',
-        required: !Env.BUILTIN_NZBHYDRA_URL || !Env.BUILTIN_NZBHYDRA_API_KEY,
+        required:
+          !appConfig.builtins.nzbhydra.url ||
+          !appConfig.builtins.nzbhydra.apiKey,
       },
       {
         id: 'searchMode',
@@ -144,9 +148,10 @@ export class NZBHydraPreset extends NewznabPreset {
       ID: 'nzbhydra',
       NAME: 'NZBHydra',
       LOGO: 'https://raw.githubusercontent.com/theotherp/nzbhydra2/refs/heads/master/core/ui-src/img/logo.png',
-      URL: `${Env.INTERNAL_URL}/builtins/newznab`,
-      TIMEOUT: Env.BUILTIN_DEFAULT_NZBHYDRA_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/newznab`],
+      TIMEOUT:
+        appConfig.builtins.nzbhydra.timeout ?? appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'An addon to get usenet results from a NZBHydra instance.',
       OPTIONS: options,
@@ -168,8 +173,8 @@ export class NZBHydraPreset extends NewznabPreset {
       nzbhydraUrl = options.nzbhydraUrl;
       nzbhydraApiKey = options.nzbhydraApiKey;
     } else {
-      nzbhydraUrl = Env.BUILTIN_NZBHYDRA_URL;
-      nzbhydraApiKey = Env.BUILTIN_NZBHYDRA_API_KEY;
+      nzbhydraUrl = appConfig.builtins.nzbhydra.url;
+      nzbhydraApiKey = appConfig.builtins.nzbhydra.apiKey;
     }
 
     if (!nzbhydraUrl || !nzbhydraApiKey) {
@@ -187,6 +192,6 @@ export class NZBHydraPreset extends NewznabPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${this.METADATA.URL}/${configString}/manifest.json`;
+    return `${this.DEFAULT_URL}/${configString}/manifest.json`;
   }
 }

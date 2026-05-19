@@ -7,5 +7,6 @@ import { frontendRoot } from '../../app.js';
 export default router;
 
 router.get('/', staticRateLimiter, (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(frontendRoot, 'index.html'));
 });

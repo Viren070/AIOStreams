@@ -1,5 +1,11 @@
-import { Headers } from 'undici';
-import { Env, Cache, makeRequest, ParsedId, IdType } from '../utils/index.js';
+﻿import { Headers } from 'undici';
+import {
+  appConfig,
+  Cache,
+  makeRequest,
+  ParsedId,
+  IdType,
+} from '../utils/index.js';
 import { deduplicateTitles, Metadata, MetadataTitle } from './utils.js';
 import { iso31661ToIso6391 } from '../utils/languages.js';
 import { z } from 'zod';
@@ -157,16 +163,17 @@ export class TMDBMetadata {
   public constructor(auth?: { accessToken?: string; apiKey?: string }) {
     if (
       !auth?.accessToken &&
-      !Env.TMDB_ACCESS_TOKEN &&
+      !appConfig.metadata.tmdb.accessToken &&
       !auth?.apiKey &&
-      !Env.TMDB_API_KEY
+      !appConfig.metadata.tmdb.apiKey
     ) {
       throw new Error('TMDB Access Token or API Key is not set');
     }
-    if (auth?.apiKey || Env.TMDB_API_KEY) {
-      this.apiKey = auth?.apiKey || Env.TMDB_API_KEY;
-    } else if (auth?.accessToken || Env.TMDB_ACCESS_TOKEN) {
-      this.accessToken = auth?.accessToken || Env.TMDB_ACCESS_TOKEN;
+    if (auth?.apiKey || appConfig.metadata.tmdb.apiKey) {
+      this.apiKey = auth?.apiKey || appConfig.metadata.tmdb.apiKey || undefined;
+    } else if (auth?.accessToken || appConfig.metadata.tmdb.accessToken) {
+      this.accessToken =
+        auth?.accessToken || appConfig.metadata.tmdb.accessToken || undefined;
     }
   }
 

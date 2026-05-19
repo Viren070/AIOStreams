@@ -3,7 +3,7 @@ import { createFormatter, FormatterContext } from '../formatters/index.js';
 import { AIOStreamsError, AIOStreamsResponse } from '../main/types.js';
 import { z } from 'zod';
 import { StreamType } from '../utils/constants.js';
-import { Env } from '../utils/env.js';
+import { config as appConfig } from '../config/index.js';
 
 type ErrorOptions = {
   errorTitle?: string;
@@ -113,7 +113,7 @@ export class ChillLinkTransformer {
           .filter((line) => line.length > 0)
       : [];
     return {
-      id: `${Env.ADDON_ID}.${stream.id}`,
+      id: `${appConfig.branding.addonId}.${stream.id}`,
       title: name,
       url: stream.url,
       metadata,
@@ -122,12 +122,12 @@ export class ChillLinkTransformer {
 
   static createErrorStream(options: ErrorOptions = {}): ChillLinkSource {
     const {
-      errorTitle = `[❌] ${Env.ADDON_NAME}`,
+      errorTitle = `[❌] ${appConfig.branding.addonName}`,
       errorDescription = 'Unknown error',
       errorUrl = 'https://github.com/Viren070/AIOStreams',
     } = options;
     return {
-      id: `${Env.ADDON_ID}.error.${Math.random().toString(36).slice(2, 10)}`,
+      id: `${appConfig.branding.addonId}.error.${Math.random().toString(36).slice(2, 10)}`,
       title: `${errorTitle} - ${errorDescription}`,
       url: errorUrl,
       metadata: [],

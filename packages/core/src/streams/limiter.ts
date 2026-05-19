@@ -1,5 +1,5 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
-import { createLogger, getTimeTakenSincePoint } from '../utils/index.js';
+import { createLogger } from '../utils/index.js';
 import { shouldPassthroughStage } from './utils.js';
 
 const logger = createLogger('limiter');
@@ -192,9 +192,7 @@ class StreamLimiter {
     // Log summary of removed streams
     const removedCount = streams.length - limitedStreams.length;
     if (removedCount > 0) {
-      logger.info(
-        `Removed ${removedCount} streams due to limits in ${getTimeTakenSincePoint(start)}`
-      );
+      logger.debug({ removed: removedCount, took: Date.now() - start }, 'stream limiting complete');
     }
 
     return limitedStreams;

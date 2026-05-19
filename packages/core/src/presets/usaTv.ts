@@ -7,7 +7,8 @@ import {
   UserData,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, LIVE_STREAM_TYPE } from '../utils/index.js';
+import { constants, LIVE_STREAM_TYPE } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
 
 class USATvStreamParser extends StreamParser {
@@ -60,16 +61,25 @@ export class USATVPreset extends Preset {
     ];
 
     const options: Option[] = [
-      ...baseOptions('USA TV', supportedResources, Env.DEFAULT_USA_TV_TIMEOUT),
+      ...baseOptions(
+        'USA TV',
+        supportedResources,
+        appConfig.presets.usaTv.defaultTimeout ??
+          appConfig.presets.defaultTimeout
+      ),
     ];
 
     return {
       ID: 'usa-tv',
       NAME: 'USA TV',
-      LOGO: `${Env.USA_TV_URL}/public/logo.png`,
-      URL: Env.USA_TV_URL,
-      TIMEOUT: Env.DEFAULT_USA_TV_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USA_TV_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.usaTv.url[0] ?? ''}/public/logo.png`,
+      URL: appConfig.presets.usaTv.url,
+      TIMEOUT:
+        appConfig.presets.usaTv.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.usaTv.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Provides access to channels across various categories for USA',
@@ -92,7 +102,7 @@ export class USATVPreset extends Preset {
   ): Addon {
     const baseUrl = options.url
       ? new URL(options.url).origin
-      : this.METADATA.URL;
+      : this.DEFAULT_URL;
 
     const url = options.url?.endsWith('/manifest.json')
       ? options.url

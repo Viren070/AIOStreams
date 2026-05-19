@@ -165,10 +165,12 @@ or phrases in 4 different fields:
 
 <Callout type="info">
   This filter is only available on self hosted instances, due to potential abuse
-  You will either need to add your UUID to the `TRUSTED_UUIDS` environment
-  variable, or set the `REGEX_FILTER_ACCESS` environment variable to `all` (only
-  recommended if you have set an `ADDON_PASSWORD`, ensuring no one unauthorised
-  can access your instance)
+  You will either need to add your UUID to **Trusted UUIDs**
+  (`TRUSTED_UUIDS`), or set **Regex filter access** (`REGEX_FILTER_ACCESS`) to
+  `all` — only recommended if your instance is access-controlled (login
+  required via `AIOSTREAMS_AUTH` / `AIOSTREAMS_AUTH_REQUIRED`) so no one
+  unauthorised can access it. These are runtime settings, configurable from the
+  dashboard Settings page or the matching environment variables.
 </Callout>
 
 This is essentially a more powerful version of the keyword filter, allowing you to use regular expressions to filter streams.

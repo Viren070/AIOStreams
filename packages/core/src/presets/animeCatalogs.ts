@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class AnimeCatalogsPreset extends Preset {
   private static malCatalogs = [
@@ -143,7 +144,8 @@ export class AnimeCatalogsPreset extends Preset {
       ...baseOptions(
         'Anime Catalogs',
         supportedResources,
-        Env.DEFAULT_ANIME_CATALOGS_TIMEOUT
+        appConfig.presets.animeCatalogs.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
       {
         id: 'dubbed',
@@ -228,11 +230,14 @@ export class AnimeCatalogsPreset extends Preset {
     return {
       ID: 'anime-catalogs',
       NAME: 'Anime Catalogs',
-      LOGO: `${Env.ANIME_CATALOGS_URL}/addon-logo.png`,
-      URL: Env.ANIME_CATALOGS_URL,
-      TIMEOUT: Env.DEFAULT_ANIME_CATALOGS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      LOGO: `${appConfig.presets.animeCatalogs.url[0] ?? ''}/addon-logo.png`,
+      URL: appConfig.presets.animeCatalogs.url,
+      TIMEOUT:
+        appConfig.presets.animeCatalogs.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_ANIME_CATALOGS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.animeCatalogs.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Catalogs for your favourite anime from: MyAnimeList, AniDB, AniList, Kitsu, aniSearch, LiveChart.me, Notify.Moe',
@@ -279,7 +284,7 @@ export class AnimeCatalogsPreset extends Preset {
     return {
       name: options.name || this.METADATA.NAME,
       identifier: '',
-      manifestUrl: `${Env.ANIME_CATALOGS_URL}/${config}/manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/${config}/manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -303,7 +308,7 @@ export class AnimeCatalogsPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

@@ -11,14 +11,14 @@ import {
 } from '../../utils/index.js';
 import TorrentGalaxyAPI, {
   TorrentGalaxyCategory,
-  torrentGalaxyUrl,
+  getTorrentGalaxyUrl,
 } from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import {
   extractTrackersFromMagnet,
   validateInfoHash,
 } from '../utils/debrid.js';
-import { Env } from '../../utils/env.js';
+import { config as appConfig } from '../../config/index.js';
 import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
 
 const logger = createLogger('torrent-galaxy');
@@ -61,7 +61,7 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
     }
 
     const queries = this.buildQueries(parsedId, metadata, {
-      titleLanguages: getTitleLanguagesForUrl(torrentGalaxyUrl, this.id),
+      titleLanguages: getTitleLanguagesForUrl(getTorrentGalaxyUrl(), this.id),
     });
     if (metadata.imdbId) {
       queries.push(metadata.imdbId);
@@ -90,7 +90,7 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
         // Calculate required pages
         const totalPages = Math.min(
           Math.ceil(total / pageSize),
-          Env.BUILTIN_TORRENT_GALAXY_PAGE_LIMIT
+          appConfig.builtins.torrentGalaxy.pageLimit
         );
 
         if (totalPages <= 1) {
