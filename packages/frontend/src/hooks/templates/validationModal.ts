@@ -1,4 +1,3 @@
-'use client';
 import { useState } from 'react';
 import { Template } from '@aiostreams/core';
 import { TemplateValidation } from '@/lib/templates/types';

@@ -10,31 +10,40 @@ export enum Time {
   Day = 24 * 60 * 60 * 1000,
 }
 
+const UNIT_MS: Record<string, number> = {
+  s: Time.Second,
+  m: Time.Minute,
+  h: Time.Hour,
+  d: Time.Day,
+  w: 7 * Time.Day,
+};
+
 /**
- * Parses a single unit time string (e.g. "5s", "2m", "1h", "1d") into milliseconds.
+ * Parses a duration string into milliseconds. Accepts a single unit
+ * (e.g. "5s", "2m", "1h", "1d", "2w") or a compound expression with
+ * optional whitespace between parts (e.g. "1h30m", "2w 3d").
+ *
+ * This round-trips with {@link formatDurationAsText} (which emits up to two
+ * units, including weeks).
  * @param timeStr The time string to parse
  * @returns The time in milliseconds
  */
 export function parseTime(timeStr: string): number {
-  const regex = /^(\d+)(s|m|h|d)$/;
-  const match = timeStr.match(regex);
-  if (!match) {
+  const compact = timeStr.replace(/\s+/g, '').toLowerCase();
+  const partRegex = /(\d+)(w|d|h|m|s)/g;
+  let total = 0;
+  let consumed = 0;
+  let match: RegExpExecArray | null;
+  while ((match = partRegex.exec(compact)) !== null) {
+    total += parseInt(match[1], 10) * UNIT_MS[match[2]];
+    consumed += match[0].length;
+  }
+  // Reject anything with leftover, non-duration characters (e.g. "abc",
+  // "1x", "1h foo") so callers can fall back / surface a validation error.
+  if (consumed === 0 || consumed !== compact.length) {
     throw new Error(`Invalid time format: ${timeStr}`);
   }
-  const value = parseInt(match[1], 10);
-  const unit = match[2];
-  switch (unit) {
-    case 's':
-      return value * Time.Second;
-    case 'm':
-      return value * Time.Minute;
-    case 'h':
-      return value * Time.Hour;
-    case 'd':
-      return value * Time.Day;
-    default:
-      throw new Error(`Unknown time unit: ${unit}`);
-  }
+  return total;
 }
 
 /**

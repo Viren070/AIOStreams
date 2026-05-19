@@ -1,4 +1,4 @@
-import {
+﻿import {
   CacheAndPlaySchema,
   Manifest,
   Meta,
@@ -13,13 +13,13 @@ import {
   constants,
   encryptString,
   enrichParsedIdWithAnimeEntry,
-  Env,
   formatZodError,
   fromUrlSafeBase64,
   getSimpleTextHash,
   getTimeTakenSincePoint,
   SERVICE_DETAILS,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import { TorrentClient } from '../../utils/torrent.js';
 import {
   BuiltinDebridServices,
@@ -41,7 +41,7 @@ import { processTorrents, processNZBs } from '../utils/debrid.js';
 import { calculateAbsoluteEpisode } from '../utils/general.js';
 import { MetadataService } from '../../metadata/service.js';
 import { MetadataTitle } from '../../metadata/utils.js';
-import { Logger } from 'winston';
+import type { Logger } from '../../logging/logger.js';
 import pLimit from 'p-limit';
 import { cleanTitle } from '../../parser/utils.js';
 import { NzbDavConfig, NzbDAVService } from '../../debrid/nzbdav.js';
@@ -393,7 +393,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     await metadataStore().set(
       metadataId,
       titleMetadata,
-      Env.BUILTIN_PLAYBACK_LINK_VALIDITY,
+      appConfig.builtins.debrid.playbackLinkValidity,
       true
     );
 
@@ -467,7 +467,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           selected.add(metadata.primaryTitle);
         } else if (spec === 'all') {
           metadata.titlesWithLang
-            ?.slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT)
+            ?.slice(0, appConfig.builtins.scrape.titleLimit)
             .forEach((t) => selected.add(cleanTitle(t.title)));
           break; // no need to process further specs
         } else if (spec === 'original') {
@@ -493,7 +493,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       }
     } else if (options?.useAllTitles) {
       titles = metadata.titles
-        .slice(0, Env.BUILTIN_SCRAPE_TITLE_LIMIT)
+        .slice(0, appConfig.builtins.scrape.titleLimit)
         .map(cleanTitle);
     } else {
       titles = [metadata.primaryTitle];

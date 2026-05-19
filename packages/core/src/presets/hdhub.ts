@@ -7,8 +7,8 @@ import {
   Stream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class HdHubStreamParser extends StreamParser {
@@ -50,9 +50,13 @@ export class HdHubPreset extends Preset {
     const supportedResources = [constants.STREAM_RESOURCE];
 
     const options: Option[] = [
-      ...baseOptions('HdHub', supportedResources, Env.DEFAULT_HDHUB_TIMEOUT, [
-        Env.HDHUB_URL,
-      ]),
+      ...baseOptions(
+        'HdHub',
+        supportedResources,
+        appConfig.presets.hdhub.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.hdhub.url ?? undefined
+      ),
       {
         id: 'mediaTypes',
         name: 'Media Types',
@@ -91,9 +95,13 @@ export class HdHubPreset extends Preset {
       ID: 'hdhub',
       NAME: 'HdHub',
       LOGO: 'https://hdhub.thevolecitor.qzz.io/logo.png',
-      URL: Env.HDHUB_URL,
-      TIMEOUT: Env.DEFAULT_HDHUB_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_HDHUB_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.hdhub.url,
+      TIMEOUT:
+        appConfig.presets.hdhub.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.hdhub.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'High-performance HdHub scraper with TorBox passthrough and hybrid CDN support.',
@@ -151,7 +159,7 @@ export class HdHubPreset extends Preset {
     options: Record<string, any>,
     torboxKey?: string
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

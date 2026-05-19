@@ -1,4 +1,3 @@
-'use client';
 import { SNIPPETS } from '../../../../../core/src/utils/constants';
 import { useDisclosure } from '@/hooks/disclosure';
 import { Button } from '../../ui/button';

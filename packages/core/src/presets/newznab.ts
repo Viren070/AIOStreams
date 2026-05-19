@@ -1,6 +1,6 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+﻿import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, RESOURCES, ServiceId, constants } from '../utils/index.js';
+import { appConfig, RESOURCES, ServiceId, constants } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 
 class NewznabStreamParser extends BuiltinStreamParser {
@@ -20,7 +20,7 @@ class NewznabStreamParser extends BuiltinStreamParser {
         ? stream.zyclopsHealth
         : undefined;
     if (zyclopsHealth) {
-      return 'NZB Health: ' + zyclopsHealth.replace('healthy', '🧝');
+      return 'NZB Health: ' + zyclopsHealth.replace('healthy', 'ðŸ§');
     }
     return undefined;
   }
@@ -104,7 +104,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       {
         id: 'proxyAuth',
         name: 'AIOStreams Proxy Auth',
-        description: `${Env.NZB_PROXY_PUBLIC_ENABLED ? 'This instance will proxy NZBs by default, however you can optionally p' : 'P'}rovide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB.`,
+        description: `${appConfig.nzbProxy.publicEnabled ? 'This instance will proxy NZBs by default, however you can optionally p' : 'P'}rovide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB.`,
         type: 'password',
         required: false,
       },
@@ -113,10 +113,10 @@ export class NewznabPreset extends BuiltinAddonPreset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -202,7 +202,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       },
       {
         id: 'zyclopsHealthProxy',
-        name: '🧝 Zyclops Health Proxy',
+        name: 'ðŸ§ Zyclops Health Proxy',
         description:
           'Route searches through ElfHosted\'s Zyclops "magic" 🔮 crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)).',
         type: 'subsection',
@@ -212,7 +212,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
             id: 'enabled',
             name: 'Enable',
             description:
-              'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. Many indexers prohibit this (*some prohibit Stremio altogether!*), proceed at **your own risk**. The health database is further directly searchable via Newznab on private ElfHosted instances only.',
+              'Enable Zyclops health filtering. âš ï¸ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. Many indexers prohibit this (*some prohibit Stremio altogether!*), proceed at **your own risk**. The health database is further directly searchable via Newznab on private ElfHosted instances only.',
             type: 'boolean',
           },
           {
@@ -272,9 +272,9 @@ export class NewznabPreset extends BuiltinAddonPreset {
       ID: 'newznab',
       NAME: 'Newznab',
       LOGO: '',
-      URL: `${Env.INTERNAL_URL}/builtins/newznab`,
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/newznab`],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'An addon to get usenet results from a Newznab endpoint.',
       OPTIONS: options,
@@ -421,6 +421,6 @@ export class NewznabPreset extends BuiltinAddonPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${this.METADATA.URL}/${configString}/manifest.json`;
+    return `${this.DEFAULT_URL}/${configString}/manifest.json`;
   }
 }

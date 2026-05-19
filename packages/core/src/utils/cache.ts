@@ -1,31 +1,51 @@
-import {
+﻿import {
   CacheBackend,
   MemoryCacheBackend,
   RedisCacheBackend,
   SQLCacheBackend,
 } from './cache-adapter.js';
-import { createLogger, Env } from './index.js';
+import { createLogger } from './index.js';
+import { config as appConfig } from '../config/index.js';
+import { getDb } from '../db/db.js';
+import { sql } from '../db/sql.js';
 import { createClient, RedisClientType } from 'redis';
 
 const logger = createLogger('cache');
 
-function formatBytes(bytes: number, decimals: number = 2): string {
-  if (!+bytes) return '0 Bytes';
+export interface CacheInstanceInfo {
+  name: string;
+  backend: 'memory' | 'redis' | 'sql';
+  maxSize: number | null;
+  items: number | null;
+  estBytes: number | null;
+  expired?: number;
+}
 
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+export interface CacheDescription {
+  instances: CacheInstanceInfo[];
+  totals: {
+    instances: number;
+    items: number | null;
+    estBytes: number | null;
+    redisDbSize?: number;
+  };
 }
 
 export class Cache<K, V> {
   private static instances: Map<string, any> = new Map();
-  private static isStatsLoopRunning: boolean = false;
-  private backend: CacheBackend<K, V>;
-  private maxSize: number;
+  /**
+   * Backend is created lazily on first access so that {@link getInstance}
+   * calls at module-load time don't read runtime config (`appConfig.resources.
+   * cache.defaultMaxSize`). The actual store/maxSize resolution happens
+   * inside {@link createBackend}, which runs after `initialiseConfig()` has
+   * resolved.
+   */
+  private _backend: CacheBackend<K, V> | null = null;
+  private explicitMaxSize:
+    | number
+    | (() => number | null | undefined)
+    | undefined;
+  private storePreference: 'redis' | 'sql' | 'memory' | undefined;
   private name: string;
 
   // Redis client singleton
@@ -33,36 +53,47 @@ export class Cache<K, V> {
 
   private constructor(
     name: string,
-    maxSize: number,
+    maxSize: number | (() => number | null | undefined) | undefined,
     store?: 'redis' | 'sql' | 'memory'
   ) {
     this.name = name;
-    this.maxSize = maxSize;
+    this.explicitMaxSize = maxSize;
+    this.storePreference = store;
+  }
 
-    // Initialize the appropriate backend based on environment configuration and store preference
+  /** Resolved max size — falls back to the runtime-config default. */
+  private get maxSize(): number {
+    const raw =
+      typeof this.explicitMaxSize === 'function'
+        ? this.explicitMaxSize()
+        : this.explicitMaxSize;
+    return raw ?? appConfig.resources.cache.defaultMaxSize;
+  }
+
+  private get backend(): CacheBackend<K, V> {
+    if (this._backend) return this._backend;
+    const { storePreference: store, maxSize, name } = this;
     if (store === 'sql') {
-      this.backend = new SQLCacheBackend<K, V>(`${name}:`, maxSize);
-      logger.debug(`Created SQL cache backend for ${name}`);
-    } else if (Env.REDIS_URI && (!store || store === 'redis')) {
-      // use redis if provided and no store preference or redis is specified
-      this.backend = new RedisCacheBackend<K, V>(
+      this._backend = new SQLCacheBackend<K, V>(`${name}:`, maxSize);
+    } else if (appConfig.bootstrap.redisUri && (!store || store === 'redis')) {
+      this._backend = new RedisCacheBackend<K, V>(
         Cache.getRedisClient(),
         `${name}:`,
         maxSize
       );
-      logger.debug(`Created Redis cache backend for ${name}`);
     } else {
-      this.backend = new MemoryCacheBackend<K, V>(maxSize);
-      Cache.startStatsLoop();
-      logger.debug(`Created Memory cache backend for ${name}`);
+      this._backend = new MemoryCacheBackend<K, V>(maxSize);
     }
+    return this._backend;
   }
 
   public static getRedisClient(): RedisClientType {
     if (!this.redisClient) {
-      logger.info(`Initialising Redis client connection to ${Env.REDIS_URI}`);
+      logger.info(
+        `Initialising Redis client connection to ${appConfig.bootstrap.redisUri}`
+      );
       this.redisClient = createClient({
-        url: Env.REDIS_URI,
+        url: appConfig.bootstrap.redisUri,
       });
       this.redisClient.on('connect', () => {
         logger.info('Connected to Redis server');
@@ -95,7 +126,7 @@ export class Cache<K, V> {
    * @throws Error if Redis connection test fails
    */
   public static async testRedisConnection(): Promise<void> {
-    if (!Env.REDIS_URI) {
+    if (!appConfig.bootstrap.redisUri) {
       return;
     }
 
@@ -136,22 +167,6 @@ export class Cache<K, V> {
     }
   }
 
-  private static startStatsLoop() {
-    if (Cache.isStatsLoopRunning) {
-      return;
-    }
-    Cache.isStatsLoopRunning = true;
-    const interval = Env.LOG_CACHE_STATS_INTERVAL * 60 * 1000; // Convert minutes to ms
-    const runAndReschedule = () => {
-      Cache.stats();
-
-      const delay = interval - (Date.now() % interval);
-      setTimeout(runAndReschedule, delay).unref();
-    };
-    const initialDelay = interval - (Date.now() % interval);
-    setTimeout(runAndReschedule, initialDelay).unref();
-  }
-
   /**
    * Get an instance of the cache with a specific name
    * @param name Unique identifier for this cache instance
@@ -159,11 +174,10 @@ export class Cache<K, V> {
    */
   public static getInstance<K, V>(
     name: string,
-    maxSize: number = Env.DEFAULT_MAX_CACHE_SIZE,
+    maxSize?: number | (() => number | null | undefined),
     store?: 'redis' | 'sql' | 'memory'
   ): Cache<K, V> {
     if (!this.instances.has(name)) {
-      logger.debug(`Creating new cache instance: ${name}`);
       this.instances.set(name, new Cache<K, V>(name, maxSize, store));
     }
     return this.instances.get(name) as Cache<K, V>;
@@ -176,55 +190,123 @@ export class Cache<K, V> {
   }
 
   /**
-   * Gets the statistics of the cache in use by the program. returns a formatted string containing a list of all cache instances
-   * and their currently held items, max items
+   * Cheap, on-demand snapshot of every registered cache instance. Replaces the
+   * old box-drawing `stats()` log loop (see 04-logging). Redis per-prefix item
+   * counts are NOT computed here (expensive) — use {@link scanPrefix}.
    */
-  public static async stats() {
-    if (!this.instances || this.instances.size === 0) {
-      return;
-    }
-
-    let grandTotalItems = 0;
-    let grandTotalSize = 0;
-
-    const header = [
-      '╔══════════════════════╤══════════╤═════════════════╤═════════════════╗',
-      '║      Cache Name      │  Items   │    Max Size     │  Estimated Size ║',
-      '╠══════════════════════╪══════════╪═════════════════╪═════════════════╣',
-    ];
-
-    const bodyLines = [];
+  public static async describe(): Promise<CacheDescription> {
+    const instances: CacheInstanceInfo[] = [];
+    let totalItems: number | null = 0;
+    let totalBytes: number | null = 0;
 
     for (const [name, cache] of this.instances.entries()) {
-      let itemCount = 0;
-      let instanceSize = 0;
-
-      // push cache stats for memory cache only
+      const backend = cache.getType() as 'memory' | 'redis' | 'sql';
+      const info: CacheInstanceInfo = {
+        name,
+        backend,
+        maxSize: cache.maxSize ?? null,
+        items: null,
+        estBytes: null,
+      };
       if (cache.backend instanceof MemoryCacheBackend) {
-        itemCount = cache.backend.getSize();
-        instanceSize = cache.backend.getMemoryUsageEstimate();
+        info.items = cache.backend.getSize();
+        info.estBytes = cache.backend.getMemoryUsageEstimate();
+        if (totalItems !== null) totalItems += info.items as any;
+        if (totalBytes !== null) totalBytes += info.estBytes as any;
+      } else if (backend === 'sql') {
+        try {
+          const db = getDb();
+          const c = await db.query<{ c: number | string }>(
+            sql`SELECT COUNT(*) AS c FROM cache WHERE key LIKE ${`${name}:%`}`
+          );
+          const e = await db.query<{ c: number | string }>(
+            sql`SELECT COUNT(*) AS c FROM cache WHERE key LIKE ${`${name}:%`} AND expires_at < ${Date.now()}`
+          );
+          info.items = Number(c[0]?.c ?? 0);
+          info.expired = Number(e[0]?.c ?? 0);
+          if (totalItems !== null) totalItems += info.items;
+        } catch {
+          totalItems = null;
+        }
+      } else {
+        // redis — per-prefix is expensive; leave null (opt-in scan).
+        totalItems = null;
+        totalBytes = null;
+      }
+      instances.push(info);
+    }
 
-        const nameStr = name.padEnd(20);
-        const itemsStr = String(itemCount).padEnd(8);
-        const maxSizeStr = String(cache.maxSize ?? '-').padEnd(15);
-        const estSizeStr = formatBytes(instanceSize).padEnd(15);
-        grandTotalItems += itemCount;
-        grandTotalSize += instanceSize;
-
-        bodyLines.push(
-          `║ ${nameStr} │ ${itemsStr} │ ${maxSizeStr} │ ${estSizeStr} ║`
-        );
+    let redisDbSize: number | undefined;
+    if (appConfig.bootstrap.redisUri) {
+      try {
+        redisDbSize = await Cache.getRedisClient().dbSize();
+      } catch {
+        /* ignore */
       }
     }
 
-    const footer = [
-      '╚══════════════════════╧══════════╧═════════════════╧═════════════════╝',
-      `  Summary: ${this.instances.size} cache instance(s), ${grandTotalItems} total items, Est. Total Size: ${formatBytes(grandTotalSize)}`,
-    ];
+    return {
+      instances,
+      totals: {
+        instances: this.instances.size,
+        items: totalItems,
+        estBytes: totalBytes,
+        redisDbSize,
+      },
+    };
+  }
 
-    const lines = [...header, ...bodyLines, ...footer];
-    if (bodyLines.length > 0) {
-      logger.verbose(lines.join('\n'));
+  /**
+   * Opt-in, capped Redis key count for one prefix via a single non-blocking
+   * SCAN cursor. May be slow on large Redis instances — never called
+   * automatically.
+   */
+  public static async scanPrefix(
+    name: string,
+    opts: { limit?: number } = {}
+  ): Promise<{ count: number; capped: boolean }> {
+    if (!appConfig.bootstrap.redisUri) return { count: 0, capped: false };
+    const cap = Math.min(Math.max(opts.limit ?? 50_000, 1), 500_000);
+    const client = Cache.getRedisClient();
+    let count = 0;
+    let cursor: string = '0';
+    do {
+      const res = await client.scan(cursor, {
+        MATCH: `*${name}:*`,
+        COUNT: 1000,
+      });
+      cursor = String(res.cursor);
+      count += res.keys.length;
+      if (count >= cap) return { count, capped: true };
+    } while (cursor !== '0');
+    return { count, capped: false };
+  }
+
+  /** Clear every registered cache instance. Destructive. */
+  public static async clearAll(): Promise<void> {
+    for (const cache of this.instances.values()) {
+      await cache.clear().catch(() => undefined);
+    }
+  }
+
+  /** Clear one instance by name (prefix). */
+  public static async clearPrefix(name: string): Promise<boolean> {
+    const cache = this.instances.get(name);
+    if (!cache) return false;
+    await cache.clear();
+    return true;
+  }
+
+  /** Delete expired SQL cache rows (memory/redis expire on their own). */
+  public static async clearExpired(): Promise<number> {
+    try {
+      const db = getDb();
+      const res = await db.exec(
+        sql`DELETE FROM cache WHERE expires_at < ${Date.now()}`
+      );
+      return res.rowCount ?? 0;
+    } catch {
+      return 0;
     }
   }
 

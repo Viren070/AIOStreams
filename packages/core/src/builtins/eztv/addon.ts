@@ -8,8 +8,8 @@ import {
   createLogger,
   getTimeTakenSincePoint,
   ParsedId,
-  Env,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import { createQueryLimit } from '../utils/general.js';
 import EztvAPI from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
@@ -84,7 +84,7 @@ export class EztvAddon extends BaseDebridAddon<EztvAddonConfig> {
 
     const start = Date.now();
     const queryLimit = createQueryLimit();
-    const maxPages = Env.BUILTIN_EZTV_MAX_PAGES;
+    const maxPages = appConfig.builtins.eztv.maxPages;
 
     // Perform initial search
     const initialResponse = await this.api.getTorrents({

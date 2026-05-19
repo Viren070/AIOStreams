@@ -1,15 +1,19 @@
-import { createLogger } from './logger.js';
+﻿import { config as appConfig } from '../config/index.js';
+import { createLogger } from '../logging/logger.js';
 import { Time } from './time.js';
 import path from 'path';
 import { Addon, Preset } from '../db/schemas.js';
-import { parseConnectionURI } from '../db/utils.js';
-import { Env } from './env.js';
+import { URL } from 'url';
 const logger = createLogger('utils-general');
 
 export function getDataFolder(): string {
-  const databaseURI = parseConnectionURI(Env.DATABASE_URI);
-  if (databaseURI.dialect === 'sqlite') {
-    return path.dirname(databaseURI.filename);
+  const url = new URL(appConfig.bootstrap.databaseUri);
+  if (url.protocol === 'sqlite:') {
+    let filename = url.pathname;
+    if (url.hostname === '.') {
+      filename = path.join(process.cwd(), url.pathname.replace(/^\//, ''));
+    }
+    return path.dirname(filename);
   }
   return path.join(process.cwd(), 'data');
 }

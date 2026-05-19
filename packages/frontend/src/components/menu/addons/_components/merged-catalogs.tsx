@@ -1,4 +1,3 @@
-'use client';
 import React, { useState } from 'react';
 import { MergedCatalog } from '@aiostreams/core';
 import { useStatus } from '@/context/status';

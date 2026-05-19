@@ -1,4 +1,10 @@
-import { Option, ParsedFile, ParsedStream, Stream, UserData } from '../db/index.js';
+import {
+  Option,
+  ParsedFile,
+  ParsedStream,
+  Stream,
+  UserData,
+} from '../db/index.js';
 import { StreamParser } from '../parser/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { Preset } from './preset.js';

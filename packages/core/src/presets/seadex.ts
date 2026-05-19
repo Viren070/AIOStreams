@@ -1,5 +1,5 @@
-import { Option, UserData } from '../db/index.js';
-import { Env, constants } from '../utils/index.js';
+﻿import { Option, UserData } from '../db/index.js';
+import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
 
@@ -21,10 +21,10 @@ export class SeaDexPreset extends TorznabPreset {
         description: 'The timeout for this addon',
         type: 'number',
         required: true,
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -60,9 +60,9 @@ export class SeaDexPreset extends TorznabPreset {
       ID: 'seadex',
       NAME: 'SeaDex',
       LOGO: 'https://releases.moe/favicon.png',
-      URL: `${Env.INTERNAL_URL}/builtins/seadex`,
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/seadex`],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
         'SeaDex is a curated database of the best anime releases. Get high-quality torrents for anime based on community recommendations.',
@@ -79,7 +79,7 @@ export class SeaDexPreset extends TorznabPreset {
     services: constants.ServiceId[],
     options: Record<string, any>
   ): string {
-    return `${Env.INTERNAL_URL}/builtins/seadex/${this.base64EncodeJSON(
+    return `${appConfig.bootstrap.internalUrl}/builtins/seadex/${this.base64EncodeJSON(
       this.getBaseConfig(userData, services),
       'urlSafe'
     )}/manifest.json`;

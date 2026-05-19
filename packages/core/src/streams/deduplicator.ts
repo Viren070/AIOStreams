@@ -1,7 +1,6 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import {
   createLogger,
-  getTimeTakenSincePoint,
   DSU,
   getSimpleTextHash,
   constants,
@@ -439,8 +438,9 @@ class StreamDeduplicator {
     let deduplicatedStreams = StreamUtils.mergeStreams(
       Array.from(processedStreams)
     );
-    logger.info(
-      `Filtered out ${streams.length - deduplicatedStreams.length} duplicate streams to ${deduplicatedStreams.length}${Array.from(excludedStreamIds.values()).length > 0 ? ' (' + Array.from(excludedStreamIds.values()).length + ' streams excluded from deduplication) ' : ''} streams in ${getTimeTakenSincePoint(start)}`
+    logger.debug(
+      { removed: streams.length - deduplicatedStreams.length, kept: deduplicatedStreams.length, excluded: excludedStreamIds.size, took: Date.now() - start },
+      'deduplication complete'
     );
     return deduplicatedStreams;
   }

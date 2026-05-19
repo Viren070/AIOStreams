@@ -1,4 +1,3 @@
-'use client';
 import React, { useRef } from 'react';
 import { cn } from '@/components/ui/core/styling';
 

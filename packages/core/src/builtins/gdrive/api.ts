@@ -1,4 +1,5 @@
-import { Cache, createLogger, Env, makeRequest } from '../../utils/index.js';
+import { Cache, createLogger, makeRequest } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import {
   GDriveFile,
   GDriveFileGetResponseSchema,
@@ -72,7 +73,10 @@ export class GoogleOAuth {
   private accessToken: string | undefined;
 
   constructor(refreshToken: string) {
-    if (!Env.BUILTIN_GDRIVE_CLIENT_ID || !Env.BUILTIN_GDRIVE_CLIENT_SECRET) {
+    if (
+      !appConfig.builtins.gdrive.clientId ||
+      !appConfig.builtins.gdrive.clientSecret
+    ) {
       throw new Error('Builtin GDrive client ID and secret are not set');
     }
     this.refreshToken = refreshToken;
@@ -80,24 +84,24 @@ export class GoogleOAuth {
   }
 
   private static get clientId(): string {
-    if (!Env.BUILTIN_GDRIVE_CLIENT_ID) {
+    if (!appConfig.builtins.gdrive.clientId) {
       throw new Error('Builtin GDrive client ID is not set');
     }
-    return Env.BUILTIN_GDRIVE_CLIENT_ID;
+    return appConfig.builtins.gdrive.clientId;
   }
 
   private static get clientSecret(): string {
-    if (!Env.BUILTIN_GDRIVE_CLIENT_SECRET) {
+    if (!appConfig.builtins.gdrive.clientSecret) {
       throw new Error('Builtin GDrive client secret is not set');
     }
-    return Env.BUILTIN_GDRIVE_CLIENT_SECRET;
+    return appConfig.builtins.gdrive.clientSecret;
   }
 
   private static get redirectUrl(): string {
-    if (!Env.BASE_URL) {
+    if (!appConfig.bootstrap.baseUrl) {
       throw new Error('Base URL is not set');
     }
-    return `${Env.BASE_URL}/oauth/callback/gdrive`;
+    return `${appConfig.bootstrap.baseUrl}/oauth/callback/gdrive`;
   }
 
   static getAuthorisationUrl() {

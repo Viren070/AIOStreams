@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response, Router } from 'express';
+﻿import { NextFunction, Request, Response, Router } from 'express';
 import {
   APIError,
   constants,
@@ -6,6 +6,7 @@ import {
   decryptString,
   domainHasUserAgent,
   Env,
+  appConfig,
   fromUrlSafeBase64,
   getProxyAgent,
   getTimeTakenSincePoint,
@@ -15,6 +16,7 @@ import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
 import { pipeline } from 'stream/promises';
 import { createProxy, BuiltinProxyStats, BuiltinProxy } from '@aiostreams/core';
+import { requireAdmin } from '../../middlewares/auth.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 import { StaticFiles } from '../../app.js';
 import { Transform } from 'stream';
@@ -105,88 +107,101 @@ const ProxyDataSchema = z.object({
 
 router.use(corsMiddleware);
 
-// GET /stats endpoint to display proxy statistics
+// GET /stats — proxy statistics for the dashboard. Admin-only via the
+// dashboard session (the old `?auth=` query path is dropped). Machine-shaped:
+// raw epoch ms, `users` as an array. (Breaking change is acceptable per
+// 00-overview — this is an admin/self-hoster endpoint.)
 router.get(
   '/stats',
-  async (req: Request, res: Response, next: NextFunction) => {
-    // only show stats to admin users
-    try {
-      const { auth: authQuery } = z
-        .object({ auth: z.string() })
-        .parse(req.query);
-      const auth = BuiltinProxy.validateAuth(authQuery);
-      if (!auth.admin) {
-        throw new APIError(
-          constants.ErrorCode.UNAUTHORIZED,
-          undefined,
-          'Invalid auth'
-        );
-      }
-    } catch (error) {
-      if (error instanceof APIError) {
-        next(error);
-      } else {
-        next(
-          new APIError(
-            constants.ErrorCode.UNAUTHORIZED,
-            undefined,
-            'Invalid auth'
-          )
-        );
-      }
-    }
-
+  requireAdmin,
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const allUserStats = await proxyStats.getAllUserStats();
-
-      // Convert Map to a more JSON-friendly format
-      const stats = {
-        timestamp: new Date().toISOString(),
-        totalUsers: allUserStats.size,
-        users: Object.fromEntries(
-          Array.from(allUserStats.entries()).map(([user, userStats]) => [
-            user,
-            {
-              active: userStats.active.map((conn) => ({
-                ...conn,
-                timestamp: new Date(conn.timestamp).toISOString(),
-                lastSeen: new Date(conn.lastSeen).toISOString(),
-                relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-                relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
-              })),
-              history: userStats.history.map((conn) => ({
-                ...conn,
-                timestamp: new Date(conn.timestamp).toISOString(),
-                lastSeen: new Date(conn.lastSeen).toISOString(),
-                relativeTimestamp: `${getTimeTakenSincePoint(conn.timestamp)} ago`,
-                relativeLastSeen: `${getTimeTakenSincePoint(conn.lastSeen)} ago`,
-              })),
-            },
-          ])
-        ),
+      const users = Array.from(allUserStats.entries()).map(
+        ([username, userStats]) => ({
+          username,
+          active: userStats.active,
+          history: userStats.history,
+        })
+      );
+      res.json({
+        users,
         summary: {
-          totalActiveConnections: Array.from(allUserStats.values()).reduce(
-            (total, userStats) => total + userStats.active.length,
+          totalActiveConnections: users.reduce(
+            (t, u) => t + u.active.length,
             0
           ),
-          totalHistoryConnections: Array.from(allUserStats.values()).reduce(
-            (total, userStats) => total + userStats.history.length,
+          totalHistoryConnections: users.reduce(
+            (t, u) => t + u.history.length,
             0
           ),
-          usersWithActiveConnections: Array.from(allUserStats.entries()).filter(
-            ([_, userStats]) => userStats.active.length > 0
-          ).length,
-          usersWithHistory: Array.from(allUserStats.entries()).filter(
-            ([_, userStats]) => userStats.history.length > 0
-          ).length,
+          usersWithActiveConnections: users.filter((u) => u.active.length > 0)
+            .length,
+          usersWithHistory: users.filter((u) => u.history.length > 0).length,
         },
-      };
-
-      res.json(stats);
+      });
     } catch (error) {
       logger.error('Failed to get proxy stats', {
         error: error instanceof Error ? error.message : String(error),
       });
+      next(error);
+    }
+  }
+);
+
+// POST /generate — produce a proxified URL. Admin-only (dashboard session).
+// Credentials are injected server-side from AIOSTREAMS_AUTH for the session
+// user — the proxy password never reaches the browser.
+const GenerateSchema = ProxyDataSchema.extend({
+  encrypt: z.boolean().optional().default(true),
+});
+
+router.post(
+  '/generate',
+  requireAdmin,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = GenerateSchema.parse(req.body ?? {});
+      const username = (req as { user?: { username?: string } }).user?.username;
+      const password = username
+        ? appConfig.bootstrap.auth?.get(username)
+        : undefined;
+      if (!username || !password) {
+        throw new APIError(
+          constants.ErrorCode.UNAUTHORIZED,
+          undefined,
+          'No AIOSTREAMS_AUTH credentials for the current session user'
+        );
+      }
+      const proxy = new BuiltinProxy({
+        id: constants.BUILTIN_SERVICE,
+        enabled: true,
+        url: appConfig.bootstrap.baseUrl,
+        credentials: `${username}:${password}`,
+      } as any);
+      const urls = await proxy.generateUrls(
+        [
+          {
+            url: body.url,
+            filename: body.filename,
+            type: body.type ?? 'stream',
+            headers: {
+              request: body.requestHeaders,
+              response: body.responseHeaders,
+            },
+          },
+        ],
+        body.encrypt
+      );
+      if (!urls || 'error' in (urls as object)) {
+        throw new APIError(
+          constants.ErrorCode.INTERNAL_SERVER_ERROR,
+          undefined,
+          (urls as { error: string })?.error ?? 'Failed to generate URL'
+        );
+      }
+      res.json({ proxified_url: (urls as string[])[0] });
+    } catch (error) {
       next(error);
     }
   }
@@ -261,10 +276,10 @@ router.all(
       auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
 
       if (
-        (!Env.AIOSTREAMS_AUTH?.has(auth.username) ||
-          Env.AIOSTREAMS_AUTH?.get(auth.username) !== auth.password) &&
+        (!appConfig.bootstrap.auth?.has(auth.username) ||
+          appConfig.bootstrap.auth?.get(auth.username) !== auth.password) &&
         (auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME ||
-          !Env.NZB_PROXY_PUBLIC_ENABLED)
+          !appConfig.nzbProxy.publicEnabled)
       ) {
         logger.warn(`[${requestId}] Authentication failed`, {
           username: auth.username,
@@ -285,8 +300,8 @@ router.all(
       const timestamp = Date.now();
 
       const connectionLimit =
-        Env.AIOSTREAMS_AUTH_CONNECTIONS_LIMIT?.get(auth.username) ??
-        Env.AIOSTREAMS_AUTH_CONNECTIONS_LIMIT?.get('*') ??
+        appConfig.bootstrap.authConnectionLimits?.get(auth.username) ??
+        appConfig.bootstrap.authConnectionLimits?.get('*') ??
         0;
 
       // prepare and execute upstream request
@@ -299,12 +314,12 @@ router.all(
       let sizeLimiter;
       let bytesRead = 0;
       if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
-        if (Env.NZB_PROXY_MAX_SIZE > 0) {
+        if (appConfig.nzbProxy.maxSize > 0) {
           sizeLimiter = new Transform({
             transform(chunk, encoding, callback) {
               bytesRead += chunk.length;
 
-              if (bytesRead > Env.NZB_PROXY_MAX_SIZE) {
+              if (bytesRead > appConfig.nzbProxy.maxSize) {
                 callback(new Error('Content too large'));
               } else {
                 callback(null, chunk);
@@ -365,10 +380,13 @@ router.all(
       let currentUrl = data.url;
 
       const INTERNAL_FORWARDED_PARAMS = ['fbk'] as const;
-      if (Env.BASE_URL) {
+      if (appConfig.bootstrap.baseUrl) {
         try {
           const upstreamUrlObj = new URL(currentUrl);
-          if (upstreamUrlObj.origin === new URL(Env.BASE_URL).origin) {
+          if (
+            upstreamUrlObj.origin ===
+            new URL(appConfig.bootstrap.baseUrl).origin
+          ) {
             let forwarded = false;
             for (const param of INTERNAL_FORWARDED_PARAMS) {
               const val = req.query[param];
@@ -390,15 +408,20 @@ router.all(
 
       while (redirectCount < maxRedirects) {
         const urlObj = new URL(currentUrl);
-        if (Env.BASE_URL && urlObj.origin === Env.BASE_URL) {
-          const internalUrl = new URL(Env.INTERNAL_URL);
+        if (
+          appConfig.bootstrap.baseUrl &&
+          urlObj.origin === appConfig.bootstrap.baseUrl
+        ) {
+          const internalUrl = new URL(appConfig.bootstrap.internalUrl);
           urlObj.protocol = internalUrl.protocol;
           urlObj.host = internalUrl.host;
           urlObj.port = internalUrl.port;
         }
 
-        if (Env.REQUEST_URL_MAPPINGS) {
-          for (const [key, value] of Object.entries(Env.REQUEST_URL_MAPPINGS)) {
+        if (appConfig.http.requestUrlMappings) {
+          for (const [key, value] of Object.entries(
+            appConfig.http.requestUrlMappings
+          )) {
             if (urlObj.origin === key) {
               const mappedUrl = new URL(value);
               urlObj.protocol = mappedUrl.protocol;
@@ -410,7 +433,7 @@ router.all(
         }
         const { useProxy, proxyIndex } = shouldProxy(urlObj);
         const proxyAgent = useProxy
-          ? getProxyAgent(Env.ADDON_PROXY![proxyIndex])
+          ? getProxyAgent(appConfig.http.addonProxy[proxyIndex])
           : undefined;
         const headers = Object.fromEntries(
           Object.entries({ ...clientHeaders, ...data.requestHeaders }).map(
@@ -488,7 +511,7 @@ router.all(
 
       if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
         // size check
-        if (Env.NZB_PROXY_MAX_SIZE > 0) {
+        if (appConfig.nzbProxy.maxSize > 0) {
           const contentLengthHeader = upstreamResponse.headers['content-length']
             ? Array.isArray(upstreamResponse.headers['content-length'])
               ? upstreamResponse.headers['content-length'][0]
@@ -497,7 +520,7 @@ router.all(
           const contentLength = contentLengthHeader
             ? parseInt(contentLengthHeader, 10)
             : 0;
-          const maxSize = Env.NZB_PROXY_MAX_SIZE;
+          const maxSize = appConfig.nzbProxy.maxSize;
           if (maxSize > 0 && contentLength > maxSize) {
             logger.warn(`[${requestId}] Public NZB proxy size limit exceeded`, {
               contentLength,

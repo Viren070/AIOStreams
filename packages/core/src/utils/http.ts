@@ -1,10 +1,11 @@
-import {
+﻿import {
   Cache,
   HEADERS_FOR_IP_FORWARDING,
   INTERNAL_SECRET_HEADER,
   Env,
   maskSensitiveInfo,
 } from './index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   BodyInit,
   Dispatcher,
@@ -15,7 +16,7 @@ import {
   RequestInit,
 } from 'undici';
 import { socksDispatcher } from 'fetch-socks';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 
 const logger = createLogger('http');
 const urlCount = Cache.getInstance<string, number>(
@@ -60,15 +61,20 @@ export interface RequestOptions {
 export async function makeRequest(url: string, options: RequestOptions) {
   const urlObj = new URL(url);
 
-  if (Env.BASE_URL && urlObj.origin === Env.BASE_URL) {
-    const internalUrl = new URL(Env.INTERNAL_URL);
+  if (
+    appConfig.bootstrap.baseUrl &&
+    urlObj.origin === appConfig.bootstrap.baseUrl
+  ) {
+    const internalUrl = new URL(appConfig.bootstrap.internalUrl);
     urlObj.protocol = internalUrl.protocol;
     urlObj.host = internalUrl.host;
     urlObj.port = internalUrl.port;
   }
 
-  if (Env.REQUEST_URL_MAPPINGS) {
-    for (const [key, value] of Object.entries(Env.REQUEST_URL_MAPPINGS)) {
+  if (appConfig.http.requestUrlMappings) {
+    for (const [key, value] of Object.entries(
+      appConfig.http.requestUrlMappings
+    )) {
       if (urlObj.origin === key) {
         const mappedUrl = new URL(value);
         urlObj.protocol = mappedUrl.protocol;
@@ -87,8 +93,8 @@ export async function makeRequest(url: string, options: RequestOptions) {
     }
   }
 
-  if (urlObj.toString().startsWith(Env.INTERNAL_URL)) {
-    headers.set(INTERNAL_SECRET_HEADER, Env.INTERNAL_SECRET);
+  if (urlObj.toString().startsWith(appConfig.bootstrap.internalUrl)) {
+    headers.set(INTERNAL_SECRET_HEADER, appConfig.bootstrap.internalSecret);
   }
 
   let domainUserAgent = domainHasUserAgent(urlObj);
@@ -108,11 +114,12 @@ export async function makeRequest(url: string, options: RequestOptions) {
   const key = `${urlObj.toString()}-${options.forwardIp}`;
   const currentCount = (await urlCount.get(key)) ?? 0;
   if (
-    currentCount > Env.RECURSION_THRESHOLD_LIMIT &&
+    currentCount > appConfig.recursion.thresholdLimit &&
     !options.ignoreRecursion
   ) {
     logger.warn(
-      `Detected possible recursive requests to ${urlObj.toString()}. Current count: ${currentCount}. Blocking request.`
+      { url: makeUrlLogSafe(urlObj.toString()), count: currentCount },
+      'detected possible recursive requests, blocking'
     );
     throw new PossibleRecursiveRequestError(
       `Possible recursive request to ${urlObj.toString()}`
@@ -121,7 +128,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
   if (currentCount > 0) {
     await urlCount.update(key, currentCount + 1);
   } else {
-    await urlCount.set(key, 1, Env.RECURSION_THRESHOLD_WINDOW);
+    await urlCount.set(key, 1, appConfig.recursion.thresholdWindow);
   }
 
   let dispatcher: Dispatcher | undefined;
@@ -129,13 +136,16 @@ export async function makeRequest(url: string, options: RequestOptions) {
   if (options.forceProxy) {
     dispatcher = getProxyAgent(options.forceProxy);
   } else if (useProxy) {
-    dispatcher = getProxyAgent(Env.ADDON_PROXY![proxyIndex]);
+    dispatcher = getProxyAgent(appConfig.http.addonProxy[proxyIndex]);
   }
 
-  logger.debug(
-    `Making a ${useProxy ? 'proxied' : options.forceProxy ? 'forced proxied (' + options.forceProxy + ')' : 'direct'}${proxyIndex !== -1 ? ` (proxy ${proxyIndex + 1})` : ''} request to ${makeUrlLogSafe(
-      urlObj.toString()
-    )} with forwarded ip ${maskSensitiveInfo(options.forwardIp ?? 'none')} and headers ${maskSensitiveInfo(JSON.stringify(Object.fromEntries(headers)))}`
+  logger.trace(
+    {
+      url: makeUrlLogSafe(urlObj.toString()),
+      method: options.method ?? 'GET',
+      proxy: useProxy ? `proxy-${proxyIndex + 1}` : options.forceProxy ? 'forced' : 'direct',
+    },
+    'http request'
   );
 
   let response;
@@ -155,12 +165,9 @@ export async function makeRequest(url: string, options: RequestOptions) {
       err.message === 'fetch failed' &&
       err.cause
     ) {
-      let logParams: [string, Record<string, any>] = [
-        'Fetch failed due to network error',
-        err.cause,
-      ];
-      delete logParams[1].stack;
-      logger.error(...logParams);
+      const cause = { ...(err.cause as Record<string, any>) };
+      delete cause.stack;
+      logger.error({ cause }, 'fetch failed due to network error');
     }
     throw err;
   }
@@ -205,7 +212,7 @@ export function shouldProxy(url: URL): {
   let hostname = url.hostname;
   let proxyIndex = -1;
 
-  if (!Env.ADDON_PROXY || Env.ADDON_PROXY.length === 0) {
+  if (!appConfig.http.addonProxy || appConfig.http.addonProxy.length === 0) {
     return { useProxy: false, proxyIndex };
   }
 
@@ -214,14 +221,22 @@ export function shouldProxy(url: URL): {
   }
 
   useProxy = true;
-  if (Env.ADDON_PROXY_CONFIG) {
-    for (const rule of Env.ADDON_PROXY_CONFIG.split(',')) {
-      const [ruleHostname, ruleProxyIndexOrBool] = rule.split(':');
+  if (
+    appConfig.http.addonProxyConfig &&
+    Object.keys(appConfig.http.addonProxyConfig).length > 0
+  ) {
+    for (const [ruleHostname, ruleValue] of Object.entries(
+      appConfig.http.addonProxyConfig
+    )) {
+      const ruleProxyIndexOrBool = String(ruleValue);
       if (
         ['true', 'false'].includes(ruleProxyIndexOrBool) === false &&
         isNaN(parseInt(ruleProxyIndexOrBool))
       ) {
-        logger.error(`Invalid proxy config: ${rule}`);
+        logger.error(
+          { hostname: ruleHostname, value: ruleProxyIndexOrBool },
+          'invalid proxy config value'
+        );
         continue;
       }
       if (ruleHostname === '*') {
@@ -254,8 +269,8 @@ export function shouldProxy(url: URL): {
     proxyIndex = 0;
   }
 
-  if (useProxy && Env.ADDON_PROXY[proxyIndex] === undefined) {
-    logger.error(`Invalid proxy index: ${proxyIndex}, does not exist`);
+  if (useProxy && appConfig.http.addonProxy[proxyIndex] === undefined) {
+    logger.error({ proxyIndex }, 'proxy index out of range');
     return { useProxy: false, proxyIndex: -1 };
   }
 
@@ -266,11 +281,14 @@ export function domainHasUserAgent(url: URL) {
   let userAgent: string | undefined;
   let hostname = url.hostname;
 
-  if (!Env.HOSTNAME_USER_AGENT_OVERRIDES) {
+  if (
+    !appConfig.http.hostnameUserAgentOverrides ||
+    Object.keys(appConfig.http.hostnameUserAgentOverrides).length === 0
+  ) {
     return undefined;
   }
 
-  const mappings = Array.from(Env.HOSTNAME_USER_AGENT_OVERRIDES.entries());
+  const mappings = Object.entries(appConfig.http.hostnameUserAgentOverrides);
   for (const [ruleHostname, ruleUserAgent] of mappings) {
     if (ruleHostname === '*') {
       userAgent = ruleUserAgent;

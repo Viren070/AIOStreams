@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { createResponse } from '../../utils/responses.js';
 import { catalogApiRateLimiter } from '../../middlewares/ratelimit.js';
+import { attachSession, injectAccessKey } from '../../middlewares/auth.js';
 import {
   createLogger,
   UserData,
@@ -17,6 +18,7 @@ const router: Router = Router();
 
 const logger = createLogger('server');
 router.use(catalogApiRateLimiter);
+router.use(attachSession);
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   const { userData } = req.body;
@@ -46,6 +48,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       merged.trusted = parent.trusted || userData.trusted;
       configToValidate = merged;
     }
+
+    injectAccessKey(req, configToValidate);
 
     try {
       validatedUserData = await validateConfig(configToValidate, {

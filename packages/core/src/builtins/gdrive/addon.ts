@@ -7,10 +7,10 @@ import {
 } from '../../db/index.js';
 import {
   AnimeDatabase,
-  Env,
   ExtrasParser,
   createLogger,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import {
   GDriveAPI,
   GoogleOAuth,
@@ -148,7 +148,7 @@ export class GDriveAddon {
       corpora: 'allDrives',
       includeItemsFromAllDrives: true,
       supportsAllDrives: true,
-      pageSize: Env.BUILTIN_GDRIVE_PAGE_SIZE_LIMIT,
+      pageSize: appConfig.builtins.gdrive.pageSizeLimit,
       fields:
         'files(id,name,description,size,createdTime,modifiedTime,thumbnailLink,iconLink,videoMediaMetadata,fileExtension)',
     };
@@ -355,8 +355,8 @@ export class GDriveAddon {
       filesToFetch = parsedExtras.skip + 100;
       filesToSkip = parsedExtras.skip;
     }
-    if (filesToFetch > Env.BUILTIN_GDRIVE_PAGE_SIZE_LIMIT) {
-      filesToFetch = Env.BUILTIN_GDRIVE_PAGE_SIZE_LIMIT;
+    if (filesToFetch > appConfig.builtins.gdrive.pageSizeLimit) {
+      filesToFetch = appConfig.builtins.gdrive.pageSizeLimit;
     }
 
     const sanitiseQuery = (query: string) => {

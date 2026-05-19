@@ -1,6 +1,7 @@
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, FULL_LANGUAGE_MAPPING } from '../utils/index.js';
+import { constants, FULL_LANGUAGE_MAPPING } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class TmdbCollectionsStreamParser extends StreamParser {
@@ -36,7 +37,8 @@ export class TmdbCollectionsPreset extends Preset {
       ...baseOptions(
         'TMDB Collections',
         supportedResources,
-        Env.DEFAULT_TMDB_COLLECTIONS_TIMEOUT
+        appConfig.presets.tmdbCollections.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'enableAdultContent',
@@ -849,10 +851,13 @@ export class TmdbCollectionsPreset extends Preset {
       ID: 'tmdb-collections',
       NAME: 'TMDB Collections',
       LOGO: 'https://raw.githubusercontent.com/youchi1/tmdb-collections/main/Images/logo.png',
-      URL: Env.TMDB_COLLECTIONS_URL,
-      TIMEOUT: Env.DEFAULT_TMDB_COLLECTIONS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.tmdbCollections.url,
+      TIMEOUT:
+        appConfig.presets.tmdbCollections.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_TMDB_COLLECTIONS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.tmdbCollections.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Catalogs for the TMDB Collections',
       OPTIONS: options,
@@ -900,7 +905,7 @@ export class TmdbCollectionsPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

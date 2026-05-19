@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Cache, constants, Env, makeRequest } from '../utils/index.js';
+import { Cache, constants, makeRequest } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { z } from 'zod';
 
 const configCache = Cache.getInstance<string, string>('ai-search-config');
@@ -95,7 +96,8 @@ export class AISearchPreset extends Preset {
       ...baseOptions(
         'AI Search',
         supportedResources,
-        Env.DEFAULT_AI_SEARCH_TIMEOUT
+        appConfig.presets.aiSearch.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'limitedConfig',
@@ -193,9 +195,13 @@ export class AISearchPreset extends Preset {
       ID: 'ai-search',
       NAME: 'AI Search',
       LOGO: `https://raw.githubusercontent.com/itcon-pty-au/stremio-ai-search/refs/heads/main/public/logo.png`,
-      URL: Env.AI_SEARCH_URL,
-      TIMEOUT: Env.DEFAULT_AI_SEARCH_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_AI_SEARCH_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.aiSearch.url,
+      TIMEOUT:
+        appConfig.presets.aiSearch.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.aiSearch.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'AI-powered movie and series recommendations. Powered by Gemini.',
@@ -239,13 +245,15 @@ export class AISearchPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<string> {
-    let url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    let url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }
 
     const tmdbApiKey =
-      options.tmdbApiKey || userData.tmdbApiKey || Env.TMDB_API_KEY;
+      options.tmdbApiKey ||
+      userData.tmdbApiKey ||
+      appConfig.metadata.tmdb.apiKey;
     if (!tmdbApiKey) {
       throw new Error(
         `${this.METADATA.NAME} requires a TMDB API Key to function. Please provide it in the services menu.`

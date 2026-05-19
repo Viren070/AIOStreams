@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { constants, ServiceId, Cache, Env } from '../utils/index.js';
+﻿import { z } from 'zod';
+import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
 
 type DebridErrorCode =
   | 'BAD_GATEWAY'
@@ -93,7 +93,7 @@ export class DebridFailureCache {
     return Cache.getInstance<
       string,
       { message: string; code?: DebridErrorCode; statusCode?: number }
-    >('debrid:failure', 10_000, Env.REDIS_URI ? 'redis' : 'sql');
+    >('debrid:failure', 10_000, appConfig.bootstrap.redisUri ? 'redis' : 'sql');
   }
 
   /**
@@ -136,7 +136,7 @@ export class DebridFailureCache {
         code: error.code,
         statusCode: error.statusCode,
       },
-      Env.BUILTIN_DEBRID_ERROR_CACHE_TTL
+      appConfig.builtins.debrid.errorCacheTtl
     );
   }
 }

@@ -1,9 +1,10 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import {
   constants,
   createLogger,
   BuiltinServiceId,
   Env,
+  appConfig,
   Cache,
   getSimpleTextHash,
   encryptString,
@@ -817,19 +818,20 @@ export function isNotVideoFile(file: DebridFile): boolean {
 export const metadataStore = () => {
   const prefix = 'mds';
   const store: 'redis' | 'sql' | 'memory' =
-    Env.BUILTIN_DEBRID_METADATA_STORE || (Env.REDIS_URI ? 'redis' : 'sql');
+    appConfig.builtins.debrid.metadataStore ||
+    (appConfig.bootstrap.redisUri ? 'redis' : 'sql');
   return Cache.getInstance<string, TitleMetadata>(prefix, 1_000_000_000, store);
 };
 
 export const fileInfoStore = () => {
   const prefix = 'fis';
   let store: 'redis' | 'sql' | 'memory' | undefined;
-  if (Env.BUILTIN_DEBRID_FILEINFO_STORE === true) {
-    store = Env.REDIS_URI ? 'redis' : 'sql';
-  } else if (!Env.BUILTIN_DEBRID_FILEINFO_STORE) {
+  if (appConfig.builtins.debrid.fileinfoStore === true) {
+    store = appConfig.bootstrap.redisUri ? 'redis' : 'sql';
+  } else if (!appConfig.builtins.debrid.fileinfoStore) {
     return undefined;
   } else {
-    store = Env.BUILTIN_DEBRID_FILEINFO_STORE;
+    store = appConfig.builtins.debrid.fileinfoStore;
   }
   return Cache.getInstance<string, FileInfo>(prefix, 1_000_000_000, store);
 };
@@ -844,8 +846,8 @@ export const fileInfoStore = () => {
 //     throw new Error('Failed to encrypt store auth');
 //   }
 //   const playbackId = getSimpleTextHash(JSON.stringify(playbackInfo));
-//   pbiCache().set(playbackId, playbackInfo, Env.BUILTIN_PLAYBACK_LINK_VALIDITY);
-//   return `${Env.BASE_URL}/api/v1/debrid/playback/${encryptedStoreAuth.data}/${playbackId}/${encodeURIComponent(filename)}`;
+//   pbiCache().set(playbackId, playbackInfo, appConfig.builtins.debrid.playbackLinkValidity);
+//   return `${appConfig.bootstrap.baseUrl}/api/v1/debrid/playback/${encryptedStoreAuth.data}/${playbackId}/${encodeURIComponent(filename)}`;
 // }
 
 export function generatePlaybackUrl(
@@ -861,8 +863,8 @@ export function generatePlaybackUrl(
     fileInfoCache.set(
       fileInfoStr,
       fileInfo,
-      Env.BUILTIN_PLAYBACK_LINK_VALIDITY
+      appConfig.builtins.debrid.playbackLinkValidity
     );
   }
-  return `${Env.BASE_URL}/api/v1/debrid/playback/${encryptedStoreAuth}/${fileInfoStr}/${metadataId}/${encodeURIComponent(filename ?? 'unknown')}`;
+  return `${appConfig.bootstrap.baseUrl}/api/v1/debrid/playback/${encryptedStoreAuth}/${fileInfoStr}/${metadataId}/${encodeURIComponent(filename ?? 'unknown')}`;
 }

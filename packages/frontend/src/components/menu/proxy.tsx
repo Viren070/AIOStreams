@@ -1,4 +1,3 @@
-'use client';
 import { useStatus } from '@/context/status';
 import { PageWrapper } from '../shared/page-wrapper';
 import { useState, useEffect } from 'react';
@@ -96,7 +95,9 @@ function Content() {
         <div>
           <div className="flex items-center gap-2">
             <h2>Proxy</h2>
-            {hasParent && isInherited('proxy') && <InheritedBadge section="proxy" />}
+            {hasParent && isInherited('proxy') && (
+              <InheritedBadge section="proxy" />
+            )}
           </div>
           <p className="text-[--muted]">
             Configure a proxy for your streams to bypass IP restrictions or

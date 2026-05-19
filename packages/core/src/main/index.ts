@@ -1,10 +1,11 @@
+﻿import { config as appConfig } from '../config/index.js';
 import {
   Addon,
   Manifest,
   StrictManifestResource,
   UserData,
 } from '../db/index.js';
-import { Cache, createLogger, Env, IdParser } from '../utils/index.js';
+import { Cache, createLogger, IdParser } from '../utils/index.js';
 import Proxifier from '../streams/proxifier.js';
 import StreamLimiter from '../streams/limiter.js';
 import {
@@ -41,7 +42,7 @@ export class AIOStreams {
     this.ctx = {
       userData,
       options,
-      manifestUrl: `${Env.BASE_URL}/stremio/${userData.uuid}/${userData.encryptedPassword}/manifest.json`,
+      manifestUrl: `${appConfig.bootstrap.baseUrl}/stremio/${userData.uuid}/${userData.encryptedPassword}/manifest.json`,
       manifests: {},
       supportedResources: {},
       finalResources: [],
@@ -134,11 +135,7 @@ export class AIOStreams {
     ) {
       return false;
     }
-    logger.info(`Determining if autoplay should be stopped`, {
-      type,
-      id,
-      uuid: this.ctx.userData.uuid,
-    });
+    logger.debug({ type, id }, 'checking if autoplay should be stopped');
     let disableAutoplay = false;
     const cfg = this.ctx.userData.areYouStillThere;
     const threshold = cfg.episodesBeforeCheck ?? 3;
@@ -146,14 +143,14 @@ export class AIOStreams {
     const cache = Cache.getInstance<string, { count: number; lastAt: number }>(
       'ays',
       10000,
-      Env.REDIS_URI ? undefined : 'sql'
+      appConfig.bootstrap.redisUri ? undefined : 'sql'
     );
     const parsed = IdParser.parse(id, type);
     const baseSeriesKey = parsed
       ? `${parsed.type}:${parsed.value}`
       : id.split(':')[0] || id;
     const key = `${this.ctx.userData.uuid}:${baseSeriesKey}`;
-    logger.debug(`Formed AYS cache key: ${key}`);
+    logger.trace({ key }, 'formed ays cache key');
     const now = Date.now();
     const prev = (await cache.get(key)) || { count: 0, lastAt: 0 };
     const withinWindow = now - prev.lastAt <= cooldownMs;
@@ -172,11 +169,7 @@ export class AIOStreams {
         Math.ceil(cooldownMs / 1000)
       );
     }
-    logger.info(`Autoplay disable check result`, {
-      disableAutoplay,
-      count: nextCount,
-      withinWindow,
-    });
+    logger.debug({ disableAutoplay, count: nextCount, withinWindow }, 'autoplay disable check result');
     return disableAutoplay;
   }
 }

@@ -1,4 +1,3 @@
-'use client';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { SettingsCard } from '../../../shared/settings-card';

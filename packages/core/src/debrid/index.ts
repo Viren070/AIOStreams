@@ -1,4 +1,4 @@
-export * from './base.js';
+﻿export * from './base.js';
 export * from './utils.js';
 export * from './stremthru.js';
 export * from './torbox.js';
@@ -6,7 +6,7 @@ export * from './nzbdav.js';
 export * from './altmount.js';
 
 import {
-  Env,
+  appConfig,
   ServiceId,
   fromUrlSafeBase64,
   resolveServiceTime,
@@ -31,22 +31,22 @@ export function getDebridService(
   };
 
   const pollInterval = resolveServiceTime(
-    Env.BUILTIN_DOWNLOAD_POLL_INTERVAL,
+    appConfig.builtins.debrid.downloadPollInterval,
     serviceName
   );
   const maxWaitTime = resolveServiceTime(
-    Env.BUILTIN_DOWNLOAD_MAX_WAIT_TIME,
+    appConfig.builtins.debrid.downloadMaxWaitTime,
     serviceName
   );
 
   switch (serviceName) {
     case 'torbox':
-      if (Env.TORBOX_USENET_VIA_STREMTHRU) {
+      if (appConfig.builtins.stremthru.torboxUsenetViaStremthru) {
         return new StremThruService({
           serviceName: 'torbox',
           clientIp: config.clientIp,
           stremthru: {
-            baseUrl: Env.BUILTIN_STREMTHRU_URL,
+            baseUrl: appConfig.builtins.stremthru.url,
             store: 'torbox',
             token: config.token,
           },
@@ -83,7 +83,7 @@ export function getDebridService(
           serviceName,
           clientIp: config.clientIp,
           stremthru: {
-            baseUrl: Env.BUILTIN_STREMTHRU_URL,
+            baseUrl: appConfig.builtins.stremthru.url,
             store: serviceName,
             token: config.token,
           },

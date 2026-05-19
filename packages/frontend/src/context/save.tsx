@@ -1,21 +1,13 @@
-'use client';
-
 import React from 'react';
 import { UserData } from '@aiostreams/core';
 import { useUserData, DefaultUserData } from './userData';
 import { useStatus } from './status';
 import { useMenu } from './menu';
-import {
-  loadRawUserConfig,
-  updateUserConfig,
-  APIError,
-  fetchManifest,
-} from '@/lib/api';
+import { loadRawUserConfig, updateUserConfig, fetchManifest } from '@/lib/api';
 import { computeUserDataDiff } from '../utils/diff/userData';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
-import { AddonPasswordModal } from '@/components/shared/addon-password-modal';
 import { UserDataDiffViewer } from '@/components/shared/userdata-diff-viewer';
 import {
   ManifestDiffViewer,
@@ -55,7 +47,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     (typeof window !== 'undefined' ? window.location.origin : '');
 
   const [loading, setLoading] = React.useState(false);
-  const [passwordModalOpen, setPasswordModalOpen] = React.useState(false);
   const [diffModalOpen, setDiffModalOpen] = React.useState(false);
   const [manifestChangedModalOpen, setManifestChangedModalOpen] =
     React.useState(false);
@@ -111,7 +102,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         uuid: (prev as any).uuid,
         encryptedPassword: (prev as any).encryptedPassword,
         trusted: (prev as any).trusted,
-        addonPassword: prev.addonPassword,
+        accessToken: prev.accessToken,
         ip: (prev as any).ip,
         showChanges: prev.showChanges,
       }));
@@ -170,9 +161,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   }, [manifestUrl, uuid]);
 
   const handleSave = React.useCallback(
-    async (options?: { skipDiff?: boolean; authenticated?: boolean }) => {
+    async (options?: { skipDiff?: boolean }) => {
       const skipDiffHandler = options?.skipDiff ?? false;
-      const authenticated = options?.authenticated ?? false;
       const shouldSkipDiff = skipDiffHandler || pendingSkipDiffRef.current;
       pendingSkipDiffRef.current = false;
 
@@ -184,17 +174,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       }
 
       let suppressSuccessToast = false;
-
-      // Instance password check
-      if (
-        status?.settings.protected &&
-        !authenticated &&
-        !userData.addonPassword
-      ) {
-        pendingSkipDiffRef.current = shouldSkipDiff;
-        setPasswordModalOpen(true);
-        return;
-      }
 
       // Diff check
       if (!shouldSkipDiff && userData?.showChanges) {
@@ -211,7 +190,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
           } else {
             setRemoteConfig(remoteConf);
-            if (authenticated) setPasswordModalOpen(false);
             setDiffModalOpen(true);
             setLoading(false);
             return;
@@ -229,22 +207,14 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         if (!suppressSuccessToast) {
           toast.success('Configuration updated successfully');
         }
-        if (authenticated) setPasswordModalOpen(false);
 
         // Capture pre-save manifest for the diff view, then check if it changed
         setPreSaveManifest(savedManifest);
         await checkManifestChange();
       } catch (err) {
-        if (err instanceof APIError && err.is('ADDON_PASSWORD_INVALID')) {
-          toast.error('Your addon password is incorrect');
-          setUserData((prev) => ({ ...prev, addonPassword: '' }));
-          setPasswordModalOpen(true);
-          return;
-        }
         toast.error(
           err instanceof Error ? err.message : 'Failed to save configuration'
         );
-        if (authenticated) setPasswordModalOpen(false);
       } finally {
         setLoading(false);
       }
@@ -285,18 +255,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   return (
     <SaveContext.Provider value={{ handleSave, loading }}>
       {children}
-
-      <AddonPasswordModal
-        open={passwordModalOpen}
-        onOpenChange={setPasswordModalOpen}
-        loading={loading}
-        onSubmit={() => handleSave({ authenticated: true })}
-        submitText="Save"
-        value={userData.addonPassword ?? ''}
-        onValueChange={(value) =>
-          setUserData((prev) => ({ ...prev, addonPassword: value }))
-        }
-      />
 
       <Modal
         open={diffModalOpen}

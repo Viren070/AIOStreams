@@ -1,4 +1,4 @@
-import {
+﻿import {
   DebridDownload,
   DebridError,
   DebridServiceConfig,
@@ -8,7 +8,7 @@ import {
 import {
   Cache,
   DistributedLock,
-  Env,
+  appConfig,
   ServiceId,
   createLogger,
   fromUrlSafeBase64,
@@ -139,7 +139,7 @@ export class EasynewsService implements UsenetDebridService {
     await EasynewsService.playbackLinkCache.set(
       cacheKey,
       finalUrl,
-      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL
+      appConfig.builtins.debrid.playbackLinkCacheTtl
     );
     return finalUrl;
   }

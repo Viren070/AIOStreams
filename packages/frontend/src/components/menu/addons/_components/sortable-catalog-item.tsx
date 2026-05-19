@@ -1,4 +1,3 @@
-'use client';
 import React, { useState } from 'react';
 import { CatalogModification } from '@aiostreams/core';
 import { useUserData } from '@/context/userData';

@@ -1,4 +1,3 @@
-'use client';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
 import { Switch } from '../../../ui/switch';

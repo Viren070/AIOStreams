@@ -1,43 +1,11 @@
 import { Addon, Option, UserData, Resource } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import { StremThruPreset } from './stremthru.js';
 
-class JackettioStreamParser extends StreamParser {
-  override applyUrlModifications(url: string | undefined): string | undefined {
-    if (!url) {
-      return url;
-    }
-    if (
-      Env.FORCE_JACKETTIO_HOSTNAME !== undefined ||
-      Env.FORCE_JACKETTIO_PORT !== undefined ||
-      Env.FORCE_JACKETTIO_PROTOCOL !== undefined
-    ) {
-      // modify the URL according to settings, needed when using a local URL for requests but a public stream URL is needed.
-      const urlObj = new URL(url);
-
-      if (Env.FORCE_JACKETTIO_PROTOCOL !== undefined) {
-        urlObj.protocol = Env.FORCE_JACKETTIO_PROTOCOL;
-      }
-      if (Env.FORCE_JACKETTIO_PORT !== undefined) {
-        urlObj.port = Env.FORCE_JACKETTIO_PORT.toString();
-      }
-      if (Env.FORCE_JACKETTIO_HOSTNAME !== undefined) {
-        urlObj.hostname = Env.FORCE_JACKETTIO_HOSTNAME;
-      }
-      return urlObj.toString();
-    }
-    return super.applyUrlModifications(url);
-  }
-}
-
 export class JackettioPreset extends StremThruPreset {
-  static override getParser(): typeof StreamParser {
-    return JackettioStreamParser;
-  }
-
   static override get METADATA() {
     const supportedServices: ServiceId[] = [
       constants.REALDEBRID_SERVICE,
@@ -56,8 +24,9 @@ export class JackettioPreset extends StremThruPreset {
       ...baseOptions(
         'Jackettio',
         supportedResources,
-        Env.DEFAULT_JACKETTIO_TIMEOUT,
-        Env.JACKETTIO_URL
+        appConfig.presets.jackettio.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.jackettio.url ?? undefined
       ),
       {
         id: 'services',
@@ -104,9 +73,13 @@ export class JackettioPreset extends StremThruPreset {
       ID: 'jackettio',
       NAME: 'Jackettio',
       LOGO: 'https://raw.githubusercontent.com/Jackett/Jackett/bbea5febd623f6e536e11aa1fa8d6674d8d4043f/src/Jackett.Common/Content/jacket_medium.png',
-      URL: Env.JACKETTIO_URL[0],
-      TIMEOUT: Env.DEFAULT_JACKETTIO_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_JACKETTIO_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.jackettio.url,
+      TIMEOUT:
+        appConfig.presets.jackettio.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.jackettio.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'Stremio addon that resolves streams using Jackett and Debrid',
@@ -172,7 +145,7 @@ export class JackettioPreset extends StremThruPreset {
     options: Record<string, any>,
     serviceId: ServiceId | undefined
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }
@@ -203,9 +176,9 @@ export class JackettioPreset extends StremThruPreset {
       mediaflowApiPassword: '',
       mediaflowPublicIp: '',
       useStremThru: true,
-      stremthruUrl: Env.DEFAULT_JACKETTIO_STREMTHRU_URL,
+      stremthruUrl: appConfig.presets.jackettio.defaultStremthruUrl,
       qualities: [0, 360, 480, 720, 1080, 2160],
-      indexers: Env.DEFAULT_JACKETTIO_INDEXERS,
+      indexers: appConfig.presets.jackettio.defaultIndexers,
     });
 
     return `${url}${configString ? '/' + configString : ''}/manifest.json`;

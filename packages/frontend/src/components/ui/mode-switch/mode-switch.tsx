@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { cn } from '@/components/ui/core/styling';
 import { Mode } from '@/context/mode';

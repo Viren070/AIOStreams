@@ -1,10 +1,7 @@
 import { BaseDebridAddon, BaseDebridConfigSchema } from '../base/debrid.js';
 import { z } from 'zod';
-import {
-  createLogger,
-  Env,
-  getTimeTakenSincePoint,
-} from '../../utils/index.js';
+import { createLogger, getTimeTakenSincePoint } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import ProwlarrApi, {
   ProwlarrApiIndexer,
   ProwlarrApiSearchItem,
@@ -51,24 +48,25 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     super(config, ProwlarrAddonConfigSchema, clientIp);
 
     this.preconfiguredInstance =
-      Env.BUILTIN_PROWLARR_URL === config.url &&
-      Env.BUILTIN_PROWLARR_API_KEY === config.apiKey;
+      appConfig.builtins.prowlarr.url === config.url &&
+      appConfig.builtins.prowlarr.apiKey === config.apiKey;
     this.indexers = config.indexers.map((x) => x.toLowerCase());
     this.tags = config.tags.map((x) => x.toLowerCase());
     this.sources = (config.sources ?? []).map((x) => x.toLowerCase());
     this.api = new ProwlarrApi({
       baseUrl: config.url,
       apiKey: config.apiKey,
-      timeout: Env.BUILTIN_PROWLARR_SEARCH_TIMEOUT,
+      timeout: appConfig.builtins.prowlarr.searchTimeout,
     });
   }
 
   public static async fetchpreconfiguredIndexers(): Promise<void> {
     if (this.preconfiguredIndexers) return;
-    if (!Env.BUILTIN_PROWLARR_URL || !Env.BUILTIN_PROWLARR_API_KEY) return;
+    if (!appConfig.builtins.prowlarr.url || !appConfig.builtins.prowlarr.apiKey)
+      return;
     const api = new ProwlarrApi({
-      baseUrl: Env.BUILTIN_PROWLARR_URL,
-      apiKey: Env.BUILTIN_PROWLARR_API_KEY,
+      baseUrl: appConfig.builtins.prowlarr.url,
+      apiKey: appConfig.builtins.prowlarr.apiKey,
       timeout: 5000,
     });
     const { data } = await api.indexers();
@@ -90,16 +88,16 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       //   );
       //   return false;
       // }
-      if (Env.BUILTIN_PROWLARR_INDEXERS?.length) {
+      if (appConfig.builtins.prowlarr.indexers?.length) {
         if (
           ![
             indexer.name.toLowerCase(),
             indexer.sortName.toLowerCase(),
             indexer.definitionName.toLowerCase(),
           ].some((x) =>
-            Env.BUILTIN_PROWLARR_INDEXERS?.map((x) => x.toLowerCase()).includes(
-              x
-            )
+            appConfig.builtins.prowlarr.indexers
+              ?.map((x) => x.toLowerCase())
+              .includes(x)
           )
         ) {
           filterReasons.set(

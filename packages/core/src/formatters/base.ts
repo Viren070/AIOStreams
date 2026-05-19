@@ -1,6 +1,6 @@
-import { ParsedStream, UserData } from '../db/schemas.js';
+﻿import { ParsedStream, UserData } from '../db/schemas.js';
 import * as constants from '../utils/constants.js';
-import { createLogger } from '../utils/logger.js';
+import { createLogger } from '../logging/logger.js';
 import {
   formatBytes,
   formatSmartBytes,
@@ -11,7 +11,7 @@ import {
   formatSmartBitrate,
 } from './utils.js';
 import { languageToCode, languageToEmoji } from '../utils/languages.js';
-import { Env } from '../utils/env.js';
+import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('formatter');
 const MAX_TEMPLATE_DEPTH = 5;
@@ -436,7 +436,7 @@ export abstract class BaseFormatter {
     const formattedAge = stream.age ? formatHours(stream.age) : null;
     const parseValue: ParseValue = {
       config: {
-        addonName: this.userData.addonName || Env.ADDON_NAME,
+        addonName: this.userData.addonName || appConfig.branding.addonName,
       },
       stream: {
         filename: stream.filename || null,

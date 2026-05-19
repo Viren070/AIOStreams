@@ -8,8 +8,8 @@ import {
   ParsedFile,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class MeteorStreamParser extends StreamParser {
@@ -100,8 +100,9 @@ export class MeteorPreset extends Preset {
       ...baseOptions(
         'Meteor',
         supportedResources,
-        Env.DEFAULT_METEOR_TIMEOUT,
-        Env.METEOR_URL
+        appConfig.presets.meteor.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.meteor.url ?? undefined
       ),
       {
         id: 'services',
@@ -245,9 +246,13 @@ export class MeteorPreset extends Preset {
       ID: 'meteor',
       NAME: 'Meteor',
       LOGO: `https://meteorfortheweebs.midnightignite.me/static/icon.png`,
-      URL: Env.METEOR_URL[0],
-      TIMEOUT: Env.DEFAULT_METEOR_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_METEOR_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.meteor.url,
+      TIMEOUT:
+        appConfig.presets.meteor.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.meteor.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'Meteor is a Stremio addon for torrent and debrid streaming',
       OPTIONS: options,
@@ -343,7 +348,7 @@ export class MeteorPreset extends Preset {
     options: Record<string, any>,
     services: ServiceId[]
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

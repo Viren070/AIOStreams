@@ -3,10 +3,10 @@ import {
   Cache,
   createLogger,
   DistributedLock,
-  Env,
   formatZodError,
   makeRequest,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import z from 'zod';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 
@@ -115,7 +115,7 @@ class ProwlarrApi {
     this.#headers = {
       'Content-Type': 'application/json',
       'X-Api-Key': this.apiKey,
-      'User-Agent': Env.DEFAULT_USER_AGENT,
+      'User-Agent': appConfig.http.defaultUserAgent,
     };
     this.#timeout = config.timeout;
   }
@@ -129,7 +129,7 @@ class ProwlarrApi {
           ProwlarrApiTagsListSchema
         ),
       `${this.baseUrl}:tag`,
-      Env.BUILTIN_PROWLARR_INDEXERS_CACHE_TTL
+      appConfig.builtins.prowlarr.indexersCacheTtl
     );
   }
 
@@ -143,7 +143,7 @@ class ProwlarrApi {
           3000
         ),
       `${this.baseUrl}:indexer`,
-      Env.BUILTIN_PROWLARR_INDEXERS_CACHE_TTL
+      appConfig.builtins.prowlarr.indexersCacheTtl
     );
   }
 
@@ -166,7 +166,7 @@ class ProwlarrApi {
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
       bgCacheKey: `prowlarr:${cacheKey}`,
-      cacheTTL: Env.BUILTIN_PROWLARR_SEARCH_CACHE_TTL,
+      cacheTTL: appConfig.builtins.prowlarr.searchCacheTtl,
       fetchFn: () =>
         this.request<ProwlarrApiSearchItem[]>(
           'search',

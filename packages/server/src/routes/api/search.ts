@@ -9,8 +9,6 @@ import {
   constants,
   formatZodError,
   validateConfig,
-  isEncrypted,
-  decryptString,
   createLogger,
   ApiTransformer,
   SearchApiResponseData,
@@ -20,6 +18,7 @@ import {
 import { streamApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { ApiResponse, createResponse } from '../../utils/responses.js';
 import { syncUserDataUrls } from '../../utils/syncUserData.js';
+import { parseBasicAuthHeader } from '../../utils/basic-auth.js';
 import { z, ZodError } from 'zod';
 const router: Router = Router();
 
@@ -91,63 +90,16 @@ router.get(
           );
         }
       } else if (auth) {
-        let uuid: string;
-        let password: string;
-        try {
-          if (!auth.startsWith('Basic ')) {
-            throw new APIError(
-              constants.ErrorCode.BAD_REQUEST,
-              undefined,
-              `Invalid auth: ${auth}. Must start with 'Basic '`
-            );
-          }
-          const base64Credentials = auth.slice('Basic '.length).trim();
-          const credentials = Buffer.from(base64Credentials, 'base64').toString(
-            'utf-8'
-          );
-          const sepIndex = credentials.indexOf(':');
-          if (sepIndex === -1) {
-            throw new APIError(
-              constants.ErrorCode.BAD_REQUEST,
-              undefined,
-              `Invalid basic auth format`
-            );
-          }
-          uuid = credentials.slice(0, sepIndex);
-          password = credentials.slice(sepIndex + 1);
-          if (!uuid || !password) {
-            throw new APIError(
-              constants.ErrorCode.BAD_REQUEST,
-              undefined,
-              `Missing username or password in basic auth`
-            );
-          }
-          if (isEncrypted(password)) {
-            const {
-              success: successfulDecryption,
-              data: decryptedPassword,
-              error,
-            } = decryptString(password);
-            if (!successfulDecryption) {
-              next(
-                new APIError(
-                  constants.ErrorCode.ENCRYPTION_ERROR,
-                  undefined,
-                  error
-                )
-              );
-              return;
-            }
-            password = decryptedPassword;
-          }
-          logger.debug(`Using basic auth for Search API request: ${uuid}`);
-        } catch (error: any) {
+        const creds = parseBasicAuthHeader(req);
+        if (!creds) {
           throw new APIError(
             constants.ErrorCode.BAD_REQUEST,
             undefined,
-            `Invalid auth: ${error.message}`
+            `Invalid auth: missing Authorization header`
           );
         }
+        const { uuid, password } = creds;
+        logger.debug(`Using basic auth for Search API request: ${uuid}`);
         const userExists = await UserRepository.checkUserExists(uuid);
         if (!userExists) {
           throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);

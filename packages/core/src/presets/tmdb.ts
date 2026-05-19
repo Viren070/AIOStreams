@@ -1,6 +1,7 @@
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
 import { Addon, Option, UserData } from '../db/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class TMDBAddonPreset extends Preset {
   static override get METADATA() {
@@ -13,7 +14,8 @@ export class TMDBAddonPreset extends Preset {
       ...baseOptions(
         'The Movie Database',
         supportedResources,
-        Env.DEFAULT_TMDB_ADDON_TIMEOUT
+        appConfig.presets.tmdbAddon.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'Enable Adult Content',
@@ -271,9 +273,13 @@ export class TMDBAddonPreset extends Preset {
       ID: 'tmdb-addon',
       NAME: 'The Movie Database',
       LOGO: 'https://raw.githubusercontent.com/mrcanelas/tmdb-addon/refs/heads/main/public/logo.png',
-      URL: Env.TMDB_ADDON_URL,
-      TIMEOUT: Env.DEFAULT_TMDB_ADDON_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_TMDB_ADDON_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.tmdbAddon.url,
+      TIMEOUT:
+        appConfig.presets.tmdbAddon.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.tmdbAddon.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Provides rich metadata for movies and TV shows from TMDB',
       OPTIONS: options,
@@ -294,11 +300,11 @@ export class TMDBAddonPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
-    let url = this.METADATA.URL;
+    let url = this.DEFAULT_URL;
     if (options.url?.endsWith('/manifest.json')) {
       url = options.url;
     } else {
-      let baseUrl = this.METADATA.URL;
+      let baseUrl = this.DEFAULT_URL;
       if (options.url) {
         baseUrl = new URL(options.url).origin;
       }
@@ -374,7 +380,7 @@ export class TMDBAddonPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

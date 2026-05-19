@@ -618,7 +618,7 @@ async function processNZBsForDebridService(
   logger.debug(`Retrieved NZB status from debrid`, {
     service: debridService.serviceName,
     nzbCount: nzbs.length,
-    time: getTimeTakenSincePoint(startTime),
+    timeTaken: getTimeTakenSincePoint(startTime),
   });
 
   // Parse NZB titles and validate

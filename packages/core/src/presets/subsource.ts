@@ -1,11 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import {
-  constants,
-  Env,
-  RESOURCES,
-  SUBTITLES_RESOURCE,
-} from '../utils/index.js';
+import { constants, SUBTITLES_RESOURCE } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class SubSourcePreset extends Preset {
   static override get METADATA() {
@@ -130,7 +126,8 @@ export class SubSourcePreset extends Preset {
       ...baseOptions(
         'SubSource',
         supportedResources,
-        Env.DEFAULT_SUBSOURCE_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.presets.subsource.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'subSourceApiKey',
@@ -197,9 +194,13 @@ export class SubSourcePreset extends Preset {
       ID: 'subsource',
       NAME: 'SubSource',
       LOGO: 'https://raw.githubusercontent.com/nexusdiscord/tv-logo/master/ss.png',
-      URL: Env.SUBSOURCE_URL,
-      TIMEOUT: Env.DEFAULT_SUBSOURCE_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_SUBSOURCE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.subsource.url,
+      TIMEOUT:
+        appConfig.presets.subsource.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.subsource.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'SubSource addon',
       OPTIONS: options,
@@ -249,7 +250,7 @@ export class SubSourcePreset extends Preset {
     }
     options.subtitleTypes = options.subtitleTypes || [1, 2, 3, 4];
 
-    const host = options.url || this.METADATA.URL;
+    const host = options.url || this.DEFAULT_URL;
 
     const type =
       options.subtitleTypes.length === 4 ? 0 : options.subtitleTypes.join(',');

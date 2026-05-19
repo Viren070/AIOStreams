@@ -1,5 +1,5 @@
-import {
-  Env,
+﻿import {
+  appConfig,
   ServiceId,
   createLogger,
   getTimeTakenSincePoint,
@@ -31,7 +31,7 @@ import { createClient, WebDAVClient, FileStat } from 'webdav';
 import { fetch } from 'undici';
 import { BuiltinProxy } from '../proxy/builtin.js';
 import { basename } from 'path';
-import { Logger } from 'winston';
+import type { Logger } from '../logging/logger.js';
 
 // Zod schemas for SABnzbd-compatible API responses (used by streaming usenet services)
 const AddUrlResponseSchema = z.object({
@@ -146,11 +146,10 @@ export class SABnzbdApi {
       url.searchParams.append(key, val);
     });
 
-    this.logger.debug(`Making ${this.serviceName} API request`, {
-      ...params,
-      apikey: maskSensitiveInfo(this.apiKey),
-      fullUrl: maskSensitiveInfo(url.toString()),
-    });
+    this.logger.debug(
+      { service: this.serviceName, ...params },
+      'making api request'
+    );
 
     try {
       const response = await fetch(url.toString(), {
@@ -206,7 +205,8 @@ export class SABnzbdApi {
 
         if (error instanceof ZodError) {
           this.logger.error(
-            `Failed to parse ${this.serviceName} API response: ${formatZodError(error)}`
+            { service: this.serviceName, err: formatZodError(error) },
+            'failed to parse api response'
           );
           throw new DebridError(`Invalid ${this.serviceName} API response`, {
             statusCode: response.status,
@@ -307,9 +307,7 @@ export class SABnzbdApi {
       });
     }
 
-    this.logger.debug(`NZB job successfully added`, {
-      nzoId,
-    });
+    this.logger.debug({ nzoId }, 'nzb job added');
     return { nzoId };
   }
 
@@ -477,10 +475,21 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   ) {
     this.auth = serviceConfig;
     this.serviceLogger = createLogger(serviceName);
-    this.webdavClient = createClient(serviceConfig.webdavUrl, {
-      username: serviceConfig.webdavUser,
-      password: serviceConfig.webdavPassword,
-    });
+    // The `webdav` library uses `base-64` for Basic Auth, which rejects any
+    // character with a code point > 0xFF. Pre-encode via Buffer (UTF-8) so
+    // credentials with non-Latin1 characters (emoji, CJK, etc.) work too.
+    const webdavClientOptions: Parameters<typeof createClient>[1] =
+      serviceConfig.webdavUser && serviceConfig.webdavPassword
+        ? {
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${serviceConfig.webdavUser}:${serviceConfig.webdavPassword}`).toString('base64')}`,
+            },
+          }
+        : {};
+    this.webdavClient = createClient(
+      serviceConfig.webdavUrl,
+      webdavClientOptions
+    );
     this.api = new SABnzbdApi(
       serviceConfig.apiUrl,
       serviceConfig.apiKey,
@@ -681,7 +690,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const directories = contents.filter((item) => item.type === 'directory');
     this.serviceLogger.debug(`Listed WebDAV folders at ${path}`, {
       count: directories.length,
-      time: getTimeTakenSincePoint(start),
+      timeTaken: getTimeTakenSincePoint(start),
     });
     return directories;
   }
@@ -743,8 +752,8 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       const remainingTTL =
         await UsenetStreamService.libraryCache.getTTL(cacheKey);
       if (remainingTTL !== null && remainingTTL > 0) {
-        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
-        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+        const age = appConfig.builtins.debrid.libraryCacheTtl - remainingTTL;
+        if (age > appConfig.builtins.debrid.libraryStaleThreshold) {
           this.serviceLogger.debug(
             `Library cache for ${this.serviceName} is stale (age: ${age}s), triggering background refresh`
           );
@@ -866,12 +875,12 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     this.serviceLogger.debug(`Listed NZBs from combined history and WebDAV`, {
       count: nzbs.length,
-      time: getTimeTakenSincePoint(start),
+      timeTaken: getTimeTakenSincePoint(start),
     });
     await UsenetStreamService.libraryCache.set(
       cacheKey,
       nzbs,
-      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      appConfig.builtins.debrid.libraryCacheTtl,
       true
     );
 
@@ -1107,7 +1116,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
         jobName,
         jobCategory,
         contentPath,
-        time: getTimeTakenSincePoint(pollStartTime),
+        timeTaken: getTimeTakenSincePoint(pollStartTime),
       });
     }
 
@@ -1152,7 +1161,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       jobName,
       contentPath,
       depth,
-      time: getTimeTakenSincePoint(listStartTime),
+      timeTaken: getTimeTakenSincePoint(listStartTime),
       count: debridFiles.length,
       files: debridFiles.map((f) => f.name),
     });
@@ -1249,7 +1258,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     await UsenetStreamService.resolveCache.set(
       cacheKey,
       playbackLink,
-      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
+      appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 
@@ -1388,7 +1397,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     await UsenetStreamService.resolveCache.set(
       cacheKey,
       playbackLink,
-      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
+      appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 

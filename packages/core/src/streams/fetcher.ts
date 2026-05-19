@@ -14,6 +14,34 @@ import StreamFilter from './filterer.js';
 import StreamPrecompute from './precomputer.js';
 import StreamDeduplicator from './deduplicator.js';
 import { StreamContext } from './context.js';
+import {
+  classifyAddonError,
+  type AnalyticsDisposition,
+  type AnalyticsErrorKind,
+  type AnalyticsStatus,
+} from '../analytics/index.js';
+
+/**
+ * Per-addon outcome tracked through {@link StreamFetcher.fetch} and surfaced
+ * to `resources.ts` so the per-user `addon_contribution` event can attribute
+ * post-pipeline results back to the right addon.
+ *
+ * Keyed by `manifestUrl` because (a) the wrapper already hashes that for
+ * `addon_instance_hash`, giving a consistent identity for joins, and
+ * (b) `ParsedStream.addon.manifestUrl` survives all pipeline steps so the
+ * caller can recover the addon from any surviving stream without a separate
+ * lookup.
+ */
+export interface AddonDispositionInfo {
+  addon: Addon;
+  disposition: AnalyticsDisposition;
+  rawCount: number;
+  latencyMs: number;
+  status: AnalyticsStatus;
+  errorKind?: AnalyticsErrorKind;
+}
+
+export type AddonDispositionMap = Map<string, AddonDispositionInfo>;
 
 const logger = createLogger('fetcher');
 
@@ -46,6 +74,8 @@ class StreamFetcher {
       title: string;
       description: string;
     }[];
+    /** Per-addon outcome map used by per-user analytics. */
+    dispositions: AddonDispositionMap;
   }> {
     const { type, id, queryType } = context;
 
@@ -62,6 +92,19 @@ class StreamFetcher {
     let allStreams: ParsedStream[] = [];
     const start = Date.now();
 
+    // Seed every input addon with `not_started` so anything filtered out (or
+    // never reached on the dynamic path) is attributable to a disposition.
+    const dispositions: AddonDispositionMap = new Map();
+    for (const a of addons) {
+      dispositions.set(a.manifestUrl, {
+        addon: a,
+        disposition: 'not_started',
+        rawCount: 0,
+        latencyMs: 0,
+        status: 'ok',
+      });
+    }
+
     addons = addons.filter((addon) => {
       if (
         addon.mediaTypes &&
@@ -77,7 +120,8 @@ class StreamFetcher {
         );
         if (!result) {
           logger.debug(
-            `Skipping ${getAddonName(addon)} because its specified media types do not include ${mappedType}`
+            { addon: getAddonName(addon), type: mappedType },
+            'skipping addon due to media type restriction'
           );
         }
         return result;
@@ -87,7 +131,6 @@ class StreamFetcher {
 
     // Helper function to fetch streams from an addon and log summary
     const fetchFromAddon = async (addon: Addon) => {
-      let summaryMsg = '';
       const start = Date.now();
 
       try {
@@ -99,30 +142,39 @@ class StreamFetcher {
           title: `[❌] ${s.error?.title || getAddonName(addon)}`,
           description: s.error?.description || 'Unknown error',
         }));
+        const usableStreams = streams.filter(
+          (s) => s.type !== constants.ERROR_STREAM_TYPE
+        );
+        const latencyMs = Date.now() - start;
+        const status: AnalyticsStatus =
+          errorStreams.length > 0 && usableStreams.length === 0
+            ? 'error'
+            : usableStreams.length === 0
+              ? 'empty'
+              : 'ok';
+        // Mark as merged optimistically — the dynamic path will downgrade to
+        // `cut_off` for addons that completed after the exit condition fired
+        // (their results are discarded from `finalStreams`).
+        dispositions.set(addon.manifestUrl, {
+          addon,
+          disposition: 'merged',
+          rawCount: usableStreams.length,
+          latencyMs,
+          status,
+        });
 
         if (errorStreams.length > 0) {
-          logger.error(
-            `Found ${errorStreams.length} error streams from ${getAddonName(addon)}`,
+          logger.warn(
             {
-              errorStreams: errorStreams.map((s) => s.error?.title),
-            }
+              addon: getAddonName(addon),
+              errors: errorStreams.length,
+              titles: errorStreams.map((s) => s.error?.title),
+            },
+            'addon returned error streams'
           );
         }
 
-        summaryMsg = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ${errorStreams.length > 0 ? '🟠' : '🟢'} [${getAddonName(addon)}] Scrape Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ✔ Status      : ${errorStreams.length > 0 ? 'PARTIAL SUCCESS' : 'SUCCESS'}
-  📦 Streams    : ${streams.length}
-  📋 Details    : ${
-    errorStreams.length > 0
-      ? `Fetched streams with errors:\n${errorStreams.map((s) => `    • ${s.error?.title || 'Unknown error'}: ${s.error?.description || 'No description'}`).join('\n')}`
-      : 'Successfully fetched streams.'
-  }
-  ⏱️ Time       : ${getTimeTakenSincePoint(start)}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-        let statisticStream = {
+        const statisticStream = {
           title: `${errorStreams.length > 0 ? '🟠' : '🟢'} [${getAddonName(addon)}] Scrape Summary`,
           description: `✔ Status      : ${errorStreams.length > 0 ? 'PARTIAL SUCCESS' : 'SUCCESS'}
 📦 Streams    : ${streams.length}
@@ -135,14 +187,21 @@ class StreamFetcher {
 `,
         };
 
+        logger.debug(
+          {
+            addon: getAddonName(addon),
+            streams: usableStreams.length,
+            errors: errorStreams.length,
+            took: latencyMs,
+          },
+          'addon fetch complete'
+        );
         return {
           success: true as const,
-          streams: streams.filter(
-            (s) => s.type !== constants.ERROR_STREAM_TYPE
-          ),
+          streams: usableStreams,
           errors: addonErrors,
           statistic: statisticStream,
-          timeTaken: Date.now() - start,
+          timeTaken: latencyMs,
         };
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
@@ -150,22 +209,26 @@ class StreamFetcher {
           title: `[❌] ${getAddonName(addon)}`,
           description: errMsg,
         };
-        summaryMsg = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔴 [${getAddonName(addon)}] Scrape Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ✖ Status      : FAILED
-  🚫 Error      : ${errMsg}
-  ⏱️ Time       : ${getTimeTakenSincePoint(start)}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+        const { error_kind } = classifyAddonError('stream', error);
+        const took = Date.now() - start;
+        dispositions.set(addon.manifestUrl, {
+          addon,
+          disposition: 'error',
+          rawCount: 0,
+          latencyMs: took,
+          status: 'error',
+          errorKind: error_kind,
+        });
+        logger.warn(
+          { addon: getAddonName(addon), err: errMsg, took },
+          'addon fetch failed'
+        );
         return {
           success: false as const,
           errors: [addonErrors],
           timeTaken: 0,
           streams: [],
         };
-      } finally {
-        logger.info(summaryMsg);
       }
     };
 
@@ -191,8 +254,9 @@ class StreamFetcher {
       // Run preferred matching AFTER filter
       await this.precompute.precomputePreferred(filteredStreams, context);
 
-      logger.info(
-        `Finished fetching from group in ${getTimeTakenSincePoint(groupStart)}`
+      logger.debug(
+        { count: filteredStreams.length, took: Date.now() - groupStart },
+        'group fetch complete'
       );
       return {
         totalTime: Date.now() - groupStart,
@@ -233,10 +297,10 @@ class StreamFetcher {
 
       const checkpointTimes = extractTimes(condition);
       if (checkpointTimes.length > 0) {
-        logger.debug(`Extracted checkpoints to check exit condition at`, {
-          checkpoints: checkpointTimes,
-          count: checkpointTimes.length,
-        });
+        logger.debug(
+          { checkpoints: checkpointTimes, count: checkpointTimes.length },
+          'extracted exit condition checkpoints'
+        );
       }
 
       await new Promise<void>((resolve) => {
@@ -271,8 +335,18 @@ class StreamFetcher {
           if (resolved) return;
           resolved = true;
           timeouts.forEach(clearTimeout);
-          logger.info(
-            `Exit condition met with results from ${queriedAddons.length} addons. (${stillFetching} addons still fetching) Returning results.`
+          // Any addon whose disposition is still `not_started` at this point
+          // never returned a result before we tripped the exit condition;
+          // tag it as cut_off. (Addons that did complete before exit are
+          // already `merged`/`error` in the map; we leave those alone.)
+          for (const [key, info] of dispositions) {
+            if (info.disposition === 'not_started') {
+              dispositions.set(key, { ...info, disposition: 'cut_off' });
+            }
+          }
+          logger.debug(
+            { queried: queriedAddons.length, stillFetching },
+            'exit condition met, returning results'
           );
           resolve();
         };
@@ -300,10 +374,10 @@ class StreamFetcher {
               );
 
               const shouldExit = await evaluator.evaluate(condition);
-              logger.debug(`Evaluated exit condition`, {
-                shouldExit,
-                queriedAddons,
-              });
+              logger.debug(
+                { shouldExit, queried: queriedAddons.length },
+                'evaluated exit condition'
+              );
               if (shouldExit && !resolved) {
                 // If triggered by addon completion, that addon hasn't decremented activePromises yet
                 const stillFetching = fromAddonCompletion
@@ -322,10 +396,15 @@ class StreamFetcher {
         checkpointTimes.forEach((checkpointTime) => {
           const timeout = setTimeout(() => {
             if (!resolved) {
-              logger.debug(`Performing scheduled exit condition checkpoint`, {
-                checkpoint: checkpointTime,
-                time: (performance.now() - addonFetchStartTime).toFixed(0),
-              });
+              logger.debug(
+                {
+                  checkpoint: checkpointTime,
+                  timeTaken: Math.round(
+                    performance.now() - addonFetchStartTime
+                  ),
+                },
+                'scheduled exit condition checkpoint reached'
+              );
               checkExit(false);
             }
           }, checkpointTime + 50);
@@ -341,7 +420,8 @@ class StreamFetcher {
               progress.remaining--;
               if (progress.remaining === 0) {
                 logger.debug(
-                  `All addons from preset ${progress.name} (${addon.preset.id}) have been queried. Pushing addon name to queriedAddons.`
+                  { preset: progress.name, presetId: addon.preset.id },
+                  'all addons from preset completed, marking as queried'
                 );
                 queriedAddons.push(addon.name);
               }
@@ -356,8 +436,11 @@ class StreamFetcher {
             .catch((error) => {
               if (resolved) return;
               logger.error(
-                `Unhandled error from fetchAndProcessAddons for ${getAddonName(addon)}:`,
-                error
+                {
+                  addon: getAddonName(addon),
+                  err: error instanceof Error ? error.message : String(error),
+                },
+                'unhandled error fetching from addon'
               );
               allErrors.push({
                 title: `[❌] ${getAddonName(addon)}`,
@@ -368,8 +451,9 @@ class StreamFetcher {
             .finally(() => {
               activePromises--;
               if (activePromises === 0 && !resolved) {
-                logger.info(
-                  `All ${addons.length} addons finished fetching. Returning results.`
+                logger.debug(
+                  { count: addons.length },
+                  'all addons finished fetching'
                 );
                 resolved = true;
                 timeouts.forEach(clearTimeout);
@@ -403,13 +487,14 @@ class StreamFetcher {
 
       if (behaviour === 'parallel') {
         // Fetch all groups in parallel but still evaluate conditions
-        const groupPromises = this.userData.groups.groupings.map((group) => {
+        const groupPromises = this.userData.groups.groupings.map((group, i) => {
           const groupAddons = addons.filter(
             (addon) => addon.preset.id && group.addons.includes(addon.preset.id)
           );
           if (groupAddons.length === 0) return Promise.resolve(null);
-          logger.info(
-            `Queueing parallel fetch for group with ${groupAddons.length} addons.`
+          logger.debug(
+            { group: i + 1, addons: groupAddons.length },
+            'queuing parallel group fetch'
           );
           return fetchAndProcessAddons(groupAddons);
         });
@@ -444,8 +529,9 @@ class StreamFetcher {
           );
 
           if (shouldIncludeAndContinue) {
-            logger.info(
-              `Condition met for parallel group ${i + 1}, awaiting its streams and continuing.`
+            logger.debug(
+              { group: i + 1 },
+              'condition met for parallel group, awaiting results'
             );
             const groupResult = await groupPromise;
             if (!groupResult) continue;
@@ -456,8 +542,9 @@ class StreamFetcher {
             previousGroupStreams = groupResult.streams;
             previousGroupTimeTaken = groupResult.totalTime;
           } else {
-            logger.info(
-              `Condition not met for parallel group ${i + 1}, skipping remaining groups.`
+            logger.debug(
+              { group: i + 1 },
+              'condition not met for parallel group, skipping remaining groups'
             );
             // exit early.
             break;
@@ -480,8 +567,9 @@ class StreamFetcher {
             const shouldFetch = await evaluator.evaluate(group.condition);
 
             if (!shouldFetch) {
-              logger.info(
-                `Condition not met for sequential group ${i + 1}, stopping.`
+              logger.debug(
+                { group: i + 1 },
+                'condition not met for sequential group, stopping'
               );
               break;
             }
@@ -490,8 +578,9 @@ class StreamFetcher {
           const groupAddons = addons.filter(
             (addon) => addon.preset.id && group.addons.includes(addon.preset.id)
           );
-          logger.info(
-            `Fetching from sequential group ${i + 1} with ${groupAddons.length} addons.`
+          logger.debug(
+            { group: i + 1, addons: groupAddons.length },
+            'fetching sequential group'
           );
 
           const groupResult = await fetchAndProcessAddons(groupAddons);
@@ -512,8 +601,13 @@ class StreamFetcher {
       allStatisticStreams.push(...result.statistics);
     }
 
-    logger.info(
-      `Fetched ${allStreams.length} streams from ${addons.length} addons in ${getTimeTakenSincePoint(start)}`
+    logger.debug(
+      {
+        streams: allStreams.length,
+        addons: addons.length,
+        took: Date.now() - start,
+      },
+      'fetch complete'
     );
 
     // Sort statistic streams by time ascending
@@ -545,6 +639,7 @@ class StreamFetcher {
       streams: allStreams,
       errors: allErrors,
       statistics: allStatisticStreams,
+      dispositions,
     };
   }
 }

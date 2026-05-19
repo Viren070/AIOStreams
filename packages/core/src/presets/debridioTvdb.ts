@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   debridioSocialOption,
   debridioApiKeyOption,
@@ -18,7 +19,8 @@ export class DebridioTvdbPreset extends Preset {
       ...baseOptions(
         'Debridio TVDB',
         supportedResources,
-        Env.DEFAULT_DEBRIDIO_TVDB_TIMEOUT
+        appConfig.presets.debridioTvdb.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       debridioApiKeyOption,
       debridioSocialOption,
@@ -28,10 +30,13 @@ export class DebridioTvdbPreset extends Preset {
       ID: 'debridio-tvdb',
       NAME: 'Debridio TVDB',
       LOGO: debridioLogo,
-      URL: Env.DEBRIDIO_TVDB_URL,
-      TIMEOUT: Env.DEFAULT_DEBRIDIO_TVDB_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.debridioTvdb.url,
+      TIMEOUT:
+        appConfig.presets.debridioTvdb.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_DEBRIDIO_TVDB_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.debridioTvdb.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Catalogs for the Debridio TVDB',
       OPTIONS: options,
@@ -57,11 +62,11 @@ export class DebridioTvdbPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
-    let url = this.METADATA.URL;
+    let url = this.DEFAULT_URL;
     if (options.url?.endsWith('/manifest.json')) {
       url = options.url;
     } else {
-      let baseUrl = this.METADATA.URL;
+      let baseUrl = this.DEFAULT_URL;
       if (options.url) {
         baseUrl = new URL(options.url).origin;
       }
@@ -99,7 +104,7 @@ export class DebridioTvdbPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class AnimeKitsuPreset extends Preset {
   static override get METADATA() {
@@ -13,7 +14,8 @@ export class AnimeKitsuPreset extends Preset {
       ...baseOptions(
         'Anime Kitsu',
         supportedResources,
-        Env.DEFAULT_ANIME_KITSU_TIMEOUT
+        appConfig.presets.animeKitsu.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'socials',
@@ -33,9 +35,13 @@ export class AnimeKitsuPreset extends Preset {
       ID: 'anime-kitsu',
       NAME: 'Anime Kitsu',
       LOGO: 'https://i.imgur.com/7N6XGoO.png',
-      URL: Env.ANIME_KITSU_URL,
-      TIMEOUT: Env.DEFAULT_ANIME_KITSU_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_ANIME_KITSU_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.animeKitsu.url,
+      TIMEOUT:
+        appConfig.presets.animeKitsu.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.animeKitsu.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Anime catalog using Kitsu',
       OPTIONS: options,
@@ -58,7 +64,7 @@ export class AnimeKitsuPreset extends Preset {
   ): Addon {
     const baseUrl = options.url
       ? new URL(options.url).origin
-      : Env.ANIME_KITSU_URL;
+      : this.DEFAULT_URL;
     return {
       name: options.name || this.METADATA.NAME,
       manifestUrl: `${baseUrl}/manifest.json`,

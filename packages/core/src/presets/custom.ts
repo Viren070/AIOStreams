@@ -1,6 +1,6 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, RESOURCES } from '../utils/index.js';
+import { appConfig, RESOURCES } from '../utils/index.js';
 import { constants } from '../utils/index.js';
 
 export class CustomPreset extends Preset {
@@ -26,10 +26,10 @@ export class CustomPreset extends Preset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -80,6 +80,7 @@ export class CustomPreset extends Preset {
         required: false,
         default: undefined,
         options: [
+          { label: 'None', value: undefined },
           { label: 'Top', value: 'top' },
           { label: 'Bottom', value: 'bottom' },
         ],
@@ -116,9 +117,9 @@ export class CustomPreset extends Preset {
       ID: 'custom',
       NAME: 'Custom',
       LOGO: '',
-      URL: '',
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Add your own addon by providing its Manifest URL.',
       OPTIONS: options,

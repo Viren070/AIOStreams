@@ -1,5 +1,6 @@
-import { BaseProxy, ProxyStream } from './base.js';
+﻿import { BaseProxy, ProxyStream } from './base.js';
 import {
+  appConfig,
   createLogger,
   maskSensitiveInfo,
   Env,
@@ -28,9 +29,9 @@ export class BuiltinProxy extends BaseProxy {
     }
 
     if (
-      !Env.AIOSTREAMS_AUTH ||
-      !Env.AIOSTREAMS_AUTH.has(username) ||
-      Env.AIOSTREAMS_AUTH.get(username) !== password
+      !appConfig.bootstrap.auth ||
+      !appConfig.bootstrap.auth.has(username) ||
+      appConfig.bootstrap.auth.get(username) !== password
     ) {
       throw new Error('Invalid credentials.');
     }
@@ -39,8 +40,9 @@ export class BuiltinProxy extends BaseProxy {
       username,
       password,
       admin:
-        Env.AIOSTREAMS_AUTH_ADMINS && Env.AIOSTREAMS_AUTH_ADMINS.length > 0
-          ? Env.AIOSTREAMS_AUTH_ADMINS.includes(username)
+        appConfig.bootstrap.authAdmins &&
+        appConfig.bootstrap.authAdmins.length > 0
+          ? appConfig.bootstrap.authAdmins.includes(username)
           : true,
     };
   }
@@ -71,7 +73,7 @@ export class BuiltinProxy extends BaseProxy {
     const cacheKey = `${this.config.id}:${this.config.url}:${this.config.credentials}`;
     const cachedPublicIp = cache ? await cache.get(cacheKey) : null;
     if (cachedPublicIp) {
-      logger.debug('Returning cached public IP');
+      logger.debug('returning cached public ip');
       return cachedPublicIp;
     }
 
@@ -81,9 +83,6 @@ export class BuiltinProxy extends BaseProxy {
     });
 
     if (!response.ok) {
-      logger.error(
-        `Failed to check public IP using AWS: ${response.status}: ${response.statusText}`
-      );
       throw new Error(
         `Failed to check public IP using AWS: ${response.status}: ${response.statusText}`
       );
@@ -95,18 +94,14 @@ export class BuiltinProxy extends BaseProxy {
       .union([z.ipv4(), z.ipv6()])
       .safeParse(publicIp);
     if (error || !success) {
-      logger.error(
-        `IP Response of ${publicIp} could not be parsed as a valid IP`
-      );
+      logger.error({ ip: publicIp }, 'aws returned invalid ip');
       throw new Error(`Proxy did not respond with a valid public IP`);
     }
 
     if (publicIp && cache) {
-      await cache.set(cacheKey, publicIp, Env.PROXY_IP_CACHE_TTL);
+      await cache.set(cacheKey, publicIp, appConfig.proxy.ip.cacheTtl);
     } else {
-      logger.error(
-        `Proxy did not respond with a public IP. Response: ${JSON.stringify(publicIp)}`
-      );
+      logger.error('aws checkip returned no usable ip');
       throw new Error('Proxy did not respond with a public IP');
     }
     return publicIp;
@@ -156,7 +151,7 @@ export class BuiltinProxy extends BaseProxy {
         streamData = toUrlSafeBase64(streamData);
       }
 
-      return `${Env.BASE_URL}/api/v1/proxy/${encrypt ? 'e' : 'u'}.${authData}.${streamData}/${encodeURIComponent(stream.filename ?? '')}`;
+      return `${appConfig.bootstrap.baseUrl}/api/v1/proxy/${encrypt ? 'e' : 'u'}.${authData}.${streamData}/${encodeURIComponent(stream.filename ?? '')}`;
     });
   }
 }
@@ -218,7 +213,7 @@ export class BuiltinProxyStats {
   }
 
   public async getAllUserStats(): Promise<Map<string, UserStats>> {
-    const users = Env.AIOSTREAMS_AUTH?.keys();
+    const users = appConfig.bootstrap.auth?.keys();
     const userStats = new Map<string, UserStats>();
 
     for (const user of users ?? []) {

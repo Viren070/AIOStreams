@@ -7,7 +7,12 @@ import {
   AIOStream,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, formatZodError, RESOURCES } from '../utils/index.js';
+import {
+  constants,
+  appConfig,
+  formatZodError,
+  RESOURCES,
+} from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
 import { createLogger } from '../utils/index.js';
 import { parseAgeString } from '../parser/utils.js';
@@ -110,10 +115,10 @@ export class AIOStreamsPreset extends Preset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -196,9 +201,9 @@ export class AIOStreamsPreset extends Preset {
       ID: 'aiostreams',
       NAME: 'AIOStreams',
       LOGO: 'https://raw.githubusercontent.com/Viren070/AIOStreams/refs/heads/main/packages/frontend/public/assets/logo.png',
-      URL: '',
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.AIOSTREAMS_USER_AGENT,
+      URL: [],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.aiostreamsUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Wrap AIOStreams within AIOStreams!',
       OPTIONS: options,

@@ -7,46 +7,12 @@ import {
   Stream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
-import { StremThruPreset, StremThruStreamParser } from './stremthru.js';
-
-class StremthruTorzStreamParser extends StremThruStreamParser {
-  protected override applyUrlModifications(
-    url: string | undefined
-  ): string | undefined {
-    if (!url) {
-      return url;
-    }
-    if (
-      Env.FORCE_STREMTHRU_TORZ_HOSTNAME !== undefined ||
-      Env.FORCE_STREMTHRU_TORZ_PORT !== undefined ||
-      Env.FORCE_STREMTHRU_TORZ_PROTOCOL !== undefined
-    ) {
-      // modify the URL according to settings, needed when using a local URL for requests but a public stream URL is needed.
-      const urlObj = new URL(url);
-
-      if (Env.FORCE_STREMTHRU_TORZ_PROTOCOL !== undefined) {
-        urlObj.protocol = Env.FORCE_STREMTHRU_TORZ_PROTOCOL;
-      }
-      if (Env.FORCE_STREMTHRU_TORZ_PORT !== undefined) {
-        urlObj.port = Env.FORCE_STREMTHRU_TORZ_PORT.toString();
-      }
-      if (Env.FORCE_STREMTHRU_TORZ_HOSTNAME !== undefined) {
-        urlObj.hostname = Env.FORCE_STREMTHRU_TORZ_HOSTNAME;
-      }
-      return urlObj.toString();
-    }
-    return super.applyUrlModifications(url);
-  }
-}
+import { StremThruPreset } from './stremthru.js';
 
 export class StremthruTorzPreset extends StremThruPreset {
-  static override getParser(): typeof StreamParser {
-    return StremthruTorzStreamParser;
-  }
-
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
 
@@ -54,8 +20,9 @@ export class StremthruTorzPreset extends StremThruPreset {
       ...baseOptions(
         'StremThru Torz',
         supportedResources,
-        Env.DEFAULT_STREMTHRU_TORZ_TIMEOUT,
-        Env.STREMTHRU_TORZ_URL
+        appConfig.presets.stremthruTorz.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.stremthruTorz.url ?? undefined
       ),
       {
         id: 'mediaTypes',
@@ -118,10 +85,13 @@ export class StremthruTorzPreset extends StremThruPreset {
       ID: 'stremthruTorz',
       NAME: 'StremThru Torz',
       LOGO: 'https://emojiapi.dev/api/v1/sparkles/256.png',
-      URL: Env.STREMTHRU_TORZ_URL[0],
-      TIMEOUT: Env.DEFAULT_STREMTHRU_TORZ_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.stremthruTorz.url,
+      TIMEOUT:
+        appConfig.presets.stremthruTorz.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_STREMTHRU_TORZ_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.stremthruTorz.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
         'Access a crowdsourced torrent library supplemented by DMM hashlists',
@@ -221,7 +191,7 @@ export class StremthruTorzPreset extends StremThruPreset {
     serviceIds: (ServiceId | 'p2p')[]
   ): string {
     // If URL already points to manifest.json, return as-is
-    let baseUrl = options.url || this.METADATA.URL;
+    let baseUrl = options.url || this.DEFAULT_URL;
     if (baseUrl.endsWith('/manifest.json')) {
       return baseUrl;
     }

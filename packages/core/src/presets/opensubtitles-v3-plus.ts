@@ -1,11 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import {
-  constants,
-  Env,
-  RESOURCES,
-  SUBTITLES_RESOURCE,
-} from '../utils/index.js';
+import { constants, RESOURCES, SUBTITLES_RESOURCE } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class OpenSubtitlesV3PlusPreset extends Preset {
   static override get METADATA() {
@@ -119,7 +115,8 @@ export class OpenSubtitlesV3PlusPreset extends Preset {
       ...baseOptions(
         'OpenSubtitles V3+',
         supportedResources,
-        Env.DEFAULT_OPENSUBTITLES_V3_PLUS_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.presets.opensubtitlesV3Plus.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'language',
@@ -168,10 +165,13 @@ export class OpenSubtitlesV3PlusPreset extends Preset {
       ID: 'opensubtitles-v3-plus',
       NAME: 'OpenSubtitles V3 Pro',
       LOGO: 'https://i.ibb.co/yN39ZPV/opensubtitles-plus-256x256.png',
-      URL: Env.OPENSUBTITLES_V3_PLUS_URL,
-      TIMEOUT: Env.DEFAULT_OPENSUBTITLES_V3_PLUS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.opensubtitlesV3Plus.url,
+      TIMEOUT:
+        appConfig.presets.opensubtitlesV3Plus.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_OPENSUBTITLES_V3_PLUS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.opensubtitlesV3Plus.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Subtitles from OpenSubtitles with language selection and more features',
@@ -216,7 +216,7 @@ export class OpenSubtitlesV3PlusPreset extends Preset {
       return options.url;
     }
 
-    const host = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const host = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
 
     const optionPairs = [
       ['ai-translated', options.includeAiTranslated],

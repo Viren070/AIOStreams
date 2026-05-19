@@ -8,8 +8,9 @@ import {
   ParsedFile,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import { arrayMerge } from '../parser/merge.js';
 
@@ -235,8 +236,9 @@ export class TorrentioPreset extends Preset {
       ...baseOptions(
         'Torrentio',
         supportedResources,
-        Env.DEFAULT_TORRENTIO_TIMEOUT,
-        Env.TORRENTIO_URL
+        appConfig.presets.torrentio.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.torrentio.url ?? undefined
       ),
       {
         id: 'providers',
@@ -302,10 +304,14 @@ export class TorrentioPreset extends Preset {
     return {
       ID: 'torrentio',
       NAME: 'Torrentio',
-      LOGO: `${Env.TORRENTIO_URL[0]}/images/logo_v1.png`,
-      URL: Env.TORRENTIO_URL[0],
-      TIMEOUT: Env.DEFAULT_TORRENTIO_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_TORRENTIO_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.torrentio.url[0] ?? ''}/images/logo_v1.png`,
+      URL: appConfig.presets.torrentio.url,
+      TIMEOUT:
+        appConfig.presets.torrentio.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.torrentio.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       REQUIRES_SERVICE: false,
       DESCRIPTION:
@@ -396,7 +402,7 @@ export class TorrentioPreset extends Preset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
-    const url = options.url || this.METADATA.URL;
+    const url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

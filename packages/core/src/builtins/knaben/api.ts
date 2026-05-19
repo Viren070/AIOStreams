@@ -1,5 +1,5 @@
 import { Cache } from '../../utils/cache.js';
-import { Env } from '../../utils/env.js';
+import { config as appConfig } from '../../config/index.js';
 import {
   formatZodError,
   makeRequest,
@@ -129,12 +129,12 @@ class KnabenAPI {
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
       bgCacheKey: `knaben:${cacheKey}`,
-      cacheTTL: Env.BUILTIN_KNABEN_SEARCH_CACHE_TTL,
+      cacheTTL: appConfig.builtins.knaben.searchCacheTtl,
       fetchFn: () =>
         this.request<KnabenSearchResponse>('', {
           schema: KnabenSearchResponse,
           method: 'POST',
-          timeout: Env.BUILTIN_KNABEN_SEARCH_TIMEOUT,
+          timeout: appConfig.builtins.knaben.searchTimeout,
           body,
         }),
       isEmptyResult: (result) => result.hits.length === 0,
@@ -162,8 +162,9 @@ class KnabenAPI {
       lockKey,
       () => this._request(endpoint, options),
       {
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
-        ttl: (options.timeout ?? Env.MAX_TIMEOUT) + 1000,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
+        ttl:
+          (options.timeout ?? appConfig.userLimits.timeouts.maxTimeout) + 1000,
       }
     );
     return result;
@@ -192,7 +193,7 @@ class KnabenAPI {
         method,
         headers: this.headers,
         body: body ? JSON.stringify(body) : undefined,
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
       });
 
       const data = (await response.json()) as unknown;

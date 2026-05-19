@@ -7,7 +7,8 @@ import {
   UserData,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, LIVE_STREAM_TYPE } from '../utils/index.js';
+import { constants, LIVE_STREAM_TYPE } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
 
 class ArgentinaTvStreamParser extends StreamParser {
@@ -63,17 +64,22 @@ export class ArgentinaTVPreset extends Preset {
       ...baseOptions(
         'Argentina TV',
         supportedResources,
-        Env.DEFAULT_ARGENTINA_TV_TIMEOUT
+        appConfig.presets.argentinaTv.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
     ];
 
     return {
       ID: 'argentina-tv',
       NAME: 'Argentina TV',
-      LOGO: `${Env.ARGENTINA_TV_URL}/public/logo.png`,
-      URL: Env.ARGENTINA_TV_URL,
-      TIMEOUT: Env.DEFAULT_ARGENTINA_TV_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_ARGENTINA_TV_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.argentinaTv.url[0] ?? ''}/public/logo.png`,
+      URL: appConfig.presets.argentinaTv.url,
+      TIMEOUT:
+        appConfig.presets.argentinaTv.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.argentinaTv.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Provides access to channels across various categories for Argentina',
@@ -96,7 +102,7 @@ export class ArgentinaTVPreset extends Preset {
   ): Addon {
     const baseUrl = options.url
       ? new URL(options.url).origin
-      : this.METADATA.URL;
+      : this.DEFAULT_URL;
 
     const url = options.url?.endsWith('/manifest.json')
       ? options.url

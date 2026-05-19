@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class StreamingCatalogsPreset extends Preset {
   // amp,atp,hbm,sst,vil,cpd,nlz,blv,zee,hay,clv,gop,hst,cru,mgl,cts,hlu,pmp,pcp,dnp,nfk,nfx
@@ -127,7 +128,8 @@ export class StreamingCatalogsPreset extends Preset {
       ...baseOptions(
         'Streaming Catalogs',
         supportedResources,
-        Env.DEFAULT_STREAMING_CATALOGS_TIMEOUT
+        appConfig.presets.streamingCatalogs.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
       {
         id: 'catalogs',
@@ -157,10 +159,13 @@ export class StreamingCatalogsPreset extends Preset {
       ID: 'streaming-catalogs',
       NAME: 'Streaming Catalogs',
       LOGO: `https://play-lh.googleusercontent.com/TBRwjS_qfJCSj1m7zZB93FnpJM5fSpMA_wUlFDLxWAb45T9RmwBvQd5cWR5viJJOhkI`,
-      URL: Env.STREAMING_CATALOGS_URL,
-      TIMEOUT: Env.DEFAULT_STREAMING_CATALOGS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.streamingCatalogs.url,
+      TIMEOUT:
+        appConfig.presets.streamingCatalogs.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_STREAMING_CATALOGS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.streamingCatalogs.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Catalogs for your favourite streaming services!',
       OPTIONS: options,
@@ -184,7 +189,7 @@ export class StreamingCatalogsPreset extends Preset {
     const config = Buffer.from(options.catalogs.join(',')).toString('base64');
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${Env.STREAMING_CATALOGS_URL}/${config}/manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/${config}/manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -208,7 +213,7 @@ export class StreamingCatalogsPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

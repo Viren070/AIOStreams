@@ -1,8 +1,9 @@
-import { DB } from '../db/db.js';
+﻿import { config as appConfig } from '../config/index.js';
+import { getDb } from '../db/db.js';
+import { sql } from '../db/sql.js';
 import { RedisClientType } from 'redis';
-import { TransactionQueue } from '../db/queue.js';
-import { Cache, Env, REDIS_PREFIX } from './index.js';
-import { createLogger } from './logger.js';
+import { Cache, REDIS_PREFIX } from './index.js';
+import { createLogger } from '../logging/logger.js';
 import { Time } from './time.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -69,7 +70,7 @@ export class DistributedLock {
       return;
     }
     this.initialisePromise = (async () => {
-      if (Env.REDIS_URI) {
+      if (appConfig.bootstrap.redisUri) {
         this.redis = Cache.getRedisClient();
         this.subRedis = this.redis.duplicate();
 
@@ -464,49 +465,33 @@ export class DistributedLock {
     fn: () => Promise<T>,
     options: LockOptions
   ): Promise<LockResult<T>> {
-    const db = DB.getInstance();
-    const { timeout = 30 * Time.Second, ttl = Time.Minute } = options;
-    const { retryInterval = db.isSQLite() ? 250 : 100 } = options;
+    const db = getDb();
+    const {
+      timeout = 30 * Time.Second,
+      ttl = Time.Minute,
+      retryInterval = 100,
+    } = options;
     const owner = Math.random().toString(36).substring(2);
     const expiresAt = Date.now() + ttl;
 
-    const tryAcquireLock = async () => {
-      return TransactionQueue.getInstance().enqueue(async () => {
-        const tx = await db.begin();
-        try {
-          await tx.execute(
-            `DELETE FROM distributed_locks WHERE expires_at < ?`,
-            [Date.now()]
-          );
+    const tryAcquireLock = async (): Promise<boolean> => {
+      return db.tx(async (tx) => {
+        await tx.exec(
+          sql`DELETE FROM distributed_locks WHERE expires_at < ${Date.now()}`
+        );
 
-          let acquired = false;
-          if (db.isSQLite()) {
-            const result = await tx.execute(
-              `INSERT OR IGNORE INTO distributed_locks (key, owner, expires_at) VALUES (?, ?, ?)`,
-              [key, owner, expiresAt]
-            );
-            acquired = db.getRowsAffected(result) > 0;
-          } else {
-            const result = await tx.execute(
-              `INSERT INTO distributed_locks (key, owner, expires_at) 
-               VALUES ($1, $2, $3)
-               ON CONFLICT (key) DO NOTHING
-               RETURNING key`,
-              [key, owner, expiresAt]
-            );
-            acquired = (result.rows.length || result.rowCount) > 0;
-          }
-
-          await tx.commit();
-          if (acquired) {
-            logger.debug(`SQL lock acquired for key: ${key}`);
-            return true;
-          }
-          return false;
-        } catch (e) {
-          await tx.rollback();
-          throw e;
+        // ON CONFLICT (...) DO NOTHING works on both SQLite (3.24+) and
+        // Postgres. The driver's `rowCount` is normalized.
+        const result = await tx.exec(
+          sql`INSERT INTO distributed_locks (key, owner, expires_at)
+              VALUES (${key}, ${owner}, ${expiresAt})
+              ON CONFLICT (key) DO NOTHING`
+        );
+        const acquired = result.rowCount > 0;
+        if (acquired) {
+          logger.debug(`SQL lock acquired for key: ${key}`);
         }
+        return acquired;
       });
     };
 
@@ -515,53 +500,37 @@ export class DistributedLock {
       try {
         result = await fn();
 
-        // Atomically update the result using the transaction queue
-        await TransactionQueue.getInstance().enqueue(async () => {
-          const tx = await db.begin();
-          try {
-            await tx.execute(
-              `UPDATE distributed_locks SET result = ? WHERE key = ? AND owner = ?`,
-              [JSON.stringify({ value: result }), key, owner]
-            );
-            await tx.commit();
-          } catch (e) {
-            await tx.rollback();
-            throw e;
-          }
-        });
+        await db.exec(
+          sql`UPDATE distributed_locks
+              SET result = ${JSON.stringify({ value: result })}
+              WHERE key = ${key} AND owner = ${owner}`
+        );
       } catch (e: any) {
-        // Atomically update the error using the transaction queue
-        await TransactionQueue.getInstance().enqueue(async () => {
-          const tx = await db.begin();
-          try {
-            const errorEntry: StoredResult<T> = { error: e.message || 'Error' };
-            if (e.code !== undefined) errorEntry.errorCode = String(e.code);
-            if (e.type !== undefined) errorEntry.errorType = String(e.type);
-            if (e.statusCode !== undefined)
-              errorEntry.errorStatusCode = Number(e.statusCode);
-            await tx.execute(
-              `UPDATE distributed_locks SET result = ? WHERE key = ? AND owner = ?`,
-              [JSON.stringify(errorEntry), key, owner]
-            );
-            await tx.commit();
-          } catch (err) {
-            await tx.rollback();
-            // We throw the original error, but log the transaction error
-            logger.error(
-              `Failed to write error result to lock for key ${key}:`,
-              err
-            );
-          }
-        });
+        try {
+          const errorEntry: StoredResult<T> = { error: e.message || 'Error' };
+          if (e.code !== undefined) errorEntry.errorCode = String(e.code);
+          if (e.type !== undefined) errorEntry.errorType = String(e.type);
+          if (e.statusCode !== undefined)
+            errorEntry.errorStatusCode = Number(e.statusCode);
+          await db.exec(
+            sql`UPDATE distributed_locks
+                SET result = ${JSON.stringify(errorEntry)}
+                WHERE key = ${key} AND owner = ${owner}`
+          );
+        } catch (err) {
+          logger.error(
+            `Failed to write error result to lock for key ${key}:`,
+            err
+          );
+        }
         throw e;
       } finally {
-        // This setTimeout is now safe because the update operation is complete.
+        // Delay release so waiters have time to read the result.
         setTimeout(() => {
           logger.debug(`Releasing SQL lock for key: ${key}`);
-          db.execute(
-            `DELETE FROM distributed_locks WHERE key = ? AND owner = ?`,
-            [key, owner]
-          );
+          db.exec(
+            sql`DELETE FROM distributed_locks WHERE key = ${key} AND owner = ${owner}`
+          ).catch(() => undefined);
         }, 2000);
       }
       return { result, cached: false };
@@ -569,12 +538,11 @@ export class DistributedLock {
 
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
-      const lock = await db.query(
-        `SELECT result FROM distributed_locks WHERE key = ?`,
-        [key]
+      const lockRow = await db.maybeOne<{ result: string | null }>(
+        sql`SELECT result FROM distributed_locks WHERE key = ${key}`
       );
-      if (lock.length > 0 && lock[0].result) {
-        const storedResult: StoredResult<T> = JSON.parse(lock[0].result);
+      if (lockRow && lockRow.result) {
+        const storedResult: StoredResult<T> = JSON.parse(lockRow.result);
         if (storedResult.error) {
           logger.warn(`Polled error result for key: ${key} from SQL lock.`);
           const err = new Error(storedResult.error);

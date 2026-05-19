@@ -7,8 +7,8 @@ import {
   Stream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class OrionStreamParser extends StreamParser {
@@ -40,7 +40,12 @@ export class OrionPreset extends Preset {
     const supportedResources = [constants.STREAM_RESOURCE];
 
     const options: Option[] = [
-      ...baseOptions('Orion', supportedResources, Env.DEFAULT_ORION_TIMEOUT),
+      ...baseOptions(
+        'Orion',
+        supportedResources,
+        appConfig.presets.orion.defaultTimeout ??
+          appConfig.presets.defaultTimeout
+      ),
       {
         id: 'orionApiKey',
         name: 'Orion API Key',
@@ -104,9 +109,13 @@ export class OrionPreset extends Preset {
       ID: 'orion',
       NAME: 'Orion',
       LOGO: 'https://orionoid.com/web/images/logo/logo256.png',
-      URL: Env.ORION_STREMIO_ADDON_URL,
-      TIMEOUT: Env.DEFAULT_ORION_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_ORION_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.orion.url,
+      TIMEOUT:
+        appConfig.presets.orion.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.orion.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: "Stremio's fastest Torrent/Debrid addon",
       OPTIONS: options,
@@ -185,7 +194,7 @@ export class OrionPreset extends Preset {
     options: Record<string, any>,
     serviceIds: ServiceId[]
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

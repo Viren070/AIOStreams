@@ -1,6 +1,7 @@
-import path from 'path';
+﻿import path from 'path';
 import fs from 'fs/promises';
 import {
+  appConfig,
   getDataFolder,
   makeRequest,
   getTimeTakenSincePoint,
@@ -12,8 +13,9 @@ import {
   ParsedId,
 } from './index.js';
 import { createWriteStream } from 'fs';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 import { Parser } from 'xml2js';
+import { TaskManager } from '../tasks/index.js';
 
 const logger = createLogger('anime-database');
 
@@ -27,7 +29,9 @@ const DATA_SOURCES = {
     filePath: path.join(ANIME_DATABASE_PATH, 'fribb-mappings.json'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'fribb-mappings.etag'),
     loader: 'loadFribbMappings',
-    refreshInterval: Env.ANIME_DB_FRIBB_MAPPINGS_REFRESH_INTERVAL,
+    get refreshInterval() {
+      return appConfig.metadata.animeDb.refresh.fribbMappings * 1000;
+    },
     dataKey: 'fribbMappingsById',
   },
   manami: {
@@ -36,7 +40,9 @@ const DATA_SOURCES = {
     filePath: path.join(ANIME_DATABASE_PATH, 'manami-db.json'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'manami-db.etag'),
     loader: 'loadManamiDb',
-    refreshInterval: Env.ANIME_DB_MANAMI_DB_REFRESH_INTERVAL,
+    get refreshInterval() {
+      return appConfig.metadata.animeDb.refresh.manamiDb * 1000;
+    },
     dataKey: 'manamiById',
   },
   kitsuImdb: {
@@ -45,7 +51,9 @@ const DATA_SOURCES = {
     filePath: path.join(ANIME_DATABASE_PATH, 'kitsu-imdb-mapping.json'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'kitsu-imdb-mapping.etag'),
     loader: 'loadKitsuImdbMapping',
-    refreshInterval: Env.ANIME_DB_KITSU_IMDB_MAPPING_REFRESH_INTERVAL,
+    get refreshInterval() {
+      return appConfig.metadata.animeDb.refresh.kitsuImdbMapping * 1000;
+    },
     dataKey: 'kitsuById',
   },
   anitraktMovies: {
@@ -54,7 +62,9 @@ const DATA_SOURCES = {
     filePath: path.join(ANIME_DATABASE_PATH, 'anitrakt-movies-ex.json'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'anitrakt-movies-ex.etag'),
     loader: 'loadExtendedAnitraktMovies',
-    refreshInterval: Env.ANIME_DB_EXTENDED_ANITRAKT_MOVIES_REFRESH_INTERVAL,
+    get refreshInterval() {
+      return appConfig.metadata.animeDb.refresh.extendedAnitraktMovies * 1000;
+    },
     dataKey: 'extendedAnitraktMoviesById',
   },
   anitraktTv: {
@@ -63,7 +73,9 @@ const DATA_SOURCES = {
     filePath: path.join(ANIME_DATABASE_PATH, 'anitrakt-tv-ex.json'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'anitrakt-tv-ex.etag'),
     loader: 'loadExtendedAnitraktTv',
-    refreshInterval: Env.ANIME_DB_EXTENDED_ANITRAKT_TV_REFRESH_INTERVAL,
+    get refreshInterval() {
+      return appConfig.metadata.animeDb.refresh.extendedAnitraktTv * 1000;
+    },
     dataKey: 'extendedAnitraktTvById',
   },
   animeList: {
@@ -72,7 +84,9 @@ const DATA_SOURCES = {
     filePath: path.join(ANIME_DATABASE_PATH, 'anime-list-master.xml'),
     etagPath: path.join(ANIME_DATABASE_PATH, 'anime-list-master.etag'),
     loader: 'loadAnimeList',
-    refreshInterval: Env.ANIME_DB_ANIME_LIST_REFRESH_INTERVAL,
+    get refreshInterval() {
+      return appConfig.metadata.animeDb.refresh.animeList * 1000;
+    },
     dataKey: 'animeListById',
   },
 } as const;
@@ -671,30 +685,31 @@ export class AnimeDatabase {
 
   public async initialise(): Promise<void> {
     if (this.isInitialised) {
-      logger.warn('AnimeDatabase is already initialised.');
+      logger.warn('already initialised');
       return;
     }
 
-    if (Env.ANIME_DB_LEVEL_OF_DETAIL === 'none') {
-      logger.info(
-        'AnimeDatabase detail level is none, skipping initialisation.'
-      );
+    if (appConfig.metadata.animeDb.levelOfDetail === 'none') {
+      logger.info('detail level is none, skipping initialisation');
       this.isInitialised = true;
       return;
     }
 
-    logger.info('Starting initial refresh of all anime data sources...');
+    logger.info('starting initial refresh of all data sources');
     for (const dataSource of Object.values(DATA_SOURCES)) {
       try {
         await this.refreshDataSource(dataSource);
       } catch (error) {
-        logger.error(`Failed to refresh data source ${dataSource}: ${error}`);
+        logger.error(
+          { source: dataSource.name, error },
+          'failed to refresh data source'
+        );
       }
     }
 
     this.setupAllRefreshIntervals();
     this.isInitialised = true;
-    logger.info('AnimeDatabase initialised successfully.');
+    logger.info('initialised successfully');
   }
 
   // --- Public Methods for Data Access ---
@@ -855,9 +870,7 @@ export class AnimeDatabase {
       if (match.mappings) return match;
     }
 
-    logger.debug(
-      'No detailed match found, defaulting to first mapping entry...'
-    );
+    logger.debug('no detailed match found, defaulting to first mapping entry');
     const mappings = mappingsList[0];
 
     return { mappings, details: this.findManamiDetailsFromMapping(mappings) };
@@ -878,13 +891,14 @@ export class AnimeDatabase {
       map?.get(key) || map?.get(key.toString()) || map?.get(Number(key));
 
     logger.debug(
-      `Multiple mapping entries found for ${idType}:${idValue}, attempting to find matching details...`,
       {
+        id: `${idType}:${idValue}`,
         mappingsList: mappingsList.map(
           (m) =>
             `${m.anidbId ? 'anidb:' : m.kitsuId ? 'kitsu:' : ''}${m.anidbId ?? m.kitsuId ?? 'UNKNOWN'}`
         ),
-      }
+      },
+      'multiple mapping entries found, attempting to find matching details'
     );
 
     // Collect all potential matches from both Kitsu and AnimeList
@@ -955,7 +969,15 @@ export class AnimeDatabase {
       );
 
       logger.debug(
-        `Best match for S${season}E${episode}: ${bestMatch.source === 'kitsu' ? `kitsuId:${bestMatch.mapping.kitsuId}` : `anidbId:${bestMatch.mapping.anidbId}`} (fromEpisode: ${bestMatch.fromEpisode})`
+        {
+          seasonEpisode: `S${season}E${episode}`,
+          match:
+            bestMatch.source === 'kitsu'
+              ? `kitsuId:${bestMatch.mapping.kitsuId}`
+              : `anidbId:${bestMatch.mapping.anidbId}`,
+          fromEpisode: bestMatch.fromEpisode,
+        },
+        'found best match'
       );
 
       return {
@@ -976,7 +998,10 @@ export class AnimeDatabase {
         );
         if (!potentialDetails) continue;
         if (potentialDetails?.synonyms.some((syn) => seasonRegex.test(syn))) {
-          logger.debug(`Matched season regex on synonym for ${type}:${id}`);
+          logger.debug(
+            { id: `${type}:${id}` },
+            'matched season regex on synonym'
+          );
           return { mappings: mappingEntry, details: potentialDetails };
         }
         break;
@@ -1167,17 +1192,25 @@ export class AnimeDatabase {
     this.refreshTimers.forEach(clearInterval);
     this.refreshTimers = [];
 
-    for (const source of Object.values(DATA_SOURCES)) {
-      const timer = setInterval(
-        () =>
-          this.refreshDataSource(source).catch((e) =>
-            logger.error(`[${source.name}] Failed to auto-refresh: ${e}`)
-          ),
-        source.refreshInterval
-      );
-      this.refreshTimers.push(timer);
+    for (const [key, source] of Object.entries(DATA_SOURCES)) {
+      TaskManager.register({
+        id: `anime-db-refresh-${key}`,
+        label: `Refresh ${source.name}`,
+        description: `Refresh the ${source.name} anime database source.`,
+        category: 'data-sync',
+        kind: 'scheduled',
+        intervalMs: source.refreshInterval,
+        enabled: true,
+        destructive: false,
+        multiReplica: 'single',
+        run: async () => {
+          await this.refreshDataSource(source);
+          return { ok: true, message: `${source.name} refreshed` };
+        },
+      });
       logger.info(
-        `[${source.name}] Set auto-refresh interval to ${source.refreshInterval}ms`
+        { source: source.name, intervalMs: source.refreshInterval },
+        'registered auto-refresh task'
       );
     }
   }
@@ -1199,8 +1232,19 @@ export class AnimeDatabase {
 
         if (fetchFromRemote) {
           logger.info(
-            `[${source.name}] Source is missing or out of date. Downloading...`
+            {
+              source: source.name,
+              reason: isDbMissing
+                ? 'missing'
+                : !remoteEtag
+                  ? 'no remote etag'
+                  : !localEtag
+                    ? 'no local etag'
+                    : 'etag mismatch',
+            },
+            'triggering download'
           );
+
           await this.downloadFile(
             source.url,
             source.filePath,
@@ -1208,7 +1252,7 @@ export class AnimeDatabase {
             remoteEtag
           );
         } else {
-          logger.info(`[${source.name}] Source is up to date.`);
+          logger.info({ source: source.name }, 'source up to date');
         }
         try {
           await this[source.loader]();
@@ -1216,7 +1260,8 @@ export class AnimeDatabase {
           // if we didnt fetch from remote and loading it failed, force a refresh next time by deleting the local file and etag
           if (!fetchFromRemote) {
             logger.debug(
-              `[${source.name}] Deleting local file and etag due to error.`
+              { source: source.name },
+              'deleting local file and etag due to error'
             );
             await fs.unlink(source.etagPath);
             await fs.unlink(source.filePath);
@@ -1267,7 +1312,12 @@ export class AnimeDatabase {
     }
     this.dataStore.fribbMappingsById = newMappingsById;
     logger.info(
-      `[${DATA_SOURCES.fribbMappings.name}] Loaded and indexed ${validEntries.length} valid entries in ${getTimeTakenSincePoint(start)}`
+      {
+        source: DATA_SOURCES.fribbMappings.name,
+        entries: validEntries.length,
+        timeTaken: getTimeTakenSincePoint(start),
+      },
+      'loaded and indexed valid entries'
     );
   }
 
@@ -1306,7 +1356,7 @@ export class AnimeDatabase {
                   .get(idType)
                   ?.set(
                     idValue,
-                    Env.ANIME_DB_LEVEL_OF_DETAIL === 'required'
+                    appConfig.metadata.animeDb.levelOfDetail === 'required'
                       ? this.minimiseManamiEntry(entry)
                       : entry
                   );
@@ -1318,7 +1368,12 @@ export class AnimeDatabase {
     }
     this.dataStore.manamiById = newManamiById;
     logger.info(
-      `[${DATA_SOURCES.manami.name}] Loaded and indexed ${validEntries.length} valid entries in ${getTimeTakenSincePoint(start)}`
+      {
+        source: DATA_SOURCES.manami.name,
+        entries: validEntries.length,
+        timeTaken: getTimeTakenSincePoint(start),
+      },
+      'loaded and indexed valid entries'
     );
   }
 
@@ -1385,13 +1440,20 @@ export class AnimeDatabase {
         }
       } else {
         logger.warn(
-          `[${DATA_SOURCES.kitsuImdb.name}] Skipping invalid entry for kitsuId ${kitsuId}`
+          { source: DATA_SOURCES.kitsuImdb.name, kitsuId },
+          'skipping invalid entry'
         );
       }
     }
 
     logger.info(
-      `[${DATA_SOURCES.kitsuImdb.name}] Loaded ${this.dataStore.kitsuById.size} kitsu entries and enriched ${enrichedCount} Fribb mappings with IMDB IDs in ${getTimeTakenSincePoint(start)}`
+      {
+        source: DATA_SOURCES.kitsuImdb.name,
+        kitsuEntries: this.dataStore.kitsuById.size,
+        enrichedMappings: enrichedCount,
+        timeTaken: getTimeTakenSincePoint(start),
+      },
+      'loaded kitsu entries and enriched Fribb mappings with IMDB IDs'
     );
   }
 
@@ -1422,7 +1484,12 @@ export class AnimeDatabase {
     }
     this.dataStore.extendedAnitraktMoviesById = newExtendedAnitraktMoviesById;
     logger.info(
-      `[${DATA_SOURCES.anitraktMovies.name}] Loaded and indexed ${validEntries.length} valid entries in ${getTimeTakenSincePoint(start)}`
+      {
+        source: DATA_SOURCES.anitraktMovies.name,
+        entries: validEntries.length,
+        timeTaken: getTimeTakenSincePoint(start),
+      },
+      'loaded and indexed valid entries'
     );
   }
 
@@ -1450,7 +1517,12 @@ export class AnimeDatabase {
     }
     this.dataStore.extendedAnitraktTvById = newExtendedAnitraktTvById;
     logger.info(
-      `[${DATA_SOURCES.anitraktTv.name}] Loaded and indexed ${validEntries.length} valid entries in ${getTimeTakenSincePoint(start)}`
+      {
+        source: DATA_SOURCES.anitraktTv.name,
+        entries: validEntries.length,
+        timeTaken: getTimeTakenSincePoint(start),
+      },
+      'loaded and indexed valid entries'
     );
   }
 
@@ -1468,9 +1540,11 @@ export class AnimeDatabase {
     const rawParseStart = Date.now();
     const parsed = await parser.parseStringPromise(fileContents);
     logger.info(
-      `[${DATA_SOURCES.animeList.name}] Parsed XML in ${getTimeTakenSincePoint(
-        rawParseStart
-      )}`
+      {
+        source: DATA_SOURCES.animeList.name,
+        timeTaken: getTimeTakenSincePoint(rawParseStart),
+      },
+      'parsed XML'
     );
     if (!parsed?.['anime-list']?.anime) {
       throw new Error(DATA_SOURCES.animeList.name + ' invalid XML structure');
@@ -1501,7 +1575,13 @@ export class AnimeDatabase {
     this.dataStore.animeListByTvdbId = newAnimeListByTvdbId;
 
     logger.info(
-      `[${DATA_SOURCES.animeList.name}] Loaded ${validEntries.length} entries (${entriesInTvdbMap} with TVDB IDs) in ${getTimeTakenSincePoint(start)}`
+      {
+        source: DATA_SOURCES.animeList.name,
+        entries: validEntries.length,
+        entriesWithTvdbIds: entriesInTvdbMap,
+        timeTaken: getTimeTakenSincePoint(start),
+      },
+      'loaded entries'
     );
   }
 
@@ -1518,7 +1598,8 @@ export class AnimeDatabase {
         validEntries.push(validated);
       } else {
         logger.warn(
-          `Skipping invalid entry for ${validator.name}: ${JSON.stringify(entry, null, 2)}`
+          { validator: validator.name, entry },
+          'skipping invalid entry'
         );
       }
     }
@@ -1533,7 +1614,7 @@ export class AnimeDatabase {
       });
       return response.headers.get('etag');
     } catch (error) {
-      logger.warn(`Failed to fetch remote etag for ${url}: ${error}`);
+      logger.warn({ url, error }, 'failed to fetch remote etag');
       return null;
     }
   }
@@ -1617,7 +1698,11 @@ export class AnimeDatabase {
     }
 
     logger.info(
-      `Downloaded ${path.basename(filePath)} in ${getTimeTakenSincePoint(startTime)}`
+      {
+        file: path.basename(filePath),
+        timeTaken: getTimeTakenSincePoint(startTime),
+      },
+      'downloaded file'
     );
   }
 
@@ -1701,13 +1786,14 @@ export function enrichParsedIdWithAnimeEntry(
         episodeOffsetApplied = true;
 
         logger.debug(
-          `Applied episode mapping for ${parsedId.type}:${parsedId.value}`,
           {
+            id: `${parsedId.type}:${parsedId.value}`,
             originalEpisode: episodeNum,
             mappedSeason: parsedId.season,
             mappedEpisode: parsedId.episode,
             ...mapping,
-          }
+          },
+          'applied episode mapping'
         );
       }
     }
@@ -1743,9 +1829,12 @@ export function enrichParsedIdWithAnimeEntry(
   }
 
   if (enriched) {
-    logger.debug(`Enriched anime ID`, {
-      original: `${parsedId.type}:${parsedId.value}${original.season ? `:${original.season}` : ''}${original.episode ? `:${original.episode}` : ''}`,
-      enriched: `${parsedId.type}:${parsedId.value}${parsedId.season ? `:${parsedId.season}` : ''}${parsedId.episode ? `:${parsedId.episode}` : ''}`,
-    });
+    logger.debug(
+      {
+        original: `${parsedId.type}:${parsedId.value}${original.season ? `:${original.season}` : ''}${original.episode ? `:${original.episode}` : ''}`,
+        enriched: `${parsedId.type}:${parsedId.value}${parsedId.season ? `:${parsedId.season}` : ''}${parsedId.episode ? `:${parsedId.episode}` : ''}`,
+      },
+      'enriched anime ID'
+    );
   }
 }

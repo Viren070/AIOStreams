@@ -1,4 +1,3 @@
-'use client';
 import { cn } from '@/components/ui/core/styling';
 import React from 'react';
 

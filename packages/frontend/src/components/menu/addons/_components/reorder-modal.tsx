@@ -1,4 +1,3 @@
-'use client';
 import React, { useState, useEffect } from 'react';
 import {
   DndContext,
@@ -18,7 +17,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { Modal } from '../../../ui/modal';
 import { Button } from '../../../ui/button';
 import { IoExtensionPuzzle } from 'react-icons/io5';
-import Image from 'next/image';
 import { PlusIcon } from 'lucide-react';
 
 interface ReorderItem {
@@ -71,11 +69,10 @@ function SortableReorderItem({ item }: { item: ReorderItem }) {
       </div>
       <div className="relative flex-shrink-0 h-6 w-6">
         {item.logo ? (
-          <Image
+          <img
             src={item.logo}
             alt={item.name}
-            fill
-            className="w-full h-full object-contain rounded"
+            className="absolute inset-0 w-full h-full object-contain rounded"
           />
         ) : item.type === 'custom' ? (
           <PlusIcon className="w-full h-full text-[--brand]" />

@@ -1,11 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import {
-  Env,
-  RESOURCES,
-  SUBTITLES_RESOURCE,
-  constants,
-} from '../utils/index.js';
+import { SUBTITLES_RESOURCE, constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class AIOSubtitlePreset extends Preset {
   static override get METADATA() {
@@ -334,7 +330,8 @@ export class AIOSubtitlePreset extends Preset {
       ...baseOptions(
         'AIOSubtitle',
         supportedResources,
-        Env.DEFAULT_AIOSUBTITLE_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.presets.aioSubtitle.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'languages',
@@ -381,10 +378,14 @@ export class AIOSubtitlePreset extends Preset {
     return {
       ID: 'aiosubtitle',
       NAME: 'AIO Subtitle',
-      LOGO: `${Env.AIOSUBTITLE_URL}/assets/AI-sub.png`,
-      URL: Env.AIOSUBTITLE_URL,
-      TIMEOUT: Env.DEFAULT_AIOSUBTITLE_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_AIOSUBTITLE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.aioSubtitle.url[0] ?? ''}/assets/AI-sub.png`,
+      URL: appConfig.presets.aioSubtitle.url,
+      TIMEOUT:
+        appConfig.presets.aioSubtitle.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.aioSubtitle.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Unofficial addon to get subtitles from Subscene, OpenSubtitles, and Kitsunekko. Uses Microsoft Translator to translate subtitles.',
@@ -428,7 +429,7 @@ export class AIOSubtitlePreset extends Preset {
     if (options.url?.endsWith('/manifest.json')) {
       return options.url;
     }
-    const host = options.url || this.METADATA.URL;
+    const host = options.url || this.DEFAULT_URL;
 
     let config: string[][] = [['languages', options.languages.join(',')]];
     if (options.microsoftTranslatorApiKey) {

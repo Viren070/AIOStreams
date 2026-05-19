@@ -2,7 +2,8 @@
 
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, ServiceId } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StremThruPreset } from './stremthru.js';
 
 export class FKStreamPreset extends StremThruPreset {
@@ -27,7 +28,8 @@ export class FKStreamPreset extends StremThruPreset {
       ...baseOptions(
         'FKStream',
         supportedResources,
-        Env.DEFAULT_FKSTREAM_TIMEOUT
+        appConfig.presets.fkstream.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'defaultSort',
@@ -79,9 +81,13 @@ export class FKStreamPreset extends StremThruPreset {
       ID: 'fkstream',
       NAME: 'FKStream',
       LOGO: 'https://raw.githubusercontent.com/Dydhzo/fkstream/refs/heads/main/fkstream/assets/fkstream-logo.jpg',
-      URL: Env.FKSTREAM_URL,
-      TIMEOUT: Env.DEFAULT_FKSTREAM_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_FKSTREAM_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.fkstream.url,
+      TIMEOUT:
+        appConfig.presets.fkstream.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.fkstream.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'An unofficial addon for Fankai - French focused anime content. Bleach, One Piece, Dragon Ball, Naruto et une soixantaine de Kai. Viens voir !',
@@ -151,7 +157,7 @@ export class FKStreamPreset extends StremThruPreset {
     options: Record<string, any>,
     serviceId: ServiceId | undefined
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

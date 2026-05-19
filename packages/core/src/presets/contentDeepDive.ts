@@ -1,6 +1,7 @@
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class ContentDeepDiveStreamParser extends StreamParser {
@@ -31,7 +32,8 @@ export class ContentDeepDivePreset extends Preset {
       ...baseOptions(
         'Content Deep Dive',
         supportedResources,
-        Env.DEFAULT_CONTENT_DEEP_DIVE_TIMEOUT
+        appConfig.presets.contentDeepDive.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'forceToTop',
@@ -58,11 +60,14 @@ export class ContentDeepDivePreset extends Preset {
     return {
       ID: 'content-deep-dive',
       NAME: 'Content Deep Dive',
-      LOGO: `${Env.CONTENT_DEEP_DIVE_URL}/DeepDiveLogo.png`,
-      URL: Env.CONTENT_DEEP_DIVE_URL,
-      TIMEOUT: Env.DEFAULT_CONTENT_DEEP_DIVE_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      LOGO: `${appConfig.presets.contentDeepDive.url[0] ?? ''}/DeepDiveLogo.png`,
+      URL: appConfig.presets.contentDeepDive.url,
+      TIMEOUT:
+        appConfig.presets.contentDeepDive.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_CONTENT_DEEP_DIVE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.contentDeepDive.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'A comprehensive companion addon that provides detailed content information, cast details, reviews, and production insights for movies and series.',
@@ -105,7 +110,7 @@ export class ContentDeepDivePreset extends Preset {
   }
 
   private static generateManifestUrl(options: Record<string, any>): string {
-    let url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    let url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }

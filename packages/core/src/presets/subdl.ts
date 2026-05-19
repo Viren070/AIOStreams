@@ -1,11 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import {
-  constants,
-  Env,
-  RESOURCES,
-  SUBTITLES_RESOURCE,
-} from '../utils/index.js';
+import { constants, SUBTITLES_RESOURCE } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class SubDLPreset extends Preset {
   static override get METADATA() {
@@ -82,7 +78,8 @@ export class SubDLPreset extends Preset {
       ...baseOptions(
         'SubDL',
         supportedResources,
-        Env.DEFAULT_SUBDL_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.presets.subdl.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'subDlApiKey',
@@ -135,9 +132,13 @@ export class SubDLPreset extends Preset {
       ID: 'subdl',
       NAME: 'SubDL',
       LOGO: 'https://raw.githubusercontent.com/nexusdiscord/tv-logo/master/download.jpg',
-      URL: Env.SUBDL_URL,
-      TIMEOUT: Env.DEFAULT_SUBDL_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_SUBDL_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.subdl.url,
+      TIMEOUT:
+        appConfig.presets.subdl.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.subdl.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'SubDL addon',
       OPTIONS: options,
@@ -181,7 +182,7 @@ export class SubDLPreset extends Preset {
       return options.url;
     }
 
-    const host = options.url || this.METADATA.URL;
+    const host = options.url || this.DEFAULT_URL;
 
     const config = Buffer.from(
       `${options.subDlApiKey}/${options.language.join(',')}/${options.hearingImpairment}`

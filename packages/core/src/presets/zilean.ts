@@ -1,5 +1,5 @@
-import { Option, UserData } from '../db/index.js';
-import { Env, constants } from '../utils/index.js';
+﻿import { Option, UserData } from '../db/index.js';
+import { appConfig, constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
@@ -11,7 +11,7 @@ export class ZileanPreset extends TorznabPreset {
       ...baseOptions(
         'Zilean',
         supportedResources,
-        Env.BUILTIN_DEFAULT_ZILEAN_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.builtins.zilean.timeout ?? appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url' && option.id !== 'resources'),
       {
         id: 'url',
@@ -66,9 +66,10 @@ export class ZileanPreset extends TorznabPreset {
       ID: 'zilean',
       NAME: 'Zilean',
       LOGO: '/assets/zilean_logo.jpg',
-      URL: Env.BUILTIN_ZILEAN_URL,
-      TIMEOUT: Env.BUILTIN_DEFAULT_ZILEAN_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [appConfig.builtins.zilean.url],
+      TIMEOUT:
+        appConfig.builtins.zilean.timeout ?? appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
         'An addon to get debrid results from Zilean, a DMM hashlist scraper.',
@@ -84,7 +85,7 @@ export class ZileanPreset extends TorznabPreset {
     services: constants.ServiceId[],
     options: Record<string, any>
   ): string {
-    const zileanUrl = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const zileanUrl = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
 
     const config = {
       ...this.getBaseConfig(userData, services),
@@ -93,6 +94,6 @@ export class ZileanPreset extends TorznabPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
+    return `${appConfig.bootstrap.internalUrl}/builtins/torznab/${configString}/manifest.json`;
   }
 }

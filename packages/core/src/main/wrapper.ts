@@ -37,37 +37,48 @@ import {
   formatZodError,
   PossibleRecursiveRequestError,
   Env,
+  appConfig,
   getTimeTakenSincePoint,
   RequestOptions,
 } from '../utils/index.js';
 import { Preset, PresetManager } from '../presets/index.js';
+import {
+  track,
+  classifyAddonError,
+  hmac,
+  type AnalyticsResource,
+  type AnalyticsErrorStage,
+} from '../analytics/index.js';
 import { z } from 'zod';
 
 const logger = createLogger('wrappers');
 
+// `Cache.getInstance` accepts a lazy `maxSize` resolver so the per-resource
+// runtime-config override is honoured without reading it at module-load
+// (runtime config is not available before `initialiseConfig()` resolves).
 const manifestCache = Cache.getInstance<string, Manifest>(
   'manifest',
-  Env.MANIFEST_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+  () => appConfig.resources.cache.manifest.maxSize
 );
 const catalogCache = Cache.getInstance<string, MetaPreview[]>(
   'catalog',
-  Env.CATALOG_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+  () => appConfig.resources.cache.catalog.maxSize
 );
 const metaCache = Cache.getInstance<string, Meta>(
   'meta',
-  Env.META_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+  () => appConfig.resources.cache.meta.maxSize
 );
 const subtitlesCache = Cache.getInstance<string, Subtitle[]>(
   'subtitles',
-  Env.SUBTITLE_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+  () => appConfig.resources.cache.subtitle.maxSize
 );
 const addonCatalogCache = Cache.getInstance<string, AddonCatalog[]>(
   'addon_catalog',
-  Env.ADDON_CATALOG_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+  () => appConfig.resources.cache.addonCatalog.maxSize
 );
 const streamsCache = Cache.getInstance<string, ParsedStream[]>(
   'streams',
-  Env.STREAM_CACHE_MAX_SIZE || Env.DEFAULT_MAX_CACHE_SIZE
+  () => appConfig.resources.cache.stream.maxSize
 );
 
 /**
@@ -149,7 +160,8 @@ export class Wrapper {
         const parsed = schema.safeParse(item);
         if (!parsed.success) {
           logger.error(
-            `An item in the response for ${resourceName} was invalid, filtering it out: ${formatZodError(parsed.error)}`
+            { resourceName, err: formatZodError(parsed.error) },
+            'invalid item in response, filtering it out'
           );
           return null;
         }
@@ -178,11 +190,13 @@ export class Wrapper {
 
     const requestFn = async (): Promise<Manifest> => {
       logger.debug(
-        `Fetching manifest for ${this.addon.name} ${this.addon.displayIdentifier || this.addon.identifier} (${makeUrlLogSafe(this.manifestUrl)})`
+        { addon: this.addon.name, url: makeUrlLogSafe(this.manifestUrl) },
+        'fetching manifest'
       );
       try {
         const backgroundTimeout =
-          Env.BACKGROUND_RESOURCE_REQUEST_TIMEOUT ?? Env.MAX_TIMEOUT;
+          appConfig.resources.background.timeout ??
+          appConfig.userLimits.timeouts.maxTimeout;
         const res = await makeRequest(this.manifestUrl, {
           timeout: backgroundTimeout,
           headers: this.addon.headers,
@@ -194,35 +208,40 @@ export class Wrapper {
         const data = await res.json();
         const manifest = ManifestSchema.safeParse(data);
         if (!manifest.success) {
-          logger.error(`Manifest response was unexpected`);
-          logger.error(formatZodError(manifest.error));
-          logger.error(JSON.stringify(data, null, 2));
+          logger.error(
+            { addon: this.getAddonName(this.addon), err: formatZodError(manifest.error) },
+            'manifest response could not be parsed'
+          );
           throw new Error(
             `Manifest response could not be parsed: ${formatZodError(manifest.error)}`
           );
         }
         return manifest.data;
       } catch (error: any) {
-        logger.error(
-          `Failed to fetch manifest for ${this.getAddonName(this.addon)}: ${error.message}`
-        );
+        if (!(error instanceof PossibleRecursiveRequestError)) {
+          logger.error(
+            { addon: this.getAddonName(this.addon), err: error.message },
+            'failed to fetch manifest'
+          );
+        }
         if (error instanceof PossibleRecursiveRequestError) {
           throw error;
         }
         throw new Error(
           `Failed to fetch manifest for ${this.getAddonName(this.addon)}: ${error.message}`
         );
+
       }
     };
 
     return this._request({
       requestFn,
-      timeout: options?.timeout ?? Env.MANIFEST_TIMEOUT,
+      timeout: options?.timeout ?? appConfig.resources.timeouts.manifest,
       resourceName: 'manifest',
       cacher: manifestCache,
       cacheKey,
       cacheTtl: resolveTtl(
-        Env.MANIFEST_CACHE_TTL,
+        appConfig.resources.cache.manifest.ttl,
         this.addon.preset.type,
         this.manifestUrl
       ),
@@ -243,7 +262,7 @@ export class Wrapper {
         options: this.addon.preset.options,
       }) || this.buildResourceUrl('stream', type, id);
     const streamTtl = resolveTtl(
-      Env.STREAM_CACHE_TTL,
+      appConfig.resources.cache.stream.ttl,
       this.addon.preset.type,
       this.manifestUrl
     );
@@ -272,7 +291,8 @@ export class Wrapper {
         invalidateCache = true;
       }
       logger.debug(
-        `Parsed ${parsedStreams.length} streams for ${this.getAddonName(this.addon)} in ${getTimeTakenSincePoint(start)}`
+        { addon: this.getAddonName(this.addon), count: parsedStreams.length, took: getTimeTakenSincePoint(start) },
+        'parsed streams'
       );
       return parsedStreams as ParsedStream[];
     } catch (error) {
@@ -281,13 +301,15 @@ export class Wrapper {
     } finally {
       if (invalidateCache) {
         logger.debug(
-          `Invalidating cache entry for ${this.getAddonName(this.addon)}`
+          { addon: this.getAddonName(this.addon) },
+          'invalidating stream cache entry'
         );
         streamsCache
           .delete(cacheKey)
           .catch((error) =>
             logger.error(
-              `Failed to invalidate cache entry: ${error instanceof Error ? error.message : error}`
+              { err: error instanceof Error ? error.message : error },
+              'failed to invalidate stream cache entry'
             )
           );
       }
@@ -304,14 +326,14 @@ export class Wrapper {
     };
 
     const catalogTtl = resolveTtl(
-      Env.CATALOG_CACHE_TTL,
+      appConfig.resources.cache.catalog.ttl,
       this.addon.preset.type,
       this.manifestUrl
     );
     return await this.makeResourceRequest(
       'catalog',
       { type, id, extras },
-      Env.CATALOG_TIMEOUT,
+      appConfig.resources.timeouts.catalog,
       validator,
       catalogTtl != -1 ? catalogCache : undefined,
       catalogTtl,
@@ -329,7 +351,10 @@ export class Wrapper {
     const validator = (data: any): Meta => {
       const parsed = MetaSchema.safeParse(data.meta);
       if (!parsed.success) {
-        logger.error(formatZodError(parsed.error));
+        logger.error(
+          { addon: this.getAddonName(this.addon), err: formatZodError(parsed.error) },
+          'failed to parse meta'
+        );
         throw new Error(
           `Failed to parse meta for ${this.getAddonName(this.addon)}`
         );
@@ -337,14 +362,14 @@ export class Wrapper {
       return parsed.data;
     };
     const metaTtl = resolveTtl(
-      Env.META_CACHE_TTL,
+      appConfig.resources.cache.meta.ttl,
       this.addon.preset.type,
       this.manifestUrl
     );
     const meta: Meta = await this.makeResourceRequest(
       'meta',
       { type, id },
-      Env.META_TIMEOUT,
+      appConfig.resources.timeouts.meta,
       validator,
       metaTtl != -1 ? metaCache : undefined,
       metaTtl,
@@ -381,7 +406,7 @@ export class Wrapper {
     };
 
     const subtitleTtl = resolveTtl(
-      Env.SUBTITLE_CACHE_TTL,
+      appConfig.resources.cache.subtitle.ttl,
       this.addon.preset.type,
       this.manifestUrl
     );
@@ -411,14 +436,14 @@ export class Wrapper {
     };
 
     const addonCatalogTtl = resolveTtl(
-      Env.ADDON_CATALOG_CACHE_TTL,
+      appConfig.resources.cache.addonCatalog.ttl,
       this.addon.preset.type,
       this.manifestUrl
     );
     return await this.makeResourceRequest(
       'addon_catalog',
       { type, id },
-      Env.CATALOG_TIMEOUT,
+      appConfig.resources.timeouts.catalog,
       validator,
       addonCatalogTtl != -1 ? addonCatalogCache : undefined,
       addonCatalogTtl,
@@ -460,7 +485,7 @@ export class Wrapper {
       bypassCache,
     } = options;
 
-    let doBackground = Env.BACKGROUND_RESOURCE_REQUESTS_ENABLED && cacher;
+    let doBackground = appConfig.resources.background.enabled && cacher;
 
     let cached = null;
 
@@ -468,7 +493,8 @@ export class Wrapper {
       cached = await cacher.get(cacheKey);
       if (cached && !bypassCache) {
         logger.debug(
-          `Returning cached ${resourceName} for ${this.getAddonName(this.addon)}`
+          { addon: this.getAddonName(this.addon), resource: resourceName },
+          'returning cached resource'
         );
         return cached;
       }
@@ -507,17 +533,20 @@ export class Wrapper {
     } catch (error: any) {
       if (cached) {
         logger.warn(
-          `Returning cached ${resourceName} for ${this.getAddonName(this.addon)} after request failure: ${error.message}`
+          { addon: this.getAddonName(this.addon), resource: resourceName, err: error.message },
+          'returning stale cache after request failure'
         );
         return cached;
       }
       if (error.message.includes('timed out')) {
         logger.warn(
-          `Request for ${resourceName} for ${this.getAddonName(this.addon)} timed out. Will process in background.`
+          { addon: this.getAddonName(this.addon), resource: resourceName },
+          'request timed out, continuing in background'
         );
         requestPromise.catch((bgError) => {
           logger.warn(
-            `Background request for ${resourceName} for ${this.getAddonName(this.addon)} failed: ${bgError.message}`
+            { addon: this.getAddonName(this.addon), resource: resourceName, err: bgError.message },
+            'background request failed'
           );
         });
       }
@@ -537,53 +566,106 @@ export class Wrapper {
     const { type, id, extras } = params;
     const url = this.buildResourceUrl(resource, type, id, extras);
     const effectiveCacheKey = cacheKey || url;
-    let doBackground = Env.BACKGROUND_RESOURCE_REQUESTS_ENABLED && cacher;
+    let doBackground = appConfig.resources.background.enabled && cacher;
 
-    logger.info(
-      `Fetching ${resource} of type ${type} with id ${id} and extras ${extras} (${makeUrlLogSafe(url)})`,
-      {
-        cacheKey: cacheKey ? makeUrlLogSafe(cacheKey) : undefined,
-      }
+    logger.debug(
+      { addon: this.getAddonName(this.addon), resource, type, id, url: makeUrlLogSafe(url) },
+      'fetching resource'
     );
 
     const requestFn = async (): Promise<T> => {
-      try {
-        const timeout = doBackground
-          ? (Env.BACKGROUND_RESOURCE_REQUEST_TIMEOUT ?? Env.MAX_TIMEOUT)
-          : this.addon.timeout;
-        const res = await makeRequest(url, {
-          timeout: timeout,
-          headers: this.addon.headers,
-          forwardIp: this.addon.ip,
-        });
+      const timeout = doBackground
+        ? (appConfig.resources.background.timeout ??
+          appConfig.userLimits.timeouts.maxTimeout)
+        : this.addon.timeout;
+      const res = await makeRequest(url, {
+        timeout,
+        headers: this.addon.headers,
+        forwardIp: this.addon.ip,
+      });
 
-        if (!res.ok) {
-          logger.error(
-            `Failed to fetch ${resource} resource for ${this.getAddonName(this.addon)}: ${res.status} - ${res.statusText}`
-          );
-          throw new Error(`${res.status} - ${res.statusText}`);
-        }
-
-        const data: unknown = await res.json();
-        return validator(data);
-      } catch (error: any) {
-        logger.error(
-          `Failed to fetch ${resource} resource for ${this.getAddonName(this.addon)}: ${error.message}`
-        );
-        throw error;
+      if (!res.ok) {
+        throw new Error(`${res.status} - ${res.statusText}`);
       }
+
+      const data: unknown = await res.json();
+      return validator(data);
     };
 
-    return this._request({
-      requestFn,
-      timeout,
-      resourceName: resource,
-      cacher,
-      cacheKey: effectiveCacheKey,
-      cacheTtl,
-      shouldCache: (data: T) =>
-        resource !== 'stream' || (Array.isArray(data) && data.length > 0),
-    });
+    const started = Date.now();
+    try {
+      const data = await this._request({
+        requestFn,
+        timeout,
+        resourceName: resource,
+        cacher,
+        cacheKey: effectiveCacheKey,
+        cacheTtl,
+        shouldCache: (data: T) =>
+          resource !== 'stream' || (Array.isArray(data) && data.length > 0),
+      });
+      const count = this.resultCountOf(data);
+      track({
+        event_type: 'addon_request',
+        resource: resource as AnalyticsResource,
+        preset_id: this.addon.preset.type,
+        url_overridden: this.isUrlOverridden(),
+        addon_instance_hash: hmac(this.manifestUrl),
+        status: count === 0 ? 'empty' : 'ok',
+        latency_ms: Date.now() - started,
+        result_count: count,
+      });
+      return data;
+    } catch (error) {
+      const { error_stage, error_kind } = classifyAddonError(
+        resource as AnalyticsErrorStage,
+        error
+      );
+      track({
+        event_type: 'addon_request',
+        resource: resource as AnalyticsResource,
+        preset_id: this.addon.preset.type,
+        url_overridden: this.isUrlOverridden(),
+        addon_instance_hash: hmac(this.manifestUrl),
+        status: 'error',
+        error_stage,
+        error_kind,
+        latency_ms: Date.now() - started,
+      });
+      throw error;
+    }
+  }
+
+  /** Result count for analytics (arrays + {streams|metas|subtitles} shapes). */
+  private resultCountOf(data: unknown): number | null {
+    if (Array.isArray(data)) return data.length;
+    if (data && typeof data === 'object') {
+      for (const k of ['streams', 'metas', 'subtitles', 'catalogs']) {
+        const v = (data as Record<string, unknown>)[k];
+        if (Array.isArray(v)) return v.length;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * True if the resolved manifest URL is not one of the preset's known
+   * marketplace default URLs (a custom / full-manifest override). Used so
+   * addon stats are only attributed to the named addon when trustworthy.
+   */
+  private isUrlOverridden(): boolean {
+    try {
+      const known: string[] =
+        ((this.preset as unknown as typeof Preset).METADATA?.URL as
+          | string[]
+          | undefined) ?? [];
+      if (known.length === 0) return false;
+      const norm = (u: string) => u.replace(/\/+$/, '').toLowerCase();
+      const m = norm(this.manifestUrl);
+      return !known.some((k) => k && m.startsWith(norm(k)));
+    } catch {
+      return false;
+    }
   }
 
   private buildResourceUrl(

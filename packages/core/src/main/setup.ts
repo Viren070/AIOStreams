@@ -1,9 +1,10 @@
-import {
+﻿import {
   createLogger,
   Env,
   getSimpleTextHash,
   maskSensitiveInfo,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { constants } from '../utils/index.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from '../presets/index.js';
@@ -142,12 +143,14 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
               })
             )
           );
-          logger.info(
-            `Service Wrap: generated ${p2pAddons.length} P2P-mode addon(s) for preset ${Preset.METADATA.NAME}`
+          logger.debug(
+            { preset: Preset.METADATA.NAME, count: p2pAddons.length },
+            'service wrap: generated p2p-mode addons'
           );
         } catch (error) {
           logger.warn(
-            `Service Wrap: failed to generate P2P addons for ${Preset.METADATA.NAME}: ${error instanceof Error ? error.message : String(error)}`
+            { preset: Preset.METADATA.NAME, err: error instanceof Error ? error.message : String(error) },
+            'service wrap: failed to generate p2p addons'
           );
         }
       }
@@ -158,7 +161,8 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
           error: error instanceof Error ? error.message : String(error),
         });
         logger.error(
-          `${error instanceof Error ? error.message : String(error)}, skipping`
+          { err: error instanceof Error ? error.message : String(error) },
+          'failed to apply preset, skipping'
         );
       } else {
         throw error;
@@ -166,19 +170,22 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
     }
   }
 
-  if (ctx.addons.length > Env.MAX_ADDONS) {
+  if (ctx.addons.length > appConfig.userLimits.maxAddons) {
     throw new Error(
-      `Your current configuration requires ${ctx.addons.length} addons, but the maximum allowed is ${Env.MAX_ADDONS}. Please reduce the number of addons installed or services enabled. If you own the instance or know the owner, increase the value of the MAX_ADDONS environment variable.`
+      `Your current configuration requires ${ctx.addons.length} addons, but the maximum allowed is ${appConfig.userLimits.maxAddons}. Please reduce the number of addons installed or services enabled. If you own the instance or know the owner, increase the max addons setting or set the MAX_ADDONS environment override.`
     );
   }
 }
 
 export function validateAddon(ctx: AIOStreamsContext, addon: Addon): void {
   const manifestUrl = new URL(addon.manifestUrl);
-  const baseUrl = Env.BASE_URL ? new URL(Env.BASE_URL) : undefined;
+  const baseUrl = appConfig.bootstrap.baseUrl
+    ? new URL(appConfig.bootstrap.baseUrl)
+    : undefined;
   if (ctx.userData.uuid && addon.manifestUrl.includes(ctx.userData.uuid)) {
     logger.warn(
-      `${ctx.userData.uuid} detected to be trying to cause infinite self scraping`
+      { uuid: ctx.userData.uuid, addon: getAddonName(addon) },
+      'detected self-scraping attempt'
     );
     throw new Error(
       `${getAddonName(addon)} would cause infinite self scraping, ensure you wrap a different AIOStreams user.`
@@ -186,9 +193,9 @@ export function validateAddon(ctx: AIOStreamsContext, addon: Addon): void {
   } else if (
     ((baseUrl && manifestUrl.host === baseUrl.host) ||
       (manifestUrl.host.startsWith('localhost') &&
-        manifestUrl.port === Env.PORT.toString())) &&
+        manifestUrl.port === appConfig.bootstrap.port.toString())) &&
     !manifestUrl.pathname.startsWith('/builtins') &&
-    Env.DISABLE_SELF_SCRAPING === true
+    appConfig.userLimits.selfScraping.disabled === true
   ) {
     throw new Error(
       `Scraping the same AIOStreams instance is disabled. Please use a different AIOStreams instance, or enable it through the environment variables.`
@@ -231,7 +238,7 @@ export async function fetchManifests(ctx: AIOStreamsContext): Promise<void> {
             addon.instanceId,
             await new Wrapper(addon).getManifest({
               timeout: ctx.options?.increasedManifestTimeout
-                ? Env.MANIFEST_INCREASED_TIMEOUT
+                ? appConfig.resources.timeouts.manifestIncreased
                 : undefined,
               bypassCache: ctx.options?.bypassManifestCache,
             }),
@@ -242,7 +249,7 @@ export async function fetchManifests(ctx: AIOStreamsContext): Promise<void> {
               addon: addon,
               error: error.message,
             });
-            logger.error(`${error.message}, skipping`);
+            logger.error({ err: error.message }, 'failed to fetch manifest, skipping');
             return [addon.instanceId, null];
           }
           throw error;
@@ -421,7 +428,7 @@ export function buildResources(ctx: AIOStreamsContext): void {
     const addon = ctx.addons.find((a) => a.instanceId === instanceId);
 
     if (!addon) {
-      logger.error(`Addon with instanceId ${instanceId} not found`);
+      logger.error({ instanceId }, 'addon not found during resource build');
       continue;
     }
 
@@ -451,7 +458,8 @@ export function buildResources(ctx: AIOStreamsContext): void {
         } else {
           if (resource.name !== 'catalog' && !resource.idPrefixes?.length) {
             logger.warn(
-              `Addon ${getAddonName(addon)} does not provide idPrefixes for type ${resource.name}, setting idPrefixes to undefined`
+              { addon: getAddonName(addon), resource: resource.name },
+              'addon provides no idPrefixes, clearing from merged resource'
             );
           }
           existing.idPrefixes = undefined;
@@ -459,7 +467,8 @@ export function buildResources(ctx: AIOStreamsContext): void {
       } else {
         if (!resource.idPrefixes?.length && resource.name !== 'catalog') {
           logger.warn(
-            `Addon ${getAddonName(addon)} does not provide idPrefixes for type ${resource.name}, setting idPrefixes to undefined`
+            { addon: getAddonName(addon), resource: resource.name },
+            'addon provides no idPrefixes'
           );
         }
         ctx.finalResources.push({
@@ -471,10 +480,9 @@ export function buildResources(ctx: AIOStreamsContext): void {
       }
     }
 
-    logger.verbose(
-      `Determined that ${getAddonName(addon)} (Instance ID: ${instanceId}) has support for the following resources: ${JSON.stringify(
-        addonResources
-      )}`
+    logger.debug(
+      { addon: getAddonName(addon), instanceId, resources: addonResources.map((r) => r.name) },
+      'addon resources resolved'
     );
 
     if (
@@ -575,7 +583,8 @@ export function buildResources(ctx: AIOStreamsContext): void {
         const key = `${catalog.id}-${catalog.type}`;
         if (catalogsInMergedCatalogs.has(key)) {
           logger.debug(
-            `Filtering out catalog ${catalog.id} of type ${catalog.type} as it is part of an enabled merged catalog`
+            { id: catalog.id, type: catalog.type },
+            'filtering out catalog: consumed by merged catalog'
           );
           return false;
         }
@@ -671,10 +680,8 @@ async function retryGetIp<T>(
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       logger.warn(
-        `Failed to get ${label}, retrying... (${attempt}/${maxRetries})`,
-        {
-          error: lastError,
-        }
+        { label, attempt, maxRetries, err: lastError },
+        'failed to get ip, retrying'
       );
     }
   }
@@ -694,12 +701,9 @@ export async function assignPublicIps(ctx: AIOStreamsContext): Promise<void> {
       ctx.userData.proxy?.enabled &&
       (!ctx.userData.proxy?.proxiedAddons?.length ||
         ctx.userData.proxy.proxiedAddons.includes(addon.preset.id));
-    logger.debug(
-      `Using ${proxy ? 'proxy' : 'user'} ip for ${getAddonName(addon)}: ${
-        proxy
-          ? maskSensitiveInfo(proxyIp ?? 'none')
-          : maskSensitiveInfo(userIp ?? 'none')
-      }`
+    logger.trace(
+      { addon: getAddonName(addon), source: proxy ? 'proxy' : 'user' },
+      'assigning ip to addon'
     );
     if (proxy) {
       addon.ip = proxyIp;

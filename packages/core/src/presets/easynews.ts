@@ -1,5 +1,6 @@
 import { baseOptions, Preset } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   PresetMetadata,
   Option,
@@ -33,7 +34,8 @@ export class EasynewsPreset extends Preset {
       ...baseOptions(
         'Easynews',
         supportedResources,
-        Env.DEFAULT_EASYNEWS_TIMEOUT
+        appConfig.presets.easynews.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'mediaTypes',
@@ -58,9 +60,13 @@ export class EasynewsPreset extends Preset {
       DESCRIPTION:
         'The original Easynews addon, to access streams from Easynews',
       LOGO: `https://pbs.twimg.com/profile_images/479627852757733376/8v9zH7Yo_400x400.jpeg`,
-      URL: Env.EASYNEWS_URL,
-      TIMEOUT: Env.DEFAULT_EASYNEWS_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_EASYNEWS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.easynews.url,
+      TIMEOUT:
+        appConfig.presets.easynews.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.easynews.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       SUPPORTED_RESOURCES: supportedResources,
       SUPPORTED_STREAM_TYPES: [constants.USENET_STREAM_TYPE],
@@ -114,7 +120,7 @@ export class EasynewsPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

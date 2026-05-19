@@ -2,10 +2,10 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import {
   constants,
-  Env,
   FULL_LANGUAGE_MAPPING,
   SUBTITLES_RESOURCE,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class SubHeroPreset extends Preset {
   static override get METADATA() {
@@ -90,7 +90,8 @@ export class SubHeroPreset extends Preset {
       ...baseOptions(
         'SubHero',
         supportedResources,
-        Env.DEFAULT_SUBHERO_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.presets.subhero.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'languages',
@@ -109,9 +110,13 @@ export class SubHeroPreset extends Preset {
       ID: 'subhero',
       NAME: 'SubHero',
       LOGO: `https://subhero.chromeknight.dev/static/logo4x4.png`,
-      URL: Env.SUBHERO_URL,
-      TIMEOUT: Env.DEFAULT_SUBHERO_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_SUBHERO_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.subhero.url,
+      TIMEOUT:
+        appConfig.presets.subhero.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.subhero.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Subtitles with language filtering, caching, file format conversion and more. Powered by Wyzie API.',
@@ -155,7 +160,7 @@ export class SubHeroPreset extends Preset {
     if (options.url?.endsWith('/manifest.json')) {
       return options.url;
     }
-    const host = options.url || this.METADATA.URL;
+    const host = options.url || this.DEFAULT_URL;
 
     let config = this.urlEncodeJSON({
       language: options.languages.join(','),

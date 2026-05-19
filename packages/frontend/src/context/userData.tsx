@@ -13,6 +13,16 @@ const USER_DATA_KEY = 'aiostreams-user-data';
 
 export function applyMigrations(config: any): UserData {
   if (
+    config &&
+    config.addonPassword !== undefined &&
+    config.accessToken === undefined
+  ) {
+    config.accessToken = config.addonPassword;
+  }
+  if (config && config.addonPassword !== undefined) {
+    delete config.addonPassword;
+  }
+  if (
     config.deduplicator &&
     typeof config.deduplicator.multiGroupBehaviour === 'string'
   ) {
