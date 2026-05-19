@@ -1,7 +1,7 @@
 {
   "id": "stremio-custom-source",
   "name": "Stremio Catalog",
-  "version": "0.8.2",
+  "version": "2.30.0",
   "manifestURI": "",
   "language": "typescript",
   "type": "custom-source",

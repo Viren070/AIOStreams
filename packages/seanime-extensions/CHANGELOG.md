@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.30.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.2...seanime-extensions-v2.30.0) (2026-05-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove deprecated service specific default/forced credential env vars
+* remove deprecated addon specific host/proxy/protocol rewrite env vars
+* remove deprecated proxy URL port/protocol/host rewrite env vars
+* deprecate `ADDON_PASSWORD` in favour of using `AIOSTREAMS_AUTH` + `AIOSTREAMS_AUTH_REQUIRED` for both dashboard and config access control
+* **api/user:** switch to basic auth
+
+### Features
+
+* add admin dashboard with analytics, logs, system info, users, proxy, tasks, cache, and settings pages ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* **api/user:** switch to basic auth ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* deprecate `ADDON_PASSWORD` in favour of using `AIOSTREAMS_AUTH` + `AIOSTREAMS_AUTH_REQUIRED` for both dashboard and config access control ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* **frontend:** switch to tanstack router + rspack/rsbuild for improved performance ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* remove deprecated addon specific host/proxy/protocol rewrite env vars ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* remove deprecated proxy URL port/protocol/host rewrite env vars ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* remove deprecated service specific default/forced credential env vars ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* rewrite database layer with migrations. ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+* use cleaner, structured logging format, recommended to set `LOG_FORMAT=json`. ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+
+
+### Bug Fixes
+
+* **presets/custom:** allow selecting none for pin position ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+
+
+### Miscellaneous Chores
+
+* **Dockerfile:** update frontend output location ([60dd54c](https://github.com/Viren070/AIOStreams/commit/60dd54ce6926c1fe507d59577d7e84d0a93b8ae6))
+
 ## [0.8.2](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.1...seanime-extensions-v0.8.2) (2026-05-09)
 
 
