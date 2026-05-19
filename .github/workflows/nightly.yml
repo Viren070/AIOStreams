@@ -43,17 +43,41 @@ jobs:
       - name: Get commit messages
         id: commit_msgs
         run: |
+          expand_commits() {
+            local range="$1"
+            local result=""
+            local hashes
+
+            mapfile -t hashes < <(git log "$range" --pretty=format:"%H")
+
+            for hash in "${hashes[@]}"; do
+              subject=$(git log -1 --pretty=format:"%s" "$hash")
+              body=$(git log -1 --pretty=format:"%b" "$hash")
+              short_hash="${hash:0:7}"
+
+              # Extract lines from the body that match conventional commit format
+              cc_lines=$(echo "$body" | grep -E '^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|revert)(\([^)]+\))?!?: .+' || true)
+
+              if [ -n "$cc_lines" ]; then
+                while IFS= read -r cc_line; do
+                  result="${result}* ${cc_line}"$'\n'
+                done <<< "$cc_lines"
+              else
+                result="${result}* ${subject} (${short_hash})"$'\n'
+              fi
+            done
+
+            printf "%s" "$result"
+          }
+
           if [ -z "${{ steps.get_last_nightly_tag.outputs.last_nightly_tag }}" ]; then
-            # If no previous nightly tag exists, get the last 20 commit messages
             echo "No previous nightly tag found. Getting recent commits."
-            COMMIT_MSGS=$(git log --pretty=format:"* %s (%h)" -n 20)
+            COMMIT_MSGS=$(expand_commits "-n 20")
           else
-            # Get commit messages since last nightly tag
             echo "Getting commits since ${{ steps.get_last_nightly_tag.outputs.last_nightly_tag }}"
-            COMMIT_MSGS=$(git log "${{ steps.get_last_nightly_tag.outputs.last_nightly_tag }}"..HEAD --pretty=format:"* %s (%h)")
+            COMMIT_MSGS=$(expand_commits "${{ steps.get_last_nightly_tag.outputs.last_nightly_tag }}..HEAD")
           fi
 
-          # If no commits found, provide a default message
           if [ -z "$COMMIT_MSGS" ]; then
             COMMIT_MSGS="No new commits since last nightly build"
           fi
