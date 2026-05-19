@@ -8,16 +8,15 @@ import {
   Addon,
 } from '../db/index.js';
 import { StreamParser } from '../parser/index.js';
-import { Env, ServiceId, constants, toUrlSafeBase64 } from '../utils/index.js';
+import { ServiceId, constants, toUrlSafeBase64 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 /**
  *
  * What modifications are needed for each preset:
  *
- * comet: apply FORCE_COMET_HOSTNAME, FORCE_COMET_PORT, FORCE_COMET_PROTOCOl to stream urls if they are defined
  * dmm cast:  need to split title by newline, replace trailing dashes, excluding lines with box emoji, and
  *           then joining the array back together.
  * easynews,easynews+,easynews++: need to set type as usenet
- * jackettio: apply FORCE_JACKETTIO_HOSTNAME, FORCE_JACKETTIO_PORT, FORCE_JACKETTIO_PROTOCOL to stream urls if they are defined
  * mediafusion: need to add hint for folder name, 📁 emoji, and split on arrow, take last index.
  * stremio-jacektt: need to inspect stream urls to extract service info.
  * stremthruStore: need to mark each stream as 'inLibrary' and unset any parsed 'indexer'
@@ -34,7 +33,7 @@ import { Env, ServiceId, constants, toUrlSafeBase64 } from '../utils/index.js';
 export const baseOptions = (
   name: string,
   resources: Resource[],
-  timeout: number = Env.DEFAULT_TIMEOUT,
+  timeout: number = appConfig.presets.defaultTimeout,
   baseUrls?: readonly string[]
 ): Option[] => {
   const urlOption: Option = {
@@ -79,8 +78,8 @@ export const baseOptions = (
       required: true,
       default: timeout,
       constraints: {
-        min: Env.MIN_TIMEOUT,
-        max: Env.MAX_TIMEOUT,
+        min: appConfig.userLimits.timeouts.minTimeout,
+        max: appConfig.userLimits.timeouts.maxTimeout,
         forceInUi: false, // large ranges don't work well
       },
     },
@@ -112,6 +111,10 @@ export interface CacheKeyRequestOptions {
 export abstract class Preset {
   static get METADATA(): PresetMetadata {
     throw new Error('METADATA must be implemented by derived classes');
+  }
+
+  static get DEFAULT_URL(): string {
+    return this.METADATA.URL[0] ?? '';
   }
 
   static getParser(): typeof StreamParser {
@@ -200,7 +203,7 @@ export abstract class Preset {
         );
         if (!userService || !userService.enabled || !userService.credentials) {
           throw new Error(
-            `You have specified ${meta?.name || service} in your configuration, but it is not enabled or has missing credentials`
+            `You have specified ${meta?.name || service} in your configuration for ${this.METADATA.NAME}, but it is not enabled or has missing credentials`
           );
         }
       }

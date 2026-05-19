@@ -1,5 +1,3 @@
-'use client';
-
 import React, {
   createContext,
   useCallback,
@@ -56,7 +54,11 @@ export function QuickActionsProvider({
     }),
     // Recreate whenever the registry changes (force tick is the trigger)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [register, actionsRef.current.size, ...Array.from(actionsRef.current.keys())]
+    [
+      register,
+      actionsRef.current.size,
+      ...Array.from(actionsRef.current.keys()),
+    ]
   );
 
   return (

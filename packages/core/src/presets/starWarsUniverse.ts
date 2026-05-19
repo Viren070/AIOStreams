@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class StarWarsUniversePreset extends Preset {
   private static catalogs = [
@@ -67,7 +68,8 @@ export class StarWarsUniversePreset extends Preset {
       ...baseOptions(
         'Star Wars Universe',
         supportedResources,
-        Env.DEFAULT_STAR_WARS_UNIVERSE_TIMEOUT
+        appConfig.presets.starWarsUniverse.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
       {
         id: 'catalogs',
@@ -94,10 +96,13 @@ export class StarWarsUniversePreset extends Preset {
       ID: 'star-wars-universe',
       NAME: 'Star Wars Universe',
       LOGO: 'https://www.freeiconspng.com/uploads/logo-star-wars-png-4.png',
-      URL: Env.DEFAULT_STAR_WARS_UNIVERSE_URL,
-      TIMEOUT: Env.DEFAULT_STAR_WARS_UNIVERSE_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.starWarsUniverse.url,
+      TIMEOUT:
+        appConfig.presets.starWarsUniverse.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_STAR_WARS_UNIVERSE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.starWarsUniverse.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Explore the Star Wars Universe by sagas, series, eras, and more!',
@@ -125,7 +130,7 @@ export class StarWarsUniversePreset extends Preset {
         : '';
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${Env.DEFAULT_STAR_WARS_UNIVERSE_URL}/${config ? 'catalog/' + config + '/' : ''}manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/${config ? 'catalog/' + config + '/' : ''}manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -149,7 +154,7 @@ export class StarWarsUniversePreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

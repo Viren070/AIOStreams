@@ -1,5 +1,3 @@
-'use client';
-
 import React, {
   createContext,
   useCallback,
@@ -56,9 +54,8 @@ function readInitial(): Partial<Record<MenuId, string>> {
 }
 
 export function SubTabProvider({ children }: { children: React.ReactNode }) {
-  const [subTabs, setSubTabs] = useState<Partial<Record<MenuId, string>>>(
-    readInitial
-  );
+  const [subTabs, setSubTabs] =
+    useState<Partial<Record<MenuId, string>>>(readInitial);
 
   const setSubTab = useCallback((menu: MenuId, tab: string) => {
     setSubTabs((prev) => ({ ...prev, [menu]: tab }));
@@ -72,10 +69,7 @@ export function SubTabProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const getUrlKey = useCallback(
-    (menu: MenuId) => URL_KEY_BY_MENU[menu],
-    []
-  );
+  const getUrlKey = useCallback((menu: MenuId) => URL_KEY_BY_MENU[menu], []);
 
   // Re-sync from URL on popstate (back/forward navigation).
   useEffect(() => {

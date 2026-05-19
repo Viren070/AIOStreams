@@ -1,7 +1,8 @@
-import { Addon, DB, Option, Stream, UserData } from '../db/index.js';
+﻿import { Addon, Option, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import {
   Env,
+  appConfig,
   RESOURCES,
   ServiceId,
   constants,
@@ -22,7 +23,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       constants.STREMTHRU_NEWZ_SERVICE,
     ];
     const options: Option[] = [
-      ...(Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY
+      ...(appConfig.builtins.prowlarr.url && appConfig.builtins.prowlarr.apiKey
         ? [
             {
               id: 'notRequiredNote',
@@ -48,10 +49,10 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -60,9 +61,11 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
         name: 'Prowlarr URL',
         description: 'The URL of the Prowlarr instance',
         type: 'url',
-        required: !Env.BUILTIN_PROWLARR_URL || !Env.BUILTIN_PROWLARR_API_KEY,
+        required:
+          !appConfig.builtins.prowlarr.url ||
+          !appConfig.builtins.prowlarr.apiKey,
         showInSimpleMode:
-          Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY
+          appConfig.builtins.prowlarr.url && appConfig.builtins.prowlarr.apiKey
             ? false
             : undefined,
       },
@@ -71,9 +74,11 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
         name: 'Prowlarr API Key',
         description: 'The API key for the Prowlarr instance',
         type: 'password',
-        required: !Env.BUILTIN_PROWLARR_URL || !Env.BUILTIN_PROWLARR_API_KEY,
+        required:
+          !appConfig.builtins.prowlarr.url ||
+          !appConfig.builtins.prowlarr.apiKey,
         showInSimpleMode:
-          Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY
+          appConfig.builtins.prowlarr.url && appConfig.builtins.prowlarr.apiKey
             ? false
             : undefined,
       },
@@ -130,7 +135,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
           'Optionally provide a comma separated list of tags here to limit the indexers to be used. Only indexers with these tags will be used.',
         type: 'string',
         showInSimpleMode:
-          Env.BUILTIN_PROWLARR_URL && Env.BUILTIN_PROWLARR_API_KEY
+          appConfig.builtins.prowlarr.url && appConfig.builtins.prowlarr.apiKey
             ? false
             : undefined,
       },
@@ -188,9 +193,9 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       ID: 'prowlarr',
       NAME: 'Prowlarr',
       LOGO: 'https://raw.githubusercontent.com/Prowlarr/Prowlarr/refs/heads/develop/Logo/256.png',
-      URL: `${Env.INTERNAL_URL}/builtins/prowlarr`,
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/prowlarr`],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'An addon to get torrent and usenet results from a Prowlarr instance via services.',
@@ -280,8 +285,8 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
         indexers = `${options.indexers}`.split(',');
       }
     } else {
-      prowlarrUrl = Env.BUILTIN_PROWLARR_URL;
-      prowlarrApiKey = Env.BUILTIN_PROWLARR_API_KEY;
+      prowlarrUrl = appConfig.builtins.prowlarr.url;
+      prowlarrApiKey = appConfig.builtins.prowlarr.apiKey;
       indexers = Array.isArray(options.indexers) ? options.indexers : undefined;
     }
 
@@ -299,6 +304,6 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${this.METADATA.URL}/${configString}/manifest.json`;
+    return `${this.DEFAULT_URL}/${configString}/manifest.json`;
   }
 }

@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
-import { constants, createLogger, Env, ServiceId } from '../utils/index.js';
+import { constants, createLogger, ServiceId } from '../utils/index.js';
 import { baseOptions, Preset } from './preset.js';
+import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('core');
 
@@ -17,7 +18,8 @@ export class YastreamPreset extends Preset {
       ...baseOptions(
         'yastream',
         supportedResources,
-        Env.DEFAULT_YASTREAM_TIMEOUT
+        appConfig.presets.yastream.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'kisskhCatalogs',
@@ -213,10 +215,14 @@ export class YastreamPreset extends Preset {
     return {
       ID: 'yastream',
       NAME: 'yastream',
-      LOGO: `${Env.YASTREAM_URL}/img/yas.png`,
-      URL: Env.YASTREAM_URL,
-      TIMEOUT: Env.DEFAULT_YASTREAM_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_YASTREAM_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      LOGO: `${appConfig.presets.yastream.url[0] ?? ''}/img/yas.png`,
+      URL: appConfig.presets.yastream.url,
+      TIMEOUT:
+        appConfig.presets.yastream.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.yastream.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       DESCRIPTION:
         'Stream Asian Dramas, Series and Movies directly from multiple sources. Powered by TMDB and TVDB for metadata.',
       OPTIONS: options,
@@ -253,7 +259,7 @@ export class YastreamPreset extends Preset {
   }
 
   private static generateManifestUrl(options: Record<string, any>) {
-    const url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }

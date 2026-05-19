@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class MarvelPreset extends Preset {
   private static catalogs = [
@@ -39,7 +40,8 @@ export class MarvelPreset extends Preset {
       ...baseOptions(
         'Marvel Universe',
         supportedResources,
-        Env.DEFAULT_MARVEL_CATALOG_TIMEOUT
+        appConfig.presets.marvelUniverse.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
       // series movies animations xmen release-order marvel-mcu
       {
@@ -67,10 +69,13 @@ export class MarvelPreset extends Preset {
       ID: 'marvel-universe',
       NAME: 'Marvel Universe',
       LOGO: 'https://upload.wikimedia.org/wikipedia/commons/b/b9/Marvel_Logo.svg',
-      URL: Env.MARVEL_UNIVERSE_URL,
-      TIMEOUT: Env.DEFAULT_MARVEL_CATALOG_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.marvelUniverse.url,
+      TIMEOUT:
+        appConfig.presets.marvelUniverse.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_MARVEL_CATALOG_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.marvelUniverse.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Catalogs for the Marvel Universe',
       OPTIONS: options,
@@ -97,7 +102,7 @@ export class MarvelPreset extends Preset {
         : '';
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${Env.MARVEL_UNIVERSE_URL}/${config ? 'catalog/' + config + '/' : ''}manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/${config ? 'catalog/' + config + '/' : ''}manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -121,7 +126,7 @@ export class MarvelPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

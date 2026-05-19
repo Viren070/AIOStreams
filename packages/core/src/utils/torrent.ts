@@ -1,15 +1,15 @@
-import { Torrent, UnprocessedTorrent, DebridFile } from '../debrid/index.js';
+﻿import { Torrent, UnprocessedTorrent, DebridFile } from '../debrid/index.js';
 import {
   extractInfoHashFromMagnet,
   validateInfoHash,
   extractTrackersFromMagnet,
 } from '../builtins/utils/debrid.js';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 import { Cache } from './cache.js';
 // import { makeRequest } from './http.js';
 import { fetch } from 'undici';
 import parseTorrent, { Instance } from 'parse-torrent';
-import { Env } from './env.js';
+import { config as appConfig } from '../config/index.js';
 import { getTimeTakenSincePoint } from './index.js';
 import pLimit from 'p-limit';
 
@@ -26,7 +26,7 @@ export class TorrentClient {
   static readonly #metadataCache = Cache.getInstance<string, TorrentMetadata>(
     'torrent-metadata',
     undefined,
-    Env.REDIS_URI ? 'redis' : 'sql'
+    appConfig.bootstrap.redisUri ? 'redis' : 'sql'
   );
 
   // Track in-progress fetches to avoid duplicate requests
@@ -35,8 +35,15 @@ export class TorrentClient {
     Promise<TorrentMetadata | undefined>
   >();
 
-  // Limit concurrent requests
-  static readonly #fetchLimit = pLimit(Env.BUILTIN_GET_TORRENT_CONCURRENCY);
+  // Limit concurrent requests. Constructed lazily on first use so the
+  // module-load class-init doesn't read runtime config.
+  static #fetchLimitImpl: ReturnType<typeof pLimit> | null = null;
+  static get #fetchLimit(): ReturnType<typeof pLimit> {
+    if (!this.#fetchLimitImpl) {
+      this.#fetchLimitImpl = pLimit(appConfig.builtins.getTorrent.concurrency);
+    }
+    return this.#fetchLimitImpl;
+  }
 
   private constructor() {}
 
@@ -70,7 +77,7 @@ export class TorrentClient {
     // Check if there's already a fetch in progress for this URL
     const inProgressFetch = this.#inProgressFetches.get(torrent.downloadUrl);
     if (inProgressFetch) {
-      if (Env.BUILTIN_GET_TORRENT_LAZILY) {
+      if (appConfig.builtins.getTorrent.lazily) {
         return undefined;
       }
       return inProgressFetch;
@@ -96,7 +103,7 @@ export class TorrentClient {
     const fetchPromise = this.#fetchLimit(fetchTask);
     this.#inProgressFetches.set(torrent.downloadUrl!, fetchPromise);
 
-    if (Env.BUILTIN_GET_TORRENT_LAZILY) {
+    if (appConfig.builtins.getTorrent.lazily) {
       // Queue the fetch but don't wait for it
       fetchPromise.catch(() => {});
       return undefined;
@@ -125,9 +132,9 @@ export class TorrentClient {
     const { downloadUrl } = torrent;
     if (!downloadUrl) throw new Error('Download URL must be provided.');
 
-    const timeout = Env.BUILTIN_GET_TORRENT_LAZILY
+    const timeout = appConfig.builtins.getTorrent.lazily
       ? 30000
-      : Env.BUILTIN_GET_TORRENT_TIMEOUT;
+      : appConfig.builtins.getTorrent.timeout;
     const start = Date.now();
 
     const response = await fetch(downloadUrl, {
@@ -208,7 +215,7 @@ export class TorrentClient {
     await this.#metadataCache.set(
       downloadUrl,
       metadata,
-      Env.BUILTIN_TORRENT_METADATA_CACHE_TTL
+      appConfig.builtins.torrent.metadataCacheTtl
     );
     return metadata;
   }

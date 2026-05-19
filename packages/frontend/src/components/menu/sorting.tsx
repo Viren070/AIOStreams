@@ -1,4 +1,3 @@
-'use client';
 import { useState, useEffect } from 'react';
 import { PageControls } from '../shared/page-controls';
 import { PageWrapper } from '../shared/page-wrapper';
@@ -708,7 +707,9 @@ function Content() {
         <div>
           <div className="flex items-center gap-2">
             <h2>Sorting</h2>
-            {hasParent && isInherited('sorting') && <InheritedBadge section="sorting" />}
+            {hasParent && isInherited('sorting') && (
+              <InheritedBadge section="sorting" />
+            )}
           </div>
           <p className="text-[--muted]">
             Configure how your streams are sorted and organised.

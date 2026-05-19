@@ -1,7 +1,7 @@
 import { Addon, Option, UserData, Resource } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class StreamFusionPreset extends Preset {
   static override get METADATA() {
@@ -26,7 +26,8 @@ export class StreamFusionPreset extends Preset {
       ...baseOptions(
         'StreamFusion',
         supportedResources,
-        Env.DEFAULT_STREAMFUSION_TIMEOUT
+        appConfig.presets.streamfusion.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'streamFusionApiKey',
@@ -130,9 +131,13 @@ export class StreamFusionPreset extends Preset {
       ID: 'streamfusion',
       NAME: 'StreamFusion',
       LOGO: 'https://stream-fusion.stremiofr.com/static/logo-stream-fusion.png',
-      URL: Env.DEFAULT_STREAMFUSION_URL,
-      TIMEOUT: Env.DEFAULT_STREAMFUSION_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_STREAMFUSION_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.streamfusion.url,
+      TIMEOUT:
+        appConfig.presets.streamfusion.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.streamfusion.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'Stremio addon focusing on french content',
       OPTIONS: options,
@@ -206,7 +211,7 @@ export class StreamFusionPreset extends Preset {
     options: Record<string, any>,
     serviceIds: ServiceId[]
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }
@@ -224,7 +229,7 @@ export class StreamFusionPreset extends Preset {
       'publicCacheServer',
     ];
     const configString = this.base64EncodeJSON({
-      addonHost: options.url ? new URL(options.url).origin : this.METADATA.URL,
+      addonHost: options.url ? new URL(options.url).origin : this.DEFAULT_URL,
       apiKey: options.streamFusionApiKey,
       service: serviceIds.map(
         (serviceId) => constants.SERVICE_DETAILS[serviceId].name

@@ -1,5 +1,3 @@
-'use client';
-
 import { useMenu } from '@/context/menu';
 import { ServicesMenu } from './menu/services';
 import { AddonsMenu } from './menu/addons';
@@ -11,6 +9,7 @@ import { SaveInstallMenu } from './menu/save-install';
 import { FormatterMenu } from './menu/formatter';
 import { ProxyMenu } from './menu/proxy';
 import { OptionsMenu } from './menu/options';
+import { StatsMenu } from './menu/stats';
 
 export function MenuContent() {
   const { selectedMenu } = useMenu();
@@ -32,6 +31,8 @@ export function MenuContent() {
       return <ProxyMenu />;
     case 'miscellaneous':
       return <MiscellaneousMenu />;
+    case 'stats':
+      return <StatsMenu />;
     case 'save-install':
       return <SaveInstallMenu />;
     case 'fun':

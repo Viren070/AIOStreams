@@ -1,5 +1,6 @@
-import { BaseProxy, ProxyStream } from './base.js';
-import { createLogger, maskSensitiveInfo, Env } from '../utils/index.js';
+﻿import { BaseProxy, ProxyStream } from './base.js';
+import { createLogger, maskSensitiveInfo } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import path from 'path';
 
 const logger = createLogger('mediaflow');
@@ -36,13 +37,13 @@ export class MediaFlowProxy extends BaseProxy {
 
     const data = {
       mediaflow_proxy_url: this.config.url.replace(/\/$/, ''),
-      api_password: Env.ENCRYPT_MEDIAFLOW_URLS
+      api_password: appConfig.proxy.encryption.mediaflow
         ? this.config.credentials
         : undefined,
       urls: streams.map((stream) => ({
         endpoint: '/proxy/stream',
         filename: stream.filename || path.basename(stream.url),
-        query_params: Env.ENCRYPT_MEDIAFLOW_URLS
+        query_params: appConfig.proxy.encryption.mediaflow
           ? undefined
           : {
               api_password: this.config.credentials,
@@ -53,13 +54,10 @@ export class MediaFlowProxy extends BaseProxy {
       })),
     };
 
-    if (Env.LOG_SENSITIVE_INFO) {
-      logger.debug(`POST ${proxyUrl.toString()}`);
-    } else {
-      logger.debug(
-        `POST ${proxyUrl.protocol}://${maskSensitiveInfo(proxyUrl.hostname)}${proxyUrl.port ? `:${proxyUrl.port}` : ''}/generate_urls`
-      );
-    }
+    logger.trace(
+      { endpoint: `${proxyUrl.protocol}//${maskSensitiveInfo(proxyUrl.hostname)}/generate_urls`, count: streams.length },
+      'generating mediaflow proxy urls'
+    );
 
     const response = await fetch(proxyUrl.toString(), {
       method: 'POST',
@@ -77,7 +75,7 @@ export class MediaFlowProxy extends BaseProxy {
       responseData = await response.json();
     } catch (error) {
       const text = await response.text();
-      logger.debug(`Response body: ${text}`);
+      logger.debug({ body: text }, 'failed to parse mediaflow json response');
       throw new Error('Failed to parse JSON response from MediaFlow');
     }
 

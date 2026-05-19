@@ -566,10 +566,10 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
     case 'subsection': {
       const [modalOpen, setModalOpen] = useState(false);
       const subOptions = (option.subOptions ?? []) as Option[];
-      const savedValue = (forcedValue ??
-        value ??
-        defaultValue ??
-        {}) as Record<string, any>;
+      const savedValue = (forcedValue ?? value ?? defaultValue ?? {}) as Record<
+        string,
+        any
+      >;
       const subDefaults: Record<string, any> = {};
       for (const sub of subOptions) {
         if (sub.default !== undefined) {

@@ -1,5 +1,6 @@
+﻿import { config as appConfig } from '../config/index.js';
 import { ParsedStream, UserData } from '../db/schemas.js';
-import { constants, createLogger, Env } from '../utils/index.js';
+import { constants, createLogger } from '../utils/index.js';
 import { createProxy } from '../proxy/index.js';
 
 const logger = createLogger('proxy');
@@ -27,9 +28,9 @@ class Proxifier {
       proxyUrl = new URL(proxy.url);
     } catch (error) {
       logger.error(
-        `URL parsing failed somehow: stream: ${JSON.stringify(stream)}, proxy: ${JSON.stringify(proxy)}`
+        { err: error instanceof Error ? (error as Error).message : String(error) },
+        'failed to parse url for proxy check'
       );
-      logger.error(error);
       return false;
     }
     // do not proxy the stream if it is a nzbdav/altmount stream from a built-in addon and the proxy is not the built-in proxy (i.e. only allow using built-in proxy for these)
@@ -38,8 +39,8 @@ class Proxifier {
       [constants.NZBDAV_SERVICE, constants.ALTMOUNT_SERVICE].includes(
         stream.service.id
       ) &&
-      (streamUrl.host == new URL(Env.INTERNAL_URL).host ||
-        streamUrl.host == new URL(Env.BASE_URL).host) &&
+      (streamUrl.host == new URL(appConfig.bootstrap.internalUrl).host ||
+        streamUrl.host == new URL(appConfig.bootstrap.baseUrl).host) &&
       proxy.id !== 'builtin'
     ) {
       return false;
@@ -94,7 +95,7 @@ class Proxifier {
       }
       return normalisedHeaders;
     };
-    logger.info(`Proxying ${streamsToProxy.length} streams`);
+    logger.debug({ count: streamsToProxy.length }, 'proxying streams');
 
     const proxy = createProxy(this.userData.proxy);
 
@@ -136,9 +137,7 @@ class Proxifier {
         )
       : [];
 
-    const count =
-      proxiedUrls && !('error' in proxiedUrls) ? proxiedUrls.length : 0;
-    logger.info(`Generated ${count} proxied URLs`);
+    logger.debug({ count: proxiedUrls && !('error' in proxiedUrls) ? proxiedUrls.length : 0 }, 'proxy url generation complete');
 
     const removeIndexes = new Set<number>();
 
@@ -155,9 +154,7 @@ class Proxifier {
     });
 
     if (removeIndexes.size > 0) {
-      logger.warn(
-        `Failed to proxy ${removeIndexes.size} streams. Removing them from the list.`
-      );
+      logger.warn({ count: removeIndexes.size }, 'failed to proxy streams, removing them');
       streams = streams.filter((_, index) => !removeIndexes.has(index));
     }
 

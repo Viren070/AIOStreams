@@ -1,7 +1,8 @@
-import { Router, Request, Response, NextFunction } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   APIError,
+  config as appConfig,
   constants,
   Env,
   UserData,
@@ -27,7 +28,7 @@ interface ChillLinkManifest {
 }
 
 const manifest = async (config?: UserData): Promise<ChillLinkManifest> => {
-  let addonId = Env.ADDON_ID;
+  let addonId = appConfig.branding.addonId;
   if (config) {
     addonId += `.${config.uuid?.substring(0, 12)}`;
   }
@@ -39,10 +40,13 @@ const manifest = async (config?: UserData): Promise<ChillLinkManifest> => {
     resources = aiostreams.getResources();
   }
   return {
-    name: config?.addonName || Env.ADDON_NAME,
+    name: config?.addonName || appConfig.branding.addonName,
     id: addonId,
-    version: Env.VERSION === 'unknown' ? '0.0.0' : Env.VERSION,
-    description: config?.addonDescription || Env.DESCRIPTION,
+    version:
+      appConfig.bootstrap.version === 'unknown'
+        ? '0.0.0'
+        : appConfig.bootstrap.version,
+    description: config?.addonDescription || appConfig.bootstrap.description,
     supported_endpoints: {
       feeds: null,
       streams:

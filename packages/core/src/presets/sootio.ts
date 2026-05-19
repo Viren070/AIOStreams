@@ -7,8 +7,9 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { createLogger, Env, getSimpleTextHash } from '../utils/index.js';
+import { createLogger, getSimpleTextHash } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class SootioStreamParser extends StreamParser {
@@ -51,8 +52,9 @@ export class SootioPreset extends Preset {
       ...baseOptions(
         'Sootio',
         supportedResources,
-        Env.DEFAULT_SOOTIO_TIMEOUT,
-        Env.SOOTIO_URL
+        appConfig.presets.sootio.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
+        appConfig.presets.sootio.url ?? undefined
       ),
       {
         id: 'httpProviders',
@@ -131,9 +133,13 @@ export class SootioPreset extends Preset {
       ID: 'sootio',
       NAME: 'Sootio',
       LOGO: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%2364ffda;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%2300A7B5;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23grad)' d='M50,5 C74.85,5 95,25.15 95,50 C95,74.85 74.85,95 50,95 C35,95 22.33,87.6 15,76 C25,85 40,85 50,80 C60,75 65,65 65,50 C65,35 55,25 40,25 C25,25 15,40 15,50 C15,55 16,60 18,64 C8.5,58 5,45 5,50 C5,25.15 25.15,5 50,5 Z'/%3E%3C/svg%3E`,
-      URL: Env.SOOTIO_URL[0],
-      TIMEOUT: Env.DEFAULT_SOOTIO_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_SOOTIO_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.sootio.url,
+      TIMEOUT:
+        appConfig.presets.sootio.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.sootio.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'Debrid addon.',
       OPTIONS: options,
@@ -236,7 +242,7 @@ export class SootioPreset extends Preset {
     options: Record<string, any>,
     serviceIds?: ServiceId[]
   ) {
-    const url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    const url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }

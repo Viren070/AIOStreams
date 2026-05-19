@@ -1,7 +1,7 @@
 import { BasePosterService } from './base.js';
 import { makeRequest } from '../utils/http.js';
 import { AIOratingsIsValidResponse } from '../db/schemas.js';
-import { Env } from '../utils/env.js';
+import { config } from '../config/index.js';
 
 export class AIOratings extends BasePosterService {
   readonly serviceName = 'AIOratings';
@@ -93,7 +93,7 @@ export class AIOratings extends BasePosterService {
     this.apiKeyValidationCache.set(
       this.apiKey,
       data.valid,
-      Env.POSTER_API_KEY_VALIDITY_CACHE_TTL
+      config.poster.apiKeyValidityCacheTtl
     );
     return data.valid;
   }

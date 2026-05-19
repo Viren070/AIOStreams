@@ -62,7 +62,7 @@ COPY --from=builder /build/packages/core/package.*json ./packages/core/
 COPY --from=builder /build/packages/server/package.*json ./packages/server/
 
 COPY --from=builder /build/packages/core/dist ./packages/core/dist
-COPY --from=builder /build/packages/frontend/out ./packages/frontend/out
+COPY --from=builder /build/packages/frontend/dist ./packages/frontend/dist
 COPY --from=builder /build/packages/server/dist ./packages/server/dist
 COPY --from=builder /build/packages/server/src/static ./packages/server/dist/static
 COPY --from=builder /build/packages/seanime-extensions/dist ./packages/seanime-extensions/dist

@@ -1,7 +1,6 @@
 import { cva } from 'class-variance-authority';
 import * as React from 'react';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
-import Link from 'next/link';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -54,7 +53,7 @@ export const StaticTabs = React.forwardRef<HTMLElement, StaticTabsProps>(
       >
         {items.map((tab) =>
           !!tab.href ? (
-            <Link
+            <a
               key={tab.name}
               href={tab.href ?? '#'}
               className={cn(
@@ -73,7 +72,7 @@ export const StaticTabs = React.forwardRef<HTMLElement, StaticTabsProps>(
                 />
               )}
               <span>{tab.name}</span>
-            </Link>
+            </a>
           ) : (
             <div
               key={tab.name}

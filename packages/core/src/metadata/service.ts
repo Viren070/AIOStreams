@@ -1,11 +1,17 @@
-import { DistributedLock } from '../utils/distributed-lock.js';
+﻿import { DistributedLock } from '../utils/distributed-lock.js';
 import { deduplicateTitles, Metadata, MetadataTitle } from './utils.js';
 import { TMDBMetadata } from './tmdb.js';
 import { getTraktAliases } from './trakt.js';
 import { IMDBMetadata } from './imdb.js';
-import { createLogger, getTimeTakenSincePoint } from '../utils/logger.js';
+import { createLogger } from '../logging/logger.js';
+import { getTimeTakenSincePoint } from '../utils/time.js';
 import { TYPES } from '../utils/constants.js';
-import { AnimeDatabase, IdParser, ParsedId, Env } from '../utils/index.js';
+import {
+  AnimeDatabase,
+  IdParser,
+  ParsedId,
+  appConfig,
+} from '../utils/index.js';
 import { withRetry } from '../utils/general.js';
 import { Meta } from '../db/schemas.js';
 import { TVDBMetadata } from './tvdb.js';
@@ -139,7 +145,7 @@ export class MetadataService {
             }
 
             // Trakt aliases
-            if (imdbId && Env.FETCH_TRAKT_ALIASES) {
+            if (imdbId && appConfig.metadata.trakt.fetchAliases) {
               promises.push(getTraktAliases(id));
             } else {
               promises.push(Promise.resolve(undefined));
@@ -287,7 +293,7 @@ export class MetadataService {
                 if (cinemetaData.releaseInfo) {
                   const parts = cinemetaData.releaseInfo
                     .toString()
-                    .split(/[-–—]/);
+                    .split(/[-—]/);
                   const start = parts[0]?.trim();
                   const end = parts[1]?.trim();
 

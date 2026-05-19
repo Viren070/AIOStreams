@@ -3,11 +3,11 @@ import { Preset, baseOptions } from './preset.js';
 import {
   Cache,
   constants,
-  Env,
   formatZodError,
   getSimpleTextHash,
   makeRequest,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import z, { ZodError } from 'zod';
 
@@ -46,7 +46,8 @@ export class MoreLikeThisPreset extends Preset {
       ...baseOptions(
         'More Like This',
         supportedResources,
-        Env.DEFAULT_MORE_LIKE_THIS_TIMEOUT
+        appConfig.presets.moreLikeThis.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       // @deprecated TMDB API Key is now handled in the services menu
       // {
@@ -367,10 +368,13 @@ export class MoreLikeThisPreset extends Preset {
       ID: 'more-like-this',
       NAME: 'More Like This',
       LOGO: `https://raw.githubusercontent.com/rama1997/More-Like-This/refs/heads/main/assets/images/logo.jpg`,
-      URL: Env.MORE_LIKE_THIS_URL,
-      TIMEOUT: Env.DEFAULT_MORE_LIKE_THIS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.moreLikeThis.url,
+      TIMEOUT:
+        appConfig.presets.moreLikeThis.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_MORE_LIKE_THIS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.moreLikeThis.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Shows recommendations from various sources',
       OPTIONS: options,
@@ -416,13 +420,15 @@ export class MoreLikeThisPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<string> {
-    let url = (options.url || this.METADATA.URL).replace(/\/$/, '');
+    let url = (options.url || this.DEFAULT_URL).replace(/\/$/, '');
     if (url.endsWith('/manifest.json')) {
       return url;
     }
 
     const tmdbApiKey =
-      options.tmdbApiKey || userData.tmdbApiKey || Env.TMDB_API_KEY;
+      options.tmdbApiKey ||
+      userData.tmdbApiKey ||
+      appConfig.metadata.tmdb.apiKey;
 
     const isKeyValid = (key: string): string =>
       typeof key === 'string' && key.length > 0 ? 'true' : '';

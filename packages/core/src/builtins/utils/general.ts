@@ -1,13 +1,13 @@
-import { Logger } from 'winston';
+﻿import type { Logger } from '../../logging/logger.js';
 import { Cache } from '../../utils/cache.js';
-import { Env } from '../../utils/env.js';
 import { createLogger } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import pLimit from 'p-limit';
 
 const logger = createLogger('builtin:scrape');
 
 export const createQueryLimit = () =>
-  pLimit(Env.BUILTIN_SCRAPE_QUERY_CONCURRENCY);
+  pLimit(appConfig.builtins.scrape.queryConcurrency);
 
 export function calculateAbsoluteEpisode(
   season: string,
@@ -30,10 +30,12 @@ export function calculateAbsoluteEpisode(
  * @deprecated Use getTitleLanguagesForUrl instead.
  */
 function useAllTitles(url: string): boolean {
-  if (Array.isArray(Env.BUILTIN_SCRAPE_WITH_ALL_TITLES)) {
-    return Env.BUILTIN_SCRAPE_WITH_ALL_TITLES.includes(new URL(url).hostname);
+  if (Array.isArray(appConfig.builtins.scrape.withAllTitles)) {
+    return (appConfig.builtins.scrape.withAllTitles as string[]).includes(
+      new URL(url).hostname
+    );
   }
-  return !!Env.BUILTIN_SCRAPE_WITH_ALL_TITLES;
+  return !!appConfig.builtins.scrape.withAllTitles;
 }
 
 /**
@@ -92,7 +94,7 @@ export function getTitleLanguagesForUrl(
   url: string,
   addonId?: string
 ): string[] {
-  const config = Env.BUILTIN_SCRAPE_TITLE_LANGUAGES as
+  const config = appConfig.builtins.scrape.titleLanguages as
     | Record<string, string[]>
     | undefined;
 
@@ -212,7 +214,7 @@ export async function searchWithBackgroundRefresh<T>(
     await bgRefreshCache.set(
       bgCacheKey,
       Date.now(),
-      Env.BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL
+      appConfig.builtins.torrent.minimumBackgroundRefreshInterval
     );
   }
 
@@ -246,7 +248,8 @@ function triggerBackgroundRefresh<T>(options: {
     try {
       const lastRefresh = await bgRefreshCache.get(bgCacheKey);
       const now = Date.now();
-      const intervalMs = Env.BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL * 1000;
+      const intervalMs =
+        appConfig.builtins.torrent.minimumBackgroundRefreshInterval * 1000;
 
       if (lastRefresh && now - lastRefresh < intervalMs) {
         // Not enough time has passed since last refresh
@@ -263,7 +266,7 @@ function triggerBackgroundRefresh<T>(options: {
         await bgRefreshCache.set(
           bgCacheKey,
           now,
-          Env.BUILTIN_MINIMUM_BACKGROUND_REFRESH_INTERVAL
+          appConfig.builtins.torrent.minimumBackgroundRefreshInterval
         );
         logger.info(`Background refreshed cache for: ${searchCacheKey}`);
       }

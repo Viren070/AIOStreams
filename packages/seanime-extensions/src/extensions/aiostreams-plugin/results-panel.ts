@@ -155,10 +155,7 @@ export class ResultsPanel {
     }
     this.suppressOutsideCloseUntil = Date.now() + SUPPRESS_OUTSIDE_CLOSE_MS;
     if (this.applyViewportSize()) {
-      this.ctx.setTimeout(
-        () => this.webview.show(),
-        POST_RESIZE_SHOW_DELAY_MS
-      );
+      this.ctx.setTimeout(() => this.webview.show(), POST_RESIZE_SHOW_DELAY_MS);
     } else {
       this.webview.show();
     }

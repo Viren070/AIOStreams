@@ -7,6 +7,7 @@ import {
   FULL_LANGUAGE_MAPPING,
   getLanguageDisplayName,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import FileParser from './file.js';
 import {
   parseAgeString,
@@ -192,14 +193,16 @@ class StreamParser {
   }
 
   protected applyUrlModifications(url: string | undefined): string | undefined {
-    if (url && Env.STREAM_URL_MAPPINGS) {
+    if (url && appConfig.resources.streamUrlMappings) {
       let streamUrl;
       try {
         streamUrl = new URL(url);
       } catch (e) {
         return url;
       }
-      for (const [key, value] of Object.entries(Env.STREAM_URL_MAPPINGS)) {
+      for (const [key, value] of Object.entries(
+        appConfig.resources.streamUrlMappings
+      )) {
         if (streamUrl.origin === key) {
           const mappedUrl = new URL(value);
           streamUrl.protocol = mappedUrl.protocol;

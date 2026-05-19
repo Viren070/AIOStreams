@@ -1,6 +1,6 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+﻿import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import StreamParser from '../parser/streams.js';
-import { Env, constants, ServiceId } from '../utils/index.js';
+import { appConfig, constants, ServiceId } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import { StremThruPreset } from './stremthru.js';
 
@@ -44,10 +44,10 @@ export class LibraryPreset extends BuiltinAddonPreset {
         description: 'The timeout for this addon',
         type: 'number',
         required: true,
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -156,9 +156,9 @@ export class LibraryPreset extends BuiltinAddonPreset {
       ID: 'library',
       NAME: 'Library',
       LOGO: '',
-      URL: `${Env.INTERNAL_URL}/builtins/library`,
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/library`],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: LibraryPreset.supportedServices,
       DESCRIPTION:
         'Browse and stream from your service library. View all items via catalogs, or automatically match items for the content you are viewing.',
@@ -243,7 +243,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
       showRefreshActions: options?.showRefreshActions,
       hideStreams: options?.hideStreams,
     };
-    return `${Env.INTERNAL_URL}/builtins/library/${this.base64EncodeJSON(
+    return `${appConfig.bootstrap.internalUrl}/builtins/library/${this.base64EncodeJSON(
       config,
       'urlSafe'
     )}/manifest.json`;

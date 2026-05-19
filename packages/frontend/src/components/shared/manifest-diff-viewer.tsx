@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useMemo } from 'react';
 import { DiffViewer } from './diff-viewer';
 import {

@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class DcUniversePreset extends Preset {
   // dc-batman-animations%2C
@@ -63,7 +64,8 @@ export class DcUniversePreset extends Preset {
       ...baseOptions(
         'DC Universe',
         supportedResources,
-        Env.DEFAULT_DC_UNIVERSE_TIMEOUT
+        appConfig.presets.dcUniverse.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
       // series movies animations xmen release-order marvel-mcu
       {
@@ -91,9 +93,13 @@ export class DcUniversePreset extends Preset {
       ID: 'dc-universe',
       NAME: 'DC Universe',
       LOGO: 'https://raw.githubusercontent.com/tapframe/addon-dc/refs/heads/main/assets/icon.png',
-      URL: Env.DC_UNIVERSE_URL,
-      TIMEOUT: Env.DEFAULT_DC_UNIVERSE_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_DC_UNIVERSE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.dcUniverse.url,
+      TIMEOUT:
+        appConfig.presets.dcUniverse.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.dcUniverse.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Explore the DC Universe by release date, movies, series, and animations!',
@@ -121,7 +127,7 @@ export class DcUniversePreset extends Preset {
         : '';
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${Env.DC_UNIVERSE_URL}/${config ? 'catalog/' + config + '/' : ''}manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/${config ? 'catalog/' + config + '/' : ''}manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -145,7 +151,7 @@ export class DcUniversePreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

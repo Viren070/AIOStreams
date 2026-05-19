@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   debridioSocialOption,
   debridioApiKeyOption,
@@ -221,7 +222,8 @@ export class DebridioTmdbPreset extends Preset {
       ...baseOptions(
         'Debridio TMDB',
         supportedResources,
-        Env.DEFAULT_DEBRIDIO_TMDB_TIMEOUT
+        appConfig.presets.debridioTmdb.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       debridioApiKeyOption,
       {
@@ -240,10 +242,13 @@ export class DebridioTmdbPreset extends Preset {
       ID: 'debridio-tmdb',
       NAME: 'Debridio TMDB',
       LOGO: debridioLogo,
-      URL: Env.DEBRIDIO_TMDB_URL,
-      TIMEOUT: Env.DEFAULT_DEBRIDIO_TMDB_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.debridioTmdb.url,
+      TIMEOUT:
+        appConfig.presets.debridioTmdb.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_DEBRIDIO_TMDB_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.debridioTmdb.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION: 'Catalogs for the Debridio TMDB',
       OPTIONS: options,
@@ -269,11 +274,11 @@ export class DebridioTmdbPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
-    let url = this.METADATA.URL;
+    let url = this.DEFAULT_URL;
     if (options.url?.endsWith('/manifest.json')) {
       url = options.url;
     } else {
-      let baseUrl = this.METADATA.URL;
+      let baseUrl = this.DEFAULT_URL;
       if (options.url) {
         baseUrl = new URL(options.url).origin;
       }
@@ -350,7 +355,7 @@ export class DebridioTmdbPreset extends Preset {
       if (new URL(presetOptions.url).pathname.endsWith('/manifest.json')) {
         return undefined;
       }
-      if (new URL(presetOptions.url).origin !== this.METADATA.URL) {
+      if (new URL(presetOptions.url).origin !== this.DEFAULT_URL) {
         return undefined;
       }
     } catch {}

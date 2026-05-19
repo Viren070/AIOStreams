@@ -1,5 +1,5 @@
 import { Cache } from '../../utils/cache.js';
-import { Env } from '../../utils/env.js';
+import { config as appConfig } from '../../config/index.js';
 import {
   formatZodError,
   makeRequest,
@@ -75,7 +75,7 @@ const TorrentGalaxySearchOptions = z.object({
 
 type TorrentGalaxySearchOptions = z.infer<typeof TorrentGalaxySearchOptions>;
 
-const API_BASE_URL = Env.BUILTIN_TORRENT_GALAXY_URL;
+const getApiBaseUrl = () => appConfig.builtins.torrentGalaxy.url;
 
 class TorrentGalaxyAPI {
   private headers: Record<string, string>;
@@ -106,13 +106,13 @@ class TorrentGalaxyAPI {
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
       bgCacheKey: `tgx:${cacheKey}`,
-      cacheTTL: Env.BUILTIN_TORRENT_GALAXY_SEARCH_CACHE_TTL,
+      cacheTTL: appConfig.builtins.torrentGalaxy.searchCacheTtl,
       fetchFn: () =>
         this.request<TorrentGalaxySearchResponse>(
           `/get-posts/keywords:${encodeURIComponent(options.query)}:format:json`,
           {
             schema: TorrentGalaxySearchResponse,
-            timeout: Env.BUILTIN_TORRENT_GALAXY_SEARCH_TIMEOUT,
+            timeout: appConfig.builtins.torrentGalaxy.searchTimeout,
             queryParams,
           }
         ),
@@ -135,7 +135,7 @@ class TorrentGalaxyAPI {
     if (endpoint) {
       path = `/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
     }
-    const url = new URL(path, API_BASE_URL);
+    const url = new URL(path, getApiBaseUrl());
     if (options.queryParams) {
       url.search = options.queryParams.toString();
     }
@@ -145,8 +145,9 @@ class TorrentGalaxyAPI {
       lockKey,
       () => this._request(endpoint, options),
       {
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
-        ttl: (options.timeout ?? Env.MAX_TIMEOUT) + 1000,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
+        ttl:
+          (options.timeout ?? appConfig.userLimits.timeouts.maxTimeout) + 1000,
       }
     );
     return result;
@@ -167,7 +168,7 @@ class TorrentGalaxyAPI {
     if (endpoint) {
       path = `/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
     }
-    const url = new URL(path, API_BASE_URL);
+    const url = new URL(path, getApiBaseUrl());
     if (options.queryParams) {
       url.search = options.queryParams.toString();
     }
@@ -179,7 +180,7 @@ class TorrentGalaxyAPI {
         method,
         headers: this.headers,
         body: body ? JSON.stringify(body) : undefined,
-        timeout: options.timeout ?? Env.MAX_TIMEOUT,
+        timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
       });
 
       const data = (await response.json()) as unknown;
@@ -208,7 +209,7 @@ class TorrentGalaxyAPI {
   }
 }
 
-export { TorrentGalaxyCategory, API_BASE_URL as torrentGalaxyUrl };
+export { TorrentGalaxyCategory, getApiBaseUrl as getTorrentGalaxyUrl };
 export type {
   TorrentGalaxySearchOptions,
   TorrentGalaxySearchResponse,

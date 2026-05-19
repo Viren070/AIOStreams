@@ -1,6 +1,7 @@
-import { StremThru, StremThruError } from 'stremthru';
+﻿import { StremThru, StremThruError } from 'stremthru';
 import {
   Env,
+  appConfig,
   ServiceId,
   createLogger,
   getSimpleTextHash,
@@ -112,7 +113,7 @@ export class StremThruService
     };
     this.stremthru = new StremThru({
       baseUrl: config.stremthru.baseUrl,
-      userAgent: Env.DEFAULT_USER_AGENT,
+      userAgent: appConfig.http.defaultUserAgent,
       auth: {
         store: config.stremthru.store,
         token: config.stremthru.token,
@@ -141,7 +142,7 @@ export class StremThruService
       await StremThruService.checkCache.set(
         `${this.serviceName}:${getSimpleTextHash(debridDownload.hash!)}`,
         debridDownload,
-        Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
+        appConfig.builtins.debrid.instantAvailabilityCacheTtl
       );
     } catch (err) {
       logger.error(
@@ -158,7 +159,10 @@ export class StremThruService
   }
 
   private getLibraryLimit(): number {
-    return Math.min(Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100), 500);
+    return Math.min(
+      Math.max(appConfig.builtins.debrid.libraryPageSize, 100),
+      500
+    );
   }
 
   private async getLibraryWithStaleRefresh(
@@ -173,8 +177,8 @@ export class StremThruService
     if (cached) {
       const remainingTTL = await StremThruService.libraryCache.getTTL(cacheKey);
       if (remainingTTL !== null && remainingTTL > 0) {
-        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
-        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+        const age = appConfig.builtins.debrid.libraryCacheTtl - remainingTTL;
+        if (age > appConfig.builtins.debrid.libraryStaleThreshold) {
           logger.debug(
             `Library cache for ${this.serviceName} (${type}) is stale (age: ${age}s), triggering background refresh`
           );
@@ -433,7 +437,7 @@ export class StremThruService
     const start = Date.now();
     const allItems: DebridDownload[] = [];
     let offset = 0;
-    const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+    const maxItems = appConfig.builtins.debrid.libraryPageLimit * limit;
     let totalItems = maxItems;
 
     while (offset < totalItems) {
@@ -460,13 +464,13 @@ export class StremThruService
     logger.debug(`Listed magnets from ${this.serviceName}`, {
       count: allItems.length,
       totalItems,
-      time: getTimeTakenSincePoint(start),
+      timeTaken: getTimeTakenSincePoint(start),
     });
 
     await StremThruService.libraryCache.set(
       cacheKey,
       allItems,
-      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      appConfig.builtins.debrid.libraryCacheTtl,
       true
     );
 
@@ -703,7 +707,7 @@ export class StremThruService
     const start = Date.now();
     const allItems: DebridDownload[] = [];
     let offset = 0;
-    const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+    const maxItems = appConfig.builtins.debrid.libraryPageLimit * limit;
     let totalItems = maxItems;
 
     while (offset < totalItems) {
@@ -736,13 +740,13 @@ export class StremThruService
     logger.debug(`Listed newz from ${this.serviceName}`, {
       count: allItems.length,
       totalItems,
-      time: getTimeTakenSincePoint(start),
+      timeTaken: getTimeTakenSincePoint(start),
     });
 
     await StremThruService.libraryCache.set(
       cacheKey,
       allItems,
-      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      appConfig.builtins.debrid.libraryCacheTtl,
       true
     );
 
@@ -916,7 +920,7 @@ export class StremThruService
     } else if (
       playbackInfo.private !== undefined &&
       playbackInfo.downloadUrl &&
-      Env.BUILTIN_DEBRID_USE_TORRENT_DOWNLOAD_URL &&
+      appConfig.builtins.debrid.useTorrentDownloadUrl &&
       (await this.checkCacheGet(hash))?.status !== 'cached'
     ) {
       logger.debug(
@@ -1098,7 +1102,7 @@ export class StremThruService
     await StremThruService.playbackLinkCache.set(
       cacheKey,
       playbackLink,
-      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
+      appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 
@@ -1363,7 +1367,7 @@ export class StremThruService
     await StremThruService.playbackLinkCache.set(
       cacheKey,
       playbackLink,
-      Env.BUILTIN_DEBRID_PLAYBACK_LINK_CACHE_TTL,
+      appConfig.builtins.debrid.playbackLinkCacheTtl,
       true
     );
 

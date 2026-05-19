@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import {
+  config as appConfig,
   createLogger,
   APIError,
   constants,
@@ -56,7 +57,7 @@ export const userDataMiddleware = async (
   const uuidRegex =
     /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
   if (!uuidRegex.test(uuidOrAlias)) {
-    const alias = Env.ALIASED_CONFIGURATIONS.get(uuidOrAlias);
+    const alias = appConfig.api.aliasedConfigurations[uuidOrAlias];
     if (alias) {
       uuid = alias.uuid;
     } else {

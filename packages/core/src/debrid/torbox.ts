@@ -1,6 +1,6 @@
-import { TorboxApi } from '@torbox/torbox-api';
+﻿import { TorboxApi } from '@torbox/torbox-api';
 import {
-  Env,
+  appConfig,
   ServiceId,
   createLogger,
   getSimpleTextHash,
@@ -140,7 +140,7 @@ export class TorboxDebridService
       serviceName: this.serviceName,
       clientIp: config.clientIp,
       stremthru: {
-        baseUrl: Env.BUILTIN_STREMTHRU_URL,
+        baseUrl: appConfig.builtins.stremthru.url,
         store: this.serviceName,
         token: config.token,
       },
@@ -277,7 +277,7 @@ export class TorboxDebridService
             TorboxDebridService.instantAvailabilityCache.set(
               getSimpleTextHash(item.hash!),
               item,
-              Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL
+              appConfig.builtins.debrid.instantAvailabilityCacheTtl
             );
           });
       } catch (error: any) {
@@ -426,10 +426,10 @@ export class TorboxDebridService
 
     const cacheKey = `torbox:usenet:${this.config.token}`;
     const limit = Math.min(
-      Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100),
+      Math.max(appConfig.builtins.debrid.libraryPageSize, 100),
       1000
     );
-    const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+    const maxItems = appConfig.builtins.debrid.libraryPageLimit * limit;
 
     // Check for stale cache before acquiring the lock
     const cached = await TorboxDebridService.libraryCache.get(cacheKey);
@@ -437,8 +437,8 @@ export class TorboxDebridService
       const remainingTTL =
         await TorboxDebridService.libraryCache.getTTL(cacheKey);
       if (remainingTTL !== null && remainingTTL > 0) {
-        const age = Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL - remainingTTL;
-        if (age > Env.BUILTIN_DEBRID_LIBRARY_STALE_THRESHOLD) {
+        const age = appConfig.builtins.debrid.libraryCacheTtl - remainingTTL;
+        if (age > appConfig.builtins.debrid.libraryStaleThreshold) {
           logger.debug(
             `Library cache for TorBox usenet is stale (age: ${age}s), triggering background refresh`
           );
@@ -534,13 +534,13 @@ export class TorboxDebridService
 
     logger.debug(`Listed usenet downloads from TorBox`, {
       count: allItems.length,
-      time: getTimeTakenSincePoint(start),
+      timeTaken: getTimeTakenSincePoint(start),
     });
 
     await TorboxDebridService.libraryCache.set(
       cacheKey,
       allItems,
-      Env.BUILTIN_DEBRID_LIBRARY_CACHE_TTL,
+      appConfig.builtins.debrid.libraryCacheTtl,
       true
     );
 
@@ -580,10 +580,10 @@ export class TorboxDebridService
     if (includeNzbs) {
       const cacheKey = `torbox:usenet:${this.config.token}`;
       const limit = Math.min(
-        Math.max(Env.BUILTIN_DEBRID_LIBRARY_PAGE_SIZE, 100),
+        Math.max(appConfig.builtins.debrid.libraryPageSize, 100),
         1000
       );
-      const maxItems = Env.BUILTIN_DEBRID_LIBRARY_PAGE_LIMIT * limit;
+      const maxItems = appConfig.builtins.debrid.libraryPageLimit * limit;
       await TorboxDebridService.libraryCache.delete(cacheKey);
       await this.fetchAndCacheNzbs(cacheKey, limit, maxItems);
     }
@@ -898,7 +898,7 @@ export class TorboxDebridService
     await TorboxDebridService.playbackLinkCache.set(
       cacheKey,
       playbackLink,
-      Env.BUILTIN_DEBRID_INSTANT_AVAILABILITY_CACHE_TTL,
+      appConfig.builtins.debrid.instantAvailabilityCacheTtl,
       true
     );
 

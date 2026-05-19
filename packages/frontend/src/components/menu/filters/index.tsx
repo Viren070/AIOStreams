@@ -1,4 +1,3 @@
-'use client';
 import { useEffect } from 'react';
 import { PageWrapper } from '../../shared/page-wrapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';

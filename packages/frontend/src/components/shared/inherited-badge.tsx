@@ -2,7 +2,15 @@ import { FiLink } from 'react-icons/fi';
 import { Tooltip } from '@/components/ui/tooltip';
 
 type Props = {
-  section: 'presets' | 'services' | 'filters' | 'sorting' | 'formatter' | 'proxy' | 'metadata' | 'misc';
+  section:
+    | 'presets'
+    | 'services'
+    | 'filters'
+    | 'sorting'
+    | 'formatter'
+    | 'proxy'
+    | 'metadata'
+    | 'misc';
 };
 
 export function InheritedBadge({ section }: Props) {

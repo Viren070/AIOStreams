@@ -1,4 +1,3 @@
-'use client';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Template, StatusResponse } from '@aiostreams/core';

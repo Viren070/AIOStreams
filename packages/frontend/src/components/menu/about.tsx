@@ -1,4 +1,3 @@
-'use client';
 import { PageWrapper } from '../shared/page-wrapper';
 import { useStatus } from '@/context/status';
 import { SettingsCard } from '../shared/settings-card';
@@ -20,7 +19,6 @@ import { FaGithub, FaDiscord, FaChevronRight } from 'react-icons/fa';
 import { BiDonateHeart, BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
 import { AiOutlineDiscord } from 'react-icons/ai';
 import { FiGithub } from 'react-icons/fi';
-import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,7 +51,6 @@ import { Select } from '@/components/ui/select';
 import { cn } from '@/components/ui/core/styling';
 import { Textarea } from '../ui/textarea';
 import { FaPlay } from 'react-icons/fa6';
-import { usePathname } from 'next/navigation';
 import { Template } from '@aiostreams/core';
 import {
   useTemplateLoader,
@@ -68,6 +65,7 @@ import {
 
 interface QuickLinkProps {
   href?: string;
+  external?: boolean;
   onClick?: () => void;
   className?: string;
   icon: React.ReactNode;
@@ -76,6 +74,7 @@ interface QuickLinkProps {
 
 function QuickLink({
   href,
+  external = true,
   onClick,
   icon,
   children,
@@ -102,8 +101,7 @@ function QuickLink({
     return (
       <a
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
         className={className}
       >
         {content}
@@ -223,7 +221,8 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   const [featuredTemplateToOpen, setFeaturedTemplateToOpen] =
     React.useState<Template | null>(null);
   const customHtml = status?.settings?.customHtml;
-  const pathname = usePathname();
+  const pathname =
+    typeof window !== 'undefined' ? window.location.pathname : '';
   const [deepLinkUrl, setDeepLinkUrl] = React.useState<string | undefined>(
     undefined
   );
@@ -360,7 +359,7 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
 
           {/* Large logo left */}
           <div className="flex-shrink-0 flex justify-center md:justify-start w-full md:w-auto p-2">
-            <Image
+            <img
               src={userData.addonLogo || '/logo.png'}
               alt="Logo"
               width={128}

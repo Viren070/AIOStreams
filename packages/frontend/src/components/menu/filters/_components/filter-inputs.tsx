@@ -1,4 +1,3 @@
-'use client';
 import { ReactNode, useCallback, useRef } from 'react';
 import { useDisclosure } from '@/hooks/disclosure';
 import { toast } from 'sonner';

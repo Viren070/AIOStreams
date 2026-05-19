@@ -1,9 +1,10 @@
-import fs from 'fs/promises';
+﻿import fs from 'fs/promises';
 import { createWriteStream, WriteStream } from 'fs';
 import path from 'path';
-import { createLogger, getTimeTakenSincePoint } from '../../utils/logger.js';
+import { createLogger } from '../../logging/logger.js';
+import { getTimeTakenSincePoint } from '../../utils/time.js';
 import { getDataFolder, makeRequest } from '../../utils/index.js';
-import { Env } from '../../utils/env.js';
+import { config as appConfig } from '../../config/index.js';
 import { BaseDataset } from '../base/dataset.js';
 
 const logger = createLogger('seadex');
@@ -34,8 +35,12 @@ export class SeaDexDataset extends BaseDataset {
   private constructor() {
     super({
       dataPath: path.join(getDataFolder(), 'seadex', 'trs.json'),
-      refreshIntervalSeconds: Env.BUILTIN_SEADEX_DATASET_REFRESH_INTERVAL,
+      refreshIntervalSeconds: appConfig.builtins.seadex.datasetRefreshInterval,
       logger,
+      taskId: 'seadex-dataset-refresh',
+      taskLabel: 'SeaDex dataset refresh',
+      taskDescription:
+        'Re-download the SeaDex torrent set used by the SeaDex built-in addon.',
     });
   }
 
@@ -87,7 +92,7 @@ export class SeaDexDataset extends BaseDataset {
             method: 'GET',
             timeout: 15000,
             headers: {
-              'User-Agent': Env.DEFAULT_USER_AGENT,
+              'User-Agent': appConfig.http.defaultUserAgent,
               Accept: 'application/json',
             },
           }

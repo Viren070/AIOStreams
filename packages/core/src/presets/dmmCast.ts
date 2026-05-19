@@ -7,7 +7,8 @@ import {
   AIOStream,
 } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env, RESOURCES, ServiceId } from '../utils/index.js';
+import { constants, RESOURCES, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class DMMCastStreamParser extends StreamParser {
@@ -81,10 +82,12 @@ export class DMMCastPreset extends Preset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.DEFAULT_DMM_CAST_TIMEOUT || Env.DEFAULT_TIMEOUT,
+        default:
+          appConfig.presets.dmmCast.defaultTimeout ??
+          appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -115,9 +118,13 @@ export class DMMCastPreset extends Preset {
       ID: 'dmm-cast',
       NAME: 'DMM Cast',
       LOGO: 'https://static.debridmediamanager.com/dmmcast.png',
-      URL: '',
-      TIMEOUT: Env.DEFAULT_DMM_CAST_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_DMM_CAST_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: [],
+      TIMEOUT:
+        appConfig.presets.dmmCast.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.dmmCast.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Access streams casted from [DMM](https://debridmediamanager.com) by you or other users',

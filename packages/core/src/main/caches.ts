@@ -1,4 +1,5 @@
-import { Cache, Env } from '../utils/index.js';
+﻿import { config as appConfig } from '../config/index.js';
+import { Cache } from '../utils/index.js';
 import type { MetaPreview } from '../db/schemas.js';
 
 export const shuffleCache = Cache.getInstance<string, MetaPreview[]>('shuffle');
@@ -14,5 +15,5 @@ export const mergedCatalogCache = Cache.getInstance<
 export const precacheCache = Cache.getInstance<string, boolean>(
   'precache',
   undefined,
-  Env.REDIS_URI ? 'redis' : 'memory'
+  appConfig.bootstrap.redisUri ? 'redis' : 'memory'
 );

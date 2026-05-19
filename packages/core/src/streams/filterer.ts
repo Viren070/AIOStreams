@@ -2424,9 +2424,7 @@ class StreamFilterer {
         }
       }
 
-      logger.verbose(
-        `Total streams selected by excluded conditions: ${streamsToRemove.size}`
-      );
+      logger.debug({ excluded: streamsToRemove.size }, 'streams removed by excluded conditions');
 
       // Remove all marked streams at once, after processing all conditions
       streams = streams.filter((stream) => !streamsToRemove.has(stream.id));
@@ -2497,9 +2495,7 @@ class StreamFilterer {
         }
       });
 
-      logger.verbose(
-        `Total streams selected by required conditions: ${streamsToKeep.size} (including ${passthroughCount} passthrough streams)`
-      );
+      logger.debug({ kept: streamsToKeep.size, passthrough: passthroughCount }, 'streams kept by required conditions');
       // remove all streams that are not in the streamsToKeep set
       streams = streams.filter((stream) => streamsToKeep.has(stream.id));
 

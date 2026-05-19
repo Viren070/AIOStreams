@@ -1,5 +1,5 @@
 import { baseOptions, Preset } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants, appConfig } from '../utils/index.js';
 import {
   PresetMetadata,
   Option,
@@ -91,10 +91,10 @@ export class UsenetStreamerPreset extends Preset {
         description: 'The timeout for this addon',
         type: 'number',
         required: true,
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false, // large ranges don't work well
         },
       },
@@ -137,9 +137,9 @@ export class UsenetStreamerPreset extends Preset {
       DESCRIPTION:
         'Usenet-powered instant streams for Stremio via Prowlarr and NZBDav',
       LOGO: `https://raw.githubusercontent.com/Sanket9225/UsenetStreamer/refs/heads/master/assets/icon.png`,
-      URL: Env.EASYNEWS_URL,
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       SUPPORTED_RESOURCES: supportedResources,
       SUPPORTED_STREAM_TYPES: [constants.USENET_STREAM_TYPE],

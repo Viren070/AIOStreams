@@ -14,9 +14,10 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 Use the `latest` tag for the latest stable release, or `nightly` for the latest commit build.
 
 <Callout type="info">
-  Only **`BASE_URL`** and **`SECRET_KEY`** are required environment variables.
-  All others are optional. See the full list in [Environment
-  Variables](/configuration/environment-variables).
+  Only **`BASE_URL`** and **`SECRET_KEY`** are required environment variables -
+  these (and a few other bootstrap variables) must be set in the environment.
+  Almost everything else is a runtime setting best configured from the
+  dashboard Settings page after first start. See the full list in [Environment Variables](/configuration/environment-variables).
 </Callout>
 
 Rather than running this on a personal device, consider hosting on a server or VPS.

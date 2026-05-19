@@ -1,12 +1,16 @@
+﻿import { config as appConfig } from '../config/index.js';
 import { RedisClientType } from 'redis';
-import { REDIS_PREFIX, Env } from './index.js';
-import { createLogger, getTimeTakenSincePoint } from './logger.js';
-import { DB } from '../db/db.js';
+import { REDIS_PREFIX } from './index.js';
+import { createLogger } from '../logging/logger.js';
+import { getTimeTakenSincePoint } from './time.js';
+import { getDb } from '../db/db.js';
+import type { DbDriver } from '../db/driver/types.js';
+import { sql } from '../db/sql.js';
 import { withTimeout } from './general.js';
 
 const logger = createLogger('cache');
 
-const REDIS_TIMEOUT = Env.REDIS_TIMEOUT;
+const REDIS_TIMEOUT = appConfig.bootstrap.redisTimeout;
 
 // Interface that both memory and Redis cache will implement
 export interface CacheBackend<K, V> {
@@ -154,7 +158,7 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   constructor(
     redisClient: RedisClientType,
     prefix: string = REDIS_PREFIX,
-    maxSize: number = Env.DEFAULT_MAX_CACHE_SIZE,
+    maxSize: number = appConfig.resources.cache.defaultMaxSize,
     timeout: number = REDIS_TIMEOUT
   ) {
     this.client = redisClient;
@@ -268,7 +272,7 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
       );
       logger.debug('Flushed Redis write buffer', {
         items: bufferToFlush.size,
-        time: getTimeTakenSincePoint(start),
+        timeTaken: getTimeTakenSincePoint(start),
       });
     } catch (err) {
       logger.error(`Error flushing Redis write buffer: ${err}`);
@@ -321,10 +325,29 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   async clear(): Promise<void> {
     await withTimeout(
       async () => {
-        // Delete all keys with this prefix
-        const keys = await this.client.keys(`${this.prefix}*`);
-        if (keys && keys.length > 0) {
-          await this.client.del(keys);
+        // Delete all keys with this cache's prefix. Must include the global
+        // `REDIS_PREFIX` because `getKey()` writes both, otherwise nothing
+        // matches when REDIS_PREFIX is non-empty (the previous bug).
+        //
+        // SCAN instead of KEYS so a large keyspace doesn't block the Redis
+        // event loop for the duration of the wipe — Redis serves other
+        // commands between iterations.
+        const pattern = `${REDIS_PREFIX}${this.prefix}*`;
+        const batch: string[] = [];
+        for await (const key of this.client.scanIterator({
+          MATCH: pattern,
+          COUNT: 500,
+        })) {
+          // node-redis v4 yields one key at a time; v5 yields chunks. Both
+          // are handled by flattening Array.isArray to support either.
+          if (Array.isArray(key)) batch.push(...key);
+          else batch.push(key);
+          if (batch.length >= 1000) {
+            await this.client.del(batch.splice(0, batch.length));
+          }
+        }
+        if (batch.length > 0) {
+          await this.client.del(batch);
         }
         return true;
       },
@@ -365,7 +388,6 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
 // SQL cache implementation
 export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
-  private db: DB;
   private prefix: string;
   static maintenanceStarted: boolean = false;
 
@@ -377,10 +399,13 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   private static flushIntervalTime: number = 2000;
 
   constructor(prefix: string = '', _: number) {
-    this.db = DB.getInstance();
     this.prefix = prefix;
     this.startMaintenance();
     SQLCacheBackend.startFlushInterval();
+  }
+
+  private get db(): DbDriver {
+    return getDb();
   }
 
   private static startFlushInterval() {
@@ -399,14 +424,26 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     const bufferToFlush = new Map(SQLCacheBackend.writeBuffer);
     SQLCacheBackend.writeBuffer.clear();
 
-    const db = DB.getInstance();
+    let db: DbDriver;
+    try {
+      db = getDb();
+    } catch (err) {
+      // DB not yet ready — put items back and bail.
+      for (const [key, value] of bufferToFlush.entries()) {
+        SQLCacheBackend.writeBuffer.set(key, value);
+      }
+      SQLCacheBackend.isFlushing = false;
+      return;
+    }
 
     const start = Date.now();
 
     try {
-      const countResult = await db.query('SELECT COUNT(*) as count FROM cache');
-      let currentSize = Number(countResult[0].count);
-      let overflow = currentSize + bufferToFlush.size - Env.SQL_CACHE_MAX_SIZE;
+      let currentSize = await db.count(
+        sql`SELECT COUNT(*) AS count FROM cache`
+      );
+      let overflow =
+        currentSize + bufferToFlush.size - appConfig.resources.cache.sqlMaxSize;
       if (overflow > 0) {
         const removed = await SQLCacheBackend.flushStaleEntries(db);
         logger.debug(
@@ -419,43 +456,40 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       if (overflow > 0) {
         logger.debug(`Cache overflow detected. Evicting ${overflow} items.`);
         const limit = Math.ceil(overflow);
-        if (db.isSQLite()) {
-          await db.execute(
-            `DELETE FROM cache WHERE key IN (SELECT key FROM cache ORDER BY last_accessed ASC LIMIT ${limit})`
-          );
-        } else {
-          await db.execute(
-            `DELETE FROM cache WHERE ctid IN (SELECT ctid FROM cache ORDER BY last_accessed ASC LIMIT ${limit})`
-          );
-        }
+        // Works identically on SQLite and Postgres.
+        await db.exec(
+          sql`DELETE FROM cache WHERE key IN (
+                SELECT key FROM cache ORDER BY last_accessed ASC LIMIT ${limit}
+              )`
+        );
       }
 
-      // Prepare for batch upsert
-      const values: any[] = [];
+      if (bufferToFlush.size === 0) return;
+
+      // Build a multi-row VALUES list and upsert. `ON CONFLICT ... DO
+      // UPDATE` with `EXCLUDED` works identically on SQLite (3.24+) and
+      // Postgres, so one query handles both dialects.
+      const values: unknown[] = [];
+      const placeholders: string[] = [];
       const now = Date.now();
       for (const [key, item] of bufferToFlush.entries()) {
+        placeholders.push('(?, ?, ?)');
         values.push(key, JSON.stringify(item.value), now + item.ttl * 1000);
       }
+      const valuesClause = placeholders.join(', ');
 
-      if (values.length === 0) return;
+      await db.exec(
+        `INSERT INTO cache (key, value, expires_at) VALUES ${valuesClause}
+           ON CONFLICT (key) DO UPDATE
+             SET value = EXCLUDED.value,
+                 expires_at = EXCLUDED.expires_at,
+                 last_accessed = CURRENT_TIMESTAMP`,
+        values
+      );
 
-      if (db.isSQLite()) {
-        const placeholders = Array(bufferToFlush.size)
-          .fill('(?, ?, ?)')
-          .join(', ');
-        const sql = `INSERT OR REPLACE INTO cache (key, value, expires_at) VALUES ${placeholders}`;
-        await db.execute(sql, values);
-      } else {
-        const placeholders = Array(bufferToFlush.size)
-          .fill('(?, ?, ?)')
-          .join(', ');
-        const timestampFunc = 'NOW()';
-        const sql = `INSERT INTO cache (key, value, expires_at) VALUES ${placeholders} ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, expires_at = EXCLUDED.expires_at, last_accessed = ${timestampFunc}`;
-        await db.execute(sql, values);
-      }
       logger.debug('Flushed SQL write buffer', {
         items: bufferToFlush.size,
-        time: getTimeTakenSincePoint(start),
+        timeTaken: getTimeTakenSincePoint(start),
       });
     } catch (err) {
       logger.error(`Error flushing SQL cache write buffer: ${err}`);
@@ -467,14 +501,15 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     }
   }
 
-  private static async flushStaleEntries(db: DB): Promise<number> {
-    return db
-      .execute('DELETE FROM cache WHERE expires_at < ?', [Date.now()])
-      .then((result) => {
-        const count = result.changed || result.rowCount || 0;
-        if (Number.isFinite(count)) return count;
-        return 0;
-      });
+  private static async flushStaleEntries(db: DbDriver): Promise<number> {
+    try {
+      const result = await db.exec(
+        sql`DELETE FROM cache WHERE expires_at < ${Date.now()}`
+      );
+      return result.rowCount;
+    } catch {
+      return 0;
+    }
   }
 
   private startMaintenance() {
@@ -483,13 +518,18 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     SQLCacheBackend.maintenanceStarted = true;
     setInterval(
       () => {
-        SQLCacheBackend.flushStaleEntries(this.db)
-          .then((removed) =>
-            logger.debug(`${removed} stale entries removed from SQL cache`)
-          )
-          .catch((err) => {
-            logger.error(`Error during SQL cache maintenance: ${err}`);
-          });
+        try {
+          const db = getDb();
+          SQLCacheBackend.flushStaleEntries(db)
+            .then((removed) =>
+              logger.debug(`${removed} stale entries removed from SQL cache`)
+            )
+            .catch((err) => {
+              logger.error(`Error during SQL cache maintenance: ${err}`);
+            });
+        } catch {
+          // DB not yet initialised — skip this tick.
+        }
       },
       1 * 60 * 60 * 1000 // hourly
     );
@@ -504,39 +544,30 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     const now = Date.now();
 
     try {
-      // Get the value and check expiration
-      const result = await this.db.query(
-        'SELECT value, expires_at FROM cache WHERE key = ?',
-        [sqlKey]
-      );
+      const row = await this.db.maybeOne<{
+        value: string;
+        expires_at: number | string;
+      }>(sql`SELECT value, expires_at FROM cache WHERE key = ${sqlKey}`);
 
-      if (!result.length) {
-        return undefined;
-      }
+      if (!row) return undefined;
 
-      const row = result[0];
-      if (now > row.expires_at) {
-        // Remove expired entry
-        await this.db.execute('DELETE FROM cache WHERE key = ?', [sqlKey]);
+      const expiresAt = Number(row.expires_at);
+      if (now > expiresAt) {
+        await this.db.exec(sql`DELETE FROM cache WHERE key = ${sqlKey}`);
         return undefined;
       }
 
       if (updateTTL) {
-        const ttl = Math.max(0, row.expires_at - now);
-        const timestampFunc = this.db.isSQLite()
-          ? 'CURRENT_TIMESTAMP'
-          : 'NOW()';
-        await this.db.execute(
-          `UPDATE cache SET expires_at = ?, last_accessed = ${timestampFunc} WHERE key = ?`,
-          [now + ttl, sqlKey]
+        const ttl = Math.max(0, expiresAt - now);
+        await this.db.exec(
+          sql`UPDATE cache
+              SET expires_at = ${now + ttl},
+                  last_accessed = CURRENT_TIMESTAMP
+              WHERE key = ${sqlKey}`
         );
       } else {
-        const timestampFunc = this.db.isSQLite()
-          ? 'CURRENT_TIMESTAMP'
-          : 'NOW()';
-        await this.db.execute(
-          `UPDATE cache SET last_accessed = ${timestampFunc} WHERE key = ?`,
-          [sqlKey]
+        await this.db.exec(
+          sql`UPDATE cache SET last_accessed = CURRENT_TIMESTAMP WHERE key = ${sqlKey}`
         );
       }
 
@@ -572,23 +603,21 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     const sqlKey = this.getKey(key);
 
     try {
-      const result = await this.db.query(
-        'SELECT expires_at FROM cache WHERE key = ?',
-        [sqlKey]
+      const row = await this.db.maybeOne<{ expires_at: number | string }>(
+        sql`SELECT expires_at FROM cache WHERE key = ${sqlKey}`
       );
+      if (!row) return;
 
-      if (!result.length) return;
-
-      const row = result[0];
-      if (Date.now() > row.expires_at) {
-        await this.db.execute('DELETE FROM cache WHERE key = ?', [sqlKey]);
+      if (Date.now() > Number(row.expires_at)) {
+        await this.db.exec(sql`DELETE FROM cache WHERE key = ${sqlKey}`);
         return;
       }
 
-      const timestampFunc = this.db.isSQLite() ? 'CURRENT_TIMESTAMP' : 'NOW()';
-      await this.db.execute(
-        `UPDATE cache SET value = ?, last_accessed = ${timestampFunc} WHERE key = ?`,
-        [JSON.stringify(value), sqlKey]
+      await this.db.exec(
+        sql`UPDATE cache
+            SET value = ${JSON.stringify(value)},
+                last_accessed = CURRENT_TIMESTAMP
+            WHERE key = ${sqlKey}`
       );
     } catch (err) {
       logger.error(`Error updating key ${String(key)} in SQL cache: ${err}`);
@@ -599,10 +628,10 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     const sqlKey = this.getKey(key);
 
     try {
-      const result = await this.db.execute('DELETE FROM cache WHERE key = ?', [
-        sqlKey,
-      ]);
-      return (result.changes || result.rowCount || 0) > 0;
+      const result = await this.db.exec(
+        sql`DELETE FROM cache WHERE key = ${sqlKey}`
+      );
+      return result.rowCount > 0;
     } catch (err) {
       logger.error(`Error deleting key ${String(key)} from SQL cache: ${err}`);
       return false;
@@ -612,11 +641,11 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   async clear(): Promise<void> {
     try {
       if (this.prefix) {
-        await this.db.execute('DELETE FROM cache WHERE key LIKE ?', [
-          `${this.prefix}%`,
-        ]);
+        await this.db.exec(
+          sql`DELETE FROM cache WHERE key LIKE ${`${this.prefix}%`}`
+        );
       } else {
-        await this.db.execute('DELETE FROM cache');
+        await this.db.exec(sql`DELETE FROM cache`);
       }
     } catch (err) {
       logger.error(`Error clearing SQL cache: ${err}`);
@@ -628,15 +657,11 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     const now = Date.now();
 
     try {
-      const result = await this.db.query(
-        'SELECT expires_at FROM cache WHERE key = ?',
-        [sqlKey]
+      const row = await this.db.maybeOne<{ expires_at: number | string }>(
+        sql`SELECT expires_at FROM cache WHERE key = ${sqlKey}`
       );
-
-      if (!result.length) return 0;
-
-      const ttl = Math.max(0, Math.floor((result[0].expires_at - now) / 1000));
-      return ttl;
+      if (!row) return 0;
+      return Math.max(0, Math.floor((Number(row.expires_at) - now) / 1000));
     } catch (err) {
       logger.error(
         `Error getting TTL for key ${String(key)} from SQL cache: ${err}`
@@ -646,10 +671,9 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
   }
 
   async waitUntilReady(): Promise<void> {
-    if (!this.db.isInitialised()) {
-      throw new Error('Database is not initialized');
-    }
-    return Promise.resolve();
+    // getDb() throws if not initialised. Calling it here turns that
+    // into an early failure for any caller that awaits readiness.
+    getDb();
   }
 
   async flush(): Promise<void> {

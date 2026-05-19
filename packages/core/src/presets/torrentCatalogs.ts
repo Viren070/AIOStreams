@@ -1,6 +1,7 @@
 import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 export class TorrentCatalogsPreset extends Preset {
   static override get METADATA() {
@@ -10,7 +11,8 @@ export class TorrentCatalogsPreset extends Preset {
       ...baseOptions(
         'Torrent Catalogs',
         supportedResources,
-        Env.DEFAULT_TORRENT_CATALOGS_TIMEOUT
+        appConfig.presets.torrentCatalogs.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
     ];
 
@@ -18,10 +20,13 @@ export class TorrentCatalogsPreset extends Preset {
       ID: 'torrent-catalogs',
       NAME: 'Torrent Catalogs',
       LOGO: 'https://i.ibb.co/w4BnkC9/GwxAcDV.png',
-      URL: Env.TORRENT_CATALOGS_URL,
-      TIMEOUT: Env.DEFAULT_TORRENT_CATALOGS_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.torrentCatalogs.url,
+      TIMEOUT:
+        appConfig.presets.torrentCatalogs.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_TORRENT_CATALOGS_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.torrentCatalogs.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'Provides catalogs for movies/series/anime based on top seeded torrents. Requires Kitsu addon for anime.',
@@ -45,7 +50,7 @@ export class TorrentCatalogsPreset extends Preset {
   ): Addon {
     return {
       name: options.name || this.METADATA.NAME,
-      manifestUrl: `${Env.TORRENT_CATALOGS_URL}/manifest.json`,
+      manifestUrl: `${this.DEFAULT_URL}/manifest.json`,
       enabled: true,
       library: false,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,

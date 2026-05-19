@@ -1,5 +1,6 @@
-import { BaseProxy, ProxyStream } from './base.js';
-import { createLogger, maskSensitiveInfo, Env } from '../utils/index.js';
+﻿import { BaseProxy, ProxyStream } from './base.js';
+import { createLogger, maskSensitiveInfo } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('stremthru');
 
@@ -25,7 +26,7 @@ export class StremThruProxy extends BaseProxy {
       'Content-Type': 'application/x-www-form-urlencoded',
     };
 
-    if (Env.ENCRYPT_STREMTHRU_URLS) {
+    if (appConfig.proxy.encryption.stremthru) {
       headers['X-StremThru-Authorization'] = `Basic ${this.config.credentials}`;
     }
 
@@ -38,7 +39,7 @@ export class StremThruProxy extends BaseProxy {
   ): Promise<string[] | null> {
     const proxyUrl = this.generateProxyUrl('/v0/proxy');
 
-    if (!Env.ENCRYPT_STREMTHRU_URLS) {
+    if (!appConfig.proxy.encryption.stremthru) {
       proxyUrl.searchParams.set('token', this.config.credentials);
     }
 
@@ -58,13 +59,13 @@ export class StremThruProxy extends BaseProxy {
       }
     });
 
-    if (Env.LOG_SENSITIVE_INFO) {
-      logger.debug(`POST ${proxyUrl.toString()}`);
-    } else {
-      logger.debug(
-        `POST ${proxyUrl.protocol}://${maskSensitiveInfo(proxyUrl.hostname)}${proxyUrl.port ? `:${proxyUrl.port}` : ''}/v0/proxy`
-      );
-    }
+    logger.trace(
+      {
+        endpoint: `${proxyUrl.protocol}//${maskSensitiveInfo(proxyUrl.hostname)}/v0/proxy`,
+        count: streams.length,
+      },
+      'generating stremthru proxy urls'
+    );
 
     const response = await fetch(proxyUrl.toString(), {
       method: 'POST',
@@ -78,11 +79,11 @@ export class StremThruProxy extends BaseProxy {
     }
 
     let responseData: any;
+    let text = await response.text();
     try {
-      responseData = await response.json();
+      responseData = JSON.parse(text);
     } catch (error) {
-      const text = await response.text();
-      logger.debug(`Response body: ${text}`);
+      logger.debug({ body: text }, 'failed to parse stremthru json response');
       throw new Error('Failed to parse JSON response from StremThru');
     }
 

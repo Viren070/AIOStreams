@@ -1,13 +1,12 @@
 import { z } from 'zod';
 import { ParsedId } from '../../../utils/id-parser.js';
 import {
-  Env,
   getTimeTakenSincePoint,
   normaliseLanguage,
   normaliseParsedMediaInfo,
   ParsedMediaInfo,
 } from '../../../utils/index.js';
-import { Logger } from 'winston';
+import { config as appConfig } from '../../../config/index.js';
 import {
   BaseDebridAddon,
   BaseDebridConfigSchema,
@@ -259,7 +258,7 @@ export abstract class BaseNabAddon<
     params: Record<string, string>
   ): Promise<SearchResultItem<A['namespace']>[]> {
     const queryLimit = createQueryLimit();
-    const maxPages = Env.BUILTIN_NAB_MAX_PAGES;
+    const maxPages = appConfig.builtins.nab.maxPages;
 
     const initialResponse: SearchResponse<A['namespace']> =
       await this.api.search(searchFunction, params);

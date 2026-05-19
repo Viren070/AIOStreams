@@ -1,4 +1,3 @@
-'use client';
 import React from 'react';
 import { Template } from '@aiostreams/core';
 import { AlertTriangleIcon } from 'lucide-react';

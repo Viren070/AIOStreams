@@ -1,4 +1,3 @@
-'use client';
 import { PageWrapper } from '../../shared/page-wrapper';
 import { useSubTab } from '@/context/sub-tab';
 import { PageControls } from '../../shared/page-controls';
@@ -31,7 +30,9 @@ function Content() {
         <div>
           <div className="flex items-center gap-2">
             <h2>Services</h2>
-            {hasParent && isInherited('services') && <InheritedBadge section="services" />}
+            {hasParent && isInherited('services') && (
+              <InheritedBadge section="services" />
+            )}
           </div>
           <p className="text-[--muted]">
             Configure your debrid, metadata, and poster services.

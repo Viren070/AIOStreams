@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { Modal } from '../ui/modal';
 import { ModeSwitch } from '../ui/mode-switch/mode-switch';

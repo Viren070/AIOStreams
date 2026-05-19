@@ -1,4 +1,3 @@
-'use client';
 import React from 'react';
 import { Template, StatusResponse } from '@aiostreams/core';
 import { BiImport } from 'react-icons/bi';

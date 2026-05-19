@@ -1,4 +1,4 @@
-import {
+﻿import {
   Addon,
   Option,
   UserData,
@@ -7,7 +7,7 @@ import {
   ParsedStream,
 } from '../db/index.js';
 import { baseOptions } from './preset.js';
-import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { appConfig, SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
@@ -34,7 +34,8 @@ export class TorBoxSearchPreset extends BuiltinAddonPreset {
       ...baseOptions(
         'TorBox Search',
         supportedResources,
-        Env.BUILTIN_TORBOX_SEARCH_TIMEOUT
+        appConfig.builtins.torboxSearch.timeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url' && option.id !== 'resources'),
       {
         id: 'sources',
@@ -129,10 +130,13 @@ export class TorBoxSearchPreset extends BuiltinAddonPreset {
       ID: 'torbox-search',
       NAME: 'TorBox Search',
       LOGO: `https://torbox.app/android-chrome-512x512.png`,
-      URL: `${Env.INTERNAL_URL}/builtins/torbox-search`,
-      TIMEOUT: Env.BUILTIN_TORBOX_SEARCH_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/torbox-search`],
+      TIMEOUT:
+        appConfig.builtins.torboxSearch.timeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.BUILTIN_TORBOX_SEARCH_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.builtins.torboxSearch.userAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: TorBoxSearchPreset.supportedServices,
       REQUIRES_SERVICE: true,
       DESCRIPTION:
@@ -228,6 +232,6 @@ export class TorBoxSearchPreset extends BuiltinAddonPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${this.METADATA.URL}/${configString}/manifest.json`;
+    return `${this.DEFAULT_URL}/${configString}/manifest.json`;
   }
 }

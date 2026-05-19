@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "gen:env-docs": "pnpm -w run gen:env-docs",
+    "prebuild": "pnpm run gen:env-docs",
     "build": "next build",
+    "predev": "pnpm run gen:env-docs",
     "dev": "next dev",
     "start": "serve out",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",

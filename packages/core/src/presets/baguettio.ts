@@ -1,6 +1,7 @@
 import { Addon, Option, UserData, Stream, ParsedStream } from '../db/index.js';
 import { baseOptions, Preset } from './preset.js';
-import { Env, constants, ServiceId } from '../utils/index.js';
+import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class BaguettioStreamParser extends StreamParser {
@@ -42,7 +43,8 @@ export class BaguettioPreset extends Preset {
       ...baseOptions(
         'Baguettio',
         supportedResources,
-        Env.DEFAULT_BAGUETTIO_TIMEOUT
+        appConfig.presets.baguettio.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'userId',
@@ -148,9 +150,13 @@ export class BaguettioPreset extends Preset {
       ID: 'baguettio',
       NAME: 'Baguettio',
       LOGO: 'https://baguettio.org/resources/logo',
-      URL: Env.BAGUETTIO_URL,
-      TIMEOUT: Env.DEFAULT_BAGUETTIO_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_BAGUETTIO_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.baguettio.url,
+      TIMEOUT:
+        appConfig.presets.baguettio.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.baguettio.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'French addon for Stremio',
       OPTIONS: options,
@@ -209,7 +215,7 @@ export class BaguettioPreset extends Preset {
     options: Record<string, any>,
     services: ServiceId[]
   ) {
-    let url = options.url || this.METADATA.URL;
+    let url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }
@@ -238,7 +244,10 @@ export class BaguettioPreset extends Preset {
     }
 
     const tmdbApiKey =
-      options.tmdbApiKey || userData.tmdbApiKey || Env.TMDB_API_KEY || '';
+      options.tmdbApiKey ||
+      userData.tmdbApiKey ||
+      appConfig.metadata.tmdb.apiKey ||
+      '';
 
     const config: Record<string, any> = {
       USER_ID: options.userId,

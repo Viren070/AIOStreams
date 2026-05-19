@@ -6,7 +6,6 @@
  */
 
 import { z } from 'zod';
-import { Env } from '../../utils/env.js';
 import {
   Cache,
   createLogger,
@@ -15,6 +14,7 @@ import {
   NzbProxyManager,
   DistributedLock,
 } from '../../utils/index.js';
+import { config as appConfig } from '../../config/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 import { VIDEO_FILE_EXTENSIONS } from '../../debrid/utils.js';
 import { parseDuration } from '../../parser/utils.js';
@@ -239,7 +239,7 @@ export class EasynewsApi {
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
       bgCacheKey: `easynews:${cacheKey}`,
-      cacheTTL: Env.BUILTIN_EASYNEWS_SEARCH_CACHE_TTL ?? 300,
+      cacheTTL: appConfig.builtins.easynews.searchCacheTtl,
       fetchFn: () => this.performSearchWithPagination(options),
       isEmptyResult: (result) => result.results.length === 0,
       logger,
@@ -253,7 +253,7 @@ export class EasynewsApi {
     options: EasynewsSearchOptions
   ): Promise<EasynewsSearchResult> {
     const { paginate = false, perPage = EASYNEWS_DEFAULT_PER_PAGE } = options;
-    const maxPages = Env.BUILTIN_EASYNEWS_SEARCH_MAX_PAGES ?? 5;
+    const maxPages = appConfig.builtins.easynews.maxPages;
 
     // Fetch first page to get metadata
     const firstPage = await this.performSearch({
@@ -372,8 +372,8 @@ export class EasynewsApi {
       lockKey,
       () => this._performSearch(query, page, perPage, url),
       {
-        timeout: Env.BUILTIN_EASYNEWS_SEARCH_TIMEOUT ?? 30000,
-        ttl: (Env.BUILTIN_EASYNEWS_SEARCH_TIMEOUT ?? 30000) + 1000,
+        timeout: appConfig.builtins.easynews.searchTimeout,
+        ttl: appConfig.builtins.easynews.searchTimeout + 1000,
       }
     );
     return result;
@@ -396,7 +396,7 @@ export class EasynewsApi {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-        timeout: Env.BUILTIN_EASYNEWS_SEARCH_TIMEOUT ?? 30000,
+        timeout: appConfig.builtins.easynews.searchTimeout,
       });
 
       if (response.status === 401 || response.status === 403) {
@@ -698,8 +698,7 @@ export class EasynewsApi {
     formParams.set(params.sig ? '0&sig=' + params.sig : '0', valueToken);
 
     const url = `${EASYNEWS_BASE}/2.0/api/dl-nzb`;
-    logger.debug(`Fetching NZB from Easynews`, { hash: params.hash });
-    logger.verbose(`POST ${url} with body: ${formParams.toString()}`);
+    logger.debug({ url, hash: params.hash }, 'fetching nzb from easynews');
 
     const response = await makeRequest(url, {
       method: 'POST',
@@ -711,7 +710,7 @@ export class EasynewsApi {
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
       body: formParams.toString(),
-      timeout: Env.BUILTIN_EASYNEWS_SEARCH_TIMEOUT ?? 30000,
+      timeout: appConfig.builtins.easynews.searchTimeout,
     });
 
     if (response.status === 401 || response.status === 403) {

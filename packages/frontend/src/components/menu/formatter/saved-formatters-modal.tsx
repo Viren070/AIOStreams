@@ -1,4 +1,3 @@
-'use client';
 import React, { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { TextInput } from '../../ui/text-input';

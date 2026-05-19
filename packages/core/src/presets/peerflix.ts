@@ -1,7 +1,8 @@
 import { Addon, Option, UserData, Resource, Stream } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { Env, SERVICE_DETAILS } from '../utils/index.js';
+import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 export class PeerflixPreset extends Preset {
@@ -25,7 +26,8 @@ export class PeerflixPreset extends Preset {
       ...baseOptions(
         'Peerflix',
         supportedResources,
-        Env.DEFAULT_PEERFLIX_TIMEOUT
+        appConfig.presets.peerflix.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'services',
@@ -83,9 +85,13 @@ export class PeerflixPreset extends Preset {
       ID: 'peerflix',
       NAME: 'Peerflix',
       LOGO: `https://config.peerflix.mov/static/media/logo.28f42024a3538640d047201d05416a09.svg`,
-      URL: Env.PEERFLIX_URL,
-      TIMEOUT: Env.DEFAULT_PEERFLIX_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_PEERFLIX_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: appConfig.presets.peerflix.url,
+      TIMEOUT:
+        appConfig.presets.peerflix.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.presets.peerflix.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       REQUIRES_SERVICE: false,
       DESCRIPTION:
@@ -173,7 +179,7 @@ export class PeerflixPreset extends Preset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
-    const url = options.url || this.METADATA.URL;
+    const url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
     }

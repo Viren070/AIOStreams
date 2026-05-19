@@ -1,5 +1,5 @@
-import { baseOptions, Preset } from './preset.js';
-import { constants, createLogger, Env } from '../utils/index.js';
+﻿import { baseOptions, Preset } from './preset.js';
+import { appConfig, constants, createLogger } from '../utils/index.js';
 import {
   PresetMetadata,
   Option,
@@ -42,7 +42,8 @@ export class GDrivePreset extends Preset {
     ];
 
     const options: Option[] =
-      Env.BUILTIN_GDRIVE_CLIENT_ID && Env.BUILTIN_GDRIVE_CLIENT_SECRET
+      appConfig.builtins.gdrive.clientId &&
+      appConfig.builtins.gdrive.clientSecret
         ? [
             {
               id: 'refreshToken',
@@ -61,7 +62,8 @@ export class GDrivePreset extends Preset {
             ...baseOptions(
               'Stremio GDrive',
               supportedResources,
-              Env.BUILTIN_GDRIVE_TIMEOUT
+              appConfig.builtins.gdrive.timeout ??
+                appConfig.presets.defaultTimeout
             ).filter((option) => option.id !== 'url'),
             {
               id: 'metadataSource',
@@ -151,16 +153,19 @@ export class GDrivePreset extends Preset {
       NAME: 'Stremio GDrive',
       DESCRIPTION: 'Access content from your Google Drive in Stremio!',
       LOGO: `https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/1200px-Google_Drive_icon_%282020%29.svg.png`,
-      URL: `${Env.INTERNAL_URL}/builtins/gdrive`,
-      TIMEOUT: Env.BUILTIN_GDRIVE_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.BUILTIN_GDRIVE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/gdrive`],
+      TIMEOUT:
+        appConfig.builtins.gdrive.timeout ?? appConfig.presets.defaultTimeout,
+      USER_AGENT:
+        appConfig.builtins.gdrive.userAgent ?? appConfig.http.defaultUserAgent,
       SUPPORTED_RESOURCES: supportedResources,
       SUPPORTED_STREAM_TYPES: [constants.HTTP_STREAM_TYPE],
       SUPPORTED_SERVICES: [],
       OPTIONS: options,
       BUILTIN: true,
       DISABLED:
-        !Env.BUILTIN_GDRIVE_CLIENT_ID || !Env.BUILTIN_GDRIVE_CLIENT_SECRET
+        !appConfig.builtins.gdrive.clientId ||
+        !appConfig.builtins.gdrive.clientSecret
           ? {
               reason: 'Not configured',
               disabled: true,
@@ -207,7 +212,7 @@ export class GDrivePreset extends Preset {
       );
     }
     if (options.metadataSource === 'tmdb') {
-      if (!userData.tmdbAccessToken && !Env.TMDB_ACCESS_TOKEN) {
+      if (!userData.tmdbAccessToken && !appConfig.metadata.tmdb.accessToken) {
         throw new Error(
           `${this.METADATA.NAME} requires a TMDB Access Token when using TMDB as the metadata source`
         );
@@ -220,11 +225,11 @@ export class GDrivePreset extends Preset {
         includeAudioFiles: options.includeAudioFiles ?? false,
         tmdbReadAccessToken:
           options.metadataSource === 'tmdb'
-            ? userData.tmdbAccessToken || Env.TMDB_ACCESS_TOKEN
+            ? userData.tmdbAccessToken || appConfig.metadata.tmdb.accessToken
             : undefined,
       },
       'urlSafe'
     );
-    return `${this.METADATA.URL}/${config}/manifest.json`;
+    return `${this.DEFAULT_URL}/${config}/manifest.json`;
   }
 }

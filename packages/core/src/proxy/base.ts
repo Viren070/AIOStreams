@@ -1,4 +1,4 @@
-import z from 'zod';
+﻿import z from 'zod';
 import { StreamProxyConfig } from '../db/schemas.js';
 import {
   Cache,
@@ -7,6 +7,7 @@ import {
   Env,
   constants,
 } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('proxy');
 const cache = Cache.getInstance<string, string>('publicIp');
@@ -34,7 +35,7 @@ export abstract class BaseProxy {
 
   constructor(config: StreamProxyConfig) {
     if (config.id === constants.BUILTIN_SERVICE) {
-      config.url = Env.BASE_URL;
+      config.url = appConfig.bootstrap.baseUrl;
       config.publicUrl = undefined;
     }
     if (!config.id || !config.credentials || !config.url) {
@@ -67,7 +68,7 @@ export abstract class BaseProxy {
 
   public async getPublicIp(): Promise<string | null> {
     if (!this.config.url) {
-      logger.error('Proxy URL is missing');
+      logger.error('proxy url is missing');
       throw new Error('Proxy URL is missing');
     }
 
@@ -77,26 +78,22 @@ export abstract class BaseProxy {
 
     const proxyUrl = new URL(this.config.url.replace(/\/$/, ''));
     if (this.PRIVATE_CIDR.test(proxyUrl.hostname)) {
-      logger.error('Proxy URL is a private IP address, returning null');
+      logger.warn('proxy url is a private ip, skipping public ip lookup');
       return null;
     }
 
     const cacheKey = `${this.config.id}:${this.config.url}:${this.config.credentials}`;
     const cachedPublicIp = cache ? await cache.get(cacheKey) : null;
     if (cachedPublicIp) {
-      logger.debug('Returning cached public IP');
+      logger.debug({ proxy: this.config.id }, 'returning cached proxy public ip');
       return cachedPublicIp;
     }
 
     const ipUrl = this.generateProxyUrl(this.getPublicIpEndpoint());
-
-    if (Env.LOG_SENSITIVE_INFO) {
-      logger.debug(`GET ${ipUrl.toString()}`);
-    } else {
-      logger.debug(
-        `GET ${ipUrl.protocol}://${maskSensitiveInfo(ipUrl.hostname)}${ipUrl.port ? `:${ipUrl.port}` : ''}${ipUrl.pathname}`
-      );
-    }
+    logger.debug(
+      { proxy: this.config.id, endpoint: `${ipUrl.protocol}//${maskSensitiveInfo(ipUrl.hostname)}${ipUrl.pathname}` },
+      'fetching proxy public ip'
+    );
 
     const response = await fetch(ipUrl.toString(), {
       method: 'GET',
@@ -115,18 +112,14 @@ export abstract class BaseProxy {
       .union([z.ipv4(), z.ipv6()])
       .safeParse(publicIp);
     if (error || !success) {
-      logger.error(
-        `IP Response of ${publicIp} could not be parsed as a valid IP`
-      );
+      logger.error({ proxy: this.config.id, ip: publicIp }, 'proxy returned invalid ip');
       throw new Error(`Proxy did not respond with a valid public IP`);
     }
 
     if (publicIp && cache) {
-      await cache.set(cacheKey, publicIp, Env.PROXY_IP_CACHE_TTL);
+      await cache.set(cacheKey, publicIp, appConfig.proxy.ip.cacheTtl);
     } else {
-      logger.error(
-        `Proxy did not respond with a public IP. Response: ${JSON.stringify(data)}`
-      );
+      logger.error({ proxy: this.config.id }, 'proxy did not return a public ip');
       throw new Error('Proxy did not respond with a public IP');
     }
 
@@ -173,12 +166,8 @@ export abstract class BaseProxy {
       return urls;
     } catch (error) {
       logger.error(
-        `Failed to generate proxy URLs: ${error instanceof Error ? error : String(error)}`,
-        error instanceof Error
-          ? Object.fromEntries(
-              Object.entries(error).filter(([key]) => key !== 'stack')
-            )
-          : undefined
+        { proxy: this.config.id, err: error instanceof Error ? error.message : String(error) },
+        'failed to generate proxy urls'
       );
       return { error: error instanceof Error ? error.message : String(error) };
     }

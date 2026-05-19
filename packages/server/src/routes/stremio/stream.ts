@@ -2,19 +2,21 @@ import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   AIOStreamResponse,
-  Env,
+  config as appConfig,
   createLogger,
   StremioTransformer,
   Cache,
   IdParser,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
+import { trackResource } from '../../middlewares/analytics.js';
 
 const router: Router = Router();
 
 const logger = createLogger('server');
 
 router.use(stremioStreamRateLimiter);
+router.use(trackResource('stream'));
 
 interface StreamParams {
   type: string;
@@ -40,12 +42,13 @@ router.get(
     }
     const transformer = new StremioTransformer(req.userData);
 
+    const provideSetting = appConfig.api.provideStreamData;
     const provideStreamData =
-      Env.PROVIDE_STREAM_DATA !== undefined
-        ? typeof Env.PROVIDE_STREAM_DATA === 'boolean'
-          ? Env.PROVIDE_STREAM_DATA
-          : Env.PROVIDE_STREAM_DATA.includes(req.requestIp || '')
-        : (req.headers['user-agent']?.includes('AIOStreams/') ?? false);
+      provideSetting === null
+        ? (req.headers['user-agent']?.includes('AIOStreams/') ?? false)
+        : typeof provideSetting === 'boolean'
+          ? provideSetting
+          : provideSetting.includes(req.requestIp || '');
 
     try {
       const { type, id } = req.params;

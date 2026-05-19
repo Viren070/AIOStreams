@@ -1,10 +1,9 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   APIError,
+  config as appConfig,
   constants,
-  Env,
-  getSimpleTextHash,
   UserData,
 } from '@aiostreams/core';
 import { Manifest } from '@aiostreams/core';
@@ -19,7 +18,7 @@ export default router;
 router.use(stremioManifestRateLimiter);
 
 const manifest = async (config?: UserData): Promise<Manifest> => {
-  let addonId = Env.ADDON_ID;
+  let addonId = appConfig.branding.addonId;
   if (config) {
     addonId = addonId += `.${config.uuid?.substring(0, 12)}`;
   }
@@ -36,10 +35,13 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
     addonCatalogs = aiostreams.getAddonCatalogs();
   }
   return {
-    name: config?.addonName || Env.ADDON_NAME,
+    name: config?.addonName || appConfig.branding.addonName,
     id: addonId,
-    version: Env.VERSION === 'unknown' ? '0.0.0' : Env.VERSION,
-    description: config?.addonDescription || Env.DESCRIPTION,
+    version:
+      appConfig.bootstrap.version === 'unknown'
+        ? '0.0.0'
+        : appConfig.bootstrap.version,
+    description: config?.addonDescription || appConfig.bootstrap.description,
     catalogs,
     resources,
     types: resources.reduce((types, resource) => {
@@ -50,7 +52,7 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
     logo:
       config?.addonLogo ||
       `https://raw.githubusercontent.com/Viren070/AIOStreams/refs/heads/main/packages/frontend/public/logo${
-        Env.ALTERNATE_DESIGN ? '_alt' : ''
+        appConfig.branding.alternateDesign ? '_alt' : ''
       }.png`,
     behaviorHints: {
       configurable: true,
@@ -58,21 +60,25 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
     },
     addonCatalogs,
     stremioAddonsConfig:
-      Env.STREMIO_ADDONS_CONFIG_ISSUER && Env.STREMIO_ADDONS_CONFIG_SIGNATURE
+      appConfig.api.stremioAddonsConfigIssuer &&
+      appConfig.api.stremioAddonsConfigSignature
         ? {
-            issuer: Env.STREMIO_ADDONS_CONFIG_ISSUER,
-            signature: Env.STREMIO_ADDONS_CONFIG_SIGNATURE,
+            issuer: appConfig.api.stremioAddonsConfigIssuer,
+            signature: appConfig.api.stremioAddonsConfigSignature,
           }
         : undefined,
   };
 };
 
-router.get('/', async (req: Request, res: Response<Manifest>, next) => {
-  logger.debug('Manifest request received', { userData: req.userData });
-  try {
-    res.status(200).json(await manifest(req.userData));
-  } catch (error) {
-    logger.error(`Failed to generate manifest: ${error}`);
-    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+router.get(
+  '/',
+  async (req: Request, res: Response<Manifest>, next: NextFunction) => {
+    logger.info({ uuid: req.userData?.uuid }, 'received request for manifest');
+    try {
+      res.status(200).json(await manifest(req.userData));
+    } catch (error) {
+      logger.error(`Failed to generate manifest: ${error}`);
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
   }
-});
+);

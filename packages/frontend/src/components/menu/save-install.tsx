@@ -1,4 +1,3 @@
-'use client';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/text-input';
@@ -8,7 +7,6 @@ import {
   deleteUserConfig,
   changePassword,
   CreateUserResponse,
-  APIError,
 } from '@/lib/api';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@/components/ui/alert';
@@ -42,7 +40,6 @@ import {
 } from '../shared/confirmation-dialog';
 import { UserData } from '@aiostreams/core';
 import { useSave } from '@/context/save';
-import { AddonPasswordModal } from '@/components/shared/addon-password-modal';
 import { FiExternalLink } from 'react-icons/fi';
 
 // Reusable modal option button component
@@ -1256,8 +1253,6 @@ function Content() {
   const stremioCustomSourceModal = useDisclosure(false);
   const jellyfinModal = useDisclosure(false);
   const aniyomiModal = useDisclosure(false);
-  const [addonPasswordModalOpen, setAddonPasswordModalOpen] =
-    React.useState(false);
   const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
@@ -1317,11 +1312,6 @@ function Content() {
       setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
       setPassword(newPassword);
     } catch (err) {
-      if (err instanceof APIError && err.is('ADDON_PASSWORD_INVALID')) {
-        setUserData((prev) => ({ ...prev, addonPassword: '' }));
-        setAddonPasswordModalOpen(true);
-        return;
-      }
       toast.error(
         err instanceof Error ? err.message : 'Failed to create configuration'
       );
@@ -1365,7 +1355,7 @@ function Content() {
       ...clonedData,
       ip: undefined,
       uuid: undefined,
-      addonPassword: undefined,
+      accessToken: undefined,
       tmdbAccessToken: undefined,
       tmdbApiKey: undefined,
       tvdbApiKey: undefined,
@@ -1993,21 +1983,6 @@ function Content() {
 
         <ConfirmationDialog {...confirmDelete} />
         <ConfirmationDialog {...confirmResetProps} />
-
-        <AddonPasswordModal
-          open={addonPasswordModalOpen}
-          onOpenChange={setAddonPasswordModalOpen}
-          loading={createLoading}
-          onSubmit={() => {
-            setAddonPasswordModalOpen(false);
-            handleCreate();
-          }}
-          submitText="Create"
-          value={userData.addonPassword ?? ''}
-          onValueChange={(value) =>
-            setUserData((prev) => ({ ...prev, addonPassword: value }))
-          }
-        />
 
         <Modal
           open={exportMenuModal.isOpen}

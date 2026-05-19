@@ -1,4 +1,3 @@
-'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CatalogModification } from '@aiostreams/core';
 import { useUserData } from '@/context/userData';
@@ -25,7 +24,7 @@ export function CatalogSettingsCard({
   fetchCatalogsData,
 }: {
   loading: boolean;
-  fetchCatalogsData: (hideToast?: boolean) => Promise<void>;
+  fetchCatalogsData: (hideToast?: boolean) => void | Promise<void>;
 }) {
   const { userData, setUserData } = useUserData();
 

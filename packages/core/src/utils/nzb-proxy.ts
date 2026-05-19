@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { Env } from './env.js';
+﻿import { z } from 'zod';
+import { config as appConfig } from '../config/index.js';
 import { createLogger } from './index.js';
 import { getSimpleTextHash } from './crypto.js';
 import bytes from 'bytes';
@@ -11,12 +11,15 @@ import bytes from 'bytes';
 class NzbRateLimiter {
   private userCounts = new Map<string, { count: number; resetAt: number }>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly windowMs: number;
 
   constructor() {
     // Cleanup old entries every 10 minutes
     this.cleanupInterval = setInterval(() => this.cleanup(), 600000);
-    this.windowMs = Env.EASYNEWS_NZB_RATE_LIMIT_WINDOW * 1000;
+  }
+
+  /** Window resolved on-demand to avoid reading runtime config at module load. */
+  private get windowMs(): number {
+    return appConfig.rateLimits.easynewsNzb.window * 1000;
   }
 
   /**
@@ -86,7 +89,7 @@ export class NzbProxyManager {
    * Check if the public/generic NZB proxy is enabled
    */
   static isPublicProxyEnabled(): boolean {
-    return Env.NZB_PROXY_PUBLIC_ENABLED === true;
+    return appConfig.nzbProxy.publicEnabled === true;
   }
 
   /**
@@ -102,14 +105,14 @@ export class NzbProxyManager {
     ) {
       return true;
     }
-    return Env.NZB_PROXY_EASYNEWS_ENABLED !== false;
+    return appConfig.nzbProxy.easynewsEnabled !== false;
   }
 
   /**
    * Check if a user has admin bypass (via AIOSTREAMS_AUTH)
    */
   static isAuthorised(username: string, password: string): boolean {
-    const authMap = Env.AIOSTREAMS_AUTH;
+    const authMap = appConfig.bootstrap.auth;
     if (!authMap || authMap.size === 0) return false;
     return authMap.get(username) === password;
   }
@@ -139,7 +142,7 @@ export class NzbProxyManager {
       return { allowed: true, authorised: true };
     }
 
-    const perUserLimit = Env.NZB_PROXY_RATE_LIMIT_PER_USER;
+    const perUserLimit = appConfig.nzbProxy.rateLimitPerUser;
 
     return nzbRateLimiter.check(userKey, perUserLimit);
   }
@@ -155,7 +158,7 @@ export class NzbProxyManager {
    * Get the maximum allowed NZB size
    */
   static getMaxSize(): number {
-    return Env.NZB_PROXY_MAX_SIZE;
+    return appConfig.nzbProxy.maxSize;
   }
 
   /**

@@ -1,7 +1,8 @@
+﻿import { config as appConfig } from '../config/index.js';
 import { BasePosterService } from './base.js';
 import { makeRequest } from '../utils/http.js';
 import { TopPosterIsValidResponse } from '../db/schemas.js';
-import { Env } from '../utils/env.js';
+import { config } from '../config/index.js';
 
 export class TopPoster extends BasePosterService {
   readonly serviceName = 'Top Poster';
@@ -26,7 +27,7 @@ export class TopPoster extends BasePosterService {
           timeout: 10000,
           ignoreRecursion: true,
           headers: {
-            'User-Agent': `AIOStreams/${Env.VERSION}`,
+            'User-Agent': `AIOStreams/${appConfig.bootstrap.version}`,
           },
         }
       );
@@ -62,7 +63,7 @@ export class TopPoster extends BasePosterService {
     this.apiKeyValidationCache.set(
       this.apiKey,
       data.valid,
-      Env.POSTER_API_KEY_VALIDITY_CACHE_TTL
+      config.poster.apiKeyValidityCacheTtl
     );
     return data.valid;
   }

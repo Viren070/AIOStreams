@@ -1,5 +1,3 @@
-'use client';
-
 import { cva } from 'class-variance-authority';
 import equal from 'fast-deep-equal';
 import * as React from 'react';

@@ -2,7 +2,8 @@
 
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
-import { constants, Env } from '../utils/index.js';
+import { constants } from '../utils/index.js';
+import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class DoctorWhoUniverseStreamParser extends StreamParser {
@@ -30,7 +31,8 @@ export class DoctorWhoUniversePreset extends Preset {
       ...baseOptions(
         'Doctor Who Universe',
         supportedResources,
-        Env.DEFAULT_DOCTOR_WHO_UNIVERSE_TIMEOUT
+        appConfig.presets.doctorWhoUniverse.defaultTimeout ??
+          appConfig.presets.defaultTimeout
       ),
       {
         id: 'socials',
@@ -47,10 +49,13 @@ export class DoctorWhoUniversePreset extends Preset {
       ID: 'doctor-who-universe',
       NAME: 'Doctor Who Universe',
       LOGO: 'https://i.imgur.com/zQ9Btju.png',
-      URL: Env.DOCTOR_WHO_UNIVERSE_URL,
-      TIMEOUT: Env.DEFAULT_DOCTOR_WHO_UNIVERSE_TIMEOUT || Env.DEFAULT_TIMEOUT,
+      URL: appConfig.presets.doctorWhoUniverse.url,
+      TIMEOUT:
+        appConfig.presets.doctorWhoUniverse.defaultTimeout ??
+        appConfig.presets.defaultTimeout,
       USER_AGENT:
-        Env.DEFAULT_DOCTOR_WHO_UNIVERSE_USER_AGENT || Env.DEFAULT_USER_AGENT,
+        appConfig.presets.doctorWhoUniverse.defaultUserAgent ??
+        appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: [],
       DESCRIPTION:
         'The complete Doctor Who universe, including Classic and New Who episodes, specials, minisodes, prequels, and spinoffs in original UK broadcast order.',
@@ -74,7 +79,7 @@ export class DoctorWhoUniversePreset extends Preset {
   ): Addon {
     const baseUrl = options.url
       ? new URL(options.url).origin
-      : Env.DOCTOR_WHO_UNIVERSE_URL;
+      : this.DEFAULT_URL;
     return {
       name: options.name || this.METADATA.NAME,
       manifestUrl: `${baseUrl}/manifest.json`,

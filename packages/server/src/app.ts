@@ -1,4 +1,4 @@
-import express, { Request, Response, Express } from 'express';
+﻿import express, { Request, Response, Express } from 'express';
 import {
   userApi,
   healthApi,
@@ -13,6 +13,8 @@ import {
   proxyApi,
   templatesApi,
   syncApi,
+  authApi,
+  dashboardApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -51,9 +53,15 @@ import {
   staticRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
+  requireSessionIfAuthRequired,
 } from './middlewares/index.js';
 
-import { constants, createLogger, Env } from '@aiostreams/core';
+import {
+  config as appConfig,
+  constants,
+  createLogger,
+  Env,
+} from '@aiostreams/core';
 import { StremioTransformer } from '@aiostreams/core';
 import { createResponse } from './utils/responses.js';
 import path from 'path';
@@ -80,7 +88,7 @@ export enum StaticFiles {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const frontendRoot = path.join(__dirname, '../../frontend/out');
+export const frontendRoot = path.join(__dirname, '../../frontend/dist');
 export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
@@ -89,7 +97,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Allow all origins in development for easier testing
-if (Env.NODE_ENV === 'development') {
+if (appConfig.bootstrap.nodeEnv === 'development') {
   logger.info('CORS enabled for all origins in development');
   app.use(corsMiddleware);
 }
@@ -104,13 +112,23 @@ apiRouter.use('/catalogs', catalogApi);
 apiRouter.use('/posters', postersApi);
 apiRouter.use('/oauth/exchange/gdrive', gdriveApi);
 apiRouter.use('/debrid', debridApi);
-if (Env.ENABLE_SEARCH_API) {
-  apiRouter.use('/search', searchApi);
-}
+apiRouter.use(
+  '/search',
+  (req, res, next) => {
+    if (!appConfig.api.enableSearchApi) {
+      res.status(403).json({ error: 'Search API is disabled', success: false });
+      return;
+    }
+    next();
+  },
+  searchApi
+);
 apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
+apiRouter.use('/auth', authApi);
+apiRouter.use('/dashboard', dashboardApi);
 app.use(`/api/v${constants.API_VERSION}`, apiRouter);
 
 // Stremio Routes
@@ -119,10 +137,7 @@ stremioRouter.use(corsMiddleware);
 // Public routes - no auth needed
 stremioRouter.use('/manifest.json', manifest);
 stremioRouter.use('/stream', stream);
-stremioRouter.use('/configure', configure);
-stremioRouter.use('/configure.txt', (req, res) => {
-  res.sendFile(path.join(frontendRoot, 'index.txt'));
-});
+stremioRouter.use('/configure', requireSessionIfAuthRequired, configure);
 
 stremioRouter.use('/u', alias);
 
@@ -132,10 +147,7 @@ stremioAuthRouter.use(corsMiddleware);
 stremioAuthRouter.use(userDataMiddleware);
 stremioAuthRouter.use('/manifest.json', manifest);
 stremioAuthRouter.use('/stream', stream);
-stremioAuthRouter.use('/configure', configure);
-stremioAuthRouter.use('/configure.txt', staticRateLimiter, (req, res) => {
-  res.sendFile(path.join(frontendRoot, 'index.txt'));
-});
+stremioAuthRouter.use('/configure', requireSessionIfAuthRequired, configure);
 stremioAuthRouter.use('/meta', meta);
 stremioAuthRouter.use('/catalog', catalog);
 stremioAuthRouter.use('/subtitles', subtitle);
@@ -173,12 +185,29 @@ builtinsRouter.use('/easynews', easynews);
 builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
 
+// Content-hashed build assets. These filenames change on every content
+// change, so they are immutable and safe to cache aggressively. Deliberately
+// NOT behind staticRateLimiter: a single page load pulls many of these and
+// rate-limiting them is what caused asset fetch failures + the logo flash.
+app.get('/assets/*any', (req, res, next) => {
+  const filePath = path.resolve(frontendRoot, req.path.replace(/^\//, ''));
+  if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.sendFile(filePath);
+    return;
+  }
+  next();
+});
+
+// Root-level static files (not content-hashed). Short cache; kept behind the
+// static rate limiter. The logo honours the alternate-design branding flag.
 app.get('/logo.png', staticRateLimiter, (req, res, next) => {
   const filePath = path.resolve(
     frontendRoot,
-    Env.ALTERNATE_DESIGN ? 'logo_alt.png' : 'logo.png'
+    appConfig.branding.alternateDesign ? 'logo_alt.png' : 'logo.png'
   );
   if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     res.sendFile(filePath);
     return;
   }
@@ -186,8 +215,6 @@ app.get('/logo.png', staticRateLimiter, (req, res, next) => {
 });
 app.get(
   [
-    '/_next/*any',
-    '/assets/*any',
     '/favicon.ico',
     '/manifest.json',
     '/web-app-manifest-192x192.png',
@@ -197,11 +224,13 @@ app.get(
     '/mini-stable-white.png',
     '/icon0.svg',
     '/icon1.png',
+    '/logo_alt.png',
   ],
   staticRateLimiter,
   (req, res, next) => {
     const filePath = path.resolve(frontendRoot, req.path.replace(/^\//, ''));
     if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
       res.sendFile(filePath);
       return;
     }
@@ -222,22 +251,15 @@ app.get('/static/*any', corsMiddleware, (req, res, next) => {
   next();
 });
 
-app.get('/oauth/callback/gdrive', (req, res) => {
-  res.sendFile(path.join(frontendRoot, 'oauth/callback/gdrive.html'));
-});
-app.get('/', (req, res) => {
-  res.redirect('/stremio/configure');
-});
-
 // legacy route handlers
 app.get(
   '{/:config}/stream/:type/:id.json',
   stremioStreamRateLimiter,
   (req, res) => {
     const baseUrl =
-      Env.BASE_URL ||
+      appConfig.bootstrap.baseUrl ||
       `${req.protocol}://${req.hostname}${
-        req.hostname === 'localhost' ? `:${Env.PORT}` : ''
+        req.hostname === 'localhost' ? `:${appConfig.bootstrap.port}` : ''
       }`;
     res.json({
       streams: [
@@ -250,8 +272,29 @@ app.get(
     });
   }
 );
+
+// redirect for legacy paths
 app.get('{/:config}/configure', (req, res) => {
   res.redirect('/stremio/configure');
+});
+
+app.get('/configure', (req, res) => {
+  res.redirect('/stremio/configure');
+});
+
+// SPA fallback.
+app.get('*splat', staticRateLimiter, (req, res, next) => {
+  if (req.method !== 'GET' || !req.accepts('html')) {
+    next();
+    return;
+  }
+  const indexPath = path.join(frontendRoot, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(indexPath);
+    return;
+  }
+  next();
 });
 
 // 404 handler

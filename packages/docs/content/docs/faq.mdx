@@ -124,7 +124,7 @@ description: Answers to the most commonly asked questions about AIOStreams.
     By default, AIOStreams restricts which external URLs can be used for Stream Expression sync.
 
     - **On a public instance:** Ask the instance host to whitelist your URL via the `WHITELISTED_SEL_URLS` environment variable.
-    - **Self-hosting:** Set `SEL_SYNC_ACCESS=all` in your `.env` to allow all URLs.
+    - **Self-hosting:** Set **SEL sync access** (`SEL_SYNC_ACCESS`) to `all` from the dashboard Settings page (or the env var) to allow all URLs.
 
   </Accordion>
 
@@ -132,7 +132,7 @@ description: Answers to the most commonly asked questions about AIOStreams.
     By default, AIOStreams restricts arbitrary regex patterns in filters.
 
     - **On a public instance:** Ask the host to add you to `TRUSTED_UUIDS`, or to whitelist the import URL via `WHITELISTED_REGEX_PATTERNS_URLS`.
-    - **Self-hosting:** Set `REGEX_FILTER_ACCESS=all` in your `.env`.
+    - **Self-hosting:** Set **Regex filter access** (`REGEX_FILTER_ACCESS`) to `all` from the dashboard Settings page (or the env var).
 
   </Accordion>
 

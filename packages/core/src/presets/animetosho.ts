@@ -1,5 +1,5 @@
-import { Option, UserData } from '../db/index.js';
-import { Env, constants } from '../utils/index.js';
+﻿import { Option, UserData } from '../db/index.js';
+import { appConfig, constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
@@ -11,7 +11,8 @@ export class AnimeToshoPreset extends TorznabPreset {
       ...baseOptions(
         'AnimeTosho',
         supportedResources,
-        Env.BUILTIN_DEFAULT_ANIMETOSHO_TIMEOUT || Env.DEFAULT_TIMEOUT
+        appConfig.builtins.animetosho.timeout ??
+          appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url' && option.id !== 'resources'),
       {
         id: 'services',
@@ -67,9 +68,11 @@ export class AnimeToshoPreset extends TorznabPreset {
       ID: 'animetosho',
       NAME: 'AnimeTosho',
       LOGO: '/assets/animetosho_logo.png',
-      URL: Env.BUILTIN_ANIMETOSHO_URL,
-      TIMEOUT: Env.BUILTIN_DEFAULT_ANIMETOSHO_TIMEOUT || Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [appConfig.builtins.animetosho.url],
+      TIMEOUT:
+        appConfig.builtins.animetosho.timeout ??
+        appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
         'An addon to get debrid results from AnimeTosho which mirrors most results from Nyaa.si and TokyoTosho.',
@@ -85,7 +88,7 @@ export class AnimeToshoPreset extends TorznabPreset {
     services: constants.ServiceId[],
     options: Record<string, any>
   ): string {
-    const animetoshoUrl = this.METADATA.URL;
+    const animetoshoUrl = this.DEFAULT_URL;
 
     const config = {
       ...this.getBaseConfig(userData, services),
@@ -95,6 +98,6 @@ export class AnimeToshoPreset extends TorznabPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${Env.INTERNAL_URL}/builtins/torznab/${configString}/manifest.json`;
+    return `${appConfig.bootstrap.internalUrl}/builtins/torznab/${configString}/manifest.json`;
   }
 }

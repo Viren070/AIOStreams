@@ -1,4 +1,4 @@
-import {
+﻿import {
   UserData,
   UserDataSchema,
   PresetObject,
@@ -17,7 +17,6 @@ import {
   decryptString,
   encryptString,
   Env,
-  maskSensitiveInfo,
   RPDB,
   AIOratings,
   FeatureControl,
@@ -28,246 +27,42 @@ import {
   createPosterService,
   APIError,
 } from './index.js';
+import { assertConfigAccessKey } from './auth.js';
 import { parseSyncedUrl } from './sync.js';
-import { z, ZodError } from 'zod';
+import { ZodError } from 'zod';
+import {
+  formatZodError as formatZodErrorImpl,
+  type FormatZodErrorOptions,
+} from './format-zod-error.js';
 import {
   ExitConditionEvaluator,
   GroupConditionEvaluator,
   StreamSelector,
 } from '../parser/streamExpression.js';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logging/logger.js';
 import { TVDBMetadata } from '../metadata/tvdb.js';
 import { FIELD_META } from './fieldMeta.js';
+import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('core');
 
-export const formatZodError = (error: ZodError) => {
-  return z.prettifyError(error);
-};
-
-function parseServiceCredentials(
-  raw: string | undefined
-): Map<string, Map<string, string>> {
-  const result = new Map<string, Map<string, string>>();
-  if (!raw) return result;
-  const normalized = raw.replace(/\\n/g, '\n');
-  for (const line of normalized.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const dotIdx = trimmed.indexOf('.');
-    const eqIdx = trimmed.indexOf('=');
-    if (dotIdx === -1 || eqIdx === -1 || dotIdx > eqIdx) continue;
-    const serviceId = trimmed.slice(0, dotIdx).trim();
-    const credentialId = trimmed.slice(dotIdx + 1, eqIdx).trim();
-    const value = trimmed.slice(eqIdx + 1);
-    if (!serviceId || !credentialId) continue;
-    if (!result.has(serviceId)) result.set(serviceId, new Map());
-    result.get(serviceId)!.set(credentialId, value);
-  }
-  return result;
-}
-
-const parsedDefaultServiceCredentials = parseServiceCredentials(
-  Env.DEFAULT_SERVICE_CREDENTIALS
-);
-const parsedForcedServiceCredentials = parseServiceCredentials(
-  Env.FORCED_SERVICE_CREDENTIALS
-);
+export const formatZodError = (
+  error: ZodError | unknown,
+  options?: FormatZodErrorOptions
+): string => formatZodErrorImpl(error, options);
 
 function getServiceCredentialDefault(
   serviceId: constants.ServiceId,
   credentialId: string
 ) {
-  const fromUnified = parsedDefaultServiceCredentials
-    .get(serviceId)
-    ?.get(credentialId);
-  if (fromUnified !== undefined) return fromUnified;
-
-  // legacy per-service env vars
-  switch (serviceId) {
-    case constants.REALDEBRID_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_REALDEBRID_API_KEY;
-      }
-      break;
-    case constants.ALLDEBRID_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_ALLDEBRID_API_KEY;
-      }
-      break;
-    case constants.PREMIUMIZE_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_PREMIUMIZE_API_KEY;
-      }
-      break;
-    case constants.DEBRIDLINK_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_DEBRIDLINK_API_KEY;
-      }
-      break;
-    case constants.TORBOX_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_TORBOX_API_KEY;
-      }
-      break;
-    case constants.EASYDEBRID_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_EASYDEBRID_API_KEY;
-      }
-      break;
-    case constants.DEBRIDER_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_DEBRIDER_API_KEY;
-      }
-      break;
-    case constants.PUTIO_SERVICE:
-      switch (credentialId) {
-        case 'clientId':
-          return Env.DEFAULT_PUTIO_CLIENT_ID;
-        case 'clientSecret':
-          return Env.DEFAULT_PUTIO_CLIENT_SECRET;
-      }
-      break;
-    case constants.PIKPAK_SERVICE:
-      switch (credentialId) {
-        case 'email':
-          return Env.DEFAULT_PIKPAK_EMAIL;
-        case 'password':
-          return Env.DEFAULT_PIKPAK_PASSWORD;
-      }
-      break;
-    case constants.OFFCLOUD_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.DEFAULT_OFFCLOUD_API_KEY;
-        case 'email':
-          return Env.DEFAULT_OFFCLOUD_EMAIL;
-        case 'password':
-          return Env.DEFAULT_OFFCLOUD_PASSWORD;
-      }
-      break;
-    case constants.SEEDR_SERVICE:
-      switch (credentialId) {
-        case 'encodedToken':
-          return Env.DEFAULT_SEEDR_ENCODED_TOKEN;
-      }
-      break;
-    case constants.EASYNEWS_SERVICE:
-      switch (credentialId) {
-        case 'username':
-          return Env.DEFAULT_EASYNEWS_USERNAME;
-        case 'password':
-          return Env.DEFAULT_EASYNEWS_PASSWORD;
-      }
-      break;
-    default:
-      return null;
-  }
+  return appConfig.services.defaultCredentials[serviceId]?.[credentialId];
 }
 
 function getServiceCredentialForced(
   serviceId: constants.ServiceId,
   credentialId: string
 ) {
-  const fromUnified = parsedForcedServiceCredentials
-    .get(serviceId)
-    ?.get(credentialId);
-  if (fromUnified !== undefined) return fromUnified;
-
-  // legacy per-service env vars
-  switch (serviceId) {
-    case constants.REALDEBRID_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_REALDEBRID_API_KEY;
-      }
-      break;
-    case constants.ALLDEBRID_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_ALLDEBRID_API_KEY;
-      }
-      break;
-    case constants.PREMIUMIZE_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_PREMIUMIZE_API_KEY;
-      }
-      break;
-    case constants.DEBRIDLINK_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_DEBRIDLINK_API_KEY;
-      }
-      break;
-    case constants.TORBOX_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_TORBOX_API_KEY;
-      }
-      break;
-    case constants.EASYDEBRID_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_EASYDEBRID_API_KEY;
-      }
-      break;
-    case constants.DEBRIDER_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_DEBRIDER_API_KEY;
-      }
-      break;
-    case constants.PUTIO_SERVICE:
-      switch (credentialId) {
-        case 'clientId':
-          return Env.FORCED_PUTIO_CLIENT_ID;
-        case 'clientSecret':
-          return Env.FORCED_PUTIO_CLIENT_SECRET;
-      }
-      break;
-    case constants.PIKPAK_SERVICE:
-      switch (credentialId) {
-        case 'email':
-          return Env.FORCED_PIKPAK_EMAIL;
-        case 'password':
-          return Env.FORCED_PIKPAK_PASSWORD;
-      }
-      break;
-    case constants.OFFCLOUD_SERVICE:
-      switch (credentialId) {
-        case 'apiKey':
-          return Env.FORCED_OFFCLOUD_API_KEY;
-        case 'email':
-          return Env.FORCED_OFFCLOUD_EMAIL;
-        case 'password':
-          return Env.FORCED_OFFCLOUD_PASSWORD;
-      }
-      break;
-    case constants.SEEDR_SERVICE:
-      switch (credentialId) {
-        case 'encodedToken':
-          return Env.FORCED_SEEDR_ENCODED_TOKEN;
-      }
-      break;
-    case constants.EASYNEWS_SERVICE:
-      switch (credentialId) {
-        case 'username':
-          return Env.FORCED_EASYNEWS_USERNAME;
-        case 'password':
-          return Env.FORCED_EASYNEWS_PASSWORD;
-      }
-      break;
-    default:
-      return null;
-  }
+  return appConfig.services.forcedCredentials[serviceId]?.[credentialId];
 }
 
 export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS {
@@ -330,12 +125,7 @@ export async function validateConfig(
     throw new Error(formatZodError(error));
   }
 
-  if (
-    Env.ADDON_PASSWORD.length > 0 &&
-    !Env.ADDON_PASSWORD.includes(config.addonPassword || '')
-  ) {
-    throw new APIError(constants.ErrorCode.ADDON_PASSWORD_INVALID);
-  }
+  assertConfigAccessKey(config);
 
   validateSyncedRegexUrls(config, options?.skipErrorsFromAddonsOrProxies);
   validateSyncedSelUrls(config, options?.skipErrorsFromAddonsOrProxies);
@@ -367,7 +157,7 @@ export async function validateConfig(
     if (!options?.skipErrorsFromAddonsOrProxies) {
       throw error;
     }
-    logger.warn(`Failed to resolve synced stream expressions: ${error}`);
+    logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'failed to resolve synced stream expressions');
     // Use the expressions from the config directly
     excludedStreamExpressions = config.excludedStreamExpressions || [];
     requiredStreamExpressions = config.requiredStreamExpressions || [];
@@ -383,9 +173,9 @@ export async function validateConfig(
     (preferredStreamExpressions?.length || 0) +
     (includedStreamExpressions?.length || 0);
 
-  if (totalStreamExpressions > Env.MAX_STREAM_EXPRESSIONS) {
+  if (totalStreamExpressions > appConfig.userLimits.sel.maxExpressions) {
     throw new Error(
-      `You have ${totalStreamExpressions} total stream expressions across all filter types, but the maximum is ${Env.MAX_STREAM_EXPRESSIONS}`
+      `You have ${totalStreamExpressions} total stream expressions across all filter types, but the maximum is ${appConfig.userLimits.sel.maxExpressions}`
     );
   }
 
@@ -402,18 +192,30 @@ export async function validateConfig(
     0
   );
 
-  if (totalCharacters > Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS) {
+  if (totalCharacters > appConfig.userLimits.sel.maxExpressionCharacters) {
     throw new Error(
-      `Your stream expressions have ${totalCharacters} total characters, but the maximum is ${Env.MAX_STREAM_EXPRESSIONS_TOTAL_CHARACTERS}`
+      `Your stream expressions have ${totalCharacters} total characters, but the maximum is ${appConfig.userLimits.sel.maxExpressionCharacters}`
     );
   }
 
   const validations = {
-    'excluded keywords': [config.excludedKeywords, Env.MAX_KEYWORD_FILTERS],
-    'included keywords': [config.includedKeywords, Env.MAX_KEYWORD_FILTERS],
-    'required keywords': [config.requiredKeywords, Env.MAX_KEYWORD_FILTERS],
-    'preferred keywords': [config.preferredKeywords, Env.MAX_KEYWORD_FILTERS],
-    groups: [config.groups, Env.MAX_GROUPS],
+    'excluded keywords': [
+      config.excludedKeywords,
+      appConfig.userLimits.maxKeywordFilters,
+    ],
+    'included keywords': [
+      config.includedKeywords,
+      appConfig.userLimits.maxKeywordFilters,
+    ],
+    'required keywords': [
+      config.requiredKeywords,
+      appConfig.userLimits.maxKeywordFilters,
+    ],
+    'preferred keywords': [
+      config.preferredKeywords,
+      appConfig.userLimits.maxKeywordFilters,
+    ],
+    groups: [config.groups, appConfig.userLimits.maxGroups],
   };
 
   for (const [name, [items, max]] of Object.entries(validations)) {
@@ -427,9 +229,12 @@ export async function validateConfig(
   // validate merged catalogs source limits
   if (config.mergedCatalogs) {
     for (const mergedCatalog of config.mergedCatalogs) {
-      if (mergedCatalog.catalogIds.length > Env.MAX_MERGED_CATALOG_SOURCES) {
+      if (
+        mergedCatalog.catalogIds.length >
+        appConfig.userLimits.maxMergedCatalogSources
+      ) {
         throw new Error(
-          `Merged catalog "${mergedCatalog.name}" has ${mergedCatalog.catalogIds.length} source catalogs, but the maximum is ${Env.MAX_MERGED_CATALOG_SOURCES}`
+          `Merged catalog "${mergedCatalog.name}" has ${mergedCatalog.catalogIds.length} source catalogs, but the maximum is ${appConfig.userLimits.maxMergedCatalogSources}`
         );
       }
     }
@@ -438,13 +243,13 @@ export async function validateConfig(
   // validate NZB failover count against the server limit
   if (
     config.nzbFailover?.count &&
-    config.nzbFailover.count > Env.MAX_NZB_FAILOVER_COUNT
+    config.nzbFailover.count > appConfig.userLimits.maxNzbFailoverCount
   ) {
     if (options?.skipErrorsFromAddonsOrProxies) {
-      config.nzbFailover.count = Env.MAX_NZB_FAILOVER_COUNT;
+      config.nzbFailover.count = appConfig.userLimits.maxNzbFailoverCount;
     } else {
       throw new Error(
-        `NZB failover count is ${config.nzbFailover.count}, but the maximum allowed is ${Env.MAX_NZB_FAILOVER_COUNT}`
+        `NZB failover count is ${config.nzbFailover.count}, but the maximum allowed is ${appConfig.userLimits.maxNzbFailoverCount}`
       );
     }
   }
@@ -470,7 +275,7 @@ export async function validateConfig(
         if (!options?.skipErrorsFromAddonsOrProxies) {
           throw error;
         }
-        logger.warn(`Invalid preset ${preset.instanceId}: ${error}`);
+        logger.warn({ preset: preset.instanceId, err: error instanceof Error ? error.message : String(error) }, 'invalid preset');
       }
     }
   }
@@ -540,15 +345,15 @@ export async function validateConfig(
       if (!options?.skipErrorsFromAddonsOrProxies) {
         throw new Error(`Invalid Poster API key: ${error}`);
       }
-      logger.warn(`Invalid Poster API key: ${error}`);
+      logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'invalid poster api key');
     }
   }
 
   const tmdbAuth =
     config.tmdbApiKey ||
     config.tmdbAccessToken ||
-    Env.TMDB_API_KEY ||
-    Env.TMDB_ACCESS_TOKEN;
+    appConfig.metadata.tmdb.apiKey ||
+    appConfig.metadata.tmdb.accessToken;
 
   const needTmdb =
     config.titleMatching?.enabled ||
@@ -576,7 +381,7 @@ export async function validateConfig(
           `Failed to validate TMDB API Key/Access Token: ${error instanceof Error ? error.message : String(error)}`
         );
       }
-      logger.warn(error instanceof Error ? error.message : String(error));
+      logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'failed to validate tmdb key');
     }
   }
 
@@ -590,7 +395,7 @@ export async function validateConfig(
       if (!options?.skipErrorsFromAddonsOrProxies) {
         throw new Error(`Invalid TVDB API key: ${error}`);
       }
-      logger.warn(`Invalid TVDB API key: ${error}`);
+      logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'invalid tvdb api key');
     }
   }
 
@@ -655,6 +460,16 @@ function removeInvalidPresetReferences(config: UserData) {
 }
 
 export function applyMigrations(config: any): UserData {
+  if (
+    config &&
+    config.addonPassword !== undefined &&
+    config.accessToken === undefined
+  ) {
+    config.accessToken = config.addonPassword;
+  }
+  if (config && config.addonPassword !== undefined) {
+    delete config.addonPassword;
+  }
   if (
     config.deduplicator &&
     typeof config.deduplicator.multiGroupBehaviour === 'string'
@@ -896,7 +711,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
     synced = await RegexAccess.resolveSyncedRegexesForValidation(config);
   } catch (error) {
     if (!skipErrors) throw error;
-    logger.warn(`Failed to resolve synced regex patterns: ${error}`);
+    logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'failed to resolve synced regex patterns');
   }
 
   // All patterns to validate: synced (from URLs) + direct (from config), deduplicated.
@@ -941,7 +756,7 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
       try {
         await compileRegex(regex);
       } catch (error: any) {
-        logger.error(`Invalid regex: ${regex}: ${error.message}`);
+        logger.error({ regex, err: error.message }, 'invalid regex pattern');
         throw new Error(`Invalid regex: ${regex}: ${error.message}`);
       }
     })
@@ -952,9 +767,9 @@ function validateSyncedRegexUrls(
   config: UserData,
   skipErrors: boolean = false
 ) {
+  const regexAccess = appConfig.userLimits.regex.access;
   const isUnrestricted =
-    Env.REGEX_FILTER_ACCESS === 'all' ||
-    (Env.REGEX_FILTER_ACCESS === 'trusted' && config.trusted);
+    regexAccess === 'all' || (regexAccess === 'trusted' && config.trusted);
 
   if (isUnrestricted) return;
 
@@ -979,9 +794,9 @@ function validateSyncedRegexUrls(
 }
 
 function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
+  const selAccess = appConfig.userLimits.sel.access;
   const isUnrestricted =
-    Env.SEL_SYNC_ACCESS === 'all' ||
-    (Env.SEL_SYNC_ACCESS === 'trusted' && config.trusted);
+    selAccess === 'all' || (selAccess === 'trusted' && config.trusted);
 
   if (isUnrestricted) return;
 
@@ -1360,43 +1175,31 @@ async function validateProxy(
 ): Promise<StreamProxyConfig> {
   // apply forced values if they exist
   const proxy = config.proxy ?? {};
-  proxy.enabled = Env.FORCE_PROXY_ENABLED ?? proxy.enabled;
-  proxy.id = Env.FORCE_PROXY_ID ?? proxy.id;
-  proxy.url = Env.FORCE_PROXY_URL
-    ? (encryptString(Env.FORCE_PROXY_URL).data ?? undefined)
+  proxy.enabled = appConfig.proxy.force.enabled ?? proxy.enabled;
+  proxy.id = (appConfig.proxy.force.id as typeof proxy.id) ?? proxy.id;
+  proxy.url = appConfig.proxy.force.url
+    ? (encryptString(appConfig.proxy.force.url).data ?? undefined)
     : (proxy.url ?? undefined);
   let forcedPublicUrl: string | undefined;
-  if (
-    proxy.url &&
-    (Env.FORCE_PUBLIC_PROXY_HOST !== undefined ||
-      Env.FORCE_PUBLIC_PROXY_PROTOCOL !== undefined ||
-      Env.FORCE_PUBLIC_PROXY_PORT !== undefined)
-  ) {
-    const proxyUrl = new URL(
-      isEncrypted(proxy.url) ? decryptString(proxy.url).data || '' : proxy.url
-    );
-    const port = Env.FORCE_PUBLIC_PROXY_PORT ?? proxyUrl.port;
-    forcedPublicUrl = `${Env.FORCE_PUBLIC_PROXY_PROTOCOL ?? proxyUrl.protocol}://${Env.FORCE_PUBLIC_PROXY_HOST ?? proxyUrl.hostname}${port ? `:${port}` : ''}`;
-  }
-  forcedPublicUrl = Env.FORCE_PROXY_PUBLIC_URL ?? forcedPublicUrl;
+  forcedPublicUrl = appConfig.proxy.force.publicUrl ?? forcedPublicUrl;
   proxy.publicUrl = forcedPublicUrl
     ? (encryptString(forcedPublicUrl).data ?? undefined)
     : (proxy.publicUrl ?? undefined);
-  proxy.credentials = Env.FORCE_PROXY_CREDENTIALS
-    ? (encryptString(Env.FORCE_PROXY_CREDENTIALS).data ?? undefined)
+  proxy.credentials = appConfig.proxy.force.credentials
+    ? (encryptString(appConfig.proxy.force.credentials).data ?? undefined)
     : (proxy.credentials ?? undefined);
-  proxy.publicIp = Env.FORCE_PROXY_PUBLIC_IP ?? proxy.publicIp;
-  proxy.proxiedAddons = Env.FORCE_PROXY_DISABLE_PROXIED_ADDONS
+  proxy.publicIp = appConfig.proxy.force.publicIp ?? proxy.publicIp;
+  proxy.proxiedAddons = appConfig.proxy.force.disableProxiedAddons
     ? undefined
     : proxy.proxiedAddons;
   proxy.proxiedServices =
-    Env.FORCE_PROXY_PROXIED_SERVICES ?? proxy.proxiedServices;
+    appConfig.proxy.force.proxiedServices ?? proxy.proxiedServices;
   if (proxy.enabled) {
     if (!proxy.id) {
       throw new Error('Proxy ID is required');
     }
     if (proxy.id === constants.BUILTIN_SERVICE) {
-      proxy.url = Env.BASE_URL;
+      proxy.url = appConfig.bootstrap.baseUrl;
     }
     if (!proxy.url) {
       throw new Error('Proxy URL is required');
@@ -1441,7 +1244,8 @@ async function validateProxy(
     } catch (error) {
       if (!skipProxyErrors) {
         logger.error(
-          `Failed to get the public IP of the proxy service ${proxy.id} (${maskSensitiveInfo(proxy.url)}): ${error}`
+          { proxyId: proxy.id, err: error instanceof Error ? error.message : String(error) },
+          'failed to get proxy public ip'
         );
         throw new Error(
           `Failed to get the public IP of the proxy service ${proxy.id}: ${error}`
@@ -1516,7 +1320,7 @@ const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
   'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
-  'addonPassword', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
+  'accessToken', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
   'randomiseResults', 'enhanceResults', 'enhancePosters',
 ];
 

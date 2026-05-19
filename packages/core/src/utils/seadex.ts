@@ -1,9 +1,7 @@
-import { createLogger } from './logger.js';
+﻿import { createLogger } from '../logging/logger.js';
 import { SeaDexDataset } from '../builtins/seadex/dataset.js';
 
 const logger = createLogger('seadex');
-
-const seadexDataset = SeaDexDataset.getInstance();
 
 export interface SeaDexResult {
   bestHashes: Set<string>;
@@ -26,6 +24,7 @@ export async function getSeaDexInfoHashes(
   anilistId: number
 ): Promise<SeaDexResult> {
   try {
+    const seadexDataset = SeaDexDataset.getInstance();
     await seadexDataset.initialise();
 
     const torrents = seadexDataset.getTorrents(anilistId);

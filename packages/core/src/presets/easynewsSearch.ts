@@ -1,5 +1,5 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
-import { Env, ServiceId, constants } from '../utils/index.js';
+﻿import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { appConfig, ServiceId, constants } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 
 /**
@@ -53,10 +53,10 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
         name: 'Timeout (ms)',
         description: 'The timeout for this addon',
         type: 'number',
-        default: Env.DEFAULT_TIMEOUT,
+        default: appConfig.presets.defaultTimeout,
         constraints: {
-          min: Env.MIN_TIMEOUT,
-          max: Env.MAX_TIMEOUT,
+          min: appConfig.userLimits.timeouts.minTimeout,
+          max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
       },
@@ -102,7 +102,7 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
         id: 'aiostreamsAuth',
         name: 'AIOStreams Auth',
         description:
-          Env.NZB_PROXY_EASYNEWS_ENABLED === false
+          appConfig.nzbProxy.easynewsEnabled === false
             ? 'You must provide a valid `username:password` from `AIOSTREAMS_AUTH` to use Easynews Search with all services except Easynews.'
             : 'Optionally provide a valid `username:password` `from AIOSTREAMS_AUTH` to bypass NZB limits when using Easynews Search with non-Easynews services.',
         type: 'password',
@@ -132,9 +132,9 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       ID: 'easynews-search',
       NAME: 'Easynews Search',
       LOGO: '/assets/easynews_logo.png',
-      URL: `${Env.INTERNAL_URL}/builtins/easynews`,
-      TIMEOUT: Env.DEFAULT_TIMEOUT,
-      USER_AGENT: Env.DEFAULT_USER_AGENT,
+      URL: [`${appConfig.bootstrap.internalUrl}/builtins/easynews`],
+      TIMEOUT: appConfig.presets.defaultTimeout,
+      USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
         'Search and stream content directly from your Easynews account.',
@@ -163,7 +163,10 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
     }
 
     if (usableServices.some((s) => s.id !== constants.EASYNEWS_SERVICE))
-      if (!options.aiostreamsAuth && Env.NZB_PROXY_EASYNEWS_ENABLED === false) {
+      if (
+        !options.aiostreamsAuth &&
+        appConfig.nzbProxy.easynewsEnabled === false
+      ) {
         throw new Error(
           `${this.METADATA.NAME} requires the AIOStreams Auth option on this instance in order to use it with the following services: ${usableServices
             .filter((s) => s.id !== constants.EASYNEWS_SERVICE)
@@ -243,6 +246,6 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
-    return `${this.METADATA.URL}/${configString}/manifest.json`;
+    return `${this.DEFAULT_URL}/${configString}/manifest.json`;
   }
 }
