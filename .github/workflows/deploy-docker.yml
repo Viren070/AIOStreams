@@ -138,6 +138,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: /tmp/digests
+          pattern: '{amd64,arm64}'
           merge-multiple: true
 
       - name: Login to Docker Hub
