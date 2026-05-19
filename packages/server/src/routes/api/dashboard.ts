@@ -239,14 +239,12 @@ function parseRange(v: unknown): AnalyticsRange {
 }
 
 router.get('/analytics/overview', async (_req, res) => {
-  res
-    .status(200)
-    .json(
-      createResponse({
-        success: true,
-        data: await AnalyticsRepository.overview(),
-      })
-    );
+  res.status(200).json(
+    createResponse({
+      success: true,
+      data: await AnalyticsRepository.overview(),
+    })
+  );
 });
 
 router.get('/analytics/users', async (req, res) => {

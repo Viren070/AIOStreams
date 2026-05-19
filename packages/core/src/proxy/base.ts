@@ -85,13 +85,19 @@ export abstract class BaseProxy {
     const cacheKey = `${this.config.id}:${this.config.url}:${this.config.credentials}`;
     const cachedPublicIp = cache ? await cache.get(cacheKey) : null;
     if (cachedPublicIp) {
-      logger.debug({ proxy: this.config.id }, 'returning cached proxy public ip');
+      logger.debug(
+        { proxy: this.config.id },
+        'returning cached proxy public ip'
+      );
       return cachedPublicIp;
     }
 
     const ipUrl = this.generateProxyUrl(this.getPublicIpEndpoint());
     logger.debug(
-      { proxy: this.config.id, endpoint: `${ipUrl.protocol}//${maskSensitiveInfo(ipUrl.hostname)}${ipUrl.pathname}` },
+      {
+        proxy: this.config.id,
+        endpoint: `${ipUrl.protocol}//${maskSensitiveInfo(ipUrl.hostname)}${ipUrl.pathname}`,
+      },
       'fetching proxy public ip'
     );
 
@@ -112,14 +118,20 @@ export abstract class BaseProxy {
       .union([z.ipv4(), z.ipv6()])
       .safeParse(publicIp);
     if (error || !success) {
-      logger.error({ proxy: this.config.id, ip: publicIp }, 'proxy returned invalid ip');
+      logger.error(
+        { proxy: this.config.id, ip: publicIp },
+        'proxy returned invalid ip'
+      );
       throw new Error(`Proxy did not respond with a valid public IP`);
     }
 
     if (publicIp && cache) {
       await cache.set(cacheKey, publicIp, appConfig.proxy.ip.cacheTtl);
     } else {
-      logger.error({ proxy: this.config.id }, 'proxy did not return a public ip');
+      logger.error(
+        { proxy: this.config.id },
+        'proxy did not return a public ip'
+      );
       throw new Error('Proxy did not respond with a public IP');
     }
 
@@ -166,7 +178,10 @@ export abstract class BaseProxy {
       return urls;
     } catch (error) {
       logger.error(
-        { proxy: this.config.id, err: error instanceof Error ? error.message : String(error) },
+        {
+          proxy: this.config.id,
+          err: error instanceof Error ? error.message : String(error),
+        },
         'failed to generate proxy urls'
       );
       return { error: error instanceof Error ? error.message : String(error) };

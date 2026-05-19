@@ -169,7 +169,10 @@ export class AIOStreams {
         Math.ceil(cooldownMs / 1000)
       );
     }
-    logger.debug({ disableAutoplay, count: nextCount, withinWindow }, 'autoplay disable check result');
+    logger.debug(
+      { disableAutoplay, count: nextCount, withinWindow },
+      'autoplay disable check result'
+    );
     return disableAutoplay;
   }
 }

@@ -157,7 +157,10 @@ export async function validateConfig(
     if (!options?.skipErrorsFromAddonsOrProxies) {
       throw error;
     }
-    logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'failed to resolve synced stream expressions');
+    logger.warn(
+      { err: error instanceof Error ? error.message : String(error) },
+      'failed to resolve synced stream expressions'
+    );
     // Use the expressions from the config directly
     excludedStreamExpressions = config.excludedStreamExpressions || [];
     requiredStreamExpressions = config.requiredStreamExpressions || [];
@@ -275,7 +278,13 @@ export async function validateConfig(
         if (!options?.skipErrorsFromAddonsOrProxies) {
           throw error;
         }
-        logger.warn({ preset: preset.instanceId, err: error instanceof Error ? error.message : String(error) }, 'invalid preset');
+        logger.warn(
+          {
+            preset: preset.instanceId,
+            err: error instanceof Error ? error.message : String(error),
+          },
+          'invalid preset'
+        );
       }
     }
   }
@@ -345,7 +354,10 @@ export async function validateConfig(
       if (!options?.skipErrorsFromAddonsOrProxies) {
         throw new Error(`Invalid Poster API key: ${error}`);
       }
-      logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'invalid poster api key');
+      logger.warn(
+        { err: error instanceof Error ? error.message : String(error) },
+        'invalid poster api key'
+      );
     }
   }
 
@@ -381,7 +393,10 @@ export async function validateConfig(
           `Failed to validate TMDB API Key/Access Token: ${error instanceof Error ? error.message : String(error)}`
         );
       }
-      logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'failed to validate tmdb key');
+      logger.warn(
+        { err: error instanceof Error ? error.message : String(error) },
+        'failed to validate tmdb key'
+      );
     }
   }
 
@@ -395,7 +410,10 @@ export async function validateConfig(
       if (!options?.skipErrorsFromAddonsOrProxies) {
         throw new Error(`Invalid TVDB API key: ${error}`);
       }
-      logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'invalid tvdb api key');
+      logger.warn(
+        { err: error instanceof Error ? error.message : String(error) },
+        'invalid tvdb api key'
+      );
     }
   }
 
@@ -711,7 +729,10 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
     synced = await RegexAccess.resolveSyncedRegexesForValidation(config);
   } catch (error) {
     if (!skipErrors) throw error;
-    logger.warn({ err: error instanceof Error ? error.message : String(error) }, 'failed to resolve synced regex patterns');
+    logger.warn(
+      { err: error instanceof Error ? error.message : String(error) },
+      'failed to resolve synced regex patterns'
+    );
   }
 
   // All patterns to validate: synced (from URLs) + direct (from config), deduplicated.
@@ -1244,7 +1265,10 @@ async function validateProxy(
     } catch (error) {
       if (!skipProxyErrors) {
         logger.error(
-          { proxyId: proxy.id, err: error instanceof Error ? error.message : String(error) },
+          {
+            proxyId: proxy.id,
+            err: error instanceof Error ? error.message : String(error),
+          },
           'failed to get proxy public ip'
         );
         throw new Error(

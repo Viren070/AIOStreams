@@ -22,7 +22,9 @@ export interface BasicAuthCredentials {
  * user credentials), it is transparently decrypted so callers always receive
  * the plaintext password.
  */
-export function parseBasicAuthHeader(req: Request): BasicAuthCredentials | null {
+export function parseBasicAuthHeader(
+  req: Request
+): BasicAuthCredentials | null {
   const header = req.headers['authorization'];
   if (typeof header !== 'string' || header.length === 0) {
     return null;

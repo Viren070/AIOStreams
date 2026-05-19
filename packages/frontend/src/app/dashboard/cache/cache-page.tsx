@@ -153,86 +153,86 @@ export function CachePage() {
         {(d) => (
           <Card className="p-0 overflow-hidden">
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
-                <tr className="text-left">
-                  <th className="p-3">Prefix</th>
-                  <th className="p-3">Backend</th>
-                  <th className="p-3 text-right">Items</th>
-                  <th className="p-3 text-right">Max</th>
-                  <th className="p-3 text-right">Est. size</th>
-                  <th className="p-3 text-right">Expired</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.instances.map((inst) => (
-                  <tr
-                    key={inst.name}
-                    className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
-                  >
-                    <td className="p-3 font-mono text-xs">{inst.name}</td>
-                    <td className="p-3">
-                      <span
-                        className={cn(
-                          'text-[10px] uppercase px-1.5 py-0.5 rounded border',
-                          BADGE[inst.backend]
-                        )}
-                      >
-                        {inst.backend}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right tabular-nums">
-                      {inst.items != null ? (
-                        inst.items
-                      ) : scanned[inst.name] ? (
-                        <>
-                          {scanned[inst.name].capped ? '≥' : ''}
-                          {scanned[inst.name].count}
-                        </>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">
-                      {inst.maxSize ?? '—'}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">
-                      {fmtBytes(inst.estBytes)}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">
-                      {inst.expired ?? '—'}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex justify-end gap-1">
-                        {inst.backend === 'redis' && inst.items == null && (
-                          <Button
-                            size="sm"
-                            intent="gray-subtle"
-                            leftIcon={<BiSearchAlt />}
-                            loading={scanning === inst.name}
-                            onClick={() => scan(inst.name)}
-                            title="May be slow on large Redis instances"
-                          >
-                            Scan
-                          </Button>
-                        )}
-                        <IconButton
-                          size="sm"
-                          intent="alert-subtle"
-                          icon={<BiTrash />}
-                          aria-label="Clear prefix"
-                          onClick={() => {
-                            setPendingPrefix(inst.name);
-                            confirmClear.open();
-                          }}
-                        />
-                      </div>
-                    </td>
+              <table className="w-full text-sm">
+                <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+                  <tr className="text-left">
+                    <th className="p-3">Prefix</th>
+                    <th className="p-3">Backend</th>
+                    <th className="p-3 text-right">Items</th>
+                    <th className="p-3 text-right">Max</th>
+                    <th className="p-3 text-right">Est. size</th>
+                    <th className="p-3 text-right">Expired</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {d.instances.map((inst) => (
+                    <tr
+                      key={inst.name}
+                      className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                    >
+                      <td className="p-3 font-mono text-xs">{inst.name}</td>
+                      <td className="p-3">
+                        <span
+                          className={cn(
+                            'text-[10px] uppercase px-1.5 py-0.5 rounded border',
+                            BADGE[inst.backend]
+                          )}
+                        >
+                          {inst.backend}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right tabular-nums">
+                        {inst.items != null ? (
+                          inst.items
+                        ) : scanned[inst.name] ? (
+                          <>
+                            {scanned[inst.name].capped ? '≥' : ''}
+                            {scanned[inst.name].count}
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="p-3 text-right tabular-nums">
+                        {inst.maxSize ?? '—'}
+                      </td>
+                      <td className="p-3 text-right tabular-nums">
+                        {fmtBytes(inst.estBytes)}
+                      </td>
+                      <td className="p-3 text-right tabular-nums">
+                        {inst.expired ?? '—'}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-1">
+                          {inst.backend === 'redis' && inst.items == null && (
+                            <Button
+                              size="sm"
+                              intent="gray-subtle"
+                              leftIcon={<BiSearchAlt />}
+                              loading={scanning === inst.name}
+                              onClick={() => scan(inst.name)}
+                              title="May be slow on large Redis instances"
+                            >
+                              Scan
+                            </Button>
+                          )}
+                          <IconButton
+                            size="sm"
+                            intent="alert-subtle"
+                            icon={<BiTrash />}
+                            aria-label="Clear prefix"
+                            onClick={() => {
+                              setPendingPrefix(inst.name);
+                              confirmClear.open();
+                            }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </Card>
         )}

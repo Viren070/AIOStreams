@@ -439,7 +439,12 @@ class StreamDeduplicator {
       Array.from(processedStreams)
     );
     logger.debug(
-      { removed: streams.length - deduplicatedStreams.length, kept: deduplicatedStreams.length, excluded: excludedStreamIds.size, took: Date.now() - start },
+      {
+        removed: streams.length - deduplicatedStreams.length,
+        kept: deduplicatedStreams.length,
+        excluded: excludedStreamIds.size,
+        took: Date.now() - start,
+      },
       'deduplication complete'
     );
     return deduplicatedStreams;

@@ -223,7 +223,10 @@ function getNextEpisode(
   if (episodeCount && currentEpisode === episodeCount) {
     const nextSeasonNumber = currentSeason + 1;
     if (metadata?.seasons?.find((s) => s.season_number === nextSeasonNumber)) {
-      logger.debug({ currentSeason, nextSeason: nextSeasonNumber }, 'current episode is last of season, advancing to next');
+      logger.debug(
+        { currentSeason, nextSeason: nextSeasonNumber },
+        'current episode is last of season, advancing to next'
+      );
       season = nextSeasonNumber;
       episode = 1;
     }
@@ -325,7 +328,13 @@ export async function processStreams(
       nzbFailoverOpts.count,
       ctx.userData.uuid
     ).catch((error) => {
-      logger.error({ err: error instanceof Error ? error.message : String(error), position: 'beforeLimiting' }, 'error during nzb failover population');
+      logger.error(
+        {
+          err: error instanceof Error ? error.message : String(error),
+          position: 'beforeLimiting',
+        },
+        'error during nzb failover population'
+      );
     });
   }
 
@@ -339,7 +348,13 @@ export async function processStreams(
       nzbFailoverOpts.count,
       ctx.userData.uuid
     ).catch((error) => {
-      logger.error({ err: error instanceof Error ? error.message : String(error), position: 'beforeSEL' }, 'error during nzb failover population');
+      logger.error(
+        {
+          err: error instanceof Error ? error.message : String(error),
+          position: 'beforeSEL',
+        },
+        'error during nzb failover population'
+      );
     });
   }
 
@@ -357,7 +372,13 @@ export async function processStreams(
         nzbFailoverOpts.count,
         ctx.userData.uuid
       ).catch((error) => {
-        logger.error({ err: error instanceof Error ? error.message : String(error), position: 'last' }, 'error during nzb failover population');
+        logger.error(
+          {
+            err: error instanceof Error ? error.message : String(error),
+            position: 'last',
+          },
+          'error during nzb failover population'
+        );
       });
     }
   }
@@ -392,7 +413,10 @@ export async function processStreams(
         );
       }
     }
-    logger.debug({ added: streamsWithExternalDownloads.length - finalStreams.length }, 'added external download streams');
+    logger.debug(
+      { added: streamsWithExternalDownloads.length - finalStreams.length },
+      'added external download streams'
+    );
     finalStreams = streamsWithExternalDownloads;
   }
 
@@ -437,7 +461,14 @@ async function precacheNextEpisode(
     episodeToPrecache?.toString()
   );
   logger.debug(
-    { titleId: parsedId.value, currentSeason, currentEpisode, episodeToPrecache, seasonToPrecache, precacheId },
+    {
+      titleId: parsedId.value,
+      currentSeason,
+      currentEpisode,
+      episodeToPrecache,
+      seasonToPrecache,
+      precacheId,
+    },
     'pre-caching next episode'
   );
 
@@ -454,7 +485,10 @@ async function precacheNextEpisode(
   ctx.userData = originalUserData;
 
   if (!nextStreamsResponse.success) {
-    logger.error({ id, errors: nextStreamsResponse.errors }, 'failed to get streams during precaching');
+    logger.error(
+      { id, errors: nextStreamsResponse.errors },
+      'failed to get streams during precaching'
+    );
     return;
   }
 
@@ -466,13 +500,22 @@ async function precacheNextEpisode(
   try {
     const streamSelector = new StreamSelector(context.toExpressionContext());
     selectedStreams = await streamSelector.select(nextStreams, selector);
-    logger.debug({ selector, resultCount: selectedStreams.length }, 'precache selector evaluated');
+    logger.debug(
+      { selector, resultCount: selectedStreams.length },
+      'precache selector evaluated'
+    );
   } catch (error) {
-    logger.error({ selector, err: error instanceof Error ? error.message : String(error) }, 'failed to evaluate precache selector');
+    logger.error(
+      { selector, err: error instanceof Error ? error.message : String(error) },
+      'failed to evaluate precache selector'
+    );
   }
 
   if (selectedStreams.length === 0) {
-    logger.debug({ id }, 'skipping precaching, precache selector returned no streams');
+    logger.debug(
+      { id },
+      'skipping precaching, precache selector returned no streams'
+    );
     return;
   }
 
@@ -486,7 +529,10 @@ async function precacheNextEpisode(
     return;
   }
 
-  logger.debug({ count: streamsToCache.length, id, type }, 'precaching streams');
+  logger.debug(
+    { count: streamsToCache.length, id, type },
+    'precaching streams'
+  );
 
   const cacheKey = `precache-${type}-${id}-${ctx.userData.uuid}`;
   await precacheCache.set(
@@ -497,7 +543,10 @@ async function precacheNextEpisode(
 
   await pingStreamUrls(streamsToCache);
 
-  logger.debug({ count: streamsToCache.length, id, type }, 'precaching complete');
+  logger.debug(
+    { count: streamsToCache.length, id, type },
+    'precaching complete'
+  );
 }
 
 /**
@@ -584,7 +633,13 @@ export async function getStreams(
 
   const supportedAddons = getAddonsForResource(ctx, 'stream', type, id);
 
-  logger.debug({ count: supportedAddons.length, addons: supportedAddons.map((a) => a.name) }, 'found addons for stream resource');
+  logger.debug(
+    {
+      count: supportedAddons.length,
+      addons: supportedAddons.map((a) => a.name),
+    },
+    'found addons for stream resource'
+  );
 
   const context = StreamContext.create(type, id, ctx.userData);
   ctx.streamContext = context;
@@ -665,7 +720,10 @@ export async function getStreams(
     const cacheKey = `precache-${type}-${id}-${ctx.userData.uuid}`;
     const cachedNextEpisode = await precacheCache.get(cacheKey, false);
     if (cachedNextEpisode) {
-      logger.debug({ type, id, ttl: precacheCache.getTTL(cacheKey) }, 'skipping precache, already precached recently');
+      logger.debug(
+        { type, id, ttl: precacheCache.getTTL(cacheKey) },
+        'skipping precache, already precached recently'
+      );
       precache = false;
     } else {
       precache = true;
@@ -692,7 +750,10 @@ export async function getStreams(
         false
       );
       if (recentlyPreloaded) {
-        logger.debug({ type, id, ttl: precacheCache.getTTL(preloadCooldownKey) }, 'preload skipped, within cooldown');
+        logger.debug(
+          { type, id, ttl: precacheCache.getTTL(preloadCooldownKey) },
+          'preload skipped, within cooldown'
+        );
         shouldPreload = false;
       } else {
         await precacheCache.set(
@@ -803,7 +864,14 @@ export async function getStreams(
     });
   }
 
-  logger.debug({ streams: finalStreams.length, errors: errors.length, statistics: statistics.length }, 'stream request complete');
+  logger.debug(
+    {
+      streams: finalStreams.length,
+      errors: errors.length,
+      statistics: statistics.length,
+    },
+    'stream request complete'
+  );
   return {
     success: true,
     data: { streams: finalStreams, statistics },
@@ -828,10 +896,20 @@ export async function getMeta(
   const errors: Array<{ title: string; description: string }> = [];
 
   for (const candidate of candidates) {
-    logger.debug({ addon: candidate.addon.name, instanceId: candidate.instanceId, reason: candidate.reason }, 'trying addon for meta resource');
+    logger.debug(
+      {
+        addon: candidate.addon.name,
+        instanceId: candidate.instanceId,
+        reason: candidate.reason,
+      },
+      'trying addon for meta resource'
+    );
     try {
       const meta = await new Wrapper(candidate.addon).getMeta(type, id);
-      logger.debug({ addon: candidate.addon.name, instanceId: candidate.instanceId }, 'successfully got meta from addon');
+      logger.debug(
+        { addon: candidate.addon.name, instanceId: candidate.instanceId },
+        'successfully got meta from addon'
+      );
       if (ctx.userData.usePosterServiceForMeta) {
         await applyPosterModifications(ctx, [meta], type, true);
       } else {
@@ -854,7 +932,14 @@ export async function getMeta(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      logger.warn({ addon: candidate.addon.name, err: errorMessage, reason: candidate.reason }, 'failed to get meta from addon');
+      logger.warn(
+        {
+          addon: candidate.addon.name,
+          err: errorMessage,
+          reason: candidate.reason,
+        },
+        'failed to get meta from addon'
+      );
       if (candidate.reason === 'general type support') continue;
       errors.push({
         title: `[❌] ${candidate.addon.name}`,
@@ -863,7 +948,10 @@ export async function getMeta(
     }
   }
 
-  logger.error({ candidates: candidates.length, type, id }, 'all candidate addons failed for meta request');
+  logger.error(
+    { candidates: candidates.length, type, id },
+    'all candidate addons failed for meta request'
+  );
   return { success: false, data: null, errors };
 }
 

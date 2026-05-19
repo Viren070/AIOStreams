@@ -55,7 +55,10 @@ export class MediaFlowProxy extends BaseProxy {
     };
 
     logger.trace(
-      { endpoint: `${proxyUrl.protocol}//${maskSensitiveInfo(proxyUrl.hostname)}/generate_urls`, count: streams.length },
+      {
+        endpoint: `${proxyUrl.protocol}//${maskSensitiveInfo(proxyUrl.hostname)}/generate_urls`,
+        count: streams.length,
+      },
       'generating mediaflow proxy urls'
     );
 

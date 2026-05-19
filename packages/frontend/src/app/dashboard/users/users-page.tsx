@@ -228,102 +228,107 @@ export function UsersPage() {
         {() => (
           <Card className="p-0 overflow-hidden">
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
-                <tr className="text-left">
-                  <th className="p-3 w-10">
-                    <Checkbox
-                      value={
-                        allOnPageSelected
-                          ? true
-                          : someOnPageSelected
-                            ? 'indeterminate'
-                            : false
-                      }
-                      onValueChange={toggleAllOnPage}
-                      aria-label="Select all on page"
-                    />
-                  </th>
-                  <th className="p-3">UUID</th>
-                  {(
-                    [
-                      ['created_at', 'Created'],
-                      ['accessed_at', 'Last accessed'],
-                    ] as const
-                  ).map(([c, l]) => (
-                    <th
-                      key={c}
-                      className="p-3 cursor-pointer select-none"
-                      onClick={() => toggleSort(c)}
-                    >
-                      {l}
-                      {sort === c ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}
-                    </th>
-                  ))}
-                  <th className="p-3 text-right">Req 24h</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageItems.map((u) => (
-                  <tr
-                    key={u.uuid}
-                    className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
-                  >
-                    <td className="p-3">
+              <table className="w-full text-sm">
+                <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+                  <tr className="text-left">
+                    <th className="p-3 w-10">
                       <Checkbox
-                        value={selected.has(u.uuid)}
-                        onValueChange={(v) => toggleRow(u.uuid, v)}
-                        aria-label={`Select ${u.uuid}`}
+                        value={
+                          allOnPageSelected
+                            ? true
+                            : someOnPageSelected
+                              ? 'indeterminate'
+                              : false
+                        }
+                        onValueChange={toggleAllOnPage}
+                        aria-label="Select all on page"
                       />
-                    </td>
-                    <td
-                      className="p-3 font-mono text-xs cursor-pointer"
-                      title={u.uuid}
-                      onClick={() => {
-                        navigator.clipboard?.writeText(u.uuid).catch(() => {});
-                        toast.success('UUID copied');
-                      }}
+                    </th>
+                    <th className="p-3">UUID</th>
+                    {(
+                      [
+                        ['created_at', 'Created'],
+                        ['accessed_at', 'Last accessed'],
+                      ] as const
+                    ).map(([c, l]) => (
+                      <th
+                        key={c}
+                        className="p-3 cursor-pointer select-none"
+                        onClick={() => toggleSort(c)}
+                      >
+                        {l}
+                        {sort === c ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </th>
+                    ))}
+                    <th className="p-3 text-right">Req 24h</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageItems.map((u) => (
+                    <tr
+                      key={u.uuid}
+                      className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
                     >
-                      {u.uuid.slice(0, 8)}…{u.uuid.slice(-4)}
-                    </td>
-                    <td className="p-3">{fmt(u.createdAt)}</td>
-                    <td className="p-3">{fmt(u.accessedAt)}</td>
-                    <td className="p-3 text-right tabular-nums">
-                      {u.requests24h}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex justify-end gap-1">
-                        <IconButton
-                          size="sm"
-                          intent="gray-subtle"
-                          icon={<BiInfoCircle />}
-                          aria-label="Details"
-                          onClick={() => openDetail(u.uuid)}
+                      <td className="p-3">
+                        <Checkbox
+                          value={selected.has(u.uuid)}
+                          onValueChange={(v) => toggleRow(u.uuid, v)}
+                          aria-label={`Select ${u.uuid}`}
                         />
-                        <IconButton
-                          size="sm"
-                          intent="alert-subtle"
-                          icon={<BiTrash />}
-                          aria-label="Delete"
-                          onClick={() => {
-                            setPendingDelete(u.uuid);
-                            confirm.open();
-                          }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {d && pageItems.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-[--muted]">
-                      No users found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </td>
+                      <td
+                        className="p-3 font-mono text-xs cursor-pointer"
+                        title={u.uuid}
+                        onClick={() => {
+                          navigator.clipboard
+                            ?.writeText(u.uuid)
+                            .catch(() => {});
+                          toast.success('UUID copied');
+                        }}
+                      >
+                        {u.uuid.slice(0, 8)}…{u.uuid.slice(-4)}
+                      </td>
+                      <td className="p-3">{fmt(u.createdAt)}</td>
+                      <td className="p-3">{fmt(u.accessedAt)}</td>
+                      <td className="p-3 text-right tabular-nums">
+                        {u.requests24h}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-1">
+                          <IconButton
+                            size="sm"
+                            intent="gray-subtle"
+                            icon={<BiInfoCircle />}
+                            aria-label="Details"
+                            onClick={() => openDetail(u.uuid)}
+                          />
+                          <IconButton
+                            size="sm"
+                            intent="alert-subtle"
+                            icon={<BiTrash />}
+                            aria-label="Delete"
+                            onClick={() => {
+                              setPendingDelete(u.uuid);
+                              confirm.open();
+                            }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {d && pageItems.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="p-8 text-center text-[--muted]"
+                      >
+                        No users found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </Card>
         )}

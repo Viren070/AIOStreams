@@ -21,7 +21,11 @@ import {
   SettingsIsDirty,
   SettingsSubmitButton,
 } from './_components/settings-submit-button';
-import { SettingsField, toName, SECRET_CLEAR_SENTINEL } from './_components/settings-field';
+import {
+  SettingsField,
+  toName,
+  SECRET_CLEAR_SENTINEL,
+} from './_components/settings-field';
 
 function readTabParam(): string | null {
   return new URLSearchParams(window.location.search).get('tab');

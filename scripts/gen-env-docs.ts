@@ -22,12 +22,10 @@ process.env.BASE_URL ??= 'http://localhost:3000';
 process.env.SECRET_KEY ??=
   '0000000000000000000000000000000000000000000000000000000000000000';
 
-const { runtimeSchemas, describeSettings } = await import(
-  '../packages/core/src/config/index.js'
-);
-const { isRuntimeConfigField, resolveDescription } = await import(
-  '../packages/core/src/config/types.js'
-);
+const { runtimeSchemas, describeSettings } =
+  await import('../packages/core/src/config/index.js');
+const { isRuntimeConfigField, resolveDescription } =
+  await import('../packages/core/src/config/types.js');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DOC_PATH = path.resolve(

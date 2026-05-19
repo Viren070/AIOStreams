@@ -114,7 +114,12 @@ export async function fetchRawCatalogItems(
       extrasString
     );
     logger.debug(
-      { addon: addon.name, catalogId, type: actualType, took: getTimeTakenSincePoint(start) },
+      {
+        addon: addon.name,
+        catalogId,
+        type: actualType,
+        took: getTimeTakenSincePoint(start),
+      },
       'received catalog'
     );
     return { success: true, items: catalog };
@@ -504,7 +509,11 @@ export async function getMergedCatalog(
           );
           if (!hasGenre) {
             logger.debug(
-              { encodedCatalogId, catalog: mergedCatalog.name, genre: requestedGenre },
+              {
+                encodedCatalogId,
+                catalog: mergedCatalog.name,
+                genre: requestedGenre,
+              },
               'skipping merged catalog source: genre not offered'
             );
             return {
@@ -547,7 +556,11 @@ export async function getMergedCatalog(
         for (const reqExtra of requiredExtras) {
           if (!sourceExtras.has(reqExtra.name)) {
             logger.debug(
-              { encodedCatalogId, catalog: mergedCatalog.name, extra: reqExtra.name },
+              {
+                encodedCatalogId,
+                catalog: mergedCatalog.name,
+                extra: reqExtra.name,
+              },
               'skipping merged catalog source: missing required extra'
             );
             return {
@@ -562,7 +575,12 @@ export async function getMergedCatalog(
       }
 
       logger.debug(
-        { encodedCatalogId, addonInstanceId, catalogType, extras: sourceExtras.toString() },
+        {
+          encodedCatalogId,
+          addonInstanceId,
+          catalogType,
+          extras: sourceExtras.toString(),
+        },
         'fetching merged catalog source'
       );
 
@@ -580,7 +598,9 @@ export async function getMergedCatalog(
             encodedCatalogId,
             catalog: mergedCatalog.name,
             skip: requestedSkip,
-            err: result.error ? maskSensitiveInfo(result.error.description || '') : 'unknown',
+            err: result.error
+              ? maskSensitiveInfo(result.error.description || '')
+              : 'unknown',
           },
           'failed to fetch merged catalog source'
         );
@@ -604,7 +624,11 @@ export async function getMergedCatalog(
   );
 
   logger.debug(
-    { catalog: mergedCatalog.name, skip: requestedSkip, sources: fetchPromises.length },
+    {
+      catalog: mergedCatalog.name,
+      skip: requestedSkip,
+      sources: fetchPromises.length,
+    },
     'fetching merged catalog'
   );
 
@@ -614,7 +638,10 @@ export async function getMergedCatalog(
   const allFailed =
     nonSkippedResults.length > 0 && nonSkippedResults.every((r) => !r.success);
   if (allFailed) {
-    logger.error({ catalog: mergedCatalog.name }, 'all sources failed for merged catalog');
+    logger.error(
+      { catalog: mergedCatalog.name },
+      'all sources failed for merged catalog'
+    );
     return {
       success: false,
       data: [],
@@ -674,7 +701,13 @@ export async function getMergedCatalog(
   }
 
   logger.debug(
-    { catalog: mergedCatalog.name, count: allItems.length, skip: requestedSkip, nextSkip, took: getTimeTakenSincePoint(start) },
+    {
+      catalog: mergedCatalog.name,
+      count: allItems.length,
+      skip: requestedSkip,
+      nextSkip,
+      took: getTimeTakenSincePoint(start),
+    },
     'merged catalog complete'
   );
 

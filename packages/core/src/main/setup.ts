@@ -149,7 +149,10 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
           );
         } catch (error) {
           logger.warn(
-            { preset: Preset.METADATA.NAME, err: error instanceof Error ? error.message : String(error) },
+            {
+              preset: Preset.METADATA.NAME,
+              err: error instanceof Error ? error.message : String(error),
+            },
             'service wrap: failed to generate p2p addons'
           );
         }
@@ -249,7 +252,10 @@ export async function fetchManifests(ctx: AIOStreamsContext): Promise<void> {
               addon: addon,
               error: error.message,
             });
-            logger.error({ err: error.message }, 'failed to fetch manifest, skipping');
+            logger.error(
+              { err: error.message },
+              'failed to fetch manifest, skipping'
+            );
             return [addon.instanceId, null];
           }
           throw error;
@@ -481,7 +487,11 @@ export function buildResources(ctx: AIOStreamsContext): void {
     }
 
     logger.debug(
-      { addon: getAddonName(addon), instanceId, resources: addonResources.map((r) => r.name) },
+      {
+        addon: getAddonName(addon),
+        instanceId,
+        resources: addonResources.map((r) => r.name),
+      },
       'addon resources resolved'
     );
 

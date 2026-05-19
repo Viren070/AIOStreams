@@ -209,7 +209,10 @@ export class Wrapper {
         const manifest = ManifestSchema.safeParse(data);
         if (!manifest.success) {
           logger.error(
-            { addon: this.getAddonName(this.addon), err: formatZodError(manifest.error) },
+            {
+              addon: this.getAddonName(this.addon),
+              err: formatZodError(manifest.error),
+            },
             'manifest response could not be parsed'
           );
           throw new Error(
@@ -230,7 +233,6 @@ export class Wrapper {
         throw new Error(
           `Failed to fetch manifest for ${this.getAddonName(this.addon)}: ${error.message}`
         );
-
       }
     };
 
@@ -291,7 +293,11 @@ export class Wrapper {
         invalidateCache = true;
       }
       logger.debug(
-        { addon: this.getAddonName(this.addon), count: parsedStreams.length, took: getTimeTakenSincePoint(start) },
+        {
+          addon: this.getAddonName(this.addon),
+          count: parsedStreams.length,
+          took: getTimeTakenSincePoint(start),
+        },
         'parsed streams'
       );
       return parsedStreams as ParsedStream[];
@@ -352,7 +358,10 @@ export class Wrapper {
       const parsed = MetaSchema.safeParse(data.meta);
       if (!parsed.success) {
         logger.error(
-          { addon: this.getAddonName(this.addon), err: formatZodError(parsed.error) },
+          {
+            addon: this.getAddonName(this.addon),
+            err: formatZodError(parsed.error),
+          },
           'failed to parse meta'
         );
         throw new Error(
@@ -533,7 +542,11 @@ export class Wrapper {
     } catch (error: any) {
       if (cached) {
         logger.warn(
-          { addon: this.getAddonName(this.addon), resource: resourceName, err: error.message },
+          {
+            addon: this.getAddonName(this.addon),
+            resource: resourceName,
+            err: error.message,
+          },
           'returning stale cache after request failure'
         );
         return cached;
@@ -545,7 +558,11 @@ export class Wrapper {
         );
         requestPromise.catch((bgError) => {
           logger.warn(
-            { addon: this.getAddonName(this.addon), resource: resourceName, err: bgError.message },
+            {
+              addon: this.getAddonName(this.addon),
+              resource: resourceName,
+              err: bgError.message,
+            },
             'background request failed'
           );
         });
@@ -569,7 +586,13 @@ export class Wrapper {
     let doBackground = appConfig.resources.background.enabled && cacher;
 
     logger.debug(
-      { addon: this.getAddonName(this.addon), resource, type, id, url: makeUrlLogSafe(url) },
+      {
+        addon: this.getAddonName(this.addon),
+        resource,
+        type,
+        id,
+        url: makeUrlLogSafe(url),
+      },
       'fetching resource'
     );
 

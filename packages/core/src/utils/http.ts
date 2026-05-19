@@ -143,7 +143,11 @@ export async function makeRequest(url: string, options: RequestOptions) {
     {
       url: makeUrlLogSafe(urlObj.toString()),
       method: options.method ?? 'GET',
-      proxy: useProxy ? `proxy-${proxyIndex + 1}` : options.forceProxy ? 'forced' : 'direct',
+      proxy: useProxy
+        ? `proxy-${proxyIndex + 1}`
+        : options.forceProxy
+          ? 'forced'
+          : 'direct',
     },
     'http request'
   );

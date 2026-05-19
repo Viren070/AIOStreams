@@ -192,7 +192,10 @@ class StreamLimiter {
     // Log summary of removed streams
     const removedCount = streams.length - limitedStreams.length;
     if (removedCount > 0) {
-      logger.debug({ removed: removedCount, took: Date.now() - start }, 'stream limiting complete');
+      logger.debug(
+        { removed: removedCount, took: Date.now() - start },
+        'stream limiting complete'
+      );
     }
 
     return limitedStreams;

@@ -1,8 +1,5 @@
 import { ParsedStream, SortCriterion, UserData } from '../db/schemas.js';
-import {
-  createLogger,
-  constants,
-} from '../utils/index.js';
+import { createLogger, constants } from '../utils/index.js';
 import { StreamContext } from './index.js';
 
 const logger = createLogger('sorter');
@@ -77,7 +74,9 @@ class StreamSorter {
       primarySortCriteria.length > 0 &&
       primarySortCriteria[0].key === 'cached'
     ) {
-      logger.debug('splitting streams into cached and uncached with separate sort criteria');
+      logger.debug(
+        'splitting streams into cached and uncached with separate sort criteria'
+      );
       const cachedStreams = streams.filter(
         (stream) => stream.service?.cached || stream.service === undefined // streams without a service can be considered as 'cached'
       );
@@ -133,7 +132,12 @@ class StreamSorter {
       pinnedParts.push(`${pinnedToBottomStreams.length} pinned to bottom`);
     }
     logger.debug(
-      { sorted: sortedStreams.length, pinnedTop: pinnedToTopStreams.length, pinnedBottom: pinnedToBottomStreams.length, took: Date.now() - start },
+      {
+        sorted: sortedStreams.length,
+        pinnedTop: pinnedToTopStreams.length,
+        pinnedBottom: pinnedToBottomStreams.length,
+        took: Date.now() - start,
+      },
       'sort complete'
     );
     return [...pinnedToTopStreams, ...sortedStreams, ...pinnedToBottomStreams];

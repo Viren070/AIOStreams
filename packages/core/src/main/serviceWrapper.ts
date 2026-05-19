@@ -144,11 +144,17 @@ export async function resolveServiceWrappedStreams(
   }
 
   if (reconfigureStreams.length > 0) {
-    logger.debug({ count: reconfigureStreams.length }, 'reconfigure service: found debrid streams with infohash');
+    logger.debug(
+      { count: reconfigureStreams.length },
+      'reconfigure service: found debrid streams with infohash'
+    );
   }
 
   logger.debug(
-    { wrapped: wrappedP2PStreams.length, reconfigure: reconfigureStreams.length },
+    {
+      wrapped: wrappedP2PStreams.length,
+      reconfigure: reconfigureStreams.length,
+    },
     'resolving streams through debrid services'
   );
 
@@ -250,7 +256,11 @@ export async function resolveServiceWrappedStreams(
   );
 
   logger.debug(
-    { debrid: debridStreams.length, wrapped: wrappedP2PStreams.length, reconfigure: reconfigureStreams.length },
+    {
+      debrid: debridStreams.length,
+      wrapped: wrappedP2PStreams.length,
+      reconfigure: reconfigureStreams.length,
+    },
     'resolved debrid streams'
   );
 
@@ -293,7 +303,14 @@ function buildDebridServices(userData: UserData): BuiltinDebridServices {
         });
       }
     } catch (error) {
-      logger.warn({ serviceId: service.id, err: error instanceof Error ? (error as Error).message : String(error) }, 'failed to get credential for service');
+      logger.warn(
+        {
+          serviceId: service.id,
+          err:
+            error instanceof Error ? (error as Error).message : String(error),
+        },
+        'failed to get credential for service'
+      );
     }
   }
 
@@ -327,7 +344,10 @@ function buildAndDeduplicateTorrents(streams: ParsedStream[]): Torrent[] {
     }
   }
 
-  logger.debug({ from: torrents.length, to: uniqueTorrents.length }, 'deduplicated torrents');
+  logger.debug(
+    { from: torrents.length, to: uniqueTorrents.length },
+    'deduplicated torrents'
+  );
 
   return uniqueTorrents;
 }

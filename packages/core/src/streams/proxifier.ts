@@ -28,7 +28,10 @@ class Proxifier {
       proxyUrl = new URL(proxy.url);
     } catch (error) {
       logger.error(
-        { err: error instanceof Error ? (error as Error).message : String(error) },
+        {
+          err:
+            error instanceof Error ? (error as Error).message : String(error),
+        },
         'failed to parse url for proxy check'
       );
       return false;
@@ -137,7 +140,13 @@ class Proxifier {
         )
       : [];
 
-    logger.debug({ count: proxiedUrls && !('error' in proxiedUrls) ? proxiedUrls.length : 0 }, 'proxy url generation complete');
+    logger.debug(
+      {
+        count:
+          proxiedUrls && !('error' in proxiedUrls) ? proxiedUrls.length : 0,
+      },
+      'proxy url generation complete'
+    );
 
     const removeIndexes = new Set<number>();
 
@@ -154,7 +163,10 @@ class Proxifier {
     });
 
     if (removeIndexes.size > 0) {
-      logger.warn({ count: removeIndexes.size }, 'failed to proxy streams, removing them');
+      logger.warn(
+        { count: removeIndexes.size },
+        'failed to proxy streams, removing them'
+      );
       streams = streams.filter((_, index) => !removeIndexes.has(index));
     }
 

@@ -154,7 +154,14 @@ export class StreamContext {
     const queryType = isAnime ? `anime.${type}` : type;
 
     logger.debug(
-      { id, type, isAnime, hasAnimeEntry: !!animeEntry, queryType, took: Date.now() - start },
+      {
+        id,
+        type,
+        isAnime,
+        hasAnimeEntry: !!animeEntry,
+        queryType,
+        took: Date.now() - start,
+      },
       'stream context created'
     );
 
@@ -267,7 +274,13 @@ export class StreamContext {
 
         return extendedMetadata;
       } catch (error) {
-        logger.warn({ id: this.id, err: error instanceof Error ? error.message : String(error) }, 'failed to fetch metadata');
+        logger.warn(
+          {
+            id: this.id,
+            err: error instanceof Error ? error.message : String(error),
+          },
+          'failed to fetch metadata'
+        );
         return undefined;
       } finally {
         this._metadataFetched = true;
@@ -299,7 +312,13 @@ export class StreamContext {
             apiKey: this.userData.tmdbApiKey,
           }).getReleaseDates(metadata.tmdbId);
         } catch (error) {
-          logger.warn({ id: this.id, err: error instanceof Error ? error.message : String(error) }, 'failed to fetch release dates');
+          logger.warn(
+            {
+              id: this.id,
+              err: error instanceof Error ? error.message : String(error),
+            },
+            'failed to fetch release dates'
+          );
           return undefined;
         }
       }
@@ -350,7 +369,13 @@ export class StreamContext {
             }
           }
           logger.debug(
-            { originalSeason, originalEpisode: this.parsedId.episode, tmdbSeason: seasonNumber, tmdbEpisode: episodeNumber, fromEpisode: this.animeEntry.tmdb?.fromEpisode },
+            {
+              originalSeason,
+              originalEpisode: this.parsedId.episode,
+              tmdbSeason: seasonNumber,
+              tmdbEpisode: episodeNumber,
+              fromEpisode: this.animeEntry.tmdb?.fromEpisode,
+            },
             'resolved tmdb season/episode for episode details'
           );
         }
@@ -359,7 +384,13 @@ export class StreamContext {
           apiKey: this.userData.tmdbApiKey,
         }).getEpisodeDetails(metadata.tmdbId, seasonNumber, episodeNumber);
       } catch (error) {
-        logger.warn({ id: this.id, err: error instanceof Error ? error.message : String(error) }, 'failed to fetch episode details');
+        logger.warn(
+          {
+            id: this.id,
+            err: error instanceof Error ? error.message : String(error),
+          },
+          'failed to fetch episode details'
+        );
         return undefined;
       }
     })();
@@ -381,7 +412,10 @@ export class StreamContext {
 
     const anilistIdRaw = this.animeEntry?.mappings?.anilistId;
     if (!anilistIdRaw) {
-      logger.debug({ id: this.id }, 'no anilist id found, skipping seadex lookup');
+      logger.debug(
+        { id: this.id },
+        'no anilist id found, skipping seadex lookup'
+      );
       this._seadexFetched = true;
       return;
     }
@@ -391,7 +425,10 @@ export class StreamContext {
         ? parseInt(anilistIdRaw, 10)
         : anilistIdRaw;
     if (isNaN(anilistId)) {
-      logger.debug({ id: this.id, anilistId: anilistIdRaw }, 'invalid anilist id, skipping seadex lookup');
+      logger.debug(
+        { id: this.id, anilistId: anilistIdRaw },
+        'invalid anilist id, skipping seadex lookup'
+      );
       this._seadexFetched = true;
       return;
     }
@@ -400,7 +437,13 @@ export class StreamContext {
       try {
         return await getSeaDexInfoHashes(anilistId);
       } catch (error) {
-        logger.warn({ id: this.id, err: error instanceof Error ? error.message : String(error) }, 'failed to fetch seadex data');
+        logger.warn(
+          {
+            id: this.id,
+            err: error instanceof Error ? error.message : String(error),
+          },
+          'failed to fetch seadex data'
+        );
         return undefined;
       } finally {
         this._seadexFetched = true;
