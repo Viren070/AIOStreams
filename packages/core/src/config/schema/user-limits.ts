@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { positiveInt, seconds } from './helpers.js';
+import { commaSeparatedList, positiveInt, seconds } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 /**
@@ -284,7 +284,7 @@ export const userLimitsSchema = {
       ui: { mapWidth: 'wide-value' },
     },
     streamTypes: {
-      schema: stringList,
+      schema: commaSeparatedList,
       default: [],
       label: 'Disabled stream types',
       description:

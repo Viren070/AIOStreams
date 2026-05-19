@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   boolOrList,
+  commaSeparatedList,
   optionalPositiveInt,
   positiveInt,
   seconds,
@@ -693,7 +694,7 @@ export const builtinsSchema = {
       secret: true,
     },
     indexers: {
-      schema: stringList,
+      schema: commaSeparatedList,
       default: [] as string[],
       label: 'Prowlarr indexers',
       env: 'BUILTIN_PROWLARR_INDEXERS',
