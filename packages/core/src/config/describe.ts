@@ -169,13 +169,13 @@ function classify(schema: AnyZod): SettingsUiHint {
     }
     if (hasBool && hasArray) return { kind: 'boolOrList' };
     // string | array(string) union: env-coerced list fields (commaSeparatedList, urlOrUrlList, stringOrStringList, …)
-    // if (hasArray && !hasBool) {
-    //   const arr = opts.find((o) => typeOf(o) === 'array');
-    //   if (arr) {
-    //     const el = unwrap(def(arr).element as AnyZod);
-    //     if (el && typeOf(el) === 'string') return { kind: 'list' };
-    //   }
-    // }
+    if (hasArray && !hasBool) {
+      const arr = opts.find((o) => typeOf(o) === 'array');
+      if (arr) {
+        const el = unwrap(def(arr).element as AnyZod);
+        if (el && typeOf(el) === 'string') return { kind: 'list' };
+      }
+    }
     if (kinds.every((k) => k === 'literal' || k === 'enum')) {
       const options: string[] = [];
       for (const o of opts) {

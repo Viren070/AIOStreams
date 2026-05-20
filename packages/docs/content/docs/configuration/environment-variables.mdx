@@ -107,7 +107,7 @@ neither the environment variable nor a stored value is present.
 | `EXPOSE_USER_COUNT` | Expose User Count | boolean | `false` | Include the total user count on the public status endpoint. |
 | `STREMIO_ADDONS_CONFIG_ISSUER` | Stremio Addons Config Issuer | string | `https://stremio-addons.net` | Issuer URL declared in the manifest for the Stremio Addons Config integration. |
 | `STREMIO_ADDONS_CONFIG_SIGNATURE` | Stremio Addons Config Signature | string | *(unset)* | Signed JWT for the Stremio Addons Config integration. Both issuer and signature must be set for the manifest field to be emitted. _(secret)_ |
-| `TRUSTED_IPS` | Trusted Ips | json | `["172.17.0.0/16","127.0.0.1/32","::1/128"]` | Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting. |
+| `TRUSTED_IPS` | Trusted Ips | list | `["172.17.0.0/16","127.0.0.1/32","::1/128"]` | Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting. |
 
 ### Branding
 
@@ -198,7 +198,7 @@ neither the environment variable nor a stored value is present.
 | `DEFAULT_PROXY_PUBLIC_URL` | Default › Public URL | json | — | Public-facing default proxy URL surfaced to clients (when different from the internal one). |
 | `DEFAULT_PROXY_CREDENTIALS` | Default › Credentials | string | *(unset)* | Credentials for the default proxy. _(secret)_ |
 | `DEFAULT_PROXY_PUBLIC_IP` | Default › Public IP | string | — | Public IP of the default proxy. |
-| `DEFAULT_PROXY_PROXIED_SERVICES` | Default › Proxied Services | json | — | List of serviceIds to proxy by default. JSON array of strings. |
+| `DEFAULT_PROXY_PROXIED_SERVICES` | Default › Proxied Services | list | — | List of serviceIds to proxy by default. JSON array of strings. |
 
 #### Force
 
@@ -211,7 +211,7 @@ neither the environment variable nor a stored value is present.
 | `FORCE_PROXY_CREDENTIALS` | Force › Credentials | string | *(unset)* | Override user choice of proxy credentials. _(secret)_ |
 | `FORCE_PROXY_PUBLIC_IP` | Force › Public IP | string | — | Override user choice of proxy public IP. |
 | `FORCE_PROXY_DISABLE_PROXIED_ADDONS` | Force › Disable Proxied Addons | boolean | `false` | When forcing a proxy, also disable any addons that already proxy themselves. |
-| `FORCE_PROXY_PROXIED_SERVICES` | Force › Proxied Services | json | — | List of serviceIds to force-proxy. JSON array of strings. |
+| `FORCE_PROXY_PROXIED_SERVICES` | Force › Proxied Services | list | — | List of serviceIds to force-proxy. JSON array of strings. |
 
 #### IP
 
@@ -350,7 +350,7 @@ neither the environment variable nor a stored value is present.
 | `COMET_URL` | Comet › URL | list | `["https://comet.feels.legal"]` | Upstream URL(s) for the Comet addon. |
 | `DEFAULT_COMET_TIMEOUT` | Comet › Default Timeout | number | — | Default timeout for the Comet addon (milliseconds). Falls back to the global default when unset. |
 | `DEFAULT_COMET_USER_AGENT` | Comet › Default User Agent | json | — | Default User-Agent for the Comet addon. Supports `{version}`/`{random}` placeholders. |
-| `COMET_PUBLIC_API_TOKEN` | Comet › Public API Token | json | *(unset)* | Public API token(s) used by Comet. JSON array or single string. _(secret)_ |
+| `COMET_PUBLIC_API_TOKEN` | Comet › Public API Token | list | — | Public API token(s) used by Comet. JSON array or single string. |
 
 #### Meteor
 
