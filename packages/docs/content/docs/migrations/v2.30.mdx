@@ -52,14 +52,24 @@ These were already deprecated and are now removed. Replace them as follows.
 All `DEFAULT_<SERVICE>_*` and `FORCED_<SERVICE>_*` credential variables (e.g.
 `DEFAULT_REALDEBRID_API_KEY`, `FORCED_EASYNEWS_USERNAME`) are removed. Use the
 consolidated `DEFAULT_SERVICE_CREDENTIALS` / `FORCED_SERVICE_CREDENTIALS`
-instead, one `serviceId.credentialId=value` entry per line:
+instead, one `serviceId.credentialId=value` entry per line (or \n separated if multi-line env variables
+are not available in your environment):
+
+<Callout type="info">
+  You can find a list of all service IDs [here](https://github.com/Viren070/AIOStreams/blob/2f42d4723e036b941154819552165379fd4ce3dc/packages/core/src/utils/constants.ts#L228-L243)
+  and a list of credential IDs [here](https://github.com/Viren070/AIOStreams/blob/2f42d4723e036b941154819552165379fd4ce3dc/packages/core/src/utils/constants.ts#L329-L779).
+</Callout>
 
 ```sh
 # Before
 DEFAULT_ALLDEBRID_API_KEY=xxx
+DEFAULT_EASYNEWS_USERNAME=yyy
 
 # After
-DEFAULT_SERVICE_CREDENTIALS='alldebrid.apiKey=xxx'
+DEFAULT_SERVICE_CREDENTIALS='alldebrid.apiKey=xxx
+easynews.username=yyy'
+# or
+DEFAULT_SERVICE_CREDENTIALS='alldebrid.apiKey=xxx\neasynews.username=yyy'
 ```
 
 ### Addon host/port/protocol rewrites
@@ -136,7 +146,6 @@ was only used for proxy authentication.
   in. Only rotate it deliberately.
 </Callout>
 
-
 ### Other removed variables
 
 | Removed                                                                                                                                       | Replacement                                                                                                                                    |
@@ -146,7 +155,6 @@ was only used for proxy authentication.
 | `PTT_PORT`, `PTT_SOCKET`                                                                                                                      | Removed (dead config)                                                                                                                          |
 
 ---
-
 
 ## API Changes
 
