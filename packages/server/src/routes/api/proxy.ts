@@ -11,6 +11,7 @@ import {
   getProxyAgent,
   getTimeTakenSincePoint,
   shouldProxy,
+  canUseProxy,
 } from '@aiostreams/core';
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
@@ -289,6 +290,23 @@ router.all(
             constants.ErrorCode.UNAUTHORIZED,
             undefined,
             'Invalid auth'
+          )
+        );
+        return;
+      }
+
+      if (
+        auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME &&
+        !canUseProxy(auth.username)
+      ) {
+        logger.warn(`[${requestId}] Proxy access denied`, {
+          username: auth.username,
+        });
+        next(
+          new APIError(
+            constants.ErrorCode.FORBIDDEN,
+            undefined,
+            'Proxy access not permitted for this user'
           )
         );
         return;

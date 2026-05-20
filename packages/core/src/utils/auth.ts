@@ -50,6 +50,16 @@ export function isAdminUser(username: string): boolean {
   return admins.includes(username);
 }
 
+/**
+ * Whether a username is allowed to use the built-in proxy.
+ * If AIOSTREAMS_AUTH_PROXY is unset/empty, all authenticated users may use it.
+ */
+export function canUseProxy(username: string): boolean {
+  const allowed = appConfig.bootstrap.authProxy;
+  if (!allowed || allowed.length === 0) return true;
+  return allowed.includes(username);
+}
+
 function sign(data: string): string {
   return createHmac('sha256', appConfig.bootstrap.secretKey)
     .update(data)

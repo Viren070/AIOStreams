@@ -17,6 +17,7 @@ export const bootstrap = {
   secretKey: Env.SECRET_KEY,
   auth: Env.AIOSTREAMS_AUTH,
   authAdmins: Env.AIOSTREAMS_AUTH_ADMINS,
+  authProxy: Env.AIOSTREAMS_AUTH_PROXY,
   authConnectionLimits: Env.AIOSTREAMS_AUTH_CONNECTIONS_LIMIT,
   logLevel: Env.LOG_LEVEL,
   logFormat: Env.LOG_FORMAT,

@@ -241,6 +241,10 @@ export const Env = cleanEnv(process.env, {
     default: undefined,
     desc: 'Comma separated list of admin usernames. If not set, all users are admins.',
   }),
+  AIOSTREAMS_AUTH_PROXY: commaSeparated({
+    default: undefined,
+    desc: 'Comma separated list of usernames allowed to use the built-in proxy. If not set, all authenticated users can use the proxy.',
+  }),
   AIOSTREAMS_AUTH_CONNECTIONS_LIMIT: connectionLimits({
     default: undefined,
     desc: 'Connection limits for authenticated users',

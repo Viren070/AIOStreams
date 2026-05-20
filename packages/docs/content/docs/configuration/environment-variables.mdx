@@ -53,11 +53,12 @@ These are validated at startup and cannot be set from the dashboard.
 
 ### Operator Authentication
 
-| Variable                            | Default | Description                                                                                                                 |
-| ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `AIOSTREAMS_AUTH`                   | —       | Comma-separated `username:password` pairs for the AIOStreams instance (currently used by the built-in proxy and NZB proxy). |
-| `AIOSTREAMS_AUTH_ADMINS`            | —       | Comma-separated usernames (from `AIOSTREAMS_AUTH`) that are admins. If unset, all users are admins.                         |
-| `AIOSTREAMS_AUTH_CONNECTIONS_LIMIT` | —       | Comma-separated `username:limit` connection limits (`0` for unlimited) for the built-in proxy.                       |
+| Variable                            | Default | Description                                                                                                                                                                                              |
+| ----------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AIOSTREAMS_AUTH`                   | —       | Comma-separated `username:password` pairs defining all valid credentials. e.g. `user1:pass1,user2:pass2`.                                                                                                |
+| `AIOSTREAMS_AUTH_ADMINS`            | —       | Comma-separated usernames (from `AIOSTREAMS_AUTH`) that are admins. Admins can access the configure page and admin-only endpoints (proxy stats, proxy URL generation). If unset, all users are admins.   |
+| `AIOSTREAMS_AUTH_PROXY`             | —       | Comma-separated usernames (from `AIOSTREAMS_AUTH`) allowed to use the built-in proxy. If unset, all authenticated users can use the proxy. Users not listed can still log in and access the configure page. |
+| `AIOSTREAMS_AUTH_CONNECTIONS_LIMIT` | —       | Comma-separated `username:limit` connection limits (`0` for unlimited) for the built-in proxy.                                                                                                           |
 
 ### Logging
 
