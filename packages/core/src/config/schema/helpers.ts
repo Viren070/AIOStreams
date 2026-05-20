@@ -162,7 +162,7 @@ export const serviceCredentialsMap = z.union([
   z.string().transform((value, ctx) => {
     const out: Record<string, Record<string, string>> = {};
     if (!value.trim()) return out;
-    for (const rawLine of value.split(/\r?\n/)) {
+    for (const rawLine of value.split(/\\n|\r?\n/)) {
       const line = rawLine.trim();
       if (!line || line.startsWith('#')) continue;
       const eq = line.indexOf('=');
