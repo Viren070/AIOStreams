@@ -155,8 +155,11 @@ function classify(schema: AnyZod): SettingsUiHint {
   }
 
   if (t === 'union') {
-    const opts = (def(s).options ?? []).map((o) => unwrap(o));
-    const kinds = opts.map((o) => typeOf(o));
+    const allOpts = (def(s).options ?? []).map((o) => unwrap(o));
+    const opts = allOpts.filter(
+      (o) => typeOf(o) !== 'null' && typeOf(o) !== 'undefined'
+    );
+    const kinds = (opts.length > 0 ? opts : allOpts).map((o) => typeOf(o));
     const hasBool = kinds.includes('boolean');
     const hasArray = kinds.includes('array');
     const hasRecord = kinds.includes('record') || kinds.includes('object');
