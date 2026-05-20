@@ -188,6 +188,11 @@ export class SettingsStore<TSections extends SectionSchemas> {
     return this.snapshot;
   }
 
+  /** Monotonic settings version (bumped by every DB write across all replicas). */
+  get currentVersion(): number {
+    return this.version;
+  }
+
   get metadata(): RuntimeConfigMetadata[] {
     const result: RuntimeConfigMetadata[] = [];
     const storedKeysCache = this.storedKeys;

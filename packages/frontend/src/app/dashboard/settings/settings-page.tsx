@@ -26,6 +26,7 @@ import {
   toName,
   SECRET_CLEAR_SENTINEL,
 } from './_components/settings-field';
+import { SettingsActionsMenu } from './_components/settings-actions-menu';
 
 function readTabParam(): string | null {
   return new URLSearchParams(window.location.search).get('tab');
@@ -71,7 +72,13 @@ function buildTabs(keys: SettingsKey[]): TabModel[] {
   );
 }
 
-function TabForm({ tab }: { tab: TabModel }) {
+function TabForm({
+  tab,
+  allKeys: allSettingsKeys,
+}: {
+  tab: TabModel;
+  allKeys: SettingsKey[];
+}) {
   const { mutateAsync, isPending } = useSaveSettings();
   // Hold the RHF methods captured from the Form's children render-prop so
   // `onSubmit` can call `reset(values)` after a successful save — otherwise
@@ -169,11 +176,20 @@ function TabForm({ tab }: { tab: TabModel }) {
         return (
           <>
             <SettingsIsDirty isPending={isPending} />
-            <SettingsPageHeader
-              title={tab.label}
-              description={`${humanise(tab.section)} configuration`}
-              icon={tab.icon}
-            />
+            <div className="flex items-start justify-between gap-2">
+              <SettingsPageHeader
+                title={tab.label}
+                description={`${humanise(tab.section)} configuration`}
+                icon={tab.icon}
+              />
+              <div className="pt-1">
+                <SettingsActionsMenu
+                  allKeys={allSettingsKeys}
+                  sectionKeys={allKeys}
+                  sectionLabel={tab.label}
+                />
+              </div>
+            </div>
             {subs.map((sub) => (
               <SettingsCard
                 key={sub || '_root'}
@@ -286,7 +302,9 @@ export function SettingsPage() {
               value={t.section}
               className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
             >
-              {tab === t.section && <TabForm tab={t} />}
+              {tab === t.section && (
+                <TabForm tab={t} allKeys={data.keys} />
+              )}
             </TabsContent>
           ))}
         </div>

@@ -4,6 +4,7 @@ import {
   logRingBuffer,
   settingsStore,
   describeSettings,
+  SettingsRepository,
   AnalyticsRepository,
   AdminUsersRepository,
   TaskManager,
@@ -228,6 +229,241 @@ router.patch('/settings', async (req, res) => {
           }),
     })
   );
+});
+
+
+router.post('/settings/reset', async (req, res) => {
+  const body = (req.body ?? {}) as { keys?: unknown };
+  const keys = Array.isArray(body.keys)
+    ? body.keys.filter((k): k is string => typeof k === 'string')
+    : [];
+  if (keys.length === 0) {
+    return res.status(400).json(
+      createResponse({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'keys[] is required' },
+      })
+    );
+  }
+  const username =
+    (req as { user?: { username?: string } }).user?.username ?? 'admin';
+  const meta = new Map(settingsStore.metadata.map((m) => [m.key, m]));
+
+  const reset: string[] = [];
+  const skipped: { key: string; reason: string }[] = [];
+  let requiresRestart = false;
+
+  for (const key of keys) {
+    const m = meta.get(key);
+    if (!m) {
+      skipped.push({ key, reason: 'unknown' });
+      continue;
+    }
+    if (m.source === 'environment') {
+      skipped.push({ key, reason: 'env-locked' });
+      continue;
+    }
+    if (m.source === 'default') {
+      // No DB row to delete - silently a no-op so the modal's count is honest.
+      skipped.push({ key, reason: 'already-default' });
+      continue;
+    }
+    try {
+      await settingsStore.delete(key);
+      reset.push(key);
+      if (m.requiresRestart) requiresRestart = true;
+    } catch (err) {
+      skipped.push({
+        key,
+        reason: err instanceof Error ? err.message : 'failed',
+      });
+    }
+  }
+
+  if (reset.length) logger.info({ reset, username }, 'settings reset');
+
+  res.status(200).json(
+    createResponse({
+      success: true,
+      data: { reset, skipped, requiresRestart },
+    })
+  );
+});
+
+// Copy env-overridden values into the
+// DB so they persist after the env vars are removed. Skips values equal to
+// the schema default. Bypasses settingsStore.set
+// (which throws when env is set) by writing through SettingsRepository
+// directly.
+router.post('/settings/import/env', async (req, res) => {
+  const username =
+    (req as { user?: { username?: string } }).user?.username ?? 'admin';
+
+  const candidates = settingsStore.metadata.filter(
+    (m) => m.source === 'environment'
+  );
+
+  const imported: string[] = [];
+  const skippedAsDefault: string[] = [];
+  const failed: { key: string; reason: string }[] = [];
+
+  for (const m of candidates) {
+    let value: unknown;
+    try {
+      value = settingsStore.getEffectiveValue(m.key);
+    } catch (err) {
+      failed.push({
+        key: m.key,
+        reason: err instanceof Error ? err.message : 'unreadable',
+      });
+      continue;
+    }
+    if (JSON.stringify(value) === JSON.stringify(m.default)) {
+      skippedAsDefault.push(m.key);
+      continue;
+    }
+    try {
+      await SettingsRepository.set(m.key, value, username);
+      imported.push(m.key);
+    } catch (err) {
+      failed.push({
+        key: m.key,
+        reason: err instanceof Error ? err.message : 'write failed',
+      });
+    }
+  }
+
+  // Reload once so the in-memory snapshot/version reflect all the new rows
+  // (effective values won't change while env still overrides, but storedKeys does).
+  if (imported.length) await settingsStore.reload();
+
+  logger.info(
+    { imported: imported.length, skippedAsDefault: skippedAsDefault.length, username },
+    'env settings imported into db'
+  );
+
+  res.status(200).json(
+    createResponse({
+      success: true,
+      data: {
+        imported,
+        skippedAsDefault,
+        failed,
+        totalEnvKeys: candidates.length,
+      },
+    })
+  );
+});
+
+// accept the same JSON shape produced by
+// `/settings/export` and persist each entry through the regular validated
+// write path. Masked secrets (value === null for keys listed in
+// maskedSecretKeys) are filtered client-side; anything else that arrives
+// as null but isn't a nullable schema will fail validation and be reported.
+router.post('/settings/import/json', async (req, res) => {
+  const body = (req.body ?? {}) as { settings?: unknown };
+  if (
+    !body.settings ||
+    typeof body.settings !== 'object' ||
+    Array.isArray(body.settings)
+  ) {
+    return res.status(400).json(
+      createResponse({
+        success: false,
+        error: {
+          code: 'BAD_REQUEST',
+          message: 'Expected a `settings` object mapping keys to values.',
+        },
+      })
+    );
+  }
+  const username =
+    (req as { user?: { username?: string } }).user?.username ?? 'admin';
+  const meta = new Map(settingsStore.metadata.map((m) => [m.key, m]));
+
+  const imported: string[] = [];
+  const skipped: { key: string; reason: string }[] = [];
+  const failed: { key: string; reason: string }[] = [];
+  let requiresRestart = false;
+
+  for (const [key, value] of Object.entries(
+    body.settings as Record<string, unknown>
+  )) {
+    const m = meta.get(key);
+    if (!m) {
+      skipped.push({ key, reason: 'unknown' });
+      continue;
+    }
+    if (m.source === 'environment') {
+      skipped.push({ key, reason: 'env-locked' });
+      continue;
+    }
+    try {
+      await settingsStore.set(key, value, username);
+      imported.push(key);
+      if (m.requiresRestart) requiresRestart = true;
+    } catch (err) {
+      failed.push({
+        key,
+        reason: err instanceof Error ? err.message : 'invalid value',
+      });
+    }
+  }
+
+  if (imported.length)
+    logger.info(
+      { imported: imported.length, username },
+      'settings imported from json'
+    );
+
+  res.status(200).json(
+    createResponse({
+      success: true,
+      data: { imported, skipped, failed, requiresRestart },
+    })
+  );
+});
+
+// JSON dump of every DB-sourced setting.
+// Secrets are masked (value=null) and listed in maskedSecretKeys so the
+// consumer can re-enter them by hand.
+router.get('/settings/export', (req, res) => {
+  const username =
+    (req as { user?: { username?: string } }).user?.username ?? 'admin';
+  const settings: Record<string, unknown> = {};
+  const maskedSecretKeys: string[] = [];
+  for (const m of settingsStore.metadata) {
+    if (m.source !== 'database') continue;
+    if (m.secret) {
+      settings[m.key] = null;
+      maskedSecretKeys.push(m.key);
+      continue;
+    }
+    try {
+      settings[m.key] = settingsStore.getEffectiveValue(m.key);
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    version: settingsStore.currentVersion,
+    settings,
+    maskedSecretKeys,
+  };
+  logger.info({ count: Object.keys(settings).length, username }, 'settings exported');
+
+  if (req.query.download === '1') {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="aiostreams-settings-${stamp}.json"`
+    );
+    return res.status(200).send(JSON.stringify(payload, null, 2));
+  }
+
+  res.status(200).json(createResponse({ success: true, data: payload }));
 });
 
 // =============================================================================

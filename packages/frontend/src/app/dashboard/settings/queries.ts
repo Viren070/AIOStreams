@@ -66,3 +66,67 @@ export function useSaveSettings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }
+
+export interface ResetResult {
+  reset: string[];
+  skipped: { key: string; reason: string }[];
+  requiresRestart: boolean;
+}
+
+export function useResetSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (keys: string[]) =>
+      api<ResetResult>('POST /dashboard/settings/reset', {
+        body: { keys },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export interface ImportEnvResult {
+  imported: string[];
+  skippedAsDefault: string[];
+  failed: { key: string; reason: string }[];
+  totalEnvKeys: number;
+}
+
+export function useImportEnv() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api<ImportEnvResult>('POST /dashboard/settings/import/env'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export interface ImportSettingsResult {
+  imported: string[];
+  skipped: { key: string; reason: string }[];
+  failed: { key: string; reason: string }[];
+  requiresRestart: boolean;
+}
+
+export function useImportSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: Record<string, unknown>) =>
+      api<ImportSettingsResult>('POST /dashboard/settings/import/json', {
+        body: { settings },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export interface ExportPayload {
+  exportedAt: string;
+  version: number;
+  settings: Record<string, unknown>;
+  maskedSecretKeys: string[];
+}
+
+/** Fetches the export payload (used in-memory; for direct download we hit the
+ *  same endpoint with `?download=1` via a window.open call). */
+export async function fetchSettingsExport(): Promise<ExportPayload> {
+  return api<ExportPayload>('GET /dashboard/settings/export');
+}
