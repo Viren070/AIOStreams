@@ -74,7 +74,7 @@ export function injectAccessKey(
 ): void {
   const key = getConfigAccessKey();
   if (key && req.user && config && typeof config === 'object') {
-    (config as { accessToken?: string }).accessToken = key;
+    (config as { accessKey?: string }).accessKey = key;
   }
 }
 
