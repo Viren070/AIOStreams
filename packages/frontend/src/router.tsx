@@ -41,6 +41,11 @@ const loginRoute = createRoute({
       // `safeNext` rejects anything that isn't a same-origin absolute path.
       const params = new URLSearchParams(window.location.search);
       const target = safeNext(params.get('next'));
+      // Non-admin users trying to reach a dashboard route should see the
+      // login form so they can sign in as a different (admin) account.
+      if (!session.isAdmin && target.startsWith('/dashboard')) {
+        return;
+      }
       throw redirect({ href: target } as never);
     }
   },
@@ -110,7 +115,10 @@ const dashboardRoute = createRoute({
       });
     }
     if (!session.isAdmin) {
-      throw redirect({ to: '/' });
+      throw redirect({
+        to: '/login',
+        search: { next: location.href } as never,
+      });
     }
   },
   component: DashboardLayout,
