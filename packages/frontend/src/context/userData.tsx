@@ -476,9 +476,11 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
   }, [userData]);
 
-  // Effect to apply forced and default values from status
+  const statusApplied = React.useRef(false);
+
   React.useEffect(() => {
-    if (!status) return;
+    if (!status || statusApplied.current) return;
+    statusApplied.current = true;
 
     const forced = status.settings.forced;
     const defaults = status.settings.defaults;
