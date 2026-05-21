@@ -41,6 +41,13 @@ export interface TaskDefinition {
   destructive: boolean;
   /** `single` ⇒ cluster-wide single-run (guarded elsewhere); `all` ⇒ per-process. */
   multiReplica: 'all' | 'single';
+  /**
+   * On a failed run (`{ ok: false }` or thrown error), schedule a one-shot
+   * retry after this many milliseconds. Cleared on success or unregister.
+   * Useful for tasks with long happy-path intervals (e.g. 24h dataset
+   * refresh) that should retry sooner after a transient failure.
+   */
+  retryIntervalMs?: number;
   run(ctx: TaskContext): Promise<TaskResult | void>;
 }
 
@@ -65,6 +72,7 @@ export interface TaskState {
 interface Entry {
   def: TaskDefinition;
   timer: NodeJS.Timeout | null;
+  retryTimer: NodeJS.Timeout | null;
   running: boolean;
   lastRunAt: number | null;
   lastDurationMs: number | null;
@@ -88,6 +96,7 @@ class TaskManagerImpl {
     const entry: Entry = {
       def,
       timer: null,
+      retryTimer: null,
       running: false,
       lastRunAt: null,
       lastDurationMs: null,
@@ -104,6 +113,7 @@ class TaskManagerImpl {
   unregister(id: string): void {
     const e = this.tasks.get(id);
     if (e?.timer) clearTimeout(e.timer);
+    if (e?.retryTimer) clearTimeout(e.retryTimer);
     this.tasks.delete(id);
   }
 
@@ -131,11 +141,11 @@ class TaskManagerImpl {
     if (entry.running) return { ok: false, message: 'already running' };
     entry.running = true;
     const started = Date.now();
+    let result: TaskResult;
     try {
-      const res = (await entry.def.run({})) ?? { ok: true };
-      entry.lastStatus = res.ok ? 'ok' : 'error';
-      entry.lastError = res.ok ? null : (res.message ?? 'failed');
-      return res;
+      result = (await entry.def.run({})) ?? { ok: true };
+      entry.lastStatus = result.ok ? 'ok' : 'error';
+      entry.lastError = result.ok ? null : (result.message ?? 'failed');
     } catch (err) {
       entry.lastStatus = 'error';
       entry.lastError = err instanceof Error ? err.message : String(err);
@@ -143,12 +153,41 @@ class TaskManagerImpl {
         { task: entry.def.id, err: entry.lastError, manual },
         'task failed'
       );
-      return { ok: false, message: entry.lastError };
+      result = { ok: false, message: entry.lastError };
     } finally {
       entry.running = false;
       entry.lastRunAt = started;
       entry.lastDurationMs = Date.now() - started;
     }
+    this.applyRetryPolicy(entry, result);
+    return result;
+  }
+
+  /**
+   * After every run, (re)evaluate the retry timer:
+   *   - success ⇒ clear any pending retry (next run is the normal interval)
+   *   - failure + `retryIntervalMs` configured ⇒ schedule a one-shot retry
+   * The scheduled interval tick is left untouched; a successful retry simply
+   * means the next interval tick is the next attempt.
+   */
+  private applyRetryPolicy(entry: Entry, result: TaskResult): void {
+    if (entry.retryTimer) {
+      clearTimeout(entry.retryTimer);
+      entry.retryTimer = null;
+    }
+    if (result.ok) return;
+    const delay = entry.def.retryIntervalMs;
+    if (!delay || delay <= 0 || !entry.def.enabled) return;
+    const clamped = Math.min(delay, MAX_TIMEOUT_MS);
+    logger.info(
+      { task: entry.def.id, retryInMs: clamped },
+      'task failed; scheduling retry'
+    );
+    entry.retryTimer = setTimeout(() => {
+      entry.retryTimer = null;
+      void this.execute(entry, false).catch(() => undefined);
+    }, clamped);
+    entry.retryTimer.unref?.();
   }
 
   async runNow(id: string): Promise<TaskResult> {
@@ -184,7 +223,10 @@ class TaskManagerImpl {
   }
 
   stopAll(): void {
-    for (const e of this.tasks.values()) if (e.timer) clearTimeout(e.timer);
+    for (const e of this.tasks.values()) {
+      if (e.timer) clearTimeout(e.timer);
+      if (e.retryTimer) clearTimeout(e.retryTimer);
+    }
   }
 }
 

@@ -2,12 +2,11 @@
 import path from 'path';
 import type { Logger } from '../../logging/logger.js';
 import { DistributedLock } from '../../utils/distributed-lock.js';
-import { TaskManager } from '../../tasks/index.js';
+import { TaskManager, type TaskResult } from '../../tasks/index.js';
 
 export interface BaseDatasetConfig {
   dataPath: string;
   refreshIntervalSeconds: number;
-  maxSyncRetries?: number;
   lockTimeoutMs?: number;
   logger: Logger;
   taskId: string;
@@ -15,18 +14,22 @@ export interface BaseDatasetConfig {
   taskDescription?: string;
 }
 
+/**
+ * Base class for file-backed datasets that periodically sync from a remote
+ * source under a distributed lock. The TaskManager owns the schedule and
+ * retry-on-failure timing (via `retryIntervalMs`); subclasses only implement
+ * `performSync` (the actual fetch/write) and `reloadDataFromFile` (in-memory
+ * cache refresh).
+ */
 export abstract class BaseDataset {
   protected readonly DATA_PATH: string;
   protected readonly LOCK_DIR: string;
   protected readonly LOCK_KEY: string;
   protected readonly REFRESH_INTERVAL_MS: number;
-  protected readonly MAX_SYNC_RETRIES: number;
   protected readonly LOCK_TIMEOUT_MS: number;
   protected logger: Logger;
 
   protected initialisationPromise: Promise<void> | null = null;
-  protected syncRetryCount: number = 0;
-  protected syncRetryTimeout: NodeJS.Timeout | null = null;
 
   protected readonly taskId: string;
   protected readonly taskLabel?: string;
@@ -40,7 +43,6 @@ export abstract class BaseDataset {
       path.extname(config.dataPath)
     );
     this.REFRESH_INTERVAL_MS = config.refreshIntervalSeconds * 1000;
-    this.MAX_SYNC_RETRIES = config.maxSyncRetries ?? 1;
     this.LOCK_TIMEOUT_MS = config.lockTimeoutMs ?? 300000; // 5 minutes
     this.logger = config.logger;
     this.taskId = config.taskId;
@@ -65,42 +67,48 @@ export abstract class BaseDataset {
   }
 
   protected async loadData(): Promise<void> {
+    this.registerSyncTask();
+
     const exists = await fs
       .access(this.DATA_PATH)
       .then(() => true)
       .catch(() => false);
 
-    if (exists) {
-      try {
-        await this.reloadDataFromFile();
-        this.logger.info('Loaded dataset from file');
-        // Reset retry count on successful load
-        this.syncRetryCount = 0;
-
-        const stat = await fs.stat(this.DATA_PATH);
-        const ageMs = Date.now() - stat.mtimeMs;
-        if (ageMs > this.REFRESH_INTERVAL_MS) {
-          this.logger.info(
-            `Dataset is stale (${Math.round(ageMs / 1000)}s old, interval: ${this.REFRESH_INTERVAL_MS / 1000}s), syncing now...`
-          );
-          await this.syncWithRetry();
-        }
-      } catch (error) {
-        this.logger.error('Failed to load dataset, forcing resync...:', error);
-        await this.syncWithRetry();
-      }
-    } else {
+    if (!exists) {
       this.logger.info('Dataset not found, starting initial sync...');
-      await this.syncWithRetry();
+      await TaskManager.runNow(this.taskId);
+      return;
     }
 
-    this.startSyncInterval();
+    try {
+      await this.reloadDataFromFile();
+      this.logger.info('Loaded dataset from file');
+    } catch (error) {
+      this.logger.error('Failed to load dataset, forcing resync...:', error);
+      await TaskManager.runNow(this.taskId);
+      return;
+    }
+
+    const stat = await fs.stat(this.DATA_PATH);
+    const ageMs = Date.now() - stat.mtimeMs;
+    if (ageMs > this.REFRESH_INTERVAL_MS) {
+      this.logger.info(
+        `Dataset is stale (${Math.round(ageMs / 1000)}s old, interval: ${
+          this.REFRESH_INTERVAL_MS / 1000
+        }s), syncing now...`
+      );
+      await TaskManager.runNow(this.taskId);
+    }
   }
 
-  protected async syncWithRetry(): Promise<void> {
+  /**
+   * Run a single sync attempt under the distributed lock and reload the
+   * in-memory cache from the freshly-written file. Returns a `TaskResult` so
+   * the TaskManager can apply its retry policy on failure.
+   */
+  private async runSync(): Promise<TaskResult> {
     try {
       const lock = DistributedLock.getInstance();
-
       const { cached } = await lock.withLock(
         this.LOCK_KEY,
         async () => {
@@ -126,57 +134,19 @@ export abstract class BaseDataset {
         .access(this.DATA_PATH)
         .then(() => true)
         .catch(() => false);
-
       if (fileExists) {
         await this.reloadDataFromFile();
         this.logger.info('Loaded dataset from file');
       }
-
-      // Reset retry count on success
-      this.syncRetryCount = 0;
+      return { ok: true, message: 'sync complete' };
     } catch (error) {
-      this.syncRetryCount++;
-
-      if (this.syncRetryCount <= this.MAX_SYNC_RETRIES) {
-        this.logger.warn(
-          `Sync failed (attempt ${this.syncRetryCount}/${this.MAX_SYNC_RETRIES}), retrying immediately...`
-        );
-        await this.syncWithRetry();
-      } else {
-        this.logger.error(
-          `Sync failed after ${this.MAX_SYNC_RETRIES} retries. Will retry after quarter of refresh interval.`
-        );
-        this.scheduleRetrySync();
-        throw error;
-      }
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error('Dataset sync failed:', message);
+      return { ok: false, message };
     }
   }
 
-  protected scheduleRetrySync(): void {
-    if (this.syncRetryTimeout) {
-      clearTimeout(this.syncRetryTimeout);
-    }
-
-    const retryDelay = Math.floor(this.REFRESH_INTERVAL_MS / 4);
-    this.logger.info(
-      `Scheduling sync retry in ${retryDelay / 1000} seconds...`
-    );
-
-    this.syncRetryTimeout = setTimeout(() => {
-      this.syncWithRetry()
-        .then(() => {
-          this.logger.info('Sync retry succeeded');
-          this.syncRetryCount = 0;
-        })
-        .catch((err: any) => {
-          this.logger.error('Sync retry failed:', err);
-          // Schedule another retry
-          this.scheduleRetrySync();
-        });
-    }, retryDelay);
-  }
-
-  protected startSyncInterval() {
+  private registerSyncTask(): void {
     TaskManager.register({
       id: this.taskId,
       label: this.taskLabel ?? this.taskId,
@@ -186,13 +156,11 @@ export abstract class BaseDataset {
       category: 'data-sync',
       kind: 'scheduled',
       intervalMs: this.REFRESH_INTERVAL_MS,
+      retryIntervalMs: Math.floor(this.REFRESH_INTERVAL_MS / 4),
       enabled: true,
       destructive: false,
       multiReplica: 'single',
-      run: async () => {
-        await this.syncWithRetry();
-        return { ok: true, message: 'sync complete' };
-      },
+      run: () => this.runSync(),
     });
   }
 

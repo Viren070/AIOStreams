@@ -391,8 +391,11 @@ export function startAnalytics(): void {
       await runRollup();
     },
   });
-  // First rollup shortly after boot so the page isn't empty.
-  setTimeout(() => void runRollup().catch(() => undefined), 30_000).unref?.();
+  // First rollup shortly after boot so the dashboard isn't empty.
+  setTimeout(
+    () => void TaskManager.runNow('analytics-rollup').catch(() => undefined),
+    30_000
+  ).unref?.();
 }
 
 /** Flush remaining events (called on graceful shutdown). */

@@ -695,19 +695,21 @@ export class AnimeDatabase {
       return;
     }
 
+    // Register every source's refresh task first, then trigger an immediate
+    // run
+    this.setupAllRefreshIntervals();
+
     logger.info('starting initial refresh of all data sources');
-    for (const dataSource of Object.values(DATA_SOURCES)) {
-      try {
-        await this.refreshDataSource(dataSource);
-      } catch (error) {
+    for (const [key, source] of Object.entries(DATA_SOURCES)) {
+      const result = await TaskManager.runNow(`anime-db-refresh-${key}`);
+      if (!result.ok) {
         logger.error(
-          { source: dataSource.name, error },
+          { source: source.name, error: result.message },
           'failed to refresh data source'
         );
       }
     }
 
-    this.setupAllRefreshIntervals();
     this.isInitialised = true;
     logger.info('initialised successfully');
   }

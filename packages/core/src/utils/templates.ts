@@ -52,27 +52,14 @@ export class TemplateManager {
       'custom'
     );
 
-    // Fetch remote templates from env URLs (best-effort, errors logged)
-    this.remoteTemplates = await this.fetchRemoteTemplates();
-
-    // Merge: custom → remote → builtin, then deduplicate
     this.templates = this.deduplicateTemplates([
       ...customTemplates.templates,
-      ...this.remoteTemplates,
       ...builtinTemplates.templates,
     ]);
 
     this.registerTrustedAccess(this.templates);
 
     const errors = [...builtinTemplates.errors, ...customTemplates.errors];
-    // logger.info(`Loaded templates`, {
-    //   totalTemplates: this.templates.length,
-    //   detectedTemplates: builtinTemplates.detected + customTemplates.detected,
-    //   builtinTemplates: builtinTemplates.loaded,
-    //   customTemplates: customTemplates.loaded,
-    //   remoteTemplates: this.remoteTemplates.length,
-    //   errors: errors.length,
-    // });
     logger.info(
       {
         total: this.templates.length,
@@ -92,8 +79,10 @@ export class TemplateManager {
       });
     }
 
-    // Schedule periodic refresh if configured
     this.scheduleRefresh();
+    if ((appConfig.templates.urls ?? []).length > 0) {
+      await TaskManager.runNow('template-remote-refresh');
+    }
   }
 
   /**
@@ -320,11 +309,10 @@ export class TemplateManager {
         // Kick an immediate refresh so newly-added URLs take effect without
         // waiting for the next scheduled tick.
         if ((appConfig.templates.urls ?? []).length > 0) {
-          try {
-            await this.refreshRemoteTemplates();
-          } catch (err) {
+          const res = await TaskManager.runNow('template-remote-refresh');
+          if (!res.ok) {
             logger.error(
-              { err: err instanceof Error ? err.message : String(err) },
+              { err: res.message },
               'immediate template refresh after config change failed'
             );
           }
