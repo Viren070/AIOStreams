@@ -49,7 +49,7 @@ function RootComponent() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
       <Outlet />
-      <Toaster />
+      <Toaster swipeDirections={['top', 'right']} />
       {DevTools && (
         <Suspense>
           <DevTools />
