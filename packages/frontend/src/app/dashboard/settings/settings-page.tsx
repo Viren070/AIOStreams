@@ -97,7 +97,13 @@ function TabForm({
       const n = toName(k.key);
       shape[n] = z.any();
       // Secrets start blank so an untouched field PATCHes nothing.
-      defaults[n] = k.secret ? '' : k.value;
+      if (k.secret) {
+        defaults[n] = '';
+      } else if (k.value === null && k.ui.kind === 'enum') {
+        defaults[n] = '';
+      } else {
+        defaults[n] = k.value;
+      }
       byName.set(n, k);
     }
     return { schema: z.object(shape), defaults, byName };
@@ -121,8 +127,11 @@ function TabForm({
             }
             continue;
           }
-          if (JSON.stringify(val) !== JSON.stringify(k.value))
-            patch[k.key] = val;
+          const isNullableEnum =
+            k.ui.kind === 'enum' && (k.value === null || k.default === null);
+          const normalised = isNullableEnum && val === '' ? null : val;
+          if (JSON.stringify(normalised) !== JSON.stringify(k.value))
+            patch[k.key] = normalised;
         }
         if (Object.keys(patch).length === 0) {
           toast.info('No changes to save.');
@@ -302,9 +311,7 @@ export function SettingsPage() {
               value={t.section}
               className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
             >
-              {tab === t.section && (
-                <TabForm tab={t} allKeys={data.keys} />
-              )}
+              {tab === t.section && <TabForm tab={t} allKeys={data.keys} />}
             </TabsContent>
           ))}
         </div>

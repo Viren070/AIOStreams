@@ -91,7 +91,8 @@ export function ResetSettingsModal({
   }, [open, resettable]);
 
   const groups = React.useMemo(() => groupKeys(resettable), [resettable]);
-  const allChecked = selected.size === resettable.length && resettable.length > 0;
+  const allChecked =
+    selected.size === resettable.length && resettable.length > 0;
   const someChecked = selected.size > 0 && !allChecked;
 
   const toggle = (key: string) => {
@@ -164,7 +165,7 @@ export function ResetSettingsModal({
       footer={
         <>
           <Button
-            intent="gray-basic"
+            intent="gray-outline"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
@@ -238,15 +239,15 @@ export function ResetSettingsModal({
                           className="flex-1 text-left min-w-0"
                           onClick={() => toggle(k.key)}
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium truncate">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                            <span className="font-medium break-words">
                               {k.label}
                             </span>
-                            <code className="text-xs text-[--muted] truncate">
+                            <code className="text-xs text-[--muted] break-all min-w-0">
                               {k.key}
                             </code>
                           </div>
-                          <div className="text-xs text-[--muted] truncate mt-0.5">
+                          <div className="text-xs text-[--muted] break-all mt-0.5 min-w-0">
                             <span className="font-mono">
                               {previewValue(k.value, k.secret)}
                             </span>

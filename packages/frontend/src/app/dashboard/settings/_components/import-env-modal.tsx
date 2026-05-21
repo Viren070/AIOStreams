@@ -136,17 +136,17 @@ export function ImportEnvModal({
                       className="flex items-start justify-between gap-3 py-1.5 px-2 rounded-md hover:bg-[--subtle] transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                          <span className="font-medium break-words">
                             {k.label}
                           </span>
                           {k.env && (
-                            <code className="text-xs text-[--muted] truncate">
+                            <code className="text-xs text-[--muted] break-all min-w-0">
                               {k.env}
                             </code>
                           )}
                         </div>
-                        <div className="text-xs text-[--muted] truncate mt-0.5 font-mono">
+                        <div className="text-xs text-[--muted] break-all mt-0.5 font-mono min-w-0">
                           {previewValue(k.value, k.secret)}
                         </div>
                       </div>

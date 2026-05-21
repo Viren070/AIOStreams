@@ -298,10 +298,10 @@ export function ImportSettingsModal({
                           className="flex items-start gap-3 py-1.5 px-2 rounded-md hover:bg-[--subtle] transition-colors"
                         >
                           <div className="min-w-0 flex-1">
-                            <code className="text-xs text-[--muted] truncate block">
+                            <code className="text-xs text-[--muted] break-all block">
                               {key}
                             </code>
-                            <div className="text-xs text-[--foreground] truncate mt-0.5 font-mono">
+                            <div className="text-xs text-[--foreground] break-all mt-0.5 font-mono min-w-0">
                               {previewValue(value)}
                             </div>
                           </div>
