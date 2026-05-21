@@ -6,7 +6,7 @@ import UserAgent from 'user-agents';
 /**
  * Replace `{version}` / `{random}` placeholders in user-agent strings.
  */
-const applyUserAgentTemplate = (value: string): string => {
+export const applyUserAgentTemplate = (value: string): string => {
   const trimmed = value.toLowerCase().trim();
   if (['false', 'none', ''].includes(trimmed)) return 'false';
   const filters =
@@ -24,13 +24,16 @@ const applyUserAgentTemplate = (value: string): string => {
     .replace(/{random}/g, new UserAgent(filters).toString());
 };
 
-/** A user-agent string with `{version}`/`{random}` templating applied. */
-export const userAgentString = z.string().transform(applyUserAgentTemplate);
+/** Resolve function for nullable user-agent strings. */
+export const applyNullableUserAgentTemplate = (
+  v: string | null
+): string | null => (v === null ? null : applyUserAgentTemplate(v));
 
-/** Nullable variant of {@link userAgentString}. */
-export const nullableUserAgentString = z
-  .union([z.string(), z.null()])
-  .transform((v) => (v === null ? null : applyUserAgentTemplate(v)));
+/** A user-agent string. Stores the raw template; use `applyUserAgentTemplate` as the field `resolve`. */
+export const userAgentString = z.string();
+
+/** Nullable variant of {@link userAgentString}. Use `applyNullableUserAgentTemplate` as the field `resolve`. */
+export const nullableUserAgentString = z.union([z.string(), z.null()]);
 
 const trimTrailingSlash = (value: string) =>
   value.endsWith('/') ? value.slice(0, -1) : value;
@@ -274,40 +277,44 @@ export const serviceTimeMap = z.union([
 
 /**
  * Map of hostname → user-agent. Env shape: `host1:ua1,host2:ua2,...`.
+ * Stores raw template values; use `applyUserAgentMapTemplates` as the field `resolve`.
  */
-export const userAgentMap = z
-  .union([
-    z.record(z.string(), z.string()),
-    z.string().transform((value, ctx) => {
-      const out: Record<string, string> = {};
-      if (!value.trim()) return out;
-      const regex = /([a-zA-Z0-9.\-*]+):([^,]*(?:,[^a-zA-Z0-9.\-*][^,]*)*)/g;
-      let match;
-      let any = false;
-      while ((match = regex.exec(value)) !== null) {
-        any = true;
-        const host = match[1].trim();
-        const ua = match[2].trim();
-        if (!host || !ua) continue;
-        out[host] = ua;
-      }
-      if (!any) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'Expected hostname:user-agent pairs.',
-        });
-        return z.NEVER;
-      }
-      return out;
-    }),
-  ])
-  .transform((record) => {
+export const userAgentMap = z.union([
+  z.record(z.string(), z.string()),
+  z.string().transform((value, ctx) => {
     const out: Record<string, string> = {};
-    for (const [host, ua] of Object.entries(record)) {
-      out[host] = applyUserAgentTemplate(ua);
+    if (!value.trim()) return out;
+    const regex = /([a-zA-Z0-9.\-*]+):([^,]*(?:,[^a-zA-Z0-9.\-*][^,]*)*)/g;
+    let match;
+    let any = false;
+    while ((match = regex.exec(value)) !== null) {
+      any = true;
+      const host = match[1].trim();
+      const ua = match[2].trim();
+      if (!host || !ua) continue;
+      out[host] = ua;
+    }
+    if (!any) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Expected hostname:user-agent pairs.',
+      });
+      return z.NEVER;
     }
     return out;
-  });
+  }),
+]);
+
+/** Resolve function for {@link userAgentMap} fields. */
+export const applyUserAgentMapTemplates = (
+  record: Record<string, string>
+): Record<string, string> => {
+  const out: Record<string, string> = {};
+  for (const [host, ua] of Object.entries(record)) {
+    out[host] = applyUserAgentTemplate(ua);
+  }
+  return out;
+};
 
 /**
  * `addonProxyConfig` env format: comma-separated `hostname:bool|number` pairs.

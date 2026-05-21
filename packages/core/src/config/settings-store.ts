@@ -348,12 +348,18 @@ export class SettingsStore<TSections extends SectionSchemas> {
     };
     const fatalErrors: ConfigError[] = [];
 
+    const applyTransform = (
+      field: RuntimeConfigField,
+      value: ConfigValue
+    ): ConfigValue => (field.transform ? field.transform(value) : value);
+
     const parseDefault = (
       field: RuntimeConfigField,
       key: string
     ): ConfigValue | undefined => {
       try {
-        return field.schema.parse(field.default) as ConfigValue;
+        const parsed = field.schema.parse(field.default) as ConfigValue;
+        return applyTransform(field, parsed);
       } catch (err) {
         fatalErrors.push({
           source: 'default',
@@ -375,7 +381,7 @@ export class SettingsStore<TSections extends SectionSchemas> {
       let value: ConfigValue | undefined;
       if (rawEnv !== undefined) {
         try {
-          value = parseEnvValue(rawEnv, field);
+          value = applyTransform(field, parseEnvValue(rawEnv, field));
         } catch (err) {
           fatalErrors.push({
             source: 'env',
@@ -391,7 +397,10 @@ export class SettingsStore<TSections extends SectionSchemas> {
         }
       } else if (stored.has(key)) {
         try {
-          value = field.schema.parse(stored.get(key)) as ConfigValue;
+          value = applyTransform(
+            field,
+            field.schema.parse(stored.get(key)) as ConfigValue
+          );
         } catch (err) {
           logger.warn(
             {

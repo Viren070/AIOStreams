@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   addonProxyConfigMap,
+  applyUserAgentMapTemplates,
+  applyUserAgentTemplate,
   urlOrUrlList,
   userAgentMap,
   userAgentString,
@@ -12,6 +14,7 @@ const stringRecord = z.record(z.string(), z.string());
 export const httpSchema = {
   defaultUserAgent: {
     schema: userAgentString,
+    transform: applyUserAgentTemplate,
     default: 'AIOStreams/{version}',
     label: 'Default user agent',
     description:
@@ -22,6 +25,7 @@ export const httpSchema = {
   },
   aiostreamsUserAgent: {
     schema: userAgentString,
+    transform: applyUserAgentTemplate,
     default: 'AIOStreams/{version}',
     label: 'AIOStreams user agent',
     description:
@@ -32,6 +36,7 @@ export const httpSchema = {
   },
   hostnameUserAgentOverrides: {
     schema: userAgentMap,
+    transform: applyUserAgentMapTemplates,
     default: {} as Record<string, string>,
     label: 'Hostname user-agent overrides',
     description:

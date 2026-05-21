@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  applyNullableUserAgentTemplate,
   nullableUserAgentString,
   optionalPositiveInt,
   positiveInt,
@@ -79,6 +80,7 @@ function userAgentField(
 ): RuntimeConfigField<string | null> {
   return {
     schema: nullableUserAgentString,
+    transform: applyNullableUserAgentTemplate,
     default: null,
     label: `Default ${label} user agent`,
     description: `Default User-Agent for the ${label} addon. Supports \`{version}\`/\`{random}\` placeholders.`,

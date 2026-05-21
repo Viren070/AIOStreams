@@ -76,6 +76,10 @@ export interface RuntimeConfigField<T extends ConfigValue = ConfigValue> {
   secret: boolean;
   /** Optional UI rendering hints surfaced via `describeSettings`. */
   ui?: RuntimeConfigUiOverride;
+  /**
+   * Transforms meant for runtime only i.e. not stored in DB.
+   */
+  transform?: (value: T) => T;
 }
 
 /**
