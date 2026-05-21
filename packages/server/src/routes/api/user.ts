@@ -113,6 +113,11 @@ router.get('/', async (req, res, next) => {
     return;
   }
 
+  // dont send accessKey to clients
+  if (userData) {
+    userData.accessKey = undefined;
+  }
+
   res.status(200).json(
     createResponse({
       success: true,
