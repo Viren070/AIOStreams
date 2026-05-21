@@ -1,0 +1,42 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 4 * * *'  # Cada día a las 4am, sincroniza y construye
+  workflow_dispatch:
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync fork with upstream
+        run: |
+          git remote add upstream https://github.com/Viren070/AIOStreams.git
+          git fetch upstream
+          git merge upstream/main --no-edit || echo "No changes or conflicts"
+          git push origin main || echo "Nothing to push"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ghcr.io/aghermida/aiostreams:latest
