@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 4 * * *'  # Cada día a las 4am, sincroniza y construye
+    - cron: '0 6 * * *' cada dia a las 06 am 
   workflow_dispatch:
 
 jobs:
