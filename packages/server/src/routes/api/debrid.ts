@@ -268,8 +268,11 @@ router.get(
         let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;
         if (resolveError instanceof DebridError) {
           logger.error(
-            `[${storeAuth.id}] Got Debrid error during debrid resolve: ${resolveError.code}: ${resolveError.message}`,
-            { ...resolveError, stack: undefined }
+            {
+              service: storeAuth.id,
+              err: resolveError,
+            },
+            `error during debrid resolve: ${resolveError.message}`
           );
           switch (resolveError.code) {
             case 'UNAVAILABLE_FOR_LEGAL_REASONS':
@@ -303,7 +306,8 @@ router.get(
           }
         } else {
           logger.error(
-            `[${storeAuth.id}] Got unknown error during debrid resolve: ${resolveError.message}`
+            { service: storeAuth.id, err: resolveError },
+            `got unknown error during debrid resolve: ${resolveError.message}`
           );
         }
 
@@ -322,7 +326,8 @@ router.get(
         next(error);
       } else {
         logger.error(
-          `Got unexpected error during debrid resolve: ${error.message}`
+          { err: error },
+          `got unexpected error during debrid resolve: ${error.message}`
         );
         next(
           new APIError(

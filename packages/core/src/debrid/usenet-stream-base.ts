@@ -475,21 +475,10 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   ) {
     this.auth = serviceConfig;
     this.serviceLogger = createLogger(serviceName);
-    // The `webdav` library uses `base-64` for Basic Auth, which rejects any
-    // character with a code point > 0xFF. Pre-encode via Buffer (UTF-8) so
-    // credentials with non-Latin1 characters (emoji, CJK, etc.) work too.
-    const webdavClientOptions: Parameters<typeof createClient>[1] =
-      serviceConfig.webdavUser && serviceConfig.webdavPassword
-        ? {
-            headers: {
-              Authorization: `Basic ${Buffer.from(`${serviceConfig.webdavUser}:${serviceConfig.webdavPassword}`).toString('base64')}`,
-            },
-          }
-        : {};
-    this.webdavClient = createClient(
-      serviceConfig.webdavUrl,
-      webdavClientOptions
-    );
+    this.webdavClient = createClient(serviceConfig.webdavUrl, {
+      username: serviceConfig.webdavUser,
+      password: serviceConfig.webdavPassword,
+    });
     this.api = new SABnzbdApi(
       serviceConfig.apiUrl,
       serviceConfig.apiKey,
