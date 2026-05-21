@@ -117,7 +117,7 @@ const dashboardRoute = createRoute({
     if (!session.isAdmin) {
       throw redirect({
         to: '/login',
-        search: { next: location.href } as never,
+        search: { next: location.href, error: 'forbidden' } as never,
       });
     }
   },

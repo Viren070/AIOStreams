@@ -33,6 +33,23 @@ export function LoginPage() {
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
 
+  const params = new URLSearchParams(window.location.search);
+
+  React.useEffect(() => {
+    if (params.get('error') === 'forbidden') {
+      toast.error('Your account does not have admin access.', {
+        description: 'Sign in with an admin account to continue.',
+      });
+      params.delete('error');
+      const search = params.toString();
+      window.history.replaceState(
+        null,
+        '',
+        search ? `?${search}` : window.location.pathname
+      );
+    }
+  }, []);
+
   const { mutate, isPending } = useMutation({
     mutationFn: ({
       username,

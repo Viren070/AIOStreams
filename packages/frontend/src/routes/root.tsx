@@ -48,8 +48,8 @@ function NotFound() {
 function RootComponent() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
-      <Outlet />
       <Toaster swipeDirections={['top', 'right']} />
+      <Outlet />
       {DevTools && (
         <Suspense>
           <DevTools />
