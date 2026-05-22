@@ -93,6 +93,11 @@ export function LoginPage() {
           <p className="text-sm text-[--muted] text-center">
             Log in to access this AIOStreams instance.
           </p>
+          <p className="text-xs text-[--muted] text-center">
+            Use a username and password from your instance's{' '}
+            <code className="text-[--foreground]">AIOSTREAMS_AUTH</code>{' '}
+            environment variable
+          </p>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <TextInput
