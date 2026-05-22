@@ -108,11 +108,11 @@ export function SettingsActionsMenu({
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Backup</DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => setImportJsonOpen(true)}>
-          <BiUpload />
+          <BiDownload />
           Import database settings…
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={downloadExport}>
-          <BiDownload />
+          <BiUpload />
           Export database settings
         </DropdownMenuItem>
       </DropdownMenu>
