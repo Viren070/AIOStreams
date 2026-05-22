@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 6 * * *' cada dia a las 06 am 
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -27,6 +27,14 @@ jobs:
           git fetch upstream
           git merge upstream/main --no-edit || echo "No changes or conflicts"
           git push origin main || echo "Nothing to push"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Generate metadata
+        run: node scripts/generateMetadata.cjs --channel=stable
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
