@@ -200,6 +200,9 @@ export const resourcesSchema = {
         env: 'MANIFEST_CACHE_TTL',
         requiresRestart: false,
         secret: false,
+        ui: {
+          min: -1,
+        },
       },
       maxSize: {
         schema: optionalPositiveInt,
@@ -221,6 +224,9 @@ export const resourcesSchema = {
         env: 'SUBTITLE_CACHE_TTL',
         requiresRestart: false,
         secret: false,
+        ui: {
+          min: -1,
+        },
       },
       maxSize: {
         schema: optionalPositiveInt,
@@ -242,6 +248,9 @@ export const resourcesSchema = {
         env: 'STREAM_CACHE_TTL',
         requiresRestart: false,
         secret: false,
+        ui: {
+          min: -1,
+        },
       },
       maxSize: {
         schema: optionalPositiveInt,
@@ -263,6 +272,9 @@ export const resourcesSchema = {
         env: 'CATALOG_CACHE_TTL',
         requiresRestart: false,
         secret: false,
+        ui: {
+          min: -1,
+        },
       },
       maxSize: {
         schema: optionalPositiveInt,
@@ -284,6 +296,9 @@ export const resourcesSchema = {
         env: 'META_CACHE_TTL',
         requiresRestart: false,
         secret: false,
+        ui: {
+          min: -1,
+        },
       },
       maxSize: {
         schema: optionalPositiveInt,
@@ -305,6 +320,9 @@ export const resourcesSchema = {
         env: 'ADDON_CATALOG_CACHE_TTL',
         requiresRestart: false,
         secret: false,
+        ui: {
+          min: -1,
+        },
       },
       maxSize: {
         schema: optionalPositiveInt,

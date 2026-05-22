@@ -44,7 +44,8 @@ export function KeyValueListField({
   disabled,
   valueKind = 'string',
   width = 'equal',
-}: CommonProps & { valueKind?: MapValueKind; width?: KvWidth }) {
+  min = 0,
+}: CommonProps & { valueKind?: MapValueKind; width?: KvWidth; min?: number }) {
   const { control } = useFormContext();
   const { field } = useController({ name, control });
 
@@ -129,6 +130,7 @@ export function KeyValueListField({
                   value={typeof v === 'number' ? v : Number(v) || 0}
                   disabled={disabled}
                   onValueChange={(nv) => setRow(i, k, nv)}
+                  min={min}
                 />
               ) : (
                 <TextInput

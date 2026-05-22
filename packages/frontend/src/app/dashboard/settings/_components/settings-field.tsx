@@ -192,6 +192,7 @@ export function SettingsField({ k }: { k: SettingsKey }) {
           disabled={disabled}
           valueKind={k.ui.mapValueKind ?? 'string'}
           width={k.ui.mapWidth ?? 'equal'}
+          min={k.ui.min}
         />
       );
     case 'duration':

@@ -127,9 +127,8 @@ function TabForm({
             }
             continue;
           }
-          const isNullableEnum =
-            k.ui.kind === 'enum' && (k.value === null || k.default === null);
-          const normalised = isNullableEnum && val === '' ? null : val;
+          const isNullable = k.value === null || k.default === null;
+          const normalised = isNullable && val === '' ? null : val;
           if (JSON.stringify(normalised) !== JSON.stringify(k.value))
             patch[k.key] = normalised;
         }
