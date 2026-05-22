@@ -184,7 +184,6 @@ function TabForm({
           : subKeys;
         return (
           <>
-            <SettingsIsDirty isPending={isPending} />
             <div className="flex items-start justify-between gap-2">
               <SettingsPageHeader
                 title={tab.label}
@@ -214,6 +213,7 @@ function TabForm({
             <div className="flex justify-end pt-2">
               <SettingsSubmitButton isPending={isPending} />
             </div>
+            <SettingsIsDirty isPending={isPending} />
           </>
         );
       }}

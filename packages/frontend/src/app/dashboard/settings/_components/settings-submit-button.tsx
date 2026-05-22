@@ -43,12 +43,17 @@ export function SettingsIsDirty({
     <Alert
       intent="info"
       className={cn(
-        'fixed right-4 top-[2rem] z-[50] h-auto w-fit p-4 !mt-0 hidden lg:block rounded-xl bg-[--background] border shadow-2xl animate-in slide-in-from-top-2 duration-300',
+        'fixed z-[50] h-auto p-4 !mt-0 rounded-xl bg-[--background] border shadow-2xl',
+        'inset-x-4 bottom-4 w-auto animate-in slide-in-from-bottom-4 duration-300',
+        'lg:inset-x-auto lg:bottom-auto lg:right-4 lg:top-[2rem] lg:w-fit',
+        'lg:slide-in-from-top-2',
         className
       )}
     >
       <div className="flex items-center gap-3">
-        <span className="text-sm">You have unsaved changes.</span>
+        <span className="flex-1 text-sm lg:flex-none">
+          You have unsaved changes.
+        </span>
         <Button
           size="sm"
           intent="gray-link"
