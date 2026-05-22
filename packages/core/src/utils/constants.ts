@@ -1007,6 +1007,7 @@ const ENCODES = [
   'AV1',
   'HEVC',
   'AVC',
+  'VC-1',
   'XviD',
   'DivX',
   // 'H-OU',

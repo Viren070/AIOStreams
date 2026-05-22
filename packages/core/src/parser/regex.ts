@@ -130,6 +130,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     HEVC: createRegex('hevc[ .\\-_]?(10)?|[xh][ .\\-_]?265'),
     AVC: createRegex('avc|[xh][ .\\-_]?264'),
     AV1: createRegex('av1'),
+    'VC-1': createRegex('vc[ .\\-_]?1'),
     XviD: createRegex('xvid'),
     DivX: createRegex('divx|dvix'),
   },
