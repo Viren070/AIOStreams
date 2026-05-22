@@ -494,6 +494,15 @@ router.get('/analytics/users', async (req, res) => {
     .json(createResponse({ success: true, data: { growth, topUsers } }));
 });
 
+router.get('/analytics/users/:uuidHash', async (req, res) => {
+  const range = parseRange(req.query.range);
+  const data = await AnalyticsRepository.userActivity(
+    req.params.uuidHash,
+    range
+  );
+  res.status(200).json(createResponse({ success: true, data }));
+});
+
 router.get('/analytics/requests', async (req, res) => {
   const data = await AnalyticsRepository.requests(parseRange(req.query.range));
   res.status(200).json(createResponse({ success: true, data }));

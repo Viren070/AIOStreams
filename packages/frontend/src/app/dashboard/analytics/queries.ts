@@ -91,3 +91,23 @@ export const useFeaturesAnalytics = (range: Range) =>
       api<FeaturesData>(`/dashboard/analytics/features?range=${range}`),
     staleTime: 30_000,
   });
+
+/**
+ * Drill-down for a single (hashed) user in the "most active users" table:
+ * request split by resource and the anonymised IP prefixes seen.
+ */
+export interface UserActivity {
+  resources: { resource: string; count: number }[];
+  ips: { ipPrefix: string; count: number; lastSeen: number }[];
+}
+
+export const useUserActivity = (uuidHash: string | null, range: Range) =>
+  useQuery({
+    queryKey: ['dashboard', 'analytics', 'user-activity', uuidHash, range],
+    queryFn: () =>
+      api<UserActivity>(
+        `/dashboard/analytics/users/${uuidHash}?range=${range}`
+      ),
+    enabled: !!uuidHash,
+    staleTime: 30_000,
+  });
