@@ -11,6 +11,7 @@ import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import { Stream } from '../db/index.js';
 import { validateInfoHash } from '../builtins/utils/debrid.js';
+import { PresetMetadata } from '../db/schemas.js';
 
 class TorboxStreamParser extends StreamParser {
   override getSeeders(
@@ -110,7 +111,7 @@ export class TorboxAddonPreset extends Preset {
     return TorboxStreamParser;
   }
 
-  static override get METADATA() {
+  static override get METADATA(): PresetMetadata {
     const supportedServices: ServiceId[] = [constants.TORBOX_SERVICE];
 
     const supportedResources = [
@@ -170,6 +171,11 @@ export class TorboxAddonPreset extends Preset {
         constants.USENET_STREAM_TYPE,
       ],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        removed: true,
+        disabled: true,
+        reason: 'TorBox addon is deprecated.',
+      },
     };
   }
 
