@@ -129,6 +129,15 @@ apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
+apiRouter.use((req, res) => {
+  res.status(404).json(
+    createResponse({
+      success: false,
+      detail: 'Not Found',
+    })
+  );
+});
+
 app.use(`/api/v${constants.API_VERSION}`, apiRouter);
 
 // Stremio Routes
@@ -295,16 +304,6 @@ app.get('*splat', staticRateLimiter, (req, res, next) => {
     return;
   }
   next();
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json(
-    createResponse({
-      success: false,
-      detail: 'Not Found',
-    })
-  );
 });
 
 // Error handling middleware should be last

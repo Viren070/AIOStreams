@@ -1007,6 +1007,7 @@ const ENCODES = [
   'AV1',
   'HEVC',
   'AVC',
+  'VC-1',
   'XviD',
   'DivX',
   // 'H-OU',
@@ -1053,12 +1054,6 @@ export const MAX_SEEDERS = 1000;
 
 export const MIN_AGE_HOURS = 0;
 export const MAX_AGE_HOURS = 6480 * 24; // 6480 days (approx 18 years)
-
-export const DEFAULT_POSTERS = [
-  'aHR0cHM6Ly93d3cucG5nbWFydC5jb20vZmlsZXMvMTEvUmlja3JvbGxpbmctUE5HLVBpYy5wbmc=',
-];
-
-export const DEFAULT_YT_ID = 'eHZGWmpvNVBnRzA=';
 
 export const SORT_CRITERIA_DETAILS: Record<
   (typeof SORT_CRITERIA)[number],

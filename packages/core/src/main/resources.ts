@@ -184,30 +184,6 @@ function getMetaCandidates(
   return results;
 }
 
-function applyModifications(
-  ctx: AIOStreamsContext,
-  streams: ParsedStream[]
-): ParsedStream[] {
-  if (ctx.userData.randomiseResults) {
-    streams.sort(() => Math.random() - 0.5);
-  }
-  if (ctx.userData.enhanceResults) {
-    streams.forEach((stream) => {
-      if (Math.random() < 0.4) {
-        stream.filename = undefined;
-        stream.parsedFile = undefined;
-        stream.type = 'youtube';
-        stream.ytId = Buffer.from(constants.DEFAULT_YT_ID, 'base64').toString(
-          'utf-8'
-        );
-        stream.message =
-          'This stream has been artificially enhanced using the best AI on the market.';
-      }
-    });
-  }
-  return streams;
-}
-
 function getNextEpisode(
   currentSeason: number | undefined,
   currentEpisode: number,
@@ -391,7 +367,7 @@ export async function processStreams(
   if (error) {
     errors.push({ title: `Proxifier Error`, description: error });
   }
-  finalStreams = applyModifications(ctx, proxiedStreams).map((stream) => {
+  finalStreams = proxiedStreams.map((stream) => {
     if (stream.parsedFile) {
       stream.parsedFile.visualTags = stream.parsedFile.visualTags.filter(
         (tag) => !constants.FAKE_VISUAL_TAGS.includes(tag as any)

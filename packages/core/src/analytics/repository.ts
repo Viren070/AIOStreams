@@ -222,6 +222,46 @@ export const AnalyticsRepository = {
   },
 
   /**
+   * Activity detail for a single (hashed) user: request split by resource and
+   * the list of anonymised IP prefixes they've been seen from. Backs the
+   * "most active users" drill-down modal. Raw-event window only.
+   */
+  async userActivity(uuidHash: string, range: AnalyticsRange) {
+    const db = getDb();
+    const since = rangeStartMs(range);
+    const [resourceRows, ipRows] = await Promise.all([
+      db.query<{ resource: string; c: number | string }>(
+        sql`SELECT resource, COUNT(*) AS c FROM analytics_events
+            WHERE uuid_hash = ${uuidHash} AND ts >= ${since}
+              AND resource IS NOT NULL
+            GROUP BY resource ORDER BY c DESC`
+      ),
+      db.query<{
+        ip_prefix: string;
+        c: number | string;
+        last_seen: number | string;
+      }>(
+        sql`SELECT ip_prefix, COUNT(*) AS c, MAX(ts) AS last_seen
+            FROM analytics_events
+            WHERE uuid_hash = ${uuidHash} AND ts >= ${since}
+              AND ip_prefix IS NOT NULL
+            GROUP BY ip_prefix ORDER BY c DESC LIMIT 100`
+      ),
+    ]);
+    return {
+      resources: resourceRows.map((r) => ({
+        resource: r.resource,
+        count: n(r.c),
+      })),
+      ips: ipRows.map((r) => ({
+        ipPrefix: r.ip_prefix,
+        count: n(r.c),
+        lastSeen: n(r.last_seen),
+      })),
+    };
+  },
+
+  /**
    * Per-user contribution breakdown for the configure-page "Stats" tab.
    *
    */

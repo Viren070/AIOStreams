@@ -105,6 +105,7 @@ export interface CacheKeyRequestOptions {
   type: string;
   id: string;
   options: Record<string, any>;
+  headers: Record<string, string> | undefined;
   extras?: string;
 }
 

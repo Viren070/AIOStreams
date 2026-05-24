@@ -70,6 +70,29 @@ export interface AnalyticsEvent {
   feature_dim?: 'service' | 'formatter' | 'preset' | null;
   /** Global `config_feature` events: dimension key (e.g. `realdebrid`, `custom`, `torrentio`). */
   feature_key?: string | null;
+  /** Anonymised client IP — IPv4 first 3 octets / IPv6 first 3 hextets only. Never a full address. */
+  ip_prefix?: string | null;
+}
+
+/**
+ * Reduce a client IP to a coarse, non-identifying prefix: the first 3 octets
+ * for IPv4 (`a.b.c.x`) or the first 3 hextets for IPv6 (`a:b:c::/48`). The host
+ * portion is dropped so a single address can never be recovered.
+ */
+export function anonymizeIp(ip: string | undefined | null): string | null {
+  if (!ip) return null;
+  const trimmed = ip.replace(/^::ffff:/i, '').trim();
+  if (trimmed.includes('.')) {
+    const parts = trimmed.split('.');
+    if (parts.length !== 4 || parts.some((p) => p === '')) return null;
+    return `${parts[0]}.${parts[1]}.${parts[2]}.x`;
+  }
+  if (trimmed.includes(':')) {
+    const parts = trimmed.split(':').filter(Boolean);
+    if (parts.length === 0) return null;
+    return parts.slice(0, 3).join(':') + '::/48';
+  }
+  return null;
 }
 
 const MAX_BUFFER = 50_000;
@@ -193,7 +216,7 @@ async function flush(): Promise<void> {
         e.service_breakdown && Object.keys(e.service_breakdown).length > 0
           ? JSON.stringify(e.service_breakdown)
           : null;
-      return sql`(${e.ts}, ${e.event_type}, ${e.resource ?? null}, ${e.uuid_hash ?? null}, ${e.addon_id ?? null}, ${e.addon_instance_hash ?? null}, ${e.preset_id ?? null}, ${e.url_overridden ?? false}, ${e.status ?? null}, ${e.error_stage ?? null}, ${e.error_kind ?? null}, ${e.latency_ms ?? null}, ${e.result_count ?? null}, ${e.final_count ?? null}, ${e.disposition ?? null}, ${serviceBreakdown}, ${e.addon_name ?? null}, ${e.feature_dim ?? null}, ${e.feature_key ?? null})`;
+      return sql`(${e.ts}, ${e.event_type}, ${e.resource ?? null}, ${e.uuid_hash ?? null}, ${e.addon_id ?? null}, ${e.addon_instance_hash ?? null}, ${e.preset_id ?? null}, ${e.url_overridden ?? false}, ${e.status ?? null}, ${e.error_stage ?? null}, ${e.error_kind ?? null}, ${e.latency_ms ?? null}, ${e.result_count ?? null}, ${e.final_count ?? null}, ${e.disposition ?? null}, ${serviceBreakdown}, ${e.addon_name ?? null}, ${e.feature_dim ?? null}, ${e.feature_key ?? null}, ${e.ip_prefix ?? null})`;
     });
     // Chunk to keep parameter counts sane.
     const CHUNK = 500;
@@ -201,7 +224,7 @@ async function flush(): Promise<void> {
       const slice = rows.slice(i, i + CHUNK);
       await db.exec(
         sql`INSERT INTO analytics_events
-          (ts, event_type, resource, uuid_hash, addon_id, addon_instance_hash, preset_id, url_overridden, status, error_stage, error_kind, latency_ms, result_count, final_count, disposition, service_breakdown, addon_name, feature_dim, feature_key)
+          (ts, event_type, resource, uuid_hash, addon_id, addon_instance_hash, preset_id, url_overridden, status, error_stage, error_kind, latency_ms, result_count, final_count, disposition, service_breakdown, addon_name, feature_dim, feature_key, ip_prefix)
           VALUES ${join(slice)}`
       );
     }
@@ -336,12 +359,15 @@ export async function runRollup(): Promise<void> {
       });
 
     await db.tx(async (tx) => {
-      // Recompute: clear this day's rows then re-insert (idempotent).
       await tx.exec(sql`DELETE FROM analytics_daily WHERE day = ${day}`);
       for (const u of upserts) {
         await tx.exec(
           sql`INSERT INTO analytics_daily (day, dimension, key, count, latency_sum, latency_count)
-              VALUES (${day}, ${u.dim}, ${u.key}, ${u.c}, ${u.ls}, ${u.lc})`
+              VALUES (${day}, ${u.dim}, ${u.key}, ${u.c}, ${u.ls}, ${u.lc})
+              ON CONFLICT (day, dimension, key) DO UPDATE SET
+                count = excluded.count,
+                latency_sum = excluded.latency_sum,
+                latency_count = excluded.latency_count`
         );
       }
     });

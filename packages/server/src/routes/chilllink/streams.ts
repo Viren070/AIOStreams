@@ -63,7 +63,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .json(
         await transformer.transformStreams(
           response,
-          streamContext.toFormatterContext()
+          streamContext.toFormatterContext(response.data.streams)
         )
       );
   } catch (error) {

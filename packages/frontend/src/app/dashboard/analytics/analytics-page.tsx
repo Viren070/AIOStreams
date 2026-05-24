@@ -1,15 +1,41 @@
 import React from 'react';
+import { FiInfo } from 'react-icons/fi';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Card } from '@/components/ui/card';
+import { Modal } from '@/components/ui/modal';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { AreaChart, BarChart, DonutChart, Stat } from '@/components/ui/charts';
+import { formatCompact } from '@/lib/format';
+
+/**
+ * A number shown in compact form (`1.2M`) with the exact value revealed in a
+ * tooltip on hover. Values below 1,000 aren't abbreviated, so no tooltip.
+ */
+function CompactNumber({ value }: { value: number }) {
+  const compact = formatCompact(value);
+  const full = value.toLocaleString();
+  if (compact === full) return <span className="tabular-nums">{compact}</span>;
+  return (
+    <Tooltip
+      trigger={
+        <span className="tabular-nums cursor-default border-b border-dotted border-[--muted]/40">
+          {compact}
+        </span>
+      }
+    >
+      {full}
+    </Tooltip>
+  );
+}
 import {
   useOverview,
   useUsersAnalytics,
   useRequestsAnalytics,
   useAddonsAnalytics,
   useFeaturesAnalytics,
+  useUserActivity,
   type Range,
   type FeatureEntry,
 } from './queries';
@@ -63,8 +89,8 @@ function FeatureList({ title, rows }: { title: string; rows: FeatureEntry[] }) {
             <li key={r.key} className="text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate font-medium">{r.key}</span>
-                <span className="tabular-nums text-[--muted]">
-                  {r.count.toLocaleString()}
+                <span className="text-[--muted]">
+                  <CompactNumber value={r.count} />
                 </span>
               </div>
               <div className="h-1 rounded-full bg-[--subtle] overflow-hidden">
@@ -83,8 +109,125 @@ function FeatureList({ title, rows }: { title: string; rows: FeatureEntry[] }) {
   );
 }
 
+/**
+ * Drill-down for one row of the "most active users" table: request split by
+ * resource plus every anonymized IP prefix the (hashed) user was seen from.
+ */
+function UserActivityModal({
+  uuidHash,
+  range,
+  onClose,
+}: {
+  uuidHash: string | null;
+  range: Range;
+  onClose: () => void;
+}) {
+  const activity = useUserActivity(uuidHash, range);
+  const d = activity.data;
+  const maxResource = d
+    ? Math.max(1, ...d.resources.map((r) => r.count))
+    : 1;
+
+  return (
+    <Modal
+      open={!!uuidHash}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title="User activity"
+      description={
+        uuidHash
+          ? `Hashed config ${uuidHash.slice(0, 16)} · ${range}`
+          : undefined
+      }
+      contentClass="max-w-xl"
+    >
+      {activity.isLoading ? (
+        <p className="text-sm text-[--muted]">Loading…</p>
+      ) : activity.isError ? (
+        <p className="text-sm text-red-500">Failed to load user activity.</p>
+      ) : !d ? null : (
+        <div className="space-y-5">
+          <div>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[--muted]">
+              Requests by resource
+            </h4>
+            {d.resources.length === 0 ? (
+              <p className="text-sm text-[--muted]">
+                No requests in this range.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {d.resources.map((r) => (
+                  <li key={r.resource} className="text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{r.resource}</span>
+                      <span className="text-[--muted]">
+                        <CompactNumber value={r.count} />
+                      </span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded-full bg-[--subtle]">
+                      <div
+                        className="h-full bg-brand"
+                        style={{
+                          width: `${(r.count / maxResource) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[--muted]">
+              IP addresses ({d.ips.length})
+            </h4>
+            {d.ips.length === 0 ? (
+              <p className="text-sm text-[--muted]">
+                No IP data recorded for this user.
+              </p>
+            ) : (
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs uppercase text-[--muted]">
+                    <tr className="border-b border-[--border] text-left">
+                      <th className="py-1.5 pr-3">Anonymized IP</th>
+                      <th className="py-1.5 px-3 text-right">Requests</th>
+                      <th className="py-1.5 pl-3 text-right">Last seen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.ips.map((ip) => (
+                      <tr
+                        key={ip.ipPrefix}
+                        className="border-b border-[--border]/50"
+                      >
+                        <td className="py-1.5 pr-3 font-mono text-xs">
+                          {ip.ipPrefix}
+                        </td>
+                        <td className="py-1.5 px-3 text-right">
+                          <CompactNumber value={ip.count} />
+                        </td>
+                        <td className="py-1.5 pl-3 text-right whitespace-nowrap text-[--muted]">
+                          {new Date(ip.lastSeen).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export function AnalyticsPage() {
   const [range, setRange] = React.useState<Range>('7d');
+  const [selectedUser, setSelectedUser] = React.useState<string | null>(null);
   const overview = useOverview();
   const users = useUsersAnalytics(range);
   const requests = useRequestsAnalytics(range);
@@ -99,7 +242,8 @@ export function AnalyticsPage() {
         <div>
           <h2>Analytics</h2>
           <p className="text-[--muted]">
-            Usage, requests and addon health. No IP data is collected.
+            Usage, requests and addon health. Only anonymized IP prefixes
+            (first 3 octets) are stored.
           </p>
         </div>
         <RangeToggle value={range} onChange={setRange} />
@@ -109,22 +253,22 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat
           label="Configured users"
-          value={o ? o.totalUsers : '—'}
-          hint={o ? `+${o.newUsers.d7} this week` : ''}
+          value={o ? <CompactNumber value={o.totalUsers} /> : '—'}
+          hint={o ? `+${formatCompact(o.newUsers.d7)} this week` : ''}
         />
         <Stat
           label="New users (24h)"
-          value={o ? o.newUsers.d1 : '—'}
-          hint={o ? `${o.newUsers.d30} in 30d` : ''}
+          value={o ? <CompactNumber value={o.newUsers.d1} /> : '—'}
+          hint={o ? `${formatCompact(o.newUsers.d30)} in 30d` : ''}
         />
         <Stat
           label="Active users (24h)"
-          value={o ? o.activeUsers.d1 : '—'}
-          hint={o ? `${o.activeUsers.d7} in 7d` : ''}
+          value={o ? <CompactNumber value={o.activeUsers.d1} /> : '—'}
+          hint={o ? `${formatCompact(o.activeUsers.d7)} in 7d` : ''}
         />
         <Stat
           label="Requests (24h)"
-          value={o ? o.requests24h.toLocaleString() : '—'}
+          value={o ? <CompactNumber value={o.requests24h} /> : '—'}
         />
       </div>
 
@@ -216,8 +360,8 @@ export function AnalyticsPage() {
                           <td className="py-2 pr-3 font-medium">
                             {a.presetId}
                           </td>
-                          <td className="py-2 px-3 text-right tabular-nums">
-                            {a.requests.toLocaleString()}
+                          <td className="py-2 px-3 text-right">
+                            <CompactNumber value={a.requests} />
                           </td>
                           <td className="py-2 px-3 text-right tabular-nums">
                             {a.share}%
@@ -248,7 +392,7 @@ export function AnalyticsPage() {
                       value: a.requests,
                     }))}
                     centerLabel="requests"
-                    centerValue={d.total.toLocaleString()}
+                    centerValue={formatCompact(d.total)}
                     height={240}
                   />
                 </div>
@@ -306,8 +450,23 @@ export function AnalyticsPage() {
                         <td className="py-1.5 font-mono text-xs text-[--muted] break-all">
                           {u.uuidHash.slice(0, 16)}
                         </td>
-                        <td className="py-1.5 pl-3 text-right tabular-nums whitespace-nowrap">
-                          {u.requests.toLocaleString()}
+                        <td className="py-1.5 pl-3 text-right whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5">
+                            <CompactNumber value={u.requests} />
+                            <Tooltip
+                              trigger={
+                                <button
+                                  onClick={() => setSelectedUser(u.uuidHash)}
+                                  aria-label="View user activity"
+                                  className="text-[--muted] transition-colors hover:text-brand"
+                                >
+                                  <FiInfo className="size-4" />
+                                </button>
+                              }
+                            >
+                              View activity
+                            </Tooltip>
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -318,6 +477,12 @@ export function AnalyticsPage() {
           }
         </DashboardQueryBoundary>
       </Card>
+
+      <UserActivityModal
+        uuidHash={selectedUser}
+        range={range}
+        onClose={() => setSelectedUser(null)}
+      />
     </PageWrapper>
   );
 }

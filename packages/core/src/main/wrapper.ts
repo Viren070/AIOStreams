@@ -185,6 +185,7 @@ export class Wrapper {
         resource: 'manifest',
         type: 'manifest',
         id: 'manifest',
+        headers: this.addon.headers,
         options: this.addon.preset.options,
       }) || this.manifestUrl;
 
@@ -262,6 +263,7 @@ export class Wrapper {
         type,
         id,
         options: this.addon.preset.options,
+        headers: this.addon.headers,
       }) || this.buildResourceUrl('stream', type, id);
     const streamTtl = resolveTtl(
       appConfig.resources.cache.stream.ttl,
@@ -279,6 +281,7 @@ export class Wrapper {
         resource: 'stream',
         type,
         id,
+        headers: this.addon.headers,
         options: this.addon.preset.options,
       })
     );
@@ -348,6 +351,7 @@ export class Wrapper {
         type,
         id,
         options: this.addon.preset.options,
+        headers: this.addon.headers,
         extras,
       })
     );
@@ -386,6 +390,7 @@ export class Wrapper {
         resource: 'meta',
         type,
         id,
+        headers: this.addon.headers,
         options: this.addon.preset.options,
       })
     );
@@ -430,6 +435,7 @@ export class Wrapper {
         resource: 'subtitles',
         type,
         id,
+        headers: this.addon.headers,
         options: this.addon.preset.options,
       })
     );
@@ -461,6 +467,7 @@ export class Wrapper {
         type,
         id,
         options: this.addon.preset.options,
+        headers: this.addon.headers,
       })
     );
   }

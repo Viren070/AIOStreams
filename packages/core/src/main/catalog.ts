@@ -4,7 +4,6 @@ import {
   ExtrasParser,
   getSimpleTextHash,
   maskSensitiveInfo,
-  constants,
 } from '../utils/index.js';
 import { Wrapper } from './wrapper.js';
 import { createPosterService } from '../poster/index.js';
@@ -187,15 +186,6 @@ export async function applyPosterModifications(
           }
         }
         item.poster = posterUrl;
-      }
-
-      if (ctx.userData.enhancePosters && Math.random() < 0.2) {
-        item.poster = Buffer.from(
-          constants.DEFAULT_POSTERS[
-            Math.floor(Math.random() * constants.DEFAULT_POSTERS.length)
-          ],
-          'base64'
-        ).toString('utf-8');
       }
 
       if (item.links) {

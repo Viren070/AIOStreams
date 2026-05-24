@@ -1355,7 +1355,7 @@ function Content() {
       ...clonedData,
       ip: undefined,
       uuid: undefined,
-      accessToken: undefined,
+      accessKey: undefined,
       tmdbAccessToken: undefined,
       tmdbApiKey: undefined,
       tvdbApiKey: undefined,

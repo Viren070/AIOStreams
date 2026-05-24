@@ -47,16 +47,18 @@ async function withMigrationLock<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   if (driver.dialect === 'postgres') {
-    await driver.exec(`SELECT pg_advisory_lock(${PG_ADVISORY_LOCK_KEY})`);
-    try {
-      return await fn();
-    } finally {
-      try {
-        await driver.exec(`SELECT pg_advisory_unlock(${PG_ADVISORY_LOCK_KEY})`);
-      } catch {
-        // best-effort
-      }
-    }
+    // `pg_advisory_xact_lock` is auto-released by Postgres on COMMIT or
+    // ROLLBACK of the transaction's pinned connection, so its lifecycle
+    // is tied to the tx and cannot leak across pool checkouts. The
+    // earlier `driver.exec(pg_advisory_lock) … driver.exec(pg_advisory_unlock)`
+    // pair sent lock and unlock through `pool.query()`, which checks
+    // out a fresh connection per call — so the unlock no-oped on a
+    // different session while the original connection returned to the
+    // pool still holding the session-level lock. See #975.
+    return driver.tx(async (tx) => {
+      await tx.exec(`SELECT pg_advisory_xact_lock(${PG_ADVISORY_LOCK_KEY})`);
+      return fn();
+    });
   }
   // SQLite: the driver's internal mutex already serializes writes; in
   // practice multi-replica + SQLite is not a supported deployment.

@@ -127,9 +127,8 @@ function TabForm({
             }
             continue;
           }
-          const isNullableEnum =
-            k.ui.kind === 'enum' && (k.value === null || k.default === null);
-          const normalised = isNullableEnum && val === '' ? null : val;
+          const isNullable = k.value === null || k.default === null;
+          const normalised = isNullable && val === '' ? null : val;
           if (JSON.stringify(normalised) !== JSON.stringify(k.value))
             patch[k.key] = normalised;
         }
@@ -184,7 +183,6 @@ function TabForm({
           : subKeys;
         return (
           <>
-            <SettingsIsDirty isPending={isPending} />
             <div className="flex items-start justify-between gap-2">
               <SettingsPageHeader
                 title={tab.label}
@@ -214,6 +212,7 @@ function TabForm({
             <div className="flex justify-end pt-2">
               <SettingsSubmitButton isPending={isPending} />
             </div>
+            <SettingsIsDirty isPending={isPending} />
           </>
         );
       }}
