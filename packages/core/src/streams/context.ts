@@ -244,7 +244,19 @@ export class StreamContext {
             }
           }
 
-          if (this.animeEntry?.imdb?.nonImdbEpisodes && absoluteEpisode) {
+          // Adjust for non-IMDB episodes if they exist.
+          const parsedSeasonRecord = seasons.find(
+            (s) => s.number === this.parsedId!.season
+          );
+          const isAlreadyAbsoluteForNonImdb =
+            parsedSeasonRecord !== undefined &&
+            Number(this.parsedId!.episode) > parsedSeasonRecord.episodes;
+
+          if (
+            this.animeEntry?.imdb?.nonImdbEpisodes &&
+            absoluteEpisode &&
+            !isAlreadyAbsoluteForNonImdb
+          ) {
             const nonImdbEpisodesBefore =
               this.animeEntry.imdb.nonImdbEpisodes.filter(
                 (ep: number) => ep < absoluteEpisode!

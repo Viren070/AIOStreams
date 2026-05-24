@@ -627,11 +627,19 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         }
       }
 
-      // Adjust for non-IMDB episodes if they exist
+
+      const parsedSeasonRecord = seasons.find(
+        (s) => s.number === parsedId.season
+      );
+      const isAlreadyAbsoluteForNonImdb =
+        parsedSeasonRecord !== undefined &&
+        Number(parsedId.episode) > parsedSeasonRecord.episodes;
+
       if (
         animeEntry?.imdb?.nonImdbEpisodes &&
         absoluteEpisode &&
-        parsedId.type === 'imdbId'
+        parsedId.type === 'imdbId' &&
+        !isAlreadyAbsoluteForNonImdb
       ) {
         const nonImdbEpisodesBefore = animeEntry.imdb.nonImdbEpisodes.filter(
           (ep) => ep < absoluteEpisode!
