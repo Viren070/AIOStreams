@@ -1355,7 +1355,6 @@ const MISC_FIELDS: (keyof UserData)[] = [
   'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
   'accessKey', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
-  'randomiseResults', 'enhanceResults', 'enhancePosters',
 ];
 
 // prettier-ignore

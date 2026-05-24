@@ -18,7 +18,6 @@ import {
   BiSort,
   BiCog,
   BiServer,
-  BiSmile,
   BiHeart,
   BiLogOutCircle,
   BiLogInCircle,
@@ -37,7 +36,6 @@ import { Modal } from '@/components/ui/modal';
 import { TextInput } from '@/components/ui/text-input';
 import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
-import { useOptions } from '@/context/options';
 import { useMode } from '@/context/mode';
 import { DonationModal } from '@/components/shared/donation-modal';
 import { useSave } from '@/context/save';
@@ -53,7 +51,6 @@ export function MainSidebar() {
   const { selectedMenu, setSelectedMenu } = useMenu();
   const pathname =
     typeof window !== 'undefined' ? window.location.pathname : '';
-  const { isOptionsEnabled, toggleOptions } = useOptions();
   const donationModal = useDisclosure(false);
 
   const user = useUserData();
@@ -186,16 +183,6 @@ export function MainSidebar() {
       isCurrent: selectedMenu === 'proxy',
       id: 'proxy' as const,
     },
-    ...(isOptionsEnabled
-      ? [
-          {
-            name: 'Fun',
-            iconType: BiSmile,
-            isCurrent: selectedMenu === 'fun',
-            id: 'fun' as const,
-          },
-        ]
-      : []),
     {
       name: 'Miscellaneous',
       iconType: BiCog,
@@ -227,13 +214,7 @@ export function MainSidebar() {
   const header = (
     <>
       <div className="mb-4 p-4 pb-0 flex flex-col items-center w-full">
-        <div
-          className="flex items-center gap-2"
-          onContextMenu={(e) => {
-            e.preventDefault();
-            toggleOptions();
-          }}
-        >
+        <div className="flex items-center gap-2">
           <img
             src={
               status?.settings.alternateDesign

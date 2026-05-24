@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { UserDataProvider } from '@/context/userData';
 import { SaveProvider } from '@/context/save';
 import { LuffyError } from '@/components/shared/luffy-error';
-import { OptionsProvider } from '@/context/options';
 import { ModeProvider } from '@/context/mode';
 import { SubTabProvider } from '@/context/sub-tab';
 import { QuickActionsProvider } from '@/context/quick-actions';
@@ -86,11 +85,9 @@ function AppContent() {
 export default function ConfigurePage() {
   return (
     <UserDataProvider>
-      <OptionsProvider>
-        <ModeProvider>
-          <AppContent />
-        </ModeProvider>
-      </OptionsProvider>
+      <ModeProvider>
+        <AppContent />
+      </ModeProvider>
     </UserDataProvider>
   );
 }

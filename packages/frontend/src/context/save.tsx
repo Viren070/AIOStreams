@@ -102,7 +102,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         uuid: (prev as any).uuid,
         encryptedPassword: (prev as any).encryptedPassword,
         trusted: (prev as any).trusted,
-        accessToken: prev.accessToken,
+        accessKey: prev.accessKey,
         ip: (prev as any).ip,
         showChanges: prev.showChanges,
       }));

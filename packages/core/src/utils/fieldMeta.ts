@@ -18,7 +18,6 @@ export const MENU_IDS = [
   'sorting',
   'formatter',
   'proxy',
-  'fun',
   'miscellaneous',
   'stats',
   'save-install',
@@ -80,10 +79,7 @@ type IgnoredKeys =
   | 'appliedTemplates'
   | 'precacheNextEpisode'
   | 'alwaysPrecache'
-  | 'precacheCondition'
-  | 'randomiseResults'
-  | 'enhanceResults'
-  | 'enhancePosters';
+  | 'precacheCondition';
 
 // prettier-ignore
 export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = {
