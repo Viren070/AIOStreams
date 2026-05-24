@@ -6,7 +6,7 @@ import {
   Stream,
   ParsedStream,
 } from '../db/index.js';
-import { baseOptions, Preset } from './preset.js';
+import { baseOptions, CacheKeyRequestOptions, Preset } from './preset.js';
 import { createLogger, getSimpleTextHash } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
@@ -407,6 +407,16 @@ export class MediaFusionPreset extends Preset {
     };
   }
 
+  public static getCacheKey(
+    options: CacheKeyRequestOptions
+  ): string | undefined {
+    const { headers } = options;
+    if (headers?.encoded_user_data) {
+      return getSimpleTextHash(headers.encoded_user_data);
+    }
+    return undefined;
+  }
+
   private static generateManifestUrl(
     options: Record<string, any>,
     encodedUserData: string
@@ -415,7 +425,7 @@ export class MediaFusionPreset extends Preset {
     if (url.endsWith('/manifest.json')) {
       return url;
     }
-    return `${url}/${getSimpleTextHash(encodedUserData)}/manifest.json`;
+    return `${url}/manifest.json`;
   }
 
   private static generateEncodedUserData(
