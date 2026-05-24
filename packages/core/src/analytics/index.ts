@@ -359,12 +359,15 @@ export async function runRollup(): Promise<void> {
       });
 
     await db.tx(async (tx) => {
-      // Recompute: clear this day's rows then re-insert (idempotent).
       await tx.exec(sql`DELETE FROM analytics_daily WHERE day = ${day}`);
       for (const u of upserts) {
         await tx.exec(
           sql`INSERT INTO analytics_daily (day, dimension, key, count, latency_sum, latency_count)
-              VALUES (${day}, ${u.dim}, ${u.key}, ${u.c}, ${u.ls}, ${u.lc})`
+              VALUES (${day}, ${u.dim}, ${u.key}, ${u.c}, ${u.ls}, ${u.lc})
+              ON CONFLICT (day, dimension, key) DO UPDATE SET
+                count = excluded.count,
+                latency_sum = excluded.latency_sum,
+                latency_count = excluded.latency_count`
         );
       }
     });
