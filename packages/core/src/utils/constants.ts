@@ -159,6 +159,7 @@ export const TORRENTIO_FORMATTER = 'torrentio';
 export const TORBOX_FORMATTER = 'torbox';
 export const PRISM_FORMATTER = 'prism';
 export const TAMTARO_FORMATTER = 'tamtaro';
+export const LITE_FORMATTER = 'lite';
 export const CUSTOM_FORMATTER = 'custom';
 
 export const FORMATTERS = [
@@ -167,6 +168,7 @@ export const FORMATTERS = [
   TAMTARO_FORMATTER,
   LIGHT_GDRIVE_FORMATTER,
   MINIMALISTIC_GDRIVE_FORMATTER,
+  LITE_FORMATTER,
   TORRENTIO_FORMATTER,
   TORBOX_FORMATTER,
   CUSTOM_FORMATTER,
@@ -205,6 +207,12 @@ export const FORMATTER_DETAILS: Record<FormatterType, FormatterDetail> = {
     id: MINIMALISTIC_GDRIVE_FORMATTER,
     name: 'Minimalistic',
     description: 'A minimalistic formatter which shows only the bare minimum',
+  },
+  [LITE_FORMATTER]: {
+    id: LITE_FORMATTER,
+    name: 'Lite',
+    description:
+      'A compact formatter with emoji-coded resolution, cache status, quality, addon, release group, languages, subtitles, tags, size, seeders, season packs and encode flags.',
   },
   [TORRENTIO_FORMATTER]: {
     id: TORRENTIO_FORMATTER,

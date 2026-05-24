@@ -61,6 +61,18 @@ Languages: {stream.languages::exists["{stream.languages::join(', ')}"||""]}{stre
 {stream.message::exists["ℹ️ {stream.message}"||""]}
 `,
   },
+  lite: {
+    name: `{service.cached::isfalse["🌐❌ - UC"||""]}
+{stream.resolution::exists["{stream.resolution::replace('2160p','✨ 4K')::replace('1440p','📀 2K')::replace('1080p','🧿1080p')::replace('720p','💿720p')}"||"N/A"]}{service.cached::istrue["🎖️"||""]}
+{stream.quality::exists["🎬{stream.quality::upper}"||""]}
+🧩 {addon.name::replace('MediaFusion', 'M.Fusion')::replace('Stremio GDrive', 'G.Drive')}
+{stream.releaseGroup::exists["👥 {stream.releaseGroup}"||""]}`,
+    description: `{stream.languages::exists["🌎 Idioma: {stream.languageEmojis::join(' • Subs: ')}"||""]}{stream.subtitleEmojis::exists["📝 {stream.subtitleEmojis::join(' ')}"||""]}
+{stream.visualTags::exists["🔆 {stream.visualTags::join(' • ')}  "||""]}{stream.audioTags::exists["🔊 {stream.audioTags::join(' • ')}"||""]}
+{stream.size::>0["📦 {stream.size::sbytes} "||""]}{service.cached::isfalse["🌱{stream.seeders}"||""]}
+{stream.seasonPack::istrue["📦 {stream.formattedSeasons}"||""]}
+{stream.encode::~AV1["⚠️ {stream.encode}"||""]}{stream.encode::~AVC["✅ {stream.encode}"||""]}{stream.repack::istrue[" 🔄 Repack"||""]}{stream.upscaled::istrue[" ⬆️ Upscaled"||""]}{stream.unrated::istrue[" 🔞 Unrated"||""]}{stream.uncensored::istrue[" 🔓 Uncensored"||""]}`,
+  },
   tamtaro: {
     name: `{stream.resolution::exists["{stream.resolution::replace('2160p','   4K ')::replace('1440p','    2K ')::replace('p','P')}‍"||"‍     "]}{stream.type::exists["‍{stream.type::replace('debrid','    ')::replace('p2p','⁽ᵖ²ᵖ⁾')::replace('live','⁽ˡᶦᵛᵉ⁾')::replace('http','⁽ʷᵉᵇ⁾')::replace('usenet','‍⁽ⁿᶻᵇ⁾‍')::replace('stremio-usenet','‏⁽ⁿᶻᵇ⁾')::replace('info','⁽ᶦⁿᶠᵒ⁾')::replace('statistic','⁽ˢᵗᵃᵗˢ⁾')::replace('external','⁽ᵉˣᵗ⁾')::replace('error','⁽ᵉʳʳᵒʳ⁾')::replace('youtube','⁽ʸᵗ⁾')}‍‍‍"||""]}{service.cached::istrue["⚡"||""]}{service.cached::isfalse["‍⏳‍​"||""]}{stream.quality::exists["‍‍\n  〈{stream.quality::title::replace('Bluray Remux','Remux')::replace('Web-dl','Web‍-‍dl')::replace('Hc Hd-rip','HC HDRip')::replace('Hdrip','HDRip')}〉‍     "||""]}{stream.message::~Download["{tools.removeLine}\n"||""]}{stream.nSeScore::exists["‍\n  {stream.nSeScore::star::replace('⯪','☆')}            "||""]}{stream.message::~Download["{tools.removeLine}\n"||""]}`,
     description: `{stream.title::exists::and::stream.library::isfalse["✎  {stream.title::title::truncate(15)}"||""]}{stream.title::exists::and::stream.library::istrue["☁︎  {stream.title::title::truncate(15)} "||""]}{stream.year::exists::and::stream.episodes::exists::isfalse::and::stream.seasons::exists::isfalse[" ({stream.year})"||""]}{stream.seasonEpisode::exists["  {stream.seasonEpisode::join('·')::replace('E','ᴇ')::replace('S','s')::replace('0','₀')::replace('1','₁')::replace('2','₂')::replace('3','₃')::replace('4','₄')::replace('5','₅')::replace('6','₆')::replace('7','₇')::replace('8','₈')::replace('9','₉')}"||""]}
