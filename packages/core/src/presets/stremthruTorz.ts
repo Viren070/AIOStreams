@@ -10,9 +10,21 @@ import { baseOptions, Preset } from './preset.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
-import { StremThruPreset } from './stremthru.js';
+import { StremThruPreset, StremThruStreamParser } from './stremthru.js';
+
+class StremthruTorzStreamParser extends StremThruStreamParser {
+  protected override applyUrlModifications(
+    url: string | undefined
+  ): string | undefined {
+    return super.applyUrlModifications(url);
+  }
+}
 
 export class StremthruTorzPreset extends StremThruPreset {
+  static override getParser(): typeof StreamParser {
+    return StremthruTorzStreamParser;
+  }
+
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
 
