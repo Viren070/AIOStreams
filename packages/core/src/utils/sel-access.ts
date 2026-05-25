@@ -67,10 +67,13 @@ export class SelAccess {
   }
 
   /**
-   * Clean up resources.
+   * Clean up resources. Safe to call before `initialise()`: the `manager`
+   * getter would otherwise read from `config.userLimits.sel` and trip the
+   * settings-store guard if shutdown runs before `initialiseConfig()` has
+   * resolved (e.g. SIGTERM during startup).
    */
   public static cleanup(): void {
-    this.manager.cleanup();
+    if (this._instance) this._instance.cleanup();
   }
 
   /**
