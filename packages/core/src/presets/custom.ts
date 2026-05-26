@@ -2,8 +2,12 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { appConfig, RESOURCES } from '../utils/index.js';
 import { constants } from '../utils/index.js';
+import { StreamParser } from '../parser/index.js';
 
 export class CustomPreset extends Preset {
+  static override getParser(): typeof StreamParser {
+    return CustomStreamParser;
+  }
   static override get METADATA() {
     const options: Option[] = [
       {
@@ -103,6 +107,16 @@ export class CustomPreset extends Preset {
         type: 'boolean',
       },
       {
+        id: 'forceUsenet',
+        name: 'Force Usenet stream/service',
+        description:
+          'When enabled, sets stream.type to "usenet" and service.id to NZBDAV_SERVICE for all streams from this addon.',
+        type: 'boolean',
+        required: false,
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
         id: 'resultPassthrough',
         name: 'Result Passthrough',
         description:
@@ -175,5 +189,30 @@ export class CustomPreset extends Preset {
         'User-Agent': this.METADATA.USER_AGENT,
       },
     };
+  }
+}
+
+class CustomStreamParser extends StreamParser {
+  protected getService(
+    stream: any,
+    currentParsedStream: any
+  ): any | undefined {
+    const force = (this.addon?.preset as any)?.options?.forceUsenet;
+    if (force) {
+      return { id: constants.NZBDAV_SERVICE, cached: true };
+    }
+    return super.getService(stream, currentParsedStream);
+  }
+
+  protected getStreamType(
+    stream: any,
+    service: any,
+    currentParsedStream: any
+  ): any {
+    const force = (this.addon?.preset as any)?.options?.forceUsenet;
+    if (force) {
+      return constants.USENET_STREAM_TYPE;
+    }
+    return super.getStreamType(stream, service, currentParsedStream);
   }
 }
