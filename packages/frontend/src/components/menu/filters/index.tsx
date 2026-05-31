@@ -41,6 +41,7 @@ import {
   LANGUAGES,
   TYPES,
   DEDUPLICATOR_KEYS,
+  DEDUPLICATOR_TIEBREAKERS,
   SMART_DETECT_ATTRIBUTES,
   DEFAULT_SMART_DETECT_ATTRIBUTES,
   AUDIO_CHANNELS,
@@ -3386,9 +3387,10 @@ function Content() {
                           <span className="font-medium">Single Result</span>
                           <p className="text-sm text-[--muted] mt-1">
                             Keeps only one result from your highest priority
-                            service and highest priority addon. If it is a P2P
-                            or uncached result, it prioritises the number of
-                            seeders over addon priority.
+                            service and highest priority addon. Enabled
+                            tiebreakers (torrent seeders, usenet age) are
+                            applied at the position configured below - either
+                            before or after addon order is considered.
                           </p>
                         </div>
                         <div>
@@ -3644,6 +3646,86 @@ function Content() {
                           { label: 'Exclusive', value: 'exclusive' },
                         ]}
                       />
+                      {DEDUPLICATOR_TIEBREAKERS.map((tiebreakerType) => {
+                        const label =
+                          tiebreakerType === 'torrent_seeders'
+                            ? 'Torrent Seeders Tiebreaker'
+                            : 'Usenet Age Tiebreaker';
+                        const help =
+                          tiebreakerType === 'torrent_seeders'
+                            ? 'When choosing between duplicate P2P or uncached streams, prefer the one with more seeders. Controls where in the priority order this check runs relative to addon order.'
+                            : 'When choosing between duplicate Usenet streams, prefer the newer post (posts released within the last 24 hours are considered equal). Controls where in the priority order this check runs relative to addon order.';
+                        const defaultPosition = 'before_addon';
+                        const currentTiebreakers = userData.deduplicator
+                          ?.tiebreakers ?? [
+                          {
+                            type: 'torrent_seeders',
+                            position: 'before_addon',
+                          },
+                          { type: 'usenet_age', position: 'before_addon' },
+                        ];
+                        const entry = currentTiebreakers.find(
+                          (t) => t.type === tiebreakerType
+                        );
+                        const value = entry?.position ?? 'disabled';
+                        return (
+                          <Select
+                            key={tiebreakerType}
+                            disabled={!userData.deduplicator?.enabled}
+                            label={label}
+                            help={help}
+                            value={value ?? defaultPosition}
+                            onValueChange={(newValue) => {
+                              setUserData((prev) => {
+                                const existing = prev.deduplicator
+                                  ?.tiebreakers ?? [
+                                  {
+                                    type: 'torrent_seeders' as const,
+                                    position: 'before_addon' as const,
+                                  },
+                                  {
+                                    type: 'usenet_age' as const,
+                                    position: 'after_addon' as const,
+                                  },
+                                ];
+                                const filtered = existing.filter(
+                                  (t) => t.type !== tiebreakerType
+                                );
+                                const updated =
+                                  newValue === 'disabled'
+                                    ? filtered
+                                    : [
+                                        ...filtered,
+                                        {
+                                          type: tiebreakerType,
+                                          position: newValue as
+                                            | 'before_addon'
+                                            | 'after_addon',
+                                        },
+                                      ];
+                                return {
+                                  ...prev,
+                                  deduplicator: {
+                                    ...prev.deduplicator,
+                                    tiebreakers: updated,
+                                  },
+                                };
+                              });
+                            }}
+                            options={[
+                              { label: 'Disabled', value: 'disabled' },
+                              {
+                                label: 'Before Addon Order',
+                                value: 'before_addon',
+                              },
+                              {
+                                label: 'After Addon Order',
+                                value: 'after_addon',
+                              },
+                            ]}
+                          />
+                        );
+                      })}
                     </SettingsCard>
                   </>
                 )}

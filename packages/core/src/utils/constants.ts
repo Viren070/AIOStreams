@@ -840,6 +840,11 @@ export const DEDUPLICATOR_LIBRARY_BEHAVIOURS = [
   'exclusive',
 ] as const;
 
+export const DEDUPLICATOR_TIEBREAKERS = [
+  'torrent_seeders',
+  'usenet_age',
+] as const;
+
 export const SMART_DETECT_ATTRIBUTES = [
   'size',
   'bitrate',

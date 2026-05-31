@@ -42,6 +42,10 @@ class StreamDeduplicator {
         constants.DEFAULT_SMART_DETECT_ATTRIBUTES,
       smartDetectRounding: deduplicator.smartDetectRounding ?? 10,
       libraryBehaviour: deduplicator.libraryBehaviour ?? 'ignore',
+      tiebreakers: deduplicator.tiebreakers ?? [
+        { type: 'torrent_seeders' as const, position: 'before_addon' as const },
+        { type: 'usenet_age' as const, position: 'before_addon' as const },
+      ],
     };
 
     // Group streams by their deduplication keys
@@ -234,6 +238,42 @@ class StreamDeduplicator {
       }
 
       // Process each type according to its deduplication mode
+      const seedersEntry = deduplicator.tiebreakers!.find(
+        (t) => t.type === 'torrent_seeders'
+      );
+      const usenetEntry = deduplicator.tiebreakers!.find(
+        (t) => t.type === 'usenet_age'
+      );
+
+      const tiebreakerCmp = (
+        a: ParsedStream,
+        b: ParsedStream,
+        type: string,
+        position: 'before_addon' | 'after_addon' | 'any'
+      ): number => {
+        if (
+          seedersEntry &&
+          (position === 'any' || seedersEntry.position === position) &&
+          (type === 'p2p' || type === 'uncached') &&
+          a.torrent?.seeders !== undefined &&
+          b.torrent?.seeders !== undefined &&
+          (a.torrent.seeders || 0) !== (b.torrent.seeders || 0)
+        ) {
+          return (b.torrent.seeders || 0) - (a.torrent.seeders || 0);
+        }
+        if (
+          usenetEntry &&
+          (position === 'any' || usenetEntry.position === position) &&
+          (type === 'usenet' || type === 'stremio-usenet') &&
+          a.age !== undefined &&
+          b.age !== undefined &&
+          Math.abs(a.age - b.age) > 24
+        ) {
+          return a.age - b.age;
+        }
+        return 0;
+      };
+
       for (const [type, rawTypeStreams] of streamsByType.entries()) {
         if (type.startsWith('passthrough-')) {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
@@ -264,8 +304,7 @@ class StreamDeduplicator {
             let selectedStream = typeStreams.sort((a, b) => {
               const lc = libraryCmp(a, b);
               if (lc !== 0) return lc;
-              // so a specific type may either have both streams not have a service, or both streams have a service
-              // if both streams have a service, then we can simpl
+
               let aProviderIndex =
                 this.userData.services
                   ?.filter((service) => service.enabled)
@@ -282,30 +321,23 @@ class StreamDeduplicator {
                 return aProviderIndex - bProviderIndex;
               }
 
-              // look at seeders for p2p and uncached streams
-              if (
-                (type === 'p2p' || type === 'uncached') &&
-                a.torrent?.seeders &&
-                b.torrent?.seeders
-              ) {
-                return (b.torrent.seeders || 0) - (a.torrent.seeders || 0);
-              }
+              const tb = tiebreakerCmp(a, b, type, 'before_addon');
+              if (tb !== 0) return tb;
 
-              // now look at the addon index
-
+              // the addon index MUST exist, its not possible for it to not exist
               const aAddonIndex = this.userData.presets.findIndex(
                 (preset) => preset.instanceId === a.addon.preset.id
               );
               const bAddonIndex = this.userData.presets.findIndex(
                 (preset) => preset.instanceId === b.addon.preset.id
               );
-
-              // the addon index MUST exist, its not possible for it to not exist
               if (aAddonIndex !== bAddonIndex) {
                 return aAddonIndex - bAddonIndex;
               }
 
-              // now look at stream type
+              const tb2 = tiebreakerCmp(a, b, type, 'after_addon');
+              if (tb2 !== 0) return tb2;
+
               let aTypeIndex =
                 this.userData.preferredStreamTypes?.findIndex(
                   (type) => type === a.type
@@ -314,10 +346,8 @@ class StreamDeduplicator {
                 this.userData.preferredStreamTypes?.findIndex(
                   (type) => type === b.type
                 ) ?? 0;
-
               aTypeIndex = aTypeIndex === -1 ? Infinity : aTypeIndex;
               bTypeIndex = bTypeIndex === -1 ? Infinity : bTypeIndex;
-
               if (aTypeIndex !== bTypeIndex) {
                 return aTypeIndex - bTypeIndex;
               }
@@ -348,6 +378,10 @@ class StreamDeduplicator {
               return serviceStreams.sort((a, b) => {
                 const lc = libraryCmp(a, b);
                 if (lc !== 0) return lc;
+
+                const tb = tiebreakerCmp(a, b, type, 'before_addon');
+                if (tb !== 0) return tb;
+
                 let aAddonIndex = this.userData.presets.findIndex(
                   (preset) => preset.instanceId === a.addon.preset.id
                 );
@@ -360,7 +394,9 @@ class StreamDeduplicator {
                   return aAddonIndex - bAddonIndex;
                 }
 
-                // now look at stream type
+                const tb2 = tiebreakerCmp(a, b, type, 'after_addon');
+                if (tb2 !== 0) return tb2;
+
                 let aTypeIndex =
                   this.userData.preferredStreamTypes?.findIndex(
                     (type) => type === a.type
@@ -375,10 +411,6 @@ class StreamDeduplicator {
                   return aTypeIndex - bTypeIndex;
                 }
 
-                // look at seeders for p2p and uncached streams
-                if (type === 'p2p' || type === 'uncached') {
-                  return (b.torrent?.seeders || 0) - (a.torrent?.seeders || 0);
-                }
                 return 0;
               })[0];
             });
@@ -420,10 +452,7 @@ class StreamDeduplicator {
                 if (aServiceIndex !== bServiceIndex) {
                   return aServiceIndex - bServiceIndex;
                 }
-                if (type === 'p2p' || type === 'uncached') {
-                  return (b.torrent?.seeders || 0) - (a.torrent?.seeders || 0);
-                }
-                return 0;
+                return tiebreakerCmp(a, b, type, 'any');
               })[0];
             });
             for (const stream of perAddonStreams) {

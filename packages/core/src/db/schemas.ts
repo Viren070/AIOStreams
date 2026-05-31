@@ -258,6 +258,14 @@ const DeduplicatorOptions = z.object({
   libraryBehaviour: z
     .enum(constants.DEDUPLICATOR_LIBRARY_BEHAVIOURS)
     .optional(),
+  tiebreakers: z
+    .array(
+      z.object({
+        type: z.enum(constants.DEDUPLICATOR_TIEBREAKERS),
+        position: z.enum(['before_addon', 'after_addon']),
+      })
+    )
+    .optional(),
 });
 
 const OptionDefinition = z.looseObject({
