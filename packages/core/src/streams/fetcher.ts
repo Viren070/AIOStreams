@@ -167,8 +167,8 @@ class StreamFetcher {
           logger.warn(
             {
               addon: getAddonName(addon),
-              errors: errorStreams.length,
-              titles: errorStreams.map((s) => s.error?.title),
+              count: errorStreams.length,
+              errors: errorStreams.map((s) => s.error?.description),
             },
             'addon returned error streams'
           );
