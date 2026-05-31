@@ -13,6 +13,9 @@ import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 
 class MeteorStreamParser extends StreamParser {
+  protected get indexerEmojis(): string[] {
+    return ['🔗', '📰'];
+  }
   protected getInLibrary(
     stream: Stream,
     currentParsedStream: ParsedStream
@@ -28,7 +31,7 @@ class MeteorStreamParser extends StreamParser {
     const type = super.getStreamType(stream, service, currentParsedStream);
     if (currentParsedStream.indexer?.startsWith('Usenet')) {
       currentParsedStream.indexer = currentParsedStream.indexer
-        .replace('Usenet:', '')
+        .replace('Usenet ·', '')
         .trim();
       return constants.USENET_STREAM_TYPE;
     }
