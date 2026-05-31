@@ -217,6 +217,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
 
   autoPlay: { label: 'Auto Play', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'playback' },
   areYouStillThere: { label: 'Are You Still There?', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'playback' },
+  infuse: { label: 'Infuse (External Player)', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'playback' },
   statistics: { label: 'Statistics', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'display' },
   hideErrors: { label: 'Hide Errors', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'display' },
   hideErrorsForResources: { label: 'Hide Errors for Resources', group: 'misc', type: 'list', menu: 'miscellaneous', subTab: 'display', sectionId: 'hideErrors' },

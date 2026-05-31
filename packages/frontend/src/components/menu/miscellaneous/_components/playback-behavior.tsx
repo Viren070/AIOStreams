@@ -167,6 +167,93 @@ export function PlaybackBehavior() {
           />
         </div>
       </SettingsCard>
+
+      <SettingsCard
+        title="Infuse (External Player)"
+        id="infuse"
+        description={
+          <div className="space-y-2">
+            <p>
+              Rewrites playable streams into <code>infuse://</code> launch links
+              with a subtitle baked in, so playback opens in Infuse with subs
+              already loaded (Infuse never requests subtitles itself).
+            </p>
+            <Alert intent="info-basic">
+              <p className="text-sm">
+                <strong>Subtitle language</strong> comes from{' '}
+                <strong>Filters › Subtitles › Preferred Subtitles</strong>{' '}
+                (defaults to English if none set). If you list several, they are
+                tried in priority order. The highest-priority language that has
+                an available subtitle is used. Infuse plays{' '}
+                <strong>one subtitle per video</strong>, so additional languages
+                act as fallbacks, not separate selectable tracks.{' '}
+                <strong>Provider priority</strong> follows your subtitle addon
+                order (put your preferred provider first).
+              </p>
+            </Alert>
+            <Alert intent="warning-basic">
+              <p className="text-sm">
+                <strong>Stremio app only.</strong> Other Apple TV clients (Fusion,
+                Omni, …) build the Infuse launch themselves and ignore the baked
+                subtitle, so it won&apos;t work there.
+              </p>
+            </Alert>
+          </div>
+        }
+      >
+        <Switch
+          label="Enable"
+          side="right"
+          value={userData.infuse?.enabled ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              infuse: {
+                ...prev.infuse,
+                enabled: value,
+              },
+            }));
+          }}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <NumberInput
+            label="Filename-matched streams (top N)"
+            help="The top N streams get a filename-matched (in-sync) subtitle lookup. The rest reuse a faster id-based lookup. Set 0 to use id-based only."
+            min={0}
+            max={50}
+            defaultValue={5}
+            disabled={!userData.infuse?.enabled}
+            value={userData.infuse?.topN ?? 5}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                infuse: {
+                  ...prev.infuse,
+                  topN: Math.min(50, Math.max(0, Number(value ?? 5))),
+                },
+              }));
+            }}
+          />
+          <NumberInput
+            label="Subtitle candidates"
+            help="How many subtitles to bake in per stream. The first that loads is used; the rest are silent fallbacks if it's dead."
+            min={1}
+            max={5}
+            defaultValue={3}
+            disabled={!userData.infuse?.enabled}
+            value={userData.infuse?.candidates ?? 3}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                infuse: {
+                  ...prev.infuse,
+                  candidates: Math.min(5, Math.max(1, Number(value ?? 3))),
+                },
+              }));
+            }}
+          />
+        </div>
+      </SettingsCard>
     </>
   );
 }

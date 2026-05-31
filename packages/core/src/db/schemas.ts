@@ -776,6 +776,22 @@ export const UserDataSchema = z.object({
       singleStream: z.boolean().optional(),
     })
     .optional(),
+  /**
+   * Infuse mode (Stremio + Infuse on Apple TV). When enabled, playable streams
+   * are rewritten into `infuse://` external-launch URLs with a subtitle baked
+   * in (Infuse never requests subtitles itself). Language comes from
+   * `preferredSubtitles` (default English); provider priority follows the
+   * configured subtitle-addon order.
+   */
+  infuse: z
+    .object({
+      enabled: z.boolean().optional(),
+      /** Streams (from the top) to resolve a per-file, filename-matched subtitle for. The rest reuse an id-based lookup. */
+      topN: z.number().min(0).max(50).optional(),
+      /** Subtitle candidates baked per stream; the proxy serves the first that fetches (silent fallback). */
+      candidates: z.number().min(1).max(5).optional(),
+    })
+    .optional(),
   services: ServiceList.optional(),
   presets: PresetList,
   addonCategoryColors: z.record(z.string(), z.string()).optional(), // maps custom category name → colour key
