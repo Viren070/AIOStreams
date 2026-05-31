@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+const TorBoxRateLimitErrorResponseSchema = z.object({
+  error: z.string(),
+});
+
 const TorBoxApiErrorResponseSchema = z.object({
   success: z.literal(false),
   error: z.string(),
@@ -18,6 +22,7 @@ const TorBoxApiSuccessResponseSchema = <T>(dataSchema: z.ZodSchema<T>) =>
 
 export const TorBoxApiResponseSchema = <T>(dataSchema: z.ZodSchema<T>) =>
   z.union([
+    TorBoxRateLimitErrorResponseSchema,
     TorBoxApiErrorResponseSchema,
     TorBoxApiSuccessResponseSchema(dataSchema),
   ]);

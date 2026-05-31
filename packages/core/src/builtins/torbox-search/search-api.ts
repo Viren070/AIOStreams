@@ -62,7 +62,7 @@ const logger = createLogger('torbox-search');
 function isErrorResponse<T>(
   response: TorboxResponse<T>
 ): response is TorboxErrorResponse {
-  return !response.success;
+  return !response.success || 'error' in response;
 }
 
 export class TorboxSearchApiError extends Error {
@@ -147,6 +147,16 @@ class TorboxSearchApi {
       throw error;
     }
 
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new TorboxSearchApiError(
+        `API returned non-JSON response (${contentType}) of ${response.status} ${response.statusText}: ${text.slice(0, 100)}`,
+        response.status,
+        'INVALID_CONTENT_TYPE'
+      );
+    }
+
     const data = await response.json();
 
     const parsedResponse = TorBoxApiResponseSchema(schema).safeParse(data);
@@ -163,7 +173,7 @@ class TorboxSearchApi {
 
     if (isErrorResponse(result)) {
       throw new TorboxSearchApiError(
-        result.detail || result.message || 'Unknown',
+        result.detail || result.message || result.error || 'Unknown API error',
         response.status,
         result.error
       );
