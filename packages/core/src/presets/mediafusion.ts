@@ -15,6 +15,10 @@ import { StreamParser } from '../parser/index.js';
 const logger = createLogger('core');
 
 class MediaFusionStreamParser extends StreamParser {
+  protected get sizeK(): 1024 | 1000 {
+    return 1000;
+  }
+
   protected override raiseErrorIfNecessary(
     stream: Stream,
     currentParsedStream: ParsedStream
@@ -39,11 +43,17 @@ class MediaFusionStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    const regex = this.getRegexForTextAfterEmojis(['📂']);
-    const file = stream.description?.match(regex)?.[1];
-    if (file && file.includes('┈➤')) {
-      return file.split('┈➤')[0].trim();
+    const nameRegex = this.getRegexForTextAfterEmojis(['📂']);
+    const filenameRegex = this.getRegexForTextAfterEmojis(['📄']);
+
+    const name = stream.description?.match(nameRegex)?.[1];
+    const filename = stream.description?.match(filenameRegex)?.[1];
+
+    if (name && filename && name !== filename) {
+      currentParsedStream.filename = filename.trim();
+      return name;
     }
+
     return undefined;
   }
 
@@ -51,7 +61,7 @@ class MediaFusionStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): number | undefined {
-    const regex = /💾\s?.*\s?\/\s?💾\s?([^💾\n]+)/;
+    const regex = /📦\s?.*\s?\/\s?📦\s?([^📦\n]+)/;
     const match = stream.description?.match(regex);
     if (match) {
       const folderSize = match[1].trim();
@@ -60,29 +70,15 @@ class MediaFusionStreamParser extends StreamParser {
     return undefined;
   }
 
-  protected override getFilename(
+  protected getStreamType(
     stream: Stream,
+    service: ParsedStream['service'],
     currentParsedStream: ParsedStream
-  ): string | undefined {
-    const cleanFilename = (filename: string) => {
-      let cleaned = filename.replace(/\s+(mkv|mp4)$/i, '.$1');
-      return cleaned.replace(/(?<![\[\]\-/\(\)])\s+(?![\[\]\-/\(\)])/g, '.');
-    };
-    const regex = this.getRegexForTextAfterEmojis(['📂']);
-    const file = stream.description?.match(regex)?.[1];
-    if (file && file.includes('┈➤')) {
-      return cleanFilename(file.split('┈➤')[1].trim());
-    }
-    if (file) {
-      return cleanFilename(file.trim());
-    }
-    if (
-      stream.description?.includes('Update IMDb metadata') ||
-      stream.description?.includes('Upload torrent for')
-    ) {
-      return undefined;
-    }
-    return super.getFilename(stream, currentParsedStream);
+  ): ParsedStream['type'] {
+    const type = super.getStreamType(stream, service, currentParsedStream);
+    if (stream.description?.includes('📰 Usenet/NZB'))
+      return constants.USENET_STREAM_TYPE;
+    return type;
   }
 
   protected override getMessage(
@@ -103,13 +99,17 @@ class MediaFusionStreamParser extends StreamParser {
     currentParsedStream: ParsedStream
   ): string | undefined {
     const indexer = super.getIndexer(stream, currentParsedStream);
-    if (indexer?.includes('Contribution')) {
-      const contributor = stream.description?.match(
-        this.getRegexForTextAfterEmojis(['🧑‍💻'])
-      )?.[1];
-      return contributor ? `Contributor|${contributor}` : undefined;
+    const contributor = stream.description?.match(
+      this.getRegexForTextAfterEmojis(['🧑‍💻'])
+    )?.[1];
+    let indexerParts = [];
+    if (indexer) {
+      indexerParts.push(indexer);
     }
-    return indexer;
+    if (contributor) {
+      indexerParts.push('Contributor', contributor);
+    }
+    return indexerParts.length > 0 ? indexerParts.join('|') : undefined;
   }
 
   protected override getLanguages(
@@ -122,7 +122,7 @@ class MediaFusionStreamParser extends StreamParser {
     if (languagesString) {
       return languages.concat(
         languagesString
-          .split('+')
+          .split('|')
           .map((language) => language.trim())
           .filter((language) => constants.LANGUAGES.includes(language as any))
       );
@@ -148,6 +148,7 @@ export class MediaFusionPreset extends Preset {
       constants.OFFCLOUD_SERVICE,
       constants.PIKPAK_SERVICE,
       constants.SEEDR_SERVICE,
+      constants.EASYNEWS_SERVICE,
     ];
 
     const supportedResources = [
@@ -164,41 +165,6 @@ export class MediaFusionPreset extends Preset {
           appConfig.presets.defaultTimeout,
         appConfig.presets.mediafusion.url ?? undefined
       ),
-      {
-        id: 'useCachedResultsOnly',
-        name: 'Use Cached Searches Only',
-        description:
-          "Only show results that are already cached in MediaFusion's database from previous searches. This disables live searching, making requests faster but potentially showing fewer results.",
-        type: 'boolean',
-        forced: appConfig.presets.mediafusion.forcedUseCachedResultsOnly,
-        default: appConfig.presets.mediafusion.defaultUseCachedResultsOnly,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'enableWatchlistCatalogs',
-        name: 'Enable Watchlist Catalogs',
-        description: 'Enable watchlist catalogs for the selected services.',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'downloadViaBrowser',
-        name: 'Download via Browser',
-        description:
-          'Show download streams to allow downloading the stream from your service, rather than streaming.',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'contributorStreams',
-        name: 'Contributor Streams',
-        description: 'Show a stream to contribute torrents for the title.',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
       {
         id: 'certificationLevelsFilter',
         name: 'Certification Levels Filter',
@@ -301,6 +267,41 @@ export class MediaFusionPreset extends Preset {
         default: [],
       },
       {
+        id: 'useCachedResultsOnly',
+        name: 'Use Cached Searches Only',
+        description:
+          "Only show results that are already cached in MediaFusion's database from previous searches. This disables live searching, making requests faster but potentially showing fewer results.",
+        type: 'boolean',
+        forced: appConfig.presets.mediafusion.forcedUseCachedResultsOnly,
+        default: appConfig.presets.mediafusion.defaultUseCachedResultsOnly,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'enableWatchlistCatalogs',
+        name: 'Enable Watchlist Catalogs',
+        description: 'Enable watchlist catalogs for the selected services.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'includeP2P',
+        name: 'Include P2P',
+        description:
+          'Include P2P streams alongside debrid streams. You only need to turn this on if you have provided a debrid service in AIOStreams, otherwise P2P streams will always be included.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'useMultipleInstances',
+        name: 'Use Multiple Instances',
+        description: '',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
         id: 'socials',
         name: '',
         description: '',
@@ -339,26 +340,36 @@ export class MediaFusionPreset extends Preset {
     options: Record<string, any>
   ): Promise<Addon[]> {
     if (options?.url?.endsWith('/manifest.json')) {
-      return [this.generateAddon(userData, options, undefined)];
+      return [this.generateAddon(userData, options, [])];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services);
+    const usableServiceIds: (ServiceId | 'p2p')[] | undefined =
+      this.getUsableServices(userData, options.services)?.map(
+        (service) => service.id
+      );
 
-    if (!usableServices || usableServices.length === 0) {
-      return [this.generateAddon(userData, options, undefined)];
+    if (!usableServiceIds || usableServiceIds.length === 0) {
+      return [this.generateAddon(userData, options, ['p2p'])];
     }
 
-    let addons = usableServices.map((service, idx) => {
-      let addonOptions = structuredClone(options);
-      // only the first addon gets contributorStreams to ensure we don't get duplicate contribution streams
-      addonOptions.contributorStreams =
-        addonOptions.contributorStreams && idx === 0;
-      return this.generateAddon(userData, addonOptions, service.id);
-    });
+    // let addons = usableServices.map((service, idx) => {
+    //   let addonOptions = structuredClone(options);
+    //   // only the first addon gets contributorStreams to ensure we don't get duplicate contribution streams
+    //   addonOptions.contributorStreams =
+    //     addonOptions.contributorStreams && idx === 0;
+    //   return this.generateAddon(userData, addonOptions, service.id);
+    // });
 
     if (options.includeP2P) {
-      addons.push(this.generateAddon(userData, options, undefined));
+      usableServiceIds.push('p2p');
     }
+
+    if (options.useMultipleInstances) {
+      return usableServiceIds.map((id) =>
+        this.generateAddon(userData, options, [id])
+      );
+    }
+    const addons = [this.generateAddon(userData, options, usableServiceIds)];
 
     return addons;
   }
@@ -366,26 +377,31 @@ export class MediaFusionPreset extends Preset {
   private static generateAddon(
     userData: UserData,
     options: Record<string, any>,
-    serviceId?: ServiceId
+    services: (ServiceId | 'p2p')[]
   ): Addon {
     const encodedUserData = this.generateEncodedUserData(
       userData,
       options,
-      serviceId
+      services
     );
     const url = this.generateManifestUrl(options, encodedUserData);
     return {
       name: options.name || this.METADATA.NAME,
-      identifier: serviceId
-        ? `${constants.SERVICE_DETAILS[serviceId].shortName}`
-        : options.url?.endsWith('/manifest.json')
-          ? undefined
-          : 'p2p',
-      displayIdentifier: serviceId
-        ? `${constants.SERVICE_DETAILS[serviceId].shortName}`
-        : options.url?.endsWith('/manifest.json')
-          ? undefined
-          : 'P2P',
+      displayIdentifier: services
+        .map((id) =>
+          id === 'p2p' ? 'P2P' : constants.SERVICE_DETAILS[id].shortName
+        )
+        .join(' | '),
+      identifier:
+        services.length > 0
+          ? services.length > 1
+            ? 'multi'
+            : services[0] === 'p2p'
+              ? 'p2p'
+              : constants.SERVICE_DETAILS[services[0]].shortName
+          : options.url?.endsWith('/manifest.json')
+            ? undefined
+            : 'p2p',
       manifestUrl: url,
       enabled: true,
       mediaTypes: options.mediaTypes || [],
@@ -433,159 +449,189 @@ export class MediaFusionPreset extends Preset {
   private static generateEncodedUserData(
     userData: UserData,
     options: Record<string, any>,
-    serviceId: ServiceId | undefined
+    services: (ServiceId | 'p2p')[]
   ) {
-    let pikpakCredentials = undefined;
-    if (serviceId === constants.PIKPAK_SERVICE) {
-      pikpakCredentials = this.getServiceCredential(serviceId, userData);
+    const config = this.buildConfig(userData, options, services);
+    return this.base64EncodeJSON(config, 'urlSafe');
+  }
+
+  private static buildConfig(
+    userData: UserData,
+    options: Record<string, unknown>,
+    services: (ServiceId | 'p2p')[]
+  ) {
+    let easynewsConfig = null;
+    let pikpakConfig = null;
+    if (services.includes(constants.EASYNEWS_SERVICE)) {
+      easynewsConfig = this.getServiceCredential(
+        constants.EASYNEWS_SERVICE,
+        userData
+      );
     }
-    const encodedUserData = this.base64EncodeJSON(
-      {
-        streaming_provider: !serviceId
-          ? null
-          : {
-              token:
-                serviceId != constants.PIKPAK_SERVICE
-                  ? this.getServiceCredential(serviceId, userData)
-                  : undefined,
-              email: pikpakCredentials?.email,
-              password: pikpakCredentials?.password,
-              service: serviceId,
-              enable_watchlist_catalogs:
-                options.enableWatchlistCatalogs || false,
-              download_via_browser: options.downloadViaBrowser || false,
-              only_show_cached_streams: false,
-            },
-        selected_catalogs: [],
-        selected_resolutions: [
-          '4k',
-          '2160p',
-          '1440p',
-          '1080p',
-          '720p',
-          '576p',
-          '480p',
-          '360p',
-          '240p',
-          null,
-        ],
-        enable_catalogs: true,
-        enable_imdb_metadata: false,
-        min_size: 0,
-        max_size: 'inf',
-        max_streams_per_resolution: 500,
-        max_streams: 100,
-        torrent_sorting_priority: [
-          { key: 'cached', direction: 'desc' },
-          { key: 'resolution', direction: 'desc' },
-          { key: 'quality', direction: 'desc' },
-          { key: 'size', direction: 'desc' },
-          { key: 'language', direction: 'desc' },
-          { key: 'seeders', direction: 'desc' },
-          { key: 'created_at', direction: 'desc' },
-        ],
-        show_full_torrent_name: true,
-        show_language_country_flag: false,
-        nudity_filter: options.nudityFilter?.length
-          ? options.nudityFilter
-          : ['Disable'],
-        certification_filter: options.certificationLevelsFilter?.length
-          ? options.certificationLevelsFilter
-          : ['Disable'],
-        language_sorting: [
-          'English',
-          'Tamil',
-          'Hindi',
-          'Malayalam',
-          'Kannada',
-          'Telugu',
-          'Chinese',
-          'Russian',
-          'Arabic',
-          'Japanese',
-          'Korean',
-          'Taiwanese',
-          'Latino',
-          'French',
-          'Spanish',
-          'Portuguese',
-          'Italian',
-          'German',
-          'Ukrainian',
-          'Polish',
-          'Czech',
-          'Thai',
-          'Indonesian',
-          'Vietnamese',
-          'Dutch',
-          'Bengali',
-          'Turkish',
-          'Greek',
-          'Swedish',
-          'Romanian',
-          'Hungarian',
-          'Finnish',
-          'Norwegian',
-          'Danish',
-          'Hebrew',
-          'Lithuanian',
-          'Punjabi',
-          'Marathi',
-          'Gujarati',
-          'Bhojpuri',
-          'Nepali',
-          'Urdu',
-          'Tagalog',
-          'Filipino',
-          'Malay',
-          'Mongolian',
-          'Armenian',
-          'Georgian',
-          null,
-        ],
-        quality_filter: [
-          'BluRay/UHD',
-          'WEB/HD',
-          'DVD/TV/SAT',
-          'CAM/Screener',
-          'Unknown',
-        ],
-        hdr_filter: [
-          'HDR10',
-          'HDR10+',
-          'Dolby Vision',
-          'HLG',
-          'SDR',
-          'Unknown',
-        ],
-        api_password: appConfig.presets.mediafusion.apiPassword,
-        mediaflow_config: null,
-        rpdb_config: null,
-        live_search_streams: !options.useCachedResultsOnly,
-        include_anime: true,
-        enable_usenet_streams: true,
-        prefer_usenet_over_torrent: false,
-        enable_telegram_streams: false,
-        enable_acestream_streams: false,
-        stream_type_grouping: 'separate',
-        stream_type_order: [
-          'torrent',
-          'usenet',
-          'telegram',
-          'http',
-          'acestream',
-          'youtube',
-        ],
-        provider_grouping: 'separate',
-        stream_name_filter_mode: 'disabled',
-        stream_name_filter_patterns: [],
-        stream_name_filter_use_regex: false,
-        contribution_streams: options.contributorStreams ?? false,
-        mdblist_config: null,
-      },
-      'urlSafe'
+    if (services.includes(constants.PIKPAK_SERVICE)) {
+      pikpakConfig = this.getServiceCredential(
+        constants.PIKPAK_SERVICE,
+        userData
+      );
+    }
+    const buildProvider = (serviceId: ServiceId | 'p2p', index: number) => ({
+      name: index > 0 ? `Provider ${index + 1}` : 'Provider',
+      service: serviceId,
+      token: ![
+        constants.EASYNEWS_SERVICE,
+        constants.PIKPAK_SERVICE,
+        'p2p',
+      ].includes(serviceId)
+        ? this.getServiceCredential(serviceId as ServiceId, userData)
+        : null,
+      ...(serviceId === constants.PIKPAK_SERVICE && pikpakConfig
+        ? pikpakConfig
+        : {}),
+      enable_watchlist_catalogs: options.enableWatchlistCatalogs || false,
+      qbittorrent_config: null,
+      only_show_cached_streams: false,
+      use_mediaflow: true,
+      sabnzbd_config: null,
+      nzbget_config: null,
+      nzbdav_config: null,
+      easynews_config:
+        serviceId === constants.EASYNEWS_SERVICE ? easynewsConfig : null,
+      priority: index,
+      enabled: true,
+    });
+
+    const streamingProviders = services.map((serviceId, index) =>
+      buildProvider(serviceId, index)
     );
 
-    return encodedUserData;
+    const config = {
+      streaming_providers: streamingProviders,
+      streaming_provider: streamingProviders[0],
+      stream_template: {
+        title:
+          '{addon.name} {if stream.type = torrent }[{service.shortName} {if service.cached}⚡️{else}⏳{/if}]{elif stream.type = usenet}[{service.shortName}{if service.cached}⚡️{else}⏳{/if}]{elif stream.type = telegram}📱{elif stream.type = youtube}▶️{elif stream.type = http}🌐{else}🔗{/if} {if stream.resolution}{stream.resolution}{/if}',
+        description:
+          "📂 {stream.name}\n{if stream.filename}📄 {stream.filename} {/if}\n{if stream.type = torrent}🧲 Torrent{elif stream.type = usenet}📰 Usenet/NZB{elif stream.type = http}🔗 Direct Stream{else}📺 {stream.type|title}{/if}\n{if stream.quality}🎥 {stream.quality} {/if}{if stream.codec}🎞️ {stream.codec} {/if}{if stream.bit_depth}{stream.bit_depth}-bit {/if}\n{if stream.hdr_formats}🎨 {stream.hdr_formats|join(' ')} {/if}{if stream.audio_formats}🎧 {stream.audio_formats|join(' ')} {/if}{if stream.channels}🔊 {stream.channels|join(' ')} {/if}\n{if stream.size > 0}📦 {stream.size|bytes}{if stream.folderSize > stream.size} / {stream.folderSize|bytes}{/if} {/if}{if stream.seeders > 0}👤 {stream.seeders} seeders {/if}\n{if stream.languages}🌐 {stream.languages|join(' | ')}{/if}\n{if stream.issue_reports > 0}⚠️ {stream.issue_reports} issue report(s)\n{/if}{if stream.rating_total > 0}👍 {stream.rating_up} · 👎 {stream.rating_down} · net {stream.rating_score}\n{/if}\n🔗 {stream.source}{if stream.release_group} | 🏷️ {stream.release_group}{/if}{if stream.uploader} | 🧑‍💻 {stream.uploader}{/if}",
+      },
+      selected_catalogs: [],
+      selected_resolutions: [
+        '4k',
+        '2160p',
+        '1440p',
+        '1080p',
+        '720p',
+        '576p',
+        '480p',
+        '360p',
+        '240p',
+        null,
+      ],
+      enable_catalogs: true,
+      enable_imdb_metadata: false,
+      min_size: 0,
+      max_size: 'inf',
+      max_streams_per_resolution: 500,
+      max_streams: 100,
+      torrent_sorting_priority: [
+        { key: 'cached', direction: 'desc' },
+        { key: 'resolution', direction: 'desc' },
+        { key: 'quality', direction: 'desc' },
+        { key: 'size', direction: 'desc' },
+        { key: 'language', direction: 'desc' },
+        { key: 'seeders', direction: 'desc' },
+        { key: 'created_at', direction: 'desc' },
+      ],
+      nudity_filter:
+        Array.isArray(options.nudityFilter) && options.nudityFilter.length > 0
+          ? options.nudityFilter
+          : ['Disable'],
+      certification_filter:
+        Array.isArray(options.certificationLevelsFilter) &&
+        options.certificationLevelsFilter.length > 0
+          ? options.certificationLevelsFilter
+          : ['Disable'],
+      language_sorting: [
+        'English',
+        'Tamil',
+        'Hindi',
+        'Malayalam',
+        'Kannada',
+        'Telugu',
+        'Chinese',
+        'Russian',
+        'Arabic',
+        'Japanese',
+        'Korean',
+        'Taiwanese',
+        'Latino',
+        'French',
+        'Spanish',
+        'Portuguese',
+        'Italian',
+        'German',
+        'Ukrainian',
+        'Polish',
+        'Czech',
+        'Thai',
+        'Indonesian',
+        'Vietnamese',
+        'Dutch',
+        'Bengali',
+        'Turkish',
+        'Greek',
+        'Swedish',
+        'Romanian',
+        'Hungarian',
+        'Finnish',
+        'Norwegian',
+        'Danish',
+        'Hebrew',
+        'Lithuanian',
+        'Punjabi',
+        'Marathi',
+        'Gujarati',
+        'Bhojpuri',
+        'Nepali',
+        'Urdu',
+        'Tagalog',
+        'Filipino',
+        'Malay',
+        'Mongolian',
+        'Armenian',
+        'Georgian',
+        null,
+      ],
+      quality_filter: [
+        'BluRay/UHD',
+        'WEB/HD',
+        'DVD/TV/SAT',
+        'CAM/Screener',
+        'Unknown',
+      ],
+      hdr_filter: ['HDR10', 'HDR10+', 'Dolby Vision', 'HLG', 'SDR', 'Unknown'],
+      api_password: appConfig.presets.mediafusion.apiPassword,
+      live_search_streams: !options.useCachedResultsOnly,
+      include_anime: true,
+      // enable_usenet_streams: true,
+      // prefer_usenet_over_torrent: false,
+      enable_telegram_streams: false,
+      enable_acestream_streams: false,
+      stream_type_grouping: 'separate',
+      stream_type_order: [
+        'torrent',
+        'usenet',
+        'telegram',
+        'http',
+        'acestream',
+        'youtube',
+      ],
+      provider_grouping: 'separate',
+      stream_name_filter_mode: 'disabled',
+      stream_name_filter_patterns: [],
+      stream_name_filter_use_regex: false,
+      telegram_config: null,
+    };
+
+    return config;
   }
 }
