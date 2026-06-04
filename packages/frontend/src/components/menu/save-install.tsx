@@ -1363,6 +1363,9 @@ function Content() {
       topPosterApiKey: undefined,
       aioratingsApiKey: undefined,
       aioratingsProfileId: undefined,
+      openposterdbApiKey: undefined,
+      openposterdbUrl: undefined,
+      openposterdbParameters: undefined,
       services: clonedData?.services?.map((service) => ({
         ...service,
         credentials: {},

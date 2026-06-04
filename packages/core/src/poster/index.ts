@@ -60,7 +60,8 @@ export function createPosterService(
       return userData.openposterdbApiKey
         ? new OpenPosterDB(
             userData.openposterdbApiKey,
-            userData.openposterdbUrl
+            userData.openposterdbUrl,
+            userData.openposterdbParameters
           )
         : null;
     default:
@@ -85,7 +86,7 @@ export function createPosterServiceFromParams(
     case 'aioratings':
       return new AIOratings(apiKey, params.profileId || 'default');
     case 'openposterdb':
-      return new OpenPosterDB(apiKey, params.baseUrl);
+      return new OpenPosterDB(apiKey, params.baseUrl, params.parameters);
     default:
       return null;
   }

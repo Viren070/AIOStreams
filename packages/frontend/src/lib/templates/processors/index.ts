@@ -125,6 +125,9 @@ export const processTemplate = (
     'topPosterApiKey',
     'aioratingsApiKey',
     'aioratingsProfileId',
+    'openposterdbApiKey',
+    'openposterdbUrl',
+    'openposterdbParameters',
   ] as const;
 
   topLevelFields.forEach((field) => {

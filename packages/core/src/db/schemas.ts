@@ -691,6 +691,10 @@ export const UserDataSchema = z.object({
     (v) => (v === '' ? undefined : v),
     z.string().url().optional()
   ),
+  openposterdbParameters: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional()
+  ),
   posterService: z
     .enum(['rpdb', 'top-poster', 'aioratings', 'openposterdb', 'none'])
     .optional(),
