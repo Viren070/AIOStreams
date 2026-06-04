@@ -136,12 +136,20 @@ export const processTemplate = (
 
     if (placeholder.isPlaceholder) {
       const detail = constants.TOP_LEVEL_OPTION_DETAILS?.[field];
+      // Most top-level fields are API keys/tokens (secret), but a few are plain
+      // config values that should not be masked in the template input UI.
+      const type: AllowedInputType =
+        field === 'aioratingsProfileId' ||
+        field === 'openposterdbUrl' ||
+        field === 'openposterdbParameters'
+          ? 'string'
+          : 'password';
       inputs.push({
         key: `toplevel_${field}`,
         path: field,
         label: detail?.name || field,
         description: detail?.description,
-        type: 'password',
+        type,
         required: placeholder.required,
         value: userData?.[field] || '',
       });
