@@ -37,10 +37,18 @@ router.head(
   '/playback/:encryptedStoreAuth/:fileInfo/:metadataId/:filename',
   async (req: Request<PlaybackParams>, res: Response, next: NextFunction) => {
     try {
-      const { encryptedStoreAuth, fileInfo: encodedFileInfo } = req.params;
+      const {
+        encryptedStoreAuth,
+        fileInfo: encodedFileInfo,
+        metadataId,
+      } = req.params;
+
+      let fileInfo: FileInfo;
 
       try {
-        FileInfoSchema.parse(JSON.parse(fromUrlSafeBase64(encodedFileInfo)));
+        fileInfo = FileInfoSchema.parse(
+          JSON.parse(fromUrlSafeBase64(encodedFileInfo))
+        );
       } catch {
         const stored = await fileInfoStore()?.get(encodedFileInfo);
         if (!stored) {
@@ -49,6 +57,21 @@ router.head(
               constants.ErrorCode.BAD_REQUEST,
               undefined,
               'Failed to parse file info and not found in store.'
+            )
+          );
+          return;
+        }
+        fileInfo = stored;
+      }
+
+      if (!fileInfo.serviceItemId) {
+        const metadata = await metadataStore().get(metadataId);
+        if (!metadata) {
+          next(
+            new APIError(
+              constants.ErrorCode.BAD_REQUEST,
+              undefined,
+              'Metadata not found'
             )
           );
           return;
