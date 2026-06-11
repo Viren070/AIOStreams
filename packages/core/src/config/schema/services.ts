@@ -18,7 +18,7 @@ export const servicesSchema = {
       ui: 'Default credentials pre-filled into user configurations when not provided (users can still override them).',
       env:
         'Default credentials pre-filled into user configurations when not provided. Format: one `serviceId.credentialId=value` entry per line (use `\\n` if your environment cannot store multiline values). ' +
-        'Service IDs: `realdebrid`, `alldebrid`, `premiumize`, `debridlink`, `torbox`, `offcloud`, `putio`, `easynews`, `easydebrid`, `debrider`, `pikpak`, `seedr`, `nzbdav`, `altmount`, `stremthru_newz`. ' +
+        'Service IDs: `realdebrid`, `alldebrid`, `premiumize`, `debridlink`, `torbox`, `offcloud`, `putio`, `easynews`, `easydebrid`, `debrider`, `pikpak`, `seedr`, `nzbdav`, `altmount`, `stremthru_newz`, `torrin`. ' +
         'Credential IDs vary by service (e.g. `apiKey`, `username`, `password`, `clientId`, `encodedToken`). ' +
         'Example: `realdebrid.apiKey=xxx` / `easynews.username=user` / `easynews.password=pass`.',
     },

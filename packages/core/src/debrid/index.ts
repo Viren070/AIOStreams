@@ -19,6 +19,7 @@ import { NzbDAVService } from './nzbdav.js';
 import { AltmountService } from './altmount.js';
 import { StremioNNTPService } from './stremio-nntp.js';
 import { EasynewsService } from './easynews.js';
+import { TorrinDebridService } from './torrin.js';
 
 export function getDebridService(
   serviceName: ServiceId,
@@ -75,6 +76,11 @@ export function getDebridService(
       return new StremioNNTPService(config);
     case 'easynews':
       return new EasynewsService(config);
+    case 'torrin':
+      return new TorrinDebridService(config, {
+        pollInterval,
+        maxWaitTime,
+      });
     case 'stremthru_newz':
       return createStremThruNewzService(config, pollInterval, maxWaitTime);
     default:
