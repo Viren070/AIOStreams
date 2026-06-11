@@ -8,3 +8,4 @@ next-env.d.ts
 .env
 metadata.json
 data/
+testing/
