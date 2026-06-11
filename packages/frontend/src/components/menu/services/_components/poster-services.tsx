@@ -172,6 +172,32 @@ export function PosterServices() {
               setUserData((prev) => ({ ...prev, openposterdbUrl: v }));
             }}
           />
+          <TextInput
+            label="OpenPosterDB Custom Parameters"
+            help={
+              <span>
+                Optional query string appended to every poster to customise it
+                (e.g. ratings, badge size and position). Enter it without the
+                leading <code>?</code>, for example{' '}
+                <code>ratings_limit=2&amp;badge_size=l&amp;position=br</code>.
+                See the{' '}
+                <a
+                  href="https://github.com/PNRxA/openposterdb#readme"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  available parameters
+                </a>
+                .
+              </span>
+            }
+            value={userData.openposterdbParameters || ''}
+            placeholder="ratings_limit=2&badge_size=l&position=br"
+            onValueChange={(v) => {
+              setUserData((prev) => ({ ...prev, openposterdbParameters: v }));
+            }}
+          />
         </>
       )}
 

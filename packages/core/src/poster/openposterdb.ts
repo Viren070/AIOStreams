@@ -10,9 +10,21 @@ export class OpenPosterDB extends BasePosterService {
   readonly ownDomains: string[];
   readonly redirectPathSegment = 'openposterdb';
   private readonly baseUrl: string;
+  /**
+   * Raw query string (without the leading `?`) appended to every poster URL,
+   * e.g. `ratings_limit=2&badge_size=l&position=br`. Lets users customise the
+   * generated poster via OpenPosterDB's query parameters. Empty when unset.
+   */
+  private readonly customParameters: string;
 
-  constructor(apiKey: string, baseUrl?: string) {
+  constructor(apiKey: string, baseUrl?: string, customParameters?: string) {
     super(apiKey, 'openposterdb');
+    // Tolerate a pasted leading `?`/`&` and surrounding whitespace, and drop any
+    // `#fragment` (which is never part of the query the server receives anyway).
+    this.customParameters = (customParameters || '')
+      .trim()
+      .replace(/#.*$/s, '')
+      .replace(/^[?&]+/, '');
     const raw = (baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
     try {
       const parsed = new URL(raw);
@@ -63,16 +75,23 @@ export class OpenPosterDB extends BasePosterService {
   }
 
   protected getCacheKey(type: string, id: string): string {
-    return `${type}-${id}-${this.apiKey}-${this.baseUrl}`;
+    const base = `${type}-${id}-${this.apiKey}-${this.baseUrl}`;
+    return this.customParameters ? `${base}-${this.customParameters}` : base;
   }
 
   protected buildPosterUrl(idType: string, idValue: string): string {
-    return `${this.baseUrl}/${this.apiKey}/${idType}/poster-default/${idValue}.jpg`;
+    // The `.jpg` suffix is optional on current OpenPosterDB instances; omit it
+    // so the customisation query string can be appended cleanly.
+    const url = `${this.baseUrl}/${this.apiKey}/${idType}/poster-default/${idValue}`;
+    return this.customParameters ? `${url}?${this.customParameters}` : url;
   }
 
   protected appendRedirectParams(url: URL): void {
     if (this.baseUrl !== DEFAULT_BASE_URL) {
       url.searchParams.set('baseUrl', this.baseUrl);
+    }
+    if (this.customParameters) {
+      url.searchParams.set('parameters', this.customParameters);
     }
   }
 
@@ -82,6 +101,9 @@ export class OpenPosterDB extends BasePosterService {
     const params: Record<string, string> = {};
     if (query.baseUrl) {
       params.baseUrl = query.baseUrl;
+    }
+    if (query.parameters) {
+      params.parameters = query.parameters;
     }
     return params;
   }

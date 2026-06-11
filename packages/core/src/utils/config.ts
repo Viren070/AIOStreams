@@ -1345,7 +1345,7 @@ const PROXY_FIELDS: (keyof UserData)[] = [
 const METADATA_FIELDS: (keyof UserData)[] = [
   'tmdbApiKey', 'tmdbAccessToken', 'tvdbApiKey',
   'rpdbApiKey', 'topPosterApiKey', 'aioratingsApiKey', 'aioratingsProfileId',
-  'openposterdbApiKey', 'openposterdbUrl', 'posterService',
+  'openposterdbApiKey', 'openposterdbUrl', 'openposterdbParameters', 'posterService',
   'usePosterRedirectApi', 'usePosterServiceForMeta',
 ];
 

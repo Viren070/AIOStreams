@@ -19,6 +19,7 @@ const searchParams = z.object({
   apiKey: z.string(),
   profileId: z.string().optional(),
   baseUrl: z.string().optional(),
+  parameters: z.string().optional(),
 });
 
 interface PosterServiceParams {
@@ -52,12 +53,14 @@ router.get(
         return;
       }
 
-      const { id, type, fallback, apiKey, profileId, baseUrl } = data;
+      const { id, type, fallback, apiKey, profileId, baseUrl, parameters } =
+        data;
       const service = req.params.service;
 
       const posterService = createPosterServiceFromParams(service, apiKey, {
         profileId: profileId || 'default',
         ...(baseUrl ? { baseUrl } : {}),
+        ...(parameters ? { parameters } : {}),
       });
 
       if (!posterService) {

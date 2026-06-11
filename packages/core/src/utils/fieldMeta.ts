@@ -211,6 +211,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   aioratingsProfileId: { label: 'AIOratings Profile ID', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   openposterdbApiKey: { label: 'OpenPosterDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   openposterdbUrl: { label: 'OpenPosterDB URL', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
+  openposterdbParameters: { label: 'OpenPosterDB Custom Parameters', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   posterService: { label: 'Poster Service', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   usePosterRedirectApi: { label: 'Use Poster Redirect API', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   usePosterServiceForMeta: { label: 'Use Poster Service for Meta', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },

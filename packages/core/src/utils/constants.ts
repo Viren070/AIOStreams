@@ -785,7 +785,10 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
   | 'tvdbApiKey'
   | 'topPosterApiKey'
   | 'aioratingsApiKey'
-  | 'aioratingsProfileId',
+  | 'aioratingsProfileId'
+  | 'openposterdbApiKey'
+  | 'openposterdbUrl'
+  | 'openposterdbParameters',
   {
     name: string;
     description: string;
@@ -825,6 +828,21 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     name: 'AIOratings Profile ID',
     description:
       'Use "default" for the default profile, or enter a custom profile UUID from your AIOratings dashboard.',
+  },
+  openposterdbApiKey: {
+    name: 'OpenPosterDB API Key',
+    description:
+      'Get your API key from [here](https://openposterdb.com) for posters with ratings. Use `t0-free-rpdb` for the free public instance.',
+  },
+  openposterdbUrl: {
+    name: 'OpenPosterDB URL',
+    description:
+      'Custom base URL for a self-hosted OpenPosterDB instance. Leave empty to use the default public instance.',
+  },
+  openposterdbParameters: {
+    name: 'OpenPosterDB Custom Parameters',
+    description:
+      'Optional query string (without the leading `?`) appended to every poster to customise it, e.g. `ratings_limit=2&badge_size=l&position=br`.',
   },
 };
 
