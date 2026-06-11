@@ -1804,8 +1804,8 @@ export function enrichParsedIdWithAnimeEntry(
   if (!parsedId.season) {
     parsedId.season =
       animeEntry.imdb?.seasonNumber?.toString() ??
-      animeEntry.trakt?.seasonNumber?.toString() ??
       animeEntry.tvdb?.seasonNumber?.toString() ??
+      animeEntry.trakt?.seasonNumber?.toString() ??
       getSeasonFromSynonyms(animeEntry.synonyms ?? []) ??
       animeEntry.tmdb?.seasonNumber?.toString();
 

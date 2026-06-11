@@ -221,8 +221,8 @@ export class StreamContext {
           // Calculate relative absolute episode (within current AniDB entry)
           const startingSeason =
             this.animeEntry?.imdb?.seasonNumber ??
-            this.animeEntry?.trakt?.seasonNumber ??
             this.animeEntry?.tvdb?.seasonNumber ??
+            this.animeEntry?.trakt?.seasonNumber ??
             this.animeEntry?.tmdb?.seasonNumber;
 
           if (startingSeason) {

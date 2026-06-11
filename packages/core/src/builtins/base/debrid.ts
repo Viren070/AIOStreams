@@ -603,8 +603,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       // Find the first season of this AniDB entry
       const startingSeason =
         animeEntry.imdb?.seasonNumber ??
-        animeEntry.trakt?.seasonNumber ??
         animeEntry.tvdb?.seasonNumber ??
+        animeEntry.trakt?.seasonNumber ??
         animeEntry.tmdb?.seasonNumber;
 
       if (startingSeason) {
