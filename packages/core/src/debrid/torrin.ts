@@ -64,6 +64,11 @@ interface TorrinAvailabilityEntry {
 
 type TorrinAvailabilityBatch = Record<string, TorrinAvailabilityEntry>;
 
+/**
+ * Translate a Torrin job status to AIOStreams' debrid download status.
+ * `cached` and `complete` collapse to `downloaded` so the rest of the pipeline
+ * treats both as immediately playable.
+ */
 function mapStatus(status: TorrinJob['status']): DebridDownload['status'] {
   switch (status) {
     case 'cached':
@@ -81,6 +86,11 @@ function mapStatus(status: TorrinJob['status']): DebridDownload['status'] {
   }
 }
 
+/**
+ * Map HTTP status codes returned by api.torrin.app to a `DebridErrorCode`.
+ * 429 collapses to `STORE_LIMIT_EXCEEDED` because Torrin returns it when the
+ * caller's plan-based concurrent-slot cap is hit.
+ */
 function mapHttpToCode(status: number): DebridError['code'] {
   switch (status) {
     case 400:
@@ -110,6 +120,10 @@ function mapHttpToCode(status: number): DebridError['code'] {
   }
 }
 
+/**
+ * Convert a Torrin Job payload into the shared `DebridDownload` shape used by
+ * the rest of AIOStreams' debrid pipeline.
+ */
 function jobToDownload(job: TorrinJob): DebridDownload {
   const files: DebridFile[] | undefined = job.files?.map((file, index) => ({
     name: file.name,
@@ -134,6 +148,12 @@ export interface TorrinServiceOptions {
   baseUrl?: string;
 }
 
+/**
+ * Native `TorrentDebridService` for [Torrin](https://torrin.app), an
+ * open-source debrid that returns pre-signed HTTPS streaming URLs for cached
+ * torrents and queues new magnets server-side. Talks directly to
+ * `api.torrin.app`; does not route through StremThru.
+ */
 export class TorrinDebridService implements TorrentDebridService {
   public readonly serviceName: ServiceId = 'torrin';
   public readonly capabilities = { torrents: true, usenet: false } as const;
@@ -155,6 +175,13 @@ export class TorrinDebridService implements TorrentDebridService {
     appConfig.bootstrap.redisUri ? 'redis' : 'sql'
   );
 
+  /**
+   * @param config Token (the user's `tr_…` API key) and optional client IP.
+   * @param opts Per-call overrides for the polling interval, max wait time,
+   *             and base URL (the last lets self-hosters point at a private
+   *             Torrin instance instead of the public api.torrin.app).
+   * @throws DebridError with `UNAUTHORIZED` if the token is missing.
+   */
   constructor(config: DebridServiceConfig, opts?: TorrinServiceOptions) {
     if (!config.token) {
       throw new DebridError('Missing Torrin API key', {
@@ -176,6 +203,11 @@ export class TorrinDebridService implements TorrentDebridService {
     this.maxWaitTime = opts?.maxWaitTime ?? 120_000;
   }
 
+  /**
+   * Issue a request against api.torrin.app with bearer auth + client-IP
+   * forwarding, and translate any non-2xx response into a `DebridError` so
+   * callers can rely on a single error type.
+   */
   private async request<T>(
     method: 'GET' | 'POST' | 'DELETE',
     path: string,
@@ -247,6 +279,12 @@ export class TorrinDebridService implements TorrentDebridService {
     return { status: response.status, data: parsed as T };
   }
 
+  /**
+   * Batch availability check via `POST /api/availability`. Hashes already
+   * cached for this credential (positive or negative) skip the network round
+   * trip; the rest are persisted into the per-credential availability cache
+   * before being returned. Only `available: true` entries become results.
+   */
   public async checkMagnets(
     magnets: string[],
     _sid?: string,
@@ -302,6 +340,10 @@ export class TorrinDebridService implements TorrentDebridService {
     return results;
   }
 
+  /**
+   * Lift an availability-cache entry into a `DebridDownload` so cached hashes
+   * can be returned from `checkMagnets` without ever calling `/api/jobs`.
+   */
   private entryToDownload(
     hash: string,
     entry: TorrinAvailabilityEntry
@@ -318,6 +360,11 @@ export class TorrinDebridService implements TorrentDebridService {
     };
   }
 
+  /**
+   * Submit a magnet URI via `POST /api/jobs`. Torrin returns 200 with the
+   * already-cached job, or 202 with a downloading job that must be polled.
+   * Either way we surface the resulting `DebridDownload`.
+   */
   public async addMagnet(magnet: string): Promise<DebridDownload> {
     const { data } = await this.request<TorrinJob>('POST', '/api/jobs', {
       magnet,
@@ -325,11 +372,23 @@ export class TorrinDebridService implements TorrentDebridService {
     return jobToDownload(data);
   }
 
+  /**
+   * Accept a magnet URI, an HTTPS URL to a `.torrent` file, or a base64
+   * `.torrent` payload, normalise it to a magnet URI via `parse-torrent`, and
+   * forward to `addMagnet`. Torrin's `POST /api/jobs` only takes magnets, so
+   * non-magnet inputs are converted client-side before submission.
+   */
   public async addTorrent(torrent: string): Promise<DebridDownload> {
     const magnet = await this.toMagnetUri(torrent);
     return this.addMagnet(magnet);
   }
 
+  /**
+   * Resolve any of the inputs supported by `addTorrent` into a magnet URI:
+   * pass-through for magnets, fetch + decode for `http(s)://…/file.torrent`,
+   * base64-decode for raw `.torrent` payloads. Errors are mapped to
+   * `DebridError` so callers can rely on the shared error contract.
+   */
   private async toMagnetUri(torrent: string): Promise<string> {
     if (typeof torrent === 'string' && /^(stream-)?magnet:/i.test(torrent)) {
       return torrent;
@@ -389,7 +448,7 @@ export class TorrinDebridService implements TorrentDebridService {
 
     let parsed: Instance;
     try {
-      parsed = (await (parseTorrent(buffer) as unknown as Promise<Instance>));
+      parsed = await (parseTorrent(buffer) as unknown as Promise<Instance>);
     } catch (error) {
       throw new DebridError(
         `Invalid .torrent file: ${error instanceof Error ? error.message : String(error)}`,
@@ -419,6 +478,7 @@ export class TorrinDebridService implements TorrentDebridService {
     return toMagnetURI(parsed);
   }
 
+  /** Fetch a single Torrin job by id via `GET /api/jobs/{id}`. */
   public async getMagnet(magnetId: string): Promise<DebridDownload> {
     const { data } = await this.request<TorrinJob>(
       'GET',
@@ -427,11 +487,13 @@ export class TorrinDebridService implements TorrentDebridService {
     return jobToDownload(data);
   }
 
+  /** List all Torrin jobs owned by this credential via `GET /api/jobs`. */
   public async listMagnets(): Promise<DebridDownload[]> {
     const { data } = await this.request<TorrinJob[]>('GET', '/api/jobs');
     return (data ?? []).map(jobToDownload);
   }
 
+  /** Delete a Torrin job by id via `DELETE /api/jobs/{id}`. */
   public async removeMagnet(magnetId: string): Promise<void> {
     await this.request<unknown>(
       'DELETE',
@@ -439,6 +501,11 @@ export class TorrinDebridService implements TorrentDebridService {
     );
   }
 
+  /**
+   * Pass-through: Torrin already returns playable, pre-signed HTTPS URLs in
+   * `Job.stream_urls[].signed_url`, so there's no separate "unrestrict" step
+   * the way other debrids have. Implemented to satisfy the interface.
+   */
   public async generateTorrentLink(
     link: string,
     _clientIp?: string
@@ -446,6 +513,11 @@ export class TorrinDebridService implements TorrentDebridService {
     return link;
   }
 
+  /**
+   * Resolve `playbackInfo` into a final, playable Torrin signed URL. Wraps
+   * `_resolve` in a `DistributedLock` so concurrent requests for the same
+   * `(credential, hash, fileIndex, …)` coalesce into one upstream call.
+   */
   public async resolve(
     playbackInfo: PlaybackInfo,
     filename: string,
@@ -490,6 +562,16 @@ export class TorrinDebridService implements TorrentDebridService {
     return result;
   }
 
+  /**
+   * The actual resolve pipeline, called inside the distributed lock:
+   *  1. consult the playback link cache and the cross-service failure cache,
+   *  2. submit the magnet to Torrin,
+   *  3. when not yet downloaded and `cacheAndPlay` is true, poll until the
+   *     job completes or `maxWaitTime` elapses,
+   *  4. select the right file via `selectFileInTorrentOrNZB`,
+   *  5. return the matching `signed_url` (and optionally auto-remove the
+   *     job for one-shot adds).
+   */
   private async _resolve(
     playbackInfo: PlaybackInfo & { type: 'torrent' },
     filename: string,
@@ -637,6 +719,11 @@ export class TorrinDebridService implements TorrentDebridService {
     return url;
   }
 
+  /**
+   * Fetch a Torrin job and return the raw `TorrinJob` shape (including
+   * `stream_urls`), bypassing the `jobToDownload` projection used elsewhere.
+   * Needed during `_resolve` to access pre-signed URLs after polling completes.
+   */
   private async getRawJob(id: string): Promise<TorrinJob> {
     const { data } = await this.request<TorrinJob>(
       'GET',
