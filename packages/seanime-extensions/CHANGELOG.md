@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.2...seanime-extensions-v0.8.3) (2026-06-11)
+
+
+### Bug Fixes
+
+* **seanime-extensions:** prefer tvdb over trakt for season number ([81093f5](https://github.com/Viren070/AIOStreams/commit/81093f5f629d6b3f3b7c87056aec5fb8bd5020f8))
+
 ## [0.8.2](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.1...seanime-extensions-v0.8.2) (2026-05-09)
 
 
