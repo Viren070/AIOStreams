@@ -291,6 +291,27 @@ app.get('/configure', (req, res) => {
   res.redirect('/stremio/configure');
 });
 
+// SPA route validation: returns true for paths that exist in the client-side router.
+const SPA_STATIC_ROUTES = [
+  '/',
+  '/login',
+  '/oauth/callback/gdrive',
+  '/splashscreen',
+  '/stremio/configure',
+];
+
+const SPA_DYNAMIC_PATTERNS: RegExp[] = [
+  /^\/stremio\/[^/]+\/[^/]+\/configure$/,
+  /^\/dashboard(\/.*)?$/,
+];
+
+function isValidSpaRoute(routePath: string): boolean {
+  if (SPA_STATIC_ROUTES.includes(routePath)) {
+    return true;
+  }
+  return SPA_DYNAMIC_PATTERNS.some((pattern) => pattern.test(routePath));
+}
+
 // SPA fallback.
 app.get('*splat', staticRateLimiter, (req, res, next) => {
   if (req.method !== 'GET' || !req.accepts('html')) {
@@ -299,8 +320,11 @@ app.get('*splat', staticRateLimiter, (req, res, next) => {
   }
   const indexPath = path.join(frontendRoot, 'index.html');
   if (fs.existsSync(indexPath)) {
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(indexPath);
+    const status = isValidSpaRoute(req.path) ? 200 : 404;
+    res
+      .status(status)
+      .setHeader('Cache-Control', 'no-cache')
+      .sendFile(indexPath);
     return;
   }
   next();
