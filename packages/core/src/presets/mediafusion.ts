@@ -410,9 +410,11 @@ export class MediaFusionPreset extends Preset {
   public static getCacheKey(
     options: CacheKeyRequestOptions
   ): string | undefined {
-    const { headers } = options;
+    const { headers, resource, type, id, extras } = options;
     if (headers?.encoded_user_data) {
-      return getSimpleTextHash(headers.encoded_user_data);
+      return getSimpleTextHash(
+        `${resource}:${type}:${id}:${extras ?? ''}:${headers.encoded_user_data}`
+      );
     }
     return undefined;
   }
