@@ -937,11 +937,25 @@ class StreamFilterer {
       }
 
       if (!parsedId) return true;
-      const requestedSeason = Number.isInteger(Number(parsedId.season))
-        ? Number(parsedId.season)
+      const requestedSeason = Number.isInteger(
+        Number(requestedMetadata?.logicalSeason ?? parsedId.season)
+      )
+        ? Number(requestedMetadata?.logicalSeason ?? parsedId.season)
         : undefined;
-      const requestedEpisode = Number.isInteger(Number(parsedId.episode))
-        ? Number(parsedId.episode)
+      const requestedEpisode = Number.isInteger(
+        Number(requestedMetadata?.logicalEpisode ?? parsedId.episode)
+      )
+        ? Number(requestedMetadata?.logicalEpisode ?? parsedId.episode)
+        : undefined;
+      const externalSeason = Number.isInteger(
+        Number(requestedMetadata?.externalSeason)
+      )
+        ? Number(requestedMetadata?.externalSeason)
+        : undefined;
+      const externalEpisode = Number.isInteger(
+        Number(requestedMetadata?.externalEpisode)
+      )
+        ? Number(requestedMetadata?.externalEpisode)
         : undefined;
 
       if (
@@ -988,13 +1002,33 @@ class StreamFilterer {
         }
       }
 
+      const matchesLogicalSeason = !!(
+        requestedSeason &&
+        seasons &&
+        seasons.length > 0 &&
+        seasons.includes(requestedSeason)
+      );
+      const matchesExternalSeason = !!(
+        externalSeason &&
+        seasons &&
+        seasons.length > 0 &&
+        seasons.includes(externalSeason)
+      );
+
       if (
         requestedSeason &&
         seasons &&
         seasons.length > 0 &&
-        !seasons.includes(requestedSeason)
+        !matchesLogicalSeason
       ) {
         if (
+          matchesExternalSeason &&
+          externalEpisode &&
+          stream.parsedFile?.episodes?.length &&
+          stream.parsedFile.episodes.includes(externalEpisode)
+        ) {
+          // allow if explicit external season/episode tuple matches
+        } else if (
           seasons[0] === 1 &&
           stream.parsedFile?.episodes?.length &&
           requestedMetadata?.absoluteEpisode &&
@@ -1023,6 +1057,12 @@ class StreamFilterer {
         !stream.parsedFile?.episodes?.includes(requestedEpisode)
       ) {
         if (
+          matchesExternalSeason &&
+          externalEpisode &&
+          stream.parsedFile.episodes.includes(externalEpisode)
+        ) {
+          // allow if explicit external season/episode tuple matches
+        } else if (
           requestedMetadata?.absoluteEpisode &&
           stream.parsedFile?.episodes?.includes(
             requestedMetadata.absoluteEpisode

@@ -194,6 +194,10 @@ export interface FormatterContext {
   episodeRuntime?: number;
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number;
+  logicalSeason?: number;
+  externalSeason?: number;
+  logicalEpisode?: number;
+  externalEpisode?: number;
   originalLanguage?: string;
   daysSinceRelease?: number;
   hasNextEpisode?: boolean;

@@ -71,11 +71,48 @@ interface SearchResultMetadata {
   capabilities: Capabilities;
 }
 
+function isRateLimitError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /\b429\b|too many requests/i.test(message);
+}
+
 export abstract class BaseNabAddon<
   C extends NabAddonConfig,
   A extends BaseNabApi<'torznab' | 'newznab'>,
 > extends BaseDebridAddon<C> {
   abstract api: A;
+
+  private async fetchQueryBatch(
+    searchFunction: string,
+    queryParams: Record<string, string>,
+    queries: string[],
+    queryLimit: ReturnType<typeof createQueryLimit>
+  ): Promise<{
+    results: SearchResultItem<A['namespace']>[];
+    rateLimitError?: unknown;
+  }> {
+    const settled = await Promise.allSettled(
+      queries.map((q) =>
+        queryLimit(() =>
+          this.fetchResults(searchFunction, { ...queryParams, q })
+        )
+      )
+    );
+
+    const results: SearchResultItem<A['namespace']>[] = [];
+    let rateLimitError: unknown;
+    for (const item of settled) {
+      if (item.status === 'fulfilled') {
+        results.push(...item.value);
+      } else if (isRateLimitError(item.reason)) {
+        rateLimitError ??= item.reason;
+      } else {
+        throw item.reason;
+      }
+    }
+
+    return { results, rateLimitError };
+  }
 
   protected async performSearch(
     parsedId: ParsedId,
@@ -88,6 +125,8 @@ export abstract class BaseNabAddon<
     const start = Date.now();
     const queryParams: Record<string, string> = {};
     const queryLimit = createQueryLimit();
+    const preferQuerySearch =
+      this.userData.forceQuerySearch || metadata.forceQuerySearch;
     let capabilities: Capabilities;
     let searchType: SearchResultMetadata['searchType'] = 'id';
     try {
@@ -100,10 +139,16 @@ export abstract class BaseNabAddon<
 
     this.logger.debug(`Capabilities: ${JSON.stringify(capabilities)}`);
 
-    const chosenFunction = this.getSearchFunction(
+    let chosenFunction = this.getSearchFunction(
       parsedId.mediaType,
       capabilities.searching
     );
+    if (preferQuerySearch && capabilities.searching.search?.available) {
+      chosenFunction = {
+        capabilities: capabilities.searching.search,
+        function: 'search',
+      };
+    }
     if (!chosenFunction)
       throw new Error(
         `Could not find a search function for ${capabilities.server.title}`
@@ -120,7 +165,7 @@ export abstract class BaseNabAddon<
       capabilities.limits?.max?.toString() ??
       '10000';
 
-    if (this.userData.forceQuerySearch) {
+    if (preferQuerySearch) {
     } else if (
       // prefer tvdb ID over imdb ID for series
       parsedId.mediaType === 'series' &&
@@ -144,17 +189,18 @@ export abstract class BaseNabAddon<
     )
       queryParams.tvdbid = metadata.tvdbId.toString();
 
+    const requestedExternalSeason = metadata.externalSeason ?? parsedId.season;
     if (
-      ((!this.userData.forceQuerySearch &&
+      ((!preferQuerySearch &&
         searchCapabilities.supportedParams.includes('season')) ||
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
         )) &&
-      parsedId.season
+      requestedExternalSeason
     )
-      queryParams.season = parsedId.season.toString();
+      queryParams.season = requestedExternalSeason.toString();
     if (
-      ((!this.userData.forceQuerySearch &&
+      ((!preferQuerySearch &&
         searchCapabilities.supportedParams.includes('ep')) ||
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
@@ -163,7 +209,7 @@ export abstract class BaseNabAddon<
     )
       queryParams.ep = parsedId.episode.toString();
     if (
-      !this.userData.forceQuerySearch &&
+      !preferQuerySearch &&
       searchCapabilities.supportedParams.includes('year') &&
       metadata.year &&
       parsedId.mediaType === 'movie'
@@ -171,6 +217,7 @@ export abstract class BaseNabAddon<
       queryParams.year = metadata.year.toString();
 
     let queries: string[] = [];
+    let queryWaves: string[][] = [];
     if (
       !queryParams.imdbid &&
       !queryParams.tmdbid &&
@@ -178,31 +225,72 @@ export abstract class BaseNabAddon<
       searchCapabilities.supportedParams.includes('q') &&
       metadata.primaryTitle
     ) {
-      queries = this.buildQueries(parsedId, metadata, {
-        // add year if it is not already in the query params
-        addYear: !queryParams.year,
-        // add season and episode if they are not already in the query params
-        // some endpoints won't return results with season/ep in query
-        addSeasonEpisode: forceIncludeSeasonEpInParams.includes(
-          capabilities.server.title || ''
-        )
-          ? false
-          : !queryParams.season && !queryParams.ep,
-        titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
-      });
+      queryWaves = metadata.forceQuerySearch
+        ? this.buildAmbiguousAnimeQueryWaves(parsedId, metadata)
+        : [];
+      queries =
+        queryWaves.length > 0
+          ? []
+          : this.buildQueries(parsedId, metadata, {
+              // add year if it is not already in the query params
+              addYear: !queryParams.year,
+              // add season and episode if they are not already in the query params
+              // some endpoints won't return results with season/ep in query
+              addSeasonEpisode: forceIncludeSeasonEpInParams.includes(
+                capabilities.server.title || ''
+              )
+                ? false
+                : !queryParams.season && !queryParams.ep,
+              titleLanguages: getTitleLanguagesForUrl(
+                this.userData.url,
+                this.id
+              ),
+            });
       searchType = 'query';
+    }
+    if (
+      preferQuerySearch &&
+      !queryParams.imdbid &&
+      !queryParams.tmdbid &&
+      !queryParams.tvdbid &&
+      queries.length === 0 &&
+      queryWaves.length === 0
+    ) {
+      throw new Error(
+        `Query search was requested for ${capabilities.server.title}, but the selected search function does not support q`
+      );
     }
     queryParams.extended = '1';
     let results: SearchResultItem<A['namespace']>[] = [];
-    if (queries.length > 0) {
+    if (queryWaves.length > 0) {
+      this.logger.debug('Performing query waves', { waves: queryWaves });
+      for (const wave of queryWaves) {
+        const waveResult = await this.fetchQueryBatch(
+          searchFunction,
+          queryParams,
+          wave,
+          queryLimit
+        );
+        results.push(...waveResult.results);
+        if (results.length > 0) {
+          break;
+        }
+        if (waveResult.rateLimitError) {
+          throw waveResult.rateLimitError;
+        }
+      }
+    } else if (queries.length > 0) {
       this.logger.debug('Performing queries', { queries });
-      const searchPromises = queries.map((q) =>
-        queryLimit(() =>
-          this.fetchResults(searchFunction, { ...queryParams, q })
-        )
+      const searchResult = await this.fetchQueryBatch(
+        searchFunction,
+        queryParams,
+        queries,
+        queryLimit
       );
-      const allResults = await Promise.all(searchPromises);
-      results = allResults.flat();
+      if (searchResult.rateLimitError && searchResult.results.length === 0) {
+        throw searchResult.rateLimitError;
+      }
+      results = searchResult.results;
     } else {
       results = await this.fetchResults(searchFunction, queryParams);
     }

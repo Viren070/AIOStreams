@@ -10,6 +10,9 @@ import {
   createLogger,
   getSeaDexInfoHashes,
   enrichParsedIdWithAnimeEntry,
+  extractLogicalSeasonFromTitles,
+  calculateLogicalEpisode,
+  buildAnimeTitles,
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
 import { calculateAbsoluteEpisode } from '../builtins/utils/general.js';
@@ -24,6 +27,11 @@ export interface ExtendedMetadata extends Metadata {
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
   seasonYear?: number; // For anime, the year of the season (e.g., 2021 for "Winter 2021")
+  logicalSeason?: number;
+  externalSeason?: number;
+  logicalEpisode?: number;
+  externalEpisode?: number;
+  isAmbiguousAnimeSeason?: boolean;
 }
 
 export interface ExpressionContext {
@@ -42,6 +50,10 @@ export interface ExpressionContext {
   runtime?: number;
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
+  logicalSeason?: number;
+  externalSeason?: number;
+  logicalEpisode?: number;
+  externalEpisode?: number;
   originalLanguage?: string;
   daysSinceRelease?: number; // age in days of the movie / **episode**
   hasNextEpisode?: boolean;
@@ -195,6 +207,29 @@ export class StreamContext {
           this.type as any
         );
 
+        const externalSeason = this.parsedId?.season
+          ? Number(this.parsedId.season)
+          : undefined;
+        const externalEpisode = this.parsedId?.episode
+          ? Number(this.parsedId.episode)
+          : undefined;
+        const logicalSeason = this.isAnime
+          ? extractLogicalSeasonFromTitles([
+              this.animeEntry?.title,
+              ...(this.animeEntry?.synonyms ?? []),
+            ])
+          : undefined;
+        const logicalEpisode = this.isAnime
+          ? calculateLogicalEpisode(externalEpisode, this.animeEntry)
+          : externalEpisode;
+        const seasonYear = this.animeEntry?.animeSeason?.year ?? undefined;
+        const isAmbiguousAnimeSeason = !!(
+          this.isAnime &&
+          logicalSeason &&
+          externalSeason &&
+          logicalSeason !== externalSeason
+        );
+
         // Calculate absolute episode for anime
         let absoluteEpisode: number | undefined;
         let relativeAbsoluteEpisode: number | undefined;
@@ -277,11 +312,48 @@ export class StreamContext {
           }
         }
 
+        const preferredTitles =
+          isAmbiguousAnimeSeason && this.animeEntry
+            ? buildAnimeTitles(
+                this.animeEntry,
+                metadata.title,
+                logicalSeason,
+                seasonYear
+              )
+            : [];
+        const preferredPrimaryTitle =
+          isAmbiguousAnimeSeason && this.animeEntry?.title
+            ? this.animeEntry.title
+            : metadata.title;
+        const titlesWithLang =
+          isAmbiguousAnimeSeason && preferredTitles.length > 0
+            ? preferredTitles.map((title, index) => {
+                const existing = metadata.titles?.find(
+                  (t) => t.title === title
+                );
+                if (existing) return existing;
+                return {
+                  title,
+                  language: index === 0 ? metadata.originalLanguage : undefined,
+                  type: 'anime-entry',
+                };
+              })
+            : metadata.titles;
+
         const extendedMetadata: ExtendedMetadata = {
           ...metadata,
+          title: preferredPrimaryTitle,
+          titles: titlesWithLang,
+          year:
+            isAmbiguousAnimeSeason && seasonYear ? seasonYear : metadata.year,
           absoluteEpisode,
           relativeAbsoluteEpisode,
-          seasonYear: this.animeEntry?.animeSeason?.year ?? undefined,
+          seasonYear,
+          logicalSeason,
+          externalSeason,
+          logicalEpisode,
+          externalEpisode,
+          isAmbiguousAnimeSeason,
         };
 
         return extendedMetadata;
@@ -396,12 +468,18 @@ export class StreamContext {
           apiKey: this.userData.tmdbApiKey,
         }).getEpisodeDetails(metadata.tmdbId, seasonNumber, episodeNumber);
       } catch (error) {
-        logger.warn(
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        const isIgnorableAnimeEpisodeLookupMiss =
+          this.isAnime && errorMessage.includes('Not Found');
+        logger[isIgnorableAnimeEpisodeLookupMiss ? 'debug' : 'warn'](
           {
             id: this.id,
-            err: error instanceof Error ? error.message : String(error),
+            err: errorMessage,
           },
-          'failed to fetch episode details'
+          isIgnorableAnimeEpisodeLookupMiss
+            ? 'episode details unavailable for anime lookup'
+            : 'failed to fetch episode details'
         );
         return undefined;
       }
@@ -658,6 +736,10 @@ export class StreamContext {
       latestSeason: this._metadata?.seasons
         ? Math.max(...this._metadata.seasons.map((s) => s.season_number))
         : undefined,
+      logicalSeason: this._metadata?.logicalSeason,
+      externalSeason: this._metadata?.externalSeason,
+      logicalEpisode: this._metadata?.logicalEpisode,
+      externalEpisode: this._metadata?.externalEpisode,
       anilistId: this.animeEntry?.mappings?.anilistId,
       malId: this.animeEntry?.mappings?.malId,
       hasSeaDex: !!this._seadex?.allHashes?.size,
@@ -699,6 +781,10 @@ export class StreamContext {
       latestSeason: this._metadata?.seasons
         ? Math.max(...this._metadata.seasons.map((s) => s.season_number))
         : undefined,
+      logicalSeason: this._metadata?.logicalSeason,
+      externalSeason: this._metadata?.externalSeason,
+      logicalEpisode: this._metadata?.logicalEpisode,
+      externalEpisode: this._metadata?.externalEpisode,
       // Anime entry data
       anilistId: this.animeEntry?.mappings?.anilistId,
       malId: this.animeEntry?.mappings?.malId,

@@ -23,6 +23,7 @@ export * from '../poster/index.js';
 export * from './distributed-lock.js';
 export * from './id-parser.js';
 export * from '../anime-database/index.js';
+export * from './anime-search.js';
 export * from './regex.js';
 export * from './general.js';
 export * from './seadex.js';
