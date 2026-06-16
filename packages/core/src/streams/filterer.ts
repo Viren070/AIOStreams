@@ -1002,28 +1002,36 @@ class StreamFilterer {
         }
       }
 
+      if (
+        requestedSeason === 0 &&
+        stream.parsedFile?.episodes?.length &&
+        !seasons?.includes(0)
+      ) {
+        return false;
+      }
+
       const matchesLogicalSeason = !!(
-        requestedSeason &&
+        requestedSeason !== undefined &&
         seasons &&
         seasons.length > 0 &&
         seasons.includes(requestedSeason)
       );
       const matchesExternalSeason = !!(
-        externalSeason &&
+        externalSeason !== undefined &&
         seasons &&
         seasons.length > 0 &&
         seasons.includes(externalSeason)
       );
 
       if (
-        requestedSeason &&
+        requestedSeason !== undefined &&
         seasons &&
         seasons.length > 0 &&
         !matchesLogicalSeason
       ) {
         if (
           matchesExternalSeason &&
-          externalEpisode &&
+          externalEpisode !== undefined &&
           stream.parsedFile?.episodes?.length &&
           stream.parsedFile.episodes.includes(externalEpisode)
         ) {
@@ -1052,13 +1060,13 @@ class StreamFilterer {
       }
 
       if (
-        requestedEpisode &&
+        requestedEpisode !== undefined &&
         stream.parsedFile?.episodes?.length &&
         !stream.parsedFile?.episodes?.includes(requestedEpisode)
       ) {
         if (
           matchesExternalSeason &&
-          externalEpisode &&
+          externalEpisode !== undefined &&
           stream.parsedFile.episodes.includes(externalEpisode)
         ) {
           // allow if explicit external season/episode tuple matches

@@ -144,6 +144,10 @@ export interface ParseValue {
     genres: string[] | null;
     year: number | null;
     episodeRuntime: number | null;
+    logicalSeason: number | null;
+    externalSeason: number | null;
+    logicalEpisode: number | null;
+    externalEpisode: number | null;
   };
   service?: {
     id: string | null;
@@ -569,6 +573,10 @@ export abstract class BaseFormatter {
         episodeRuntime: this.formatterContext.episodeRuntime || null,
         genres: this.formatterContext.genres || null,
         year: this.formatterContext.year || null,
+        logicalSeason: this.formatterContext.logicalSeason ?? null,
+        externalSeason: this.formatterContext.externalSeason ?? null,
+        logicalEpisode: this.formatterContext.logicalEpisode ?? null,
+        externalEpisode: this.formatterContext.externalEpisode ?? null,
       },
       addon: {
         name: stream.addon?.name || null,

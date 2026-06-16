@@ -7,6 +7,7 @@ import {
   AnimeEntry,
   IdParser,
   ParsedId,
+  parseStremioCoordinate,
   createLogger,
   getSeaDexInfoHashes,
   enrichParsedIdWithAnimeEntry,
@@ -153,8 +154,8 @@ export class StreamContext {
       animeEntry = animeDb.getEntryById(
         parsedId.type,
         parsedId.value,
-        parsedId.season ? Number(parsedId.season) : undefined,
-        parsedId.episode ? Number(parsedId.episode) : undefined
+        parseStremioCoordinate(parsedId.season),
+        parseStremioCoordinate(parsedId.episode)
       );
 
       // Enrich parsedId with anime entry data if available and no season specified
@@ -207,26 +208,25 @@ export class StreamContext {
           this.type as any
         );
 
-        const externalSeason = this.parsedId?.season
-          ? Number(this.parsedId.season)
-          : undefined;
-        const externalEpisode = this.parsedId?.episode
-          ? Number(this.parsedId.episode)
-          : undefined;
-        const logicalSeason = this.isAnime
+        const externalSeason = parseStremioCoordinate(this.parsedId?.season);
+        const externalEpisode = parseStremioCoordinate(this.parsedId?.episode);
+        const useLogicalAnimeCoordinates =
+          this.isAnime && externalSeason !== 0;
+        const logicalSeason = useLogicalAnimeCoordinates
           ? extractLogicalSeasonFromTitles([
               this.animeEntry?.title,
               ...(this.animeEntry?.synonyms ?? []),
             ])
           : undefined;
-        const logicalEpisode = this.isAnime
+        const logicalEpisode = useLogicalAnimeCoordinates
           ? calculateLogicalEpisode(externalEpisode, this.animeEntry)
           : externalEpisode;
         const seasonYear = this.animeEntry?.animeSeason?.year ?? undefined;
         const isAmbiguousAnimeSeason = !!(
           this.isAnime &&
-          logicalSeason &&
-          externalSeason &&
+          logicalSeason !== undefined &&
+          externalSeason !== undefined &&
+          externalSeason > 0 &&
           logicalSeason !== externalSeason
         );
 
@@ -712,10 +712,8 @@ export class StreamContext {
       type: this.type,
       isAnime: this.isAnime,
       queryType: this.queryType,
-      season: this.parsedId?.season ? Number(this.parsedId.season) : undefined,
-      episode: this.parsedId?.episode
-        ? Number(this.parsedId.episode)
-        : undefined,
+      season: parseStremioCoordinate(this.parsedId?.season),
+      episode: parseStremioCoordinate(this.parsedId?.episode),
       title: this._metadata?.title,
       titles: this._metadata?.titles?.map((t) => t.title),
       year: this._metadata?.year,
@@ -757,10 +755,8 @@ export class StreamContext {
       id: this.id,
       isAnime: this.isAnime,
       queryType: this.queryType,
-      season: this.parsedId?.season ? Number(this.parsedId.season) : undefined,
-      episode: this.parsedId?.episode
-        ? Number(this.parsedId.episode)
-        : undefined,
+      season: parseStremioCoordinate(this.parsedId?.season),
+      episode: parseStremioCoordinate(this.parsedId?.episode),
       // Metadata fields
       title: this._metadata?.title,
       titles: this._metadata?.titles?.map((t) => t.title),

@@ -1,4 +1,4 @@
-import type { AnimeEntry } from './anime-database.js';
+import type { AnimeEntry } from '../anime-database/index.js';
 
 const SEASON_WORD_PATTERNS = [
   'season',

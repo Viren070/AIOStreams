@@ -6,7 +6,12 @@
   Stream,
 } from '../../db/schemas.js';
 import { z, ZodError } from 'zod';
-import { IdParser, IdType, ParsedId } from '../../utils/id-parser.js';
+import {
+  IdParser,
+  IdType,
+  ParsedId,
+  parseStremioCoordinate,
+} from '../../utils/id-parser.js';
 import {
   AnimeDatabase,
   BuiltinServiceId,
@@ -205,8 +210,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       this._searchMetadataPromise = Promise.resolve({
         primaryTitle: undefined,
         titles: [],
-        season: parsedId.season ? Number(parsedId.season) : undefined,
-        episode: parsedId.episode ? Number(parsedId.episode) : undefined,
+        season: parseStremioCoordinate(parsedId.season),
+        episode: parseStremioCoordinate(parsedId.episode),
       });
     }
 
@@ -549,8 +554,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     }
 
     const titlePlaceholder = '<___title___>';
-    const querySeason = metadata.logicalSeason ?? parsedId.season;
-    const queryEpisode = metadata.logicalEpisode ?? parsedId.episode;
+    const querySeason = parseStremioCoordinate(
+      metadata.logicalSeason ?? parsedId.season
+    );
+    const queryEpisode = parseStremioCoordinate(
+      metadata.logicalEpisode ?? parsedId.episode
+    );
     const externalSeason = metadata.externalSeason;
     const externalEpisode = metadata.externalEpisode;
 
@@ -577,8 +586,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     } else if (parsedId.mediaType === 'series' && addSeasonEpisode) {
       if (
         includeSeasonOnly &&
-        querySeason &&
-        (queryEpisode ? Number(queryEpisode) < 100 : true)
+        querySeason !== undefined &&
+        (queryEpisode !== undefined ? queryEpisode < 100 : true)
       ) {
         addQuery(
           `${titlePlaceholder} S${querySeason.toString().padStart(2, '0')}`
@@ -588,12 +597,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         addQuery(
           `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`
         );
-      } else if (queryEpisode && !querySeason) {
+      } else if (queryEpisode !== undefined && querySeason === undefined) {
         addQuery(
           `${titlePlaceholder} E${queryEpisode.toString().padStart(2, '0')}`
         );
       }
-      if (includeEpisodeOnly && queryEpisode) {
+      if (includeEpisodeOnly && queryEpisode !== undefined) {
         addQuery(
           `${titlePlaceholder} ${queryEpisode.toString().padStart(2, '0')}`
         );
@@ -610,15 +619,15 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode!.toString().padStart(2, '0')}`
         );
       }
-      if (querySeason && queryEpisode) {
+      if (querySeason !== undefined && queryEpisode !== undefined) {
         addQuery(
           `${titlePlaceholder} S${querySeason.toString().padStart(2, '0')}E${queryEpisode.toString().padStart(2, '0')}`
         );
       }
       if (
         includeExternalQueries &&
-        externalSeason &&
-        externalEpisode &&
+        externalSeason !== undefined &&
+        externalEpisode !== undefined &&
         (externalSeason !== querySeason || externalEpisode !== queryEpisode)
       ) {
         addExternalQuery(
@@ -645,8 +654,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       !metadata.isAnime ||
       !metadata.forceQuerySearch ||
       parsedId.mediaType !== 'series' ||
-      !metadata.logicalSeason ||
-      !metadata.logicalEpisode
+      metadata.logicalSeason === undefined ||
+      metadata.logicalEpisode === undefined
     ) {
       return [];
     }
@@ -668,8 +677,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const animeEntry = AnimeDatabase.getInstance().getEntryById(
       parsedId.type,
       parsedId.value,
-      parsedId.season ? Number(parsedId.season) : undefined,
-      parsedId.episode ? Number(parsedId.episode) : undefined
+      parseStremioCoordinate(parsedId.season),
+      parseStremioCoordinate(parsedId.episode)
     );
 
     // Extract seasonYear from anime entry
@@ -680,25 +689,23 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
     }
 
-    const externalSeason = parsedId.season
-      ? Number(parsedId.season)
-      : undefined;
-    const externalEpisode = parsedId.episode
-      ? Number(parsedId.episode)
-      : undefined;
-    const logicalSeason = animeEntry
+    const externalSeason = parseStremioCoordinate(parsedId.season);
+    const externalEpisode = parseStremioCoordinate(parsedId.episode);
+    const useLogicalAnimeCoordinates = !!animeEntry && externalSeason !== 0;
+    const logicalSeason = useLogicalAnimeCoordinates
       ? extractLogicalSeasonFromTitles([
           animeEntry?.title,
           ...(animeEntry?.synonyms ?? []),
         ])
       : undefined;
-    const logicalEpisode = animeEntry
+    const logicalEpisode = useLogicalAnimeCoordinates
       ? calculateLogicalEpisode(externalEpisode, animeEntry)
       : externalEpisode;
     const isAmbiguousAnimeSeason = !!(
       animeEntry &&
-      logicalSeason &&
-      externalSeason &&
+      logicalSeason !== undefined &&
+      externalSeason !== undefined &&
+      externalSeason > 0 &&
       logicalSeason !== externalSeason
     );
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AnimeEntry } from './anime-database.js';
+import type { AnimeEntry } from '../anime-database/index.js';
 import {
   buildAmbiguousAnimeQueryWaves,
   buildAnimeTitles,

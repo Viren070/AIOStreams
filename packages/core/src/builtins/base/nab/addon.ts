@@ -15,6 +15,7 @@ import {
 import {
   BaseNabApi,
   Capabilities,
+  NabRateLimitError,
   SearchResponse,
   SearchResultItem,
 } from './api.js';
@@ -72,8 +73,7 @@ interface SearchResultMetadata {
 }
 
 function isRateLimitError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /\b429\b|too many requests/i.test(message);
+  return error instanceof NabRateLimitError;
 }
 
 export abstract class BaseNabAddon<
@@ -196,7 +196,7 @@ export abstract class BaseNabAddon<
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
         )) &&
-      requestedExternalSeason
+      requestedExternalSeason !== undefined
     )
       queryParams.season = requestedExternalSeason.toString();
     if (
