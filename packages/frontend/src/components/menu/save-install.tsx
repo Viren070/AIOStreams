@@ -292,6 +292,7 @@ interface InstallCardProps {
   onOpenSeanime: () => void;
   onOpenJellyfin: () => void;
   onOpenAniyomi: () => void;
+  onOpenSyncler: () => void;
   disableSeanimeCard?: boolean;
   seanimeDisabledReason?: string;
 }
@@ -307,6 +308,7 @@ function InstallCard({
   onOpenSeanime,
   onOpenJellyfin,
   onOpenAniyomi,
+  onOpenSyncler,
   disableSeanimeCard,
   seanimeDisabledReason,
 }: InstallCardProps) {
@@ -476,6 +478,12 @@ function InstallCard({
               unofficial
               author="worldInColors"
               onClick={onOpenAniyomi}
+            />
+            <AppCard
+              logoSrc="https://styles.redditmedia.com/t5_36vbjl/styles/communityIcon_l8kk44971s261.png?width=128&frame=1&auto=webp&s=01081fb70172c0683bad48d926ca309fd3138d56"
+              name="Syncler"
+              description="Via Syncler Express Vendor"
+              onClick={onOpenSyncler}
             />
           </div>
         </div>
@@ -1253,6 +1261,7 @@ function Content() {
   const stremioCustomSourceModal = useDisclosure(false);
   const jellyfinModal = useDisclosure(false);
   const aniyomiModal = useDisclosure(false);
+  const synclerModal = useDisclosure(false);
   const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
@@ -1610,6 +1619,7 @@ function Content() {
               onOpenSeanime={seanimeModal.open}
               onOpenJellyfin={jellyfinModal.open}
               onOpenAniyomi={aniyomiModal.open}
+              onOpenSyncler={synclerModal.open}
               disableSeanimeCard={disableSeanimeCard}
               seanimeDisabledReason={seanimeDisabledReason}
             />
@@ -1981,6 +1991,76 @@ function Content() {
             >
               Open extension on GitHub
             </Button>
+          </div>
+        </Modal>
+
+        <Modal
+          open={synclerModal.isOpen}
+          onOpenChange={synclerModal.toggle}
+          title="Install in Syncler"
+          description="Configure AIOStreams as a Syncler Express Vendor"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">
+              AIOStreams can act as a Syncler Express Vendor package.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-400 ml-1">
+                Vendor URL
+              </label>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={`${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler-provider.json`}
+                  className="flex-1 font-mono text-sm bg-black/20"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={() =>
+                    copyToClipboard(`${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler-provider.json`, {
+                      onSuccess: () => toast.success('Vendor URL copied to clipboard'),
+                      onError: () => toast.error('Failed to copy'),
+                    })
+                  }
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy Vendor URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2 mt-4">
+              <label className="text-xs font-medium text-gray-400 ml-1">
+                Syncler Managed Account Token
+              </label>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={`${uuid ?? ''}/${encryptedPassword ?? ''}`}
+                  className="flex-1 font-mono text-sm bg-black/20"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={() =>
+                    copyToClipboard(`${uuid ?? ''}/${encryptedPassword ?? ''}`, {
+                      onSuccess: () => toast.success('Token copied to clipboard'),
+                      onError: () => toast.error('Failed to copy'),
+                    })
+                  }
+                  intent="primary"
+                  className="shrink-0 px-3"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Add the Vendor URL to Syncler. It will install two packages: <strong>AIOStreams</strong> and <strong>AIOStreams (Advanced Format)</strong>.<br/><br/>
+              Select your preferred package, and paste the combined Token above into its <strong>API Key</strong> slot. The Advanced Format provides rich UI badges and custom sorting.
+            </p>
           </div>
         </Modal>
 
