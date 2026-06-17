@@ -124,6 +124,16 @@ export const metadataSchema = {
         requiresRestart: true,
         secret: false,
       },
+      animeApi: {
+        schema: seconds,
+        default: 86400,
+        label: 'AnimeApi refresh (s)',
+        description:
+          'Refresh interval for the nattadasu/animeApi dataset (anidb/anilist/mal/kitsu/imdb/tmdb/tvdb/trakt mappings).',
+        env: 'ANIME_DB_ANIMEAPI_REFRESH_INTERVAL',
+        requiresRestart: true,
+        secret: false,
+      },
     },
   },
 } as const satisfies RuntimeConfigSection;

@@ -30,7 +30,8 @@ export type ExternalIdType =
   | 'notify.moe_id'
   | 'simkl_id'
   | 'themoviedb_id'
-  | 'thetvdb_id';
+  | 'thetvdb_id'
+  | 'trakt_id';
 export interface ParsedId {
   type: IdType;
   value: string | number;

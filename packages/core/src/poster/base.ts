@@ -2,7 +2,7 @@
 import { Cache } from '../utils/cache.js';
 import { makeRequest } from '../utils/http.js';
 import { IdParser } from '../utils/id-parser.js';
-import { AnimeDatabase } from '../utils/anime-database.js';
+import { AnimeDatabase } from '../anime-database/index.js';
 
 export type ParsedPosterId = {
   idType: 'tmdb' | 'imdb' | 'tvdb';
