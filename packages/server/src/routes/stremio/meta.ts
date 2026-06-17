@@ -8,6 +8,7 @@ import {
 
 import { stremioMetaRateLimiter } from '../../middlewares/ratelimit.js';
 import { trackResource } from '../../middlewares/analytics.js';
+import { createResponse } from '../../utils/responses.js';
 
 const logger = createLogger('server');
 const router: Router = Router();
@@ -24,7 +25,7 @@ router.get(
   '/:type/:id.json',
   async (
     req: Request<MetaParams>,
-    res: Response<MetaResponse>,
+    res: Response<MetaResponse | ReturnType<typeof createResponse>>,
     next: NextFunction
   ) => {
     if (!req.userData) {
@@ -67,7 +68,15 @@ router.get(
         }
       );
       if (!transformed) {
-        next();
+        res.status(404).json(
+          createResponse({
+            success: false,
+            error: {
+              code: 'NOT_FOUND',
+              message: 'no addon to handle meta resource',
+            },
+          })
+        );
       } else {
         res.status(200).json(transformed);
       }
