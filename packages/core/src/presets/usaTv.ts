@@ -86,6 +86,11 @@ export class USATVPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [LIVE_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        removed: true,
+        disabled: true,
+        reason: 'USA TV addon is deprecated.',
+      },
     };
   }
 

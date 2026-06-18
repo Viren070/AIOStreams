@@ -129,6 +129,11 @@ export class DebridioTvPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.LIVE_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        removed: true,
+        disabled: true,
+        reason: 'Debridio TV addon is deprecated.',
+      },
     };
   }
 
