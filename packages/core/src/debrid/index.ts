@@ -1,12 +1,14 @@
-﻿export * from './base.js';
+export * from './base.js';
 export * from './utils.js';
 export * from './stremthru.js';
 export * from './torbox.js';
 export * from './nzbdav.js';
 export * from './altmount.js';
+export * from './aiostreams.js';
 
 import {
   appConfig,
+  constants,
   ServiceId,
   fromUrlSafeBase64,
   resolveServiceTime,
@@ -19,6 +21,7 @@ import { NzbDAVService } from './nzbdav.js';
 import { AltmountService } from './altmount.js';
 import { StremioNNTPService } from './stremio-nntp.js';
 import { EasynewsService } from './easynews.js';
+import { NativeUsenetService } from './aiostreams.js';
 
 export function getDebridService(
   serviceName: ServiceId,
@@ -77,6 +80,8 @@ export function getDebridService(
       return new EasynewsService(config);
     case 'stremthru_newz':
       return createStremThruNewzService(config, pollInterval, maxWaitTime);
+    case constants.AIOSTREAMS_SERVICE:
+      return new NativeUsenetService(config);
     default:
       if (StremThruPreset.supportedServices.includes(serviceName)) {
         return new StremThruService({

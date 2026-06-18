@@ -20,7 +20,7 @@ import {
   SERVICE_DETAILS,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
-import { TorrentClient } from '../../utils/torrent.js';
+import { TorrentGrabber } from '../../utils/torrent.js';
 import {
   BuiltinDebridServices,
   PlaybackInfo,
@@ -46,7 +46,6 @@ import pLimit from 'p-limit';
 import { cleanTitle } from '../../parser/utils.js';
 import { NzbDavConfig, NzbDAVService } from '../../debrid/nzbdav.js';
 import { AltmountConfig, AltmountService } from '../../debrid/altmount.js';
-import { createProxy } from '../../proxy/index.js';
 import { formatHours } from '../../formatters/utils.js';
 
 export interface SearchMetadata extends TitleMetadata {
@@ -249,7 +248,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       const start = Date.now();
       const metadataPromises = torrentsToDownload.map(async (torrent) => {
         try {
-          const metadata = await TorrentClient.getMetadata(torrent);
+          const metadata = await TorrentGrabber.getMetadata(torrent);
           if (!metadata) {
             return torrent.hash ? (torrent as Torrent) : null;
           }
@@ -275,7 +274,14 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     }
 
     const torrentServices = this.userData.services.filter(
-      (s) => !['nzbdav', 'altmount'].includes(s.id)
+      (s) =>
+        ![
+          'nzbdav',
+          'altmount',
+          'stremio_nntp',
+          'stremthru_newz',
+          'aiostreams',
+        ].includes(s.id)
     );
     const nzbServices = this.userData.services.filter((s) =>
       [
@@ -284,6 +290,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         'torbox',
         'stremio_nntp',
         'stremthru_newz',
+        'aiostreams',
       ].includes(s.id)
     );
 
@@ -627,7 +634,6 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         }
       }
 
-
       const parsedSeasonRecord = seasons.find(
         (s) => s.number === parsedId.season
       );
@@ -823,7 +829,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const errorStreams: Stream[] = [];
 
     let resultStreams = [...streams];
-    let serviceIds = [...streamServiceIds];
+    const serviceIds = [...streamServiceIds];
 
     let nzbdavAuth: z.infer<typeof NzbDavConfig> | undefined;
     let altmountAuth: z.infer<typeof AltmountConfig> | undefined;
@@ -877,21 +883,6 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       });
     };
 
-    const getServiceIndices = (serviceId: BuiltinServiceId): number[] =>
-      serviceIds
-        .map((id, i) => ({ id, i }))
-        .filter(({ id }) => id === serviceId)
-        .map(({ i }) => i);
-
-    const dropServiceStreams = (serviceId: BuiltinServiceId) => {
-      const keep: number[] = serviceIds
-        .map((id, i) => ({ id, i }))
-        .filter(({ id }) => id !== serviceId)
-        .map(({ i }) => i);
-      resultStreams = keep.map((i) => resultStreams[i]);
-      serviceIds = keep.map((i) => serviceIds[i]);
-    };
-
     const nzbdavBasicAuth =
       nzbdavAuth?.webdavUser && nzbdavAuth?.webdavPassword
         ? `Basic ${Buffer.from(
@@ -905,80 +896,15 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           ).toString('base64')}`
         : undefined;
 
-    if (nzbdavAuth) {
+    // Only stamp proxy headers / notWebReady when the service will NOT proxy
+    // itself at resolve time.
+    if (nzbdavAuth && !nzbdavAuth.aiostreamsAuth) {
       setProxyHeaders('nzbdav', nzbdavBasicAuth);
     }
 
-    if (altmountAuth) {
+    if (altmountAuth && !altmountAuth.aiostreamsAuth) {
       setProxyHeaders('altmount', altmountBasicAuth);
     }
-
-    const proxyServiceStreams = async (
-      serviceId: BuiltinServiceId,
-      proxyCredential: string | undefined,
-      authorization: string | undefined,
-      errorDescription: string
-    ) => {
-      const indices = getServiceIndices(serviceId);
-      if (indices.length === 0 || !proxyCredential) return;
-
-      const proxy = createProxy({
-        id: 'builtin',
-        enabled: true,
-        credentials: proxyCredential,
-      });
-
-      const proxiedStreams = await proxy.generateUrls(
-        indices.map((i) => ({
-          url: resultStreams[i].url!,
-          filename: resultStreams[i].behaviorHints?.filename ?? undefined,
-          headers: authorization
-            ? {
-                request: {
-                  Authorization: authorization,
-                },
-              }
-            : undefined,
-        }))
-      );
-
-      if (proxiedStreams && !('error' in proxiedStreams)) {
-        for (let i = 0; i < indices.length; i++) {
-          const index = indices[i];
-          const proxiedUrl = proxiedStreams[i];
-          if (proxiedUrl) {
-            resultStreams[index].url = proxiedUrl;
-            resultStreams[index].behaviorHints = {
-              ...resultStreams[index].behaviorHints,
-              notWebReady: undefined,
-              proxyHeaders: undefined,
-            };
-          }
-        }
-      } else {
-        errorStreams.push(
-          this._createErrorStream({
-            title: `${this.name}`,
-            description: errorDescription,
-          })
-        );
-        dropServiceStreams(serviceId);
-      }
-    };
-
-    await proxyServiceStreams(
-      'nzbdav',
-      nzbdavAuth?.aiostreamsAuth,
-      nzbdavBasicAuth,
-      'Failed to proxy NzbDAV streams, ensure your proxy auth is correct.'
-    );
-
-    await proxyServiceStreams(
-      'altmount',
-      altmountAuth?.aiostreamsAuth,
-      altmountBasicAuth,
-      'Failed to proxy Altmount streams, ensure your proxy auth is correct.'
-    );
 
     return {
       streams: resultStreams,

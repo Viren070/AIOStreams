@@ -14,6 +14,7 @@ import {
   selectFileInTorrentOrNZB,
   hashNzbUrl,
   buildResolveKey,
+  removeDownloadOnAbort,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -628,14 +629,16 @@ export class TorboxDebridService
     playbackInfo: PlaybackInfo,
     filename: string,
     cacheAndPlay: boolean,
-    autoRemoveDownloads?: boolean
+    autoRemoveDownloads?: boolean,
+    signal?: AbortSignal
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'torrent') {
       return this.stremthru.resolve(
         playbackInfo,
         filename,
         cacheAndPlay,
-        autoRemoveDownloads
+        autoRemoveDownloads,
+        signal
       );
     }
     const { result } = await DistributedLock.getInstance().withLock(
@@ -653,7 +656,8 @@ export class TorboxDebridService
           playbackInfo,
           filename,
           cacheAndPlay,
-          autoRemoveDownloads
+          autoRemoveDownloads,
+          signal
         ),
       {
         timeout: cacheAndPlay ? this.maxWaitTime + this.pollInterval : 30000,
@@ -669,7 +673,8 @@ export class TorboxDebridService
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string,
     cacheAndPlay: boolean,
-    autoRemoveDownloads?: boolean
+    autoRemoveDownloads?: boolean,
+    signal?: AbortSignal
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
     const cacheKey = buildResolveKey(
@@ -751,6 +756,15 @@ export class TorboxDebridService
         status: usenetDownload.status,
         id: usenetDownload.id,
       });
+
+      // If this attempt loses a parallel failover race, drop the usenet
+      // download we just added (library lookups above are left intact).
+      removeDownloadOnAbort(
+        signal,
+        { id: usenetDownload.id },
+        (id) => this.removeNzb(id),
+        (m) => logger.warn(m)
+      );
     }
 
     if (usenetDownload.status !== 'downloaded') {
@@ -762,6 +776,16 @@ export class TorboxDebridService
       // poll status when cacheAndPlay is true
       const maxPolls = Math.ceil(this.maxWaitTime / this.pollInterval);
       for (let i = 0; i < maxPolls; i++) {
+        if (signal?.aborted) {
+          throw new DebridError('resolve aborted (failover lost)', {
+            statusCode: 499,
+            statusText: 'Client Closed Request',
+            code: 'UNKNOWN',
+            headers: {},
+            body: null,
+            type: 'api_error',
+          });
+        }
         await new Promise((resolve) => setTimeout(resolve, this.pollInterval));
         const usenetList = await this._fetchNzbList(
           usenetDownload.id.toString()

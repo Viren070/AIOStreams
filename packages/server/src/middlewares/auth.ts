@@ -6,6 +6,8 @@ import {
   verifySession,
   issueSession,
   getConfigAccessKey,
+  hasPermission,
+  Permission,
 } from '@aiostreams/core';
 
 export const SESSION_COOKIE = 'aiostreams.session';
@@ -106,32 +108,36 @@ export function requireSession(
 }
 
 /**
- * Requires a valid admin session. Chains requireSession, then rejects
- * non-admins (403 / redirect to /).
+ * Requires a valid session whose user holds the given permission. Chains
+ * requireSession, then rejects users lacking the permission (403 / redirect to
+ * /). `admin` implies every permission.
  */
-export function requireAdmin(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
-  requireSession(req, res, (err?: unknown) => {
-    if (err) {
-      next(err);
-      return;
-    }
-    if (!res.headersSent && req.user) {
-      if (req.user.isAdmin) {
-        next();
+export function requirePermission(permission: Permission) {
+  return function (req: Request, res: Response, next: NextFunction): void {
+    requireSession(req, res, (err?: unknown) => {
+      if (err) {
+        next(err);
         return;
       }
-      if (req.accepts(['html', 'json']) === 'html') {
-        res.redirect(302, '/');
-        return;
+      if (!res.headersSent && req.user) {
+        if (hasPermission(req.user.username, permission)) {
+          next();
+          return;
+        }
+        if (req.accepts(['html', 'json']) === 'html') {
+          res.redirect(302, '/');
+          return;
+        }
+        next(new APIError(constants.ErrorCode.FORBIDDEN));
       }
-      next(new APIError(constants.ErrorCode.FORBIDDEN));
-    }
-  });
+    });
+  };
 }
+
+/**
+ * Requires a valid admin session. Rejects non-admins (403 / redirect to /).
+ */
+export const requireAdmin = requirePermission(Permission.Admin);
 
 /**
  * Applies requireSession only when the config page is auth-gated

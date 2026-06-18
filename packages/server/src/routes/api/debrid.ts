@@ -3,27 +3,17 @@ import {
   APIError,
   constants,
   createLogger,
-  formatZodError,
   DebridError,
-  PlaybackInfoSchema,
-  getDebridService,
-  ServiceAuthSchema,
-  fromUrlSafeBase64,
-  Cache,
-  PlaybackInfo,
-  ServiceAuth,
-  decryptString,
-  metadataStore,
-  fileInfoStore,
-  TitleMetadata,
-  FileInfoSchema,
+  decodeFallbackKey,
+  decodeFileInfo,
+  getPlayChain,
+  parsePlaybackUrl,
+  resolvePlaybackTarget,
+  runPlayChain,
   getSimpleTextHash,
-  FileInfo,
-  maskSensitiveInfo,
-  getNzbFallbacks,
-  isNzbRetryableError,
   DistributedLock,
-  type NzbFallback,
+  type FailoverAttempt,
+  type FailoverContentType,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import { StaticFiles } from '../../app.js';
@@ -44,283 +34,169 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 
 interface PlaybackParams {
   encryptedStoreAuth: string;
+  fallbackKey?: string;
   fileInfo: string;
   metadataId: string;
   filename: string;
 }
 
+/** Map a DebridError code to the static fallback video served to the player. */
+function mapDebridErrorToStaticFile(code: string | undefined): string {
+  switch (code) {
+    case 'UNAVAILABLE_FOR_LEGAL_REASONS':
+      return StaticFiles.UNAVAILABLE_FOR_LEGAL_REASONS;
+    case 'STORE_LIMIT_EXCEEDED':
+      return StaticFiles.STORE_LIMIT_EXCEEDED;
+    case 'PAYMENT_REQUIRED':
+      return StaticFiles.PAYMENT_REQUIRED;
+    case 'TOO_MANY_REQUESTS':
+      return StaticFiles.TOO_MANY_REQUESTS;
+    case 'FORBIDDEN':
+      return StaticFiles.FORBIDDEN;
+    case 'UNAUTHORIZED':
+      return StaticFiles.UNAUTHORIZED;
+    case 'UNPROCESSABLE_ENTITY':
+    case 'UNSUPPORTED_MEDIA_TYPE':
+    case 'STORE_MAGNET_INVALID':
+      return StaticFiles.DOWNLOAD_FAILED;
+    case 'NO_MATCHING_FILE':
+      return StaticFiles.NO_MATCHING_FILE;
+    default:
+      return StaticFiles.INTERNAL_SERVER_ERROR;
+  }
+}
+
 router.get(
-  '/playback/:encryptedStoreAuth/:fileInfo/:metadataId/:filename',
+  [
+    '/playback/:encryptedStoreAuth/:fallbackKey/:fileInfo/:metadataId/:filename',
+    // Legacy
+    '/playback/:encryptedStoreAuth/:fileInfo/:metadataId/:filename',
+  ],
   async (req: Request<PlaybackParams>, res: Response, next: NextFunction) => {
     try {
       const {
         encryptedStoreAuth,
-        fileInfo: encodedFileInfo,
+        fallbackKey,
+        fileInfo: fileInfoRaw,
         metadataId,
         filename,
       } = req.params;
 
-      let fileInfo: FileInfo | undefined;
-
-      try {
-        fileInfo = FileInfoSchema.parse(
-          JSON.parse(fromUrlSafeBase64(encodedFileInfo))
+      // Validate the clicked item decodes (preserves the 400 contract) and tells
+      // us which kind it is for cross-type filtering.
+      const fileInfo = await decodeFileInfo(fileInfoRaw);
+      if (!fileInfo) {
+        next(
+          new APIError(
+            constants.ErrorCode.BAD_REQUEST,
+            undefined,
+            'Failed to parse file info and not found in store.'
+          )
         );
-      } catch (error: any) {
-        fileInfo = await fileInfoStore()?.get(encodedFileInfo);
-        if (!fileInfo) {
-          logger.warn(`Could not get file info`, {
-            fileInfo: encodedFileInfo,
-            error,
-            fileInfoStoreAvailable: fileInfoStore() ? true : false,
-          });
-          next(
-            new APIError(
-              constants.ErrorCode.BAD_REQUEST,
-              undefined,
-              'Failed to parse file info and not found in store.'
-            )
-          );
-          return;
-        }
+        return;
       }
+      const clickedType: FailoverContentType =
+        fileInfo.type === 'usenet' ? 'usenet' : 'debrid';
 
-      const decryptedStoreAuth = decryptString(encryptedStoreAuth);
-      if (!decryptedStoreAuth.success) {
-        throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
-          undefined,
-          'Failed to decrypt store auth'
-        );
-      }
+      const decodedFbk = decodeFallbackKey(fallbackKey);
+      const chain = decodedFbk
+        ? await getPlayChain(decodedFbk, clickedType)
+        : undefined;
+      const fallbackItems = chain?.items ?? [];
+      const hasFailover = fallbackItems.length > 0;
 
-      let storeAuth: ServiceAuth;
-      try {
-        storeAuth = ServiceAuthSchema.parse(
-          JSON.parse(decryptedStoreAuth.data)
-        );
-      } catch (error: any) {
-        logger.warn(`Could not parse decrypted store auth`, {
-          decryptedStoreAuth: maskSensitiveInfo(decryptedStoreAuth.data),
-          error,
-        });
-        throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
-          undefined,
-          'Failed to parse store auth'
-        );
-      }
+      const clientIp = req.userIp;
+      const attempts: FailoverAttempt[] = [
+        {
+          label: 'clicked',
+          resolve: (signal) =>
+            resolvePlaybackTarget(
+              { encryptedStoreAuth, fileInfoRaw, metadataId, filename },
+              { clientIp },
+              signal
+            ),
+        },
+        ...fallbackItems.map((it): FailoverAttempt => {
+          const target = parsePlaybackUrl(it.url);
+          return {
+            label: it.type,
+            resolve: (signal) =>
+              target
+                ? resolvePlaybackTarget(target, { clientIp }, signal)
+                : Promise.reject(new Error('unparseable fallback url')),
+          };
+        }),
+      ];
 
-      const metadata: TitleMetadata | undefined =
-        await metadataStore().get(metadataId);
-      if (!metadata && !fileInfo.serviceItemId) {
-        throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
-          undefined,
-          'Metadata not found'
-        );
-      }
-
-      logger.verbose(`Got metadata: ${JSON.stringify(metadata)}`);
-
-      const playbackInfo: PlaybackInfo =
-        fileInfo.type === 'torrent'
-          ? {
-              type: 'torrent',
-              metadata: metadata,
-              title: fileInfo.title,
-              downloadUrl: fileInfo.downloadUrl,
-              hash: fileInfo.hash,
-              private: fileInfo.private,
-              sources: fileInfo.sources,
-              index: fileInfo.index,
-              filename: filename,
-              fileIndex: fileInfo.fileIndex,
-              serviceItemId: fileInfo.serviceItemId,
-            }
-          : {
-              type: 'usenet',
-              metadata: metadata,
-              title: fileInfo.title,
-              hash: fileInfo.hash,
-              nzb: fileInfo.nzb,
-              easynewsUrl: fileInfo.easynewsUrl,
-              index: fileInfo.index,
-              filename: filename,
-              fileIndex: fileInfo.fileIndex,
-              serviceItemId: fileInfo.serviceItemId,
-            };
-
-      const debridInterface = getDebridService(
-        storeAuth.id,
-        storeAuth.credential,
-        req.userIp
-      );
-
-      const fbk = req.query.fbk as string | undefined;
-      const nzbFallbacks: NzbFallback[] = fbk ? await getNzbFallbacks(fbk) : [];
-
-      logger.debug(`Attempting debrid resolve`, {
-        storeAuthId: storeAuth.id,
-        fallbacks: nzbFallbacks.length,
-      });
-
-      const attempts: Array<NzbFallback | null> = [null, ...nzbFallbacks];
-      const isUsenetFailover =
-        fileInfo.type === 'usenet' && nzbFallbacks.length > 0;
-
-      const outerLockKey = `nzb-failover:${storeAuth.id}:${fileInfo.hash ?? metadataId}:${filename}:${req.userIp}:${getSimpleTextHash(storeAuth.credential)}`;
-
-      let encounteredRetryableFailure = false;
-
-      const runFailoverChain = async (): Promise<string | undefined> => {
-        for (let i = 0; i < attempts.length; i++) {
-          const attempt = attempts[i];
-          const isLastAttempt = i === attempts.length - 1;
-
-          const currentPlaybackInfo: PlaybackInfo =
-            attempt !== null
-              ? {
-                  ...(playbackInfo as PlaybackInfo & { type: 'usenet' }),
-                  nzb: attempt.nzbUrl,
-                  hash: attempt.hash,
-                  serviceItemId: undefined,
-                  fileIndex: undefined,
-                  ...(attempt.filename !== undefined && {
-                    filename: attempt.filename,
-                    title: attempt.filename,
-                  }),
-                }
-              : playbackInfo;
-
-          const currentFilename = attempt?.filename ?? filename;
-
-          try {
-            const url = await debridInterface.resolve(
-              currentPlaybackInfo,
-              currentFilename,
-              fileInfo.cacheAndPlay ?? false,
-              fileInfo.autoRemoveDownloads
-            );
-            if (attempt !== null) {
-              logger.info(
-                `[${storeAuth.id}] NZB failover succeeded with fallback NZB`,
-                {
-                  attemptIndex: i,
-                  fallbackNzb: attempt.nzbUrl.substring(0, 80),
-                }
-              );
-            }
-            return url;
-          } catch (error: any) {
-            const isRetryable = isNzbRetryableError(error);
-
-            if (!isRetryable || isLastAttempt) {
-              throw error;
-            }
-
-            encounteredRetryableFailure = true;
-            logger.warn(
-              `[${storeAuth.id}] NZB resolve failed, trying ${
-                attempt === null
-                  ? `first fallback (1 of ${nzbFallbacks.length})`
-                  : `next fallback (${i + 1} of ${nzbFallbacks.length})`
-              }`,
-              { code: error?.code, message: error.message }
-            );
-          }
-        }
-        return undefined;
+      const runCfg = {
+        parallel: chain?.parallel ?? 1,
+        staggerMs: chain?.staggerMs ?? 0,
+        preferredGraceMs: chain?.preferredGraceMs ?? 0,
+        maxWaitMs: chain?.maxWaitMs ?? 60_000,
       };
 
-      let streamUrl: string | undefined;
-      let resolveError: Error | undefined;
-      try {
-        if (isUsenetFailover) {
-          const { result } = await DistributedLock.getInstance().withLock(
-            outerLockKey,
-            runFailoverChain,
-            { timeout: 180_000, ttl: 185_000 }
-          );
-          streamUrl = result;
-        } else {
-          streamUrl = await debridInterface.resolve(
-            playbackInfo,
-            filename,
-            fileInfo.cacheAndPlay ?? false,
-            fileInfo.autoRemoveDownloads
-          );
-        }
-      } catch (err: any) {
-        resolveError = err;
-      }
+      logger.debug('Attempting debrid resolve', {
+        attempts: attempts.length,
+        parallel: runCfg.parallel,
+        clickedType,
+      });
 
-      if (encounteredRetryableFailure) {
-        debridInterface.refreshLibraryCache?.(['nzb']).catch((err) => {
-          logger.warn(
-            `[${storeAuth.id}] Failed to refresh library cache after NZB failover failures`,
-            { error: err?.message }
-          );
-        });
-      }
+      const run = () => runPlayChain(attempts, runCfg);
 
-      if (resolveError) {
-        let staticFile: string = StaticFiles.INTERNAL_SERVER_ERROR;
-        if (resolveError instanceof DebridError) {
-          logger.error(
-            {
-              service: storeAuth.id,
-              err: resolveError,
-            },
-            `error during debrid resolve: ${resolveError.message}`
-          );
-          switch (resolveError.code) {
-            case 'UNAVAILABLE_FOR_LEGAL_REASONS':
-              staticFile = StaticFiles.UNAVAILABLE_FOR_LEGAL_REASONS;
-              break;
-            case 'STORE_LIMIT_EXCEEDED':
-              staticFile = StaticFiles.STORE_LIMIT_EXCEEDED;
-              break;
-            case 'PAYMENT_REQUIRED':
-              staticFile = StaticFiles.PAYMENT_REQUIRED;
-              break;
-            case 'TOO_MANY_REQUESTS':
-              staticFile = StaticFiles.TOO_MANY_REQUESTS;
-              break;
-            case 'FORBIDDEN':
-              staticFile = StaticFiles.FORBIDDEN;
-              break;
-            case 'UNAUTHORIZED':
-              staticFile = StaticFiles.UNAUTHORIZED;
-              break;
-            case 'UNPROCESSABLE_ENTITY':
-            case 'UNSUPPORTED_MEDIA_TYPE':
-            case 'STORE_MAGNET_INVALID':
-              staticFile = StaticFiles.DOWNLOAD_FAILED;
-              break;
-            case 'NO_MATCHING_FILE':
-              staticFile = StaticFiles.NO_MATCHING_FILE;
-              break;
-            default:
-              break;
+      // Share one running chain across concurrent requests for the same click.
+      const result = hasFailover
+        ? (
+            await DistributedLock.getInstance().withLock(
+              `failover:${getSimpleTextHash(
+                encryptedStoreAuth + metadataId + filename + fallbackKey
+              )}:${clientIp ?? '-'}`,
+              run,
+              {
+                timeout: Math.max(runCfg.maxWaitMs, 180_000),
+                ttl: Math.max(runCfg.maxWaitMs, 185_000),
+              }
+            )
+          ).result
+        : await run();
+
+      if (result.error) {
+        const err = result.error;
+        if (err instanceof DebridError) {
+          // A malformed clicked item with no chain to fall back to is a 400,
+          // not a static video.
+          if (err.code === 'BAD_REQUEST' && !hasFailover) {
+            next(
+              new APIError(
+                constants.ErrorCode.BAD_REQUEST,
+                undefined,
+                err.message
+              )
+            );
+            return;
           }
-        } else {
-          logger.error(
-            { service: storeAuth.id, err: resolveError },
-            `got unknown error during debrid resolve: ${resolveError.message}`
-          );
+          logger.error({ err }, `error during debrid resolve: ${err.message}`);
+          res.redirect(307, `/static/${mapDebridErrorToStaticFile(err.code)}`);
+          return;
         }
-
-        res.redirect(307, `/static/${staticFile}`);
+        logger.error(
+          { err },
+          `got unknown error during debrid resolve: ${err.message}`
+        );
+        res.redirect(307, `/static/${StaticFiles.INTERNAL_SERVER_ERROR}`);
         return;
       }
 
-      if (!streamUrl) {
+      if (!result.url) {
         res.redirect(307, `/static/${StaticFiles.DOWNLOADING}`);
         return;
       }
 
-      res.redirect(307, streamUrl);
+      logger.debug(
+        { url: result.url },
+        'Debrid resolve succeeded, redirecting'
+      );
+
+      res.redirect(307, result.url);
     } catch (error: any) {
       if (error instanceof APIError || error instanceof ZodError) {
         next(error);
