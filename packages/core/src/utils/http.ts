@@ -281,6 +281,60 @@ export function shouldProxy(url: URL): {
   return { useProxy, proxyIndex };
 }
 
+export function isInternalEndpoint(url: URL): boolean {
+  const hostname = url.hostname.toLowerCase();
+
+  if (
+    hostname === 'localhost' ||
+    hostname === 'host.docker.internal' ||
+    hostname.endsWith('.local')
+  ) {
+    return true;
+  }
+
+  // Common internal-container hostnames are often single-label (e.g. "nzbdav").
+  if (!hostname.includes('.')) {
+    return true;
+  }
+
+  if (/^(127\.)/.test(hostname)) {
+    return true;
+  }
+  if (/^(10\.)/.test(hostname)) {
+    return true;
+  }
+  if (/^(192\.168\.)/.test(hostname)) {
+    return true;
+  }
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) {
+    return true;
+  }
+  if (/^169\.254\./.test(hostname)) {
+    return true;
+  }
+
+  if (hostname === '::1' || hostname.startsWith('fe80:')) {
+    return true;
+  }
+  if (hostname.startsWith('fc') || hostname.startsWith('fd')) {
+    return true;
+  }
+
+  try {
+    const baseHost = new URL(appConfig.bootstrap.baseUrl).hostname.toLowerCase();
+    const internalHost = new URL(
+      appConfig.bootstrap.internalUrl
+    ).hostname.toLowerCase();
+    if (hostname === baseHost || hostname === internalHost) {
+      return true;
+    }
+  } catch {
+    // Ignore invalid bootstrap URLs and rely on hostname heuristics above.
+  }
+
+  return false;
+}
+
 export function domainHasUserAgent(url: URL) {
   let userAgent: string | undefined;
   let hostname = url.hostname;

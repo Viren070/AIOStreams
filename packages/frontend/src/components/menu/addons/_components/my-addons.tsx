@@ -33,6 +33,10 @@ import {
   useConfirmationDialog,
 } from '../../../shared/confirmation-dialog';
 import * as constants from '../../../../../../core/src/utils/constants';
+import {
+  applyInternalAddonProxyConfig,
+  shouldAutoProxyInternalAddon,
+} from './proxy-auto';
 
 const manifestCache = new Map<string, any>();
 
@@ -995,6 +999,11 @@ function AddonListItem({
   const handleManifestUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const std = standardiseManifestUrl(newManifestUrl);
+    const nextOptionsForDecision =
+      presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
+        ? { manifestUrl: std }
+        : { url: std };
+    const autoProxyDecision = shouldAutoProxyInternalAddon(nextOptionsForDecision);
     if (!newManifestUrl) {
       toast.error('Please enter a new manifest URL');
       return;
@@ -1014,6 +1023,7 @@ function AddonListItem({
       setLoading(false);
       return;
     }
+    let autoEnabledProxy = false;
     setUserData((prev) => {
       const currentPreset = prev.presets.find(
         (p) => p.instanceId === preset.instanceId
@@ -1023,16 +1033,38 @@ function AddonListItem({
         presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
           ? { ...currentPreset.options, manifestUrl: std }
           : { ...currentPreset.options, url: std };
-      return {
+      const nextUserData = {
         ...prev,
         presets: prev.presets.map((p) =>
           p.instanceId === preset.instanceId ? { ...p, options } : p
         ),
       };
+
+      if (!autoProxyDecision.shouldAutoProxy) {
+        return nextUserData;
+      }
+
+      const autoProxyResult = applyInternalAddonProxyConfig(
+        nextUserData,
+        preset.instanceId
+      );
+      autoEnabledProxy = autoProxyResult.autoEnabledProxy;
+      return autoProxyResult.nextUserData;
     });
     setNewManifestUrl('');
     configModalOpen.close();
     toast.success('Manifest URL updated successfully');
+    if (autoProxyDecision.shouldAutoProxy) {
+      if (autoEnabledProxy) {
+        toast.info(
+          'Detected an internal HTTP addon URL. Proxy was auto-enabled and this addon was auto-routed through proxy.'
+        );
+      } else {
+        toast.info(
+          'Detected an internal HTTP addon URL. This addon was auto-targeted for proxy. Configure proxy URL and credentials to fully enable routing.'
+        );
+      }
+    }
     setLoading(false);
   };
 

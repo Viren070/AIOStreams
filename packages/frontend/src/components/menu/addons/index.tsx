@@ -30,6 +30,10 @@ import { AddonFetchingBehaviorCard } from './_components/addon-fetching-behavior
 import { CatalogSettingsCard } from './_components/catalog-settings';
 import { MergedCatalogsCard } from './_components/merged-catalogs';
 import { MyAddons } from './_components/my-addons';
+import {
+  applyInternalAddonProxyConfig,
+  shouldAutoProxyInternalAddon,
+} from './_components/proxy-auto';
 
 export function AddonsMenu() {
   return (
@@ -229,22 +233,74 @@ function Content() {
         setModalOpen(false);
         return;
       }
-      setUserData((prev) => ({
-        ...prev,
-        presets: [...prev.presets, newPreset],
-      }));
+      const autoProxyDecision = shouldAutoProxyInternalAddon(values.options);
+      let autoEnabledProxy = false;
+      setUserData((prev) => {
+        const baseNext = {
+          ...prev,
+          presets: [...prev.presets, newPreset],
+        };
+
+        if (!autoProxyDecision.shouldAutoProxy) {
+          return baseNext;
+        }
+
+        const autoProxyResult = applyInternalAddonProxyConfig(
+          baseNext,
+          newPreset.instanceId
+        );
+        autoEnabledProxy = autoProxyResult.autoEnabledProxy;
+        return autoProxyResult.nextUserData;
+      });
       toast.info('Addon installed successfully!');
+      if (autoProxyDecision.shouldAutoProxy) {
+        if (autoEnabledProxy) {
+          toast.info(
+            'Detected an internal HTTP addon URL. Proxy was auto-enabled and this addon was auto-routed through proxy.'
+          );
+        } else {
+          toast.info(
+            'Detected an internal HTTP addon URL. This addon was auto-targeted for proxy. Configure proxy URL and credentials to fully enable routing.'
+          );
+        }
+      }
       setModalOpen(false);
     } else if (modalMode === 'edit' && editingAddonId) {
-      setUserData((prev) => ({
-        ...prev,
-        presets: prev.presets.map((a) =>
-          a.instanceId === editingAddonId
-            ? { ...a, options: values.options }
-            : a
-        ),
-      }));
+      const autoProxyDecision = shouldAutoProxyInternalAddon(values.options);
+      let autoEnabledProxy = false;
+      setUserData((prev) => {
+        const baseNext = {
+          ...prev,
+          presets: prev.presets.map((a) =>
+            a.instanceId === editingAddonId
+              ? { ...a, options: values.options }
+              : a
+          ),
+        };
+
+        if (!autoProxyDecision.shouldAutoProxy) {
+          return baseNext;
+        }
+
+        const autoProxyResult = applyInternalAddonProxyConfig(
+          baseNext,
+          editingAddonId
+        );
+        autoEnabledProxy = autoProxyResult.autoEnabledProxy;
+        return autoProxyResult.nextUserData;
+      });
       toast.info('Addon updated successfully!');
+      if (autoProxyDecision.shouldAutoProxy) {
+        if (autoEnabledProxy) {
+          toast.info(
+            'Detected an internal HTTP addon URL. Proxy was auto-enabled and this addon was auto-routed through proxy.'
+          );
+        } else {
+          toast.info(
+            'Detected an internal HTTP addon URL. This addon was auto-targeted for proxy. Configure proxy URL and credentials to fully enable routing.'
+          );
+        }
+      }
       setModalOpen(false);
     }
   }
