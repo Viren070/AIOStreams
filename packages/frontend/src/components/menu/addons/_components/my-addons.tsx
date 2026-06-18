@@ -1004,6 +1004,11 @@ function AddonListItem({
         ? { manifestUrl: std }
         : { url: std };
     const autoProxyDecision = shouldAutoProxyInternalAddon(nextOptionsForDecision);
+    const autoEnabledProxy =
+      autoProxyDecision.shouldAutoProxy &&
+      !!userData.proxy?.id &&
+      !!userData.proxy?.url &&
+      !!userData.proxy?.credentials;
     if (!newManifestUrl) {
       toast.error('Please enter a new manifest URL');
       return;
@@ -1053,9 +1058,15 @@ function AddonListItem({
     configModalOpen.close();
     toast.success('Manifest URL updated successfully');
     if (autoProxyDecision.shouldAutoProxy) {
-      toast.info(
-        'Detected an internal HTTP addon URL. Proxy routing was auto-configured for this addon.'
-      );
+      if (autoEnabledProxy) {
+        toast.info(
+          'Detected an internal HTTP addon URL. Proxy was auto-enabled and this addon was auto-routed through proxy.'
+        );
+      } else {
+        toast.info(
+          'Detected an internal HTTP addon URL. This addon was auto-targeted for proxy. Configure proxy URL and credentials to fully enable routing.'
+        );
+      }
     }
     setLoading(false);
   };
