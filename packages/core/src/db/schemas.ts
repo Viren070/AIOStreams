@@ -790,10 +790,23 @@ export const UserDataSchema = z.object({
 
   autoRemoveDownloads: z.boolean().optional(),
   checkOwned: z.boolean().optional().default(true),
-  nzbFailover: z
+  failover: z
     .object({
       enabled: z.boolean().optional(),
+      /** Which result kinds may appear as failover targets. Default ['usenet']. */
+      contentTypes: z.array(z.enum(['usenet', 'debrid'])).optional(),
+      /** Allow a click on one kind to fail over into a different kind. Default false. */
+      allowCrossType: z.boolean().optional(),
+      /** Chain depth (number of fallback targets after the clicked item). */
       count: z.number().min(1).optional(),
+      /** Attempts in flight at once. 1 (default) = sequential = current behaviour. */
+      parallel: z.number().min(1).optional(),
+      /** Delay before starting the next parallel attempt (ms). */
+      staggerMs: z.number().min(0).optional(),
+      /** How long a ready lower-priority result waits for the clicked / higher-ranked item to catch up before being accepted (ms, parallel only). */
+      preferredGraceMs: z.number().min(0).optional(),
+      /** Overall deadline before giving up and serving a static error (ms). */
+      maxWaitMs: z.number().min(0).optional(),
       position: z.enum(['beforeLimiting', 'beforeSEL', 'last']).optional(),
     })
     .optional(),
@@ -1346,6 +1359,7 @@ const StatusResponseSchema = z.object({
     }),
     loggingSensitiveInfo: z.boolean(),
     searchApiDisabled: z.boolean(),
+    nabApiDisabled: z.boolean(),
     seanimeExtensionVersion: z.string().nullable(),
     tmdbApiAvailable: z.boolean(),
     /** Global analytics master switch (false = no events written anywhere). */
