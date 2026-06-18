@@ -23,7 +23,7 @@ import { partial_ratio } from 'fuzzball';
 import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
-import { StreamContext, ExtendedMetadata } from './context.js';
+import type { ExtendedMetadata, StreamContext } from './context.js';
 
 const logger = createLogger('filterer');
 

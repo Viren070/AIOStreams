@@ -26,13 +26,14 @@ The **Grouping** feature lets you control _when_ different sets of your addons a
   </Step>
   <Step>
     **Evaluate as results arrive** — as soon as Group 1 responds, AIOStreams
-    evaluates Group 2's condition: 
-      - If the condition is `false`, Group 2 (and all subsequent groups) are skipped immediately. 
+    evaluates Group 2's condition:
+      - If the condition is `false`, Group 2 (and all subsequent groups) are skipped immediately by default.
+      - If **Always add results from finished queries** is enabled, AIOStreams still exits early, but Group 2 and any subsequent groups that have already completed are included.
       - If `true`, Group 2's results are included and Group 3's condition is evaluated next.
   </Step>
   <Step>
     **Early exit** — the moment a group's condition is `false`, all pending
-    results beyond that point are discarded.
+    results beyond that point are discarded by default.
   </Step>
 </Steps>
 
@@ -91,6 +92,17 @@ queryType == "series" and count(resolution(totalStreams, '1080p')) < 2
 ```
 count(resolution(previousStreams, '2160p')) == 0 or previousGroupTimeTaken > 5000
 ```
+
+### Parallel option: finished results
+
+When using **Parallel** group behavior, you can enable **Always add results from finished queries**.
+
+With this option enabled:
+
+- AIOStreams still evaluates group conditions in order.
+- A failed condition still stops waiting for later groups.
+- The failed-condition group and any later groups that have already finished by that moment are still included.
+- Later groups that are still pending are not waited on.
 
 ---
 

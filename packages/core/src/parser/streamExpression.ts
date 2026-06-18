@@ -11,7 +11,7 @@ import { ZodError } from 'zod';
 import { PASSTHROUGH_STAGES } from '../utils/constants.js';
 import { parseBitrate } from './utils.js';
 import { createLogger } from '../logging/logger.js';
-import { ExpressionContext } from '../streams/context.js';
+import type { ExpressionContext } from '../streams/context.js';
 import { formRegexFromKeywordsSync } from '../utils/regex.js';
 
 const logger = createLogger('stream-expression');

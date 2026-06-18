@@ -660,6 +660,7 @@ export const UserDataSchema = z.object({
         )
         .optional(),
       behaviour: z.enum(['sequential', 'parallel']).optional(),
+      includeFinishedResultsOnEarlyExit: z.boolean().optional(),
     })
     .optional(),
   sortCriteria: z.object({
