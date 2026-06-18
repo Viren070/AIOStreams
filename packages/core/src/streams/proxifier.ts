@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import { ParsedStream, UserData } from '../db/schemas.js';
 import { constants, createLogger } from '../utils/index.js';
 import { createProxy } from '../proxy/index.js';
@@ -19,6 +19,11 @@ class Proxifier {
       return false;
     }
     if (stream.proxied) {
+      return false;
+    }
+    // Native usenet streams are served directly from this instance's byte
+    // endpoint (under BASE_URL) and must never be routed through any proxy.
+    if (stream.service && stream.service.id === constants.AIOSTREAMS_SERVICE) {
       return false;
     }
     let streamUrl: URL;
