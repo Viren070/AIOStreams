@@ -192,6 +192,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         age: age,
         title: result.title,
         indexer:
+          result.newznab?.sourceIndexerName?.toString() ??
           result.newznab?.hydraIndexerName?.toString() ??
           meta.capabilities.server.title,
         size:
