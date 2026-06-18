@@ -78,6 +78,7 @@ import { SeaDexPreset } from './seadex.js';
 import { StreamNZBPreset } from './streamnzb.js';
 import { HdHubPreset } from './hdhub.js';
 import { BaguettioPreset } from './baguettio.js';
+import { DeepBridgePreset } from './deepbridge.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -121,6 +122,7 @@ let PRESET_LIST: string[] = [
   'easynews-search',
   'usenet-streamer',
   'streamnzb',
+  'deepbridge',
   'dmm-cast',
   'nuvio-streams',
   'webstreamr',
@@ -331,6 +333,8 @@ export class PresetManager {
         return EasynewsSearchPreset;
       case 'streamnzb':
         return StreamNZBPreset;
+      case 'deepbridge':
+        return DeepBridgePreset;
       case 'hdhub':
         return HdHubPreset;
       case 'baguettio':
