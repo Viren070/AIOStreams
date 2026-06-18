@@ -5,7 +5,6 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "test": "pnpm run test --workspaces",
     "release": "commit-and-tag-version",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "metadata": "node scripts/generateMetadata.cjs",

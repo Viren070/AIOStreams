@@ -9,6 +9,7 @@ allowBuilds:
   sharp: true
   sqlite3: true
   unrs-resolver: true
+  yencode: true
 
 patchedDependencies:
   stremthru: patches/stremthru.patch
