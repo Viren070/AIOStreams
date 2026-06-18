@@ -134,6 +134,7 @@ const HEADERS_FOR_IP_FORWARDING = [
   'True-Client-IP',
   'X-Forwarded',
   'Forwarded-For',
+  'X-AIOStreams-User-IP',
 ];
 
 export const INTERNAL_SECRET_HEADER = Buffer.from(

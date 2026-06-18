@@ -48,6 +48,7 @@ export const ipMiddleware = (
 ) => {
   const getIpFromHeaders = (req: Request) => {
     return (
+      req.get('X-AIOStreams-User-IP') ||
       req.get('X-Client-IP') ||
       req.get('X-Forwarded-For')?.split(',')[0].trim() ||
       req.get('X-Real-IP') ||
