@@ -234,24 +234,16 @@ function Content() {
         return;
       }
       const autoProxyDecision = shouldAutoProxyInternalAddon(values.options);
-      let autoEnabledProxy = false;
-      setUserData((prev) => {
-        const baseNext = {
-          ...prev,
-          presets: [...prev.presets, newPreset],
-        };
-
-        if (!autoProxyDecision.shouldAutoProxy) {
-          return baseNext;
-        }
-
-        const autoProxyResult = applyInternalAddonProxyConfig(
-          baseNext,
-          newPreset.instanceId
-        );
-        autoEnabledProxy = autoProxyResult.autoEnabledProxy;
-        return autoProxyResult.nextUserData;
-      });
+      const baseNext = {
+        ...userData,
+        presets: [...userData.presets, newPreset],
+      };
+      const autoProxyResult = autoProxyDecision.shouldAutoProxy
+        ? applyInternalAddonProxyConfig(baseNext, newPreset.instanceId)
+        : null;
+      const nextUserData = autoProxyResult?.nextUserData ?? baseNext;
+      const autoEnabledProxy = autoProxyResult?.autoEnabledProxy ?? false;
+      setUserData(() => nextUserData);
       toast.info('Addon installed successfully!');
       if (autoProxyDecision.shouldAutoProxy) {
         if (autoEnabledProxy) {
@@ -267,28 +259,18 @@ function Content() {
       setModalOpen(false);
     } else if (modalMode === 'edit' && editingAddonId) {
       const autoProxyDecision = shouldAutoProxyInternalAddon(values.options);
-      let autoEnabledProxy = false;
-      setUserData((prev) => {
-        const baseNext = {
-          ...prev,
-          presets: prev.presets.map((a) =>
-            a.instanceId === editingAddonId
-              ? { ...a, options: values.options }
-              : a
-          ),
-        };
-
-        if (!autoProxyDecision.shouldAutoProxy) {
-          return baseNext;
-        }
-
-        const autoProxyResult = applyInternalAddonProxyConfig(
-          baseNext,
-          editingAddonId
-        );
-        autoEnabledProxy = autoProxyResult.autoEnabledProxy;
-        return autoProxyResult.nextUserData;
-      });
+      const baseNext = {
+        ...userData,
+        presets: userData.presets.map((a) =>
+          a.instanceId === editingAddonId ? { ...a, options: values.options } : a
+        ),
+      };
+      const autoProxyResult = autoProxyDecision.shouldAutoProxy
+        ? applyInternalAddonProxyConfig(baseNext, editingAddonId)
+        : null;
+      const nextUserData = autoProxyResult?.nextUserData ?? baseNext;
+      const autoEnabledProxy = autoProxyResult?.autoEnabledProxy ?? false;
+      setUserData(() => nextUserData);
       toast.info('Addon updated successfully!');
       if (autoProxyDecision.shouldAutoProxy) {
         if (autoEnabledProxy) {

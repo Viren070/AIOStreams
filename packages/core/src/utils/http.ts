@@ -282,18 +282,17 @@ export function shouldProxy(url: URL): {
 }
 
 export function isInternalEndpoint(url: URL): boolean {
-  const hostname = url.hostname.toLowerCase();
+  const rawHostname = url.hostname.toLowerCase();
+  const hostname =
+    rawHostname.startsWith('[') && rawHostname.endsWith(']')
+      ? rawHostname.slice(1, -1)
+      : rawHostname;
 
   if (
     hostname === 'localhost' ||
     hostname === 'host.docker.internal' ||
     hostname.endsWith('.local')
   ) {
-    return true;
-  }
-
-  // Common internal-container hostnames are often single-label (e.g. "nzbdav").
-  if (!hostname.includes('.')) {
     return true;
   }
 
@@ -313,10 +312,15 @@ export function isInternalEndpoint(url: URL): boolean {
     return true;
   }
 
-  if (hostname === '::1' || hostname.startsWith('fe80:')) {
+  if (hostname === '::1' || /^fe[89ab][0-9a-f]:/i.test(hostname)) {
     return true;
   }
-  if (hostname.startsWith('fc') || hostname.startsWith('fd')) {
+  if (/^f[cd][0-9a-f]{2}:/i.test(hostname)) {
+    return true;
+  }
+
+  // Common internal-container hostnames are often single-label (e.g. "nzbdav").
+  if (!hostname.includes('.') && !hostname.includes(':')) {
     return true;
   }
 

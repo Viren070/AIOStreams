@@ -27,7 +27,11 @@ function extractManifestUrl(options: Record<string, any>): string | undefined {
 }
 
 function isInternalEndpoint(url: URL): boolean {
-  const hostname = url.hostname.toLowerCase();
+  const rawHostname = url.hostname.toLowerCase();
+  const hostname =
+    rawHostname.startsWith('[') && rawHostname.endsWith(']')
+      ? rawHostname.slice(1, -1)
+      : rawHostname;
 
   if (
     hostname === 'localhost' ||
@@ -37,18 +41,16 @@ function isInternalEndpoint(url: URL): boolean {
     return true;
   }
 
-  if (!hostname.includes('.')) {
-    return true;
-  }
-
   if (/^(127\.)/.test(hostname)) return true;
   if (/^(10\.)/.test(hostname)) return true;
   if (/^(192\.168\.)/.test(hostname)) return true;
   if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) return true;
   if (/^169\.254\./.test(hostname)) return true;
 
-  if (hostname === '::1' || hostname.startsWith('fe80:')) return true;
-  if (hostname.startsWith('fc') || hostname.startsWith('fd')) return true;
+  if (hostname === '::1' || /^fe[89ab][0-9a-f]:/i.test(hostname)) return true;
+  if (/^f[cd][0-9a-f]{2}:/i.test(hostname)) return true;
+
+  if (!hostname.includes('.') && !hostname.includes(':')) return true;
 
   return false;
 }

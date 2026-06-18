@@ -931,7 +931,7 @@ function AddonListItem({
   onRemove: () => void;
   onToggleEnabled: (v: boolean) => void;
 }) {
-  const { setUserData } = useUserData();
+  const { userData, setUserData } = useUserData();
   const [isConfigurable, setIsConfigurable] = useState(false);
   const [logo, setLogo] = useState<string | undefined>(
     preset.logo || presetMetadata?.LOGO
@@ -1023,34 +1023,32 @@ function AddonListItem({
       setLoading(false);
       return;
     }
-    let autoEnabledProxy = false;
-    setUserData((prev) => {
-      const currentPreset = prev.presets.find(
-        (p) => p.instanceId === preset.instanceId
-      );
-      if (!currentPreset) return prev;
-      const options =
-        presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
-          ? { ...currentPreset.options, manifestUrl: std }
-          : { ...currentPreset.options, url: std };
-      const nextUserData = {
-        ...prev,
-        presets: prev.presets.map((p) =>
-          p.instanceId === preset.instanceId ? { ...p, options } : p
-        ),
-      };
+    const currentPreset = userData.presets.find(
+      (p) => p.instanceId === preset.instanceId
+    );
+    if (!currentPreset) {
+      toast.error('Addon not found while updating manifest URL.');
+      setLoading(false);
+      return;
+    }
 
-      if (!autoProxyDecision.shouldAutoProxy) {
-        return nextUserData;
-      }
+    const options =
+      presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
+        ? { ...currentPreset.options, manifestUrl: std }
+        : { ...currentPreset.options, url: std };
+    const baseNextUserData = {
+      ...userData,
+      presets: userData.presets.map((p) =>
+        p.instanceId === preset.instanceId ? { ...p, options } : p
+      ),
+    };
+    const autoProxyResult = autoProxyDecision.shouldAutoProxy
+      ? applyInternalAddonProxyConfig(baseNextUserData, preset.instanceId)
+      : null;
+    const nextUserData = autoProxyResult?.nextUserData ?? baseNextUserData;
+    const autoEnabledProxy = autoProxyResult?.autoEnabledProxy ?? false;
 
-      const autoProxyResult = applyInternalAddonProxyConfig(
-        nextUserData,
-        preset.instanceId
-      );
-      autoEnabledProxy = autoProxyResult.autoEnabledProxy;
-      return autoProxyResult.nextUserData;
-    });
+    setUserData(() => nextUserData);
     setNewManifestUrl('');
     configModalOpen.close();
     toast.success('Manifest URL updated successfully');
