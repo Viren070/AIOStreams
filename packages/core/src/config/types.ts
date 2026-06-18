@@ -33,6 +33,12 @@ export interface RuntimeConfigUiOverride {
     | 'json';
   /** Minimum allowed value for `number` fields (default: 0). */
   min?: number;
+  /**
+   * Hide this field from the generic settings page. Used for fields managed by
+   * a bespoke editor elsewhere (e.g. `usenet.providers` lives in the usenet
+   * dashboard). The value is still stored/served via that editor, never here.
+   */
+  hidden?: boolean;
 }
 
 /**

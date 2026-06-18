@@ -2,6 +2,7 @@
 import { SettingsRepository } from '../db/repositories/settings.js';
 import { createLogger } from '../logging/logger.js';
 import { formatZodError } from '../utils/format-zod-error.js';
+import { encryptString, decryptString } from '../utils/crypto.js';
 import {
   isRuntimeConfigField,
   resolveDescription,
@@ -228,7 +229,8 @@ export class SettingsStore<TSections extends SectionSchemas> {
     const stored = new Map<string, unknown>();
     for (const row of rows) {
       try {
-        stored.set(row.key, JSON.parse(row.value));
+        const decoded = this.decodeFromStorage(row.key, JSON.parse(row.value));
+        if (decoded !== undefined) stored.set(row.key, decoded);
       } catch (error) {
         logger.warn({ key: row.key, error }, 'Ignoring invalid stored setting');
       }
@@ -307,7 +309,11 @@ export class SettingsStore<TSections extends SectionSchemas> {
     if (entry.field.env && process.env[entry.field.env] !== undefined) {
       throw new Error(`Setting ${key} is overridden by ${entry.field.env}`);
     }
-    await SettingsRepository.set(key, parsed, updatedBy);
+    await SettingsRepository.set(
+      key,
+      this.encodeForStorage(key, parsed as ConfigValue),
+      updatedBy
+    );
     await this.reload();
   }
 
@@ -457,5 +463,52 @@ export class SettingsStore<TSections extends SectionSchemas> {
     const entry = this.fieldsByKey.get(key);
     if (!entry) throw new Error(`Unknown setting: ${key}`);
     return entry;
+  }
+
+  /**
+   * Encrypt the persisted form of a `secret: true` field at rest. Non-secret
+   * fields are stored verbatim. The encrypted form is a `{ __enc }` envelope so
+   * {@link decodeFromStorage} can transparently distinguish it from any
+   * previously-plaintext secret value (back-compat).
+   */
+  private encodeForStorage(key: string, value: ConfigValue): unknown {
+    const entry = this.fieldsByKey.get(key);
+    if (!entry?.field.secret) return value;
+    const enc = encryptString(JSON.stringify(value));
+    if (!enc.success) {
+      throw new Error(`Failed to encrypt secret setting ${key}`);
+    }
+    return { __enc: enc.data };
+  }
+
+  /**
+   * Inverse of {@link encodeForStorage}. Returns the decrypted value for secret
+   * fields stored as a `{ __enc }` envelope, the raw value for plaintext
+   * (legacy) secrets, and `undefined` when decryption fails (so the caller
+   * falls back to the default rather than surfacing ciphertext).
+   */
+  private decodeFromStorage(key: string, parsed: unknown): unknown {
+    const entry = this.fieldsByKey.get(key);
+    if (!entry?.field.secret) return parsed;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      typeof (parsed as { __enc?: unknown }).__enc === 'string'
+    ) {
+      const dec = decryptString((parsed as { __enc: string }).__enc);
+      if (!dec.success || dec.data == null) {
+        logger.warn(
+          { key },
+          'failed to decrypt secret setting; falling back to default'
+        );
+        return undefined;
+      }
+      try {
+        return JSON.parse(dec.data);
+      } catch {
+        return dec.data;
+      }
+    }
+    return parsed;
   }
 }

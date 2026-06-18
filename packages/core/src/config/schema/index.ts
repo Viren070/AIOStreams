@@ -16,3 +16,4 @@ export { rateLimitsSchema } from './rate-limits.js';
 export { presetsSchema } from './presets.js';
 export { builtinsSchema } from './builtins.js';
 export { analyticsSchema } from './analytics.js';
+export { usenetSchema } from './usenet.js';

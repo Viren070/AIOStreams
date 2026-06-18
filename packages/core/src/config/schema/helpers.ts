@@ -276,28 +276,32 @@ export const serviceTimeMap = z.union([
 ]);
 
 /**
- * Map of hostname → user-agent. Env shape: `host1:ua1,host2:ua2,...`.
- * Stores raw template values; use `applyUserAgentMapTemplates` as the field `resolve`.
+ * Map of key → user-agent. Env shape: `key1:ua1,key2:ua2,...`. A key is either a
+ * hostname pattern (`host`, `*.host`, `*`) or a `[context]` label (e.g.
+ * `[nzb_grabs]`) describing the kind of request. A value is either a literal
+ * user-agent or a `{preset}` reference to a built-in header set (see
+ * `header-presets.ts`). Stores raw template values; use
+ * `applyUserAgentMapTemplates` as the field `resolve`.
  */
 export const userAgentMap = z.union([
   z.record(z.string(), z.string()),
   z.string().transform((value, ctx) => {
     const out: Record<string, string> = {};
     if (!value.trim()) return out;
-    const regex = /([a-zA-Z0-9.\-*]+):([^,]*(?:,[^a-zA-Z0-9.\-*][^,]*)*)/g;
+    const regex = /([a-zA-Z0-9.\-*[\]_]+):([^,]*(?:,[^a-zA-Z0-9.\-*[][^,]*)*)/g;
     let match;
     let any = false;
     while ((match = regex.exec(value)) !== null) {
       any = true;
-      const host = match[1].trim();
+      const key = match[1].trim();
       const ua = match[2].trim();
-      if (!host || !ua) continue;
-      out[host] = ua;
+      if (!key || !ua) continue;
+      out[key] = ua;
     }
     if (!any) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Expected hostname:user-agent pairs.',
+        message: 'Expected key:user-agent pairs.',
       });
       return z.NEVER;
     }
@@ -317,8 +321,10 @@ export const applyUserAgentMapTemplates = (
 };
 
 /**
- * `addonProxyConfig` env format: comma-separated `hostname:bool|number` pairs.
- * Stored as `Record<hostname, boolean|number>`.
+ * `addonProxyConfig` env format: comma-separated `key:bool|number` pairs, where
+ * a key is a hostname (`host`, `*.host`, `*`) or a `[context]` label (e.g.
+ * `[newznab]`). The value enables/disables proxying or selects an `addonProxy`
+ * index. Stored as `Record<key, boolean|number>`.
  */
 export const addonProxyConfigMap = z.union([
   z.record(z.string(), z.union([z.boolean(), z.number().int()])),

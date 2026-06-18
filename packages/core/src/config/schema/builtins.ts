@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   boolOrList,
+  byteSize,
   commaSeparatedList,
   optionalPositiveInt,
   positiveInt,
@@ -88,6 +89,10 @@ const boolOrDebridStore = z.union([z.boolean(), debridStore]);
 
 const Day = 86400;
 const Week = 7 * Day;
+
+// Byte-size units (base-10, matching the `byteSize` helper + frontend SizeField).
+const MB = 1000 * 1000;
+const GB = 1000 * MB;
 
 /**
  * Built-in addons.
@@ -354,6 +359,50 @@ export const builtinsSchema = {
       secret: false,
     },
   },
+  grab: {
+    nzbCacheBytes: {
+      schema: byteSize,
+      default: 64 * MB,
+      label: 'NZB grab cache size',
+      description:
+        'In-memory cache size for grabbed .nzb files. Accepts plain bytes or `64MB`-style strings.',
+      env: 'BUILTIN_NZB_GRAB_CACHE_BYTES',
+      requiresRestart: false,
+      secret: false,
+    },
+    nzbDiskCacheBytes: {
+      schema: byteSize,
+      default: 1 * GB,
+      label: 'NZB grab disk cache size',
+      description:
+        'On-disk cache size for grabbed .nzb files (survives restarts). Set to ' +
+        '`0` to disable the disk tier. Accepts plain bytes or `1GB`-style strings.',
+      env: 'BUILTIN_NZB_GRAB_DISK_CACHE_BYTES',
+      requiresRestart: false,
+      secret: false,
+    },
+    torrentCacheBytes: {
+      schema: byteSize,
+      default: 64 * MB,
+      label: 'Torrent grab cache size',
+      description:
+        'In-memory cache size for grabbed .torrent files. Accepts plain bytes or `64MB`-style strings.',
+      env: 'BUILTIN_TORRENT_GRAB_CACHE_BYTES',
+      requiresRestart: false,
+      secret: false,
+    },
+    torrentDiskCacheBytes: {
+      schema: byteSize,
+      default: 512 * MB,
+      label: 'Torrent grab disk cache size',
+      description:
+        'On-disk cache size for grabbed .torrent files (survives restarts). Set ' +
+        'to `0` to disable the disk tier. Accepts plain bytes or `512MB`-style strings.',
+      env: 'BUILTIN_TORRENT_GRAB_DISK_CACHE_BYTES',
+      requiresRestart: false,
+      secret: false,
+    },
+  },
   gdrive: {
     clientId: {
       schema: nullableString,
@@ -491,7 +540,11 @@ export const builtinsSchema = {
       default: null,
       label: 'Newznab/Torznab user agent',
       env: 'BUILTIN_NAB_USER_AGENT',
-      description: 'User-Agent for Newznab/Torznab requests.',
+      description:
+        'Deprecated: prefer `[newznab]`/`[torznab]` entries in ' +
+        '`HOSTNAME_USER_AGENT_OVERRIDES` (which also support `{preset}` header ' +
+        'sets). User-Agent for Newznab/Torznab requests; the fallback when no ' +
+        'host/context override matches.',
       requiresRestart: false,
       secret: false,
     },
@@ -501,7 +554,11 @@ export const builtinsSchema = {
       label: 'Newznab/Torznab HTTP proxy',
       env: 'BUILTIN_NAB_HTTP_PROXY',
       description:
-        'Per-protocol HTTP proxy override (`torznab:URL,newznab:URL`). Overrides the global addon proxy.',
+        'Deprecated: add the proxy URL to `ADDON_PROXY` and route Newznab/Torznab ' +
+        'through it with a `[newznab]`/`[torznab]` entry in `ADDON_PROXY_CONFIG` ' +
+        '(e.g. `[newznab]:0`). Per-protocol HTTP proxy override ' +
+        '(`torznab:URL,newznab:URL`); still honoured and overrides the global ' +
+        'addon proxy when set.',
       requiresRestart: false,
       secret: false,
     },
