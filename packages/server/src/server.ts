@@ -20,9 +20,12 @@ import {
   constants,
   SeaDexDataset,
   ensureConfigAccessKey,
+  warnLegacyAuthVarsIfNeeded,
   startAnalytics,
   stopAnalytics,
   TaskManager,
+  drainUsenetMetrics,
+  pruneUsenetMetrics,
 } from '@aiostreams/core';
 import { randomBytes } from 'crypto';
 
@@ -94,6 +97,46 @@ function registerCacheTasks() {
   });
 }
 
+// Retain usenet provider rollups for ~13 months so the "all time" / monthly
+// views have history without the table growing unbounded.
+const USENET_METRICS_RETENTION_DAYS = 400;
+
+function registerUsenetTasks() {
+  TaskManager.register({
+    id: 'usenet-metrics-drain',
+    label: 'Flush usenet provider metrics',
+    description:
+      'Drains the in-memory native usenet engine counters into the hourly ' +
+      'provider metrics table that powers the dashboard charts.',
+    category: 'usenet',
+    kind: 'scheduled',
+    intervalMs: 60_000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'all',
+    run: async () => {
+      const n = await drainUsenetMetrics();
+      return { ok: true, message: `flushed ${n} provider deltas` };
+    },
+  });
+  TaskManager.register({
+    id: 'usenet-metrics-prune',
+    label: 'Prune old usenet metrics',
+    description:
+      'Deletes native usenet provider rollups older than the retention window.',
+    category: 'usenet',
+    kind: 'scheduled',
+    intervalMs: 24 * 60 * 60_000,
+    enabled: true,
+    destructive: true,
+    multiReplica: 'single',
+    run: async () => {
+      const n = await pruneUsenetMetrics(USENET_METRICS_RETENTION_DAYS);
+      return { ok: true, message: `pruned ${n} metric rows` };
+    },
+  });
+}
+
 async function initialiseRedis() {
   if (appConfig.bootstrap.redisUri) {
     await Cache.testRedisConnection();
@@ -132,6 +175,7 @@ async function initialiseTemplates() {
 
 async function initialiseAuth() {
   await ensureConfigAccessKey();
+  warnLegacyAuthVarsIfNeeded();
   if (appConfig.nzbProxy.publicEnabled) {
     appConfig.bootstrap.auth.set(
       constants.PUBLIC_NZB_PROXY_USERNAME,
@@ -160,6 +204,7 @@ async function start() {
     await initialiseProwlarr();
     registerPruneTask();
     registerCacheTasks();
+    registerUsenetTasks();
     await initialiseAuth();
     startAnalytics();
     const server = app.listen(appConfig.bootstrap.port, (error) => {

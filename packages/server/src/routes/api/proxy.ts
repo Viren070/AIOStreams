@@ -4,14 +4,16 @@ import {
   constants,
   createLogger,
   decryptString,
-  domainHasUserAgent,
+  resolveOverrideHeaders,
   Env,
   appConfig,
   fromUrlSafeBase64,
   getProxyAgent,
   getTimeTakenSincePoint,
   shouldProxy,
-  canUseProxy,
+  validateCredentials,
+  hasPermission,
+  Permission,
 } from '@aiostreams/core';
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
@@ -277,8 +279,7 @@ router.all(
       auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
 
       if (
-        (!appConfig.bootstrap.auth?.has(auth.username) ||
-          appConfig.bootstrap.auth?.get(auth.username) !== auth.password) &&
+        !validateCredentials(auth.username, auth.password) &&
         (auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME ||
           !appConfig.nzbProxy.publicEnabled)
       ) {
@@ -297,7 +298,7 @@ router.all(
 
       if (
         auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME &&
-        !canUseProxy(auth.username)
+        !hasPermission(auth.username, Permission.Proxy)
       ) {
         logger.warn(`[${requestId}] Proxy access denied`, {
           username: auth.username,
@@ -397,29 +398,6 @@ router.all(
       const upstreamStartTime = Date.now();
       let currentUrl = data.url;
 
-      const INTERNAL_FORWARDED_PARAMS = ['fbk'] as const;
-      if (appConfig.bootstrap.baseUrl) {
-        try {
-          const upstreamUrlObj = new URL(currentUrl);
-          if (
-            upstreamUrlObj.origin ===
-            new URL(appConfig.bootstrap.baseUrl).origin
-          ) {
-            let forwarded = false;
-            for (const param of INTERNAL_FORWARDED_PARAMS) {
-              const val = req.query[param];
-              if (val && typeof val === 'string') {
-                upstreamUrlObj.searchParams.set(param, val);
-                forwarded = true;
-              }
-            }
-            if (forwarded) currentUrl = upstreamUrlObj.toString();
-          }
-        } catch {
-          // ignore malformed URLs
-        }
-      }
-
       const maxRedirects = 10;
       let redirectCount = 0;
       let method = req.method as Dispatcher.HttpMethod;
@@ -458,9 +436,9 @@ router.all(
             ([key, value]) => [key.toLowerCase(), value]
           )
         );
-        const domainUserAgent = domainHasUserAgent(urlObj);
-        if (domainUserAgent) {
-          headers['user-agent'] = domainUserAgent;
+        const overrideHeaders = resolveOverrideHeaders(urlObj);
+        for (const [name, value] of Object.entries(overrideHeaders)) {
+          headers[name.toLowerCase()] = value;
         }
         if (urlObj.username && urlObj.password) {
           const basicAuth = Buffer.from(

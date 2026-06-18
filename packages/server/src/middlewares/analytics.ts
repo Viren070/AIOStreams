@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { track, hmac, anonymizeIp, type AnalyticsResource } from '@aiostreams/core';
+import {
+  track,
+  hmac,
+  anonymizeIp,
+  type AnalyticsResource,
+} from '@aiostreams/core';
 
 /**
  * Resource-level analytics: one event per Stremio resource request, carrying
