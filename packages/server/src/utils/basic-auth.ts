@@ -23,8 +23,10 @@ export interface BasicAuthCredentials {
  * the plaintext password.
  */
 export function parseBasicAuthHeader(
-  req: Request
+  req: Request,
+  opts?: { allowEncrypted?: boolean }
 ): BasicAuthCredentials | null {
+  const allowEncrypted = opts?.allowEncrypted ?? true;
   const header = req.headers['authorization'];
   if (typeof header !== 'string' || header.length === 0) {
     return null;
@@ -71,6 +73,13 @@ export function parseBasicAuthHeader(
   }
 
   if (isEncrypted(password)) {
+    if (!allowEncrypted) {
+      throw new APIError(
+        constants.ErrorCode.UNAUTHORIZED,
+        undefined,
+        'Encrypted password is not accepted here; use your raw password'
+      );
+    }
     const { success, data, error } = decryptString(password);
     if (!success) {
       throw new APIError(
