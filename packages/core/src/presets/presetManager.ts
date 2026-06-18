@@ -76,6 +76,7 @@ import { NekoBtPreset } from './nekoBt.js';
 import { EasynewsSearchPreset } from './easynewsSearch.js';
 import { SeaDexPreset } from './seadex.js';
 import { StreamNZBPreset } from './streamnzb.js';
+import { DavexPreset } from './davex.js';
 import { HdHubPreset } from './hdhub.js';
 import { BaguettioPreset } from './baguettio.js';
 import { Preset } from './index.js';
@@ -121,6 +122,7 @@ let PRESET_LIST: string[] = [
   'easynews-search',
   'usenet-streamer',
   'streamnzb',
+  'davex',
   'dmm-cast',
   'nuvio-streams',
   'webstreamr',
@@ -331,6 +333,8 @@ export class PresetManager {
         return EasynewsSearchPreset;
       case 'streamnzb':
         return StreamNZBPreset;
+      case 'davex':
+        return DavexPreset;
       case 'hdhub':
         return HdHubPreset;
       case 'baguettio':
