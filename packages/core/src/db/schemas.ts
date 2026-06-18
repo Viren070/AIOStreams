@@ -807,7 +807,7 @@ export const UserDataSchema = z.object({
       preferredGraceMs: z.number().min(0).optional(),
       /** Overall deadline before giving up and serving a static error (ms). */
       maxWaitMs: z.number().min(0).optional(),
-      position: z.enum(['beforeLimiting', 'beforeSEL', 'last']).optional(),
+      position: z.enum(['beforeSEL', 'beforeLimiting', 'last']).optional(),
     })
     .optional(),
   serviceWrap: z
