@@ -1,6 +1,6 @@
 ﻿import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { createLogger } from '../logging/logger.js';
-import { APIError, ErrorCode } from './constants.js';
+import { APIError, ErrorCode, PUBLIC_NZB_PROXY_USERNAME } from './constants.js';
 import { toUrlSafeBase64, fromUrlSafeBase64 } from './general.js';
 import { config as appConfig, settingsStore } from '../config/index.js';
 
@@ -28,6 +28,50 @@ function constantTimeEquals(a: string, b: string): boolean {
 }
 
 /**
+ * Permissions an AIOSTREAMS_AUTH user may hold. `admin` is a superset that
+ * implies every other permission.
+ */
+export const Permission = {
+  Admin: 'admin',
+  Proxy: 'proxy',
+  Service: 'service',
+  Sabnzbd: 'sabnzbd',
+} as const;
+
+export type Permission = (typeof Permission)[keyof typeof Permission];
+
+const ALL_PERMISSIONS: Permission[] = Object.values(Permission);
+
+/**
+ * Parse a credential string into its username/password parts. Accepts both
+ * plaintext `username:password` and `base64(username:password)`. Returns null when the input cannot be parsed into
+ * a non-empty username/password pair.
+ */
+export function parseCredential(
+  raw: string | undefined | null
+): { username: string; password: string } | null {
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+
+  let decoded = raw;
+  if (!raw.includes(':')) {
+    try {
+      const candidate = Buffer.from(raw, 'base64').toString('utf-8');
+      if (!candidate.includes(':')) return null;
+      decoded = candidate;
+    } catch {
+      return null;
+    }
+  }
+
+  const sep = decoded.indexOf(':');
+  if (sep === -1) return null;
+  const username = decoded.slice(0, sep);
+  const password = decoded.slice(sep + 1);
+  if (!username || !password) return null;
+  return { username, password };
+}
+
+/**
  * Validate a username/password pair against the AIOSTREAMS_AUTH credential
  * map. This is the same map used by the built-in proxy and NZB-grab proxying.
  */
@@ -41,13 +85,72 @@ export function validateCredentials(
 }
 
 /**
+ * Validate a credential string (`user:pass` or `base64(user:pass)`) against the
+ * AIOSTREAMS_AUTH map. Returns the parsed username on success, null otherwise.
+ */
+export function validateCredentialString(
+  raw: string | undefined | null
+): { username: string; password: string } | null {
+  const parsed = parseCredential(raw);
+  if (!parsed) return null;
+  return validateCredentials(parsed.username, parsed.password) ? parsed : null;
+}
+
+/**
+ * Resolve the effective permission set for a username.
+ *
+ * - Users listed in AIOSTREAMS_AUTH_PERMISSIONS get exactly that set (with
+ *   `admin` expanded to every permission).
+ * - Users not listed fall back to the legacy AIOSTREAMS_AUTH_ADMINS /
+ *   AIOSTREAMS_AUTH_PROXY behaviour: admin if the admin list is empty or
+ *   includes them; proxy if the proxy list is empty or includes them; service
+ *   and sabnzbd are always granted. With no legacy vars set this means every user is an admin.
+ */
+export function getEffectivePermissions(username: string): Set<Permission> {
+  if (username === PUBLIC_NZB_PROXY_USERNAME) {
+    return new Set<Permission>();
+  }
+
+  const configured = appConfig.bootstrap.authPermissions?.get(username);
+  if (configured) {
+    if (configured.has(Permission.Admin)) {
+      return new Set(ALL_PERMISSIONS);
+    }
+    return new Set(configured as Set<Permission>);
+  }
+
+  const admins = appConfig.bootstrap.authAdmins;
+  const isAdmin = !admins || admins.length === 0 || admins.includes(username);
+  if (isAdmin) {
+    return new Set(ALL_PERMISSIONS);
+  }
+
+  const proxyAllow = appConfig.bootstrap.authProxy;
+  const canProxy =
+    !proxyAllow || proxyAllow.length === 0 || proxyAllow.includes(username);
+
+  const perms = new Set<Permission>([Permission.Service, Permission.Sabnzbd]);
+  if (canProxy) perms.add(Permission.Proxy);
+  return perms;
+}
+
+/**
+ * Whether a username holds the given permission. `admin` implies all.
+ */
+export function hasPermission(
+  username: string,
+  permission: Permission
+): boolean {
+  const perms = getEffectivePermissions(username);
+  return perms.has(Permission.Admin) || perms.has(permission);
+}
+
+/**
  * Whether a username is an admin. If AIOSTREAMS_AUTH_ADMINS is unset/empty,
  * every authenticated user is an admin (matches the documented env behaviour).
  */
 export function isAdminUser(username: string): boolean {
-  const admins = appConfig.bootstrap.authAdmins;
-  if (!admins || admins.length === 0) return true;
-  return admins.includes(username);
+  return hasPermission(username, Permission.Admin);
 }
 
 /**
@@ -55,9 +158,32 @@ export function isAdminUser(username: string): boolean {
  * If AIOSTREAMS_AUTH_PROXY is unset/empty, all authenticated users may use it.
  */
 export function canUseProxy(username: string): boolean {
-  const allowed = appConfig.bootstrap.authProxy;
-  if (!allowed || allowed.length === 0) return true;
-  return allowed.includes(username);
+  return hasPermission(username, Permission.Proxy);
+}
+
+/**
+ * Emit a one-time deprecation warning when the legacy permission env vars are
+ * set. Call once at startup. AIOSTREAMS_AUTH_PERMISSIONS supersedes them.
+ */
+export function warnLegacyAuthVarsIfNeeded(): void {
+  const legacy: string[] = [];
+  if (appConfig.bootstrap.authAdmins?.length) {
+    legacy.push('AIOSTREAMS_AUTH_ADMINS');
+  }
+  if (appConfig.bootstrap.authProxy?.length) {
+    legacy.push('AIOSTREAMS_AUTH_PROXY');
+  }
+  if (legacy.length === 0) return;
+
+  if ((appConfig.bootstrap.authPermissions?.size ?? 0) > 0) {
+    logger.warn(
+      `${legacy.join(' and ')} are deprecated and only apply to users not listed in AIOSTREAMS_AUTH_PERMISSIONS. Migrate them into AIOSTREAMS_AUTH_PERMISSIONS.`
+    );
+  } else {
+    logger.warn(
+      `${legacy.join(' and ')} are deprecated. Use AIOSTREAMS_AUTH_PERMISSIONS instead (e.g. user1=admin,user2=proxy|sabnzbd).`
+    );
+  }
 }
 
 function sign(data: string): string {

@@ -22,7 +22,10 @@ type DebridErrorCode =
   | 'UNKNOWN'
   | 'UNPROCESSABLE_ENTITY'
   | 'UNSUPPORTED_MEDIA_TYPE'
-  | 'NO_MATCHING_FILE';
+  | 'NO_MATCHING_FILE'
+  | 'TIMEOUT'
+  | 'MISSING_ARTICLES';
+
 type DebridErrorType =
   | 'api_error'
   | 'store_error'
@@ -253,7 +256,13 @@ interface BaseDebridService {
     playbackInfo: PlaybackInfo,
     filename: string,
     cacheAndPlay: boolean,
-    autoRemoveDownloads?: boolean
+    autoRemoveDownloads?: boolean,
+    /**
+     * Optional abort signal used by the failover orchestrator to cancel a
+     * losing parallel attempt. Services that can honour it (e.g. native usenet)
+     * should thread it into their I/O; others may ignore it.
+     */
+    signal?: AbortSignal
   ): Promise<string | undefined>;
 
   refreshLibraryCache?(sources?: ('torrent' | 'nzb')[]): Promise<void>;

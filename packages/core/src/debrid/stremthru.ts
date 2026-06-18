@@ -14,6 +14,7 @@ import {
   Torrent,
   hashNzbUrl,
   buildResolveKey,
+  removeDownloadOnAbort,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -799,7 +800,8 @@ export class StremThruService
     playbackInfo: PlaybackInfo,
     filename: string,
     cacheAndPlay: boolean,
-    autoRemoveDownloads?: boolean
+    autoRemoveDownloads?: boolean,
+    signal?: AbortSignal
   ): Promise<string | undefined> {
     if (playbackInfo.type === 'usenet') {
       const effectiveCacheAndPlay =
@@ -826,7 +828,8 @@ export class StremThruService
             playbackInfo,
             filename,
             effectiveCacheAndPlay,
-            effectiveAutoRemove
+            effectiveAutoRemove,
+            signal
           ),
         {
           timeout: effectiveCacheAndPlay
@@ -859,7 +862,8 @@ export class StremThruService
           playbackInfo,
           filename,
           cacheAndPlay,
-          autoRemoveDownloads
+          autoRemoveDownloads,
+          signal
         ),
       {
         timeout: cacheAndPlay
@@ -880,7 +884,8 @@ export class StremThruService
     playbackInfo: PlaybackInfo & { type: 'torrent' },
     filename: string,
     cacheAndPlay: boolean,
-    autoRemoveDownloads?: boolean
+    autoRemoveDownloads?: boolean,
+    signal?: AbortSignal
   ): Promise<string | undefined> {
     const { hash, metadata } = playbackInfo;
     const cacheKey = buildResolveKey(
@@ -948,6 +953,21 @@ export class StremThruService
       });
     }
 
+    // If this attempt loses a parallel failover race, drop the magnet we just
+    // added. Skipped for items resolved from an existing library entry
+    // (serviceItemId) and for private torrents (seeding obligations).
+    if (!playbackInfo.serviceItemId) {
+      removeDownloadOnAbort(
+        signal,
+        {
+          id: magnetDownload.id,
+          private: magnetDownload.private ?? playbackInfo.private,
+        },
+        (id) => this.removeMagnet(id),
+        (m) => logger.warn(m)
+      );
+    }
+
     if (magnetDownload.status !== 'downloaded') {
       StremThruService.playbackLinkCache.set(cacheKey, null, 60);
       if (!cacheAndPlay) {
@@ -958,6 +978,15 @@ export class StremThruService
         this.cacheAndPlayOptions.maxWaitTime / pollingInterval
       );
       for (let i = 0; i < maxPolls; i++) {
+        if (signal?.aborted) {
+          throw new DebridError('resolve aborted (failover lost)', {
+            statusCode: 499,
+            statusText: 'Client Closed Request',
+            code: 'UNKNOWN',
+            headers: {},
+            body: null,
+          });
+        }
         await new Promise((resolve) => setTimeout(resolve, pollingInterval));
         const list = await this.listMagnets();
         const magnetDownloadInList = list.find(
@@ -1121,7 +1150,8 @@ export class StremThruService
     playbackInfo: PlaybackInfo & { type: 'usenet' },
     filename: string,
     cacheAndPlay: boolean,
-    autoRemoveDownloads?: boolean
+    autoRemoveDownloads?: boolean,
+    signal?: AbortSignal
   ): Promise<string | undefined> {
     const { nzb, metadata, hash } = playbackInfo;
     const cacheKey = buildResolveKey(
@@ -1197,6 +1227,15 @@ export class StremThruService
         status: usenetDownload.status,
         id: usenetDownload.id,
       });
+
+      // If this attempt loses a parallel failover race, drop the usenet
+      // download we just added (library lookups above are left intact).
+      removeDownloadOnAbort(
+        signal,
+        { id: usenetDownload.id },
+        (id) => this.removeNzb(id),
+        (m) => logger.warn(m)
+      );
     }
 
     if (usenetDownload.status !== 'downloaded') {
@@ -1209,6 +1248,15 @@ export class StremThruService
           this.cacheAndPlayOptions.pollingInterval
       );
       for (let i = 0; i < maxPolls; i++) {
+        if (signal?.aborted) {
+          throw new DebridError('resolve aborted (failover lost)', {
+            statusCode: 499,
+            statusText: 'Client Closed Request',
+            code: 'UNKNOWN',
+            headers: {},
+            body: null,
+          });
+        }
         await new Promise((resolve) =>
           setTimeout(resolve, this.cacheAndPlayOptions.pollingInterval)
         );

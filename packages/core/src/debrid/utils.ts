@@ -60,13 +60,27 @@ export function hashNzbUrl(url: string, clean: boolean = true): string {
   try {
     const u = new URL(url);
     const pathName = u.pathname.replace(/\/$/, '');
+    // newznab t=get or t=g requests
     if (pathName.endsWith('/api')) {
       const t = u.searchParams.get('t');
       const id = u.searchParams.get('id');
-      if (t === 'get' && id) {
+      if ((t === 'get' || t === 'g') && id) {
         const keys = Array.from(u.searchParams.keys());
         for (const key of keys) {
           if (key !== 't' && key !== 'id') {
+            u.searchParams.delete(key);
+          }
+        }
+        return createHash('md5').update(u.toString()).digest('hex');
+      }
+    }
+    // prowlarr nzb urls
+    if (pathName.endsWith('/download')) {
+      const link = u.searchParams.get('link');
+      if (link) {
+        const keys = Array.from(u.searchParams.keys());
+        for (const key of keys) {
+          if (key !== 'link') {
             u.searchParams.delete(key);
           }
         }
@@ -850,6 +864,13 @@ export const fileInfoStore = () => {
 //   return `${appConfig.bootstrap.baseUrl}/api/v1/debrid/playback/${encryptedStoreAuth.data}/${playbackId}/${encodeURIComponent(filename)}`;
 // }
 
+/**
+ * Placeholder for the playback URL's fallback-key path segment when no failover
+ * chain applies. The failover builder rewrites this in place; the route treats
+ * it as "no chain".
+ */
+export const PLAYBACK_FALLBACK_PLACEHOLDER = '-';
+
 export function generatePlaybackUrl(
   encryptedStoreAuth: string,
   metadataId: string,
@@ -866,5 +887,91 @@ export function generatePlaybackUrl(
       appConfig.builtins.debrid.playbackLinkValidity
     );
   }
-  return `${appConfig.bootstrap.baseUrl}/api/v1/debrid/playback/${encryptedStoreAuth}/${fileInfoStr}/${metadataId}/${encodeURIComponent(filename ?? 'unknown')}`;
+  // The fallback-key segment lives right after the store auth so the failover
+  // builder can rewrite it without touching the rest of the URL. Carrying it as
+  // a PATH segment (not a query param) keeps it intact for clients like Infuse
+  // that strip query strings.
+  return `${appConfig.bootstrap.baseUrl}/api/v1/debrid/playback/${encryptedStoreAuth}/${PLAYBACK_FALLBACK_PLACEHOLDER}/${fileInfoStr}/${metadataId}/${encodeURIComponent(filename ?? 'unknown')}`;
+}
+
+/** Marker that prefixes the path of a playback URL we generated. */
+export const PLAYBACK_PATH_PREFIX = '/api/v1/debrid/playback/';
+
+/**
+ * Rewrite the fallback-key segment of a playback URL produced by
+ * {@link generatePlaybackUrl}. Returns the URL unchanged if it isn't one of
+ * ours (e.g. an external/arbitrary URL).
+ */
+export function setPlaybackFallbackKey(
+  url: string,
+  fallbackKey: string
+): string {
+  const idx = url.indexOf(PLAYBACK_PATH_PREFIX);
+  if (idx === -1) return url;
+  const headEnd = idx + PLAYBACK_PATH_PREFIX.length;
+  const rest = url.slice(headEnd); // {storeAuth}/{fbk}/{fileInfo}/...
+  const segments = rest.split('/');
+  if (segments.length < 2) return url;
+  segments[1] = fallbackKey; // storeAuth is [0], fallback key is [1]
+  return url.slice(0, headEnd) + segments.join('/');
+}
+
+/**
+ * Remove a debrid download if the resolve attempt that created it loses a
+ * parallel failover race (its `signal` aborts). This is how a discarded
+ * attempt undoes its side effect — every torrent/usenet resolve adds the item
+ * to the account, even cached ones. Private torrents are left intact (seeding).
+ * Idempotent and safe to call with an already-aborted signal.
+ */
+export function removeDownloadOnAbort(
+  signal: AbortSignal | undefined,
+  download: { id?: string | number; private?: boolean } | undefined,
+  remove: (id: string) => Promise<void>,
+  onError?: (message: string) => void
+): void {
+  if (!signal || download?.id === undefined || download.private) return;
+  const id = String(download.id);
+  let done = false;
+  const onAbort = () => {
+    if (done) return;
+    done = true;
+    remove(id).catch((err) =>
+      onError?.(
+        `failed to remove download ${id} after failover abort: ${err?.message}`
+      )
+    );
+  };
+  if (signal.aborted) {
+    onAbort();
+    return;
+  }
+  signal.addEventListener('abort', onAbort, { once: true });
+}
+
+/** Encode the failover chain reference carried in the playback URL path. */
+export function encodeFallbackKey(
+  index: number,
+  count: number,
+  listKey: string
+): string {
+  return `${index}.${count}.${listKey}`;
+}
+
+/**
+ * Decode the failover chain reference. Returns undefined for the placeholder or
+ * any malformed value.
+ */
+export function decodeFallbackKey(
+  fallbackKey: string | undefined
+): { index: number; count: number; listKey: string } | undefined {
+  if (!fallbackKey || fallbackKey === PLAYBACK_FALLBACK_PLACEHOLDER) {
+    return undefined;
+  }
+  const parts = fallbackKey.split('.');
+  if (parts.length !== 3) return undefined;
+  const index = parseInt(parts[0], 10);
+  const count = parseInt(parts[1], 10);
+  const listKey = parts[2];
+  if (isNaN(index) || isNaN(count) || !listKey) return undefined;
+  return { index, count, listKey };
 }
