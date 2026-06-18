@@ -304,34 +304,6 @@ export async function processStreams(
   let finalStreams = await ctx.sorter.sort(processedStreams, context);
   sortMs = Date.now() - sortStart;
 
-  if (failoverOpts?.position === 'beforeLimiting') {
-    await buildPlayChain(
-      finalStreams,
-      {
-        count: failoverOpts.count,
-        contentTypes: failoverOpts.contentTypes,
-        allowCrossType: failoverOpts.allowCrossType,
-        parallel: failoverOpts.parallel,
-        staggerMs: failoverOpts.staggerMs,
-        preferredGraceMs: failoverOpts.preferredGraceMs,
-        maxWaitMs: failoverOpts.maxWaitMs,
-      },
-      ctx.userData.uuid
-    ).catch((error) => {
-      logger.error(
-        {
-          err: error instanceof Error ? error.message : String(error),
-          position: 'beforeLimiting',
-        },
-        'error during play chain population'
-      );
-    });
-  }
-
-  const limitStart = Date.now();
-  finalStreams = await ctx.limiter.limit(finalStreams);
-  limitMs = Date.now() - limitStart;
-
   if (failoverOpts?.position === 'beforeSEL') {
     await buildPlayChain(
       finalStreams,
@@ -362,6 +334,34 @@ export async function processStreams(
     context
   );
   selMs = Date.now() - selStart;
+
+  if (failoverOpts?.position === 'beforeLimiting') {
+    await buildPlayChain(
+      finalStreams,
+      {
+        count: failoverOpts.count,
+        contentTypes: failoverOpts.contentTypes,
+        allowCrossType: failoverOpts.allowCrossType,
+        parallel: failoverOpts.parallel,
+        staggerMs: failoverOpts.staggerMs,
+        preferredGraceMs: failoverOpts.preferredGraceMs,
+        maxWaitMs: failoverOpts.maxWaitMs,
+      },
+      ctx.userData.uuid
+    ).catch((error) => {
+      logger.error(
+        {
+          err: error instanceof Error ? error.message : String(error),
+          position: 'beforeLimiting',
+        },
+        'error during play chain population'
+      );
+    });
+  }
+
+  const limitStart = Date.now();
+  finalStreams = await ctx.limiter.limit(finalStreams);
+  limitMs = Date.now() - limitStart;
 
   if (!failoverOpts?.position || failoverOpts.position === 'last') {
     if (failoverOpts) {

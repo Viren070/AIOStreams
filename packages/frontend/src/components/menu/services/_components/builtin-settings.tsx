@@ -274,10 +274,10 @@ export function BuiltinSettings() {
         <Select
           label="Failover Position"
           disabled={!userData.failover?.enabled}
-          help="Where in the processing pipeline the fallback chain is built. All positions are after sorting. Earlier positions draw from a larger pool of streams but may include streams that would later be removed by limits or SEL filters."
+          help="Where in the processing pipeline the fallback chain is built. All positions are after sorting. Earlier positions draw from a larger pool of streams but may include streams that would later be removed by SEL filters or limits."
           options={[
-            { label: 'Before Limiting', value: 'beforeLimiting' },
             { label: 'Before SEL', value: 'beforeSEL' },
+            { label: 'Before Limiting', value: 'beforeLimiting' },
             { label: 'Last (default)', value: 'last' },
           ]}
           value={userData.failover?.position ?? 'last'}
