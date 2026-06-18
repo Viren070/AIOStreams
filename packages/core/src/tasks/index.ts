@@ -16,7 +16,8 @@ export type TaskCategory =
   | 'cache'
   | 'users'
   | 'templates'
-  | 'analytics';
+  | 'analytics'
+  | 'usenet';
 
 export interface TaskContext {
   signal?: AbortSignal;

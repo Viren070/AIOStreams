@@ -12,7 +12,7 @@ import { Wrapper } from './wrapper.js';
 import { PresetManager } from '../presets/index.js';
 import { FeatureControl } from '../utils/feature.js';
 import { StreamContext, StreamUtils } from '../streams/index.js';
-import { populateNzbFallbacks } from './nzbFailover.js';
+import { buildPlayChain, type FailoverContentType } from './play-chain.js';
 import { resolveServiceWrappedStreams } from './serviceWrapper.js';
 import type { ServiceWrapServiceTiming } from './serviceWrapper.js';
 import type { PrecomputeSubTimings } from '../streams/precomputer.js';
@@ -215,9 +215,15 @@ export async function processStreams(
   streams: ParsedStream[],
   context: StreamContext,
   isMeta: boolean = false,
-  nzbFailoverOpts?: {
+  failoverOpts?: {
     count: number;
     position: 'beforeLimiting' | 'beforeSEL' | 'last';
+    contentTypes: FailoverContentType[];
+    allowCrossType: boolean;
+    parallel: number;
+    staggerMs: number;
+    preferredGraceMs: number;
+    maxWaitMs: number;
   }
 ): Promise<{
   streams: ParsedStream[];
@@ -298,10 +304,18 @@ export async function processStreams(
   let finalStreams = await ctx.sorter.sort(processedStreams, context);
   sortMs = Date.now() - sortStart;
 
-  if (nzbFailoverOpts?.position === 'beforeLimiting') {
-    await populateNzbFallbacks(
+  if (failoverOpts?.position === 'beforeLimiting') {
+    await buildPlayChain(
       finalStreams,
-      nzbFailoverOpts.count,
+      {
+        count: failoverOpts.count,
+        contentTypes: failoverOpts.contentTypes,
+        allowCrossType: failoverOpts.allowCrossType,
+        parallel: failoverOpts.parallel,
+        staggerMs: failoverOpts.staggerMs,
+        preferredGraceMs: failoverOpts.preferredGraceMs,
+        maxWaitMs: failoverOpts.maxWaitMs,
+      },
       ctx.userData.uuid
     ).catch((error) => {
       logger.error(
@@ -309,7 +323,7 @@ export async function processStreams(
           err: error instanceof Error ? error.message : String(error),
           position: 'beforeLimiting',
         },
-        'error during nzb failover population'
+        'error during play chain population'
       );
     });
   }
@@ -318,10 +332,18 @@ export async function processStreams(
   finalStreams = await ctx.limiter.limit(finalStreams);
   limitMs = Date.now() - limitStart;
 
-  if (nzbFailoverOpts?.position === 'beforeSEL') {
-    await populateNzbFallbacks(
+  if (failoverOpts?.position === 'beforeSEL') {
+    await buildPlayChain(
       finalStreams,
-      nzbFailoverOpts.count,
+      {
+        count: failoverOpts.count,
+        contentTypes: failoverOpts.contentTypes,
+        allowCrossType: failoverOpts.allowCrossType,
+        parallel: failoverOpts.parallel,
+        staggerMs: failoverOpts.staggerMs,
+        preferredGraceMs: failoverOpts.preferredGraceMs,
+        maxWaitMs: failoverOpts.maxWaitMs,
+      },
       ctx.userData.uuid
     ).catch((error) => {
       logger.error(
@@ -329,7 +351,7 @@ export async function processStreams(
           err: error instanceof Error ? error.message : String(error),
           position: 'beforeSEL',
         },
-        'error during nzb failover population'
+        'error during play chain population'
       );
     });
   }
@@ -341,11 +363,19 @@ export async function processStreams(
   );
   selMs = Date.now() - selStart;
 
-  if (!nzbFailoverOpts?.position || nzbFailoverOpts.position === 'last') {
-    if (nzbFailoverOpts) {
-      await populateNzbFallbacks(
+  if (!failoverOpts?.position || failoverOpts.position === 'last') {
+    if (failoverOpts) {
+      await buildPlayChain(
         finalStreams,
-        nzbFailoverOpts.count,
+        {
+          count: failoverOpts.count,
+          contentTypes: failoverOpts.contentTypes,
+          allowCrossType: failoverOpts.allowCrossType,
+          parallel: failoverOpts.parallel,
+          staggerMs: failoverOpts.staggerMs,
+          preferredGraceMs: failoverOpts.preferredGraceMs,
+          maxWaitMs: failoverOpts.maxWaitMs,
+        },
         ctx.userData.uuid
       ).catch((error) => {
         logger.error(
@@ -353,7 +383,7 @@ export async function processStreams(
             err: error instanceof Error ? error.message : String(error),
             position: 'last',
           },
-          'error during nzb failover population'
+          'error during play chain population'
         );
       });
     }
@@ -651,10 +681,27 @@ export async function getStreams(
     streams,
     context,
     false,
-    ctx.userData.nzbFailover?.enabled && !preCaching
+    ctx.userData.failover?.enabled && !preCaching
       ? {
-          count: ctx.userData.nzbFailover.count ?? 3,
-          position: ctx.userData.nzbFailover.position ?? 'last',
+          count:
+            ctx.userData.failover.count ?? constants.DEFAULT_FAILOVER_COUNT,
+          position: ctx.userData.failover.position ?? 'last',
+          contentTypes: (ctx.userData.failover.contentTypes ?? [
+            ...constants.DEFAULT_FAILOVER_CONTENT_TYPES,
+          ]) as FailoverContentType[],
+          allowCrossType: ctx.userData.failover.allowCrossType ?? false,
+          parallel:
+            ctx.userData.failover.parallel ??
+            constants.DEFAULT_FAILOVER_PARALLEL,
+          staggerMs:
+            ctx.userData.failover.staggerMs ??
+            constants.DEFAULT_FAILOVER_STAGGER_MS,
+          preferredGraceMs:
+            ctx.userData.failover.preferredGraceMs ??
+            constants.DEFAULT_FAILOVER_PREFERRED_GRACE_MS,
+          maxWaitMs:
+            ctx.userData.failover.maxWaitMs ??
+            constants.DEFAULT_FAILOVER_MAX_WAIT_MS,
         }
       : undefined
   );
