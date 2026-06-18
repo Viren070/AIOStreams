@@ -44,6 +44,12 @@ export class UsenetStreamerParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
+    const isSmartPlay =
+      (stream as any).meta?.smartPlay === true ||
+      stream.name?.includes('🎯 Smart Play') ||
+      stream.behaviorHints?.bingeGroup?.startsWith('usenet-smartplay-');
+    if (isSmartPlay) return '🎯 Smart Play';
+
     const status = stream.description?.match(/(🧝|✅|⚠️|🚫)/g)?.[0];
     if (status) return `NZB Health: ${status}`;
   }
