@@ -9,6 +9,8 @@ import {
   DisclosureTrigger,
 } from '../disclosure';
 import { Tooltip, TooltipProps } from '../tooltip';
+import { HoverCard } from '../hover-card';
+import { motion, AnimatePresence } from 'motion/react';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -147,6 +149,20 @@ export type VerticalMenuItem = {
   onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   addon?: React.ReactNode;
   subContent?: React.ReactNode;
+  /**
+   * Optional content shown in a hover flyout when the menu is collapsed
+   * (icon-only). Used e.g. to surface a page's sub-sections from the sidebar
+   * without leaving the page. Replaces the plain label tooltip for this item.
+   */
+  flyout?: React.ReactNode;
+  /**
+   * Expandable sub-items. When present the item renders as an accordion group:
+   * the item button sits at the top of a rounded "oval" and the sub-items reveal
+   * below it (icon buttons in the collapsed sidebar rail, icon+label expanded).
+   */
+  subItems?: VerticalMenuItem[];
+  /** Whether the {@link subItems} accordion is expanded (controlled by parent). */
+  expanded?: boolean;
 };
 
 export type VerticalMenuProps = React.ComponentPropsWithRef<'div'> &
@@ -209,10 +225,30 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
       };
 
     const ItemContentWrapper = React.useCallback(
-      (props: { children: React.ReactElement; name: string }) => {
-        return !collapsed ? (
-          props.children
-        ) : (
+      (props: {
+        children: React.ReactElement;
+        name: string;
+        flyout?: React.ReactNode;
+      }) => {
+        if (!collapsed) return props.children;
+        // A flyout (sub-section nav) takes precedence over the plain label
+        // tooltip; otherwise fall back to the label tooltip.
+        if (props.flyout)
+          return (
+            <HoverCard
+              trigger={props.children}
+              side="right"
+              align="center"
+              openDelay={120}
+              closeDelay={120}
+              // Neutral wrapper — the flyout content provides its own surface so
+              // it can match the page's nav styling exactly.
+              className="w-auto border-0 bg-transparent p-0 shadow-none"
+            >
+              {props.flyout}
+            </HoverCard>
+          );
+        return (
           <Tooltip trigger={props.children} side="right" {...itemTooltipProps}>
             {props.name}
           </Tooltip>
@@ -223,7 +259,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
 
     const ItemContent = React.useCallback(
       (item: VerticalMenuItem) => (
-        <ItemContentWrapper name={item.name}>
+        <ItemContentWrapper name={item.name} flyout={item.flyout}>
           <div
             data-vertical-menu-item={item.name}
             className={cn(
@@ -266,7 +302,60 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
           {items.map((item, idx) => {
             return (
               <React.Fragment key={item.name + idx}>
-                {!item.subContent ? (
+                {item.subItems && item.subItems.length > 0 ? (
+                  // Expandable accordion group: the item button forms the top of a
+                  // rounded "oval" and its sub-items reveal below it on expand.
+                  <div
+                    className={cn(
+                      'flex flex-col',
+                      isSidebar &&
+                        item.expanded &&
+                        'gap-1 rounded-3xl border border-[--border] bg-[--paper] p-1 shadow-sm'
+                    )}
+                  >
+                    <button
+                      className={cn(
+                        VerticalMenuAnatomy.item({ collapsed, isSidebar }),
+                        itemClass
+                      )}
+                      data-current={item.isCurrent}
+                      onClick={handleItemClick(item)}
+                      data-vertical-menu-item-button={item.name}
+                    >
+                      <ItemContent {...item} />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {item.expanded && (
+                        <motion.div
+                          key="subitems"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: 'easeOut' }}
+                          className="flex flex-col gap-1 overflow-hidden"
+                        >
+                          {item.subItems.map((sub, subIdx) => (
+                            <button
+                              key={sub.name + subIdx}
+                              className={cn(
+                                VerticalMenuAnatomy.item({
+                                  collapsed,
+                                  isSidebar,
+                                }),
+                                itemClass
+                              )}
+                              data-current={sub.isCurrent}
+                              onClick={handleItemClick(sub)}
+                              data-vertical-menu-item-button={sub.name}
+                            >
+                              <ItemContent {...sub} />
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : !item.subContent ? (
                   <button
                     className={cn(
                       VerticalMenuAnatomy.item({ collapsed, isSidebar }),

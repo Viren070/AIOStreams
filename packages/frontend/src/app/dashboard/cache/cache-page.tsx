@@ -12,10 +12,11 @@ import {
 } from '@/components/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { api } from '@/lib/api';
+import { formatBytes } from '@/lib/format';
 
 interface Instance {
   name: string;
-  backend: 'memory' | 'redis' | 'sql';
+  backend: 'memory' | 'redis' | 'sql' | 'disk';
   maxSize: number | null;
   items: number | null;
   estBytes: number | null;
@@ -31,18 +32,11 @@ interface Describe {
   };
 }
 
-const fmtBytes = (n: number | null) => {
-  if (n == null) return '—';
-  if (!n) return '0 B';
-  const u = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(n) / Math.log(1024));
-  return `${(n / 1024 ** i).toFixed(1)} ${u[i]}`;
-};
-
 const BADGE: Record<string, string> = {
   memory: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
   sql: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
   redis: 'bg-red-500/10 text-red-500 border-red-500/20',
+  disk: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
 };
 
 export function CachePage() {
@@ -195,10 +189,12 @@ export function CachePage() {
                         )}
                       </td>
                       <td className="p-3 text-right tabular-nums">
-                        {inst.maxSize ?? '—'}
+                        {inst.backend === 'disk'
+                          ? formatBytes(inst.maxSize)
+                          : (inst.maxSize ?? '—')}
                       </td>
                       <td className="p-3 text-right tabular-nums">
-                        {fmtBytes(inst.estBytes)}
+                        {formatBytes(inst.estBytes)}
                       </td>
                       <td className="p-3 text-right tabular-nums">
                         {inst.expired ?? '—'}

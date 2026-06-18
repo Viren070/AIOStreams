@@ -42,7 +42,9 @@ function parseExportFile(text: string, fileName: string): ParsedFile {
   }
   const masked = new Set(
     Array.isArray(parsed.maskedSecretKeys)
-      ? parsed.maskedSecretKeys.filter((k): k is string => typeof k === 'string')
+      ? parsed.maskedSecretKeys.filter(
+          (k): k is string => typeof k === 'string'
+        )
       : []
   );
   const source = parsed.settings as Record<string, unknown>;
@@ -237,11 +239,7 @@ export function ImportSettingsModal({
         )}
 
         {step === 'review' && file && (
-          <motion.div
-            key="review"
-            {...stepTransition}
-            className="space-y-3"
-          >
+          <motion.div key="review" {...stepTransition} className="space-y-3">
             {file.exportedAt && (
               <Alert
                 intent="info"

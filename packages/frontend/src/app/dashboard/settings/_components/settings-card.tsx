@@ -52,19 +52,32 @@ export function SettingsPageHeader({
   title,
   description,
   icon: Icon,
+  size = 'lg',
 }: {
   title: string;
   description: string;
   icon: IconType;
+  /** `lg` is the tab page header; `md` is a slightly smaller in-card variant. */
+  size?: 'md' | 'lg';
 }) {
+  const lg = size === 'lg';
   return (
     <div className="flex items-center gap-3">
       <div className="p-2 rounded-lg bg-gradient-to-br from-brand-500/10 to-purple-500/10 border border-brand-500/15">
-        <Icon className="text-2xl text-brand-600 dark:text-brand-400" />
+        <Icon
+          className={cn(
+            'text-brand-600 dark:text-brand-400',
+            lg ? 'text-2xl' : 'text-xl'
+          )}
+        />
       </div>
       <div>
-        <h3 className="text-xl font-semibold">{title}</h3>
-        <p className="text-base text-[--muted]">{description}</p>
+        <h3 className={cn('font-semibold', lg ? 'text-xl' : 'text-lg')}>
+          {title}
+        </h3>
+        <p className={cn('text-[--muted]', lg ? 'text-base' : 'text-sm')}>
+          {description}
+        </p>
       </div>
     </div>
   );

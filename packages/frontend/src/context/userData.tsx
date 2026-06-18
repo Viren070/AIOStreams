@@ -6,6 +6,8 @@ import {
   SERVICE_DETAILS,
   DEFAULT_PRECACHE_SELECTOR,
   DEFAULT_SMART_DETECT_ATTRIBUTES,
+  DEFAULT_FAILOVER_CONTENT_TYPES,
+  DEFAULT_FAILOVER_PARALLEL,
 } from '../../../core/src/utils/constants';
 import { useStatus } from './status';
 
@@ -214,6 +216,19 @@ export function applyMigrations(config: any): UserData {
     config.serviceWrap = config.p2pWrap;
     delete config.p2pWrap;
   }
+
+  // migrate nzbFailover -> generic failover (usenet-only, sequential = old behaviour)
+  if (config.failover === undefined && config.nzbFailover !== undefined) {
+    config.failover = {
+      enabled: config.nzbFailover.enabled,
+      count: config.nzbFailover.count,
+      position: config.nzbFailover.position,
+      contentTypes: [...DEFAULT_FAILOVER_CONTENT_TYPES],
+      allowCrossType: false,
+      parallel: DEFAULT_FAILOVER_PARALLEL,
+    };
+  }
+  delete config.nzbFailover;
 
   // migrate stream expressions from string[] to {expression, enabled}[]
   const streamExpressionKeys = [

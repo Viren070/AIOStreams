@@ -17,6 +17,7 @@ import {
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { useDebounce } from '@/hooks/debounce';
 import { api } from '@/lib/api';
+import { formatDateTime } from '@/lib/format';
 
 interface UserItem {
   uuid: string;
@@ -35,11 +36,6 @@ interface UserList {
 interface UserDetail extends UserItem {
   recentErrorStages: { stage: string; count: number }[];
 }
-
-const fmt = (s: string) => {
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? s : d.toLocaleString();
-};
 
 const PAGE_SIZES = ['10', '25', '50', '100'];
 
@@ -289,8 +285,8 @@ export function UsersPage() {
                       >
                         {u.uuid.slice(0, 8)}…{u.uuid.slice(-4)}
                       </td>
-                      <td className="p-3">{fmt(u.createdAt)}</td>
-                      <td className="p-3">{fmt(u.accessedAt)}</td>
+                      <td className="p-3">{formatDateTime(u.createdAt)}</td>
+                      <td className="p-3">{formatDateTime(u.accessedAt)}</td>
                       <td className="p-3 text-right tabular-nums">
                         {u.requests24h}
                       </td>
@@ -411,15 +407,15 @@ export function UsersPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="text-xs text-[--muted]">Created</div>
-                {fmt(detail.createdAt)}
+                {formatDateTime(detail.createdAt)}
               </div>
               <div>
                 <div className="text-xs text-[--muted]">Updated</div>
-                {fmt(detail.updatedAt)}
+                {formatDateTime(detail.updatedAt)}
               </div>
               <div>
                 <div className="text-xs text-[--muted]">Last accessed</div>
-                {fmt(detail.accessedAt)}
+                {formatDateTime(detail.accessedAt)}
               </div>
               <div>
                 <div className="text-xs text-[--muted]">Requests 24h</div>

@@ -57,13 +57,19 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(
           onOpenChange={onOpenChange}
         >
           <TooltipPrimitive.Trigger asChild>{trigger}</TooltipPrimitive.Trigger>
-          <TooltipPrimitive.Content
-            ref={ref}
-            className={cn(TooltipAnatomy.root(), className)}
-            {...rest}
-          >
-            {children}
-          </TooltipPrimitive.Content>
+          {/* Portal the content to <body> so an opened tooltip never becomes an
+              in-flow sibling of its trigger — without this, tapping a clamped
+              title on touch devices mounts the full-width text inside the flex
+              row and stretches the card, hiding trailing action buttons. */}
+          <TooltipPrimitive.Portal>
+            <TooltipPrimitive.Content
+              ref={ref}
+              className={cn(TooltipAnatomy.root(), className)}
+              {...rest}
+            >
+              {children}
+            </TooltipPrimitive.Content>
+          </TooltipPrimitive.Portal>
         </TooltipPrimitive.Root>
       </TooltipProvider>
     );

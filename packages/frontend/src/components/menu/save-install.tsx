@@ -13,9 +13,11 @@ import { Alert } from '@/components/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
+  Code2,
   CopyIcon,
   DownloadIcon,
   PlusIcon,
+  Rss,
   SearchIcon,
   UploadIcon,
 } from 'lucide-react';
@@ -75,7 +77,10 @@ function ModalOptionButton({
 }
 
 interface AppCardProps {
-  logoSrc: string;
+  /** Brand logo image. Omit and pass `icon` for a generic (non-brand) entry. */
+  logoSrc?: string;
+  /** Generic icon shown when there is no `logoSrc` (e.g. API/indexer entries). */
+  icon?: React.ReactNode;
   name: string;
   description: string;
   onClick: () => void;
@@ -88,6 +93,7 @@ interface AppCardProps {
 
 function AppCard({
   logoSrc,
+  icon,
   name,
   description,
   onClick,
@@ -107,12 +113,16 @@ function AppCard({
           : 'hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5'
       }`}
     >
-      <div className="flex-shrink-0 h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center">
-        <img
-          src={logoSrc}
-          alt={name}
-          className="h-full w-full object-contain"
-        />
+      <div className="flex-shrink-0 h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center text-brand-400">
+        {logoSrc ? (
+          <img
+            src={logoSrc}
+            alt={name}
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          icon
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -292,8 +302,14 @@ interface InstallCardProps {
   onOpenSeanime: () => void;
   onOpenJellyfin: () => void;
   onOpenAniyomi: () => void;
+  onOpenNabIndexer: () => void;
+  onOpenSearchApi: () => void;
   disableSeanimeCard?: boolean;
   seanimeDisabledReason?: string;
+  disableNabIndexerCard?: boolean;
+  nabIndexerDisabledReason?: string;
+  disableSearchApiCard?: boolean;
+  searchApiDisabledReason?: string;
 }
 
 function InstallCard({
@@ -307,152 +323,103 @@ function InstallCard({
   onOpenSeanime,
   onOpenJellyfin,
   onOpenAniyomi,
+  onOpenNabIndexer,
+  onOpenSearchApi,
   disableSeanimeCard,
   seanimeDisabledReason,
+  disableNabIndexerCard,
+  nabIndexerDisabledReason,
+  disableSearchApiCard,
+  searchApiDisabledReason,
 }: InstallCardProps) {
-  const stremioCardRef = React.useRef<HTMLDivElement>(null);
-  const [stremioCardHeight, setStremioCardHeight] = React.useState<
-    number | null
-  >(null);
-  const [isDesktop, setIsDesktop] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const mediaQuery = window.matchMedia('(min-width: 1024px)');
-    const updateViewport = () => setIsDesktop(mediaQuery.matches);
-    updateViewport();
-
-    mediaQuery.addEventListener('change', updateViewport);
-
-    return () => {
-      mediaQuery.removeEventListener('change', updateViewport);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (!isDesktop) {
-      setStremioCardHeight(null);
-      return;
-    }
-
-    const element = stremioCardRef.current;
-    if (!element) return;
-
-    const updateHeight = () => {
-      setStremioCardHeight(element.getBoundingClientRect().height);
-    };
-
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(updateHeight);
-    resizeObserver.observe(element);
-
-    window.addEventListener('resize', updateHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', updateHeight);
-    };
-  }, [isDesktop]);
-
   return (
     <SettingsCard
       title="Installation Options"
       description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you — otherwise, you do not need to reinstall."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-start">
-        <div
-          ref={stremioCardRef}
-          className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5 rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner"
-        >
-          <div className="flex items-center gap-4 border-b border-gray-700/50 pb-4">
-            <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
-              <img
-                src="https://raw.githubusercontent.com/Stremio/stremio-brand/refs/heads/master/logos/PNG/stremio-logo-800px.png"
-                alt="Stremio"
-                className="h-full w-full object-contain"
-              />
+      <div className="flex flex-col gap-6">
+        <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
+                  <img
+                    src="https://raw.githubusercontent.com/Stremio/stremio-brand/refs/heads/master/logos/PNG/stremio-logo-800px.png"
+                    alt="Stremio"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Stremio</h3>
+                  <p className="text-sm text-gray-400">
+                    Install to Stremio or other Stremio addon compatible clients
+                    using the Manifest URL.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  onClick={() =>
+                    window.open(
+                      `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
+                    )
+                  }
+                  intent="primary"
+                  className="w-full shadow-md"
+                >
+                  Install to Stremio
+                </Button>
+                <Button
+                  onClick={() =>
+                    window.open(
+                      `https://web.stremio.com/#/addons?addon=${encodedManifest}`
+                    )
+                  }
+                  intent="gray-outline"
+                  className="w-full"
+                >
+                  Install to Stremio Web
+                </Button>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Stremio</h3>
-              <p className="text-sm text-gray-400">
-                Install to Stremio or other Stremio addon compatible clients
-                using the Manifest URL.
+
+            <div className="space-y-1.5 lg:border-l lg:border-gray-700/50 lg:pl-8">
+              <label className="text-xs font-medium text-gray-400 ml-1">
+                Direct Manifest URL
+              </label>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={manifestUrl}
+                  className="flex-1 font-mono text-sm bg-black/20"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={onCopyManifestUrl}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy install link"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 ml-1">
+                Paste this into any Stremio-compatible client.
               </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              onClick={() =>
-                window.open(
-                  `stremio://${baseUrl.replace(/^https?:\/\//, '')}/stremio/${uuid}/${encryptedPassword}/manifest.json`
-                )
-              }
-              intent="primary"
-              className="w-full shadow-md"
-            >
-              Install to Stremio
-            </Button>
-            <Button
-              onClick={() =>
-                window.open(
-                  `https://web.stremio.com/#/addons?addon=${encodedManifest}`
-                )
-              }
-              intent="gray-outline"
-              className="w-full"
-            >
-              Install to Stremio Web
-            </Button>
-          </div>
-
-          <div className="space-y-1.5 mt-2">
-            <label className="text-xs font-medium text-gray-400 ml-1">
-              Direct Manifest URL
-            </label>
-            <div className="flex items-center gap-2">
-              <TextInput
-                type="text"
-                readOnly
-                value={manifestUrl}
-                className="flex-1 font-mono text-sm bg-black/20"
-                onClick={(e) => e.currentTarget.select()}
-              />
-              <Button
-                onClick={onCopyManifestUrl}
-                intent="primary"
-                className="shrink-0 px-3"
-                aria-label="Copy install link"
-              >
-                <CopyIcon className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
 
-        <div
-          className="lg:col-span-5 xl:col-span-4 flex flex-col rounded-xl border border-gray-700 bg-gray-800/10 p-5 lg:overflow-hidden"
-          style={
-            isDesktop && stremioCardHeight
-              ? { maxHeight: `${stremioCardHeight}px` }
-              : undefined
-          }
-        >
+        {/* Other apps — playback clients you install the addon into */}
+        <div>
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <div className="h-px bg-gray-700 flex-1"></div>
             Other apps
             <div className="h-px bg-gray-700 flex-1"></div>
           </h3>
-
-          <div className="flex flex-col gap-3 flex-1 min-h-0 lg:overflow-y-auto pr-1">
-            <AppCard
-              logoSrc="https://link.chillio.app/app-icon.png"
-              name="Chillio"
-              description="Via ChillLink protocol"
-              onClick={onOpenChillio}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <AppCard
               logoSrc="https://seanime.app/seanime-logo.png"
               name="Seanime"
@@ -470,12 +437,45 @@ function InstallCard({
               onClick={onOpenJellyfin}
             />
             <AppCard
+              logoSrc="https://link.chillio.app/app-icon.png"
+              name="Chillio"
+              description="Via ChillLink protocol"
+              onClick={onOpenChillio}
+            />
+            <AppCard
               logoSrc="https://aniyomi.org/img/logo-128px.png"
               name="Aniyomi / Animiru"
               description="Extension-based integration"
               unofficial
               author="worldInColors"
               onClick={onOpenAniyomi}
+            />
+          </div>
+        </div>
+
+        {/* Programmatic / API access — endpoints other tools consume */}
+        <div>
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="h-px bg-gray-700 flex-1"></div>
+            Programmatic / API access
+            <div className="h-px bg-gray-700 flex-1"></div>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <AppCard
+              icon={<Rss className="h-5 w-5" />}
+              name="Newznab / Torznab"
+              description="Indexer for Prowlarr, NZBHydra & *Arr apps"
+              onClick={onOpenNabIndexer}
+              disabled={disableNabIndexerCard}
+              disabledReason={nabIndexerDisabledReason}
+            />
+            <AppCard
+              icon={<Code2 className="h-5 w-5" />}
+              name="Search API"
+              description="JSON stream search endpoint"
+              onClick={onOpenSearchApi}
+              disabled={disableSearchApiCard}
+              disabledReason={searchApiDisabledReason}
             />
           </div>
         </div>
@@ -1227,6 +1227,7 @@ function Content() {
   const baseUrl = status?.settings?.baseUrl || window.location.origin;
   const hasStatus = !!status;
   const searchApiDisabled = status?.settings?.searchApiDisabled ?? false;
+  const nabApiDisabled = status?.settings?.nabApiDisabled ?? false;
   const seanimeExtensionVersion =
     status?.settings?.seanimeExtensionVersion ?? null;
   const isSeanimeVersionUnavailable =
@@ -1253,6 +1254,8 @@ function Content() {
   const stremioCustomSourceModal = useDisclosure(false);
   const jellyfinModal = useDisclosure(false);
   const aniyomiModal = useDisclosure(false);
+  const nabIndexerModal = useDisclosure(false);
+  const searchApiModal = useDisclosure(false);
   const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
@@ -1470,6 +1473,37 @@ function Content() {
     });
   };
 
+  const newznabUrl = `${baseUrl}/api/v1/newznab/api`;
+  const torznabUrl = `${baseUrl}/api/v1/torznab/api`;
+  const nabApiKey =
+    uuid && encryptedPassword ? btoa(`${uuid}:${encryptedPassword}`) : '';
+  const searchApiUrl = `${baseUrl}/api/v1/search`;
+
+  const copyNewznabUrl = async () => {
+    await copyToClipboard(newznabUrl, {
+      onSuccess: () => toast.success('Newznab URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy URL'),
+    });
+  };
+  const copyTorznabUrl = async () => {
+    await copyToClipboard(torznabUrl, {
+      onSuccess: () => toast.success('Torznab URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy URL'),
+    });
+  };
+  const copyNabApiKey = async () => {
+    await copyToClipboard(nabApiKey, {
+      onSuccess: () => toast.success('API key copied to clipboard'),
+      onError: () => toast.error('Failed to copy API key'),
+    });
+  };
+  const copySearchApiUrl = async () => {
+    await copyToClipboard(searchApiUrl, {
+      onSuccess: () => toast.success('Search API URL copied to clipboard'),
+      onError: () => toast.error('Failed to copy URL'),
+    });
+  };
+
   const handleDelete = async () => {
     try {
       if (!uuid) {
@@ -1610,8 +1644,22 @@ function Content() {
               onOpenSeanime={seanimeModal.open}
               onOpenJellyfin={jellyfinModal.open}
               onOpenAniyomi={aniyomiModal.open}
+              onOpenNabIndexer={nabIndexerModal.open}
+              onOpenSearchApi={searchApiModal.open}
               disableSeanimeCard={disableSeanimeCard}
               seanimeDisabledReason={seanimeDisabledReason}
+              disableNabIndexerCard={nabApiDisabled}
+              nabIndexerDisabledReason={
+                nabApiDisabled
+                  ? 'Newznab/Torznab API (disabled on this instance)'
+                  : undefined
+              }
+              disableSearchApiCard={searchApiDisabled}
+              searchApiDisabledReason={
+                searchApiDisabled
+                  ? 'Search API (disabled on this instance)'
+                  : undefined
+              }
             />
           </>
         )}
@@ -1932,6 +1980,131 @@ function Content() {
           baseUrl={baseUrl}
           initialManifestUrl={manifestUrl}
         />
+
+        {/* Newznab / Torznab indexer modal */}
+        <Modal
+          open={nabIndexerModal.isOpen}
+          onOpenChange={nabIndexerModal.toggle}
+          title="Newznab / Torznab Indexer"
+          description="Use AIOStreams as a newznab/torznab indexer in Prowlarr, Sonarr or Radarr"
+        >
+          <div className="flex flex-col gap-5">
+            <p className="text-xs text-gray-400">
+              Add a <span className="text-gray-200">Generic Newznab</span>{' '}
+              (usenet) or <span className="text-gray-200">Generic Torznab</span>{' '}
+              (torrent) indexer. Only ID and season/episode searches are
+              supported — free-text searches return no results.
+            </p>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-white">Newznab URL</p>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={newznabUrl}
+                  className="flex-1 font-mono text-sm"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={copyNewznabUrl}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy Newznab URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-white">Torznab URL</p>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={torznabUrl}
+                  className="flex-1 font-mono text-sm"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={copyTorznabUrl}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy Torznab URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-white">API Key</p>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={nabApiKey}
+                  className="flex-1 font-mono text-sm"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={copyNabApiKey}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy API key"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Paste this into the indexer's API Key field.
+              </p>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Search API modal */}
+        <Modal
+          open={searchApiModal.isOpen}
+          onOpenChange={searchApiModal.toggle}
+          title="Search API"
+          description="Query your stream pipeline as JSON"
+        >
+          <div className="flex flex-col gap-5">
+            <p className="text-xs text-gray-400">
+              <span className="font-mono text-gray-200">
+                GET {searchApiUrl}
+              </span>{' '}
+              with query params <span className="text-gray-200">type</span> and{' '}
+              <span className="text-gray-200">id</span>, authenticated with an{' '}
+              <span className="text-gray-200">
+                Authorization: Basic base64(uuid:password)
+              </span>{' '}
+              header.
+            </p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-white">Endpoint</p>
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={searchApiUrl}
+                  className="flex-1 font-mono text-sm"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  onClick={copySearchApiUrl}
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy Search API URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
 
         <Modal
           open={jellyfinModal.isOpen}
