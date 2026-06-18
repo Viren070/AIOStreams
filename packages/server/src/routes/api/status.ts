@@ -54,6 +54,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       },
       loggingSensitiveInfo: appConfig.logging.logSensitiveInfo,
       searchApiDisabled: !appConfig.api.enableSearchApi,
+      nabApiDisabled: !appConfig.api.enableNabApi,
       seanimeExtensionVersion: getSeanimeExtensionVersion(),
       analyticsEnabled: appConfig.analytics.enabled !== false,
       userAnalyticsEnabled:
