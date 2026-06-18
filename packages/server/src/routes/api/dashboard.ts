@@ -9,6 +9,8 @@ import {
   AdminUsersRepository,
   TaskManager,
   Cache,
+  describeDiskCaches,
+  clearDiskCacheByName,
   config as appConfig,
   closeDb,
   stopAnalytics,
@@ -21,12 +23,16 @@ import { ZodError } from 'zod';
 import { requireAdmin } from '../../middlewares/auth.js';
 import { createResponse } from '../../utils/responses.js';
 import { getSystemMetrics } from '../../utils/system-metrics.js';
+import usenetDashboard from './dashboard-usenet.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
 
 // Every /dashboard/* route is admin-only.
 router.use(requireAdmin);
+
+// Native usenet engine: stats, providers, library.
+router.use('/usenet', usenetDashboard);
 
 function csv(v: unknown): string[] | undefined {
   if (typeof v !== 'string' || !v.trim()) return undefined;
@@ -141,23 +147,27 @@ const SECRET_MASK = '';
 // GET /dashboard/settings — every runtime config key + metadata + value.
 router.get('/settings', (_req, res) => {
   const hints = describeSettings();
-  const keys = settingsStore.metadata.map((m) => {
-    let value: unknown;
-    try {
-      value = settingsStore.getEffectiveValue(m.key);
-    } catch {
-      value = m.default;
-    }
-    const secretSet =
-      m.secret && m.source !== 'default' && value !== '' && value != null;
-    return {
-      ...m,
-      ui: hints[m.key] ?? { kind: 'json' },
-      // Never echo secrets back to the browser.
-      value: m.secret ? SECRET_MASK : value,
-      secretSet,
-    };
-  });
+  const keys = settingsStore.metadata
+    // Fields with a bespoke editor (e.g. usenet.providers) are hidden here and
+    // managed only via their dedicated dashboard; never serve their value.
+    .filter((m) => !hints[m.key]?.hidden)
+    .map((m) => {
+      let value: unknown;
+      try {
+        value = settingsStore.getEffectiveValue(m.key);
+      } catch {
+        value = m.default;
+      }
+      const secretSet =
+        m.secret && m.source !== 'default' && value !== '' && value != null;
+      return {
+        ...m,
+        ui: hints[m.key] ?? { kind: 'json' },
+        // Never echo secrets back to the browser.
+        value: m.secret ? SECRET_MASK : value,
+        secretSet,
+      };
+    });
   res.status(200).json(createResponse({ success: true, data: { keys } }));
 });
 
@@ -180,11 +190,17 @@ router.patch('/settings', async (req, res) => {
   const errors: Record<string, string> = {};
   let requiresRestart = false;
   const meta = new Map(settingsStore.metadata.map((m) => [m.key, m]));
+  const hints = describeSettings();
 
   for (const [key, value] of Object.entries(body)) {
     const m = meta.get(key);
     if (!m) {
       errors[key] = 'Unknown setting';
+      continue;
+    }
+    if (hints[key]?.hidden) {
+      // Managed by a bespoke editor (e.g. the usenet dashboard), not here.
+      errors[key] = 'Managed via its dedicated editor';
       continue;
     }
     if (m.source === 'environment') {
@@ -230,7 +246,6 @@ router.patch('/settings', async (req, res) => {
     })
   );
 });
-
 
 router.post('/settings/reset', async (req, res) => {
   const body = (req.body ?? {}) as { keys?: unknown };
@@ -338,7 +353,11 @@ router.post('/settings/import/env', async (req, res) => {
   if (imported.length) await settingsStore.reload();
 
   logger.info(
-    { imported: imported.length, skippedAsDefault: skippedAsDefault.length, username },
+    {
+      imported: imported.length,
+      skippedAsDefault: skippedAsDefault.length,
+      username,
+    },
     'env settings imported into db'
   );
 
@@ -451,7 +470,10 @@ router.get('/settings/export', (req, res) => {
     settings,
     maskedSecretKeys,
   };
-  logger.info({ count: Object.keys(settings).length, username }, 'settings exported');
+  logger.info(
+    { count: Object.keys(settings).length, username },
+    'settings exported'
+  );
 
   if (req.query.download === '1') {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -778,9 +800,30 @@ router.post('/tasks/:id/run', async (req, res) => {
 let lastScanAt = 0;
 
 router.get('/cache', async (_req, res) => {
-  res
-    .status(200)
-    .json(createResponse({ success: true, data: await Cache.describe() }));
+  const described = await Cache.describe();
+  // Merge in the two-tier disk-backed caches (segment + grab caches) so they
+  // appear alongside the memory/redis/sql instances.
+  const diskInstances = describeDiskCaches().map((c) => ({
+    name: c.name,
+    backend: 'disk' as const,
+    maxSize: c.maxDiskBytes || c.maxMemBytes || null,
+    items: c.stats.memCount + c.stats.diskCount,
+    estBytes: c.stats.memBytes + c.stats.diskBytes,
+  }));
+  const totalDiskBytes = diskInstances.reduce((n, c) => n + c.estBytes, 0);
+  const data = {
+    ...described,
+    instances: [...described.instances, ...diskInstances],
+    totals: {
+      ...described.totals,
+      instances: described.totals.instances + diskInstances.length,
+      estBytes:
+        described.totals.estBytes == null
+          ? totalDiskBytes
+          : described.totals.estBytes + totalDiskBytes,
+    },
+  };
+  res.status(200).json(createResponse({ success: true, data }));
 });
 
 router.post('/cache/scan', async (req, res) => {
@@ -823,6 +866,15 @@ router.post('/cache/clear', async (req, res) => {
   const username =
     (req as { user?: { username?: string } }).user?.username ?? 'admin';
   if (typeof body.prefix === 'string' && body.prefix) {
+    // Disk-backed caches are keyed by name, not a Cache prefix.
+    if (await clearDiskCacheByName(body.prefix)) {
+      logger.warn({ prefix: body.prefix, username }, 'disk cache cleared');
+      return res
+        .status(200)
+        .json(
+          createResponse({ success: true, data: { cleared: body.prefix } })
+        );
+    }
     const ok = await Cache.clearPrefix(body.prefix);
     logger.warn({ prefix: body.prefix, username }, 'cache prefix cleared');
     return res.status(ok ? 200 : 404).json(

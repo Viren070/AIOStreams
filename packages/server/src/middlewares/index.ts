@@ -6,3 +6,4 @@ export * from './cors.js';
 export * from './ratelimit.js';
 export * from './internal.js';
 export * from './auth.js';
+export * from './upload.js';

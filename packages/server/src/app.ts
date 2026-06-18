@@ -1,4 +1,4 @@
-﻿import express, { Request, Response, Express } from 'express';
+﻿import express, { Express } from 'express';
 import {
   userApi,
   healthApi,
@@ -15,6 +15,7 @@ import {
   syncApi,
   authApi,
   dashboardApi,
+  usenetApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -31,6 +32,8 @@ import {
   streams as chillLinkStreams,
 } from './routes/chilllink/index.js';
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
+import sabnzbdRouter from './routes/api/sabnzbd.js';
+import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
   torboxSearch,
@@ -129,6 +132,10 @@ apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
+apiRouter.use('/usenet', usenetApi);
+apiRouter.use('/sabnzbd', sabnzbdRouter);
+apiRouter.use('/newznab', createNabRouter('newznab'));
+apiRouter.use('/torznab', createNabRouter('torznab'));
 apiRouter.use((req, res) => {
   res.status(404).json(
     createResponse({
