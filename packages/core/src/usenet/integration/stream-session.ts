@@ -1,0 +1,334 @@
+import { Readable } from 'node:stream';
+import { createLogger } from '../../logging/logger.js';
+import { DebridError } from '../../debrid/base.js';
+import {
+  ArticleNotFoundError,
+  NotStreamableError,
+  deserializeArchiveLayout,
+  serializeArchiveLayout,
+  hasPendingFragments,
+  type ArchiveStreamLayout,
+  type LazyResolveHooks,
+  type DataFragment,
+  type SeekableStream,
+  type EngineOptions,
+  type ProviderConfig,
+} from '../index.js';
+import { UsenetLibraryRepository } from '../../db/index.js';
+import { type UsenetStreamToken, decodeUsenetStreamToken } from './tokens.js';
+import { friendlyUsenetError } from './errors.js';
+import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
+import { fetchNzb, parseNzbCached } from './library.js';
+
+const logger = createLogger('usenet/stream');
+
+export interface OpenedUsenetStream {
+  /** Readable producing the requested byte range. */
+  stream: Readable;
+  /** Total decoded size of the file in bytes. */
+  size: number;
+  /** Inclusive start of the served range. */
+  start: number;
+  /** Exclusive end of the served range. */
+  end: number;
+  /** Best-effort filename for Content-Disposition. */
+  filename: string;
+}
+
+/**
+ * One opened, seekable file handle kept warm across the many HTTP Range
+ * requests a single playback generates (players seek/resume constantly). The
+ * `FileStream` itself holds no sockets; connections are leased per
+ * `fetchSegment` and released, so an idle session only retains the parsed NZB
+ * model + the size/segment-range index.
+ */
+interface UsenetStreamSession {
+  stream: SeekableStream;
+  size: number;
+  filename: string;
+  lastUsedAt: number;
+}
+
+/** Identity of a resolved (token → file) stream, independent of byte range. */
+function streamSessionKey(token: UsenetStreamToken): string {
+  return `${token.hash}:${token.fileIndex ?? 'auto'}:${token.innerPath ?? ''}`;
+}
+
+const streamSessions = new Map<string, UsenetStreamSession>();
+/** Single-flight in-flight opens so concurrent first requests open once. */
+const openingSessions = new Map<string, Promise<UsenetStreamSession>>();
+/** Idle TTL for a warm session; comfortably below the 5-min engine idle evict. */
+const STREAM_SESSION_IDLE_MS = 90_000;
+
+const sessionEvictionTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, session] of streamSessions) {
+    if (now - session.lastUsedAt > STREAM_SESSION_IDLE_MS) {
+      streamSessions.delete(key);
+    }
+  }
+}, 30_000);
+sessionEvictionTimer.unref?.();
+
+/**
+ * Load the cached archive rebuild recipe for an inner file, if one was captured
+ * at inspection. Best-effort: any miss returns undefined so the caller falls
+ * back to a full parse-based open.
+ */
+async function loadArchiveLayout(
+  hash: string,
+  innerPath: string
+): Promise<ArchiveStreamLayout | undefined> {
+  try {
+    const entry = await UsenetLibraryRepository.get(hash);
+    const file = entry?.files.find((f) => f.path === innerPath);
+    return file?.layout ? deserializeArchiveLayout(file.layout) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Debounce for persisting lazy-resolution progress, keyed `${hash}:${path}`. */
+const layoutPatchTimers = new Map<string, NodeJS.Timeout>();
+const LAYOUT_PATCH_DEBOUNCE_MS = 2_000;
+
+/**
+ * Hooks wiring a lazy (pending-fragment) layout's runtime resolution back to
+ * the library entry: commits are persisted (debounced, latest-wins) so later
+ * opens skip re-resolving; a structural invalidation clears the layout and
+ * drops the warm session so the next open takes the full-parse path instead
+ * of looping on a poisoned recipe.
+ */
+function lazyHooksFor(
+  hash: string,
+  innerPath: string,
+  layout: ArchiveStreamLayout,
+  sessionKey: string
+): LazyResolveHooks {
+  const key = `${hash}:${innerPath}`;
+  return {
+    onCommit: (fragments: DataFragment[]) => {
+      const t = layoutPatchTimers.get(key);
+      if (t) clearTimeout(t);
+      const timer = setTimeout(() => {
+        layoutPatchTimers.delete(key);
+        const patched: ArchiveStreamLayout = {
+          ...layout,
+          target: { ...layout.target, fragments },
+        };
+        UsenetLibraryRepository.updateFileLayout(
+          hash,
+          innerPath,
+          serializeArchiveLayout(patched)
+        ).catch((err) =>
+          logger.debug(
+            { hash, innerPath, err: (err as Error)?.message },
+            'lazy layout patch failed (re-resolves on next open)'
+          )
+        );
+      }, LAYOUT_PATCH_DEBOUNCE_MS);
+      timer.unref?.();
+      layoutPatchTimers.set(key, timer);
+    },
+    onInvalid: (err: Error) => {
+      const t = layoutPatchTimers.get(key);
+      if (t) clearTimeout(t);
+      layoutPatchTimers.delete(key);
+      streamSessions.delete(sessionKey);
+      logger.warn(
+        { hash, innerPath, err: err.message },
+        'lazy layout invalidated; clearing persisted layout'
+      );
+      UsenetLibraryRepository.updateFileLayout(hash, innerPath, null).catch(
+        () => {}
+      );
+    },
+  };
+}
+
+/** Open (or reuse) the seekable handle for a resolved token. */
+async function getStreamSession(
+  decoded: UsenetStreamToken,
+  providers: ProviderConfig[],
+  options: Partial<EngineOptions>
+): Promise<UsenetStreamSession> {
+  const key = streamSessionKey(decoded);
+  const existing = streamSessions.get(key);
+  if (existing) {
+    existing.lastUsedAt = Date.now();
+    // Refresh the engine's idle clock so it isn't evicted out from under a
+    // session that's serving range requests without re-entering the registry.
+    usenetEngineRegistry.get(providers, options);
+    logger.debug(
+      { hash: decoded.hash, filename: existing.filename },
+      'reused warm usenet stream session'
+    );
+    return existing;
+  }
+
+  const inflight = openingSessions.get(key);
+  if (inflight) return inflight;
+
+  const open = (async (): Promise<UsenetStreamSession> => {
+    const startedAt = Date.now();
+    // Open without the caller's request signal: a session is shared, so a
+    // disconnect mid-open must not poison it for everyone (segment timeouts
+    // still bound the work). Phase timings (grab/parse/open) are logged so a
+    // cold-start slowdown can be attributed.
+    const xml = await fetchNzb(decoded.nzb);
+    const grabbedAt = Date.now();
+    // Reuses the model the resolve just parsed (same hash); parsing the same
+    // multi-MB NZB twice per playback is pure waste.
+    const nzb = await parseNzbCached(decoded.hash, xml);
+    const parsedAt = Date.now();
+    const engine = usenetEngineRegistry.get(providers, options);
+
+    let stream: SeekableStream | undefined;
+    let filename = decoded.filename;
+    try {
+      // Fast path: rebuild an archive inner stream from the layout captured at
+      // inspection, skipping re-fetching/parsing the archive header (and the
+      // encrypted-7z AES+LZMA decode that makes cold opens of large password 7z
+      // packs slow). Any miss/failure falls back to a full parse open.
+      if (decoded.innerPath) {
+        const layout = await loadArchiveLayout(decoded.hash, decoded.innerPath);
+        if (layout) {
+          try {
+            const hooks = hasPendingFragments(layout.target)
+              ? lazyHooksFor(decoded.hash, decoded.innerPath, layout, key)
+              : undefined;
+            stream = await engine.openArchiveStreamFromLayout(
+              nzb,
+              layout,
+              undefined,
+              hooks
+            );
+            filename = stream.filename ?? decoded.filename;
+          } catch (err) {
+            logger.warn(
+              {
+                hash: decoded.hash,
+                innerPath: decoded.innerPath,
+                err: (err as Error)?.message,
+              },
+              'archive layout rebuild failed; falling back to full parse'
+            );
+            stream = undefined;
+          }
+        }
+      }
+      if (!stream) {
+        if (
+          decoded.fileIndex !== undefined ||
+          decoded.innerPath ||
+          decoded.filename
+        ) {
+          stream = await engine.openFileStream(
+            nzb,
+            {
+              fileIndex: decoded.fileIndex,
+              innerPath: decoded.innerPath,
+              filename: decoded.filename,
+            },
+            undefined
+          );
+          filename = stream.filename ?? decoded.filename;
+        } else {
+          const handle = await engine.selectAndOpen(nzb, { auto: true });
+          stream = handle.stream;
+          filename = handle.file.filename ?? decoded.filename;
+        }
+      }
+    } catch (err) {
+      if (
+        err instanceof ArticleNotFoundError ||
+        err instanceof NotStreamableError
+      ) {
+        const friendly = friendlyUsenetError(err);
+        UsenetLibraryRepository.markFailed(
+          decoded.hash,
+          friendly.reason,
+          decoded.filename,
+          friendly.code
+        ).catch(() => {});
+      }
+      throw err;
+    }
+
+    if (!stream) throw new Error('failed to open usenet stream');
+    const session: UsenetStreamSession = {
+      stream,
+      size: stream.size(),
+      filename,
+      lastUsedAt: Date.now(),
+    };
+    streamSessions.set(key, session);
+    const openedAt = Date.now();
+    logger.debug(
+      {
+        hash: decoded.hash,
+        filename,
+        size: session.size,
+        grabMs: grabbedAt - startedAt,
+        parseMs: parsedAt - grabbedAt,
+        openMs: openedAt - parsedAt,
+        latency: openedAt - startedAt,
+      },
+      'opened native usenet stream session'
+    );
+    return session;
+  })().finally(() => openingSessions.delete(key));
+
+  openingSessions.set(key, open);
+  return open;
+}
+
+/**
+ * Core entry point for the byte-serving route: decode a stream token, open (or
+ * reuse a warm) seekable handle for the selected file, and return a
+ * {@link Readable} for the requested half-open byte range `[start, end)`. The
+ * server route handles HTTP concerns (Range parsing, headers).
+ */
+export async function openNativeUsenetStream(opts: {
+  token: string;
+  start?: number;
+  end?: number;
+  signal?: AbortSignal;
+}): Promise<OpenedUsenetStream> {
+  const decoded = decodeUsenetStreamToken(opts.token);
+  if (!decoded) {
+    throw new DebridError('invalid or tampered usenet stream token', {
+      statusCode: 400,
+      statusText: 'Bad Request',
+      code: 'BAD_REQUEST',
+      headers: {},
+      body: null,
+      type: 'api_error',
+    });
+  }
+
+  const { providers, options } = getUsenetEngineConfig();
+  if (providers.length === 0) {
+    throw new DebridError('no usenet providers are configured', {
+      statusCode: 503,
+      statusText: 'Service Unavailable',
+      code: 'SERVICE_UNAVAILABLE',
+      headers: {},
+      body: null,
+      type: 'api_error',
+    });
+  }
+
+  const session = await getStreamSession(decoded, providers, options);
+  const { size, filename } = session;
+  const start = Math.max(0, opts.start ?? 0);
+  const end = Math.min(size, opts.end ?? size);
+
+  return {
+    stream: session.stream.createReadStream({ start, end }),
+    size,
+    start,
+    end,
+    filename,
+  };
+}
