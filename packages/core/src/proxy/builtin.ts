@@ -10,6 +10,9 @@ import {
   Cache,
   toUrlSafeBase64,
   constants,
+  parseCredential,
+  validateCredentials,
+  isAdminUser,
 } from '../utils/index.js';
 import z from 'zod';
 
@@ -23,27 +26,15 @@ export class BuiltinProxy extends BaseProxy {
     password: string;
     admin: boolean;
   } {
-    const [username, password] = auth.split(':');
-    if (!username || !password) {
-      throw new Error('Invalid credentials');
-    }
-
-    if (
-      !appConfig.bootstrap.auth ||
-      !appConfig.bootstrap.auth.has(username) ||
-      appConfig.bootstrap.auth.get(username) !== password
-    ) {
+    const creds = parseCredential(auth);
+    if (!creds || !validateCredentials(creds.username, creds.password)) {
       throw new Error('Invalid credentials.');
     }
 
     return {
-      username,
-      password,
-      admin:
-        appConfig.bootstrap.authAdmins &&
-        appConfig.bootstrap.authAdmins.length > 0
-          ? appConfig.bootstrap.authAdmins.includes(username)
-          : true,
+      username: creds.username,
+      password: creds.password,
+      admin: isAdminUser(creds.username),
     };
   }
 

@@ -152,6 +152,16 @@ export const DEFAULT_PRECACHE_SELECTOR =
 
 export const DEFAULT_PRELOAD_SELECTOR = 'slice(streams, 0, 2)';
 
+/** Failover defaults shared by the schema, orchestrator and config UI. */
+export const DEFAULT_FAILOVER_CONTENT_TYPES = ['usenet'] as const;
+export const DEFAULT_FAILOVER_COUNT = 3;
+export const DEFAULT_FAILOVER_PARALLEL = 1; // 1 = sequential (current behaviour)
+export const DEFAULT_FAILOVER_STAGGER_MS = 1000;
+export const DEFAULT_FAILOVER_MAX_WAIT_MS = 30000;
+// How long a ready lower-priority result waits for the clicked / higher-ranked
+// item to catch up before it's accepted (parallel mode only). 0 = first-ready wins.
+export const DEFAULT_FAILOVER_PREFERRED_GRACE_MS = 2000;
+
 export const GDRIVE_FORMATTER = 'gdrive';
 export const LIGHT_GDRIVE_FORMATTER = 'lightgdrive';
 export const MINIMALISTIC_GDRIVE_FORMATTER = 'minimalisticgdrive';
@@ -241,6 +251,7 @@ const NZBDAV_SERVICE = 'nzbdav';
 const ALTMOUNT_SERVICE = 'altmount';
 const STREMIO_NNTP_SERVICE = 'stremio_nntp';
 const STREMTHRU_NEWZ_SERVICE = 'stremthru_newz';
+const AIOSTREAMS_SERVICE = 'aiostreams';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -259,6 +270,7 @@ const SERVICES = [
   ALTMOUNT_SERVICE,
   STREMIO_NNTP_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  AIOSTREAMS_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -276,6 +288,7 @@ export const BUILTIN_SUPPORTED_SERVICES = [
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  AIOSTREAMS_SERVICE,
 ] as const;
 
 export type ServiceId = (typeof SERVICES)[number];
@@ -513,6 +526,32 @@ const SERVICE_DETAILS: Record<
           'If you would like to proxy your NzbDAV streams, you will need to provide a username:password pair for your AIOStreams instance, defined in the `AIOSTREAMS_AUTH` environment variable. **Other proxies will not work and you must define it here only**',
         type: 'password',
         required: false,
+      },
+    ],
+  },
+  [AIOSTREAMS_SERVICE]: {
+    id: AIOSTREAMS_SERVICE,
+    name: 'AIOStreams',
+    shortName: 'AIO',
+    knownNames: ['AIO', 'AIO Usenet', 'NZB', 'Usenet', 'Native Usenet'],
+    signUpText:
+      'Stream directly from your own NNTP providers via the built-in usenet engine. Providers are configured globally by the administrator.',
+    credentials: [
+      {
+        id: 'note',
+        name: 'Configuration Help',
+        description: `NNTP providers for this engine are configured **globally by the administrator** (Settings → Usenet), not here.\n\nTo authorise streaming through the built-in engine, provide an AIOStreams Auth Token below: a \`username:password\` pair defined in the \`AIOSTREAMS_AUTH\` environment variable.`,
+        type: 'alert',
+        intent: 'info',
+        required: false,
+      },
+      {
+        id: 'aiostreamsAuth',
+        name: 'AIOStreams Auth Token',
+        description:
+          'A `username:password` pair for your AIOStreams instance, defined in the `AIOSTREAMS_AUTH` environment variable. Required to authorise streaming through the built-in usenet engine.',
+        type: 'password',
+        required: true,
       },
     ],
   },
@@ -1518,6 +1557,7 @@ export {
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  AIOSTREAMS_SERVICE,
   SERVICE_DETAILS,
   TOP_LEVEL_OPTION_DETAILS,
   HEADERS_FOR_IP_FORWARDING,

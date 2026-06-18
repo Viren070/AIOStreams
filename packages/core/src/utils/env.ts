@@ -107,6 +107,56 @@ const proxyAuth = makeValidator((x) => {
   return userMap;
 });
 
+/** Permission names accepted in AIOSTREAMS_AUTH_PERMISSIONS. */
+const PERMISSION_NAMES = ['admin', 'proxy', 'service', 'sabnzbd'] as const;
+
+const permissionsMap = makeExactValidator<Map<string, Set<string>>>((x) => {
+  const map = new Map<string, Set<string>>();
+  if (x === '') {
+    return map;
+  }
+  // comma separated list of `username=perm1|perm2`
+  for (const entry of x.split(',').map((e) => e.trim())) {
+    if (!entry) continue;
+    const eq = entry.indexOf('=');
+    if (eq === -1) {
+      throw new EnvError(
+        `Invalid permission entry "${entry}". Expected username=perm1|perm2`
+      );
+    }
+    const username = entry.slice(0, eq).trim();
+    const permsRaw = entry.slice(eq + 1).trim();
+    if (!username) {
+      throw new EnvError(
+        `Invalid permission entry "${entry}". Expected username=perm1|perm2`
+      );
+    }
+    const perms = new Set<string>();
+    // `none` (or an empty value) grants no permissions: the user can still log
+    // in to a protected config page but cannot use any permission-gated feature.
+    if (permsRaw === '' || permsRaw === 'none') {
+      map.set(username, perms);
+      continue;
+    }
+    for (const perm of permsRaw.split('|').map((p) => p.trim())) {
+      if (!perm) continue;
+      if (perm === 'none') {
+        throw new EnvError(
+          `Permission "none" for user "${username}" cannot be combined with other permissions`
+        );
+      }
+      if (!(PERMISSION_NAMES as readonly string[]).includes(perm)) {
+        throw new EnvError(
+          `Unknown permission "${perm}" for user "${username}". Valid permissions: ${PERMISSION_NAMES.join(', ')}, none`
+        );
+      }
+      perms.add(perm);
+    }
+    map.set(username, perms);
+  }
+  return map;
+});
+
 const connectionLimits = makeValidator((x) => {
   if (typeof x !== 'string') {
     throw new EnvError('Connection limits must be a string');
@@ -218,7 +268,16 @@ export const Env = cleanEnv(process.env, {
   LOG_LEVEL: str({
     default: 'info',
     desc: 'Log level for the addon',
-    choices: ['info', 'debug', 'warn', 'error', 'verbose', 'silly', 'http'],
+    choices: [
+      'info',
+      'debug',
+      'warn',
+      'error',
+      'verbose',
+      'silly',
+      'http',
+      'trace',
+    ],
   }),
   LOG_FORMAT: str({
     default: 'json',
@@ -248,6 +307,10 @@ export const Env = cleanEnv(process.env, {
   AIOSTREAMS_AUTH_CONNECTIONS_LIMIT: connectionLimits({
     default: undefined,
     desc: 'Connection limits for authenticated users',
+  }),
+  AIOSTREAMS_AUTH_PERMISSIONS: permissionsMap({
+    default: new Map<string, Set<string>>(),
+    desc: 'Per-user permissions. Comma-separated `username=perm1|perm2` entries (valid permissions: admin, proxy, service, sabnzbd; or `none` for login-only with no permissions). Users not listed default to admin (a superset of all permissions). Supersedes the deprecated AIOSTREAMS_AUTH_ADMINS / AIOSTREAMS_AUTH_PROXY for any user listed here.',
   }),
   SYSTEM_LIFECYCLE_ENABLED: bool({
     default: false,

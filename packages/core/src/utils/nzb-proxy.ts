@@ -1,7 +1,8 @@
 ﻿import { z } from 'zod';
 import { config as appConfig } from '../config/index.js';
-import { createLogger } from './index.js';
+import { createLogger } from '../logging/logger.js';
 import { getSimpleTextHash } from './crypto.js';
+import { validateCredentials } from './auth.js';
 import bytes from 'bytes';
 
 /**
@@ -112,9 +113,7 @@ export class NzbProxyManager {
    * Check if a user has admin bypass (via AIOSTREAMS_AUTH)
    */
   static isAuthorised(username: string, password: string): boolean {
-    const authMap = appConfig.bootstrap.auth;
-    if (!authMap || authMap.size === 0) return false;
-    return authMap.get(username) === password;
+    return validateCredentials(username, password);
   }
 
   /**
