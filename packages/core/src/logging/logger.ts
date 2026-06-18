@@ -2,6 +2,7 @@ import pino, { type DestinationStream, type Logger as PinoLogger } from 'pino';
 import { prettyFactory } from 'pino-pretty';
 import { Writable } from 'stream';
 import { bootstrap } from '../config/bootstrap.js';
+import { formatMilliseconds } from '../utils/time.js';
 import { redactUrlParams } from './redact.js';
 import { logRingBuffer } from './ring-buffer.js';
 
@@ -232,6 +233,17 @@ function deconflictReservedKeys(obj: Record<string, unknown>): void {
   }
 }
 
+/**
+ * When a record carries `latency` as a number of milliseconds, add a
+ * human-readable `latencyHuman` alongside it (e.g. `850ms`, `1m 5s`). This is
+ * the single convention for timing across the codebase: pass `latency` in ms.
+ */
+function deriveLatencyHuman(obj: Record<string, unknown>): void {
+  if (typeof obj.latency === 'number' && !('latencyHuman' in obj)) {
+    obj.latencyHuman = formatMilliseconds(obj.latency);
+  }
+}
+
 function wrap(pinoInstance: PinoLogger): Logger {
   const emit =
     (level: Level | keyof typeof legacyLevelMap) =>
@@ -242,6 +254,7 @@ function wrap(pinoInstance: PinoLogger): Logger {
           : (level as Level);
       const { obj, msg } = normalizeArgs(args);
       deconflictReservedKeys(obj);
+      deriveLatencyHuman(obj);
       if (msg === undefined && Object.keys(obj).length === 0) return;
       if (msg === undefined) {
         pinoInstance[target](obj);

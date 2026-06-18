@@ -243,18 +243,25 @@ export async function validateConfig(
     }
   }
 
-  // validate NZB failover count against the server limit
+  // validate failover count against the server limit
   if (
-    config.nzbFailover?.count &&
-    config.nzbFailover.count > appConfig.userLimits.maxNzbFailoverCount
+    config.failover?.count &&
+    config.failover.count > appConfig.userLimits.maxNzbFailoverCount
   ) {
     if (options?.skipErrorsFromAddonsOrProxies) {
-      config.nzbFailover.count = appConfig.userLimits.maxNzbFailoverCount;
+      config.failover.count = appConfig.userLimits.maxNzbFailoverCount;
     } else {
       throw new Error(
-        `NZB failover count is ${config.nzbFailover.count}, but the maximum allowed is ${appConfig.userLimits.maxNzbFailoverCount}`
+        `Failover count is ${config.failover.count}, but the maximum allowed is ${appConfig.userLimits.maxNzbFailoverCount}`
       );
     }
+  }
+  // a parallel window can never exceed the chain depth
+  if (config.failover?.parallel && config.failover.count) {
+    config.failover.parallel = Math.min(
+      config.failover.parallel,
+      config.failover.count
+    );
   }
 
   // now, validate preset options and service credentials.
@@ -679,6 +686,19 @@ export function applyMigrations(config: any): UserData {
   }
   delete config.alwaysPrecache;
   delete config.precacheCondition;
+
+  // migrate nzbFailover -> generic failover (usenet-only, sequential = old behaviour)
+  if (config.failover === undefined && config.nzbFailover !== undefined) {
+    config.failover = {
+      enabled: config.nzbFailover.enabled,
+      count: config.nzbFailover.count,
+      position: config.nzbFailover.position,
+      contentTypes: [...constants.DEFAULT_FAILOVER_CONTENT_TYPES],
+      allowCrossType: false,
+      parallel: constants.DEFAULT_FAILOVER_PARALLEL,
+    };
+  }
+  delete config.nzbFailover;
 
   // migrate stream expressions from string[] to {expression, enabled}[]
   const streamExpressionKeys = [
@@ -1352,7 +1372,7 @@ const METADATA_FIELDS: (keyof UserData)[] = [
 // prettier-ignore
 const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
-  'nzbFailover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
+  'failover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'mergedCatalogs',
   'accessKey', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
 ];
