@@ -30,6 +30,7 @@ import z, { ZodError } from 'zod';
 import { createClient, WebDAVClient, FileStat } from 'webdav';
 import { fetch } from 'undici';
 import { BuiltinProxy } from '../proxy/builtin.js';
+import { createProxy } from '../proxy/index.js';
 import { basename } from 'path';
 import type { Logger } from '../logging/logger.js';
 
@@ -393,7 +394,7 @@ export class SABnzbdApi {
       {
         statusCode: 504,
         statusText: 'Gateway Timeout',
-        code: 'UNKNOWN',
+        code: 'TIMEOUT',
         headers: {},
         body: { nzoId, category },
         type: 'api_error',
@@ -964,7 +965,57 @@ export abstract class UsenetStreamService implements UsenetDebridService {
         ttl: this.maxWaitTime + this.pollInterval + 10000,
       }
     );
-    return result;
+    // Proxy the resolved WebDAV URL through the builtin proxy when the service
+    // is configured with aiostreamsAuth.
+    if (!result || !this.auth.aiostreamsAuth) return result;
+    return this.proxyResolvedUrl(result, filename);
+  }
+
+  /**
+   * Wrap a resolved WebDAV stream URL in a builtin-proxy URL using the service's
+   * `aiostreamsAuth`, carrying the WebDAV Basic auth in the (encrypted) proxy
+   * payload. On any failure, falls back to serving the direct URL.
+   */
+  private async proxyResolvedUrl(
+    url: string,
+    filename: string
+  ): Promise<string> {
+    const aiostreamsAuth = this.auth.aiostreamsAuth;
+    if (!aiostreamsAuth) return url;
+    const basic =
+      this.auth.webdavUser && this.auth.webdavPassword
+        ? `Basic ${Buffer.from(
+            `${this.auth.webdavUser}:${this.auth.webdavPassword}`
+          ).toString('base64')}`
+        : undefined;
+    try {
+      const proxied = await createProxy({
+        id: 'builtin',
+        enabled: true,
+        credentials: aiostreamsAuth,
+      }).generateUrls([
+        {
+          url,
+          filename,
+          headers: basic ? { request: { Authorization: basic } } : undefined,
+        },
+      ]);
+      if (proxied && !('error' in proxied) && proxied[0]) {
+        return proxied[0];
+      }
+      this.serviceLogger.warn(
+        'failed to proxy resolved stream url; serving direct'
+      );
+      return url;
+    } catch (error) {
+      this.serviceLogger.warn(
+        {
+          err: error instanceof Error ? error.message : String(error),
+        },
+        'error proxying resolved stream url; serving direct'
+      );
+      return url;
+    }
   }
 
   protected async _resolve(
