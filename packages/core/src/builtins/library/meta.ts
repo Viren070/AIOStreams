@@ -94,6 +94,7 @@ export function buildMeta(
   service: { id: BuiltinServiceId; credential: string },
   itemType: 'torrent' | 'usenet'
 ): Meta {
+  logger.debug({ item, id }, 'Building library meta for item');
   const videos = buildVideos(item, id);
   const parsed = parseTorrentTitle(item.name ?? '');
   const descriptionParts: string[] = [];

@@ -72,6 +72,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
             constants.ALTMOUNT_SERVICE,
             constants.STREMIO_NNTP_SERVICE,
             constants.STREMTHRU_NEWZ_SERVICE,
+            constants.AIOSTREAMS_SERVICE,
           ].includes(s.id)
       )
     ) {

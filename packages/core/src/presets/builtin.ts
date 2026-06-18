@@ -246,6 +246,12 @@ export class BuiltinAddonPreset extends Preset {
             publicUrl: credentials.publicUrl,
           })
         ),
+      [constants.AIOSTREAMS_SERVICE]: (credentials: any) =>
+        toUrlSafeBase64(
+          JSON.stringify({
+            aiostreamsAuth: credentials.aiostreamsAuth,
+          })
+        ),
     };
     const altmountSpecialCase: Partial<
       Record<ServiceId, (credentials: any) => any>

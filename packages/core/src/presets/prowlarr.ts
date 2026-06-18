@@ -1,4 +1,4 @@
-﻿import { Addon, Option, Stream, UserData } from '../db/index.js';
+import { Addon, Option, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import {
   Env,
@@ -21,6 +21,7 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
       constants.STREMTHRU_NEWZ_SERVICE,
+      constants.AIOSTREAMS_SERVICE,
     ];
     const options: Option[] = [
       ...(appConfig.builtins.prowlarr.url && appConfig.builtins.prowlarr.apiKey

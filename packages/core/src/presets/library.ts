@@ -1,4 +1,4 @@
-﻿import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import StreamParser from '../parser/streams.js';
 import { appConfig, constants, ServiceId } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
@@ -21,6 +21,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
     constants.NZBDAV_SERVICE,
     constants.ALTMOUNT_SERVICE,
     constants.STREMTHRU_NEWZ_SERVICE,
+    constants.AIOSTREAMS_SERVICE,
   ];
 
   static override get METADATA() {
