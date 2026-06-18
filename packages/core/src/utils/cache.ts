@@ -4,7 +4,7 @@
   RedisCacheBackend,
   SQLCacheBackend,
 } from './cache-adapter.js';
-import { createLogger } from './index.js';
+import { createLogger } from '../logging/logger.js';
 import { config as appConfig } from '../config/index.js';
 import { getDb } from '../db/db.js';
 import { sql } from '../db/sql.js';

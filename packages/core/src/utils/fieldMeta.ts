@@ -231,7 +231,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   catalogModifications: { label: 'Catalog Modifications', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'catalogs' },
   mergedCatalogs: { label: 'Merged Catalogs', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'catalogs' },
 
-  nzbFailover: { label: 'NZB Failover', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
+  failover: { label: 'Failover', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   serviceWrap: { label: 'Service Wrap', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   cacheAndPlay: { label: 'Cache and Play', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   autoRemoveDownloads: { label: 'Auto Remove Downloads', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },

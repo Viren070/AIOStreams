@@ -8,7 +8,7 @@
  */
 import path from 'path';
 import fs from 'fs/promises';
-import { Parser } from 'xml2js';
+import { parseXmlCompat } from '../../index.js';
 import { config as appConfig } from '../../config/index.js';
 import {
   AnimeType,
@@ -70,8 +70,7 @@ export const animeListXmlSource: AnimeSource = {
   },
   async *parse(filePath: string): AsyncIterable<SourceEntry> {
     const text = await fs.readFile(filePath, 'utf8');
-    const parser = new Parser({ explicitArray: true, async: true });
-    const parsed = await parser.parseStringPromise(text);
+    const parsed = parseXmlCompat(text);
     const list = parsed?.['anime-list']?.anime;
     if (!Array.isArray(list)) return;
 

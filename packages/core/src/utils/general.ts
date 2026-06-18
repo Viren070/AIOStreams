@@ -18,6 +18,15 @@ export function getDataFolder(): string {
   return path.join(process.cwd(), 'data');
 }
 
+/**
+ * Single parent directory for every disk-backed cache. Each cache lives in its
+ * own namespace subdirectory (`<data>/cache/<namespace>/`) so they share one
+ * root and surface together on the dashboard cache page.
+ */
+export function getCacheFolder(): string {
+  return path.join(getDataFolder(), 'cache');
+}
+
 export function getAddonName(addon: Addon | Preset): string {
   return 'type' in addon
     ? addon.type
