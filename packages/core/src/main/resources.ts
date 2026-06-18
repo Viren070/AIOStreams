@@ -12,6 +12,7 @@ import { Wrapper } from './wrapper.js';
 import { PresetManager } from '../presets/index.js';
 import { FeatureControl } from '../utils/feature.js';
 import { StreamContext, StreamUtils } from '../streams/index.js';
+import { createProxy } from '../proxy/index.js';
 import { populateNzbFallbacks } from './nzbFailover.js';
 import { resolveServiceWrappedStreams } from './serviceWrapper.js';
 import type { ServiceWrapServiceTiming } from './serviceWrapper.js';
@@ -948,7 +949,10 @@ export async function getSubtitles(
       description: error.error,
     })
   );
-  let allSubtitles: Subtitle[] = [];
+  const subtitleEntries: Array<{
+    subtitle: Subtitle;
+    addonInstanceId?: string;
+  }> = [];
 
   await Promise.all(
     supportedAddons.map(async (addon) => {
@@ -958,7 +962,14 @@ export async function getSubtitles(
           id,
           parsedExtras.toString()
         );
-        if (subtitles) allSubtitles.push(...subtitles);
+        if (subtitles?.length) {
+          subtitleEntries.push(
+            ...subtitles.map((subtitle) => ({
+              subtitle,
+              addonInstanceId: addon.instanceId,
+            }))
+          );
+        }
       } catch (error) {
         errors.push({
           title: `[❌] ${getAddonName(addon)}`,
@@ -967,6 +978,58 @@ export async function getSubtitles(
       }
     })
   );
+
+  let allSubtitles: Subtitle[] = subtitleEntries.map((entry) => entry.subtitle);
+
+  if (ctx.userData.proxy?.enabled && allSubtitles.length > 0) {
+    const subtitlesToProxy = subtitleEntries
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => {
+        const proxyService =
+          !ctx.userData.proxy?.proxiedServices?.length ||
+          ctx.userData.proxy.proxiedServices.includes('subtitle');
+
+        const proxyAddon =
+          !ctx.userData.proxy?.proxiedAddons?.length ||
+          (entry.addonInstanceId
+            ? ctx.userData.proxy.proxiedAddons.includes(entry.addonInstanceId)
+            : false);
+
+        return proxyService && proxyAddon;
+      });
+
+    if (subtitlesToProxy.length === 0) {
+      return { success: true, data: allSubtitles, errors };
+    }
+
+    try {
+      const proxy = createProxy(ctx.userData.proxy);
+      const proxiedUrls = await proxy.generateUrls(
+        subtitlesToProxy.map(({ entry }) => ({
+          url: entry.subtitle.url,
+          filename: 'subtitle',
+        }))
+      );
+      if (proxiedUrls && !('error' in proxiedUrls)) {
+        allSubtitles = allSubtitles.map((subtitle, index) => {
+          const proxiedSubtitleIndex = subtitlesToProxy.findIndex(
+            (entry) => entry.index === index
+          );
+
+          if (proxiedSubtitleIndex === -1) {
+            return subtitle;
+          }
+
+          return {
+            ...subtitle,
+            url: proxiedUrls[proxiedSubtitleIndex] ?? subtitle.url,
+          };
+        });
+      }
+    } catch (err) {
+      logger.warn({ err }, 'failed to proxy subtitle urls');
+    }
+  }
 
   return { success: true, data: allSubtitles, errors };
 }

@@ -60,6 +60,11 @@ function Content() {
       textValue: service.name,
     })),
     {
+      label: 'Subtitles',
+      value: 'subtitle',
+      textValue: 'Subtitles',
+    },
+    {
       label: 'None',
       value: 'none',
       textValue: 'None',
@@ -268,9 +273,10 @@ function Content() {
                 emptyMessage="No services available"
               />
               <p className="text-[--muted] text-sm">
-                Only streams (that are detected to be) from these services will
-                be proxied. Select None to enable proxying of streams that are
-                not detected to be from a service.
+                Only streams (that are detected to be) from these services and
+                selected subtitle URLs will be proxied. Select Subtitles to
+                proxy subtitle URLs. Select None to enable proxying of streams
+                that are not detected to be from a service.
               </p>
             </div>
 
@@ -291,7 +297,8 @@ function Content() {
                 emptyMessage="No addons available"
               />
               <p className="text-[--muted] text-sm">
-                Only streams from these addons will be proxied
+                Only streams and subtitle URLs from these addons will be
+                proxied
               </p>
             </div>
           </SettingsCard>
