@@ -11,6 +11,7 @@ export * from './parser/index.js';
 export * from './formatters/index.js';
 export * from './transformers/index.js';
 export * from './debrid/index.js';
+export * from './usenet/integration/index.js';
 export * from './proxy/index.js';
 export {
   TorBoxSearchAddon,
@@ -36,8 +37,26 @@ export {
 } from './builtins/index.js';
 export { PresetManager } from './presets/index.js';
 export {
-  populateNzbFallbacks,
-  getNzbFallbacks,
-  isNzbRetryableError,
-} from './main/nzbFailover.js';
-export type { NzbFallback } from './main/nzbFailover.js';
+  buildPlayChain,
+  getPlayChain,
+  isFailoverRetryableError,
+} from './main/play-chain.js';
+export type {
+  PlayChainItem,
+  PlayChainRecord,
+  ResolvedPlayChain,
+  FailoverContentType,
+  BuildPlayChainOptions,
+} from './main/play-chain.js';
+export {
+  runPlayChain,
+  resolvePlaybackTarget,
+  parsePlaybackUrl,
+  decodeFileInfo,
+} from './main/failover.js';
+export type {
+  PlaybackTarget,
+  FailoverAttempt,
+  RunPlayChainConfig,
+  RunPlayChainResult,
+} from './main/failover.js';
