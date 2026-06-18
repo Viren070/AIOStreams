@@ -38,22 +38,27 @@ export const HoverCard = React.forwardRef<HTMLDivElement, HoverCardProps>(
       sideOffset = 8,
       openDelay = 1000,
       closeDelay = 0,
+      trigger,
       ...rest
     } = props;
 
     return (
       <HoverCardPrimitive.Root openDelay={openDelay} closeDelay={closeDelay}>
         <HoverCardPrimitive.Trigger asChild>
-          {props.trigger}
+          {trigger}
         </HoverCardPrimitive.Trigger>
 
-        <HoverCardPrimitive.Content
-          ref={ref}
-          align={align}
-          sideOffset={sideOffset}
-          className={cn(HoverCardAnatomy.root(), className)}
-          {...rest}
-        />
+        {/* Portaled so the floating card is never clipped by an ancestor with
+            `overflow: hidden` (e.g. a sidebar column). */}
+        <HoverCardPrimitive.Portal>
+          <HoverCardPrimitive.Content
+            ref={ref}
+            align={align}
+            sideOffset={sideOffset}
+            className={cn(HoverCardAnatomy.root(), className)}
+            {...rest}
+          />
+        </HoverCardPrimitive.Portal>
       </HoverCardPrimitive.Root>
     );
   }

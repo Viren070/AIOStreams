@@ -13,6 +13,12 @@ import {
   UsersPage,
   TasksPage,
   CachePage,
+  UsenetLayout,
+  UsenetLibraryPage,
+  UsenetStreamsPage,
+  UsenetStatsPage,
+  UsenetProvidersPage,
+  UsenetSettingsPage,
 } from './routes/dashboard-pages';
 import { SplashscreenPage } from './routes/splashscreen-page';
 import { ConfigureRoute } from './routes/configure-route';
@@ -178,6 +184,51 @@ const dashboardCacheRoute = createRoute({
   component: CachePage,
 });
 
+const dashboardUsenetRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'usenet',
+  component: UsenetLayout,
+});
+
+// `/dashboard/usenet` → redirect to the default section.
+const dashboardUsenetIndexRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: '/',
+  beforeLoad: () => {
+    throw redirect({ to: '/dashboard/usenet/library' });
+  },
+});
+
+const dashboardUsenetLibraryRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: 'library',
+  component: UsenetLibraryPage,
+});
+
+const dashboardUsenetStreamsRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: 'streams',
+  component: UsenetStreamsPage,
+});
+
+const dashboardUsenetStatsRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: 'stats',
+  component: UsenetStatsPage,
+});
+
+const dashboardUsenetProvidersRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: 'providers',
+  component: UsenetProvidersPage,
+});
+
+const dashboardUsenetSettingsRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: 'settings',
+  component: UsenetSettingsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   stremioConfigureRoute,
@@ -195,6 +246,14 @@ const routeTree = rootRoute.addChildren([
     dashboardUsersRoute,
     dashboardTasksRoute,
     dashboardCacheRoute,
+    dashboardUsenetRoute.addChildren([
+      dashboardUsenetIndexRoute,
+      dashboardUsenetLibraryRoute,
+      dashboardUsenetStreamsRoute,
+      dashboardUsenetStatsRoute,
+      dashboardUsenetProvidersRoute,
+      dashboardUsenetSettingsRoute,
+    ]),
   ]),
 ]);
 

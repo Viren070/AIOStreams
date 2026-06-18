@@ -85,6 +85,9 @@ interface BaseChartProps {
   className?: string;
   stacked?: boolean;
   valueFormatter?: (v: any) => string;
+  /** Formats Y-axis tick labels (e.g. bytes → "2.1 GB") so large raw numbers
+   *  don't overflow the card. Falls back to the raw value. */
+  yTickFormatter?: (v: any) => string;
   hideLegend?: boolean;
   hideGrid?: boolean;
 }
@@ -152,6 +155,7 @@ export function AreaChart({
   className,
   stacked,
   valueFormatter,
+  yTickFormatter,
   hideLegend,
   hideGrid,
 }: BaseChartProps) {
@@ -185,7 +189,11 @@ export function AreaChart({
             />
           )}
           <XAxis dataKey={xKey} {...AXIS_PROPS} />
-          <YAxis {...AXIS_PROPS} width={40} />
+          <YAxis
+            {...AXIS_PROPS}
+            width={yTickFormatter ? 60 : 40}
+            tickFormatter={yTickFormatter}
+          />
           <Tooltip
             content={<ChartTooltip valueFormatter={valueFormatter} />}
             cursor={{ stroke: 'var(--border)' }}

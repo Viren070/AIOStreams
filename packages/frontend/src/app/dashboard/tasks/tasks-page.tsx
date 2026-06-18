@@ -12,6 +12,7 @@ import {
 } from '@/components/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { api } from '@/lib/api';
+import { formatDuration } from '@/lib/format';
 
 interface TaskState {
   id: string;
@@ -29,40 +30,6 @@ interface TaskState {
   lastStatus: 'ok' | 'error' | 'skipped' | null;
   lastError: string | null;
   nextRunAt: number | null;
-}
-
-/**
- * Format a duration (in seconds) using two adjacent units at most (`2h 14m`,
- * `3d 4h`, `2w 1d`). Returns a single short token for sub-minute values so
- * lists stay aligned. Negative values are formatted unsigned — callers prepend
- * "in " or append " ago" as needed.
- */
-export function formatDuration(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds));
-  if (s < 1) return '0s';
-  if (s < 60) return `${s}s`;
-  const units: Array<[string, number]> = [
-    ['w', 604800],
-    ['d', 86400],
-    ['h', 3600],
-    ['m', 60],
-    ['s', 1],
-  ];
-  // Find the first unit with a non-zero count, emit it + the next unit.
-  for (let i = 0; i < units.length; i++) {
-    const [u, secs] = units[i];
-    const n = Math.floor(s / secs);
-    if (n > 0) {
-      const rem = s - n * secs;
-      const next = units[i + 1];
-      if (next && rem > 0) {
-        const m = Math.floor(rem / next[1]);
-        if (m > 0) return `${n}${u} ${m}${next[0]}`;
-      }
-      return `${n}${u}`;
-    }
-  }
-  return `${s}s`;
 }
 
 function humanInterval(ms?: number): string {

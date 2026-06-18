@@ -9,6 +9,7 @@ import {
 import { CloseButton, IconButton } from '../button';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 import { hiddenInputStyles } from '../input';
+import { formatBytes } from '@/lib/format';
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -266,7 +267,7 @@ export const SimpleDropzone = React.forwardRef<
         <div
           className={cn(SimpleDropzoneAnatomy.maxSizeText(), maxSizeTextClass)}
         >
-          {`≤`} {humanFileSize(maxSize, 0)}
+          {`≤`} {formatBytes(maxSize)}
         </div>
       )}
 
@@ -453,7 +454,7 @@ export const SimpleDropzone = React.forwardRef<
                       listItemSizeClass
                     )}
                   >
-                    {humanFileSize(file.size)}
+                    {formatBytes(file.size)}
                   </p>
                 </div>
                 <IconButton
@@ -548,7 +549,7 @@ export const SimpleDropzone = React.forwardRef<
                       listItemSizeClass
                     )}
                   >
-                    {humanFileSize(file.size)}
+                    {formatBytes(file.size)}
                   </p>
                 </div>
               </div>
@@ -561,11 +562,3 @@ export const SimpleDropzone = React.forwardRef<
 });
 
 SimpleDropzone.displayName = 'SimpleDropzone';
-
-function humanFileSize(size: number, precision = 2): string {
-  const i = Math.floor(Math.log(size) / Math.log(1024));
-  return (
-    (size / Math.pow(1024, i)).toFixed(precision).toString() +
-    ['bytes', 'Kb', 'Mb', 'Gb', 'Tb'][i]
-  );
-}

@@ -25,13 +25,19 @@ import {
   BiTask,
   BiData,
   BiSliderAlt,
+  BiCloudDownload,
 } from 'react-icons/bi';
 import { LayoutHeaderBackground } from '@/components/layout-header-background';
+import { SECTIONS } from '@/app/dashboard/usenet/sections';
 
 // Order mirrors how operators typically navigate the dashboard: dashboards
 // at the top, operational tools in the middle, infrastructure (Proxy) before
 // the dangerous Settings page which lives last.
-const NAV: { label: string; href: string; icon: React.ElementType }[] = [
+const NAV: {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+}[] = [
   { label: 'Overview', href: '/dashboard', icon: BiGridAlt },
   { label: 'Analytics', href: '/dashboard/analytics', icon: BiBarChartAlt2 },
   { label: 'Logs', href: '/dashboard/logs', icon: BiListUl },
@@ -39,6 +45,9 @@ const NAV: { label: string; href: string; icon: React.ElementType }[] = [
   { label: 'Users', href: '/dashboard/users', icon: BiGroup },
   { label: 'Tasks', href: '/dashboard/tasks', icon: BiTask },
   { label: 'Cache', href: '/dashboard/cache', icon: BiData },
+  // The Usenet item expands into an inline accordion of its sub-sections
+  // (wired up in the items mapping below).
+  { label: 'Usenet', href: '/dashboard/usenet', icon: BiCloudDownload },
   { label: 'Proxy', href: '/dashboard/proxy', icon: BiNetworkChart },
   { label: 'Settings', href: '/dashboard/settings', icon: BiCog },
 ];
@@ -48,6 +57,9 @@ export function DashboardLayout() {
   const { signOut } = useSession();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  // While on a usenet route the sidebar item expands into an accordion that
+  // highlights the active section (the last path segment).
+  const isOnUsenet = pathname.startsWith('/dashboard/usenet');
 
   const confirmSignOut = useConfirmationDialog({
     title: 'Sign Out',
@@ -58,12 +70,32 @@ export function DashboardLayout() {
     },
   });
 
-  const items: SidebarItem[] = NAV.map((n) => ({
-    name: n.label,
-    iconType: n.icon,
-    isCurrent: pathname === n.href || pathname === `${n.href}/`,
-    onClick: () => navigate({ to: n.href }),
-  }));
+  const items: SidebarItem[] = NAV.map((n) => {
+    if (n.href === '/dashboard/usenet') {
+      // Usenet expands into an inline oval accordion of its sub-sections, each a
+      // child route (`/dashboard/usenet/<section>`). The header navigates to the
+      // base path (which redirects to the default section).
+      return {
+        name: n.label,
+        iconType: n.icon,
+        isCurrent: isOnUsenet,
+        expanded: isOnUsenet,
+        onClick: () => navigate({ to: '/dashboard/usenet' }),
+        subItems: SECTIONS.map((s) => ({
+          name: s.label,
+          iconType: s.icon,
+          isCurrent: pathname === `/dashboard/usenet/${s.id}`,
+          onClick: () => navigate({ to: `/dashboard/usenet/${s.id}` }),
+        })),
+      };
+    }
+    return {
+      name: n.label,
+      iconType: n.icon,
+      isCurrent: pathname === n.href || pathname === `${n.href}/`,
+      onClick: () => navigate({ to: n.href }),
+    };
+  });
 
   const header = (
     <div className="mb-4 p-4 pb-0 flex flex-col items-center w-full">

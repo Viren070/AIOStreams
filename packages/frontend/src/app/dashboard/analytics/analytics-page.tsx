@@ -124,9 +124,7 @@ function UserActivityModal({
 }) {
   const activity = useUserActivity(uuidHash, range);
   const d = activity.data;
-  const maxResource = d
-    ? Math.max(1, ...d.resources.map((r) => r.count))
-    : 1;
+  const maxResource = d ? Math.max(1, ...d.resources.map((r) => r.count)) : 1;
 
   return (
     <Modal
@@ -242,8 +240,8 @@ export function AnalyticsPage() {
         <div>
           <h2>Analytics</h2>
           <p className="text-[--muted]">
-            Usage, requests and addon health. Only anonymized IP prefixes
-            (first 3 octets) are stored.
+            Usage, requests and addon health. Only anonymized IP prefixes (first
+            3 octets) are stored.
           </p>
         </div>
         <RangeToggle value={range} onChange={setRange} />

@@ -24,7 +24,7 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/components/ui/core/styling';
 import { api } from '@/lib/api';
 import { useSystemStream } from '@/app/dashboard/system/use-system';
-import { formatDuration } from '@/app/dashboard/tasks/tasks-page';
+import { formatDuration } from '@/lib/format';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 
 interface OverviewMetrics {

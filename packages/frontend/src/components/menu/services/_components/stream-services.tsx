@@ -8,6 +8,7 @@ import {
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  AIOSTREAMS_SERVICE,
 } from '../../../../../../core/src/utils/constants';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
@@ -42,6 +43,7 @@ const USENET_SERVICE_IDS: string[] = [
   STREMIO_NNTP_SERVICE,
   EASYNEWS_SERVICE,
   STREMTHRU_NEWZ_SERVICE,
+  AIOSTREAMS_SERVICE,
 ];
 
 const DUAL_SERVICE_IDS: string[] = ['torbox'];
@@ -77,6 +79,7 @@ const SERVICE_LOGO_MAP: Record<ServiceId, string> = {
     'https://raw.githubusercontent.com/nzbdav-dev/nzbdav/refs/heads/main/frontend/public/logo.svg',
   altmount:
     'https://raw.githubusercontent.com/javi11/altmount/refs/heads/main/docs/static/img/logo.png',
+  aiostreams: '/logo.png',
 };
 
 function ServiceLogo({

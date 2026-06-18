@@ -32,9 +32,9 @@ export function SettingsActionsMenu({
   sectionKeys: SettingsKey[];
   sectionLabel: string;
 }) {
-  const [resetScope, setResetScope] = React.useState<
-    'section' | 'all' | null
-  >(null);
+  const [resetScope, setResetScope] = React.useState<'section' | 'all' | null>(
+    null
+  );
   const [importEnvOpen, setImportEnvOpen] = React.useState(false);
   const [importJsonOpen, setImportJsonOpen] = React.useState(false);
 

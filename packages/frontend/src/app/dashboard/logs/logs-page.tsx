@@ -32,6 +32,7 @@ import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Spinner } from '@/components/ui/loading-spinner';
 import { LuffyError } from '@/components/shared/luffy-error';
 import { copyToClipboard } from '@/utils/clipboard';
+import { formatDateTime } from '@/lib/format';
 
 const LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const;
 
@@ -52,21 +53,6 @@ const LEVEL_DOT: Record<string, string> = {
   error: 'bg-red-500',
   fatal: 'bg-red-600',
 };
-
-function formatTime(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString(undefined, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
-}
 
 const ALL_MODULES = '__all__';
 const PREFS_KEY = 'aiostreams.logs.prefs';
@@ -104,7 +90,7 @@ function LogLine({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const time = formatTime(row.time);
+  const time = formatDateTime(row.time);
   const hasFields = Object.keys(row.obj).length > 0;
   const [hovered, setHovered] = useState(false);
 

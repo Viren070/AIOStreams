@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Button, IconButton } from '@/components/ui/button';
 import { BasicField } from '@/components/ui/basic-field';
+import { parseDuration, formatDurationMs } from '@/lib/format';
 import type { SettingsUiHint } from '../queries';
 /** Sentinel value that signals "clear this secret" on save. */
 export const SECRET_CLEAR_SENTINEL = '\x00CLEAR\x00';
@@ -312,59 +313,30 @@ export function BoolOrListField({ name, label, help, disabled }: CommonProps) {
 }
 
 /**
- * Client mirror of core `formatDurationAsText` — up to two units, including
- * weeks. Used to show stored second-counts in a human-readable way.
+ * DurationField stores whole SECONDS (the backend's unit for config
+ * durations). Display/parse delegate to the shared millisecond helpers in
+ * `lib/format` (the single decimal-aware duration implementation), converting
+ * at the seconds⇄ms boundary.
  */
 function formatDuration(totalSeconds: number): string {
   if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return '';
   if (totalSeconds === 0) return '0s';
-  const units: Array<[string, number]> = [
-    ['w', 604800],
-    ['d', 86400],
-    ['h', 3600],
-    ['m', 60],
-    ['s', 1],
-  ];
-  let rem = Math.floor(totalSeconds);
-  const parts: string[] = [];
-  for (const [unit, size] of units) {
-    if (rem >= size) {
-      parts.push(`${Math.floor(rem / size)}${unit}`);
-      rem %= size;
-    }
-  }
-  return parts.slice(0, 2).join(' ');
+  return formatDurationMs(Math.round(totalSeconds) * 1000);
 }
 
-const UNIT_SECONDS: Record<string, number> = {
-  w: 604800,
-  d: 86400,
-  h: 3600,
-  m: 60,
-  s: 1,
-};
-
 /**
- * Client mirror of core `parseTime` (compound durations + weeks), returning
- * whole seconds. Also accepts a plain integer (already seconds). Returns
- * `null` for unparseable input so the field can surface a validation error
- * without committing a bad value.
+ * Parse a friendly duration string to whole seconds. A bare integer is taken
+ * as seconds (config unit); unit strings (`30m`, `1h`, `1.5h`) go through the
+ * shared ms parser. Returns `null` for unparseable input so the field can
+ * surface a validation error without committing a bad value.
  */
 function parseDurationToSeconds(text: string): number | null {
   const t = text.trim();
   if (t === '') return null;
-  if (/^-?\d+$/.test(t)) return Number(t);
-  const compact = t.replace(/\s+/g, '').toLowerCase();
-  const re = /(\d+)(w|d|h|m|s)/g;
-  let total = 0;
-  let consumed = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(compact)) !== null) {
-    total += Number(m[1]) * UNIT_SECONDS[m[2]];
-    consumed += m[0].length;
-  }
-  if (consumed === 0 || consumed !== compact.length) return null;
-  return total;
+  if (/^-?\d+$/.test(t)) return Number(t); // bare integer = seconds
+  if (!/[a-z]/i.test(t)) return null; // bare non-integer without a unit = invalid
+  const ms = parseDuration(t);
+  return ms == null ? null : Math.round(ms / 1000);
 }
 
 /**

@@ -17,19 +17,7 @@ import {
   useConfirmationDialog,
 } from '@/components/shared/confirmation-dialog';
 import { useSystemStream, type CpuSample } from './use-system';
-
-function fmtBytes(n: number): string {
-  if (!n) return '0 B';
-  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(n) / Math.log(1024));
-  return `${(n / 1024 ** i).toFixed(1)} ${u[i]}`;
-}
-function fmtUptime(s: number): string {
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return [d && `${d}d`, h && `${h}h`, `${m}m`].filter(Boolean).join(' ');
-}
+import { formatBytes, formatDuration } from '@/lib/format';
 
 function Gauge({
   label,
@@ -249,14 +237,14 @@ export function SystemPage() {
         <Gauge
           label="Memory"
           pct={memPct}
-          detail={`${fmtBytes(m.memory.used)} / ${fmtBytes(m.memory.total)}`}
+          detail={`${formatBytes(m.memory.used)} / ${formatBytes(m.memory.total)}`}
         />
         <Gauge
           label="Disk (data)"
           pct={diskPct}
           detail={
             m.disk
-              ? `${fmtBytes(m.disk.used)} / ${fmtBytes(m.disk.total)}`
+              ? `${formatBytes(m.disk.used)} / ${formatBytes(m.disk.total)}`
               : 'unavailable'
           }
         />
@@ -319,11 +307,11 @@ export function SystemPage() {
         <h3 className="text-sm font-semibold mb-3">Process</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           {[
-            ['Uptime', fmtUptime(m.process.uptimeSec)],
+            ['Uptime', formatDuration(m.process.uptimeSec)],
             ['Node', m.process.nodeVersion],
             ['PID', String(m.process.pid)],
-            ['Heap', fmtBytes(m.memory.heapUsed)],
-            ['RSS', fmtBytes(m.memory.rss)],
+            ['Heap', formatBytes(m.memory.heapUsed)],
+            ['RSS', formatBytes(m.memory.rss)],
             ['Platform', m.process.platform],
           ].map(([k, v]) => (
             <div key={k}>

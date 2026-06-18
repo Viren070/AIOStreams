@@ -38,7 +38,6 @@ export function ImportEnvModal({
 }) {
   const { mutateAsync, isPending } = useImportEnv();
 
-
   const grouped = React.useMemo(() => {
     const m = new Map<string, SettingsKey[]>();
     for (const k of envKeys) {
@@ -116,8 +115,8 @@ export function ImportEnvModal({
               <>
                 Environment variables always override database values. After
                 importing, you must remove the matching env vars from your
-                deployment <em>and restart</em> for the persisted values to
-                take effect - otherwise the env still overrides.
+                deployment <em>and restart</em> for the persisted values to take
+                effect - otherwise the env still overrides.
               </>
             }
             isClosable={false}
