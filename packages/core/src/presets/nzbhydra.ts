@@ -1,4 +1,4 @@
-﻿import { NewznabPreset } from './newznab.js';
+import { NewznabPreset } from './newznab.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { Option, UserData } from '../db/index.js';
 import { appConfig } from '../utils/index.js';
@@ -12,6 +12,7 @@ export class NZBHydraPreset extends NewznabPreset {
       constants.ALTMOUNT_SERVICE,
       constants.STREMIO_NNTP_SERVICE,
       constants.STREMTHRU_NEWZ_SERVICE,
+      constants.AIOSTREAMS_SERVICE,
     ] as ServiceId[];
     const options: Option[] = [
       {

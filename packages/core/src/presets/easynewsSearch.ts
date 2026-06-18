@@ -1,4 +1,4 @@
-﻿import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { appConfig, ServiceId, constants } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 
@@ -37,6 +37,7 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       constants.STREMIO_NNTP_SERVICE,
       constants.EASYNEWS_SERVICE,
       constants.STREMTHRU_NEWZ_SERVICE,
+      constants.AIOSTREAMS_SERVICE,
     ] as ServiceId[];
 
     const options: Option[] = [

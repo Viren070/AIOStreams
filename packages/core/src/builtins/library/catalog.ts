@@ -169,6 +169,7 @@ export async function fetchCatalog(
   }
 
   if (nzbs.status === 'fulfilled') {
+    logger.debug({ nzbs: nzbs.value }, 'fetched nzbs from service');
     for (const item of nzbs.value) {
       if (!item.name) continue;
       if (item.status !== 'cached' && item.status !== 'downloaded') continue;

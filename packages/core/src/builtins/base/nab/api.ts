@@ -7,9 +7,9 @@ import {
   createLogger,
   makeRequest,
   makeUrlLogSafe,
+  parseXmlCompat,
 } from '../../../utils/index.js';
 import { config as appConfig } from '../../../config/index.js';
-import { Parser } from 'xml2js';
 import type { Logger } from '../../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../../utils/general.js';
 
@@ -237,7 +237,6 @@ type RawSearchResponse = {
 
 // --- API Client Class ---
 export class BaseNabApi<N extends 'torznab' | 'newznab'> {
-  private readonly xmlParser: Parser;
   private readonly capabilitiesCache: Cache<string, Capabilities>;
   private readonly searchCache: Cache<string, SearchResponse<N>>;
   private readonly SearchResultSchema: z.ZodType<RawSearchResponse>;
@@ -270,7 +269,6 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       });
       this.apiPath = apiPathUrl.pathname;
     }
-    this.xmlParser = new Parser();
     this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v2`);
     this.userAgent =
@@ -452,6 +450,9 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         headers: this.getHeaders(),
         timeout: timeout ?? appConfig.builtins.nab.searchTimeout,
         forceProxy: this.httpProxy,
+        // `[newznab]`/`[torznab]` overrides apply on top of getHeaders()
+        // (legacy nab.userAgent) inside makeRequest.
+        context: this.namespace,
       });
 
       const data = await response.text();
@@ -459,11 +460,10 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       let result: any | null = null;
       let parseError: Error | null = null;
       try {
-        result = await this.xmlParser.parseStringPromise(data);
+        result = parseXmlCompat(data);
       } catch (error) {
         parseError = error as Error;
       }
-      this.xmlParser.reset();
 
       if (result && result.error) {
         const code = parseInt(result.error.$.code, 10);
