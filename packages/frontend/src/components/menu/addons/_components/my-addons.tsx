@@ -1012,56 +1012,50 @@ function AddonListItem({
       toast.error('Please enter a valid manifest URL');
       return;
     }
-    try {
-      setLoading(true);
-      const response = await fetch(std);
-      if (!response.ok)
-        throw new Error(`${response.status} ${response.statusText}`);
-      await response.json();
-    } catch (error: any) {
-      toast.error(`Failed to fetch or parse manifest: ${error.message}`);
-      setLoading(false);
-      return;
-    }
-    const currentPreset = userData.presets.find(
-      (p) => p.instanceId === preset.instanceId
-    );
-    if (!currentPreset) {
-      toast.error('Addon not found while updating manifest URL.');
-      setLoading(false);
-      return;
+    setLoading(true);
+    if (!autoProxyDecision.shouldAutoProxy) {
+      try {
+        const response = await fetch(std);
+        if (!response.ok)
+          throw new Error(`${response.status} ${response.statusText}`);
+        await response.json();
+      } catch (error: any) {
+        toast.error(`Failed to fetch or parse manifest: ${error.message}`);
+        setLoading(false);
+        return;
+      }
     }
 
-    const options =
-      presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
-        ? { ...currentPreset.options, manifestUrl: std }
-        : { ...currentPreset.options, url: std };
-    const baseNextUserData = {
-      ...userData,
-      presets: userData.presets.map((p) =>
-        p.instanceId === preset.instanceId ? { ...p, options } : p
-      ),
-    };
-    const autoProxyResult = autoProxyDecision.shouldAutoProxy
-      ? applyInternalAddonProxyConfig(baseNextUserData, preset.instanceId)
-      : null;
-    const nextUserData = autoProxyResult?.nextUserData ?? baseNextUserData;
-    const autoEnabledProxy = autoProxyResult?.autoEnabledProxy ?? false;
+    setUserData((prev) => {
+      const currentPreset = prev.presets.find(
+        (p) => p.instanceId === preset.instanceId
+      );
+      if (!currentPreset) {
+        return prev;
+      }
 
-    setUserData(() => nextUserData);
+      const options =
+        presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
+          ? { ...currentPreset.options, manifestUrl: std }
+          : { ...currentPreset.options, url: std };
+      const baseNextUserData = {
+        ...prev,
+        presets: prev.presets.map((p) =>
+          p.instanceId === preset.instanceId ? { ...p, options } : p
+        ),
+      };
+      const autoProxyResult = autoProxyDecision.shouldAutoProxy
+        ? applyInternalAddonProxyConfig(baseNextUserData, preset.instanceId)
+        : null;
+      return autoProxyResult?.nextUserData ?? baseNextUserData;
+    });
     setNewManifestUrl('');
     configModalOpen.close();
     toast.success('Manifest URL updated successfully');
     if (autoProxyDecision.shouldAutoProxy) {
-      if (autoEnabledProxy) {
-        toast.info(
-          'Detected an internal HTTP addon URL. Proxy was auto-enabled and this addon was auto-routed through proxy.'
-        );
-      } else {
-        toast.info(
-          'Detected an internal HTTP addon URL. This addon was auto-targeted for proxy. Configure proxy URL and credentials to fully enable routing.'
-        );
-      }
+      toast.info(
+        'Detected an internal HTTP addon URL. Proxy routing was auto-configured for this addon.'
+      );
     }
     setLoading(false);
   };
