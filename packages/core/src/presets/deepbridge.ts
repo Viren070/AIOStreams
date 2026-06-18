@@ -2,8 +2,7 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { Preset } from './preset.js';
 import { appConfig, constants } from '../utils/index.js';
 
-const DEEPBRID_BANNER =
-  'https://www.deepbrid.com/file/get/path/banners.5ea0998723b53/i/236387';
+const DEEPBRID_LOGO = '/assets/deepbridge_logo.png';
 
 export class DeepBridgePreset extends Preset {
   static override get METADATA() {
@@ -56,7 +55,7 @@ export class DeepBridgePreset extends Preset {
     return {
       ID: 'deepbridge',
       NAME: 'DeepBridge',
-      LOGO: DEEPBRID_BANNER,
+      LOGO: DEEPBRID_LOGO,
       URL: appConfig.presets.deepbridge.url,
       TIMEOUT:
         appConfig.presets.deepbridge.defaultTimeout ??
