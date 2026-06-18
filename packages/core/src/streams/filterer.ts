@@ -989,7 +989,7 @@ class StreamFilterer {
       }
 
       if (
-        requestedSeason &&
+        requestedSeason !== undefined &&
         seasons &&
         seasons.length > 0 &&
         !seasons.includes(requestedSeason)
@@ -1018,7 +1018,7 @@ class StreamFilterer {
       }
 
       if (
-        requestedEpisode &&
+        requestedEpisode !== undefined &&
         stream.parsedFile?.episodes?.length &&
         !stream.parsedFile?.episodes?.includes(requestedEpisode)
       ) {
