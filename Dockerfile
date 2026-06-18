@@ -8,6 +8,15 @@ FROM base AS builder
 
 WORKDIR /build
 
+# Build toolchain for native addons that lack prebuilt binaries on this platform
+# (e.g. yencode, used by the native usenet engine, has no linux/arm64 prebuild and
+# must be compiled with node-gyp → needs Python + a C/C++ toolchain). These tools
+# live only in the builder/runtime stages; the final distroless image just copies
+# the already-compiled .node binaries, so it stays clean.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy LICENSE file.
 COPY LICENSE ./
 
