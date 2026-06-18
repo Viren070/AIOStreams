@@ -106,8 +106,18 @@ export const apiSchema = {
     default: true,
     label: 'Enable search API',
     description:
-      'When true, the /api/search endpoint is mounted and reachable.',
+      'When true, the /api/v1/search endpoint is mounted and reachable.',
     env: 'ENABLE_SEARCH_API',
+    requiresRestart: true,
+    secret: false,
+  },
+  enableNabApi: {
+    schema: z.boolean(),
+    default: true,
+    label: 'Enable newznab/torznab API',
+    description:
+      'When true, the per-user /api/v1/newznab/api and /api/v1/torznab/api endpoints are mounted and reachable. These expose a user’s stream results to newznab/torznab clients (Prowlarr, Sonarr, Radarr) as an indexer, supporting ID and season/episode lookups only.',
+    env: 'ENABLE_NAB_API',
     requiresRestart: true,
     secret: false,
   },

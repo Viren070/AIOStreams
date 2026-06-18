@@ -38,9 +38,20 @@ export const httpSchema = {
     schema: userAgentMap,
     transform: applyUserAgentMapTemplates,
     default: {} as Record<string, string>,
-    label: 'Hostname user-agent overrides',
+    label: 'Request header overrides',
     description:
-      'Per-hostname User-Agent overrides. Env shape: `host1:ua1,host2:ua2,...`. Takes priority over the default user agents.',
+      'Per-key request header overrides. A key is a hostname (`host`, `*.host`, ' +
+      '`*`) or a `[context]` label for a request purpose - `[nzb_grabs]`, ' +
+      '`[torrent_grabs]`, `[newznab]`, `[torznab]`. A value is a literal ' +
+      'User-Agent (which may use the `{version}` / `{random}` placeholders, like ' +
+      '`DEFAULT_USER_AGENT`) or a `{preset}` reference to a built-in header set ' +
+      '(`{sabnzbd}`, `{nzbget}`, `{sonarr}`, `{radarr}`, `{prowlarr}`, ' +
+      '`{chrome}`). Env shape: `key1:value1,key2:value2,...`. When several keys ' +
+      'match a request the most specific one wins - exact host, then wildcard ' +
+      'host (`*.host`), then `[context]`, then global `*` - and the chosen value ' +
+      'overrides the default user agent. Example: ' +
+      '`[nzb_grabs]:{sabnzbd},indexer.com:{prowlarr}`. (Env var name kept for ' +
+      'backwards compatibility.)',
     env: 'HOSTNAME_USER_AGENT_OVERRIDES',
     requiresRestart: false,
     secret: false,
@@ -61,7 +72,13 @@ export const httpSchema = {
     default: {} as Record<string, boolean | number>,
     label: 'Addon proxy config',
     description:
-      'Per-hostname proxy enablement / index. Env shape: `host1:bool|index,host2:bool|index,...`. Index references `addonProxy` when configured as a list.',
+      'Per-key proxy enablement / index. A key is a hostname (`host`, `*.host`, ' +
+      '`*`) or a `[context]` label (`[nzb_grabs]`, `[torrent_grabs]`, ' +
+      '`[newznab]`, `[torznab]`). Env shape: `key1:bool|index,...` - `true`/' +
+      '`false` enable/disable, an index selects an `addonProxy` entry. When ' +
+      'several keys match the most specific one wins - exact host, then wildcard ' +
+      'host (`*.host`), then `[context]`, then global `*`. Example: ' +
+      '`[newznab]:true`.',
     env: 'ADDON_PROXY_CONFIG',
     requiresRestart: false,
     secret: false,

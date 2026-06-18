@@ -24,6 +24,7 @@ import {
   presetsSchema,
   builtinsSchema,
   analyticsSchema,
+  usenetSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -45,6 +46,7 @@ export const runtimeSchemas = {
   presets: presetsSchema,
   builtins: builtinsSchema,
   analytics: analyticsSchema,
+  usenet: usenetSchema,
 } as const;
 
 export const settingsStore = new SettingsStore(runtimeSchemas);
