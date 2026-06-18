@@ -291,6 +291,65 @@ function SaveConfigCard({
   );
 }
 
+const COMPATIBLE_CLIENTS: {
+  name: string;
+  logoSrc: string;
+  url: string;
+  imgClassName?: string;
+}[] = [
+  {
+    name: 'Nuvio',
+    logoSrc: 'https://nuvio.tv/assets/Logo_1080x1080.png',
+    url: 'https://nuvio.tv/',
+  },
+  {
+    name: 'RealStream',
+    logoSrc: 'https://rstream.app/logo-realstream.png',
+    url: 'https://rstream.app/',
+    imgClassName: 'scale-150',
+  },
+  {
+    name: 'Aurora',
+    logoSrc: 'https://auroramediacenter.com/logo.png',
+    url: 'https://auroramediacenter.com/',
+    imgClassName: 'scale-150',
+  },
+  {
+    name: 'Fusion',
+    logoSrc: 'https://fusionapp.dev/FUSN_dark-iOS.png',
+    url: 'https://fusionapp.dev/',
+  },
+  {
+    name: 'Omni',
+    logoSrc: 'https://omni.stkc.win/favicon.ico',
+    url: 'https://omni.stkc.win/',
+  },
+];
+
+function CompatibleClientLogos() {
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-1.5 ml-1">
+      {COMPATIBLE_CLIENTS.map((client) => (
+        <a
+          key={client.name}
+          href={client.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={client.name}
+          aria-label={`${client.name} (opens in a new tab)`}
+          className="flex-shrink-0 h-7 w-7 rounded-md overflow-hidden transition-transform hover:scale-110 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400"
+        >
+          <img
+            src={client.logoSrc}
+            alt={client.name}
+            className={`h-full w-full object-contain ${client.imgClassName ?? ''}`}
+          />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 interface InstallCardProps {
   baseUrl: string;
   uuid: string;
@@ -406,8 +465,10 @@ function InstallCard({
                 </Button>
               </div>
               <p className="text-xs text-gray-500 ml-1">
-                Paste this into any Stremio-compatible client.
+                Install manually to Stremio or any Stremio addon compatible
+                client.
               </p>
+              <CompatibleClientLogos />
             </div>
           </div>
         </div>
