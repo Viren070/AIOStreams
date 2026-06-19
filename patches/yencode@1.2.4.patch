@@ -1,0 +1,12 @@
+diff --git a/binding.gyp b/binding.gyp
+index 57afb1eafa1ba15125cb461b2bca7bb77bc2ff8b..f1056610b3882689531451fe4d4d85af25f3d69f 100644
+--- a/binding.gyp
++++ b/binding.gyp	
+@@ -1,6 +1,6 @@
+ {
+   "variables": {
+-    "enable_native_tuning%": 1,
++    "enable_native_tuning%": 0,
+     "disable_avx256%": 0,
+     "disable_crcutil%": 0,
+     "built_with_electron%": 0
