@@ -48,6 +48,29 @@ export function innerDisplayName(
 }
 
 /**
+ * Best-effort release name from an NZB's own metadata, for when the SABnzbd
+ * client supplied no name (Prowlarr's `addurl`/redirect path sends only the
+ * URL — no `nzbname`, no upload filename). Prefer `<head><meta type="name">`,
+ * but only when it looks like a real release name: some indexers stuff the raw
+ * yEnc article subject (`[002/111] "<hash>.part001.rar" yEnc`) in there, which
+ * is worse than the parsed first-file name. Falls back to the first file's
+ * filename. Returns undefined when nothing usable is present.
+ */
+export function nzbReleaseName(
+  meta: Record<string, string> | undefined,
+  firstFile?: string
+): string | undefined {
+  const metaName = meta?.name?.trim();
+  if (metaName && !looksLikeArticleSubject(metaName)) return metaName;
+  return firstFile?.trim() || metaName || undefined;
+}
+
+/** A yEnc article subject masquerading as a name (`[n/m] "..." yEnc`). */
+function looksLikeArticleSubject(s: string): boolean {
+  return /yenc/i.test(s) || /\[\d+\/\d+\]/.test(s);
+}
+
+/**
  * Best-effort NZB password: the `<head><meta type="password">` value, else a
  * `{{password}}` (or `{password}`) token embedded in the release name (a common
  * indexer convention for protected archives).
