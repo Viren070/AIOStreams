@@ -130,7 +130,7 @@ export class MultiProviderPool {
     private stats: StatsAccumulator
   ) {
     const depthOf = (p: ProviderConfig): number =>
-      Math.max(1, p.pipelineDepth ?? opts.defaultPipelineDepth ?? 1);
+      Math.max(1, p.pipelineDepth ?? 1);
     this.pools = providers
       .filter((p) => p.enabled !== false)
       .map((p) => {

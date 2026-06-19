@@ -31,8 +31,8 @@ export interface ProviderConfig {
   /**
    * Max in-flight `BODY`/`STAT` commands per connection (NNTP pipelining). `1`
    * (default) = sequential. Higher hides per-article latency so fewer
-   * connections saturate a fast/high-latency link. Falls back to the engine's
-   * {@link EngineOptions.defaultPipelineDepth} when unset.
+   * connections saturate a fast/high-latency link. Defaults to `1` (off) when
+   * unset.
    */
   pipelineDepth?: number;
 }
@@ -43,13 +43,6 @@ export interface EngineOptions {
   maxDownloadConnections: number;
   /** Max parallel segment fetches for a single playback/stream. */
   maxConnectionsPerStream: number;
-  /**
-   * Default NNTP pipeline depth (in-flight commands per connection) for providers
-   * that don't set their own {@link ProviderConfig.pipelineDepth}. `1` = off
-   * (sequential). A connection pipelines High-priority playback only; Low probes
-   * stay at depth 1.
-   */
-  defaultPipelineDepth: number;
   /**
    * Read-ahead depth, in segments, for a single playback/stream. The reorder
    * buffer is sized to hold this many segments so the stream stays ahead of the
@@ -109,7 +102,6 @@ export interface EngineOptions {
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   maxDownloadConnections: 60,
   maxConnectionsPerStream: 8,
-  defaultPipelineDepth: 1,
   prefetchSegments: 32,
   streamingPriority: 0.8,
   segmentCacheBytes: 256 * 1024 * 1024,

@@ -69,7 +69,6 @@ export function buildUsenetEngineOptions(
   // provider depth (the worker pool still packs them onto ≤ connections sockets).
   const maxProviderDepth = Math.max(
     1,
-    u.defaultPipelineDepth,
     ...providers.map((p) => p.pipelineDepth ?? 0)
   );
   const maxConnectionsPerStream = baseConnectionsPerStream * maxProviderDepth;
@@ -83,7 +82,6 @@ export function buildUsenetEngineOptions(
   return {
     maxDownloadConnections,
     maxConnectionsPerStream,
-    defaultPipelineDepth: u.defaultPipelineDepth,
     prefetchSegments,
     streamingPriority: u.streamingPriority,
     segmentCacheBytes,
@@ -128,10 +126,7 @@ export function getSpeedTestEngineConfig(provider: ProviderConfig): {
 } {
   const u = appConfig.usenet;
   const options = buildUsenetEngineOptions([provider]);
-  const pipelineDepth = Math.max(
-    1,
-    provider.pipelineDepth ?? u.defaultPipelineDepth
-  );
+  const pipelineDepth = Math.max(1, provider.pipelineDepth ?? 1);
   const prefetchSegments = options.prefetchSegments ?? u.prefetchSegments;
   // options.maxConnectionsPerStream is the scaled parallel-fetch count
   // (connections × depth); divide back out to report the configured socket count.
