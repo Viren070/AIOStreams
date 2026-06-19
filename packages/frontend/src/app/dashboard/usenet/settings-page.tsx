@@ -44,7 +44,6 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
     title: 'Connections & timeouts',
     leaves: [
       'maxDownloadConnections',
-      'defaultPipelineDepth',
       'streamingPriority',
       'segmentTimeout',
       'dialTimeout',

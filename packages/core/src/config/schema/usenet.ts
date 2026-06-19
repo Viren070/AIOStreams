@@ -150,21 +150,6 @@ export const usenetSchema = {
     secret: false,
     ui: HIDDEN,
   },
-  defaultPipelineDepth: {
-    schema: z.number().int().min(1).max(20),
-    default: 1,
-    label: 'NNTP pipeline depth',
-    description:
-      'Default number of in-flight BODY/STAT commands per connection (NNTP ' +
-      'pipelining). `1` (default) is sequential — today’s behaviour. Higher ' +
-      'hides per-article round-trip latency so fewer connections saturate a ' +
-      'fast/high-latency link; a per-provider value overrides this. Falls back ' +
-      'to 1 automatically if a provider mishandles pipelining.',
-    env: 'USENET_DEFAULT_PIPELINE_DEPTH',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
   prefetchSegments: {
     schema: positiveInt,
     default: 32,
