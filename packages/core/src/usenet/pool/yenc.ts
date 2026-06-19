@@ -80,6 +80,29 @@ export function decodeArticle(raw: Buffer): DecodedSegment {
 }
 
 /**
+ * Some obfuscated posts declare a bogus, too-small yEnc `=ybegin size=` (e.g.
+ * ~5 MB in the first part of a ~200 MB multipart volume).
+ * 
+ * Returns true when `fileSize` is too small to be
+ * this multipart file's real decoded size, so the caller must instead derive
+ * the size from the last part's `=ypart end=`.
+ */
+export function isImplausibleYencFileSize(
+  fileSize: number,
+  numParts: number,
+  ref: { encodedSize?: number; firstPartLen?: number }
+): boolean {
+  if (numParts <= 1) return false; // single part: `=ybegin size=` IS the part
+  if (ref.encodedSize && ref.encodedSize > 0) {
+    return fileSize < ref.encodedSize * 0.5;
+  }
+  if (ref.firstPartLen && ref.firstPartLen > 0) {
+    return fileSize < ref.firstPartLen * (numParts - 1);
+  }
+  return false; // no reference to judge against → trust it (no regression)
+}
+
+/**
  * Streaming yEnc decoder for piping article bytes as they arrive off the wire.
  * Wraps `yencode.decodeChunk`, carrying state between chunks and performing
  * NNTP dot-unstuffing. Emits decoded payload bytes only.
