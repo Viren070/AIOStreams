@@ -39,6 +39,7 @@ import {
   stripNzbExt,
   innerDisplayName,
   extractNzbPassword,
+  nzbReleaseName,
 } from './naming.js';
 import { encodeUsenetStreamToken } from './tokens.js';
 
@@ -630,7 +631,11 @@ export async function addUsenetNzb(opts: {
     nzb.meta = { ...nzb.meta, password: opts.password };
   }
   const nzbHash = nzb.hash;
-  const name = stripNzbExt(opts.name ?? nzb.files[0]?.filename ?? nzbHash);
+  const name = stripNzbExt(
+    opts.name?.trim() ||
+      nzbReleaseName(nzb.meta, nzb.files[0]?.filename) ||
+      nzbHash
+  );
 
   // Uploaded NZBs have no indexer URL; persist the contents under a synthetic
   // `local-nzb://` source so the entry stays streamable after upload.
