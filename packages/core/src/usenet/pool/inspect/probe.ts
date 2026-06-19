@@ -5,7 +5,7 @@ import {
   ArticleNotFoundError,
   isProviderUnavailableError,
 } from '../../nntp/errors.js';
-import { YencDecodeError } from '../yenc.js';
+import { YencDecodeError, isImplausibleYencFileSize } from '../yenc.js';
 import { NzbFile } from '../../nzb/model.js';
 import { isProbablyObfuscated } from '../../nzb/obfuscation.js';
 import { CommandPriority } from '../../types.js';
@@ -101,15 +101,33 @@ export async function inspectFile(
       );
     }
 
+    const firstPartLen =
+      first.byteRange !== undefined
+        ? first.byteRange[1] - first.byteRange[0]
+        : undefined;
+    const trustYencSize =
+      first.fileSize !== undefined &&
+      !isImplausibleYencFileSize(first.fileSize, file.segments.length, {
+        encodedSize: file.encodedSize,
+        firstPartLen,
+      });
+
     let size =
-      first.fileSize ?? first.byteRange?.[1] ?? first.size ?? file.encodedSize;
-    // Exact when the yEnc header carries the total size, or the single
+      (trustYencSize ? first.fileSize : undefined) ??
+      first.byteRange?.[1] ??
+      first.size ??
+      file.encodedSize;
+    // Exact when the (trusted) yEnc header carries the total size, or the single
     // segment's part range IS the whole file. Anything else is an estimate.
     let sizeExact =
-      first.fileSize !== undefined ||
+      trustYencSize ||
       (file.segments.length === 1 && first.byteRange !== undefined);
 
-    if (opts.mode === 'full' && file.segments.length > 1) {
+    // Fetch the last segment's header for the exact size when the first
+    // segment's `=ybegin size=` is missing or untrustworthy for a multipart
+    // file. In `quick` mode this only fires for those bogus/missing-size posts;
+    // honest posts keep the zero-extra-fetch fast path.
+    if (file.segments.length > 1 && (opts.mode === 'full' || !trustYencSize)) {
       try {
         // Header-only: the exact part range arrives in the leading lines.
         const last = await pool.fetchSegmentHead(

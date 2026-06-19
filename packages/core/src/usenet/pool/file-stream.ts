@@ -2,6 +2,7 @@ import { Readable } from 'node:stream';
 import { createLogger } from '../../logging/logger.js';
 import { MultiProviderPool } from './multi-provider-pool.js';
 import { SegmentsStream } from './segments-stream.js';
+import { isImplausibleYencFileSize } from './yenc.js';
 import { CommandPriority, EngineOptions, NzbSegmentRef } from '../types.js';
 
 const logger = createLogger('usenet/file-stream');
@@ -116,14 +117,24 @@ export class FileStream implements SeekableStream {
     this.knownRanges.set(0, { begin: firstBegin, end: firstEnd });
     this.avgDecodedSize = firstEnd - firstBegin || first.size || 1;
 
+    const encodedSize = segments.reduce((acc, s) => acc + (s.bytes ?? 0), 0);
+    const trustYencSize =
+      first.fileSize !== undefined &&
+      !isImplausibleYencFileSize(first.fileSize, segments.length, {
+        encodedSize,
+        firstPartLen: firstEnd - firstBegin,
+      });
+
     if (segments.length === 1) {
-      this._size = first.fileSize ?? firstEnd;
-    } else if (first.fileSize) {
+      // A single part spans the whole file, so its decoded end IS the exact
+      // size; prefer it over a (possibly bogus) `=ybegin size=`.
+      this._size = firstEnd || first.fileSize || first.size;
+    } else if (trustYencSize) {
       // yEnc `=ybegin size=` is the exact total file size; no last fetch needed.
-      this._size = first.fileSize;
+      this._size = first.fileSize!;
     } else {
-      // No yEnc size: fall back to the last segment's part end (exact) or a
-      // ratio estimate.
+      // No (or implausible) yEnc size: fall back to the last segment's part end
+      // (exact) or a ratio estimate.
       const lastIdx = segments.length - 1;
       const last = await this.pool.fetchSegment(
         segments[lastIdx],
