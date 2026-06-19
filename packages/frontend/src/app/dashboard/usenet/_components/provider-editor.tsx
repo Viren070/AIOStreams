@@ -53,12 +53,12 @@ interface Draft {
   isBackup: boolean;
   enabled: boolean;
   /**
-   * Link this row into the load-balanced group of the row above it (shares the
-   * group head's priority + backup tier). Always treated as `false` for row 0.
-   * A maximal run of consecutive linked rows is one group whose providers split
-   * load by free capacity instead of strictly cascading.
+   * Cascade rank and grouping key. Lower = tried first; providers that share a
+   * priority form one load-balanced group (they split load by free capacity
+   * instead of strictly cascading). Kept as contiguous 1-based group indices by
+   * {@link normalize}, so the value the user sees is always 1, 2, 3…
    */
-  groupedWithAbove: boolean;
+  priority: number;
 }
 
 /** Small status pill (no Badge primitive exists in the UI kit). */
@@ -108,55 +108,55 @@ function fromMasked(p: MaskedProvider): Draft {
     pipelineDepth: p.pipelineDepth ?? 1,
     isBackup: p.isBackup ?? false,
     enabled: p.enabled !== false,
-    // Reconstructed by {@link draftsFromProviders} from adjacent priorities.
-    groupedWithAbove: false,
+    priority: p.priority,
   };
 }
 
 /**
- * Build the editor's ordered draft list from the saved providers, reconstructing
- * load-balanced groups: providers are ordered by tier then priority, and a row is
- * linked to the one above it when they share the same priority AND backup tier
- * (i.e. they were saved as one group). Legacy configs with all-distinct
- * priorities reconstruct as no groups (each provider its own cascade step).
+ * Canonicalise the draft list: order by tier (backups always after primaries)
+ * then priority, and renumber priorities to contiguous 1-based group indices so
+ * providers sharing a number stay one adjacent, load-balanced group. Run after
+ * every structural edit so the list, the bracket rendering and the save payload
+ * all read from the same normalised shape. Backup tiers are assumed already
+ * consistent per group (the handlers keep them so); this only orders + renumbers.
  */
-function draftsFromProviders(providers: MaskedProvider[]): Draft[] {
-  const ordered = providers
-    .map((p, originalIndex) => ({ p, originalIndex }))
+function normalize(drafts: Draft[]): Draft[] {
+  const sorted = drafts
+    .map((d, i) => ({ d, i }))
     .sort((a, b) => {
-      const tier = (a.p.isBackup ? 1 : 0) - (b.p.isBackup ? 1 : 0);
+      const tier = (a.d.isBackup ? 1 : 0) - (b.d.isBackup ? 1 : 0);
       if (tier !== 0) return tier;
-      if (a.p.priority !== b.p.priority) return a.p.priority - b.p.priority;
-      return a.originalIndex - b.originalIndex;
+      if (a.d.priority !== b.d.priority) return a.d.priority - b.d.priority;
+      return a.i - b.i;
     })
-    .map(({ p }) => p);
-  return ordered.map((p, i) => {
-    const prev = ordered[i - 1];
-    const groupedWithAbove =
-      i > 0 && prev.priority === p.priority && !!prev.isBackup === !!p.isBackup;
-    return { ...fromMasked(p), groupedWithAbove };
+    .map(({ d }) => d);
+  let groupNo = 0;
+  let prevPriority: number | null = null;
+  let prevTier: boolean | null = null;
+  return sorted.map((d) => {
+    if (d.priority !== prevPriority || d.isBackup !== prevTier) {
+      groupNo++;
+      prevPriority = d.priority;
+      prevTier = d.isBackup;
+    }
+    return { ...d, priority: groupNo };
   });
 }
 
-/**
- * Resolve each draft's effective `{ priority, isBackup }` from the grouping. A
- * group head opens a new priority and owns the group's backup tier; linked rows
- * inherit both, so equal priorities reach the engine (which load-balances them)
- * and a group never straddles the primary/backup split.
- */
-function deriveGroups(
-  drafts: Draft[]
-): { priority: number; isBackup: boolean }[] {
-  let priority = -1;
-  let headIsBackup = false;
-  return drafts.map((d, i) => {
-    const linked = i > 0 && d.groupedWithAbove;
-    if (!linked) {
-      priority++;
-      headIsBackup = d.isBackup;
-    }
-    return { priority, isBackup: headIsBackup };
-  });
+/** Group consecutive drafts that share a priority (input must be normalised). */
+function groupRuns(drafts: Draft[]): Draft[][] {
+  const runs: Draft[][] = [];
+  for (const d of drafts) {
+    const last = runs[runs.length - 1];
+    if (last && last[0].priority === d.priority) last.push(d);
+    else runs.push([d]);
+  }
+  return runs;
+}
+
+/** Build the editor's ordered, grouped draft list from the saved providers. */
+function draftsFromProviders(providers: MaskedProvider[]): Draft[] {
+  return normalize(providers.map(fromMasked));
 }
 
 function emptyDraft(): Draft {
@@ -174,16 +174,12 @@ function emptyDraft(): Draft {
     pipelineDepth: 1,
     isBackup: false,
     enabled: true,
-    groupedWithAbove: false,
+    priority: 1,
   };
 }
 
-/**
- * Build the API payload for one draft. Priority and backup tier are group-derived
- * (see {@link deriveGroups}), not the raw row index, so linked rows share a
- * priority and the engine load-balances them.
- */
-function toPayload(d: Draft, group: { priority: number; isBackup: boolean }) {
+/** Build the API payload for one draft (priority + backup tier are stored directly). */
+function toPayload(d: Draft) {
   const password = d.password
     ? d.password
     : d.hasPassword
@@ -200,8 +196,8 @@ function toPayload(d: Draft, group: { priority: number; isBackup: boolean }) {
     password,
     maxConnections: d.maxConnections,
     pipelineDepth: d.pipelineDepth > 1 ? d.pipelineDepth : undefined,
-    priority: group.priority,
-    isBackup: group.isBackup || undefined,
+    priority: d.priority,
+    isBackup: d.isBackup || undefined,
     enabled: d.enabled,
   };
 }
@@ -210,9 +206,6 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
   const [drafts, setDrafts] = React.useState<Draft[]>(() =>
     draftsFromProviders(providers)
   );
-  // Effective priority + backup tier per row, derived from the grouping. Drives
-  // the save payload, the connection test, and the per-row inherited-tier UI.
-  const groups = React.useMemo(() => deriveGroups(drafts), [drafts]);
   const [tests, setTests] = React.useState<
     Record<string, ProviderTestResult | 'pending'>
   >({});
@@ -247,35 +240,82 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
     setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...patch } : d)));
 
   const remove = (id: string) =>
+    setDrafts((ds) => normalize(ds.filter((d) => d.id !== id)));
+
+  const add = () =>
+    setDrafts((ds) =>
+      normalize([
+        ...ds,
+        {
+          ...emptyDraft(),
+          priority: (ds.length ? Math.max(...ds.map((d) => d.priority)) : 0) + 1,
+        },
+      ])
+    );
+
+  // Set a provider's priority to a typed value. Matching another provider's
+  // number joins its group (and adopts that group's backup tier).
+  const setPriority = (id: string, value: number) =>
     setDrafts((ds) => {
-      const idx = ds.findIndex((d) => d.id === id);
-      if (idx === -1) return ds;
-      const removedWasHead = idx === 0 || !ds[idx].groupedWithAbove;
-      const next = ds.filter((d) => d.id !== id);
-      // Removing a group head would silently merge its members into the group
-      // above; promote the first orphan to its own head instead.
-      if (removedWasHead && next[idx]?.groupedWithAbove) {
-        next[idx] = { ...next[idx], groupedWithAbove: false };
-      }
-      return next;
+      const n = Math.max(1, Math.round(value) || 1);
+      return normalize(
+        ds.map((d) => {
+          if (d.id !== id) return d;
+          const joinTier = ds.find(
+            (o) => o.id !== id && o.priority === n
+          )?.isBackup;
+          return { ...d, priority: n, isBackup: joinTier ?? d.isBackup };
+        })
+      );
     });
 
-  const move = (index: number, dir: -1 | 1) =>
+  // Up arrow: merge this provider into the group directly above it (priorities
+  // are contiguous, so that group is `priority - 1`), adopting its backup tier.
+  const groupUp = (id: string) =>
     setDrafts((ds) => {
-      const next = [...ds];
-      const target = index + dir;
-      if (target < 0 || target >= next.length) return ds;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
+      const cur = ds.find((d) => d.id === id);
+      if (!cur || cur.priority <= 1) return ds;
+      const targetPriority = cur.priority - 1;
+      const targetTier =
+        ds.find((d) => d.priority === targetPriority)?.isBackup ?? cur.isBackup;
+      return normalize(
+        ds.map((d) =>
+          d.id === id
+            ? { ...d, priority: targetPriority, isBackup: targetTier }
+            : d
+        )
+      );
     });
 
-  const add = () => setDrafts((ds) => [...ds, emptyDraft()]);
+  // Down arrow: split this provider out of its group into its own priority just
+  // below it (the +0.5 sorts it after its old group; normalize re-integers it).
+  const ungroup = (id: string) =>
+    setDrafts((ds) => {
+      const cur = ds.find((d) => d.id === id);
+      if (!cur || ds.filter((d) => d.priority === cur.priority).length <= 1)
+        return ds;
+      return normalize(
+        ds.map((d) => (d.id === id ? { ...d, priority: d.priority + 0.5 } : d))
+      );
+    });
 
-  const runTest = async (d: Draft, index: number) => {
+  // Backup toggle is a group control: flip the whole priority group's tier.
+  const setBackup = (id: string, value: boolean) =>
+    setDrafts((ds) => {
+      const cur = ds.find((d) => d.id === id);
+      if (!cur) return ds;
+      return normalize(
+        ds.map((d) =>
+          d.priority === cur.priority ? { ...d, isBackup: value } : d
+        )
+      );
+    });
+
+  const runTest = async (d: Draft) => {
     setTests((t) => ({ ...t, [d.id]: 'pending' }));
     try {
       const result = await test.mutateAsync(
-        toPayload(d, groups[index]) as Record<string, unknown>
+        toPayload(d) as Record<string, unknown>
       );
       setTests((t) => ({ ...t, [d.id]: result }));
       if (result.ok) {
@@ -322,12 +362,14 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
       }
     }
     try {
-      await save.mutateAsync(drafts.map((d, i) => toPayload(d, groups[i])));
+      await save.mutateAsync(drafts.map(toPayload));
       toast.success('Providers saved.');
     } catch (e: any) {
       toast.error(e?.message ?? 'Failed to save providers');
     }
   };
+
+  const groups = groupRuns(drafts);
 
   return (
     <div className="space-y-4">
@@ -335,10 +377,13 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
         <div>
           <h3 className="text-sm font-semibold">NNTP providers</h3>
           <p className="text-xs text-[--muted]">
-            Order sets priority — groups are tried top to bottom. Link providers
-            into a group to share a priority so they split load by free capacity
-            instead of one sitting idle as failover. Mark metered block accounts
-            as backups so they're only used when a primary misses an article.
+            Lower priority numbers are tried first. Give two providers the same
+            priority to put them in one load-balanced group (shown bracketed) so
+            they split load by free capacity instead of one sitting idle as
+            failover — the up arrow groups a provider with the one above, the
+            down arrow splits it back out. Mark metered block accounts as backups
+            (the toggle applies to the whole group) so they’re only used when a
+            primary misses an article.
           </p>
         </div>
         <Button
@@ -359,26 +404,31 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
       )}
 
       <div className="space-y-3">
-        {drafts.map((d, i) => (
-          <ProviderRow
-            key={d.id}
-            draft={d}
-            index={i}
-            count={drafts.length}
-            linkedAbove={d.groupedWithAbove}
-            linkedBelow={
-              i < drafts.length - 1 && drafts[i + 1].groupedWithAbove
-            }
-            effectiveIsBackup={groups[i].isBackup}
-            testResult={tests[d.id]}
-            speedResult={speeds[d.id]}
-            canSpeedTest={savedIds.has(d.id)}
-            onChange={(patch) => update(d.id, patch)}
-            onRemove={() => remove(d.id)}
-            onMove={(dir) => move(i, dir)}
-            onTest={() => runTest(d, i)}
-            onSpeedTest={() => runSpeed(d)}
-          />
+        {groups.map((group) => (
+          <div key={group[0].id} className="space-y-px">
+            {group.map((d, gi) => (
+              <ProviderRow
+                key={d.id}
+                draft={d}
+                grouped={group.length > 1}
+                isGroupHead={gi === 0}
+                isGroupTail={gi === group.length - 1}
+                canGroupUp={d.priority > 1}
+                canUngroup={group.length > 1}
+                testResult={tests[d.id]}
+                speedResult={speeds[d.id]}
+                canSpeedTest={savedIds.has(d.id)}
+                onChange={(patch) => update(d.id, patch)}
+                onSetPriority={(v) => setPriority(d.id, v)}
+                onGroupUp={() => groupUp(d.id)}
+                onUngroup={() => ungroup(d.id)}
+                onSetBackup={(v) => setBackup(d.id, v)}
+                onRemove={() => remove(d.id)}
+                onTest={() => runTest(d)}
+                onSpeedTest={() => runSpeed(d)}
+              />
+            ))}
+          </div>
         ))}
       </div>
 
@@ -441,43 +491,81 @@ function SpeedBadge({
   );
 }
 
+/**
+ * Priority number input. Commits on blur (not per keystroke) so typing a
+ * multi-digit value doesn't re-sort the list mid-edit; the displayed value is
+ * reset whenever the normalised priority changes externally (via the key).
+ */
+function PriorityField({
+  value,
+  onCommit,
+}: {
+  value: number;
+  onCommit: (v: number) => void;
+}) {
+  const latest = React.useRef(value);
+  React.useEffect(() => {
+    latest.current = value;
+  }, [value]);
+  return (
+    <div onBlur={() => latest.current !== value && onCommit(latest.current)}>
+      <NumberInput
+        key={value}
+        defaultValue={value}
+        min={1}
+        hideControls
+        size="sm"
+        className="w-16 text-center tabular-nums"
+        aria-label="Priority"
+        onValueChange={(n) => {
+          latest.current = Number.isFinite(n) && n >= 1 ? Math.round(n) : 1;
+        }}
+      />
+    </div>
+  );
+}
+
 function ProviderRow({
   draft: d,
-  index,
-  count,
-  linkedAbove,
-  linkedBelow,
-  effectiveIsBackup,
+  grouped,
+  isGroupHead,
+  isGroupTail,
+  canGroupUp,
+  canUngroup,
   testResult,
   speedResult,
   canSpeedTest,
   onChange,
+  onSetPriority,
+  onGroupUp,
+  onUngroup,
+  onSetBackup,
   onRemove,
-  onMove,
   onTest,
   onSpeedTest,
 }: {
   draft: Draft;
-  index: number;
-  count: number;
-  /** This row is linked into the group above it. */
-  linkedAbove: boolean;
-  /** The row below is linked into this row's group (so this row is a group head). */
-  linkedBelow: boolean;
-  /** Backup tier resolved from the group (inherited from the head when linked). */
-  effectiveIsBackup: boolean;
+  /** Part of a multi-provider load-balanced group (shares its priority). */
+  grouped: boolean;
+  /** First / last row of its group — drives the `[` bracket corner rounding. */
+  isGroupHead: boolean;
+  isGroupTail: boolean;
+  /** There is a group above to merge into (up arrow). */
+  canGroupUp: boolean;
+  /** This row is in a group and can be split back out (down arrow). */
+  canUngroup: boolean;
   testResult?: ProviderTestResult | 'pending';
   speedResult?: ProviderSpeedTestResult | 'pending';
   canSpeedTest: boolean;
   onChange: (patch: Partial<Draft>) => void;
+  onSetPriority: (v: number) => void;
+  onGroupUp: () => void;
+  onUngroup: () => void;
+  onSetBackup: (v: boolean) => void;
   onRemove: () => void;
-  onMove: (dir: -1 | 1) => void;
   onTest: () => void;
   onSpeedTest: () => void;
 }) {
-  // Part of a multi-provider load-balanced group (either linked above, or a head
-  // with a linked row below).
-  const grouped = linkedAbove || linkedBelow;
   const pending = testResult === 'pending';
   const speedPending = speedResult === 'pending';
   const confirmDelete = useConfirmationDialog({
@@ -497,32 +585,45 @@ function ProviderRow({
       className={cn(
         'p-4 transition-opacity duration-300',
         !d.enabled && 'opacity-60',
-        // Accent the left edge of grouped rows so a load-balanced group reads as
-        // one block (linked rows share the head's priority + backup tier).
-        grouped && 'border-l-2 border-l-[--brand]'
+        // Accent + bracket the left edge of grouped rows so a load-balanced
+        // group reads as one block: rounded only at the head's top and the
+        // tail's bottom, forming a continuous `[`.
+        grouped && 'border-l-2 border-l-[--brand]',
+        grouped && !isGroupHead && 'rounded-t-none',
+        grouped && !isGroupTail && 'rounded-b-none'
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex flex-col items-center pt-1">
-          <IconButton
-            size="xs"
-            intent="gray-subtle"
-            icon={<BiChevronUp />}
-            disabled={index === 0}
-            onClick={() => onMove(-1)}
-            aria-label="Move up"
-          />
-          <span className="text-xs text-[--muted] tabular-nums my-0.5">
-            #{index + 1}
-          </span>
-          <IconButton
-            size="xs"
-            intent="gray-subtle"
-            icon={<BiChevronDown />}
-            disabled={index === count - 1}
-            onClick={() => onMove(1)}
-            aria-label="Move down"
-          />
+        <div className="flex flex-col items-center gap-1 pt-1">
+          <Tooltip
+            trigger={
+              <IconButton
+                size="xs"
+                intent="gray-subtle"
+                icon={<BiChevronUp />}
+                disabled={!canGroupUp}
+                onClick={onGroupUp}
+                aria-label="Group with provider above"
+              />
+            }
+          >
+            Group with the provider above
+          </Tooltip>
+          <PriorityField value={d.priority} onCommit={onSetPriority} />
+          <Tooltip
+            trigger={
+              <IconButton
+                size="xs"
+                intent="gray-subtle"
+                icon={<BiChevronDown />}
+                disabled={!canUngroup}
+                onClick={onUngroup}
+                aria-label="Split out of group"
+              />
+            }
+          >
+            Split out into its own priority
+          </Tooltip>
         </div>
 
         <div className="flex-1 space-y-3">
@@ -531,7 +632,7 @@ function ProviderRow({
               <span className="font-medium text-sm">
                 {d.name || d.host || 'New provider'}
               </span>
-              {effectiveIsBackup && <Pill intent="warning">backup</Pill>}
+              {d.isBackup && <Pill intent="warning">backup</Pill>}
               {grouped && <Pill intent="success">load-balanced</Pill>}
               <StateBadge result={testResult} />
               <SpeedBadge result={speedResult} />
@@ -673,28 +774,17 @@ function ProviderRow({
               label="SSL/TLS"
               side="right"
             />
-            {index > 0 && (
-              <Switch
-                value={d.groupedWithAbove}
-                onValueChange={(v) => onChange({ groupedWithAbove: v })}
-                label="Group with above"
-                moreHelp="Share the priority of the provider above and split load across
-                the group (instead of strict failover)."
-                side="right"
-              />
-            )}
-            {linkedAbove ? (
-              <span className="text-xs text-[--muted]">
-                Backup: {effectiveIsBackup ? 'on' : 'off'} (from group)
-              </span>
-            ) : (
-              <Switch
-                value={d.isBackup}
-                onValueChange={(v) => onChange({ isBackup: v })}
-                label="Backup"
-                side="right"
-              />
-            )}
+            <Switch
+              value={d.isBackup}
+              onValueChange={onSetBackup}
+              label="Backup"
+              moreHelp={
+                grouped
+                  ? 'Applies to the whole group — a metered/block group only runs once a primary misses an article.'
+                  : 'Metered/block account: only used once a primary misses an article.'
+              }
+              side="right"
+            />
             <Switch
               value={d.tlsSkipVerify}
               onValueChange={(v) => onChange({ tlsSkipVerify: v })}
