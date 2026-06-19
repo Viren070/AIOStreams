@@ -13,15 +13,15 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   },
   sonarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Sonarr/4.0.17.2952 (alpine 3.23.3)',
+    'User-Agent': 'Sonarr/4.0.17.2952 (alpine 3.23.4)',
   },
   radarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Radarr/6.2.1.10461 (alpine 3.23.3)',
+    'User-Agent': 'Radarr/6.2.1.10461 (alpine 3.23.4)',
   },
   prowlarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Prowlarr/2.4.0.5397 (alpine 3.23.3)',
+    'User-Agent': 'Prowlarr/2.4.0.5397 (alpine 3.23.4)',
   },
   chrome: {
     'User-Agent':
