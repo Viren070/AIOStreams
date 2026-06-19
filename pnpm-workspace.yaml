@@ -13,3 +13,4 @@ allowBuilds:
 
 patchedDependencies:
   stremthru: patches/stremthru.patch
+  yencode@1.2.4: patches/yencode@1.2.4.patch
