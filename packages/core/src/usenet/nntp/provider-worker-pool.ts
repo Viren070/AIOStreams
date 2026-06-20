@@ -116,6 +116,10 @@ export class ProviderWorkerPool {
   get id(): string {
     return this.config.id;
   }
+  /** Human-friendly label for logs: display name, falling back to the stable id. */
+  get label(): string {
+    return this.config.name ?? this.config.id;
+  }
   get isBackup(): boolean {
     return !!this.config.isBackup;
   }
@@ -323,7 +327,7 @@ export class ProviderWorkerPool {
         slot.conn = conn;
         slot.failures = 0;
         if (this.state !== 'online') {
-          logger.info({ providerId: this.id }, 'provider back online');
+          logger.info({ provider: this.label }, 'provider back online');
           this.state = 'online';
         }
         this.dispatch();
@@ -338,7 +342,10 @@ export class ProviderWorkerPool {
   private onDialError(slot: Slot, err: unknown): void {
     if (err instanceof NntpError && err.kind === 'auth_failed') {
       if (this.state !== 'auth_failed') {
-        logger.warn({ providerId: this.id }, 'provider authentication failed');
+        logger.warn(
+          { provider: this.label, err },
+          'provider authentication failed'
+        );
       }
       this.state = 'auth_failed';
       this.dispatch(); // fails the queue
@@ -350,7 +357,7 @@ export class ProviderWorkerPool {
       setTimeout(() => this.dispatch(), DIAL_BACKOFF_MS).unref?.();
       return;
     }
-    this.recordConnFailure(slot);
+    this.recordConnFailure(slot, err);
     setTimeout(() => this.dispatch(), DIAL_BACKOFF_MS).unref?.();
   }
 
@@ -412,7 +419,7 @@ export class ProviderWorkerPool {
     if (err instanceof NntpError && err.kind === 'connection_limit') {
       this.throttleOnLimit();
     } else {
-      this.recordConnFailure(slot);
+      this.recordConnFailure(slot, err);
     }
     if (slot.conn && !slot.conn.isUsable) slot.conn = null;
     req.reject(err);
@@ -427,7 +434,7 @@ export class ProviderWorkerPool {
     this.allowed = Math.min(this.allowed, Math.max(1, target));
     if (!wasThrottled) {
       logger.debug(
-        { providerId: this.id, throttledTo: this.allowed },
+        { provider: this.label, throttledTo: this.allowed },
         'provider connection limit hit; throttling connection ceiling'
       );
     }
@@ -448,14 +455,18 @@ export class ProviderWorkerPool {
     }
   }
 
-  private recordConnFailure(slot: Slot): void {
+  private recordConnFailure(slot: Slot, err: unknown): void {
     slot.failures++;
     if (slot.failures >= this.opts.circuitBreakerThreshold) {
       const wasTripped = this.trippedUntil > Date.now();
       this.trippedUntil = Date.now() + this.opts.circuitBreakerCooldownMs;
       if (!wasTripped) {
         logger.warn(
-          { providerId: this.id, failures: slot.failures },
+          {
+            provider: this.label,
+            failures: slot.failures,
+            err,
+          },
           'provider circuit breaker tripped'
         );
       }
