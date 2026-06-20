@@ -420,7 +420,7 @@ export class MultiProviderPool {
         });
         logger.trace(
           {
-            providerId: pool.id,
+            provider: pool.label,
             messageId: segment.messageId,
             bytes,
             latency: durationMs,
@@ -435,7 +435,7 @@ export class MultiProviderPool {
           if (nzbHash) this.affinity.record(nzbHash, pool.id, 'missing');
           this.stats.record({ type: 'segment_missing', providerId: pool.id });
           logger.debug(
-            { providerId: pool.id, messageId: segment.messageId },
+            { provider: pool.label, messageId: segment.messageId },
             'segment missing on provider'
           );
           continue;

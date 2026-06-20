@@ -68,6 +68,7 @@ let CONNECTION_SEQ = 0;
 export class NntpConnection {
   readonly id: number;
   readonly providerId: string;
+  readonly label: string;
   private socket: net.Socket | tls.TLSSocket;
   private reader = new NntpResponseReader();
   /** FIFO queue of in-flight requests; head is the one currently being read. */
@@ -86,10 +87,12 @@ export class NntpConnection {
   private constructor(
     socket: net.Socket | tls.TLSSocket,
     providerId: string,
+    label: string,
     private opts: ConnectionOptions
   ) {
     this.id = ++CONNECTION_SEQ;
     this.providerId = providerId;
+    this.label = label;
     this.socket = socket;
     this.attach();
   }
@@ -189,7 +192,12 @@ export class NntpConnection {
       }
     );
 
-    const conn = new NntpConnection(socket, config.id, opts);
+    const conn = new NntpConnection(
+      socket,
+      config.id,
+      config.name ?? config.id,
+      opts
+    );
     // Greeting: 200 (posting allowed) or 201 (no posting). Unsolicited: the
     // server sends it on connect, so read a line without writing a command.
     const greeting = await conn.readGreeting(opts.dialTimeoutMs);
@@ -202,7 +210,11 @@ export class NntpConnection {
       const limited = isConnectionLimitResponse(status.code, greeting);
       if (!limited) {
         logger.warn(
-          { providerId: config.id, host: config.host, code: status.code },
+          {
+            provider: config.name ?? config.id,
+            host: config.host,
+            code: status.code,
+          },
           'unexpected nntp greeting'
         );
       }
@@ -222,7 +234,7 @@ export class NntpConnection {
     conn.touch();
     logger.debug(
       {
-        providerId: config.id,
+        provider: config.name ?? config.id,
         host: config.host,
         port: config.port,
         tls: config.tls,
@@ -268,7 +280,7 @@ export class NntpConnection {
       const limited = isConnectionLimitResponse(passStatus.code, passResp);
       if (!limited) {
         logger.warn(
-          { providerId: this.providerId, code: passStatus.code },
+          { provider: this.label, code: passStatus.code },
           'nntp authentication rejected'
         );
       }
@@ -526,7 +538,7 @@ export class NntpConnection {
       this.stallTimer = null;
       logger.warn(
         {
-          providerId: this.providerId,
+          provider: this.label,
           connId: this.id,
           timeoutMs,
           inFlight: this.queue.length,
