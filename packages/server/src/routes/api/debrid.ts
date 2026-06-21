@@ -204,7 +204,7 @@ router.get(
       }
 
       logger.debug(
-        { url: result.url },
+        { url: result.url, label: result.winningLabel },
         'Debrid resolve succeeded, redirecting'
       );
 
