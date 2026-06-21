@@ -19,6 +19,8 @@ export interface PlayChainItem {
   type: FailoverContentType;
   serviceId?: string;
   filename?: string;
+  /** Addon name that produced this stream (e.g. 'TorBox', 'Easynews'). */
+  addonName?: string;
 }
 
 /** What we persist per chain so the resolver can slice + filter it on click. */
@@ -54,18 +56,26 @@ function chainCache() {
 }
 
 /**
- * A stream is an eligible failover participant only if WE own its playback —
- * i.e. its URL is one we generated via {@link generatePlaybackUrl}. Arbitrary
- * external addon URLs are skipped because we cannot `resolve()` them.
+ * A stream is an eligible failover participant if:
+ * - WE own its playback (URL contains PLAYBACK_PATH_PREFIX) so we can
+ *   `resolve()` it, OR
+ * - It is a debrid stream with any URL (we redirect to the raw URL directly).
+ * Usenet streams without a playback URL are skipped because they need the
+ * full resolve pipeline (nzb download, yenc decode).
  */
-function isOwnedPlayback(
+function isEligibleForChain(
   s: ParsedStream
 ): s is ParsedStream & { url: string; type: FailoverContentType } {
-  return (
-    !!s.url &&
-    s.url.includes(PLAYBACK_PATH_PREFIX) &&
-    (s.type === 'usenet' || s.type === 'debrid')
-  );
+  if (!s.url) return false;
+  // Owned playback URLs we can resolve (usenet + debrid)
+  if (s.url.includes(PLAYBACK_PATH_PREFIX) && (s.type === 'usenet' || s.type === 'debrid')) {
+    return true;
+  }
+  // Debrid streams with a raw URL — use directly without resolve
+  if (s.type === 'debrid') {
+    return true;
+  }
+  return false;
 }
 
 /** Content-stable-ish identity for the chain cache key. */
@@ -84,7 +94,7 @@ export async function buildPlayChain(
   opts: BuildPlayChainOptions,
   uuid?: string
 ): Promise<void> {
-  const eligible = streams.filter(isOwnedPlayback);
+  const eligible = streams.filter(isEligibleForChain);
   if (eligible.length < 2) {
     return;
   }
@@ -94,6 +104,7 @@ export async function buildPlayChain(
     type: s.type,
     serviceId: s.service?.id,
     filename: s.filename,
+    addonName: s.addon?.name,
   }));
 
   const listKey = buildFallbackKey(

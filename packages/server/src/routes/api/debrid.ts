@@ -12,6 +12,7 @@ import {
   runPlayChain,
   getSimpleTextHash,
   DistributedLock,
+  PLAYBACK_PATH_PREFIX,
   type FailoverAttempt,
   type FailoverContentType,
 } from '@aiostreams/core';
@@ -117,13 +118,24 @@ router.get(
             ),
         },
         ...fallbackItems.map((it): FailoverAttempt => {
-          const target = parsePlaybackUrl(it.url);
+          const label = it.addonName
+            ? `${it.type} (${it.addonName})`
+            : it.type;
+          // Owned playback URL — parse and resolve
+          if (it.url.includes(PLAYBACK_PATH_PREFIX)) {
+            const target = parsePlaybackUrl(it.url);
+            return {
+              label,
+              resolve: (signal) =>
+                target
+                  ? resolvePlaybackTarget(target, { clientIp }, signal)
+                  : Promise.reject(new Error('unparseable fallback url')),
+            };
+          }
+          // Raw URL (e.g. debrid direct download) — use directly without resolve
           return {
-            label: it.type,
-            resolve: (signal) =>
-              target
-                ? resolvePlaybackTarget(target, { clientIp }, signal)
-                : Promise.reject(new Error('unparseable fallback url')),
+            label,
+            resolve: () => Promise.resolve(it.url),
           };
         }),
       ];

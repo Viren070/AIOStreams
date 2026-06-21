@@ -170,6 +170,8 @@ export interface RunPlayChainResult {
   error?: Error;
   /** True if any attempt beyond the first was used / failed over. */
   failedOver: boolean;
+  /** Label of the winning attempt (e.g. 'clicked', 'usenet', 'debrid'). */
+  winningLabel?: string;
 }
 
 /**
@@ -195,7 +197,11 @@ async function runSequential(
     const isLast = i === attempts.length - 1;
     try {
       const url = await attempts[i].resolve();
-      return { url, failedOver: failedOver || i > 0 };
+      return {
+        url,
+        failedOver: failedOver || i > 0,
+        winningLabel: attempts[i].label,
+      };
     } catch (err: any) {
       const retryable = isFailoverRetryableError(err);
       if (!retryable || isLast) {
@@ -245,7 +251,11 @@ function runParallel(
       for (let i = 0; i < controllers.length; i++) {
         if (i !== b.index) controllers[i]?.abort();
       }
-      resolve({ url: b.url, failedOver: b.index > 0 });
+      resolve({
+        url: b.url,
+        failedOver: b.index > 0,
+        winningLabel: attempts[b.index]?.label,
+      });
     }
 
     function finishFail() {
@@ -253,7 +263,10 @@ function runParallel(
       settled = true;
       clearTimers();
       for (const c of controllers) c?.abort();
-      resolve({ error: pickError(errors), failedOver: launched > 1 });
+      resolve({
+        error: pickError(errors),
+        failedOver: launched > 1,
+      });
     }
 
     function onDeadline() {
