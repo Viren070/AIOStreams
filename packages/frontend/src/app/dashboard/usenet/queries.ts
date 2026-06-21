@@ -464,3 +464,11 @@ export function useDeleteLibraryEntry() {
     onSuccess: () => qc.invalidateQueries({ queryKey: [...ROOT, 'library'] }),
   });
 }
+
+export function useDeleteAllLibraryEntries() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api('DELETE /dashboard/usenet/library'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...ROOT, 'library'] }),
+  });
+}
