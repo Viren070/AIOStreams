@@ -107,7 +107,7 @@ export class USATVPreset extends Preset {
     const configuredUrl = options.url || this.DEFAULT_URL;
     const url = configuredUrl.endsWith('/manifest.json')
       ? configuredUrl
-      : `${options.url ? new URL(configuredUrl).origin : configuredUrl}/manifest.json`;
+      : `${configuredUrl.replace(/\/?$/, '')}/manifest.json`;
     return {
       name: options.name || this.METADATA.NAME,
       manifestUrl: url,
