@@ -59,6 +59,10 @@ export class USATVPreset extends Preset {
       constants.META_RESOURCE,
       constants.STREAM_RESOURCE,
     ];
+    const defaultUrl = appConfig.presets.usaTv.url[0] ?? '';
+    const assetBaseUrl = defaultUrl.endsWith('/manifest.json')
+      ? defaultUrl.slice(0, -'/manifest.json'.length)
+      : defaultUrl;
 
     const options: Option[] = [
       ...baseOptions(
@@ -72,7 +76,7 @@ export class USATVPreset extends Preset {
     return {
       ID: 'usa-tv',
       NAME: 'USA TV',
-      LOGO: `${appConfig.presets.usaTv.url[0] ?? ''}/public/logo.png`,
+      LOGO: `${assetBaseUrl}/public/logo.png`,
       URL: appConfig.presets.usaTv.url,
       TIMEOUT:
         appConfig.presets.usaTv.defaultTimeout ??
@@ -86,11 +90,6 @@ export class USATVPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [LIVE_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
-      DISABLED: {
-        removed: true,
-        disabled: true,
-        reason: 'USA TV addon is deprecated.',
-      },
     };
   }
 
@@ -105,13 +104,10 @@ export class USATVPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Addon {
-    const baseUrl = options.url
-      ? new URL(options.url).origin
-      : this.DEFAULT_URL;
-
-    const url = options.url?.endsWith('/manifest.json')
-      ? options.url
-      : `${baseUrl}/manifest.json`;
+    const configuredUrl = options.url || this.DEFAULT_URL;
+    const url = configuredUrl.endsWith('/manifest.json')
+      ? configuredUrl
+      : `${options.url ? new URL(configuredUrl).origin : configuredUrl}/manifest.json`;
     return {
       name: options.name || this.METADATA.NAME,
       manifestUrl: url,
