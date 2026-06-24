@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import { createHash } from 'node:crypto';
 import { createLogger } from '../../logging/logger.js';
 import { DebridError } from '../../debrid/base.js';
 import {
@@ -33,6 +34,24 @@ export interface OpenedUsenetStream {
   end: number;
   /** Best-effort filename for Content-Disposition. */
   filename: string;
+  /** Strong validator for the resolved file */
+  etag: string;
+  /** Stable Last-Modified companion to {@link etag}. */
+  lastModified: Date;
+}
+
+/**
+ * Fallback `Last-Modified`
+ */
+const USENET_LAST_MODIFIED = new Date('2024-01-01T00:00:00Z');
+
+/** Strong, stable ETag for a resolved stream at a known size. */
+function streamEtag(token: UsenetStreamToken, size: number): string {
+  const digest = createHash('sha1')
+    .update(streamSessionKey(token))
+    .digest('hex')
+    .slice(0, 20);
+  return `"u-${digest}-${size.toString(16)}"`;
 }
 
 /**
@@ -47,6 +66,7 @@ interface UsenetStreamSession {
   size: number;
   filename: string;
   lastUsedAt: number;
+  lastModified: Date;
 }
 
 /** Identity of a resolved (token → file) stream, independent of byte range. */
@@ -256,11 +276,20 @@ async function getStreamSession(
     }
 
     if (!stream) throw new Error('failed to open usenet stream');
+    const entry = await UsenetLibraryRepository.get(decoded.hash).catch(
+      () => undefined
+    );
+    const addedAt = entry?.addedAt ? new Date(entry.addedAt) : undefined;
+    const lastModified =
+      addedAt && !Number.isNaN(addedAt.getTime())
+        ? addedAt
+        : USENET_LAST_MODIFIED;
     const session: UsenetStreamSession = {
       stream,
       size: stream.size(),
       filename,
       lastUsedAt: Date.now(),
+      lastModified,
     };
     streamSessions.set(key, session);
     const openedAt = Date.now();
@@ -330,5 +359,7 @@ export async function openNativeUsenetStream(opts: {
     start,
     end,
     filename,
+    etag: streamEtag(decoded, size),
+    lastModified: session.lastModified,
   };
 }

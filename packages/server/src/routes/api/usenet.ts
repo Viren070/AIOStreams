@@ -82,7 +82,27 @@ router.get(
         signal: controller.signal,
       });
 
-      const { size, start, end, stream, filename } = opened;
+      const { size, start, end, stream, filename, etag, lastModified } = opened;
+
+      // set appropriate cache headers
+      res.setHeader('ETag', etag);
+      res.setHeader('Last-Modified', lastModified.toUTCString());
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      // Conditional GET: a re-request of the unchanged file with a matching
+      // If-None-Match is a cheap 304
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (
+        ifNoneMatch &&
+        (ifNoneMatch === '*' ||
+          ifNoneMatch.split(',').some((t) => t.trim() === etag))
+      ) {
+        res.removeListener('close', onClose);
+        stream.destroy();
+        res.status(304).end();
+        return;
+      }
 
       // Unsatisfiable range.
       if (requested && requested.start >= size) {
@@ -94,7 +114,6 @@ router.get(
 
       const disposition =
         req.query.download !== undefined ? 'attachment' : 'inline';
-      res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Content-Type', mimeForFilename(filename));
       res.setHeader(
         'Content-Disposition',
