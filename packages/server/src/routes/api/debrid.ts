@@ -196,6 +196,7 @@ router.get(
         'Debrid resolve succeeded, redirecting'
       );
 
+      res.setHeader('Cache-Control', 'no-store');
       res.redirect(307, result.url);
     } catch (error: any) {
       if (error instanceof APIError || error instanceof ZodError) {
