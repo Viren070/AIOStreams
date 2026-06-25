@@ -44,6 +44,7 @@ import {
   useUsenetLibrary,
   useUsenetLibraryStream,
   useDeleteLibraryEntry,
+  useDeleteAllLibraryEntries,
   useAddNzb,
   useUploadNzb,
   usePlayUrl,
@@ -591,6 +592,7 @@ export function UsenetLibraryPage() {
     offset: (page - 1) * PAGE_SIZE,
   });
   const del = useDeleteLibraryEntry();
+  const delAll = useDeleteAllLibraryEntries();
   const pending = React.useRef<string[]>([]);
 
   const entries = query.data?.entries ?? [];
@@ -626,6 +628,26 @@ export function UsenetLibraryPage() {
           setSelectMode(false);
         }
       );
+    },
+  });
+
+  const confirmDeleteAll = useConfirmationDialog({
+    title: 'Delete all library entries',
+    description:
+      'This will remove every entry from the library, including active imports. This action cannot be undone.',
+    actionText: 'Delete all',
+    actionIntent: 'alert-subtle',
+    onConfirm: () => {
+      delAll
+        .mutateAsync(undefined)
+        .then(() => {
+          toast.success('Library cleared');
+          setSelected(new Set());
+          setSelectMode(false);
+        })
+        .catch((e: any) => {
+          toast.error(e?.message ?? 'Failed to clear library');
+        });
     },
   });
 
@@ -768,22 +790,37 @@ export function UsenetLibraryPage() {
                 >
                   Done
                 </Tooltip>
+              </>              ) : (
+              <>
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      size="md"
+                      intent="alert-subtle"
+                      icon={<BiTrash />}
+                      aria-label="Delete all entries"
+                      loading={delAll.isPending}
+                      onClick={confirmDeleteAll.open}
+                    />
+                  }
+                >
+                  Delete all
+                </Tooltip>
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      size="md"
+                      intent="gray-outline"
+                      icon={<BiSelectMultiple />}
+                      aria-label="Select entries"
+                      disabled={entries.length === 0}
+                      onClick={() => setSelectMode(true)}
+                    />
+                  }
+                >
+                  Select
+                </Tooltip>
               </>
-            ) : (
-              <Tooltip
-                trigger={
-                  <IconButton
-                    size="md"
-                    intent="gray-outline"
-                    icon={<BiSelectMultiple />}
-                    aria-label="Select entries"
-                    disabled={entries.length === 0}
-                    onClick={() => setSelectMode(true)}
-                  />
-                }
-              >
-                Select
-              </Tooltip>
             )}
           </div>
         </div>
@@ -868,6 +905,7 @@ export function UsenetLibraryPage() {
         onOpenChange={(o) => !o && setInfo(null)}
       />
       <ConfirmationDialog {...confirm} />
+      <ConfirmationDialog {...confirmDeleteAll} />
     </div>
   );
 }
