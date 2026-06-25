@@ -98,6 +98,18 @@ export interface EngineOptions {
    * widened to compensate for the skipped availability evidence.
    */
   lazyRarResolution: boolean;
+  /**
+   * Strict archive-volume membership: for OBFUSCATED split-7z sets (md5-named
+   * subjects whose real `.7z.NNN` names live only in the yEnc headers), skip the
+   * positional name-inference that avoids probing middle volumes and instead
+   * probe every volume so each is identified authoritatively by its yEnc name /
+   * PAR2 md5-16k descriptor. Eliminates the residual risk of the cheap
+   * inference (mislabeling a non-uniform sidecar, or transposing two equal-size
+   * volumes) at the cost of a first-segment fetch per volume (~one segment each,
+   * full article on the wire). Off by default; the size-gated inference is the
+   * cheap, always-on safety net.
+   */
+  strictArchiveMembership: boolean;
 }
 
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
@@ -115,6 +127,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   availabilitySamplePoints: 3,
   verifyMode: 'stat',
   lazyRarResolution: true,
+  strictArchiveMembership: false,
 };
 
 /** Priority for an NNTP command acquisition. */

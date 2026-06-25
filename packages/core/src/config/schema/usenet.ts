@@ -272,6 +272,22 @@ export const usenetSchema = {
     secret: false,
     ui: HIDDEN,
   },
+  strictArchiveMembership: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Strict archive membership',
+    description:
+      'For obfuscated split-7z posts (random-named parts whose real .7z.NNN ' +
+      'names live only in the yEnc headers), probe every volume so each is ' +
+      'identified authoritatively (by yEnc name / PAR2 descriptor) instead of ' +
+      'inferring names by position. Eliminates rare mis-grouping of such sets ' +
+      'at the cost of one first-segment fetch per volume. The default ' +
+      '(off) uses a cheaper size-checked inference that handles the common case.',
+    env: 'USENET_STRICT_ARCHIVE_MEMBERSHIP',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
   verifyMode: {
     schema: z.enum(['none', 'stat', 'body']),
     default: 'stat',

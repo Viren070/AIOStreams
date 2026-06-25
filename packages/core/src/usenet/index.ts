@@ -195,6 +195,8 @@ export class UsenetEngine {
       ...opts,
       concurrency: inspectConcurrency,
       lazyArchives: opts.lazyArchives ?? this.options.lazyRarResolution,
+      strictArchiveMembership:
+        opts.strictArchiveMembership ?? this.options.strictArchiveMembership,
     });
     // External abort (e.g. a parallel-failover loser) must surface as a throw,W
     opts.signal?.throwIfAborted();
