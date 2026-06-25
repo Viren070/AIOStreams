@@ -79,6 +79,15 @@ export interface EngineOptions {
    * download budget) and check every provider incl. backups.
    */
   availabilitySamplePoints: number;
+  /**
+   * How the target-availability sample is verified at import:
+   * - `stat`: cheap STAT existence check (fast, but a cache/debrid NNTP gateway
+   *   can answer "present" for an article whose body it cannot deliver).
+   * - `body`: authoritative - actually body-fetches the sample segments, slightly slower; the
+   *   fetched segments are cached so they double as start-of-playback prefetch.
+   * - `none`: skip the target-availability sample entirely.
+   */
+  verifyMode: 'none' | 'stat' | 'body';
   /** Treat any archived (RAR/7z) result as non-streamable (skip archives). */
   failArchivedResults: boolean;
   /**
@@ -112,6 +121,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   circuitBreakerThreshold: 5,
   circuitBreakerCooldownMs: 30_000,
   availabilitySamplePoints: 3,
+  verifyMode: 'stat',
   failArchivedResults: false,
   failNestedArchives: false,
   lazyRarResolution: true,

@@ -298,6 +298,36 @@ export const usenetSchema = {
     secret: false,
     ui: HIDDEN,
   },
+  verifyMode: {
+    schema: z.enum(['none', 'stat', 'body']),
+    default: 'stat',
+    label: 'Verify mode',
+    description:
+      'How the chosen video is checked for retrievability at import, before a ' +
+      'stream URL is minted. `stat` (default) is a fast existence check, but ' +
+      'can sometimes be inaccurate and answer “present” for articles they ' +
+      'cannot actually deliver, so a dead release can slip through. `body` ' +
+      'actually fetches the sample segments; authoritative and the fetched segments are cached as ' +
+      'start-of-playback prefetch, at a small first-byte latency cost. `none` ' +
+      'skips this check.',
+    env: 'USENET_VERIFY_MODE',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  verifySamplePoints: {
+    schema: positiveInt,
+    default: 3,
+    label: 'Verify sample points',
+    description:
+      'How many evenly-spread segments of the chosen video to check (begin / ' +
+      'middle / end for 3). Higher catches sparser damage but adds latency in ' +
+      '`body` mode. Only applies when verify mode is `stat` or `body`.',
+    env: 'USENET_VERIFY_SAMPLE_POINTS',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
   maxNzbSize: {
     schema: byteSize,
     default: 150 * MB,
