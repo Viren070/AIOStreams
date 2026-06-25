@@ -88,15 +88,6 @@ export interface EngineOptions {
    * - `none`: skip the target-availability sample entirely.
    */
   verifyMode: 'none' | 'stat' | 'body';
-  /** Treat any archived (RAR/7z) result as non-streamable (skip archives). */
-  failArchivedResults: boolean;
-  /**
-   * When a streamable item is itself nested inside another archive, fail
-   * instantly instead of opening the nested archive (one extra parse + seek
-   * layer). Defaults false: open one level of nesting (rar/7z, either
-   * direction); set true to prefer fast failover instead.
-   */
-  failNestedArchives: boolean;
   /**
    * Lazy RAR fragment resolution: for named multi-volume RAR sets whose exact
    * volume sizes come from PAR2 descriptors, skip the middle-volume probes at
@@ -122,8 +113,6 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   circuitBreakerCooldownMs: 30_000,
   availabilitySamplePoints: 3,
   verifyMode: 'stat',
-  failArchivedResults: false,
-  failNestedArchives: false,
   lazyRarResolution: true,
 };
 
