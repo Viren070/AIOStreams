@@ -96,7 +96,7 @@ export class ParallelRangeStream extends Readable {
       this.inflight++;
       this.readAtFn(this.windowOffset(idx), this.windowLength(idx))
         .then((buf) => {
-          if (this.destroyedFlag) return;
+          if (this.destroyedFlag || this.ended) return;
           this.inflight--;
           this.buffered.set(idx, buf);
           this.bufferedBytes += buf.length;
@@ -104,7 +104,7 @@ export class ParallelRangeStream extends Readable {
           this.dispatch();
         })
         .catch((err) => {
-          if (this.destroyedFlag) return;
+          if (this.destroyedFlag || this.ended) return;
           this.inflight--;
           logger.debug(
             { windowIndex: idx, err: (err as Error)?.message },
