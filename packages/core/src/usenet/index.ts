@@ -195,6 +195,8 @@ export class UsenetEngine {
       concurrency: inspectConcurrency,
       lazyArchives: opts.lazyArchives ?? this.options.lazyRarResolution,
     });
+    // External abort (e.g. a parallel-failover loser) must surface as a throw,W
+    opts.signal?.throwIfAborted();
     // A definitive availability verdict from the gate / dead-abort means the
     // import fails as missing_on_providers; archive parsing and target
     // sampling would only spend fetches re-proving it.
@@ -232,6 +234,7 @@ export class UsenetEngine {
         opts.signal
       );
     }
+    opts.signal?.throwIfAborted();
     return content;
   }
 
