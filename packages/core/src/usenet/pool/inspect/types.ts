@@ -73,6 +73,13 @@ export interface InspectOptions {
    * descriptors; their headers are read on first touch during playback.
    */
   lazyArchives?: boolean;
+  /**
+   * Disable positional name-inference for obfuscated split-7z sets, forcing a
+   * full probe of every volume so membership/order/size come from each file's
+   * own yEnc name / PAR2 descriptor rather than from its position. See
+   * {@link EngineOptions.strictArchiveMembership}.
+   */
+  strictArchiveMembership?: boolean;
   signal?: AbortSignal;
 }
 
