@@ -32,29 +32,72 @@ const AFFINITY_TTL_MS = 30 * 60_000;
 /** Max NZBs tracked (insertion-order eviction). */
 const AFFINITY_MAX_HASHES = 512;
 
+/** Min recorded outcomes before a provider can be demoted for a release. */
+const AFFINITY_MIN_SAMPLES = 4;
 /**
- * Per-NZB provider-order hint. A provider that 430s articles of one release
- * while another serves them gets demoted FOR THAT RELEASE ONLY; the global
- * provider order (priority/tier/health) is untouched, so a backup or
+ * Cumulative body-miss ratio (missed / attempts) at/above which a provider is
+ * demoted for this nzb.
+ */
+const AFFINITY_DEMOTE_RATIO = 0.3;
+/**
+ * Cumulative ratio at/below which a demoted provider rehabilitates. The gap to
+ * {@link AFFINITY_DEMOTE_RATIO} plus the cumulative denominator make demotion
+ * STICKY: once misses accrue, the ratio can't crater in one present run, so a
+ * provider proven materially incomplete for a release stays demoted (a miss is a
+ * definitive content 430 — it won't regain the article mid-session). A small
+ * cold-start burst (first probes landing in an absent cluster) still self-corrects
+ * while the counts are tiny.
+ */
+const AFFINITY_RECOVER_RATIO = 0.12;
+
+/** Mutable per-(nzb, provider) reliability state. */
+interface AffinityStat {
+  /** Body fetches this provider actually delivered for this nzb. */
+  served: number;
+  /** Definitive content-misses (body/STAT 430) for this nzb. */
+  missed: number;
+  /** Stateful demotion flag with hysteresis (never recomputed ad hoc). */
+  demoted: boolean;
+}
+
+/**
+ * Per-NZB provider reliability tracker. A provider that 430s articles of one
+ * release while another serves them gets demoted FOR THAT RELEASE ONLY; the
+ * global provider order (priority/tier/health) is untouched, so a backup or
  * lower-priority provider that happens to carry one NZB doesn't get promoted
  * for everything else (metered block accounts must not drain globally).
  *
- * Affinity is an ORDERING hint, never an exclusion: every fetch still falls
+ * Demotion is driven by the CUMULATIVE per-release body-miss ratio with sticky
+ * hysteresis (see the threshold constants): a provider missing a material
+ * fraction of a release stays deprioritised for it instead of flapping as
+ * sequential playback crosses present/absent volume clusters.
+ *
+ * Affinity is an ordering signal, every fetch still falls
  * through the full provider list, so "missing on all providers" semantics and
- * transient-outage failover are unchanged. Without it, every segment of a
- * release missing on the first-tried provider pays a wasted 430 round-trip.
+ * transient-outage failover are unchanged, and a demoted provider is still tried
+ * as a FALLBACK when the leader misses (no coverage loss). Without it, every
+ * segment of a release missing on the first-tried provider pays a wasted 430.
  */
 class ProviderAffinity {
   private byHash = new Map<
     string,
-    { at: number; outcomes: Map<string, 'served' | 'missing'> }
+    { at: number; stats: Map<string, AffinityStat> }
   >();
 
+  /**
+   * Record one fetch outcome for ordering. `miss` is a definitive content-miss
+   * (a body/STAT 430), never a transient/unreachable error (those aren't
+   * recorded). A STAT `present` is dropped (unreliable: a cache/debrid gateway
+   * answers present for articles it can't deliver), so only body successes count
+   * as `served`.
+   */
   record(
     hash: string,
     providerId: string,
-    outcome: 'served' | 'missing'
+    miss: boolean,
+    source: 'body' | 'stat'
   ): void {
+    if (source === 'stat' && !miss) return; // unreliable positive; ignore
     const now = Date.now();
     let entry = this.byHash.get(hash);
     if (entry && now - entry.at > AFFINITY_TTL_MS) {
@@ -62,18 +105,42 @@ class ProviderAffinity {
       entry = undefined;
     }
     if (!entry) {
-      entry = { at: now, outcomes: new Map() };
+      entry = { at: now, stats: new Map() };
     } else {
       this.byHash.delete(hash); // refresh insertion order (LRU)
     }
     entry.at = now;
-    if (outcome === 'missing' && entry.outcomes.get(providerId) !== 'missing') {
+
+    let stat = entry.stats.get(providerId);
+    if (!stat) {
+      stat = { served: 0, missed: 0, demoted: false };
+      entry.stats.set(providerId, stat);
+    }
+    if (miss) stat.missed++;
+    else stat.served++;
+    const attempts = stat.served + stat.missed;
+    const ratio = stat.missed / attempts;
+
+    // Hysteresis on the cumulative ratio: demote a materially-incomplete provider
+    // and keep it demoted (sticky) until it serves nearly everything again.
+    if (
+      !stat.demoted &&
+      attempts >= AFFINITY_MIN_SAMPLES &&
+      ratio >= AFFINITY_DEMOTE_RATIO
+    ) {
+      stat.demoted = true;
       logger.debug(
-        { nzbHash: hash, providerId },
-        'provider demoted for this nzb (article missing)'
+        { nzbHash: hash, providerId, served: stat.served, missed: stat.missed },
+        'provider demoted for this nzb (missing a material fraction)'
+      );
+    } else if (stat.demoted && ratio <= AFFINITY_RECOVER_RATIO) {
+      stat.demoted = false;
+      logger.debug(
+        { nzbHash: hash, providerId, served: stat.served, missed: stat.missed },
+        'provider rehabilitated for this nzb (serving again)'
       );
     }
-    entry.outcomes.set(providerId, outcome);
+
     this.byHash.set(hash, entry);
     if (this.byHash.size > AFFINITY_MAX_HASHES) {
       const oldest = this.byHash.keys().next().value;
@@ -81,12 +148,11 @@ class ProviderAffinity {
     }
   }
 
-  /** 0 = known to serve this nzb, 1 = unknown, 2 = known to be missing it. */
-  classOf(hash: string, providerId: string): 0 | 1 | 2 {
+  /** Whether this provider is currently demoted for this release. */
+  isDemoted(hash: string, providerId: string): boolean {
     const entry = this.byHash.get(hash);
-    if (!entry || Date.now() - entry.at > AFFINITY_TTL_MS) return 1;
-    const o = entry.outcomes.get(providerId);
-    return o === 'served' ? 0 : o === 'missing' ? 2 : 1;
+    if (!entry || Date.now() - entry.at > AFFINITY_TTL_MS) return false;
+    return entry.stats.get(providerId)?.demoted ?? false;
   }
 }
 
@@ -411,7 +477,7 @@ export class MultiProviderPool {
           priority,
           run,
         });
-        if (nzbHash) this.affinity.record(nzbHash, pool.id, 'served');
+        if (nzbHash) this.affinity.record(nzbHash, pool.id, false, 'body');
         this.stats.record({
           type: 'segment_fetched',
           providerId: pool.id,
@@ -432,7 +498,7 @@ export class MultiProviderPool {
       } catch (err) {
         if (err instanceof NntpError && err.kind === 'article_not_found') {
           notFound.add(pool.id);
-          if (nzbHash) this.affinity.record(nzbHash, pool.id, 'missing');
+          if (nzbHash) this.affinity.record(nzbHash, pool.id, true, 'body');
           this.stats.record({ type: 'segment_missing', providerId: pool.id });
           logger.debug(
             { provider: pool.label, messageId: segment.messageId },
@@ -495,12 +561,11 @@ export class MultiProviderPool {
   /**
    * The full provider order for one fetch: primaries before backups, each tier
    * ordered by {@link orderProviders}, then STABLE-sorted by per-NZB affinity.
-   * Only providers KNOWN to be missing this release sink to the back; "served"
-   * and "untried" are treated equally so the {@link orderProviders} order (which
-   * load-balances a group) is preserved between them. Promoting "served" over
-   * "untried" would pin the first provider that serves a segment as the sole
-   * candidate and starve its equally-capable group peers for the whole stream.
-   * With no affinity data (or a single provider) this is exactly the tier order.
+   * Only providers DEMOTED for this release (missing the bulk of it) sink to the
+   * back; everyone else keeps the {@link orderProviders} order (which load-
+   * balances a group), so a provider that serves the odd segment isn't pinned as
+   * the sole candidate and starve its equally-capable peers. With no affinity
+   * data (or a single provider) this is exactly the tier order.
    */
   private orderedCandidates(nzbHash: string | undefined): ProviderWorkerPool[] {
     const list = [
@@ -508,16 +573,13 @@ export class MultiProviderPool {
       ...this.orderProviders(true, EMPTY_EXCLUDE),
     ];
     if (!nzbHash || list.length < 2) return list;
-    // Collapse served(0)/unknown(1) → 0, missing(2) → 1: only known-missing
-    // providers are deprioritised; the rest keep their load-balanced order.
-    const rank = (c: 0 | 1 | 2): 0 | 1 => (c === 2 ? 1 : 0);
     return list
       .map((pool, i) => ({
         pool,
         i,
-        c: rank(this.affinity.classOf(nzbHash, pool.id)),
+        demoted: this.affinity.isDemoted(nzbHash, pool.id) ? 1 : 0,
       }))
-      .sort((a, b) => a.c - b.c || a.i - b.i)
+      .sort((a, b) => a.demoted - b.demoted || a.i - b.i)
       .map((x) => x.pool);
   }
 
@@ -632,7 +694,7 @@ export class MultiProviderPool {
         // A resolved STAT means the provider answered (exists = true | false).
         answered = true;
         if (nzbHash) {
-          this.affinity.record(nzbHash, pool.id, exists ? 'served' : 'missing');
+          this.affinity.record(nzbHash, pool.id, !exists, 'stat');
         }
         if (exists) return true;
       } catch (err) {
