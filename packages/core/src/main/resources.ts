@@ -681,7 +681,7 @@ export async function getStreams(
     streams,
     context,
     false,
-    ctx.userData.failover?.enabled && !preCaching
+    ctx.userData.failover?.enabled && (!preCaching || ctx.userData.failover?.precacheFailover)
       ? {
           count:
             ctx.userData.failover.count ?? constants.DEFAULT_FAILOVER_COUNT,
