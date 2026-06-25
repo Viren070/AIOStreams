@@ -14,7 +14,7 @@ import {
 } from '../../index.js';
 import { NntpConnection } from '../../nntp/connection.js';
 import { NntpError } from '../../nntp/errors.js';
-import { getSpeedTestEngineConfig } from '../engine.js';
+import { getSpeedTestEngineConfig, usenetEngineRegistry } from '../engine.js';
 import { fetchNzb } from '../library.js';
 
 const logger = createLogger('usenet/dashboard');
@@ -89,6 +89,8 @@ export async function saveUsenetProviders(
   });
 
   await settingsStore.set('usenet.providers', merged, username);
+  // Drop warm engines so the next request rebuilds with the saved providers.
+  usenetEngineRegistry.invalidate();
 }
 
 /** Test a single provider connection (dial + auth + DATE health probe).

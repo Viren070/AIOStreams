@@ -2,6 +2,7 @@
  * Shared, HTTP-agnostic types for the usenet engine. The service layer maps
  * dashboard/global settings onto these; the engine never reads UserData.
  */
+import { createHmac } from 'node:crypto';
 
 /** A single NNTP provider/account configuration. */
 export interface ProviderConfig {
@@ -172,15 +173,35 @@ export interface SegmentData {
   size: number;
 }
 
+/**
+ * Short, non-secret discriminator for a provider's credentials, keyed with the
+ * server secret (HMAC) so the value — which appears in the logged fingerprint —
+ * cannot be brute-forced back to the password. A credential change yields a new
+ * value, forcing an engine rebuild. Mirrors the HMAC(SECRET_KEY, …) identifier
+ * pattern used elsewhere (analytics, auth).
+ */
+function credFingerprint(p: ProviderConfig, secret: string): string {
+  if (!p.password) return '';
+  return createHmac('sha256', secret)
+    .update(`${p.username ?? ''}:${p.password}`)
+    .digest('hex')
+    .slice(0, 16);
+}
+
 /** Stable fingerprint of a provider set (for engine registry keying). */
-export function providerSetFingerprint(providers: ProviderConfig[]): string {
+export function providerSetFingerprint(
+  providers: ProviderConfig[],
+  secret: string
+): string {
   const norm = providers
     .filter((p) => p.enabled !== false)
     .map((p) => ({
       host: p.host,
       port: p.port,
       tls: p.tls,
+      tlsSkipVerify: !!p.tlsSkipVerify,
       username: p.username ?? '',
+      credHash: credFingerprint(p, secret),
       maxConnections: p.maxConnections,
       priority: p.priority,
       isBackup: !!p.isBackup,

@@ -2,6 +2,7 @@ import { readdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { createLogger } from '../logging/logger.js';
 import { getCacheFolder } from '../utils/general.js';
+import { appConfig } from '../utils/index.js';
 import { MultiProviderPool } from './pool/multi-provider-pool.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
@@ -689,7 +690,10 @@ export class UsenetEngine {
   }
 
   get fingerprint(): string {
-    return providerSetFingerprint(this.providers);
+    return providerSetFingerprint(
+      this.providers,
+      appConfig.bootstrap.secretKey
+    );
   }
 
   private touch(): void {
@@ -758,7 +762,10 @@ export class UsenetEngineRegistry {
     providers: ProviderConfig[],
     options?: Partial<EngineOptions>
   ): UsenetEngine {
-    const key = providerSetFingerprint(providers);
+    const key = providerSetFingerprint(
+      providers,
+      appConfig.bootstrap.secretKey
+    );
     let engine = this.engines.get(key);
     if (!engine) {
       // NNTP providers are a single global admin config, so any engine under a
@@ -807,6 +814,15 @@ export class UsenetEngineRegistry {
         this.engines.delete(key);
       }
     }
+  }
+
+  /**
+   * Close and drop every warm engine WITHOUT stopping the eviction timer (unlike
+   * {@link closeAll}, which is for shutdown).
+   */
+  invalidate(): void {
+    for (const engine of this.engines.values()) engine.close();
+    this.engines.clear();
   }
 
   closeAll(): void {
