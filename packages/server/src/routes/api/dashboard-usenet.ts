@@ -429,6 +429,18 @@ router.get('/library/:hash/nzb', async (req, res, next) => {
   }
 });
 
+// DELETE /dashboard/usenet/library — remove every entry.
+router.delete('/library', async (_req, res, next) => {
+  try {
+    await UsenetLibraryRepository.clear();
+    res
+      .status(200)
+      .json(createResponse({ success: true, data: { cleared: true } }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // DELETE /dashboard/usenet/library/:hash — remove one entry.
 router.delete('/library/:hash', async (req, res, next) => {
   try {
