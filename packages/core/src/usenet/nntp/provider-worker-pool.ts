@@ -198,7 +198,7 @@ export class ProviderWorkerPool {
       if (this.closed || this.state === 'disabled') {
         reject(
           new NntpError('no_providers', 'provider unavailable', {
-            providerId: this.id,
+            provider: this.label,
           })
         );
         return;
@@ -206,7 +206,7 @@ export class ProviderWorkerPool {
       if (this.authBlocked()) {
         reject(
           new NntpError('auth_failed', 'provider authentication failed', {
-            providerId: this.id,
+            provider: this.label,
           })
         );
         return;
@@ -273,7 +273,7 @@ export class ProviderWorkerPool {
     if (this.state === 'disabled') {
       this.failAllQueued(
         new NntpError('no_providers', 'provider disabled', {
-          providerId: this.id,
+          provider: this.label,
         })
       );
       return;
@@ -284,7 +284,7 @@ export class ProviderWorkerPool {
     if (this.authBlocked()) {
       this.failAllQueued(
         new NntpError('auth_failed', 'provider authentication failed', {
-          providerId: this.id,
+          provider: this.label,
         })
       );
       return;
@@ -423,7 +423,7 @@ export class ProviderWorkerPool {
         if (this.closed) {
           req.reject(
             new NntpError('no_providers', 'pool closed', {
-              providerId: this.id,
+              provider: this.label,
             })
           );
           return;
@@ -618,7 +618,7 @@ export class ProviderWorkerPool {
       slot.conn = null;
     }
     this.failAllQueued(
-      new NntpError('no_providers', 'pool closed', { providerId: this.id })
+      new NntpError('no_providers', 'pool closed', { provider: this.label })
     );
   }
 }
