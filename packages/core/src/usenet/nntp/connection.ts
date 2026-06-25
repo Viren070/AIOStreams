@@ -67,7 +67,6 @@ let CONNECTION_SEQ = 0;
  */
 export class NntpConnection {
   readonly id: number;
-  readonly providerId: string;
   readonly label: string;
   private socket: net.Socket | tls.TLSSocket;
   private reader = new NntpResponseReader();
@@ -86,12 +85,10 @@ export class NntpConnection {
 
   private constructor(
     socket: net.Socket | tls.TLSSocket,
-    providerId: string,
     label: string,
     private opts: ConnectionOptions
   ) {
     this.id = ++CONNECTION_SEQ;
-    this.providerId = providerId;
     this.label = label;
     this.socket = socket;
     this.attach();
@@ -131,7 +128,7 @@ export class NntpConnection {
         err instanceof NntpError
           ? err
           : new NntpError('connection', err.message, {
-              providerId: this.providerId,
+              provider: this.label,
               cause: err,
             });
       this.rejectAll(this.fatalError);
@@ -142,7 +139,7 @@ export class NntpConnection {
       if (!this.destroyed) {
         fail(
           new NntpError('connection', 'socket closed by peer', {
-            providerId: this.providerId,
+            provider: this.label,
           })
         );
       }
@@ -159,7 +156,7 @@ export class NntpConnection {
         const onError = (err: Error) =>
           reject(
             new NntpError('connection', `dial failed: ${err.message}`, {
-              providerId: config.id,
+              provider: config.name ?? config.id,
               cause: err,
             })
           );
@@ -167,7 +164,7 @@ export class NntpConnection {
         const timer = setTimeout(() => {
           s?.destroy();
           reject(
-            new NntpError('timeout', 'dial timeout', { providerId: config.id })
+            new NntpError('timeout', 'dial timeout', { provider: config.name ?? config.id })
           );
         }, opts.dialTimeoutMs);
         const onConnect = () => {
@@ -192,12 +189,7 @@ export class NntpConnection {
       }
     );
 
-    const conn = new NntpConnection(
-      socket,
-      config.id,
-      config.name ?? config.id,
-      opts
-    );
+    const conn = new NntpConnection(socket, config.name ?? config.id, opts);
     // Greeting: 200 (posting allowed) or 201 (no posting). Unsolicited: the
     // server sends it on connect, so read a line without writing a command.
     const greeting = await conn.readGreeting(opts.dialTimeoutMs);
@@ -223,7 +215,7 @@ export class NntpConnection {
         limited
           ? `connection limit at greeting: ${greeting}`
           : `unexpected greeting: ${greeting}`,
-        { code: status.code, providerId: config.id }
+        { code: status.code, provider: config.name ?? config.id }
       );
     }
 
@@ -264,7 +256,7 @@ export class NntpConnection {
       throw new NntpError(
         limited ? 'connection_limit' : 'auth_failed',
         `auth user rejected: ${userResp}`,
-        { code: userStatus.code, providerId: this.providerId }
+        { code: userStatus.code, provider: this.label }
       );
     }
     const passResp = await this.command(
@@ -289,7 +281,7 @@ export class NntpConnection {
         limited
           ? `connection limit reached: ${passResp}`
           : `auth pass rejected: ${passStatus.code}`,
-        { code: passStatus.code, providerId: this.providerId }
+        { code: passStatus.code, provider: this.label }
       );
     }
   }
@@ -308,7 +300,7 @@ export class NntpConnection {
         `GROUP failed: ${resp}`,
         {
           code: status.code,
-          providerId: this.providerId,
+          provider: this.label,
         }
       );
     }
@@ -369,7 +361,7 @@ export class NntpConnection {
       `STAT failed: ${resp}`,
       {
         code: status.code,
-        providerId: this.providerId,
+        provider: this.label,
       }
     );
   }
@@ -381,7 +373,7 @@ export class NntpConnection {
     if (status.code !== 111) {
       throw new NntpError('protocol', `DATE failed: ${resp}`, {
         code: status.code,
-        providerId: this.providerId,
+        provider: this.label,
       });
     }
   }
@@ -406,7 +398,7 @@ export class NntpConnection {
       this.rejectAll(
         this.fatalError ??
           new NntpError('connection', 'connection destroyed', {
-            providerId: this.providerId,
+            provider: this.label,
           })
       );
     }
@@ -459,14 +451,14 @@ export class NntpConnection {
       return Promise.reject(
         this.fatalError ??
           new NntpError('connection', 'connection not usable', {
-            providerId: this.providerId,
+            provider: this.label,
           })
       );
     }
     if (signal?.aborted) {
       this.destroy();
       return Promise.reject(
-        new NntpError('connection', 'aborted', { providerId: this.providerId })
+        new NntpError('connection', 'aborted', { provider: this.label })
       );
     }
     this.write(line);
@@ -548,7 +540,7 @@ export class NntpConnection {
       this.fatalError = new NntpError(
         'timeout',
         `no response progress for ${timeoutMs}ms`,
-        { providerId: this.providerId }
+        { provider: this.label }
       );
       this.destroy();
     }, timeoutMs);
@@ -586,7 +578,7 @@ export class NntpConnection {
             this.fatalError = new NntpError(
               'protocol',
               `protocol desync: ${line}`,
-              { providerId: this.providerId }
+              { provider: this.label }
             );
             this.destroy();
             return;
@@ -601,7 +593,7 @@ export class NntpConnection {
             const err = new NntpError(
               classifyNntpStatus(status.code),
               `command failed: ${status.code} ${status.message}`,
-              { code: status.code, providerId: this.providerId }
+              { code: status.code, provider: this.label }
             );
             this.finishHead(() => head.reject(err));
             continue;

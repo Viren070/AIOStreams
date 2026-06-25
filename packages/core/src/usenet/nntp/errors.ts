@@ -30,19 +30,20 @@ export class NntpError extends Error {
   readonly kind: NntpErrorKind;
   /** NNTP numeric status code, when one was received. */
   readonly code?: number;
-  readonly providerId?: string;
+  /** Human-friendly provider label (display name, falling back to the id). */
+  readonly provider?: string;
   cause?: unknown;
 
   constructor(
     kind: NntpErrorKind,
     message: string,
-    opts: { code?: number; providerId?: string; cause?: unknown } = {}
+    opts: { code?: number; provider?: string; cause?: unknown } = {}
   ) {
     super(message);
     this.name = 'NntpError';
     this.kind = kind;
     this.code = opts.code;
-    this.providerId = opts.providerId;
+    this.provider = opts.provider;
     if (opts.cause !== undefined) this.cause = opts.cause;
     if (Error.captureStackTrace) Error.captureStackTrace(this, NntpError);
   }
