@@ -13,6 +13,11 @@ const RAR_FIRST = /\.rar$/i;
 const SEVENZIP_PART = /\.7z\.(\d+)$/i;
 const SEVENZIP_FIRST = /\.7z$/i;
 
+const PART_SCHEME: Record<ArchiveKind, RegExp> = {
+  rar: RAR_PART,
+  '7z': SEVENZIP_PART,
+};
+
 /** Volume index for a RAR member, or -1 if the name is not part of a RAR set. */
 export function rarVolumeNumber(filename: string): number {
   let m = filename.match(RAR_PART);
@@ -205,7 +210,44 @@ export function groupVolumeSets(
     // info); ties keep the first by name.
     g.members = dedupeVolumeMembers(g.members);
   }
-  return [...map.values()];
+  return mergeObfuscatedArchiveParts([...map.values()]);
+}
+
+/**
+ * Obfuscated multi-volume posts give each volume a random base name
+ * (rar `*.partNN.rar`, 7z `*.7z.NNN`) while keeping the volume ordinal, so
+ * per-base grouping can group one archive into N single-volume "sets" that each
+ * parse as incomplete/unreadable.
+ *
+ * When the single-member groups of one kind form
+ * a strict contiguous run 1..N (no gaps, no duplicates) under the count-from-1
+ * scheme, they are one archive whose stems were randomized; merge them into one
+ * ordered set.
+ */
+function mergeObfuscatedArchiveParts(
+  groups: VolumeSetGroup[]
+): VolumeSetGroup[] {
+  let result = groups;
+  for (const kind of Object.keys(PART_SCHEME) as ArchiveKind[]) {
+    const re = PART_SCHEME[kind];
+    const singles = result.filter(
+      (g) =>
+        g.kind === kind &&
+        g.members.length === 1 &&
+        re.test(g.members[0].filename)
+    );
+    if (singles.length < 2) continue;
+    singles.sort((a, b) => a.members[0].volume - b.members[0].volume);
+    if (!singles.every((g, i) => g.members[0].volume === i + 1)) continue;
+    const merged: VolumeSetGroup = {
+      kind,
+      baseName: singles[0].members[0].filename.replace(re, ''),
+      members: singles.map((g) => g.members[0]),
+    };
+    const drop = new Set(singles);
+    result = [...result.filter((g) => !drop.has(g)), merged];
+  }
+  return result;
 }
 
 /** Pick the most complete candidate per volume ordinal (see groupVolumeSets). */
