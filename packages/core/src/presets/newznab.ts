@@ -20,7 +20,7 @@ class NewznabStreamParser extends BuiltinStreamParser {
         ? stream.zyclopsHealth
         : undefined;
     if (zyclopsHealth) {
-      return 'NZB Health: ' + zyclopsHealth.replace('healthy', 'ðŸ§');
+      return 'NZB Health: ' + zyclopsHealth.replace('healthy', '🧝');
     }
     return undefined;
   }
@@ -202,7 +202,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       },
       {
         id: 'zyclopsHealthProxy',
-        name: 'ðŸ§ Zyclops Health Proxy',
+        name: '🧝 Zyclops Health Proxy',
         description:
           'Route searches through ElfHosted\'s Zyclops "magic" 🔮 crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)).',
         type: 'subsection',
@@ -212,7 +212,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
             id: 'enabled',
             name: 'Enable',
             description:
-              'Enable Zyclops health filtering. âš ï¸ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. Many indexers prohibit this (*some prohibit Stremio altogether!*), proceed at **your own risk**. The health database is further directly searchable via Newznab on private ElfHosted instances only.',
+              'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. Many indexers prohibit this (*some prohibit Stremio altogether!*), proceed at **your own risk**. The health database is further directly searchable via Newznab on private ElfHosted instances only.',
             type: 'boolean',
           },
           {
