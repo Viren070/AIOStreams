@@ -808,6 +808,8 @@ export const UserDataSchema = z.object({
       /** Overall deadline before giving up and serving a static error (ms). */
       maxWaitMs: z.number().min(0).optional(),
       position: z.enum(['beforeSEL', 'beforeLimiting', 'last']).optional(),
+      /** When true, failover is also applied during background pre-caching of the next episode. Default false. */
+      precacheFailover: z.boolean().optional(),
     })
     .optional(),
   serviceWrap: z

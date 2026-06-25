@@ -183,6 +183,19 @@ export function BuiltinSettings() {
             }));
           }}
         />
+        <Switch
+          label="During Pre-cache"
+          side="right"
+          disabled={!userData.failover?.enabled}
+          help="Also apply failover when pre-caching the next episode's streams in the background. When off, pre-cache requests skip failover entirely."
+          value={userData.failover?.precacheFailover ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              failover: { ...prev.failover, precacheFailover: value },
+            }));
+          }}
+        />
         <NumberInput
           label="Fallback Count"
           help={
