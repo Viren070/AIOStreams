@@ -214,22 +214,24 @@ export class UsenetEngine {
     // The probe heads exist solely as a hand-off to the archive parse, so free
     // them (~16KB per file) before sampling/persisting.
     content.heads = undefined;
-    // Cheap begin/middle/end STAT of the chosen video so an incomplete/removed
-    // post is caught at import rather than mid-playback. Runs after archive
-    // inspection so an inner video is the sampling target where applicable.
-    // A chased import skipped its middle-volume probes, so its availability
-    // evidence is thinner; widen the sample (still ~zero bytes, STATs only).
+    const verifyMode = opts.verifyMode ?? this.options.verifyMode;
     const points =
       opts.availabilitySamplePoints ?? this.options.availabilitySamplePoints;
-    const samplePoints = anyChased
-      ? Math.max(points, CHASED_SAMPLE_POINTS)
-      : points;
-    if (content.streamable && samplePoints > 0) {
+    // A chased import skipped its middle-volume probes, so its availability
+    // evidence is thinner; widen the STAT sample (still ~zero bytes). In `body`
+    // mode each extra point is a real transfer on the playback hot path, so keep
+    // it at the configured count instead of widening.
+    const samplePoints =
+      anyChased && verifyMode === 'stat'
+        ? Math.max(points, CHASED_SAMPLE_POINTS)
+        : points;
+    if (content.streamable && verifyMode !== 'none' && samplePoints > 0) {
       await sampleTargetAvailability(
         nzb,
         this.pool,
         content,
         samplePoints,
+        verifyMode,
         opts.signal
       );
     }

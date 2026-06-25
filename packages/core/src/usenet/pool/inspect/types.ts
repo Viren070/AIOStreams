@@ -65,6 +65,8 @@ export interface InspectOptions {
   concurrency?: number;
   /** Override the engine's availability sample-point count for this inspect. */
   availabilitySamplePoints?: number;
+  /** Override the engine's target-availability verify mode for this inspect. */
+  verifyMode?: 'none' | 'stat' | 'body';
   /**
    * Skip middle-volume probes of par2-named RAR sets (lazy fragment
    * resolution). The skipped volumes' exact sizes come from the PAR2

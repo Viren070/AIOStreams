@@ -95,6 +95,8 @@ export function buildUsenetEngineOptions(
     failArchivedResults: u.failArchivedResults,
     failNestedArchives: u.failNestedArchives,
     lazyRarResolution: u.lazyRarResolution,
+    verifyMode: u.verifyMode,
+    availabilitySamplePoints: u.verifySamplePoints,
   };
 }
 
