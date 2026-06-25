@@ -279,6 +279,7 @@ export class MultiProviderPool {
   ): Promise<T> {
     if (!signal) return shared;
     if (signal.aborted) {
+      void shared.catch(() => undefined);
       return Promise.reject(new NntpError('connection', 'aborted'));
     }
     return new Promise<T>((resolve, reject) => {

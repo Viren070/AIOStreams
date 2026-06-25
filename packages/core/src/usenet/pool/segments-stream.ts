@@ -50,6 +50,10 @@ export class SegmentsStream extends Readable {
   private bufferedBytes = 0;
   private paused = false;
   private destroyedFlag = false;
+  /**
+   * Set once EOF has been pushed (range limit reached or all segments emitted).
+   */
+  private ended = false;
 
   private skipRemaining: number;
   private limitRemaining: number;
@@ -108,6 +112,7 @@ export class SegmentsStream extends Readable {
   private dispatch(): void {
     while (
       !this.destroyedFlag &&
+      !this.ended &&
       this.inflight < this.maxWorkers &&
       this.nextDispatch < this.segments.length &&
       this.bufferedBytes < this.bufferSizeBytes
@@ -124,7 +129,7 @@ export class SegmentsStream extends Readable {
           this.priority
         )
         .then((data) => {
-          if (this.destroyedFlag) return;
+          if (this.destroyedFlag || this.ended) return;
           this.inflight--;
           this.buffered.set(idx, data.body);
           this.bufferedBytes += data.body.length;
@@ -132,7 +137,7 @@ export class SegmentsStream extends Readable {
           this.dispatch();
         })
         .catch((err) => {
-          if (this.destroyedFlag) return;
+          if (this.destroyedFlag || this.ended) return;
           // An aborted fetch is expected teardown of an unneeded prefetch;
           // never surface it as a stream error (it would kill the consumer).
           if (this.abortController.signal.aborted) return;
@@ -146,7 +151,7 @@ export class SegmentsStream extends Readable {
   }
 
   private flush(): void {
-    if (this.paused || this.destroyedFlag) return;
+    if (this.paused || this.destroyedFlag || this.ended) return;
     while (this.buffered.has(this.nextEmit)) {
       // The head-of-line segment we were waiting on just arrived: close out the
       // stall window and report it if it was long enough to be felt.
@@ -192,7 +197,7 @@ export class SegmentsStream extends Readable {
       const more = chunk.length === 0 ? true : this.push(chunk);
 
       if (this.limitRemaining <= 0) {
-        this.push(null);
+        this.finishEnd();
         return;
       }
       if (!more) {
@@ -202,7 +207,20 @@ export class SegmentsStream extends Readable {
     }
 
     if (this.nextEmit >= this.segments.length && this.inflight === 0) {
-      this.push(null);
+      this.finishEnd();
     }
+  }
+
+  /**
+   * Emit EOF exactly once and abort any still-in-flight prefetches. Aborting
+   * both stops wasted fetches and ensures their (now-irrelevant) outcomes hit
+   * the `abortController.signal.aborted` guard in {@link dispatch} rather than
+   * destroying a stream whose consumer has already detached.
+   */
+  private finishEnd(): void {
+    if (this.ended || this.destroyedFlag) return;
+    this.ended = true;
+    this.abortController.abort();
+    this.push(null);
   }
 }
