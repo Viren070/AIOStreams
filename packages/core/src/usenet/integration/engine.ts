@@ -92,8 +92,6 @@ export function buildUsenetEngineOptions(
     idleConnectionMs: u.idleConnection * 1000,
     circuitBreakerThreshold: u.circuitBreakerThreshold,
     circuitBreakerCooldownMs: u.circuitBreakerCooldown * 1000,
-    failArchivedResults: u.failArchivedResults,
-    failNestedArchives: u.failNestedArchives,
     lazyRarResolution: u.lazyRarResolution,
     verifyMode: u.verifyMode,
     availabilitySamplePoints: u.verifySamplePoints,

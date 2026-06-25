@@ -257,32 +257,6 @@ export const usenetSchema = {
     secret: false,
     ui: { kind: 'duration' as const, hidden: true },
   },
-  failArchivedResults: {
-    schema: z.boolean(),
-    default: false,
-    label: 'Fail archived results',
-    description:
-      'Treat any archived (RAR/7z) result as non-streamable and skip it ' +
-      'entirely, rather than attempting stored-archive streaming.',
-    env: 'USENET_FAIL_ARCHIVED_RESULTS',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
-  failNestedArchives: {
-    schema: z.boolean(),
-    default: false,
-    label: 'Fail nested archives',
-    description:
-      'When a streamable file is itself nested inside another archive, fail ' +
-      'instantly instead of opening the nested archive (which adds first-byte ' +
-      'latency). Enabled by default: best-effort nested playback (one level, ' +
-      'RAR/7z either direction). Set true to prefer fast failover instead.',
-    env: 'USENET_FAIL_NESTED_ARCHIVES',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
   lazyRarResolution: {
     schema: z.boolean(),
     default: true,

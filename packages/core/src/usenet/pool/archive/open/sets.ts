@@ -156,15 +156,13 @@ async function listInnerRecursive(
   source: RandomAccess,
   entries: ArchiveEntry[],
   depth: number,
-  failNested: boolean,
   password: string,
   outer: LayoutOuter,
   parentLevels: InnerDescriptor[][] = [],
   parseConcurrency = DEFAULT_OPEN_CONCURRENCY,
   signal?: AbortSignal
 ): Promise<ArchiveInnerEntry[]> {
-  const groups =
-    failNested || depth >= MAX_NEST_DEPTH ? [] : groupNestedArchives(entries);
+  const groups = depth >= MAX_NEST_DEPTH ? [] : groupNestedArchives(entries);
   const nestedMembers = new Set(
     groups.flatMap((g) => g.members.map((m) => m.name))
   );
@@ -209,7 +207,6 @@ async function listInnerRecursive(
           vs,
           nestedEntries,
           depth + 1,
-          failNested,
           password,
           outer,
           [...parentLevels, g.members.map(descriptorOf)],
@@ -242,7 +239,6 @@ export async function inspectArchiveSets(
   files: ContentFileRef[],
   opener: FileOpener,
   opts: {
-    failNested?: boolean;
     password?: string;
     /** Parallelism for volume-size probing + final stream read windows. */
     concurrency?: number;
@@ -341,7 +337,6 @@ export async function inspectArchiveSets(
             vs,
             entries,
             0,
-            !!opts.failNested,
             password,
             { kind: set.kind, memberIndices: set.memberIndices, memberSizes },
             [],

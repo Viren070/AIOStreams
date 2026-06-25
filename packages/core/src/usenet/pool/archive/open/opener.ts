@@ -23,8 +23,6 @@ import {
 const logger = createLogger('usenet/archive');
 
 export interface OpenInnerOptions {
-  /** Fail instantly on a nested archive rather than opening it (one level). */
-  failNested: boolean;
   /** Pre-known decoded sizes for each member volume (index-aligned). */
   knownSizes?: (number | undefined)[];
   /** Archive password (7z AES), e.g. from the NZB `<meta type="password">`. */
@@ -124,7 +122,7 @@ async function resolveInner(
 
   // 2. Descend one level into nested archive volume sets (rar-in-rar,
   //    rar-in-7z, ...) to find the target / a video inside them.
-  if (!opts.failNested && depth < MAX_NEST_DEPTH) {
+  if (depth < MAX_NEST_DEPTH) {
     for (const g of groupNestedArchives(entries)) {
       if (!g.allStored) continue;
       try {

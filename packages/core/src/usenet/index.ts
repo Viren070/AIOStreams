@@ -202,15 +202,12 @@ export class UsenetEngine {
       content.heads = undefined;
       return content;
     }
-    let anyChased = false;
-    if (!this.options.failArchivedResults) {
-      anyChased = await this.inspectArchives(
-        nzb,
-        content,
-        inspectConcurrency,
-        opts.signal
-      );
-    }
+    let anyChased = await this.inspectArchives(
+      nzb,
+      content,
+      inspectConcurrency,
+      opts.signal
+    );
     // The probe heads exist solely as a hand-off to the archive parse, so free
     // them (~16KB per file) before sampling/persisting.
     content.heads = undefined;
@@ -342,7 +339,6 @@ export class UsenetEngine {
         }
       }
       const sets = await inspectArchiveSets(refs, opener, {
-        failNested: this.options.failNestedArchives,
         password: nzb.meta.password,
         // Volume-size probing parallelism stays at the per-stream budget
         // (these can hit a cold pool); the header walk itself reads mostly
@@ -587,7 +583,6 @@ export class UsenetEngine {
       ? set.memberIndices.map((i) => fileSizes.get(i))
       : undefined;
     const opened = await openArchiveInner(set, opener, innerPath, {
-      failNested: this.options.failNestedArchives,
       knownSizes,
       password: nzb.meta.password,
       concurrency: this.options.maxConnectionsPerStream,
