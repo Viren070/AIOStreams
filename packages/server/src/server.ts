@@ -232,6 +232,13 @@ async function shutdown() {
   await closeDb();
 }
 
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ err: reason }, 'unhandled promise rejection ');
+});
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'uncaught exception ');
+});
+
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
   await shutdown();
