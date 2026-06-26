@@ -41,6 +41,7 @@ export async function walkVolume(
   let abs = sig.dataStart;
   let guard = 0;
   let encrypted = false;
+  let volumeNumber: number | undefined;
   // Each volume re-states its own encryption, so reset the crypt state per walk.
   ctx.blockKey = undefined;
   ctx.rar4Encrypted = undefined;
@@ -55,6 +56,9 @@ export async function walkVolume(
         ? await parseRar5Block(ra, ctx, abs)
         : await parseRar4Block(ra, ctx, abs);
     if (!res || res.next <= abs) break; // malformed / EOF
+    if (res.kind === 'other' && res.archiveVolumeNumber !== undefined) {
+      volumeNumber = res.archiveVolumeNumber;
+    }
     // Headers are encrypted from here on. RAR5: derive the block key from the
     // crypt header's record (throws on missing/bad password). RAR4: per-header
     // salts, so only the password can be checked here; the parser derives a
@@ -107,5 +111,10 @@ export async function walkVolume(
       abs = re.dataStart;
     }
   }
-  return { version, blocks: out, encrypted: encrypted || undefined };
+  return {
+    version,
+    blocks: out,
+    encrypted: encrypted || undefined,
+    volumeNumber,
+  };
 }

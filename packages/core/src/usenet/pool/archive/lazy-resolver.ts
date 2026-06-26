@@ -176,6 +176,17 @@ export class LazyFragmentResolver {
         )
       );
     }
+    // Serve-time backstop for a scrambled set whose first/last positions look
+    // correct but whose middles are out of order: the resolved volume's RAR header number must equal the
+    // position it's standing in.
+    if (vp.volumeNumber !== undefined && vp.volumeNumber !== volume) {
+      throw this.poison(
+        new NotStreamableError(
+          'archive_incomplete',
+          `lazy resolve: volume ${volume} header number ${vp.volumeNumber} != position (scrambled set)`
+        )
+      );
+    }
     const b = vp.blocks[0];
     // Every pending is a STRICT middle of the target file: its first block
     // must be a continuation (not first), still split-after (not last), of
