@@ -56,7 +56,7 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
   },
   {
     title: 'Archive handling',
-    leaves: ['lazyRarResolution'],
+    leaves: ['lazyRarResolution', 'strictArchiveMembership'],
   },
   {
     title: 'Verification',
