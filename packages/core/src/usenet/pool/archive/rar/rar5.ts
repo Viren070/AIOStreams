@@ -17,9 +17,11 @@ import {
 } from '../crypto/rar-kdf.js';
 
 // ---- RAR5 constants -----------------------------------------
+const B5_MAIN = 1;
 const B5_FILE = 2;
 const B5_CRYPT = 4;
 const B5_END = 5;
+const ARC5_HAS_VOLUME_NUMBER = 0x0002;
 const B5_HAS_EXTRA = 0x01;
 const B5_HAS_DATA = 0x02;
 const B5_DATA_NOT_FIRST = 0x08;
@@ -182,6 +184,15 @@ function parseRar5Plain(buf: Buffer, dataOff: number): BlockResult | undefined {
     };
   }
   if (htype === B5_END) return { kind: 'end', next };
+  if (htype === B5_MAIN) {
+    const [aflags, an] = uvarint(buf, p);
+    let archiveVolumeNumber: number | undefined;
+    if (aflags & ARC5_HAS_VOLUME_NUMBER) {
+      const [vol] = uvarint(buf, p + an);
+      archiveVolumeNumber = vol;
+    }
+    return { kind: 'other', next, archiveVolumeNumber };
+  }
   if (htype !== B5_FILE) return { kind: 'other', next };
 
   const bodyEnd = headerEnd - extraSize;
