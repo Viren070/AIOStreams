@@ -202,11 +202,20 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
     });
-    if (queries.length === 0) {
+    if (parsedId.mediaType === 'movie') {
+      queries.push(
+        ...this.buildQueries(parsedId, metadata, {
+          addYear: false,
+          titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
+        })
+      );
+    }
+    const uniqueQueries = [...new Set(queries)];
+    if (uniqueQueries.length === 0) {
       return [];
     }
 
-    const searchPromises = queries.map((q) =>
+    const searchPromises = uniqueQueries.map((q) =>
       queryLimit(async () => {
         const start = Date.now();
         const { data } = await this.api.search({
