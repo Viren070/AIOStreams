@@ -6,6 +6,8 @@ import { encryptString, decryptString } from '../utils/crypto.js';
 import {
   isRuntimeConfigField,
   resolveDescription,
+  resolveEnvOverride,
+  primaryEnvName,
   type ConfigValue,
   type RuntimeConfigField,
   type RuntimeConfigMetadata,
@@ -202,17 +204,16 @@ export class SettingsStore<TSections extends SectionSchemas> {
         key,
         label: field.label,
         description: resolveDescription(field.description, 'ui'),
-        env: field.env,
+        env: primaryEnvName(field.env),
         requiresRestart: field.requiresRestart,
         secret: field.secret,
         valueType: valueType(field.schema),
         default: field.default,
-        source:
-          field.env && process.env[field.env] !== undefined
-            ? 'environment'
-            : storedKeysCache.has(key)
-              ? 'database'
-              : 'default',
+        source: resolveEnvOverride(field.env)
+          ? 'environment'
+          : storedKeysCache.has(key)
+            ? 'database'
+            : 'default',
       });
     }
     return result;
@@ -306,8 +307,9 @@ export class SettingsStore<TSections extends SectionSchemas> {
   async set(key: string, value: unknown, updatedBy?: string): Promise<void> {
     const entry = this.requireField(key);
     const parsed = entry.field.schema.parse(value);
-    if (entry.field.env && process.env[entry.field.env] !== undefined) {
-      throw new Error(`Setting ${key} is overridden by ${entry.field.env}`);
+    const override = resolveEnvOverride(entry.field.env);
+    if (override) {
+      throw new Error(`Setting ${key} is overridden by ${override.name}`);
     }
     await SettingsRepository.set(
       key,
@@ -319,8 +321,9 @@ export class SettingsStore<TSections extends SectionSchemas> {
 
   async delete(key: string): Promise<void> {
     const entry = this.requireField(key);
-    if (entry.field.env && process.env[entry.field.env] !== undefined) {
-      throw new Error(`Setting ${key} is overridden by ${entry.field.env}`);
+    const override = resolveEnvOverride(entry.field.env);
+    if (override) {
+      throw new Error(`Setting ${key} is overridden by ${override.name}`);
     }
     await SettingsRepository.delete(key);
     await this.reload();
@@ -382,7 +385,8 @@ export class SettingsStore<TSections extends SectionSchemas> {
     };
 
     for (const { field, path, key } of this.fieldsByKey.values()) {
-      const rawEnv = field.env ? process.env[field.env] : undefined;
+      const override = resolveEnvOverride(field.env);
+      const rawEnv = override?.value;
 
       let value: ConfigValue | undefined;
       if (rawEnv !== undefined) {
@@ -391,7 +395,7 @@ export class SettingsStore<TSections extends SectionSchemas> {
         } catch (err) {
           fatalErrors.push({
             source: 'env',
-            label: field.env!,
+            label: override!.name,
             key,
             value: field.secret ? '(secret)' : rawEnv,
             message: formatZodError(err as ZodError, {
