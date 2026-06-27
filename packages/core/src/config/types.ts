@@ -75,7 +75,7 @@ export interface RuntimeConfigField<T extends ConfigValue = ConfigValue> {
   label: string;
   description: RuntimeConfigDescription;
   /** Environment variable name that overrides the DB-backed value. */
-  env: string | null;
+  env: string | null | string[];
   /** If true, changes require a process restart to take effect. */
   requiresRestart: boolean;
   /** If true, the value should be masked in logs and UI. */
@@ -102,6 +102,30 @@ export type RuntimeConfigNode =
  * concrete field types narrow while validating overall shape.
  */
 export type RuntimeConfigSection = { [key: string]: RuntimeConfigNode };
+
+/**
+ * Resolve a field's env override. `env` may be a single var name or an ordered
+ * list of fallback names (the first one that is set wins). Returns the matched name and
+ * its raw value, or undefined if none are set.
+ */
+export function resolveEnvOverride(
+  env: string | string[] | null | undefined
+): { name: string; value: string } | undefined {
+  if (!env) return undefined;
+  for (const name of Array.isArray(env) ? env : [env]) {
+    const value = process.env[name];
+    if (value !== undefined) return { name, value };
+  }
+  return undefined;
+}
+
+/** The primary (canonical) env var name for a field — the first when it's a list. */
+export function primaryEnvName(
+  env: string | string[] | null | undefined
+): string | null {
+  if (!env) return null;
+  return Array.isArray(env) ? (env[0] ?? null) : env;
+}
 
 export interface RuntimeConfigMetadata {
   key: string;

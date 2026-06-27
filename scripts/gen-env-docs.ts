@@ -220,7 +220,12 @@ function main() {
         if (field.requiresRestart) flags.push('restart required');
         let desc = mdEscape(resolveDescription(field.description, 'env'));
         if (flags.length) desc += ` _(${flags.join(', ')})_`;
-        const envVar = field.env ? '`' + field.env + '`' : '—';
+        const envName = Array.isArray(field.env)
+          ? field.env[0]
+          : field.env
+            ? field.env
+            : null;
+        const envVar = envName ? '`' + envName + '`' : '—';
         const uiLabel = sub.map(humanise).join(' › ');
         lines.push(
           `| ${envVar} | ${uiLabel} | ${kind} | ${fmtDefault(field)} | ${desc} |`
