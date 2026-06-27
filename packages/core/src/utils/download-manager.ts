@@ -69,7 +69,7 @@ class DownloadManager {
     opts: Omit<GrabOptions, 'userAgent'> = {}
   ): Promise<Buffer> {
     // Default user-agent; a `[nzb_grabs]` (or per-host) override in
-    // HOSTNAME_USER_AGENT_OVERRIDES takes priority inside makeRequest.
+    // REQUEST_HEADER_OVERRIDES takes priority inside makeRequest.
     const userAgent = appConfig.http.defaultUserAgent;
     return this.nzbCache().fetch(url, () =>
       this.download(url, { ...opts, userAgent })
