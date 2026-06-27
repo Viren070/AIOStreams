@@ -4,8 +4,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest watch",
+    "test": "tsx --test --test-force-exit --import ./test/setup.ts \"src/**/*.test.ts\"",
+    "test:watch": "tsx --test --watch --import ./test/setup.ts \"src/**/*.test.ts\"",
     "build": "tsc",
     "dev": "tsc -w --preserveWatchOutput"
   },
