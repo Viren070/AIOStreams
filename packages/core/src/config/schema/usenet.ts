@@ -257,32 +257,6 @@ export const usenetSchema = {
     secret: false,
     ui: { kind: 'duration' as const, hidden: true },
   },
-  failArchivedResults: {
-    schema: z.boolean(),
-    default: false,
-    label: 'Fail archived results',
-    description:
-      'Treat any archived (RAR/7z) result as non-streamable and skip it ' +
-      'entirely, rather than attempting stored-archive streaming.',
-    env: 'USENET_FAIL_ARCHIVED_RESULTS',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
-  failNestedArchives: {
-    schema: z.boolean(),
-    default: false,
-    label: 'Fail nested archives',
-    description:
-      'When a streamable file is itself nested inside another archive, fail ' +
-      'instantly instead of opening the nested archive (which adds first-byte ' +
-      'latency). Enabled by default: best-effort nested playback (one level, ' +
-      'RAR/7z either direction). Set true to prefer fast failover instead.',
-    env: 'USENET_FAIL_NESTED_ARCHIVES',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
   lazyRarResolution: {
     schema: z.boolean(),
     default: true,
@@ -294,6 +268,52 @@ export const usenetSchema = {
       'season-pack imports drop from one fetch per volume to roughly one per ' +
       'inner file. Disable to restore exhaustive per-volume probing.',
     env: 'USENET_LAZY_RAR_RESOLUTION',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  strictArchiveMembership: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Strict archive membership',
+    description:
+      'For obfuscated split-7z posts (random-named parts whose real .7z.NNN ' +
+      'names live only in the yEnc headers), probe every volume so each is ' +
+      'identified authoritatively (by yEnc name / PAR2 descriptor) instead of ' +
+      'inferring names by position. Eliminates rare mis-grouping of such sets ' +
+      'at the cost of one first-segment fetch per volume. The default ' +
+      '(off) uses a cheaper size-checked inference that handles the common case.',
+    env: 'USENET_STRICT_ARCHIVE_MEMBERSHIP',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  verifyMode: {
+    schema: z.enum(['none', 'stat', 'body']),
+    default: 'stat',
+    label: 'Verify mode',
+    description:
+      'How the chosen video is checked for retrievability at import, before a ' +
+      'stream URL is minted. `stat` (default) is a fast existence check, but ' +
+      'can sometimes be inaccurate and answer “present” for articles they ' +
+      'cannot actually deliver, so a dead release can slip through. `body` ' +
+      'actually fetches the sample segments; authoritative and the fetched segments are cached as ' +
+      'start-of-playback prefetch, at a small first-byte latency cost. `none` ' +
+      'skips this check.',
+    env: 'USENET_VERIFY_MODE',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  verifySamplePoints: {
+    schema: positiveInt,
+    default: 3,
+    label: 'Verify sample points',
+    description:
+      'How many evenly-spread segments of the chosen video to check (begin / ' +
+      'middle / end for 3). Higher catches sparser damage but adds latency in ' +
+      '`body` mode. Only applies when verify mode is `stat` or `body`.',
+    env: 'USENET_VERIFY_SAMPLE_POINTS',
     requiresRestart: false,
     secret: false,
     ui: HIDDEN,

@@ -27,6 +27,22 @@ const MIN_LAZY_VOLS = 8;
 export const DYNAMIC_REGROUP_PROBES = 32;
 
 /**
+ * Encoded-size tolerance for treating a file as a uniform split-7z volume slice
+ * (vs a par2 sidecar or the smaller last volume). yEnc overhead is uniform per
+ * decoded byte, so genuine equal-size volumes differ only by a hair; par2
+ * recovery files are several % off.
+ */
+const UNIFORM_SIZE_TOLERANCE = 0.01;
+
+/** Median encoded size of the given files (0 when none have a positive size). */
+function medianEncodedSize(files: Array<{ encodedSize: number }>): number {
+  const sizes = files.map((f) => f.encodedSize).filter((s) => s > 0);
+  if (sizes.length === 0) return 0;
+  sizes.sort((a, b) => a - b);
+  return sizes[sizes.length >> 1];
+}
+
+/**
  * Which files to probe and what is already known about the rest; built before
  * the probe pass, refined mid-pass by {@link ProbePlan.dynamicRegroup}.
  */
@@ -185,6 +201,9 @@ export async function buildProbePlan(
    * any violation abandons the inference (mixed releases keep full probes).
    */
   const dynamicRegroup = (): void => {
+    // Strict membership: never infer obfuscated split-7z volume names by
+    // position.
+    if (opts.strictArchiveMembership) return;
     type Hit = { index: number; volume: number; base: string };
     const byBase = new Map<string, Hit[]>();
     for (let i = 0; i < liveNames.length; i++) {
@@ -231,24 +250,44 @@ export async function buildProbePlan(
         );
         continue;
       }
+      // Uniform-slice gate: a split-7z's volumes are fixed-size slices, so an
+      // inferable middle MUST have the same encoded size as the probed volumes.
+      const refEnc = medianEncodedSize(hits.map((h) => nzb.files[h.index]));
+      const sizeUniform = (i: number): boolean => {
+        if (refEnc <= 0) return true; // no usable reference: don't regress
+        const e = nzb.files[i].encodedSize;
+        return e > 0 && Math.abs(e - refEnc) <= refEnc * UNIFORM_SIZE_TOLERANCE;
+      };
       // Width of the numeric suffix (e.g. `.7z.001` → 3) from a sample name.
       const sample = liveNames[hits[0].index]!;
       const width = sample.match(/\.7z\.(\d+)$/i)?.[1].length ?? 3;
       // The probed hits only span the files probed SO FAR; extend the window
       // across the contiguous obfuscated-shaped block they sit in (volume
-      // numbers start at 1, so the low edge is bounded by the offset).
+      // numbers start at 1, so the low edge is bounded by the offset). The
+      // size gate stops the walk at the first non-uniform file (par2 / last vol).
       let lo = Math.min(...hits.map((h) => h.index));
       let hi = Math.max(...hits.map((h) => h.index));
-      while (lo - 1 >= 0 && lo - 1 - offset >= 1 && obfuscatedShaped(lo - 1)) {
+      while (
+        lo - 1 >= 0 &&
+        lo - 1 - offset >= 1 &&
+        obfuscatedShaped(lo - 1) &&
+        sizeUniform(lo - 1)
+      ) {
         lo--;
       }
-      while (hi + 1 < nzb.files.length && obfuscatedShaped(hi + 1)) hi++;
+      while (
+        hi + 1 < nzb.files.length &&
+        obfuscatedShaped(hi + 1) &&
+        sizeUniform(hi + 1)
+      )
+        hi++;
       let added = 0;
       // `hi` itself stays probed: its recovered yEnc name verifies the set's
       // tail (the 7z end header lives there) instead of trusting inference.
       for (let i = lo; i < hi; i++) {
         if (liveNames[i] !== nzb.files[i].filename) continue; // probed/renamed
         if (skipProbe.has(i)) continue;
+        if (!sizeUniform(i)) continue;
         const inferred = `${base}.7z.${String(i - offset).padStart(width, '0')}`;
         inferredNames.set(i, inferred);
         liveNames[i] = inferred;
@@ -262,6 +301,7 @@ export async function buildProbePlan(
             base: base.slice(-24),
             matched: hits.length,
             offset,
+            refEnc,
             lo,
             hi,
             inferred: added,

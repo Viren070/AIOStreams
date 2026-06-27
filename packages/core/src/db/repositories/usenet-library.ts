@@ -387,6 +387,12 @@ export class UsenetLibraryRepository {
     usenetLibraryBus.emit('change');
   }
 
+  /** Remove every entry from the library. */
+  static async clear(): Promise<void> {
+    await getDb().exec(sql`DELETE FROM usenet_library`);
+    usenetLibraryBus.emit('change');
+  }
+
   /** The streamable file list for an entry. */
   static async getFiles(nzbHash: string): Promise<UsenetLibraryFile[]> {
     const entry = await this.get(nzbHash);

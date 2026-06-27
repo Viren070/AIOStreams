@@ -13,6 +13,23 @@ import { walkVolume } from './walk.js';
 
 const logger = createLogger('usenet/rar');
 
+function headerVolumeOrder(
+  numbers: Array<number | undefined>
+): number[] | null {
+  const n = numbers.length;
+  if (n === 0) return null;
+  const resolved = numbers.map((v) => (v === undefined ? 0 : v));
+  const seen = new Set<number>();
+  for (const r of resolved) {
+    if (!Number.isInteger(r) || r < 0 || r >= n || seen.has(r)) return null;
+    seen.add(r);
+  }
+  return resolved
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => a.r - b.r)
+    .map((x) => x.i);
+}
+
 /**
  * Minimum volumes the FIRST split file must span for the lazy parse to pay
  * off. The boundary chain is serial (~1 round-trip per inner file), while the
@@ -91,11 +108,15 @@ export class RarReader {
       )
     );
 
-    // Phase 2: link split-file continuations in volume order.
+    // Phase 2: link split-file continuations in volume order, handling any volume misordering
+    // compared to the RAR header volume numbers.
+    const order =
+      headerVolumeOrder(results.map((r) => r.volumeNumber)) ??
+      results.map((_, i) => i);
     let version: 4 | 5 | undefined;
     let blocks = 0;
     let encrypted = false;
-    for (let vi = 0; vi < ranges.length; vi++) {
+    for (const vi of order) {
       const vp = results[vi];
       version ??= vp.version;
       if (vp.encrypted) encrypted = true;
@@ -187,6 +208,14 @@ export class RarReader {
       }
       if (vp.blocks.length === 0) {
         throw new LazyAbortError(`volume ${vi}: no file blocks`);
+      }
+      // Lazy estimation assumes filenames are in physical volume order. If a
+      // walked volume's RAR header volume number disagrees with its position,
+      // bail to the eager parse, which reorders by header number
+      if (vp.volumeNumber !== undefined && vp.volumeNumber !== vi) {
+        throw new LazyAbortError(
+          `volume ${vi}: header volume number ${vp.volumeNumber} != position (scrambled set)`
+        );
       }
       return vp;
     };

@@ -30,19 +30,20 @@ export class NntpError extends Error {
   readonly kind: NntpErrorKind;
   /** NNTP numeric status code, when one was received. */
   readonly code?: number;
-  readonly providerId?: string;
+  /** Human-friendly provider label (display name, falling back to the id). */
+  readonly provider?: string;
   cause?: unknown;
 
   constructor(
     kind: NntpErrorKind,
     message: string,
-    opts: { code?: number; providerId?: string; cause?: unknown } = {}
+    opts: { code?: number; provider?: string; cause?: unknown } = {}
   ) {
     super(message);
     this.name = 'NntpError';
     this.kind = kind;
     this.code = opts.code;
-    this.providerId = opts.providerId;
+    this.provider = opts.provider;
     if (opts.cause !== undefined) this.cause = opts.cause;
     if (Error.captureStackTrace) Error.captureStackTrace(this, NntpError);
   }
@@ -106,34 +107,27 @@ export function isProviderUnavailableError(err: unknown): boolean {
 }
 
 /**
- * Recognise a credential/authentication rejection by its message text. Needed
- * because the 482 status code is overloaded: providers use it for BOTH "too many
- * connections" AND bad credentials (TorBox returns `482 invalid username or
- * password`), and RFC 3977 even defines 482 as "authentication command out of
- * sequence". An auth message must win over the code-based connection-limit
- * heuristic, or a wrong password latches into an endless throttle/retry instead
- * of failing fast.
+ * Recognise a *credential* rejection by its message text
  */
-export function isAuthFailureResponse(text: string): boolean {
-  return /invalid\s+(?:user|username|login|password|credential)|bad\s+(?:user|username|password|credential)|incorrect\s+(?:user|username|password)|authenticat(?:ion|e)\s+(?:failed|rejected|denied|required|error|invalid)|auth(?:entication)?\s+failure|access\s+denied|permission\s+denied|not\s+authori[sz]ed|unauthori[sz]ed|wrong\s+(?:user|username|password)/i.test(
+export function isCredentialRejectionText(text: string): boolean {
+  return /invalid\s+(?:user|username|login|password|credential)s?|bad\s+(?:user|username|password|credential)s?|incorrect\s+(?:user|username|password)|wrong\s+(?:user|username|password)|authenticat(?:ion|e)\s+(?:failed|rejected|invalid)|auth(?:entication)?\s+failure/i.test(
     text
   );
 }
 
 /**
- * Recognise a "too many connections" / connection-limit response. Many providers
- * signal the account connection ceiling at handshake time with 482 or 502 (or a
- * descriptive message under another code, e.g. TorBox's
- * `482 too many connections for your user`). Matched by code OR text so we don't
- * depend on a single provider's numbering; a clearly-auth message (482 is also
- * used for bad credentials) is never treated as capacity backpressure.
+ * Recognise a "too many connections" / connection-limit response.
  */
 export function isConnectionLimitResponse(code: number, text: string): boolean {
-  if (isAuthFailureResponse(text)) return false;
-  if (code === 482 || code === 502) return true;
-  return /too many connection|connection limit|max(?:imum)?[^.]*connection|exceed[^.]*connection|too many[^.]*stream/i.test(
-    text
-  );
+  if (
+    /too many connection|connection limit|max(?:imum)?[^.]*connection|exceed[^.]*connection|too many[^.]*stream/i.test(
+      text
+    )
+  ) {
+    return true;
+  }
+  if (isCredentialRejectionText(text)) return false;
+  return code === 482 || code === 502;
 }
 
 /** Map an NNTP status code to an error kind for thrown responses. */

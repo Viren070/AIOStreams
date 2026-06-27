@@ -92,9 +92,10 @@ export function buildUsenetEngineOptions(
     idleConnectionMs: u.idleConnection * 1000,
     circuitBreakerThreshold: u.circuitBreakerThreshold,
     circuitBreakerCooldownMs: u.circuitBreakerCooldown * 1000,
-    failArchivedResults: u.failArchivedResults,
-    failNestedArchives: u.failNestedArchives,
     lazyRarResolution: u.lazyRarResolution,
+    strictArchiveMembership: u.strictArchiveMembership,
+    verifyMode: u.verifyMode,
+    availabilitySamplePoints: u.verifySamplePoints,
   };
 }
 
@@ -132,7 +133,9 @@ export function getSpeedTestEngineConfig(provider: ProviderConfig): {
   // (connections × depth); divide back out to report the configured socket count.
   const connectionsPerStream = Math.max(
     1,
-    Math.round((options.maxConnectionsPerStream ?? pipelineDepth) / pipelineDepth)
+    Math.round(
+      (options.maxConnectionsPerStream ?? pipelineDepth) / pipelineDepth
+    )
   );
   return {
     options,

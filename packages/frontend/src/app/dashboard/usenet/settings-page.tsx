@@ -56,7 +56,17 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
   },
   {
     title: 'Archive handling',
-    leaves: ['failArchivedResults', 'failNestedArchives', 'lazyRarResolution'],
+    leaves: ['lazyRarResolution', 'strictArchiveMembership'],
+  },
+  {
+    title: 'Verification',
+    leaves: ['verifyMode', 'verifySamplePoints'],
+    note:
+      'Before a stream URL is minted, AIOStreams runs a chain of checks so dead or incomplete releases fail upfront instead of mid-playback: ' +
+      '(1) a quick release gate STAT-samples the post to reject clearly dead/removed releases fast; ' +
+      '(2) a per-file probe body-fetches the first/last segment of each file to identify the content and catch missing or undecodable files; ' +
+      '(3) target verification (below) samples the chosen video to confirm it is actually retrievable. ' +
+      'During playback, a provider that keeps missing a release is automatically demoted so a healthy provider serves it.',
   },
   {
     title: 'Import & API',

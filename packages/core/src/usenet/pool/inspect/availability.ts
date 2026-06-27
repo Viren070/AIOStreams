@@ -4,8 +4,14 @@ import { Nzb, NzbFile } from '../../nzb/model.js';
 import { groupArchiveSets } from '../archive/open/index.js';
 import { NzbContent } from './types.js';
 import { selectBestVideo } from './select.js';
+import { CommandPriority, NzbSegmentRef } from '../../types.js';
+import { ArticleNotFoundError } from '../../nntp/errors.js';
+import { YencDecodeError } from '../yenc.js';
 
 const logger = createLogger('usenet/inspect');
+
+/** Target-availability verification method (see {@link sampleTargetAvailability}). */
+export type VerifyMode = 'stat' | 'body';
 
 /** Evenly-spaced indices across [0, n); begin/middle/end for `points === 3`. */
 export function samplePointIndices(n: number, points: number): number[] {
@@ -18,22 +24,23 @@ export function samplePointIndices(n: number, points: number): number[] {
 }
 
 /**
- * STAT a few evenly-spaced points (begin..end) of the best video's backing
- * segments to catch incomplete/removed posts BEFORE playback: the cheap
+ * Verify a few evenly-spaced points (begin..end) of the best video's backing
+ * segments BEFORE playback to catch incomplete/removed posts: the cheap
  * insurance against a stream that starts then dies mid-file. Records the result
  * on `content.availability`; the caller decides whether to fail the import.
  *
  * For an archive inner video the "backing" segments are the archive set's
- * volumes (sampling their tail catches a truncated post). STATs are Low-priority
- * and bypass the download budget, and check every provider incl. backups; a STAT
- * error (vs a definitive miss) is treated as "present" so a transient blip never
- * wrongly fails an import.
+ * volumes (sampling their tail catches a truncated post). Probes are Low-priority
+ * and check every provider incl. backups (a body fetch fails over, so it answers
+ * "retrievable from SOME provider?"); a probe error that is NOT a definitive miss
+ * is treated as "present" so a transient blip never wrongly fails an import.
  */
 export async function sampleTargetAvailability(
   nzb: Nzb,
   pool: MultiProviderPool,
   content: NzbContent,
   points: number,
+  mode: VerifyMode,
   signal?: AbortSignal
 ): Promise<void> {
   if (points <= 0) return;
@@ -59,27 +66,51 @@ export async function sampleTargetAvailability(
     backing = f ? [f] : [];
   }
 
-  const flat: Array<{ messageId: string; groups: string[] }> = [];
+  const flat: Array<{ seg: NzbSegmentRef; groups: string[] }> = [];
   for (const f of backing)
-    for (const seg of f.segments)
-      flat.push({ messageId: seg.messageId, groups: f.groups });
+    for (const seg of f.segments) flat.push({ seg, groups: f.groups });
   if (flat.length === 0) return;
+
+  // Returns true = present/unknown, false = definitively missing.
+  const probe = async (ref: {
+    seg: NzbSegmentRef;
+    groups: string[];
+  }): Promise<boolean> => {
+    if (mode === 'body') {
+      try {
+        // A real retrieval (cached for prefetch). A 430 transfers nothing.
+        await pool.fetchSegment(
+          ref.seg,
+          ref.groups,
+          nzb.hash,
+          signal,
+          CommandPriority.Low
+        );
+        return true;
+      } catch (err) {
+        // Only a definitive "missing on all providers" / undecodable body counts
+        // as missing; transient/unreachable errors are treated as present so a
+        // blip never fails a good release.
+        return !(
+          err instanceof ArticleNotFoundError || err instanceof YencDecodeError
+        );
+      }
+    }
+    return pool
+      .statSegment(ref.seg.messageId, ref.groups, signal, nzb.hash)
+      .catch(() => true);
+  };
 
   const startedAt = Date.now();
   const idxs = samplePointIndices(flat.length, points);
-  const results = await Promise.all(
-    idxs.map((i) =>
-      pool
-        .statSegment(flat[i].messageId, flat[i].groups, signal, nzb.hash)
-        .catch(() => true)
-    )
-  );
+  const results = await Promise.all(idxs.map((i) => probe(flat[i])));
   const missing = results.filter((ok) => !ok).length;
   content.availability = { sampled: idxs.length, missing };
   logger.debug(
     {
       nzbHash: nzb.hash,
       target: target.innerPath ?? target.filename,
+      mode,
       sampled: idxs.length,
       missing,
       latency: Date.now() - startedAt,

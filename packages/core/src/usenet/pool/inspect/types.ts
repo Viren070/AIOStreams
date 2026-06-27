@@ -65,12 +65,21 @@ export interface InspectOptions {
   concurrency?: number;
   /** Override the engine's availability sample-point count for this inspect. */
   availabilitySamplePoints?: number;
+  /** Override the engine's target-availability verify mode for this inspect. */
+  verifyMode?: 'none' | 'stat' | 'body';
   /**
    * Skip middle-volume probes of par2-named RAR sets (lazy fragment
    * resolution). The skipped volumes' exact sizes come from the PAR2
    * descriptors; their headers are read on first touch during playback.
    */
   lazyArchives?: boolean;
+  /**
+   * Disable positional name-inference for obfuscated split-7z sets, forcing a
+   * full probe of every volume so membership/order/size come from each file's
+   * own yEnc name / PAR2 descriptor rather than from its position. See
+   * {@link EngineOptions.strictArchiveMembership}.
+   */
+  strictArchiveMembership?: boolean;
   signal?: AbortSignal;
 }
 

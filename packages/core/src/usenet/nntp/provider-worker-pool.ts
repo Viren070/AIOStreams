@@ -63,6 +63,13 @@ const THROTTLE_STEP_MS = 5_000;
 const KEEPALIVE_MS = 30_000;
 /** Backoff after a transient dial/connection failure before re-dialing. */
 const DIAL_BACKOFF_MS = 1_000;
+/**
+ * Auth-recovery cooldown for a provider that authenticated successfully before
+ * and then started failing auth
+ */
+const AUTH_RECOVERY_BASE_MS = 60_000;
+const AUTH_RECOVERY_FACTOR = 5;
+const AUTH_RECOVERY_CAP_MS = 5 * 60_000;
 
 /**
  * Per-provider pool of long-lived **worker connections** that pull from priority
@@ -83,6 +90,17 @@ export class ProviderWorkerPool {
   private throttleTimer?: ReturnType<typeof setInterval>;
   private keepaliveTimer?: ReturnType<typeof setInterval>;
   private trippedUntil = 0;
+
+  /** A successful authenticated dial has happened at least once. */
+  private everOnline = false;
+  /**
+   * Epoch ms when an `auth_failed` provider may attempt a recovery probe. `0`
+   * means a terminal latch (never authenticated = treat as bad creds). Set to a
+   * future time only once {@link everOnline} - a transient post-online auth fail.
+   */
+  private authClearAt = 0;
+  /** Current auth-recovery backoff (grows per consecutive failure). */
+  private authBackoffMs = 0;
 
   /** EWMAs used by the multi-pool for provider ordering. */
   private latencyEwmaMs = 0;
@@ -180,15 +198,15 @@ export class ProviderWorkerPool {
       if (this.closed || this.state === 'disabled') {
         reject(
           new NntpError('no_providers', 'provider unavailable', {
-            providerId: this.id,
+            provider: this.label,
           })
         );
         return;
       }
-      if (this.state === 'auth_failed') {
+      if (this.authBlocked()) {
         reject(
           new NntpError('auth_failed', 'provider authentication failed', {
-            providerId: this.id,
+            provider: this.label,
           })
         );
         return;
@@ -252,15 +270,22 @@ export class ProviderWorkerPool {
   /** Assign as much queued work as connections + the pipeline depth allow. */
   private dispatch(): void {
     if (this.closed) return;
-    if (this.state === 'auth_failed' || this.state === 'disabled') {
+    if (this.state === 'disabled') {
       this.failAllQueued(
-        new NntpError(
-          this.state === 'auth_failed' ? 'auth_failed' : 'no_providers',
-          this.state === 'auth_failed'
-            ? 'provider authentication failed'
-            : 'provider disabled',
-          { providerId: this.id }
-        )
+        new NntpError('no_providers', 'provider disabled', {
+          provider: this.label,
+        })
+      );
+      return;
+    }
+    // While the auth cooldown is in effect (or terminally latched), fail the
+    // queue so the multi-pool fails over. Once the cooldown elapses we fall
+    // through and the dial loop below fires a single recovery probe.
+    if (this.authBlocked()) {
+      this.failAllQueued(
+        new NntpError('auth_failed', 'provider authentication failed', {
+          provider: this.label,
+        })
       );
       return;
     }
@@ -301,6 +326,11 @@ export class ProviderWorkerPool {
     const demand = this.inFlightTotal() + queued;
     const wantConns = Math.min(this.allowed, Math.ceil(demand / this.depth));
     let toDial = wantConns - this.openConns();
+    // Recovering from `auth_failed` (cooldown elapsed): dial only a single probe
+    // to re-test the credentials.
+    if (this.state === 'auth_failed') {
+      toDial = Math.max(0, 1 - this.openConns());
+    }
     for (const slot of this.slots) {
       if (toDial <= 0) break;
       if (slot.connecting || slot.conn) continue;
@@ -326,9 +356,13 @@ export class ProviderWorkerPool {
         }
         slot.conn = conn;
         slot.failures = 0;
+        this.everOnline = true;
         if (this.state !== 'online') {
           logger.info({ provider: this.label }, 'provider back online');
           this.state = 'online';
+          // A clean authenticated dial clears any auth-recovery cooldown.
+          this.authClearAt = 0;
+          this.authBackoffMs = 0;
         }
         this.dispatch();
       },
@@ -341,16 +375,35 @@ export class ProviderWorkerPool {
 
   private onDialError(slot: Slot, err: unknown): void {
     if (err instanceof NntpError && err.kind === 'auth_failed') {
-      if (this.state !== 'auth_failed') {
-        logger.warn(
-          { provider: this.label, err },
-          'provider authentication failed'
-        );
-      }
+      const firstTime = this.state !== 'auth_failed';
       this.state = 'auth_failed';
-      this.dispatch(); // fails the queue
+      if (this.everOnline) {
+        // Proven-good account: a transient auth glitch, not bad creds. Cool down
+        // and let a later request fire a single recovery probe (no busy-dial).
+        this.armAuthCooldown();
+        if (firstTime) {
+          logger.warn(
+            { provider: this.label, err, retryInMs: this.authBackoffMs },
+            'provider auth failed after being online; cooling down'
+          );
+        }
+      } else {
+        // Never authenticated = real bad credentials. Latch terminally (fail
+        // fast); recovery comes from a credential re-save rebuilding the engine.
+        this.authClearAt = 0;
+        if (firstTime) {
+          logger.warn(
+            { provider: this.label, err },
+            'provider authentication failed (check credentials)'
+          );
+        }
+      }
+      this.dispatch(); // fails the queue (authBlocked)
       return;
     }
+    // A recovery probe that failed for a non-auth reason: re-arm the cooldown so
+    // a proven-good-but-currently-unreachable provider doesn't busy-dial.
+    if (this.state === 'auth_failed' && this.everOnline) this.armAuthCooldown();
     if (err instanceof NntpError && err.kind === 'connection_limit') {
       this.throttleOnLimit();
       // Re-dispatch after a short backoff (queued work waits behind the gate).
@@ -370,7 +423,7 @@ export class ProviderWorkerPool {
         if (this.closed) {
           req.reject(
             new NntpError('no_providers', 'pool closed', {
-              providerId: this.id,
+              provider: this.label,
             })
           );
           return;
@@ -403,6 +456,10 @@ export class ProviderWorkerPool {
   }
 
   private onTransferError(slot: Slot, req: WorkRequest, err: unknown): void {
+    if (this.closed) {
+      req.reject(err);
+      return;
+    }
     // Content-level outcomes leave the connection healthy.
     if (err instanceof NntpError && err.kind === 'article_not_found') {
       this.recordOutcome(true);
@@ -455,7 +512,31 @@ export class ProviderWorkerPool {
     }
   }
 
+  /**
+   * Whether the pool must reject auth-bound work synchronously right now: while
+   * `auth_failed` and either terminally latched (never authenticated = bad creds,
+   * `authClearAt === 0`) or still inside the recovery cooldown. False once the
+   * cooldown elapses, so the next dispatch can fire a single recovery probe.
+   */
+  private authBlocked(): boolean {
+    if (this.state !== 'auth_failed') return false;
+    if (this.authClearAt === 0) return true; // never authenticated = terminal
+    return Date.now() < this.authClearAt; // proven-good = blocked during cooldown
+  }
+
+  /** Grow the auth-recovery backoff and arm the next probe time. */
+  private armAuthCooldown(): void {
+    this.authBackoffMs = Math.min(
+      AUTH_RECOVERY_CAP_MS,
+      this.authBackoffMs
+        ? this.authBackoffMs * AUTH_RECOVERY_FACTOR
+        : AUTH_RECOVERY_BASE_MS
+    );
+    this.authClearAt = Date.now() + this.authBackoffMs;
+  }
+
   private recordConnFailure(slot: Slot, err: unknown): void {
+    if (this.closed) return;
     slot.failures++;
     if (slot.failures >= this.opts.circuitBreakerThreshold) {
       const wasTripped = this.trippedUntil > Date.now();
@@ -537,7 +618,7 @@ export class ProviderWorkerPool {
       slot.conn = null;
     }
     this.failAllQueued(
-      new NntpError('no_providers', 'pool closed', { providerId: this.id })
+      new NntpError('no_providers', 'pool closed', { provider: this.label })
     );
   }
 }

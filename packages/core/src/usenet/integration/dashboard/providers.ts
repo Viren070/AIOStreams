@@ -14,7 +14,7 @@ import {
 } from '../../index.js';
 import { NntpConnection } from '../../nntp/connection.js';
 import { NntpError } from '../../nntp/errors.js';
-import { getSpeedTestEngineConfig } from '../engine.js';
+import { getSpeedTestEngineConfig, usenetEngineRegistry } from '../engine.js';
 import { fetchNzb } from '../library.js';
 
 const logger = createLogger('usenet/dashboard');
@@ -89,9 +89,15 @@ export async function saveUsenetProviders(
   });
 
   await settingsStore.set('usenet.providers', merged, username);
+  // Drop warm engines so the next request rebuilds with the saved providers.
+  usenetEngineRegistry.invalidate();
 }
 
-/** Test a single provider connection (dial + auth + DATE health probe). */
+/** Test a single provider connection (dial + auth + DATE health probe).
+ *
+ * `latencyMs` in the result measures only the DATE command round-trip after the
+ * connection (TCP/TLS/greeting/auth) is fully established, so it reflects the
+ * true server responsiveness rather than including connection setup overhead. */
 export async function testUsenetProvider(
   provider: Partial<ProviderConfig> & { password?: string },
   signal?: AbortSignal
@@ -120,13 +126,14 @@ export async function testUsenetProvider(
     priority: provider.priority ?? 0,
   };
 
-  const start = Date.now();
   let conn: NntpConnection | undefined;
   try {
     conn = await NntpConnection.connect(config, {
       dialTimeoutMs: 15_000,
       idleConnectionMs: 60_000,
     });
+    // Measure only the DATE round-trip — connection setup is already done.
+    const start = Date.now();
     await conn.date(signal, 15_000);
     return { ok: true, latencyMs: Date.now() - start };
   } catch (err) {

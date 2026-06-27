@@ -2,6 +2,7 @@
  * Shared, HTTP-agnostic types for the usenet engine. The service layer maps
  * dashboard/global settings onto these; the engine never reads UserData.
  */
+import { createHmac } from 'node:crypto';
 
 /** A single NNTP provider/account configuration. */
 export interface ProviderConfig {
@@ -79,15 +80,15 @@ export interface EngineOptions {
    * download budget) and check every provider incl. backups.
    */
   availabilitySamplePoints: number;
-  /** Treat any archived (RAR/7z) result as non-streamable (skip archives). */
-  failArchivedResults: boolean;
   /**
-   * When a streamable item is itself nested inside another archive, fail
-   * instantly instead of opening the nested archive (one extra parse + seek
-   * layer). Defaults false: open one level of nesting (rar/7z, either
-   * direction); set true to prefer fast failover instead.
+   * How the target-availability sample is verified at import:
+   * - `stat`: cheap STAT existence check (fast, but a cache/debrid NNTP gateway
+   *   can answer "present" for an article whose body it cannot deliver).
+   * - `body`: authoritative - actually body-fetches the sample segments, slightly slower; the
+   *   fetched segments are cached so they double as start-of-playback prefetch.
+   * - `none`: skip the target-availability sample entirely.
    */
-  failNestedArchives: boolean;
+  verifyMode: 'none' | 'stat' | 'body';
   /**
    * Lazy RAR fragment resolution: for named multi-volume RAR sets whose exact
    * volume sizes come from PAR2 descriptors, skip the middle-volume probes at
@@ -97,6 +98,18 @@ export interface EngineOptions {
    * widened to compensate for the skipped availability evidence.
    */
   lazyRarResolution: boolean;
+  /**
+   * Strict archive-volume membership: for OBFUSCATED split-7z sets (md5-named
+   * subjects whose real `.7z.NNN` names live only in the yEnc headers), skip the
+   * positional name-inference that avoids probing middle volumes and instead
+   * probe every volume so each is identified authoritatively by its yEnc name /
+   * PAR2 md5-16k descriptor. Eliminates the residual risk of the cheap
+   * inference (mislabeling a non-uniform sidecar, or transposing two equal-size
+   * volumes) at the cost of a first-segment fetch per volume (~one segment each,
+   * full article on the wire). Off by default; the size-gated inference is the
+   * cheap, always-on safety net.
+   */
+  strictArchiveMembership: boolean;
 }
 
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
@@ -112,9 +125,9 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   circuitBreakerThreshold: 5,
   circuitBreakerCooldownMs: 30_000,
   availabilitySamplePoints: 3,
-  failArchivedResults: false,
-  failNestedArchives: false,
+  verifyMode: 'stat',
   lazyRarResolution: true,
+  strictArchiveMembership: false,
 };
 
 /** Priority for an NNTP command acquisition. */
@@ -173,15 +186,35 @@ export interface SegmentData {
   size: number;
 }
 
+/**
+ * Short, non-secret discriminator for a provider's credentials, keyed with the
+ * server secret (HMAC) so the value — which appears in the logged fingerprint —
+ * cannot be brute-forced back to the password. A credential change yields a new
+ * value, forcing an engine rebuild. Mirrors the HMAC(SECRET_KEY, …) identifier
+ * pattern used elsewhere (analytics, auth).
+ */
+function credFingerprint(p: ProviderConfig, secret: string): string {
+  if (!p.password) return '';
+  return createHmac('sha256', secret)
+    .update(`${p.username ?? ''}:${p.password}`)
+    .digest('hex')
+    .slice(0, 16);
+}
+
 /** Stable fingerprint of a provider set (for engine registry keying). */
-export function providerSetFingerprint(providers: ProviderConfig[]): string {
+export function providerSetFingerprint(
+  providers: ProviderConfig[],
+  secret: string
+): string {
   const norm = providers
     .filter((p) => p.enabled !== false)
     .map((p) => ({
       host: p.host,
       port: p.port,
       tls: p.tls,
+      tlsSkipVerify: !!p.tlsSkipVerify,
       username: p.username ?? '',
+      credHash: credFingerprint(p, secret),
       maxConnections: p.maxConnections,
       priority: p.priority,
       isBackup: !!p.isBackup,

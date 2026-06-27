@@ -96,7 +96,12 @@ export type HeaderCrypt = { v: 5; crypt: Rar5CryptInfo } | { v: 4 };
 export type BlockResult =
   | { kind: 'file'; next: number; dataOff: number; file: ParsedFile }
   | { kind: 'end'; next: number }
-  | { kind: 'other'; next: number; headerCrypt?: HeaderCrypt };
+  | {
+      kind: 'other';
+      next: number;
+      headerCrypt?: HeaderCrypt;
+      archiveVolumeNumber?: number;
+    };
 
 /** Per-volume context threaded through the block walk. */
 export interface VolumeCtx {
@@ -137,4 +142,5 @@ export interface VolumeParse {
   blocks: VolumeBlock[];
   error?: Error;
   encrypted?: boolean;
+  volumeNumber?: number;
 }

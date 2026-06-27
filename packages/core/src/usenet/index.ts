@@ -2,6 +2,7 @@ import { readdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { createLogger } from '../logging/logger.js';
 import { getCacheFolder } from '../utils/general.js';
+import { appConfig } from '../utils/index.js';
 import { MultiProviderPool } from './pool/multi-provider-pool.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
@@ -194,7 +195,11 @@ export class UsenetEngine {
       ...opts,
       concurrency: inspectConcurrency,
       lazyArchives: opts.lazyArchives ?? this.options.lazyRarResolution,
+      strictArchiveMembership:
+        opts.strictArchiveMembership ?? this.options.strictArchiveMembership,
     });
+    // External abort (e.g. a parallel-failover loser) must surface as a throw,W
+    opts.signal?.throwIfAborted();
     // A definitive availability verdict from the gate / dead-abort means the
     // import fails as missing_on_providers; archive parsing and target
     // sampling would only spend fetches re-proving it.
@@ -202,37 +207,37 @@ export class UsenetEngine {
       content.heads = undefined;
       return content;
     }
-    let anyChased = false;
-    if (!this.options.failArchivedResults) {
-      anyChased = await this.inspectArchives(
-        nzb,
-        content,
-        inspectConcurrency,
-        opts.signal
-      );
-    }
+    let anyChased = await this.inspectArchives(
+      nzb,
+      content,
+      inspectConcurrency,
+      opts.signal
+    );
     // The probe heads exist solely as a hand-off to the archive parse, so free
     // them (~16KB per file) before sampling/persisting.
     content.heads = undefined;
-    // Cheap begin/middle/end STAT of the chosen video so an incomplete/removed
-    // post is caught at import rather than mid-playback. Runs after archive
-    // inspection so an inner video is the sampling target where applicable.
-    // A chased import skipped its middle-volume probes, so its availability
-    // evidence is thinner; widen the sample (still ~zero bytes, STATs only).
+    const verifyMode = opts.verifyMode ?? this.options.verifyMode;
     const points =
       opts.availabilitySamplePoints ?? this.options.availabilitySamplePoints;
-    const samplePoints = anyChased
-      ? Math.max(points, CHASED_SAMPLE_POINTS)
-      : points;
-    if (content.streamable && samplePoints > 0) {
+    // A chased import skipped its middle-volume probes, so its availability
+    // evidence is thinner; widen the STAT sample (still ~zero bytes). In `body`
+    // mode each extra point is a real transfer on the playback hot path, so keep
+    // it at the configured count instead of widening.
+    const samplePoints =
+      anyChased && verifyMode === 'stat'
+        ? Math.max(points, CHASED_SAMPLE_POINTS)
+        : points;
+    if (content.streamable && verifyMode !== 'none' && samplePoints > 0) {
       await sampleTargetAvailability(
         nzb,
         this.pool,
         content,
         samplePoints,
+        verifyMode,
         opts.signal
       );
     }
+    opts.signal?.throwIfAborted();
     return content;
   }
 
@@ -340,7 +345,6 @@ export class UsenetEngine {
         }
       }
       const sets = await inspectArchiveSets(refs, opener, {
-        failNested: this.options.failNestedArchives,
         password: nzb.meta.password,
         // Volume-size probing parallelism stays at the per-stream budget
         // (these can hit a cold pool); the header walk itself reads mostly
@@ -585,7 +589,6 @@ export class UsenetEngine {
       ? set.memberIndices.map((i) => fileSizes.get(i))
       : undefined;
     const opened = await openArchiveInner(set, opener, innerPath, {
-      failNested: this.options.failNestedArchives,
       knownSizes,
       password: nzb.meta.password,
       concurrency: this.options.maxConnectionsPerStream,
@@ -689,7 +692,10 @@ export class UsenetEngine {
   }
 
   get fingerprint(): string {
-    return providerSetFingerprint(this.providers);
+    return providerSetFingerprint(
+      this.providers,
+      appConfig.bootstrap.secretKey
+    );
   }
 
   private touch(): void {
@@ -758,7 +764,10 @@ export class UsenetEngineRegistry {
     providers: ProviderConfig[],
     options?: Partial<EngineOptions>
   ): UsenetEngine {
-    const key = providerSetFingerprint(providers);
+    const key = providerSetFingerprint(
+      providers,
+      appConfig.bootstrap.secretKey
+    );
     let engine = this.engines.get(key);
     if (!engine) {
       // NNTP providers are a single global admin config, so any engine under a
@@ -807,6 +816,15 @@ export class UsenetEngineRegistry {
         this.engines.delete(key);
       }
     }
+  }
+
+  /**
+   * Close and drop every warm engine WITHOUT stopping the eviction timer (unlike
+   * {@link closeAll}, which is for shutdown).
+   */
+  invalidate(): void {
+    for (const engine of this.engines.values()) engine.close();
+    this.engines.clear();
   }
 
   closeAll(): void {
