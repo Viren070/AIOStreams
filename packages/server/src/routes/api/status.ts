@@ -122,9 +122,8 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxStreamExpressionsTotalCharacters:
           appConfig.userLimits.sel.maxExpressionCharacters,
         maxAddons: appConfig.userLimits.maxAddons,
-        maxNzbFailoverCount: appConfig.userLimits.maxNzbFailoverCount,
-        maxSameReleaseFailoverCount:
-          appConfig.userLimits.maxSameReleaseFailoverCount,
+        maxFailoverAttempts: appConfig.userLimits.maxFailoverAttempts,
+        maxParallelAttempts: appConfig.userLimits.maxParallelAttempts,
         maxBackgroundPings: appConfig.userLimits.maxBackgroundPings,
       },
     },

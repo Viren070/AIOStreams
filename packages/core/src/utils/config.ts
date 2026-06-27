@@ -243,39 +243,37 @@ export async function validateConfig(
     }
   }
 
-  // validate failover count against the server limit
+  // validate max failover attempts against the server limit
   if (
-    config.failover?.count &&
-    config.failover.count > appConfig.userLimits.maxNzbFailoverCount
+    config.failover?.maxAttempts &&
+    config.failover.maxAttempts > appConfig.userLimits.maxFailoverAttempts
   ) {
     if (options?.skipErrorsFromAddonsOrProxies) {
-      config.failover.count = appConfig.userLimits.maxNzbFailoverCount;
+      config.failover.maxAttempts = appConfig.userLimits.maxFailoverAttempts;
     } else {
       throw new Error(
-        `Failover count is ${config.failover.count}, but the maximum allowed is ${appConfig.userLimits.maxNzbFailoverCount}`
+        `Failover max attempts is ${config.failover.maxAttempts}, but the maximum allowed is ${appConfig.userLimits.maxFailoverAttempts}`
       );
     }
   }
-  // validate same-release failover count against the server limit
+  // validate parallel attempts against the server limit
   if (
-    config.failover?.sameReleaseLimit &&
-    config.failover.sameReleaseLimit >
-      appConfig.userLimits.maxSameReleaseFailoverCount
+    config.failover?.parallel &&
+    config.failover.parallel > appConfig.userLimits.maxParallelAttempts
   ) {
     if (options?.skipErrorsFromAddonsOrProxies) {
-      config.failover.sameReleaseLimit =
-        appConfig.userLimits.maxSameReleaseFailoverCount;
+      config.failover.parallel = appConfig.userLimits.maxParallelAttempts;
     } else {
       throw new Error(
-        `Same-release failover count is ${config.failover.sameReleaseLimit}, but the maximum allowed is ${appConfig.userLimits.maxSameReleaseFailoverCount}`
+        `Failover parallel attempts is ${config.failover.parallel}, but the maximum allowed is ${appConfig.userLimits.maxParallelAttempts}`
       );
     }
   }
-  // a parallel window can never exceed the chain depth
-  if (config.failover?.parallel && config.failover.count) {
+  // a parallel window can never exceed the total attempt budget
+  if (config.failover?.parallel && config.failover.maxAttempts) {
     config.failover.parallel = Math.min(
       config.failover.parallel,
-      config.failover.count
+      config.failover.maxAttempts
     );
   }
 
@@ -706,7 +704,7 @@ export function applyMigrations(config: any): UserData {
   if (config.failover === undefined && config.nzbFailover !== undefined) {
     config.failover = {
       enabled: config.nzbFailover.enabled,
-      count: config.nzbFailover.count,
+      maxAttempts: config.nzbFailover.count,
       position: config.nzbFailover.position,
       contentTypes: [...constants.DEFAULT_FAILOVER_CONTENT_TYPES],
       allowCrossType: false,
@@ -714,6 +712,12 @@ export function applyMigrations(config: any): UserData {
     };
   }
   delete config.nzbFailover;
+
+  // migrate failover.count -> failover.maxAttempts (renamed)
+  if (config.failover && config.failover.count !== undefined) {
+    config.failover.maxAttempts ??= config.failover.count;
+    delete config.failover.count;
+  }
 
   // migrate stream expressions from string[] to {expression, enabled}[]
   const streamExpressionKeys = [

@@ -56,8 +56,8 @@ export interface PlayChainRecord {
 export interface BuildPlayChainOptions {
   contentTypes: FailoverContentType[];
   allowCrossType: boolean;
-  /** Chain depth carried in each item's fallback key. */
-  count: number;
+  /** Max total failover attempts, carried in each item's fallback key. */
+  maxAttempts: number;
   parallel: number;
   staggerMs: number;
   preferredGraceMs: number;
@@ -205,14 +205,30 @@ export async function buildPlayChain(
     if (items[i].kind !== 'owned' || !url) continue;
     eligible[i].url = setPlaybackFallbackKey(
       url,
-      encodeFallbackKey(i, opts.count, listKey)
+      encodeFallbackKey(i, opts.maxAttempts, listKey)
     );
   }
 }
 
+/** One resolved failover attempt: a chain item plus its execution metadata. */
+export interface ResolvedFallback extends PlayChainItem {
+  /**
+   * Failover rank: same-release alternatives share a rank (grace-bypassed),
+   * distinct releases get increasing ranks. The clicked item is rank 0, so its
+   * same-release variants are rank 0 too.
+   */
+  rank: number;
+  /** True for a same-release alternative source (vs the primary of its release). */
+  isVariant: boolean;
+}
+
 export interface ResolvedPlayChain {
-  /** Failover targets ranked after the clicked item (already filtered). */
-  items: PlayChainItem[];
+  /**
+   * Ordered, de-duplicated, `maxAttempts`-capped failover targets to try after
+   * the clicked item. All filtering and capping is done here so the route can map
+   * straight to attempts.
+   */
+  fallbacks: ResolvedFallback[];
   parallel: number;
   staggerMs: number;
   preferredGraceMs: number;
@@ -221,19 +237,30 @@ export interface ResolvedPlayChain {
   proxyConfig?: StreamProxyConfig;
   /** Whether a URL resolved from the clicked item should be proxied. */
   clickedProxied?: boolean;
-  /** Same-release variants of the clicked item, filtered + capped. */
-  clickedVariants: PlayChainItem[];
-  /** Max same-release variant attempts per release. */
-  sameReleaseLimit: number;
   /** Delay between launching same-release variant attempts (ms). */
   duplicateStaggerMs: number;
 }
 
+/** Stable identity of a resolvable target, ignoring the display-only fallback-key
+ *  segment of owned playback URLs. (Inlined here to avoid importing failover.ts,
+ *  which would create a cycle.) */
+function targetIdentity(it: PlayChainItem): string {
+  if (it.kind === 'external') return `ext|${it.url}`;
+  const idx = it.url.indexOf(PLAYBACK_PATH_PREFIX);
+  if (idx === -1) return `raw|${it.url}`;
+  // {storeAuth}/{fallbackKey}/{fileInfo}/{metadataId}/{filename} — ignore [1].
+  const seg = it.url.slice(idx + PLAYBACK_PATH_PREFIX.length).split('/');
+  if (seg.length < 5) return `raw|${it.url}`;
+  return `own|${seg[0]}|${seg[2]}|${seg[3]}|${seg[4]}`;
+}
+
 /**
- * Resolve the failover targets for a clicked item: the items ranked after it,
- * filtered by the user's content-type allowlist and (unless cross-type is
- * enabled) restricted to the clicked item's own kind. Also returns the
- * orchestration config snapshot stored with the chain.
+ * Resolve the failover targets for a clicked item into a single ordered list,
+ * ready for the route to map to attempts. Applies, in one place: content-type /
+ * cross-type filtering, per-release variant capping (`sameReleaseLimit`),
+ * de-duplication by resolvable target (so a release surviving dedup or harvested
+ * under multiple winners is never tried twice), and the overall `maxAttempts` cap
+ * — done last so dedup never shrinks the effective budget.
  */
 export async function getPlayChain(
   decoded: { index: number; count: number; listKey: string },
@@ -251,39 +278,69 @@ export async function getPlayChain(
     record.contentTypes.includes(it.type) &&
     (record.allowCrossType || it.type === clickedType);
 
-  // Same-release variants share their parent's filter and are capped per release.
-  const filterVariants = (vs: PlayChainItem[] | undefined): PlayChainItem[] =>
-    (vs ?? []).filter(passesFilter).slice(0, record.sameReleaseLimit);
+  const maxAttempts = decoded.count;
+  const clickedItem = record.items[decoded.index];
+  // Seed with the clicked target so it can't be re-queued as a variant/item.
+  const seen = new Set<string>();
+  if (clickedItem) seen.add(targetIdentity(clickedItem));
 
-  const clickedVariants = filterVariants(record.items[decoded.index]?.variants);
+  const fallbacks: ResolvedFallback[] = [];
 
-  const after = record.items.slice(decoded.index + 1);
-  const items = after
-    .filter(passesFilter)
-    .slice(0, decoded.count)
-    .map((it) => ({ ...it, variants: filterVariants(it.variants) }));
-  if (items.length === 0 && after.length > 0) {
+  /** Add up to `sameReleaseLimit` fresh same-release variants at `rank`. */
+  const addVariants = (
+    vs: PlayChainItem[] | undefined,
+    rank: number
+  ): void => {
+    let perRelease = 0;
+    for (const v of vs ?? []) {
+      if (fallbacks.length >= maxAttempts || perRelease >= record.sameReleaseLimit)
+        return;
+      if (!passesFilter(v)) continue;
+      const key = targetIdentity(v);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      fallbacks.push({ ...v, rank, isVariant: true });
+      perRelease++;
+    }
+  };
+
+  // Rank 0: same-release alternatives of the clicked item.
+  addVariants(clickedItem?.variants, 0);
+
+  // Then each subsequent distinct release (increasing rank) + its variants.
+  let rank = 1;
+  for (const item of record.items.slice(decoded.index + 1)) {
+    if (fallbacks.length >= maxAttempts) break;
+    if (!passesFilter(item)) continue;
+    const key = targetIdentity(item);
+    if (seen.has(key)) continue; // already covered (e.g. as a clicked variant)
+    seen.add(key);
+    fallbacks.push({ ...item, rank, isVariant: false });
+    addVariants(item.variants, rank);
+    rank++;
+  }
+
+  if (fallbacks.length === 0 && record.items.length > 1) {
     logger.debug(
       {
         listKey: decoded.listKey,
         clickedType,
         contentTypes: record.contentTypes,
         allowCrossType: record.allowCrossType,
-        candidatesAfter: after.length,
+        items: record.items.length,
       },
-      'play chain has no failover targets after content-type/cross-type filtering'
+      'play chain has no failover targets after filtering'
     );
   }
+
   return {
-    items,
+    fallbacks,
     parallel: record.parallel,
     staggerMs: record.staggerMs,
     preferredGraceMs: record.preferredGraceMs,
     maxWaitMs: record.maxWaitMs,
     proxyConfig: record.proxyConfig,
-    clickedProxied: record.items[decoded.index]?.proxied,
-    clickedVariants,
-    sameReleaseLimit: record.sameReleaseLimit,
+    clickedProxied: clickedItem?.proxied,
     duplicateStaggerMs: record.duplicateStaggerMs,
   };
 }
