@@ -135,7 +135,7 @@ export class TorrentGrabber {
     const response = await makeRequest(downloadUrl, {
       timeout,
       // User-agent comes from a `[torrent_grabs]` (or per-host) entry in
-      // HOSTNAME_USER_AGENT_OVERRIDES, applied inside makeRequest.
+      // REQUEST_HEADER_OVERRIDES, applied inside makeRequest.
       context: 'torrent_grabs',
       rawOptions: { redirect: 'manual' },
     });

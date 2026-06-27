@@ -542,7 +542,7 @@ export const builtinsSchema = {
       env: 'BUILTIN_NAB_USER_AGENT',
       description:
         'Deprecated: prefer `[newznab]`/`[torznab]` entries in ' +
-        '`HOSTNAME_USER_AGENT_OVERRIDES` (which also support `{preset}` header ' +
+        '`REQUEST_HEADER_OVERRIDES` (which also support `{preset}` header ' +
         'sets). User-Agent for Newznab/Torznab requests; the fallback when no ' +
         'host/context override matches.',
       requiresRestart: false,

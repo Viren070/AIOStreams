@@ -23,6 +23,10 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
     'User-Agent': 'Prowlarr/2.4.0.5397 (alpine 3.23.4)',
   },
+  nzbhydra2: {
+    Accept: 'application/xml',
+    'User-Agent': 'NZBHydra2 8.8.3',
+  },
   chrome: {
     'User-Agent':
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
