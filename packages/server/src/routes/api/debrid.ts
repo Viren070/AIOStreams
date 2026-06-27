@@ -3,17 +3,21 @@ import {
   APIError,
   constants,
   createLogger,
+  createProxy,
   DebridError,
   decodeFallbackKey,
   decodeFileInfo,
   getPlayChain,
   parsePlaybackUrl,
   resolvePlaybackTarget,
+  resolveExternalTarget,
   runPlayChain,
   getSimpleTextHash,
   DistributedLock,
   type FailoverAttempt,
   type FailoverContentType,
+  type PlayChainItem,
+  maskSensitiveInfo,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import { StaticFiles } from '../../app.js';
@@ -103,36 +107,121 @@ router.get(
         ? await getPlayChain(decodedFbk, clickedType)
         : undefined;
       const fallbackItems = chain?.items ?? [];
-      const hasFailover = fallbackItems.length > 0;
+      const clickedVariants = chain?.clickedVariants ?? [];
+      const hasFailover =
+        fallbackItems.length > 0 || clickedVariants.length > 0;
+
+      if (!hasFailover && !decodedFbk) {
+        logger.debug(
+          { clickedType, hasFallbackKey: !!fallbackKey },
+          'clicked item has no failover chain reference'
+        );
+      }
 
       const clientIp = req.userIp;
+
+      const arrivedViaOurProxy = !!req.query[constants.INTERNAL_PROXY_MARKER];
+      const proxyConfig = chain?.proxyConfig;
+
+      // Wrap a resolved (CDN) URL in a proxy URL when the source item should be
+      // proxied and we didn't arrive via our proxy. Fail-open to the raw URL.
+      const maybeProxy = async (
+        resolvedUrl: string | undefined,
+        itemProxied: boolean | undefined
+      ): Promise<string | undefined> => {
+        if (!resolvedUrl) return resolvedUrl; // still downloading
+        if (arrivedViaOurProxy || !itemProxied || !proxyConfig?.enabled) {
+          return resolvedUrl;
+        }
+        if (resolvedUrl.includes(constants.BUILTIN_PROXY_PATH_PREFIX)) {
+          return resolvedUrl;
+        }
+        try {
+          const out = await createProxy(proxyConfig).generateUrls([
+            { url: resolvedUrl, filename, type: 'stream' },
+          ]);
+          if (Array.isArray(out) && out[0]) return out[0];
+          logger.warn(
+            { err: out && 'error' in out ? out.error : 'no url returned' },
+            'failed to proxy failover-resolved url; serving raw url'
+          );
+        } catch (err: any) {
+          logger.warn(
+            { err: err?.message ?? String(err) },
+            'error proxying failover-resolved url; serving raw url'
+          );
+        }
+        return resolvedUrl; // fail-open
+      };
+
+      // Resolve a chain item (or variant), branching on owned vs external, then
+      // proxying the result when configured.
+      const resolveTarget =
+        (item: PlayChainItem) =>
+        async (signal?: AbortSignal): Promise<string | undefined> => {
+          if (item.kind === 'external') {
+            return resolveExternalTarget(item.url, { clientIp }, signal).then(
+              (url) => maybeProxy(url, item.proxied)
+            );
+          }
+          const target = parsePlaybackUrl(item.url);
+          return target
+            ? resolvePlaybackTarget(target, { clientIp }, signal).then((url) =>
+                maybeProxy(url, item.proxied)
+              )
+            : Promise.reject(new Error('unparseable fallback url'));
+        };
+
+      const labelFor = (name: string | undefined, descriptor: string): string =>
+        `${name ?? 'unknown'} (${descriptor})`;
+      const descriptorFor = (it: PlayChainItem, base: string): string =>
+        it.kind === 'external' ? `${base}:external` : base;
       const attempts: FailoverAttempt[] = [
         {
-          label: 'clicked',
+          label: labelFor(filename, 'clicked'),
+          rank: 0,
           resolve: (signal) =>
             resolvePlaybackTarget(
               { encryptedStoreAuth, fileInfoRaw, metadataId, filename },
               { clientIp },
               signal
-            ),
+            ).then((url) => maybeProxy(url, chain?.clickedProxied)),
         },
-        ...fallbackItems.map((it): FailoverAttempt => {
-          const target = parsePlaybackUrl(it.url);
-          return {
-            label: it.type,
-            resolve: (signal) =>
-              target
-                ? resolvePlaybackTarget(target, { clientIp }, signal)
-                : Promise.reject(new Error('unparseable fallback url')),
-          };
-        }),
+        ...clickedVariants.map(
+          (v): FailoverAttempt => ({
+            label: labelFor(v.filename, descriptorFor(v, `${v.type}:variant`)),
+            rank: 0,
+            resolve: resolveTarget(v),
+          })
+        ),
       ];
+
+      let rank = 1;
+      for (const item of fallbackItems) {
+        attempts.push({
+          label: labelFor(item.filename, descriptorFor(item, item.type)),
+          rank,
+          resolve: resolveTarget(item),
+        });
+        for (const v of item.variants ?? []) {
+          attempts.push({
+            label: labelFor(
+              v.filename,
+              descriptorFor(v, `${item.type}:variant`)
+            ),
+            rank,
+            resolve: resolveTarget(v),
+          });
+        }
+        rank++;
+      }
 
       const runCfg = {
         parallel: chain?.parallel ?? 1,
         staggerMs: chain?.staggerMs ?? 0,
         preferredGraceMs: chain?.preferredGraceMs ?? 0,
         maxWaitMs: chain?.maxWaitMs ?? 60_000,
+        duplicateStaggerMs: chain?.duplicateStaggerMs ?? 0,
       };
 
       logger.debug('Attempting debrid resolve', {
@@ -192,7 +281,11 @@ router.get(
       }
 
       logger.debug(
-        { url: result.url },
+        {
+          url: maskSensitiveInfo(result.url),
+          label: result.label,
+          failedOver: result.failedOver,
+        },
         'Debrid resolve succeeded, redirecting'
       );
 

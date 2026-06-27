@@ -42,6 +42,7 @@ import {
   TYPES,
   DEDUPLICATOR_KEYS,
   DEDUPLICATOR_TIEBREAKERS,
+  DEDUPLICATOR_MERGE_FIELDS,
   SMART_DETECT_ATTRIBUTES,
   DEFAULT_SMART_DETECT_ATTRIBUTES,
   AUDIO_CHANNELS,
@@ -3726,6 +3727,81 @@ function Content() {
                           />
                         );
                       })}
+                    </SettingsCard>
+                    <SettingsCard
+                      title="Merge Duplicates"
+                      description="Instead of just discarding duplicates, fold their info into the surviving result: extra same-release failover targets and richer metadata from other addons."
+                    >
+                      <Switch
+                        label="Enable Merging"
+                        side="right"
+                        disabled={!userData.deduplicator?.enabled}
+                        value={userData.deduplicator?.merge?.enabled ?? false}
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            deduplicator: {
+                              ...prev.deduplicator,
+                              merge: {
+                                ...prev.deduplicator?.merge,
+                                enabled: value,
+                              },
+                            },
+                          }));
+                        }}
+                      />
+                      <Switch
+                        label="Harvest Failover Variants"
+                        side="right"
+                        help="Collect discarded duplicates' playback URLs as same-release failover targets, so failover can try another copy of the SAME release (e.g. a different indexer's NZB) before moving to a different release. Follows your Failover content-type settings."
+                        disabled={
+                          !userData.deduplicator?.enabled ||
+                          !userData.deduplicator?.merge?.enabled
+                        }
+                        value={
+                          userData.deduplicator?.merge?.failoverVariants ?? false
+                        }
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            deduplicator: {
+                              ...prev.deduplicator,
+                              merge: {
+                                ...prev.deduplicator?.merge,
+                                failoverVariants: value,
+                              },
+                            },
+                          }));
+                        }}
+                      />
+                      <Combobox
+                        label="Merged Metadata Fields"
+                        multiple
+                        help="Which metadata to merge from discarded duplicates into the kept result. Languages/subtitles are merged accuracy-aware: an addon's accurate audio/subtitle split is never overwritten by inaccurate filename-parsed guesses."
+                        disabled={
+                          !userData.deduplicator?.enabled ||
+                          !userData.deduplicator?.merge?.enabled
+                        }
+                        value={userData.deduplicator?.merge?.fields ?? []}
+                        emptyMessage="No fields available"
+                        onValueChange={(value) => {
+                          setUserData((prev) => ({
+                            ...prev,
+                            deduplicator: {
+                              ...prev.deduplicator,
+                              merge: {
+                                ...prev.deduplicator?.merge,
+                                fields:
+                                  value as (typeof DEDUPLICATOR_MERGE_FIELDS)[number][],
+                              },
+                            },
+                          }));
+                        }}
+                        options={DEDUPLICATOR_MERGE_FIELDS.map((field) => ({
+                          label: field,
+                          value: field,
+                        }))}
+                      />
                     </SettingsCard>
                   </>
                 )}

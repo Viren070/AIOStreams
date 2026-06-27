@@ -266,6 +266,13 @@ const DeduplicatorOptions = z.object({
       })
     )
     .optional(),
+  merge: z
+    .object({
+      enabled: z.boolean().optional(),
+      failoverVariants: z.boolean().optional(), // harvest same-release failover URLs
+      fields: z.array(z.enum(constants.DEDUPLICATOR_MERGE_FIELDS)).optional(), // metadata to merge
+    })
+    .optional(),
 });
 
 const OptionDefinition = z.looseObject({
@@ -810,6 +817,12 @@ export const UserDataSchema = z.object({
       position: z.enum(['beforeSEL', 'beforeLimiting', 'last']).optional(),
       /** When true, failover is also applied during background pre-caching of the next episode. Default false. */
       precacheFailover: z.boolean().optional(),
+      /** Include non-owned addon debrid URLs (resolved by probing) as failover targets. Default false. */
+      includeExternalFailover: z.boolean().optional(),
+      /** Max same-release variant attempts tried per release before moving on (0 disables). */
+      sameReleaseLimit: z.number().min(0).optional(),
+      /** Delay between launching same-release variant attempts (ms). Default 0. */
+      duplicateStaggerMs: z.number().min(0).optional(),
     })
     .optional(),
   serviceWrap: z
@@ -1081,6 +1094,22 @@ export const ParsedStreamSchema = z.object({
   passthrough: PassthroughSchema.optional(),
   url: z.string().optional(),
   nzbUrl: z.string().optional(),
+  // Same-release failover targets harvested from discarded duplicates by the
+  // deduplicator merge step. Each is another playback URL for the *same*
+  // release (a different indexer's NZB or another addon's debrid link).
+  failoverVariants: z
+    .array(
+      z.object({
+        url: z.string(),
+        type: z.enum(['usenet', 'debrid']),
+        serviceId: z.string().optional(),
+        filename: z.string().optional(),
+        identity: z.string().optional(), // nzbUrl | infoHash | external host+path
+        kind: z.enum(['owned', 'external']).optional(), // default 'owned'
+        proxied: z.boolean().optional(), // computed at merge time
+      })
+    )
+    .optional(),
   servers: z.array(z.string().min(1)).optional(),
   rarUrls: z.array(SourceSchema).nullable().optional(),
   zipUrls: z.array(SourceSchema).nullable().optional(),
@@ -1410,6 +1439,7 @@ const StatusResponseSchema = z.object({
       maxStreamExpressionsTotalCharacters: z.number(),
       maxAddons: z.number(),
       maxNzbFailoverCount: z.number(),
+      maxSameReleaseFailoverCount: z.number(),
       maxBackgroundPings: z.number(),
     }),
   }),

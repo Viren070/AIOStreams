@@ -6,6 +6,13 @@ import {
   constants,
 } from '../utils/index.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
+import { shouldProxyStream } from './proxifier.js';
+import { isExternalDebridFailover } from '../main/play-chain.js';
+import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
+import { arrayMerge } from '../parser/merge.js';
+
+type MergeOptions = NonNullable<NonNullable<UserData['deduplicator']>['merge']>;
+type FailoverVariant = NonNullable<ParsedStream['failoverVariants']>[number];
 
 const logger = createLogger('deduplicator');
 
@@ -22,6 +29,12 @@ class StreamDeduplicator {
       return streams;
     }
     const start = Date.now();
+
+    const merge = deduplicator.merge;
+    const failoverTypes: ('usenet' | 'debrid')[] = this.userData.failover
+      ?.contentTypes ?? ['usenet'];
+    const includeExternal =
+      this.userData.failover?.includeExternalFailover ?? false;
 
     const deduplicationKeys = deduplicator.keys || ['filename', 'infoHash'];
 
@@ -181,6 +194,7 @@ class StreamDeduplicator {
     }
 
     for (const group of finalDuplicateGroupsMap.values()) {
+      const groupWinners: ParsedStream[] = [];
       // Group streams by type
       const streamsByType = new Map<string, ParsedStream[]>();
       for (const stream of group) {
@@ -354,7 +368,7 @@ class StreamDeduplicator {
 
               return 0;
             })[0];
-            processedStreams.add(selectedStream);
+            groupWinners.push(selectedStream);
             break;
           }
           case 'per_service': {
@@ -415,7 +429,7 @@ class StreamDeduplicator {
               })[0];
             });
             for (const stream of perServiceStreams) {
-              processedStreams.add(stream);
+              groupWinners.push(stream);
             }
             break;
           }
@@ -456,11 +470,28 @@ class StreamDeduplicator {
               })[0];
             });
             for (const stream of perAddonStreams) {
-              processedStreams.add(stream);
+              groupWinners.push(stream);
             }
             break;
           }
         }
+      }
+
+      // Merge discarded duplicates' info into each surviving winner, then
+      // add the winners to the result.
+      if (merge?.enabled) {
+        for (const winner of groupWinners) {
+          this.mergeIntoWinner(
+            winner,
+            group,
+            merge,
+            failoverTypes,
+            includeExternal
+          );
+        }
+      }
+      for (const winner of groupWinners) {
+        processedStreams.add(winner);
       }
     }
 
@@ -477,6 +508,148 @@ class StreamDeduplicator {
       'deduplication complete'
     );
     return deduplicatedStreams;
+  }
+
+  /**
+   * Fold info from a duplicate group's discarded streams into the surviving
+   * winner: same-release failover variants and selected metadata fields. Mutates
+   * the winner in place (consistent with the rest of the pipeline).
+   */
+  private mergeIntoWinner(
+    winner: ParsedStream,
+    group: ParsedStream[],
+    merge: MergeOptions,
+    failoverTypes: ('usenet' | 'debrid')[],
+    includeExternal: boolean
+  ): void {
+    const others = group.filter((s) => s.id !== winner.id);
+    if (others.length === 0) return;
+
+    // Same-release failover variants ---
+    if (merge.failoverVariants) {
+      const seen = new Set<string>();
+      const winnerIdentity = winner.nzbUrl ?? winner.torrent?.infoHash;
+      if (winnerIdentity) seen.add(winnerIdentity);
+
+      const variants: FailoverVariant[] = [];
+      for (const other of others) {
+        let entry: FailoverVariant | undefined;
+        if (
+          other.url?.includes(PLAYBACK_PATH_PREFIX) &&
+          (other.type === 'usenet' || other.type === 'debrid') &&
+          failoverTypes.includes(other.type)
+        ) {
+          entry = {
+            url: other.url,
+            type: other.type,
+            serviceId: other.service?.id,
+            filename: other.filename,
+            identity: other.nzbUrl ?? other.torrent?.infoHash ?? other.url,
+            kind: 'owned',
+            proxied: shouldProxyStream(other, this.userData.proxy),
+          };
+        } else if (includeExternal && isExternalDebridFailover(other)) {
+          let identity = other.url;
+          try {
+            const u = new URL(other.url);
+            identity = u.host + u.pathname;
+          } catch {}
+          entry = {
+            url: other.url,
+            type: 'debrid',
+            serviceId: other.service?.id,
+            filename: other.filename,
+            identity,
+            kind: 'external',
+            proxied: shouldProxyStream(other, this.userData.proxy),
+          };
+        }
+        if (!entry) continue;
+        const key = entry.identity ?? entry.url;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        variants.push(entry);
+      }
+      if (variants.length > 0) {
+        winner.failoverVariants = [
+          ...(winner.failoverVariants ?? []),
+          ...variants,
+        ];
+      }
+    }
+
+    // Metadata
+    const fields = merge.fields ?? [];
+    if (fields.includes('languages') || fields.includes('subtitles')) {
+      this.mergeLanguagesAndSubtitles(winner, others, fields);
+    }
+    if (fields.includes('library') && !winner.library) {
+      if (others.some((s) => s.library)) winner.library = true;
+    }
+    if (fields.includes('seadex') && !winner.seadex) {
+      const withSeadex = others.filter((s) => s.seadex);
+      const best = withSeadex.find((s) => s.seadex?.isBest) ?? withSeadex[0];
+      if (best?.seadex) winner.seadex = best.seadex;
+    }
+    if (fields.includes('sizes')) {
+      if (winner.size === undefined) {
+        const max = Math.max(0, ...others.map((s) => s.size ?? 0));
+        if (max > 0) winner.size = max;
+      }
+      if (winner.folderSize === undefined) {
+        const max = Math.max(0, ...others.map((s) => s.folderSize ?? 0));
+        if (max > 0) winner.folderSize = max;
+      }
+    }
+  }
+
+  /**
+   * Accuracy-aware merge of parsed `languages`/`subtitles` plus actual subtitle
+   * tracks.
+   */
+  private mergeLanguagesAndSubtitles(
+    winner: ParsedStream,
+    others: ParsedStream[],
+    fields: readonly string[]
+  ): void {
+    const sources = [winner, ...others].filter((s) => s.parsedFile);
+    const accurate = sources.filter(
+      (s) =>
+        (s.parsedFile?.languages?.length ?? 0) > 0 &&
+        (s.parsedFile?.subtitles?.length ?? 0) > 0
+    );
+    const pool = accurate.length > 0 ? accurate : sources;
+
+    if (winner.parsedFile) {
+      if (fields.includes('languages')) {
+        winner.parsedFile.languages = arrayMerge(
+          [],
+          pool.flatMap((s) => s.parsedFile?.languages ?? [])
+        );
+      }
+      if (fields.includes('subtitles')) {
+        winner.parsedFile.subtitles = arrayMerge(
+          [],
+          pool.flatMap((s) => s.parsedFile?.subtitles ?? [])
+        );
+      }
+    }
+
+    // Merge actual subtitle tracks (with URLs) by unique (lang, url).
+    if (fields.includes('subtitles')) {
+      const seen = new Set<string>();
+      const merged: NonNullable<ParsedStream['subtitles']> = [];
+      for (const sub of [
+        ...(winner.subtitles ?? []),
+        ...others.flatMap((s) => s.subtitles ?? []),
+      ]) {
+        const key = `${sub.lang}|${sub.url}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(sub);
+      }
+      if (merged.length > 0) winner.subtitles = merged;
+    }
   }
 }
 

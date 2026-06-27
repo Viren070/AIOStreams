@@ -22,6 +22,7 @@ import type {
   ParsedStream,
   Subtitle,
   AddonCatalog,
+  UserData,
 } from '../db/schemas.js';
 import type { Addon } from '../db/index.js';
 import type { Metadata } from '../metadata/utils.js';
@@ -224,6 +225,10 @@ export async function processStreams(
     staggerMs: number;
     preferredGraceMs: number;
     maxWaitMs: number;
+    proxyConfig?: UserData['proxy'];
+    includeExternalFailover?: boolean;
+    sameReleaseLimit: number;
+    duplicateStaggerMs: number;
   }
 ): Promise<{
   streams: ParsedStream[];
@@ -315,6 +320,10 @@ export async function processStreams(
         staggerMs: failoverOpts.staggerMs,
         preferredGraceMs: failoverOpts.preferredGraceMs,
         maxWaitMs: failoverOpts.maxWaitMs,
+        proxyConfig: failoverOpts.proxyConfig,
+        includeExternal: failoverOpts.includeExternalFailover,
+        sameReleaseLimit: failoverOpts.sameReleaseLimit,
+        duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
       },
       ctx.userData.uuid
     ).catch((error) => {
@@ -346,6 +355,10 @@ export async function processStreams(
         staggerMs: failoverOpts.staggerMs,
         preferredGraceMs: failoverOpts.preferredGraceMs,
         maxWaitMs: failoverOpts.maxWaitMs,
+        proxyConfig: failoverOpts.proxyConfig,
+        includeExternal: failoverOpts.includeExternalFailover,
+        sameReleaseLimit: failoverOpts.sameReleaseLimit,
+        duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
       },
       ctx.userData.uuid
     ).catch((error) => {
@@ -375,6 +388,10 @@ export async function processStreams(
           staggerMs: failoverOpts.staggerMs,
           preferredGraceMs: failoverOpts.preferredGraceMs,
           maxWaitMs: failoverOpts.maxWaitMs,
+          proxyConfig: failoverOpts.proxyConfig,
+          includeExternal: failoverOpts.includeExternalFailover,
+          sameReleaseLimit: failoverOpts.sameReleaseLimit,
+          duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
         },
         ctx.userData.uuid
       ).catch((error) => {
@@ -702,6 +719,18 @@ export async function getStreams(
           maxWaitMs:
             ctx.userData.failover.maxWaitMs ??
             constants.DEFAULT_FAILOVER_MAX_WAIT_MS,
+          proxyConfig: ctx.userData.proxy,
+          includeExternalFailover:
+            ctx.userData.failover.includeExternalFailover ??
+            constants.DEFAULT_FAILOVER_INCLUDE_EXTERNAL,
+          sameReleaseLimit: Math.min(
+            ctx.userData.failover.sameReleaseLimit ??
+              constants.DEFAULT_FAILOVER_SAME_RELEASE_LIMIT,
+            appConfig.userLimits.maxSameReleaseFailoverCount
+          ),
+          duplicateStaggerMs:
+            ctx.userData.failover.duplicateStaggerMs ??
+            constants.DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS,
         }
       : undefined
   );

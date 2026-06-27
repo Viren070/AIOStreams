@@ -51,6 +51,7 @@ export type {
 export {
   runPlayChain,
   resolvePlaybackTarget,
+  resolveExternalTarget,
   parsePlaybackUrl,
   decodeFileInfo,
 } from './main/failover.js';
