@@ -258,6 +258,18 @@ export function BuiltinSettings() {
               }}
             />
             <DurationInput
+              label="Same-release backup delay"
+              help="Like Backup delay, but between attempts for the SAME release (alternative sources of the clicked release, harvested by deduplicator merging). These are essentially the same release, so no head start is needed — defaults to 0."
+              disabled={!userData.failover?.enabled}
+              value={userData.failover?.duplicateStaggerMs ?? 0}
+              onValueChange={(ms) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  failover: { ...prev.failover, duplicateStaggerMs: ms },
+                }));
+              }}
+            />
+            <DurationInput
               label="Preferred-item grace"
               help="Once a backup is healthy, how long to wait for the item you actually clicked (or a higher-ranked one still in flight) to catch up before settling for the backup. 0 = take the first healthy result."
               disabled={!userData.failover?.enabled}
@@ -301,6 +313,50 @@ export function BuiltinSettings() {
                 ...prev.failover,
                 position: value as 'beforeLimiting' | 'beforeSEL' | 'last',
               },
+            }));
+          }}
+        />
+        <NumberInput
+          label="Same-Release Failover Attempts"
+          help={
+            <>
+              How many alternative sources of the SAME release (harvested by
+              deduplicator merging) to try per release before moving to a
+              different release. 0 disables same-release failover. Maximum is set
+              by <code>MAX_SAME_RELEASE_FAILOVER_COUNT</code> (currently{' '}
+              {status?.settings?.limits?.maxSameReleaseFailoverCount ?? 5}).
+            </>
+          }
+          min={0}
+          max={status?.settings?.limits?.maxSameReleaseFailoverCount ?? 5}
+          defaultValue={2}
+          disabled={!userData.failover?.enabled}
+          value={userData.failover?.sameReleaseLimit ?? 2}
+          onValueChange={(value) => {
+            const maxCount =
+              status?.settings?.limits?.maxSameReleaseFailoverCount ?? 5;
+            setUserData((prev) => ({
+              ...prev,
+              failover: {
+                ...prev.failover,
+                sameReleaseLimit: Math.min(
+                  maxCount,
+                  Math.max(0, Number(value ?? 2))
+                ),
+              },
+            }));
+          }}
+        />
+        <Switch
+          label="Include External Addon Targets"
+          side="right"
+          disabled={!userData.failover?.enabled}
+          help="Also use non-owned debrid links from external addons (on the addon's own host) as failover targets. These are resolved by probing: a redirect to the addon's own host is treated as a dead link, a redirect to a CDN as success. A direct click on an external stream still won't fail over."
+          value={userData.failover?.includeExternalFailover ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              failover: { ...prev.failover, includeExternalFailover: value },
             }));
           }}
         />

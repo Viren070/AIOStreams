@@ -123,6 +123,8 @@ const statusInfo = async (): Promise<StatusResponse> => {
           appConfig.userLimits.sel.maxExpressionCharacters,
         maxAddons: appConfig.userLimits.maxAddons,
         maxNzbFailoverCount: appConfig.userLimits.maxNzbFailoverCount,
+        maxSameReleaseFailoverCount:
+          appConfig.userLimits.maxSameReleaseFailoverCount,
         maxBackgroundPings: appConfig.userLimits.maxBackgroundPings,
       },
     },

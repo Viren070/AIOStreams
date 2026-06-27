@@ -142,7 +142,7 @@ export class BuiltinProxy extends BaseProxy {
         streamData = toUrlSafeBase64(streamData);
       }
 
-      return `${appConfig.bootstrap.baseUrl}/api/v1/proxy/${encrypt ? 'e' : 'u'}.${authData}.${streamData}/${encodeURIComponent(stream.filename ?? '')}`;
+      return `${appConfig.bootstrap.baseUrl}${constants.BUILTIN_PROXY_PATH_PREFIX}${encrypt ? 'e' : 'u'}.${authData}.${streamData}/${encodeURIComponent(stream.filename ?? '')}`;
     });
   }
 }

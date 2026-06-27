@@ -256,6 +256,21 @@ export async function validateConfig(
       );
     }
   }
+  // validate same-release failover count against the server limit
+  if (
+    config.failover?.sameReleaseLimit &&
+    config.failover.sameReleaseLimit >
+      appConfig.userLimits.maxSameReleaseFailoverCount
+  ) {
+    if (options?.skipErrorsFromAddonsOrProxies) {
+      config.failover.sameReleaseLimit =
+        appConfig.userLimits.maxSameReleaseFailoverCount;
+    } else {
+      throw new Error(
+        `Same-release failover count is ${config.failover.sameReleaseLimit}, but the maximum allowed is ${appConfig.userLimits.maxSameReleaseFailoverCount}`
+      );
+    }
+  }
   // a parallel window can never exceed the chain depth
   if (config.failover?.parallel && config.failover.count) {
     config.failover.parallel = Math.min(

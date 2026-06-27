@@ -163,6 +163,34 @@ export const DEFAULT_FAILOVER_MAX_WAIT_MS = 30000;
 // item to catch up before it's accepted (parallel mode only). 0 = first-ready wins.
 export const DEFAULT_FAILOVER_PREFERRED_GRACE_MS = 2000;
 
+/**
+ * Query-param marker appended to an owned-playback inner URL when it is wrapped by
+ * a proxy.
+ */
+export const INTERNAL_PROXY_MARKER = 'from_proxy';
+
+/**
+ * Path prefix of an AIOStreams builtin-proxy URL.
+ */
+export const BUILTIN_PROXY_PATH_PREFIX = '/api/v1/proxy/';
+
+/** Whether external addon debrid URLs may be used as failover targets. */
+export const DEFAULT_FAILOVER_INCLUDE_EXTERNAL = false;
+
+/** Max same-release variant attempts tried per release before moving on (0 = off). */
+export const DEFAULT_FAILOVER_SAME_RELEASE_LIMIT = 2;
+/** Delay between launching same-release variant attempts (ms). 0 = no delay. */
+export const DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS = 0;
+
+/** Metadata fields the deduplicator can merge from discarded duplicates into the winner. */
+export const DEDUPLICATOR_MERGE_FIELDS = [
+  'languages',
+  'subtitles',
+  'library',
+  'seadex',
+  'sizes',
+] as const;
+
 export const GDRIVE_FORMATTER = 'gdrive';
 export const LIGHT_GDRIVE_FORMATTER = 'lightgdrive';
 export const MINIMALISTIC_GDRIVE_FORMATTER = 'minimalisticgdrive';

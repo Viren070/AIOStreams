@@ -82,6 +82,16 @@ export const userLimitsSchema = {
     requiresRestart: false,
     secret: false,
   },
+  maxSameReleaseFailoverCount: {
+    schema: positiveInt,
+    default: 5,
+    label: 'Max same-release failover count',
+    description:
+      'Maximum same-release variant failover attempts a user can configure per release.',
+    env: 'MAX_SAME_RELEASE_FAILOVER_COUNT',
+    requiresRestart: false,
+    secret: false,
+  },
   maxGroups: {
     schema: positiveInt,
     default: 20,
