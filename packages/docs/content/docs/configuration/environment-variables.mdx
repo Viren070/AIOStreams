@@ -1061,8 +1061,8 @@ neither the environment variable nor a stored value is present.
 | `MAX_ADDONS` | Max Addons | number | `15` | Maximum number of addons a user configuration can install. |
 | `MAX_KEYWORD_FILTERS` | Max Keyword Filters | number | `30` | Maximum number of keyword filters per keyword filter group. |
 | `MAX_FORMATTER_TEMPLATE_LENGTH` | Max Formatter Template Length | number | `5000` | Maximum length (characters) of a single formatter template string. Enforced during config validation. |
-| `MAX_NZB_FAILOVER_COUNT` | Max NZB Failover Count | number | `5` | Maximum NZB failover attempts a user can configure. |
-| `MAX_SAME_RELEASE_FAILOVER_COUNT` | Max Same Release Failover Count | number | `5` | Maximum same-release variant failover attempts a user can configure per release. |
+| `MAX_FAILOVER_ATTEMPTS` | Max Failover Attempts | number | `5` | Maximum total failover attempts (after de-duplication) a user can configure. |
+| `MAX_PARALLEL_ATTEMPTS` | Max Parallel Attempts | number | `2` | Maximum concurrent failover attempts a user can configure. Caps load on upstream providers. |
 | `MAX_GROUPS` | Max Groups | number | `20` | Maximum number of stream groups in a user configuration. |
 | `MAX_MERGED_CATALOG_SOURCES` | Max Merged Catalog Sources | number | `10` | Maximum source catalogs in a single merged catalog. |
 | `MAX_BACKGROUND_PINGS` | Max Background Pings | number | `2` | Maximum streams pinged in a background preload/precache operation. |

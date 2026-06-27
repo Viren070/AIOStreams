@@ -73,22 +73,23 @@ export const userLimitsSchema = {
     requiresRestart: false,
     secret: false,
   },
-  maxNzbFailoverCount: {
+  maxFailoverAttempts: {
     schema: positiveInt,
     default: 5,
-    label: 'Max NZB failover count',
-    description: 'Maximum NZB failover attempts a user can configure.',
-    env: 'MAX_NZB_FAILOVER_COUNT',
+    label: 'Max failover attempts',
+    description:
+      'Maximum total failover attempts (after de-duplication) a user can configure.',
+    env: ['MAX_FAILOVER_ATTEMPTS', 'MAX_NZB_FAILOVER_COUNT'],
     requiresRestart: false,
     secret: false,
   },
-  maxSameReleaseFailoverCount: {
+  maxParallelAttempts: {
     schema: positiveInt,
-    default: 5,
-    label: 'Max same-release failover count',
+    default: 2,
+    label: 'Max parallel failover attempts',
     description:
-      'Maximum same-release variant failover attempts a user can configure per release.',
-    env: 'MAX_SAME_RELEASE_FAILOVER_COUNT',
+      'Maximum concurrent failover attempts a user can configure. Caps load on upstream providers.',
+    env: 'MAX_PARALLEL_ATTEMPTS',
     requiresRestart: false,
     secret: false,
   },

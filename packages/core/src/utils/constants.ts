@@ -155,7 +155,7 @@ export const DEFAULT_PRELOAD_SELECTOR = 'slice(streams, 0, 2)';
 
 /** Failover defaults shared by the schema, orchestrator and config UI. */
 export const DEFAULT_FAILOVER_CONTENT_TYPES = ['usenet'] as const;
-export const DEFAULT_FAILOVER_COUNT = 3;
+export const DEFAULT_FAILOVER_MAX_ATTEMPTS = 3;
 export const DEFAULT_FAILOVER_PARALLEL = 1; // 1 = sequential (current behaviour)
 export const DEFAULT_FAILOVER_STAGGER_MS = 1000;
 export const DEFAULT_FAILOVER_MAX_WAIT_MS = 30000;

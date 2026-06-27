@@ -106,10 +106,8 @@ router.get(
       const chain = decodedFbk
         ? await getPlayChain(decodedFbk, clickedType)
         : undefined;
-      const fallbackItems = chain?.items ?? [];
-      const clickedVariants = chain?.clickedVariants ?? [];
-      const hasFailover =
-        fallbackItems.length > 0 || clickedVariants.length > 0;
+      const fallbacks = chain?.fallbacks ?? [];
+      const hasFailover = fallbacks.length > 0;
 
       if (!hasFailover && !decodedFbk) {
         logger.debug(
@@ -176,6 +174,7 @@ router.get(
         `${name ?? 'unknown'} (${descriptor})`;
       const descriptorFor = (it: PlayChainItem, base: string): string =>
         it.kind === 'external' ? `${base}:external` : base;
+
       const attempts: FailoverAttempt[] = [
         {
           label: labelFor(filename, 'clicked'),
@@ -187,34 +186,17 @@ router.get(
               signal
             ).then((url) => maybeProxy(url, chain?.clickedProxied)),
         },
-        ...clickedVariants.map(
-          (v): FailoverAttempt => ({
-            label: labelFor(v.filename, descriptorFor(v, `${v.type}:variant`)),
-            rank: 0,
-            resolve: resolveTarget(v),
+        ...fallbacks.map(
+          (f): FailoverAttempt => ({
+            label: labelFor(
+              f.filename,
+              descriptorFor(f, f.isVariant ? `${f.type}:variant` : f.type)
+            ),
+            rank: f.rank,
+            resolve: resolveTarget(f),
           })
         ),
       ];
-
-      let rank = 1;
-      for (const item of fallbackItems) {
-        attempts.push({
-          label: labelFor(item.filename, descriptorFor(item, item.type)),
-          rank,
-          resolve: resolveTarget(item),
-        });
-        for (const v of item.variants ?? []) {
-          attempts.push({
-            label: labelFor(
-              v.filename,
-              descriptorFor(v, `${item.type}:variant`)
-            ),
-            rank,
-            resolve: resolveTarget(v),
-          });
-        }
-        rank++;
-      }
 
       const runCfg = {
         parallel: chain?.parallel ?? 1,

@@ -217,7 +217,7 @@ export async function processStreams(
   context: StreamContext,
   isMeta: boolean = false,
   failoverOpts?: {
-    count: number;
+    maxAttempts: number;
     position: 'beforeLimiting' | 'beforeSEL' | 'last';
     contentTypes: FailoverContentType[];
     allowCrossType: boolean;
@@ -313,7 +313,7 @@ export async function processStreams(
     await buildPlayChain(
       finalStreams,
       {
-        count: failoverOpts.count,
+        maxAttempts: failoverOpts.maxAttempts,
         contentTypes: failoverOpts.contentTypes,
         allowCrossType: failoverOpts.allowCrossType,
         parallel: failoverOpts.parallel,
@@ -348,7 +348,7 @@ export async function processStreams(
     await buildPlayChain(
       finalStreams,
       {
-        count: failoverOpts.count,
+        maxAttempts: failoverOpts.maxAttempts,
         contentTypes: failoverOpts.contentTypes,
         allowCrossType: failoverOpts.allowCrossType,
         parallel: failoverOpts.parallel,
@@ -381,7 +381,7 @@ export async function processStreams(
       await buildPlayChain(
         finalStreams,
         {
-          count: failoverOpts.count,
+          maxAttempts: failoverOpts.maxAttempts,
           contentTypes: failoverOpts.contentTypes,
           allowCrossType: failoverOpts.allowCrossType,
           parallel: failoverOpts.parallel,
@@ -700,16 +700,21 @@ export async function getStreams(
     false,
     ctx.userData.failover?.enabled && (!preCaching || ctx.userData.failover?.precacheFailover)
       ? {
-          count:
-            ctx.userData.failover.count ?? constants.DEFAULT_FAILOVER_COUNT,
+          maxAttempts: Math.min(
+            ctx.userData.failover.maxAttempts ??
+              constants.DEFAULT_FAILOVER_MAX_ATTEMPTS,
+            appConfig.userLimits.maxFailoverAttempts
+          ),
           position: ctx.userData.failover.position ?? 'last',
           contentTypes: (ctx.userData.failover.contentTypes ?? [
             ...constants.DEFAULT_FAILOVER_CONTENT_TYPES,
           ]) as FailoverContentType[],
           allowCrossType: ctx.userData.failover.allowCrossType ?? false,
-          parallel:
+          parallel: Math.min(
             ctx.userData.failover.parallel ??
-            constants.DEFAULT_FAILOVER_PARALLEL,
+              constants.DEFAULT_FAILOVER_PARALLEL,
+            appConfig.userLimits.maxParallelAttempts
+          ),
           staggerMs:
             ctx.userData.failover.staggerMs ??
             constants.DEFAULT_FAILOVER_STAGGER_MS,
@@ -723,11 +728,9 @@ export async function getStreams(
           includeExternalFailover:
             ctx.userData.failover.includeExternalFailover ??
             constants.DEFAULT_FAILOVER_INCLUDE_EXTERNAL,
-          sameReleaseLimit: Math.min(
+          sameReleaseLimit:
             ctx.userData.failover.sameReleaseLimit ??
-              constants.DEFAULT_FAILOVER_SAME_RELEASE_LIMIT,
-            appConfig.userLimits.maxSameReleaseFailoverCount
-          ),
+            constants.DEFAULT_FAILOVER_SAME_RELEASE_LIMIT,
           duplicateStaggerMs:
             ctx.userData.failover.duplicateStaggerMs ??
             constants.DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS,

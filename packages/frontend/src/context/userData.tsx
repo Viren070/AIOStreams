@@ -221,7 +221,7 @@ export function applyMigrations(config: any): UserData {
   if (config.failover === undefined && config.nzbFailover !== undefined) {
     config.failover = {
       enabled: config.nzbFailover.enabled,
-      count: config.nzbFailover.count,
+      maxAttempts: config.nzbFailover.count,
       position: config.nzbFailover.position,
       contentTypes: [...DEFAULT_FAILOVER_CONTENT_TYPES],
       allowCrossType: false,
@@ -229,6 +229,12 @@ export function applyMigrations(config: any): UserData {
     };
   }
   delete config.nzbFailover;
+
+  // migrate failover.count -> failover.maxAttempts (renamed)
+  if (config.failover && (config.failover as any).count !== undefined) {
+    config.failover.maxAttempts ??= (config.failover as any).count;
+    delete (config.failover as any).count;
+  }
 
   // migrate stream expressions from string[] to {expression, enabled}[]
   const streamExpressionKeys = [

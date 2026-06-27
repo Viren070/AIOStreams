@@ -13,8 +13,52 @@ import { arrayMerge } from '../parser/merge.js';
 
 type MergeOptions = NonNullable<NonNullable<UserData['deduplicator']>['merge']>;
 type FailoverVariant = NonNullable<ParsedStream['failoverVariants']>[number];
+type Tiebreaker = NonNullable<
+  NonNullable<UserData['deduplicator']>['tiebreakers']
+>[number];
+type TiebreakerCmp = (
+  a: ParsedStream,
+  b: ParsedStream,
+  type: string,
+  position: 'before_addon' | 'after_addon' | 'any'
+) => number;
 
 const logger = createLogger('deduplicator');
+
+/**
+ * Build the seeders/age tiebreaker comparator from the user's config. Shared by
+ * winner selection and same-release variant ordering so both honour the same
+ * `torrent_seeders` / `usenet_age` settings. `position: 'any'` applies an enabled
+ * tiebreaker regardless of its before/after-addon placement (used for variant
+ * ordering, which has no addon-order step).
+ */
+function makeTiebreakerCmp(tiebreakers: Tiebreaker[]): TiebreakerCmp {
+  const seedersEntry = tiebreakers.find((t) => t.type === 'torrent_seeders');
+  const usenetEntry = tiebreakers.find((t) => t.type === 'usenet_age');
+  return (a, b, type, position) => {
+    if (
+      seedersEntry &&
+      (position === 'any' || seedersEntry.position === position) &&
+      (type === 'p2p' || type === 'uncached') &&
+      a.torrent?.seeders !== undefined &&
+      b.torrent?.seeders !== undefined &&
+      (a.torrent.seeders || 0) !== (b.torrent.seeders || 0)
+    ) {
+      return (b.torrent.seeders || 0) - (a.torrent.seeders || 0);
+    }
+    if (
+      usenetEntry &&
+      (position === 'any' || usenetEntry.position === position) &&
+      (type === 'usenet' || type === 'stremio-usenet') &&
+      a.age !== undefined &&
+      b.age !== undefined &&
+      Math.abs(a.age - b.age) > 24
+    ) {
+      return a.age - b.age;
+    }
+    return 0;
+  };
+}
 
 class StreamDeduplicator {
   private userData: UserData;
@@ -59,6 +103,16 @@ class StreamDeduplicator {
         { type: 'torrent_seeders' as const, position: 'before_addon' as const },
         { type: 'usenet_age' as const, position: 'before_addon' as const },
       ],
+    };
+
+    // Shared by per-type winner selection and same-release variant ordering.
+    const tiebreakerCmp = makeTiebreakerCmp(deduplicator.tiebreakers ?? []);
+
+    const libraryCmp = (a: ParsedStream, b: ParsedStream): number => {
+      if (deduplicator.libraryBehaviour !== 'prefer') return 0;
+      if (a.library && !b.library) return -1;
+      if (!a.library && b.library) return 1;
+      return 0;
     };
 
     // Group streams by their deduplication keys
@@ -252,42 +306,6 @@ class StreamDeduplicator {
       }
 
       // Process each type according to its deduplication mode
-      const seedersEntry = deduplicator.tiebreakers!.find(
-        (t) => t.type === 'torrent_seeders'
-      );
-      const usenetEntry = deduplicator.tiebreakers!.find(
-        (t) => t.type === 'usenet_age'
-      );
-
-      const tiebreakerCmp = (
-        a: ParsedStream,
-        b: ParsedStream,
-        type: string,
-        position: 'before_addon' | 'after_addon' | 'any'
-      ): number => {
-        if (
-          seedersEntry &&
-          (position === 'any' || seedersEntry.position === position) &&
-          (type === 'p2p' || type === 'uncached') &&
-          a.torrent?.seeders !== undefined &&
-          b.torrent?.seeders !== undefined &&
-          (a.torrent.seeders || 0) !== (b.torrent.seeders || 0)
-        ) {
-          return (b.torrent.seeders || 0) - (a.torrent.seeders || 0);
-        }
-        if (
-          usenetEntry &&
-          (position === 'any' || usenetEntry.position === position) &&
-          (type === 'usenet' || type === 'stremio-usenet') &&
-          a.age !== undefined &&
-          b.age !== undefined &&
-          Math.abs(a.age - b.age) > 24
-        ) {
-          return a.age - b.age;
-        }
-        return 0;
-      };
-
       for (const [type, rawTypeStreams] of streamsByType.entries()) {
         if (type.startsWith('passthrough-')) {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
@@ -305,69 +323,12 @@ class StreamDeduplicator {
             ? rawTypeStreams.filter((s) => s.library)
             : rawTypeStreams;
 
-        const libraryCmp = (a: ParsedStream, b: ParsedStream): number => {
-          if (deduplicator.libraryBehaviour !== 'prefer') return 0;
-          if (a.library && !b.library) return -1;
-          if (!a.library && b.library) return 1;
-          return 0;
-        };
-
         switch (mode) {
           case 'single_result': {
             // Keep one result with highest priority service and addon
-            let selectedStream = typeStreams.sort((a, b) => {
-              const lc = libraryCmp(a, b);
-              if (lc !== 0) return lc;
-
-              let aProviderIndex =
-                this.userData.services
-                  ?.filter((service) => service.enabled)
-                  .findIndex((service) => service.id === a.service?.id) ?? 0;
-              let bProviderIndex =
-                this.userData.services
-                  ?.filter((service) => service.enabled)
-                  .findIndex((service) => service.id === b.service?.id) ?? 0;
-              aProviderIndex =
-                aProviderIndex === -1 ? Infinity : aProviderIndex;
-              bProviderIndex =
-                bProviderIndex === -1 ? Infinity : bProviderIndex;
-              if (aProviderIndex !== bProviderIndex) {
-                return aProviderIndex - bProviderIndex;
-              }
-
-              const tb = tiebreakerCmp(a, b, type, 'before_addon');
-              if (tb !== 0) return tb;
-
-              // the addon index MUST exist, its not possible for it to not exist
-              const aAddonIndex = this.userData.presets.findIndex(
-                (preset) => preset.instanceId === a.addon.preset.id
-              );
-              const bAddonIndex = this.userData.presets.findIndex(
-                (preset) => preset.instanceId === b.addon.preset.id
-              );
-              if (aAddonIndex !== bAddonIndex) {
-                return aAddonIndex - bAddonIndex;
-              }
-
-              const tb2 = tiebreakerCmp(a, b, type, 'after_addon');
-              if (tb2 !== 0) return tb2;
-
-              let aTypeIndex =
-                this.userData.preferredStreamTypes?.findIndex(
-                  (type) => type === a.type
-                ) ?? 0;
-              let bTypeIndex =
-                this.userData.preferredStreamTypes?.findIndex(
-                  (type) => type === b.type
-                ) ?? 0;
-              aTypeIndex = aTypeIndex === -1 ? Infinity : aTypeIndex;
-              bTypeIndex = bTypeIndex === -1 ? Infinity : bTypeIndex;
-              if (aTypeIndex !== bTypeIndex) {
-                return aTypeIndex - bTypeIndex;
-              }
-
-              return 0;
-            })[0];
+            let selectedStream = typeStreams.sort((a, b) =>
+              this.compareByPriority(a, b, type, tiebreakerCmp, libraryCmp)
+            )[0];
             groupWinners.push(selectedStream);
             break;
           }
@@ -389,44 +350,9 @@ class StreamDeduplicator {
                 {} as Record<string, ParsedStream[]>
               )
             ).map((serviceStreams) => {
-              return serviceStreams.sort((a, b) => {
-                const lc = libraryCmp(a, b);
-                if (lc !== 0) return lc;
-
-                const tb = tiebreakerCmp(a, b, type, 'before_addon');
-                if (tb !== 0) return tb;
-
-                let aAddonIndex = this.userData.presets.findIndex(
-                  (preset) => preset.instanceId === a.addon.preset.id
-                );
-                let bAddonIndex = this.userData.presets.findIndex(
-                  (preset) => preset.instanceId === b.addon.preset.id
-                );
-                aAddonIndex = aAddonIndex === -1 ? Infinity : aAddonIndex;
-                bAddonIndex = bAddonIndex === -1 ? Infinity : bAddonIndex;
-                if (aAddonIndex !== bAddonIndex) {
-                  return aAddonIndex - bAddonIndex;
-                }
-
-                const tb2 = tiebreakerCmp(a, b, type, 'after_addon');
-                if (tb2 !== 0) return tb2;
-
-                let aTypeIndex =
-                  this.userData.preferredStreamTypes?.findIndex(
-                    (type) => type === a.type
-                  ) ?? 0;
-                let bTypeIndex =
-                  this.userData.preferredStreamTypes?.findIndex(
-                    (type) => type === b.type
-                  ) ?? 0;
-                aTypeIndex = aTypeIndex === -1 ? Infinity : aTypeIndex;
-                bTypeIndex = bTypeIndex === -1 ? Infinity : bTypeIndex;
-                if (aTypeIndex !== bTypeIndex) {
-                  return aTypeIndex - bTypeIndex;
-                }
-
-                return 0;
-              })[0];
+              return serviceStreams.sort((a, b) =>
+                this.compareByPriority(a, b, type, tiebreakerCmp, libraryCmp)
+              )[0];
             });
             for (const stream of perServiceStreams) {
               groupWinners.push(stream);
@@ -450,24 +376,9 @@ class StreamDeduplicator {
                 {} as Record<string, ParsedStream[]>
               )
             ).map((addonStreams) => {
-              return addonStreams.sort((a, b) => {
-                const lc = libraryCmp(a, b);
-                if (lc !== 0) return lc;
-                let aServiceIndex =
-                  this.userData.services
-                    ?.filter((service) => service.enabled)
-                    .findIndex((service) => service.id === a.service?.id) ?? 0;
-                let bServiceIndex =
-                  this.userData.services
-                    ?.filter((service) => service.enabled)
-                    .findIndex((service) => service.id === b.service?.id) ?? 0;
-                aServiceIndex = aServiceIndex === -1 ? Infinity : aServiceIndex;
-                bServiceIndex = bServiceIndex === -1 ? Infinity : bServiceIndex;
-                if (aServiceIndex !== bServiceIndex) {
-                  return aServiceIndex - bServiceIndex;
-                }
-                return tiebreakerCmp(a, b, type, 'any');
-              })[0];
+              return addonStreams.sort((a, b) =>
+                this.compareByPriority(a, b, type, tiebreakerCmp, libraryCmp)
+              )[0];
             });
             for (const stream of perAddonStreams) {
               groupWinners.push(stream);
@@ -486,7 +397,9 @@ class StreamDeduplicator {
             group,
             merge,
             failoverTypes,
-            includeExternal
+            includeExternal,
+            tiebreakerCmp,
+            libraryCmp
           );
         }
       }
@@ -511,6 +424,65 @@ class StreamDeduplicator {
   }
 
   /**
+   * Canonical stream-priority comparator shared by every winner-selection mode
+   * and same-release variant ordering, so all of them honour the same rules.
+   */
+  private compareByPriority(
+    a: ParsedStream,
+    b: ParsedStream,
+    type: string,
+    tiebreakerCmp: TiebreakerCmp,
+    libraryCmp: (a: ParsedStream, b: ParsedStream) => number
+  ): number {
+    const lc = libraryCmp(a, b);
+    if (lc !== 0) return lc;
+
+    let aServiceIndex =
+      this.userData.services
+        ?.filter((service) => service.enabled)
+        .findIndex((service) => service.id === a.service?.id) ?? 0;
+    let bServiceIndex =
+      this.userData.services
+        ?.filter((service) => service.enabled)
+        .findIndex((service) => service.id === b.service?.id) ?? 0;
+    aServiceIndex = aServiceIndex === -1 ? Infinity : aServiceIndex;
+    bServiceIndex = bServiceIndex === -1 ? Infinity : bServiceIndex;
+    if (aServiceIndex !== bServiceIndex) {
+      return aServiceIndex - bServiceIndex;
+    }
+
+    const tb = tiebreakerCmp(a, b, type, 'before_addon');
+    if (tb !== 0) return tb;
+
+    let aAddonIndex = this.userData.presets.findIndex(
+      (preset) => preset.instanceId === a.addon.preset.id
+    );
+    let bAddonIndex = this.userData.presets.findIndex(
+      (preset) => preset.instanceId === b.addon.preset.id
+    );
+    aAddonIndex = aAddonIndex === -1 ? Infinity : aAddonIndex;
+    bAddonIndex = bAddonIndex === -1 ? Infinity : bAddonIndex;
+    if (aAddonIndex !== bAddonIndex) {
+      return aAddonIndex - bAddonIndex;
+    }
+
+    const tb2 = tiebreakerCmp(a, b, type, 'after_addon');
+    if (tb2 !== 0) return tb2;
+
+    let aTypeIndex =
+      this.userData.preferredStreamTypes?.findIndex((t) => t === a.type) ?? 0;
+    let bTypeIndex =
+      this.userData.preferredStreamTypes?.findIndex((t) => t === b.type) ?? 0;
+    aTypeIndex = aTypeIndex === -1 ? Infinity : aTypeIndex;
+    bTypeIndex = bTypeIndex === -1 ? Infinity : bTypeIndex;
+    if (aTypeIndex !== bTypeIndex) {
+      return aTypeIndex - bTypeIndex;
+    }
+
+    return 0;
+  }
+
+  /**
    * Fold info from a duplicate group's discarded streams into the surviving
    * winner: same-release failover variants and selected metadata fields. Mutates
    * the winner in place (consistent with the rest of the pipeline).
@@ -520,7 +492,9 @@ class StreamDeduplicator {
     group: ParsedStream[],
     merge: MergeOptions,
     failoverTypes: ('usenet' | 'debrid')[],
-    includeExternal: boolean
+    includeExternal: boolean,
+    tiebreakerCmp: TiebreakerCmp,
+    libraryCmp: (a: ParsedStream, b: ParsedStream) => number
   ): void {
     const others = group.filter((s) => s.id !== winner.id);
     if (others.length === 0) return;
@@ -531,8 +505,18 @@ class StreamDeduplicator {
       const winnerIdentity = winner.nzbUrl ?? winner.torrent?.infoHash;
       if (winnerIdentity) seen.add(winnerIdentity);
 
+      const ordered = [...others].sort((a, b) =>
+        this.compareByPriority(
+          a,
+          b,
+          a.type === 'usenet' && b.type === 'usenet' ? 'usenet' : 'uncached',
+          tiebreakerCmp,
+          libraryCmp
+        )
+      );
+
       const variants: FailoverVariant[] = [];
-      for (const other of others) {
+      for (const other of ordered) {
         let entry: FailoverVariant | undefined;
         if (
           other.url?.includes(PLAYBACK_PATH_PREFIX) &&

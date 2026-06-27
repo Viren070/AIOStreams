@@ -804,8 +804,8 @@ export const UserDataSchema = z.object({
       contentTypes: z.array(z.enum(['usenet', 'debrid'])).optional(),
       /** Allow a click on one kind to fail over into a different kind. Default false. */
       allowCrossType: z.boolean().optional(),
-      /** Chain depth (number of fallback targets after the clicked item). */
-      count: z.number().min(1).optional(),
+      /** Max total failover attempts (after de-duplication) tried after the clicked item. */
+      maxAttempts: z.number().min(1).optional(),
       /** Attempts in flight at once. 1 (default) = sequential = current behaviour. */
       parallel: z.number().min(1).optional(),
       /** Delay before starting the next parallel attempt (ms). */
@@ -1438,8 +1438,8 @@ const StatusResponseSchema = z.object({
       maxStreamExpressions: z.number(),
       maxStreamExpressionsTotalCharacters: z.number(),
       maxAddons: z.number(),
-      maxNzbFailoverCount: z.number(),
-      maxSameReleaseFailoverCount: z.number(),
+      maxFailoverAttempts: z.number(),
+      maxParallelAttempts: z.number(),
       maxBackgroundPings: z.number(),
     }),
   }),

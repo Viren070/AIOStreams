@@ -138,6 +138,7 @@ export function BuiltinSettings() {
         id="failover"
         description="When a stream fails to play, AIOStreams automatically tries the next best result from your sorted list. Works with built-in Usenet and debrid results (those AIOStreams resolves itself)."
       >
+        {/* --- Enable --- */}
         <Switch
           label="Enable"
           side="right"
@@ -149,6 +150,7 @@ export function BuiltinSettings() {
             }));
           }}
         />
+        {/* --- What can be a failover target (scope) --- */}
         <Combobox
           label="Failover Content Types"
           help="Which kinds of result may be used as failover targets."
@@ -184,53 +186,91 @@ export function BuiltinSettings() {
           }}
         />
         <Switch
-          label="During Pre-cache"
+          label="Include External Addon Targets"
           side="right"
           disabled={!userData.failover?.enabled}
-          help="Also apply failover when pre-caching the next episode's streams in the background. When off, pre-cache requests skip failover entirely."
-          value={userData.failover?.precacheFailover ?? false}
+          help="Also use non-owned debrid links from external addons (on the addon's own host) as failover targets. These are resolved by probing: a redirect to the addon's own host is treated as a dead link, a redirect to a CDN as success. A direct click on an external stream still won't fail over."
+          value={userData.failover?.includeExternalFailover ?? false}
           onValueChange={(value) => {
             setUserData((prev) => ({
               ...prev,
-              failover: { ...prev.failover, precacheFailover: value },
+              failover: { ...prev.failover, includeExternalFailover: value },
             }));
           }}
         />
+        {/* --- How many to try (budget) --- */}
         <NumberInput
-          label="Fallback Count"
+          label="Max Failover Attempts"
           help={
             <>
-              How many fallback results to try before giving up. Maximum is set
-              by <code>MAX_NZB_FAILOVER_COUNT</code> (currently{' '}
-              {status?.settings?.limits?.maxNzbFailoverCount ?? 5}).
+              How many unique fallback results to try before giving up. Maximum
+              is set by <code>MAX_FAILOVER_ATTEMPTS</code> (currently{' '}
+              {status?.settings?.limits?.maxFailoverAttempts ?? 5}).
             </>
           }
           min={1}
-          max={status?.settings?.limits?.maxNzbFailoverCount ?? 5}
+          max={status?.settings?.limits?.maxFailoverAttempts ?? 5}
           defaultValue={3}
           disabled={!userData.failover?.enabled}
-          value={userData.failover?.count ?? 3}
+          value={userData.failover?.maxAttempts ?? 3}
           onValueChange={(value) => {
-            const maxCount = status?.settings?.limits?.maxNzbFailoverCount ?? 5;
+            const maxCount = status?.settings?.limits?.maxFailoverAttempts ?? 5;
             setUserData((prev) => ({
               ...prev,
               failover: {
                 ...prev.failover,
-                count: Math.min(maxCount, Math.max(1, Number(value || 3))),
+                maxAttempts: Math.min(
+                  maxCount,
+                  Math.max(1, Number(value || 3))
+                ),
               },
             }));
           }}
         />
         <NumberInput
+          label="Same-Release Failover Attempts"
+          help="How many alternative sources of the SAME release (harvested by deduplicator merging) to try per release before moving to a different release. 0 disables same-release failover. Bounded by the overall Max Failover Attempts."
+          min={0}
+          max={status?.settings?.limits?.maxFailoverAttempts ?? 5}
+          defaultValue={2}
+          disabled={!userData.failover?.enabled}
+          value={userData.failover?.sameReleaseLimit ?? 2}
+          onValueChange={(value) => {
+            const maxCount = status?.settings?.limits?.maxFailoverAttempts ?? 5;
+            setUserData((prev) => ({
+              ...prev,
+              failover: {
+                ...prev.failover,
+                sameReleaseLimit: Math.min(
+                  maxCount,
+                  Math.max(0, Number(value ?? 2))
+                ),
+              },
+            }));
+          }}
+        />
+        {/* --- How to run them (concurrency + timing) --- */}
+        <NumberInput
           label="Parallel Attempts"
-          help="How many attempts to run at once. 1 keeps the classic sequential behaviour (try one, then the next). Higher values race several attempts and take the first that proves healthy; the losing attempts are cancelled and cleaned up (usenet probes are aborted; debrid downloads added by a loser are removed, except private torrents)."
+          help={
+            <>
+              How many attempts to run at once. 1 keeps the classic sequential
+              behaviour (try one, then the next). Higher values race several
+              attempts and take the first that proves healthy; the losing
+              attempts are cancelled and cleaned up (usenet probes are aborted;
+              debrid downloads added by a loser are removed, except private
+              torrents). Maximum is set by <code>MAX_PARALLEL_ATTEMPTS</code>{' '}
+              (currently {status?.settings?.limits?.maxParallelAttempts ?? 2}).
+            </>
+          }
           min={1}
-          max={Math.max(1, userData.failover?.count ?? 3)}
+          max={status?.settings?.limits?.maxParallelAttempts ?? 2}
           defaultValue={1}
           disabled={!userData.failover?.enabled}
           value={userData.failover?.parallel ?? 1}
           onValueChange={(value) => {
-            const maxParallel = Math.max(1, userData.failover?.count ?? 3);
+            const maxParallel =
+              status?.settings?.limits?.maxParallelAttempts ?? 2;
             setUserData((prev) => ({
               ...prev,
               failover: {
@@ -296,6 +336,20 @@ export function BuiltinSettings() {
             />
           </>
         )}
+        {/* --- Advanced --- */}
+        <Switch
+          label="During Pre-cache"
+          side="right"
+          disabled={!userData.failover?.enabled}
+          help="Also apply failover when pre-caching the next episode's streams in the background. When off, pre-cache requests skip failover entirely."
+          value={userData.failover?.precacheFailover ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              failover: { ...prev.failover, precacheFailover: value },
+            }));
+          }}
+        />
         <Select
           label="Failover Position"
           disabled={!userData.failover?.enabled}
@@ -313,50 +367,6 @@ export function BuiltinSettings() {
                 ...prev.failover,
                 position: value as 'beforeLimiting' | 'beforeSEL' | 'last',
               },
-            }));
-          }}
-        />
-        <NumberInput
-          label="Same-Release Failover Attempts"
-          help={
-            <>
-              How many alternative sources of the SAME release (harvested by
-              deduplicator merging) to try per release before moving to a
-              different release. 0 disables same-release failover. Maximum is set
-              by <code>MAX_SAME_RELEASE_FAILOVER_COUNT</code> (currently{' '}
-              {status?.settings?.limits?.maxSameReleaseFailoverCount ?? 5}).
-            </>
-          }
-          min={0}
-          max={status?.settings?.limits?.maxSameReleaseFailoverCount ?? 5}
-          defaultValue={2}
-          disabled={!userData.failover?.enabled}
-          value={userData.failover?.sameReleaseLimit ?? 2}
-          onValueChange={(value) => {
-            const maxCount =
-              status?.settings?.limits?.maxSameReleaseFailoverCount ?? 5;
-            setUserData((prev) => ({
-              ...prev,
-              failover: {
-                ...prev.failover,
-                sameReleaseLimit: Math.min(
-                  maxCount,
-                  Math.max(0, Number(value ?? 2))
-                ),
-              },
-            }));
-          }}
-        />
-        <Switch
-          label="Include External Addon Targets"
-          side="right"
-          disabled={!userData.failover?.enabled}
-          help="Also use non-owned debrid links from external addons (on the addon's own host) as failover targets. These are resolved by probing: a redirect to the addon's own host is treated as a dead link, a redirect to a CDN as success. A direct click on an external stream still won't fail over."
-          value={userData.failover?.includeExternalFailover ?? false}
-          onValueChange={(value) => {
-            setUserData((prev) => ({
-              ...prev,
-              failover: { ...prev.failover, includeExternalFailover: value },
             }));
           }}
         />
