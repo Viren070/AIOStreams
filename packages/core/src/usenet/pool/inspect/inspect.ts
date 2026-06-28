@@ -139,7 +139,14 @@ export async function inspectNzb(
               },
             };
           }
-          const r = await inspectFile(file, index, pool, nzb.hash, fileOpts);
+          const r = await inspectFile(
+            file,
+            index,
+            pool,
+            nzb.hash,
+            fileOpts,
+            lazySizes.get(index)
+          );
           probed++;
           lastProgressAt = Date.now();
           if (r.file.filename) liveNames[index] = r.file.filename;
