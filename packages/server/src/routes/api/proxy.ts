@@ -10,6 +10,7 @@ import {
   fromUrlSafeBase64,
   getProxyAgent,
   getTimeTakenSincePoint,
+  makeUrlLogSafe,
   shouldProxy,
   validateCredentials,
   hasPermission,
@@ -412,18 +413,27 @@ router.all(
           urlObj.password = '';
         }
         currentUrl = urlObj.toString();
-        logger.debug(`[${requestId}] Making upstream request`, {
-          username: auth.username,
-          method: method,
-          tunneled: useProxy
-            ? `true${proxyIndex > 1 ? ` (${proxyIndex + 1})` : ''}`
-            : 'false',
-          range: headers['range'],
-          url: currentUrl,
-        });
-        logger.silly(`[${requestId}] Headers for upstream request`, {
-          headers: JSON.stringify(headers),
-        });
+        logger.debug(
+          {
+            requestId,
+            username: auth.username,
+            url: makeUrlLogSafe(currentUrl),
+            method,
+            tunneled: proxyAgent
+              ? `true (proxy index ${proxyIndex})`
+              : 'false',
+            ...(appConfig.logging.logSensitiveInfo
+              ? {
+                  headers,
+                  dispatcher: useProxy
+                    ? appConfig.http.addonProxy[proxyIndex]
+                    : undefined,
+                }
+              : {}),
+          },
+          'Making upstream request'
+        );
+
         upstreamResponse = await request(currentUrl, {
           method: method,
           headers: headers,
