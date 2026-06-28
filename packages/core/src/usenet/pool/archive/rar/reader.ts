@@ -491,25 +491,29 @@ export class RarReader {
   }
 
   /**
-   * Stored-encrypted entries decrypt as ONE continuous CBC stream over their
-   * concatenated fragments (both versions), and the cipher mapping is global:
-   * fragment-boundary alignment is not required to decrypt. RAR5 splits
-   * encrypted files on cipher-block boundaries, so a misaligned RAR5 fragment
-   * signals a broken fragment map (missed volume, bad link); drop the crypt
-   * info so the entry falls back to a plain `archive_encrypted` verdict rather
-   * than streaming garbage. RAR4 splits at arbitrary byte offsets (cipher
-   * blocks straddle volumes), so no such tripwire exists for v4.
+   * A stored encrypted RAR5 file decrypts as one continuous AES-CBC stream over
+   * its concatenated fragments, so per-fragment boundaries need not be 16-byte
+   * aligned. The concatenated total must form a valid CBC ciphertext: a
+   * multiple of 16, equal to the plaintext size rounded up to the next 16-byte
+   * boundary. A total that breaks this invariant means the fragment map is
+   * wrong, so drop the crypt info and let the entry report `archive_encrypted`
+   * rather than stream garbage.
    */
   private validateEncrypted(): void {
     for (const e of this.entries) {
       if (e.crypt?.v !== 5) continue;
-      const misaligned = e.fragments
-        .slice(0, -1)
-        .some((f) => f.length % 16 !== 0);
-      if (misaligned) {
+      const total = e.fragments.reduce((a, f) => a + f.length, 0);
+      const validCbc =
+        total % 16 === 0 && total >= e.size && total - e.size < 16;
+      if (!validCbc) {
         logger.debug(
-          { name: e.name, fragments: e.fragments.length },
-          'encrypted entry has non-16-aligned fragment; cannot stream-decrypt'
+          {
+            name: e.name,
+            total,
+            size: e.size,
+            fragments: e.fragments.length,
+          },
+          'encrypted entry fragment sum is not a valid CBC ciphertext; cannot stream-decrypt'
         );
         e.crypt = undefined;
       }
