@@ -154,15 +154,22 @@ export async function makeRequest(url: string, options: RequestOptions) {
     dispatcher = getProxyAgent(appConfig.http.addonProxy[proxyIndex]);
   }
 
-  logger.trace(
+  logger.debug(
     {
       url: makeUrlLogSafe(urlObj.toString()),
       method: options.method ?? 'GET',
-      proxy: useProxy
-        ? `proxy-${proxyIndex + 1}`
-        : options.forceProxy
-          ? 'forced'
-          : 'direct',
+      tunneled: !!dispatcher
+        ? 'true' +
+          (options.forceProxy ? ' (forced)' : ` (proxy index ${proxyIndex})`)
+        : 'false',
+      ...(appConfig.logging.logSensitiveInfo
+        ? {
+            headers: Object.fromEntries(headers.entries()),
+            dispatcher:
+              options.forceProxy ??
+              (useProxy ? appConfig.http.addonProxy[proxyIndex] : undefined),
+          }
+        : {}),
     },
     'http request'
   );
