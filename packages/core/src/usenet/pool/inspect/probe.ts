@@ -58,7 +58,8 @@ export async function inspectFile(
   index: number,
   pool: MultiProviderPool,
   nzbHash: string,
-  opts: InspectOptions
+  opts: InspectOptions,
+  knownSize?: number
 ): Promise<InspectResult> {
   if (file.segments.length === 0) {
     return {
@@ -101,54 +102,67 @@ export async function inspectFile(
       );
     }
 
-    const firstPartLen =
-      first.byteRange !== undefined
-        ? first.byteRange[1] - first.byteRange[0]
-        : undefined;
-    const trustYencSize =
-      first.fileSize !== undefined &&
-      !isImplausibleYencFileSize(first.fileSize, file.segments.length, {
-        encodedSize: file.encodedSize,
-        firstPartLen,
-      });
+    const filename = pickProbeName(file.filename, first.name);
+    const type = detectFileType(first.head, filename);
 
-    let size =
-      (trustYencSize ? first.fileSize : undefined) ??
-      first.byteRange?.[1] ??
-      first.size ??
-      file.encodedSize;
-    // Exact when the (trusted) yEnc header carries the total size, or the single
-    // segment's part range IS the whole file. Anything else is an estimate.
-    let sizeExact =
-      trustYencSize ||
-      (file.segments.length === 1 && first.byteRange !== undefined);
+    let size: number;
+    let sizeExact: boolean;
+    if (knownSize && knownSize > 0) {
+      // PAR2 already pinned this file's exact length; trust it over any yEnc header
+      // and skip the size-refinement fetch entirely.
+      size = knownSize;
+      sizeExact = true;
+    } else {
+      const firstPartLen =
+        first.byteRange !== undefined
+          ? first.byteRange[1] - first.byteRange[0]
+          : undefined;
+      const trustYencSize =
+        first.fileSize !== undefined &&
+        !isImplausibleYencFileSize(first.fileSize, file.segments.length, {
+          encodedSize: file.encodedSize,
+          firstPartLen,
+        });
 
-    // Fetch the last segment's header for the exact size when the first
-    // segment's `=ybegin size=` is missing or untrustworthy for a multipart
-    // file. In `quick` mode this only fires for those bogus/missing-size posts;
-    // honest posts keep the zero-extra-fetch fast path.
-    if (file.segments.length > 1 && (opts.mode === 'full' || !trustYencSize)) {
-      try {
-        // Header-only: the exact part range arrives in the leading lines.
-        const last = await pool.fetchSegmentHead(
-          file.segments[file.segments.length - 1],
-          file.groups,
-          nzbHash,
-          opts.signal,
-          CommandPriority.Low,
-          0
-        );
-        if (last.byteRange) {
-          size = last.byteRange[1];
-          sizeExact = true;
+      size =
+        (trustYencSize ? first.fileSize : undefined) ??
+        first.byteRange?.[1] ??
+        first.size ??
+        file.encodedSize;
+      // Exact when the (trusted) yEnc header carries the total size, or the
+      // single segment's part range IS the whole file. Anything else is an
+      // estimate.
+      sizeExact =
+        trustYencSize ||
+        (file.segments.length === 1 && first.byteRange !== undefined);
+
+      // Fetch the last segment's header for the exact part-grid size when the
+      // first segment's `=ybegin size=` is missing/untrustworthy, OR for an
+      // archive volume: its decoded size sets the VolumeSet offsets
+      if (
+        file.segments.length > 1 &&
+        (opts.mode === 'full' || !trustYencSize || type.category === 'archive')
+      ) {
+        try {
+          // Header-only: the exact part range arrives in the leading lines.
+          const last = await pool.fetchSegmentHead(
+            file.segments[file.segments.length - 1],
+            file.groups,
+            nzbHash,
+            opts.signal,
+            CommandPriority.Low,
+            0
+          );
+          if (last.byteRange) {
+            size = last.byteRange[1];
+            sizeExact = true;
+          }
+        } catch {
+          /* non-fatal: keep first-segment size estimate */
         }
-      } catch {
-        /* non-fatal: keep first-segment size estimate */
       }
     }
 
-    const filename = pickProbeName(file.filename, first.name);
-    const type = detectFileType(first.head, filename);
     return {
       file: {
         index,
@@ -194,9 +208,7 @@ export async function inspectFile(
           index,
           filename: file.filename,
           firstSegment: file.segments[0]?.messageId,
-          errName: (err as Error)?.name,
-          errKind: (err as { kind?: string })?.kind,
-          err: (err as Error)?.message,
+          err,
         },
         `file inspection failed (${decodeFailed ? 'decode_failed' : 'open_failed'})`
       );
