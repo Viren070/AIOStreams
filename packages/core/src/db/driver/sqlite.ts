@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { copyFileSync, existsSync, renameSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import type {
   DbDriver,
   ExecResult,
@@ -60,9 +60,10 @@ class Mutex {
   }
 }
 
-/** Path for the rolling backup alongside the primary db file. */
 function backupPath(filename: string): string {
-  return join(dirname(filename), 'db.backup.sqlite');
+  const ext = extname(filename);
+  const base = basename(filename, ext);
+  return join(dirname(filename), `${base}.backup${ext}`);
 }
 
 /**
@@ -71,21 +72,25 @@ function backupPath(filename: string): string {
  */
 function openDatabase(filename: string): Database.Database {
   const db = new Database(filename);
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-  db.pragma('busy_timeout = 5000');
-  db.pragma('foreign_keys = ON');
+  try {
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+    db.pragma('busy_timeout = 5000');
+    db.pragma('foreign_keys = ON');
 
-  // integrity_check returns rows like { integrity_check: 'ok' } when healthy.
-  const rows = db.pragma('integrity_check') as { integrity_check: string }[];
-  const ok = rows.length === 1 && rows[0].integrity_check === 'ok';
-  if (!ok) {
+    // integrity_check returns rows like { integrity_check: 'ok' } when healthy.
+    const rows = db.pragma('integrity_check') as { integrity_check: string }[];
+    const ok = rows.length === 1 && rows[0].integrity_check === 'ok';
+    if (!ok) {
+      throw new Error(
+        `SQLite integrity check failed: ${rows.map((r) => r.integrity_check).join(', ')}`
+      );
+    }
+    return db;
+  } catch (err) {
     db.close();
-    throw new Error(
-      `SQLite integrity check failed: ${rows.map((r) => r.integrity_check).join(', ')}`
-    );
+    throw err;
   }
-  return db;
 }
 
 export class SqliteDriver implements DbDriver {
@@ -106,19 +111,28 @@ export class SqliteDriver implements DbDriver {
           `[sqlite] Primary database failed to open (${(primaryErr as Error).message}). ` +
             `Attempting recovery from backup: ${backup}`
         );
+        const restoreTmp = `${filename}.restore_tmp_${Date.now()}`;
         try {
-          renameSync(filename, filename + '.corrupt_' + Date.now());
-        } catch {
-          // best-effort; may fail if filename doesn't exist yet
-        }
-        copyFileSync(backup, filename);
-        try {
+          copyFileSync(backup, restoreTmp);
+          const testDb = openDatabase(restoreTmp);
+          testDb.close();
+          try {
+            renameSync(filename, `${filename}.corrupt_${Date.now()}`);
+          } catch {
+            // best-effort; primary may not exist
+          }
+          renameSync(restoreTmp, filename);
           db = openDatabase(filename);
           console.warn(
             '[sqlite] Database recovered from backup. ' +
               'Data may be up to 5 minutes old. Original corrupt file preserved.'
           );
         } catch (backupErr) {
+          try {
+            renameSync(restoreTmp, `${restoreTmp}.failed`);
+          } catch {
+            // ignore cleanup errors
+          }
           throw new Error(
             `[sqlite] Both primary and backup databases are unreadable. ` +
               `Primary error: ${(primaryErr as Error).message}. ` +
