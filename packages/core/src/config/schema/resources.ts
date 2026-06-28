@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cacheTtlMap, positiveInt, seconds } from './helpers.js';
+import { cacheTtlMap, nonNegativeInt, positiveInt, seconds } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 const optionalPositiveInt = z.union([z.number().int().positive(), z.null()]);
@@ -330,6 +330,30 @@ export const resourcesSchema = {
         label: 'Addon catalog cache max size',
         description: 'Maximum number of cached addon-catalog responses.',
         env: 'ADDON_CATALOG_CACHE_MAX_SIZE',
+        requiresRestart: true,
+        secret: false,
+      },
+    },
+    streamResult: {
+      ttl: {
+        schema: nonNegativeInt,
+        default: 0,
+        label: 'Stream result cache TTL (s)',
+        description:
+          'TTL for the fully-processed stream result cache (seconds). Caches the final Stremio response including formatting, proxying, and all pipeline stages. Set to 0 to disable.',
+        env: 'STREAM_RESULT_CACHE_TTL',
+        requiresRestart: false,
+        secret: false,
+        ui: {
+          min: 0,
+        },
+      },
+      maxSize: {
+        schema: positiveInt,
+        default: 1000,
+        label: 'Stream result cache max size',
+        description: 'Maximum number of cached stream result entries.',
+        env: 'STREAM_RESULT_CACHE_MAX_SIZE',
         requiresRestart: true,
         secret: false,
       },
