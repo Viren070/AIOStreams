@@ -427,7 +427,8 @@ router.all(
             }
           }
         }
-        const { useProxy, proxyIndex } = shouldProxy(urlObj);
+        const grabContext = data.type === 'nzb' ? 'nzb_grabs' : undefined;
+        const { useProxy, proxyIndex } = shouldProxy(urlObj, grabContext);
         const proxyAgent = useProxy
           ? getProxyAgent(appConfig.http.addonProxy[proxyIndex])
           : undefined;
@@ -436,7 +437,7 @@ router.all(
             ([key, value]) => [key.toLowerCase(), value]
           )
         );
-        const overrideHeaders = resolveOverrideHeaders(urlObj);
+        const overrideHeaders = resolveOverrideHeaders(urlObj, grabContext);
         for (const [name, value] of Object.entries(overrideHeaders)) {
           headers[name.toLowerCase()] = value;
         }
