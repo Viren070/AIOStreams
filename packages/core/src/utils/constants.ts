@@ -142,8 +142,6 @@ export const INTERNAL_SECRET_HEADER = Buffer.from(
   'base64'
 ).toString('utf8');
 
-export const PUBLIC_NZB_PROXY_USERNAME = 'public_nzb_proxy_user';
-
 const API_VERSION = 1;
 
 export const REDIS_PREFIX = 'aiostreams:';

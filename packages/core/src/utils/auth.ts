@@ -1,6 +1,6 @@
 ﻿import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { createLogger } from '../logging/logger.js';
-import { APIError, ErrorCode, PUBLIC_NZB_PROXY_USERNAME } from './constants.js';
+import { APIError, ErrorCode } from './constants.js';
 import { toUrlSafeBase64, fromUrlSafeBase64 } from './general.js';
 import { config as appConfig, settingsStore } from '../config/index.js';
 
@@ -107,10 +107,6 @@ export function validateCredentialString(
  *   and sabnzbd are always granted. With no legacy vars set this means every user is an admin.
  */
 export function getEffectivePermissions(username: string): Set<Permission> {
-  if (username === PUBLIC_NZB_PROXY_USERNAME) {
-    return new Set<Permission>();
-  }
-
   const configured = appConfig.bootstrap.authPermissions?.get(username);
   if (configured) {
     if (configured.has(Permission.Admin)) {

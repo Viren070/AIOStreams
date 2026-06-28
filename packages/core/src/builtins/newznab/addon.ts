@@ -94,7 +94,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       return undefined;
     }
 
-    const endpoint = appConfig.nzbProxy.zyclopsHealthProxyEndpoint;
+    const endpoint = appConfig.builtins.nab.zyclopsHealthProxyEndpoint;
     const path = '/api';
     const extraParams: Record<string, string | number | boolean> = {};
 
@@ -212,12 +212,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       nzbs.push(nzb);
     }
 
-    if (this.userData.proxyAuth || appConfig.nzbProxy.publicEnabled) {
-      const auth = this.userData.proxyAuth
-        ? this.userData.proxyAuth
-        : `${constants.PUBLIC_NZB_PROXY_USERNAME}:${appConfig.bootstrap.auth?.get(
-            constants.PUBLIC_NZB_PROXY_USERNAME
-          )}`;
+    if (this.userData.proxyAuth) {
+      const auth = this.userData.proxyAuth;
       try {
         BuiltinProxy.validateAuth(auth);
       } catch (error) {

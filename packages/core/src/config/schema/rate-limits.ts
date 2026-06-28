@@ -130,12 +130,6 @@ export const rateLimitsSchema = {
     envPrefix: 'STREMIO_META',
     label: 'Stremio meta',
   }),
-  easynewsNzb: rateLimit({
-    windowDefault: 60,
-    maxDefault: 15,
-    envPrefix: 'EASYNEWS_NZB',
-    label: 'Easynews NZB',
-  }),
   login: rateLimit({
     windowDefault: 300,
     maxDefault: 5,

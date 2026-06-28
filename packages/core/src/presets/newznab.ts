@@ -105,7 +105,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       {
         id: 'proxyAuth',
         name: 'AIOStreams Proxy Auth',
-        description: `${appConfig.nzbProxy.publicEnabled ? 'This instance will proxy NZBs by default, however you can optionally p' : 'P'}rovide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB.`,
+        description: `Provide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB.`,
         type: 'password',
         required: false,
       },

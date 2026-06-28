@@ -142,11 +142,6 @@ const staticRateLimiter = lazyLimiter(
   'static'
 );
 
-const easynewsNzbRateLimiter = lazyLimiter(
-  () => appConfig.rateLimits.easynewsNzb,
-  'easynews-nzb'
-);
-
 export {
   userApiRateLimiter,
   streamApiRateLimiter,
@@ -159,6 +154,5 @@ export {
   stremioSubtitleRateLimiter,
   stremioMetaRateLimiter,
   staticRateLimiter,
-  easynewsNzbRateLimiter,
   loginRateLimiter,
 };

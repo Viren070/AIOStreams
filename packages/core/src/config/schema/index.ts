@@ -8,7 +8,6 @@ export { templatesSchema } from './templates.js';
 export { httpSchema } from './http.js';
 export { resourcesSchema } from './resources.js';
 export { proxySchema } from './proxy.js';
-export { nzbProxySchema } from './nzb-proxy.js';
 export { servicesSchema } from './services.js';
 export { metadataSchema } from './metadata.js';
 export { posterSchema } from './poster.js';

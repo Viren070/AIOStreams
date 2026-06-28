@@ -11,7 +11,6 @@ import {
   createLogger,
   formatZodError,
   makeRequest,
-  NzbProxyManager,
   DistributedLock,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
@@ -161,7 +160,6 @@ const MIN_DURATION_SECONDS = 60;
 export class EasynewsApi {
   private readonly auth: string;
   private readonly encodedAuth: string;
-  private readonly userKey: string;
   private readonly searchCache = Cache.getInstance<
     string,
     EasynewsSearchResult
@@ -180,16 +178,6 @@ export class EasynewsApi {
     this.encodedAuth = Buffer.from(
       JSON.stringify({ username, password })
     ).toString('base64url');
-
-    // User key for rate limiting (hashed to avoid storing PII)
-    this.userKey = NzbProxyManager.getUserKey(username);
-  }
-
-  /**
-   * Get the user key for rate limiting
-   */
-  getUserKey(): string {
-    return this.userKey;
   }
 
   /**
