@@ -9,7 +9,6 @@ const logger = createLogger('usenet/file-stream');
 
 export interface FileSource {
   segments: NzbSegmentRef[];
-  groups: string[];
   /** Best-effort filename. */
   filename?: string;
   /**
@@ -107,7 +106,6 @@ export class FileStream implements SeekableStream {
 
     const first = await this.pool.fetchSegment(
       segments[0],
-      this.source.groups,
       this.nzbHash,
       signal,
       CommandPriority.High
@@ -138,7 +136,6 @@ export class FileStream implements SeekableStream {
       const lastIdx = segments.length - 1;
       const last = await this.pool.fetchSegment(
         segments[lastIdx],
-        this.source.groups,
         this.nzbHash,
         signal,
         CommandPriority.High
@@ -194,7 +191,6 @@ export class FileStream implements SeekableStream {
     while (pos < end && segmentIndex < segments.length) {
       const data = await this.pool.fetchSegment(
         segments[segmentIndex],
-        this.source.groups,
         this.nzbHash,
         undefined,
         CommandPriority.High
@@ -259,7 +255,6 @@ export class FileStream implements SeekableStream {
         const inner = new SegmentsStream({
           pool: this.pool,
           segments,
-          groups: this.source.groups,
           nzbHash: this.nzbHash,
           maxWorkers: this.opts.maxConnectionsPerStream,
           // In-flight fetches are capped by maxWorkers; the buffer is sized to
@@ -358,7 +353,6 @@ export class FileStream implements SeekableStream {
     if (cached) return cached;
     const data = await this.pool.fetchSegment(
       this.source.segments[index],
-      this.source.groups,
       this.nzbHash,
       undefined,
       CommandPriority.High

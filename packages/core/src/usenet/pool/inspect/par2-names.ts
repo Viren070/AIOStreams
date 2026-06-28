@@ -24,15 +24,7 @@ export async function fetchFileBytes(
   const limit = pLimit(8);
   const parts = await Promise.all(
     file.segments.map((seg) =>
-      limit(() =>
-        pool.fetchSegment(
-          seg,
-          file.groups,
-          nzbHash,
-          signal,
-          CommandPriority.Low
-        )
-      )
+      limit(() => pool.fetchSegment(seg, nzbHash, signal, CommandPriority.Low))
     )
   );
   return Buffer.concat(parts.map((d) => d.body));

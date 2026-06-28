@@ -76,7 +76,7 @@ async function statSample(
       limit(async () => {
         if (ac.signal.aborted) return;
         const ok = await pool
-          .statSegment(ref.messageId, ref.groups, ac.signal, nzbHash)
+          .statSegment(ref.messageId, ac.signal, nzbHash)
           .catch(() => true);
         if (!ok && !missing && !ac.signal.aborted) {
           missing = ref;

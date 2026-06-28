@@ -631,7 +631,6 @@ export class UsenetEngine {
       this.pool,
       {
         segments: file.segments,
-        groups: file.groups,
         filename: file.filename,
         knownSize,
       },
