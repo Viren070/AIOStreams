@@ -47,7 +47,16 @@ export const runtimeSchemas = {
   usenet: usenetSchema,
 } as const;
 
-export const settingsStore = new SettingsStore(runtimeSchemas);
+export const runtimeKeyAliases: Record<string, string> = {
+  'nzbProxy.zyclopsHealthProxyEndpoint':
+    'builtins.nab.zyclopsHealthProxyEndpoint',
+  'userLimits.maxNzbFailoverCount': 'userLimits.maxFailoverAttempts',
+};
+
+export const settingsStore = new SettingsStore(
+  runtimeSchemas,
+  runtimeKeyAliases
+);
 
 export const config = new Proxy(
   { bootstrap, ...settingsStore.current },
