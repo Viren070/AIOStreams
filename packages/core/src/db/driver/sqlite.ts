@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import { copyFileSync, existsSync, renameSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type {
   DbDriver,
   ExecResult,
@@ -58,17 +60,88 @@ class Mutex {
   }
 }
 
+/** Path for the rolling backup alongside the primary db file. */
+function backupPath(filename: string): string {
+  return join(dirname(filename), 'db.backup.sqlite');
+}
+
+/**
+ * Open a SQLite database, running an integrity check after open.
+ * Returns the Database instance on success, throws on failure.
+ */
+function openDatabase(filename: string): Database.Database {
+  const db = new Database(filename);
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('foreign_keys = ON');
+
+  // integrity_check returns rows like { integrity_check: 'ok' } when healthy.
+  const rows = db.pragma('integrity_check') as { integrity_check: string }[];
+  const ok = rows.length === 1 && rows[0].integrity_check === 'ok';
+  if (!ok) {
+    db.close();
+    throw new Error(
+      `SQLite integrity check failed: ${rows.map((r) => r.integrity_check).join(', ')}`
+    );
+  }
+  return db;
+}
+
 export class SqliteDriver implements DbDriver {
   readonly dialect = 'sqlite' as const;
   private readonly db: Database.Database;
   private readonly mutex = new Mutex();
+  private backupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(filename: string) {
-    this.db = new Database(filename);
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('synchronous = NORMAL');
-    this.db.pragma('busy_timeout = 5000');
-    this.db.pragma('foreign_keys = ON');
+    const backup = backupPath(filename);
+    let db: Database.Database;
+    try {
+      db = openDatabase(filename);
+    } catch (primaryErr) {
+      // Primary DB is corrupt or missing. Try the rolling backup.
+      if (existsSync(backup)) {
+        console.error(
+          `[sqlite] Primary database failed to open (${(primaryErr as Error).message}). ` +
+            `Attempting recovery from backup: ${backup}`
+        );
+        try {
+          renameSync(filename, filename + '.corrupt_' + Date.now());
+        } catch {
+          // best-effort; may fail if filename doesn't exist yet
+        }
+        copyFileSync(backup, filename);
+        try {
+          db = openDatabase(filename);
+          console.warn(
+            '[sqlite] Database recovered from backup. ' +
+              'Data may be up to 5 minutes old. Original corrupt file preserved.'
+          );
+        } catch (backupErr) {
+          throw new Error(
+            `[sqlite] Both primary and backup databases are unreadable. ` +
+              `Primary error: ${(primaryErr as Error).message}. ` +
+              `Backup error: ${(backupErr as Error).message}.`
+          );
+        }
+      } else {
+        // No backup — rethrow primary error so initDb can create a fresh DB.
+        throw primaryErr;
+      }
+    }
+    this.db = db;
+
+    // Schedule rolling backup every 5 minutes using the SQLite Online Backup
+    // API via better-sqlite3's .backup(). This is atomic and non-blocking.
+    const BACKUP_INTERVAL_MS = 5 * 60 * 1000;
+    this.backupTimer = setInterval(() => {
+      this.db.backup(backup).catch((err: Error) => {
+        console.error('[sqlite] Backup failed:', err.message);
+      });
+    }, BACKUP_INTERVAL_MS);
+    // Don't hold the process open just for the backup timer.
+    if (this.backupTimer.unref) this.backupTimer.unref();
   }
 
   // --- sync core; all public async methods funnel through these via the mutex.
@@ -167,6 +240,10 @@ export class SqliteDriver implements DbDriver {
   }
 
   async close(): Promise<void> {
+    if (this.backupTimer !== null) {
+      clearInterval(this.backupTimer);
+      this.backupTimer = null;
+    }
     this.db.close();
   }
 
