@@ -9,7 +9,6 @@ import {
   BiBox,
   BiTachometer,
   BiImage,
-  BiCloudDownload,
   BiTask,
   BiPalette,
   BiInfoCircle,
@@ -39,12 +38,6 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
   logging: { label: 'Logging', icon: BiListUl, group: 'Core', order: 5 },
   http: { label: 'HTTP', icon: BiNetworkChart, group: 'Network', order: 6 },
   proxy: { label: 'Proxy', icon: BiNetworkChart, group: 'Network', order: 7 },
-  nzbProxy: {
-    label: 'NZB Proxy',
-    icon: BiCloudDownload,
-    group: 'Network',
-    order: 8,
-  },
   rateLimits: {
     label: 'Rate Limits',
     icon: BiTachometer,

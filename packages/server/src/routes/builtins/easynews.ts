@@ -7,12 +7,11 @@ import {
   fromUrlSafeBase64,
   createLogger,
   formatZodError,
-  NzbProxyManager,
+  validateCredentials,
   APIError,
   constants,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
-import { easynewsNzbRateLimiter } from '../../middlewares/index.js';
 import { createResponse } from '../../utils/responses.js';
 
 const router: Router = Router();
@@ -86,13 +85,12 @@ interface EasynewsNzbParams {
   encodedParams: string;
   aiostreamsAuth?: string; // optional
   filename: string;
-  // match Express.Request<ParamsDictionary> to allow chaining of easynewsNzbRateLimiter middleware
+  // match Express.Request<ParamsDictionary>
   [key: string]: string | string[] | undefined;
 }
 
 router.get(
   '/nzb/:encodedAuth/:encodedParams{/:aiostreamsAuth}/:filename.nzb',
-  easynewsNzbRateLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     const {
       encodedAuth,
@@ -154,68 +152,25 @@ router.get(
         }
       }
 
-      // Check if Easynews NZB proxy is enabled
-      if (!NzbProxyManager.isEasynewsProxyEnabled(aiostreamsAuth)) {
-        res.status(503).json(
+      if (
+        !aiostreamsAuth ||
+        !validateCredentials(aiostreamsAuth.username, aiostreamsAuth.password)
+      ) {
+        logger.warn('Easynews NZB fetch denied: missing or invalid auth');
+        res.status(403).json(
           createResponse({
             error: {
-              code: 'NZB_PROXY_DISABLED',
-              message: 'Easynews NZB proxying is disabled',
+              code: 'UNAUTHORIZED',
+              message: 'Valid AIOStreams auth is required to fetch NZBs',
             },
             success: false,
           })
-        );
-        return;
-      }
-
-      // Check rate limits
-      const userKey = NzbProxyManager.getUserKey(auth.username);
-      const rateLimitCheck = NzbProxyManager.checkRateLimit(
-        userKey,
-        aiostreamsAuth
-      );
-      if (!rateLimitCheck.allowed) {
-        logger.warn('Rate limit exceeded for Easynews NZB fetch', {
-          userKey,
-          reason: rateLimitCheck.reason,
-        });
-        next(
-          new APIError(
-            constants.ErrorCode.RATE_LIMIT_EXCEEDED,
-            undefined,
-            rateLimitCheck.reason || 'Rate limit exceeded'
-          )
         );
         return;
       }
 
       const api = new EasynewsApi(auth.username, auth.password);
       const { content, filename } = await api.fetchNzb(nzbParams);
-
-      const sizeCheck = NzbProxyManager.checkSizeLimit(
-        content.length,
-        aiostreamsAuth
-      );
-      if (!sizeCheck.allowed) {
-        logger.warn('NZB size limit exceeded', {
-          size: content.length,
-          reason: sizeCheck.reason,
-        });
-        res.status(413).json(
-          createResponse({
-            error: {
-              code: 'NZB_SIZE_LIMIT_EXCEEDED',
-              message: sizeCheck.reason || 'NZB size limit exceeded',
-            },
-            success: false,
-          })
-        );
-        return;
-      }
-
-      if (!rateLimitCheck.authorised) {
-        NzbProxyManager.incrementRateLimit(userKey);
-      }
 
       // Set headers for NZB download
       res.setHeader('Content-Type', 'application/x-nzb');

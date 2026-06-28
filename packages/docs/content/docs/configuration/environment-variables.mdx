@@ -222,17 +222,6 @@ neither the environment variable nor a stored value is present.
 | --- | --- | --- | --- | --- |
 | `PROXY_IP_CACHE_TTL` | IP › Cache TTL | number | `900` | Cache TTL for resolved proxy IPs (seconds). |
 
-### NZB Proxy
-
-| Environment Variable | UI Setting | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `NZB_PROXY_PUBLIC_ENABLED` | Public Enabled | boolean | `false` | Enable the public/generic NZB proxy endpoint. Disabled by default for security. _(restart required)_ |
-| `NZB_PROXY_EASYNEWS_ENABLED` | Easynews Enabled | boolean | `false` | Enable the Easynews-specific NZB proxy endpoint. _(restart required)_ |
-| `NZB_PROXY_MAX_SIZE` | Max Size | size | `20000000` | Maximum size of NZBs that can be proxied. Accepts plain bytes or `20MB`-style strings. |
-| `NZB_PROXY_RATE_LIMIT_WINDOW` | Rate Limit Window | number | `3600` | Sliding window for the NZB proxy rate limit (seconds). _(restart required)_ |
-| `NZB_PROXY_RATE_LIMIT_PER_USER` | Rate Limit Per User | number | `100` | Maximum NZB proxy requests per user per window. _(restart required)_ |
-| `ZYCLOPS_HEALTH_PROXY_ENDPOINT` | Zyclops Health Proxy Endpoint | string | `https://zyclops.elfhosted.com` | Base URL of the Zyclops health proxy used by the Newznab preset. |
-
 ### Rate Limits
 
 | Environment Variable | UI Setting | Type | Default | Description |
@@ -316,13 +305,6 @@ neither the environment variable nor a stored value is present.
 | --- | --- | --- | --- | --- |
 | `STREMIO_META_RATE_LIMIT_WINDOW` | Stremio Meta › Window | number | `5` | Sliding-window length (seconds) for the Stremio meta rate limiter. _(restart required)_ |
 | `STREMIO_META_RATE_LIMIT_MAX_REQUESTS` | Stremio Meta › Max Requests | number | `15` | Maximum requests per IP within the window for the Stremio meta rate limiter. _(restart required)_ |
-
-#### Easynews NZB
-
-| Environment Variable | UI Setting | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `EASYNEWS_NZB_RATE_LIMIT_WINDOW` | Easynews NZB › Window | number | `60` | Sliding-window length (seconds) for the Easynews NZB rate limiter. _(restart required)_ |
-| `EASYNEWS_NZB_RATE_LIMIT_MAX_REQUESTS` | Easynews NZB › Max Requests | number | `15` | Maximum requests per IP within the window for the Easynews NZB rate limiter. _(restart required)_ |
 
 #### Login
 
@@ -891,6 +873,7 @@ neither the environment variable nor a stored value is present.
 | `BUILTIN_NAB_USER_AGENT` | NAB › User Agent | string | — | Deprecated: prefer `[newznab]`/`[torznab]` entries in `REQUEST_HEADER_OVERRIDES` (which also support `{preset}` header sets). User-Agent for Newznab/Torznab requests; the fallback when no host/context override matches. |
 | `BUILTIN_NAB_HTTP_PROXY` | NAB › HTTP Proxy | map | — | Deprecated: add the proxy URL to `ADDON_PROXY` and route Newznab/Torznab through it with a `[newznab]`/`[torznab]` entry in `ADDON_PROXY_CONFIG` (e.g. `[newznab]:0`). Per-protocol HTTP proxy override (`torznab:URL,newznab:URL`); still honoured and overrides the global addon proxy when set. |
 | `BUILTIN_NAB_MAX_PAGES` | NAB › Max Pages | number | `5` | Maximum pages to fetch when paginating Newznab/Torznab results. |
+| `ZYCLOPS_HEALTH_PROXY_ENDPOINT` | NAB › Zyclops Health Proxy Endpoint | string | `https://zyclops.elfhosted.com` | Base URL of the Zyclops health proxy used by the Newznab preset. |
 
 #### Zilean
 

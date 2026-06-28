@@ -16,8 +16,6 @@ import {
   ConfigStartupError,
   ProwlarrAddon,
   TemplateManager,
-  maskSensitiveInfo,
-  constants,
   SeaDexDataset,
   ensureConfigAccessKey,
   warnLegacyAuthVarsIfNeeded,
@@ -27,7 +25,6 @@ import {
   drainUsenetMetrics,
   pruneUsenetMetrics,
 } from '@aiostreams/core';
-import { randomBytes } from 'crypto';
 
 const logger = createLogger('server');
 
@@ -176,19 +173,6 @@ async function initialiseTemplates() {
 async function initialiseAuth() {
   await ensureConfigAccessKey();
   warnLegacyAuthVarsIfNeeded();
-  if (appConfig.nzbProxy.publicEnabled) {
-    appConfig.bootstrap.auth.set(
-      constants.PUBLIC_NZB_PROXY_USERNAME,
-      appConfig.bootstrap.auth.get(constants.PUBLIC_NZB_PROXY_USERNAME) ||
-        randomBytes(32).toString('hex')
-    );
-    logger.info('AIOStreams Public NZB Proxy is enabled.', {
-      username: constants.PUBLIC_NZB_PROXY_USERNAME,
-      password: maskSensitiveInfo(
-        appConfig.bootstrap.auth.get(constants.PUBLIC_NZB_PROXY_USERNAME) || ''
-      ),
-    });
-  }
 }
 
 async function start() {
