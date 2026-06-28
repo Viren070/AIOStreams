@@ -167,7 +167,10 @@ export class SettingsStore<TSections extends SectionSchemas> {
   private fieldsByKey: Map<string, FieldEntry>;
   private listeners: Set<SettingsChangeListener<TSections>> = new Set();
 
-  constructor(private readonly schemas: TSections) {
+  constructor(
+    private readonly schemas: TSections,
+    private readonly aliases: Record<string, string> = {}
+  ) {
     this.fieldsByKey = new Map();
     for (const sectionName of Object.keys(schemas)) {
       const section = schemas[sectionName] as Record<string, RuntimeConfigNode>;
@@ -227,13 +230,44 @@ export class SettingsStore<TSections extends SectionSchemas> {
     const emit = options.emit !== false;
     const previous = this.snapshot;
     const rows = await SettingsRepository.getAll();
-    const stored = new Map<string, unknown>();
+
+    // Parse raw row values, then fold renamed (aliased) keys onto their current
+    // schema key so values saved under an old key survive the rename.
+    const rawByKey = new Map<string, unknown>();
     for (const row of rows) {
       try {
-        const decoded = this.decodeFromStorage(row.key, JSON.parse(row.value));
-        if (decoded !== undefined) stored.set(row.key, decoded);
+        rawByKey.set(row.key, JSON.parse(row.value));
       } catch (error) {
         logger.warn({ key: row.key, error }, 'Ignoring invalid stored setting');
+      }
+    }
+    // A real row under the canonical key always wins; among multiple stale
+    // aliases that resolve to the same key, the one closest to it (the most
+    // recent rename) wins.
+    const directlyStored = new Set(rawByKey.keys());
+    const candidates = new Map<string, { value: unknown; hops: number }>();
+    for (const oldKey of Object.keys(this.aliases)) {
+      if (!rawByKey.has(oldKey)) continue;
+      const { key: canonical, hops } = this.resolveAlias(oldKey);
+      if (canonical !== oldKey) {
+        const existing = candidates.get(canonical);
+        if (!existing || hops < existing.hops) {
+          candidates.set(canonical, { value: rawByKey.get(oldKey), hops });
+        }
+      }
+      rawByKey.delete(oldKey);
+    }
+    for (const [canonical, { value }] of candidates) {
+      if (!directlyStored.has(canonical)) rawByKey.set(canonical, value);
+    }
+
+    const stored = new Map<string, unknown>();
+    for (const [key, raw] of rawByKey) {
+      try {
+        const decoded = this.decodeFromStorage(key, raw);
+        if (decoded !== undefined) stored.set(key, decoded);
+      } catch (error) {
+        logger.warn({ key, error }, 'Ignoring invalid stored setting');
       }
     }
     this.storedKeys = new Set(stored.keys());
@@ -461,6 +495,28 @@ export class SettingsStore<TSections extends SectionSchemas> {
     }
 
     return snapshot as Snapshot<TSections>;
+  }
+
+  /**
+   * Follow the alias chain for a stored key to its current schema key. Renames
+   * are recorded as single hops (`A → B`, `B → C`); this chases them so a value
+   * still stored under `A` resolves to `C`. Returns the endpoint key and the
+   * number of hops taken (used to prefer the most-recent rename when several
+   * stale keys resolve to the same canonical key). A `visited` set guards
+   * against a cyclic alias map looping forever.
+   */
+  private resolveAlias(key: string): { key: string; hops: number } {
+    const visited = new Set<string>([key]);
+    let current = key;
+    let hops = 0;
+    while (this.aliases[current] !== undefined) {
+      const next = this.aliases[current];
+      if (visited.has(next)) break;
+      visited.add(next);
+      current = next;
+      hops++;
+    }
+    return { key: current, hops };
   }
 
   private requireField(key: string): FieldEntry {
