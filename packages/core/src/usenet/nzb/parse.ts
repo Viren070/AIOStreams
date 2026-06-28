@@ -7,7 +7,12 @@ import {
   sortSegments,
 } from './model.js';
 import { parseSubjectFilename } from './subject.js';
-import { scanNzb, NzbScanError, type ScannedFile } from './scan.js';
+import {
+  scanNzb,
+  NzbScanError,
+  type ScannedFile,
+  type ScannedNzbDocument,
+} from './scan.js';
 
 const logger = createLogger('usenet/nzb');
 
@@ -26,7 +31,25 @@ const logger = createLogger('usenet/nzb');
  */
 export async function parseNzb(xml: string | Buffer): Promise<Nzb> {
   const startedAt = Date.now();
-  const doc = scanNzb(xml);
+  let doc: ScannedNzbDocument;
+  try {
+    doc = scanNzb(xml);
+  } catch (err) {
+    if (err instanceof NzbScanError) {
+      const buf = Buffer.isBuffer(xml) ? xml : Buffer.from(xml, 'utf8');
+      const sample = buf
+        .toString('utf8', 0, 512)
+        .replace(
+          /[\x00-\x1f\x7f]/g,
+          (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0')
+        );
+      logger.warn(
+        { error: err.message, bytes: buf.length, sample },
+        'NZB scan failed; content is not a valid NZB'
+      );
+    }
+    throw err;
+  }
   const files = doc.files.map(buildFile);
   if (files.length === 0) {
     throw new Error('Invalid NZB: no files with segments found');
