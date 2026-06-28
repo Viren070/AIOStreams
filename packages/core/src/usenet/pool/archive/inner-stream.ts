@@ -80,11 +80,14 @@ export class ArchiveInnerStream implements SeekableStream {
   async readAt(offset: number, length: number): Promise<Buffer> {
     if (length <= 0 || offset >= this._size) return Buffer.alloc(0);
     if (this.resolver?.hasPending()) {
-      // Bytes are only served from the exact prefix: resolve every pending
-      // fragment the read overlaps (parallel, single-flight), then pre-resolve
-      // the next volume so sequential playback never blocks at a crossing.
-      this.fragments = await this.resolver.resolveThrough(offset + length);
-      this.resolver.resolveAhead(offset + length, 1);
+      // Resolve enough pending fragments that the read maps through exact
+      // lengths, anchored from whichever side is cheaper
+      const end = offset + length;
+      this.fragments =
+        this._size - offset < end
+          ? await this.resolver.resolveFrom(offset)
+          : await this.resolver.resolveThrough(end);
+      this.resolver.resolveAhead(end, 1);
     }
     const out: Buffer[] = [];
     let pos = Math.max(0, offset);
