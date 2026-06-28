@@ -12,8 +12,6 @@ export interface SegmentsStreamOptions {
   pool: MultiProviderPool;
   /** Segments to stream, in file order. */
   segments: NzbSegmentRef[];
-  /** Newsgroups for GROUP selection. */
-  groups: string[];
   nzbHash: string;
   /** Max parallel segment fetches. */
   maxWorkers: number;
@@ -36,7 +34,6 @@ export interface SegmentsStreamOptions {
 export class SegmentsStream extends Readable {
   private pool: MultiProviderPool;
   private segments: NzbSegmentRef[];
-  private groups: string[];
   private nzbHash: string;
   private maxWorkers: number;
   private bufferSizeBytes: number;
@@ -72,7 +69,6 @@ export class SegmentsStream extends Readable {
     super({ highWaterMark: opts.bufferSizeBytes });
     this.pool = opts.pool;
     this.segments = opts.segments;
-    this.groups = opts.groups;
     this.nzbHash = opts.nzbHash;
     this.maxWorkers = Math.max(1, opts.maxWorkers);
     this.bufferSizeBytes = Math.max(1, opts.bufferSizeBytes);
@@ -123,7 +119,6 @@ export class SegmentsStream extends Readable {
       this.pool
         .fetchSegment(
           segment,
-          this.groups,
           this.nzbHash,
           this.abortController.signal,
           this.priority

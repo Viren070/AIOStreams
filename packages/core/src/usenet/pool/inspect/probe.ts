@@ -77,7 +77,6 @@ export async function inspectFile(
   try {
     const first = await pool.fetchSegmentHead(
       file.segments[0],
-      file.groups,
       nzbHash,
       opts.signal,
       CommandPriority.Low,
@@ -95,7 +94,6 @@ export async function inspectFile(
     ) {
       await pool.fetchSegment(
         file.segments[0],
-        file.groups,
         nzbHash,
         opts.signal,
         CommandPriority.Low
@@ -147,7 +145,6 @@ export async function inspectFile(
           // Header-only: the exact part range arrives in the leading lines.
           const last = await pool.fetchSegmentHead(
             file.segments[file.segments.length - 1],
-            file.groups,
             nzbHash,
             opts.signal,
             CommandPriority.Low,

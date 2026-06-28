@@ -27,9 +27,8 @@ export interface WorkerPoolOptions extends ConnectionOptions {
 /**
  * One unit of work submitted to a provider: the `run` closure performs the
  * actual `BODY`/`STAT` (and decode) on a ready connection. The worker pool owns
- * only the connection lifecycle (dialing, auth, GROUP selection, pipelining,
- * reconnect, throttle) and never touches yEnc/cache/affinity (those stay in
- * {@link MultiProviderPool}).
+ * only the connection lifecycle (dialing, auth, pipelining, reconnect, throttle)
+ * and never touches yEnc/cache/affinity (those stay in {@link MultiProviderPool}).
  */
 export interface WorkResult<T = unknown> {
   value: T;
@@ -39,7 +38,6 @@ export interface WorkResult<T = unknown> {
 }
 
 export interface WorkRequest<T = unknown> {
-  groups: string[];
   priority: CommandPriority;
   run: (conn: NntpConnection) => Promise<{ value: T; bytes: number }>;
   resolve: (r: WorkResult<T>) => void;
@@ -51,8 +49,6 @@ interface Slot {
   conn: NntpConnection | null;
   /** A dial is in progress for this slot. */
   connecting: boolean;
-  /** A GROUP select is in progress (don't pipeline onto it until it resolves). */
-  preparingGroup: boolean;
   /** Consecutive failures on this slot's connection (per-connection breaker). */
   failures: number;
 }
@@ -123,7 +119,6 @@ export class ProviderWorkerPool {
     this.slots = Array.from({ length: max }, () => ({
       conn: null,
       connecting: false,
-      preparingGroup: false,
       failures: 0,
     }));
     this.state = config.enabled === false ? 'disabled' : 'online';
@@ -240,16 +235,10 @@ export class ProviderWorkerPool {
   }
 
   /**
-   * Peek the next request whose group is compatible with `conn` (any group when
-   * the connection is idle, else the connection's current group), and dequeue it.
+   * Peek the next dispatchable request and dequeue it.
    */
-  private pullFor(conn: NntpConnection): WorkRequest | undefined {
-    const fits = (q: WorkRequest[]): boolean => {
-      const head = q[0];
-      return (
-        !!head && (conn.inFlight === 0 || head.groups[0] === conn.currentGroup)
-      );
-    };
+  private pullFor(): WorkRequest | undefined {
+    const fits = (q: WorkRequest[]): boolean => q.length > 0;
     const hasHigh = fits(this.prioQ);
     const hasLow = fits(this.normalQ);
     // When both classes have compatible work, divert `1 - streamingPriority` of
@@ -292,25 +281,14 @@ export class ProviderWorkerPool {
     // 1) Fill EXISTING usable connections' pipelines with compatible work first.
     for (const slot of this.slots) {
       if (!this.hasWork()) break;
-      if (slot.connecting || slot.preparingGroup) continue;
+      if (slot.connecting) continue;
       if (!slot.conn || !slot.conn.isUsable) {
         slot.conn = null;
         continue;
       }
       while (slot.conn.canAccept(this.depth)) {
-        const req = this.pullFor(slot.conn);
+        const req = this.pullFor();
         if (!req) break;
-        const group = req.groups[0];
-        if (group && slot.conn.currentGroup !== group) {
-          if (slot.conn.inFlight > 0) {
-            // Can't change group with requests in flight, so requeue and let an
-            // idle connection take it.
-            this.requeueHead(req);
-            break;
-          }
-          this.beginGroupThenAssign(slot, req);
-          break; // slot now preparing; stop pulling onto it
-        }
         this.fireTransfer(slot, req);
       }
     }
@@ -337,12 +315,6 @@ export class ProviderWorkerPool {
       this.beginDial(slot);
       toDial--;
     }
-  }
-
-  private requeueHead(req: WorkRequest): void {
-    (req.priority === CommandPriority.High ? this.prioQ : this.normalQ).unshift(
-      req
-    );
   }
 
   private beginDial(slot: Slot): void {
@@ -412,30 +384,6 @@ export class ProviderWorkerPool {
     }
     this.recordConnFailure(slot, err);
     setTimeout(() => this.dispatch(), DIAL_BACKOFF_MS).unref?.();
-  }
-
-  private beginGroupThenAssign(slot: Slot, req: WorkRequest): void {
-    const conn = slot.conn!;
-    slot.preparingGroup = true;
-    conn.group(req.groups[0], undefined, this.opts.idleConnectionMs).then(
-      () => {
-        slot.preparingGroup = false;
-        if (this.closed) {
-          req.reject(
-            new NntpError('no_providers', 'pool closed', {
-              provider: this.label,
-            })
-          );
-          return;
-        }
-        this.fireTransfer(slot, req);
-        this.dispatch();
-      },
-      (err) => {
-        slot.preparingGroup = false;
-        this.onTransferError(slot, req, err);
-      }
-    );
   }
 
   private fireTransfer(slot: Slot, req: WorkRequest): void {

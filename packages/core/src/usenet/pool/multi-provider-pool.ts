@@ -231,7 +231,6 @@ export class MultiProviderPool {
    */
   async fetchSegment(
     segment: NzbSegmentRef,
-    groups: string[],
     nzbHash: string,
     signal: AbortSignal | undefined,
     priority: CommandPriority = CommandPriority.High
@@ -246,13 +245,7 @@ export class MultiProviderPool {
       // completion (caching its result). A single caller abandoning its wait
       // (e.g. a teardown aborting prefetched-but-unneeded segments) must never
       // poison the fetch for other callers single-flighting the same segment.
-      const promise = this.diskThenFetch(
-        segment,
-        groups,
-        nzbHash,
-        undefined,
-        priority
-      );
+      const promise = this.diskThenFetch(segment, nzbHash, undefined, priority);
       shared = promise;
       this.inflight.set(segment.messageId, promise);
       // Only clear the map entry if it still points at this promise (a later
@@ -306,19 +299,17 @@ export class MultiProviderPool {
    */
   private async diskThenFetch(
     segment: NzbSegmentRef,
-    groups: string[],
     nzbHash: string,
     signal: AbortSignal | undefined,
     priority: CommandPriority
   ): Promise<SegmentData> {
     const fromDisk = await this.cache.getAsync(segment.messageId);
     if (fromDisk) return fromDisk;
-    return this.doFetch(segment, groups, nzbHash, signal, priority);
+    return this.doFetch(segment, nzbHash, signal, priority);
   }
 
   private async doFetch(
     segment: NzbSegmentRef,
-    groups: string[],
     nzbHash: string,
     signal: AbortSignal | undefined,
     priority: CommandPriority
@@ -327,7 +318,6 @@ export class MultiProviderPool {
     try {
       return await this.submitWithFailover<SegmentData>(
         segment,
-        groups,
         nzbHash,
         priority,
         async (conn) => {
@@ -366,7 +356,6 @@ export class MultiProviderPool {
    */
   async fetchSegmentHead(
     segment: NzbSegmentRef,
-    groups: string[],
     nzbHash: string,
     signal: AbortSignal | undefined,
     priority: CommandPriority,
@@ -394,7 +383,6 @@ export class MultiProviderPool {
         try {
           return await this.submitWithFailover<SegmentHeadData>(
             segment,
-            groups,
             nzbHash,
             priority,
             async (conn) => {
@@ -436,7 +424,6 @@ export class MultiProviderPool {
    */
   private async submitWithFailover<T>(
     segment: NzbSegmentRef,
-    groups: string[],
     nzbHash: string | undefined,
     priority: CommandPriority,
     run: (conn: NntpConnection) => Promise<{ value: T; bytes: number }>
@@ -474,7 +461,6 @@ export class MultiProviderPool {
       this.stats.fetchStarted(pool.id);
       try {
         const { value, bytes, durationMs } = await pool.submit<T>({
-          groups,
           priority,
           run,
         });
@@ -660,7 +646,6 @@ export class MultiProviderPool {
    */
   async statSegment(
     messageId: string,
-    groups: string[],
     signal: AbortSignal | undefined,
     nzbHash?: string
   ): Promise<boolean> {
@@ -679,7 +664,6 @@ export class MultiProviderPool {
         // definitive miss) without affecting the in-flight STAT on the worker.
         const { value: exists } = await this.awaitAbortable(
           pool.submit<boolean>({
-            groups,
             priority: CommandPriority.Low,
             run: async (conn) => ({
               value: await conn.stat(

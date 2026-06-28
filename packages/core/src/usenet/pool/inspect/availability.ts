@@ -81,7 +81,6 @@ export async function sampleTargetAvailability(
         // A real retrieval (cached for prefetch). A 430 transfers nothing.
         await pool.fetchSegment(
           ref.seg,
-          ref.groups,
           nzb.hash,
           signal,
           CommandPriority.Low
@@ -97,7 +96,7 @@ export async function sampleTargetAvailability(
       }
     }
     return pool
-      .statSegment(ref.seg.messageId, ref.groups, signal, nzb.hash)
+      .statSegment(ref.seg.messageId, signal, nzb.hash)
       .catch(() => true);
   };
 
