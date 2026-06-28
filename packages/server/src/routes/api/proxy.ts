@@ -22,7 +22,6 @@ import { createProxy, BuiltinProxyStats, BuiltinProxy } from '@aiostreams/core';
 import { requireAdmin } from '../../middlewares/auth.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 import { StaticFiles } from '../../app.js';
-import { Transform } from 'stream';
 
 const logger = createLogger('server');
 const router: Router = Router();
@@ -278,11 +277,7 @@ router.all(
       data = ProxyDataSchema.parse(JSON.parse(rawData));
       auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
 
-      if (
-        !validateCredentials(auth.username, auth.password) &&
-        (auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME ||
-          !appConfig.nzbProxy.publicEnabled)
-      ) {
+      if (!validateCredentials(auth.username, auth.password)) {
         logger.warn(`[${requestId}] Authentication failed`, {
           username: auth.username,
         });
@@ -296,10 +291,7 @@ router.all(
         return;
       }
 
-      if (
-        auth.username !== constants.PUBLIC_NZB_PROXY_USERNAME &&
-        !hasPermission(auth.username, Permission.Proxy)
-      ) {
+      if (!hasPermission(auth.username, Permission.Proxy)) {
         logger.warn(`[${requestId}] Proxy access denied`, {
           username: auth.username,
         });
@@ -329,38 +321,6 @@ router.all(
       const isBodyRequest =
         req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH';
       const isGetRequest = req.method === 'GET';
-
-      let sizeLimiter;
-      let bytesRead = 0;
-      if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
-        if (appConfig.nzbProxy.maxSize > 0) {
-          sizeLimiter = new Transform({
-            transform(chunk, encoding, callback) {
-              bytesRead += chunk.length;
-
-              if (bytesRead > appConfig.nzbProxy.maxSize) {
-                callback(new Error('Content too large'));
-              } else {
-                callback(null, chunk);
-              }
-            },
-          });
-        }
-        if (data.type !== 'nzb') {
-          logger.warn(
-            `[${requestId}] Public NZB proxy can only be used for NZB files`,
-            { dataType: data.type }
-          );
-          next(
-            new APIError(
-              constants.ErrorCode.FORBIDDEN,
-              undefined,
-              'Public NZB proxy can only be used for NZB files'
-            )
-          );
-          return;
-        }
-      }
 
       if (isGetRequest) {
         if (connectionLimit > 0) {
@@ -506,35 +466,6 @@ router.all(
       }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
 
-      if (auth.username === constants.PUBLIC_NZB_PROXY_USERNAME) {
-        // size check
-        if (appConfig.nzbProxy.maxSize > 0) {
-          const contentLengthHeader = upstreamResponse.headers['content-length']
-            ? Array.isArray(upstreamResponse.headers['content-length'])
-              ? upstreamResponse.headers['content-length'][0]
-              : upstreamResponse.headers['content-length']
-            : undefined;
-          const contentLength = contentLengthHeader
-            ? parseInt(contentLengthHeader, 10)
-            : 0;
-          const maxSize = appConfig.nzbProxy.maxSize;
-          if (maxSize > 0 && contentLength > maxSize) {
-            logger.warn(`[${requestId}] Public NZB proxy size limit exceeded`, {
-              contentLength,
-              maxSize,
-            });
-            next(
-              new APIError(
-                constants.ErrorCode.FORBIDDEN,
-                undefined,
-                'Content size exceeds public NZB proxy limit'
-              )
-            );
-            return;
-          }
-        }
-      }
-
       // forward upstream response to client
       res.set(sanitiseHeaders(upstreamResponse.headers));
       if (data.responseHeaders) {
@@ -565,11 +496,7 @@ router.all(
             }
           );
         } else {
-          if (sizeLimiter) {
-            await pipeline(upstreamResponse.body, sizeLimiter, res);
-          } else {
-            await pipeline(upstreamResponse.body, res);
-          }
+          await pipeline(upstreamResponse.body, res);
         }
       }
 

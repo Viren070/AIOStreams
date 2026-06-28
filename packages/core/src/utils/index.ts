@@ -30,7 +30,6 @@ export * from './disk-backed-cache.js';
 export * from './grab-cache.js';
 export * from './download-manager.js';
 export * from './seadex.js';
-export * from './nzb-proxy.js';
 export * from './time.js';
 export * from './fieldMeta.js';
 export * from './xml.js';

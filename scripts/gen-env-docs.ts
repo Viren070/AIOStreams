@@ -51,7 +51,6 @@ const TAB_MANIFEST: Record<
   logging: { label: 'Logging', group: 'Core', order: 5 },
   http: { label: 'HTTP', group: 'Network', order: 6 },
   proxy: { label: 'Proxy', group: 'Network', order: 7 },
-  nzbProxy: { label: 'NZB Proxy', group: 'Network', order: 8 },
   rateLimits: { label: 'Rate Limits', group: 'Network', order: 9 },
   services: { label: 'Services', group: 'Content', order: 10 },
   presets: { label: 'Presets', group: 'Content', order: 11 },
