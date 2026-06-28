@@ -24,8 +24,7 @@ router.use(trackResource('stream'));
 // A dedicated in-memory Map (rather than the generic Cache class) avoids
 // structuredClone overhead on large stream arrays and keeps the hot path
 // allocation-free. The TTL is configurable via STREAM_RESULT_CACHE_TTL (0 =
-// disabled); the default is 30 seconds — long enough to absorb Stremio
-// refreshes and back-to-back episode clicks without returning stale data.
+// disabled); the default is 0 (off) — users must opt in.
 
 interface CachedStreamResult {
   response: AIOStreamResponse;
@@ -58,7 +57,7 @@ function streamResultCacheSet(key: string, response: AIOStreamResponse): void {
     const oldest = streamResultCache.keys().next().value;
     if (oldest !== undefined) streamResultCache.delete(oldest);
   }
-  const ttl = appConfig.resources.cache.streamResult.ttl ?? 30;
+  const ttl = appConfig.resources.cache.streamResult.ttl ?? 0;
   streamResultCache.set(key, {
     response,
     expiresAt: Date.now() + ttl * 1000,

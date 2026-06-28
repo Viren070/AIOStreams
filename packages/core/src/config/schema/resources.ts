@@ -337,7 +337,7 @@ export const resourcesSchema = {
     streamResult: {
       ttl: {
         schema: nonNegativeInt,
-        default: 30,
+        default: 0,
         label: 'Stream result cache TTL (s)',
         description:
           'TTL for the fully-processed stream result cache (seconds). Caches the final Stremio response including formatting, proxying, and all pipeline stages. Set to 0 to disable.',
