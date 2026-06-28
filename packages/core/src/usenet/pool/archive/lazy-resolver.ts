@@ -102,6 +102,30 @@ export class LazyFragmentResolver {
   }
 
   /**
+   * Suffix-anchored mirror of {@link resolveThrough}: resolve every pending
+   * fragment overlapping logical `[startOffset, size)`. A read near EOF resolves
+   * only the trailing volumes it touches, not the whole prefix chain, because
+   * the file total is forced exact so the resolved suffix's logical start is
+   * exact even while the prefix stays estimated.
+   */
+  async resolveFrom(startOffset: number): Promise<DataFragment[]> {
+    for (;;) {
+      if (this.invalid) throw this.invalid;
+      const volumes: number[] = [];
+      let logical = 0;
+      for (const f of this.table) {
+        const fragEnd = logical + f.length;
+        if (fragEnd > startOffset && f.pending !== undefined)
+          volumes.push(f.pending);
+        logical = fragEnd;
+      }
+      if (volumes.length === 0) return this.table;
+      await Promise.all(volumes.map((v) => this.resolveVolume(v)));
+      this.commit();
+    }
+  }
+
+  /**
    * Fire-and-forget: pre-resolve the next `count` pending volumes past
    * `endOffset` so sequential playback never blocks at a volume crossing.
    * Errors are swallowed; the first blocking touch surfaces them.
