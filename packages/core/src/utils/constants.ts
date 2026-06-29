@@ -623,19 +623,19 @@ const SERVICE_DETAILS: Record<
       },
       {
         id: 'username',
-        name: 'AltMount WebDAV Username',
+        name: 'AltMount WebDAV Username (Optional)',
         description:
-          'Your AltMount WebDAV Username, found at `Configuration -> WebDAV Server` in the AltMount Web UI.',
+          'Your AltMount WebDAV Username, found at `Configuration -> WebDAV Server` in the AltMount Web UI. Only needed as a fallback for AltMount versions that predate the native /api/nzb/streams endpoint.',
         type: 'string',
-        required: true,
+        required: false,
       },
       {
         id: 'password',
-        name: 'AltMount WebDAV Password',
+        name: 'AltMount WebDAV Password (Optional)',
         description:
-          'Your AltMount WebDAV Password, found at `Configuration -> WebDAV Server` in the AltMount Web UI.',
+          'Your AltMount WebDAV Password, found at `Configuration -> WebDAV Server` in the AltMount Web UI. Only needed as a fallback for AltMount versions that predate the native /api/nzb/streams endpoint.',
         type: 'password',
-        required: true,
+        required: false,
       },
       {
         id: 'aiostreamsAuth',
