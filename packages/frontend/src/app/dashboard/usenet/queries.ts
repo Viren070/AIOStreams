@@ -401,9 +401,11 @@ export function useUsenetSettings(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: USENET_SETTINGS_QUERY_KEY,
     queryFn: () =>
-      api<{ keys: SettingsKey[]; profiles: UsenetProfiles }>(
-        '/dashboard/usenet/settings'
-      ),
+      api<{
+        keys: SettingsKey[];
+        profiles: UsenetProfiles;
+        webdavUrl?: string;
+      }>('/dashboard/usenet/settings'),
     staleTime: 10_000,
     enabled: opts?.enabled ?? true,
   });
