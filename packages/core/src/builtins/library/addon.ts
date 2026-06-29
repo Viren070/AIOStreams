@@ -352,6 +352,7 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
         return metadata;
       }
     );
+    this._searchMetadataPromise.catch(() => {});
 
     const [torrentResults, nzbResults] = await Promise.allSettled([
       this._searchTorrents(parsedId),

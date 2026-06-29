@@ -187,6 +187,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         }
         return metadata;
       });
+      this._searchMetadataPromise.catch(() => {});
     } else {
       // Provide a minimal empty metadata object for addons that don't need it
       this._searchMetadataPromise = Promise.resolve({
@@ -626,7 +627,6 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           relativeAbsoluteEpisode = calculated;
         }
       }
-
 
       const parsedSeasonRecord = seasons.find(
         (s) => s.number === parsedId.season
