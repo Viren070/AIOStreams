@@ -298,9 +298,11 @@ export function useUsenetSettings() {
   return useQuery({
     queryKey: [...ROOT, 'settings'],
     queryFn: () =>
-      api<{ keys: SettingsKey[]; profiles: UsenetProfiles }>(
-        '/dashboard/usenet/settings'
-      ),
+      api<{
+        keys: SettingsKey[];
+        profiles: UsenetProfiles;
+        webdavUrl?: string;
+      }>('/dashboard/usenet/settings'),
     staleTime: 10_000,
   });
 }

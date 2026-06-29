@@ -6,3 +6,4 @@ export * from './library.js';
 export * from './stream-session.js';
 export * from './dashboard/index.js';
 export * from './sabnzbd.js';
+export * from './webdav/index.js';

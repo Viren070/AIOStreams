@@ -33,6 +33,7 @@ import {
 } from './routes/chilllink/index.js';
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import sabnzbdRouter from './routes/api/sabnzbd.js';
+import webdavRouter from './routes/webdav.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -200,6 +201,13 @@ builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
 builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
+
+// Built-in WebDAV server: exposes the native usenet library as a browsable,
+// streamable filesystem at /dav (Basic Auth against AIOSTREAMS_AUTH). Mounted
+// at top level — before the SPA fallback and outside the API rate limiters —
+// so large Range streams are never throttled. The router gates itself on
+// `usenet.webdavEnabled` and handles its own auth + method dispatch.
+app.use('/dav', webdavRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately

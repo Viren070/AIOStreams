@@ -8,9 +8,11 @@ import {
 import { DebridError } from '../../debrid/base.js';
 import { formatBytes } from '../../formatters/utils.js';
 import { createLogger } from '../../logging/logger.js';
+import { appConfig } from '../../utils/index.js';
 import { addUsenetNzb } from './library.js';
 import { baseName, stripNzbExt, stripReleaseExt } from './naming.js';
 import { getUsenetProviders, getUsenetLiveStats } from './dashboard/index.js';
+import { webdavLibraryRoot, webdavLibraryStoragePath } from './webdav/index.js';
 
 const logger = createLogger('usenet/sabnzbd');
 
@@ -140,6 +142,14 @@ function queueSlot(entry: UsenetLibraryEntry, index: number) {
 function historySlot(entry: UsenetLibraryEntry) {
   const name = entryName(entry);
   const bytes = entry.size ?? entry.bytesTotal;
+  // When the WebDAV server is on, an available entry is browsable at a stable
+  // `/dav/library/<category>/<release>` path; report it as the completed
+  // `storage`/`path` so Sonarr/Radarr can locate and import the release from
+  // their WebDAV mount. Failed/incomplete entries have nothing to serve.
+  const storage =
+    appConfig.usenet.webdavEnabled && entry.status === 'available'
+      ? webdavLibraryStoragePath(entry)
+      : '';
   return {
     nzo_id: toNzoId(entry.nzbHash),
     name,
@@ -155,8 +165,8 @@ function historySlot(entry: UsenetLibraryEntry) {
     time_added: toUnix(entry.addedAt),
     download_time: Math.round((entry.importMs ?? 0) / 1000),
     postproc_time: 0,
-    storage: '',
-    path: '',
+    storage,
+    path: storage,
     stage_log: [] as unknown[],
     loaded: false,
     archive: false,
@@ -430,7 +440,7 @@ function buildGetConfig(req: SabnzbdRequest, cats: string[]): SabnzbdResult {
           password: '',
           api_key: req.apikey,
           nzb_key: req.apikey,
-          complete_dir: '',
+          complete_dir: appConfig.usenet.webdavEnabled ? webdavLibraryRoot() : '',
           pre_check: 0,
           history_retention: '',
           history_retention_option: 'all',

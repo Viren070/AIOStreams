@@ -580,6 +580,14 @@ const SERVICE_DETAILS: Record<
         type: 'password',
         required: true,
       },
+      {
+        id: 'webdavNote',
+        name: 'WebDAV library',
+        description: `When the built-in **WebDAV server** is enabled, your usenet library is also mountable as a browsable, streamable filesystem at \`/dav\` — for media players (Infuse, Kodi, VLC) and Sonarr/Radarr completed-download mounts. Log in with the **same AIOStreams Auth Token** (\`username:password\`) above. The exact, ready-to-copy mount URL is shown in **Dashboard → Usenet → Settings**. See the [Usenet Wiki](https://github.com/Viren070/AIOStreams/wiki/Usenet) for client setup.`,
+        type: 'alert',
+        intent: 'info',
+        required: false,
+      },
     ],
   },
   [ALTMOUNT_SERVICE]: {

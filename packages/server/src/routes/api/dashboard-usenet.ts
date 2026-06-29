@@ -17,6 +17,7 @@ import {
   exportUsenetLibraryNzb,
   UsenetLibraryRepository,
   usenetLibraryBus,
+  WEBDAV_BASE,
   type UsenetStatsWindow,
   type UsenetLibraryStatusGroup,
   type UsenetLibraryStatus,
@@ -129,12 +130,26 @@ router.put('/providers', async (req, res) => {
 });
 
 // GET /dashboard/usenet/settings — engine settings (incl. hidden) + values.
-router.get('/settings', (_req, res, next) => {
+router.get('/settings', (req, res, next) => {
   try {
+    const configuredBase = (appConfig.bootstrap.baseUrl || '').replace(
+      /\/+$/,
+      ''
+    );
+    const requestBase =
+      req.protocol && req.headers.host
+        ? `${req.protocol}://${req.headers.host}`
+        : '';
+    const base = configuredBase || requestBase;
+    const webdavUrl = base ? `${base}${WEBDAV_BASE}` : '';
     res.status(200).json(
       createResponse({
         success: true,
-        data: { keys: getUsenetSettings(), profiles: PERFORMANCE_PROFILES },
+        data: {
+          keys: getUsenetSettings(),
+          profiles: PERFORMANCE_PROFILES,
+          webdavUrl,
+        },
       })
     );
   } catch (err) {

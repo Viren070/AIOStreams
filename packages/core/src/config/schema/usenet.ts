@@ -347,4 +347,22 @@ export const usenetSchema = {
     secret: false,
     ui: HIDDEN,
   },
+  webdavEnabled: {
+    schema: z.boolean(),
+    default: true,
+    label: 'WebDAV server',
+    description:
+      'Expose the built-in usenet library as a read-only WebDAV filesystem at ' +
+      '`/dav` so media players (Infuse, Kodi, VLC) and *arr completed-download ' +
+      'mounts can browse and stream it on demand, with zero local storage. ' +
+      'Two trees are served: `/dav/library/<category>/<release>` (matches the ' +
+      'SABnzbd-compatible API’s reported paths, for Sonarr/Radarr import) and ' +
+      '`/dav/media/Movies|Series` (clean, parsed names for browsing). Log in ' +
+      'with an `AIOSTREAMS_AUTH` `username:password`. Inert until NNTP ' +
+      'providers and `AIOSTREAMS_AUTH` are configured.',
+    env: 'USENET_WEBDAV_ENABLED',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
 } as const satisfies RuntimeConfigSection;
