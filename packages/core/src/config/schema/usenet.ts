@@ -347,4 +347,41 @@ export const usenetSchema = {
     secret: false,
     ui: HIDDEN,
   },
+  webdavEnabled: {
+    schema: z.boolean(),
+    default: false,
+    label: 'WebDAV server',
+    description:
+      'Serve the built-in usenet library as a WebDAV filesystem at `/dav` so ' +
+      'media players (Infuse, Kodi, VLC) and *arr mounts can browse and stream ' +
+      'it on demand, without storing completed downloads locally. Two trees ' +
+      'are served: ' +
+      '`/dav/library/<category>/<release>` (matches the SABnzbd-compatible ' +
+      'API’s reported paths, for Sonarr/Radarr) and `/dav/media/Movies|Series` ' +
+      '(parsed names for browsing). Supports browsing, streaming and deleting ' +
+      'library entries; uploads and renames are rejected. Log in with an ' +
+      '`AIOSTREAMS_AUTH` `username:password`. Inert until NNTP providers and ' +
+      '`AIOSTREAMS_AUTH` are configured.',
+    env: 'USENET_WEBDAV_ENABLED',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  webdavImportPaths: {
+    schema: z.boolean(),
+    default: false,
+    label: 'WebDAV completed-download paths',
+    description:
+      'When enabled (and the WebDAV server is on), the SABnzbd-compatible API ' +
+      'reports `/dav/library/...` completed-download paths instead of leaving ' +
+      'them blank. This alone is not enough to import: Sonarr/Radarr must also ' +
+      'reach those files, either by mounting the `/dav` WebDAV share on the ' +
+      '*arr host or by adding a Remote Path Mapping to it. Off (default) leaves ' +
+      'the paths blank so enabling the WebDAV server for browsing never changes ' +
+      'an existing download-client setup.',
+    env: 'USENET_WEBDAV_IMPORT_PATHS',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
 } as const satisfies RuntimeConfigSection;

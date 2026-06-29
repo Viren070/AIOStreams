@@ -8,9 +8,11 @@ import {
 import { DebridError } from '../../debrid/base.js';
 import { formatBytes } from '../../formatters/utils.js';
 import { createLogger } from '../../logging/logger.js';
+import { appConfig } from '../../utils/index.js';
 import { addUsenetNzb } from './library.js';
 import { baseName, stripNzbExt, stripReleaseExt } from './naming.js';
 import { getUsenetProviders, getUsenetLiveStats } from './dashboard/index.js';
+import { webdavLibraryRoot, webdavLibraryStoragePath } from './webdav/index.js';
 
 const logger = createLogger('usenet/sabnzbd');
 
@@ -140,6 +142,16 @@ function queueSlot(entry: UsenetLibraryEntry, index: number) {
 function historySlot(entry: UsenetLibraryEntry) {
   const name = entryName(entry);
   const bytes = entry.size ?? entry.bytesTotal;
+  // Only report a `/dav/library/<category>/<release>` completed path when the
+  // operator has explicitly opted into WebDAV import paths (and the server is
+  // on). Off by default so enabling the WebDAV server for browsing never
+  // changes the SABnzbd contract existing Sonarr/Radarr clients rely on.
+  const storage =
+    appConfig.usenet.webdavEnabled &&
+    appConfig.usenet.webdavImportPaths &&
+    entry.status === 'available'
+      ? webdavLibraryStoragePath(entry)
+      : '';
   return {
     nzo_id: toNzoId(entry.nzbHash),
     name,
@@ -155,8 +167,8 @@ function historySlot(entry: UsenetLibraryEntry) {
     time_added: toUnix(entry.addedAt),
     download_time: Math.round((entry.importMs ?? 0) / 1000),
     postproc_time: 0,
-    storage: '',
-    path: '',
+    storage,
+    path: storage,
     stage_log: [] as unknown[],
     loaded: false,
     archive: false,
@@ -430,7 +442,10 @@ function buildGetConfig(req: SabnzbdRequest, cats: string[]): SabnzbdResult {
           password: '',
           api_key: req.apikey,
           nzb_key: req.apikey,
-          complete_dir: '',
+          complete_dir:
+            appConfig.usenet.webdavEnabled && appConfig.usenet.webdavImportPaths
+              ? webdavLibraryRoot()
+              : '',
           pre_check: 0,
           history_retention: '',
           history_retention_option: 'all',
