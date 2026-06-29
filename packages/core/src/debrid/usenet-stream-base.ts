@@ -407,8 +407,8 @@ export class SABnzbdApi {
  * Configuration for streaming usenet services that use SABnzbd-compatible APIs
  */
 export interface UsenetStreamServiceConfig {
-  webdavUrl: string;
-  publicWebdavUrl: string;
+  webdavUrl?: string;
+  publicWebdavUrl?: string;
   webdavUser?: string;
   webdavPassword?: string;
   apiUrl: string;
@@ -433,7 +433,7 @@ const CATEGORIES_CACHE_TTL = Time.Hour;
  * directly from usenet providers via WebDAV, rather than downloading to disk.
  */
 export abstract class UsenetStreamService implements UsenetDebridService {
-  protected readonly webdavClient: WebDAVClient;
+  protected readonly webdavClient: WebDAVClient | undefined;
   protected readonly api: SABnzbdApi;
   protected static resolveCache = Cache.getInstance<string, string>(
     'usenet-stream:link'
@@ -476,10 +476,12 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   ) {
     this.auth = serviceConfig;
     this.serviceLogger = createLogger(serviceName);
-    this.webdavClient = createClient(serviceConfig.webdavUrl, {
-      username: serviceConfig.webdavUser,
-      password: serviceConfig.webdavPassword,
-    });
+    this.webdavClient = serviceConfig.webdavUrl
+      ? createClient(serviceConfig.webdavUrl, {
+          username: serviceConfig.webdavUser,
+          password: serviceConfig.webdavPassword,
+        })
+      : undefined;
     this.api = new SABnzbdApi(
       serviceConfig.apiUrl,
       serviceConfig.apiKey,
@@ -493,12 +495,26 @@ export abstract class UsenetStreamService implements UsenetDebridService {
       serviceConfig.cacheAndPlayOptions?.maxWaitTime ?? Time.Second * 90;
   }
 
+  private get requireWebdavClient(): WebDAVClient {
+    if (!this.webdavClient) {
+      throw new DebridError('WebDAV is not configured for this service', {
+        statusCode: 503,
+        statusText: 'Service Unavailable',
+        code: 'UNKNOWN',
+        headers: {},
+        body: null,
+        type: 'api_error',
+      });
+    }
+    return this.webdavClient;
+  }
+
   protected async collectFiles(
     path: string
   ): Promise<{ files: FileStat[]; depth: number }> {
     // First, try using deep mode (recursive)
     try {
-      const contents = (await this.webdavClient.getDirectoryContents(path, {
+      const contents = (await this.requireWebdavClient.getDirectoryContents(path, {
         deep: true,
       })) as FileStat[];
 
@@ -529,7 +545,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     let contents: FileStat[];
     try {
-      contents = (await this.webdavClient.getDirectoryContents(
+      contents = (await this.requireWebdavClient.getDirectoryContents(
         path
       )) as FileStat[];
     } catch (error: any) {
@@ -636,7 +652,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     for (const category of categories) {
       const candidatePath = `${prefix}/${category}/${id}`;
       try {
-        const stat = await this.webdavClient.stat(candidatePath);
+        const stat = await this.requireWebdavClient.stat(candidatePath);
         const statData = 'data' in stat ? stat.data : stat;
         if (statData.type === 'directory') return candidatePath;
       } catch {
@@ -658,7 +674,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     let contents: FileStat[];
     const start = Date.now();
     try {
-      contents = (await this.webdavClient.getDirectoryContents(
+      contents = (await this.requireWebdavClient.getDirectoryContents(
         path
       )) as FileStat[];
     } catch (error: any) {
@@ -696,7 +712,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
     const prefix = this.getContentPathPrefix();
     try {
-      const contents = (await this.webdavClient.getDirectoryContents(
+      const contents = (await this.requireWebdavClient.getDirectoryContents(
         prefix
       )) as FileStat[];
       const categories = contents
@@ -1076,7 +1092,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     let alreadyExists = false;
 
     try {
-      const stat = await this.webdavClient.stat(expectedContentPath);
+      const stat = await this.requireWebdavClient.stat(expectedContentPath);
       const statData = 'data' in stat ? stat.data : stat;
       if (statData.type === 'directory') {
         alreadyExists = true;
@@ -1445,6 +1461,16 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   }
 
   protected getPublicWebdavUrlWithAuth(): string {
+    if (!this.auth.publicWebdavUrl) {
+      throw new DebridError('WebDAV is not configured for this service', {
+        statusCode: 503,
+        statusText: 'Service Unavailable',
+        code: 'UNKNOWN',
+        headers: {},
+        body: null,
+        type: 'api_error',
+      });
+    }
     let url = new URL(this.auth.publicWebdavUrl);
     if (this.auth.webdavUser && this.auth.webdavPassword) {
       url.username = encodeURIComponent(this.auth.webdavUser);
