@@ -184,7 +184,7 @@ router.post('/providers/test', async (req, res, next) => {
 });
 
 // POST /dashboard/usenet/providers/:id/speedtest — measure download throughput
-// by fetching real articles from an imported NZB over one connection.
+// by fanning a fixed test NZB out across the provider's whole connection pool.
 router.post('/providers/:id/speedtest', async (req, res, next) => {
   try {
     const result = await runProviderSpeedTest({ id: req.params.id });

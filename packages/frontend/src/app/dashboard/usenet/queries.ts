@@ -166,9 +166,8 @@ export interface ProviderSpeedTestResult {
   bytes?: number;
   durationMs?: number;
   segments?: number;
-  connectionsPerStream?: number;
   pipelineDepth?: number;
-  prefetchSegments?: number;
+  connections?: number;
   error?: string;
   code?: string;
 }
