@@ -24,12 +24,25 @@ declare module 'yencode' {
    */
   export function decodeChunk(
     data: Buffer,
-    state?: string | null,
-    output?: Buffer
+    output?: Buffer | null,
+    prev?: string | null
   ): DecodeChunkResult;
 
   /** Raw yEnc decode of a buffer. `stripDots` enables NNTP dot-unstuffing. */
   export function decode(data: Buffer, stripDots?: boolean): Buffer;
+
+  /**
+   * Raw yEnc decode straight into a caller-provided `output` buffer (which must
+   * be at least `data.length` bytes, since decoded output never exceeds the
+   * encoded input). Returns the number of bytes written. `stripDots` enables NNTP
+   * dot-unstuffing. Lets the hot path reuse/right-size the destination instead of
+   * letting the decoder allocate a fresh scratch buffer per call.
+   */
+  export function decodeTo(
+    data: Buffer,
+    output: Buffer,
+    stripDots?: boolean
+  ): number;
 
   export interface FromPostProps {
     begin?: Record<string, string>;

@@ -37,52 +37,139 @@ export class YencDecodeError extends Error {
   }
 }
 
+const CR = 0x0d;
+const LF = 0x0a;
+const EQ = 0x3d; // '='
+const Y = 0x79; // 'y'
+const YBEGIN_CRLF = Buffer.from('\r\n=ybegin ');
+const YBEGIN_AT0 = Buffer.from('=ybegin ');
+const YEND_CRLF = Buffer.from('\r\n=yend');
+
 /**
  * Decode a complete article body (raw, possibly dot-stuffed NNTP payload) into
  * its yEnc-decoded bytes plus the part/file metadata we need for seeking.
  *
+ * Parses only the `=ybegin`/`=ypart` header lines we actually consume, then
+ * decodes the data region straight into one right-sized buffer via the native
+ * `decodeTo`. This skips the two things `yencode.from_post` does per article that
+ * nothing here uses: a full CRC32 pass over the decoded body, and a swarm of
+ * short-lived JS objects (per-line strings, nested `props`, a `warnings` array).
+ * Structural failures (no start / no end marker) still throw
+ * {@link YencDecodeError}.
+ *
  * @param raw the article body bytes as received from BODY (without the
- *   terminating `\r\n.\r\n`). Still dot-stuffed, so `stripDots` is true.
+ *   terminating `\r\n.\r\n`). Still dot-stuffed, so decoding strips dots.
  */
 export function decodeArticle(raw: Buffer): DecodedSegment {
-  const result = yencode.from_post(raw, true);
-  if (result instanceof Error || (result as any).code) {
-    const err = result as yencode.FromPostError;
+  // Locate the `=ybegin ` line: usually at offset 0, otherwise after a CRLF
+  // (real posts sometimes carry junk before the header).
+  let pos: number;
+  if (
+    raw.length >= 8 &&
+    raw[0] === EQ &&
+    raw.compare(YBEGIN_AT0, 0, 8, 0, 8) === 0
+  ) {
+    pos = 0;
+  } else {
+    const at = raw.indexOf(YBEGIN_CRLF);
+    if (at < 0) {
+      throw new YencDecodeError(
+        'no_start_found',
+        'yEnc decode failed: no_start_found'
+      );
+    }
+    pos = at + 2; // skip the leading CRLF
+  }
+
+  let fileSize: number | undefined;
+  let name: string | undefined;
+  let byteRange: [number, number] | undefined;
+
+  // Walk the header lines (`=ybegin`, optional `=ypart`, rarely more) until the
+  // first line that does not start with `=y`, which is where the data begins.
+  // `=ybegin` is always first; `=ypart` (when present) carries the byte range.
+  let first = true;
+  while (pos < raw.length && raw[pos] === EQ && raw[pos + 1] === Y) {
+    let eol = raw.indexOf(LF, pos);
+    if (eol < 0) eol = raw.length;
+    // Header lines are short; latin1 keeps a 1:1 byte↔char mapping.
+    const lineEnd = eol > pos && raw[eol - 1] === CR ? eol - 1 : eol;
+    const line = raw.toString('latin1', pos, lineEnd);
+    if (first) {
+      // `=ybegin line=128 size=768000 name=...`
+      fileSize = toInt(/(?:^|\s)size=(\d+)/.exec(line)?.[1]);
+      name = /(?:^|\s)name=(.*)$/.exec(line)?.[1];
+      first = false;
+    } else if (line.startsWith('=ypart ')) {
+      const pb = toInt(/(?:^|\s)begin=(\d+)/.exec(line)?.[1]);
+      const pe = toInt(/(?:^|\s)end=(\d+)/.exec(line)?.[1]);
+      if (pb !== undefined && pe !== undefined) {
+        // =ypart begin/end are 1-based inclusive → 0-based half-open.
+        byteRange = [pb - 1, pe];
+      }
+    }
+    pos = eol + 1;
+  }
+  const dataStart = pos;
+
+  // The data region ends at the trailing `\r\n=yend`. Search from the end so a
+  // stray `=yend`-looking sequence inside the data can't end it early.
+  const dataEnd = raw.lastIndexOf(YEND_CRLF);
+  if (dataEnd < 0 || dataEnd < dataStart) {
     throw new YencDecodeError(
-      err.code,
-      `yEnc decode failed: ${err.code ?? err.message}`
+      'no_end_found',
+      'yEnc decode failed: no_end_found'
     );
   }
-  const ok = result as yencode.FromPostResult;
-  const props = ok.props ?? {};
 
-  const begin = props.begin ?? {};
-  const part = props.part ?? {};
+  const slice = raw.subarray(dataStart, dataEnd);
+  // Decoded length is always ≤ encoded length (escapes + line breaks shrink),
+  // so the encoded slice length is a safe destination size; decodeTo returns
+  // the exact written count.
+  const out = acquireDecodeOut(slice.length);
+  const written = yencode.decodeTo(slice, out, true);
+  const body = out.subarray(0, written);
 
-  const fileSize = toInt(begin.size);
-  const name = begin.name;
+  return { body, byteRange, fileSize, name, size: written };
+}
 
-  let byteRange: [number, number] | undefined;
-  const partBegin = toInt(part.begin);
-  const partEnd = toInt(part.end);
-  if (partBegin !== undefined && partEnd !== undefined) {
-    // =ypart begin/end are 1-based inclusive; convert to 0-based half-open.
-    byteRange = [partBegin - 1, partEnd];
+let decodeRing: Buffer[] | null = null;
+let decodeRingIdx = 0;
+
+/**
+ * Enable (N>0) or disable (N<=0) the reusable decode-output ring with N slots.
+ * Idempotent; growing N re-sizes the ring. Called once by the engine.
+ */
+export function configureDecodePool(n: number): void {
+  if (n <= 0) {
+    decodeRing = null;
+    decodeRingIdx = 0;
+    return;
   }
+  if (!decodeRing) {
+    decodeRing = [];
+    decodeRingIdx = 0;
+  }
+  // Grow only; shrinking would risk aliasing a slot a live body still views.
+  while (decodeRing.length < n) decodeRing.push(Buffer.allocUnsafe(1 << 20));
+}
 
-  return {
-    body: ok.data,
-    byteRange,
-    fileSize,
-    name,
-    size: ok.data.length,
-  };
+function acquireDecodeOut(size: number): Buffer {
+  if (!decodeRing) return Buffer.allocUnsafe(size);
+  let buf = decodeRing[decodeRingIdx];
+  if (buf.length < size) {
+    // Oversized article: grow this slot (rare; typical yEnc article ≤ ~1 MiB).
+    buf = Buffer.allocUnsafe(size);
+    decodeRing[decodeRingIdx] = buf;
+  }
+  decodeRingIdx = (decodeRingIdx + 1) % decodeRing.length;
+  return buf;
 }
 
 /**
  * Some obfuscated posts declare a bogus, too-small yEnc `=ybegin size=` (e.g.
  * ~5 MB in the first part of a ~200 MB multipart volume).
- * 
+ *
  * Returns true when `fileSize` is too small to be
  * this multipart file's real decoded size, so the caller must instead derive
  * the size from the last part's `=ypart end=`.
@@ -122,7 +209,7 @@ export class StreamingYencDecoder {
    */
   push(chunk: Buffer): Buffer {
     if (this._ended || chunk.length === 0) return Buffer.alloc(0);
-    const res = yencode.decodeChunk(chunk, this.state);
+    const res = yencode.decodeChunk(chunk, undefined, this.state);
     this.state = res.state;
     if (res.ended) this._ended = true;
     return res.written === res.output.length
