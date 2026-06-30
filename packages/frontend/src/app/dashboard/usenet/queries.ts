@@ -51,13 +51,9 @@ export interface PoolInfo {
 }
 
 export interface CacheStats {
-  sizeBytes: number;
-  maxBytes: number;
-  count: number;
   hits: number;
   misses: number;
   hitRate: number;
-  memBytes: number;
   diskBytes: number;
   diskCount: number;
   diskHits: number;
@@ -287,9 +283,8 @@ export function useSpeedTestProvider() {
 
 /** Concrete values a performance profile applies (matches core PERFORMANCE_PROFILES). */
 export interface UsenetProfilePreset {
-  maxConnectionsPerStream: number;
   prefetchSegments: number;
-  segmentCacheBytes: number;
+  maxConcurrentDownloads: number;
   segmentDiskCacheBytes: number;
 }
 export type UsenetProfiles = Record<string, UsenetProfilePreset>;

@@ -23,6 +23,18 @@ export interface DiskBackedCacheOptions<V> {
   deserialize: (buf: Buffer) => V;
   /** Decoded byte weight of a value (drives both budgets). */
   sizeOf: (value: V) => number;
+  /**
+   * Optional zero-alloc serializer: write the full serialized form of `value`
+   * into `dst` (≥ {@link serializedSize} bytes) and return the bytes written.
+   * When provided (with {@link serializedSize}), disk writes serialize
+   * synchronously in {@link DiskBackedCache.set} through a pooled, recycled
+   * write-buffer ring, so a transient/pooled `value` body is captured before it
+   * can be reused, with no per-write `Buffer.concat`. Falls back to
+   * {@link serialize} when absent.
+   */
+  serializeInto?: (value: V, dst: Buffer) => number;
+  /** Exact serialized byte length of `value`. Required iff {@link serializeInto} is set. */
+  serializedSize?: (value: V) => number;
 }
 
 interface MemEntry<V> {
@@ -299,6 +311,25 @@ export class DiskBackedCache<V> {
   private static readonly MAX_PENDING_WRITES = 64;
   private static readonly MAX_PENDING_WRITE_BYTES = 128 * 1024 * 1024;
 
+  /**
+   * Recycled write-buffer ring for the zero-alloc serialize path. Bounded by the
+   * same {@link MAX_PENDING_WRITES} backpressure; a slot returns to the pool once
+   * its `fs.writeFile` settles.
+   */
+  private writePool: Buffer[] = [];
+
+  private acquireWriteBuf(size: number): Buffer {
+    const slot = this.writePool.pop();
+    if (slot && slot.length >= size) return slot;
+    return Buffer.allocUnsafe(Math.max(size, 1 << 20));
+  }
+
+  private releaseWriteBuf(buf: Buffer): void {
+    if (this.writePool.length < DiskBackedCache.MAX_PENDING_WRITES) {
+      this.writePool.push(buf);
+    }
+  }
+
   /** Update the disk index synchronously; write the file in the background. */
   private persistToDisk(key: string, value: V, size: number): void {
     if (
@@ -318,12 +349,26 @@ export class DiskBackedCache<V> {
     this.indexDirty = true;
     this.evictDisk();
 
+    // Zero-alloc path: serialize SYNCHRONOUSLY into a pooled slot (capturing a
+    // transient/pooled `value` body before it can be reused), then write the
+    // slot's bytes and recycle it. Falls back to the allocating `serialize` when
+    // the codec doesn't provide the into-form.
+    const into = this.opts.serializeInto;
+    const sizer = this.opts.serializedSize;
+    let slot: Buffer | undefined;
+    let payload: Buffer;
+    if (into && sizer) {
+      slot = this.acquireWriteBuf(sizer(value));
+      payload = slot.subarray(0, into(value, slot));
+    } else {
+      payload = this.opts.serialize(value);
+    }
+
     let write: Promise<void>;
     this.pendingWriteBytes += size;
     const run = async (): Promise<void> => {
       try {
-        const buf = this.opts.serialize(value);
-        await fs.writeFile(this.filePath(fileKey), buf);
+        await fs.writeFile(this.filePath(fileKey), payload);
       } catch (err) {
         // Roll back the index entry on write failure.
         this.dropDisk(fileKey);
@@ -332,6 +377,7 @@ export class DiskBackedCache<V> {
           'disk cache write failed'
         );
       } finally {
+        if (slot) this.releaseWriteBuf(slot);
         this.pendingWriteBytes -= size;
         if (this.pendingWrites.get(fileKey) === write) {
           this.pendingWrites.delete(fileKey);

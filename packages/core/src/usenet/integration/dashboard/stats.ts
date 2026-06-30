@@ -116,13 +116,9 @@ function emptyLive(): LiveTiles {
 
 function emptyCache(): CacheStats {
   return {
-    sizeBytes: 0,
-    maxBytes: 0,
-    count: 0,
     hits: 0,
     misses: 0,
     hitRate: 0,
-    memBytes: 0,
     diskBytes: 0,
     diskCount: 0,
     diskHits: 0,
