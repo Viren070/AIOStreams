@@ -86,7 +86,7 @@ const EasynewsSearchResponseSchema = z.object({
   perPage: z.union([z.string(), z.number()]).optional(),
   thumbURL: z.string().optional(),
   thumbUrl: z.string().optional(),
-  dlFarm: z.string().optional(),
+  dlFarm: z.union([z.string(), z.number()]).optional(),
   dlPort: z.union([z.string(), z.number()]).optional(),
   downURL: z.string().optional(),
 });
@@ -465,7 +465,7 @@ export class EasynewsApi {
       numPages: response.numPages,
       currentPage: response.page ?? 1,
       downloadInfo: {
-        dlFarm: response.dlFarm ?? '',
+        dlFarm: String(response.dlFarm ?? ''),
         dlPort: String(response.dlPort ?? ''),
         downURL: response.downURL ?? `${EASYNEWS_BASE}/dl`,
       },
