@@ -72,6 +72,19 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
     title: 'Import & API',
     leaves: ['maxNzbSize', 'sabnzbdApiEnabled'],
   },
+  {
+    title: 'WebDAV server',
+    leaves: ['webdavEnabled', 'webdavImportPaths'],
+    note:
+      'Exposes the usenet library as a WebDAV filesystem at “/dav” so media ' +
+      'players (Infuse, Kodi, VLC) and *arr mounts can browse and stream it on ' +
+      'demand, without storing completed downloads locally. Two trees are ' +
+      'served: “/dav/library/<category>/<release>” and “/dav/media/Movies|Series” ' +
+      '(parsed names for browsing). Log in with your AIOSTREAMS_AUTH ' +
+      '“username:password”. For Sonarr/Radarr import, also turn on WebDAV ' +
+      'completed-download paths below, and mount “/dav” on the *arr host or add ' +
+      'a Remote Path Mapping. Inert until NNTP providers and AIOSTREAMS_AUTH are set.',
+  },
 ];
 
 const leafOf = (key: string) => key.replace(/^usenet\./, '');
@@ -166,6 +179,9 @@ export function UsenetSettingsPage() {
 
   const keys = query.data?.keys ?? [];
   const profiles = query.data?.profiles ?? {};
+  const webdavUrl =
+    query.data?.webdavUrl ||
+    (typeof window !== 'undefined' ? `${window.location.origin}/dav` : '/dav');
 
   const { schema, defaults, byName } = React.useMemo(() => {
     const shape: Record<string, z.ZodTypeAny> = {};
@@ -268,6 +284,17 @@ export function UsenetSettingsPage() {
                 {g.keys.map((k) => (
                   <SettingsField key={k.key} k={k} />
                 ))}
+                {g.title === 'WebDAV server' &&
+                  methods.watch(toName(usenetKey('webdavEnabled'))) === true && (
+                  <div className="mt-1">
+                    <p className="text-xs text-[--muted] mb-1">
+                      Connect your WebDAV client to:
+                    </p>
+                    <code className="block select-all break-all rounded-md border border-[--border] bg-[--subtle]/40 px-3 py-2 text-xs">
+                      {webdavUrl}
+                    </code>
+                  </div>
+                )}
               </SettingsCard>
             ))}
             <div className="flex justify-end">

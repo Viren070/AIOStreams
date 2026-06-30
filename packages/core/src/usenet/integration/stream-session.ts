@@ -322,6 +322,8 @@ export async function openNativeUsenetStream(opts: {
   token: string;
   start?: number;
   end?: number;
+  /** Suffix range (`bytes=-N`): serve the last N bytes, resolved against size. */
+  suffix?: number;
   signal?: AbortSignal;
 }): Promise<OpenedUsenetStream> {
   const decoded = decodeUsenetStreamToken(opts.token);
@@ -350,8 +352,29 @@ export async function openNativeUsenetStream(opts: {
 
   const session = await getStreamSession(decoded, providers, options);
   const { size, filename } = session;
-  const start = Math.max(0, opts.start ?? 0);
-  const end = Math.min(size, opts.end ?? size);
+  const hasRange =
+    opts.start !== undefined ||
+    opts.end !== undefined ||
+    opts.suffix !== undefined;
+  const start =
+    opts.suffix !== undefined
+      ? Math.max(0, size - opts.suffix)
+      : Math.max(0, opts.start ?? 0);
+  const end = opts.suffix !== undefined ? size : Math.min(size, opts.end ?? size);
+
+  // Reject unsatisfiable ranges before creating the read stream, so a bad range
+  // never reaches the NNTP engine: beyond EOF / reversed for a non-empty file,
+  // and any range at all against an empty file (a non-range read still 200s).
+  if ((size > 0 && (start >= size || start >= end)) || (size === 0 && hasRange)) {
+    throw new DebridError('requested range not satisfiable', {
+      statusCode: 416,
+      statusText: 'Range Not Satisfiable',
+      code: 'BAD_REQUEST',
+      headers: { 'content-range': `bytes */${size}` },
+      body: null,
+      type: 'api_error',
+    });
+  }
 
   return {
     stream: session.stream.createReadStream({ start, end }),

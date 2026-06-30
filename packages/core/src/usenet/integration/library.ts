@@ -677,12 +677,38 @@ export async function addUsenetNzb(opts: {
  */
 export async function mintUsenetLibraryToken(
   nzbHash: string,
-  fileSel?: string
+  fileSel?: string,
+  opts?: { strict?: boolean }
 ): Promise<{ token: string; filename: string } | undefined> {
   const entry = await UsenetLibraryRepository.get(nzbHash);
   if (!entry?.nzbUrl) return undefined;
   let file: UsenetLibraryFile | undefined;
-  if (fileSel) {
+  if (opts?.strict) {
+    // Strict callers (WebDAV GET) need an exact, unambiguous match. Prefer path
+    // or index; fall back to name only when it is unique (the WebDAV tree lists
+    // a name-only file the same way). No match returns undefined rather than a
+    // different stream.
+    if (fileSel) {
+      // `fileSel` is one namespace for path, index and name. Collect every file
+      // it could match and accept only when exactly one distinct file matches,
+      // so an ambiguous selector never mints a token for the wrong file.
+      const byName = entry.files.filter((f) => f.name === fileSel);
+      const candidates = new Set<UsenetLibraryFile>([
+        ...entry.files.filter((f) => f.path === fileSel),
+        ...entry.files.filter(
+          (f) => f.index != null && String(f.index) === fileSel
+        ),
+        ...(byName.length === 1 ? byName : []),
+      ]);
+      file = candidates.size === 1 ? [...candidates][0] : undefined;
+    } else {
+      // No selector (a listed file with no path/index/name): only unambiguous
+      // when the entry has exactly one streamable file.
+      const streamable = entry.files.filter((f) => f.streamable !== false);
+      if (streamable.length === 1) file = streamable[0];
+    }
+    if (!file) return undefined;
+  } else if (fileSel) {
     file =
       entry.files.find((f) => f.path === fileSel) ??
       entry.files.find((f) => String(f.index) === fileSel) ??

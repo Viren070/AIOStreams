@@ -17,6 +17,7 @@ import {
   exportUsenetLibraryNzb,
   UsenetLibraryRepository,
   usenetLibraryBus,
+  WEBDAV_BASE,
   type UsenetStatsWindow,
   type UsenetLibraryStatusGroup,
   type UsenetLibraryStatus,
@@ -131,10 +132,22 @@ router.put('/providers', async (req, res) => {
 // GET /dashboard/usenet/settings — engine settings (incl. hidden) + values.
 router.get('/settings', (_req, res, next) => {
   try {
+    // Only advertise the mount URL from the configured base URL. When it's unset
+    // the client falls back to its own window origin rather than us trusting a
+    // spoofable Host header.
+    const configuredBase = (appConfig.bootstrap.baseUrl || '').replace(
+      /\/+$/,
+      ''
+    );
+    const webdavUrl = configuredBase ? `${configuredBase}${WEBDAV_BASE}` : '';
     res.status(200).json(
       createResponse({
         success: true,
-        data: { keys: getUsenetSettings(), profiles: PERFORMANCE_PROFILES },
+        data: {
+          keys: getUsenetSettings(),
+          profiles: PERFORMANCE_PROFILES,
+          webdavUrl,
+        },
       })
     );
   } catch (err) {
