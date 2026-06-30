@@ -35,198 +35,189 @@ export function isErrorStatus(code: number): boolean {
   return statusClass(code) >= 4;
 }
 
+const LF = 0x0a;
+const CR = 0x0d;
+/** Cap on an accumulated status line; longer without a CRLF is a protocol desync. */
+const LINE_CAP = 4096;
+const TERM_LEN = DOT_TERMINATOR.length; // 5
+const TERM_OVERLAP = TERM_LEN - 1; // 4: max bytes a terminator can straddle a read boundary
+
+/** One step from {@link NntpOnreadParser.feedLine}. */
+export type LineStep =
+  | { status: 'line'; text: string; off: number }
+  | { status: 'need-more'; off: number }
+  | { status: 'desync' };
+
+/** One step from {@link NntpOnreadParser.feedBody}. */
+export interface BodyStep {
+  /** True once the `\r\n.\r\n` terminator has been consumed. */
+  ended: boolean;
+  /** New offset into the socket buffer (past the terminator when `ended`). */
+  off: number;
+}
+
 /**
- * Incrementally accumulates socket bytes and yields complete protocol units.
+ * Streaming NNTP response parser for the `onread` read path: it is fed the
+ * socket's reused read buffer `(nread, buf)` directly and consumes it
+ * synchronously within the read callback, so no per-read Buffer is allocated. It
+ * owns small, once-allocated scratch (a line carry plus a terminator-overlap
+ * tail) and never retains a view of the socket buffer across reads.
  *
- * Usage: after issuing a command, call {@link takeLine} (single line) or begin
- * a multiline read via {@link takeMultiline}. The reader is fed via
- * {@link push} from the socket's 'data' handler and resolves the appropriate
- * pending request.
- *
- * For BODY/ARTICLE the multiline payload is exposed as raw bytes (including
- * the dot-stuffing) up to but not including the terminating `\r\n.\r\n`.
- *
- * Bytes are kept as the **list of socket chunks** rather than one growing
- * buffer: re-`concat`ing the accumulator on every chunk would cost O(n^2)
- * memcpy as a large multi-chunk article arrives. The chunk list does ONE
- * join when a unit completes; terminator scans only touch the newly arrived
- * region (plus a needle-sized overlap for matches that straddle chunks).
+ * Two body modes:
+ *  - buffered (`beginBufferedBody`): the hot `BODY` path. Each read is copied
+ *    straight into the caller's pooled destination (`dest`) and the terminator
+ *    is found by scanning `dest` itself with a {@link TERM_OVERLAP}-byte
+ *    back-scan, so the carry is just `dest`'s own tail: one copy, a contiguous
+ *    scan, and a rewind of `bodyLen` if the terminator straddled the prior read.
+ *  - streaming (`beginStreamingBody`): the low-volume probe path. Confirmed body
+ *    bytes are emitted to a consumer as they arrive while the last
+ *    {@link TERM_OVERLAP} bytes are held back (they might begin the terminator).
  */
-export class NntpResponseReader {
-  private chunks: Buffer[] = [];
-  private buffered = 0;
+export class NntpOnreadParser {
+  // --- line carry ---
+  private lineBuf = Buffer.allocUnsafe(LINE_CAP);
+  private lineLen = 0;
 
-  push(chunk: Buffer): void {
-    if (chunk.length === 0) return;
-    this.chunks.push(chunk);
-    this.buffered += chunk.length;
+  // --- buffered body ---
+  /** Caller-owned destination for the current buffered body (a pooled ring slot). */
+  dest: Buffer | null = null;
+  /** Confirmed decoded-into-`dest` length; on `ended` this is the body length. */
+  bodyLen = 0;
+  /** `dest` scan watermark: bytes already searched for the terminator. */
+  private scanned = 0;
+
+  // --- streaming body ---
+  private consumer: ((chunk: Buffer) => void) | null = null;
+  /** Reused scratch for the streaming-merge scan (sized lazily to the read buffer). */
+  private streamScratch: Buffer | null = null;
+  /** Held-back tail bytes that might begin the terminator (streaming mode). */
+  private tail = Buffer.allocUnsafe(TERM_OVERLAP);
+  private tailLen = 0;
+  /** Total raw body bytes streamed for the current request. */
+  streamed = 0;
+
+  /** Arm for a single CRLF-terminated line (greeting / STAT / DATE / GROUP / AUTH). */
+  beginLine(): void {
+    this.lineLen = 0;
   }
 
-  reset(): void {
-    this.chunks = [];
-    this.buffered = 0;
+  /** Arm for a buffered BODY payload copied into `dest`. */
+  beginBufferedBody(dest: Buffer): void {
+    this.dest = dest;
+    this.consumer = null;
+    this.bodyLen = 0;
+    this.scanned = 0;
   }
 
-  /** Number of bytes currently buffered (diagnostics/back-pressure). */
-  get bufferedBytes(): number {
-    return this.buffered;
+  /** Replace the destination (used by the connection's oversize-grow path). */
+  setDest(dest: Buffer): void {
+    this.dest = dest;
   }
 
-  /**
-   * Try to read a single CRLF-terminated status line from the buffer.
-   * Returns null if a full line is not yet available.
-   */
-  takeLine(): string | null {
-    const idx = this.indexOfFrom(CRLF, 0);
-    if (idx === -1) return null;
-    const line = this.consume(idx).toString('latin1');
-    this.discard(CRLF.length);
-    return line;
-  }
-
-  /**
-   * Try to read a complete multiline body terminated by `\r\n.\r\n`.
-   * Returns the raw payload bytes (still dot-stuffed) WITHOUT the terminator,
-   * or null if the terminator has not been seen yet.
-   *
-   * `searchFrom` lets callers avoid rescanning already-scanned bytes; pass the
-   * value returned by {@link scanWatermark} on the next call.
-   */
-  takeMultiline(searchFrom = 0): { body: Buffer; scanned: number } | null {
-    // The terminator can straddle previously-buffered bytes, so back up by
-    // (terminator length - 1) to catch a split sequence.
-    const start = Math.max(0, searchFrom - (DOT_TERMINATOR.length - 1));
-    const idx = this.indexOfFrom(DOT_TERMINATOR, start);
-    if (idx === -1) {
-      return null;
-    }
-    const body = this.consume(idx);
-    this.discard(DOT_TERMINATOR.length);
-    return { body, scanned: 0 };
-  }
-
-  /** Current scan watermark for the next takeMultiline call. */
-  scanWatermark(): number {
-    return this.buffered;
+  /** Arm for a streamed BODY payload (probe path); body bytes go to `consumer`. */
+  beginStreamingBody(consumer: (chunk: Buffer) => void): void {
+    this.consumer = consumer;
+    this.dest = null;
+    this.tailLen = 0;
+    this.streamed = 0;
   }
 
   /**
-   * Streaming variant of {@link takeMultiline}: hand the raw (dot-stuffed)
-   * payload to `consume` as it arrives instead of accumulating it, retaining
-   * only a terminator-overlap tail in the buffer. Returns true once the
-   * terminator was consumed, false while the body is still incomplete. The
-   * buffer therefore stays a few bytes deep regardless of article size.
+   * Consume one CRLF-terminated line from `buf[off..nread]`, accumulating across
+   * reads. The returned line excludes the trailing `\r\n`; a bare `\n` (not
+   * preceded by `\r`) is treated as line content.
    */
-  takeMultilineStreaming(consume: (chunk: Buffer) => void): boolean {
-    const idx = this.indexOfFrom(DOT_TERMINATOR, 0);
-    if (idx === -1) {
-      const keep = DOT_TERMINATOR.length - 1;
-      if (this.buffered > keep) {
-        consume(this.consume(this.buffered - keep));
+  feedLine(buf: Buffer, off: number, nread: number): LineStep {
+    let p = off;
+    for (;;) {
+      let lf = buf.indexOf(LF, p);
+      if (lf >= nread) lf = -1; // ignore stale bytes past this read
+      const end = lf < 0 ? nread : lf + 1;
+      const add = end - p;
+      if (this.lineLen + add > LINE_CAP) return { status: 'desync' };
+      buf.copy(this.lineBuf, this.lineLen, p, end);
+      this.lineLen += add;
+      if (lf < 0) return { status: 'need-more', off: nread };
+      // A real line ends in CRLF; a bare LF is content, so keep scanning.
+      if (this.lineLen >= 2 && this.lineBuf[this.lineLen - 2] === CR) {
+        const text = this.lineBuf.toString('latin1', 0, this.lineLen - 2);
+        this.lineLen = 0;
+        return { status: 'line', text, off: end };
       }
-      return false;
+      p = end;
     }
-    const tail = this.consume(idx);
-    this.discard(DOT_TERMINATOR.length);
-    if (tail.length > 0) consume(tail);
-    return true;
   }
 
   /**
-   * Absolute index of the first occurrence of `needle` starting at or after
-   * absolute offset `from`, searching across chunk boundaries; -1 when absent.
+   * Consume body bytes from `buf[off..nread]` for the current (buffered or
+   * streaming) request. Returns whether the terminator was reached and the new
+   * `off`. In buffered mode the body lives in `dest[0..bodyLen]`; in streaming
+   * mode confirmed bytes have been handed to the consumer and `streamed` updated.
    */
-  private indexOfFrom(needle: Buffer, from: number): number {
-    const n = needle.length;
-    let base = 0; // absolute offset of chunks[i][0]
-    for (let i = 0; i < this.chunks.length; i++) {
-      const chunk = this.chunks[i];
-      const end = base + chunk.length;
-      // A match starts at some abs >= from; any chunk ending at/before `from`
-      // cannot contain a match start.
-      if (end <= from) {
-        base = end;
-        continue;
-      }
-      const localFrom = Math.max(0, from - base);
-      // Match fully inside this chunk.
-      const hit = chunk.indexOf(needle, localFrom);
-      if (hit !== -1) return base + hit;
-      // Match starting in this chunk's last (n-1) bytes and continuing into
-      // the following chunk(s): search a small joined boundary window.
-      if (n > 1 && i + 1 < this.chunks.length) {
-        const winStart = Math.max(localFrom, chunk.length - (n - 1));
-        if (winStart < chunk.length) {
-          const window = this.boundaryWindow(
-            i,
-            winStart,
-            chunk.length - winStart + (n - 1)
-          );
-          const winHit = window.indexOf(needle);
-          if (winHit !== -1) return base + winStart + winHit;
-        }
-      }
-      base = end;
-    }
-    return -1;
+  feedBody(buf: Buffer, off: number, nread: number): BodyStep {
+    return this.dest !== null
+      ? this.feedBuffered(buf, off, nread)
+      : this.feedStreaming(buf, off, nread);
   }
 
-  /**
-   * Join up to `maxLen` bytes starting at `(chunkIdx, localOffset)` spanning
-   * into subsequent chunks; used for needle-sized boundary windows only.
-   */
-  private boundaryWindow(
-    chunkIdx: number,
-    localOffset: number,
-    maxLen: number
-  ): Buffer {
-    const parts: Buffer[] = [];
-    let need = maxLen;
-    for (let i = chunkIdx; i < this.chunks.length && need > 0; i++) {
-      const part =
-        i === chunkIdx ? this.chunks[i].subarray(localOffset) : this.chunks[i];
-      const take = part.length > need ? part.subarray(0, need) : part;
-      parts.push(take);
-      need -= take.length;
+  /** Buffered hot path: copy-into-`dest`, scan `dest` with overlap, rewind on hit. */
+  private feedBuffered(buf: Buffer, off: number, nread: number): BodyStep {
+    let dest = this.dest!;
+    const win = nread - off;
+    const start = this.bodyLen; // dest offset where this read lands
+    if (start + win > dest.length) {
+      // Oversize article: grow geometrically, copy what we have, keep going.
+      const grown = Buffer.allocUnsafe(Math.max(dest.length * 2, start + win));
+      dest.copy(grown, 0, 0, start);
+      dest = grown;
+      this.dest = grown;
     }
-    return parts.length === 1 ? parts[0] : Buffer.concat(parts);
+    buf.copy(dest, start, off, nread);
+    const writtenEnd = start + win;
+    // Back up the scan by TERM_OVERLAP so a terminator that straddled the prior
+    // read's tail is still found; never re-scan confirmed bytes twice otherwise.
+    // The subarray BOUNDS the scan to written bytes (the slot's tail is stale).
+    const from = Math.max(0, this.scanned, start - TERM_OVERLAP);
+    const hit = dest.subarray(0, writtenEnd).indexOf(DOT_TERMINATOR, from);
+    if (hit >= 0) {
+      const windowConsumed = hit + TERM_LEN - start; // terminator end, in this read's bytes
+      this.bodyLen = hit; // body ends at the terminator (rewinds if it straddled)
+      return { ended: true, off: off + windowConsumed };
+    }
+    this.bodyLen = writtenEnd;
+    this.scanned = Math.max(0, writtenEnd - TERM_OVERLAP);
+    return { ended: false, off: nread };
   }
 
-  /** Remove the first `n` bytes and return them as one buffer (single copy). */
-  private consume(n: number): Buffer {
-    if (n <= 0) return Buffer.alloc(0);
-    const parts: Buffer[] = [];
-    let need = n;
-    while (need > 0 && this.chunks.length > 0) {
-      const head = this.chunks[0];
-      if (head.length <= need) {
-        parts.push(head);
-        this.chunks.shift();
-        need -= head.length;
-      } else {
-        parts.push(head.subarray(0, need));
-        // Keep the remainder as a zero-copy view; it becomes the new head.
-        this.chunks[0] = head.subarray(need);
-        need = 0;
-      }
+  /** Streaming probe path: merge tail+window in scratch, emit all but the held tail. */
+  private feedStreaming(buf: Buffer, off: number, nread: number): BodyStep {
+    const win = nread - off;
+    const need = this.tailLen + win;
+    if (!this.streamScratch || this.streamScratch.length < need) {
+      this.streamScratch = Buffer.allocUnsafe(Math.max(need, 64 * 1024));
     }
-    this.buffered -= n - need;
-    return parts.length === 1 ? parts[0] : Buffer.concat(parts);
-  }
-
-  /** Drop the first `n` bytes without materialising them. */
-  private discard(n: number): void {
-    let need = n;
-    while (need > 0 && this.chunks.length > 0) {
-      const head = this.chunks[0];
-      if (head.length <= need) {
-        this.chunks.shift();
-        need -= head.length;
-      } else {
-        this.chunks[0] = head.subarray(need);
-        need = 0;
+    const s = this.streamScratch;
+    this.tail.copy(s, 0, 0, this.tailLen);
+    buf.copy(s, this.tailLen, off, nread);
+    const total = this.tailLen + win;
+    const hit = s.subarray(0, total).indexOf(DOT_TERMINATOR); // bounded: scratch tail is stale
+    if (hit >= 0) {
+      if (hit > 0) {
+        this.consumer!(s.subarray(0, hit));
+        this.streamed += hit;
       }
+      const windowConsumed = hit + TERM_LEN - this.tailLen;
+      this.tailLen = 0;
+      return { ended: true, off: off + windowConsumed };
     }
-    this.buffered -= n - need;
+    const keep = Math.min(TERM_OVERLAP, total);
+    const emitLen = total - keep;
+    if (emitLen > 0) {
+      this.consumer!(s.subarray(0, emitLen));
+      this.streamed += emitLen;
+    }
+    s.copy(this.tail, 0, emitLen, total);
+    this.tailLen = keep;
+    return { ended: false, off: nread };
   }
 }
