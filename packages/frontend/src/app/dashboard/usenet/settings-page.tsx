@@ -20,9 +20,8 @@ import {
 
 /** Config leaves a performance profile bundles (must match core PERFORMANCE_PROFILES). */
 const BUNDLED_LEAVES = [
-  'maxConnectionsPerStream',
   'prefetchSegments',
-  'segmentCacheBytes',
+  'maxConcurrentDownloads',
   'segmentDiskCacheBytes',
 ] as const;
 const PROFILE_LEAF = 'performanceProfile';
@@ -38,12 +37,11 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
   {
     title: 'Performance',
     leaves: [PROFILE_LEAF, ...BUNDLED_LEAVES],
-    note: 'Pick a profile to fill in the four values below with sensible defaults — editing any of them switches the profile to “custom”. The active profile is what the engine actually uses.',
+    note: 'Pick a profile to fill in the values below with sensible defaults — editing any of them switches the profile to “custom”. The active profile is what the engine actually uses.',
   },
   {
     title: 'Connections & timeouts',
     leaves: [
-      'maxDownloadConnections',
       'streamingPriority',
       'segmentTimeout',
       'dialTimeout',

@@ -51,6 +51,7 @@ export const runtimeKeyAliases: Record<string, string> = {
   'nzbProxy.zyclopsHealthProxyEndpoint':
     'builtins.nab.zyclopsHealthProxyEndpoint',
   'userLimits.maxNzbFailoverCount': 'userLimits.maxFailoverAttempts',
+  'usenet.maxDownloadConnections': 'usenet.maxConcurrentDownloads',
 };
 
 export const settingsStore = new SettingsStore(

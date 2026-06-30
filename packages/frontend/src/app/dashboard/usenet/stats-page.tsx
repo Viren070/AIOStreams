@@ -104,13 +104,7 @@ function LivePanel() {
         <Stat
           label="Cache hit rate"
           value={d ? formatPercent(d.cache.hitRate) : '—'}
-          hint={
-            d
-              ? `mem ${formatBytes(d.cache.memBytes)} · disk ${formatBytes(
-                  d.cache.diskBytes
-                )}`
-              : ''
-          }
+          hint={d ? `${formatBytes(d.cache.diskBytes)} on disk` : ''}
         />
       </div>
 

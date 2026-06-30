@@ -3,40 +3,30 @@ import { DiskBackedCache } from '../../utils/disk-backed-cache.js';
 
 /** Point-in-time cache stats for the dashboard. */
 export interface CacheStats {
-  /** Memory-tier bytes (alias of {@link memBytes}; kept for back-compat). */
-  sizeBytes: number;
-  /** Memory-tier budget. */
-  maxBytes: number;
-  /** Memory-tier entry count. */
-  count: number;
   hits: number;
   misses: number;
   /** hits / (hits + misses); 0 when never queried. */
   hitRate: number;
-  /** L1 (memory) bytes. */
-  memBytes: number;
-  /** L2 (disk) bytes. */
+  /** On-disk cache bytes. */
   diskBytes: number;
-  /** L2 (disk) entry count. */
+  /** On-disk cache entry count. */
   diskCount: number;
-  /** Subset of hits served from the disk tier. */
+  /** Subset of hits served from the disk cache. */
   diskHits: number;
 }
 
 export interface SegmentCacheOptions {
-  /** L1 (in-memory) byte budget. */
-  maxBytes: number;
-  /** L2 (on-disk) byte budget. `0` (default) disables the disk tier. */
+  /** On-disk byte budget. `0` (default) disables the cache. */
   diskBytes?: number;
-  /** Base directory for the disk tier. */
+  /** Base directory for the disk cache. */
   diskPath?: string;
   /** Subdirectory namespace (e.g. per provider-set) under {@link diskPath}. */
   namespace?: string;
 }
 
-/** Length-prefixed metadata header + raw body. */
-function serializeSegment(s: SegmentData): Buffer {
-  const meta = Buffer.from(
+/** JSON metadata buffer (shared by serialize / size / serialize-into). */
+function metaBufOf(s: SegmentData): Buffer {
+  return Buffer.from(
     JSON.stringify({
       byteRange: s.byteRange,
       fileSize: s.fileSize,
@@ -45,9 +35,33 @@ function serializeSegment(s: SegmentData): Buffer {
     }),
     'utf8'
   );
+}
+
+/** Length-prefixed metadata header + raw body. */
+function serializeSegment(s: SegmentData): Buffer {
+  const meta = metaBufOf(s);
   const header = Buffer.allocUnsafe(4);
   header.writeUInt32LE(meta.length, 0);
   return Buffer.concat([header, meta, s.body]);
+}
+
+/** Exact serialized byte length (drives the pooled write-buffer slot size). */
+function serializedSegmentSize(s: SegmentData): number {
+  return 4 + metaBufOf(s).length + s.body.length;
+}
+
+/**
+ * Zero-alloc serializer: write `[u32 metaLen][meta][body]` straight into `dst`
+ * (the cache's pooled write slot) instead of allocating via `Buffer.concat`. Runs
+ * synchronously at `set()` time, capturing the (pooled ring-slot) body before it
+ * can be reused. Returns the number of bytes written.
+ */
+function serializeSegmentInto(s: SegmentData, dst: Buffer): number {
+  const meta = metaBufOf(s);
+  dst.writeUInt32LE(meta.length, 0);
+  meta.copy(dst, 4);
+  s.body.copy(dst, 4 + meta.length);
+  return 4 + meta.length + s.body.length;
 }
 
 function deserializeSegment(buf: Buffer): SegmentData {
@@ -64,59 +78,48 @@ function deserializeSegment(buf: Buffer): SegmentData {
 }
 
 /**
- * Bounded, byte-sized LRU cache for decoded segment payloads, backed by the
- * generic two-tier {@link DiskBackedCache} (hot memory L1 + on-disk L2 overflow
- * that survives restarts). Keyed by message-id.
- *
- * The hot path uses the synchronous {@link get} (L1 only); {@link getAsync}
- * additionally consults the disk tier before a network fetch.
+ * Disk-only cache for decoded segment payloads, backed by the generic
+ * {@link DiskBackedCache} as an on-disk tier that survives restarts. Keyed by
+ * message-id. {@link getAsync} consults the disk before a network fetch.
  */
 export class SegmentCache {
   private cache: DiskBackedCache<SegmentData>;
-  private maxBytes: number;
 
   constructor(opts: SegmentCacheOptions) {
-    this.maxBytes = opts.maxBytes;
     this.cache = new DiskBackedCache<SegmentData>({
       name: opts.namespace ?? 'segments',
       dir: opts.diskPath ?? '',
-      maxMemBytes: opts.maxBytes,
+      maxMemBytes: 0,
       maxDiskBytes: opts.diskBytes ?? 0,
       serialize: serializeSegment,
+      serializeInto: serializeSegmentInto,
+      serializedSize: serializedSegmentSize,
       deserialize: deserializeSegment,
       sizeOf: (s) => s.body.length,
     });
   }
 
-  /** Synchronous L1 lookup for the hot path. */
+  /** Synchronous lookup for the hot path (in-process; no network or disk read). */
   get(messageId: string): SegmentData | undefined {
     return this.cache.get(messageId);
   }
 
-  /** L1 → L2 lookup; promotes disk hits back to memory. */
+  /** Disk lookup, consulted before a network fetch. */
   getAsync(messageId: string): Promise<SegmentData | undefined> {
     return this.cache.getAsync(messageId);
   }
 
-  /**
-   * Insert a decoded segment. `disk: false` keeps it L1-only; used for
-   * Low-priority (inspect/probe) bodies that the archive parse may re-read
-   * shortly but that would otherwise flood the disk tier's write queue.
-   */
-  set(messageId: string, data: SegmentData, opts?: { disk?: boolean }): void {
-    this.cache.set(messageId, data, { skipDisk: opts?.disk === false });
+  /** Insert a decoded segment, written through to disk. */
+  set(messageId: string, data: SegmentData): void {
+    this.cache.set(messageId, data);
   }
 
   stats(): CacheStats {
     const s = this.cache.stats();
     return {
-      sizeBytes: s.memBytes,
-      maxBytes: this.maxBytes,
-      count: s.memCount,
       hits: s.hits,
       misses: s.misses,
       hitRate: s.hitRate,
-      memBytes: s.memBytes,
       diskBytes: s.diskBytes,
       diskCount: s.diskCount,
       diskHits: s.diskHits,
@@ -125,12 +128,6 @@ export class SegmentCache {
 
   clear(): void {
     void this.cache.clear();
-  }
-
-  /** Resize the memory budget (e.g. after a settings change) and evict. */
-  resize(maxBytes: number): void {
-    this.maxBytes = maxBytes;
-    this.cache.resize(maxBytes);
   }
 
   /** Flush the disk index + drain pending writes (called on engine close). */

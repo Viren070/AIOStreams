@@ -46,11 +46,14 @@ export class MultiProviderPool {
     // StatsAccumulator is its (in-process) stats sink.
     this.fetcher = new LocalSegmentFetcher(providers, opts, stats);
 
-    // The global download budget is a hard ceiling on concurrent in-flight
-    // BODY/ARTICLE downloads; the per-stream priority reservation rides on this
-    // semaphore.
+    // The global download budget is a HARD ceiling on concurrent in-flight
+    // BODY/ARTICLE downloads. It is auto-sized (in buildUsenetEngineOptions) to
+    // Σ maxConnections × depth so the default never throttles pipelining; an
+    // explicit `maxConcurrentDownloads` lower than that is honoured as a real
+    // cap (the per-provider connection pools still bound sockets per account).
+    // The per-stream priority reservation rides on this semaphore.
     this.globalDownloads = new PrioritySemaphore(
-      Math.max(1, opts.maxDownloadConnections),
+      Math.max(1, opts.maxConcurrentDownloads),
       opts.streamingPriority
     );
   }

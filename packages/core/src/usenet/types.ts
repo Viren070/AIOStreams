@@ -41,15 +41,15 @@ export interface ProviderConfig {
 /** Tunable engine behaviour (sourced from global usenet settings). */
 export interface EngineOptions {
   /** Global ceiling on concurrent BODY/ARTICLE downloads across all streams. */
-  maxDownloadConnections: number;
-  /** Max parallel segment fetches for a single playback/stream. */
-  maxConnectionsPerStream: number;
+  maxConcurrentDownloads: number;
   /**
-   * Read-ahead depth, in segments, for a single playback/stream. The reorder
-   * buffer is sized to hold this many segments so the stream stays ahead of the
-   * consumer and absorbs per-segment latency jitter.
-   * Independent of {@link maxConnectionsPerStream}, which caps *in-flight*
-   * fetches; this caps how far *ahead* of the read cursor we prefetch.
+   * Per-stream read-ahead window, in segments: how many segments a single
+   * playback/stream fetches in parallel ahead of the read cursor (and the size of
+   * its reorder buffer). This is the per-stream parallelism: a lone stream
+   * dispatches up to this many fetches and the global
+   * {@link maxConcurrentDownloads} semaphore caps how many actually run, so one
+   * stream can use the whole account while concurrent streams fair-share it.
+   * Bigger absorbs more latency jitter at the cost of memory.
    */
   prefetchSegments: number;
   /**
@@ -57,9 +57,7 @@ export interface EngineOptions {
    * playback so background work (health/inspect/seek) never starves it.
    */
   streamingPriority: number;
-  /** In-memory segment cache size in bytes. */
-  segmentCacheBytes: number;
-  /** On-disk segment cache overflow size in bytes. `0` disables the disk tier. */
+  /** On-disk decoded-segment cache size in bytes. `0` disables the disk cache. */
   segmentDiskCacheBytes: number;
   /** Absolute base directory for the on-disk segment cache. */
   segmentDiskCachePath?: string;
@@ -113,11 +111,9 @@ export interface EngineOptions {
 }
 
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
-  maxDownloadConnections: 60,
-  maxConnectionsPerStream: 8,
+  maxConcurrentDownloads: 60,
   prefetchSegments: 32,
   streamingPriority: 0.8,
-  segmentCacheBytes: 256 * 1024 * 1024,
   segmentDiskCacheBytes: 2 * 1024 * 1024 * 1024,
   segmentTimeoutMs: 30_000,
   dialTimeoutMs: 15_000,

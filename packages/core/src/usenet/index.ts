@@ -4,6 +4,7 @@ import { createLogger } from '../logging/logger.js';
 import { getCacheFolder } from '../utils/general.js';
 import { appConfig } from '../utils/index.js';
 import { MultiProviderPool } from './pool/multi-provider-pool.js';
+import { configureDecodePool } from './pool/yenc.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
 import { FileStream, SeekableStream } from './pool/file-stream.js';
@@ -37,10 +38,13 @@ import { NotStreamableError } from './pool/archive/errors.js';
 import { parseNzb } from './nzb/parse.js';
 import { Nzb, NzbFile } from './nzb/model.js';
 import {
+  CommandPriority,
   DEFAULT_ENGINE_OPTIONS,
   EngineOptions,
+  NzbSegmentRef,
   PoolInfo,
   ProviderConfig,
+  SegmentData,
   providerSetFingerprint,
 } from './types.js';
 import {
@@ -58,6 +62,14 @@ const logger = createLogger('usenet/engine');
  * cap), bounded so a cold-handshake herd doesn't hit the provider.
  */
 const INSPECT_MAX_CONCURRENCY = 64;
+
+/**
+ * Parallelism for archive volume-size probing and inner-file opens. A modest
+ * fixed width (bounded by the global download budget) so an archive's per-volume
+ * header reads neither serialise nor hammer the provider, independent of the
+ * per-stream read-ahead window used for plain playback.
+ */
+const ARCHIVE_OP_CONCURRENCY = 16;
 
 /**
  * Wall-clock budget for the whole archive-inspection phase. A pathological set
@@ -147,18 +159,31 @@ export class UsenetEngine {
     options: Partial<EngineOptions> = {}
   ) {
     this.options = { ...DEFAULT_ENGINE_OPTIONS, ...options };
-    // Segment cache entries are keyed by message-id (a globally-unique article
-    // identifier whose body is byte-identical regardless of provider), so the
-    // cache is provider-independent and uses one stable namespace. The registry
-    // guarantees a single live engine, so this directory only has one writer.
+    // The segment cache is disk-only: pooled decode (below) recycles a fixed ring
+    // of buffers, so a long-lived in-RAM entry would alias a recycled slot. The
+    // disk tier copies each body out synchronously at `set()` time (see
+    // SegmentCache.serializeInto), capturing it before the slot recycles, so
+    // re-reads/seeks/multi-client still hit the cache.
+    //
+    // Entries are keyed by message-id (a globally-unique article id whose body is
+    // byte-identical across providers), so the cache is provider-independent and
+    // uses one stable namespace; the registry guarantees a single writer.
     this.cache = new SegmentCache({
-      maxBytes: this.options.segmentCacheBytes,
       diskBytes: this.options.segmentDiskCachePath
         ? this.options.segmentDiskCacheBytes
         : 0,
       diskPath: this.options.segmentDiskCachePath,
       namespace: 'segments',
     });
+    // Decode into a fixed ring of reusable buffers sized above the live set:
+    // in-flight fetches + the in-order reorder window (~prefetch) + the downstream
+    // socket buffer (~prefetch) + margin, so a slot is never reused while still
+    // referenced.
+    configureDecodePool(
+      this.options.maxConcurrentDownloads +
+        2 * this.options.prefetchSegments +
+        64
+    );
     this.stats = new StatsAccumulator();
     this.pool = new MultiProviderPool(
       providers,
@@ -175,8 +200,7 @@ export class UsenetEngine {
       {
         fingerprint: this.fingerprint,
         providers: providers.filter((p) => p.enabled !== false).length,
-        maxDownloadConnections: this.options.maxDownloadConnections,
-        segmentCacheBytes: this.options.segmentCacheBytes,
+        maxConcurrentDownloads: this.options.maxConcurrentDownloads,
       },
       'usenet engine created'
     );
@@ -188,7 +212,7 @@ export class UsenetEngine {
     const inspectConcurrency =
       opts.concurrency ??
       Math.min(
-        Math.max(8, this.options.maxDownloadConnections),
+        Math.max(8, this.options.maxConcurrentDownloads),
         INSPECT_MAX_CONCURRENCY
       );
     const content = await inspectNzb(nzb, this.pool, {
@@ -346,10 +370,13 @@ export class UsenetEngine {
       }
       const sets = await inspectArchiveSets(refs, opener, {
         password: nzb.meta.password,
-        // Volume-size probing parallelism stays at the per-stream budget
-        // (these can hit a cold pool); the header walk itself reads mostly
-        // from probe heads and otherwise rides the warm import budget.
-        concurrency: this.options.maxConnectionsPerStream,
+        // Modest fixed volume-size probing parallelism (bounded by the global
+        // budget); the header walk itself reads mostly from probe heads and
+        // otherwise rides the warm import budget.
+        concurrency: Math.min(
+          ARCHIVE_OP_CONCURRENCY,
+          this.options.maxConcurrentDownloads
+        ),
         parseConcurrency,
         heads: content.heads,
         extraSets: joinedArchiveSets,
@@ -480,6 +507,27 @@ export class UsenetEngine {
   }
 
   /**
+   * Fetch + decode one article straight from the multi-provider pool; the caller
+   * discards the bytes. The capability primitive the dashboard speed test fans
+   * out across the whole pool (an out-of-order BODY blast), unlike
+   * {@link openFileStream}, which delivers a file in playback (in-order) order
+   * and so reports the lower single-stream rate.
+   */
+  fetchArticle(
+    segment: NzbSegmentRef,
+    nzbHash: string,
+    signal?: AbortSignal
+  ): Promise<SegmentData> {
+    this.touch();
+    return this.pool.fetchSegment(
+      segment,
+      nzbHash,
+      signal,
+      CommandPriority.High
+    );
+  }
+
+  /**
    * Grouping refs over the raw NZB files. Segment info rides along so volume
    * grouping can resolve reposted/fill duplicates the same way everywhere.
    */
@@ -591,7 +639,10 @@ export class UsenetEngine {
     const opened = await openArchiveInner(set, opener, innerPath, {
       knownSizes,
       password: nzb.meta.password,
-      concurrency: this.options.maxConnectionsPerStream,
+      concurrency: Math.min(
+        ARCHIVE_OP_CONCURRENCY,
+        this.options.maxConcurrentDownloads
+      ),
       prefetchWindows: this.options.prefetchSegments,
     });
     return opened.stream;
@@ -614,7 +665,10 @@ export class UsenetEngine {
       this.openFile(nzb, nzb.files[index], signal, knownSize);
     const stream = await rebuildArchiveStream(layout, opener, {
       password: nzb.meta.password,
-      concurrency: this.options.maxConnectionsPerStream,
+      concurrency: Math.min(
+        ARCHIVE_OP_CONCURRENCY,
+        this.options.maxConcurrentDownloads
+      ),
       prefetchWindows: this.options.prefetchSegments,
       lazyHooks,
     });

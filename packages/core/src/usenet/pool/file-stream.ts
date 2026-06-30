@@ -171,7 +171,7 @@ export class FileStream implements SeekableStream {
    * Unlike {@link createReadStream} (which prefetches a parallel window for
    * playback), this fetches **only** the segments overlapping the requested
    * range, sequentially. A small header probe therefore costs ~one segment, not
-   * a `maxConnectionsPerStream`-wide prefetch burst; this is critical for the archive
+   * a full read-ahead-window prefetch burst; this is critical for the archive
    * parser, which issues many tiny reads across volume boundaries.
    */
   async readAt(offset: number, length: number): Promise<Buffer> {
@@ -256,13 +256,18 @@ export class FileStream implements SeekableStream {
           pool: this.pool,
           segments,
           nzbHash: this.nzbHash,
-          maxWorkers: this.opts.maxConnectionsPerStream,
-          // In-flight fetches are capped by maxWorkers; the buffer is sized to
-          // the (larger) prefetch depth so the stream stays well ahead of the
-          // consumer and rides out per-segment latency jitter.
+          // The read-ahead window IS the per-stream parallelism: a stream keeps
+          // up to `prefetchSegments` segment fetches in flight ahead of the read
+          // cursor, and the global download semaphore (Σ provider connections)
+          // caps how many of those actually run at once. So a lone stream can use
+          // the whole account, while concurrent streams fair-share it via that
+          // semaphore; there is no separate per-stream connection cap.
+          maxWorkers: this.opts.prefetchSegments,
+          // Buffer sized to the same window so completed-but-not-yet-emitted
+          // segments can ride out per-segment latency jitter without stalling
+          // dispatch.
           bufferSizeBytes: Math.max(
             this.avgDecodedSize * this.opts.prefetchSegments,
-            this.avgDecodedSize * this.opts.maxConnectionsPerStream,
             1
           ),
           skipBytes: start - segmentStartByte,

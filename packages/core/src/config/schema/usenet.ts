@@ -8,27 +8,24 @@ const GB = 1000 * MB;
 /**
  * Bundled performance presets. A profile sets the handful of knobs that trade
  * speed for CPU/RAM/connection use together, so the engine works great out of
- * the box and power users can step up (or define a `custom` profile). Tuned from
- * the benchmark sweep; resolved to `EngineOptions` in `getUsenetEngineConfig`.
- * `custom` is intentionally absent here — it means "use the individual fields".
+ * the box and power users can step up (or define a `custom` profile). Resolved
+ * to `EngineOptions` in `getUsenetEngineConfig`. `custom` is intentionally absent
+ * here: it means "use the individual fields".
  */
 export const PERFORMANCE_PROFILES = {
   conservative: {
-    maxConnectionsPerStream: 4,
     prefetchSegments: 16,
-    segmentCacheBytes: 128 * MB,
+    maxConcurrentDownloads: 30,
     segmentDiskCacheBytes: 1 * GB,
   },
   balanced: {
-    maxConnectionsPerStream: 10,
     prefetchSegments: 32,
-    segmentCacheBytes: 256 * MB,
+    maxConcurrentDownloads: 0,
     segmentDiskCacheBytes: 2 * GB,
   },
   high: {
-    maxConnectionsPerStream: 20,
     prefetchSegments: 64,
-    segmentCacheBytes: 512 * MB,
+    maxConcurrentDownloads: 0,
     segmentDiskCacheBytes: 8 * GB,
   },
 } as const;
@@ -117,35 +114,26 @@ export const usenetSchema = {
       'Bundled speed/resource preset. `balanced` (default) suits a typical ' +
       'box; `high` saturates a fast link on a beefy machine; `conservative` ' +
       'is gentle on low-RAM/CPU hosts; `custom` uses the individual fields ' +
-      'below. A profile sets max connections per stream, prefetch depth, and ' +
-      'cache sizes together.',
+      'below. A profile sets the per-stream read-ahead window and disk cache ' +
+      'size together.',
     env: 'USENET_PERFORMANCE_PROFILE',
     requiresRestart: false,
     secret: false,
     ui: HIDDEN,
   },
-  maxDownloadConnections: {
+  maxConcurrentDownloads: {
     schema: nonNegativeInt,
     default: 0,
-    label: 'Max download connections',
+    label: 'Max concurrent downloads',
     description:
-      'Global ceiling on concurrent article/body downloads across every ' +
-      'stream. `0` (default) means auto: the sum of every enabled provider’s ' +
-      'connection limit, so a single provider’s account cap is never ' +
-      'artificially throttled.',
-    env: 'USENET_MAX_DOWNLOAD_CONNECTIONS',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
-  maxConnectionsPerStream: {
-    schema: positiveInt,
-    default: 8,
-    label: 'Max connections per stream',
-    description:
-      'Max parallel segment fetches for a single playback/stream (used when ' +
-      'the performance profile is `custom`).',
-    env: 'USENET_MAX_CONNECTIONS_PER_STREAM',
+      'Hard ceiling on concurrent article/body downloads in flight across ' +
+      'every stream. This counts downloads, not sockets: with pipeline depth D ' +
+      'it is roughly value ÷ D connections per account, and each account is ' +
+      'still bounded by its own max connections. `0` (default) means auto: the ' +
+      'sum of every enabled provider’s max connections × its pipeline depth, so ' +
+      'the default never throttles pipelining; set a lower value to cap total ' +
+      'concurrency (e.g. to protect a weak host).',
+    env: ['USENET_MAX_CONCURRENT_DOWNLOADS', 'USENET_MAX_DOWNLOAD_CONNECTIONS'],
     requiresRestart: false,
     secret: false,
     ui: HIDDEN,
@@ -153,11 +141,15 @@ export const usenetSchema = {
   prefetchSegments: {
     schema: positiveInt,
     default: 32,
-    label: 'Prefetch depth (segments)',
+    label: 'Read-ahead (segments)',
     description:
-      'How far ahead of the read cursor a stream prefetches, in segments ' +
-      '(buffer = this × ~segment size). Higher rides out latency jitter at the ' +
-      'cost of memory. Used when the performance profile is `custom`.',
+      'Per-stream read-ahead window, in segments: how many segments a single ' +
+      'stream fetches in parallel ahead of the read cursor (and the reorder-' +
+      'buffer size). This is the per-stream parallelism — one stream can use the ' +
+      'whole connection budget, and the global max bounds how many run at once, ' +
+      'so concurrent streams fair-share it. Higher saturates a fast link and ' +
+      'rides out latency jitter at the cost of memory. Used when the performance ' +
+      'profile is `custom`.',
     env: 'USENET_PREFETCH_SEGMENTS',
     requiresRestart: false,
     secret: false,
@@ -178,24 +170,13 @@ export const usenetSchema = {
     secret: false,
     ui: { kind: 'number' as const, min: 0, hidden: true },
   },
-  segmentCacheBytes: {
-    schema: byteSize,
-    default: 256 * MB,
-    label: 'Segment cache size',
-    description:
-      'In-memory decoded-segment cache size. Accepts plain bytes or `256MB`-style strings.',
-    env: 'USENET_SEGMENT_CACHE_BYTES',
-    requiresRestart: false,
-    secret: false,
-    ui: HIDDEN,
-  },
   segmentDiskCacheBytes: {
     schema: byteSize,
     default: 2 * GB,
     label: 'Segment disk cache size',
     description:
-      'On-disk decoded-segment overflow cache size (survives restarts). Set to ' +
-      '`0` to disable the disk tier. Accepts plain bytes or `2GB`-style strings.',
+      'On-disk decoded-segment cache size (survives restarts). Set to `0` to ' +
+      'disable caching. Accepts plain bytes or `2GB`-style strings.',
     env: 'USENET_SEGMENT_DISK_CACHE_BYTES',
     requiresRestart: false,
     secret: false,

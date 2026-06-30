@@ -248,7 +248,8 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
         ...ds,
         {
           ...emptyDraft(),
-          priority: (ds.length ? Math.max(...ds.map((d) => d.priority)) : 0) + 1,
+          priority:
+            (ds.length ? Math.max(...ds.map((d) => d.priority)) : 0) + 1,
         },
       ])
     );
@@ -381,9 +382,9 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
             priority to put them in one load-balanced group (shown bracketed) so
             they split load by free capacity instead of one sitting idle as
             failover — the up arrow groups a provider with the one above, the
-            down arrow splits it back out. Mark metered block accounts as backups
-            (the toggle applies to the whole group) so they’re only used when a
-            primary misses an article.
+            down arrow splits it back out. Mark metered block accounts as
+            backups (the toggle applies to the whole group) so they’re only used
+            when a primary misses an article.
           </p>
         </div>
         <Button
@@ -471,8 +472,12 @@ function SpeedBadge({
       </Pill>
     );
   const cfg =
-    result.connectionsPerStream != null
-      ? `${result.connectionsPerStream}×${result.pipelineDepth ?? 1} conns, pf ${result.prefetchSegments ?? 0}`
+    result.connections != null
+      ? `${result.connections} conn${
+          result.pipelineDepth && result.pipelineDepth > 1
+            ? ` × depth ${result.pipelineDepth}`
+            : ''
+        }`
       : undefined;
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -482,7 +487,7 @@ function SpeedBadge({
       {cfg ? (
         <span
           className="text-[10px] text-[--muted]"
-          title={`Tested at ${result.connectionsPerStream} connections/stream × pipeline depth ${result.pipelineDepth}, prefetch ${result.prefetchSegments} segments`}
+          title={`Fanned out across ${result.connections} connections, pipeline depth ${result.pipelineDepth ?? 1}`}
         >
           {cfg}
         </span>
