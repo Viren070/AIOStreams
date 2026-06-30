@@ -289,6 +289,11 @@ export async function processStreams(
     filterMs = Date.now() - filterStart;
   }
 
+  // Drop releases the Screener has flagged (dead/fake/mislabeled) before dedup,
+  // so a flagged candidate never becomes a failover attempt. Recorded as a
+  // 'screener' filter reason so it shows in the per-request stats / dashboard.
+  processedStreams = await ctx.filterer.screenFlagged(processedStreams);
+
   const dedupStart = Date.now();
   processedStreams = await ctx.deduplicator.deduplicate(processedStreams);
   deduplicationMs = Date.now() - dedupStart;

@@ -221,6 +221,14 @@ const UsenetInfoSchema = BaseFileInfoSchema.extend({
   hash: z.string(),
   easynewsUrl: z.string().optional(),
   nzb: z.string(),
+  // Davex-compatible Screener key (`wd1:...`) carried to playback so a release
+  // discovered dead (articles missing) can auto-mark itself on the Screener.
+  // Only valid usenet keys are accepted; anything else is dropped here.
+  screenerKey: z
+    .string()
+    .regex(/^wd1:[0-9a-f]{32}$/)
+    .optional()
+    .catch(undefined),
   type: z.literal('usenet'),
 });
 

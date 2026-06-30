@@ -289,6 +289,7 @@ export class NativeUsenetService implements UsenetDebridService {
       fileIndex: selected.index,
       innerPath: selected.path,
       filename: chosenFilename,
+      screenerKey: playbackInfo.screenerKey,
     });
 
     const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}/${encodeURIComponent(

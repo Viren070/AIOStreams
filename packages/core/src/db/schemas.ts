@@ -275,6 +275,15 @@ const DeduplicatorOptions = z.object({
     .optional(),
 });
 
+// Per-user knobs for the Screener (the instance-global shared filter of bad
+// releases). Sources and their trust are operator-managed; these are the
+// per-user filtering controls.
+const ScreenerOptions = z.object({
+  enabled: z.boolean().optional(), // hide releases flagged dead/fake/mislabeled from my results
+  quorum: z.number().int().min(1).max(20).optional(), // agreements needed before a corroborate source filters
+  backboneScope: z.boolean().optional(), // only honour remote usenet verdicts whose provider matches mine
+});
+
 const OptionDefinition = z.looseObject({
   id: z.string().min(1),
   name: z.string(),
@@ -757,6 +766,7 @@ export const UserDataSchema = z.object({
     })
     .optional(),
   deduplicator: DeduplicatorOptions.optional(),
+  screener: ScreenerOptions.optional(),
   autoPlay: z
     .object({
       enabled: z.boolean().optional(),
@@ -945,9 +955,19 @@ export const NNTPServersSchema = z.array(NNTPServerSchema);
 
 export type NNTPServers = z.infer<typeof NNTPServersSchema>;
 
+// One contract for the Screener key at every stream boundary: only a valid
+// usenet `wd1:` key survives, anything else is dropped rather than rejecting the
+// whole stream.
+export const ScreenerKeySchema = z
+  .string()
+  .regex(/^wd1:[0-9a-f]{32}$/)
+  .optional()
+  .catch(undefined);
+
 export const StreamSchema = z.looseObject({
   url: z.string().or(z.null()).optional(),
   nzbUrl: z.string().or(z.null()).optional(),
+  screenerKey: ScreenerKeySchema,
   servers: z.array(z.string().min(1)).nullable().optional(),
   rarUrls: z.array(SourceSchema).nullable().optional(),
   zipUrls: z.array(SourceSchema).nullable().optional(),
@@ -1094,6 +1114,10 @@ export const ParsedStreamSchema = z.object({
   passthrough: PassthroughSchema.optional(),
   url: z.string().optional(),
   nzbUrl: z.string().optional(),
+  // Precomputed Screener release key (`wd1:...`) for usenet streams, set by the
+  // builtin that has the poster/date/size. Torrent/debrid keys are derived from
+  // `torrent.infoHash` at filter time and don't need this.
+  screenerKey: ScreenerKeySchema,
   // Same-release failover targets harvested from discarded duplicates by the
   // deduplicator merge step. Each is another playback URL for the *same*
   // release (a different indexer's NZB or another addon's debrid link).

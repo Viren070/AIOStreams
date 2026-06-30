@@ -9,6 +9,7 @@ import { usenetMetrics } from './0008_usenet_metrics.js';
 import { usenetLibraryExt } from './0009_usenet_library_ext.js';
 import { usenetLibraryPassword } from './0010_usenet_library_password.js';
 import { usenetSpeed } from './0011_usenet_speed.js';
+import { screener } from './0012_screener.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -23,6 +24,7 @@ export const MIGRATIONS: readonly Migration[] = [
   usenetLibraryExt,
   usenetLibraryPassword,
   usenetSpeed,
+  screener,
 ];
 
 export type { Migration } from './types.js';

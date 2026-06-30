@@ -740,6 +740,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             nzb: torrentOrNzb.nzb,
             title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
+            screenerKey: torrentOrNzb.screenerKey,
             index: torrentOrNzb.file.index,
             easynewsUrl:
               torrentOrNzb.service?.id === 'easynews'
@@ -785,6 +786,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             )
           : undefined,
       nzbUrl: torrentOrNzb.type === 'usenet' ? torrentOrNzb.nzb : undefined,
+      screenerKey:
+        torrentOrNzb.type === 'usenet' ? torrentOrNzb.screenerKey : undefined,
       servers:
         torrentOrNzb.service?.id === 'stremio_nntp'
           ? (encryptedStoreAuth as string[])

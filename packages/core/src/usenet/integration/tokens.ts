@@ -16,6 +16,8 @@ export interface UsenetStreamToken {
   innerPath?: string;
   /** Best-effort display filename. */
   filename: string;
+  /** Davex-compatible Screener key (`wd1:...`), so a dead post can self-mark. */
+  screenerKey?: string;
 }
 
 /**
