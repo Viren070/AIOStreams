@@ -1,17 +1,14 @@
-import type { Readable } from 'node:stream';
 import { settingsStore } from '../../../config/index.js';
 import { createLogger } from '../../../logging/logger.js';
-import {
-  UsenetMetricsRepository,
-  UsenetLibraryRepository,
-} from '../../../db/index.js';
+import { UsenetMetricsRepository } from '../../../db/index.js';
 import {
   ProviderConfig,
   parseNzb,
   UsenetEngine,
   type Nzb,
-  type SeekableStream,
+  type NzbSegment,
 } from '../../index.js';
+import { detectFileType } from '../../pool/file-type.js';
 import { NntpConnection } from '../../nntp/connection.js';
 import { NntpError } from '../../nntp/errors.js';
 import { getSpeedTestEngineConfig, usenetEngineRegistry } from '../engine.js';
@@ -37,20 +34,18 @@ export interface ProviderTestResult {
 
 export interface ProviderSpeedTestResult {
   ok: boolean;
-  /** Measured download rate in bytes/second. */
+  /** Aggregate download rate in bytes/second over the steady-state window. */
   bytesPerSec?: number;
-  /** Bytes downloaded during the test. */
+  /** Wire bytes counted during the steady-state measurement window. */
   bytes?: number;
-  /** Wall-clock duration of the streamed transfer window, ms. */
+  /** Duration of the steady-state measurement window, ms. */
   durationMs?: number;
   /** Number of articles fetched. */
   segments?: number;
-  /** Parallel socket fetches per stream the test ran under. */
-  connectionsPerStream?: number;
   /** In-flight BODY commands per connection (NNTP pipelining). */
   pipelineDepth?: number;
-  /** Read-ahead depth, in segments. */
-  prefetchSegments?: number;
+  /** Connections fanned out across (parallel width = connections × depth). */
+  connections?: number;
   error?: string;
   code?: string;
 }
@@ -132,7 +127,7 @@ export async function testUsenetProvider(
       dialTimeoutMs: 15_000,
       idleConnectionMs: 60_000,
     });
-    // Measure only the DATE round-trip — connection setup is already done.
+    // Measure only the DATE round-trip; connection setup is already done.
     const start = Date.now();
     await conn.date(signal, 15_000);
     return { ok: true, latencyMs: Date.now() - start };
@@ -148,147 +143,208 @@ export async function testUsenetProvider(
 
 // --- Provider speed test ----------------------------------------------------
 
-/** Stop the test once this many bytes have been streamed. */
-const SPEEDTEST_MAX_BYTES = 96 * 1024 * 1024;
-/** Hard wall-clock cap for the measurement phase. */
-const SPEEDTEST_MAX_MS = 10_000;
 /**
- * Discard this much of the transfer before measuring. A real playback runs for
- * minutes and amortises the connection dial + GROUP select + initial buffer
- * fill; a 10s test would otherwise count that cold ramp against the rate. The
- * warm-up makes the result reflect sustained throughput.
+ * Fixed, well-propagated test NZB to stream for the throughput measurement (the
+ * SABnzbd download-speed test file the wider usenet community uses). Blasting a
+ * known-good, fully-available file makes the result reflect the provider + line
+ * capability rather than the availability of whatever is in the user's library.
+ * Override with `USENET_SPEEDTEST_NZB_URL`; the articles must be retained on the
+ * provider under test (otherwise the test reports `article_not_found`).
  */
-const SPEEDTEST_WARMUP_MS = 1_000;
+const SPEEDTEST_NZB_URL =
+  process.env.USENET_SPEEDTEST_NZB_URL ||
+  'https://sabnzbd.org/tests/test_download_1GB.nzb';
+/** Stop once this many WIRE bytes have been fetched (caps quota per run). */
+const SPEEDTEST_MAX_BYTES = 1024 * 1024 * 1024;
+/** Hard wall-clock cap for the measurement, timed from the first byte. */
+const SPEEDTEST_MAX_MS = 12_000;
 /**
- * RAM-only segment cache for the throughput engine. The warm registry engine
- * owns the shared on-disk `segments` cache as the single writer, so the
- * speed-test engine must never touch disk; this also keeps the measurement a
- * cold network read rather than a cache replay.
+ * Discard this much of the transfer (from the first byte) before the steady-
+ * state window opens. A fan-out's first ~second is the connection dial/auth
+ * ramp where not every connection is up yet; charging it against the rate would
+ * understate sustained throughput.
  */
-const SPEEDTEST_CACHE_BYTES = 64 * 1024 * 1024;
-/** How many distinct library entries to resolve into speed-test samples. */
-const SPEEDTEST_MAX_SAMPLES = 5;
+const SPEEDTEST_WARMUP_MS = 1_500;
 /** Singleflight: one in-flight speed test per provider id (avoid storms). */
 const speedTestInFlight = new Map<string, Promise<ProviderSpeedTestResult>>();
 
-/** A real file to stream for the speed test: a parsed NZB + the file to open. */
-interface SpeedTestSample {
+/** A parsed NZB plus the data-file indexes to stream, largest first. */
+export interface SpeedTestSource {
   nzb: Nzb;
-  fileIndex: number;
+  fileIndexes: number[];
 }
 
 /**
- * Resolve real files to stream for a speed test from already-imported, available
- * library entries. Returns several samples (the largest file of different
- * entries) because availability is decided across the whole provider pool: a
- * given entry's articles may not be carried by the single provider under test,
- * so the runner can fall back to another sample. Empty when nothing is
- * importable.
+ * Parsed test NZB, cached module-level keyed by URL: repeated tests don't
+ * re-fetch sabnzbd.org, and a transient outage after the first fetch doesn't
+ * break later runs.
  */
-async function resolveSpeedTestSamples(
-  maxSamples = SPEEDTEST_MAX_SAMPLES
-): Promise<SpeedTestSample[]> {
-  const { entries } = await UsenetLibraryRepository.list({
-    group: 'history',
-    limit: 25,
-  });
-  const candidates = entries.filter(
-    (e) => e.status === 'available' && e.nzbUrl
-  );
-  const samples: SpeedTestSample[] = [];
-  for (const entry of candidates) {
-    if (samples.length >= maxSamples) break;
-    try {
-      const xml = await fetchNzb(entry.nzbUrl!);
-      const nzb = await parseNzb(xml);
-      // Largest file by encoded size: the most data to stream for a stable rate.
-      let fileIndex = -1;
-      let best = -1;
-      nzb.files.forEach((f, i) => {
-        if (f.segments.length > 0 && f.encodedSize > best) {
-          best = f.encodedSize;
-          fileIndex = i;
-        }
-      });
-      if (fileIndex >= 0) samples.push({ nzb, fileIndex });
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return samples;
+let cachedTestSource: { url: string; source: SpeedTestSource } | null = null;
+
+/**
+ * Indexes of the streamable DATA files in an NZB, largest (by encoded size)
+ * first. Reuses {@link detectFileType} (extension-only here, no bytes yet) to
+ * keep only real content (video/archive) and never PAR2/NFO/SFV/subtitle/image
+ * sidecars, whose articles are often missing and never represent throughput.
+ */
+export function dataFileIndexes(nzb: Nzb): number[] {
+  return nzb.files
+    .map((f, i) => ({ i, f }))
+    .filter(({ f }) => {
+      if (f.segments.length === 0) return false;
+      const { category } = detectFileType(
+        Buffer.alloc(0),
+        f.filename ?? f.subject
+      );
+      return category === 'video' || category === 'archive';
+    })
+    .sort((a, b) => b.f.encodedSize - a.f.encodedSize)
+    .map(({ i }) => i);
 }
 
 /**
- * Read a range stream in FLOWING mode until the byte budget, the time cap, end,
- * or an error, counting decoded bytes and timing from the first byte.
- *
- * Flowing mode (`.on('data')`) is required: the engine's range stream only
- * re-resumes its inner prefetch on the OUTER stream's `resume` event, which a
- * paused `for await` consumer never emits, so it would deadlock the moment the
- * prefetch buffer fills. The hard cap also guarantees the request can't hang
- * forever if a provider stalls mid-transfer.
+ * Resolve the fixed test NZB to stream (parsed once, then cached). Returns null
+ * when the NZB can't be fetched/parsed or carries no data files; there is no
+ * library fallback, so the caller surfaces that as a hard error.
  */
-function measureStream(
-  readable: Readable,
+async function resolveSpeedTestSource(
   signal?: AbortSignal
-): Promise<{ bytes: number; durationMs: number; error?: unknown }> {
-  return new Promise((resolve) => {
-    let totalBytes = 0; // since first byte; fallback for transfers shorter than warm-up
-    let firstByteAt = 0;
-    let windowBytes = 0; // steady-state: bytes after the warm-up
-    let windowStart = 0;
-    let done = false;
-    const finish = (error?: unknown): void => {
-      if (done) return;
-      done = true;
-      clearTimeout(cap);
-      readable.destroy();
-      const now = Date.now();
-      // Prefer the post-warm-up steady-state window; fall back to the whole
-      // transfer for files that finished during (or just after) the warm-up.
-      const useWindow = windowStart > 0 && now - windowStart >= 250;
-      resolve({
-        bytes: useWindow ? windowBytes : totalBytes,
-        durationMs: useWindow
-          ? now - windowStart
-          : firstByteAt
-            ? now - firstByteAt
-            : 0,
-        error,
-      });
-    };
-    const cap = setTimeout(() => finish(), SPEEDTEST_MAX_MS);
-    cap.unref?.();
-    readable.on('data', (chunk: Buffer) => {
-      const now = Date.now();
-      if (!firstByteAt) firstByteAt = now;
-      totalBytes += chunk.length;
-      // Once past the warm-up, start the steady-state accounting.
-      if (windowStart === 0 && now - firstByteAt >= SPEEDTEST_WARMUP_MS) {
-        windowStart = now;
-      }
-      if (windowStart > 0) windowBytes += chunk.length;
-      if (totalBytes >= SPEEDTEST_MAX_BYTES) finish();
-    });
-    readable.on('end', () => finish());
-    readable.on('error', (err) => finish(err));
-    if (signal) {
-      if (signal.aborted) finish();
-      else signal.addEventListener('abort', () => finish(), { once: true });
-    }
-  });
+): Promise<SpeedTestSource | null> {
+  if (cachedTestSource?.url === SPEEDTEST_NZB_URL) {
+    return cachedTestSource.source;
+  }
+  try {
+    const xml = await fetchNzb(SPEEDTEST_NZB_URL, signal);
+    const nzb = await parseNzb(xml);
+    const fileIndexes = dataFileIndexes(nzb);
+    if (fileIndexes.length === 0) return null;
+    const source: SpeedTestSource = { nzb, fileIndexes };
+    cachedTestSource = { url: SPEEDTEST_NZB_URL, source };
+    return source;
+  } catch (err) {
+    logger.debug(
+      { url: SPEEDTEST_NZB_URL, err: (err as Error).message },
+      'speed-test NZB unreachable'
+    );
+    return null;
+  }
+}
+
+/** Outcome of a throughput run: the steady-state window plus totals. */
+interface ThroughputResult {
+  /** Wire bytes counted inside the steady-state window. */
+  windowWireBytes: number;
+  /** Steady-state window duration, ms (≥1 once any byte arrived). */
+  windowMs: number;
+  /** Total wire bytes fetched (whole run). */
+  wireBytes: number;
+  /** Total decoded bytes fetched (whole run). */
+  decodedBytes: number;
+  /** Articles successfully fetched. */
+  segments: number;
+  /** Last per-fetch error, surfaced when nothing was fetched. */
+  lastError?: unknown;
 }
 
 /**
- * Measure a provider's download throughput by streaming a real library file
- * through the actual engine path (`UsenetEngine.openFileStream` →
- * `FileStream.createReadStream` → the multi-provider pool) so the test honours
- * the configured `maxConnectionsPerStream`, pipeline depth and `prefetchSegments`
- * (and yEnc-decodes like playback), replicating a real stream. The engine is
- * built with ONLY the provider under test so the rate is attributable to it.
- * Singleflighted per provider id so repeated clicks don't open a connection
- * storm; the measured bytes are folded into the hourly rollups so the result
- * shows in the windowed average.
+ * Measure provider throughput by blasting every data segment of the test file
+ * across the whole pool out of order and discarding the bytes: a raw capability
+ * measurement, not a single in-order playback stream (which is gated by
+ * reassembly and the Readable pipeline and reads far lower). `concurrency`
+ * workers (= connections × pipeline depth) saturate the pool's pipelines exactly
+ * like a production fan-out.
+ *
+ * Counts wire bytes (each article's NZB-declared yEnc-encoded size, i.e. what
+ * crossed the socket; falls back to the decoded length when the NZB omits it)
+ * over a steady-state window that opens after {@link SPEEDTEST_WARMUP_MS}, so the
+ * one-time dial/auth ramp isn't charged against the rate. Stops at the byte
+ * budget or the wall-clock cap.
+ */
+export async function measureThroughput(
+  engine: UsenetEngine,
+  source: SpeedTestSource,
+  concurrency: number,
+  signal?: AbortSignal
+): Promise<ThroughputResult> {
+  // Flatten every segment of the data files into one work list, largest file
+  // first (dataFileIndexes order), to dispatch out of order.
+  const work: NzbSegment[] = [];
+  for (const fileIndex of source.fileIndexes) {
+    for (const s of source.nzb.files[fileIndex].segments) work.push(s);
+  }
+
+  let wireBytes = 0;
+  let decodedBytes = 0;
+  let segments = 0;
+  let firstByteAt = 0;
+  let lastByteAt = 0;
+  let windowStart = 0; // steady-state window opens after the warm-up
+  let windowStartWire = 0; // cumulative wire bytes when the window opened
+  let lastError: unknown;
+  let next = 0;
+  let stop = false;
+
+  const worker = async (): Promise<void> => {
+    while (!stop && !signal?.aborted) {
+      const i = next++;
+      if (i >= work.length) return;
+      try {
+        const d = await engine.fetchArticle(work[i], source.nzb.hash, signal);
+        const now = Date.now();
+        if (!firstByteAt) firstByteAt = now;
+        // NZB-declared segment size = the posted (yEnc-encoded) wire size; fall
+        // back to the decoded length when the NZB omits it.
+        wireBytes += work[i].bytes > 0 ? work[i].bytes : d.size;
+        decodedBytes += d.size;
+        segments++;
+        lastByteAt = now;
+        if (windowStart === 0 && now - firstByteAt >= SPEEDTEST_WARMUP_MS) {
+          windowStart = now;
+          windowStartWire = wireBytes;
+        }
+        if (
+          wireBytes >= SPEEDTEST_MAX_BYTES ||
+          now - firstByteAt >= SPEEDTEST_MAX_MS
+        ) {
+          stop = true;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.max(1, concurrency) }, () => worker())
+  );
+
+  // Prefer the post-warm-up steady-state window; fall back to the whole transfer
+  // for the rare test that finishes (or hits a cap) before the warm-up elapses.
+  const haveWindow = windowStart > 0 && wireBytes - windowStartWire > 0;
+  const windowWireBytes = haveWindow ? wireBytes - windowStartWire : wireBytes;
+  const windowMs = haveWindow
+    ? Math.max(1, lastByteAt - windowStart)
+    : firstByteAt
+      ? Math.max(1, lastByteAt - firstByteAt)
+      : 0;
+
+  return {
+    windowWireBytes,
+    windowMs,
+    wireBytes,
+    decodedBytes,
+    segments,
+    lastError,
+  };
+}
+
+/**
+ * Measure a provider's download capability by fanning the fixed test NZB out
+ * across the whole pool out of order ({@link measureThroughput}), yEnc-decoding
+ * each article like playback but discarding the bytes. The engine is built with
+ * only the provider under test so the rate is attributable to it. Singleflighted
+ * per provider id so repeated clicks don't open a connection storm; the transfer
+ * is folded into the hourly rollups so it shows in the windowed average.
  */
 export async function runProviderSpeedTest(
   provider: Partial<ProviderConfig> & { password?: string },
@@ -324,16 +380,16 @@ async function runProviderSpeedTestInner(
     return { ok: false, error: 'host and port are required', code: 'invalid' };
   }
 
-  const samples = await resolveSpeedTestSamples();
-  if (samples.length === 0) {
+  const source = await resolveSpeedTestSource(signal);
+  if (!source) {
     return {
       ok: false,
-      code: 'no_sample',
-      error: 'Import an NZB first: a speed test downloads from your library.',
+      code: 'test_nzb_unreachable',
+      error: `Could not fetch the speed-test NZB (${SPEEDTEST_NZB_URL}).`,
     };
   }
 
-  // A single-provider, primary, enabled config so the engine streams ONLY from
+  // A single-provider, primary, enabled config so the engine fetches ONLY from
   // the provider under test (no failover muddying the measured rate).
   const providerConfig: ProviderConfig = {
     id: provider.id ?? 'speedtest',
@@ -352,81 +408,62 @@ async function runProviderSpeedTestInner(
   };
 
   const { options, summary } = getSpeedTestEngineConfig(providerConfig);
-  const config = {
-    connectionsPerStream: summary.connectionsPerStream,
-    pipelineDepth: summary.pipelineDepth,
-    prefetchSegments: summary.prefetchSegments,
-  };
-  const engine = new UsenetEngine([providerConfig], {
-    ...options,
-    // RAM-only, never share the warm engine's on-disk segment cache.
-    segmentDiskCacheBytes: 0,
-    segmentDiskCachePath: undefined,
-    segmentCacheBytes: Math.min(
-      options.segmentCacheBytes ?? SPEEDTEST_CACHE_BYTES,
-      SPEEDTEST_CACHE_BYTES
-    ),
-  });
+  const depth = summary.pipelineDepth;
+  // The global in-flight download budget (an explicit maxConcurrentDownloads, or
+  // the auto Σ conn×depth) is now a hard cap, so the test honours it: fan out the
+  // provider's full pipeline capacity, clamped to that budget. Sockets used =
+  // in-flight ÷ depth (pipelining packs `depth` requests onto each connection).
+  const budget = Math.max(
+    1,
+    options.maxConcurrentDownloads ?? providerConfig.maxConnections * depth
+  );
+  const connections = Math.max(
+    1,
+    Math.min(providerConfig.maxConnections, Math.floor(budget / depth))
+  );
+  const concurrency = connections * depth;
+  const config = { connections, pipelineDepth: depth };
+  // Bound the test engine's account to `connections` sockets so it uses exactly
+  // the connections × depth in-flight we report (and never exceeds the budget).
+  const engine = new UsenetEngine(
+    [{ ...providerConfig, maxConnections: connections }],
+    {
+      ...options,
+      // Never share the warm engine's on-disk cache: measure cold network reads
+      // rather than a cache replay.
+      segmentDiskCacheBytes: 0,
+      segmentDiskCachePath: undefined,
+    }
+  );
 
   try {
-    let bytes = 0;
-    let durationMs = 0;
-    let probeError: unknown;
-    let lastError: unknown;
-    for (const sample of samples) {
-      if (signal?.aborted) break;
-      let stream: SeekableStream;
-      try {
-        // open() fetches the first segment, doubling as the availability probe:
-        // a 430 (article missing on THIS provider) throws and we try the next.
-        stream = await engine.openFileStream(
-          sample.nzb,
-          { fileIndex: sample.fileIndex },
-          signal
-        );
-      } catch (err) {
-        probeError = err;
-        continue;
-      }
-      const readable = stream.createReadStream({
-        start: 0,
-        end: SPEEDTEST_MAX_BYTES,
-      });
-      const measured = await measureStream(readable, signal);
-      if (measured.error) lastError = measured.error;
-      if (measured.bytes > 0) {
-        bytes = measured.bytes;
-        durationMs = measured.durationMs;
-        break;
-      }
-      // Nothing streamed from this sample (missing on this provider); try next.
-    }
+    const { windowWireBytes, windowMs, segments, lastError } =
+      await measureThroughput(engine, source, concurrency, signal);
 
-    if (bytes <= 0) {
-      const errSrc = lastError ?? probeError;
-      const code = errSrc instanceof NntpError ? errSrc.kind : 'no_data';
+    if (segments === 0 || windowWireBytes <= 0) {
+      const code = lastError instanceof NntpError ? lastError.kind : 'no_data';
       const error =
-        errSrc instanceof NntpError && errSrc.kind === 'auth_failed'
+        lastError instanceof NntpError && lastError.kind === 'auth_failed'
           ? 'Authentication failed: check the username and password.'
-          : errSrc instanceof NntpError && errSrc.kind === 'article_not_found'
-            ? 'No articles fetched: the sample articles are missing on this provider.'
-            : errSrc instanceof Error
-              ? `No articles fetched: ${errSrc.message}`
+          : lastError instanceof NntpError &&
+              lastError.kind === 'article_not_found'
+            ? 'No articles fetched: the test article is missing on this provider.'
+            : lastError instanceof Error
+              ? `No articles fetched: ${lastError.message}`
               : 'No articles fetched';
       logger.debug(
-        { host, code, error, samples: samples.length },
-        'provider speed test streamed no bytes'
+        { host, code, error },
+        'provider speed test fetched no bytes'
       );
       return { ok: false, code, error, ...config };
     }
 
-    const bytesPerSec = Math.round(bytes / (Math.max(1, durationMs) / 1000));
+    // Aggregate wire bytes/sec (raw socket bytes) over the steady-state window.
+    const bytesPerSec = Math.round(windowWireBytes / (windowMs / 1000));
 
     // Fold the real transfer into the rollups (decoded bytes, real per-fetch
-    // durations) so it contributes to the window average speed. The drain also
-    // yields the article count for the result.
+    // durations) so it contributes to the window average speed.
     const deltas = engine.drainMetrics();
-    const segments = deltas.reduce((n, d) => n + d.articles, 0);
     if (provider.id) {
       try {
         await UsenetMetricsRepository.addDeltas(deltas);
@@ -438,7 +475,14 @@ async function runProviderSpeedTestInner(
       }
     }
 
-    return { ok: true, bytesPerSec, bytes, durationMs, segments, ...config };
+    return {
+      ok: true,
+      bytesPerSec,
+      bytes: windowWireBytes,
+      durationMs: windowMs,
+      segments,
+      ...config,
+    };
   } catch (err) {
     const code = err instanceof NntpError ? err.kind : 'unknown';
     const error = err instanceof Error ? err.message : String(err);
