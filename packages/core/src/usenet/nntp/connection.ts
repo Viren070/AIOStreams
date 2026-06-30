@@ -10,7 +10,7 @@ import {
 import {
   CRLF,
   DOT_TERMINATOR,
-  NntpResponseReader,
+  NntpOnreadParser,
   parseStatusLine,
   statusClass,
 } from './protocol.js';
@@ -43,18 +43,21 @@ interface PipelineRequest {
   timeoutMs: number;
   onAbort?: () => void;
   signal?: AbortSignal;
-  /** Multiline scan watermark (avoids rescanning already-scanned bytes). */
-  scanned: number;
   /**
    * Streaming payload: raw chunks are handed here as they arrive (nothing
    * accumulates) and the request resolves with the total payload byte count once
-   * the dot terminator is seen. Absent = buffer the whole payload into a Buffer.
+   * the dot terminator is seen. Absent = buffer the whole payload into a slot.
    */
   consumer?: (chunk: Buffer) => void;
-  streamed: number;
 }
 
 let CONNECTION_SEQ = 0;
+
+/** Upper bound (bytes) on a pooled article buffer; larger payloads are allocated fresh, not pooled. */
+const RAW_POOL_CAP = 1 << 20;
+
+/** Per-connection reused socket-read buffer for the `onread` path (Node fills it, consumed synchronously). */
+const READ_BUF_SIZE = 256 * 1024;
 
 /**
  * A single NNTP connection over TCP or TLS. Supports **pipelining**: multiple
@@ -69,7 +72,10 @@ export class NntpConnection {
   readonly id: number;
   readonly label: string;
   private socket: net.Socket | tls.TLSSocket;
-  private reader = new NntpResponseReader();
+  /** Zero-alloc streaming parser, fed the reused read buffer synchronously. */
+  private readonly parser = new NntpOnreadParser();
+  /** Reused per-connection socket read buffer (Node fills it, no per-read alloc). */
+  private readBuf: Buffer;
   /** FIFO queue of in-flight requests; head is the one currently being read. */
   private queue: PipelineRequest[] = [];
   /** Rolling "no progress" timer, (re)armed while the queue is non-empty. */
@@ -83,14 +89,27 @@ export class NntpConnection {
   /** Epoch ms after which this idle connection is considered stale. */
   staleAt = 0;
 
+  /**
+   * Reusable destination buffers for buffered article payloads, recycled in a
+   * ring so each segment doesn't allocate a fresh buffer. The ring grows to
+   * `inFlight + 1` so a slot is never reused while an earlier resolved-but-not-
+   * yet-decoded body still views it (bodies resolve synchronously during an
+   * `onRead` pass; their decode runs in later microtasks). Buffers larger than
+   * {@link RAW_POOL_CAP} are allocated fresh to bound retained memory.
+   */
+  private rawSlots: Buffer[] = [];
+  private rawNext = 0;
+
   private constructor(
     socket: net.Socket | tls.TLSSocket,
     label: string,
-    private opts: ConnectionOptions
+    private opts: ConnectionOptions,
+    readBuf: Buffer
   ) {
     this.id = ++CONNECTION_SEQ;
     this.label = label;
     this.socket = socket;
+    this.readBuf = readBuf;
     this.attach();
   }
 
@@ -117,12 +136,8 @@ export class NntpConnection {
   }
 
   private attach(): void {
-    this.socket.on('data', (chunk: Buffer) => {
-      // Any byte from the peer is progress, so push the rolling stall deadline out.
-      this.armStallTimer();
-      this.reader.push(chunk);
-      this.tryResolve();
-    });
+    // The socket is consumed via the reused read-buffer callback wired at
+    // construction (no `'data'` events fire); we only handle error/close here.
     const fail = (err: Error) => {
       this.fatalError =
         err instanceof NntpError
@@ -151,21 +166,38 @@ export class NntpConnection {
     config: ProviderConfig,
     opts: ConnectionOptions
   ): Promise<NntpConnection> {
+    const label = config.name ?? config.id;
+    // The socket is created WITH a reused read buffer whose callback routes to the
+    // (not-yet-constructed) instance. `conn` is assigned in the microtask after
+    // connect resolves, before the first onread IO tick fires, so the closure always
+    // sees a live instance (the `conn?.` guard is belt-and-braces).
+    const readBuf = Buffer.allocUnsafe(READ_BUF_SIZE);
+    let conn: NntpConnection | undefined;
+    // `onread` is valid on both net and tls sockets at runtime but is missing from
+    // @types/node's tls.ConnectionOptions; spread it in (via a variable) to skip the
+    // excess-property check.
+    const onreadOpt = {
+      onread: {
+        buffer: readBuf,
+        callback: (bytesRead: number, buf: Buffer): boolean => {
+          conn?.onRead(bytesRead, buf);
+          return true;
+        },
+      },
+    };
     const socket = await new Promise<net.Socket | tls.TLSSocket>(
       (resolve, reject) => {
         const onError = (err: Error) =>
           reject(
             new NntpError('connection', `dial failed: ${err.message}`, {
-              provider: config.name ?? config.id,
+              provider: label,
               cause: err,
             })
           );
         let s: net.Socket | tls.TLSSocket;
         const timer = setTimeout(() => {
           s?.destroy();
-          reject(
-            new NntpError('timeout', 'dial timeout', { provider: config.name ?? config.id })
-          );
+          reject(new NntpError('timeout', 'dial timeout', { provider: label }));
         }, opts.dialTimeoutMs);
         const onConnect = () => {
           clearTimeout(timer);
@@ -179,17 +211,22 @@ export class NntpConnection {
             port: config.port,
             rejectUnauthorized: !config.tlsSkipVerify,
             servername: config.host,
+            ...onreadOpt,
           });
           s.once('secureConnect', onConnect);
         } else {
-          s = net.connect({ host: config.host, port: config.port });
+          s = net.connect({
+            host: config.host,
+            port: config.port,
+            ...onreadOpt,
+          });
           s.once('connect', onConnect);
         }
         s.once('error', onError);
       }
     );
 
-    const conn = new NntpConnection(socket, config.name ?? config.id, opts);
+    conn = new NntpConnection(socket, label, opts, readBuf);
     // Greeting: 200 (posting allowed) or 201 (no posting). Unsolicited: the
     // server sends it on connect, so read a line without writing a command.
     const greeting = await conn.readGreeting(opts.dialTimeoutMs);
@@ -488,9 +525,7 @@ export class NntpConnection {
         reject,
         timeoutMs,
         signal,
-        scanned: 0,
         consumer,
-        streamed: 0,
       };
       if (signal) {
         // Aborting one request mid-pipeline can't un-send its command, so the
@@ -503,8 +538,8 @@ export class NntpConnection {
       }
       this.queue.push(req);
       this.armStallTimer();
-      // Bytes for this response may already be buffered (pipelined ahead).
-      this.tryResolve();
+      // Response bytes only exist during a read callback; the next onRead picks
+      // this request up.
     });
   }
 
@@ -554,75 +589,101 @@ export class NntpConnection {
     }
   }
 
-  /**
-   * Drive the FIFO state machine over buffered bytes, completing as many queued
-   * requests as the buffer allows. Re-entrancy (a `resolve` synchronously
-   * submitting another command) is guarded so the reader is never re-driven
-   * mid-pass.
-   */
+  /** Re-entrancy guard for {@link onRead} (a synchronous `resolve` may enqueue). */
   private processing = false;
-  private tryResolve(): void {
-    if (this.processing) return;
+
+  /**
+   * onread read path: drive the FIFO machine over the reused socket buffer
+   * `buf[0..nread]` synchronously. Reads from the live window via
+   * {@link NntpOnreadParser}; the window is only valid during this call, so
+   * buffered bodies are copied into a pooled slot before resolving.
+   */
+  private onRead(nread: number, buf: Buffer): void {
+    const parser = this.parser;
+    if (!parser || this.destroyed || this.processing) return;
+    // Any byte from the peer is progress; push the rolling stall deadline out.
+    this.armStallTimer();
     this.processing = true;
     try {
-      while (this.queue.length > 0) {
+      let off = 0;
+      while (off < nread && this.queue.length > 0) {
         const head = this.queue[0];
         if (head.stage === 'status') {
-          const line = this.reader.takeLine();
-          if (line === null) return; // need more bytes
-          const status = parseStatusLine(line);
-          if (status.code === 0) {
-            // Garbage where a status line was expected: pipeline desync. Mark the
-            // connection unsafe to reuse and fail everything in flight.
-            this.pipeliningUnsafe = true;
-            this.fatalError = new NntpError(
-              'protocol',
-              `protocol desync: ${line}`,
-              { provider: this.label }
-            );
-            this.destroy();
+          const step = parser.feedLine(buf, off, nread);
+          if (step.status === 'need-more') return;
+          if (step.status === 'desync') {
+            this.onDesync('non-line where a status line was expected');
             return;
           }
-          if (head.kind === 'line') {
-            this.finishHead(() => head.resolve(line));
-            continue;
-          }
-          // body request: 2xx → read the payload; ≥4xx (e.g. 430) → reject ONLY
-          // this request with no body to consume; the connection stays healthy.
-          if (statusClass(status.code) >= 4) {
-            const err = new NntpError(
-              classifyNntpStatus(status.code),
-              `command failed: ${status.code} ${status.message}`,
-              { code: status.code, provider: this.label }
-            );
-            this.finishHead(() => head.reject(err));
-            continue;
-          }
-          head.stage = 'payload';
-          head.scanned = 0;
+          off = step.off;
+          if (!this.onStatusLine(head, step.text)) return; // desync handled inside
           continue;
         }
         // payload stage
+        const step = parser.feedBody(buf, off, nread);
+        off = step.off;
+        if (!step.ended) return; // window exhausted; the carry is retained
         if (head.consumer) {
-          const consumer = head.consumer;
-          const done = this.reader.takeMultilineStreaming((chunk) => {
-            head.streamed += chunk.length;
-            consumer(chunk);
-          });
-          if (!done) return;
-          this.finishHead(() => head.resolve(head.streamed));
-          continue;
+          const streamed = parser.streamed;
+          this.finishHead(() => head.resolve(streamed));
+        } else {
+          // A view of the pooled slot, valid until the ring recycles it (after
+          // `inFlight` more bodies); long enough for the synchronous decode that
+          // follows the resolve in the next microtask.
+          const body = parser.dest!.subarray(0, parser.bodyLen);
+          this.finishHead(() => head.resolve(body));
         }
-        const result = this.reader.takeMultiline(head.scanned);
-        if (result === null) {
-          head.scanned = this.reader.scanWatermark();
-          return;
-        }
-        this.finishHead(() => head.resolve(result.body));
       }
     } finally {
       this.processing = false;
     }
+  }
+
+  /**
+   * Act on a completed status line for the current head (onread mode): resolve a
+   * line request, reject a body 4xx (consuming no payload, so the connection
+   * stays healthy), or arm the parser for the 2xx payload. Returns false (after
+   * tearing the connection down) on a desync.
+   */
+  private onStatusLine(head: PipelineRequest, line: string): boolean {
+    const parser = this.parser!;
+    const status = parseStatusLine(line);
+    if (status.code === 0) {
+      this.onDesync(line);
+      return false;
+    }
+    if (head.kind === 'line') {
+      this.finishHead(() => head.resolve(line));
+      return true;
+    }
+    // body request: ≥4xx (e.g. 430) → reject ONLY this request, no body to read.
+    if (statusClass(status.code) >= 4) {
+      const err = new NntpError(
+        classifyNntpStatus(status.code),
+        `command failed: ${status.code} ${status.message}`,
+        { code: status.code, provider: this.label }
+      );
+      this.finishHead(() => head.reject(err));
+      return true;
+    }
+    head.stage = 'payload';
+    if (head.consumer) {
+      parser.beginStreamingBody(head.consumer);
+    } else {
+      // Fixed-cap pooled slot: size is unknown until the terminator, so the body
+      // streams in and the slot's own tail is the terminator carry.
+      parser.beginBufferedBody(this.acquireRaw(RAW_POOL_CAP));
+    }
+    return true;
+  }
+
+  /** Pipeline desync: mark unusable, latch the error, destroy. */
+  private onDesync(line: string): void {
+    this.pipeliningUnsafe = true;
+    this.fatalError = new NntpError('protocol', `protocol desync: ${line}`, {
+      provider: this.label,
+    });
+    this.destroy();
   }
 
   /** Shift the completed head, re-arm the stall timer, then deliver its result. */
@@ -634,6 +695,28 @@ export class NntpConnection {
     }
     this.armStallTimer();
     deliver();
+  }
+
+  /**
+   * Return a recycled destination buffer of at least `size` bytes for the next
+   * buffered article payload. The ring holds one slot per concurrently in-flight
+   * request (+1 margin) so a slot is never overwritten while an earlier body it
+   * backs is still awaiting decode. Oversized articles bypass the pool.
+   */
+  private acquireRaw(size: number): Buffer {
+    if (size > RAW_POOL_CAP) return Buffer.allocUnsafe(size);
+    const want = Math.max(2, this.queue.length + 1);
+    while (this.rawSlots.length < want) {
+      this.rawSlots.push(Buffer.allocUnsafe(size));
+    }
+    if (this.rawNext >= this.rawSlots.length) this.rawNext = 0;
+    let buf = this.rawSlots[this.rawNext];
+    if (buf.length < size) {
+      buf = Buffer.allocUnsafe(size);
+      this.rawSlots[this.rawNext] = buf;
+    }
+    this.rawNext = (this.rawNext + 1) % this.rawSlots.length;
+    return buf;
   }
 
   /** Reject every in-flight request (socket error / timeout / destroy). */
