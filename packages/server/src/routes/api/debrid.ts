@@ -33,14 +33,83 @@ const logger = createLogger('server');
 
 router.use(corsMiddleware);
 
-// block HEAD requests
-router.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.method === 'HEAD') {
-    res.status(405).send('Method not allowed');
-  } else {
-    next();
+router.head(
+  '/playback/:encryptedStoreAuth/:fileInfo/:metadataId/:filename',
+  async (req: Request<PlaybackParams>, res: Response, next: NextFunction) => {
+    try {
+      const {
+        encryptedStoreAuth,
+        fileInfo: encodedFileInfo,
+        metadataId,
+      } = req.params;
+
+      let fileInfo: FileInfo;
+
+      try {
+        fileInfo = FileInfoSchema.parse(
+          JSON.parse(fromUrlSafeBase64(encodedFileInfo))
+        );
+      } catch {
+        const stored = await fileInfoStore()?.get(encodedFileInfo);
+        if (!stored) {
+          next(
+            new APIError(
+              constants.ErrorCode.BAD_REQUEST,
+              undefined,
+              'Failed to parse file info and not found in store.'
+            )
+          );
+          return;
+        }
+        fileInfo = stored;
+      }
+
+      if (!fileInfo.serviceItemId) {
+        const metadata = await metadataStore().get(metadataId);
+        if (!metadata) {
+          next(
+            new APIError(
+              constants.ErrorCode.BAD_REQUEST,
+              undefined,
+              'Metadata not found'
+            )
+          );
+          return;
+        }
+      }
+
+      const decryptedStoreAuth = decryptString(encryptedStoreAuth);
+      if (!decryptedStoreAuth.success) {
+        next(
+          new APIError(
+            constants.ErrorCode.BAD_REQUEST,
+            undefined,
+            'Failed to decrypt store auth'
+          )
+        );
+        return;
+      }
+
+      try {
+        ServiceAuthSchema.parse(JSON.parse(decryptedStoreAuth.data));
+      } catch {
+        next(
+          new APIError(
+            constants.ErrorCode.BAD_REQUEST,
+            undefined,
+            'Failed to parse store auth'
+          )
+        );
+        return;
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.status(200).end();
+    } catch (error: any) {
+      next(error);
+    }
   }
-});
+);
 
 interface PlaybackParams {
   encryptedStoreAuth: string;
