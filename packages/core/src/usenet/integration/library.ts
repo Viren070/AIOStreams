@@ -4,6 +4,8 @@ import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
 import { downloadManager, NzbTooLargeError } from '../../utils/index.js';
 import { getDataFolder } from '../../utils/general.js';
 import { createLogger } from '../../logging/logger.js';
+import { markReleaseDead } from '../../screener/feedback.js';
+import { isReleaseScreened } from '../../screener/filter.js';
 import {
   DebridError,
   DebridDownload,
@@ -22,11 +24,13 @@ import {
   parseNzb,
   isEligibleVideoTarget,
   contentTotalSize,
+  ArticleNotFoundError,
   type Nzb,
   type NzbContent,
 } from '../index.js';
 import {
   UsenetLibraryRepository,
+  ScreenerStore,
   type UsenetLibraryEntry,
   type UsenetLibraryFile,
   type UsenetLibrarySource,
@@ -354,10 +358,27 @@ async function importNzb(
     startedAt?: number;
     /** Grab/parse timings for the resolve path's phase-breakdown log. */
     timings?: { importStart: number; grabbedAt: number; parsedAt: number };
+    /**
+     * Release key of the playback that triggered this import. When set, a
+     * release proven gone on every provider self-fills the Screener as dead.
+     */
+    screenerKey?: string;
   },
   jobSignal: AbortSignal
 ): Promise<UsenetLibraryFile[]> {
   const { nzbHash, nzb, name, owner, source, nzbUrl } = spec;
+  // A release confirmed gone on every provider is dead on usenet: self-fill the
+  // Screener. No-op without a key or for a torrent; the no-key case is logged so
+  // an empty list stays explainable.
+  const markScreenerDead = () => {
+    if (spec.screenerKey) {
+      markReleaseDead(spec.screenerKey);
+    } else {
+      logger.info(
+        `Screener: ${nzbHash} is dead on all providers but carries no release key, so it can't be listed (its indexer reported no size + poster/date).`
+      );
+    }
+  };
   try {
     const engine = usenetEngineRegistry.get(spec.providers, spec.options);
     // Dispatch (not schedule) time, so `importMs` measures the inspect
@@ -387,6 +408,9 @@ async function importNzb(
         name,
         friendly.code
       ).catch(() => {});
+      if (err instanceof ArticleNotFoundError && err.allProviders) {
+        markScreenerDead();
+      }
       throw toDebridError(err);
     }
     if (spec.timings) {
@@ -415,6 +439,7 @@ async function importNzb(
         { nzbHash, ...content.availability },
         'nzb failed availability verification'
       );
+      markScreenerDead();
       throw await failImport(nzbHash, name, availFail.reason, availFail.code, {
         reasonCode: availFail.code,
       });
@@ -451,6 +476,7 @@ async function importNzb(
         'no streamable files in nzb'
       );
       const { reason, code } = classifyNoStreamable(content);
+      if (code === 'missing_on_providers') markScreenerDead();
       throw await failImport(nzbHash, name, reason, code, {
         byCategory,
         archiveInner,
@@ -521,6 +547,39 @@ export async function resolveFileList(
   cached?: DebridFile[],
   signal?: AbortSignal
 ): Promise<{ files: DebridFile[]; nzbHash: string }> {
+  // Already flagged dead? Check before serving cached files too, so a release the
+  // Screener has since flagged isn't handed back from a stale cache entry, and a
+  // sibling NZB of a release already proved dead isn't re-probed from scratch
+  // (the library failure-cache is per-hash; Screener is per-release-key).
+  // When the viewer's filter options rode along on the token, apply their full
+  // decision (quorum/backbone, respecting the enabled toggle); otherwise fall
+  // back to a local-only check (own full-trust marks always pass the filter).
+  if (playbackInfo.screenerKey) {
+    const flaggedDead = playbackInfo.screenerOptions
+      ? await isReleaseScreened(
+          playbackInfo.screenerKey,
+          playbackInfo.screenerOptions
+        )
+      : await ScreenerStore.isLocallyDead(playbackInfo.screenerKey);
+    if (flaggedDead) {
+      const reason = 'Skipped: already flagged dead by Screener';
+      await UsenetLibraryRepository.markFailed(
+        nzbHash,
+        reason,
+        playbackInfo.filename,
+        'screener_skip'
+      ).catch(() => {});
+      throw new DebridError(reason, {
+        statusCode: 404,
+        statusText: 'Not Found',
+        code: 'NO_MATCHING_FILE',
+        headers: {},
+        body: { reasonCode: 'screener_skip' },
+        type: 'api_error',
+      });
+    }
+  }
+
   if (cached?.length) return { files: cached, nzbHash };
 
   const importStart = Date.now();
@@ -588,6 +647,7 @@ export async function resolveFileList(
             eligibleOnly: true,
             deleteOnAbort: !existedBefore,
             timings: { importStart, grabbedAt, parsedAt },
+            screenerKey: playbackInfo.screenerKey,
           },
           jobSignal
         ),

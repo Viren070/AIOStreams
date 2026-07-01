@@ -26,6 +26,8 @@ import {
   pruneUsenetMetrics,
   requeueInterruptedInspects,
   flushAllDiskCaches,
+  ScreenerRemoteSourceService,
+  ScreenerGitHubSyncService,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -136,6 +138,41 @@ function registerUsenetTasks() {
   });
 }
 
+function registerScreenerTask() {
+  TaskManager.register({
+    id: 'screener-remote-refresh',
+    label: 'Refresh Screener remote lists',
+    description:
+      'Re-fetches subscribed remote Screener lists whose refresh interval has ' +
+      'elapsed and replaces their stored entries.',
+    category: 'data-sync',
+    kind: 'scheduled',
+    intervalMs: 15 * 60_000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => ScreenerRemoteSourceService.refreshDue(),
+  });
+  TaskManager.register({
+    id: 'screener-github-sync',
+    label: 'Publish Screener list to GitHub',
+    description:
+      'Pushes Screener list to the configured GitHub repo when auto-sync ' +
+      'is enabled and its interval has elapsed.',
+    category: 'data-sync',
+    kind: 'scheduled',
+    intervalMs: 15 * 60_000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => {
+      // syncIfDue never throws; it signals a failed push with an `error:` prefix.
+      const message = await ScreenerGitHubSyncService.syncIfDue();
+      return { ok: !message.startsWith('error:'), message };
+    },
+  });
+}
+
 async function initialiseRedis() {
   if (appConfig.bootstrap.redisUri) {
     await Cache.testRedisConnection();
@@ -192,6 +229,7 @@ async function start() {
     registerCacheTasks();
     registerUsenetTasks();
     void requeueInterruptedInspects();
+    registerScreenerTask();
     await initialiseAuth();
     startAnalytics();
     const server = app.listen(appConfig.bootstrap.port, (error) => {

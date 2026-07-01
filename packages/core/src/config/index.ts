@@ -24,6 +24,7 @@ import {
   builtinsSchema,
   analyticsSchema,
   usenetSchema,
+  screenerSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -45,6 +46,7 @@ export const runtimeSchemas = {
   builtins: builtinsSchema,
   analytics: analyticsSchema,
   usenet: usenetSchema,
+  screener: screenerSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

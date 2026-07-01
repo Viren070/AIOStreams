@@ -26,6 +26,7 @@ export {
   type UsenetProviderRollup,
   type UsenetMetricBucket,
 } from './repositories/usenet-metrics.js';
+export { ScreenerStore } from './repositories/screener.js';
 export * from './schemas.js';
 
 export { sql, raw, join, SqlFragment } from './sql.js';

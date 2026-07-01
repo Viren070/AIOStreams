@@ -33,6 +33,7 @@ import {
 } from '../../db/index.js';
 import { type UsenetStreamToken, decodeUsenetStreamToken } from './tokens.js';
 import { friendlyUsenetError } from './errors.js';
+import { markReleaseDead } from '../../screener/feedback.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
 import { fetchNzb, parseNzbCached, canonicaliseNzbHash } from './library.js';
 
@@ -450,6 +451,19 @@ async function getStreamSession(
           decoded.filename,
           friendly.code
         ).catch(() => {});
+        // Articles missing on every provider == gone from usenet: self-fill the
+        // Screener. Gate on allProviders so a single-provider 430 (still alive
+        // elsewhere) doesn't poison the shared list. NotStreamableError is
+        // encrypted/etc — the release exists, so it's excluded already.
+        if (err instanceof ArticleNotFoundError && err.allProviders) {
+          if (decoded.screenerKey) {
+            markReleaseDead(decoded.screenerKey);
+          } else {
+            logger.info(
+              `Screener: ${decoded.hash} is dead on all providers but carries no release key, so it can't be listed (its indexer reported no size + poster/date).`
+            );
+          }
+        }
       }
       throw err;
     }

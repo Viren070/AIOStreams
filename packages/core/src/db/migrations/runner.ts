@@ -79,11 +79,17 @@ async function applyMigration(
   driver: DbDriver,
   migration: Migration
 ): Promise<void> {
-  const sql = migration.up[driver.dialect];
-  const statements = splitStatements(sql);
   await driver.tx(async (tx) => {
-    for (const stmt of statements) {
-      await tx.exec(stmt);
+    if (migration.run) {
+      await migration.run(tx);
+    } else if (migration.up) {
+      for (const stmt of splitStatements(migration.up[driver.dialect])) {
+        await tx.exec(stmt);
+      }
+    } else {
+      throw new Error(
+        `Migration ${migration.id} (${migration.name}) has neither up nor run`
+      );
     }
     await tx.exec(`INSERT INTO _migrations (id, name) VALUES (?, ?)`, [
       migration.id,

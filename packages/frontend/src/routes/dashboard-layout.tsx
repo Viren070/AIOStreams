@@ -26,6 +26,7 @@ import {
   BiData,
   BiSliderAlt,
   BiCloudDownload,
+  BiShield,
 } from 'react-icons/bi';
 import { LayoutHeaderBackground } from '@/components/layout-header-background';
 import { SECTIONS } from '@/app/dashboard/usenet/sections';
@@ -49,6 +50,7 @@ const NAV: {
   // (wired up in the items mapping below).
   { label: 'Usenet', href: '/dashboard/usenet', icon: BiCloudDownload },
   { label: 'Proxy', href: '/dashboard/proxy', icon: BiNetworkChart },
+  { label: 'Screener', href: '/dashboard/screener', icon: BiShield },
   { label: 'Settings', href: '/dashboard/settings', icon: BiCog },
 ];
 

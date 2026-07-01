@@ -9,6 +9,8 @@ import {
 } from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
+import { usenetKey } from '../../screener/key.js';
+import { toUnixSeconds } from '../../screener/fingerprint.js';
 import { BaseNabApi, SearchResultItem } from '../base/nab/api.js';
 import {
   BaseNabAddon,
@@ -208,6 +210,23 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       if (zyclopsHealth) {
         nzb.zyclopsHealth = zyclopsHealth;
       }
+
+      // Davex-compatible Screener key from the indexer's size/poster/date, so
+      // this release can be matched against shared dead-release lists.
+      const poster =
+        result.newznab?.poster == null
+          ? undefined
+          : String(result.newznab.poster).trim() || undefined;
+      // Hash the exact indexer-reported size, not the enclosure-length/0
+      // fallback nzb.size can hold, so the wd1 matches across indexers + davex.
+      const rawReleaseSize = result.size ?? result.newznab?.size;
+      const releaseSize =
+        rawReleaseSize == null ? undefined : Number(rawReleaseSize);
+      const screenerKey =
+        typeof releaseSize === 'number' && Number.isFinite(releaseSize)
+          ? usenetKey(releaseSize, poster, toUnixSeconds(date))
+          : null;
+      if (screenerKey) nzb.screenerKey = screenerKey;
 
       nzbs.push(nzb);
     }
