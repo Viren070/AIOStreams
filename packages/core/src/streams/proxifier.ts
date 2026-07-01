@@ -1,6 +1,6 @@
 ﻿import { config as appConfig } from '../config/index.js';
 import { ParsedStream, UserData } from '../db/schemas.js';
-import { constants, createLogger } from '../utils/index.js';
+import { constants, createLogger, isInternalEndpoint } from '../utils/index.js';
 import { createProxy } from '../proxy/index.js';
 
 const logger = createLogger('proxy');
@@ -63,8 +63,10 @@ class Proxifier {
     const proxyService =
       !proxy.proxiedServices?.length ||
       proxy.proxiedServices.includes(streamService);
+    const isInternalHttpStream =
+      streamUrl.protocol === 'http:' && isInternalEndpoint(streamUrl);
 
-    if (proxy.enabled && proxyAddon && proxyService) {
+    if (proxy.enabled && (isInternalHttpStream || (proxyAddon && proxyService))) {
       return true;
     }
 
