@@ -10,6 +10,7 @@ import {
   SystemPage,
   SettingsPage,
   ProxyPage,
+  ScreenerPage,
   UsersPage,
   TasksPage,
   CachePage,
@@ -166,6 +167,12 @@ const dashboardProxyRoute = createRoute({
   component: ProxyPage,
 });
 
+const dashboardScreenerRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'screener',
+  component: ScreenerPage,
+});
+
 const dashboardUsersRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: 'users',
@@ -243,6 +250,7 @@ const routeTree = rootRoute.addChildren([
     dashboardSystemRoute,
     dashboardSettingsRoute,
     dashboardProxyRoute,
+    dashboardScreenerRoute,
     dashboardUsersRoute,
     dashboardTasksRoute,
     dashboardCacheRoute,

@@ -4,6 +4,7 @@ export { AnalyticsPage } from '@/app/dashboard/analytics/analytics-page';
 export { SystemPage } from '@/app/dashboard/system/system-page';
 export { UsersPage } from '@/app/dashboard/users/users-page';
 export { ProxyPage } from '@/app/dashboard/proxy/proxy-page';
+export { ScreenerPage } from '@/app/dashboard/screener/screener-page';
 export { TasksPage } from '@/app/dashboard/tasks/tasks-page';
 export { CachePage } from '@/app/dashboard/cache/cache-page';
 export { UsenetLayout } from '@/app/dashboard/usenet/usenet-layout';

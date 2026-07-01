@@ -16,6 +16,7 @@ import {
   authApi,
   dashboardApi,
   usenetApi,
+  screenerApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -96,7 +97,14 @@ export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
 app.use(loggerMiddleware);
-app.use(express.json());
+// Screener's import accepts a large NDJSON body and sets its own limit on the
+// route; every other route keeps this small default. Parser built once.
+const jsonParser = express.json();
+app.use((req, res, next) =>
+  req.path.replace(/\/+$/, '').endsWith('/screener/import')
+    ? next()
+    : jsonParser(req, res, next)
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Allow all origins in development for easier testing
@@ -133,6 +141,7 @@ apiRouter.use('/sync', syncApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);
+apiRouter.use('/screener', screenerApi);
 apiRouter.use('/sabnzbd', sabnzbdRouter);
 apiRouter.use('/newznab', createNabRouter('newznab'));
 apiRouter.use('/torznab', createNabRouter('torznab'));

@@ -16,6 +16,13 @@ export class SettingsRepository {
     );
   }
 
+  static async get(key: string): Promise<unknown> {
+    const row = await getDb().maybeOne<{ value: string }>(
+      sql`SELECT value FROM settings WHERE key = ${key}`
+    );
+    return row ? JSON.parse(row.value) : undefined;
+  }
+
   static async getVersion(): Promise<number> {
     const row = await getDb().maybeOne<{ version: number | string }>(
       sql`SELECT version FROM settings_version WHERE id = ${1}`

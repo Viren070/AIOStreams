@@ -115,7 +115,9 @@ export class NativeUsenetService implements UsenetDebridService {
 
     return nzbs.map(({ name, hash }) => {
       const entry = hash ? library.get(hash) : undefined;
-      if (entry?.status === 'failed') {
+      // A viewer-specific Screener skip is not a shared availability failure;
+      // don't report it as failed for other viewers.
+      if (entry?.status === 'failed' && entry.errorCode !== 'screener_skip') {
         return {
           id: hash ?? name ?? 'unknown',
           hash,
@@ -212,8 +214,11 @@ export class NativeUsenetService implements UsenetDebridService {
       });
     }
 
-    if (existing?.status === 'failed') {
-      // Short-circuit on a cached failure WITHOUT re-checking providers. Logged
+    if (existing?.status === 'failed' && existing.errorCode !== 'screener_skip') {
+      // Short-circuit on a cached failure WITHOUT re-checking providers. A
+      // Screener skip is viewer-specific (it depends on the viewer's filter
+      // settings), so it's excluded here and re-evaluated per request instead of
+      // blocking every viewer. Logged
       // so a fast "previously failed" rejection is distinguishable from a fresh
       // inspect failure (delete the library entry to force a re-inspect).
       logger.debug(
@@ -289,6 +294,7 @@ export class NativeUsenetService implements UsenetDebridService {
       fileIndex: selected.index,
       innerPath: selected.path,
       filename: chosenFilename,
+      screenerKey: playbackInfo.screenerKey,
     });
 
     const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}/${encodeURIComponent(

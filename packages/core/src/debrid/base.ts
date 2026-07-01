@@ -217,10 +217,35 @@ const TorrentInfoSchema = BaseFileInfoSchema.extend({
 const TorrentPlaybackInfoSchema =
   BasePlaybackInfoSchema.merge(TorrentInfoSchema);
 
+/**
+ * The user's Screener filtering knobs. Carried alongside a release key into the
+ * stateless playback token so the resolve step can apply the same filter
+ * decision (quorum/backbone/enabled) the stream list already used, without a
+ * resolved UserData at the `/playback` route.
+ */
+export const ScreenerOptionsSchema = z.object({
+  enabled: z.boolean().optional(),
+  quorum: z.number().int().min(1).max(20).optional(),
+});
+export type ScreenerOptions = z.infer<typeof ScreenerOptionsSchema>;
+
 const UsenetInfoSchema = BaseFileInfoSchema.extend({
   hash: z.string(),
   easynewsUrl: z.string().optional(),
   nzb: z.string(),
+  // Davex-compatible Screener key (`wd1:...`) carried to playback so a release
+  // discovered dead (articles missing) can auto-mark itself on Screener.
+  // Only valid usenet keys are accepted; anything else is dropped here.
+  screenerKey: z
+    .string()
+    .regex(/^wd1:[0-9a-f]{32}$/)
+    .optional()
+    .catch(undefined),
+  // The viewer's Screener knobs at stream-list time, so a sibling NZB of a
+  // flagged release can be skipped at resolve under the same rules. A malformed
+  // blob is dropped (falls back to the local-only skip) rather than failing the
+  // whole token.
+  screenerOptions: ScreenerOptionsSchema.optional().catch(undefined),
   type: z.literal('usenet'),
 });
 

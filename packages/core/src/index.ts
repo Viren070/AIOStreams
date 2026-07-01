@@ -2,6 +2,7 @@ export * from './utils/index.js';
 export * from './logging/ring-buffer.js';
 export * from './config/index.js';
 export * from './db/index.js';
+export * from './screener/index.js';
 export * from './analytics/index.js';
 export * from './analytics/repository.js';
 export * from './tasks/index.js';

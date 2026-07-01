@@ -24,6 +24,8 @@ import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
+import { applyScreener } from '../screener/filter.js';
+import { myBackbones } from '../screener/backbones.js';
 
 const logger = createLogger('filterer');
 
@@ -73,6 +75,7 @@ export interface FilterStatistics {
     requiredFilterCondition: Reason;
     size: Reason;
     bitrate: Reason;
+    screener: Reason;
   };
   included: {
     passthrough: Reason;
@@ -178,6 +181,7 @@ class StreamFilterer {
         requiredFilterCondition: { total: 0, details: {} },
         size: { total: 0, details: {} },
         bitrate: { total: 0, details: {} },
+        screener: { total: 0, details: {} },
       },
       included: {
         passthrough: { total: 0, details: {} },
@@ -239,6 +243,27 @@ class StreamFilterer {
 
   public getFilterStatistics() {
     return this.filterStatistics;
+  }
+
+  /**
+   * Remove releases Screener has flagged (dead/fake/mislabeled), recording
+   * each as a `screener` removal so it surfaces in the filter stats / dashboard
+   * ("skipped due to Screener"). Run once over the full candidate set before
+   * dedup, so a flagged release never becomes a failover attempt.
+   */
+  public async screenFlagged(
+    streams: ParsedStream[]
+  ): Promise<ParsedStream[]> {
+    return applyScreener(
+      streams,
+      this.userData.screener,
+      myBackbones(),
+      (_stream, verdict) =>
+        this.incrementRemovalReason(
+          'screener',
+          verdict.verdict ?? verdict.reason ?? 'flagged'
+        )
+    );
   }
 
   public getFilterTimings(): FilterTimings {
