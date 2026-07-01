@@ -19,6 +19,12 @@ describe('anime search metadata helpers', () => {
       3
     );
     expect(
+      extractLogicalSeasonFromTitles([
+        'Example Anime XI Season',
+        'Example Anime 4th Season',
+      ])
+    ).toBe(4);
+    expect(
       extractLogicalSeasonFromTitles(['Example Anime Final Season Part 2'])
     ).toBeUndefined();
   });
@@ -56,6 +62,17 @@ describe('anime search metadata helpers', () => {
       })
     ).toContain('Bungo Stray Dogs');
     expect(
+      selectAmbiguousAnimeBaseTitles({
+        primaryTitle: 'Bungo Stray Dogs 4th Season',
+        titles: [
+          'Bungo Stray Dogs 4th Season',
+          'Bungo Stray Dogs Season 4',
+          'Bungou Stray Dogs 4th Season',
+        ],
+        logicalSeason: 4,
+      })
+    ).toEqual(['Bungo Stray Dogs', 'Bungou Stray Dogs']);
+    expect(
       selectAmbiguousAnimeEntryTitles({
         primaryTitle: titles[0],
         titles,
@@ -75,7 +92,12 @@ describe('anime search metadata helpers', () => {
     });
 
     expect(waves).toEqual([
-      ['Bungo Stray Dogs S04E01', 'Bungo Stray Dogs S04'],
+      [
+        'Bungo Stray Dogs S04E01',
+        'Bungo Stray Dogs S04',
+        'Bungou Stray Dogs S04E01',
+        'Bungou Stray Dogs S04',
+      ],
       [
         'Bungo Stray Dogs 4th Season 01',
         'Bungo Stray Dogs 4th Season E01',

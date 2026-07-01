@@ -53,7 +53,8 @@ export function extractLogicalSeasonFromTitles(
 
     const romanMatch = title.match(/\b([IVX]+)\s+season\b/i);
     if (romanMatch) {
-      return ROMAN_NUMERALS[romanMatch[1].toUpperCase()];
+      const season = ROMAN_NUMERALS[romanMatch[1].toUpperCase()];
+      if (season !== undefined) return season;
     }
   }
   return undefined;
@@ -190,7 +191,7 @@ export function selectAmbiguousAnimeBaseTitles(
   metadata: AmbiguousAnimeTitleMetadata,
   maxTitles = 2
 ): string[] {
-  return dedupeCleanTitles([
+  const stripped = dedupeCleanTitles([
     metadata.externalTitle,
     ...(metadata.externalTitles ?? []),
     metadata.primaryTitle,
@@ -203,8 +204,9 @@ export function selectAmbiguousAnimeBaseTitles(
         metadata.seasonYear
       )
     )
-    .filter(isLatinSearchTitle)
-    .slice(0, maxTitles);
+    .filter(isLatinSearchTitle);
+
+  return dedupeCleanTitles(stripped).slice(0, maxTitles);
 }
 
 export function selectAmbiguousAnimeEntryTitles(
