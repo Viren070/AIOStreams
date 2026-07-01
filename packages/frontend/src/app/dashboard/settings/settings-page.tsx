@@ -57,6 +57,8 @@ function buildTabs(keys: SettingsKey[]): TabModel[] {
   }
   const tabs: TabModel[] = [];
   for (const [section, sectionKeys] of bySection) {
+    // Screener settings live on the dedicated Screener page, not here.
+    if (section === 'screener') continue;
     const meta = tabFor(section);
     const groups = new Map<string, SettingsKey[]>();
     for (const k of sectionKeys) {

@@ -36,6 +36,7 @@ import {
   metadataStore,
   fileInfoStore,
   FileInfo,
+  ScreenerOptionsSchema,
 } from '../../debrid/index.js';
 import { processTorrents, processNZBs } from '../utils/debrid.js';
 import { calculateAbsoluteEpisode } from '../utils/general.js';
@@ -69,6 +70,9 @@ export const BaseDebridConfigSchema = z.object({
   cacheAndPlay: CacheAndPlaySchema.optional(),
   autoRemoveDownloads: z.boolean().optional(),
   checkOwned: z.boolean().optional().default(true),
+  // The viewer's Screener knobs, forwarded so a usenet playback token can carry
+  // them to the stateless resolve step (see _createStream).
+  screener: ScreenerOptionsSchema.optional(),
 });
 export type BaseDebridConfig = z.infer<typeof BaseDebridConfigSchema>;
 
@@ -740,6 +744,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             nzb: torrentOrNzb.nzb,
             title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
+            screenerKey: torrentOrNzb.screenerKey,
+            // Only useful alongside a key (the resolve-skip gates on the key),
+            // so it rides only on keyed releases to keep keyless tokens unchanged.
+            screenerOptions: torrentOrNzb.screenerKey
+              ? this.userData.screener ?? {}
+              : undefined,
             index: torrentOrNzb.file.index,
             easynewsUrl:
               torrentOrNzb.service?.id === 'easynews'
@@ -785,6 +795,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             )
           : undefined,
       nzbUrl: torrentOrNzb.type === 'usenet' ? torrentOrNzb.nzb : undefined,
+      screenerKey:
+        torrentOrNzb.type === 'usenet' ? torrentOrNzb.screenerKey : undefined,
       servers:
         torrentOrNzb.service?.id === 'stremio_nntp'
           ? (encryptedStoreAuth as string[])

@@ -4,6 +4,8 @@ import { ParsedResult, parseTorrentTitle } from '@viren070/parse-torrent-title';
 import { downloadManager, NzbTooLargeError } from '../../utils/index.js';
 import { getDataFolder } from '../../utils/general.js';
 import { createLogger } from '../../logging/logger.js';
+import { markReleaseDead } from '../../screener/feedback.js';
+import { isReleaseScreened } from '../../screener/filter.js';
 import {
   DebridError,
   DebridDownload,
@@ -18,11 +20,13 @@ import {
   parseNzb,
   isEligibleVideoTarget,
   contentTotalSize,
+  ArticleNotFoundError,
   type Nzb,
   type NzbContent,
 } from '../index.js';
 import {
   UsenetLibraryRepository,
+  ScreenerStore,
   type UsenetLibraryEntry,
   type UsenetLibraryFile,
 } from '../../db/index.js';
@@ -246,7 +250,53 @@ export async function resolveFileList(
   cached?: DebridFile[],
   signal?: AbortSignal
 ): Promise<DebridFile[]> {
+  // Already flagged dead? Check before serving cached files too, so a release the
+  // Screener has since flagged isn't handed back from a stale cache entry, and a
+  // sibling NZB of a release already proved dead isn't re-probed from scratch
+  // (the library failure-cache is per-hash; Screener is per-release-key).
+  // When the viewer's filter options rode along on the token, apply their full
+  // decision (quorum/backbone, respecting the enabled toggle); otherwise fall
+  // back to a local-only check (own full-trust marks always pass the filter).
+  if (playbackInfo.screenerKey) {
+    const flaggedDead = playbackInfo.screenerOptions
+      ? await isReleaseScreened(
+          playbackInfo.screenerKey,
+          playbackInfo.screenerOptions
+        )
+      : await ScreenerStore.isLocallyDead(playbackInfo.screenerKey);
+    if (flaggedDead) {
+      const reason = 'Skipped: already flagged dead by Screener';
+      await UsenetLibraryRepository.markFailed(
+        nzbHash,
+        reason,
+        playbackInfo.filename,
+        'screener_skip'
+      ).catch(() => {});
+      throw new DebridError(reason, {
+        statusCode: 404,
+        statusText: 'Not Found',
+        code: 'NO_MATCHING_FILE',
+        headers: {},
+        body: { reasonCode: 'screener_skip' },
+        type: 'api_error',
+      });
+    }
+  }
+
   if (cached?.length) return cached;
+
+  // A release confirmed gone on every provider is dead on usenet: self-fill the
+  // Screener. No-op without a key or for a torrent; the no-key case is logged so
+  // an empty list stays explainable.
+  const markScreenerDead = () => {
+    if (playbackInfo.screenerKey) {
+      markReleaseDead(playbackInfo.screenerKey);
+    } else {
+      logger.info(
+        `Screener: ${nzbHash} is dead on all providers but carries no release key, so it can't be listed (its indexer reported no size + poster/date).`
+      );
+    }
+  };
 
   // Split the import into grab (NZB fetch), parse, and inspect (the
   // segment-probing phase that dominates) so a slow cold load can be pinned to
@@ -285,6 +335,9 @@ export async function resolveFileList(
       playbackInfo.filename,
       friendly.code
     ).catch(() => {});
+    if (err instanceof ArticleNotFoundError && err.allProviders) {
+      markScreenerDead();
+    }
     throw toDebridError(err);
   }
   const inspectedAt = Date.now();
@@ -316,6 +369,7 @@ export async function resolveFileList(
       playbackInfo.filename,
       availFail.code
     ).catch(() => {});
+    markScreenerDead();
     throw new DebridError(availFail.reason, {
       statusCode: 404,
       statusText: 'Not Found',
@@ -400,6 +454,7 @@ export async function resolveFileList(
       playbackInfo.filename,
       code
     ).catch(() => {});
+    if (code === 'missing_on_providers') markScreenerDead();
     throw new DebridError(reason, {
       statusCode: 404,
       statusText: 'Not Found',

@@ -288,6 +288,7 @@ export class BuiltinAddonPreset extends Preset {
       cacheAndPlay: userData.cacheAndPlay,
       autoRemoveDownloads: userData.autoRemoveDownloads,
       checkOwned: userData.checkOwned ?? true,
+      screener: userData.screener,
     };
   }
 }
