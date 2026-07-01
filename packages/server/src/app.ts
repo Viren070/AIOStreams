@@ -260,6 +260,89 @@ app.get('/static/*any', corsMiddleware, (req, res, next) => {
   next();
 });
 
+// Infuse-mode subtitle proxy. Serves an upstream provider subtitle from this
+// addon's own host/cert (reachable by the Apple TV), normalising the
+// content-type. Path: /infuse-sub/<payload>/<name>-<lang>.srt
+//   - payload: base64url(JSON array of candidate upstream URLs, priority order)
+//   - the trailing <name>-<lang>.srt is read by Infuse to label the track and
+//     needs the .srt extension; the server only uses <payload>.
+// Serves the FIRST candidate that fetches OK (transparent fallback). Public +
+// CORS so Infuse can fetch it.
+app.get(
+  /^\/infuse-sub\/([A-Za-z0-9_-]+)\/[^/]+\.srt$/,
+  corsMiddleware,
+  async (req, res) => {
+    try {
+      const encoded = (req.params as unknown as string[])[0];
+      const decoded = Buffer.from(encoded, 'base64url').toString('utf-8');
+      let candidates: string[];
+      try {
+        const parsed = JSON.parse(decoded);
+        candidates = Array.isArray(parsed) ? parsed : [String(parsed)];
+      } catch {
+        candidates = [decoded]; // tolerate a plain (non-JSON) URL
+      }
+      candidates = candidates.filter((u) => /^https?:\/\//i.test(u));
+      if (candidates.length === 0) {
+        res.status(400).send('no valid subtitle url');
+        return;
+      }
+      const title = typeof req.query.t === 'string' ? req.query.t : undefined;
+      const SUB_TIMEOUT_MS = 10_000;
+      const SUB_MAX_BYTES = 5_000_000; // subtitles are tiny; guard against huge/hanging upstreams
+      for (let i = 0; i < candidates.length; i++) {
+        const upstream = candidates[i];
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SUB_TIMEOUT_MS);
+        try {
+          const upstreamRes = await fetch(upstream, {
+            redirect: 'follow',
+            signal: controller.signal,
+          });
+          if (upstreamRes.ok) {
+            const declared = Number(
+              upstreamRes.headers.get('content-length') || 0
+            );
+            if (declared > SUB_MAX_BYTES) {
+              logger.warn(
+                `infuse-sub: subtitle too large (${declared} bytes) for ${upstream}`
+              );
+              continue;
+            }
+            const buf = Buffer.from(await upstreamRes.arrayBuffer());
+            if (buf.length > SUB_MAX_BYTES) {
+              logger.warn(
+                `infuse-sub: subtitle too large (${buf.length} bytes) for ${upstream}`
+              );
+              continue;
+            }
+            res.setHeader('Content-Type', 'application/x-subrip; charset=utf-8');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.send(buf);
+            logger.info(
+              `infuse-sub served: movie=${title ?? 'unknown'} | candidate ${i + 1}/${candidates.length} | url=${upstream}`
+            );
+            return;
+          }
+          logger.warn(`infuse-sub: ${upstreamRes.status} for ${upstream}`);
+        } catch (e) {
+          logger.warn(
+            `infuse-sub: fetch failed for ${upstream}: ${e instanceof Error ? e.message : String(e)}`
+          );
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+      res.status(502).send('all subtitle candidates failed');
+    } catch (error) {
+      logger.error(
+        `infuse-sub error: ${error instanceof Error ? error.message : String(error)}`
+      );
+      res.status(500).send('subtitle proxy error');
+    }
+  }
+);
+
 // legacy route handlers
 app.get(
   '{/:config}/stream/:type/:id.json',

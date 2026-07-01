@@ -8,6 +8,13 @@ import {
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { getAddonName } from '../utils/general.js';
+import {
+  INFUSE_DEFAULT_TOP_N,
+  INFUSE_DEFAULT_CANDIDATES,
+  infuseTargetLanguages,
+  selectInfuseSubtitles,
+  buildInfusePlayUrl,
+} from './infuse.js';
 import { Wrapper } from './wrapper.js';
 import { PresetManager } from '../presets/index.js';
 import { FeatureControl } from '../utils/feature.js';
@@ -592,6 +599,146 @@ function emitAddonContributions(args: {
   }
 }
 
+// --- Infuse mode -------------------------------------------------------------
+// When a user enables it, each playable stream is rewritten into a direct
+// `infuse://` external-launch URL with one subtitle baked into `sub=`, so
+// playback happens in Infuse on Apple TV (which never requests subtitles
+// itself). Subtitles are resolved per-file for the top N streams and id-based
+// for the rest; the chosen upstream is served through a `.srt` proxy (see the
+// server's app.ts) that gives Infuse a language-labelled file. Stremio-only:
+// other clients (Fusion/Omni) build the Infuse launch themselves and ignore
+// this scheme.
+
+const INFUSE_PLAYABLE_TYPES = new Set<string>([
+  constants.HTTP_STREAM_TYPE,
+  constants.DEBRID_STREAM_TYPE,
+  constants.USENET_STREAM_TYPE,
+]);
+
+/**
+ * Query subtitle addons (in the user's configured order) and collect up to
+ * `limit` subtitles matching the target languages, deduped by URL. The ordered
+ * list lets the subtitle proxy fall back to the next candidate if an earlier
+ * one fails to fetch. Selection/dedup/labelling logic lives in `./infuse.ts`.
+ */
+async function collectInfuseSubtitles(
+  subtitleAddons: Addon[],
+  type: string,
+  id: string,
+  targets: string[],
+  limit: number,
+  filename?: string
+): Promise<Subtitle[]> {
+  const extras = filename
+    ? `filename=${encodeURIComponent(filename)}`
+    : undefined;
+  const out: Subtitle[] = [];
+  const seen = new Set<string>();
+  for (const addon of subtitleAddons) {
+    if (out.length >= limit) break;
+    let subs: Subtitle[] = [];
+    try {
+      subs = (await new Wrapper(addon).getSubtitles(type, id, extras)) ?? [];
+    } catch (error) {
+      logger.debug(
+        {
+          addon: getAddonName(addon),
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'infuse: subtitle addon failed'
+      );
+      continue;
+    }
+    for (const s of selectInfuseSubtitles(subs, targets, limit)) {
+      if (!seen.has(s.url)) {
+        seen.add(s.url);
+        out.push(s);
+        if (out.length >= limit) break;
+      }
+    }
+  }
+  return out;
+}
+
+async function applyInfuseTransform(
+  ctx: AIOStreamsContext,
+  type: string,
+  id: string,
+  streams: ParsedStream[]
+): Promise<void> {
+  const cfg = ctx.userData.infuse;
+  if (!cfg?.enabled) return;
+  const topN = cfg.topN ?? INFUSE_DEFAULT_TOP_N;
+  const limit = Math.max(1, cfg.candidates ?? INFUSE_DEFAULT_CANDIDATES);
+
+  // Target languages: the user's preferred subtitles (normalised, in order),
+  // falling back to English when none are set.
+  const targets = infuseTargetLanguages(ctx.userData.preferredSubtitles);
+
+  const playable = streams.filter(
+    (s) => s.url && INFUSE_PLAYABLE_TYPES.has(s.type)
+  );
+  if (playable.length === 0) return;
+
+  // Subtitle addons in the user's configured order (= provider priority).
+  const subtitleAddons = getAddonsForResource(ctx, 'subtitles', type, id);
+  if (subtitleAddons.length === 0) {
+    logger.warn(
+      'infuse: no subtitle addons configured; launching in Infuse without a subtitle'
+    );
+  }
+
+  // id-based candidates: resolved once, reused for streams beyond the top N.
+  const fallbackSubs = await collectInfuseSubtitles(
+    subtitleAddons,
+    type,
+    id,
+    targets,
+    limit
+  );
+
+  // per-file (filename-matched) candidates for the top N playable streams.
+  const subsByStreamId = new Map<string, Subtitle[]>();
+  const top = playable.slice(0, Math.max(0, topN));
+  await Promise.all(
+    top.map(async (s) => {
+      const perFile = await collectInfuseSubtitles(
+        subtitleAddons,
+        type,
+        id,
+        targets,
+        limit,
+        s.filename
+      );
+      subsByStreamId.set(s.id, perFile.length > 0 ? perFile : fallbackSubs);
+    })
+  );
+
+  for (const s of playable) {
+    const subs = subsByStreamId.get(s.id) ?? fallbackSubs;
+    const filename = s.filename || undefined;
+    s.externalUrl = buildInfusePlayUrl(
+      appConfig.bootstrap.baseUrl,
+      s.url!,
+      subs,
+      filename
+    );
+    // Stremio's transformer only emits externalUrl when type === 'external'.
+    // Keep s.url intact so background preload pinging still resolves the cache.
+    s.type = constants.EXTERNAL_STREAM_TYPE;
+  }
+
+  logger.info(
+    {
+      rewritten: playable.length,
+      perFileResolved: top.length,
+      languages: targets,
+      fallbackCandidates: fallbackSubs.length,
+    },
+    'infuse: rewrote playable streams to infuse:// launch URLs'
+  );
+}
+
 export async function getStreams(
   ctx: AIOStreamsContext,
   id: string,
@@ -838,6 +985,28 @@ export async function getStreams(
       formatterId: ctx.userData.formatter?.id ?? null,
       presetTypes,
     });
+  }
+
+  // Infuse mode: rewrite playable streams into infuse:// launch URLs with a
+  // subtitle baked in. Done last (after stats/preload selection) so it disturbs
+  // nothing upstream, and skipped during precaching.
+  if (
+    ctx.userData.infuse?.enabled &&
+    !preCaching &&
+    (type === 'movie' || type === 'series')
+  ) {
+    try {
+      await applyInfuseTransform(ctx, type, id, finalStreams);
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          type,
+          id,
+        },
+        'infuse: transform failed; returning streams unchanged'
+      );
+    }
   }
 
   logger.debug(

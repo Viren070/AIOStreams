@@ -1,0 +1,57 @@
+---
+title: Infuse (External Player Subtitles)
+description: Play debrid streams in Infuse on Apple TV with subtitles auto-loaded — a fork addition.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## What it does
+
+[Infuse](https://firecore.com/infuse) is a popular external player on Apple TV. When you hand a stream off to Infuse, it plays **embedded** subtitle tracks fine (mostly English) — but it **never asks the addon for subtitles** the way Stremio's built-in player does. So for languages that aren't embedded (e.g. Arabic), you'd normally download a subtitle manually every time.
+
+**Infuse mode** fixes that. When enabled, AIOStreams rewrites each playable stream into a direct Infuse launch URL with a subtitle already baked in:
+
+```
+infuse://x-callback-url/play?url=<stream>&sub=<subtitle>&filename=<name>
+```
+
+Clicking the stream in Stremio opens Infuse with the debrid stream **and** the subtitle already loaded.
+
+<Callout type="warn">
+  This works in the **Stremio** app only. Stremio opens the addon-provided URL
+  exactly as given. Other Apple TV clients (Fusion, Omni, …) build the Infuse
+  launch themselves from the media URL and ignore both the baked scheme and the
+  stream's subtitles, so the subtitle cannot be injected there.
+</Callout>
+
+## How subtitles are chosen
+
+- **Language** comes from your **Preferred Subtitles** (Filtering menu). The highest-priority language with an available subtitle wins; if you've set none, it defaults to **English**.
+- **Provider priority** follows your configured **subtitle addon order** — put the provider you trust first.
+- **Filename matching**: the top *N* streams get a filename-matched (release-synced) lookup so the subtitle matches the exact rip; the rest reuse a faster id-based lookup.
+- **One subtitle per video**: Infuse's URL scheme supports a single external subtitle per video. AIOStreams bakes in a few *candidates* — the first that actually loads is used, the rest are silent fallbacks if it's dead.
+
+The subtitle is served through a small built-in proxy at `/infuse-sub/...Subtitle-<lang>.srt` so Infuse recognises it (by extension), labels the track by language, and fetches it from a host/cert it already trusts.
+
+## Enabling it
+
+In the configure UI: **Miscellaneous → Playback → Infuse (External Player)**. This section lives under **Advanced** mode — if you don't see it, switch the mode toggle at the top of the configure page from Basic to Advanced.
+
+- **Enable** — turn it on (off by default).
+- **Filename-matched streams (top N)** — how many top streams get release-matched subtitles (default 5; set 0 for id-based only).
+- **Subtitle candidates** — how many subtitles to bake per stream as fallbacks (default 3).
+
+Set your language(s) under **Filtering → Preferred Subtitles**, and order your subtitle addons so your preferred provider is first.
+
+<Callout type="info">
+  The subtitle and stream URLs are served by your AIOStreams instance, so the
+  device running Infuse must be able to reach your instance's `BASE_URL`. On a
+  LAN-only deployment that means same-network playback; for remote playback the
+  instance must be reachable (and `BASE_URL` correct) from the device.
+</Callout>
+
+## Notes & limitations
+
+- **Stremio + Apple TV (Infuse) only** — see the warning above.
+- **Torrent (`p2p`) streams** are skipped (no playable URL); only resolved http/debrid/usenet streams are rewritten.
+- Once playback hands off to Infuse, Stremio loses resume/scrobble for that play (Infuse tracks its own).
