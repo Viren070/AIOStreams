@@ -95,7 +95,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         },
         timeout: appConfig.presets.defaultTimeout ?? null,
       },
-      presets: PresetManager.getPresetList().map((preset) => ({
+      presets: (await PresetManager.getPresetListDynamic()).map((preset) => ({
         ...preset,
         DISABLED: FeatureControl.removedAddons.has(preset.ID)
           ? {
