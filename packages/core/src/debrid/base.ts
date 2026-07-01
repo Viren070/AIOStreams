@@ -183,6 +183,10 @@ const TitleMetadataSchema = z.object({
   episode: z.number().optional(),
   absoluteEpisode: z.number().optional(),
   relativeAbsoluteEpisode: z.number().optional(),
+  logicalSeason: z.number().optional(),
+  externalSeason: z.number().optional(),
+  logicalEpisode: z.number().optional(),
+  externalEpisode: z.number().optional(),
 });
 
 const BasePlaybackInfoSchema = z.object({
