@@ -1,11 +1,26 @@
 name: Dev Docker Image
 
 on:
+  push:
+    branches:
+      - syncler-integration
+    paths:
+      - '.github/workflows/dev-docker.yml'
+      - 'Dockerfile'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
+      - 'tsconfig.base.json'
+      - 'packages/**'
+      - 'patches/**'
+      - 'resources/**'
+      - 'scripts/**'
   workflow_dispatch:
     inputs:
       ref:
         description: 'Branch name or PR number (e.g. my-feature or 42)'
-        required: true
+        required: false
         type: string
       tag:
         description: 'Override the image tag (optional, default: pr-<N> or <branch-name>)'
@@ -19,11 +34,12 @@ jobs:
     outputs:
       ref: ${{ steps.resolve.outputs.ref }}
       tag: ${{ steps.resolve.outputs.tag }}
+      image: ${{ steps.image.outputs.image }}
     steps:
       - name: Resolve ref and tag
         id: resolve
         env:
-          INPUT_REF: ${{ inputs.ref }}
+          INPUT_REF: ${{ inputs.ref || github.ref_name }}
           INPUT_TAG: ${{ inputs.tag }}
         run: |
           if [[ "$INPUT_REF" =~ ^[0-9]+$ ]]; then
@@ -41,7 +57,11 @@ jobs:
 
           echo "ref=${RESOLVED_REF}" >> $GITHUB_OUTPUT
           echo "tag=${FINAL_TAG}" >> $GITHUB_OUTPUT
-          echo "Resolved ref: ${RESOLVED_REF}, tag: ghcr.io/${{ github.repository_owner }}/aiostreams:${FINAL_TAG}"
+          echo "Resolved ref: ${RESOLVED_REF}"
+
+      - name: Calculate image name
+        id: image
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
 
   build:
     name: build (${{ matrix.suffix }})
@@ -95,7 +115,10 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          outputs: type=image,name=ghcr.io/viren070/aiostreams,push-by-digest=true,name-canonical=true
+          outputs: type=image,name=${{ needs.setup.outputs.image }},push-by-digest=true,name-canonical=true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
 
@@ -137,8 +160,9 @@ jobs:
       - name: Create and push manifest
         env:
           TAG: ${{ needs.setup.outputs.tag }}
+          IMAGE: ${{ needs.setup.outputs.image }}
         run: |
           docker buildx imagetools create \
-            -t "ghcr.io/viren070/aiostreams:${TAG}" \
-            "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/amd64)" \
-            "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/arm64)"
+            -t "${IMAGE}:${TAG}" \
+            "${IMAGE}@$(cat /tmp/digests/amd64)" \
+            "${IMAGE}@$(cat /tmp/digests/arm64)"

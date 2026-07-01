@@ -1,4 +1,4 @@
-﻿import app from './app.js';
+import app from './app.js';
 
 import {
   Env,
@@ -149,6 +149,36 @@ async function initialiseAuth() {
 
 async function start() {
   try {
+    if (!appConfig.bootstrap.baseUrl) {
+      throw new ConfigStartupError(
+        'AIOStreams Error: Missing Base URL\n\n' +
+        'Please explicitly configure the bootstrap baseUrl in your configuration.\n' +
+        'This is required to safely generate manifest URLs and allowlists.'
+      );
+    }
+    try {
+      const parsedBaseUrl = new URL(appConfig.bootstrap.baseUrl);
+      if (parsedBaseUrl.protocol !== 'http:' && parsedBaseUrl.protocol !== 'https:') {
+        throw new Error('Protocol must be http: or https:');
+      }
+      if (parsedBaseUrl.search !== '') {
+        throw new Error('Query strings are not allowed');
+      }
+      if (parsedBaseUrl.hash !== '') {
+        throw new Error('Fragments (#) are not allowed');
+      }
+      if (parsedBaseUrl.username !== '' || parsedBaseUrl.password !== '') {
+        throw new Error('Embedded credentials are not allowed');
+      }
+    } catch (e: any) {
+      throw new ConfigStartupError(
+        'AIOStreams Error: Invalid Base URL\n\n' +
+        `The configured baseUrl "${appConfig.bootstrap.baseUrl}" is not a valid URL.\n` +
+        `Reason: ${e.message || 'Invalid format'}.\n` +
+        'Please provide a full, clean URL (e.g., https://example.com).'
+      );
+    }
+
     await initialiseDatabase();
     await initialiseTemplates();
     logStartupInfo();

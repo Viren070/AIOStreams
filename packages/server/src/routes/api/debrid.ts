@@ -42,6 +42,15 @@ router.use((req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+// block HEAD requests
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method === 'HEAD') {
+    res.status(405).send('Method not allowed');
+  } else {
+    next();
+  }
+});
+
 interface PlaybackParams {
   encryptedStoreAuth: string;
   fileInfo: string;

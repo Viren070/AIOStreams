@@ -1,4 +1,4 @@
-﻿import express, { Request, Response, Express } from 'express';
+import express, { Request, Response, Express } from 'express';
 import {
   userApi,
   healthApi,
@@ -26,6 +26,7 @@ import {
   addonCatalog,
   alias,
 } from './routes/stremio/index.js';
+import syncler from './routes/stremio/syncler.js';
 import {
   manifest as chillLinkManifest,
   streams as chillLinkStreams,
@@ -161,6 +162,7 @@ stremioAuthRouter.use('/meta', meta);
 stremioAuthRouter.use('/catalog', catalog);
 stremioAuthRouter.use('/subtitles', subtitle);
 stremioAuthRouter.use('/addon_catalog', addonCatalog);
+stremioAuthRouter.use('/syncler', syncler);
 
 app.use('/stremio', stremioRouter); // For public routes
 app.use('/stremio/:uuid/:encryptedPassword', stremioAuthRouter); // For authenticated routes
@@ -265,22 +267,225 @@ app.get(
   '{/:config}/stream/:type/:id.json',
   stremioStreamRateLimiter,
   (req, res) => {
-    const baseUrl =
-      appConfig.bootstrap.baseUrl ||
-      `${req.protocol}://${req.hostname}${
-        req.hostname === 'localhost' ? `:${appConfig.bootstrap.port}` : ''
-      }`;
+    const baseUrl = appConfig.bootstrap.baseUrl!;
     res.json({
       streams: [
         StremioTransformer.createErrorStream({
           errorDescription:
             'AIOStreams v2 requires you to reconfigure. Please click this stream to reconfigure.',
-          errorUrl: `${baseUrl}/stremio/configure`,
+          errorUrl: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/stremio/configure`,
         }),
       ],
     });
   }
 );
+
+// Syncler vendor package
+app.get(['/syncler-vendor.json', '/syncler-provider.json'], corsMiddleware, (req, res) => {
+  const baseUrl = appConfig.bootstrap.baseUrl!;
+  
+  res.json({
+    name: "AIOStreams Vendor",
+    description: "AIOStreams vendor package for Syncler.",
+    tutorial: "https://github.com/Viren070/AIOStreams",
+    support: "https://github.com/Viren070/AIOStreams/issues",
+    website: "https://github.com/Viren070/AIOStreams",
+    version: 1,
+    packages: [
+      {
+        name: "AIOStreams",
+        description: "AIOStreams Express package.",
+        manifest: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler/manifest2.json`,
+        enabled: true
+      },
+      {
+        name: "AIOStreams (Advanced Format)",
+        description: "AIOStreams with dedicated metadata extraction and sorting tailored for Syncler UI.",
+        manifest: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler/manifest_advanced.json`,
+        enabled: true
+      }
+    ],
+    cacheServers: [],
+    defaults: {
+      packages: [
+        `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler/manifest2.json`,
+        `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler/manifest_advanced.json`
+      ]
+    }
+  });
+});
+
+app.get(['/syncler/manifest.json', '/syncler/manifest2.json'], corsMiddleware, (req, res) => {
+  const baseUrl = appConfig.bootstrap.baseUrl!;
+  const domain = new URL(baseUrl).hostname;
+  
+  res.json({
+    id: "com.aiostreams.syncler.express",
+    name: "AIOStreams",
+    description: "AIOStreams Express package.",
+    version: 1,
+    type: "express",
+    url: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler/express2.json`,
+    accounts: [
+      {
+        alias: "aiostreams",
+        branding: {
+          name: "AIOStreams",
+          website: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}`
+        },
+        auth: {
+          type: "token",
+          allowedDomains: [
+            domain
+          ],
+          inject: {
+            query: {
+              dummy_auth: "{managedAccounts.aiostreams.token}"
+            }
+          }
+        },
+        verification: {
+          url: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/`,
+          method: "GET",
+          responseType: "text",
+          extract: {
+            username: {
+              type: "regex",
+              value: "<title>(.*?)</title>"
+            }
+          }
+        }
+      }
+    ]
+  });
+});
+
+app.get(['/syncler/manifest_advanced.json'], corsMiddleware, (req, res) => {
+  const baseUrl = appConfig.bootstrap.baseUrl!;
+  const domain = new URL(baseUrl).hostname;
+  
+  res.json({
+    id: "com.aiostreams.syncler.express.advanced",
+    name: "AIOStreams (Advanced Format)",
+    description: "AIOStreams with dedicated Syncler formatting and UI badge extraction.",
+    version: 1,
+    type: "express",
+    url: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/syncler/express_advanced.json`,
+    accounts: [
+      {
+        alias: "aiostreams",
+        branding: {
+          name: "AIOStreams",
+          website: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}`
+        },
+        auth: {
+          type: "token",
+          allowedDomains: [
+            domain
+          ],
+          inject: {
+            query: {
+              dummy_auth: "{managedAccounts.aiostreams.token}"
+            }
+          }
+        },
+        verification: {
+          url: `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/`,
+          method: "GET",
+          responseType: "text",
+          extract: {
+            username: {
+              type: "regex",
+              value: "<title>(.*?)</title>"
+            }
+          }
+        }
+      }
+    ]
+  });
+});
+
+app.get(['/syncler/express.json', '/syncler/express2.json'], corsMiddleware, (req, res) => {
+  const baseUrl = appConfig.bootstrap.baseUrl!;
+  
+  res.json({
+    aiostreams: {
+      name: 'AIOStreams',
+      enabled: true,
+      languages: ['en'],
+      base_url: baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`,
+      response_type: 'json',
+      time_to_wait_between_each_request_ms: 300,
+      time_to_wait_on_too_many_request_ms: 5000,
+      movie: {
+        query:
+          'stremio/{managedAccounts.aiostreams.token}/stream/movie/{imdbId}.json',
+        keywords: '{imdbId}',
+      },
+      episode: {
+        query:
+          'stremio/{managedAccounts.aiostreams.token}/stream/series/{showImdbId}:{season}:{episode}.json',
+        keywords: '{showImdbId}:{season}:{episode}',
+      },
+      json_format: {
+        results: 'streams',
+        url: 'url',
+        title: 'description',
+        host: 'url',
+        'host:ops': [
+          {
+            name: 'regex',
+            params: ['^https?://([^/:]+)'],
+          },
+        ],
+        size: 'description',
+        'size:ops': [
+          {
+            name: 'regex',
+            params: ['([0-9]+(?:\\.[0-9]+)?\\s*(?:MB|GB|TB))'],
+          },
+        ],
+        playbackFileName: 'behaviorHints.filename',
+        playbackFileSize: 'behaviorHints.videoSize',
+      },
+    },
+  });
+});
+
+app.get(['/syncler/express_advanced.json'], corsMiddleware, (req, res) => {
+  const baseUrl = appConfig.bootstrap.baseUrl!;
+  
+  res.json({
+    aiostreams: {
+      name: 'AIOStreams (Advanced Format)',
+      enabled: true,
+      languages: ['en'],
+      base_url: baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`,
+      response_type: 'json',
+      time_to_wait_between_each_request_ms: 300,
+      time_to_wait_on_too_many_request_ms: 5000,
+      movie: {
+        query:
+          'stremio/{managedAccounts.aiostreams.token}/syncler/stream/movie/{imdbId}.json',
+        keywords: '{imdbId}',
+      },
+      episode: {
+        query:
+          'stremio/{managedAccounts.aiostreams.token}/syncler/stream/series/{showImdbId}:{season}:{episode}.json',
+        keywords: '{showImdbId}:{season}:{episode}',
+      },
+      json_format: {
+        results: 'streams',
+        url: 'url',
+        title: 'title',
+        quality: 'quality',
+        size: 'size',
+        host: 'host',
+        badge: 'badges'
+      }
+    }
+  });
+});
 
 // redirect for legacy paths
 app.get('{/:config}/configure', (req, res) => {

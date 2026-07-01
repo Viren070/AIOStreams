@@ -16,6 +16,7 @@ export function AddonCard({
   onAdd: () => void;
 }) {
   const [showBuiltinModal, setShowBuiltinModal] = useState(false);
+  const shouldContainLogo = preset.ID === 'deepbridge';
 
   return (
     <>
@@ -39,11 +40,11 @@ export function AddonCard({
                 <PlusIcon className="w-6 h-6 text-[--brand]" />
               </div>
             ) : preset.LOGO ? (
-              <div className="relative rounded-md size-12 bg-gray-900 overflow-hidden">
+              <div className="relative rounded-md size-12 bg-gray-900 overflow-hidden flex items-center justify-center">
                 <img
                   src={preset.LOGO}
                   alt={preset.NAME}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full ${shouldContainLogo ? 'object-contain p-1' : 'object-cover'}`}
                 />
               </div>
             ) : (

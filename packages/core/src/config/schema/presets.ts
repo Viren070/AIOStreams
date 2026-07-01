@@ -289,6 +289,13 @@ export const presetsSchema = {
       },
     },
   }),
+  deepbridge: basicPreset({
+    label: 'DeepBridge',
+    default: null,
+    envBase: 'DEEPBRIDGE_URL',
+    timeoutEnv: 'DEFAULT_DEEPBRIDGE_TIMEOUT',
+    userAgentEnv: 'DEFAULT_DEEPBRIDGE_USER_AGENT',
+  }),
   debridio: basicPreset({
     label: 'Debridio',
     default: ['https://addon.debridio.com'],
