@@ -13,7 +13,7 @@ import {
 import StreamFilter from './filterer.js';
 import StreamPrecompute from './precomputer.js';
 import StreamDeduplicator from './deduplicator.js';
-import { StreamContext } from './context.js';
+import type { StreamContext } from './context.js';
 import {
   classifyAddonError,
   type AnalyticsDisposition,
@@ -481,6 +481,8 @@ class StreamFetcher {
       }
 
       const behaviour = this.userData.groups.behaviour || 'parallel';
+      const includeFinishedResultsOnEarlyExit =
+        this.userData.groups.includeFinishedResultsOnEarlyExit ?? false;
       let totalTimeTaken = 0;
       let previousGroupStreams: ParsedStream[] = [];
       let previousGroupTimeTaken = 0;
@@ -499,20 +501,34 @@ class StreamFetcher {
           return fetchAndProcessAddons(groupAddons);
         });
 
+        const mergedGroups = new Set<number>();
+
+        const mergeGroupResult = (
+          index: number,
+          groupResult:
+            | Awaited<ReturnType<typeof fetchAndProcessAddons>>
+            | null
+            | undefined
+        ) => {
+          if (!groupResult || mergedGroups.has(index)) return;
+          allStreams.push(...groupResult.streams);
+          allErrors.push(...groupResult.errors);
+          allStatisticStreams.push(...groupResult.statistics);
+          totalTimeTaken = Math.max(totalTimeTaken, groupResult.totalTime);
+          previousGroupStreams = groupResult.streams;
+          previousGroupTimeTaken = groupResult.totalTime;
+          mergedGroups.add(index);
+        };
+
         for (let i = 0; i < this.userData.groups.groupings.length; i++) {
           const groupPromise = groupPromises[i];
 
           if (i === 0) {
             const groupResult = await groupPromise;
-            if (!groupResult) continue;
-            allStreams.push(...groupResult.streams);
-            allErrors.push(...groupResult.errors);
-            allStatisticStreams.push(...groupResult.statistics);
-            totalTimeTaken = groupResult.totalTime;
-            previousGroupStreams = groupResult.streams;
-            previousGroupTimeTaken = groupResult.totalTime;
+            mergeGroupResult(i, groupResult);
             continue;
           }
+
           // For groups other than the first, check their condition
           const group = this.userData.groups.groupings[i];
           if (!group.condition || !group.addons.length) continue;
@@ -534,18 +550,27 @@ class StreamFetcher {
               'condition met for parallel group, awaiting results'
             );
             const groupResult = await groupPromise;
-            if (!groupResult) continue;
-            allStreams.push(...groupResult.streams);
-            allErrors.push(...groupResult.errors);
-            allStatisticStreams.push(...groupResult.statistics);
-            totalTimeTaken = Math.max(totalTimeTaken, groupResult.totalTime);
-            previousGroupStreams = groupResult.streams;
-            previousGroupTimeTaken = groupResult.totalTime;
+            mergeGroupResult(i, groupResult);
           } else {
             logger.debug(
-              { group: i + 1 },
-              'condition not met for parallel group, skipping remaining groups'
+              { group: i + 1, includeFinishedResultsOnEarlyExit },
+              'condition not met for parallel group'
             );
+
+            if (includeFinishedResultsOnEarlyExit) {
+              const settledResults = await Promise.all(
+                groupPromises
+                  .slice(i)
+                  .map((p) => Promise.race([p, Promise.resolve()]))
+              );
+
+              settledResults.forEach((result, offset) => {
+                if (!result) return;
+                const absoluteIndex = i + offset;
+                mergeGroupResult(absoluteIndex, result);
+              });
+            }
+
             // exit early.
             break;
           }
