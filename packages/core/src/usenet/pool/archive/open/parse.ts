@@ -75,7 +75,7 @@ export async function openVolumeSet(
 ): Promise<VolumeSet> {
   const volumes: Volume[] = set.memberIndices.map((index, i) => ({
     filename: `vol-${index}`,
-    open: (knownSize) => opener(index, knownSize),
+    open: (knownSize, memo) => opener(index, knownSize, memo),
     knownSize: knownSizes?.[i],
   }));
   const vs = new VolumeSet(volumes);

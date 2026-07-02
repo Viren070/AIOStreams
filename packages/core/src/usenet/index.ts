@@ -6,7 +6,11 @@ import { appConfig } from '../utils/index.js';
 import { MultiProviderPool } from './pool/multi-provider-pool.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
-import { FileStream, SeekableStream } from './pool/file-stream.js';
+import {
+  FileStream,
+  SeekableStream,
+  SegmentMemo,
+} from './pool/file-stream.js';
 import { trackSeekableStream } from './pool/tracked-stream.js';
 import {
   inspectNzb,
@@ -363,8 +367,8 @@ export class UsenetEngine {
     }, ARCHIVE_INSPECT_TIMEOUT_MS);
     timer.unref?.();
 
-    const opener: FileOpener = (index, knownSize) =>
-      this.openFile(nzb, nzb.files[index], ac.signal, knownSize);
+    const opener: FileOpener = (index, knownSize, memo) =>
+      this.openFile(nzb, nzb.files[index], ac.signal, knownSize, memo);
     try {
       // Only EXACT sizes may seed archive volume offsets: a placeholder
       // (encoded-size) value shifts every later volume's mapping and the
@@ -653,8 +657,8 @@ export class UsenetEngine {
     if (!set) {
       throw new Error(`no archive set for file index ${archiveIndex}`);
     }
-    const opener: FileOpener = (index, knownSize) =>
-      this.openFile(nzb, nzb.files[index], signal, knownSize);
+    const opener: FileOpener = (index, knownSize, memo) =>
+      this.openFile(nzb, nzb.files[index], signal, knownSize, memo);
     const knownSizes = fileSizes
       ? set.memberIndices.map((i) => fileSizes.get(i))
       : undefined;
@@ -679,8 +683,8 @@ export class UsenetEngine {
     lazyHooks?: LazyResolveHooks
   ): Promise<SeekableStream> {
     this.touch();
-    const opener: FileOpener = (index, knownSize) =>
-      this.openFile(nzb, nzb.files[index], signal, knownSize);
+    const opener: FileOpener = (index, knownSize, memo) =>
+      this.openFile(nzb, nzb.files[index], signal, knownSize, memo);
     const stream = await rebuildArchiveStream(layout, opener, {
       password: nzb.meta.password,
       ...this.archiveStreamOpts(),
@@ -719,7 +723,8 @@ export class UsenetEngine {
     nzb: Nzb,
     file: NzbFile,
     signal?: AbortSignal,
-    knownSize?: number
+    knownSize?: number,
+    memo?: SegmentMemo
   ): Promise<FileStream> {
     const stream = new FileStream(
       this.pool,
@@ -729,7 +734,8 @@ export class UsenetEngine {
         knownSize,
       },
       nzb.hash,
-      this.options
+      this.options,
+      memo
     );
     await stream.open(signal);
     return stream;
