@@ -493,7 +493,9 @@ export const presetsSchema = {
   }),
   usaTv: basicPreset({
     label: 'USA TV',
-    default: ['https://848b3516657c-usatv.baby-beamup.club'],
+    default: [
+      'https://raw.githubusercontent.com/yowmamasita/usa-tv-next/main/manifest.json',
+    ],
     envBase: 'USA_TV_URL',
     timeoutEnv: 'DEFAULT_USA_TV_TIMEOUT',
     userAgentEnv: 'DEFAULT_USA_TV_USER_AGENT',
