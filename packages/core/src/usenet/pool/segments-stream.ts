@@ -48,6 +48,33 @@ export class SegmentsStream extends Readable {
   private paused = false;
   private destroyedFlag = false;
   /**
+   * Per-stream decode slot pool: fetches decode into pooled slots so the
+   * steady-state serve path allocates nothing per article.
+   *
+   * Recycling is load-bearing (premature reuse is silent corruption): a slot
+   * may be recycled only once every reference to the body decoded into it is
+   * gone. Emission is strictly in-order, so liveness is tracked with a
+   * consumption watermark: each pushed pooled chunk records its cumulative
+   * pushed-byte end (`pushedFifo`), and everything at or before
+   * `pushedBytes - readableLength - allowance` has left both this stream's
+   * queue and the small downstream holds (relay Readable and HTTP writable
+   * each hold at most their small HWM plus one overflow chunk). Slots are
+   * acquired lazily at decode time (never for cache hits, never while queued
+   * on the semaphore), returned on the watermark / full-skip / owned-body
+   * resolution, and hard-capped at `slotCap`, beyond which decodes fall back
+   * to throwaway owned buffers; the pool therefore tracks actual concurrency,
+   * not stream length.
+   */
+  private slotPool: Buffer[] = [];
+  private slotsAllocated = 0;
+  private readonly slotCap: number;
+  /** dispatch idx → pooled slot backing its (not yet reclaimed) body. */
+  private liveSlots = new Map<number, Buffer>();
+  /** In-order pushed pooled chunks awaiting the consumption watermark. */
+  private pushedFifo: Array<{ idx: number; pushedEnd: number }> = [];
+  private pushedBytes = 0;
+  private maxSlotBytes = 1 << 20;
+  /**
    * Set once EOF has been pushed (range limit reached or all segments emitted).
    */
   private ended = false;
@@ -71,6 +98,7 @@ export class SegmentsStream extends Readable {
     this.segments = opts.segments;
     this.nzbHash = opts.nzbHash;
     this.maxWorkers = Math.max(1, opts.maxWorkers);
+    this.slotCap = 4 * this.maxWorkers + 16;
     this.bufferSizeBytes = Math.max(1, opts.bufferSizeBytes);
     this.priority = opts.priority ?? CommandPriority.High;
     this.signal = opts.signal;
@@ -90,6 +118,8 @@ export class SegmentsStream extends Readable {
 
   override _read(): void {
     this.paused = false;
+    // Draining may have advanced the watermark.
+    this.reclaimSlots();
     this.flush();
     this.dispatch();
   }
@@ -102,7 +132,65 @@ export class SegmentsStream extends Readable {
     }
     this.buffered.clear();
     this.bufferedBytes = 0;
+    // Drop the pool; a fetch resolving after destroy still holds its own slot
+    // reference and hits the destroyedFlag guard in dispatch().
+    this.slotPool = [];
+    this.liveSlots.clear();
+    this.pushedFifo = [];
     cb(err);
+  }
+
+  /**
+   * Check out a decode slot for dispatch index `idx`, sized by `encodedBytes`
+   * (the raw article size, an upper bound on the decoded size). When that is
+   * absent or under-declared, `decodeArticle` falls back to an owned buffer.
+   */
+  private acquireSlot(idx: number, encodedBytes?: number): Buffer {
+    const need = Math.max(1 << 20, encodedBytes ?? 0);
+    this.reclaimSlots();
+    let buf: Buffer | undefined;
+    while ((buf = this.slotPool.pop()) && buf.length < need) {
+      // Undersized slot (mixed part sizes): drop it.
+      this.slotsAllocated--;
+    }
+    if (!buf) {
+      if (this.slotsAllocated >= this.slotCap) {
+        // Deep backpressure: degrade to a throwaway owned buffer instead of
+        // growing the pool.
+        return Buffer.allocUnsafe(need);
+      }
+      this.slotsAllocated++;
+      buf = Buffer.allocUnsafe(need);
+    }
+    if (buf.length > this.maxSlotBytes) this.maxSlotBytes = buf.length;
+    this.liveSlots.set(idx, buf);
+    return buf;
+  }
+
+  /** Return `idx`'s pooled slot to the free list (no-op for throwaways). */
+  private releaseSlot(idx: number): void {
+    const slot = this.liveSlots.get(idx);
+    if (slot) {
+      this.liveSlots.delete(idx);
+      this.slotPool.push(slot);
+    }
+  }
+
+  /**
+   * Free every pooled slot whose chunk has provably been consumed (see the
+   * slot pool doc). If the downstream wiring ever gains a larger-than-HWM
+   * buffer layer, the allowance must grow with it.
+   */
+  private reclaimSlots(): void {
+    if (this.pushedFifo.length === 0) return;
+    const allowance = 3 * this.maxSlotBytes + 65536;
+    const consumed = this.pushedBytes - this.readableLength - allowance;
+    while (
+      this.pushedFifo.length > 0 &&
+      this.pushedFifo[0].pushedEnd <= consumed
+    ) {
+      this.releaseSlot(this.pushedFifo.shift()!.idx);
+    }
   }
 
   private dispatch(): void {
@@ -116,16 +204,22 @@ export class SegmentsStream extends Readable {
       const idx = this.nextDispatch++;
       const segment = this.segments[idx];
       this.inflight++;
+      // The slot provider is idempotent across failover retries.
+      let slot: Buffer | undefined;
       this.pool
-        .fetchSegment(
+        .fetchSegmentInto(
           segment,
           this.nzbHash,
           this.abortController.signal,
-          this.priority
+          this.priority,
+          () => (slot ??= this.acquireSlot(idx, segment.bytes))
         )
         .then((data) => {
           if (this.destroyedFlag || this.ended) return;
           this.inflight--;
+          // Return the slot if the fetch resolved with an owned body (cache
+          // hit / oversized decode).
+          if (slot && data.body.buffer !== slot.buffer) this.releaseSlot(idx);
           this.buffered.set(idx, data.body);
           this.bufferedBytes += data.body.length;
           this.flush();
@@ -168,8 +262,9 @@ export class SegmentsStream extends Readable {
           );
         }
       }
-      let chunk = this.buffered.get(this.nextEmit)!;
-      this.buffered.delete(this.nextEmit);
+      const emitIdx = this.nextEmit;
+      let chunk = this.buffered.get(emitIdx)!;
+      this.buffered.delete(emitIdx);
       this.bufferedBytes -= chunk.length;
       this.nextEmit++;
 
@@ -177,6 +272,8 @@ export class SegmentsStream extends Readable {
       if (this.skipRemaining > 0) {
         if (chunk.length <= this.skipRemaining) {
           this.skipRemaining -= chunk.length;
+          // Never pushed: the slot has no downstream references.
+          this.releaseSlot(emitIdx);
           continue;
         }
         chunk = chunk.subarray(this.skipRemaining);
@@ -189,7 +286,16 @@ export class SegmentsStream extends Readable {
       }
       this.limitRemaining -= chunk.length;
 
-      const more = chunk.length === 0 ? true : this.push(chunk);
+      let more = true;
+      if (chunk.length === 0) {
+        this.releaseSlot(emitIdx);
+      } else {
+        more = this.push(chunk);
+        this.pushedBytes += chunk.length;
+        if (this.liveSlots.has(emitIdx)) {
+          this.pushedFifo.push({ idx: emitIdx, pushedEnd: this.pushedBytes });
+        }
+      }
 
       if (this.limitRemaining <= 0) {
         this.finishEnd();

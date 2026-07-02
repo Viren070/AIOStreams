@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream';
 import { SeekableStream } from '../file-stream.js';
-import { RandomAccess } from './random-access.js';
+import { RandomAccess, readAtIntoFrom } from './random-access.js';
 import { DataFragment } from './types.js';
 import { LazyFragmentResolver } from './lazy-resolver.js';
 import { ParallelRangeStream } from './range-stream.js';
@@ -79,6 +79,20 @@ export class ArchiveInnerStream implements SeekableStream {
 
   async readAt(offset: number, length: number): Promise<Buffer> {
     if (length <= 0 || offset >= this._size) return Buffer.alloc(0);
+    const want = Math.min(length, this._size - Math.max(0, offset));
+    const dst = Buffer.allocUnsafe(want);
+    const written = await this.readAtInto(dst, 0, offset, length);
+    return written === dst.length ? dst : dst.subarray(0, written);
+  }
+
+  /** {@link readAt} into a caller-owned buffer (see RandomAccess.readAtInto). */
+  async readAtInto(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number> {
+    if (length <= 0 || offset >= this._size) return 0;
     if (this.resolver?.hasPending()) {
       // Resolve enough pending fragments that the read maps through exact
       // lengths, anchored from whichever side is cheaper
@@ -89,7 +103,7 @@ export class ArchiveInnerStream implements SeekableStream {
           : await this.resolver.resolveThrough(end);
       this.resolver.resolveAhead(end, 1);
     }
-    const out: Buffer[] = [];
+    let written = 0;
     let pos = Math.max(0, offset);
     let remaining = Math.min(length, this._size - pos);
     let logical = 0;
@@ -101,24 +115,32 @@ export class ArchiveInnerStream implements SeekableStream {
       if (pos >= fragEnd) continue;
       const within = pos - fragStart;
       const want = Math.min(remaining, frag.length - within);
-      const chunk = await this.source.readAt(frag.offset + within, want);
-      if (chunk.length === 0) break;
-      out.push(chunk);
-      pos += chunk.length;
-      remaining -= chunk.length;
+      const n = await readAtIntoFrom(
+        this.source,
+        dst,
+        dstOffset + written,
+        frag.offset + within,
+        want
+      );
+      if (n === 0) break;
+      written += n;
+      pos += n;
+      remaining -= n;
     }
-    return Buffer.concat(out);
+    return written;
   }
 
   createReadStream(range?: { start?: number; end?: number }): Readable {
     const start = Math.max(0, range?.start ?? 0);
     const end = Math.min(this._size, range?.end ?? this._size);
     if (end <= start) return Readable.from([]);
-    // Drive `readAt` windows in parallel + in order. Each window composes the
-    // inner offset onto its fragment/volume/segment(s); running several windows
-    // concurrently gives archive playback the same throughput as a plain file.
+    // Drive `readAtInto` windows in parallel + in order. Each window composes
+    // the inner offset onto its fragment/volume/segment(s); running several
+    // windows concurrently gives archive playback the same throughput as a
+    // plain file.
     return new ParallelRangeStream({
-      readAt: (offset, length) => this.readAt(offset, length),
+      readAtInto: (dst, dstOffset, offset, length) =>
+        this.readAtInto(dst, dstOffset, offset, length),
       start,
       end,
       windowBytes: this.windowBytes,

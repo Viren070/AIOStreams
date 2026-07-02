@@ -41,6 +41,21 @@ class TrackedSeekableStream implements SeekableStream {
     return this.inner.readAt(offset, length);
   }
 
+  readAtInto(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number> {
+    if (this.inner.readAtInto) {
+      return this.inner.readAtInto(dst, dstOffset, offset, length);
+    }
+    return this.inner.readAt(offset, length).then((buf) => {
+      buf.copy(dst, dstOffset);
+      return buf.length;
+    });
+  }
+
   createReadStream(range?: { start?: number; end?: number }): Readable {
     const out = this.inner.createReadStream(range);
     const id = this.stats.streamOpened({

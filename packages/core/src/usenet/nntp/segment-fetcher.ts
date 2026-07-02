@@ -59,11 +59,17 @@ export interface SegmentHeadData {
  * ordering/affinity, the 430 failover and the yEnc decode.
  */
 export interface SegmentFetcher {
-  /** Fetch + decode a full article body, with per-segment provider failover. */
+  /**
+   * Fetch + decode a full article body, with per-segment provider failover.
+   * When `out` is provided the decode targets the buffer it returns (invoked
+   * lazily at decode time) and the returned body may be a view into it, with
+   * its lifetime owned by the caller; without `out` the body is always owned.
+   */
   fetchBody(
     segment: NzbSegmentRef,
     nzbHash: string,
-    priority: CommandPriority
+    priority: CommandPriority,
+    out?: () => Buffer
   ): Promise<SegmentData>;
   /** Head-only probe: decode the leading `want` bytes + yEnc header fields. */
   fetchHead(
@@ -278,7 +284,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
   async fetchBody(
     segment: NzbSegmentRef,
     nzbHash: string,
-    priority: CommandPriority
+    priority: CommandPriority,
+    out?: () => Buffer
   ): Promise<SegmentData> {
     return this.submitWithFailover<SegmentData>(
       segment,
@@ -290,7 +297,9 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           undefined,
           this.opts.segmentTimeoutMs
         );
-        const decoded = decodeArticle(raw);
+        // Failover attempts run sequentially, so re-decoding a retry into the
+        // same target is safe: only the resolving attempt's bytes survive.
+        const decoded = decodeArticle(raw, out?.());
         const data: SegmentData = {
           body: decoded.body,
           byteRange: decoded.byteRange,

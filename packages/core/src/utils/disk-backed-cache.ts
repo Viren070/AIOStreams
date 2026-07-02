@@ -271,8 +271,15 @@ export class DiskBackedCache<V> {
    * Insert into L1 and (unless `skipDisk`) write-through to the disk tier in
    * the background. `skipDisk` is for transient payloads (e.g. import-probe
    * article bodies) that benefit from the hot L1 but would only churn the disk.
+   * `skipMem` is for values whose backing memory the caller recycles: the
+   * disk serialize copies them out synchronously, but the mem tier must not
+   * retain the view.
    */
-  set(key: string, value: V, opts?: { skipDisk?: boolean }): void {
+  set(
+    key: string,
+    value: V,
+    opts?: { skipDisk?: boolean; skipMem?: boolean }
+  ): void {
     if (this.closed) return;
     const size = this.opts.sizeOf(value);
     if (size <= 0) return;
@@ -280,7 +287,7 @@ export class DiskBackedCache<V> {
     const fitsDisk = this.diskEnabled() && size <= this.opts.maxDiskBytes;
     if (!fitsMem && !fitsDisk) return; // larger than every budget
 
-    if (fitsMem) this.addToMem(key, value, size);
+    if (fitsMem && !opts?.skipMem) this.addToMem(key, value, size);
     if (fitsDisk && !opts?.skipDisk) this.persistToDisk(key, value, size);
   }
 

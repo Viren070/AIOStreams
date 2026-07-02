@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import { createLogger } from '../../../logging/logger.js';
-import { RandomAccess } from './random-access.js';
+import { RandomAccess, readAtIntoFrom } from './random-access.js';
 
 const logger = createLogger('usenet/archive');
 
@@ -112,7 +112,22 @@ export class VolumeSet implements RandomAccess {
   async readAt(offset: number, length: number): Promise<Buffer> {
     if (!this.opened) throw new Error('VolumeSet.open() must be called first');
     if (length <= 0 || offset >= this.total) return Buffer.alloc(0);
-    const out: Buffer[] = [];
+    const want = Math.min(length, this.total - Math.max(0, offset));
+    const dst = Buffer.allocUnsafe(want);
+    const written = await this.readAtInto(dst, 0, offset, length);
+    return written === dst.length ? dst : dst.subarray(0, written);
+  }
+
+  /** {@link readAt} into a caller-owned buffer (see RandomAccess.readAtInto). */
+  async readAtInto(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number> {
+    if (!this.opened) throw new Error('VolumeSet.open() must be called first');
+    if (length <= 0 || offset >= this.total) return 0;
+    let written = 0;
     let pos = Math.max(0, offset);
     let remaining = Math.min(length, this.total - pos);
     while (remaining > 0 && pos < this.total) {
@@ -124,13 +139,19 @@ export class VolumeSet implements RandomAccess {
       const localOffset = pos - this.starts[vi];
       const want = Math.min(remaining, acc.size() - localOffset);
       if (want <= 0) break;
-      const chunk = await acc.readAt(localOffset, want);
-      if (chunk.length === 0) break;
-      out.push(chunk);
-      pos += chunk.length;
-      remaining -= chunk.length;
+      const n = await readAtIntoFrom(
+        acc,
+        dst,
+        dstOffset + written,
+        localOffset,
+        want
+      );
+      if (n === 0) break;
+      written += n;
+      pos += n;
+      remaining -= n;
     }
-    return Buffer.concat(out);
+    return written;
   }
 
   /** Index of the volume containing absolute offset `pos` (binary search). */

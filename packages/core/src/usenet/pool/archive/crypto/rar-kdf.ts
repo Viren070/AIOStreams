@@ -266,8 +266,9 @@ export function decryptCbc(key: Buffer, iv: Buffer, cipher: Buffer): Buffer {
   const algorithm = key.length === 16 ? 'aes-128-cbc' : 'aes-256-cbc';
   const decipher = createDecipheriv(algorithm, key, iv);
   decipher.setAutoPadding(false);
-  return Buffer.concat([
-    decipher.update(cipher.subarray(0, aligned)),
-    decipher.final(),
-  ]);
+  // With padding off and block-aligned input, update() yields all plaintext
+  // and final() is empty, so the concat (a full extra copy) can be skipped.
+  const out = decipher.update(cipher.subarray(0, aligned));
+  const fin = decipher.final();
+  return fin.length === 0 ? out : Buffer.concat([out, fin]);
 }

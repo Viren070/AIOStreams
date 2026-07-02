@@ -59,8 +59,12 @@ const YEND_CRLF = Buffer.from('\r\n=yend');
  *
  * @param raw the article body bytes as received from BODY (without the
  *   terminating `\r\n.\r\n`). Still dot-stuffed, so decoding strips dots.
+ * @param out optional decode destination, used only when it can hold the
+ *   whole decoded part (the encoded slice length is a safe upper bound);
+ *   otherwise a fresh owned buffer is allocated. When used, the returned
+ *   body is a view into it and the caller owns its lifetime.
  */
-export function decodeArticle(raw: Buffer): DecodedSegment {
+export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
   // Locate the `=ybegin ` line: usually at offset 0, otherwise after a CRLF
   // (real posts sometimes carry junk before the header).
   let pos: number;
@@ -126,44 +130,12 @@ export function decodeArticle(raw: Buffer): DecodedSegment {
   // Decoded length is always ≤ encoded length (escapes + line breaks shrink),
   // so the encoded slice length is a safe destination size; decodeTo returns
   // the exact written count.
-  const out = acquireDecodeOut(slice.length);
-  const written = yencode.decodeTo(slice, out, true);
-  const body = out.subarray(0, written);
+  const dst =
+    out && out.length >= slice.length ? out : Buffer.allocUnsafe(slice.length);
+  const written = yencode.decodeTo(slice, dst, true);
+  const body = dst.subarray(0, written);
 
   return { body, byteRange, fileSize, name, size: written };
-}
-
-let decodeRing: Buffer[] | null = null;
-let decodeRingIdx = 0;
-
-/**
- * Enable (N>0) or disable (N<=0) the reusable decode-output ring with N slots.
- * Idempotent; growing N re-sizes the ring. Called once by the engine.
- */
-export function configureDecodePool(n: number): void {
-  if (n <= 0) {
-    decodeRing = null;
-    decodeRingIdx = 0;
-    return;
-  }
-  if (!decodeRing) {
-    decodeRing = [];
-    decodeRingIdx = 0;
-  }
-  // Grow only; shrinking would risk aliasing a slot a live body still views.
-  while (decodeRing.length < n) decodeRing.push(Buffer.allocUnsafe(1 << 20));
-}
-
-function acquireDecodeOut(size: number): Buffer {
-  if (!decodeRing) return Buffer.allocUnsafe(size);
-  let buf = decodeRing[decodeRingIdx];
-  if (buf.length < size) {
-    // Oversized article: grow this slot (rare; typical yEnc article ≤ ~1 MiB).
-    buf = Buffer.allocUnsafe(size);
-    decodeRing[decodeRingIdx] = buf;
-  }
-  decodeRingIdx = (decodeRingIdx + 1) % decodeRing.length;
-  return buf;
 }
 
 /**
