@@ -1,0 +1,128 @@
+name: Build Branch Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Override the image tag (optional, default: sanitized branch name)'
+        required: false
+        type: string
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Resolve tag
+        id: resolve
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          # Strip conventional prefixes (feat/, fix/, chore/, etc.), then sanitise
+          STRIPPED=$(echo "$BRANCH" | sed -E 's|^[a-z]+/||')
+          SAFE=$(echo "$STRIPPED" | tr '/' '-' | tr -cd 'a-zA-Z0-9._-' | sed 's/^-*//')
+          FINAL_TAG="${INPUT_TAG:-$SAFE}"
+          echo "tag=${FINAL_TAG}" >> $GITHUB_OUTPUT
+          echo "Building from branch '${BRANCH}' → tag 'ghcr.io/${{ github.repository_owner }}/aiostreams:${FINAL_TAG}'"
+
+  build:
+    name: build (${{ matrix.suffix }})
+    needs: setup
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Get commit hash
+        id: commit
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Generate metadata
+        run: node scripts/generateMetadata.cjs --channel=dev --ref=${{ needs.setup.outputs.tag }} --commit=${{ steps.commit.outputs.sha }}
+
+      - name: Build & Push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          platforms: ${{ matrix.platform }}
+          push: true
+          context: .
+          file: ./Dockerfile
+          outputs: type=image,name=ghcr.io/djangowaming/aiostreams,push-by-digest=true,name-canonical=true
+          cache-from: type=gha,scope=${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
+
+      - name: Export digest
+        run: echo "${{ steps.build.outputs.digest }}" > "/tmp/${{ matrix.suffix }}"
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: /tmp/${{ matrix.suffix }}
+          archive: false
+          retention-days: 1
+
+  merge:
+    name: Merge manifests
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: '{amd64,arm64}'
+          merge-multiple: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Create and push manifest
+        env:
+          TAG: ${{ needs.setup.outputs.tag }}
+        run: |
+          docker buildx imagetools create \
+            -t "ghcr.io/djangowaming/aiostreams:${TAG}" \
+            "ghcr.io/djangowaming/aiostreams@$(cat /tmp/digests/amd64)" \
+            "ghcr.io/djangowaming/aiostreams@$(cat /tmp/digests/arm64)"
