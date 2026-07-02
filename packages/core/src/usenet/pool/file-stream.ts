@@ -51,6 +51,23 @@ interface KnownRange {
 }
 
 /**
+ * Memo of the window-boundary segment on the readAt path: consecutive archive
+ * windows (and the CBC IV read just before each window) re-touch the segment
+ * straddling the boundary, and the memo spares them an arena/disk round-trip.
+ * Holds a copy, never a pin: FileStream has no close/destroy hook, so a pin
+ * held here would leak an arena slot.
+ */
+export interface SegmentMemo {
+  owner?: FileStream;
+  index: number;
+  begin: number;
+  end: number;
+  len: number;
+  /** Lazily allocated, grown only when a larger body appears; reused in place. */
+  buf?: Buffer;
+}
+
+/**
  * Seekable view over a single NZB file. Resolves byte offsets to segment
  * indices using interpolation search (cheap because probed segments are cached)
  * and serves arbitrary HTTP ranges via {@link SegmentsStream}.
@@ -69,29 +86,18 @@ export class FileStream implements SeekableStream {
    */
   private lockedPartSize: number | undefined;
   private opened = false;
-  /**
-   * Memo of the window-boundary segment on the readAt path: consecutive
-   * archive windows (and the CBC IV read just before each window) re-touch
-   * the segment straddling the boundary, and the memo spares them an
-   * arena/disk round-trip. Holds a copy, never a pin: FileStream has no
-   * close/destroy hook, so a pin held here would leak an arena slot.
-   * Concurrent readAt windows race the memo benignly (last-writer-wins;
-   * readers and writers are single synchronous blocks).
-   */
-  private lastSegment?: {
-    index: number;
-    begin: number;
-    end: number;
-    len: number;
-  };
-  private memoBuf?: Buffer;
+  /** See {@link SegmentMemo}; shared when injected, own slot otherwise. */
+  private memo?: SegmentMemo;
 
   constructor(
     private pool: MultiProviderPool,
     private source: FileSource,
     private nzbHash: string,
-    private opts: EngineOptions
-  ) {}
+    private opts: EngineOptions,
+    memo?: SegmentMemo
+  ) {
+    this.memo = memo;
+  }
 
   get filename(): string | undefined {
     return this.source.filename;
@@ -247,16 +253,22 @@ export class FileStream implements SeekableStream {
     while (pos < end && segmentIndex < segments.length) {
       let begin: number;
       let segEnd: number;
-      const memo = this.lastSegment;
-      if (memo && memo.index === segmentIndex) {
+      const memo = this.memo;
+      if (
+        memo &&
+        memo.owner === this &&
+        memo.index === segmentIndex &&
+        memo.buf
+      ) {
         ({ begin, end: segEnd } = memo);
+        const buf = memo.buf;
         this.knownRanges.set(segmentIndex, { begin, end: segEnd });
         if (begin >= end) break;
         if (segEnd > pos) {
           const within = Math.max(0, pos - begin);
           const take = Math.min(end, segEnd) - pos;
           if (take > 0) {
-            this.memoBuf!.copy(dst, dstOffset + written, within, within + take);
+            buf.copy(dst, dstOffset + written, within, within + take);
             written += take;
             pos += take;
           }
@@ -290,16 +302,21 @@ export class FileStream implements SeekableStream {
           // Memoize only the window-boundary segment (extends past this
           // read's end), as a copy, never a retained pin.
           if (segEnd >= end && body.length > 0) {
-            if (!this.memoBuf || this.memoBuf.length < body.length) {
-              this.memoBuf = Buffer.allocUnsafe(Math.max(1 << 20, body.length));
+            const slot = (this.memo ??= {
+              index: -1,
+              begin: 0,
+              end: 0,
+              len: 0,
+            });
+            if (!slot.buf || slot.buf.length < body.length) {
+              slot.buf = Buffer.allocUnsafe(Math.max(1 << 20, body.length));
             }
-            body.copy(this.memoBuf, 0);
-            this.lastSegment = {
-              index: segmentIndex,
-              begin,
-              end: segEnd,
-              len: body.length,
-            };
+            body.copy(slot.buf, 0);
+            slot.owner = this;
+            slot.index = segmentIndex;
+            slot.begin = begin;
+            slot.end = segEnd;
+            slot.len = body.length;
           }
         } finally {
           h.release();

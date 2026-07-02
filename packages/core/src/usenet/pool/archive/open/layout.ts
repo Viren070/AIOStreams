@@ -1,4 +1,4 @@
-import { SeekableStream } from '../../file-stream.js';
+import { SeekableStream, SegmentMemo } from '../../file-stream.js';
 import { RandomAccess } from '../random-access.js';
 import { ArchiveKind } from '../archive-volume.js';
 import { VolumeSet, Volume } from '../usenet-fs.js';
@@ -14,11 +14,13 @@ import {
 
 /**
  * Opens an NZB file (by index) as an opened random-access source. `knownSize`
- * lets the underlying stream skip its size probe (no fetch at open).
+ * lets the underlying stream skip its size probe (no fetch at open). `memo` is
+ * the owning VolumeSet's shared boundary-segment slot (see {@link SegmentMemo}).
  */
 export type FileOpener = (
   index: number,
-  knownSize?: number
+  knownSize?: number,
+  memo?: SegmentMemo
 ) => Promise<RandomAccess>;
 
 /**
@@ -199,7 +201,7 @@ export async function rebuildArchiveStream(
   const outerVolumes: Volume[] = layout.memberIndices.map((index, i) => ({
     filename: `vol-${index}`,
     knownSize: layout.memberSizes[i],
-    open: (knownSize) => opener(index, knownSize),
+    open: (knownSize, memo) => opener(index, knownSize, memo),
   }));
   const outer = new VolumeSet(outerVolumes);
   // Parallel size probing: a layout persisted without some volume sizes must

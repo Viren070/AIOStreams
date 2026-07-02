@@ -1,5 +1,6 @@
 import pLimit from 'p-limit';
 import { createLogger } from '../../../logging/logger.js';
+import type { SegmentMemo } from '../file-stream.js';
 import { RandomAccess, readAtIntoFrom } from './random-access.js';
 
 const logger = createLogger('usenet/archive');
@@ -10,9 +11,10 @@ export interface Volume {
   /**
    * Open the volume as a random-access source (e.g. a {@link FileStream}). The
    * `knownSize` hint lets the source skip its own size probe (no segment fetch
-   * at open time).
+   * at open time). `memo` is the set-wide boundary-segment slot (see
+   * {@link SegmentMemo}); sources that don't memoize ignore it.
    */
-  open: (knownSize?: number) => Promise<RandomAccess>;
+  open: (knownSize?: number, memo?: SegmentMemo) => Promise<RandomAccess>;
   /**
    * Pre-known decoded size of this volume (e.g. from the yEnc `=ybegin size=`
    * header fetched during NZB inspection). When provided, the volume is opened
@@ -38,6 +40,10 @@ export class VolumeSet implements RandomAccess {
   private starts: number[] = [];
   private total = 0;
   private opened = false;
+  /**
+   * One boundary-segment memo shared by all volume streams of this set
+   */
+  private memo: SegmentMemo = { index: -1, begin: 0, end: 0, len: 0 };
 
   constructor(private volumes: Volume[]) {}
 
@@ -80,7 +86,7 @@ export class VolumeSet implements RandomAccess {
       await Promise.all(
         unknown.map(({ v, i }) =>
           limit(async () => {
-            sized[i] = await v.open(v.knownSize);
+            sized[i] = await v.open(v.knownSize, this.memo);
           })
         )
       );
@@ -133,7 +139,10 @@ export class VolumeSet implements RandomAccess {
     while (remaining > 0 && pos < this.total) {
       const vi = this.volumeIndexAt(pos);
       if (!this.accs[vi]) {
-        this.accs[vi] = await this.volumes[vi].open(this.volumes[vi].knownSize);
+        this.accs[vi] = await this.volumes[vi].open(
+          this.volumes[vi].knownSize,
+          this.memo
+        );
       }
       const acc = this.accs[vi]!;
       const localOffset = pos - this.starts[vi];
