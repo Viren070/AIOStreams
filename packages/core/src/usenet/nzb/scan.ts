@@ -58,6 +58,11 @@ function isWs(c: number): boolean {
   return c === 0x20 || c === 0x09 || c === 0x0a || c === 0x0d;
 }
 
+/** The ASCII part of String.prototype.trim's whitespace set (adds \v, \f). */
+function isJsTrimWs(c: number): boolean {
+  return c === 0x20 || (c >= 0x09 && c <= 0x0d);
+}
+
 function isNameChar(c: number): boolean {
   return (
     (c >= 0x61 && c <= 0x7a) || // a-z
@@ -164,6 +169,22 @@ class Scanner {
   }
 
   /**
+   * Case-insensitive byte match of `expected` (lowercase ASCII letters only)
+   * as the element name after '<' at pos. On match advances pos past
+   * the name and returns true; otherwise leaves pos unchanged.
+   */
+  private matchName(expected: string): boolean {
+    let i = this.pos + 1;
+    for (let k = 0; k < expected.length; k++, i++) {
+      // `| 0x20` lower-cases ASCII letters; `expected` is all a-z.
+      if ((this.buf[i] | 0x20) !== expected.charCodeAt(k)) return false;
+    }
+    if (i < this.len && isNameChar(this.buf[i])) return false;
+    this.pos = i;
+    return true;
+  }
+
+  /**
    * Parse attributes up to the closing '>' of the current tag. Returns the
    * attribute map (lower-cased names, entity-decoded values) and whether the
    * tag was self-closing. pos ends just after '>'.
@@ -223,12 +244,22 @@ class Scanner {
   /** Consume `</name>` at pos (pos at '<'). */
   private expectClose(name: string): void {
     if (this.buf[this.pos + 1] !== SLASH) this.fail(`expected </${name}>`);
-    this.pos += 1; // at '/'
-    this.pos += 1; // after '/'
-    const start = this.pos;
-    while (this.pos < this.len && isNameChar(this.buf[this.pos])) this.pos++;
-    const got = this.text(start, this.pos).toLowerCase();
-    if (got !== name) this.fail(`expected </${name}>, got </${got}>`);
+    let i = this.pos + 2;
+    let k = 0;
+    while (k < name.length && (this.buf[i] | 0x20) === name.charCodeAt(k)) {
+      i++;
+      k++;
+    }
+    if (k < name.length || (i < this.len && isNameChar(this.buf[i]))) {
+      // Mismatch: materialise the actual name only for the error message.
+      const start = this.pos + 2;
+      let j = start;
+      while (j < this.len && isNameChar(this.buf[j])) j++;
+      const got = this.text(start, j).toLowerCase();
+      this.pos = j;
+      this.fail(`expected </${name}>, got </${got}>`);
+    }
+    this.pos = i;
     while (this.pos < this.len && isWs(this.buf[this.pos])) this.pos++;
     if (this.buf[this.pos] !== GT) this.fail(`malformed </${name}>`);
     this.pos++;
@@ -351,12 +382,15 @@ class Scanner {
           this.expectClose('file');
           break;
         }
-        const name = this.readName();
-        if (name === 'groups') this.readGroups(file);
-        else if (name === 'segments') this.readSegments(file);
-        // Some NZBs nest <segment> directly under <file>.
-        else if (name === 'segment') this.readSegment(file);
-        else this.fail(`unexpected <${name}> in <file>`);
+        // Some NZBs nest <segment> directly under <file>, so this loop can be
+        // as hot as the <segments> one; match names without materialising.
+        if (this.matchName('segment')) this.readSegment(file);
+        else if (this.matchName('segments')) this.readSegments(file);
+        else if (this.matchName('groups')) this.readGroups(file);
+        else {
+          const name = this.readName();
+          this.fail(`unexpected <${name}> in <file>`);
+        }
       }
     }
     doc.files.push(file);
@@ -390,20 +424,31 @@ class Scanner {
         this.expectClose('segments');
         return;
       }
-      const name = this.readName();
-      if (name !== 'segment') this.fail(`unexpected <${name}> in <segments>`);
+      if (!this.matchName('segment')) {
+        const name = this.readName();
+        this.fail(`unexpected <${name}> in <segments>`);
+      }
       this.readSegment(file);
     }
   }
 
   /**
-   * Strict integer attribute on <segment>: absent → 0 (the model builder
-   * backfills `number` by document order), present-but-unparseable → throw
-   * (a garbage `bytes`/`number` means the NZB is broken, not just sloppy).
+   * Integer attribute value on <segment> in [start, end). Digit runs up to 15
+   * chars accumulate directly (exact within Number's integer range); anything
+   * else falls back to decodeEntities + parseInt for identical semantics.
    */
-  private segmentIntAttr(attrs: Map<string, string>, name: string): number {
-    const raw = attrs.get(name);
-    if (raw === undefined) return 0;
+  private segmentIntValue(start: number, end: number, name: string): number {
+    if (end > start && end - start <= 15) {
+      let n = 0;
+      let i = start;
+      for (; i < end; i++) {
+        const c = this.buf[i];
+        if (c < 0x30 || c > 0x39) break;
+        n = n * 10 + (c - 0x30);
+      }
+      if (i === end) return n;
+    }
+    const raw = decodeEntities(this.text(start, end));
     const n = Number.parseInt(raw, 10);
     if (!Number.isFinite(n)) {
       this.fail(`invalid ${name} attribute "${raw}" on <segment>`);
@@ -411,18 +456,93 @@ class Scanner {
     return n;
   }
 
-  /** Parse one <segment ...>msgid</segment> (opening tag already consumed). */
+  /** Case-insensitive compare of attr name bytes against lowercase `expected`. */
+  private attrNameIs(start: number, end: number, expected: string): boolean {
+    if (end - start !== expected.length) return false;
+    for (let k = 0; k < expected.length; k++) {
+      if ((this.buf[start + k] | 0x20) !== expected.charCodeAt(k)) return false;
+    }
+    return true;
+  }
+
+  /** Parse one <segment ...>msgid</segment> (element name already consumed). */
   private readSegment(file: ScannedFile): void {
-    const tag = this.readAttributes();
-    const messageId = (
-      tag.selfClosed ? '' : this.readLeafText('segment')
-    ).replace(/^<|>$/g, '');
+    let number = 0;
+    let bytes = 0;
+    let selfClosed = false;
+    for (;;) {
+      while (this.pos < this.len && isWs(this.buf[this.pos])) this.pos++;
+      if (this.pos >= this.len) this.fail('unterminated tag');
+      const c = this.buf[this.pos];
+      if (c === GT) {
+        this.pos++;
+        break;
+      }
+      if (c === SLASH) {
+        if (this.buf[this.pos + 1] !== GT) this.fail('malformed self-close');
+        this.pos += 2;
+        selfClosed = true;
+        break;
+      }
+      const nameStart = this.pos;
+      while (this.pos < this.len && isNameChar(this.buf[this.pos])) this.pos++;
+      if (this.pos === nameStart) this.fail('expected attribute name');
+      const nameEnd = this.pos;
+      while (this.pos < this.len && isWs(this.buf[this.pos])) this.pos++;
+      if (this.buf[this.pos] !== EQ) this.fail('expected = after attribute');
+      this.pos++;
+      while (this.pos < this.len && isWs(this.buf[this.pos])) this.pos++;
+      const quote = this.buf[this.pos];
+      if (quote !== QUOT && quote !== APOS) this.fail('unquoted attribute');
+      this.pos++;
+      const valueStart = this.pos;
+      const close = this.buf.indexOf(quote, valueStart);
+      if (close === -1) this.fail('unterminated attribute value');
+      this.pos = close + 1;
+      // Last occurrence wins, matching readAttributes' Map.set.
+      if (this.attrNameIs(nameStart, nameEnd, 'bytes')) {
+        bytes = this.segmentIntValue(valueStart, close, 'bytes');
+      } else if (this.attrNameIs(nameStart, nameEnd, 'number')) {
+        number = this.segmentIntValue(valueStart, close, 'number');
+      }
+    }
+    const messageId = selfClosed ? '' : this.readMessageId();
     if (!messageId) this.fail('segment missing message-id');
-    file.segments.push({
-      messageId,
-      number: this.segmentIntAttr(tag.attrs, 'number'),
-      bytes: this.segmentIntAttr(tag.attrs, 'bytes'),
-    });
+    file.segments.push({ messageId, number, bytes });
+  }
+
+  /**
+   * Byte-level leaf text of <segment> with the surrounding angle brackets
+   * stripped. Entities or non-ASCII bytes (including possible Unicode
+   * whitespace that String.trim strips) fall back to the decoding path.
+   */
+  private readMessageId(): string {
+    const start = this.pos;
+    const lt = this.buf.indexOf(LT, start);
+    if (lt === -1) this.fail('unterminated <segment>');
+    let ascii = true;
+    for (let i = start; i < lt; i++) {
+      const c = this.buf[i];
+      if (c === AMP || c >= 0x80) {
+        ascii = false;
+        break;
+      }
+    }
+    let value: string;
+    if (!ascii) {
+      value = decodeEntities(this.text(start, lt)).trim().replace(/^<|>$/g, '');
+    } else {
+      let s = start;
+      let e = lt;
+      while (s < e && isJsTrimWs(this.buf[s])) s++;
+      while (e > s && isJsTrimWs(this.buf[e - 1])) e--;
+      if (s < e && this.buf[s] === LT) s++;
+      if (e > s && this.buf[e - 1] === GT) e--;
+      value = this.buf.toString('latin1', s, e);
+    }
+    this.pos = lt;
+    this.expectClose('segment');
+    return value;
   }
 }
 
