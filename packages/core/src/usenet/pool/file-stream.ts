@@ -31,6 +31,17 @@ export interface SeekableStream {
   open(signal?: AbortSignal): Promise<void>;
   createReadStream(range?: { start?: number; end?: number }): Readable;
   readAt(offset: number, length: number): Promise<Buffer>;
+  /**
+   * Zero-alloc variant of {@link readAt}: write into `dst` at `dstOffset`,
+   * returning bytes written (fewer than `length` only at EOF). Optional; see
+   * `RandomAccess.readAtInto` for the contract and rationale.
+   */
+  readAtInto?(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number>;
 }
 
 interface KnownRange {
@@ -58,6 +69,22 @@ export class FileStream implements SeekableStream {
    */
   private lockedPartSize: number | undefined;
   private opened = false;
+  /**
+   * Memo of the window-boundary segment on the readAt path: consecutive
+   * archive windows (and the CBC IV read just before each window) re-touch
+   * the segment straddling the boundary, and the memo spares them an
+   * arena/disk round-trip. Holds a copy, never a pin: FileStream has no
+   * close/destroy hook, so a pin held here would leak an arena slot.
+   * Concurrent readAt windows race the memo benignly (last-writer-wins;
+   * readers and writers are single synchronous blocks).
+   */
+  private lastSegment?: {
+    index: number;
+    begin: number;
+    end: number;
+    len: number;
+  };
+  private memoBuf?: Buffer;
 
   constructor(
     private pool: MultiProviderPool,
@@ -104,12 +131,16 @@ export class FileStream implements SeekableStream {
       return;
     }
 
-    const first = await this.pool.fetchSegment(
+    // Metadata-only: handles released immediately; the scalar fields stay
+    // valid after release (see SharedSegment).
+    const firstShared = await this.pool.fetchSegmentShared(
       segments[0],
       this.nzbHash,
       signal,
       CommandPriority.High
     );
+    const first = firstShared.data;
+    firstShared.release();
     const firstBegin = first.byteRange?.[0] ?? 0;
     const firstEnd = first.byteRange?.[1] ?? first.size;
     this.knownRanges.set(0, { begin: firstBegin, end: firstEnd });
@@ -134,12 +165,14 @@ export class FileStream implements SeekableStream {
       // No (or implausible) yEnc size: fall back to the last segment's part end
       // (exact) or a ratio estimate.
       const lastIdx = segments.length - 1;
-      const last = await this.pool.fetchSegment(
+      const lastShared = await this.pool.fetchSegmentShared(
         segments[lastIdx],
         this.nzbHash,
         signal,
         CommandPriority.High
       );
+      const last = lastShared.data;
+      lastShared.release();
       if (last.byteRange) {
         this.knownRanges.set(lastIdx, {
           begin: last.byteRange[0],
@@ -182,36 +215,99 @@ export class FileStream implements SeekableStream {
     const start = Math.max(0, offset);
     const end = Math.min(this._size, start + length);
     if (end <= start) return Buffer.alloc(0);
+    const dst = Buffer.allocUnsafe(end - start);
+    const written = await this.readAtInto(dst, 0, offset, length);
+    return written === dst.length ? dst : dst.subarray(0, written);
+  }
+
+  /**
+   * {@link readAt} into a caller-owned buffer: the archive serve path's hot
+   * loop. Copies each contributing segment's slice straight into `dst` with
+   * no intermediate allocation.
+   */
+  async readAtInto(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number> {
+    if (!this.opened) {
+      throw new Error('FileStream.open() must be called before reading');
+    }
+    if (length <= 0) return 0;
+    const start = Math.max(0, offset);
+    const end = Math.min(this._size, start + length);
+    if (end <= start) return 0;
 
     const segments = this.source.segments;
-    const out: Buffer[] = [];
+    let written = 0;
     let pos = start;
     let { segmentIndex } = await this.locateSegment(pos);
 
     while (pos < end && segmentIndex < segments.length) {
-      const data = await this.pool.fetchSegment(
-        segments[segmentIndex],
-        this.nzbHash,
-        undefined,
-        CommandPriority.High
-      );
-      const begin = data.byteRange?.[0] ?? segmentIndex * this.avgDecodedSize;
-      const segEnd = data.byteRange?.[1] ?? begin + data.body.length;
-      this.knownRanges.set(segmentIndex, { begin, end: segEnd });
-      // The located segment must contain `pos`; subsequent segments start at
-      // their own `begin`. Guard against a gap/overshoot just in case.
-      if (begin >= end) break;
-      if (segEnd > pos) {
-        const within = Math.max(0, pos - begin);
-        const take = Math.min(end, segEnd) - pos;
-        if (take > 0) {
-          out.push(data.body.subarray(within, within + take));
-          pos += take;
+      let begin: number;
+      let segEnd: number;
+      const memo = this.lastSegment;
+      if (memo && memo.index === segmentIndex) {
+        ({ begin, end: segEnd } = memo);
+        this.knownRanges.set(segmentIndex, { begin, end: segEnd });
+        if (begin >= end) break;
+        if (segEnd > pos) {
+          const within = Math.max(0, pos - begin);
+          const take = Math.min(end, segEnd) - pos;
+          if (take > 0) {
+            this.memoBuf!.copy(dst, dstOffset + written, within, within + take);
+            written += take;
+            pos += take;
+          }
+        }
+      } else {
+        // Everything between the pin and release() is one synchronous block
+        // (the arena contract).
+        const h = await this.pool.fetchSegmentShared(
+          segments[segmentIndex],
+          this.nzbHash,
+          undefined,
+          CommandPriority.High
+        );
+        try {
+          const body = h.data.body;
+          begin = h.data.byteRange?.[0] ?? segmentIndex * this.avgDecodedSize;
+          segEnd = h.data.byteRange?.[1] ?? begin + body.length;
+          this.knownRanges.set(segmentIndex, { begin, end: segEnd });
+          // The located segment must contain `pos`; subsequent segments start
+          // at their own `begin`. Guard against a gap/overshoot just in case.
+          if (begin >= end) break;
+          if (segEnd > pos) {
+            const within = Math.max(0, pos - begin);
+            const take = Math.min(end, segEnd) - pos;
+            if (take > 0) {
+              body.copy(dst, dstOffset + written, within, within + take);
+              written += take;
+              pos += take;
+            }
+          }
+          // Memoize only the window-boundary segment (extends past this
+          // read's end), as a copy, never a retained pin.
+          if (segEnd >= end && body.length > 0) {
+            if (!this.memoBuf || this.memoBuf.length < body.length) {
+              this.memoBuf = Buffer.allocUnsafe(Math.max(1 << 20, body.length));
+            }
+            body.copy(this.memoBuf, 0);
+            this.lastSegment = {
+              index: segmentIndex,
+              begin,
+              end: segEnd,
+              len: body.length,
+            };
+          }
+        } finally {
+          h.release();
         }
       }
       segmentIndex++;
     }
-    return Buffer.concat(out);
+    return written;
   }
 
   /**
@@ -356,12 +452,15 @@ export class FileStream implements SeekableStream {
   private async rangeForSegment(index: number): Promise<KnownRange> {
     const cached = this.knownRanges.get(index);
     if (cached) return cached;
-    const data = await this.pool.fetchSegment(
+    // Metadata-only; released immediately.
+    const h = await this.pool.fetchSegmentShared(
       this.source.segments[index],
       this.nzbHash,
       undefined,
       CommandPriority.High
     );
+    const data = h.data;
+    h.release();
     const begin = data.byteRange?.[0] ?? index * this.avgDecodedSize;
     const end = data.byteRange?.[1] ?? begin + data.size;
     const range = { begin, end };

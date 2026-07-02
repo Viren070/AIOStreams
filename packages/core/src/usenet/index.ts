@@ -4,7 +4,6 @@ import { createLogger } from '../logging/logger.js';
 import { getCacheFolder } from '../utils/general.js';
 import { appConfig } from '../utils/index.js';
 import { MultiProviderPool } from './pool/multi-provider-pool.js';
-import { configureDecodePool } from './pool/yenc.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
 import { FileStream, SeekableStream } from './pool/file-stream.js';
@@ -77,6 +76,34 @@ const ARCHIVE_OP_CONCURRENCY = 16;
  * honestly instead of grinding connections for the rest of the resolve.
  */
 const ARCHIVE_INSPECT_TIMEOUT_MS = 120_000;
+
+/**
+ * Pinned segment-arena budget bounds. Slot demand tracks concurrent decodes
+ * (pins on already-resident entries consume no new slots), so the budget
+ * scales with the connection budget, floored to cover the archive re-touch
+ * set and capped because a large pinned live-set has its own major-GC
+ * marking cost.
+ */
+const SEGMENT_ARENA_MIN_BYTES = 64 * 1024 * 1024;
+const SEGMENT_ARENA_MAX_BYTES = 160 * 1024 * 1024;
+const SEGMENT_ARENA_PER_DOWNLOAD_BYTES = 1.5 * 1024 * 1024;
+
+function segmentArenaBytes(maxConcurrentDownloads: number): number {
+  return Math.min(
+    SEGMENT_ARENA_MAX_BYTES,
+    Math.max(
+      SEGMENT_ARENA_MIN_BYTES,
+      Math.floor(maxConcurrentDownloads * SEGMENT_ARENA_PER_DOWNLOAD_BYTES)
+    )
+  );
+}
+
+/**
+ * Archive read-window granularity. Each window is one `readAtInto` through
+ * the inner-stream / CBC / volume-set / file-stream chain, so the per-window
+ * fixed costs amortize over this size.
+ */
+const ARCHIVE_WINDOW_BYTES = 1 << 20;
 
 /**
  * Target STAT sample width when the import skipped middle-volume probes
@@ -159,31 +186,26 @@ export class UsenetEngine {
     options: Partial<EngineOptions> = {}
   ) {
     this.options = { ...DEFAULT_ENGINE_OPTIONS, ...options };
-    // The segment cache is disk-only: pooled decode (below) recycles a fixed ring
-    // of buffers, so a long-lived in-RAM entry would alias a recycled slot. The
-    // disk tier copies each body out synchronously at `set()` time (see
-    // SegmentCache.serializeInto), capturing it before the slot recycles, so
-    // re-reads/seeks/multi-client still hit the cache.
+    // Segment cache tiers:
+    // - The pinned in-RAM arena (see SegmentArena) absorbs the archive path's
+    //   constant re-touches: window boundaries land mid-segment, and
+    //   CBC-encrypted entries read the IV block just before each window.
+    // - The disk tier copies each body out synchronously at `set()` time, so
+    //   re-reads/seeks/multi-client hit it regardless of decode target.
+    // Per-stream decode-slot bodies (direct path) enter neither tier's memory
+    // (see SegmentCache.set).
     //
     // Entries are keyed by message-id (a globally-unique article id whose body is
     // byte-identical across providers), so the cache is provider-independent and
     // uses one stable namespace; the registry guarantees a single writer.
     this.cache = new SegmentCache({
+      arenaBytes: segmentArenaBytes(this.options.maxConcurrentDownloads),
       diskBytes: this.options.segmentDiskCachePath
         ? this.options.segmentDiskCacheBytes
         : 0,
       diskPath: this.options.segmentDiskCachePath,
       namespace: 'segments',
     });
-    // Decode into a fixed ring of reusable buffers sized above the live set:
-    // in-flight fetches + the in-order reorder window (~prefetch) + the downstream
-    // socket buffer (~prefetch) + margin, so a slot is never reused while still
-    // referenced.
-    configureDecodePool(
-      this.options.maxConcurrentDownloads +
-        2 * this.options.prefetchSegments +
-        64
-    );
     this.stats = new StatsAccumulator();
     this.pool = new MultiProviderPool(
       providers,
@@ -639,11 +661,7 @@ export class UsenetEngine {
     const opened = await openArchiveInner(set, opener, innerPath, {
       knownSizes,
       password: nzb.meta.password,
-      concurrency: Math.min(
-        ARCHIVE_OP_CONCURRENCY,
-        this.options.maxConcurrentDownloads
-      ),
-      prefetchWindows: this.options.prefetchSegments,
+      ...this.archiveStreamOpts(),
     });
     return opened.stream;
   }
@@ -665,14 +683,36 @@ export class UsenetEngine {
       this.openFile(nzb, nzb.files[index], signal, knownSize);
     const stream = await rebuildArchiveStream(layout, opener, {
       password: nzb.meta.password,
+      ...this.archiveStreamOpts(),
+      lazyHooks,
+    });
+    return this.track(nzb, stream);
+  }
+
+  /**
+   * Playback tuning for archive inner streams (both the fresh-open and the
+   * layout-rebuild paths). `prefetchSegments` is defined in ~1 MiB units, so
+   * the read-ahead depth in windows is scaled to hold read-ahead bytes
+   * constant across window-granularity changes.
+   */
+  private archiveStreamOpts(): {
+    concurrency: number;
+    windowBytes: number;
+    prefetchWindows: number;
+  } {
+    return {
       concurrency: Math.min(
         ARCHIVE_OP_CONCURRENCY,
         this.options.maxConcurrentDownloads
       ),
-      prefetchWindows: this.options.prefetchSegments,
-      lazyHooks,
-    });
-    return this.track(nzb, stream);
+      windowBytes: ARCHIVE_WINDOW_BYTES,
+      prefetchWindows: Math.max(
+        4,
+        Math.ceil(
+          (this.options.prefetchSegments * (1 << 20)) / ARCHIVE_WINDOW_BYTES
+        )
+      ),
+    };
   }
 
   private async openFile(

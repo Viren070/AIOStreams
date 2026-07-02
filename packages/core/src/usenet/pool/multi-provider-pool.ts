@@ -2,11 +2,18 @@ import { SegmentCache } from './segment-cache.js';
 import { PrioritySemaphore } from './priority-semaphore.js';
 import { StatsAccumulator } from '../stats/accumulator.js';
 import {
+  SegmentArena,
+  SharedSegment,
+  ArenaLease,
+  ownedShared,
+} from './segment-arena.js';
+import {
   SegmentFetcher,
   SegmentHeadData,
   LocalSegmentFetcher,
   awaitAbortable,
 } from '../nntp/segment-fetcher.js';
+import { NntpError } from '../nntp/errors.js';
 import {
   CommandPriority,
   EngineOptions,
@@ -17,6 +24,18 @@ import {
 } from '../types.js';
 
 export type { SegmentHeadData } from '../nntp/segment-fetcher.js';
+export type { SharedSegment } from './segment-arena.js';
+
+/** One registered waiter of a shared single-flight fetch. */
+interface SharedWaiter {
+  deliver(h: SharedSegment): void;
+  fail(err: unknown): void;
+}
+
+/** A shared fetch in flight; aborting waiters deregister themselves. */
+interface SharedFlight {
+  waiters: Set<SharedWaiter>;
+}
 
 /**
  * Coordinates segment fetches: owns the segment cache, single-flight de-dupe and
@@ -27,7 +46,8 @@ export type { SegmentHeadData } from '../nntp/segment-fetcher.js';
 export class MultiProviderPool {
   private fetcher: SegmentFetcher;
   private globalDownloads: PrioritySemaphore;
-  private inflight = new Map<string, Promise<SegmentData>>();
+  /** Single-flight coordinator for shared (arena-backed) segment fetches. */
+  private sharedInflight = new Map<string, SharedFlight>();
   /**
    * Single-flight for head-only probe fetches. Fill/repost NZBs list the SAME
    * articles under multiple `<file>` entries, and head fetches don't populate
@@ -35,6 +55,11 @@ export class MultiProviderPool {
    * article.
    */
   private inflightHeads = new Map<string, Promise<SegmentHeadData>>();
+
+  /** The pinned decoded-body tier (owned by the segment cache). */
+  private get arena(): SegmentArena {
+    return this.cache.arena;
+  }
 
   constructor(
     providers: ProviderConfig[],
@@ -63,6 +88,9 @@ export class MultiProviderPool {
    * with per-segment 430 failover and backup escalation. Throws
    * `ArticleNotFoundError` when every provider reports the article missing, or
    * the last transient `NntpError` when all attempts failed transiently.
+   *
+   * Thin wrapper over {@link fetchSegmentShared}: the returned body is always
+   * owned, so callers may retain it freely.
    */
   async fetchSegment(
     segment: NzbSegmentRef,
@@ -70,62 +98,194 @@ export class MultiProviderPool {
     signal: AbortSignal | undefined,
     priority: CommandPriority = CommandPriority.High
   ): Promise<SegmentData> {
-    const cached = this.cache.get(segment.messageId);
-    if (cached) return cached;
-
-    let shared = this.inflight.get(segment.messageId);
-    if (!shared) {
-      // The shared single-flight fetch deliberately runs WITHOUT any caller's
-      // signal: it is bounded only by `segmentTimeoutMs` and always runs to
-      // completion (caching its result). A single caller abandoning its wait
-      // (e.g. a teardown aborting prefetched-but-unneeded segments) must never
-      // poison the fetch for other callers single-flighting the same segment.
-      const promise = this.diskThenFetch(segment, nzbHash, priority);
-      shared = promise;
-      this.inflight.set(segment.messageId, promise);
-      // Only clear the map entry if it still points at this promise (a later
-      // miss may have already replaced it).
-      void promise
-        .catch(() => undefined)
-        .finally(() => {
-          if (this.inflight.get(segment.messageId) === promise) {
-            this.inflight.delete(segment.messageId);
-          }
-        });
+    const h = await this.fetchSegmentShared(segment, nzbHash, signal, priority);
+    try {
+      return h.owned ? h.data : { ...h.data, body: Buffer.from(h.data.body) };
+    } finally {
+      h.release();
     }
-    return awaitAbortable(shared, signal);
   }
 
   /**
-   * On a sync (L1) cache miss, consult the disk tier before paying for a
-   * network fetch. Runs inside the single-flight dedupe so concurrent misses
-   * for the same segment share one disk read.
+   * Fetch + decode one segment as a pinned view into the shared segment arena
+   * ({@link SegmentArena} documents the pin/release contract). Single-flighted:
+   * concurrent callers of the same message-id share one fetch, each receiving
+   * its own pin.
    */
-  private async diskThenFetch(
+  fetchSegmentShared(
     segment: NzbSegmentRef,
     nzbHash: string,
-    priority: CommandPriority
-  ): Promise<SegmentData> {
-    const fromDisk = await this.cache.getAsync(segment.messageId);
-    if (fromDisk) return fromDisk;
-    return this.doFetch(segment, nzbHash, priority);
+    signal: AbortSignal | undefined,
+    priority: CommandPriority = CommandPriority.High
+  ): Promise<SharedSegment> {
+    const id = segment.messageId;
+    const hit = this.arena.acquire(id);
+    if (hit) return Promise.resolve(hit);
+    if (signal?.aborted) {
+      return Promise.reject(new NntpError('connection', 'aborted'));
+    }
+
+    let flight = this.sharedInflight.get(id);
+    const isNew = !flight;
+    if (!flight) {
+      flight = { waiters: new Set() };
+      this.sharedInflight.set(id, flight);
+    }
+    const joined = flight;
+    const p = new Promise<SharedSegment>((resolve, reject) => {
+      // An aborting waiter deregisters itself before delivery, so pins are
+      // granted only to waiters that will consume them. The fetch itself runs
+      // without any caller's signal (bounded by segmentTimeoutMs) so one
+      // abandoning caller cannot poison the flight for the others.
+      let onAbort: (() => void) | undefined;
+      const done = (): void => {
+        if (onAbort) signal!.removeEventListener('abort', onAbort);
+      };
+      const waiter: SharedWaiter = {
+        deliver: (h) => {
+          done();
+          resolve(h);
+        },
+        fail: (e) => {
+          done();
+          reject(e);
+        },
+      };
+      joined.waiters.add(waiter);
+      if (signal) {
+        onAbort = () => {
+          joined.waiters.delete(waiter);
+          reject(new NntpError('connection', 'aborted'));
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
+    });
+    if (isNew) void this.runShared(segment, nzbHash, priority, joined);
+    return p;
   }
 
-  private async doFetch(
+  /** The single flight behind {@link fetchSegmentShared}. */
+  private async runShared(
     segment: NzbSegmentRef,
     nzbHash: string,
-    priority: CommandPriority
+    priority: CommandPriority,
+    flight: SharedFlight
+  ): Promise<void> {
+    const id = segment.messageId;
+    let lease: ArenaLease | null | undefined;
+    try {
+      let data = await this.cache.getAsync(id);
+      if (data) {
+        // Disk hit: promote into the arena (one memcpy) when a slot is free,
+        // so serve-path re-touches stop paying the disk round-trip.
+        lease = this.arena.checkout(data.body.length);
+        if (lease) {
+          data.body.copy(lease.slot, 0);
+          data = { ...data, body: lease.slot.subarray(0, data.body.length) };
+        }
+      } else {
+        const need = Math.max(1 << 20, segment.bytes ?? 0);
+        data = await this.runFetch(
+          segment,
+          nzbHash,
+          priority,
+          () =>
+            (lease ??= this.arena.checkout(need))?.slot ??
+            Buffer.allocUnsafe(need)
+        );
+        if (lease && data.body.buffer !== lease.slot.buffer) {
+          // Decode fell back to an owned buffer (oversized/undeclared bytes).
+          this.arena.abandon(lease);
+          lease = null;
+        }
+      }
+      // Deliver in one synchronous block: unregister the flight, commit the
+      // slot, and grant one pin per still-registered waiter, so no checkout
+      // (hence no eviction) can interleave.
+      if (this.sharedInflight.get(id) === flight) {
+        this.sharedInflight.delete(id);
+      }
+      if (lease) {
+        this.arena.commit(lease, id, data);
+        for (const w of flight.waiters) {
+          w.deliver(this.arena.acquireCommitted(id));
+        }
+      } else {
+        const shared = ownedShared(data);
+        for (const w of flight.waiters) w.deliver(shared);
+      }
+    } catch (err) {
+      if (lease) this.arena.abandon(lease);
+      if (this.sharedInflight.get(id) === flight) {
+        this.sharedInflight.delete(id);
+      }
+      for (const w of flight.waiters) w.fail(err);
+    }
+  }
+
+  /**
+   * Fetch + decode one segment into a caller-owned buffer (a per-stream decode
+   * slot). `out` is invoked lazily at decode time: cache hits never check a
+   * slot out, and no slot is held while waiting on the download semaphore.
+   * Deliberately not single-flighted: the body may be a view into the slot,
+   * whose recycle policy belongs to this one caller. Concurrent streams of the
+   * same file may duplicate a fetch until the disk tier catches up.
+   */
+  async fetchSegmentInto(
+    segment: NzbSegmentRef,
+    nzbHash: string,
+    signal: AbortSignal | undefined,
+    priority: CommandPriority,
+    out: () => Buffer
+  ): Promise<SegmentData> {
+    // Arena hit: copy into the caller's slot to keep the stream's
+    // `body.buffer === slot.buffer` bookkeeping intact; oversized bodies fall
+    // back to an owned copy.
+    const pinned = this.arena.acquire(segment.messageId);
+    if (pinned) {
+      try {
+        const body = pinned.data.body;
+        const dst = out();
+        if (dst.length >= body.length) {
+          body.copy(dst, 0);
+          return { ...pinned.data, body: dst.subarray(0, body.length) };
+        }
+        return { ...pinned.data, body: Buffer.from(body) };
+      } finally {
+        pinned.release();
+      }
+    }
+    // Disk hits return owned bodies (fresh deserialize) and ignore `out`.
+    const fromDisk = await this.cache.getAsync(segment.messageId);
+    if (fromDisk) return fromDisk;
+    return awaitAbortable(
+      this.runFetch(segment, nzbHash, priority, out),
+      signal
+    );
+  }
+
+  private async runFetch(
+    segment: NzbSegmentRef,
+    nzbHash: string,
+    priority: CommandPriority,
+    out?: () => Buffer
   ): Promise<SegmentData> {
     const releaseGlobal = await this.globalDownloads.acquire(
       priority,
       undefined
     );
     try {
-      const data = await this.fetcher.fetchBody(segment, nzbHash, priority);
+      const data = await this.fetcher.fetchBody(
+        segment,
+        nzbHash,
+        priority,
+        out
+      );
       // Write-through for ALL priorities, including import probes that still take
       // the full path (par2, mid-volume header reads). RAM is protected by the
-      // bounded pending-write queue, not by skipping the writes.
-      this.cache.set(segment.messageId, data);
+      // bounded pending-write queue, not by skipping the writes. Slot-backed
+      // bodies must skip the mem tier (see SegmentCache.set).
+      this.cache.set(segment.messageId, data, { skipMem: out !== undefined });
       return data;
     } finally {
       releaseGlobal();
@@ -154,8 +314,14 @@ export class MultiProviderPool {
       name: d.name,
       size: d.size,
     });
-    const cached = this.cache.get(segment.messageId);
-    if (cached) return fromHit(cached);
+    const pinned = this.arena.acquire(segment.messageId);
+    if (pinned) {
+      try {
+        return fromHit(pinned.data); // head is copied while pinned
+      } finally {
+        pinned.release();
+      }
+    }
 
     let shared = this.inflightHeads.get(segment.messageId);
     if (!shared) {
@@ -195,7 +361,7 @@ export class MultiProviderPool {
     signal: AbortSignal | undefined,
     nzbHash?: string
   ): Promise<boolean> {
-    if (this.cache.get(messageId)) return true;
+    if (this.arena.has(messageId)) return true;
     return this.fetcher.statSegment(
       messageId,
       nzbHash,

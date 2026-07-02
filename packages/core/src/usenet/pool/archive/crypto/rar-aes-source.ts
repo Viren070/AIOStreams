@@ -1,4 +1,4 @@
-import { RandomAccess } from '../random-access.js';
+import { RandomAccess, readAtIntoFrom } from '../random-access.js';
 import { DataFragment } from '../types.js';
 import { NotStreamableError } from '../errors.js';
 import { CbcSeekableSource } from './cbc-source.js';
@@ -40,7 +40,7 @@ function resolveKeyIv(crypt: RarCryptInfo, password: string): RarKeyIv {
  * file record).
  *
  * The ciphertext lives across the entry's {@link DataFragment}s in the backing
- * VolumeSet; {@link readCipher} maps a global cipher offset through the
+ * VolumeSet; {@link readCipherInto} maps a global cipher offset through the
  * fragment prefix sums onto {@link parent}.
  */
 export class RarAesSource extends CbcSeekableSource {
@@ -64,10 +64,18 @@ export class RarAesSource extends CbcSeekableSource {
     this.cipherTotal = fragments.reduce((a, f) => a + f.length, 0);
   }
 
-  /** Read `length` ciphertext bytes at a global offset, across fragments. */
-  protected async readCipher(offset: number, length: number): Promise<Buffer> {
-    if (length <= 0 || offset >= this.cipherTotal) return Buffer.alloc(0);
-    const out: Buffer[] = [];
+  /**
+   * Read `length` ciphertext bytes at a global offset, across fragments,
+   * straight into `dst`.
+   */
+  protected async readCipherInto(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number> {
+    if (length <= 0 || offset >= this.cipherTotal) return 0;
+    let written = 0;
     let pos = offset;
     let remaining = Math.min(length, this.cipherTotal - offset);
     let logical = 0;
@@ -79,13 +87,19 @@ export class RarAesSource extends CbcSeekableSource {
       if (pos >= fragEnd) continue;
       const within = pos - fragStart;
       const want = Math.min(remaining, frag.length - within);
-      const chunk = await this.parent.readAt(frag.offset + within, want);
-      if (chunk.length === 0) break;
-      out.push(chunk);
-      pos += chunk.length;
-      remaining -= chunk.length;
+      const n = await readAtIntoFrom(
+        this.parent,
+        dst,
+        dstOffset + written,
+        frag.offset + within,
+        want
+      );
+      if (n === 0) break;
+      written += n;
+      pos += n;
+      remaining -= n;
     }
-    return Buffer.concat(out);
+    return written;
   }
 
   protected decryptBlocks(iv: Buffer, cipher: Buffer): Buffer {

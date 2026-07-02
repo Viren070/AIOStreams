@@ -1,4 +1,4 @@
-import { RandomAccess } from '../random-access.js';
+import { RandomAccess, readAtIntoFrom } from '../random-access.js';
 import { AesStoredRegion } from '../types.js';
 import { CbcSeekableSource } from './cbc-source.js';
 import { deriveAesKey, decryptAesRegion } from './aes7z.js';
@@ -22,8 +22,19 @@ export class AesFolderSource extends CbcSeekableSource {
     this.key = deriveAesKey(password, region.cycles, region.salt);
   }
 
-  protected readCipher(offset: number, length: number): Promise<Buffer> {
-    return this.parent.readAt(this.region.packOffset + offset, length);
+  protected readCipherInto(
+    dst: Buffer,
+    dstOffset: number,
+    offset: number,
+    length: number
+  ): Promise<number> {
+    return readAtIntoFrom(
+      this.parent,
+      dst,
+      dstOffset,
+      this.region.packOffset + offset,
+      length
+    );
   }
 
   protected decryptBlocks(iv: Buffer, cipher: Buffer): Buffer {

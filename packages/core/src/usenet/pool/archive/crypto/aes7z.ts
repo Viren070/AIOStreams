@@ -124,5 +124,9 @@ export function decryptAesRegion(
 ): Buffer {
   const decipher = createDecipheriv('aes-256-cbc', key, prevBlock);
   decipher.setAutoPadding(false);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  // With padding off and block-aligned input, update() yields all plaintext
+  // and final() is empty, so the concat (a full extra copy) can be skipped.
+  const out = decipher.update(ciphertext);
+  const fin = decipher.final();
+  return fin.length === 0 ? out : Buffer.concat([out, fin]);
 }
