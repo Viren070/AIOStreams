@@ -56,18 +56,28 @@ export function nzbEncodedSize(nzb: Nzb): number {
  * same physical posting always hashes identically.
  */
 export function computeNzbHash(files: NzbFile[]): string {
-  const ids = new Set<string>();
+  const ids: string[] = [];
   for (const file of files) {
     for (const seg of file.segments) {
-      if (seg.messageId) ids.add(seg.messageId);
+      if (seg.messageId) ids.push(seg.messageId);
     }
   }
-  const sorted = Array.from(ids).sort();
+  ids.sort();
+  // Chunked joins must feed the hash the exact "<id>\n" byte stream that
+  // per-id updates would; existing hashes depend on it.
   const hash = createHash('sha1');
-  for (const id of sorted) {
-    hash.update(id);
-    hash.update('\n');
+  const chunk: string[] = [];
+  let prev: string | undefined;
+  for (const id of ids) {
+    if (id === prev) continue;
+    prev = id;
+    chunk.push(id);
+    if (chunk.length === 4096) {
+      hash.update(chunk.join('\n') + '\n');
+      chunk.length = 0;
+    }
   }
+  if (chunk.length) hash.update(chunk.join('\n') + '\n');
   return hash.digest('hex');
 }
 

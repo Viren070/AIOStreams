@@ -72,17 +72,16 @@ function buildFile(f: ScannedFile): NzbFile {
   if (f.segments.length === 0) {
     throw new NzbScanError(`file has no segments (subject "${f.subject}")`);
   }
-  const segments: NzbSegment[] = f.segments.map((s) => ({
-    messageId: s.messageId,
-    number: s.number,
-    bytes: s.bytes,
-  }));
-  // Backfill missing `number`s by document order.
-  segments.forEach((seg, idx) => {
+  const segments: NzbSegment[] = f.segments;
+  let encodedSize = 0;
+  for (let idx = 0; idx < segments.length; idx++) {
+    const seg = segments[idx];
+    // Backfill missing `number`s by document order.
     if (!Number.isFinite(seg.number) || seg.number <= 0) {
       seg.number = idx + 1;
     }
-  });
+    encodedSize += seg.bytes || 0;
+  }
   const file: NzbFile = {
     subject: f.subject,
     poster: f.poster,
@@ -90,7 +89,7 @@ function buildFile(f: ScannedFile): NzbFile {
     groups: f.groups,
     segments,
     filename: parseSubjectFilename(f.subject),
-    encodedSize: segments.reduce((acc, s) => acc + (s.bytes || 0), 0),
+    encodedSize,
   };
   return sortSegments(file);
 }
