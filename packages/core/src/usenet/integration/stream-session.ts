@@ -353,8 +353,37 @@ export async function openNativeUsenetStream(opts: {
   const start = Math.max(0, opts.start ?? 0);
   const end = Math.min(size, opts.end ?? size);
 
+  const readStream = session.stream.createReadStream({ start, end });
+  // Mid-stream segment-missing detection: when a segment fails with
+  // ArticleNotFoundError during playback (all providers tried, none could
+  // serve it), mark the library entry as failed so this release is avoided
+  // on future resolves.  Transient/connection errors do NOT trigger this.
+  const onStreamError = (err: Error) => {
+    if (err instanceof ArticleNotFoundError) {
+      logger.warn(
+        { hash: decoded.hash, err: err.message },
+        'segment missing during usenet playback; marking library entry as failed'
+      );
+      const friendly = friendlyUsenetError(err);
+      UsenetLibraryRepository.markFailed(
+        decoded.hash,
+        friendly.reason,
+        decoded.filename,
+        friendly.code
+      ).catch(() => {});
+    }
+  };
+  readStream.on('error', onStreamError);
+  // Clean up the error listener once the stream finishes, so we never try
+  // to mark an entry after successful playback, and the listener doesn't
+  // accumulate on long-lived sessions.
+  const cleanup = () => readStream.off('error', onStreamError);
+  readStream.once('close', cleanup);
+  readStream.once('end', cleanup);
+  readStream.once('error', cleanup); // also clean up on error itself
+
   return {
-    stream: session.stream.createReadStream({ start, end }),
+    stream: readStream,
     size,
     start,
     end,
