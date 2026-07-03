@@ -698,7 +698,8 @@ export async function getStreams(
     streams,
     context,
     false,
-    ctx.userData.failover?.enabled && (!preCaching || ctx.userData.failover?.precacheFailover)
+    ctx.userData.failover?.enabled &&
+      (!preCaching || ctx.userData.failover?.precacheFailover)
       ? {
           maxAttempts: Math.min(
             ctx.userData.failover.maxAttempts ??
@@ -847,6 +848,10 @@ export async function getStreams(
         streamsToPreload = [];
       }
       if (streamsToPreload.length > 0) {
+        // mark streams as preloading for formatter
+        for (const s of streamsToPreload) {
+          s.preloading = true;
+        }
         setImmediate(() => {
           pingStreamUrls(streamsToPreload).catch((error) => {
             logger.error('Error during stream preloading:', {

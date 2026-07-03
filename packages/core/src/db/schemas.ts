@@ -1118,6 +1118,8 @@ export const ParsedStreamSchema = z.object({
   tarUrls: z.array(SourceSchema).nullable().optional(),
   ytId: z.string().min(1).optional(),
   externalUrl: z.string().min(1).optional(),
+  /** Whether the stream has been selected for preloading, should be set to true if the stream is selected */
+  preloading: z.boolean().optional(),
   error: z
     .object({
       title: z.string().min(1),

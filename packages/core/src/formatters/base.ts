@@ -136,6 +136,7 @@ export interface ParseValue {
     nSeScore: number | null; // normalised (0-100) based on max and min scores (neg scores become 0)
     seMatched: string | null;
     rseMatched: string[];
+    preloading: boolean;
   };
   metadata?: {
     queryType: string | null;
@@ -557,6 +558,7 @@ export abstract class BaseFormatter {
           stream.rankedStreamExpressionsMatched?.filter(
             (name): name is string => typeof name === 'string'
           ) || [],
+        preloading: stream.preloading ?? false,
       },
       metadata: {
         queryType: this.formatterContext.queryType || null,
