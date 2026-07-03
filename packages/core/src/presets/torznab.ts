@@ -115,6 +115,16 @@ export class TorznabPreset extends BuiltinAddonPreset {
         ],
       },
       {
+        id: 'seasonPackFallback',
+        name: 'Season Pack Fallback',
+        description:
+          'In `Auto` mode, retries with season only (no episode) if nothing is found, to surface season packs - useful for private trackers. May also return unrelated episodes, so enabling `Season/Episode Matching` in Filters is recommended.',
+        type: 'boolean',
+        default: false,
+        required: false,
+        showInSimpleMode: false,
+      },
+      {
         id: 'initialLimit',
         name: 'Initial Result Limit',
         description:
@@ -248,6 +258,7 @@ export class TorznabPreset extends BuiltinAddonPreset {
       forceQuerySearch: options.forceQuerySearch ?? false,
       forceInitialLimit: options.initialLimit,
       paginate: options.paginate ?? false,
+      seasonPackFallback: options.seasonPackFallback ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

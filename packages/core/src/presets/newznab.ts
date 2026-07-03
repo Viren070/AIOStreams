@@ -192,6 +192,16 @@ export class NewznabPreset extends BuiltinAddonPreset {
         showInSimpleMode: false,
       },
       {
+        id: 'seasonPackFallback',
+        name: 'Season Pack Fallback',
+        description:
+          'In `Auto` mode, retries with season only (no episode) if nothing is found, to surface season packs - useful for private trackers. May also return unrelated episodes, so enabling `Season/Episode Matching` in Filters is recommended.',
+        type: 'boolean',
+        default: false,
+        required: false,
+        showInSimpleMode: false,
+      },
+      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
@@ -417,6 +427,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
+      seasonPackFallback: options.seasonPackFallback ?? false,
       zyclopsHealthProxy: zyclopsHealthProxyConfig,
     };
 

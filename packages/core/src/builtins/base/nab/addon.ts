@@ -63,6 +63,7 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
   forceInitialLimit: z.number().min(1).max(10000).optional(),
+  seasonPackFallback: z.boolean().default(false),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -205,6 +206,21 @@ export abstract class BaseNabAddon<
       results = allResults.flat();
     } else {
       results = await this.fetchResults(searchFunction, queryParams);
+      if (
+        results.length === 0 &&
+        this.userData.seasonPackFallback &&
+        parsedId.mediaType === 'series' &&
+        !this.userData.forceQuerySearch &&
+        searchCapabilities.supportedParams.includes('season') &&
+        queryParams.season &&
+        queryParams.ep
+      ) {
+        this.logger.debug(
+          'No results for season+episode search, retrying with season only to find season packs'
+        );
+        const { ep, ...seasonOnlyParams } = queryParams;
+        results = await this.fetchResults(searchFunction, seasonOnlyParams);
+      }
     }
     this.logger.info(
       `Completed search for ${capabilities.server.title} in ${getTimeTakenSincePoint(start)}`,
