@@ -24,6 +24,7 @@ import {
   TaskManager,
   drainUsenetMetrics,
   pruneUsenetMetrics,
+  flushAllDiskCaches,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -210,6 +211,7 @@ async function start() {
 async function shutdown() {
   TaskManager.stopAll();
   await stopAnalytics().catch(() => undefined);
+  await flushAllDiskCaches().catch(() => undefined);
   await Cache.close();
   RegexAccess.cleanup();
   SelAccess.cleanup();

@@ -89,6 +89,13 @@ export async function clearDiskCacheByName(name: string): Promise<boolean> {
 }
 
 /**
+ * Drain in-flight writes and persist every registered disk cache's index.
+ */
+export async function flushAllDiskCaches(): Promise<void> {
+  await Promise.allSettled([...diskCacheRegistry].map((c) => c.flush()));
+}
+
+/**
  * Two-tier, byte-bounded, restart-surviving cache: a hot in-memory LRU (L1) in
  * front of an on-disk LRU overflow (L2). One file per key under a namespaced
  * directory, plus a persisted index so the disk budget + LRU survive restarts.
@@ -122,6 +129,8 @@ export class DiskBackedCache<V> {
   /** Serialises index persistence. */
   private indexFlush: Promise<void> = Promise.resolve();
   private indexDirty = false;
+  /** Pending debounced index-persist timer (see {@link scheduleIndexFlush}). */
+  private flushTimer?: NodeJS.Timeout;
   private ready: Promise<void>;
   private closed = false;
 
@@ -355,6 +364,7 @@ export class DiskBackedCache<V> {
     this.diskBytes += size;
     this.indexDirty = true;
     this.evictDisk();
+    this.scheduleIndexFlush();
 
     // Zero-alloc path: serialize SYNCHRONOUSLY into a pooled slot (capturing a
     // transient/pooled `value` body before it can be reused), then write the
@@ -410,6 +420,7 @@ export class DiskBackedCache<V> {
     this.disk.delete(fileKey);
     this.diskBytes -= entry.size;
     this.indexDirty = true;
+    this.scheduleIndexFlush();
     fs.rm(this.filePath(fileKey), { force: true }).catch(() => {});
   }
 
@@ -470,6 +481,24 @@ export class DiskBackedCache<V> {
     this.evictDisk();
   }
 
+  /**
+   * Debounce window for the self-scheduled index persist.
+   */
+  private static readonly INDEX_FLUSH_DEBOUNCE_MS = 5_000;
+
+  /**
+   * Ensure a dirty index is persisted soon, coalescing a burst of writes into a
+   * single flush. Unref'd so the timer never keeps the process alive.
+   */
+  private scheduleIndexFlush(): void {
+    if (this.flushTimer || this.closed || !this.diskEnabled()) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = undefined;
+      void this.flushIndex();
+    }, DiskBackedCache.INDEX_FLUSH_DEBOUNCE_MS);
+    this.flushTimer.unref?.();
+  }
+
   /** Persist the disk index. Coalesces concurrent callers. */
   async flushIndex(): Promise<void> {
     if (!this.diskEnabled() || !this.indexDirty) return;
@@ -491,11 +520,23 @@ export class DiskBackedCache<V> {
     return this.indexFlush;
   }
 
+  /**
+   * Drain in-flight writes and persist the index, without closing the cache.
+   */
+  async flush(): Promise<void> {
+    await this.ready.catch(() => {});
+    await Promise.allSettled([...this.pendingWrites.values()]);
+    await this.flushIndex();
+  }
+
   /** Drain in-flight writes, persist the index, and stop accepting writes. */
   async close(): Promise<void> {
     this.closed = true;
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+    }
     diskCacheRegistry.delete(this as DiskBackedCache<unknown>);
-    await Promise.allSettled([...this.pendingWrites.values()]);
-    await this.flushIndex();
+    await this.flush();
   }
 }
