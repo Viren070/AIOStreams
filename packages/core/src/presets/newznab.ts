@@ -171,7 +171,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
         id: 'searchMode',
         name: 'Search Mode',
         description:
-          'The search mode to use when querying the Newznab endpoint. **Note**: `Both` will result in two addons being created, one for each search mode.',
+          '`Auto` searches by ID (TVDB/IMDb/TMDB + season/episode) when the indexer supports it; `Forced Query` always searches by title text instead. **Note**: `Both` creates two separate addons, one per mode.',
         type: 'select',
         required: false,
         default: 'auto',
