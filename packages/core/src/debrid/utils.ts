@@ -202,6 +202,8 @@ export interface NZB extends BaseFile {
   easynewsUrl?: string;
   zyclopsHealth?: string;
   serviceItemId?: string;
+  /** Screener release key (`wd1:...`) from the indexer's size/poster/date. */
+  screenerKey?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {

@@ -9,6 +9,7 @@ import {
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import FileParser from './file.js';
+import { keyKind } from '../screener/key.js';
 import {
   parseAgeString,
   parseDuration,
@@ -88,6 +89,12 @@ class StreamParser {
       proxied: this.isProxied(stream),
       url: this.applyUrlModifications(stream.url ?? undefined),
       nzbUrl: stream.nzbUrl || undefined,
+      // Only carry a usenet (wd1) Screener key; ignore anything an addon injects
+      // that isn't a valid usenet key.
+      screenerKey:
+        keyKind(stream.screenerKey) === 'usenet'
+          ? (stream.screenerKey ?? undefined)
+          : undefined,
       tarUrls: stream.tarUrls ?? undefined,
       tgzUrls: stream.tgzUrls ?? undefined,
       '7zipUrls': stream['7zipUrls'] ?? undefined,
