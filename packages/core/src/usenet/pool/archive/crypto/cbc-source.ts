@@ -40,7 +40,8 @@ export abstract class CbcSeekableSource implements RandomAccess {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number>;
 
   /** AES-CBC decrypt `cipher` (a multiple of 16 bytes) with `iv`. */
@@ -59,7 +60,8 @@ export abstract class CbcSeekableSource implements RandomAccess {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number> {
     if (length <= 0 || offset >= this.plainSize) return 0;
     const start = Math.max(0, offset);
@@ -80,7 +82,8 @@ export abstract class CbcSeekableSource implements RandomAccess {
           scratch,
           0,
           (firstBlock - 1) * 16,
-          16
+          16,
+          signal
         );
         if (n < 16) return 0;
         iv = scratch.subarray(0, 16);
@@ -90,7 +93,8 @@ export abstract class CbcSeekableSource implements RandomAccess {
         scratch,
         16,
         firstBlock * 16,
-        cipherLen
+        cipherLen,
+        signal
       );
       const aligned = got - (got % 16);
       if (aligned === 0) return 0;

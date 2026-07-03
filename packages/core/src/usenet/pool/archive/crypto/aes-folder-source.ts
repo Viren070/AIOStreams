@@ -26,14 +26,16 @@ export class AesFolderSource extends CbcSeekableSource {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number> {
     return readAtIntoFrom(
       this.parent,
       dst,
       dstOffset,
       this.region.packOffset + offset,
-      length
+      length,
+      signal
     );
   }
 

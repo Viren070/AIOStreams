@@ -250,7 +250,9 @@ export class FileStream implements SeekableStream {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    /** Stops the segment walk and cancels queued fetches (abandoned window). */
+    signal?: AbortSignal
   ): Promise<number> {
     if (!this.opened) {
       throw new Error('FileStream.open() must be called before reading');
@@ -294,7 +296,7 @@ export class FileStream implements SeekableStream {
         const h = await this.pool.fetchSegmentShared(
           segments[segmentIndex],
           this.nzbHash,
-          undefined,
+          signal,
           CommandPriority.High
         );
         try {

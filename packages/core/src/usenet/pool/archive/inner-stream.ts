@@ -97,7 +97,8 @@ export class ArchiveInnerStream implements SeekableStream {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number> {
     if (length <= 0 || offset >= this._size) return 0;
     if (this.resolver?.hasPending()) {
@@ -127,7 +128,8 @@ export class ArchiveInnerStream implements SeekableStream {
         dst,
         dstOffset + written,
         frag.offset + within,
-        want
+        want,
+        signal
       );
       if (n === 0) break;
       written += n;
@@ -146,8 +148,8 @@ export class ArchiveInnerStream implements SeekableStream {
     // windows concurrently gives archive playback the same throughput as a
     // plain file.
     return new ParallelRangeStream({
-      readAtInto: (dst, dstOffset, offset, length) =>
-        this.readAtInto(dst, dstOffset, offset, length),
+      readAtInto: (dst, dstOffset, offset, length, signal) =>
+        this.readAtInto(dst, dstOffset, offset, length, signal),
       start,
       end,
       windowBytes: this.windowBytes,

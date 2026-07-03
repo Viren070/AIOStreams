@@ -72,7 +72,8 @@ export class RarAesSource extends CbcSeekableSource {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number> {
     if (length <= 0 || offset >= this.cipherTotal) return 0;
     let written = 0;
@@ -92,7 +93,8 @@ export class RarAesSource extends CbcSeekableSource {
         dst,
         dstOffset + written,
         frag.offset + within,
-        want
+        want,
+        signal
       );
       if (n === 0) break;
       written += n;

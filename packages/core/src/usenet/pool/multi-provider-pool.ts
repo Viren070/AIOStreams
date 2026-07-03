@@ -36,6 +36,12 @@ interface SharedWaiter {
 /** A shared fetch in flight; aborting waiters deregister themselves. */
 interface SharedFlight {
   waiters: Set<SharedWaiter>;
+  /**
+   * Aborted when the last waiter deregisters: cancels a still-queued
+   * semaphore acquire; a granted (on-the-wire) fetch always completes and
+   * warms the cache.
+   */
+  ctl: AbortController;
 }
 
 /**
@@ -129,15 +135,17 @@ export class MultiProviderPool {
     let flight = this.sharedInflight.get(id);
     const isNew = !flight;
     if (!flight) {
-      flight = { waiters: new Set() };
+      flight = { waiters: new Set(), ctl: new AbortController() };
       this.sharedInflight.set(id, flight);
     }
     const joined = flight;
     const p = new Promise<SharedSegment>((resolve, reject) => {
       // An aborting waiter deregisters itself before delivery, so pins are
-      // granted only to waiters that will consume them. The fetch itself runs
-      // without any caller's signal (bounded by segmentTimeoutMs) so one
-      // abandoning caller cannot poison the flight for the others.
+      // granted only to waiters that will consume them. While any waiter
+      // remains the fetch runs without its signal, so one abandoning caller
+      // cannot poison the flight for the others; the last waiter to leave
+      // cancels a still-queued acquire via the flight controller. Waiters
+      // without a signal never deregister.
       let onAbort: (() => void) | undefined;
       const done = (): void => {
         if (onAbort) signal!.removeEventListener('abort', onAbort);
@@ -156,6 +164,14 @@ export class MultiProviderPool {
       if (signal) {
         onAbort = () => {
           joined.waiters.delete(waiter);
+          if (joined.waiters.size === 0) {
+            // Deregister BEFORE aborting so a new caller starts a fresh
+            // flight instead of joining this dying one.
+            if (this.sharedInflight.get(id) === joined) {
+              this.sharedInflight.delete(id);
+            }
+            joined.ctl.abort();
+          }
           reject(new NntpError('connection', 'aborted'));
         };
         signal.addEventListener('abort', onAbort, { once: true });
@@ -192,7 +208,8 @@ export class MultiProviderPool {
           priority,
           () =>
             (lease ??= this.arena.checkout(need))?.slot ??
-            Buffer.allocUnsafe(need)
+            Buffer.allocUnsafe(need),
+          flight.ctl.signal
         );
         if (lease && data.body.buffer !== lease.slot.buffer) {
           // Decode fell back to an owned buffer (oversized/undeclared bytes).
@@ -260,7 +277,7 @@ export class MultiProviderPool {
     const fromDisk = await this.cache.getAsync(segment.messageId);
     if (fromDisk) return fromDisk;
     return awaitAbortable(
-      this.runFetch(segment, nzbHash, priority, out),
+      this.runFetch(segment, nzbHash, priority, out, signal),
       signal
     );
   }
@@ -269,12 +286,20 @@ export class MultiProviderPool {
     segment: NzbSegmentRef,
     nzbHash: string,
     priority: CommandPriority,
-    out?: () => Buffer
+    out?: () => Buffer,
+    /**
+     * Cancels the download while it is still queued at the global semaphore,
+     * so an abandoned prefetch does not hold its FIFO position ahead of live
+     * streams. Once granted, the fetch completes and warms the cache.
+     */
+    signal?: AbortSignal
   ): Promise<SegmentData> {
-    const releaseGlobal = await this.globalDownloads.acquire(
-      priority,
-      undefined
-    );
+    let releaseGlobal: () => void;
+    try {
+      releaseGlobal = await this.globalDownloads.acquire(priority, signal);
+    } catch {
+      throw new NntpError('connection', 'aborted');
+    }
     try {
       const data = await this.fetcher.fetchBody(
         segment,

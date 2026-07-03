@@ -17,12 +17,18 @@ export interface RandomAccess {
    * streaming chain copies once into a caller-owned window buffer instead of
    * allocating a fresh buffer per layer. Call via {@link readAtIntoFrom} for
    * an automatic fallback.
+   *
+   * `signal` (serve path only) cancels segment fetches the read has not yet
+   * started or that are still queued at the download semaphore, so an
+   * abandoned read window stops consuming the download budget.
+   * Implementations forward it to their underlying source.
    */
   readAtInto?(
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number>;
 }
 
@@ -32,9 +38,12 @@ export async function readAtIntoFrom(
   dst: Buffer,
   dstOffset: number,
   offset: number,
-  length: number
+  length: number,
+  signal?: AbortSignal
 ): Promise<number> {
-  if (src.readAtInto) return src.readAtInto(dst, dstOffset, offset, length);
+  if (src.readAtInto) {
+    return src.readAtInto(dst, dstOffset, offset, length, signal);
+  }
   const buf = await src.readAt(offset, length);
   buf.copy(dst, dstOffset);
   return buf.length;

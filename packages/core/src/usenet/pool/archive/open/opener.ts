@@ -28,9 +28,12 @@ export interface OpenInnerOptions {
   /** Archive password (7z AES), e.g. from the NZB `<meta type="password">`. */
   password?: string;
   /**
-   * Parallelism for the per-volume header parse AND the final inner stream's
-   * concurrent read windows (both = the per-stream connection budget).
+   * OPEN-time parallelism: volume-size probes and per-volume header parses
+   * (incl. nested sets). Independent of the playback window parallelism;
+   * falls back to `concurrency`.
    */
+  openConcurrency?: number;
+  /** Final inner stream: max concurrent read windows. */
   concurrency?: number;
   /** Final inner stream: read-window granularity in bytes. */
   windowBytes?: number;
@@ -68,14 +71,15 @@ export async function openArchiveInner(
   opts: OpenInnerOptions
 ): Promise<OpenedInner> {
   const startedAt = Date.now();
-  const concurrency = opts.concurrency ?? DEFAULT_OPEN_CONCURRENCY;
-  const vs = await openVolumeSet(set, opener, opts.knownSizes, concurrency);
+  const openConcurrency =
+    opts.openConcurrency ?? opts.concurrency ?? DEFAULT_OPEN_CONCURRENCY;
+  const vs = await openVolumeSet(set, opener, opts.knownSizes, openConcurrency);
   const { entries } = await parseArchiveEntries(
     vs,
     set.kind,
     opts.password ?? '',
     {
-      concurrency,
+      concurrency: openConcurrency,
     }
   );
   const opened = await resolveInner(vs, entries, innerPath, opts, 0);
@@ -135,7 +139,12 @@ async function resolveInner(
           vs,
           g.kind,
           opts.password ?? '',
-          { concurrency: opts.concurrency ?? DEFAULT_OPEN_CONCURRENCY }
+          {
+            concurrency:
+              opts.openConcurrency ??
+              opts.concurrency ??
+              DEFAULT_OPEN_CONCURRENCY,
+          }
         );
         return await resolveInner(
           vs,
