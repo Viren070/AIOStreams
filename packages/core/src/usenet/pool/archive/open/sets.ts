@@ -16,6 +16,7 @@ import {
   parseArchiveEntries,
   openVolumeSet,
   isArticleNotFound,
+  findArticleNotFound,
   cryptFailure,
 } from './parse.js';
 import {
@@ -78,6 +79,18 @@ export interface ArchiveSetInfo {
    * `bad_password` are RAR5 header-encryption failures (no/incorrect password).
    */
   failure?: 'article_not_found' | 'parse_failed' | 'encrypted' | 'bad_password';
+  /**
+   * NZB file indices of the members whose volumes actually failed with
+   * missing articles, when the parse could attribute them. The failure stamp
+   * belongs on these files
+   */
+  failedMemberIndices?: number[];
+  /**
+   * Message-id of the missing article behind an `article_not_found` failure
+   * that aborted the parse outright (no per-volume attribution available);
+   * the caller can map it back to the owning NZB file.
+   */
+  failureMessageId?: string;
   /**
    * The set's middle volumes were never probed (lazy parse); its
    * availability evidence is thinner, so the caller widens target STAT
@@ -367,6 +380,7 @@ export async function inspectArchiveSets(
           // stream. Only when failures left NOTHING streamable does the set
           // carry a failure verdict.
           let failure: ArchiveSetInfo['failure'];
+          let failedMemberIndices: number[] | undefined;
           if (volumeErrors.length > 0 && !inner.some((i) => i.streamable)) {
             const crypt = volumeErrors
               .map((v) => cryptFailure(v.error))
@@ -376,6 +390,15 @@ export async function inspectArchiveSets(
               (volumeErrors.some((v) => isArticleNotFound(v.error))
                 ? 'article_not_found'
                 : 'parse_failed');
+            // volumeErrors positions map 1:1 onto memberIndices (except a
+            // joined set, whose parse is one range spanning all members), so
+            // the verdict can blame the volumes that actually failed.
+            if (failure === 'article_not_found' && !set.joined) {
+              failedMemberIndices = volumeErrors
+                .filter((v) => isArticleNotFound(v.error))
+                .map((v) => set.memberIndices[v.volume])
+                .filter((i): i is number => i !== undefined);
+            }
             // A header-encryption failure parses to zero entries; synthesize a
             // reason-carrying inner so the verdict is honest, not generic.
             if (crypt && inner.length === 0) {
@@ -395,6 +418,7 @@ export async function inspectArchiveSets(
             memberIndices: set.memberIndices,
             inner,
             failure,
+            failedMemberIndices,
             chased: lazy || undefined,
           };
         };
@@ -410,9 +434,9 @@ export async function inspectArchiveSets(
           );
         const failed = (err: unknown): ArchiveSetInfo => {
           const crypt = cryptFailure(err);
+          const notFound = findArticleNotFound(err);
           const failure =
-            crypt ??
-            (isArticleNotFound(err) ? 'article_not_found' : 'parse_failed');
+            crypt ?? (notFound ? 'article_not_found' : 'parse_failed');
           return {
             kind: set.kind,
             index: set.index,
@@ -428,6 +452,7 @@ export async function inspectArchiveSets(
                 ]
               : [],
             failure,
+            failureMessageId: notFound?.messageId,
           };
         };
         try {
