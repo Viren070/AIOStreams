@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { BiCopy, BiHide, BiShow } from 'react-icons/bi';
 import { Modal } from '@/components/ui/modal';
 import { IconButton } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
 import { copyToClipboard } from '@/utils/clipboard';
 import { type LibraryEntry } from '../queries';
@@ -78,6 +79,37 @@ function SecretRow({ label, secret }: { label: string; secret: string }) {
   );
 }
 
+/** NZB URL row: shows the host only; hover reveals the full URL, copy grabs it whole. */
+function NzbUrlRow({ url }: { url: string }) {
+  if (url.startsWith('local-nzb://')) return null;
+  let host = url;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    // fall back to showing the raw value.
+  }
+  return (
+    <Row label="NZB URL">
+      <Tooltip
+        trigger={
+          <span className="font-mono break-all cursor-default">{host}</span>
+        }
+        className="max-w-md break-all"
+      >
+        {url}
+      </Tooltip>
+      <IconButton
+        size="xs"
+        intent="gray-subtle"
+        icon={<BiCopy />}
+        aria-label="Copy NZB URL"
+        className="shrink-0 ml-auto"
+        onClick={() => copy(url, 'NZB URL')}
+      />
+    </Row>
+  );
+}
+
 /** A cleanly-laid-out details panel for a library entry (replaces card clutter). */
 export function EntryInfoModal({
   entry,
@@ -120,7 +152,7 @@ export function EntryInfoModal({
           <Row label="Import time" value={formatLatency(e.importMs)} />
         )}
         {e.password && <SecretRow label="Password" secret={e.password} />}
-        {e.nzbUrl && <SecretRow label="NZB URL" secret={e.nzbUrl} />}
+        {e.nzbUrl && <NzbUrlRow url={e.nzbUrl} />}
         <Row
           label="Hash"
           value={
