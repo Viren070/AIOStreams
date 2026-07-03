@@ -583,8 +583,30 @@ export class UsenetEngine {
         // A parse that failed on missing articles IS missing content: feed the
         // honest verdict (missing_on_providers) instead of the generic
         // "no streamable files".
-        if (set.failure === 'article_not_found' && !rep.error) {
-          rep.error = 'article_not_found';
+        if (set.failure === 'article_not_found') {
+          const fileAt = (i: number) =>
+            content.files.find((f) => f.index === i);
+          const culprits = new Set(set.failedMemberIndices);
+          if (set.failureMessageId) {
+            const owner = set.memberIndices.find((i) =>
+              nzb.files[i]?.segments.some(
+                (s) => s.messageId === set.failureMessageId
+              )
+            );
+            if (owner !== undefined) culprits.add(owner);
+          }
+          for (const i of culprits) {
+            const f = fileAt(i);
+            if (f && !f.error) f.error = 'article_not_found';
+          }
+          if (
+            !rep.error &&
+            !set.memberIndices.some(
+              (i) => fileAt(i)?.error === 'article_not_found'
+            )
+          ) {
+            rep.error = 'article_not_found';
+          }
         }
       }
       logger.debug(
@@ -597,6 +619,8 @@ export class UsenetEngine {
             streamableInner: s.inner.filter((i) => i.streamable).length,
             videos: s.inner.filter((i) => i.category === 'video').length,
             failure: s.failure,
+            failedMembers: s.failedMemberIndices,
+            failureMessageId: s.failureMessageId,
             chased: s.chased,
           })),
         },

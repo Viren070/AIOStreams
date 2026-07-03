@@ -47,12 +47,19 @@ export async function parseArchiveEntries(
   return { entries, volumeErrors: reader.volumeErrors };
 }
 
+/** The {@link ArticleNotFoundError} in a failure's cause chain, if any. */
+export function findArticleNotFound(
+  err: unknown
+): ArticleNotFoundError | undefined {
+  for (let e = err; e instanceof Error; e = e.cause as Error | undefined) {
+    if (e instanceof ArticleNotFoundError) return e;
+  }
+  return undefined;
+}
+
 /** Whether an archive-parse failure means "articles gone", incl. cause chain. */
 export function isArticleNotFound(err: unknown): boolean {
-  for (let e = err; e instanceof Error; e = e.cause as Error | undefined) {
-    if (e instanceof ArticleNotFoundError) return true;
-  }
-  return false;
+  return findArticleNotFound(err) !== undefined;
 }
 
 /** Classify a RAR5 header-encryption failure from a parse error, if any. */
