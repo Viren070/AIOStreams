@@ -36,6 +36,8 @@ export interface OpenInnerOptions {
   windowBytes?: number;
   /** Final inner stream: read-ahead depth in windows. */
   prefetchWindows?: number;
+  /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
+  onHole?: ArchiveStreamOptions['onHole'];
 }
 
 /** Build the playback tuning passed to the final inner {@link ArchiveInnerStream}. */
@@ -44,6 +46,7 @@ function streamOptsFrom(opts: OpenInnerOptions): ArchiveStreamOptions {
     concurrency: opts.concurrency,
     windowBytes: opts.windowBytes,
     prefetchWindows: opts.prefetchWindows,
+    onHole: opts.onHole,
   };
 }
 

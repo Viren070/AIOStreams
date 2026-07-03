@@ -3,7 +3,9 @@ import { createLogger } from '../../logging/logger.js';
 import { MultiProviderPool } from './multi-provider-pool.js';
 import { SegmentsStream } from './segments-stream.js';
 import { isImplausibleYencFileSize } from './yenc.js';
+import { ArticleNotFoundError } from '../nntp/errors.js';
 import { CommandPriority, EngineOptions, NzbSegmentRef } from '../types.js';
+import type { HoleHooks } from '../holes.js';
 
 const logger = createLogger('usenet/file-stream');
 
@@ -86,17 +88,23 @@ export class FileStream implements SeekableStream {
    */
   private lockedPartSize: number | undefined;
   private opened = false;
+  /** Whether {@link _size} is exact (measured/known), not a ratio estimate. */
+  private sizeExact = false;
   /** See {@link SegmentMemo}; shared when injected, own slot otherwise. */
   private memo?: SegmentMemo;
+  /** Playback hole handling (zero-fill policy owner + persisted holes). */
+  private holes?: { hooks: HoleHooks; fileIndex: number };
 
   constructor(
     private pool: MultiProviderPool,
     private source: FileSource,
     private nzbHash: string,
     private opts: EngineOptions,
-    memo?: SegmentMemo
+    memo?: SegmentMemo,
+    holes?: { hooks: HoleHooks; fileIndex: number }
   ) {
     this.memo = memo;
+    this.holes = holes;
   }
 
   get filename(): string | undefined {
@@ -130,6 +138,9 @@ export class FileStream implements SeekableStream {
 
     if (this.source.knownSize && this.source.knownSize > 0) {
       this._size = this.source.knownSize;
+      // Callers only pass exact sizes here (PAR2 descriptors / probed part
+      // ends); estimates would corrupt archive offset maps anyway.
+      this.sizeExact = true;
       // Float on purpose: flooring biases the estimate low, which makes far
       // seeks overshoot by a segment or two (each a wasted full fetch).
       this.avgDecodedSize = Math.max(1, this._size / segments.length);
@@ -164,9 +175,11 @@ export class FileStream implements SeekableStream {
       // A single part spans the whole file, so its decoded end IS the exact
       // size; prefer it over a (possibly bogus) `=ybegin size=`.
       this._size = firstEnd || first.fileSize || first.size;
+      this.sizeExact = firstEnd > 0;
     } else if (trustYencSize) {
       // yEnc `=ybegin size=` is the exact total file size; no last fetch needed.
       this._size = first.fileSize!;
+      this.sizeExact = true;
     } else {
       // No (or implausible) yEnc size: fall back to the last segment's part end
       // (exact) or a ratio estimate.
@@ -185,8 +198,10 @@ export class FileStream implements SeekableStream {
           end: last.byteRange[1],
         });
         this._size = last.byteRange[1];
+        this.sizeExact = true;
       } else {
         this._size = this.avgDecodedSize * segments.length;
+        this.sizeExact = false;
       }
     }
     this.opened = true;
@@ -365,10 +380,33 @@ export class FileStream implements SeekableStream {
     void this.locateSegment(start)
       .then(({ segmentIndex, segmentStartByte }) => {
         const segments = this.source.segments.slice(segmentIndex);
+        // Playback hole handling: local task index → absolute segment index.
+        const holes = this.holes;
+        const knownAbs = holes?.hooks.knownHoles?.(holes.fileIndex);
+        const knownLocal =
+          knownAbs && knownAbs.size > 0
+            ? new Set(
+                [...knownAbs]
+                  .map((a) => a - segmentIndex)
+                  .filter((l) => l >= 0 && l < segments.length)
+              )
+            : undefined;
         const inner = new SegmentsStream({
           pool: this.pool,
           segments,
           nzbHash: this.nzbHash,
+          sizeForSegment: holes
+            ? (local) => this.exactSegmentSize(segmentIndex + local)
+            : undefined,
+          onHole: holes
+            ? (local, bytes) =>
+                holes.hooks.onHole({
+                  nzbFileIndex: holes.fileIndex,
+                  segmentIndex: segmentIndex + local,
+                  bytes,
+                })
+            : undefined,
+          knownHoles: knownLocal,
           // The read-ahead window IS the per-stream parallelism: a stream keeps
           // up to `prefetchSegments` segment fetches in flight ahead of the read
           // cursor, and the global download semaphore (Σ provider connections)
@@ -466,18 +504,81 @@ export class FileStream implements SeekableStream {
     return { segmentIndex: idx, segmentStartByte: range.begin };
   }
 
+  /**
+   * Uniform part length, when proven: the locked grid (a measured non-first
+   * range landing exactly on `index × len`), else the first segment's
+   * measured length corroborated by an EXACT total size + segment count that
+   * only a uniform grid of that length satisfies. yEnc posters emit
+   * fixed-size parts, so corroboration failing means "don't trust it".
+   */
+  private partGridSize(): number | undefined {
+    if (this.lockedPartSize !== undefined && this.lockedPartSize > 0) {
+      return this.lockedPartSize;
+    }
+    const first = this.knownRanges.get(0);
+    if (!first || first.begin !== 0 || !this.sizeExact) return undefined;
+    const len = first.end - first.begin;
+    const n = this.source.segments.length;
+    if (len <= 0) return undefined;
+    return len * (n - 1) < this._size && this._size <= len * n
+      ? len
+      : undefined;
+  }
+
+  /**
+   * Exact decoded size of segment `index`, or undefined when it cannot be
+   * guaranteed. Zero-fill padding relies on this: a wrong length silently
+   * shifts every later byte, which is worse than the stream dying.
+   */
+  private exactSegmentSize(index: number): number | undefined {
+    const known = this.knownRanges.get(index);
+    if (known) return known.end - known.begin;
+    const part = this.partGridSize();
+    if (part === undefined) return undefined;
+    const n = this.source.segments.length;
+    if (index < 0 || index >= n) return undefined;
+    if (index < n - 1) return part;
+    if (!this.sizeExact) return undefined;
+    const last = this._size - part * (n - 1);
+    return last > 0 && last <= part ? last : undefined;
+  }
+
   private async rangeForSegment(index: number): Promise<KnownRange> {
     const cached = this.knownRanges.get(index);
     if (cached) return cached;
     // Metadata-only; released immediately.
-    const h = await this.pool.fetchSegmentShared(
-      this.source.segments[index],
-      this.nzbHash,
-      undefined,
-      CommandPriority.High
-    );
-    const data = h.data;
-    h.release();
+    let data: { byteRange?: [number, number]; size: number };
+    try {
+      const h = await this.pool.fetchSegmentShared(
+        this.source.segments[index],
+        this.nzbHash,
+        undefined,
+        CommandPriority.High
+      );
+      data = h.data;
+      h.release();
+    } catch (err) {
+      // A seek landing ON a hole must not kill the locate: with a proven part
+      // grid the segment's range is known without its bytes. The actual read
+      // of the hole is then the padding policy's problem, not the seek's.
+      if (err instanceof ArticleNotFoundError && err.allProviders) {
+        const part = this.partGridSize();
+        if (part !== undefined) {
+          const begin = index * part;
+          const end = this.exactSegmentSize(index)
+            ? begin + this.exactSegmentSize(index)!
+            : Math.min(begin + part, this._size || begin + part);
+          const range = { begin, end };
+          this.knownRanges.set(index, range);
+          logger.debug(
+            { nzbHash: this.nzbHash, index, begin, end },
+            'segment missing on all providers; synthesized grid range for seek'
+          );
+          return range;
+        }
+      }
+      throw err;
+    }
     const begin = data.byteRange?.[0] ?? index * this.avgDecodedSize;
     const end = data.byteRange?.[1] ?? begin + data.size;
     const range = { begin, end };

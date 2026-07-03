@@ -40,6 +40,7 @@ const LIBRARY_STATUSES: UsenetLibraryStatus[] = [
   'queued',
   'inspecting',
   'available',
+  'degraded',
   'failed',
   'streaming',
 ];

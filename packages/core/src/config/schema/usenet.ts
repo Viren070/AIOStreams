@@ -270,31 +270,84 @@ export const usenetSchema = {
     ui: HIDDEN,
   },
   verifyMode: {
-    schema: z.enum(['none', 'stat', 'body']),
-    default: 'stat',
+    schema: z.enum(['none', 'census']),
+    default: 'census',
     label: 'Verify mode',
     description:
-      'How the chosen video is checked for retrievability at import, before a ' +
-      'stream URL is minted. `stat` (default) is a fast existence check, but ' +
-      'can sometimes be inaccurate and answer “present” for articles they ' +
-      'cannot actually deliver, so a dead release can slip through. `body` ' +
-      'actually fetches the sample segments; authoritative and the fetched segments are cached as ' +
-      'start-of-playback prefetch, at a small first-byte latency cost. `none` ' +
-      'skips this check.',
+      'Import-time availability verification. `census` (default) audits every ' +
+      'data segment of the release with cheap STAT existence probes, run ' +
+      'concurrently with the import so it adds no latency: releases with ' +
+      'catastrophic damage fail the import, small damage imports as ' +
+      '“degraded” (see damage policy), and whatever the import window did not ' +
+      'cover finishes in the background right after. Providers whose STAT ' +
+      'answers prove untrustworthy (cache gateways that claim articles they ' +
+      'cannot deliver) are detected and excluded automatically. `none` skips ' +
+      'verification entirely.',
     env: 'USENET_VERIFY_MODE',
     requiresRestart: false,
     secret: false,
     ui: HIDDEN,
   },
-  verifySamplePoints: {
-    schema: positiveInt,
-    default: 3,
-    label: 'Verify sample points',
+  verifyBudgetMs: {
+    schema: nonNegativeInt,
+    default: 0,
+    label: 'Verify budget',
     description:
-      'How many evenly-spread segments of the chosen video to check (begin / ' +
-      'middle / end for 3). Higher catches sparser damage but adds latency in ' +
-      '`body` mode. Only applies when verify mode is `stat` or `body`.',
-    env: 'USENET_VERIFY_SAMPLE_POINTS',
+      'Extra milliseconds an import may wait for census evidence after ' +
+      'inspection finishes. The default 0 never delays the import (the ' +
+      'census still runs concurrently and completes in the background); ' +
+      'raise it to trade import latency for more damage detection before ' +
+      'the first byte is served.',
+    env: 'USENET_VERIFY_BUDGET_MS',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  censusShadowConcurrency: {
+    schema: positiveInt,
+    default: 12,
+    label: 'Census background concurrency',
+    description:
+      'How many probe requests the census keeps in flight per release once ' +
+      'the import has returned and the audit continues in the background. ' +
+      'The import-time share always uses the full budget (up to 40, bounded ' +
+      'by max concurrent downloads); this only throttles the background ' +
+      'tail. Lower is gentler on provider connections during playback; ' +
+      'higher finishes the audit (and the final degraded/failed verdict) ' +
+      'sooner.',
+    env: 'USENET_CENSUS_SHADOW_CONCURRENCY',
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  censusMaxLifetime: {
+    schema: seconds,
+    default: 1800,
+    label: 'Census max lifetime',
+    description:
+      'Hard cap on how long one census may run in total (import share plus ' +
+      'background tail) before it is cancelled. Bounds how long a background ' +
+      'audit can keep the engine and its connections warm; a cancelled ' +
+      'census leaves the import-time verdict in place. Raise it if very ' +
+      'large releases end their audit incomplete at the default background ' +
+      'concurrency. Accepts seconds or a duration string (e.g. 30m).',
+    env: 'USENET_CENSUS_MAX_LIFETIME',
+    requiresRestart: false,
+    secret: false,
+    ui: { kind: 'duration' as const, hidden: true },
+  },
+  damagePolicy: {
+    schema: z.enum(['tolerant', 'strict']),
+    default: 'tolerant',
+    label: 'Damage policy',
+    description:
+      'What to do when verification finds SMALL damage (a few missing ' +
+      'articles, within the playback padding caps). `tolerant` (default) ' +
+      'imports the release as “degraded”: playback zero-fills the missing ' +
+      'ranges, which shows up as brief glitches instead of a dead stream. ' +
+      '`strict` fails the import so another release can be picked instead. ' +
+      'Releases damaged beyond the padding caps fail under both policies.',
+    env: 'USENET_DAMAGE_POLICY',
     requiresRestart: false,
     secret: false,
     ui: HIDDEN,

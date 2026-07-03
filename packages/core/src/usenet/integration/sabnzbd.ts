@@ -78,6 +78,7 @@ function sabStatus(status: UsenetLibraryStatus): SabnzbdStatus {
     case 'failed':
       return 'Failed';
     case 'available':
+    case 'degraded': // playable with zero-filled holes: complete for *arr purposes
     default:
       return 'Completed';
   }

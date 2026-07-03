@@ -3,13 +3,7 @@ import { createLogger } from '../../../logging/logger.js';
 import { MultiProviderPool } from '../multi-provider-pool.js';
 import { detectFileType } from '../file-type.js';
 import { Nzb } from '../../nzb/model.js';
-import {
-  InspectOptions,
-  InspectResult,
-  NzbContent,
-  NzbContentFile,
-} from './types.js';
-import { runReleaseGate } from './gate.js';
+import { InspectOptions, InspectResult, NzbContent } from './types.js';
 import { buildProbePlan, DYNAMIC_REGROUP_PROBES } from './probe-plan.js';
 import { inspectFile } from './probe.js';
 import { applyPar2Names } from './par2-names.js';
@@ -53,21 +47,11 @@ export async function inspectNzb(
   const concurrency = Math.max(1, opts.concurrency ?? 8);
   const limit = pLimit(concurrency);
 
-  // Release STAT gate: see ./gate.ts for semantics.
-  let gateMiss = false;
-  if (nzb.files.length > 0 && !opts.signal?.aborted) {
-    const gate = await runReleaseGate(
-      nzb,
-      pool,
-      concurrency,
-      startedAt,
-      opts.signal
-    );
-    if (gate.failFast) return gate.failFast;
-    gateMiss = gate.gateMiss;
-  }
+  // Live census evidence (the census runs concurrently with this whole pass):
+  // once it confirms a miss, evidence-reducing probe skips must not be added.
+  const confirmedMiss = (): boolean => opts.hasConfirmedMiss?.() ?? false;
 
-  const plan = await buildProbePlan(nzb, pool, opts, gateMiss);
+  const plan = await buildProbePlan(nzb, pool, opts, confirmedMiss());
   const { skipProbe, lazySizes, liveNames, inferredNames } = plan;
 
   // Merge the caller's signal into an internal controller we can trip ourselves
@@ -150,7 +134,14 @@ export async function inspectNzb(
           probed++;
           lastProgressAt = Date.now();
           if (r.file.filename) liveNames[index] = r.file.filename;
-          if (probed === DYNAMIC_REGROUP_PROBES && !ac.signal.aborted) {
+          // Re-checked at trigger time: the census may have confirmed a miss
+          // since the plan was built, in which case adding positional-inference
+          // skips would reduce exactly the evidence that maps the damage.
+          if (
+            probed === DYNAMIC_REGROUP_PROBES &&
+            !ac.signal.aborted &&
+            !confirmedMiss()
+          ) {
             plan.dynamicRegroup();
           }
           if (r.file.error === 'article_not_found') missing++;
@@ -226,7 +217,6 @@ export async function inspectNzb(
     'inspected nzb'
   );
   const content: NzbContent = { files, streamable };
-  if (gateMiss) content.gateMiss = true;
   // Hand the aligned probe heads to the archive parse (per-volume headers live
   // in them). ~16KB per probed file, freed by the engine after that phase.
   const heads = new Map<number, Buffer>();

@@ -10,6 +10,7 @@ import {
 import {
   SegmentFetcher,
   SegmentHeadData,
+  StatDetail,
   LocalSegmentFetcher,
   awaitAbortable,
 } from '../nntp/segment-fetcher.js';
@@ -368,6 +369,58 @@ export class MultiProviderPool {
       CommandPriority.Low,
       signal
     );
+  }
+
+  /**
+   * STAT probe that reports WHICH provider answered and can restrict the
+   * candidate set (census evidence with per-provider STAT trust). An arena hit
+   * is authoritative present with no `answeredBy` (no provider was asked, so
+   * trust calibration must ignore it).
+   */
+  async statSegmentDetailed(
+    messageId: string,
+    signal: AbortSignal | undefined,
+    nzbHash?: string,
+    providerIds?: readonly string[]
+  ): Promise<StatDetail> {
+    if (this.arena.has(messageId)) return { present: true, answered: true };
+    return this.fetcher.statSegmentDetailed(
+      messageId,
+      nzbHash,
+      CommandPriority.Low,
+      signal,
+      providerIds
+    );
+  }
+
+  /**
+   * BODY probe on exactly one provider (STAT-trust calibration): transfer
+   * discarded, no failover, no cache. Takes a Low-priority download slot so a
+   * calibration burst can never oversubscribe the account's sockets.
+   */
+  async probeBodyOnProvider(
+    segment: NzbSegmentRef,
+    providerId: string,
+    signal?: AbortSignal
+  ): Promise<'ok' | 'not_found' | 'unreachable'> {
+    const releaseGlobal = await this.globalDownloads.acquire(
+      CommandPriority.Low,
+      signal
+    );
+    try {
+      return await this.fetcher.probeBodyOnProvider(
+        segment,
+        providerId,
+        signal
+      );
+    } finally {
+      releaseGlobal();
+    }
+  }
+
+  /** Configured provider ids, in priority order. */
+  providerIds(): string[] {
+    return this.fetcher.providerIds();
   }
 
   /** Download slots currently leased (in-flight article fetches). */

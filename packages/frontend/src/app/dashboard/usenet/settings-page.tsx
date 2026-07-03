@@ -58,13 +58,19 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
   },
   {
     title: 'Verification',
-    leaves: ['verifyMode', 'verifySamplePoints'],
+    leaves: [
+      'verifyMode',
+      'verifyBudgetMs',
+      'damagePolicy',
+      'censusShadowConcurrency',
+      'censusMaxLifetime',
+    ],
     note:
-      'Before a stream URL is minted, AIOStreams runs a chain of checks so dead or incomplete releases fail upfront instead of mid-playback: ' +
-      '(1) a quick release gate STAT-samples the post to reject clearly dead/removed releases fast; ' +
-      '(2) a per-file probe body-fetches the first/last segment of each file to identify the content and catch missing or undecodable files; ' +
-      '(3) target verification (below) samples the chosen video to confirm it is actually retrievable. ' +
-      'During playback, a provider that keeps missing a release is automatically demoted so a healthy provider serves it.',
+      'Before a stream URL is minted, AIOStreams runs checks so dead or incomplete releases fail upfront instead of mid-playback: ' +
+      '(1) a per-file probe body-fetches the first segment of each file to identify the content and catch missing or undecodable files; ' +
+      '(2) a census audits every data segment of the release with cheap STAT existence probes, running alongside the import so it adds no latency — badly damaged releases fail the import, lightly damaged ones import as “degraded” (per the damage policy) and are zero-filled during playback, and whatever the import window did not cover finishes in the background. ' +
+      'That background tail runs at the census background concurrency below and is bounded by the census max lifetime. ' +
+      'Providers whose STAT answers prove untrustworthy (gateways that claim articles they cannot deliver) are excluded from census evidence automatically, and a provider that keeps missing a release during playback is demoted so a healthy one serves it.',
   },
   {
     title: 'Import & API',

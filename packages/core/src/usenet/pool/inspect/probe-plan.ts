@@ -68,7 +68,7 @@ export async function buildProbePlan(
   nzb: Nzb,
   pool: MultiProviderPool,
   opts: InspectOptions,
-  gateMiss: boolean
+  confirmedMiss: boolean
 ): Promise<ProbePlan> {
   // Split 7z volumes are fixed-size slices of ONE container: every volume but
   // the last has the first volume's exact size, and only the signature header
@@ -115,7 +115,7 @@ export async function buildProbePlan(
   // fill posts) keeps full probes.
   const lazySizes = new Map<number, number>();
   let par2Index: Par2Index | undefined;
-  if (opts.lazyArchives && !gateMiss && !opts.signal?.aborted) {
+  if (opts.lazyArchives && !confirmedMiss && !opts.signal?.aborted) {
     const rarSets = groupVolumeSets(
       nzb.files.map((f, index) => ({
         index,

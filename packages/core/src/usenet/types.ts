@@ -72,21 +72,40 @@ export interface EngineOptions {
   /** Cooldown before a tripped provider is probed again. */
   circuitBreakerCooldownMs: number;
   /**
-   * Number of evenly-spaced points (begin/end) of the target video to STAT at
-   * import to catch incomplete/removed posts before playback (reduces
-   * mid-stream failures). `0` disables. STATs are cheap (Low priority, no
-   * download budget) and check every provider incl. backups.
+   * Import-time availability verification:
+   * - `census`: STAT-audit every data segment of the release, run
+   *   concurrently with the import (anchors + low-discrepancy spread, run
+   *   densification, per-provider STAT-trust calibration). The blocking share
+   *   ends with the inspect (+{@link verifyBudgetMs}); the remainder finishes
+   *   in the background and updates the library entry.
+   * - `none`: skip verification entirely.
    */
-  availabilitySamplePoints: number;
+  verifyMode: 'none' | 'census';
   /**
-   * How the target-availability sample is verified at import:
-   * - `stat`: cheap STAT existence check (fast, but a cache/debrid NNTP gateway
-   *   can answer "present" for an article whose body it cannot deliver).
-   * - `body`: authoritative - actually body-fetches the sample segments, slightly slower; the
-   *   fetched segments are cached so they double as start-of-playback prefetch.
-   * - `none`: skip the target-availability sample entirely.
+   * Extra milliseconds the import may wait for census evidence after the
+   * inspect phases finish. `0` (default) never delays the import.
    */
-  verifyMode: 'none' | 'stat' | 'body';
+  verifyBudgetMs: number;
+  /**
+   * Verdict for SMALL confirmed damage (within the playback padding caps,
+   * see `holes.ts`): `tolerant` imports as degraded (playback zero-fills),
+   * `strict` fails the import. Damage beyond the caps fails either way.
+   */
+  damagePolicy: 'tolerant' | 'strict';
+  /**
+   * Census worker width once an import has returned and the audit continues
+   * in the background (the "shadow"). The import-time (blocking) share always
+   * uses the full budget: min(40, max(4, {@link maxConcurrentDownloads})).
+   * Lower is gentler on providers during playback; higher finishes the audit
+   * (and the final degraded/failed verdict) sooner.
+   */
+  censusShadowConcurrency: number;
+  /**
+   * Hard wall-clock cap on one census run (blocking + shadow) in ms. Bounds
+   * how long a background audit can keep an otherwise-idle engine alive; a
+   * capped census applies nothing (the blocking verdict stands).
+   */
+  censusMaxLifetimeMs: number;
   /**
    * Lazy RAR fragment resolution: for named multi-volume RAR sets whose exact
    * volume sizes come from PAR2 descriptors, skip the middle-volume probes at
@@ -120,8 +139,11 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   idleConnectionMs: 60_000,
   circuitBreakerThreshold: 5,
   circuitBreakerCooldownMs: 30_000,
-  availabilitySamplePoints: 3,
-  verifyMode: 'stat',
+  verifyMode: 'census',
+  verifyBudgetMs: 0,
+  damagePolicy: 'tolerant',
+  censusShadowConcurrency: 12,
+  censusMaxLifetimeMs: 30 * 60_000,
   lazyRarResolution: true,
   strictArchiveMembership: false,
 };

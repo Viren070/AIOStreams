@@ -4,22 +4,29 @@ import { createLogger } from '../logging/logger.js';
 import { getCacheFolder } from '../utils/general.js';
 import { appConfig } from '../utils/index.js';
 import { MultiProviderPool } from './pool/multi-provider-pool.js';
+import { PrioritySemaphore } from './pool/priority-semaphore.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
-import {
-  FileStream,
-  SeekableStream,
-  SegmentMemo,
-} from './pool/file-stream.js';
+import { FileStream, SeekableStream, SegmentMemo } from './pool/file-stream.js';
 import { trackSeekableStream } from './pool/tracked-stream.js';
 import {
   inspectNzb,
   selectBestVideo,
-  sampleTargetAvailability,
+  startCensus,
+  StatTrustCache,
+  CENSUS_CONCURRENCY,
   NzbContent,
   NzbContentFile,
   InspectOptions,
+  type CensusRun,
+  type CensusSnapshot,
 } from './pool/inspect/index.js';
+import {
+  classifyHoles,
+  classifyProjectedHoles,
+  type HoleVerdict,
+  type HoleHooks,
+} from './holes.js';
 import {
   inspectArchiveSets,
   groupArchiveSets,
@@ -109,14 +116,8 @@ function segmentArenaBytes(maxConcurrentDownloads: number): number {
  */
 const ARCHIVE_WINDOW_BYTES = 1 << 20;
 
-/**
- * Target STAT sample width when the import skipped middle-volume probes
- * (lazy parse): restores the availability evidence those probes used to
- * provide, at the cost of STAT round-trips only.
- */
-const CHASED_SAMPLE_POINTS = 16;
-
 export * from './types.js';
+export * from './holes.js';
 export * from './nzb/model.js';
 export { isProbablyObfuscated } from './nzb/obfuscation.js';
 export * from './stats/types.js';
@@ -182,6 +183,16 @@ export class UsenetEngine {
   private stats: StatsAccumulator;
   readonly options: EngineOptions;
   private purgeTimer?: NodeJS.Timeout;
+  /** Engine-lifetime per-provider STAT trust (census calibration results). */
+  private statTrust = new StatTrustCache();
+  /** Live census runs, so close() can cancel their workers promptly. */
+  private liveCensus = new Set<CensusRun>();
+  /**
+   * Shared probe budget for ALL live censuses (blocking + shadows): N
+   * concurrent censuses contend for these slots instead of multiplying
+   * pressure. Blocking phases acquire High and strictly preempt shadows.
+   */
+  private censusGate: PrioritySemaphore;
   /** Epoch ms of the last activity, for idle eviction by the registry. */
   lastUsedAt = Date.now();
 
@@ -190,6 +201,12 @@ export class UsenetEngine {
     options: Partial<EngineOptions> = {}
   ) {
     this.options = { ...DEFAULT_ENGINE_OPTIONS, ...options };
+    this.censusGate = new PrioritySemaphore(
+      Math.min(
+        CENSUS_CONCURRENCY,
+        Math.max(4, this.options.maxConcurrentDownloads)
+      )
+    );
     // Segment cache tiers:
     // - The pinned in-RAM arena (see SegmentArena) absorbs the archive path's
     //   constant re-touches: window boundaries land mid-segment, and
@@ -241,54 +258,200 @@ export class UsenetEngine {
         Math.max(8, this.options.maxConcurrentDownloads),
         INSPECT_MAX_CONCURRENCY
       );
-    const content = await inspectNzb(nzb, this.pool, {
-      ...opts,
-      concurrency: inspectConcurrency,
-      lazyArchives: opts.lazyArchives ?? this.options.lazyRarResolution,
-      strictArchiveMembership:
-        opts.strictArchiveMembership ?? this.options.strictArchiveMembership,
-    });
-    // External abort (e.g. a parallel-failover loser) must surface as a throw,W
-    opts.signal?.throwIfAborted();
-    // A definitive availability verdict from the gate / dead-abort means the
-    // import fails as missing_on_providers; archive parsing and target
-    // sampling would only spend fetches re-proving it.
-    if ((content.availability?.missing ?? 0) > 0) {
-      content.heads = undefined;
-      return content;
-    }
-    let anyChased = await this.inspectArchives(
-      nzb,
-      content,
-      inspectConcurrency,
-      opts.signal
-    );
-    // The probe heads exist solely as a hand-off to the archive parse, so free
-    // them (~16KB per file) before sampling/persisting.
-    content.heads = undefined;
     const verifyMode = opts.verifyMode ?? this.options.verifyMode;
-    const points =
-      opts.availabilitySamplePoints ?? this.options.availabilitySamplePoints;
-    // A chased import skipped its middle-volume probes, so its availability
-    // evidence is thinner; widen the STAT sample (still ~zero bytes). In `body`
-    // mode each extra point is a real transfer on the playback hot path, so keep
-    // it at the configured count instead of widening.
-    const samplePoints =
-      anyChased && verifyMode === 'stat'
-        ? Math.max(points, CHASED_SAMPLE_POINTS)
-        : points;
-    if (content.streamable && verifyMode !== 'none' && samplePoints > 0) {
-      await sampleTargetAvailability(
-        nzb,
-        this.pool,
-        content,
-        samplePoints,
-        verifyMode,
-        opts.signal
-      );
+
+    // The census runs from t=0, concurrently with the probe/parse phases
+    // below (Low-priority STATs, no download budget). Its blocking share ends
+    // when the inspect does (+ the optional verifyBudgetMs tail); the
+    // remainder keeps running as the post-resolve "shadow", adopted by the
+    // integration layer via `content.census`.
+    //
+    // The merged controller lets a catastrophic census verdict (dead release)
+    // abort the in-flight probes; probing a dead post is wasted work.
+    const ac = new AbortController();
+    const onExternalAbort = (): void => ac.abort();
+    if (opts.signal) {
+      if (opts.signal.aborted) ac.abort();
+      else
+        opts.signal.addEventListener('abort', onExternalAbort, {
+          once: true,
+        });
     }
-    opts.signal?.throwIfAborted();
-    return content;
+    const census =
+      verifyMode === 'census' && nzb.files.length > 0
+        ? startCensus(nzb, this.pool, {
+            signal: ac.signal,
+            trust: this.statTrust,
+            concurrency: this.censusGate.capacity,
+            shadowConcurrency: this.options.censusShadowConcurrency,
+            gate: this.censusGate,
+            maxLifetimeMs: this.options.censusMaxLifetimeMs,
+          })
+        : undefined;
+    if (census) {
+      census.onCatastrophic(() => ac.abort());
+      this.registerCensus(census);
+    }
+
+    try {
+      const content = await inspectNzb(nzb, this.pool, {
+        ...opts,
+        signal: ac.signal,
+        concurrency: inspectConcurrency,
+        lazyArchives: opts.lazyArchives ?? this.options.lazyRarResolution,
+        strictArchiveMembership:
+          opts.strictArchiveMembership ?? this.options.strictArchiveMembership,
+        hasConfirmedMiss: census && (() => census.hasConfirmedMiss()),
+      });
+      // External abort (e.g. a parallel-failover loser) must surface as a throw.
+      opts.signal?.throwIfAborted();
+      // Catastrophic census abort: the release is dead on every trusted
+      // provider; report availability and skip archive parsing (probes could
+      // only re-prove it). The library fails this as missing_on_providers.
+      if (census && ac.signal.aborted) {
+        const snap = census.snapshot();
+        census.cancel();
+        content.heads = undefined;
+        content.streamable = false;
+        content.availability = { sampled: snap.sampled, missing: snap.missing };
+        return content;
+      }
+      // A definitive availability verdict from the probe dead-abort means the
+      // import fails as missing_on_providers; archive parsing would only
+      // spend fetches re-proving it.
+      if ((content.availability?.missing ?? 0) > 0) {
+        census?.cancel();
+        content.heads = undefined;
+        return content;
+      }
+      await this.inspectArchives(
+        nzb,
+        content,
+        inspectConcurrency,
+        ac.signal,
+        census?.hasConfirmedMiss() ?? false
+      );
+      // The probe heads exist solely as a hand-off to the archive parse, so
+      // free them before verdicts/persisting.
+      content.heads = undefined;
+      if (census) {
+        const snap = await census.endBlockingPhase(
+          opts.verifyBudgetMs ?? this.options.verifyBudgetMs
+        );
+        this.applyCensusVerdict(nzb, content, census, snap);
+      }
+      opts.signal?.throwIfAborted();
+      return content;
+    } catch (err) {
+      census?.cancel();
+      throw err;
+    } finally {
+      if (opts.signal) {
+        opts.signal.removeEventListener('abort', onExternalAbort);
+      }
+    }
+  }
+
+  /**
+   * Blocking-phase census verdict for the import, applied to `content`:
+   *
+   * - fail the import (via `content.availability`, the same funnel the
+   *   probe dead-abort uses) when the PRIMARY playback target's confirmed
+   *   damage already exceeds the playback padding caps, when a projection
+   *   from the uniform sample clearly exceeds them and the primary target is
+   *   confirmed damaged, or (strict policy) when ANY confirmed hole touches
+   *   an eligible target's backing set;
+   * - otherwise adopt the still-running census (`content.census`) so the
+   *   integration layer finishes it in the background, recording any small
+   *   confirmed damage as `content.provisionalHoles` (entry persists as
+   *   degraded).
+   */
+  private applyCensusVerdict(
+    nzb: Nzb,
+    content: NzbContent,
+    census: CensusRun,
+    snap: CensusSnapshot
+  ): void {
+    const primary = selectBestVideo(content);
+    if (!primary || !content.streamable) {
+      // Nothing playable: the no-streamable verdict path owns this import.
+      census.cancel();
+      return;
+    }
+    const backing = new Set(this.backingIndices(nzb, content, primary.index));
+    const runs = snap.holes.runsForFiles(backing);
+    let backingSegs = 0;
+    let backingBytes = 0;
+    for (const i of backing) {
+      backingSegs += nzb.files[i]?.segments.length ?? 0;
+      backingBytes += nzb.files[i]?.encodedSize ?? 0;
+    }
+    const segBytes = backingSegs > 0 ? backingBytes / backingSegs : 750_000;
+    const observed: HoleVerdict = classifyHoles(
+      runs,
+      backingBytes > 0 ? backingBytes : undefined,
+      segBytes
+    );
+    const projected = classifyProjectedHoles(
+      snap.missing,
+      snap.sampled,
+      snap.total,
+      snap.longestRun
+    );
+    const primaryDamaged = runs.length > 0;
+    const strict = this.options.damagePolicy === 'strict';
+    const failed =
+      observed === 'failed' ||
+      (projected === 'failed' && primaryDamaged) ||
+      (strict && snap.missing > 0);
+    logger.debug(
+      {
+        nzbHash: nzb.hash,
+        sampled: snap.sampled,
+        total: snap.total,
+        missing: snap.missing,
+        longestRun: snap.longestRun,
+        observed,
+        projected,
+        complete: snap.complete,
+        strict,
+        failed,
+      },
+      'census blocking verdict'
+    );
+    if (failed) {
+      content.availability = {
+        sampled: snap.sampled,
+        missing: Math.max(1, snap.missing),
+      };
+      census.cancel();
+      return;
+    }
+    content.census = census;
+    if (primaryDamaged) content.provisionalHoles = snap.holes.runs();
+  }
+
+  /**
+   * NZB file indices backing a playback target: the archive set's volumes for
+   * an inner file, else the file itself.
+   */
+  backingIndices(nzb: Nzb, content: NzbContent, fileIndex: number): number[] {
+    const refs: ContentFileRef[] = content.files.map((f) => ({
+      index: f.index,
+      filename: f.filename,
+      segments: nzb.files[f.index]?.segments.length,
+      firstSegmentNumber: nzb.files[f.index]?.segments[0]?.number,
+    }));
+    const set = groupArchiveSets(refs).find(
+      (s) => s.memberIndices.includes(fileIndex) || s.index === fileIndex
+    );
+    return set?.memberIndices ?? [fileIndex];
+  }
+
+  /** Track a live census so {@link close} can cancel its workers promptly. */
+  private registerCensus(census: CensusRun): void {
+    this.liveCensus.add(census);
+    void census.done.finally(() => this.liveCensus.delete(census));
   }
 
   /**
@@ -299,7 +462,8 @@ export class UsenetEngine {
     nzb: Nzb,
     content: NzbContent,
     parseConcurrency: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    confirmedMiss = false
   ): Promise<boolean> {
     // Raw numeric splits (`x.001..x.NNN`, names recovered by now): what the
     // joined bytes are is decided by the first chunk's probed magic: a video
@@ -406,7 +570,9 @@ export class UsenetEngine {
         parseConcurrency,
         heads: content.heads,
         extraSets: joinedArchiveSets,
-        allowLazy: !content.gateMiss && this.options.lazyRarResolution,
+        // A census-confirmed miss disables the lazy parse: skipped middles
+        // would reduce exactly the evidence that maps the damage.
+        allowLazy: !confirmedMiss && this.options.lazyRarResolution,
         signal: ac.signal,
       });
       anyChased = sets.some((s) => s.chased);
@@ -508,13 +674,19 @@ export class UsenetEngine {
   async openFileStream(
     nzb: Nzb,
     selector: { fileIndex?: number; innerPath?: string; filename?: string },
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    holeHooks?: HoleHooks
   ): Promise<SeekableStream> {
     this.touch();
     if (selector.innerPath) {
       return this.track(
         nzb,
-        await this.openArchiveFileByPath(nzb, selector.innerPath, signal)
+        await this.openArchiveFileByPath(
+          nzb,
+          selector.innerPath,
+          signal,
+          holeHooks
+        )
       );
     }
     let file =
@@ -529,7 +701,14 @@ export class UsenetEngine {
         `file not found (filename=${selector.filename ?? '-'}, index=${selector.fileIndex ?? '-'})`
       );
     }
-    return this.track(nzb, await this.openFile(nzb, file, signal));
+    const fileIndex = nzb.files.indexOf(file);
+    return this.track(
+      nzb,
+      await this.openFile(nzb, file, signal, undefined, undefined, {
+        holeHooks,
+        fileIndex,
+      })
+    );
   }
 
   /**
@@ -574,19 +753,34 @@ export class UsenetEngine {
   private async openArchiveFileByPath(
     nzb: Nzb,
     innerPath: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    holeHooks?: HoleHooks
   ): Promise<SeekableStream> {
     const sets = groupArchiveSets(this.fileRefs(nzb));
     if (sets.length === 0) {
       throw new Error(`no archive set in nzb for inner file (${innerPath})`);
     }
     if (sets.length === 1) {
-      return this.openArchiveFile(nzb, sets[0].index, innerPath, signal);
+      return this.openArchiveFile(
+        nzb,
+        sets[0].index,
+        innerPath,
+        signal,
+        undefined,
+        holeHooks
+      );
     }
     let lastErr: unknown;
     for (const set of sets) {
       try {
-        return await this.openArchiveFile(nzb, set.index, innerPath, signal);
+        return await this.openArchiveFile(
+          nzb,
+          set.index,
+          innerPath,
+          signal,
+          undefined,
+          holeHooks
+        );
       } catch (err) {
         // Inner path absent from this set: try the next one. Any other failure
         // (encrypted/compressed/transport) is real and propagates immediately.
@@ -610,7 +804,8 @@ export class UsenetEngine {
   async selectAndOpen(
     nzb: Nzb,
     criteria: SelectCriteria = { auto: true },
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    holeHooks?: HoleHooks
   ): Promise<FileStreamHandle> {
     this.touch();
     const content = await this.inspect(nzb, { mode: 'quick', signal });
@@ -637,9 +832,20 @@ export class UsenetEngine {
           chosen.index,
           chosen.innerPath,
           signal,
-          fileSizes
+          fileSizes,
+          holeHooks
         )
-      : await this.openFile(nzb, nzb.files[chosen.index], signal);
+      : await this.openFile(
+          nzb,
+          nzb.files[chosen.index],
+          signal,
+          undefined,
+          undefined,
+          {
+            holeHooks,
+            fileIndex: chosen.index,
+          }
+        );
     return { stream: this.track(nzb, stream), file: chosen };
   }
 
@@ -649,7 +855,8 @@ export class UsenetEngine {
     archiveIndex: number,
     innerPath: string,
     signal?: AbortSignal,
-    fileSizes?: Map<number, number>
+    fileSizes?: Map<number, number>,
+    holeHooks?: HoleHooks
   ): Promise<SeekableStream> {
     const set = groupArchiveSets(this.fileRefs(nzb)).find(
       (s) => s.index === archiveIndex || s.memberIndices.includes(archiveIndex)
@@ -665,7 +872,7 @@ export class UsenetEngine {
     const opened = await openArchiveInner(set, opener, innerPath, {
       knownSizes,
       password: nzb.meta.password,
-      ...this.archiveStreamOpts(),
+      ...this.archiveStreamOpts(holeHooks, set.index),
     });
     return opened.stream;
   }
@@ -680,14 +887,15 @@ export class UsenetEngine {
     nzb: Nzb,
     layout: ArchiveStreamLayout,
     signal?: AbortSignal,
-    lazyHooks?: LazyResolveHooks
+    lazyHooks?: LazyResolveHooks,
+    holeHooks?: HoleHooks
   ): Promise<SeekableStream> {
     this.touch();
     const opener: FileOpener = (index, knownSize, memo) =>
       this.openFile(nzb, nzb.files[index], signal, knownSize, memo);
     const stream = await rebuildArchiveStream(layout, opener, {
       password: nzb.meta.password,
-      ...this.archiveStreamOpts(),
+      ...this.archiveStreamOpts(holeHooks, layout.memberIndices[0]),
       lazyHooks,
     });
     return this.track(nzb, stream);
@@ -699,10 +907,22 @@ export class UsenetEngine {
    * the read-ahead depth in windows is scaled to hold read-ahead bytes
    * constant across window-granularity changes.
    */
-  private archiveStreamOpts(): {
+  private archiveStreamOpts(
+    holeHooks?: HoleHooks,
+    /**
+     * NZB file index the hole hooks account windows against. Windows span
+     * volume boundaries, so exact per-volume attribution is not meaningful;
+     * the set's representative index is a stable per-target key.
+     */
+    repFileIndex?: number
+  ): {
     concurrency: number;
     windowBytes: number;
     prefetchWindows: number;
+    onHole?: (info: {
+      windowOffset: number;
+      windowLength: number;
+    }) => 'pad' | 'fail';
   } {
     return {
       concurrency: Math.min(
@@ -716,6 +936,15 @@ export class UsenetEngine {
           (this.options.prefetchSegments * (1 << 20)) / ARCHIVE_WINDOW_BYTES
         )
       ),
+      onHole:
+        holeHooks && repFileIndex !== undefined
+          ? (info) =>
+              holeHooks.onHole({
+                nzbFileIndex: repFileIndex,
+                windowOffset: info.windowOffset,
+                bytes: info.windowLength,
+              })
+          : undefined,
     };
   }
 
@@ -724,7 +953,13 @@ export class UsenetEngine {
     file: NzbFile,
     signal?: AbortSignal,
     knownSize?: number,
-    memo?: SegmentMemo
+    memo?: SegmentMemo,
+    /**
+     * Hole handling for PLAIN playback targets only. Internal per-volume
+     * streams of the archive path never pad here; the window level owns
+     * archive padding.
+     */
+    holes?: { holeHooks?: HoleHooks; fileIndex: number }
   ): Promise<FileStream> {
     const stream = new FileStream(
       this.pool,
@@ -735,7 +970,10 @@ export class UsenetEngine {
       },
       nzb.hash,
       this.options,
-      memo
+      memo,
+      holes?.holeHooks
+        ? { hooks: holes.holeHooks, fileIndex: holes.fileIndex }
+        : undefined
     );
     await stream.open(signal);
     return stream;
@@ -765,11 +1003,17 @@ export class UsenetEngine {
 
   /**
    * True while this engine is doing real work: a read stream is open (even a
-   * stalled one, since a paused player fetches nothing) or article fetches are in
-   * flight (imports, inspections).
+   * stalled one, since a paused player fetches nothing), article fetches are
+   * in flight (imports, inspections), or a census is still auditing a
+   * release. Counting censuses keeps the registry from evicting an engine
+   * mid-shadow; the census max-lifetime cap bounds how long that can pin one.
    */
   isBusy(): boolean {
-    return this.stats.activeStreams > 0 || this.pool.downloadsInUse > 0;
+    return (
+      this.stats.activeStreams > 0 ||
+      this.pool.downloadsInUse > 0 ||
+      this.liveCensus.size > 0
+    );
   }
 
   /** Unified live snapshot (tiles + pool + per-provider + cache). */
@@ -803,6 +1047,10 @@ export class UsenetEngine {
 
   close(): void {
     if (this.purgeTimer) clearInterval(this.purgeTimer);
+    // Cancel any shadow census first so its workers stop submitting to the
+    // pool being closed (they self-resolve with `complete: false`).
+    for (const census of this.liveCensus) census.cancel();
+    this.liveCensus.clear();
     this.pool.close();
     // Persist the disk index + drain pending writes; keep on-disk files so the
     // cache survives the eviction/restart (do NOT clear()).

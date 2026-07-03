@@ -63,10 +63,8 @@ const STATUS_STYLE: Record<LibraryStatus, string> = {
   queued: 'bg-[--subtle] text-[--muted]',
   inspecting: 'bg-amber-500/15 text-amber-500',
   available: 'bg-emerald-500/15 text-emerald-500',
+  degraded: 'bg-orange-500/15 text-orange-500',
   failed: 'bg-red-500/15 text-red-500',
-  // `streaming` is never persisted today (live streams are tracked separately on
-  // the Streams tab); kept in the type/style map only for completeness.
-  streaming: 'bg-brand/15 text-brand',
 };
 
 /** Status filter options for the Select (single-select; "all" clears it). */
@@ -75,6 +73,7 @@ const STATUS_OPTIONS: { value: LibraryStatus | 'all'; label: string }[] = [
   { value: 'queued', label: 'Queued' },
   { value: 'inspecting', label: 'Inspecting' },
   { value: 'available', label: 'Available' },
+  { value: 'degraded', label: 'Degraded' },
   { value: 'failed', label: 'Failed' },
 ];
 
@@ -298,7 +297,8 @@ function EntryActions({
   onDelete: (hash: string) => void;
 }) {
   const playUrl = usePlayUrl();
-  const available = e.status === 'available';
+  // Degraded entries are playable: known holes are zero-filled at playback.
+  const available = e.status === 'available' || e.status === 'degraded';
   const multiFile = e.files.length > 1;
   // Per-file preview/download only makes sense for a single, available file.
   const canPlayOne = available && !multiFile;
@@ -790,7 +790,8 @@ export function UsenetLibraryPage() {
                 >
                   Done
                 </Tooltip>
-              </>              ) : (
+              </>
+            ) : (
               <>
                 <Tooltip
                   trigger={

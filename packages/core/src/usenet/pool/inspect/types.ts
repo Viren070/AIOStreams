@@ -1,5 +1,7 @@
 import type { FileCategory } from '../file-type.js';
 import type { ArchiveInnerEntry } from '../archive/open/index.js';
+import type { CensusRun } from './census.js';
+import type { HoleRun } from '../../holes.js';
 
 export interface NzbContentFile {
   /** Index of this file within the NZB. */
@@ -50,12 +52,17 @@ export interface NzbContent {
    */
   heads?: Map<number, Buffer>;
   /**
-   * The pre-probe release STAT gate found a missing segment that did NOT
-   * justify failing the import outright (sidecar / one volume of a pack).
-   * Evidence-reducing optimisations (probe skipping for chased sets) must be
-   * disabled for this import; the full probe pass maps the damage precisely.
+   * The still-running census (blocking phase over, shadow continuing). The
+   * integration layer adopts it (`spawnCensusShadow`) or cancels it.
+   * TRANSIENT: never serialized.
    */
-  gateMiss?: boolean;
+  census?: CensusRun;
+  /**
+   * Damage confirmed during the blocking phase that stayed within the
+   * playback padding caps (tolerant policy): the import proceeds but the
+   * entry is persisted as `degraded` with these holes. TRANSIENT.
+   */
+  provisionalHoles?: HoleRun[];
 }
 
 export interface InspectOptions {
@@ -63,10 +70,15 @@ export interface InspectOptions {
   mode?: 'quick' | 'full';
   /** Bound on concurrent file inspections. */
   concurrency?: number;
-  /** Override the engine's availability sample-point count for this inspect. */
-  availabilitySamplePoints?: number;
-  /** Override the engine's target-availability verify mode for this inspect. */
-  verifyMode?: 'none' | 'stat' | 'body';
+  /** Override the engine's verify mode for this inspect. */
+  verifyMode?: 'none' | 'census';
+  /** Override the engine's extra census blocking budget for this inspect. */
+  verifyBudgetMs?: number;
+  /**
+   * Live census evidence: true once a confirmed miss exists. The probe plan
+   * must not ADD evidence-reducing skips (lazy middles) after this flips.
+   */
+  hasConfirmedMiss?: () => boolean;
   /**
    * Skip middle-volume probes of par2-named RAR sets (lazy fragment
    * resolution). The skipped volumes' exact sizes come from the PAR2
