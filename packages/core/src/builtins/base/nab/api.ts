@@ -24,6 +24,35 @@ export class NabApiError extends Error {
   }
 }
 
+export class NabRateLimitError extends Error {
+  constructor(
+    message: string,
+    public readonly retryAfterMs: number
+  ) {
+    super(message);
+    this.name = 'NabRateLimitError';
+  }
+}
+
+const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 10 * 60 * 1000;
+const rateLimitCooldowns = new Map<string, number>();
+
+function parseRetryAfterMs(value: string | null | undefined): number {
+  if (!value) return DEFAULT_RATE_LIMIT_COOLDOWN_MS;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.max(1000, seconds * 1000);
+  }
+
+  const date = Date.parse(value);
+  if (Number.isFinite(date)) {
+    return Math.max(1000, date - Date.now());
+  }
+
+  return DEFAULT_RATE_LIMIT_COOLDOWN_MS;
+}
+
 // --- Zod Schemas ---
 const convertString = z
   .string()
@@ -358,6 +387,34 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     }
   }
 
+  private getRateLimitKey(): string {
+    return `${this.namespace}:${this.baseUrl}${this.apiPath}`;
+  }
+
+  private getRateLimitRemainingMs(): number {
+    const until = rateLimitCooldowns.get(this.getRateLimitKey());
+    if (!until) return 0;
+
+    const remaining = until - Date.now();
+    if (remaining <= 0) {
+      rateLimitCooldowns.delete(this.getRateLimitKey());
+      return 0;
+    }
+
+    return remaining;
+  }
+
+  private setRateLimitCooldown(retryAfterMs?: number): void {
+    const duration = Math.max(
+      1000,
+      retryAfterMs || DEFAULT_RATE_LIMIT_COOLDOWN_MS
+    );
+    rateLimitCooldowns.set(this.getRateLimitKey(), Date.now() + duration);
+    this.logger.warn(
+      `${this.namespace} endpoint rate limited, cooling down for ${Math.ceil(duration / 1000)}s`
+    );
+  }
+
   public async getCapabilities(): Promise<Capabilities> {
     const cacheKey = `${this.baseUrl}${this.apiPath}?t=caps&${JSON.stringify(this.params)}`;
     return this.capabilitiesCache.wrap(
@@ -372,6 +429,16 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     params: Record<string, string | number | boolean> = {}
   ): Promise<SearchResponse<N>> {
     const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
+
+    if (this.getRateLimitRemainingMs() > 0) {
+      const cachedResult = await this.searchCache.get(cacheKey);
+      if (cachedResult !== undefined) {
+        this.logger.warn(
+          `${this.namespace} endpoint is cooling down after 429, returning cached search result without refresh`
+        );
+        return cachedResult;
+      }
+    }
 
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
@@ -407,6 +474,14 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     params: Record<string, string | number | boolean> = {},
     timeout?: number
   ): Promise<T> {
+    const remaining = this.getRateLimitRemainingMs();
+    if (remaining > 0) {
+      throw new NabRateLimitError(
+        `429 - Too Many Requests (cooldown active for ${Math.ceil(remaining / 1000)}s)`,
+        remaining
+      );
+    }
+
     const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
@@ -454,6 +529,14 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         forceProxy: this.httpProxy,
       });
 
+      if (response.status === 429) {
+        const retryAfterMs = parseRetryAfterMs(
+          response.headers?.get?.('retry-after')
+        );
+        this.setRateLimitCooldown(retryAfterMs);
+        throw new NabRateLimitError('429 - Too Many Requests', retryAfterMs);
+      }
+
       const data = await response.text();
 
       let result: any | null = null;
@@ -468,6 +551,13 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       if (result && result.error) {
         const code = parseInt(result.error.$.code, 10);
         const description = result.error.$.description;
+        if (code === 429) {
+          this.setRateLimitCooldown(DEFAULT_RATE_LIMIT_COOLDOWN_MS);
+          throw new NabRateLimitError(
+            description || '429 - Too Many Requests',
+            DEFAULT_RATE_LIMIT_COOLDOWN_MS
+          );
+        }
         throw new NabApiError(code, description);
       }
 

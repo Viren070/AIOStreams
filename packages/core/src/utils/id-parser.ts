@@ -47,6 +47,15 @@ export interface ParsedId {
   ) => string;
 }
 
+export function parseStremioCoordinate(
+  value: number | string | undefined
+): number | undefined {
+  if (value === undefined || value === '') return undefined;
+  const numeric = Number(value);
+  // Stremio uses season 0 for Specials, so valid coordinates are non-negative.
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : undefined;
+}
+
 interface IdParserDefinition {
   type: IdType;
   externalType: ExternalIdType;

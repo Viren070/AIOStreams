@@ -81,6 +81,10 @@ export abstract class StreamExpressionEngine {
     this.parser.consts.isAnime = context.isAnime ?? false;
     this.parser.consts.season = context.season ?? -1;
     this.parser.consts.episode = context.episode ?? -1;
+    this.parser.consts.logicalSeason = context.logicalSeason ?? -1;
+    this.parser.consts.externalSeason = context.externalSeason ?? -1;
+    this.parser.consts.logicalEpisode = context.logicalEpisode ?? -1;
+    this.parser.consts.externalEpisode = context.externalEpisode ?? -1;
     this.parser.consts.genres = context.genres ?? [];
     this.parser.consts.title = context.title ?? '';
     this.parser.consts.year = context.year ?? 0;

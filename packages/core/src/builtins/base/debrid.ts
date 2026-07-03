@@ -6,7 +6,12 @@
   Stream,
 } from '../../db/schemas.js';
 import { z, ZodError } from 'zod';
-import { IdParser, IdType, ParsedId } from '../../utils/id-parser.js';
+import {
+  IdParser,
+  IdType,
+  ParsedId,
+  parseStremioCoordinate,
+} from '../../utils/id-parser.js';
 import {
   AnimeDatabase,
   BuiltinServiceId,
@@ -18,6 +23,11 @@ import {
   getSimpleTextHash,
   getTimeTakenSincePoint,
   SERVICE_DETAILS,
+  buildAnimeTitles,
+  calculateLogicalEpisode,
+  dedupeCleanTitles,
+  extractLogicalSeasonFromTitles,
+  buildAmbiguousAnimeQueryWaves,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
 import { TorrentClient } from '../../utils/torrent.js';
@@ -56,6 +66,13 @@ export interface SearchMetadata extends TitleMetadata {
   tmdbId?: number | null;
   tvdbId?: number | null;
   isAnime?: boolean;
+  logicalSeason?: number;
+  externalSeason?: number;
+  logicalEpisode?: number;
+  externalEpisode?: number;
+  externalTitle?: string;
+  externalTitles?: string[];
+  forceQuerySearch?: boolean;
   /** Full title list with language tags, used by buildQueries for language-aware scraping. */
   titlesWithLang?: MetadataTitle[];
   /** ISO 639-1 code of the content's original language (from TMDB). */
@@ -193,8 +210,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       this._searchMetadataPromise = Promise.resolve({
         primaryTitle: undefined,
         titles: [],
-        season: parsedId.season ? Number(parsedId.season) : undefined,
-        episode: parsedId.episode ? Number(parsedId.episode) : undefined,
+        season: parseStremioCoordinate(parsedId.season),
+        episode: parseStremioCoordinate(parsedId.episode),
       });
     }
 
@@ -389,6 +406,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       episode: searchMetadata.episode,
       absoluteEpisode: searchMetadata.absoluteEpisode,
       relativeAbsoluteEpisode: searchMetadata.relativeAbsoluteEpisode,
+      logicalSeason: searchMetadata.logicalSeason,
+      externalSeason: searchMetadata.externalSeason,
+      logicalEpisode: searchMetadata.logicalEpisode,
+      externalEpisode: searchMetadata.externalEpisode,
     };
     const metadataId = getSimpleTextHash(JSON.stringify(titleMetadata));
     await metadataStore().set(
@@ -445,11 +466,31 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       /** @deprecated Use titleLanguages instead. */
       useAllTitles?: boolean;
       titleLanguages?: string[];
+      maxTitles?: number;
+      includeSeasonOnly?: boolean;
+      includeAbsoluteEpisode?: boolean;
+      includeRelativeAbsoluteEpisode?: boolean;
+      includeExternalQueries?: boolean;
+      includeEpisodeOnly?: boolean;
     }
   ): string[] {
-    const { addYear, addSeasonEpisode } = {
+    const {
+      addYear,
+      addSeasonEpisode,
+      maxTitles,
+      includeSeasonOnly,
+      includeAbsoluteEpisode,
+      includeRelativeAbsoluteEpisode,
+      includeExternalQueries,
+      includeEpisodeOnly,
+    } = {
       addYear: true,
       addSeasonEpisode: true,
+      includeSeasonOnly: true,
+      includeAbsoluteEpisode: true,
+      includeRelativeAbsoluteEpisode: true,
+      includeExternalQueries: true,
+      includeEpisodeOnly: false,
       ...options,
     };
     let queries: string[] = [];
@@ -499,39 +540,78 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     } else {
       titles = [metadata.primaryTitle];
     }
+    titles = dedupeCleanTitles(titles);
+    const cleanedPrimaryTitle = cleanTitle(metadata.primaryTitle);
+    const primaryIndex = titles.findIndex(
+      (title) => title.toLowerCase() === cleanedPrimaryTitle.toLowerCase()
+    );
+    if (primaryIndex > 0) {
+      const [primaryTitle] = titles.splice(primaryIndex, 1);
+      titles.unshift(primaryTitle);
+    }
+    if (maxTitles && maxTitles > 0) {
+      titles = titles.slice(0, maxTitles);
+    }
 
     const titlePlaceholder = '<___title___>';
+    const querySeason = parseStremioCoordinate(
+      metadata.logicalSeason ?? parsedId.season
+    );
+    const queryEpisode = parseStremioCoordinate(
+      metadata.logicalEpisode ?? parsedId.episode
+    );
+    const externalSeason = metadata.externalSeason;
+    const externalEpisode = metadata.externalEpisode;
+
     const addQuery = (query: string) => {
       titles.forEach((title) => {
         queries.push(query.replace(titlePlaceholder, title));
       });
     };
+    const addExternalQuery = (query: string) => {
+      const externalTitles = metadata.externalTitles?.length
+        ? metadata.externalTitles
+        : metadata.externalTitle
+          ? [metadata.externalTitle]
+          : [];
+      externalTitles.forEach((title) => {
+        queries.push(query.replace(titlePlaceholder, cleanTitle(title)));
+      });
+    };
+
     if (parsedId.mediaType === 'movie' && addYear) {
       addQuery(
         `${titlePlaceholder}${metadata.year ? ` ${metadata.year}` : ''}`
       );
     } else if (parsedId.mediaType === 'series' && addSeasonEpisode) {
       if (
-        parsedId.season &&
-        (parsedId.episode ? Number(parsedId.episode) < 100 : true)
+        includeSeasonOnly &&
+        querySeason !== undefined &&
+        (queryEpisode !== undefined ? queryEpisode < 100 : true)
       ) {
         addQuery(
-          `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}`
+          `${titlePlaceholder} S${querySeason.toString().padStart(2, '0')}`
         );
       }
-      if (metadata.absoluteEpisode) {
+      if (includeAbsoluteEpisode && metadata.absoluteEpisode) {
         addQuery(
           `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`
         );
-      } else if (parsedId.episode && !parsedId.season) {
+      } else if (queryEpisode !== undefined && querySeason === undefined) {
         addQuery(
-          `${titlePlaceholder} E${parsedId.episode!.toString().padStart(2, '0')}`
+          `${titlePlaceholder} E${queryEpisode.toString().padStart(2, '0')}`
+        );
+      }
+      if (includeEpisodeOnly && queryEpisode !== undefined) {
+        addQuery(
+          `${titlePlaceholder} ${queryEpisode.toString().padStart(2, '0')}`
         );
       }
       if (
+        includeRelativeAbsoluteEpisode &&
         // if relative absolute exists and is different from absoluteEpisode and episode
         metadata.relativeAbsoluteEpisode &&
-        [metadata.absoluteEpisode, parsedId.episode].every(
+        [metadata.absoluteEpisode, queryEpisode].every(
           (v) => v !== metadata.relativeAbsoluteEpisode
         )
       ) {
@@ -539,15 +619,48 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode!.toString().padStart(2, '0')}`
         );
       }
-      if (parsedId.season && parsedId.episode) {
+      if (querySeason !== undefined && queryEpisode !== undefined) {
         addQuery(
-          `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`
+          `${titlePlaceholder} S${querySeason.toString().padStart(2, '0')}E${queryEpisode.toString().padStart(2, '0')}`
+        );
+      }
+      if (
+        includeExternalQueries &&
+        externalSeason !== undefined &&
+        externalEpisode !== undefined &&
+        (externalSeason !== querySeason || externalEpisode !== queryEpisode)
+      ) {
+        addExternalQuery(
+          `${titlePlaceholder} S${externalSeason.toString().padStart(2, '0')}E${externalEpisode.toString().padStart(2, '0')}`
+        );
+        addExternalQuery(
+          `${titlePlaceholder} ${externalEpisode.toString().padStart(2, '0')}`
         );
       }
     } else {
       addQuery(titlePlaceholder);
     }
-    return queries;
+    return queries.filter(
+      (query, index, array) => array.indexOf(query) === index
+    );
+  }
+
+  protected buildAmbiguousAnimeQueryWaves(
+    parsedId: ParsedId,
+    metadata: SearchMetadata,
+    options: { maxBaseTitles?: number; maxEntryTitles?: number } = {}
+  ): string[][] {
+    if (
+      !metadata.isAnime ||
+      !metadata.forceQuerySearch ||
+      parsedId.mediaType !== 'series' ||
+      metadata.logicalSeason === undefined ||
+      metadata.logicalEpisode === undefined
+    ) {
+      return [];
+    }
+
+    return buildAmbiguousAnimeQueryWaves(metadata, options);
   }
 
   protected abstract _searchTorrents(
@@ -564,8 +677,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const animeEntry = AnimeDatabase.getInstance().getEntryById(
       parsedId.type,
       parsedId.value,
-      parsedId.season ? Number(parsedId.season) : undefined,
-      parsedId.episode ? Number(parsedId.episode) : undefined
+      parseStremioCoordinate(parsedId.season),
+      parseStremioCoordinate(parsedId.episode)
     );
 
     // Extract seasonYear from anime entry
@@ -575,6 +688,26 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     if (animeEntry && !parsedId.season) {
       enrichParsedIdWithAnimeEntry(parsedId, animeEntry);
     }
+
+    const externalSeason = parseStremioCoordinate(parsedId.season);
+    const externalEpisode = parseStremioCoordinate(parsedId.episode);
+    const useLogicalAnimeCoordinates = !!animeEntry && externalSeason !== 0;
+    const logicalSeason = useLogicalAnimeCoordinates
+      ? extractLogicalSeasonFromTitles([
+          animeEntry?.title,
+          ...(animeEntry?.synonyms ?? []),
+        ])
+      : undefined;
+    const logicalEpisode = useLogicalAnimeCoordinates
+      ? calculateLogicalEpisode(externalEpisode, animeEntry)
+      : externalEpisode;
+    const isAmbiguousAnimeSeason = !!(
+      animeEntry &&
+      logicalSeason !== undefined &&
+      externalSeason !== undefined &&
+      externalSeason > 0 &&
+      logicalSeason !== externalSeason
+    );
 
     const metadata = await new MetadataService({
       tmdbAccessToken: this.userData.tmdbReadAccessToken,
@@ -665,6 +798,25 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       parsedId.type === 'imdbId'
         ? parsedId.value.toString()
         : animeEntry?.mappings?.imdbId?.toString();
+    const animeTitles = isAmbiguousAnimeSeason
+      ? buildAnimeTitles(animeEntry, metadata.title, logicalSeason, seasonYear)
+      : (metadata.titles?.map((t) => t.title) ?? []);
+    const primaryTitle =
+      isAmbiguousAnimeSeason && animeEntry?.title
+        ? cleanTitle(animeEntry.title)
+        : metadata.title;
+    const titlesWithLang = isAmbiguousAnimeSeason
+      ? animeTitles.map((title, index) => {
+          const existing = metadata.titles?.find(
+            (t) => cleanTitle(t.title) === title
+          );
+          if (existing) return existing;
+          return {
+            title,
+            language: index === 0 ? metadata.originalLanguage : undefined,
+          };
+        })
+      : (metadata.titles ?? []);
     // const tmdbId =
     //   parsedId.type === 'themoviedbId'
     //     ? parsedId.value.toString()
@@ -675,20 +827,27 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     //     : (animeEntry?.mappings?.thetvdbId?.toString() ?? null);
 
     const searchMetadata: SearchMetadata = {
-      primaryTitle: metadata.title,
-      titles: metadata.titles?.map((t) => t.title) ?? [],
-      titlesWithLang: metadata.titles ?? [],
+      primaryTitle,
+      titles: animeTitles,
+      titlesWithLang,
       originalLanguage: metadata.originalLanguage,
-      season: parsedId.season ? Number(parsedId.season) : undefined,
-      episode: parsedId.episode ? Number(parsedId.episode) : undefined,
+      season: logicalSeason ?? externalSeason,
+      logicalSeason,
+      externalSeason,
+      episode: logicalEpisode ?? externalEpisode,
+      logicalEpisode,
+      externalEpisode,
       absoluteEpisode,
       relativeAbsoluteEpisode,
-      year: metadata.year,
+      year: isAmbiguousAnimeSeason && seasonYear ? seasonYear : metadata.year,
       seasonYear,
+      externalTitle: metadata.title,
+      externalTitles: metadata.titles?.map((t) => t.title) ?? [],
       imdbId,
       tmdbId: metadata.tmdbId ?? null,
       tvdbId: metadata.tvdbId ?? null,
       isAnime: animeEntry ? true : false,
+      forceQuerySearch: isAmbiguousAnimeSeason,
     };
 
     this.logger.debug(
