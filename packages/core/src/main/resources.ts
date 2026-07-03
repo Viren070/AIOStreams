@@ -850,7 +850,11 @@ export async function getStreams(
       if (streamsToPreload.length > 0) {
         // mark streams as preloading for formatter
         for (const s of streamsToPreload) {
-          s.preloading = true;
+          // cant mutate as select returns copys via zod parsing, so we need to find the original stream via ID.
+          const originalStream = finalStreams.find((fs) => fs.id === s.id);
+          if (originalStream) {
+            originalStream.preloading = true;
+          }
         }
         setImmediate(() => {
           pingStreamUrls(streamsToPreload).catch((error) => {
