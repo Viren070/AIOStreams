@@ -190,6 +190,8 @@ export async function rebuildArchiveStream(
     prefetchWindows?: number;
     /** Persistence/invalidations hooks for lazy (pending-fragment) layouts. */
     lazyHooks?: LazyResolveHooks;
+    /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
+    onHole?: ArchiveStreamOptions['onHole'];
   } = {}
 ): Promise<SeekableStream> {
   const password = opts.password ?? '';
@@ -197,6 +199,7 @@ export async function rebuildArchiveStream(
     concurrency: opts.concurrency,
     windowBytes: opts.windowBytes,
     prefetchWindows: opts.prefetchWindows,
+    onHole: opts.onHole,
   };
   const outerVolumes: Volume[] = layout.memberIndices.map((index, i) => ({
     filename: `vol-${index}`,

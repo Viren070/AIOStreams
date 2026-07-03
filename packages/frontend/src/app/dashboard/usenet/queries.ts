@@ -185,8 +185,8 @@ export type LibraryStatus =
   | 'queued'
   | 'inspecting'
   | 'available'
-  | 'failed'
-  | 'streaming';
+  | 'degraded'
+  | 'failed';
 
 export type LibraryStatusGroup = 'active' | 'history' | 'all';
 

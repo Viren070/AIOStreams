@@ -3,7 +3,10 @@ import { SeekableStream } from '../file-stream.js';
 import { RandomAccess, readAtIntoFrom } from './random-access.js';
 import { DataFragment } from './types.js';
 import { LazyFragmentResolver } from './lazy-resolver.js';
-import { ParallelRangeStream } from './range-stream.js';
+import {
+  ParallelRangeStream,
+  type ParallelRangeStreamOptions,
+} from './range-stream.js';
 
 /** Default read window: roughly one NZB segment, so a window ≈ one fetch. */
 const DEFAULT_WINDOW_BYTES = 1 << 20; // 1 MiB
@@ -20,6 +23,8 @@ export interface ArchiveStreamOptions {
   windowBytes?: number;
   /** Read-ahead depth in windows (buffer = windows × windowBytes). */
   prefetchWindows?: number;
+  /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
+  onHole?: ParallelRangeStreamOptions['onHole'];
 }
 
 /**
@@ -34,6 +39,7 @@ export class ArchiveInnerStream implements SeekableStream {
   private readonly windowBytes: number;
   private readonly concurrency: number;
   private readonly prefetchWindows: number;
+  private readonly onHole?: ParallelRangeStreamOptions['onHole'];
 
   constructor(
     private source: RandomAccess,
@@ -67,6 +73,7 @@ export class ArchiveInnerStream implements SeekableStream {
       1,
       streamOpts.prefetchWindows ?? DEFAULT_PREFETCH_WINDOWS
     );
+    this.onHole = streamOpts.onHole;
   }
 
   size(): number {
@@ -146,6 +153,7 @@ export class ArchiveInnerStream implements SeekableStream {
       windowBytes: this.windowBytes,
       concurrency: this.concurrency,
       maxBufferedBytes: this.prefetchWindows * this.windowBytes,
+      onHole: this.onHole,
     });
   }
 }

@@ -27,6 +27,7 @@ import {
   type UsenetLibraryFile,
 } from '../../db/index.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
+import { attachProvisionalHoles, spawnCensusShadow } from './census-shadow.js';
 import {
   classifyNoStreamable,
   classifyAvailability,
@@ -306,9 +307,10 @@ export async function resolveFileList(
   // dashboard remains available) instead of serving a doomed stream.
   const availFail = classifyAvailability(content);
   if (availFail) {
+    content.census?.cancel();
     logger.warn(
       { nzbHash, ...content.availability },
-      'nzb failed availability sampling'
+      'nzb failed availability verification'
     );
     UsenetLibraryRepository.markFailed(
       nzbHash,
@@ -373,6 +375,7 @@ export async function resolveFileList(
     }
   }
   if (files.length === 0) {
+    content.census?.cancel();
     const byCategory: Record<string, number> = {};
     for (const f of content.files)
       byCategory[f.category] = (byCategory[f.category] ?? 0) + 1;
@@ -411,26 +414,40 @@ export async function resolveFileList(
   }
   const best = files.reduce((a, b) => (b.size > a.size ? b : a), files[0]);
 
+  const libFiles: UsenetLibraryFile[] = files.map((f) => ({
+    name: f.name,
+    size: f.size,
+    index: f.index,
+    path: f.path,
+    layout: f.path ? layoutByPath.get(f.path) : undefined,
+  }));
+  // Small damage the census confirmed within the blocking window: the entry
+  // lands as degraded with its per-file hole map attached (playback pre-pads).
+  const degraded = attachProvisionalHoles(engine, nzb, content, libFiles);
   UsenetLibraryRepository.upsertAvailable({
     nzbHash,
     name: playbackInfo.filename,
     size: files.reduce((s, f) => s + f.size, 0),
     fileIndex: best?.index,
-    files: files.map((f) => ({
-      name: f.name,
-      size: f.size,
-      index: f.index,
-      path: f.path,
-      layout: f.path ? layoutByPath.get(f.path) : undefined,
-    })),
+    files: libFiles,
     owner,
     source: 'auto',
     importMs: Date.now() - inspectStart,
     nzbUrl: playbackInfo.nzb,
     password: extractNzbPassword(nzb.meta, playbackInfo.filename),
+    status: degraded ? 'degraded' : 'available',
   }).catch((err) =>
     logger.warn({ err, nzbHash }, 'failed to persist usenet library entry')
   );
+  // The census tail keeps auditing in the background; its final verdict
+  // updates the entry (degraded/failed/promoted) when it completes.
+  spawnCensusShadow({
+    nzbHash,
+    name: playbackInfo.filename,
+    nzb,
+    content,
+    engine,
+  });
 
   return files;
 }
@@ -533,6 +550,7 @@ async function inspectNzbInBackground(args: {
 
     const availFail = classifyAvailability(content);
     if (availFail) {
+      content.census?.cancel();
       await UsenetLibraryRepository.markFailed(
         nzbHash,
         availFail.reason,
@@ -547,6 +565,7 @@ async function inspectNzbInBackground(args: {
     const files = collectLibraryFiles(content, releaseName);
 
     if (!files.some((f) => f.streamable)) {
+      content.census?.cancel();
       const { reason, code } = classifyNoStreamable(content);
       await UsenetLibraryRepository.markFailed(nzbHash, reason, name, code);
       return;
@@ -555,6 +574,7 @@ async function inspectNzbInBackground(args: {
     const best = files
       .filter((f) => f.streamable)
       .reduce((a, b) => (b.size > a.size ? b : a));
+    const degraded = attachProvisionalHoles(engine, nzb, content, files);
     await UsenetLibraryRepository.upsertAvailable({
       nzbHash,
       name,
@@ -566,7 +586,9 @@ async function inspectNzbInBackground(args: {
       importMs: Date.now() - startedAt,
       nzbUrl: sourceUrl,
       password: extractNzbPassword(nzb.meta, name),
+      status: degraded ? 'degraded' : 'available',
     });
+    spawnCensusShadow({ nzbHash, name, nzb, content, engine });
   } catch (err) {
     logger.warn({ err, nzbHash }, 'background nzb inspection failed');
     await UsenetLibraryRepository.markFailed(

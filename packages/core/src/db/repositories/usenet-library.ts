@@ -30,12 +30,21 @@ export interface UsenetLibraryFile {
    * as-is within the `files` JSON blob; only the usenet engine interprets it.
    */
   layout?: unknown;
+  /**
+   * Persisted hole map: segments confirmed missing on every provider, as
+   * serialised `HoleRun` rows `[nzbFileIndex, startSegment, count]` (see
+   * `usenet/holes.ts`). Written by the census shadow and by playback padding;
+   * replays pre-pad these ranges instead of re-discovering them through a
+   * failover round-trip. Engine-interpreted, like {@link layout}.
+   */
+  holes?: number[][];
 }
 
 export type UsenetLibraryStatus =
   | 'queued'
   | 'inspecting'
   | 'available'
+  | 'degraded'
   | 'failed'
   | 'streaming';
 
@@ -61,7 +70,11 @@ const ACTIVE_STATUSES: UsenetLibraryStatus[] = [
   'inspecting',
   'streaming',
 ];
-const HISTORY_STATUSES: UsenetLibraryStatus[] = ['available', 'failed'];
+const HISTORY_STATUSES: UsenetLibraryStatus[] = [
+  'available',
+  'degraded',
+  'failed',
+];
 
 export interface UsenetLibraryEntry {
   nzbHash: string;
@@ -148,6 +161,7 @@ const VALID_STATUSES = new Set<UsenetLibraryStatus>([
   'queued',
   'inspecting',
   'available',
+  'degraded',
   'failed',
   'streaming',
 ]);
@@ -245,28 +259,39 @@ export class UsenetLibraryRepository {
     usenetLibraryBus.emit('change');
   }
 
-  /** Update the lifecycle status (+ optional progress) of an entry. */
+  /**
+   * Update the lifecycle status (+ optional progress) of an entry.
+   * `guard.notIn` skips the update when the row is currently in one of those
+   * statuses (e.g. a census-shadow verdict must never resurrect `failed`).
+   */
   static async setStatus(
     nzbHash: string,
     status: UsenetLibraryStatus,
-    patch: { progress?: number } = {}
+    patch: { progress?: number; guard?: { notIn: UsenetLibraryStatus[] } } = {}
   ): Promise<void> {
     const progress =
       patch.progress ??
-      (status === 'available' || status === 'failed'
+      (status === 'available' || status === 'degraded' || status === 'failed'
         ? 1
         : status === 'inspecting'
           ? 0.5
           : 0);
+    const guard = patch.guard?.notIn?.length
+      ? sql` AND status NOT IN (${join(patch.guard.notIn.map((s) => sql`${s}`))})`
+      : sql``;
     await getDb().exec(
       sql`UPDATE usenet_library
           SET status = ${status}, progress = ${progress}, last_used_at = CURRENT_TIMESTAMP
-          WHERE nzb_hash = ${nzbHash}`
+          WHERE nzb_hash = ${nzbHash}${guard}`
     );
     usenetLibraryBus.emit('change');
   }
 
-  /** Record a successfully-inspected NZB and its streamable file list. */
+  /**
+   * Record a successfully-inspected NZB and its streamable file list.
+   * `status` may be `degraded` when the import's census confirmed small
+   * damage (the files carry the hole map; playback zero-fills).
+   */
   static async upsertAvailable(entry: {
     nzbHash: string;
     name?: string;
@@ -278,21 +303,23 @@ export class UsenetLibraryRepository {
     importMs?: number;
     nzbUrl?: string;
     password?: string;
+    status?: 'available' | 'degraded';
   }): Promise<void> {
     const filesJson = JSON.stringify(entry.files ?? []);
+    const status = entry.status ?? 'available';
     await getDb().exec(
       sql`INSERT INTO usenet_library
             (nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, last_used_at,
              nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, password)
           VALUES
-            (${entry.nzbHash}, ${entry.name ?? null}, ${entry.size ?? null}, ${entry.fileIndex ?? null}, ${filesJson}, 'available', NULL, NULL, 0, CURRENT_TIMESTAMP,
+            (${entry.nzbHash}, ${entry.name ?? null}, ${entry.size ?? null}, ${entry.fileIndex ?? null}, ${filesJson}, ${status}, NULL, NULL, 0, CURRENT_TIMESTAMP,
              ${entry.nzbHash}, 1, ${entry.size ?? 0}, ${entry.size ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.importMs ?? null}, ${entry.nzbUrl ?? null}, ${entry.password ?? null})
           ON CONFLICT(nzb_hash) DO UPDATE SET
             name = EXCLUDED.name,
             size = EXCLUDED.size,
             file_index = EXCLUDED.file_index,
             files = EXCLUDED.files,
-            status = 'available',
+            status = EXCLUDED.status,
             fail_reason = NULL,
             error_code = NULL,
             progress = 1,
@@ -338,31 +365,26 @@ export class UsenetLibraryRepository {
     );
   }
 
-  /** In-process per-hash patch chains (see {@link updateFileLayout}). */
-  private static layoutPatchChains = new Map<string, Promise<void>>();
+  /** In-process per-hash patch chains (see {@link patchFiles}). */
+  private static filesPatchChains = new Map<string, Promise<void>>();
 
   /**
-   * Patch ONE file's archive layout inside the `files` JSON blob. Lazy RAR
-   * fragment resolution persists its progress through this so later opens
-   * skip re-resolving; `layout: null` clears a poisoned layout so the next
-   * open takes the full-parse path. Read-modify-write serialized per hash via
-   * an in-process promise chain (single-process service — two episodes of the
+   * Read-modify-write the `files` JSON blob, serialized per hash via an
+   * in-process promise chain (single-process service; two episodes of the
    * same NZB streaming concurrently would otherwise last-writer-wins each
-   * other's patch). Deliberately does NOT emit a library change event:
-   * layouts are invisible to the dashboard and patches recur during playback.
+   * other's patch). `mutate` returns false to skip the write. Deliberately
+   * does NOT emit a library change event: these fields are invisible to the
+   * dashboard list and patches recur during playback.
    */
-  static updateFileLayout(
+  private static patchFiles(
     nzbHash: string,
-    path: string,
-    layout: unknown
+    mutate: (files: UsenetLibraryFile[]) => boolean
   ): Promise<void> {
-    const prev = this.layoutPatchChains.get(nzbHash) ?? Promise.resolve();
+    const prev = this.filesPatchChains.get(nzbHash) ?? Promise.resolve();
     const run = prev.then(async () => {
       const entry = await this.get(nzbHash);
       if (!entry) return;
-      const file = entry.files.find((f) => f.path === path);
-      if (!file) return;
-      file.layout = layout ?? undefined;
+      if (!mutate(entry.files)) return;
       await getDb().exec(
         sql`UPDATE usenet_library SET files = ${JSON.stringify(entry.files)} WHERE nzb_hash = ${nzbHash}`
       );
@@ -371,13 +393,83 @@ export class UsenetLibraryRepository {
     // later patches nor leaks an unhandled rejection; callers still see the
     // original promise.
     const tail = run.catch(() => {});
-    this.layoutPatchChains.set(nzbHash, tail);
+    this.filesPatchChains.set(nzbHash, tail);
     void tail.then(() => {
-      if (this.layoutPatchChains.get(nzbHash) === tail) {
-        this.layoutPatchChains.delete(nzbHash);
+      if (this.filesPatchChains.get(nzbHash) === tail) {
+        this.filesPatchChains.delete(nzbHash);
       }
     });
     return run;
+  }
+
+  /**
+   * Patch ONE file's archive layout inside the `files` JSON blob. Lazy RAR
+   * fragment resolution persists its progress through this so later opens
+   * skip re-resolving; `layout: null` clears a poisoned layout so the next
+   * open takes the full-parse path.
+   */
+  static updateFileLayout(
+    nzbHash: string,
+    path: string,
+    layout: unknown
+  ): Promise<void> {
+    return this.patchFiles(nzbHash, (files) => {
+      const file = files.find((f) => f.path === path);
+      if (!file) return false;
+      file.layout = layout ?? undefined;
+      return true;
+    });
+  }
+
+  /** Select a library file by inner path (preferred) or NZB file index. */
+  private static findFile(
+    files: UsenetLibraryFile[],
+    selector: { path?: string; index?: number }
+  ): UsenetLibraryFile | undefined {
+    if (selector.path !== undefined) {
+      return files.find((f) => f.path === selector.path);
+    }
+    if (selector.index !== undefined) {
+      return files.find((f) => f.index === selector.index);
+    }
+    return undefined;
+  }
+
+  /**
+   * Replace ONE file's persisted hole map (serialised `HoleRun` rows; see
+   * `usenet/holes.ts`). Written by the census shadow and by playback padding
+   * (debounced by callers); `null` clears it.
+   */
+  static updateFileHoles(
+    nzbHash: string,
+    selector: { path?: string; index?: number },
+    holes: number[][] | null
+  ): Promise<void> {
+    return this.patchFiles(nzbHash, (files) => {
+      const file = this.findFile(files, selector);
+      if (!file) return false;
+      file.holes = holes && holes.length > 0 ? holes : undefined;
+      return true;
+    });
+  }
+
+  /**
+   * Flip ONE file's streamable flag (census shadow marking a pack member
+   * whose backing volumes are dead). Emits a change event: this is visible
+   * in the dashboard browse tree.
+   */
+  static async updateFileStreamable(
+    nzbHash: string,
+    selector: { path?: string; index?: number },
+    streamable: boolean
+  ): Promise<void> {
+    await this.patchFiles(nzbHash, (files) => {
+      const file = this.findFile(files, selector);
+      if (!file || file.streamable === streamable) return false;
+      file.streamable = streamable;
+      return true;
+    });
+    usenetLibraryBus.emit('change');
   }
 
   static async delete(nzbHash: string): Promise<void> {

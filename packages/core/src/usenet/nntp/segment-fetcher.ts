@@ -85,10 +85,36 @@ export interface SegmentFetcher {
     priority: CommandPriority,
     signal: AbortSignal | undefined
   ): Promise<boolean>;
+  /** STAT probe that reports which provider answered (census evidence). */
+  statSegmentDetailed(
+    messageId: string,
+    nzbHash: string | undefined,
+    priority: CommandPriority,
+    signal: AbortSignal | undefined,
+    providerIds?: readonly string[]
+  ): Promise<StatDetail>;
+  /** BODY existence probe on exactly one provider (STAT-trust calibration). */
+  probeBodyOnProvider(
+    segment: NzbSegmentRef,
+    providerId: string,
+    signal?: AbortSignal
+  ): Promise<'ok' | 'not_found' | 'unreachable'>;
+  /** Configured provider ids, in priority order. */
+  providerIds(): string[];
   /** Per-provider pool info for the dashboard. */
   info(): ProviderPoolInfo[];
   purgeStaleIdles(): void;
   close(): void;
+}
+
+/** Outcome of a detailed STAT probe (see {@link SegmentFetcher}). */
+export interface StatDetail {
+  /** True when some candidate answered 223 (present). */
+  present: boolean;
+  /** Provider that answered present (unset for cache-satisfied probes). */
+  answeredBy?: string;
+  /** Whether at least one candidate gave a definitive answer. */
+  answered: boolean;
 }
 
 /**
@@ -346,18 +372,40 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     priority: CommandPriority,
     signal: AbortSignal | undefined
   ): Promise<boolean> {
+    const detail = await this.statSegmentDetailed(
+      messageId,
+      nzbHash,
+      priority,
+      signal
+    );
+    return detail.present;
+  }
+
+  /**
+   * STAT probe that also reports WHICH provider answered present, and lets the
+   * caller restrict candidates (the census excludes providers whose STAT
+   * answers are proven untrustworthy). Throws when no candidate could be
+   * queried at all; callers treat a throw as "unknown ⇒ present".
+   */
+  async statSegmentDetailed(
+    messageId: string,
+    nzbHash: string | undefined,
+    priority: CommandPriority,
+    signal: AbortSignal | undefined,
+    providerIds?: readonly string[]
+  ): Promise<StatDetail> {
     // Track whether any provider actually answered the STAT. If none did (all
-    // unreachable / at-capacity / errored), we must not return `false`; that
-    // reads as "definitively absent" and trips the release gate. Throw the last
-    // error instead; callers treat a throw as "unknown ⇒ present". STATs go to
-    // the same worker connections at Low priority (behind playback) and do NOT
-    // consume the global download budget.
+    // unreachable / at-capacity / errored), we must not report `absent`; that
+    // reads as "definitively missing" and trips availability verdicts. Throw
+    // the last error instead. STATs go to the same worker connections at Low
+    // priority (behind playback) and do NOT consume the global download budget.
     let answered = false;
     let lastErr: unknown;
     for (const pool of this.orderedCandidates(nzbHash)) {
+      if (providerIds && !providerIds.includes(pool.id)) continue;
       try {
-        // Let the caller abandon its wait (the gate aborts remaining STATs on a
-        // definitive miss) without affecting the in-flight STAT on the worker.
+        // Let the caller abandon its wait (a caller aborts remaining STATs on
+        // a definitive miss) without affecting the in-flight STAT on the worker.
         const { value: exists } = await awaitAbortable(
           pool.submit<boolean>({
             priority,
@@ -377,7 +425,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         if (nzbHash) {
           this.affinity.record(nzbHash, pool.id, !exists, 'stat');
         }
-        if (exists) return true;
+        if (exists) return { present: true, answeredBy: pool.id, answered };
       } catch (err) {
         lastErr = err;
         logger.debug(
@@ -387,11 +435,55 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         continue;
       }
     }
-    // A provider answered "absent" on every reachable provider → genuinely missing.
-    if (answered) return false;
+    // A provider answered "absent" on every reachable candidate → missing.
+    if (answered) return { present: false, answered };
     // Nobody could be reached/queried: unknown, not missing.
     if (lastErr) throw lastErr;
-    return false;
+    return { present: false, answered: false };
+  }
+
+  /**
+   * BODY probe on exactly ONE provider, transfer discarded: does this provider
+   * actually deliver an article it (or its index) claims to have? Used only
+   * for STAT-trust calibration (a lying cache/debrid gateway answers STAT 223
+   * for bodies it 430s). No failover, no decode, no cache interaction.
+   */
+  async probeBodyOnProvider(
+    segment: NzbSegmentRef,
+    providerId: string,
+    signal?: AbortSignal
+  ): Promise<'ok' | 'not_found' | 'unreachable'> {
+    const pool = this.pools.find((p) => p.id === providerId);
+    if (!pool) return 'unreachable';
+    try {
+      await awaitAbortable(
+        pool.submit<number>({
+          priority: CommandPriority.Low,
+          run: async (conn) => {
+            // Raw transfer only: the calibration signal is 222-vs-430, and
+            // skipping the decode keeps corrupt-but-delivered articles from
+            // reading as a lying STAT.
+            const raw = await conn.body(
+              segment.messageId,
+              undefined,
+              this.opts.segmentTimeoutMs
+            );
+            return { value: raw.length, bytes: raw.length };
+          },
+        }),
+        signal
+      );
+      return 'ok';
+    } catch (err) {
+      if (err instanceof NntpError && err.kind === 'article_not_found') {
+        return 'not_found';
+      }
+      return 'unreachable';
+    }
+  }
+
+  providerIds(): string[] {
+    return this.pools.map((p) => p.id);
   }
 
   info(): ProviderPoolInfo[] {

@@ -80,7 +80,10 @@ export function buildUsenetEngineOptions(
     lazyRarResolution: u.lazyRarResolution,
     strictArchiveMembership: u.strictArchiveMembership,
     verifyMode: u.verifyMode,
-    availabilitySamplePoints: u.verifySamplePoints,
+    verifyBudgetMs: u.verifyBudgetMs,
+    damagePolicy: u.damagePolicy,
+    censusShadowConcurrency: u.censusShadowConcurrency,
+    censusMaxLifetimeMs: u.censusMaxLifetime * 1000,
   };
 }
 

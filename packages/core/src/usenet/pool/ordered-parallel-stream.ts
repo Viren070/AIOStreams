@@ -1,5 +1,6 @@
 import { Readable } from 'node:stream';
 import type { Logger } from '../../logging/logger.js';
+import { ArticleNotFoundError } from '../nntp/errors.js';
 
 export interface SlotPoolOptions {
   /** Hard cap on pooled slots; beyond it acquire() returns throwaway buffers. */
@@ -218,6 +219,44 @@ export abstract class OrderedParallelStream extends Readable {
       'ordered stream task failed; destroying stream'
     );
     this.destroy(err instanceof Error ? err : new Error(String(err)));
+  }
+
+  /**
+   * Approved zero-fill length for task `idx`, or undefined to refuse.
+   * Subclasses that support hole padding override this with their geometry
+   * (exact segment size / window length) AND their policy-owner consult; the
+   * base owns the shared pad-or-destroy flow ({@link settleTaskFailure}).
+   */
+  protected tryPadHole(_idx: number): number | undefined {
+    return undefined;
+  }
+
+  /** Zero-fill task `idx` if {@link tryPadHole} approves; true when padded. */
+  protected padTask(idx: number): boolean {
+    const bytes = this.tryPadHole(idx);
+    if (bytes === undefined || bytes <= 0) return false;
+    this.logger.warn(
+      { ...this.logContext(idx), bytes },
+      'task data missing on all providers; zero-filled'
+    );
+    this.completeTask(idx, Buffer.alloc(bytes));
+    return true;
+  }
+
+  /**
+   * Settle a failed task: a definitive all-providers miss may be zero-filled
+   * (exact length only, policy-approved); anything else (transient errors,
+   * partial-provider misses, refused pads) destroys the stream.
+   */
+  protected settleTaskFailure(idx: number, err: unknown): void {
+    if (
+      err instanceof ArticleNotFoundError &&
+      err.allProviders &&
+      this.padTask(idx)
+    ) {
+      return;
+    }
+    this.failTask(idx, err);
   }
 
   override _read(): void {

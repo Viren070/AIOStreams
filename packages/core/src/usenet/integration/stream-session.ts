@@ -8,6 +8,17 @@ import {
   deserializeArchiveLayout,
   serializeArchiveLayout,
   hasPendingFragments,
+  HoleAccumulator,
+  deserializeHoles,
+  serializeHoles,
+  MAX_PAD_RUN_SEGMENTS,
+  MAX_PAD_RUN_BYTES,
+  MAX_PAD_TOTAL_SEGMENTS,
+  MAX_PAD_TOTAL_BYTES,
+  MAX_PAD_FILE_BYTES_RATIO,
+  type HoleHooks,
+  type HoleInfo,
+  type HoleDecision,
   type ArchiveStreamLayout,
   type LazyResolveHooks,
   type DataFragment,
@@ -15,7 +26,10 @@ import {
   type EngineOptions,
   type ProviderConfig,
 } from '../index.js';
-import { UsenetLibraryRepository } from '../../db/index.js';
+import {
+  UsenetLibraryRepository,
+  type UsenetLibraryEntry,
+} from '../../db/index.js';
 import { type UsenetStreamToken, decodeUsenetStreamToken } from './tokens.js';
 import { friendlyUsenetError } from './errors.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
@@ -166,6 +180,141 @@ function lazyHooksFor(
   };
 }
 
+/** Debounce for persisting playback-discovered holes, keyed `${hash}:${sel}`. */
+const holePatchTimers = new Map<string, NodeJS.Timeout>();
+const HOLE_PATCH_DEBOUNCE_MS = 2_000;
+
+/**
+ * Playback hole policy owner (see `usenet/holes.ts` for the threshold table):
+ * the streams ask per definitive all-providers miss and this closure decides
+ * pad-vs-fail, accounts the caps, persists the hole map (debounced) and
+ * transitions the library entry (`degraded` on the first pad, `failed` when a
+ * cap trips).
+ *
+ * Plain targets account in SEGMENT space and persist runs (replays pre-pad
+ * them via `knownHoles`, skipping the failover round-trip). Archive targets
+ * account in WINDOW-byte space (windows span volume boundaries, so there is
+ * no exact segment mapping); their persisted rows come from the census
+ * shadow instead, so archive replays re-discover pads but the entry status
+ * stays honest either way.
+ */
+function holeHooksFor(
+  hash: string,
+  decoded: UsenetStreamToken,
+  entry: UsenetLibraryEntry | undefined,
+  sessionKey: string
+): HoleHooks {
+  // Seed with every persisted hole (idempotent adds keep replays stable).
+  const acc = new HoleAccumulator();
+  for (const f of entry?.files ?? []) {
+    if (f.holes) acc.load(deserializeHoles(f.holes));
+  }
+  const selector = decoded.innerPath
+    ? { path: decoded.innerPath }
+    : { index: decoded.fileIndex };
+  const targetFile = entry?.files.find((f) =>
+    decoded.innerPath
+      ? f.path === decoded.innerPath
+      : f.index === decoded.fileIndex
+  );
+  const targetBytes = targetFile?.size ?? 0;
+
+  // Window-space (archive) session accounting.
+  let windowRunBytes = 0;
+  let windowRunEnd = -1;
+  let paddedBytesTotal = 0;
+  let degradedMarked = entry?.status === 'degraded';
+
+  const markDegraded = (): void => {
+    if (degradedMarked) return;
+    degradedMarked = true;
+    UsenetLibraryRepository.setStatus(hash, 'degraded', {
+      guard: { notIn: ['failed'] },
+    }).catch(() => {});
+  };
+
+  const persistHoles = (nzbFileIndex: number): void => {
+    const key = `${hash}:${selector.path ?? selector.index ?? ''}`;
+    const t = holePatchTimers.get(key);
+    if (t) clearTimeout(t);
+    const timer = setTimeout(() => {
+      holePatchTimers.delete(key);
+      UsenetLibraryRepository.updateFileHoles(
+        hash,
+        selector,
+        serializeHoles(acc.runsForFiles(new Set([nzbFileIndex])))
+      ).catch((err) =>
+        logger.debug(
+          { hash, err: (err as Error)?.message },
+          'hole map patch failed (re-discovered on next play)'
+        )
+      );
+    }, HOLE_PATCH_DEBOUNCE_MS);
+    timer.unref?.();
+    holePatchTimers.set(key, timer);
+  };
+
+  const fail = (info: HoleInfo, why: string): HoleDecision => {
+    logger.warn(
+      { hash, nzbFileIndex: info.nzbFileIndex, why },
+      'playback hole exceeds padding caps; failing entry'
+    );
+    UsenetLibraryRepository.markFailed(
+      hash,
+      'Too many articles missing on every provider to play',
+      decoded.filename,
+      'missing_on_providers'
+    ).catch(() => {});
+    // Drop the warm session so a player retry re-opens fresh and sees the
+    // failed entry.
+    streamSessions.delete(sessionKey);
+    return 'fail';
+  };
+
+  return {
+    onHole(info: HoleInfo): HoleDecision {
+      paddedBytesTotal += info.bytes;
+      if (
+        targetBytes > 0 &&
+        paddedBytesTotal > MAX_PAD_FILE_BYTES_RATIO * targetBytes
+      ) {
+        return fail(info, 'padded-bytes share of target');
+      }
+      if (info.segmentIndex !== undefined) {
+        // Plain path: segment space, exact run tracking, persisted map.
+        acc.add(info.nzbFileIndex, info.segmentIndex);
+        const run = acc.runAt(info.nzbFileIndex, info.segmentIndex);
+        if ((run?.count ?? 1) > MAX_PAD_RUN_SEGMENTS) {
+          return fail(info, 'consecutive missing segments');
+        }
+        if (acc.total > MAX_PAD_TOTAL_SEGMENTS) {
+          return fail(info, 'cumulative missing segments');
+        }
+        markDegraded();
+        persistHoles(info.nzbFileIndex);
+        return 'pad';
+      }
+      // Archive path: byte-window space.
+      const offset = info.windowOffset ?? 0;
+      windowRunBytes =
+        offset === windowRunEnd ? windowRunBytes + info.bytes : info.bytes;
+      windowRunEnd = offset + info.bytes;
+      if (windowRunBytes > MAX_PAD_RUN_BYTES) {
+        return fail(info, 'consecutive unreadable bytes');
+      }
+      if (paddedBytesTotal > MAX_PAD_TOTAL_BYTES) {
+        return fail(info, 'cumulative unreadable bytes');
+      }
+      markDegraded();
+      return 'pad';
+    },
+    knownHoles(nzbFileIndex: number): ReadonlySet<number> | undefined {
+      const set = acc.indicesForFile(nzbFileIndex);
+      return set.size > 0 ? set : undefined;
+    },
+  };
+}
+
 /** Open (or reuse) the seekable handle for a resolved token. */
 async function getStreamSession(
   decoded: UsenetStreamToken,
@@ -202,6 +351,12 @@ async function getStreamSession(
     const nzb = await parseNzbCached(decoded.hash, xml);
     const parsedAt = Date.now();
     const engine = usenetEngineRegistry.get(providers, options);
+    // Fetched up-front: seeds the hole hooks (persisted hole map → replay
+    // pre-pad) and provides addedAt for Last-Modified below.
+    const entry = await UsenetLibraryRepository.get(decoded.hash).catch(
+      () => undefined
+    );
+    const holeHooks = holeHooksFor(decoded.hash, decoded, entry, key);
 
     let stream: SeekableStream | undefined;
     let filename = decoded.filename;
@@ -221,7 +376,8 @@ async function getStreamSession(
               nzb,
               layout,
               undefined,
-              hooks
+              hooks,
+              holeHooks
             );
             filename = stream.filename ?? decoded.filename;
           } catch (err) {
@@ -250,11 +406,17 @@ async function getStreamSession(
               innerPath: decoded.innerPath,
               filename: decoded.filename,
             },
-            undefined
+            undefined,
+            holeHooks
           );
           filename = stream.filename ?? decoded.filename;
         } else {
-          const handle = await engine.selectAndOpen(nzb, { auto: true });
+          const handle = await engine.selectAndOpen(
+            nzb,
+            { auto: true },
+            undefined,
+            holeHooks
+          );
           stream = handle.stream;
           filename = handle.file.filename ?? decoded.filename;
         }
@@ -276,9 +438,6 @@ async function getStreamSession(
     }
 
     if (!stream) throw new Error('failed to open usenet stream');
-    const entry = await UsenetLibraryRepository.get(decoded.hash).catch(
-      () => undefined
-    );
     const addedAt = entry?.addedAt ? new Date(entry.addedAt) : undefined;
     const lastModified =
       addedAt && !Number.isNaN(addedAt.getTime())

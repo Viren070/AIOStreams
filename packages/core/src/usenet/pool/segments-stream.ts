@@ -2,6 +2,7 @@ import { createLogger } from '../../logging/logger.js';
 import { MultiProviderPool } from './multi-provider-pool.js';
 import { OrderedParallelStream } from './ordered-parallel-stream.js';
 import { CommandPriority, NzbSegmentRef } from '../types.js';
+import type { HoleDecision } from '../holes.js';
 
 const logger = createLogger('usenet/segments');
 
@@ -20,6 +21,24 @@ export interface SegmentsStreamOptions {
   limitBytes?: number;
   priority?: CommandPriority;
   signal?: AbortSignal;
+  /**
+   * Exact decoded size of task `idx` (LOCAL index within `segments`), or
+   * undefined when the part grid can't guarantee it. Zero-fill padding
+   * requires an exact size: a wrong pad length silently shifts every later
+   * byte, which is worse than the stream dying.
+   */
+  sizeForSegment?: (idx: number) => number | undefined;
+  /**
+   * Decision hook for a definitive all-providers miss: `pad` emits exactly
+   * `bytes` zeros in the segment's place, `fail` destroys the stream (legacy
+   * behaviour, also used when the hook or the exact size is absent).
+   */
+  onHole?: (idx: number, bytes: number) => HoleDecision;
+  /**
+   * Segments (LOCAL indices) already known missing from a persisted hole
+   * map: zero-filled immediately, without burning a failover round-trip.
+   */
+  knownHoles?: ReadonlySet<number>;
 }
 
 /**
@@ -39,6 +58,9 @@ export class SegmentsStream extends OrderedParallelStream {
   private limitRemaining: number;
   private abortController = new AbortController();
   private onExternalAbort?: () => void;
+  private sizeForSegment?: (idx: number) => number | undefined;
+  private onHole?: (idx: number, bytes: number) => HoleDecision;
+  private knownHoles?: ReadonlySet<number>;
 
   constructor(opts: SegmentsStreamOptions) {
     const maxWorkers = Math.max(1, opts.maxWorkers);
@@ -58,6 +80,9 @@ export class SegmentsStream extends OrderedParallelStream {
     this.signal = opts.signal;
     this.skipRemaining = opts.skipBytes ?? 0;
     this.limitRemaining = opts.limitBytes ?? Number.POSITIVE_INFINITY;
+    this.sizeForSegment = opts.sizeForSegment;
+    this.onHole = opts.onHole;
+    this.knownHoles = opts.knownHoles;
 
     if (this.signal) {
       if (this.signal.aborted) this.abortController.abort();
@@ -72,6 +97,9 @@ export class SegmentsStream extends OrderedParallelStream {
 
   protected startTask(idx: number): void {
     const segment = this.segments[idx];
+    // Replay pre-pad: a segment already known missing (persisted hole map)
+    // zero-fills immediately, with no fetch or failover round-trip.
+    if (this.knownHoles?.has(idx) && this.padTask(idx)) return;
     // Slots are acquired lazily via the provider (never for cache hits) and
     // idempotently across failover retries. Slot size is bounded by
     // `segment.bytes`, an upper bound on the decoded size; when that is
@@ -95,7 +123,27 @@ export class SegmentsStream extends OrderedParallelStream {
         if (slot && data.body.buffer !== slot.buffer) this.slots.release(idx);
         this.completeTask(idx, data.body);
       })
-      .catch((err) => this.failTask(idx, err));
+      .catch((err) => {
+        if (slot) this.slots.release(idx);
+        this.settleTaskFailure(idx, err);
+      });
+  }
+
+  /**
+   * A segment may be zero-filled only with its exact decoded size and only
+   * when the owner's hole hook approves.
+   */
+  protected override tryPadHole(idx: number): number | undefined {
+    if (!this.onHole || !this.sizeForSegment) return undefined;
+    const bytes = this.sizeForSegment(idx);
+    if (bytes === undefined || bytes <= 0) {
+      logger.warn(
+        { ...this.logContext(idx) },
+        'segment missing on all providers but its exact size is unknown (no locked part grid); cannot pad'
+      );
+      return undefined;
+    }
+    return this.onHole(idx, bytes) === 'pad' ? bytes : undefined;
   }
 
   protected transformChunk(idx: number, chunk: Buffer): Buffer | null {
