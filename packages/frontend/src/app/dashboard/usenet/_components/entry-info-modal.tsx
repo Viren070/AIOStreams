@@ -50,19 +50,19 @@ function Row({
   );
 }
 
-/** Masked, reveal-able, copyable password row. */
-function PasswordRow({ password }: { password: string }) {
+/** Masked, reveal-able, copyable secret row (password, NZB URL, etc). */
+function SecretRow({ label, secret }: { label: string; secret: string }) {
   const [shown, setShown] = React.useState(false);
   return (
-    <Row label="Password">
+    <Row label={label}>
       <span className="font-mono break-all">
-        {shown ? password : '•'.repeat(Math.min(password.length, 12))}
+        {shown ? secret : '•'.repeat(Math.min(secret.length, 12))}
       </span>
       <IconButton
         size="xs"
         intent="gray-subtle"
         icon={shown ? <BiHide /> : <BiShow />}
-        aria-label={shown ? 'Hide password' : 'Show password'}
+        aria-label={shown ? `Hide ${label}` : `Show ${label}`}
         className="shrink-0 ml-auto"
         onClick={() => setShown((s) => !s)}
       />
@@ -70,9 +70,9 @@ function PasswordRow({ password }: { password: string }) {
         size="xs"
         intent="gray-subtle"
         icon={<BiCopy />}
-        aria-label="Copy password"
+        aria-label={`Copy ${label}`}
         className="shrink-0"
-        onClick={() => copy(password, 'Password')}
+        onClick={() => copy(secret, label)}
       />
     </Row>
   );
@@ -119,7 +119,8 @@ export function EntryInfoModal({
         {e.importMs != null && (
           <Row label="Import time" value={formatLatency(e.importMs)} />
         )}
-        {e.password && <PasswordRow password={e.password} />}
+        {e.password && <SecretRow label="Password" secret={e.password} />}
+        {e.nzbUrl && <SecretRow label="NZB URL" secret={e.nzbUrl} />}
         <Row
           label="Hash"
           value={
