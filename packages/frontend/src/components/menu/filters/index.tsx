@@ -27,7 +27,7 @@ import {
 import { BiSolidCameraMovie } from 'react-icons/bi';
 import { BsRegex, BsSpeakerFill } from 'react-icons/bs';
 import { GoContainer, GoFileBinary } from 'react-icons/go';
-import { TbFilterCode } from 'react-icons/tb';
+import { TbFilterCode, TbShieldHalfFilled } from 'react-icons/tb';
 import { Select } from '../../ui/select';
 import { Combobox } from '../../ui/combobox';
 import { SettingsCard } from '../../shared/settings-card';
@@ -445,6 +445,10 @@ function Content() {
               <TabsTrigger value="miscellaneous">
                 <MdMiscellaneousServices className="text-lg mr-3" />
                 Miscellaneous
+              </TabsTrigger>
+              <TabsTrigger value="screener">
+                <TbShieldHalfFilled className="text-lg mr-3" />
+                Screener
               </TabsTrigger>
             </div>
           </SettingsNavCard>
@@ -3987,6 +3991,58 @@ function Content() {
                     />
                   </SettingsCard>
                 )}
+              </div>
+            </>
+          </TabsContent>
+          <TabsContent
+            id="filter-tab-screener"
+            value="screener"
+            className="space-y-4"
+          >
+            <>
+              <HeadingWithPageControls heading="Screener" />
+              <div className="mb-4">
+                <p className="text-sm text-[--muted]">
+                  Hide releases the instance's shared screener has flagged as
+                  dead, fake, or mislabeled.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <SettingsCard
+                  title="Enable"
+                  description="Draws on this instance's own findings plus any community lists it subscribes to."
+                >
+                  <Switch
+                    label="Enable"
+                    side="right"
+                    value={userData.screener?.enabled ?? true}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        screener: { ...prev.screener, enabled: value },
+                      }));
+                    }}
+                  />
+                </SettingsCard>
+                <SettingsCard
+                  title="Corroboration quorum"
+                  description="How many corroborate-trust sources must agree before a release is hidden. Full-trust sources act on their own."
+                >
+                  <NumberInput
+                    label="Quorum"
+                    disabled={userData.screener?.enabled === false}
+                    value={userData.screener?.quorum ?? 2}
+                    min={1}
+                    max={20}
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        screener: { ...prev.screener, quorum: newValue },
+                      }))
+                    }
+                  />
+                </SettingsCard>
               </div>
             </>
           </TabsContent>

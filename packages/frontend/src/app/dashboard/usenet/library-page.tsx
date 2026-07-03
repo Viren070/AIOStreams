@@ -470,6 +470,17 @@ function EntryCard({
                   {e.failReason}
                 </span>
               )}
+              {e.status === 'failed' &&
+                ['missing_on_providers', 'article_not_found'].includes(
+                  e.errorCode ?? ''
+                ) && (
+                  <span
+                    className="text-brand"
+                    title="Recorded in this instance's Screener list"
+                  >
+                    Recorded by Screener
+                  </span>
+                )}
             </div>
           </div>
           <StatusPill status={e.status} />
@@ -514,6 +525,17 @@ function EntryCard({
             {e.failReason}
           </p>
         )}
+        {e.status === 'failed' &&
+          ['missing_on_providers', 'article_not_found'].includes(
+            e.errorCode ?? ''
+          ) && (
+            <p
+              className="text-xs text-brand mt-0.5"
+              title="Recorded in this instance's Screener list"
+            >
+              Recorded by Screener
+            </p>
+          )}
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[--muted]">
           {meta}
         </div>
