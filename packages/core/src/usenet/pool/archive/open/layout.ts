@@ -185,6 +185,12 @@ export async function rebuildArchiveStream(
   opener: FileOpener,
   opts: {
     password?: string;
+    /**
+     * OPEN-time parallelism (volume-size probes, lazy middle-volume
+     * resolver); falls back to `concurrency`.
+     */
+    openConcurrency?: number;
+    /** Final inner stream: max concurrent read windows. */
     concurrency?: number;
     windowBytes?: number;
     prefetchWindows?: number;
@@ -195,6 +201,7 @@ export async function rebuildArchiveStream(
   } = {}
 ): Promise<SeekableStream> {
   const password = opts.password ?? '';
+  const openConcurrency = opts.openConcurrency ?? opts.concurrency ?? 8;
   const streamOpts: ArchiveStreamOptions = {
     concurrency: opts.concurrency,
     windowBytes: opts.windowBytes,
@@ -209,7 +216,7 @@ export async function rebuildArchiveStream(
   const outer = new VolumeSet(outerVolumes);
   // Parallel size probing: a layout persisted without some volume sizes must
   // not open serially.
-  await outer.open(opts.concurrency ?? 8);
+  await outer.open(openConcurrency);
 
   let source: RandomAccess = outer;
   for (const level of layout.nestedLevels) {
@@ -241,7 +248,7 @@ export async function rebuildArchiveStream(
       outer.volumeRanges(),
       { name: layout.target.name, size: layout.target.size },
       layout.target.fragments ?? [],
-      { concurrency: opts.concurrency, hooks: opts.lazyHooks }
+      { concurrency: openConcurrency, hooks: opts.lazyHooks }
     );
   }
   return entrySource(source, layout.target, password, streamOpts, resolver);

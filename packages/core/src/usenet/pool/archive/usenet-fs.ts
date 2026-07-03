@@ -129,7 +129,8 @@ export class VolumeSet implements RandomAccess {
     dst: Buffer,
     dstOffset: number,
     offset: number,
-    length: number
+    length: number,
+    signal?: AbortSignal
   ): Promise<number> {
     if (!this.opened) throw new Error('VolumeSet.open() must be called first');
     if (length <= 0 || offset >= this.total) return 0;
@@ -153,7 +154,8 @@ export class VolumeSet implements RandomAccess {
         dst,
         dstOffset + written,
         localOffset,
-        want
+        want,
+        signal
       );
       if (n === 0) break;
       written += n;

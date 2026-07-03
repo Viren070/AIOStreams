@@ -74,12 +74,13 @@ const logger = createLogger('usenet/engine');
 const INSPECT_MAX_CONCURRENCY = 64;
 
 /**
- * Parallelism for archive volume-size probing and inner-file opens. A modest
- * fixed width (bounded by the global download budget) so an archive's per-volume
- * header reads neither serialise nor hammer the provider, independent of the
- * per-stream read-ahead window used for plain playback.
+ * Parallelism for archive OPEN-time work: volume-size probes, per-volume
+ * header parses (incl. nested sets) and the lazy middle-volume resolver. A
+ * modest fixed width so header reads neither serialise nor hammer the
+ * provider, independent of the playback window parallelism (which scales
+ * with `prefetchSegments`).
  */
-const ARCHIVE_OP_CONCURRENCY = 16;
+const ARCHIVE_OPEN_CONCURRENCY = 16;
 
 /**
  * Wall-clock budget for the whole archive-inspection phase. A pathological set
@@ -564,7 +565,7 @@ export class UsenetEngine {
         // budget); the header walk itself reads mostly from probe heads and
         // otherwise rides the warm import budget.
         concurrency: Math.min(
-          ARCHIVE_OP_CONCURRENCY,
+          ARCHIVE_OPEN_CONCURRENCY,
           this.options.maxConcurrentDownloads
         ),
         parseConcurrency,
@@ -940,6 +941,7 @@ export class UsenetEngine {
      */
     repFileIndex?: number
   ): {
+    openConcurrency: number;
     concurrency: number;
     windowBytes: number;
     prefetchWindows: number;
@@ -948,18 +950,27 @@ export class UsenetEngine {
       windowLength: number;
     }) => 'pad' | 'fail';
   } {
+    const prefetchWindows = Math.max(
+      4,
+      Math.ceil(
+        (this.options.prefetchSegments * (1 << 20)) / ARCHIVE_WINDOW_BYTES
+      )
+    );
     return {
-      concurrency: Math.min(
-        ARCHIVE_OP_CONCURRENCY,
-        this.options.maxConcurrentDownloads
+      openConcurrency: Math.max(
+        1,
+        Math.min(ARCHIVE_OPEN_CONCURRENCY, this.options.maxConcurrentDownloads)
+      ),
+      // As on the plain-file path, the read-ahead window is also the
+      // per-stream dispatch parallelism; the global download semaphore
+      // governs what actually runs. Clamped to the budget so excess window
+      // slots don't sit pre-allocated in the semaphore queue.
+      concurrency: Math.max(
+        1,
+        Math.min(prefetchWindows, this.options.maxConcurrentDownloads)
       ),
       windowBytes: ARCHIVE_WINDOW_BYTES,
-      prefetchWindows: Math.max(
-        4,
-        Math.ceil(
-          (this.options.prefetchSegments * (1 << 20)) / ARCHIVE_WINDOW_BYTES
-        )
-      ),
+      prefetchWindows,
       onHole:
         holeHooks && repFileIndex !== undefined
           ? (info) =>
