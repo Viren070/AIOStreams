@@ -46,6 +46,7 @@ export const FILTER_TAB_IDS = [
   'bitrate',
   'limit',
   'deduplicator',
+  'screener',
   'miscellaneous',
 ] as const;
 export type FilterTabId = (typeof FILTER_TAB_IDS)[number];
@@ -196,6 +197,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
 
   sortCriteria: { label: 'Sort Criteria', group: 'sorting', type: 'scalar', menu: 'sorting' },
   deduplicator: { label: 'Deduplicator', group: 'sorting', type: 'scalar', menu: 'filters', subTab: 'deduplicator' },
+  screener: { label: 'Screener', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'screener' },
   resultLimits: { label: 'Result Limits', group: 'sorting', type: 'scalar', menu: 'filters', subTab: 'limit' },
 
   formatter: { label: 'Formatter', group: 'formatter', type: 'scalar', menu: 'formatter' },

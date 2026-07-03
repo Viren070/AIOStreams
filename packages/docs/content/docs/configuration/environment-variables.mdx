@@ -1131,6 +1131,13 @@ neither the environment variable nor a stored value is present.
 | `ANALYTICS_EVENT_RETENTION_DAYS` | Event Retention Days | number | `7` | How many days of raw per-request analytics events to keep before the rollup task prunes them. The per-user Stats tab is limited to this window. |
 | `ANALYTICS_DAILY_RETENTION_DAYS` | Daily Retention Days | number | `90` | How many days of aggregated daily analytics to keep. |
 
+### Screener
+
+| Environment Variable | UI Setting | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `SCREENER_BACKBONE_SCOPE` | Backbone Scope | boolean | `true` | Only honour usenet verdicts recorded on a backbone that matches one of this instance's providers, so a release that's dead on another provider's backbone can't hide one that's still fine on yours. Turn off to apply every verdict regardless of backbone. |
+| `SCREENER_TRUSTED_BACKBONES` | Trusted Backbones | list | — | Extra provider root domains (e.g. newshosting.com) whose verdicts are honoured under backbone scope even though they aren't this instance's own — for resellers that share a backbone. Ignored when backbone scope is off. |
+
 ### Usenet
 
 | Environment Variable | UI Setting | Type | Default | Description |
