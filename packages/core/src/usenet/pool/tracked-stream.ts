@@ -13,16 +13,18 @@ import { SeekableStream } from './file-stream.js';
 export function trackSeekableStream(
   stream: SeekableStream,
   stats: StatsAccumulator,
-  nzbHash: string
+  nzbHash: string,
+  liveReaders?: Set<Readable>
 ): SeekableStream {
-  return new TrackedSeekableStream(stream, stats, nzbHash);
+  return new TrackedSeekableStream(stream, stats, nzbHash, liveReaders);
 }
 
 class TrackedSeekableStream implements SeekableStream {
   constructor(
     private readonly inner: SeekableStream,
     private readonly stats: StatsAccumulator,
-    private readonly nzbHash: string
+    private readonly nzbHash: string,
+    private readonly liveReaders?: Set<Readable>
   ) {}
 
   get filename(): string | undefined {
@@ -75,9 +77,13 @@ class TrackedSeekableStream implements SeekableStream {
       }
       return push(chunk, encoding);
     };
-    // 'close' always follows end/destroy (autoDestroy default), so the gauge
-    // can't leak an open entry.
-    out.once('close', () => this.stats.streamClosed(id));
+    this.liveReaders?.add(out);
+    // 'close' always follows end/destroy (autoDestroy default), so neither
+    // the gauge nor the live-reader registry can leak an open entry.
+    out.once('close', () => {
+      this.liveReaders?.delete(out);
+      this.stats.streamClosed(id);
+    });
     return out;
   }
 }

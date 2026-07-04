@@ -25,6 +25,7 @@ import {
   type SeekableStream,
   type EngineOptions,
   type ProviderConfig,
+  type UsenetEngine,
 } from '../index.js';
 import {
   UsenetLibraryRepository,
@@ -81,6 +82,7 @@ interface UsenetStreamSession {
   filename: string;
   lastUsedAt: number;
   lastModified: Date;
+  engine: UsenetEngine;
 }
 
 /** Identity of a resolved (token → file) stream, independent of byte range. */
@@ -324,15 +326,26 @@ async function getStreamSession(
   const key = streamSessionKey(decoded);
   const existing = streamSessions.get(key);
   if (existing) {
-    existing.lastUsedAt = Date.now();
-    // Refresh the engine's idle clock so it isn't evicted out from under a
-    // session that's serving range requests without re-entering the registry.
-    usenetEngineRegistry.get(providers, options);
+    // Resolves the current engine (creating it after a provider edit) and
+    // refreshes its idle clock so it isn't evicted out from under a session
+    // that's serving range requests without re-entering the registry.
+    const engine = usenetEngineRegistry.get(providers, options);
+    if (existing.engine === engine) {
+      existing.lastUsedAt = Date.now();
+      logger.debug(
+        { hash: decoded.hash, filename: existing.filename },
+        'reused warm usenet stream session'
+      );
+      return existing;
+    }
+    // Engine swapped since this session opened (provider edit closed it, or
+    // idle eviction dropped it); the session's stream is bound to the dead
+    // engine's pool. Drop it and open fresh on the current engine.
     logger.debug(
       { hash: decoded.hash, filename: existing.filename },
-      'reused warm usenet stream session'
+      'dropping warm session bound to a closed engine'
     );
-    return existing;
+    streamSessions.delete(key);
   }
 
   const inflight = openingSessions.get(key);
@@ -449,6 +462,7 @@ async function getStreamSession(
       filename,
       lastUsedAt: Date.now(),
       lastModified,
+      engine,
     };
     streamSessions.set(key, session);
     const openedAt = Date.now();
