@@ -71,7 +71,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
           { label: 'NzbNoob', value: 'https://nzbnoob.com' },
           { label: 'NzbPlanet', value: 'https://api.nzbplanet.net' },
           { label: 'NZBStars', value: 'https://nzbstars.com/' },
-          { label: 'SceneNZBs', value: 'https://scenenzbs.com' },
+          { label: 'Treasure Maps (formerly SceneNZBs)', value: 'https://treasure-maps.com' },
           {
             label: 'Tabula Rasa',
             value: 'https://www.tabula-rasa.pw/api/v1/',
