@@ -41,7 +41,7 @@ export class BuiltinStreamParser extends StreamParser {
     const provided = stream.parsedMediaInfo as ParsedMediaInfo | undefined;
     if (provided) {
       if (typeof provided.duration === 'number')
-        parsedStream.duration = provided.duration;
+        parsedStream.duration = provided.duration * 1000;
       if (typeof provided.bitrate === 'number')
         parsedStream.bitrate = provided.bitrate;
     }

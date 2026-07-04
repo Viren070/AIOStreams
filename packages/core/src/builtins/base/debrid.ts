@@ -797,7 +797,6 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           ? 'stremio-usenet'
           : torrentOrNzb.type,
       age: torrentOrNzb.age,
-      duration: torrentOrNzb.duration,
       infoHash: torrentOrNzb.hash,
       fileIdx: torrentOrNzb.file.index,
       behaviorHints: {
