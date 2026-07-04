@@ -108,6 +108,19 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
         required: false,
       },
       {
+        id: 'apiVersion',
+        name: 'Easynews API Version',
+        description:
+          'Which Easynews search API to use. V2 is the long-standing, well-tested endpoint and returns up to 250 results per page. V3 is a newer endpoint that is limited to a fixed 100 results per page. Both return the same rich metadata (audio/subtitle languages, resolution, codecs) and both support direct Easynews playback. If unsure, leave this as V2.',
+        type: 'select',
+        default: '2.0',
+        showInSimpleMode: false,
+        options: [
+          { label: 'V2 (recommended)', value: '2.0' },
+          { label: 'V3', value: '3.0' },
+        ],
+      },
+      {
         id: 'paginate',
         name: 'Paginate Results',
         description:
@@ -251,6 +264,7 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       ...this.getBaseConfig(userData, services),
       authentication: easynewsCreds,
       paginate: options.paginate ?? false,
+      apiVersion: options.apiVersion ?? '2.0',
       aiostreamsAuth: options.aiostreamsAuth || undefined,
     };
 
