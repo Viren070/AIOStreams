@@ -152,6 +152,19 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<Addon[]> {
+    const easynewsService = userData.services?.find(
+      (s) => s.id === constants.EASYNEWS_SERVICE
+    );
+    if (
+      !easynewsService ||
+      !easynewsService.credentials?.username ||
+      !easynewsService.credentials?.password
+    ) {
+      throw new Error(
+        `${this.METADATA.NAME} requires the Easynews service to be configured with a valid username and password. Please enter your Easynews username and password under Services.`
+      );
+    }
+
     const usableServices = this.getUsableServices(userData, options.services);
     if (!usableServices || usableServices.length === 0) {
       throw new Error(
