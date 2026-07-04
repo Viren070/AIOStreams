@@ -520,7 +520,9 @@ async function buildDebridStreams(
             parsedMediaInfo.hasChapters ?? debridStream.parsedFile?.hasChapters,
         };
         debridStream.duration =
-          parsedMediaInfo.duration ?? debridStream.duration;
+          parsedMediaInfo.duration != null
+            ? parsedMediaInfo.duration * 1000
+            : debridStream.duration;
         debridStream.bitrate = parsedMediaInfo.bitrate ?? debridStream.bitrate;
       }
 
