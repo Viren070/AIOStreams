@@ -16,9 +16,16 @@ async function ensureMigrationsTable(driver: DbDriver): Promise<void> {
     `CREATE TABLE IF NOT EXISTS _migrations (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
+        backward_compatible INTEGER NOT NULL DEFAULT 0,
         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`
   );
+  // Add to databases created before this column existed (0 = breaking).
+  if (!(await columnExists(driver, '_migrations', 'backward_compatible'))) {
+    await driver.exec(
+      `ALTER TABLE _migrations ADD COLUMN backward_compatible INTEGER NOT NULL DEFAULT 0`
+    );
+  }
 }
 
 async function tableExists(driver: DbDriver, table: string): Promise<boolean> {
@@ -33,6 +40,25 @@ async function tableExists(driver: DbDriver, table: string): Promise<boolean> {
     `public.${table}`,
   ]);
   return !!row && (row as { reg: unknown }).reg !== null;
+}
+
+async function columnExists(
+  driver: DbDriver,
+  table: string,
+  column: string
+): Promise<boolean> {
+  if (driver.dialect === 'sqlite') {
+    // `table` is an internal literal, never user input, so interpolation is safe.
+    const rows = await driver.query<{ name: string }>(
+      `PRAGMA table_info(${table})`
+    );
+    return rows.some((r) => r.name === column);
+  }
+  const row = await driver.maybeOne(
+    `SELECT 1 FROM information_schema.columns WHERE table_name = ? AND column_name = ?`,
+    [table, column]
+  );
+  return row !== null;
 }
 
 async function getAppliedIds(driver: DbDriver): Promise<Set<number>> {
@@ -85,10 +111,10 @@ async function applyMigration(
     for (const stmt of statements) {
       await tx.exec(stmt);
     }
-    await tx.exec(`INSERT INTO _migrations (id, name) VALUES (?, ?)`, [
-      migration.id,
-      migration.name,
-    ]);
+    await tx.exec(
+      `INSERT INTO _migrations (id, name, backward_compatible) VALUES (?, ?, ?)`,
+      [migration.id, migration.name, migration.backwardCompatible ? 1 : 0]
+    );
   });
 }
 
@@ -144,22 +170,29 @@ export async function runMigrations(driver: DbDriver): Promise<void> {
 }
 
 /**
- * Verify that the schema is at the expected version. Call after
- * `runMigrations` (which only adds to `_migrations`, never removes).
- * Throws if the DB has a newer schema than the running code expects —
- * the only way that happens is if a newer replica migrated first and an
- * older replica is now booting against it.
+ * After a rollback the DB may carry migrations this build doesn't know. Boot only
+ * if every newer one is backward-compatible; else throw. Call after runMigrations.
  */
 export async function assertSchemaUpToDate(driver: DbDriver): Promise<void> {
   const expected = MIGRATIONS.reduce((m, x) => Math.max(m, x.id), 0);
-  const row = await driver.maybeOne<{ max: number | string | null }>(
-    `SELECT MAX(id) AS max FROM _migrations`
-  );
-  const current = Number(row?.max ?? 0);
-  if (current > expected) {
-    throw new Error(
-      `Database is at migration ${current} but this build only knows up to ${expected}. ` +
-        `Upgrade the application or roll back the database.`
+  const ahead = await driver.query<{
+    id: number | string;
+    backward_compatible: number | string;
+  }>(`SELECT id, backward_compatible FROM _migrations WHERE id > ?`, [expected]);
+  if (ahead.length === 0) return;
+
+  const newest = Math.max(...ahead.map((r) => Number(r.id)));
+  const breaking = ahead.filter((r) => Number(r.backward_compatible) !== 1);
+  if (breaking.length === 0) {
+    logger.warn(
+      `Database is ahead of this build (migration ${newest} vs ${expected}); ` +
+        `all newer migrations are backward-compatible, booting and ignoring them.`
     );
+    return;
   }
+  throw new Error(
+    `Database is at migration ${newest} but this build only knows up to ${expected}, ` +
+      `and a newer migration changes existing tables in a way it can't safely use. ` +
+      `Upgrade or roll back the database.`
+  );
 }

@@ -7,4 +7,6 @@ export interface Migration {
   readonly name: string;
   /** DDL/DML per dialect. Both are required so missing one is a build error. */
   readonly up: Record<Dialect, string>;
+  /** True when this migration only adds things old code ignores, letting an older build boot on it after a rollback. Omit for renames/drops/retypes. */
+  readonly backwardCompatible?: boolean;
 }
