@@ -10,6 +10,10 @@ import {
   constants,
   createLogger,
   getTimeTakenSincePoint,
+  normaliseParsedMediaInfo,
+  normaliseAudioTag,
+  normaliseEncode,
+  normaliseResolution,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
 import { NZB, Torrent } from '../../debrid/index.js';
@@ -31,9 +35,23 @@ import { BuiltinProxy } from '../../proxy/builtin.js';
 
 const logger = createLogger('easynews');
 
+function easynewsAudioTag(acodec?: string, title?: string): string | undefined {
+  const tag = normaliseAudioTag(acodec, undefined);
+  if (tag === 'DTS' && title && /dts[\s._-]?(hd|x|es)\b/i.test(title)) {
+    return undefined;
+  }
+  return tag;
+}
+
+function easynewsEncode(vcodec?: string): string | undefined {
+  if (!vcodec) return undefined;
+  return normaliseEncode({ codec: vcodec });
+}
+
 export const EasynewsSearchAddonConfigSchema = BaseDebridConfigSchema.extend({
   authentication: z.string(),
   paginate: z.boolean().default(false),
+  apiVersion: z.enum(['2.0', '3.0']).default('2.0'),
   aiostreamsAuth: z.string().optional(), // Optional AIOStreams auth for rate limit bypass
 });
 
@@ -87,7 +105,11 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
     );
     this.auth = auth;
 
-    this.api = new EasynewsApi(auth.username, auth.password);
+    this.api = new EasynewsApi(
+      auth.username,
+      auth.password,
+      this.userData.apiVersion
+    );
   }
 
   protected async _searchNzbs(parsedId: ParsedId): Promise<NZB[]> {
@@ -184,6 +206,17 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
       const age = this.api.calculateAge(item.posted);
       const easynewsUrl = this.api.generateEasynewsDlUrl(item, downloadInfo);
 
+      const audioTag = easynewsAudioTag(item.acodec, item.title);
+      const parsedMediaInfo = normaliseParsedMediaInfo({
+        languages: item.audioLangs,
+        subtitles: item.subLangs,
+        audioTags: audioTag ? [audioTag] : undefined,
+        encode: easynewsEncode(item.vcodec),
+        resolution: normaliseResolution(item.xres, item.yres),
+        bitrate: item.bps,
+        duration: item.duration,
+      });
+
       return {
         confirmed: false,
         hash: hashNzbUrl(nzbUrl),
@@ -194,7 +227,7 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
         indexer: 'Easynews',
         size: item.size,
         type: 'usenet',
-        duration: item.duration,
+        parsedMediaInfo,
       };
     });
 
