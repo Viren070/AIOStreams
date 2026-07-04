@@ -1,5 +1,6 @@
 import { readdir, rm } from 'fs/promises';
 import { join } from 'path';
+import type { Readable } from 'node:stream';
 import { createLogger } from '../logging/logger.js';
 import { getCacheFolder } from '../utils/general.js';
 import { appConfig } from '../utils/index.js';
@@ -188,6 +189,11 @@ export class UsenetEngine {
   private statTrust = new StatTrustCache();
   /** Live census runs, so close() can cancel their workers promptly. */
   private liveCensus = new Set<CensusRun>();
+  /**
+   * Every read stream opened through {@link track}, so close() can destroy
+   * in-flight readers.
+   */
+  private liveReaders = new Set<Readable>();
   /**
    * Shared probe budget for ALL live censuses (blocking + shadows): N
    * concurrent censuses contend for these slots instead of multiplying
@@ -1021,7 +1027,7 @@ export class UsenetEngine {
    * paths alike), while internal per-volume streams stay untracked.
    */
   private track(nzb: Nzb, stream: SeekableStream): SeekableStream {
-    return trackSeekableStream(stream, this.stats, nzb.hash);
+    return trackSeekableStream(stream, this.stats, nzb.hash, this.liveReaders);
   }
 
   poolInfo(): PoolInfo {
@@ -1086,6 +1092,15 @@ export class UsenetEngine {
     // pool being closed (they self-resolve with `complete: false`).
     for (const census of this.liveCensus) census.cancel();
     this.liveCensus.clear();
+    // Destroy in-flight readers before  closing the pool so their HTTP
+    // pipelines terminate
+    const readers = this.liveReaders.size;
+    if (readers > 0) {
+      logger.debug({ readers }, 'destroying live readers on engine close');
+      for (const reader of [...this.liveReaders]) {
+        reader.destroy(new Error('usenet engine closed'));
+      }
+    }
     this.pool.close();
     // Persist the disk index + drain pending writes; keep on-disk files so the
     // cache survives the eviction/restart (do NOT clear()).
