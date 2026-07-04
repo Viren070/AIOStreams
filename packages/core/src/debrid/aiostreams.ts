@@ -291,9 +291,7 @@ export class NativeUsenetService implements UsenetDebridService {
       filename: chosenFilename,
     });
 
-    const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}/${encodeURIComponent(
-      chosenFilename
-    )}`;
+    const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}`;
     logger.debug(
       {
         hash: nzbHash,

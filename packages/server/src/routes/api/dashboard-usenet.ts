@@ -380,9 +380,9 @@ async function mintAndRespond(
       );
       return;
     }
-    const url = `/api/v1/usenet/stream/${minted.token}/${encodeURIComponent(
-      minted.filename
-    )}${download ? '?download=1' : ''}`;
+    const url = `/api/v1/usenet/stream/${minted.token}${
+      download ? '?download=1' : ''
+    }`;
     res.status(200).json(
       createResponse({
         success: true,
