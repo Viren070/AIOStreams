@@ -172,7 +172,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
         if (controlledValue === undefined) _setValue(value);
         onValueChange?.(value);
       },
-      [controlledValue]
+      [controlledValue, onValueChange]
     );
 
     React.useEffect(() => {
