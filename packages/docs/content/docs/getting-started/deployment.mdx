@@ -190,6 +190,22 @@ These platforms offer free tiers that can run AIOStreams, but they are **not per
   not work.
 </Callout>
 
+<Callout type="info">
+  Building from source compiles the **`yencode`** native addon (used by the
+  native usenet engine) from source with `node-gyp` — it ships no prebuilt
+  binaries — so you need a C/C++ toolchain and Python 3 installed:
+
+- **Debian / Ubuntu:** `sudo apt-get install -y python3 make g++`
+- **macOS:** `xcode-select --install`
+- **Windows:** [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) ("Desktop development with C++") + [Python 3](https://www.python.org/downloads/)
+
+To skip this entirely, deploy the prebuilt [Docker image](#docker) instead — it
+already contains the compiled addon. The
+[Development guide](/guides/development#native-module-build-tools) has more
+detail.
+
+</Callout>
+
 <Steps>
   <Step>
     Clone the repository:

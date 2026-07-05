@@ -8,10 +8,46 @@ description: How to set up AIOStreams locally for development and contribution.
 - **Node.js** v22+
 - **pnpm** v10.15+
 - **git**
+- A **C/C++ toolchain + Python 3** — needed to compile the `yencode` native addon at install time (see [Native module build tools](#native-module-build-tools) below)
 
 <Callout type="warn">
   Earlier versions of Node.js or pnpm may work, but are not guaranteed.
 </Callout>
+
+---
+
+## Native module build tools
+
+AIOStreams' **native usenet engine** uses [`yencode`](https://www.npmjs.com/package/yencode) — a native (C++) addon that decodes yEnc-encoded article bodies. It is published **without prebuilt binaries**, so `pnpm i` compiles it from source with `node-gyp`. That requires a C/C++ compiler and Python 3 on your machine:
+
+<Tabs items={['Linux', 'macOS', 'Windows']}>
+  <Tab value="Linux">
+    ```bash
+    # Debian / Ubuntu
+    sudo apt-get install -y python3 make g++
+    ```
+
+    On other distributions, install the equivalent packages: `python3`, `make`, and a C++ compiler such as `gcc-c++` or `clang`.
+
+  </Tab>
+  <Tab value="macOS">
+    ```bash
+    xcode-select --install
+    ```
+
+    This provides Clang and `make`. Recent macOS already ships Python 3; if not, install it with `brew install python`.
+
+  </Tab>
+  <Tab value="Windows">
+    Install both:
+
+    - **[Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)** with the **"Desktop development with C++"** workload
+    - **[Python 3](https://www.python.org/downloads/)**
+
+    The Node.js Windows installer can also set these up for you — tick **"Automatically install the necessary tools"** (Tools for Native Modules) during installation.
+
+  </Tab>
+</Tabs>
 
 ---
 
@@ -76,26 +112,19 @@ pnpm -F frontend run build
 
 ## Frontend Hot Reload
 
-For full hot reload including the frontend:
+For full hot reload including the frontend, use the [rsbuild](https://rsbuild.dev) dev server. It serves the SPA with hot module replacement and proxies API requests through to the backend.
 
 <Steps>
   <Step>
-    ### Change the server port
+    ### Point the frontend at the backend
 
-    In your root `.env`, set `PORT` to something other than `3000` (e.g. `3001`). This is the port the backend server listens on.
-
-  </Step>
-
-  <Step>
-    ### Configure the frontend's backend URL
-
-    Create a `.env.development` file in `packages/frontend/`:
+    The dev server proxies every `/api` request to the backend. Create a `.env.local` file in `packages/frontend/` and set the backend's URL:
 
     ```bash
-    NEXT_PUBLIC_BACKEND_BASE_URL=http://localhost:3001
+    PUBLIC_BACKEND_BASE_URL=http://localhost:3000
     ```
 
-    Adjust the port to match the one you set above.
+    Match the port to your backend's `PORT` (default `3000`). If you omit this, the proxy falls back to `http://localhost:3001`.
 
   </Step>
 
@@ -106,14 +135,21 @@ For full hot reload including the frontend:
     pnpm dev
     ```
 
-    The Next.js dev server will automatically proxy API requests to the backend. The frontend will be available at `http://localhost:3000`.
+    This runs `core`, `server` and `frontend` together. The rsbuild dev server serves the SPA with hot reload on port `21456` (override with `PORT`) and proxies `/api` to the backend URL above.
+
+  </Step>
+
+  <Step>
+    ### Open the app
+
+    Open the dev server URL that rsbuild prints — `http://localhost:21456` by default.
 
   </Step>
 </Steps>
 
 <Callout type="info">
   If you're only testing backend changes, use `pnpm run start:dev` instead — it
-  avoids starting the Next.js dev server unnecessarily.
+  avoids starting the frontend dev server unnecessarily.
 </Callout>
 
 ---
