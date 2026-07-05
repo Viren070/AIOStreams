@@ -1,6 +1,6 @@
 import { config as appConfig } from '../config/index.js';
 import { ParsedStream, StreamProxyConfig, UserData } from '../db/schemas.js';
-import { constants, createLogger } from '../utils/index.js';
+import { constants, createLogger, isInternalEndpoint } from '../utils/index.js';
 import { takeBasicAuthFromUrl } from '../utils/http.js';
 import { createProxy } from '../proxy/index.js';
 import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
@@ -71,8 +71,13 @@ export function evaluateProxyStream(
   const proxyService =
     !proxy.proxiedServices?.length ||
     proxy.proxiedServices.includes(streamService);
+  // Auto-proxy internal/container addon endpoints (e.g. http://nzbdav:8080): an
+  // external player can't reach a container hostname or private IP, so route it
+  // through us regardless of the addon/service proxy filters.
+  const isInternalHttpStream =
+    streamUrl.protocol === 'http:' && isInternalEndpoint(streamUrl);
 
-  if (proxy.enabled && proxyAddon && proxyService) {
+  if (proxy.enabled && (isInternalHttpStream || (proxyAddon && proxyService))) {
     return 'proxy';
   }
 

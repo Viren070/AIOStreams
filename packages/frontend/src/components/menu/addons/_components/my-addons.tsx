@@ -33,6 +33,10 @@ import {
   useConfirmationDialog,
 } from '../../../shared/confirmation-dialog';
 import * as constants from '../../../../../../core/src/utils/constants';
+import {
+  applyInternalAddonProxyConfig,
+  shouldAutoProxyInternalAddon,
+} from './proxy-auto';
 
 const manifestCache = new Map<string, any>();
 
@@ -927,7 +931,7 @@ function AddonListItem({
   onRemove: () => void;
   onToggleEnabled: (v: boolean) => void;
 }) {
-  const { setUserData } = useUserData();
+  const { userData, setUserData } = useUserData();
   const [isConfigurable, setIsConfigurable] = useState(false);
   const [logo, setLogo] = useState<string | undefined>(
     preset.logo || presetMetadata?.LOGO
@@ -995,6 +999,16 @@ function AddonListItem({
   const handleManifestUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const std = standardiseManifestUrl(newManifestUrl);
+    const nextOptionsForDecision =
+      presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
+        ? { manifestUrl: std }
+        : { url: std };
+    const autoProxyDecision = shouldAutoProxyInternalAddon(nextOptionsForDecision);
+    const autoEnabledProxy =
+      autoProxyDecision.shouldAutoProxy &&
+      !!userData.proxy?.id &&
+      !!userData.proxy?.url &&
+      !!userData.proxy?.credentials;
     if (!newManifestUrl) {
       toast.error('Please enter a new manifest URL');
       return;
@@ -1003,36 +1017,57 @@ function AddonListItem({
       toast.error('Please enter a valid manifest URL');
       return;
     }
-    try {
-      setLoading(true);
-      const response = await fetch(std);
-      if (!response.ok)
-        throw new Error(`${response.status} ${response.statusText}`);
-      await response.json();
-    } catch (error: any) {
-      toast.error(`Failed to fetch or parse manifest: ${error.message}`);
-      setLoading(false);
-      return;
+    setLoading(true);
+    if (!autoProxyDecision.shouldAutoProxy) {
+      try {
+        const response = await fetch(std);
+        if (!response.ok)
+          throw new Error(`${response.status} ${response.statusText}`);
+        await response.json();
+      } catch (error: any) {
+        toast.error(`Failed to fetch or parse manifest: ${error.message}`);
+        setLoading(false);
+        return;
+      }
     }
+
     setUserData((prev) => {
       const currentPreset = prev.presets.find(
         (p) => p.instanceId === preset.instanceId
       );
-      if (!currentPreset) return prev;
+      if (!currentPreset) {
+        return prev;
+      }
+
       const options =
         presetMetadata?.ID === 'custom' || presetMetadata?.ID === 'aiostreams'
           ? { ...currentPreset.options, manifestUrl: std }
           : { ...currentPreset.options, url: std };
-      return {
+      const baseNextUserData = {
         ...prev,
         presets: prev.presets.map((p) =>
           p.instanceId === preset.instanceId ? { ...p, options } : p
         ),
       };
+      const autoProxyResult = autoProxyDecision.shouldAutoProxy
+        ? applyInternalAddonProxyConfig(baseNextUserData, preset.instanceId)
+        : null;
+      return autoProxyResult?.nextUserData ?? baseNextUserData;
     });
     setNewManifestUrl('');
     configModalOpen.close();
     toast.success('Manifest URL updated successfully');
+    if (autoProxyDecision.shouldAutoProxy) {
+      if (autoEnabledProxy) {
+        toast.info(
+          'Detected an internal HTTP addon URL. Proxy was auto-enabled and this addon was auto-routed through proxy.'
+        );
+      } else {
+        toast.info(
+          'Detected an internal HTTP addon URL. This addon was auto-targeted for proxy. Configure proxy URL and credentials to fully enable routing.'
+        );
+      }
+    }
     setLoading(false);
   };
 

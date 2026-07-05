@@ -6,6 +6,7 @@ import {
   Env,
   ExtrasParser,
   getSimpleTextHash,
+  isInternalEndpoint,
   makeUrlLogSafe,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
@@ -47,6 +48,7 @@ import {
   type AnalyticsServiceBreakdown,
 } from '../analytics/index.js';
 import type { AddonDispositionMap } from '../streams/fetcher.js';
+import { createProxy } from '../proxy/index.js';
 
 const logger = createLogger('core');
 
@@ -1085,6 +1087,87 @@ export async function getSubtitles(
   );
   let allSubtitles: Subtitle[] = [];
 
+  const proxifyAddonSubtitles = async (
+    addon: Addon,
+    subtitles: Subtitle[]
+  ): Promise<Subtitle[]> => {
+    const proxy = ctx.userData.proxy;
+    if (!proxy?.enabled || !proxy.url || subtitles.length === 0) {
+      return subtitles;
+    }
+
+    let proxyUrl: URL;
+    try {
+      proxyUrl = new URL(proxy.url);
+    } catch {
+      return subtitles;
+    }
+
+    const shouldProxySubtitle = (subtitle: Subtitle): boolean => {
+      let subtitleUrl: URL;
+      try {
+        subtitleUrl = new URL(subtitle.url);
+      } catch {
+        return false;
+      }
+
+      if (subtitleUrl.host === proxyUrl.host) {
+        return false;
+      }
+
+      const isInternalHttpSubtitle =
+        subtitleUrl.protocol === 'http:' && isInternalEndpoint(subtitleUrl);
+      if (isInternalHttpSubtitle) {
+        return true;
+      }
+
+      const proxyAddon =
+        !proxy.proxiedAddons?.length ||
+        proxy.proxiedAddons.includes(addon.preset.id);
+      const proxyService =
+        !proxy.proxiedServices?.length ||
+        proxy.proxiedServices.includes('subtitle') ||
+        proxy.proxiedServices.includes('subtitles');
+
+      return proxyAddon && proxyService;
+    };
+
+    const proxyTargets = subtitles
+      .map((subtitle, index) => ({ subtitle, index }))
+      .filter(({ subtitle }) => shouldProxySubtitle(subtitle));
+
+    if (proxyTargets.length === 0) {
+      return subtitles;
+    }
+
+    const proxiedUrls = await createProxy(proxy).generateUrls(
+      proxyTargets.map(({ subtitle }) => ({
+        url: subtitle.url,
+        type: 'stream',
+      }))
+    );
+
+    if (!proxiedUrls || 'error' in proxiedUrls) {
+      errors.push({
+        title: 'Proxifier Error',
+        description:
+          proxiedUrls && 'error' in proxiedUrls
+            ? proxiedUrls.error
+            : 'Failed to proxy subtitle URLs',
+      });
+      return subtitles;
+    }
+
+    const updated = [...subtitles];
+    proxyTargets.forEach(({ index }, i) => {
+      const proxiedUrl = proxiedUrls[i];
+      if (proxiedUrl) {
+        updated[index] = { ...updated[index], url: proxiedUrl };
+      }
+    });
+    return updated;
+  };
+
   await Promise.all(
     supportedAddons.map(async (addon) => {
       try {
@@ -1093,7 +1176,10 @@ export async function getSubtitles(
           id,
           parsedExtras.toString()
         );
-        if (subtitles) allSubtitles.push(...subtitles);
+        if (subtitles) {
+          const proxiedSubtitles = await proxifyAddonSubtitles(addon, subtitles);
+          allSubtitles.push(...proxiedSubtitles);
+        }
       } catch (error) {
         errors.push({
           title: `[❌] ${getAddonName(addon)}`,
