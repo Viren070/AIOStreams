@@ -10,7 +10,7 @@
 <p align="center">
   <strong>One addon to rule them all.</strong>
   <br />
-  AIOStreams consolidates multiple Stremio addons and debrid services - including its own suite of built-in addons - into a single, highly customisable super-addon.
+  AIOStreams consolidates multiple Stremio addons and debrid/usenet services - including its own suite of built-in addons - into a single, highly customisable super-addon.
 </p>
 
 <p align="center">
@@ -73,7 +73,7 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 AIOStreams ships with a suite of its own addons - search engines and integrations that are hosted alongside AIOStreams itself and available exclusively to your instance. They're configured and used just like any other addon in the marketplace.
 
 > [!NOTE]
-> Built-in addons that search for torrents require a debrid service. Usenet results can be streamed directly via [NZBDav](https://github.com/nzbdav-dev/nzbdav) or [AltMount](https://github.com/javi11/altmount), or through TorBox (Pro plan). All built-in addons support anime and Kitsu/MAL catalogs.
+> Built-in addons that search for torrents require a debrid service. Usenet results can be streamed by AIOStreams' own built-in usenet engine, via external tools like [NzbDAV](https://github.com/nzbdav-dev/nzbdav) or [AltMount](https://github.com/javi11/altmount), natively by Stremio itself, or through TorBox (Pro plan) - see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet). All built-in addons support anime and Kitsu/MAL catalogs.
 
 The built-in addons include:
 
@@ -103,9 +103,11 @@ AIOStreams supports all major debrid and Usenet services, including:
 
 **Debrid**: Real-Debrid, AllDebrid, Debrid-Link, Premiumize, TorBox, EasyDebrid, PikPak, Offcloud, Seedr, put.io, and more.
 
-**Usenet**: Easynews, NzbDAV, AltMount, Stremio NNTP, StremThru Newz.
+**Usenet**: the built-in usenet engine (streams straight from your own NNTP provider), Easynews, NzbDAV, AltMount, Stremio NNTP, StremThru Newz.
 
 Services are configured once in the **Services** tab and automatically applied to every compatible addon in your configuration.
+
+Full guide: [docs.aiostreams.viren070.me/guides/usenet](https://docs.aiostreams.viren070.me/guides/usenet)
 
 <p align="center">
     <img width="1500" alt="image" src="https://github.com/user-attachments/assets/fbf40e7d-b303-4bef-a43e-5ce3d26684bb" />
