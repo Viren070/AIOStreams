@@ -501,7 +501,7 @@ const SERVICE_DETAILS: Record<
       {
         id: 'note',
         name: 'Configuration Help',
-        description: `**URL:** Use internal URL for local setups (e.g., http://nzbdav:3000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet Wiki](https://github.com/Viren070/AIOStreams/wiki/Usenet#configuring-the-service-in-aiostreams).`,
+        description: `**URL:** Use internal URL for local setups (e.g., http://nzbdav:3000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet#nzbdav-altmount-and-stremthru-newz).`,
         type: 'alert',
         intent: 'info',
         required: false,
@@ -592,7 +592,7 @@ const SERVICE_DETAILS: Record<
       {
         id: 'note',
         name: 'Configuration Help',
-        description: `**URL:** Use internal URL for local setups (e.g., http://altmount:8000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet Wiki](https://github.com/Viren070/AIOStreams/wiki/Usenet#configuring-the-service-in-aiostreams).`,
+        description: `**URL:** Use internal URL for local setups (e.g., http://altmount:8000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet#nzbdav-altmount-and-stremthru-newz).`,
         type: 'alert',
         intent: 'info',
         required: false,
