@@ -7,200 +7,320 @@ import { Callout } from 'fumadocs-ui/components/callout';
 import { Steps, Step } from 'fumadocs-ui/components/steps';
 import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
-This guide covers using Usenet with AIOStreams — from sourcing content through indexers to configuring a playback method.
+AIOStreams has first-class Usenet support: addons that search your indexers, and playback services — including a fully built-in NNTP streaming engine — that turn the results into streams on any device.
 
----
+This guide is organised as a journey: understand [how it works](#how-usenet-streaming-works), [pick a playback service](#1-pick-a-playback-service) and [set it up](#2-set-up-your-service), [add your indexers](#3-add-your-indexers), then [make playback resilient](#4-make-it-resilient-failover) and get familiar with [NZB grabs and indexer rules](#5-nzb-grabs-and-indexer-rules).
 
-## Step 1: Sourcing Content (Addons)
+## How Usenet Streaming Works
 
-AIOStreams provides several built-in addons to find Usenet content:
+Usenet in AIOStreams is built on a simple foundation with two halves:
 
-| Addon               | Description                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| **Newznab**         | Connect indexers directly via their API URL and key          |
-| **NZBHydra2**       | Connect your NZBHydra2 instance                              |
-| **Prowlarr**        | Query Prowlarr for both torrent and Usenet results           |
-| **TorBox Search**   | Uses TorBox's internal indexers (both torrents and Usenet)   |
-| **Easynews Search** | Search Easynews; results can stream directly or provide NZBs |
+1. **Addons** find content — they search your indexers and return NZB results.
+2. **A service** plays it — it turns an NZB into a video stream your player can handle.
+
+Every setup in this guide is some combination of the two: pick a playback service, then feed it results from one or more addons.
+
+### Usenet in 60 Seconds
+
+Skip ahead if you already know your backbones from your indexers.
+
+- **Providers** sell access to Usenet servers (spoken to over the NNTP protocol). Content is stored as millions of small **articles** (segments), and each provider sits on a **backbone** — providers on the same backbone share the same underlying storage.
+- **Indexers** catalogue that content and hand out **NZB** files. An NZB is essentially a map: it lists the articles that make up a release.
+- Retention and takedowns differ per backbone, so a release can be complete on one backbone while **missing articles** on another. Adding a provider from a _different_ backbone gives you a second chance at finding every article.
+
+The [Usenet Tree](https://usenet.rexum.space/tree) shows which providers sit on which backbone, and the same site tracks current [provider deals](https://usenet.rexum.space/deals).
 
 <Callout type="tip">
-  With the Newznab addon, set the **Search Mode** to `both` if you have API hits
-  to spare. Some indexers only return results via query search — test both modes
-  to see what works best.
+  **Don't overdo providers for streaming.** Every extra provider is another
+  place to check when an article is missing — and pre-playback, that costs
+  time. A two-backbone combination (commonly **Omicron + Abavia**) already
+  covers the vast majority of content; if an article is missing on both, a
+  stack of smaller backbones rarely saves it and
+  [failover](#4-make-it-resilient-failover) to a different release is usually
+  the better option.
 </Callout>
 
----
+## 1. Pick a Playback Service
 
-## Method 1: Stremio Native NNTP
+There are three flavours of Usenet playback in AIOStreams:
+
+1. **NNTP streaming** — something downloads articles from your provider and converts them into an HTTP stream on the fly. That something is either **AIOStreams itself** (the [built-in engine](#the-built-in-engine-aiostreams)), an [external self-hosted tool](#nzbdav-altmount-and-stremthru-newz) (NzbDAV, AltMount, StremThru Newz), or — uniquely — the **Stremio client itself** ([Stremio NNTP](#stremio-nntp)). You bring your own provider account(s) and indexers.
+2. **Easynews** — a provider with its own web search whose results are direct HTTP URLs served from Easynews' servers. No extra software, no hosting; accessed through the [Easynews Search addon](#easynews).
+3. **TorBox** — AIOStreams hands TorBox an NZB URL; TorBox downloads the whole release to _their_ servers, after which it is "cached" and plays back instantly from them, on any device. See [TorBox](#torbox).
+
+All of the NNTP streamers pull articles straight from your provider — the difference is which piece of software does the streaming, and therefore where it has to run:
+
+| Service                                | How it plays                                         | Streaming runs on         | You need                                                                                                             |
+| -------------------------------------- | ---------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **AIOStreams** (built-in engine)       | Streams over NNTP from your provider                 | Your AIOStreams instance  | Your own instance (self-hosted or a private [ElfHosted](#zero-setup-the-elfhosted-bundle) one), a provider, indexers |
+| **NzbDAV / AltMount / StremThru Newz** | Streams over NNTP from your provider                 | The tool's server         | A self-hosted tool, a provider, indexers                                                                             |
+| **Stremio NNTP**                       | Streams over NNTP from your provider                 | Inside the Stremio client | Stremio Desktop v5 or Android TV, a provider, indexers                                                               |
+| **TorBox**                             | Full download to TorBox first, then instant playback | TorBox's servers          | A TorBox Pro plan                                                                                                    |
+| **Easynews**                           | Direct HTTP from Easynews                            | Easynews' servers         | An Easynews subscription                                                                                             |
+
+<Callout type="info">
+  **Which one?** If you run your own AIOStreams instance (or a private
+  ElfHosted one), the **built-in engine** is the simplest full-control option —
+  no extra software to install. If you can't host anything, **TorBox Pro** or
+  **Easynews** work from any device, and **Stremio NNTP** works with just a
+  provider if you're on a supported Stremio client.
+</Callout>
+
+## 2. Set Up Your Service
+
+Jump straight to the service you picked. Every path ends the same way: once the service is configured, continue to [Add Your Indexers](#3-add-your-indexers).
+
+### The Built-In Engine (AIOStreams)
+
+AIOStreams ships its own NNTP streaming engine: give it your provider details and it downloads, unpacks and serves releases as HTTP streams directly from your instance — no NzbDAV, AltMount or any other companion software.
+
+It appears in your configuration as the **AIOStreams** service (results tagged `AIO`), and requires your own instance — self-hosted, or a private [ElfHosted](#zero-setup-the-elfhosted-bundle) instance.
+
+#### Dashboard Setup (once per instance)
+
+<Steps>
+  <Step>
+    Set the `AIOSTREAMS_AUTH` environment variable with one or more
+    `username:password` pairs (e.g. `AIOSTREAMS_AUTH=alice:secret`). Optionally
+    control what each user may do with `AIOSTREAMS_AUTH_PERMISSIONS` (valid
+    permissions: `admin`, `proxy`, `service`, `sabnzbd`; users not listed
+    default to `admin`, which implies everything). Configuring the engine
+    requires `admin`; streaming through it requires `service`.
+  </Step>
+  <Step>
+    Log in to the dashboard (with a user that has the `admin` permission) and
+    open **Usenet → Providers** (`/dashboard/usenet`).
+  </Step>
+  <Step>
+    Add your NNTP provider(s): name, host, port, SSL/TLS, username, password
+    and max connections (respect your provider's connection limit). The list
+    order sets priority, and a provider can be marked as **Backup** so it is
+    only consulted when the primary providers are missing articles.
+  </Step>
+  <Step>
+    The **Settings** section holds the engine's tuning knobs (performance
+    profile, cache sizes, timeouts, …). The defaults are right for almost
+    everyone — leave them alone unless you have a reason not to. Each setting
+    is documented in the [Usenet environment
+    variables](/configuration/environment-variables#usenet).
+  </Step>
+</Steps>
+
+#### User Setup (configuration page)
+
+<Steps>
+  <Step>Go to **Services** and add the **AIOStreams** service.</Step>
+  <Step>
+    Enter the **AIOStreams Auth Token**: a `username:password` pair from
+    `AIOSTREAMS_AUTH` (the user needs the `service` permission).
+  </Step>
+  <Step>
+    [Add your indexers](#3-add-your-indexers) — their results play through the
+    engine automatically.
+  </Step>
+</Steps>
+
+Streams are served directly from your instance under your `BASE_URL` — there is no separate WebDAV server to expose, no credentials embedded in URLs, and no proxy configuration needed.
+
+<Callout type="info">
+  The dashboard's **Usenet** menu also gives you a **Library** of imported
+  NZBs, a live **Streams** view and transfer **Stats**. The engine additionally
+  exposes a SABnzbd-compatible API (`/api/v1/sabnzbd`), so tools like Sonarr,
+  Radarr and Prowlarr can send NZBs to it as if it were a SABnzbd download
+  client.
+</Callout>
+
+### Stremio NNTP
+
+The one NNTP option that needs no server at all: here, the tool that converts Usenet articles into video **is the Stremio client itself**. AIOStreams sends your provider details and the NZB location with the stream, and Stremio connects to your provider and streams natively.
 
 <Callout type="warn">
-  This method currently requires **Stremio v5 desktop** (latest releases).
+  Only supported by **Stremio Desktop v5** and **Stremio Android TV**. Other
+  clients cannot play these results.
 </Callout>
-
-The most direct approach. Stremio handles downloading and streaming the NZB natively — no extra software required beyond a Usenet provider and indexers.
-
-**How it works:** AIOStreams sends your provider config and the NZB location to the Stremio app. Stremio fetches the NZB and streams it directly from your provider.
 
 **Setup:**
 
 <Steps>
-  <Step>In AIOStreams, go to **Services** and select **Stremio NNTP**.</Step>
+  <Step>In AIOStreams, go to **Services** and add **Stremio NNTP**.</Step>
   <Step>
-    Fill in your NNTP server details: Host, Port, Username, Password, SSL
-    toggle, and Connections (recommended: leave at the default of `5`).
+    Fill in your NNTP server details: host, port, username, password, SSL
+    toggle and connections (the default of `5` is fine).
   </Step>
   <Step>
-    Usenet addons will now show results with the `SN` tag. Playing these
-    triggers native Stremio streaming.
+    Usenet addons now show results tagged `SN`. Playing one triggers native
+    Stremio streaming.
   </Step>
 </Steps>
 
 **Drawbacks:**
 
-- Desktop-only (Stremio v5)
-- Harder to debug since streaming happens inside the Stremio client
+- Limited to the two clients above.
+- Harder to debug — streaming happens entirely inside Stremio.
+- [Failover](#4-make-it-resilient-failover) cannot protect these streams, since playback never touches AIOStreams.
 
----
+### TorBox
 
-## Method 2: TorBox Pro
+TorBox works differently from the NNTP streamers: AIOStreams passes an NZB URL to TorBox, TorBox downloads the **entire release to their servers**, and once complete it becomes _cached_ — from then on it plays back instantly from TorBox, on any device. Usenet downloads on TorBox are generally fast and reliable compared to torrents.
 
-The easiest "it just works on all devices" option. TorBox Pro manages Usenet providers and indexers for you — no separate subscriptions needed.
-
-**How it works:** TorBox downloads NZBs to their servers and streams the content to you. Usenet downloads are generally fast and reliable compared to torrents.
+Usenet on TorBox requires their **Pro** plan, which also bundles internal indexers (via [TorBox Search](#torbox-search-caveats)) and [an NNTP server](#the-torbox-nntp-server) — so it can be a zero-hosting, all-in-one option.
 
 **Setup:**
 
 <Steps>
-  <Step>Obtain a **TorBox Pro** account ($10/month).</Step>
+  <Step>Obtain a **TorBox Pro** account.</Step>
   <Step>In AIOStreams, go to **Services** and add your TorBox API key.</Step>
-  <Step>Usenet results are now playable via TorBox.</Step>
+  <Step>
+    Add Usenet addons — TorBox Search for their internal indexers, or Newznab
+    and friends for your own.
+  </Step>
 </Steps>
 
 <Callout type="warn">
-  When using your own indexers with TorBox (not their internal ones), all
-  results appear uncached even if another TorBox user has cached the same file.
-  Internal TorBox indexer results will show as cached when previously
-  downloaded.
+  When using your own indexers with TorBox (not their internal ones), results
+  appear uncached even if another TorBox user has already cached the same file.
+  Internal TorBox indexer results do show as cached when previously downloaded.
 </Callout>
 
-### Cache & Play
+#### Cache and Play
 
-To improve uncached Usenet playback on TorBox, enable **Cache & Play** in AIOStreams:
-
-- **Without it:** An uncached file returns a short video asking you to try again while it downloads in the background.
-- **With it:** The video player buffers until the download completes, then begins playing automatically.
+Because TorBox must finish downloading before playback, an uncached result normally returns a short "downloading, come back later" video — you'd retry once it's cached. **Cache and Play** (under **Services → Built-in → Cache and Play**) changes that: AIOStreams polls TorBox until the download completes, then serves the playback link directly, so your player just buffers a little longer and starts on its own.
 
 <Callout type="warn">
-  Cache & Play effectiveness depends on your player's timeout settings. The
-  Stremio iOS app has a short timeout (~30 seconds) — if the download takes
-  longer, the player will error out and you'll need to restart the stream
-  manually.
+  Cache and Play is limited by your player's timeout. The Stremio iOS app, for
+  example, gives up after ~30 seconds — if the download takes longer, restart
+  the stream manually once it's cached.
 </Callout>
 
----
+(The setting also applies to uncached debrid downloads, but it shines with Usenet since downloads usually finish quickly.)
 
-## Method 3: Self-Hosted (Advanced)
+#### TorBox Search Caveats
 
-This method gives the most control and works on any device (since it produces a standard HTTP stream URL). It requires self-hosting one of the following applications:
+TorBox's Search API returns both torrent and Usenet results. You can use it through the dedicated **TorBox Search** addon, or point the built-in **Newznab**/**Torznab** addons at its Newznab/Torznab endpoints. Two important caveats either way:
 
-- [**nzbDAV**](https://github.com/nzbdav-dev/nzbdav)
+<Callout type="warn">
+  **The TorBox Search API is IP-whitelisted** — it only responds to approved
+  IPs. In practice it will not work from a self-hosted AIOStreams instance;
+  you need to use one of the trusted public instances.
+</Callout>
+
+<Callout type="warn">
+  **TorBox Search Usenet results only work with the TorBox service.** The "NZB
+  URLs" it returns are not real NZB downloads — only TorBox can internally
+  resolve them and start a download. No other service or tool can fetch an NZB
+  from them, and that includes NNTP tools configured with TorBox's own NNTP
+  server.
+</Callout>
+
+#### The TorBox NNTP Server
+
+TorBox Pro also includes access to a TorBox **NNTP server**. That makes it usable as a regular provider with any NNTP-based service — the built-in engine, NzbDAV, AltMount, StremThru Newz or Stremio NNTP. It appears to sit on the **Abavia** backbone, so pairing it with an Omicron provider follows the two-backbone advice from [the primer](#usenet-in-60-seconds).
+
+### NzbDAV, AltMount and StremThru Newz
+
+Before the built-in engine existed, streaming NNTP through AIOStreams meant self-hosting a companion tool, and these remain fully supported:
+
+- [**NzbDAV**](https://github.com/nzbdav-dev/nzbdav)
 - [**AltMount**](https://github.com/javi11/altmount)
-- [**StremThru**](https://github.com/MunifTanjim/stremthru)
+- [**StremThru**](https://github.com/MunifTanjim/stremthru) (the **StremThru Newz** service)
 
-These apps mount NZBs as a virtual filesystem and expose a WebDAV server (or equivalent) that AIOStreams wraps to produce streamable URLs.
+Like the built-in engine, these stream over NNTP straight from your provider — they mount NZBs as a virtual filesystem and expose a WebDAV server (or equivalent) that AIOStreams wraps into streamable URLs. The stream URL your player hits is served by the tool itself (unless you [proxy it through AIOStreams](#proxying-streams-through-aiostreams)). Choose one of these over the built-in engine if you already run it for other tooling, or want the Usenet machinery on a separate box from AIOStreams.
 
 <Callout type="info">
   For free self-hosting, follow the [Oracle VPS
   guides](https://guides.viren070.me/selfhosting) and the [Docker Compose
-  template](https://github.com/Viren070/docker-compose-template) that includes
-  pre-configured setups for all required software.
+  template](https://github.com/Viren070/docker-compose-template), which
+  includes pre-configured setups for all required software. Prefer managed?
+  See the [ElfHosted bundle](#zero-setup-the-elfhosted-bundle).
 </Callout>
 
 <Callout type="warn">
-  nzbDAV and AltMount are alpha software. You may encounter bugs or breaking
-  changes. StremThru is also actively developed.
+  If you run several of these concurrently, be mindful of your provider's connection limits.
 </Callout>
 
 <Callout type="info">
-  The nzbDAV and AltMount integrations were inspired by the
+  The NzbDAV and AltMount integrations were inspired by the
   [UsenetStreamer](https://github.com/Sanket9225/UsenetStreamer) addon, which
-  was the first to serve nzbDAV streams through a Stremio addon.
+  was the first to serve NzbDAV streams through a Stremio addon.
 </Callout>
 
-### Initial Application Setup
+#### Set Up the Tool
 
-#### StremThru
+<Tabs items={['NzbDAV', 'AltMount', 'StremThru']}>
+  <Tab value="NzbDAV">
+    <Steps>
+      <Step>Register your admin user on first launch.</Step>
+      <Step>Go to **Settings → Usenet** and add your Usenet provider.</Step>
+      <Step>Go to the **SABnzbd** tab and note the API key.</Step>
+      <Step>
+        In the **WebDAV** tab, set a WebDAV username and password (these are
+        separate from your admin login).
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab value="AltMount">
+    <Steps>
+      <Step>Complete the onboarding to create your admin user.</Step>
+      <Step>
+        Go to **Configuration → WebDAV** and set your username and password.
+      </Step>
+      <Step>In **NNTP Providers**, add your Usenet provider details.</Step>
+      <Step>
+        In **SABnzbd API**, turn **Enable SABnzbd API** ON. Do **not** change
+        the `Complete` directory (must stay `/complete`).
+      </Step>
+      <Step>Go to the **System** tab and note your API key.</Step>
+    </Steps>
+  </Tab>
+  <Tab value="StremThru">
+    <Steps>
+      <Step>
+        Install and run StremThru following the [official
+        documentation](https://docs.stremthru.13377001.xyz/getting-started/installation).
+        Set
+        [`STREMTHRU_AUTH`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-auth)
+        and
+        [`STREMTHRU_VAULT_SECRET`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-vault-secret)
+        in your environment.
+      </Step>
+      <Step>
+        Configure your Usenet providers in the StremThru dashboard (`/dash`)
+        under **Usenet → Servers**.
+      </Step>
+      <Step>
+        Do **not** configure your indexers in StremThru — that is only for
+        using StremThru standalone. With AIOStreams, add your indexers via the
+        [Newznab addon](#3-add-your-indexers) as usual. (If you'd rather
+        centralise indexers in StremThru anyway, take each indexer's Newznab
+        URL from the StremThru dashboard and add each one as a separate Newznab
+        addon.)
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+#### Add the Service in AIOStreams
 
 <Steps>
   <Step>
-    Install and run StremThru following the
-    [official documentation](https://docs.stremthru.13377001.xyz/getting-started/installation).
-    Set
-    [`STREMTHRU_AUTH`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-auth)
-    and
-    [`STREMTHRU_VAULT_SECRET`](https://docs.stremthru.13377001.xyz/configuration/#stremthru-vault-secret)
-    in your environment.
+    Go to **Services** and add **NzbDAV**, **AltMount** or **StremThru Newz**.
   </Step>
   <Step>
-    Configure your Usenet providers in the StremThru dashboard (`/dash`) under
-    **Usenet → Servers**.
-  </Step>
-</Steps>
-
-#### nzbDAV
-
-<Steps>
-  <Step>Register your admin user on first launch.</Step>
-  <Step>Go to **Settings → Usenet** and add your Usenet provider.</Step>
-  <Step>Go to the **SABnzbd** tab and note the API key.</Step>
-  <Step>
-    In the **WebDAV** tab, set a WebDAV username and password (these are
-    separate from your admin login).
-  </Step>
-</Steps>
-
-#### AltMount
-
-<Steps>
-  <Step>Complete the onboarding to create your admin user.</Step>
-  <Step>
-    Go to **Configuration → WebDAV** and set your username and password.
-  </Step>
-  <Step>In **NNTP Providers**, add your Usenet provider details.</Step>
-  <Step>
-    In **SABnzbd API**, turn **Enable SABnzbd API** ON. Do **not** change the
-    `Complete` directory (must stay `/complete`).
-  </Step>
-  <Step>Go to the **System** tab and note your API key.</Step>
-</Steps>
-
-<Callout type="warn">
-  If running multiple services concurrently, be mindful of your Usenet
-  provider's connection limits.
-</Callout>
-
-### Configuring in AIOStreams
-
-<Steps>
-  <Step>
-    In AIOStreams, go to **Services** and select nzbDAV, AltMount, or StremThru.
-  </Step>
-  <Step>
-    Enter the required details. 
-      - **nzbDAV / AltMount:** API Key, WebDAV User, WebDAV Password. 
-      - **StremThru:** StremThru URL and Auth Token — a `user:password` string (optionally base64-encoded) from your `STREMTHRU_AUTH`
-      value.
+    Enter the required details.
+      - **NzbDAV / AltMount:** API key, WebDAV username, WebDAV password.
+      - **StremThru:** StremThru URL and Auth Token — a `user:password` string
+        (optionally base64-encoded) from your `STREMTHRU_AUTH` value.
   </Step>
   <Step>Configure the **URL** and **Public URL** fields (see below).</Step>
 </Steps>
 
-### URL vs. Public URL
+#### URL vs. Public URL
 
-This is the most critical configuration step.
+This is the most critical configuration step for NzbDAV and AltMount.
 
 | Field          | Purpose                                                                      |
 | -------------- | ---------------------------------------------------------------------------- |
-| **URL**        | Address AIOStreams uses to talk to the API                                   |
+| **URL**        | Address AIOStreams uses to talk to the tool's API                            |
 | **Public URL** | Publicly accessible address used to construct streaming URLs for your player |
 
 <Callout type="info">
@@ -214,13 +334,14 @@ This is the most critical configuration step.
   <Tab value="Same local network">
     **URL:** Internal Docker/local address (e.g. `http://nzbdav:3000`)
 
-    **Public URL — Option A (Proxy, recommended):** Leave blank and provide your
-    `AIOStreams Auth Token` in the service settings. AIOStreams proxies the stream
-    — most reliable method.
+    **Public URL — Option A (Proxy, recommended):** Leave blank and provide
+    your **AIOStreams Auth Token** in the service settings (see
+    [below](#proxying-streams-through-aiostreams)). AIOStreams proxies the
+    stream — the most reliable method.
 
-    **Public URL — Option B (Direct):** Enter the publicly accessible URL (e.g.
-    `https://nzbdav.yourdomain.com`). Without it your player receives an
-    inaccessible local address.
+    **Public URL — Option B (Direct):** Enter the publicly accessible URL
+    (e.g. `https://nzbdav.yourdomain.com`). Without it, your player receives an
+    unreachable local address.
 
   </Tab>
   <Tab value="AIOStreams remote">
@@ -232,61 +353,183 @@ This is the most critical configuration step.
   </Tab>
 </Tabs>
 
+#### Proxying Streams Through AIOStreams
+
+The NzbDAV and AltMount service configs have an optional **AIOStreams Auth Token** field (a `username:password` pair from your instance's `AIOSTREAMS_AUTH`). Providing it makes AIOStreams proxy the tool's stream URLs instead of handing them to your player directly. That helps in three ways:
+
+- **Player compatibility** — NzbDAV/AltMount playback URLs are WebDAV URLs with embedded credentials, which some players refuse. The proxy produces a "normal" URL.
+- **Keep the tool private** — only AIOStreams needs to reach NzbDAV/AltMount, so you can leave them on your local network and expose just AIOStreams.
+- **No protocol mismatches** — mixed HTTP/HTTPS setups are a common cause of failed playback; the proxy sidesteps them entirely.
+
+Note that this only changes the URL your player sees. It has no effect on what your Usenet provider or indexer sees — the tool still downloads the articles and grabs the NZB exactly as before.
+
 <Callout type="warn">
-  Mismatched HTTP/HTTPS protocols can cause playback to fail. Using the
-  **built-in proxy** avoids this issue entirely.
+  Only the built-in proxy can do this — provide the token in the **service's**
+  own settings. External proxies (e.g. MediaFlow) will not work for these
+  URLs.
 </Callout>
 
----
+### Easynews
 
-## Method 4: ElfHosted (Managed)
+Easynews is a Usenet provider with its own web search, and its results are plain HTTP URLs served from Easynews' servers — no hosting, no companion software, works on every device.
 
-If you want the self-hosted setup without the complexity, ElfHosted offers a [pre-configured AIOStreams + nzbDAV bundle](https://store.elfhosted.com/product/aiostreams-nzbdav/) that includes:
+<Steps>
+  <Step>
+    Go to **Services** and add **Easynews** with your username and password.
+  </Step>
+  <Step>
+    Add the **Easynews Search** addon — it is the recommended way to access Easynews'
+    web search results in AIOStreams.
+  </Step>
+</Steps>
+
+#### Using Easynews Results with Other Services
+
+The Easynews Search addon can also obtain **real NZB files** for its web search results. That means those results can be played through any of the traditional NZB-accepting services too — the built-in engine, NzbDAV, AltMount, StremThru Newz, Stremio NNTP or TorBox — not just the Easynews service.
+
+Since your AIOStreams instance is what generates and serves those NZBs, this requires the addon's **AIOStreams Auth** option (a `username:password` pair from `AIOSTREAMS_AUTH`) — so using Easynews Search with any service other than Easynews means running your own instance (self-hosted or a private [ElfHosted](#zero-setup-the-elfhosted-bundle) one). Using it purely with the Easynews service needs no auth and works on any instance.
+
+<Callout type="info">
+  An Easynews subscription also includes regular **NNTP provider access** — the
+  HTTP downloads behind their web search are just one way in. You can use their
+  NNTP server details with any NNTP-based service in this guide, exactly like
+  any other provider.
+</Callout>
+
+### Zero Setup: The ElfHosted Bundle
+
+Don't want to host anything yourself? A **private [ElfHosted](https://store.elfhosted.com/elf/viren070/) instance** (ElfHosted is a project sponsor) is the managed alternative anywhere this guide says _self-host_: paid, private, pre-configured, no server administration — see the [deployment guide](/getting-started/deployment#elfhosted-paid-managed). Note that ElfHosted also runs a _public_ AIOStreams instance; anything here that needs `AIOSTREAMS_AUTH` or the dashboard requires a private instance of your own, not the public one.
+
+For Usenet specifically, their [pre-configured AIOStreams + NzbDAV bundle](https://store.elfhosted.com/product/aiostreams-nzbdav/) includes:
 
 - A private AIOStreams instance (_yours to manage_)
-- nzbDAV, secured behind ElfHosted SSO
-- A bundled Usenet provider account
+- NzbDAV, secured behind ElfHosted SSO
 - A bundled indexer to get started (_you can add more of your own later_)
 - 150 Mbps proxy bandwidth (_boostable_), enough to happily stream a 4K REMUX (_also usable for proxying debrid streams_)
 
-Pre-configured, fully supported, available in 5 minutes.
+Pre-configured, fully supported, available in 5 minutes — the same software stack as the self-hosted method, just hosted and pre-wired, so the configuration steps in this guide apply unchanged.
 
-<Callout type="info">
-  This is the same software stack as the self-hosted method, just hosted and pre-wired. The AIOStreams configuration steps in earlier guides apply unchanged.
+## 3. Add Your Indexers
+
+With a playback service in place, add addons to feed it results. AIOStreams provides several built-in addons that return Usenet results:
+
+| Addon               | Description                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Newznab**         | Connect indexers directly via their API URL and key                                                   |
+| **NZBHydra2**       | Connect your NZBHydra2 instance                                                                       |
+| **Prowlarr**        | Query Prowlarr for both torrent and Usenet results                                                    |
+| **TorBox Search**   | Uses TorBox's internal indexers (torrents and Usenet) — IP-whitelisted, trusted public instances only |
+| **Easynews Search** | Search Easynews; results stream directly or serve as NZBs                                             |
+
+These addons need at least one Usenet-capable service configured — each result is tagged with the service that will play it (e.g. `AIO`, `SN`, `TB`).
+
+You are not limited to a single Newznab addon: add it once **per indexer**, each with that indexer's API URL and key. A handful of Newznab addon instances side by side is the normal setup.
+
+<Callout type="tip">
+  With the Newznab addon, set the **Search Mode** to `both` if you have API
+  hits to spare. Some indexers only return results via query search — test both
+  modes to see what works best.
 </Callout>
 
----
+If you already manage your indexers through **NZBHydra2** or **Prowlarr**, their addons connect all of them at once — but be aware their NZB-grab behaviour differs; see [Indexer Managers](#indexer-managers).
 
-## Indexer IP Considerations
+## 4. Make It Resilient: Failover
 
-Some indexers flag mismatched IPs between the search request and the NZB grab as a TOS violation.
+Missing articles are the most common way a Usenet stream fails to play — and normally that means a "Something went wrong" error video. **Failover** fixes this: when the result you clicked fails, AIOStreams automatically tries the next result in your sorted list and redirects your player there instead, so playback works instead of failing.
 
-| Method                    | Search IP         | Grab IP                                  |
-| ------------------------- | ----------------- | ---------------------------------------- |
-| Stremio NNTP              | AIOStreams server | Your Stremio client (home IP)            |
-| TorBox                    | AIOStreams server | TorBox servers                           |
-| nzbDAV/AltMount/StremThru | AIOStreams server | Server running nzbDAV/AltMount/StremThru |
+Enable it under **Services → Built-in → Failover** on the configuration page.
 
-### Solutions
+### Where It Works
 
-**AIOStreams Proxy (Newznab):** Configure the Newznab addon to proxy NZB grabs through AIOStreams by providing your `AIOSTREAMS_AUTH` credentials in the addon settings (`user:password`). This makes both the query and grab come from the same AIOStreams IP.
+Failover can only act where AIOStreams controls playback — where your player's first request goes to an AIOStreams URL, letting AIOStreams resolve a healthy target and redirect. That covers:
 
-**Indexer managers:**
+- **Built-in addons** (marked with a _Built-in_ ribbon in the addon marketplace), and
+- **service-wrapped addons** (external addons whose results AIOStreams resolves through your debrid service).
 
-- **NZBHydra2:** Proxies grabs by default (preferred behaviour), unless the redirect option is enabled.
-- **Prowlarr:** Only redirects NZB grabs — this will cause an IP mismatch.
+Stremio NNTP results are excluded — playback happens entirely inside Stremio. Additionally, the **Include External Addon Targets** option lets failover _fall over to_ results from external addons (e.g. a Comet debrid link) even though a direct click on those can't trigger failover; such targets are health-checked by probing before your player is redirected.
 
-**ElfHosted**
+### Key Settings
 
-When running an ElfHosted AIOStreams instance, your search IP and grab IP are always the same, routed through a built-in NZBHydra/SABnzbd proxy on your instance, so usage patterns are identical to traditional Usenet access.
+- **Failover Content Types** — whether Usenet and/or debrid results may be used as targets.
+- **Allow Cross-Type Failover** — let a failed Usenet result fall through to a debrid result (or vice versa) if that's what's next in the list. Off keeps failover within the clicked result's own kind.
+- **Include External Addon Targets** — see above.
+- **Max Failover Attempts** — how many fallback results to try before giving up.
+- **Same-Release Failover Attempts** — see [below](#same-release-variants-deduplicator-merging).
+- **Parallel Attempts** and its timing knobs (backup delay, preferred-item grace, …) — advanced: race several attempts and take the first healthy one.
 
-ElfHosted also offers managed [NZBHydra2](https://store.elfhosted.com/product/nzbhydra/) or [Prowlarr](https://store.elfhosted.com/product/prowlarr/) instances ($1 trial) for users wanting to augment an existing setup.
+### Same-Release Variants (Deduplicator Merging)
 
-The public [Zyclops NewzNab Healthcheck Proxy](https://zyclops.elfhosted.com/) (_an ElfHosted project_) is another means of ensuring your search IP matches your grab IP, and functionality to add Zyclops healthchecks is built into AIOStreams Newznab addons. Be sure to review the highlighted implications re credential / NZB sharing and your indexer's TOS.
+The deduplicator (**Filters → Deduplicator**) removes duplicate copies of the same release from your list. Two settings turn those discarded copies into failover ammunition instead of waste:
 
-### Indexer Policies
+- **Merge Duplicates** — rather than just discarding duplicates, their info is folded into the surviving result (e.g. a runtime that only one addon reported is kept on the winner).
+- **Harvest Failover Variants** — additionally retains the duplicates' playback URLs on the winner as _same-release_ failover targets: the same release from a different indexer or addon.
 
-Indexer rules vary — always check with your indexer directly. Some known policies:
+With variants harvested, the **Same-Release Failover Attempts** setting (in the Failover card) controls how many alternative copies of the _same_ release are tried before failover moves on to a different release — often the ideal behaviour, since another indexer's NZB of the same release may be complete where the first wasn't.
 
-- **NinjaCentral:** Compatible with public AIOStreams instances, as long as you are not sharing your account.
-- **SceneNZBs:** Explicitly disallows use with Stremio. This is likely detected via the IP mismatch — self-hosting AIOStreams with the proxy feature or NZBHydra2 may resolve it.
+### Failover Position
+
+The last stages of the result pipeline are the required/excluded stream expression filters (**Filters → Stream Expression**) followed by result limits (**Filters → Result Limits**) — and depending on your configuration, both can remove a lot of results. **Failover Position** picks the point (always after sorting) from which the fallback chain is built:
+
+| Position            | Fallback chain drawn from                                            |
+| ------------------- | -------------------------------------------------------------------- |
+| **Before SEL**      | Results before stream expression filters are applied                 |
+| **Before Limiting** | Results after expression filters, before result limits               |
+| **Last** (default)  | The fully filtered list — exactly the results you see in your player |
+
+Earlier positions give failover a larger pool to draw from, at the cost of possibly landing on a result your filters would have removed. The default is WYSIWYG.
+
+## 5. NZB Grabs and Indexer Rules
+
+Streaming is a contentious use of Usenet, and some indexers actively restrict it: blocking the user agents of known streaming tools (AIOStreams, NzbDAV, …), blocking datacenter/VPS IP ranges, or — as **Treasure Maps** (formerly SceneNZBs) is known to — serving decoy NZBs to suspected streamers. Others flag a mismatch between the IP that _searched_ and the IP that _grabbed_ the NZB as a TOS violation.
+
+This section covers how NZBs actually travel from your indexer to your playback service — and the options AIOStreams gives you around it. Always check your indexer's rules.
+
+### Search IP vs. Grab IP
+
+Searches always come from your AIOStreams instance. Who performs the NZB grab depends on the playback service:
+
+| Playback service                   | Search request      | NZB grab                                   |
+| ---------------------------------- | ------------------- | ------------------------------------------ |
+| Built-in engine (**AIOStreams**)   | AIOStreams instance | AIOStreams instance — always matches       |
+| NzbDAV / AltMount / StremThru Newz | AIOStreams instance | The tool's server (matches when co-hosted) |
+| Stremio NNTP                       | AIOStreams instance | Your Stremio device (home IP)              |
+| TorBox                             | AIOStreams instance | TorBox's servers                           |
+
+This table assumes the Newznab addon pointed directly at your indexers. If you go through an indexer manager (NZBHydra2, Prowlarr), the search still originates from AIOStreams but goes to the manager, which then queries the indexer — so the indexer sees the _manager's_ IP for searches.
+
+### Proxying NZB Grabs Through AIOStreams
+
+The Newznab addon has an **AIOStreams Proxy Auth** option (a `username:password` pair from `AIOSTREAMS_AUTH`). With it set, AIOStreams hands the playback service a proxied AIOStreams URL instead of the indexer's raw NZB URL — so the grab is performed by AIOStreams itself, and the indexer sees the same IP for search and grab.
+
+**When it helps:**
+
+- **Stremio NNTP** and **TorBox** — the grab would otherwise come from your Stremio device or TorBox's servers. (Some indexers block TorBox's servers outright; proxying means the indexer only ever sees your AIOStreams instance.)
+
+**When it's usually unnecessary:**
+
+- The **built-in engine** — AIOStreams already grabs the NZB itself.
+- **NzbDAV / AltMount / StremThru Newz co-hosted with AIOStreams** — the tool most likely shares AIOStreams' IP anyway, so proxying just adds a hop. The only reasons to still enable it here are to reuse AIOStreams' [NZB grab cache](#the-nzb-grab-cache) or to centrally apply the [outbound request controls](#outbound-request-controls) (header overrides, HTTP proxies) when the tool doesn't support them itself.
+
+### The NZB Grab Cache
+
+AIOStreams keeps grabbed `.nzb` files in a two-tier cache (in-memory plus on-disk) so the same NZB is never fetched from an indexer twice. It applies both to proxied grabs and to grabs made by the built-in Usenet engine. The sizes are configurable in the dashboard under **Settings → Built-in → Grab** — the defaults (64 MB memory, 1 GB disk) are reasonably sized and rarely need changing.
+
+### Indexer Managers
+
+- **NZBHydra2** proxies grabs by default, so search and grab both come from Hydra. Note that Hydra force-disables proxying for certain indexers at those indexers' request, so this is not guaranteed for every indexer.
+- **Prowlarr** only redirects NZB grabs — the downloading service hits the indexer directly, so the IP mismatch remains.
+
+### ElfHosted & Zyclops
+
+When running an ElfHosted AIOStreams instance, your search IP and grab IP are always the same, routed through a built-in NZBHydra/SABnzbd proxy on your instance, so usage patterns are identical to traditional Usenet access. ElfHosted also offers managed [NZBHydra2](https://store.elfhosted.com/product/nzbhydra/) and [Prowlarr](https://store.elfhosted.com/product/prowlarr/) instances ($1 trial) for augmenting an existing setup.
+
+The public [Zyclops NewzNab Healthcheck Proxy](https://zyclops.elfhosted.com/) (_an ElfHosted project_) is another way to keep your search and grab IPs aligned, and Zyclops health checks are built into the AIOStreams Newznab addon. Review the highlighted implications regarding credential/NZB sharing and your indexer's TOS before enabling it.
+
+### Outbound Request Controls
+
+The dashboard has two settings (**Settings → HTTP**) that shape every outbound request your instance makes. Whether a given configuration complies with your indexer's or provider's terms is between you and them.
+
+- **Request header overrides** — per-key User-Agent/header overrides. A key is a hostname (`host`, `*.host`, `*`) or a `[context]` label for a request purpose (`[nzb_grabs]`, `[torrent_grabs]`, `[newznab]`, `[torznab]`). A value is a literal User-Agent (supports the `{version}` / `{random}` placeholders) or a `{preset}` reference to a built-in header set: `{sabnzbd}`, `{nzbget}`, `{sonarr}`, `{radarr}`, `{prowlarr}`, `{nzbhydra2}`, `{chrome}`. When several keys match, the most specific wins — exact host, then wildcard host, then `[context]`, then global `*`. Example: `[nzb_grabs]:{sabnzbd},indexer.com:{prowlarr}`.
+- **Addon proxy URL(s)** and **Addon proxy config** — route outbound requests through one or more HTTP proxies (e.g. a gluetun container for VPN routing). The config map uses the same key scheme as above, with `true`/`false` to enable/disable per key, or a 0-based index to pick a specific proxy from the list. Example: `[newznab]:true`.
+
+Both are also settable via environment variables (`REQUEST_HEADER_OVERRIDES`, `ADDON_PROXY`, `ADDON_PROXY_CONFIG`) — see the [environment variable reference](/configuration/environment-variables).

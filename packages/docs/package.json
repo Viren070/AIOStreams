@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "gen:env-docs": "pnpm -w run gen:env-docs",
+    "gen:env-docs": "tsx ../../scripts/gen-env-docs.ts && prettier --write ./content/docs/configuration/environment-variables.mdx",
     "prebuild": "pnpm run gen:env-docs",
     "build": "next build",
     "predev": "pnpm run gen:env-docs",
