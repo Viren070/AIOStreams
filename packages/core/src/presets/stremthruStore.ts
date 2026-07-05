@@ -222,6 +222,12 @@ export class StremthruStorePreset extends StremThruPreset {
       storeToken = credential.authToken;
       storeName = '';
     }
+    if (serviceId === constants.STREMTHRU_TORRENT_SERVICE) {
+      url = `${credential.url.replace(/\/$/, '')}`;
+      storeToken = credential.authToken;
+      // Blank store name means the instance itself is the store.
+      storeName = credential.storeName || '';
+    }
     if (!url.endsWith('/stremio/store')) {
       url += '/stremio/store';
     }

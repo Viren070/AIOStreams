@@ -246,6 +246,14 @@ export class BuiltinAddonPreset extends Preset {
             publicUrl: credentials.publicUrl,
           })
         ),
+      [constants.STREMTHRU_TORRENT_SERVICE]: (credentials: any) =>
+        toUrlSafeBase64(
+          JSON.stringify({
+            url: credentials.url,
+            authToken: credentials.authToken,
+            storeName: credentials.storeName,
+          })
+        ),
       [constants.AIOSTREAMS_SERVICE]: (credentials: any) =>
         toUrlSafeBase64(
           JSON.stringify({

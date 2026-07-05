@@ -7,6 +7,7 @@ import {
   encryptString,
   BuiltinServiceId,
   mergeParsedMediaInfos,
+  toUrlSafeBase64,
 } from '../utils/index.js';
 import {
   Torrent,
@@ -637,6 +638,14 @@ export function getServiceCredential(service: {
         email: creds.email,
         password: creds.password,
       });
+    case constants.STREMTHRU_TORRENT_SERVICE:
+      return toUrlSafeBase64(
+        JSON.stringify({
+          url: creds.url,
+          authToken: creds.authToken,
+          storeName: creds.storeName,
+        })
+      );
     default:
       return creds.apiKey;
   }

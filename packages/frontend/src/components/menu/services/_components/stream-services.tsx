@@ -73,6 +73,7 @@ const SERVICE_LOGO_MAP: Record<ServiceId, string> = {
   debrider: 'https://debrider.app/icon.svg',
   easynews: '/assets/easynews_logo.png',
   stremthru_newz: 'https://emojiapi.dev/api/v1/sparkles/256.png',
+  stremthru_torrent: 'https://emojiapi.dev/api/v1/magnet/256.png',
   stremio_nntp:
     'https://raw.githubusercontent.com/Stremio/stremio-brand/refs/heads/master/logos/PNG/stremio-logo-800px.png',
   nzbdav:

@@ -1006,6 +1006,7 @@ export abstract class StreamExpressionEngine {
             'altmount',
             'stremio_nntp',
             'stremthru_newz',
+            'stremthru_torrent',
             'easydebrid',
             'debrider',
             'aiostreams',
@@ -1013,7 +1014,7 @@ export abstract class StreamExpressionEngine {
         )
       ) {
         throw new Error(
-          'Service must be a string and one of: realdebrid, debridlink, alldebrid, torbox, pikpak, seedr, offcloud, premiumize, easynews, nzbdav, altmount, stremio_nntp, stremthru_newz, easydebrid, debrider, aiostreams'
+          'Service must be a string and one of: realdebrid, debridlink, alldebrid, torbox, pikpak, seedr, offcloud, premiumize, easynews, nzbdav, altmount, stremio_nntp, stremthru_newz, stremthru_torrent, easydebrid, debrider, aiostreams'
         );
       }
       return streams.filter((stream) =>

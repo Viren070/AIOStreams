@@ -17,6 +17,7 @@ export const stremthruSpecialCases: Partial<
   [constants.PIKPAK_SERVICE]: (credentials: any) =>
     `${credentials.email}:${credentials.password}`,
   [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) => credentials,
+  [constants.STREMTHRU_TORRENT_SERVICE]: (credentials: any) => credentials,
 };
 
 export class StremThruStreamParser extends StreamParser {
@@ -96,6 +97,7 @@ export class StremThruPreset extends Preset {
     constants.PIKPAK_SERVICE,
     constants.REALDEBRID_SERVICE,
     constants.TORBOX_SERVICE,
+    constants.STREMTHRU_TORRENT_SERVICE,
   ] as const;
 
   protected static readonly socialLinks: Option['socials'] = [

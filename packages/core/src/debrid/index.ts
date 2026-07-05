@@ -80,6 +80,8 @@ export function getDebridService(
       return new EasynewsService(config);
     case 'stremthru_newz':
       return createStremThruNewzService(config, pollInterval, maxWaitTime);
+    case constants.STREMTHRU_TORRENT_SERVICE:
+      return createStremThruTorrentService(config, pollInterval, maxWaitTime);
     case constants.AIOSTREAMS_SERVICE:
       return new NativeUsenetService(config);
     default:
@@ -155,6 +157,64 @@ function createStremThruNewzService(
       neverAutoRemove: true,
       treatUnknownAsCached: true,
     },
+    cacheAndPlayOptions: {
+      pollingInterval: pollInterval,
+      maxWaitTime: maxWaitTime,
+    },
+  });
+}
+
+function createStremThruTorrentService(
+  config: DebridServiceConfig,
+  pollInterval: number,
+  maxWaitTime: number
+): StremThruService {
+  let url: string;
+  let authToken: string;
+  let storeName: string | undefined;
+
+  try {
+    const parsed = JSON.parse(fromUrlSafeBase64(config.token));
+    url = parsed.url;
+    authToken = parsed.authToken;
+    storeName = parsed.storeName;
+  } catch {
+    throw new DebridError(
+      'Invalid StremThru Torrent credentials. Expected base64-encoded JSON with url and authToken.',
+      {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'BAD_REQUEST',
+        headers: {},
+        body: {},
+      }
+    );
+  }
+
+  if (!url || !authToken) {
+    throw new DebridError(
+      'Missing url or authToken in StremThru Torrent credentials.',
+      {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'BAD_REQUEST',
+        headers: {},
+        body: {},
+      }
+    );
+  }
+
+  return new StremThruService({
+    serviceName: constants.STREMTHRU_TORRENT_SERVICE,
+    clientIp: config.clientIp,
+    stremthru: {
+      baseUrl: url,
+      // When the user does not name a backing store, the instance itself is
+      // treated as the store (matches the stremthru_newz convention).
+      store: storeName || 'stremthru',
+      token: authToken,
+    },
+    capabilities: { torrents: true, usenet: false },
     cacheAndPlayOptions: {
       pollingInterval: pollInterval,
       maxWaitTime: maxWaitTime,
