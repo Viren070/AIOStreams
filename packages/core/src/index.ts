@@ -1,5 +1,6 @@
 export * from './utils/index.js';
 export * from './logging/ring-buffer.js';
+export { pinoRoot, setLogLevel, getLogLevel, getLogLevelDisplay } from './logging/logger.js';
 export * from './config/index.js';
 export * from './db/index.js';
 export * from './analytics/index.js';

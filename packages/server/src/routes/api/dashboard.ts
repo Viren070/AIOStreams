@@ -15,6 +15,8 @@ import {
   closeDb,
   stopAnalytics,
   formatZodError,
+  setLogLevel,
+  getLogLevelDisplay,
   type AnalyticsRange,
   type LogRecord,
   type LogQuery,
@@ -136,6 +138,68 @@ router.get('/logs/export', (req, res) => {
   }
   res.end();
   logger.info({ format }, 'logs exported');
+});
+
+// POST /dashboard/log-level — change the process log level at runtime.
+router.post('/log-level', (req, res) => {
+  const { level } = (req.body ?? {}) as { level?: unknown };
+  if (typeof level !== 'string' || !level) {
+    return res.status(400).json(
+      createResponse({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'level (string) is required' },
+      })
+    );
+  }
+  const ok = setLogLevel(level);
+  if (!ok) {
+    return res.status(400).json(
+      createResponse({
+        success: false,
+        error: {
+          code: 'BAD_REQUEST',
+          message: `Invalid log level: "${level}". Valid levels: silly, debug, verbose, http, info, warn, error.`,
+        },
+      })
+    );
+  }
+  const username =
+    (req as { user?: { username?: string } }).user?.username ?? 'admin';
+  logger.warn({ level, username }, 'log level changed at runtime');
+  res.status(200).json(
+    createResponse({ success: true, data: { level: getLogLevelDisplay() } })
+  );
+});
+
+// GET /dashboard/log-level — current log level (display name).
+router.get('/log-level', (_req, res) => {
+  res.status(200).json(
+    createResponse({ success: true, data: { level: getLogLevelDisplay() } })
+  );
+});
+
+// POST /dashboard/logs/clear — drop all retained log lines from the ring buffer.
+router.post('/logs/clear', (req, res) => {
+  const body = (req.body ?? {}) as { confirm?: unknown };
+  if (body.confirm !== true) {
+    return res.status(400).json(
+      createResponse({
+        success: false,
+        error: {
+          code: 'CONFIRMATION_REQUIRED',
+          message:
+            'Clearing logs is destructive and requires confirmation.',
+        },
+      })
+    );
+  }
+  const username =
+    (req as { user?: { username?: string } }).user?.username ?? 'admin';
+  logRingBuffer.clear();
+  logger.warn({ username }, 'log ring buffer cleared');
+  res
+    .status(200)
+    .json(createResponse({ success: true, data: { cleared: true } }));
 });
 
 // =============================================================================

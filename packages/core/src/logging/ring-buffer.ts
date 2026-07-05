@@ -195,6 +195,15 @@ class LogRingBuffer {
       lastSeq: this.seq,
     };
   }
+
+  /** Clear all retained logs from the in-memory ring buffer. */
+  clear(): void {
+    this.buf = [];
+    this.head = 0;
+    this.bytes = 0;
+    // Intentionally do NOT reset `seq` so that SSE clients don't replay
+    // old lines after a clear — their `lastSeq` cursors remain valid.
+  }
 }
 
 export const logRingBuffer = new LogRingBuffer(

@@ -12,6 +12,7 @@ import {
   BiDownArrowAlt,
   BiDotsVerticalRounded,
   BiCopy,
+  BiTrash,
 } from 'react-icons/bi';
 import { toast } from 'sonner';
 import { TextInput } from '@/components/ui/text-input';
@@ -33,6 +34,7 @@ import { Spinner } from '@/components/ui/loading-spinner';
 import { LuffyError } from '@/components/shared/luffy-error';
 import { copyToClipboard } from '@/utils/clipboard';
 import { formatDateTime } from '@/lib/format';
+import { api } from '@/lib/api';
 
 const LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const;
 
@@ -173,6 +175,16 @@ function LogLine({
   );
 }
 
+const LOG_LEVEL_OPTIONS = [
+  { value: 'silly', label: 'Silly' },
+  { value: 'debug', label: 'Debug' },
+  { value: 'verbose', label: 'Verbose' },
+  { value: 'http', label: 'HTTP' },
+  { value: 'info', label: 'Info' },
+  { value: 'warn', label: 'Warn' },
+  { value: 'error', label: 'Error' },
+];
+
 export function LogsPage() {
   const initialPrefs = useMemo(loadPrefs, []);
   const [autoscroll, setAutoscroll] = useState(initialPrefs.autoscroll);
@@ -183,6 +195,43 @@ export function LogsPage() {
   const [regex, setRegex] = useState(false);
   const debouncedSearch = useDebounce(search, 250);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  // Runtime log level
+  const [logLevel, setLogLevel] = useState<string>('info');
+  const [logLevelLoading, setLogLevelLoading] = useState(false);
+
+  useEffect(() => {
+    api<{ level: string }>('/dashboard/log-level')
+      .then((d) => setLogLevel(d.level))
+      .catch(() => {});
+  }, []);
+
+  const changeLogLevel = async (level: string) => {
+    setLogLevelLoading(true);
+    try {
+      await api<{ level: string }>('POST /dashboard/log-level', {
+        body: { level },
+      });
+      setLogLevel(level);
+      toast.success(`Log level changed to ${level}`);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to change log level');
+    } finally {
+      setLogLevelLoading(false);
+    }
+  };
+
+  const clearLogs = async () => {
+    try {
+      await api<{ cleared: boolean }>('POST /dashboard/logs/clear', {
+        body: { confirm: true },
+      });
+      clear();
+      toast.success('Logs cleared');
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to clear logs');
+    }
+  };
 
   const regexError = useMemo(() => {
     if (!regex || !search) return null;
@@ -204,7 +253,7 @@ export function LogsPage() {
     [debouncedSearch, regex, regexError, levels, module]
   );
 
-  const { rows, loading, connected, error, retry } = useLogStream(filters);
+  const { rows, loading, connected, error, clear, retry } = useLogStream(filters);
 
   // Defer rendering the heavy virtualizer until the page-entry animation settles (~400ms spring)
   const [ready, setReady] = useState(false);
@@ -333,7 +382,26 @@ export function LogsPage() {
               </span>
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-[--muted] whitespace-nowrap">
+                Level:
+              </span>
+              <Select
+                options={LOG_LEVEL_OPTIONS}
+                value={logLevel}
+                onValueChange={changeLogLevel}
+                disabled={logLevelLoading}
+                className="min-w-[90px]"
+              />
+            </div>
+            <IconButton
+              size="sm"
+              intent="gray-outline"
+              icon={<BiTrash />}
+              aria-label="Clear logs"
+              onClick={clearLogs}
+            />
             <Button
               size="sm"
               intent="gray-outline"
