@@ -5,21 +5,23 @@ import {
   createLogger,
   decryptString,
   resolveOverrideHeaders,
-  Env,
   appConfig,
   fromUrlSafeBase64,
-  getProxyAgent,
   getTimeTakenSincePoint,
   makeUrlLogSafe,
-  shouldProxy,
+  rewriteRequestUrl,
+  resolveDispatcher,
   validateCredentials,
   hasPermission,
   Permission,
+  downloadManager,
+  NzbTooLargeError,
+  BuiltinProxyStats,
+  BuiltinProxy,
 } from '@aiostreams/core';
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
 import { pipeline } from 'stream/promises';
-import { createProxy, BuiltinProxyStats, BuiltinProxy } from '@aiostreams/core';
 import { requireAdmin } from '../../middlewares/auth.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 import { StaticFiles } from '../../app.js';
@@ -108,12 +110,175 @@ const ProxyDataSchema = z.object({
   responseHeaders: z.record(z.string(), z.string()).optional(),
 });
 
+type ProxyAuth = z.infer<typeof ProxyAuthSchema>;
+type ProxyData = z.infer<typeof ProxyDataSchema>;
+
+/**
+ * Decode the `{mode}.{auth}.{data}` path segment, then authenticate and
+ * authorise the caller. Throws {@link APIError} (mapped to the right status by
+ * the route's catch) on any malformed / unauthenticated / unauthorised request.
+ */
+function decodeAndAuthorizeRequest(
+  encryptedAuthAndData: string,
+  requestId: string
+): { auth: ProxyAuth; data: ProxyData } {
+  const parts = encryptedAuthAndData.split('.');
+  let encodedAuth: string;
+  let encodedData: string;
+  let encodeMode: 'e' | 'u';
+  if (parts.length === 2) {
+    encodeMode = 'e';
+    [encodedAuth, encodedData] = parts;
+  } else if (parts.length === 3) {
+    encodeMode = parts[0] as 'e' | 'u';
+    [, encodedAuth, encodedData] = parts;
+  } else {
+    throw new APIError(
+      constants.ErrorCode.BAD_REQUEST,
+      undefined,
+      'Invalid encrypted auth and data'
+    );
+  }
+
+  let rawAuth: string | undefined;
+  let rawData: string | undefined;
+  if (encodeMode === 'e') {
+    rawAuth = decryptString(encodedAuth).data ?? undefined;
+    rawData = decryptString(encodedData).data ?? undefined;
+  } else {
+    rawAuth = fromUrlSafeBase64(encodedAuth);
+    rawData = fromUrlSafeBase64(encodedData);
+  }
+
+  if (!rawData || !rawAuth) {
+    logger.error(`[${requestId}] Decryption failed`);
+    throw new APIError(
+      constants.ErrorCode.ENCRYPTION_ERROR,
+      undefined,
+      'Could not decrypt data or auth'
+    );
+  }
+
+  const data = ProxyDataSchema.parse(JSON.parse(rawData));
+  const auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
+
+  if (!validateCredentials(auth.username, auth.password)) {
+    logger.warn(`[${requestId}] Authentication failed`, {
+      username: auth.username,
+    });
+    throw new APIError(
+      constants.ErrorCode.UNAUTHORIZED,
+      undefined,
+      'Invalid auth'
+    );
+  }
+
+  if (!hasPermission(auth.username, Permission.Proxy)) {
+    logger.warn(`[${requestId}] Proxy access denied`, {
+      username: auth.username,
+    });
+    throw new APIError(
+      constants.ErrorCode.FORBIDDEN,
+      undefined,
+      'Proxy access not permitted for this user'
+    );
+  }
+
+  return { auth, data };
+}
+
+/**
+ * Build the outbound header set for an upstream request to `urlObj`: client
+ * headers + the caller's `requestHeaders`, then per-host / `[context]` override
+ * headers, then any URL userinfo folded into a Basic auth header (and stripped
+ * from `urlObj`). Header names are lowercased. Mutates `urlObj`.
+ */
+function buildOutboundHeaders(
+  clientHeaders: Record<string, string | string[] | undefined>,
+  requestHeaders: Record<string, string> | undefined,
+  urlObj: URL,
+  context?: 'nzb_grabs'
+): Record<string, string | string[] | undefined> {
+  const headers = Object.fromEntries(
+    Object.entries({ ...clientHeaders, ...requestHeaders }).map(
+      ([key, value]) => [key.toLowerCase(), value]
+    )
+  );
+  for (const [name, value] of Object.entries(
+    resolveOverrideHeaders(urlObj, context)
+  )) {
+    headers[name.toLowerCase()] = value;
+  }
+  if (urlObj.username && urlObj.password) {
+    const basicAuth = Buffer.from(
+      `${decodeURIComponent(urlObj.username)}:${decodeURIComponent(
+        urlObj.password
+      )}`
+    ).toString('base64');
+    headers['authorization'] = `Basic ${basicAuth}`;
+    urlObj.username = '';
+    urlObj.password = '';
+  }
+  return headers;
+}
+
+/**
+ * Serve a NZB grab (`type: 'nzb'`) from the shared disk-backed grab
+ * cache. Throws {@link APIError} on failure.
+ */
+async function serveNzbFromGrabCache(
+  method: string,
+  res: Response,
+  data: ProxyData,
+  requestId: string,
+  username: string
+): Promise<void> {
+  let nzb: Buffer;
+  try {
+    nzb = await downloadManager.fetchNzb(data.url);
+  } catch (error) {
+    if (error instanceof NzbTooLargeError) {
+      throw new APIError(constants.ErrorCode.BAD_REQUEST, 413, error.message);
+    }
+    logger.error(`[${requestId}] Failed to grab NZB`, {
+      username,
+      url: makeUrlLogSafe(data.url),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new APIError(
+      constants.ErrorCode.INTERNAL_SERVER_ERROR,
+      502,
+      'Failed to grab NZB'
+    );
+  }
+
+  res.status(200);
+  res.set('Content-Type', 'application/x-nzb');
+  res.set('Content-Length', String(nzb.length));
+  if (data.filename) {
+    res.set(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(data.filename)}"`
+    );
+  }
+  // Let any caller-supplied response headers win, matching the streaming path.
+  if (data.responseHeaders) {
+    res.set(data.responseHeaders);
+  }
+  logger.debug(`[${requestId}] Served NZB from grab cache`, {
+    username,
+    bytes: nzb.length,
+    url: makeUrlLogSafe(data.url),
+  });
+  if (method === 'HEAD') {
+    res.end();
+  } else {
+    res.end(nzb);
+  }
+}
+
 router.use(corsMiddleware);
 
-// GET /stats — proxy statistics for the dashboard. Admin-only via the
-// dashboard session (the old `?auth=` query path is dropped). Machine-shaped:
-// raw epoch ms, `users` as an array. (Breaking change is acceptable per
-// 00-overview — this is an admin/self-hoster endpoint.)
 router.get(
   '/stats',
   requireAdmin,
@@ -226,82 +391,22 @@ router.all(
     let clientIp: string | undefined;
 
     try {
-      // decrypt and authenticate the request
-      const { encryptedAuthAndData } = req.params;
-      // const [encodeMode, encryptedAuth, encryptedData] =
-      //   encryptedAuthAndData.split('.');
-      const parts = encryptedAuthAndData.split('.');
-      let encodedAuth: string | undefined;
-      let encodedData: string | undefined;
-      let encodeMode: 'e' | 'u' | undefined;
-      if (parts.length == 2) {
-        encodeMode = 'e';
-        encodedAuth = parts[0];
-        encodedData = parts[1];
-      } else if (parts.length == 3) {
-        encodeMode = parts[0] as 'e' | 'u';
-        encodedAuth = parts[1];
-        encodedData = parts[2];
-      } else {
-        throw new APIError(
-          constants.ErrorCode.BAD_REQUEST,
-          undefined,
-          'Invalid encrypted auth and data'
-        );
-      }
+      const { auth: decodedAuth, data: decodedData } =
+        decodeAndAuthorizeRequest(req.params.encryptedAuthAndData, requestId);
+      auth = decodedAuth;
+      data = decodedData;
       const filename = req.params.filename as string | undefined;
 
-      let rawData: string | undefined;
-      let rawAuth: string | undefined;
-      if (encodeMode === 'e') {
-        const { data: streamData } = decryptString(encodedData);
-        const { data: authData } = decryptString(encodedAuth);
-        rawData = streamData ?? undefined;
-        rawAuth = authData ?? undefined;
-      } else {
-        rawAuth = fromUrlSafeBase64(encodedAuth);
-        rawData = fromUrlSafeBase64(encodedData);
-      }
-
-      if (!rawData || !rawAuth) {
-        logger.error(`[${requestId}] Decryption failed`);
-        next(
-          new APIError(
-            constants.ErrorCode.ENCRYPTION_ERROR,
-            undefined,
-            'Could not decrypt data or auth'
-          )
-        );
-        return;
-      }
-
-      data = ProxyDataSchema.parse(JSON.parse(rawData));
-      auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
-
-      if (!validateCredentials(auth.username, auth.password)) {
-        logger.warn(`[${requestId}] Authentication failed`, {
-          username: auth.username,
-        });
-        next(
-          new APIError(
-            constants.ErrorCode.UNAUTHORIZED,
-            undefined,
-            'Invalid auth'
-          )
-        );
-        return;
-      }
-
-      if (!hasPermission(auth.username, Permission.Proxy)) {
-        logger.warn(`[${requestId}] Proxy access denied`, {
-          username: auth.username,
-        });
-        next(
-          new APIError(
-            constants.ErrorCode.FORBIDDEN,
-            undefined,
-            'Proxy access not permitted for this user'
-          )
+      if (
+        data.type === 'nzb' &&
+        (req.method === 'GET' || req.method === 'HEAD')
+      ) {
+        await serveNzbFromGrabCache(
+          req.method,
+          res,
+          data,
+          requestId,
+          auth.username
         );
         return;
       }
@@ -364,54 +469,18 @@ router.all(
       let method = req.method as Dispatcher.HttpMethod;
 
       while (redirectCount < maxRedirects) {
-        const urlObj = new URL(currentUrl);
-        if (
-          appConfig.bootstrap.baseUrl &&
-          urlObj.origin === appConfig.bootstrap.baseUrl
-        ) {
-          const internalUrl = new URL(appConfig.bootstrap.internalUrl);
-          urlObj.protocol = internalUrl.protocol;
-          urlObj.host = internalUrl.host;
-          urlObj.port = internalUrl.port;
-        }
-
-        if (appConfig.http.requestUrlMappings) {
-          for (const [key, value] of Object.entries(
-            appConfig.http.requestUrlMappings
-          )) {
-            if (urlObj.origin === key) {
-              const mappedUrl = new URL(value);
-              urlObj.protocol = mappedUrl.protocol;
-              urlObj.host = mappedUrl.host;
-              urlObj.port = mappedUrl.port;
-              break;
-            }
-          }
-        }
         const grabContext = data.type === 'nzb' ? 'nzb_grabs' : undefined;
-        const { useProxy, proxyIndex } = shouldProxy(urlObj, grabContext);
-        const proxyAgent = useProxy
-          ? getProxyAgent(appConfig.http.addonProxy[proxyIndex])
-          : undefined;
-        const headers = Object.fromEntries(
-          Object.entries({ ...clientHeaders, ...data.requestHeaders }).map(
-            ([key, value]) => [key.toLowerCase(), value]
-          )
+        const urlObj = rewriteRequestUrl(new URL(currentUrl));
+        const { dispatcher, useProxy, proxyIndex } = resolveDispatcher(
+          urlObj,
+          grabContext
         );
-        const overrideHeaders = resolveOverrideHeaders(urlObj, grabContext);
-        for (const [name, value] of Object.entries(overrideHeaders)) {
-          headers[name.toLowerCase()] = value;
-        }
-        if (urlObj.username && urlObj.password) {
-          const basicAuth = Buffer.from(
-            `${decodeURIComponent(urlObj.username)}:${decodeURIComponent(
-              urlObj.password
-            )}`
-          ).toString('base64');
-          headers['authorization'] = `Basic ${basicAuth}`;
-          urlObj.username = '';
-          urlObj.password = '';
-        }
+        const headers = buildOutboundHeaders(
+          clientHeaders,
+          data.requestHeaders,
+          urlObj,
+          grabContext
+        );
         currentUrl = urlObj.toString();
         logger.debug(
           {
@@ -419,9 +488,7 @@ router.all(
             username: auth.username,
             url: makeUrlLogSafe(currentUrl),
             method,
-            tunneled: proxyAgent
-              ? `true (proxy index ${proxyIndex})`
-              : 'false',
+            tunneled: dispatcher ? `true (proxy index ${proxyIndex})` : 'false',
             ...(appConfig.logging.logSensitiveInfo
               ? {
                   headers,
@@ -437,7 +504,7 @@ router.all(
         upstreamResponse = await request(currentUrl, {
           method: method,
           headers: headers,
-          dispatcher: proxyAgent,
+          dispatcher: dispatcher,
           body: isBodyRequest ? req : undefined,
           bodyTimeout: 0,
           headersTimeout: 0,
@@ -514,6 +581,13 @@ router.all(
         username: auth.username,
       });
     } catch (error) {
+      if (error instanceof APIError) {
+        if (!res.headersSent) {
+          next(error);
+        }
+        return;
+      }
+
       const totalDuration = Date.now() - startTime;
 
       if (upstreamResponse && !upstreamResponse.body.destroyed) {

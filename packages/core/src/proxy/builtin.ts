@@ -114,7 +114,7 @@ export class BuiltinProxy extends BaseProxy {
         filename: stream.filename,
         requestHeaders: stream.headers?.request,
         responseHeaders: stream.headers?.response,
-        type: 'nzb',
+        type: stream.type ?? 'stream',
       });
 
       if (encrypt) {

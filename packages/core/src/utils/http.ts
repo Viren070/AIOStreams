@@ -73,33 +73,12 @@ export interface RequestOptions {
 }
 
 export async function makeRequest(url: string, options: RequestOptions) {
-  const urlObj = new URL(url);
-
-  if (
-    appConfig.bootstrap.baseUrl &&
-    urlObj.origin === appConfig.bootstrap.baseUrl
-  ) {
-    const internalUrl = new URL(appConfig.bootstrap.internalUrl);
-    urlObj.protocol = internalUrl.protocol;
-    urlObj.host = internalUrl.host;
-    urlObj.port = internalUrl.port;
-  }
-
-  if (appConfig.http.requestUrlMappings) {
-    for (const [key, value] of Object.entries(
-      appConfig.http.requestUrlMappings
-    )) {
-      if (urlObj.origin === key) {
-        const mappedUrl = new URL(value);
-        urlObj.protocol = mappedUrl.protocol;
-        urlObj.host = mappedUrl.host;
-        urlObj.port = mappedUrl.port;
-        break;
-      }
-    }
-  }
-
-  const { useProxy, proxyIndex } = shouldProxy(urlObj, options.context);
+  const urlObj = rewriteRequestUrl(new URL(url));
+  const { dispatcher, useProxy, proxyIndex } = resolveDispatcher(
+    urlObj,
+    options.context,
+    options.forceProxy
+  );
   const headers = new Headers(options.headers);
   if (options.forwardIp) {
     for (const header of HEADERS_FOR_IP_FORWARDING) {
@@ -144,14 +123,6 @@ export async function makeRequest(url: string, options: RequestOptions) {
     await urlCount.update(key, currentCount + 1);
   } else {
     await urlCount.set(key, 1, appConfig.recursion.thresholdWindow);
-  }
-
-  let dispatcher: Dispatcher | undefined;
-
-  if (options.forceProxy) {
-    dispatcher = getProxyAgent(options.forceProxy);
-  } else if (useProxy) {
-    dispatcher = getProxyAgent(appConfig.http.addonProxy[proxyIndex]);
   }
 
   logger.debug(
@@ -228,6 +199,65 @@ export function getProxyAgent(proxyUrl: string): Dispatcher | undefined {
   }
 
   return proxyAgent;
+}
+
+/**
+ * Resolve an outbound request URL: map a `BASE_URL` origin onto the internal URL,
+ * then apply any `requestUrlMappings` origin override. Mutates and returns the
+ * given URL. Shared by {@link makeRequest} and the streaming proxy route so both
+ * resolve hosts identically.
+ */
+export function rewriteRequestUrl(urlObj: URL): URL {
+  if (
+    appConfig.bootstrap.baseUrl &&
+    urlObj.origin === appConfig.bootstrap.baseUrl
+  ) {
+    const internalUrl = new URL(appConfig.bootstrap.internalUrl);
+    urlObj.protocol = internalUrl.protocol;
+    urlObj.host = internalUrl.host;
+    urlObj.port = internalUrl.port;
+  }
+
+  if (appConfig.http.requestUrlMappings) {
+    for (const [key, value] of Object.entries(
+      appConfig.http.requestUrlMappings
+    )) {
+      if (urlObj.origin === key) {
+        const mappedUrl = new URL(value);
+        urlObj.protocol = mappedUrl.protocol;
+        urlObj.host = mappedUrl.host;
+        urlObj.port = mappedUrl.port;
+        break;
+      }
+    }
+  }
+
+  return urlObj;
+}
+
+/**
+ * Pick the undici {@link Dispatcher} (proxy tunnel) for a request to `urlObj` in
+ * an optional `context`. `forceProxy` overrides the configured addon-proxy
+ * selection. Also returns the {@link shouldProxy} decision (for logging). Shared
+ * by {@link makeRequest} and the streaming proxy route.
+ */
+export function resolveDispatcher(
+  urlObj: URL,
+  context?: FetchContext,
+  forceProxy?: string
+): {
+  dispatcher: Dispatcher | undefined;
+  useProxy: boolean;
+  proxyIndex: number;
+} {
+  const { useProxy, proxyIndex } = shouldProxy(urlObj, context);
+  let dispatcher: Dispatcher | undefined;
+  if (forceProxy) {
+    dispatcher = getProxyAgent(forceProxy);
+  } else if (useProxy) {
+    dispatcher = getProxyAgent(appConfig.http.addonProxy[proxyIndex]);
+  }
+  return { dispatcher, useProxy, proxyIndex };
 }
 
 export function shouldProxy(
