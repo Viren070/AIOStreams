@@ -32,6 +32,10 @@ import { useDebounce } from '@/hooks/debounce';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Spinner } from '@/components/ui/loading-spinner';
 import { LuffyError } from '@/components/shared/luffy-error';
+import {
+  ConfirmationDialog,
+  useConfirmationDialog,
+} from '@/components/shared/confirmation-dialog';
 import { copyToClipboard } from '@/utils/clipboard';
 import { formatDateTime } from '@/lib/format';
 import { api } from '@/lib/api';
@@ -221,17 +225,26 @@ export function LogsPage() {
     }
   };
 
-  const clearLogs = async () => {
-    try {
-      await api<{ cleared: boolean }>('POST /dashboard/logs/clear', {
-        body: { confirm: true },
-      });
-      clear();
-      toast.success('Logs cleared');
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to clear logs');
-    }
-  };
+  const confirmClear = useConfirmationDialog({
+    title: 'Clear logs',
+    description:
+      'This permanently removes all retained logs. This cannot be undone.',
+    actionText: 'Clear',
+    actionIntent: 'alert-subtle',
+    onConfirm: async () => {
+      try {
+        await api<{ cleared: boolean }>('POST /dashboard/logs/clear', {
+          body: { confirm: true },
+        });
+        clear();
+        toast.success('Logs cleared');
+      } catch (err: any) {
+        toast.error(err?.message ?? 'Failed to clear logs');
+      }
+    },
+  });
+
+  const clearLogs = () => confirmClear.open();
 
   const regexError = useMemo(() => {
     if (!regex || !search) return null;
@@ -582,6 +595,8 @@ export function LogsPage() {
             </Button>
           )}
         </Card>
+
+        <ConfirmationDialog {...confirmClear} />
       </div>
     </PageWrapper>
   );

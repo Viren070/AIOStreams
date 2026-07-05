@@ -29,12 +29,14 @@ type Level = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 const VALID_LEVELS = new Set<string>([
   'silly',
+  'trace',
   'debug',
   'verbose',
   'http',
   'info',
   'warn',
   'error',
+  'fatal',
 ]);
 
 // --- Pino root setup ------------------------------------------------------
@@ -304,7 +306,9 @@ export const pinoRoot: PinoLogger = root;
 export function setLogLevel(level: string): boolean {
   const normalized = normalizeLevel(level);
   // Only accept levels that map identically (no fallback).
-  if (!VALID_LEVELS.has(level as Level)) return false;
+  // Check against the lowercased input so case-insensitive variants (e.g.
+  // "Info", "TRACE") are accepted as long as they match a known name.
+  if (!VALID_LEVELS.has(level.toLowerCase())) return false;
   root.level = normalized;
   return true;
 }
