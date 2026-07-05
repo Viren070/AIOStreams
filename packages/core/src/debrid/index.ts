@@ -5,6 +5,7 @@ export * from './torbox.js';
 export * from './nzbdav.js';
 export * from './altmount.js';
 export * from './aiostreams.js';
+export * from './realdebrid.js';
 
 import {
   appConfig,
@@ -22,6 +23,7 @@ import { AltmountService } from './altmount.js';
 import { StremioNNTPService } from './stremio-nntp.js';
 import { EasynewsService } from './easynews.js';
 import { NativeUsenetService } from './aiostreams.js';
+import { RealDebridService } from './realdebrid.js';
 
 export function getDebridService(
   serviceName: ServiceId,
@@ -80,6 +82,8 @@ export function getDebridService(
       return new EasynewsService(config);
     case 'stremthru_newz':
       return createStremThruNewzService(config, pollInterval, maxWaitTime);
+    case constants.CUSTOM_REALDEBRID_SERVICE:
+      return createCustomRealDebridService(config, pollInterval, maxWaitTime);
     case constants.AIOSTREAMS_SERVICE:
       return new NativeUsenetService(config);
     default:
@@ -160,4 +164,63 @@ function createStremThruNewzService(
       maxWaitTime: maxWaitTime,
     },
   });
+}
+
+function createCustomRealDebridService(
+  config: DebridServiceConfig,
+  pollInterval: number,
+  maxWaitTime: number
+): RealDebridService {
+  // The credential is JSON `{url, apiKey}` (assembled by getServiceCredential);
+  // also accept the base64-encoded form for parity with other custom services.
+  let url: string | undefined;
+  let apiKey: string | undefined;
+  try {
+    const parsed = JSON.parse(config.token);
+    url = parsed.url;
+    apiKey = parsed.apiKey;
+  } catch {
+    try {
+      const parsed = JSON.parse(fromUrlSafeBase64(config.token));
+      url = parsed.url;
+      apiKey = parsed.apiKey;
+    } catch {
+      // fall through to the validation error below
+    }
+  }
+
+  if (!url || !apiKey) {
+    throw new DebridError(
+      'Invalid Custom RealDebrid credentials. Expected a url and an apiKey.',
+      {
+        statusCode: 400,
+        statusText: 'Bad Request',
+        code: 'BAD_REQUEST',
+        headers: {},
+        body: {},
+      }
+    );
+  }
+
+  // Fail fast on a malformed base URL rather than surfacing confusing fetch
+  // errors later.
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('protocol must be http or https');
+    }
+  } catch {
+    throw new DebridError(`Invalid Custom RealDebrid base URL: ${url}`, {
+      statusCode: 400,
+      statusText: 'Bad Request',
+      code: 'BAD_REQUEST',
+      headers: {},
+      body: {},
+    });
+  }
+
+  return new RealDebridService(
+    { baseUrl: url, token: apiKey, clientIp: config.clientIp },
+    { pollInterval, maxWaitTime }
+  );
 }

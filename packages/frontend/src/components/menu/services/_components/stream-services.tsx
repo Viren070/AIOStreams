@@ -80,6 +80,8 @@ const SERVICE_LOGO_MAP: Record<ServiceId, string> = {
   altmount:
     'https://raw.githubusercontent.com/javi11/altmount/refs/heads/main/docs/static/img/logo.png',
   aiostreams: '/logo.png',
+  custom_realdebrid:
+    'https://cdn.jsdelivr.net/gh/selfhst/icons/png/real-debrid.png',
 };
 
 function ServiceLogo({
