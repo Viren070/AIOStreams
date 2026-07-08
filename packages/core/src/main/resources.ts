@@ -1,9 +1,11 @@
 import pLimit from 'p-limit';
 import {
+  Cache,
   createLogger,
   constants,
   Env,
   ExtrasParser,
+  getSimpleTextHash,
   makeUrlLogSafe,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
@@ -49,6 +51,22 @@ import type { AddonDispositionMap } from '../streams/fetcher.js';
 const logger = createLogger('core');
 
 const PING_TIMEOUT_MS = 10_000;
+
+/** Shape returned by getStreams */
+type StreamsResponse = AIOStreamsResponse<{
+  streams: ParsedStream[];
+  statistics: { title: string; description: string; forced?: boolean }[];
+}>;
+
+/**
+ * Full-pipeline result cache: caches the final processed response for a whole
+ * request
+ */
+const pipelineResultCache = Cache.getInstance<string, StreamsResponse>(
+  'pipeline-result',
+  () => appConfig.resources.cache.pipeline.maxSize,
+  appConfig.bootstrap.redisUri ? undefined : 'memory'
+);
 
 async function pingStream(stream: ParsedStream, timeoutMs = PING_TIMEOUT_MS) {
   if (!stream.url) {
@@ -644,12 +662,7 @@ export async function getStreams(
   id: string,
   type: string,
   preCaching: boolean = false
-): Promise<
-  AIOStreamsResponse<{
-    streams: ParsedStream[];
-    statistics: { title: string; description: string; forced?: boolean }[];
-  }>
-> {
+): Promise<StreamsResponse> {
   logger.debug({ type, id }, 'handling stream request');
   const statistics: { title: string; description: string; forced?: boolean }[] =
     [];
@@ -666,6 +679,29 @@ export async function getStreams(
 
   const context = StreamContext.create(type, id, ctx.userData);
   ctx.streamContext = context;
+
+  const pipelineTtl = appConfig.resources.cache.pipeline.ttl;
+  const usePipelineCache = !preCaching && pipelineTtl > 0;
+  // Hash the full userData: it captures everything the pipeline output depends
+  // on
+  const pipelineCacheKey = `${getSimpleTextHash(
+    JSON.stringify(ctx.userData)
+  )}:${type}:${id}`;
+  if (usePipelineCache) {
+    const cached = await pipelineResultCache.get(pipelineCacheKey);
+    if (cached !== undefined) {
+      // The fetch pipeline that normally populates the context's backing fields
+      // was skipped, so await the ones toFormatterContext()/toExpressionContext()
+      // read directly manually.
+      await Promise.all([
+        context.getMetadata(),
+        context.getSeaDex(),
+        context.getEpisodeRuntime(),
+      ]);
+      logger.debug({ type, id }, 'pipeline result cache hit');
+      return cached;
+    }
+  }
 
   ctx.filterer.resetFilterTimings();
   ctx.precomputer.resetPrecomputeTimings();
@@ -936,11 +972,15 @@ export async function getStreams(
     },
     'stream request complete'
   );
-  return {
+  const response: StreamsResponse = {
     success: true,
     data: { streams: finalStreams, statistics },
     errors,
   };
+  if (usePipelineCache) {
+    await pipelineResultCache.set(pipelineCacheKey, response, pipelineTtl);
+  }
+  return response;
 }
 
 export async function getMeta(
