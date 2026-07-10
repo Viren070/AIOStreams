@@ -33,10 +33,6 @@ export function resolveCatalogAddon(
   );
   if (exactMatch) return exactMatch;
 
-  // Catalog modifications and merged catalogs may retain the stable preset
-  // instance ID, while generated addons append a hash to their runtime ID.
-  // Only fall back when the preset resolves unambiguously; presets that create
-  // multiple addons must continue to use their full generated instance IDs.
   const presetMatches = ctx.addons.filter(
     (addon) => addon.preset.id === addonInstanceId
   );
