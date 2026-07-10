@@ -631,9 +631,6 @@ export class Wrapper {
         cacher,
         cacheKey: effectiveCacheKey,
         cacheTtl,
-        // Do not retain transient empty catalog responses. An upstream
-        // timeout or provider hiccup can otherwise make a catalog disappear
-        // for the full TTL, even when the next request would succeed.
         shouldCache: (data: T) =>
           resource === 'catalog'
             ? Array.isArray(data) && data.length > 0
