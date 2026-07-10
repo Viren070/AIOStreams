@@ -63,7 +63,13 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
   forceInitialLimit: z.number().min(1).max(10000).optional(),
-  seasonPackFallback: z.boolean().default(false),
+  seasonPackStrategy: z
+    .enum([
+      'episodeOnly',
+      'episodeFirstSeasonPackFallback',
+      'seasonPackFirstEpisodeFallback',
+    ])
+    .default('episodeOnly'),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -205,21 +211,40 @@ export abstract class BaseNabAddon<
       const allResults = await Promise.all(searchPromises);
       results = allResults.flat();
     } else {
-      results = await this.fetchResults(searchFunction, queryParams);
-      if (
-        results.length === 0 &&
-        this.userData.seasonPackFallback &&
+      const canToggleEpisodeParam =
         parsedId.mediaType === 'series' &&
         !this.userData.forceQuerySearch &&
         searchCapabilities.supportedParams.includes('season') &&
         queryParams.season &&
-        queryParams.ep
+        queryParams.ep;
+
+      if (
+        this.userData.seasonPackStrategy ===
+          'seasonPackFirstEpisodeFallback' &&
+        canToggleEpisodeParam
       ) {
-        this.logger.debug(
-          'No results for season+episode search, retrying with season only to find season packs'
-        );
         const { ep, ...seasonOnlyParams } = queryParams;
         results = await this.fetchResults(searchFunction, seasonOnlyParams);
+        if (results.length === 0) {
+          this.logger.debug(
+            'No results for season-only search, retrying with episode included'
+          );
+          results = await this.fetchResults(searchFunction, queryParams);
+        }
+      } else {
+        results = await this.fetchResults(searchFunction, queryParams);
+        if (
+          results.length === 0 &&
+          this.userData.seasonPackStrategy ===
+            'episodeFirstSeasonPackFallback' &&
+          canToggleEpisodeParam
+        ) {
+          this.logger.debug(
+            'No results for season+episode search, retrying with season only to find season packs'
+          );
+          const { ep, ...seasonOnlyParams } = queryParams;
+          results = await this.fetchResults(searchFunction, seasonOnlyParams);
+        }
       }
     }
     this.logger.info(
