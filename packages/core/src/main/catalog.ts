@@ -24,6 +24,25 @@ import {
 
 const logger = createLogger('core');
 
+export function resolveCatalogAddon(
+  ctx: Pick<AIOStreamsContext, 'addons'>,
+  addonInstanceId: string
+): AIOStreamsContext['addons'][number] | undefined {
+  const exactMatch = ctx.addons.find(
+    (addon) => addon.instanceId === addonInstanceId
+  );
+  if (exactMatch) return exactMatch;
+
+  // Catalog modifications and merged catalogs may retain the stable preset
+  // instance ID, while generated addons append a hash to their runtime ID.
+  // Only fall back when the preset resolves unambiguously; presets that create
+  // multiple addons must continue to use their full generated instance IDs.
+  const presetMatches = ctx.addons.filter(
+    (addon) => addon.preset.id === addonInstanceId
+  );
+  return presetMatches.length === 1 ? presetMatches[0] : undefined;
+}
+
 export function convertDiscoverDeepLinks(
   ctx: Pick<AIOStreamsContext, 'addons' | 'manifestUrl'>,
   items: Meta['links']
@@ -63,7 +82,7 @@ export async function fetchRawCatalogItems(
   items: MetaPreview[];
   error?: { title: string; description: string };
 }> {
-  const addon = ctx.addons.find((a) => a.instanceId === addonInstanceId);
+  const addon = resolveCatalogAddon(ctx, addonInstanceId);
 
   if (!addon) {
     const initError = (
@@ -139,12 +158,13 @@ export async function fetchRawCatalogItems(
  * Used to determine what extras (search, genre, etc.) a catalog supports.
  */
 export function getCatalogExtras(
-  ctx: Pick<AIOStreamsContext, 'manifests'>,
+  ctx: Pick<AIOStreamsContext, 'addons' | 'manifests'>,
   addonInstanceId: string,
   catalogId: string,
   catalogType: string
 ): Manifest['catalogs'][number]['extra'] | undefined {
-  const manifest = ctx.manifests[addonInstanceId];
+  const addon = resolveCatalogAddon(ctx, addonInstanceId);
+  const manifest = ctx.manifests[addon?.instanceId ?? addonInstanceId];
   if (!manifest) return undefined;
 
   const catalog = manifest.catalogs?.find(
