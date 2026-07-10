@@ -211,40 +211,32 @@ export abstract class BaseNabAddon<
       const allResults = await Promise.all(searchPromises);
       results = allResults.flat();
     } else {
-      const canToggleEpisodeParam =
+      const canApplySeasonPackStrategy =
         parsedId.mediaType === 'series' &&
         !this.userData.forceQuerySearch &&
         searchCapabilities.supportedParams.includes('season') &&
         queryParams.season &&
         queryParams.ep;
 
-      if (
-        this.userData.seasonPackStrategy ===
-          'seasonPackFirstEpisodeFallback' &&
-        canToggleEpisodeParam
-      ) {
+      let primaryParams = queryParams;
+      let fallbackParams: Record<string, string> | undefined;
+      if (canApplySeasonPackStrategy) {
         const { ep, ...seasonOnlyParams } = queryParams;
-        results = await this.fetchResults(searchFunction, seasonOnlyParams);
-        if (results.length === 0) {
-          this.logger.debug(
-            'No results for season-only search, retrying with episode included'
-          );
-          results = await this.fetchResults(searchFunction, queryParams);
+        if (this.userData.seasonPackStrategy === 'seasonPackFirstEpisodeFallback') {
+          primaryParams = seasonOnlyParams;
+          fallbackParams = queryParams;
+        } else if (this.userData.seasonPackStrategy === 'episodeFirstSeasonPackFallback') {
+          fallbackParams = seasonOnlyParams;
         }
-      } else {
-        results = await this.fetchResults(searchFunction, queryParams);
-        if (
-          results.length === 0 &&
-          this.userData.seasonPackStrategy ===
-            'episodeFirstSeasonPackFallback' &&
-          canToggleEpisodeParam
-        ) {
-          this.logger.debug(
-            'No results for season+episode search, retrying with season only to find season packs'
-          );
-          const { ep, ...seasonOnlyParams } = queryParams;
-          results = await this.fetchResults(searchFunction, seasonOnlyParams);
-        }
+      }
+
+      results = await this.fetchResults(searchFunction, primaryParams);
+      if (results.length === 0 && fallbackParams) {
+        this.logger.debug(
+          'No results for initial search, retrying with alternate season/episode params',
+          { season: queryParams.season, episode: queryParams.ep }
+        );
+        results = await this.fetchResults(searchFunction, fallbackParams);
       }
     }
     this.logger.info(
