@@ -8,6 +8,7 @@ const logger = createLogger('release-blocklist');
 
 const GIST_FILENAME = 'blocklist.ndjson';
 const GIST_API = 'https://api.github.com/gists';
+const REQUEST_TIMEOUT_MS = 15_000;
 
 /** Extract the gist id (32 hex) from a stored gist URL or a bare id. Takes the
  *  last hex run so an owner segment in the path cannot shadow the id. */
@@ -32,10 +33,15 @@ async function githubRequest(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    throw new Error(`GitHub gist ${method} failed (${res.status}): ${detail}`);
+    const err = new Error(
+      `GitHub gist ${method} failed (${res.status}): ${detail}`
+    );
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
   const json = (await res.json()) as { id: string; owner?: { login?: string } };
   return { id: json.id, ownerLogin: json.owner?.login ?? '' };
@@ -56,15 +62,33 @@ export async function publishBlocklistGist(): Promise<string> {
   ]);
   const content = toNativeNdjson(records);
   const files = { [GIST_FILENAME]: { content } };
+  const create = () =>
+    githubRequest(token, 'POST', '', {
+      description: 'AIOStreams release blocklist',
+      public: false,
+      files,
+    });
   const existingId = gistIdFrom(settings.githubGistUrl);
 
-  const { id, ownerLogin } = existingId
-    ? await githubRequest(token, 'PATCH', `/${existingId}`, { files })
-    : await githubRequest(token, 'POST', '', {
-        description: 'AIOStreams release blocklist',
-        public: false,
-        files,
-      });
+  let id: string;
+  let ownerLogin: string;
+  if (existingId) {
+    try {
+      ({ id, ownerLogin } = await githubRequest(
+        token,
+        'PATCH',
+        `/${existingId}`,
+        { files }
+      ));
+    } catch (err) {
+      // The gist was deleted upstream: create a fresh one instead of failing
+      // every sync until the stale URL is cleared by hand.
+      if ((err as { status?: number }).status !== 404) throw err;
+      ({ id, ownerLogin } = await create());
+    }
+  } else {
+    ({ id, ownerLogin } = await create());
+  }
 
   const url = `https://gist.githubusercontent.com/${ownerLogin}/${id}/raw/${GIST_FILENAME}`;
   if (url !== settings.githubGistUrl) {

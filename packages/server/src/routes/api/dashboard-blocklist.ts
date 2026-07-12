@@ -122,7 +122,7 @@ async function snapshot() {
       publicExportPassword: settings.publicExport
         ? settings.publicExportPassword
         : '',
-      githubConfigured: Boolean(settings.githubToken),
+      githubConfigured: Boolean(settings.githubToken.trim()),
       githubGistUrl: settings.githubGistUrl,
     },
     backbones: {
@@ -430,7 +430,7 @@ router.get('/export', async (req, res, next) => {
 // to the configured GitHub gist now, returning the shareable raw URL.
 router.post('/gist/publish', async (_req, res, next) => {
   try {
-    if (!appConfig.releaseBlocklist.githubToken) {
+    if (!appConfig.releaseBlocklist.githubToken.trim()) {
       return badRequest(res, 'no GitHub token configured');
     }
     const url = await publishBlocklistGist();
