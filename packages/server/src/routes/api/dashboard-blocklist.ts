@@ -19,6 +19,7 @@ import {
   LOCAL_SOURCE_ID,
   MIN_REFRESH_SECONDS,
   MAX_REFRESH_SECONDS,
+  type BlocklistTrust,
   type BlocklistVerdict,
   type ReleaseKeyKind,
 } from '@aiostreams/core';
@@ -39,9 +40,8 @@ const RefreshSecondsSchema = z
   .min(MIN_REFRESH_SECONDS)
   .max(MAX_REFRESH_SECONDS);
 
-const RemoteSourceSchema = z.object({
-  name: z.string().trim().min(1).max(120).optional(),
-  url: z.string().trim().min(1).max(2000),
+const RemoteSourcesSchema = z.object({
+  input: z.string().min(1).max(200_000),
   trust: TrustSchema.optional(),
   refreshSeconds: RefreshSecondsSchema.optional(),
 });
@@ -184,23 +184,85 @@ router.get('/entries', async (req, res, next) => {
   }
 });
 
-// POST /dashboard/blocklist/sources/remote - subscribe to a list URL.
+/** A source name from a list URL: owner/repo on github, else the hostname. */
+function deriveSourceName(url: string): string {
+  const parsed = new URL(url);
+  if (
+    parsed.hostname === 'github.com' ||
+    parsed.hostname === 'raw.githubusercontent.com'
+  ) {
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    if (parts.length >= 2) return `${parts[0]}/${parts[1]}`;
+  }
+  return parsed.hostname;
+}
+
+// POST /dashboard/blocklist/sources/remote - subscribe to one or more list
+// URLs, one per line (blank and # lines ignored).
 router.post('/sources/remote', async (req, res, next) => {
   try {
-    const body = RemoteSourceSchema.parse(req.body ?? {});
-    const urlError = validateListUrl(body.url);
-    if (urlError) return badRequest(res, urlError);
-    const source = await ReleaseBlocklistRepository.addSource({
-      kind: 'remote',
-      name: body.name ?? new URL(body.url).hostname,
-      url: body.url,
-      trust: (body.trust ?? 'full') as never,
-      refreshSeconds: body.refreshSeconds,
-    });
-    await ReleaseBlocklistRemoteService.refreshByIds([source.id]);
-    res
-      .status(200)
-      .json(createResponse({ success: true, data: await snapshot() }));
+    const body = RemoteSourcesSchema.parse(req.body ?? {});
+    const urls = [
+      ...new Set(
+        body.input
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith('#'))
+      ),
+    ];
+    if (urls.length === 0) return badRequest(res, 'no URLs provided');
+
+    const existing = new Set(
+      (await ReleaseBlocklistRepository.getSources()).map((s) => s.url)
+    );
+    const errors: string[] = [];
+    const newIds: string[] = [];
+    let skipped = 0;
+    for (const url of urls) {
+      const urlError = validateListUrl(url);
+      if (urlError) {
+        errors.push(`${url}: ${urlError}`);
+        continue;
+      }
+      if (existing.has(url)) {
+        skipped++;
+        continue;
+      }
+      try {
+        const source = await ReleaseBlocklistRepository.addSource({
+          kind: 'remote',
+          name: deriveSourceName(url),
+          url,
+          trust: (body.trust ?? 'full') as BlocklistTrust,
+          refreshSeconds: body.refreshSeconds,
+        });
+        newIds.push(source.id);
+      } catch (err) {
+        errors.push(
+          `${url}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+
+    // A single subscribe reports its first fetch synchronously; larger
+    // imports refresh in the background so the request is not held open.
+    if (newIds.length === 1) {
+      await ReleaseBlocklistRemoteService.refreshByIds(newIds);
+    } else if (newIds.length > 1) {
+      void ReleaseBlocklistRemoteService.refreshByIds(newIds).catch((err) =>
+        logger.warn(`background refresh of new blocklist sources failed: ${err}`)
+      );
+    }
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: {
+          ...(await snapshot()),
+          import: { added: newIds.length, skipped, errors },
+        },
+      })
+    );
   } catch (err) {
     if (err instanceof ZodError) return badRequest(res, zodMessage(err));
     next(err);

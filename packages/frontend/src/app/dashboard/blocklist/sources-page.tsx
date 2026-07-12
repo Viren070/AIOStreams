@@ -13,6 +13,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Button, IconButton } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/text-input';
+import { Textarea } from '@/components/ui/textarea';
 import { NumberInput } from '@/components/ui/number-input';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -418,26 +419,34 @@ function SubscribeModal({
   onOpenChange: (open: boolean) => void;
   invalidate: () => void;
 }) {
-  const [url, setUrl] = React.useState('');
-  const [name, setName] = React.useState('');
+  const [input, setInput] = React.useState('');
   const [trust, setTrust] = React.useState<Trust>('full');
   const [refreshHours, setRefreshHours] = React.useState(24);
 
+  const urlCount = input
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#')).length;
+
   const subscribe = useMutation({
     mutationFn: () =>
-      api('POST /dashboard/blocklist/sources/remote', {
-        body: {
-          url: url.trim(),
-          name: name.trim() || undefined,
-          trust,
-          refreshSeconds: Math.round(refreshHours * 3600),
-        },
-      }),
-    onSuccess: () => {
-      toast.success('Subscribed');
+      api<{ import: { added: number; skipped: number; errors: string[] } }>(
+        'POST /dashboard/blocklist/sources/remote',
+        {
+          body: {
+            input,
+            trust,
+            refreshSeconds: Math.round(refreshHours * 3600),
+          },
+        }
+      ),
+    onSuccess: ({ import: result }) => {
+      const parts = [`${result.added} added`];
+      if (result.skipped) parts.push(`${result.skipped} already present`);
+      if (result.errors.length) parts.push(`${result.errors.length} failed`);
+      toast.success(parts.join(', '));
       onOpenChange(false);
-      setUrl('');
-      setName('');
+      setInput('');
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? 'Subscribe failed'),
@@ -447,21 +456,16 @@ function SubscribeModal({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Subscribe to a blocklist"
-      description="Any URL serving a blocklist or Warden NDJSON list, e.g. another instance's /blocklist/export."
+      title="Subscribe to blocklists"
+      description="Any URL serving a blocklist or Warden NDJSON list, e.g. another instance's /blocklist/export. One URL per line."
     >
       <div className="space-y-3">
-        <TextInput
-          label="URL"
+        <Textarea
+          label="List URL(s)"
           placeholder="https://example.com/blocklist/export"
-          value={url}
-          onValueChange={setUrl}
-        />
-        <TextInput
-          label="Name (optional)"
-          placeholder="Community list"
-          value={name}
-          onValueChange={setName}
+          rows={5}
+          value={input}
+          onValueChange={setInput}
         />
         <div className="grid grid-cols-2 gap-3">
           <Select
@@ -486,10 +490,10 @@ function SubscribeModal({
           <Button
             intent="primary"
             loading={subscribe.isPending}
-            disabled={!url.trim()}
+            disabled={urlCount === 0}
             onClick={() => subscribe.mutate()}
           >
-            Subscribe
+            {urlCount > 1 ? `Subscribe (${urlCount})` : 'Subscribe'}
           </Button>
         </div>
       </div>
