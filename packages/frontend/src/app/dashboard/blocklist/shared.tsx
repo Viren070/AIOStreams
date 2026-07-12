@@ -30,7 +30,7 @@ export interface Snapshot {
     trustedBackbones: string[];
     publicExport: boolean;
     publicExportScope: string;
-    publicExportPasswordSet: boolean;
+    publicExportPassword: string;
   };
   backbones: { mine: string[]; observed: string[] };
 }

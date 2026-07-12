@@ -51,7 +51,8 @@ export function SettingsActionsMenu({
   /** Keys in scope for this menu (drives the section reset + counts). */
   sectionKeys: SettingsKey[];
   sectionLabel: string;
-  /** Query keys to refetch after reset/import (defaults to the generic query). */
+  /** Query keys to refetch after reset/import (defaults to the whole
+   *  dashboard scope). */
   invalidate?: QueryKey[];
   scope?: SettingsActionsScope;
 }) {

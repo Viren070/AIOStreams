@@ -48,10 +48,11 @@ export interface SettingsKey {
   ui: SettingsUiHint;
 }
 
-/** Query key for the generic settings page. Also the default invalidation
- *  target for the reset/import mutations below. */
+/** Query key for the generic settings page. */
 export const SETTINGS_QUERY_KEY = ['dashboard', 'settings'] as const;
 const KEY = SETTINGS_QUERY_KEY;
+
+const DASHBOARD_SCOPE = ['dashboard'] as const;
 
 export function useSettings() {
   return useQuery({
@@ -71,7 +72,7 @@ export function useSaveSettings() {
   return useMutation({
     mutationFn: (patch: Record<string, unknown>) =>
       api<PatchResult>('PATCH /dashboard/settings', { body: patch }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: DASHBOARD_SCOPE }),
   });
 }
 
@@ -84,7 +85,7 @@ export interface ResetResult {
 /**
  * @param invalidate Query keys to refetch after a successful reset.
  */
-export function useResetSettings(invalidate: QueryKey[] = [KEY]) {
+export function useResetSettings(invalidate: QueryKey[] = [DASHBOARD_SCOPE]) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (keys: string[]) =>
@@ -108,7 +109,7 @@ export function useImportEnv() {
   return useMutation({
     mutationFn: () =>
       api<ImportEnvResult>('POST /dashboard/settings/import/env'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: DASHBOARD_SCOPE }),
   });
 }
 
@@ -122,7 +123,7 @@ export interface ImportSettingsResult {
 /**
  * @param invalidate Query keys to refetch after a successful import.
  */
-export function useImportSettings(invalidate: QueryKey[] = [KEY]) {
+export function useImportSettings(invalidate: QueryKey[] = [DASHBOARD_SCOPE]) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (settings: Record<string, unknown>) =>

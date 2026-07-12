@@ -115,7 +115,9 @@ async function snapshot() {
       trustedBackbones: settings.trustedBackbones,
       publicExport: settings.publicExport,
       publicExportScope: settings.publicExportScope,
-      publicExportPasswordSet: Boolean(settings.publicExportPassword),
+      publicExportPassword: settings.publicExport
+        ? settings.publicExportPassword
+        : '',
     },
     backbones: {
       mine: instanceBackbones(),
@@ -139,7 +141,10 @@ router.get('/', async (_req, res, next) => {
 router.get('/entries', async (req, res, next) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 25));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, Number(req.query.pageSize) || 25)
+    );
     const verdict = String(req.query.verdict ?? '');
     const kind = String(req.query.kind ?? '');
     const result = await ReleaseBlocklistRepository.listEntries({
@@ -278,13 +283,18 @@ router.post('/sources/:id/refresh', async (req, res, next) => {
 // JSON body { content }. Always lands in a NEW imported source, never local.
 router.post(
   '/import',
-  express.raw({ type: ['application/octet-stream', 'application/gzip', 'text/*'], limit: IMPORT_BODY_LIMIT }),
+  express.raw({
+    type: ['application/octet-stream', 'application/gzip', 'text/*'],
+    limit: IMPORT_BODY_LIMIT,
+  }),
   async (req, res, next) => {
     try {
       let text: string;
       if (Buffer.isBuffer(req.body)) {
         text = decodeListBody(req.body);
-      } else if (typeof (req.body as { content?: unknown })?.content === 'string') {
+      } else if (
+        typeof (req.body as { content?: unknown })?.content === 'string'
+      ) {
         text = (req.body as { content: string }).content;
       } else {
         return badRequest(res, 'expected list content');
@@ -312,7 +322,9 @@ router.post(
         status: `imported (${stored} entries${invalid ? `, ${invalid} invalid lines skipped` : ''})`,
         lastUpdated: Math.floor(Date.now() / 1000),
       });
-      logger.info(`imported blocklist source "${source.name}": ${stored} entries`);
+      logger.info(
+        `imported blocklist source "${source.name}": ${stored} entries`
+      );
       res
         .status(200)
         .json(createResponse({ success: true, data: await snapshot() }));
@@ -408,7 +420,10 @@ router.post('/unmark', async (req, res, next) => {
 router.get('/overrides', async (req, res, next) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 25));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, Number(req.query.pageSize) || 25)
+    );
     const result = await ReleaseBlocklistRepository.listOverrides(
       pageSize,
       (page - 1) * pageSize

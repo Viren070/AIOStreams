@@ -3,10 +3,12 @@ import { toast } from 'sonner';
 import { useMutation } from '@tanstack/react-query';
 import {
   BiBlock,
+  BiCopy,
   BiDownload,
   BiPencil,
   BiPlus,
   BiRefresh,
+  BiShareAlt,
   BiTrash,
   BiUpload,
 } from 'react-icons/bi';
@@ -24,6 +26,8 @@ import {
 } from '@/components/shared/confirmation-dialog';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { api } from '@/lib/api';
+import { copyToClipboard } from '@/utils/clipboard';
+import { useStatus } from '@/context/status';
 import {
   Badge,
   KIND_BADGE,
@@ -63,6 +67,7 @@ function SourcesView({
   const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [importOpen, setImportOpen] = React.useState(false);
   const [exportOpen, setExportOpen] = React.useState(false);
+  const [shareOpen, setShareOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<BlocklistSource>();
   const [pendingDelete, setPendingDelete] = React.useState<BlocklistSource>();
   const [pendingClear, setPendingClear] = React.useState<BlocklistSource>();
@@ -148,6 +153,14 @@ function SourcesView({
           onClick={() => setExportOpen(true)}
         >
           Export
+        </Button>
+        <Button
+          size="sm"
+          intent="gray-outline"
+          leftIcon={<BiShareAlt />}
+          onClick={() => setShareOpen(true)}
+        >
+          Share this list
         </Button>
       </div>
 
@@ -267,34 +280,6 @@ function SourcesView({
         </div>
       </Card>
 
-      <Card className="p-4 text-xs text-[--muted] space-y-1">
-        <p>
-          Backbone gating: <b>{snapshot.settings.backboneScope}</b> (
-          {snapshot.settings.backboneGrouping === 'domain'
-            ? 'by provider domain'
-            : 'by backbone'}
-          ) · quorum{' '}
-          <b>{snapshot.settings.quorum}</b> · your backbones:{' '}
-          {snapshot.backbones.mine.length
-            ? snapshot.backbones.mine.join(', ')
-            : 'none (gating inert)'}
-          {snapshot.settings.trustedBackbones.length > 0 && (
-            <> · trusted: {snapshot.settings.trustedBackbones.join(', ')}</>
-          )}
-        </p>
-        <p>
-          Public export:{' '}
-          <b>
-            {snapshot.settings.publicExport
-              ? `enabled (${snapshot.settings.publicExportScope}${snapshot.settings.publicExportPasswordSet ? ', password protected' : ''}) at /blocklist/export`
-              : 'disabled'}
-          </b>
-          . These are instance settings, editable under Settings → Release
-          Blocklist. Publishing an empty list never wipes a subscribed source;
-          use Clear instead.
-        </p>
-      </Card>
-
       <SubscribeModal
         open={subscribeOpen}
         onOpenChange={setSubscribeOpen}
@@ -306,6 +291,11 @@ function SourcesView({
         invalidate={invalidate}
       />
       <ExportModal open={exportOpen} onOpenChange={setExportOpen} />
+      <ShareModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        settings={snapshot.settings}
+      />
       {editing && (
         <EditSourceModal
           source={editing}
@@ -647,6 +637,103 @@ function ExportModal({
           </Button>
         </div>
       </div>
+    </Modal>
+  );
+}
+
+function ShareModal({
+  open,
+  onOpenChange,
+  settings,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  settings: Snapshot['settings'];
+}) {
+  const { status } = useStatus();
+  const [scope, setScope] = React.useState<'local' | 'all'>('local');
+  const [wardenCompatible, setWardenCompatible] = React.useState(false);
+
+  const baseUrl = status?.settings?.baseUrl || window.location.origin;
+  const params = new URLSearchParams();
+  if (settings.publicExportPassword) {
+    params.set('key', settings.publicExportPassword);
+  }
+  if (scope === 'all') params.set('scope', 'all');
+  if (wardenCompatible) params.set('format', 'warden');
+  const query = params.toString();
+  const url = `${baseUrl}/blocklist/export${query ? `?${query}` : ''}`;
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Share this list"
+      description="Other instances can subscribe to this URL and stay in sync as your list changes."
+    >
+      {settings.publicExport ? (
+        <div className="space-y-3">
+          <Select
+            label="Scope"
+            options={[
+              { label: 'This instance’s own verdicts', value: 'local' },
+              ...(settings.publicExportScope === 'all'
+                ? [
+                    {
+                      label: 'Everything (all sources, deduplicated)',
+                      value: 'all',
+                    },
+                  ]
+                : []),
+            ]}
+            value={scope}
+            onValueChange={(v) => setScope(v as 'local' | 'all')}
+            help={
+              settings.publicExportScope === 'all'
+                ? undefined
+                : 'This instance only publishes its own verdicts; the scope can be raised under Settings → Release Blocklist.'
+            }
+          />
+          <Switch
+            label="Warden-compatible format"
+            value={wardenCompatible}
+            onValueChange={setWardenCompatible}
+            help="For davex. Carries only dead usenet fingerprints; content-hash and torrent entries are left out."
+          />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[--muted] ml-1">
+              Subscribe URL
+            </label>
+            <div className="flex items-center gap-2">
+              <TextInput
+                type="text"
+                readOnly
+                value={url}
+                className="flex-1 font-mono text-sm bg-black/20"
+                onClick={(e) => e.currentTarget.select()}
+              />
+              <Button
+                intent="primary"
+                className="shrink-0 px-3"
+                aria-label="Copy subscribe URL"
+                onClick={() =>
+                  copyToClipboard(url, {
+                    onSuccess: () => toast.success('Copied to clipboard'),
+                    onError: () => toast.error('Failed to copy'),
+                  })
+                }
+              >
+                <BiCopy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-[--muted]">
+          Public sharing is disabled on this instance. Enable the public export
+          endpoint under Settings → Release Blocklist to get a shareable URL.
+        </p>
+      )}
     </Modal>
   );
 }
