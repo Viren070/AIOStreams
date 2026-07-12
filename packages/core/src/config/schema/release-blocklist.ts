@@ -75,4 +75,24 @@ export const releaseBlocklistSchema = {
     requiresRestart: false,
     secret: true,
   },
+  githubToken: {
+    schema: z.string(),
+    default: '',
+    label: 'GitHub token (gist sharing)',
+    description:
+      "When set, this instance's own verdicts can be published to a secret GitHub gist and shared as a `gist.githubusercontent.com` URL, so subscribers never see your instance's address and it does not need to be reachable from the internet. Needs a token with the `gist` scope.",
+    env: 'RELEASE_BLOCKLIST_GITHUB_TOKEN',
+    requiresRestart: false,
+    secret: true,
+  },
+  githubGistUrl: {
+    schema: z.string(),
+    default: '',
+    label: 'Gist share URL',
+    description:
+      'The raw URL of the gist the blocklist is published to. Filled in automatically on the first publish; set it yourself to reuse an existing gist.',
+    env: 'RELEASE_BLOCKLIST_GITHUB_GIST_URL',
+    requiresRestart: false,
+    secret: false,
+  },
 } as const satisfies RuntimeConfigSection;

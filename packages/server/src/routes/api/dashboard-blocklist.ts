@@ -6,6 +6,7 @@ import {
   formatZodError,
   ReleaseBlocklistRepository,
   ReleaseBlocklistRemoteService,
+  publishBlocklistGist,
   decodeListBody,
   instanceBackbones,
   isUnsafeRemoteUrl,
@@ -121,6 +122,8 @@ async function snapshot() {
       publicExportPassword: settings.publicExport
         ? settings.publicExportPassword
         : '',
+      githubConfigured: Boolean(settings.githubToken),
+      githubGistUrl: settings.githubGistUrl,
     },
     backbones: {
       mine: instanceBackbones(),
@@ -418,6 +421,24 @@ router.get('/export', async (req, res, next) => {
       `attachment; filename="blocklist-${scope}${format === 'warden' ? '-warden' : ''}.ndjson"`
     );
     res.status(200).send(body);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /dashboard/blocklist/gist/publish - push this instance's own verdicts
+// to the configured GitHub gist now, returning the shareable raw URL.
+router.post('/gist/publish', async (_req, res, next) => {
+  try {
+    if (!appConfig.releaseBlocklist.githubToken) {
+      return badRequest(res, 'no GitHub token configured');
+    }
+    const url = await publishBlocklistGist();
+    res
+      .status(200)
+      .json(
+        createResponse({ success: true, data: { ...(await snapshot()), url } })
+      );
   } catch (err) {
     next(err);
   }

@@ -663,8 +663,19 @@ function ShareModal({
   settings: Snapshot['settings'];
 }) {
   const { status } = useStatus();
+  const invalidate = useInvalidateBlocklist();
   const [scope, setScope] = React.useState<'local' | 'all'>('local');
   const [wardenCompatible, setWardenCompatible] = React.useState(false);
+
+  const publishGist = useMutation({
+    mutationFn: () =>
+      api('POST /dashboard/blocklist/gist/publish', { body: {} }),
+    onSuccess: () => {
+      toast.success('Published to gist');
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Publish failed'),
+  });
 
   const baseUrl = status?.settings?.baseUrl || window.location.origin;
   const params = new URLSearchParams();
@@ -746,6 +757,54 @@ function ShareModal({
           endpoint under Settings → Release Blocklist to get a shareable URL.
         </p>
       )}
+
+      <div className="mt-4 pt-4 border-t border-[--border]/50 space-y-2">
+        <label className="text-xs font-medium text-[--muted] ml-1">
+          Share via GitHub gist
+        </label>
+        {settings.githubConfigured ? (
+          <div className="space-y-2">
+            {settings.githubGistUrl && (
+              <div className="flex items-center gap-2">
+                <TextInput
+                  type="text"
+                  readOnly
+                  value={settings.githubGistUrl}
+                  className="flex-1 font-mono text-sm bg-black/20"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  intent="primary"
+                  className="shrink-0 px-3"
+                  aria-label="Copy gist URL"
+                  onClick={() =>
+                    copyToClipboard(settings.githubGistUrl, {
+                      onSuccess: () => toast.success('Copied to clipboard'),
+                      onError: () => toast.error('Failed to copy'),
+                    })
+                  }
+                >
+                  <BiCopy className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <Button
+              intent="gray-subtle"
+              size="sm"
+              loading={publishGist.isPending}
+              onClick={() => publishGist.mutate()}
+            >
+              {settings.githubGistUrl ? 'Publish update now' : 'Publish now'}
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-[--muted]">
+            Add a GitHub token under Settings → Release Blocklist to publish
+            your own verdicts to a private gist and share that URL, without
+            exposing this instance’s address.
+          </p>
+        )}
+      </div>
     </Modal>
   );
 }

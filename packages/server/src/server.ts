@@ -27,6 +27,7 @@ import {
   requeueInterruptedInspects,
   flushAllDiskCaches,
   ReleaseBlocklistRemoteService,
+  syncBlocklistGist,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -150,7 +151,13 @@ function registerReleaseBlocklistTasks() {
     enabled: true,
     destructive: false,
     multiReplica: 'single',
-    run: async () => ReleaseBlocklistRemoteService.refreshDue(),
+    run: async () => {
+      const result = await ReleaseBlocklistRemoteService.refreshDue();
+      await syncBlocklistGist().catch((err) =>
+        logger.warn(`blocklist gist sync failed: ${err}`)
+      );
+      return result;
+    },
   });
 }
 

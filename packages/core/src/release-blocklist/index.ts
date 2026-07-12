@@ -34,3 +34,4 @@ export { isUnsafeRemoteUrl } from './url-safety.js';
 export { applyReleaseBlocklist, blocklistEvalOptions } from './filter.js';
 export { markReleaseDead, retractRelease } from './feedback.js';
 export { ReleaseBlocklistRemoteService, decodeListBody } from './remote.js';
+export { publishBlocklistGist, syncBlocklistGist } from './gist.js';

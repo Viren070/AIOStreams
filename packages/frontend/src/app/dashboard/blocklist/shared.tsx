@@ -32,6 +32,8 @@ export interface Snapshot {
     publicExport: boolean;
     publicExportScope: string;
     publicExportPassword: string;
+    githubConfigured: boolean;
+    githubGistUrl: string;
   };
   backbones: { mine: string[]; observed: string[] };
 }
