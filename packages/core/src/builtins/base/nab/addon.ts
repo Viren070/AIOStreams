@@ -66,6 +66,7 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   seasonPackStrategy: z
     .enum([
       'episodeOnly',
+      'dynamic',
       'episodeFirstSeasonPackFallback',
       'seasonPackFirstEpisodeFallback',
     ])
@@ -222,10 +223,16 @@ export abstract class BaseNabAddon<
       let fallbackParams: Record<string, string> | undefined;
       if (canApplySeasonPackStrategy) {
         const { ep, ...seasonOnlyParams } = queryParams;
-        if (this.userData.seasonPackStrategy === 'seasonPackFirstEpisodeFallback') {
+        let strategy = this.userData.seasonPackStrategy;
+        if (strategy === 'dynamic') {
+          strategy = metadata.ongoingSeason === true
+            ? 'episodeOnly'
+            : 'seasonPackFirstEpisodeFallback';
+        }
+        if (strategy === 'seasonPackFirstEpisodeFallback') {
           primaryParams = seasonOnlyParams;
           fallbackParams = queryParams;
-        } else if (this.userData.seasonPackStrategy === 'episodeFirstSeasonPackFallback') {
+        } else if (strategy === 'episodeFirstSeasonPackFallback') {
           fallbackParams = seasonOnlyParams;
         }
       }

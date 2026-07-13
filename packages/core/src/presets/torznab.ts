@@ -118,21 +118,16 @@ export class TorznabPreset extends BuiltinAddonPreset {
         id: 'seasonPackStrategy',
         name: 'Season Pack Strategy',
         description:
-          'In `Auto` mode, whether to retry a series search with episode/season-only swapped if the first attempt finds nothing - useful for private trackers where season packs replace individual episodes. May also return unrelated episodes, so enabling `Season/Episode Matching` in Filters is recommended.',
+          'Controls episode vs. season-pack search order for series in `Auto` mode - useful for private trackers where season packs replace individual episodes. `Dynamic` decides based on whether the season is still airing. May include individual episodes too - pair with `Season/Episode Matching` in Filters to filter them out.',
         type: 'select',
         required: false,
         showInSimpleMode: false,
         default: 'episodeOnly',
         options: [
           { label: 'Episode Only', value: 'episodeOnly' },
-          {
-            label: 'Episode First, Season Pack Fallback',
-            value: 'episodeFirstSeasonPackFallback',
-          },
-          {
-            label: 'Season Pack First, Episode Fallback',
-            value: 'seasonPackFirstEpisodeFallback',
-          },
+          { label: 'Dynamic (Season Pack Preferred)', value: 'dynamic' },
+          { label: 'Episode First, Season Pack Fallback', value: 'episodeFirstSeasonPackFallback' },
+          { label: 'Season Pack First, Episode Fallback', value: 'seasonPackFirstEpisodeFallback' },
         ],
       },
       {
