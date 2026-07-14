@@ -225,9 +225,10 @@ export abstract class BaseNabAddon<
         const { ep, ...seasonOnlyParams } = queryParams;
         let strategy = this.userData.seasonPackStrategy;
         if (strategy === 'dynamic') {
-          strategy = metadata.ongoingSeason === true
-            ? 'episodeOnly'
-            : 'seasonPackFirstEpisodeFallback';
+          strategy =
+            metadata.ongoingSeason === true
+              ? 'episodeOnly'
+              : 'seasonPackFirstEpisodeFallback';
         }
         if (strategy === 'seasonPackFirstEpisodeFallback') {
           primaryParams = seasonOnlyParams;

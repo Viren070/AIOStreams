@@ -187,15 +187,6 @@ export class NewznabPreset extends BuiltinAddonPreset {
         ],
       },
       {
-        id: 'paginate',
-        name: 'Paginate Results',
-        description:
-          'Newznab endpoints can limit the number of results returned per request. Enabling this option will make the addon paginate through all available results to provide a more comprehensive set of results. Enabling this can increase the time taken to return results, some endpoints may not support pagination, and this will also increase the number of requests.',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
         id: 'seasonPackStrategy',
         name: 'Season Pack Strategy',
         description:
@@ -207,9 +198,24 @@ export class NewznabPreset extends BuiltinAddonPreset {
         options: [
           { label: 'Episode Only', value: 'episodeOnly' },
           { label: 'Dynamic (Season Pack Preferred)', value: 'dynamic' },
-          { label: 'Episode First, Season Pack Fallback', value: 'episodeFirstSeasonPackFallback' },
-          { label: 'Season Pack First, Episode Fallback', value: 'seasonPackFirstEpisodeFallback' },
+          {
+            label: 'Episode First, Season Pack Fallback',
+            value: 'episodeFirstSeasonPackFallback',
+          },
+          {
+            label: 'Season Pack First, Episode Fallback',
+            value: 'seasonPackFirstEpisodeFallback',
+          },
         ],
+      },
+      {
+        id: 'paginate',
+        name: 'Paginate Results',
+        description:
+          'Newznab endpoints can limit the number of results returned per request. Enabling this option will make the addon paginate through all available results to provide a more comprehensive set of results. Enabling this can increase the time taken to return results, some endpoints may not support pagination, and this will also increase the number of requests.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
       },
       {
         id: 'useMultipleInstances',

@@ -698,8 +698,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       tmdbId: metadata.tmdbId ?? null,
       tvdbId: metadata.tvdbId ?? null,
       isAnime: animeEntry ? true : false,
-      ongoingSeason: metadata.nextAirDate && metadata.seasons?.length
-          ? Number(parsedId.season) === Math.max(...metadata.seasons.map((s) => s.season_number))
+      ongoingSeason:
+        metadata.nextAirDate && metadata.seasons?.length
+          ? Number(parsedId.season) ===
+            Math.max(...metadata.seasons.map((s) => s.season_number))
           : undefined,
     };
 

@@ -17,10 +17,14 @@ export type PublicExportLeaf =
   | 'publicExportScope'
   | 'publicExportPassword';
 
-const dottedKey = (leaf: PublicExportLeaf) => `releaseBlocklist.${leaf}` as const;
+const dottedKey = (leaf: PublicExportLeaf) =>
+  `releaseBlocklist.${leaf}` as const;
 
 /** For each field, the env var pinning it, or `null` when it is editable. */
-export function publicExportEnvLocks(): Record<PublicExportLeaf, string | null> {
+export function publicExportEnvLocks(): Record<
+  PublicExportLeaf,
+  string | null
+> {
   const locks = settingEnvLocks(PUBLIC_EXPORT_SETTING_KEYS);
   return {
     publicExport: locks['releaseBlocklist.publicExport'],

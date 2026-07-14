@@ -190,9 +190,7 @@ export class StreamPlayer {
             anime,
             episodeNumber,
             result,
-            torrentstreamPlaybackType === 'nativeplayer'
-              ? 'builtin'
-              : 'desktop'
+            torrentstreamPlaybackType === 'nativeplayer' ? 'builtin' : 'desktop'
           );
         }
       })

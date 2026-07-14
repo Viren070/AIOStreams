@@ -154,7 +154,11 @@ export class ReleaseBlocklistPublishRepository {
 
   static async setStatus(
     id: string,
-    fields: { status?: string | null; lastChecked?: number; lastPushed?: number }
+    fields: {
+      status?: string | null;
+      lastChecked?: number;
+      lastPushed?: number;
+    }
   ): Promise<void> {
     const sets: SqlFragment[] = [];
     if (fields.status !== undefined) sets.push(sql`status = ${fields.status}`);

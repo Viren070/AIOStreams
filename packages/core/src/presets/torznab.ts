@@ -126,8 +126,14 @@ export class TorznabPreset extends BuiltinAddonPreset {
         options: [
           { label: 'Episode Only', value: 'episodeOnly' },
           { label: 'Dynamic (Season Pack Preferred)', value: 'dynamic' },
-          { label: 'Episode First, Season Pack Fallback', value: 'episodeFirstSeasonPackFallback' },
-          { label: 'Season Pack First, Episode Fallback', value: 'seasonPackFirstEpisodeFallback' },
+          {
+            label: 'Episode First, Season Pack Fallback',
+            value: 'episodeFirstSeasonPackFallback',
+          },
+          {
+            label: 'Season Pack First, Episode Fallback',
+            value: 'seasonPackFirstEpisodeFallback',
+          },
         ],
       },
       {

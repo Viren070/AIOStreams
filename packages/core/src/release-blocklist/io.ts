@@ -123,9 +123,7 @@ export function parseNdjson(
   return { records, invalid, dialect };
 }
 
-function maxRecordAt(
-  records: readonly BlocklistRecord[]
-): number | undefined {
+function maxRecordAt(records: readonly BlocklistRecord[]): number | undefined {
   let max: number | undefined;
   for (const record of records) {
     if (max === undefined || record.at > max) max = record.at;
@@ -163,7 +161,9 @@ export function toWardenNdjson(
     (record) => record.v === 'dead' && WD1_KEY_REGEX.test(record.k)
   );
   const updated =
-    updatedAtUnixSeconds ?? maxRecordAt(subset) ?? Math.floor(Date.now() / 1000);
+    updatedAtUnixSeconds ??
+    maxRecordAt(subset) ??
+    Math.floor(Date.now() / 1000);
   const lines = [JSON.stringify({ warden: 1, updated })];
   for (const record of subset) {
     lines.push(
