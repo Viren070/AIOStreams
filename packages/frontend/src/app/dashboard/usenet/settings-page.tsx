@@ -186,6 +186,26 @@ export function UsenetSettingsPage() {
   const methodsRef = React.useRef<UseFormReturn<any> | null>(null);
   const location = useLocation();
 
+  // Scroll effect must run unconditionally — before the early-return guards
+  // for loading/error — to satisfy React's rules of hooks.
+  React.useEffect(() => {
+    const fieldKey = new URLSearchParams(location.search).get('field');
+    if (!fieldKey) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`setting-${fieldKey}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Toggle the attribute so the CSS animation replays every time
+      el.removeAttribute('data-command-target');
+      void el.offsetWidth;
+      el.setAttribute('data-command-target', 'true');
+      setTimeout(() => {
+        el.removeAttribute('data-command-target');
+      }, 1400);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [location.search]);
+
   const keys = query.data?.keys ?? [];
   const profiles = query.data?.profiles ?? {};
 
@@ -229,25 +249,6 @@ export function UsenetSettingsPage() {
   const groups = groupKeys(keys);
   const bundledNames = new Set(BUNDLED_LEAVES.map((l) => toName(usenetKey(l))));
   const profileNameKey = toName(usenetKey(PROFILE_LEAF));
-
-  // Scroll to the target field when the `field` search param is set.
-  React.useEffect(() => {
-    const fieldKey = new URLSearchParams(location.search).get('field');
-    if (!fieldKey) return;
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`setting-${fieldKey}`);
-      if (!el) return;
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Toggle the attribute so the CSS animation replays every time
-      el.removeAttribute('data-command-target');
-      void el.offsetWidth;
-      el.setAttribute('data-command-target', 'true');
-      setTimeout(() => {
-        el.removeAttribute('data-command-target');
-      }, 1400);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [location.search]);
 
   return (
     <div className="space-y-4">

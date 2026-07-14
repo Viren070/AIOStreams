@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import type { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -233,25 +233,49 @@ export function SettingsPage() {
     else if (!tab) setTab(tabs[0].section);
   }, [tabs, location.search]);
 
+  // Keep a ref of the current tab so the scroll effect's cleanup callback
+  // always uses the latest tab value, never a stale captured one.
+  const tabRef = React.useRef(tab);
+  tabRef.current = tab;
+
+  // Holds the inner 1.4s glow-cleanup timer so the effect can cancel it
+  // on re-run (e.g. the user switches tabs before the glow finishes).
+  const cleanupTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const navigate = useNavigate();
+
   // Scroll to a specific field when the `field` search param is set
   React.useEffect(() => {
     const fieldKey = new URLSearchParams(location.search).get('field');
     if (!fieldKey || !tab) return;
     // Small delay to let the tab panel mount and render its fields
     const id = `setting-${fieldKey}`;
-    const timer = setTimeout(() => {
+    const outerTimer = setTimeout(() => {
       const el = document.getElementById(id);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.setAttribute('data-command-target', 'true');
-        setTimeout(() => {
+        cleanupTimerRef.current = setTimeout(() => {
+          cleanupTimerRef.current = null;
           el.removeAttribute('data-command-target');
-          // Clear the field param from the URL so it doesn't persist
-          writeTabParam(tab);
+          // Use the router to clear the field param — keeps useLocation
+          // in sync and always uses the latest tab via the ref.
+          navigate({
+            to: '.',
+            search: { tab: tabRef.current, field: undefined },
+            replace: true,
+          });
         }, 1400);
       }
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(outerTimer);
+      if (cleanupTimerRef.current !== null) {
+        clearTimeout(cleanupTimerRef.current);
+        cleanupTimerRef.current = null;
+      }
+    };
   }, [tab, location.search]);
 
   const onTabChange = (v: string) => {
