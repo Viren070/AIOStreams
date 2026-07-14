@@ -11,6 +11,7 @@ import { AnimatedNumber } from '@/components/shared/animated-number';
 import {
   useUsenetStats,
   useUsenetLive,
+  useIndexerStats,
   liveFrameMs,
   type PoolInfo,
   type ProviderPoolInfo,
@@ -18,6 +19,7 @@ import {
   type ProviderState,
   type UsenetProviderStatRow,
   type UsenetStatsOverview,
+  type IndexerStatRow,
 } from './queries';
 import {
   formatBytes,
@@ -541,6 +543,65 @@ function ProviderTable({ providers }: { providers: UsenetProviderStatRow[] }) {
   );
 }
 
+function IndexerTable({ indexers }: { indexers: IndexerStatRow[] }) {
+  if (indexers.length === 0) {
+    return (
+      <p className="text-sm text-[--muted]">
+        No indexer activity recorded in this window yet.
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+      <table className="w-full text-sm min-w-[640px]">
+        <thead className="text-[--muted] text-xs uppercase">
+          <tr className="text-left border-b border-[--border]">
+            <th className="py-2 pr-3">Indexer</th>
+            <th className="py-2 px-3 text-right">Searches</th>
+            <th className="py-2 px-3 text-right">Avg results</th>
+            <th className="py-2 px-3 text-right">Avg latency</th>
+            <th className="py-2 pl-3 text-right">Errors</th>
+          </tr>
+        </thead>
+        <tbody>
+          {indexers.map((i) => (
+            <tr key={i.instanceId} className="border-b border-[--border]/50">
+              <td className="py-2 pr-3 font-medium">{i.name}</td>
+              <td className="py-2 px-3 text-right tabular-nums">
+                {formatCompact(i.searches)}
+              </td>
+              <td className="py-2 px-3 text-right tabular-nums">
+                {i.avgResults.toFixed(1)}
+              </td>
+              <td className="py-2 px-3 text-right tabular-nums">
+                {i.avgLatencyMs > 0 ? `${i.avgLatencyMs}ms` : '—'}
+              </td>
+              <td
+                className={cn(
+                  'py-2 pl-3 text-right tabular-nums',
+                  i.errorRate > 0.1 && 'text-red-500'
+                )}
+              >
+                {formatPercent(i.errorRate)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function IndexerCard({ window }: { window: UsenetWindow }) {
+  const { data } = useIndexerStats(window);
+  return (
+    <Card className="p-4">
+      <h3 className="text-sm font-semibold mb-3">Indexers</h3>
+      <IndexerTable indexers={data?.indexers ?? []} />
+    </Card>
+  );
+}
+
 function StatsSection({ data }: { data: UsenetStatsOverview }) {
   const chartData = data.throughput.map((b) => ({
     t: fmtBucketLabel(b.bucketMs, data.window),
@@ -624,6 +685,8 @@ function StatsSection({ data }: { data: UsenetStatsOverview }) {
           <ProviderTable providers={data.providers} />
         )}
       </Card>
+
+      <IndexerCard window={data.window} />
     </div>
   );
 }

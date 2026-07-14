@@ -14,6 +14,7 @@ export * from './debrid/index.js';
 export * from './usenet/integration/index.js';
 export * from './release-blocklist/index.js';
 export * from './proxy/index.js';
+export { indexerStats } from './streams/indexer-stats.js';
 export {
   TorBoxSearchAddon,
   GDriveAddon,

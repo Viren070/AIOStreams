@@ -28,6 +28,8 @@ import {
   flushAllDiskCaches,
   ReleaseBlocklistRemoteService,
   ReleaseBlocklistPublishService,
+  indexerStats,
+  IndexerMetricsRepository,
 } from '@aiostreams/core';
 
 const logger = createLogger('server');
@@ -170,6 +172,47 @@ function registerReleaseBlocklistTasks() {
   });
 }
 
+// Match the provider-metrics retention window (~13 months).
+const INDEXER_METRICS_RETENTION_DAYS = 400;
+
+function registerIndexerTasks() {
+  TaskManager.register({
+    id: 'indexer-metrics-drain',
+    label: 'Flush indexer metrics',
+    description:
+      'Drains the in-memory per-indexer counters (searches, results, ' +
+      'latency, errors, proxied grabs) into the hourly rollup table.',
+    category: 'data-sync',
+    kind: 'scheduled',
+    intervalMs: 60_000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'all',
+    run: async () => {
+      const deltas = indexerStats.drain();
+      await IndexerMetricsRepository.addDeltas(deltas);
+      return { ok: true, message: `flushed ${deltas.length} indexer deltas` };
+    },
+  });
+  TaskManager.register({
+    id: 'indexer-metrics-prune',
+    label: 'Prune old indexer metrics',
+    description: 'Deletes per-indexer rollups older than the retention window.',
+    category: 'data-sync',
+    kind: 'scheduled',
+    intervalMs: 24 * 60 * 60_000,
+    enabled: true,
+    destructive: true,
+    multiReplica: 'single',
+    run: async () => {
+      const cutoff =
+        Date.now() - INDEXER_METRICS_RETENTION_DAYS * 24 * 60 * 60_000;
+      const n = await IndexerMetricsRepository.pruneOlderThan(cutoff);
+      return { ok: true, message: `pruned ${n} indexer metric rows` };
+    },
+  });
+}
+
 async function initialiseRedis() {
   if (appConfig.bootstrap.redisUri) {
     await Cache.testRedisConnection();
@@ -226,6 +269,7 @@ async function start() {
     registerCacheTasks();
     registerUsenetTasks();
     registerReleaseBlocklistTasks();
+    registerIndexerTasks();
     void requeueInterruptedInspects();
     await initialiseAuth();
     startAnalytics();

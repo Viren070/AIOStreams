@@ -22,6 +22,7 @@ import {
   ReleaseBlocklistRepository,
   blocklistEvalOptions,
   nzbContentKey,
+  IndexerMetricsRepository,
   type UsenetStatsWindow,
   type UsenetLibraryStatusGroup,
   type UsenetLibraryStatus,
@@ -68,6 +69,44 @@ router.get('/stats', async (req, res, next) => {
     const window = WINDOWS.includes(w) ? w : '24h';
     const overview = await getUsenetStatsOverview(window);
     res.status(200).json(createResponse({ success: true, data: overview }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+const WINDOW_MS: Record<UsenetStatsWindow, number | null> = {
+  '24h': 24 * 60 * 60_000,
+  '7d': 7 * 24 * 60 * 60_000,
+  '30d': 30 * 24 * 60 * 60_000,
+  all: null,
+};
+
+// GET /dashboard/usenet/indexers?window=24h — per-indexer stats over the window.
+router.get('/indexers', async (req, res, next) => {
+  try {
+    const w = String(req.query.window ?? '24h') as UsenetStatsWindow;
+    const window = WINDOWS.includes(w) ? w : '24h';
+    const span = WINDOW_MS[window];
+    const sinceMs = span == null ? 0 : Date.now() - span;
+    const rows = await IndexerMetricsRepository.summaryByIndexer(sinceMs);
+    const indexers = rows
+      .map((r) => ({
+        instanceId: r.instanceId,
+        name: r.name,
+        searches: r.searches,
+        results: r.results,
+        errors: r.errors,
+        avgResults: r.searches > 0 ? r.results / r.searches : 0,
+        avgLatencyMs:
+          r.latencySamples > 0
+            ? Math.round(r.latencyMsSum / r.latencySamples)
+            : 0,
+        errorRate: r.searches > 0 ? r.errors / r.searches : 0,
+      }))
+      .sort((a, b) => b.searches - a.searches);
+    res
+      .status(200)
+      .json(createResponse({ success: true, data: { window, indexers } }));
   } catch (err) {
     next(err);
   }

@@ -6,6 +6,7 @@ import {
   getTimeTakenSincePoint,
 } from '../utils/index.js';
 import { Wrapper } from '../main/wrapper.js';
+import { indexerStats } from './indexer-stats.js';
 import {
   ExitConditionEvaluator,
   GroupConditionEvaluator,
@@ -639,6 +640,17 @@ class StreamFetcher {
     for (let i = 0; i < allStatisticStreams.length; i++) {
       allStatisticStreams[i] = statStreamsWithTime[i].stat;
     }
+    for (const info of dispositions.values()) {
+      if (info.disposition === 'not_started') continue;
+      indexerStats.recordSearch({
+        instanceId: info.addon.preset.id,
+        name: info.addon.name,
+        results: info.rawCount,
+        latencyMs: info.latencyMs,
+        error: info.disposition === 'error',
+      });
+    }
+
     return {
       streams: allStreams,
       errors: allErrors,

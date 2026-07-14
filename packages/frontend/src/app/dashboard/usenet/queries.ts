@@ -272,6 +272,32 @@ export function useUsenetStats(window: UsenetWindow) {
   });
 }
 
+export interface IndexerStatRow {
+  instanceId: string;
+  name: string;
+  searches: number;
+  results: number;
+  errors: number;
+  avgResults: number;
+  avgLatencyMs: number;
+  errorRate: number;
+}
+
+export interface IndexerStats {
+  window: UsenetWindow;
+  indexers: IndexerStatRow[];
+}
+
+export function useIndexerStats(window: UsenetWindow) {
+  return useQuery({
+    queryKey: [...ROOT, 'indexers', window],
+    queryFn: () =>
+      api<IndexerStats>(`/dashboard/usenet/indexers?window=${window}`),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+}
+
 const LIVE_QUERY_KEY = [...ROOT, 'live'] as const;
 
 /**

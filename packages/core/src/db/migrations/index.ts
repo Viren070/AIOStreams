@@ -13,6 +13,7 @@ import { usenetLibraryAliases } from './0012_usenet_library_aliases.js';
 import { releaseBlocklist } from './0013_release_blocklist.js';
 import { releaseBlocklistPublish } from './0014_release_blocklist_publish.js';
 import { usenetLatency } from './0015_usenet_latency.js';
+import { indexerMetrics } from './0016_indexer_metrics.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -31,6 +32,7 @@ export const MIGRATIONS: readonly Migration[] = [
   releaseBlocklist,
   releaseBlocklistPublish,
   usenetLatency,
+  indexerMetrics,
 ];
 
 export type { Migration } from './types.js';
