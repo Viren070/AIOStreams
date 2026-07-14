@@ -161,11 +161,11 @@ neither the environment variable nor a stored value is present.
 
 ### Logging
 
-| Environment Variable | UI Setting         | Type    | Default | Description                                                                                                                                                                                                            |
-| -------------------- | ------------------ | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LOG_LEVEL`          | Log Level          | enum    | `info`  | How much detail to log. Takes effect immediately.                                                                                                                                                                      |
-| `LOG_FORMAT`         | Log Format         | enum    | `json`  | How log lines are printed to the console. `json` is recommended for production. Takes effect immediately, so the console carries both shapes across a switch — a log collector parsing JSON will see the pretty lines. |
-| `LOG_SENSITIVE_INFO` | Log Sensitive Info | boolean | `false` | When true, sensitive values may appear in logs. Use only for debugging.                                                                                                                                                |
+| Environment Variable | UI Setting         | Type    | Default | Description                                                                     |
+| -------------------- | ------------------ | ------- | ------- | ------------------------------------------------------------------------------- |
+| `LOG_LEVEL`          | Log Level          | enum    | `info`  | How much detail to log.                                                         |
+| `LOG_FORMAT`         | Log Format         | enum    | `json`  | How log lines are printed to the console. `json` is recommended for production. |
+| `LOG_SENSITIVE_INFO` | Log Sensitive Info | boolean | `false` | When true, sensitive values may appear in logs. Use only for debugging.         |
 
 ## Network
 
@@ -947,11 +947,12 @@ neither the environment variable nor a stored value is present.
 
 #### Easynews
 
-| Environment Variable                | UI Setting                  | Type     | Default | Description                                                                                           |
-| ----------------------------------- | --------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| `BUILTIN_EASYNEWS_SEARCH_TIMEOUT`   | Easynews › Search Timeout   | number   | `30000` | Timeout for Easynews search requests.                                                                 |
-| `BUILTIN_EASYNEWS_SEARCH_CACHE_TTL` | Easynews › Search Cache TTL | duration | `3600`  | Cache TTL for Easynews search results. Defaults to 1h since Easynews content rotates more frequently. |
-| `BUILTIN_EASYNEWS_SEARCH_MAX_PAGES` | Easynews › Max Pages        | number   | `5`     | Maximum pages fetched when paginating Easynews search results.                                        |
+| Environment Variable                  | UI Setting                    | Type     | Default | Description                                                                                           |
+| ------------------------------------- | ----------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `BUILTIN_EASYNEWS_SEARCH_TIMEOUT`     | Easynews › Search Timeout     | number   | `30000` | Timeout for Easynews search requests.                                                                 |
+| `BUILTIN_EASYNEWS_SEARCH_CACHE_TTL`   | Easynews › Search Cache TTL   | duration | `3600`  | Cache TTL for Easynews search results. Defaults to 1h since Easynews content rotates more frequently. |
+| `BUILTIN_EASYNEWS_SEARCH_MAX_PAGES`   | Easynews › Max Pages          | number   | `5`     | Maximum pages fetched when paginating Easynews search results.                                        |
+| `BUILTIN_EASYNEWS_SEARCH_CONCURRENCY` | Easynews › Search Concurrency | number   | `2`     | Maximum Easynews search requests in flight at once, per Easynews account.                             |
 
 #### Torrent Galaxy
 

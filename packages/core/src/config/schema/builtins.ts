@@ -875,6 +875,16 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    searchConcurrency: {
+      schema: positiveInt,
+      default: 2,
+      label: 'Easynews search concurrency',
+      env: 'BUILTIN_EASYNEWS_SEARCH_CONCURRENCY',
+      description:
+        'Maximum Easynews search requests in flight at once, per Easynews account.',
+      requiresRestart: false,
+      secret: false,
+    },
   },
   torrentGalaxy: {
     url: {

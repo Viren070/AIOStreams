@@ -17,10 +17,24 @@ import { config as appConfig } from '../../config/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
 import { VIDEO_FILE_EXTENSIONS } from '../../debrid/utils.js';
 import { parseDuration } from '../../parser/utils.js';
-import { createQueryLimit } from '../utils/general.js';
 import bytes from 'bytes';
+import pLimit, { type LimitFunction } from 'p-limit';
 
 const logger = createLogger('easynews');
+
+const searchLimits = new Map<string, LimitFunction>();
+
+function getSearchLimit(account: string): LimitFunction {
+  const concurrency = appConfig.builtins.easynews.searchConcurrency;
+  let limit = searchLimits.get(account);
+  if (!limit) {
+    limit = pLimit(concurrency);
+    searchLimits.set(account, limit);
+  } else if (limit.concurrency !== concurrency) {
+    limit.concurrency = concurrency;
+  }
+  return limit;
+}
 
 export const EASYNEWS_BASE = 'https://members.easynews.com';
 // Page size for the 2.0 API. The 3.0 API ignores page-size params entirely
@@ -171,6 +185,13 @@ export class EasynewsApiError extends Error {
 const MIN_DURATION_SECONDS = 60;
 
 /**
+ * Retries for an empty response body. Easynews only drops requests that are
+ * over its concurrency cap, so the limiter should keep this from triggering.
+ */
+const EMPTY_RESPONSE_RETRIES = 1;
+const EMPTY_RESPONSE_RETRY_DELAY = 500;
+
+/**
  * Easynews API client
  */
 export class EasynewsApi {
@@ -300,14 +321,13 @@ export class EasynewsApi {
     }
 
     // Fetch remaining pages concurrently
-    const queryLimit = createQueryLimit();
     const remainingPages = Array.from(
       { length: pagesToFetch - 1 },
       (_, i) => i + 2
     );
 
     const pagePromises = remainingPages.map((page) =>
-      queryLimit(() => this.performSearch({ ...options, page, perPage }))
+      this.performSearch({ ...options, page, perPage })
     );
 
     const settledResults = await Promise.allSettled(pagePromises);
@@ -390,7 +410,10 @@ export class EasynewsApi {
 
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
-      () => this._performSearch(query, page, perPage, url),
+      () =>
+        getSearchLimit(this.auth)(() =>
+          this._performSearch(query, page, perPage, url)
+        ),
       {
         timeout: appConfig.builtins.easynews.searchTimeout,
         ttl: appConfig.builtins.easynews.searchTimeout + 1000,
@@ -407,6 +430,30 @@ export class EasynewsApi {
   ): Promise<ParsedSearchResponse> {
     logger.debug(`Searching Easynews page ${page} for: ${query}`);
 
+    for (let attempt = 1; ; attempt++) {
+      const result = await this._searchOnce(url);
+      if (result) {
+        return result;
+      }
+      if (attempt > EMPTY_RESPONSE_RETRIES) {
+        throw new EasynewsApiError('Easynews returned an empty response');
+      }
+      logger.warn('Easynews returned an empty response, retrying', {
+        query,
+        page,
+        attempt,
+      });
+      await new Promise((resolve) =>
+        setTimeout(resolve, EMPTY_RESPONSE_RETRY_DELAY)
+      );
+    }
+  }
+
+  /**
+   * A single search request. Resolves to null when Easynews answers with an
+   * empty body.
+   */
+  private async _searchOnce(url: string): Promise<ParsedSearchResponse | null> {
     try {
       const response = await makeRequest(url, {
         method: 'GET',
@@ -437,11 +484,14 @@ export class EasynewsApi {
 
       let json;
       const raw = await response.text();
+      if (raw.length === 0) {
+        return null;
+      }
       try {
         json = JSON.parse(raw);
       } catch (error) {
         throw new EasynewsApiError(
-          `Invalid JSON response from API${raw.length > 0 ? ': ' + (raw.length > 50 ? raw.slice(0, 50) + '...' : raw) : ''}`
+          `Invalid JSON response from API: ${raw.length > 50 ? raw.slice(0, 50) + '...' : raw}`
         );
       }
       const parsed = EasynewsSearchResponseSchema.safeParse(json);
