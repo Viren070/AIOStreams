@@ -3,14 +3,19 @@ import { cn } from '@/components/ui/core/styling';
 import { useAppSidebarContext } from '@/components/ui/app-layout';
 import { Tooltip } from '@/components/ui/tooltip';
 
-const isMac =
-  typeof navigator !== 'undefined' &&
-  /Mac|iPod|iPhone|iPad/.test(
-    (navigator as { userAgentData?: { platform?: string } }).userAgentData
-      ?.platform ?? navigator.platform
-  );
+const APPLE_PLATFORM = /mac|ios|iphone|ipad|ipod/i;
 
-export const COMMAND_PALETTE_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
+const platform =
+  typeof navigator === 'undefined'
+    ? ''
+    : (navigator as { userAgentData?: { platform?: string } }).userAgentData
+        ?.platform ||
+      navigator.platform ||
+      '';
+
+export const COMMAND_PALETTE_SHORTCUT = APPLE_PLATFORM.test(platform)
+  ? '⌘K'
+  : 'Ctrl K';
 
 const SURFACE =
   'flex items-center rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors';
