@@ -120,29 +120,33 @@ export function DashboardLayout() {
   function SidebarHeader() {
     const { open: openCommandPalette } = useDashboardCommandPalette();
     return (
-      <div className="mb-4 p-4 pb-0 flex flex-col items-center w-full">
-        <img
-          src="/logo.png"
-          alt="AIOStreams"
-          className="max-w-[90px] max-h-[60px] object-contain p-4"
-        />
-        <span className="text-xs text-gray-500 mb-3">Dashboard</span>
-        <Tooltip
-          side="right"
-          trigger={
-            <button
-              type="button"
-              onClick={() => openCommandPalette()}
-              className="group/search flex w-11 h-10 items-center justify-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-0"
-              aria-label="Search dashboard"
-            >
-              <BiSearch className="text-base shrink-0" />
-            </button>
-          }
-        >
-          Search dashboard ({shortcutLabel})
-        </Tooltip>
-      </div>
+      <>
+        <div className="mb-4 p-4 pb-0 flex flex-col items-center w-full">
+          <img
+            src="/logo.png"
+            alt="AIOStreams"
+            className="max-w-[90px] max-h-[60px] object-contain p-4"
+          />
+          <span className="text-xs text-gray-500 mb-3">Dashboard</span>
+        </div>
+        <div className="mb-3 flex justify-center">
+          <Tooltip
+            side="right"
+            trigger={
+              <button
+                type="button"
+                onClick={() => openCommandPalette()}
+                className="group/search flex w-11 h-10 items-center justify-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-0"
+                aria-label="Search dashboard"
+              >
+                <BiSearch className="text-base shrink-0" />
+              </button>
+            }
+          >
+            Search dashboard ({shortcutLabel})
+          </Tooltip>
+        </div>
+      </>
     );
   }
 
