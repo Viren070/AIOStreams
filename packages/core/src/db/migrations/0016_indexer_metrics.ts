@@ -23,8 +23,8 @@ export const indexerMetrics: Migration = {
         PRIMARY KEY (hour_ms, instance_id)
       );
 
-      CREATE INDEX IF NOT EXISTS idx_indexer_metrics_hour
-        ON indexer_metrics (hour_ms);
+      CREATE INDEX IF NOT EXISTS idx_indexer_metrics_instance
+        ON indexer_metrics (instance_id, hour_ms);
     `,
     postgres: `
       CREATE TABLE IF NOT EXISTS indexer_metrics (
@@ -39,8 +39,8 @@ export const indexerMetrics: Migration = {
         PRIMARY KEY (hour_ms, instance_id)
       );
 
-      CREATE INDEX IF NOT EXISTS idx_indexer_metrics_hour
-        ON indexer_metrics (hour_ms);
+      CREATE INDEX IF NOT EXISTS idx_indexer_metrics_instance
+        ON indexer_metrics (instance_id, hour_ms);
     `,
   },
 };

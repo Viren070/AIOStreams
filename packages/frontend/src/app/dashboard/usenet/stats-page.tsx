@@ -593,11 +593,15 @@ function IndexerTable({ indexers }: { indexers: IndexerStatRow[] }) {
 }
 
 function IndexerCard({ window }: { window: UsenetWindow }) {
-  const { data } = useIndexerStats(window);
+  const { data, isPending } = useIndexerStats(window);
   return (
     <Card className="p-4">
       <h3 className="text-sm font-semibold mb-3">Indexers</h3>
-      <IndexerTable indexers={data?.indexers ?? []} />
+      {isPending ? (
+        <p className="text-sm text-[--muted]">Loading…</p>
+      ) : (
+        <IndexerTable indexers={data?.indexers ?? []} />
+      )}
     </Card>
   );
 }
