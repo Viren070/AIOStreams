@@ -79,6 +79,7 @@ import { StreamNZBPreset } from './streamnzb.js';
 import { DavexPreset } from './davex.js';
 import { HdHubPreset } from './hdhub.js';
 import { BaguettioPreset } from './baguettio.js';
+import { OneZeroOneCatalogsPreset } from './oneZeroOneCatalogs.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -140,6 +141,7 @@ let PRESET_LIST: string[] = [
   'debridio-tmdb',
   'debridio-tvdb',
   'debridio-ic4a',
+  '101catalogs',
   'streaming-catalogs',
   'anime-catalogs',
   'torrent-catalogs',
@@ -245,6 +247,8 @@ export class PresetManager {
         return WebStreamrPreset;
       case 'astream':
         return AStreamPreset;
+      case '101catalogs':
+        return OneZeroOneCatalogsPreset;
       case 'streaming-catalogs':
         return StreamingCatalogsPreset;
       case 'anime-catalogs':
