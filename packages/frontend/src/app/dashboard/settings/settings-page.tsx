@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from '@tanstack/react-router';
 import { z } from 'zod';
 import type { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -28,9 +29,6 @@ import {
 } from './_components/settings-field';
 import { SettingsActionsMenu } from './_components/settings-actions-menu';
 
-function readTabParam(): string | null {
-  return new URLSearchParams(window.location.search).get('tab');
-}
 function writeTabParam(tab: string) {
   const url = new URL(window.location.href);
   url.searchParams.set('tab', tab);
@@ -205,7 +203,9 @@ function TabForm({
                 }
               >
                 {tab.groups.get(sub)!.map((k) => (
-                  <SettingsField key={k.key} k={k} />
+                  <div key={k.key} id={`setting-${k.key}`}>
+                    <SettingsField k={k} />
+                  </div>
                 ))}
               </SettingsCard>
             ))}
@@ -223,14 +223,36 @@ function TabForm({
 export function SettingsPage() {
   const { data, isLoading, error, refetch } = useSettings();
   const tabs = React.useMemo(() => (data ? buildTabs(data.keys) : []), [data]);
+  const location = useLocation();
 
   const [tab, setTab] = React.useState<string>('');
   React.useEffect(() => {
     if (!tabs.length) return;
-    const fromUrl = readTabParam();
+    const fromUrl = new URLSearchParams(location.search).get('tab');
     if (fromUrl && tabs.some((t) => t.section === fromUrl)) setTab(fromUrl);
     else if (!tab) setTab(tabs[0].section);
-  }, [tabs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tabs, location.search]);
+
+  // Scroll to a specific field when the `field` search param is set
+  React.useEffect(() => {
+    const fieldKey = new URLSearchParams(location.search).get('field');
+    if (!fieldKey || !tab) return;
+    // Small delay to let the tab panel mount and render its fields
+    const id = `setting-${fieldKey}`;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.setAttribute('data-command-target', 'true');
+        setTimeout(() => {
+          el.removeAttribute('data-command-target');
+          // Clear the field param from the URL so it doesn't persist
+          writeTabParam(tab);
+        }, 1400);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [tab, location.search]);
 
   const onTabChange = (v: string) => {
     setTab(v);

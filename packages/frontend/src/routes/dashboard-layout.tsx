@@ -27,11 +27,18 @@ import {
   BiSliderAlt,
   BiCloudDownload,
   BiBlock,
+  BiSearch,
 } from 'react-icons/bi';
 import { LayoutHeaderBackground } from '@/components/layout-header-background';
 import { SECTIONS } from '@/app/dashboard/usenet/sections';
 import { BLOCKLIST_SECTIONS } from '@/app/dashboard/blocklist/sections';
 import type { DashboardSection } from '@/components/shared/section-nav-select';
+import {
+  DashboardCommandPaletteProvider,
+  useDashboardCommandPalette,
+} from '@/context/dashboard-command-palette';
+import { DashboardCommandPalette } from '@/components/shared/dashboard-command-palette';
+import { Tooltip } from '@/components/ui/tooltip';
 
 // Order mirrors how operators typically navigate the dashboard: dashboards
 // at the top, operational tools in the middle, infrastructure (Proxy) before
@@ -105,16 +112,54 @@ export function DashboardLayout() {
     };
   });
 
-  const header = (
-    <div className="mb-4 p-4 pb-0 flex flex-col items-center w-full">
-      <img
-        src="/logo.png"
-        alt="AIOStreams"
-        className="max-w-[90px] max-h-[60px] object-contain p-4"
-      />
-      <span className="text-xs text-gray-500">Dashboard</span>
-    </div>
-  );
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const shortcutLabel = isMac ? '⌘K' : 'Ctrl K';
+
+  function SidebarHeader() {
+    const { open: openCommandPalette } = useDashboardCommandPalette();
+    return (
+      <div className="mb-4 p-4 pb-0 flex flex-col items-center w-full">
+        <img
+          src="/logo.png"
+          alt="AIOStreams"
+          className="max-w-[90px] max-h-[60px] object-contain p-4"
+        />
+        <span className="text-xs text-gray-500 mb-3">Dashboard</span>
+        <Tooltip
+          side="right"
+          trigger={
+            <button
+              type="button"
+              onClick={() => openCommandPalette()}
+              className="group/search flex w-11 h-10 items-center justify-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-0"
+              aria-label="Search dashboard"
+            >
+              <BiSearch className="text-base shrink-0" />
+            </button>
+          }
+        >
+          Search dashboard ({shortcutLabel})
+        </Tooltip>
+      </div>
+    );
+  }
+
+  function MobileSearchBar() {
+    const { open: openCommandPalette } = useDashboardCommandPalette();
+    return (
+      <button
+        type="button"
+        onClick={() => openCommandPalette()}
+        aria-label="Search dashboard"
+        className="flex-1 flex items-center gap-2 h-9 px-3 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors text-sm truncate"
+      >
+        <BiSearch className="text-base shrink-0" />
+        <span className="flex-1 text-left">Search dashboard…</span>
+      </button>
+    );
+  }
 
   const footerItems: SidebarItem[] = [
     {
@@ -130,28 +175,29 @@ export function DashboardLayout() {
   ];
 
   return (
-    <AppSidebarProvider>
-      <AppLayout withSidebar sidebarSize="slim">
-        <AppLayoutSidebar>
-          <Sidebar header={header} items={items} footerItems={footerItems} />
-        </AppLayoutSidebar>
-        <AppLayout>
-          <AppLayoutContent>
-            <div
-              data-dashboard-top-navbar
-              className="lg:hidden w-full h-[5rem] relative overflow-hidden flex items-center gap-3 px-4"
-            >
-              <AppSidebarTrigger />
-              <span className="text-sm font-medium text-[--muted]">
-                Dashboard
-              </span>
-              <LayoutHeaderBackground />
-            </div>
-            <Outlet />
-          </AppLayoutContent>
+    <DashboardCommandPaletteProvider>
+      <AppSidebarProvider>
+        <AppLayout withSidebar sidebarSize="slim">
+          <AppLayoutSidebar>
+            <Sidebar header={<SidebarHeader />} items={items} footerItems={footerItems} />
+          </AppLayoutSidebar>
+          <AppLayout>
+            <AppLayoutContent>
+              <div
+                data-dashboard-top-navbar
+                className="lg:hidden w-full h-[5rem] relative overflow-hidden flex items-center gap-3 px-4"
+              >
+                <AppSidebarTrigger />
+                <MobileSearchBar />
+                <LayoutHeaderBackground />
+              </div>
+              <Outlet />
+            </AppLayoutContent>
+          </AppLayout>
         </AppLayout>
-      </AppLayout>
-      <ConfirmationDialog {...confirmSignOut} />
-    </AppSidebarProvider>
+        <ConfirmationDialog {...confirmSignOut} />
+      </AppSidebarProvider>
+      <DashboardCommandPalette />
+    </DashboardCommandPaletteProvider>
   );
 }

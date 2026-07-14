@@ -340,3 +340,25 @@ pre {
   scrollbar-width: none;
   /* Firefox */
 }
+
+/* Highlight animation for command-palette scroll targets */
+[data-command-target='true'] {
+  animation: command-target-pulse 1.4s ease-out;
+  border-radius: var(--radius-md);
+}
+
+@keyframes command-target-pulse {
+  0%,
+  100% {
+    background-color: transparent;
+    outline-color: transparent;
+  }
+  15% {
+    background-color: rgba(97, 82, 223, 0.15);
+    outline: 2px solid rgba(97, 82, 223, 0.4);
+  }
+  60% {
+    background-color: rgba(97, 82, 223, 0.06);
+    outline: 2px solid rgba(97, 82, 223, 0.15);
+  }
+}
