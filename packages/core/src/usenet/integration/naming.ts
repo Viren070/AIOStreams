@@ -1,4 +1,5 @@
 import { isProbablyObfuscated } from '../index.js';
+import { MAX_ARCHIVE_PASSWORD } from '../pool/archive/crypto/password.js';
 
 /**
  * The filename component of an archive-inner path. `name` holds the filename
@@ -73,14 +74,18 @@ function looksLikeArticleSubject(s: string): boolean {
 /**
  * Best-effort NZB password: the `<head><meta type="password">` value, else a
  * `{{password}}` (or `{password}`) token embedded in the release name (a common
- * indexer convention for protected archives).
+ * indexer convention for protected archives). Values longer than
+ * {@link MAX_ARCHIVE_PASSWORD} are dropped
  */
 export function extractNzbPassword(
   meta: Record<string, string> | undefined,
   name?: string
 ): string | undefined {
   const fromMeta = meta?.password?.trim();
-  if (fromMeta) return fromMeta;
-  const m = name?.match(/\{\{([^}]+)\}\}/) ?? name?.match(/\{([^}]+)\}/);
-  return m?.[1]?.trim() || undefined;
+  const m = fromMeta
+    ? undefined
+    : (name?.match(/\{\{([^}]+)\}\}/) ?? name?.match(/\{([^}]+)\}/));
+  const password = fromMeta || m?.[1]?.trim();
+  if (!password || password.length > MAX_ARCHIVE_PASSWORD) return undefined;
+  return password;
 }

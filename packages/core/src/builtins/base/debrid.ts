@@ -59,6 +59,8 @@ export interface SearchMetadata extends TitleMetadata {
   titlesWithLang?: MetadataTitle[];
   /** ISO 639-1 code of the content's original language (from TMDB). */
   originalLanguage?: string;
+  /** Whether the requested season is the latest season and still has an upcoming episode. */
+  ongoingSeason?: boolean;
 }
 
 export const BaseDebridConfigSchema = z.object({
@@ -696,6 +698,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       tmdbId: metadata.tmdbId ?? null,
       tvdbId: metadata.tvdbId ?? null,
       isAnime: animeEntry ? true : false,
+      ongoingSeason:
+        metadata.nextAirDate && metadata.seasons?.length
+          ? Number(parsedId.season) ===
+            Math.max(...metadata.seasons.map((s) => s.season_number))
+          : undefined,
     };
 
     this.logger.debug(
@@ -741,6 +748,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             nzb: torrentOrNzb.nzb,
             title: torrentOrNzb.title,
             hash: torrentOrNzb.hash,
+            releaseKey: torrentOrNzb.releaseKey,
             index: torrentOrNzb.file.index,
             easynewsUrl:
               torrentOrNzb.service?.id === 'easynews'
@@ -786,6 +794,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             )
           : undefined,
       nzbUrl: torrentOrNzb.type === 'usenet' ? torrentOrNzb.nzb : undefined,
+      releaseKey:
+        torrentOrNzb.type === 'usenet' ? torrentOrNzb.releaseKey : undefined,
       servers:
         torrentOrNzb.service?.id === 'stremio_nntp'
           ? (encryptedStoreAuth as string[])

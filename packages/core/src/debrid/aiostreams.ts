@@ -28,9 +28,12 @@ import {
   selectStreamFile,
 } from '../usenet/integration/index.js';
 import {
+  ReleaseBlocklistRepository,
   UsenetLibraryRepository,
   type UsenetLibraryEntry,
 } from '../db/index.js';
+import { markReleaseDead } from '../release-blocklist/feedback.js';
+import { nzbContentKey } from '../release-blocklist/keys.js';
 
 const logger = createLogger('usenet/service');
 
@@ -87,11 +90,12 @@ export class NativeUsenetService implements UsenetDebridService {
   /**
    * Availability is proven on demand by the engine, so any NZB we have not seen
    * is reported as `cached` (playable). Previously-resolved NZBs are reported
-   * with `library: true` plus their stored streamable file list (so the caller
-   * can run accurate file selection without re-inspecting), and previously-
-   * failed NZBs are reported as `failed` so the caller skips them. Keyed by the
-   * NZB content hash, the same value the resolve path uses, so the two stay in
-   * sync.
+   * with `library: true` plus their stored streamable file list, and previously-
+   * failed NZBs are reported as `failed` so the caller skips them. Lookups are
+   * keyed by whatever hash the search minted (`hashNzbUrl`) and resolved
+   * through the alias table onto content-hash-keyed library rows, so a post
+   * that failed via one indexer is reported failed for every indexer's URL of
+   * it (once that URL has been seen once).
    */
   async checkNzbs(
     nzbs: { name?: string; hash?: string }[]
@@ -106,7 +110,7 @@ export class NativeUsenetService implements UsenetDebridService {
     }
 
     const hashes = nzbs.map((n) => n.hash).filter((h): h is string => !!h);
-    const library = await UsenetLibraryRepository.getMany(hashes).catch(
+    const library = await UsenetLibraryRepository.getManyResolved(hashes).catch(
       (err): Map<string, UsenetLibraryEntry> => {
         logger.warn({ err }, 'failed to read usenet library; assuming empty');
         return new Map();
@@ -184,17 +188,20 @@ export class NativeUsenetService implements UsenetDebridService {
 
     const nzbHash = playbackInfo.hash;
 
-    const existing = await UsenetLibraryRepository.get(nzbHash).catch(
+    const resolved = await UsenetLibraryRepository.getResolved(nzbHash).catch(
       () => undefined
     );
+    const existing = resolved?.entry;
 
     if (!playbackInfo.nzb) {
       const entry =
         existing ??
         (playbackInfo.serviceItemId
-          ? await UsenetLibraryRepository.get(playbackInfo.serviceItemId).catch(
-              () => undefined
-            )
+          ? (
+              await UsenetLibraryRepository.getResolved(
+                playbackInfo.serviceItemId
+              ).catch(() => undefined)
+            )?.entry
           : undefined);
       if (entry?.nzbUrl) {
         playbackInfo.nzb = entry.nzbUrl;
@@ -226,6 +233,16 @@ export class NativeUsenetService implements UsenetDebridService {
         },
         'skipping nzb: cached failure (delete the library entry to retry)'
       );
+      // ensure the release is marked dead in the blocklist if it was previously failed on all providers
+      if (
+        existing.errorCode === 'missing_on_providers' ||
+        existing.errorCode === 'article_not_found'
+      ) {
+        markReleaseDead(
+          playbackInfo.releaseKey,
+          nzbContentKey(resolved?.contentHash)
+        );
+      }
       throw new DebridError('nzb previously failed on all providers', {
         statusCode: 404,
         statusText: 'Not Found',
@@ -235,38 +252,46 @@ export class NativeUsenetService implements UsenetDebridService {
         type: 'api_error',
       });
     }
-    // Whether the library entry existed before this resolve. Used so loser
-    // cleanup / auto-remove only ever drop entries WE created, never a user's
-    // manually-saved (or previously-imported) library item.
-    const existedBefore = !!existing;
 
-    let files;
-    try {
-      files = await resolveFileList(
-        playbackInfo,
-        nzbHash,
-        providers,
-        options,
-        this.owner,
-        existing?.files.length
-          ? existing.files.map((f) => ({
-              name: f.name,
-              size: f.size,
-              index: f.index,
-              path: f.path,
-            }))
-          : undefined,
-        signal
+    if (
+      playbackInfo.releaseKey &&
+      (await ReleaseBlocklistRepository.isLocallyBlocked(
+        playbackInfo.releaseKey
+      ).catch(() => false))
+    ) {
+      // Only this instance's own verdicts block resolve; remote-sourced ones
+      // filter at list time and an explicit attempt is allowed through so a
+      // success can retract them.
+      logger.debug(
+        { hash: nzbHash, releaseKey: playbackInfo.releaseKey },
+        'skipping nzb: release is blocklisted by this instance'
       );
-    } catch (err) {
-      // Cancelled by a winning parallel failover attempt: drop the freshly
-      // created (auto) entry so a cancelled-but-fine NZB doesn't linger as a
-      // dead "inspecting" row.
-      if (signal?.aborted && !existedBefore) {
-        UsenetLibraryRepository.delete(nzbHash).catch(() => {});
-      }
-      throw err;
+      throw new DebridError('release is blocklisted by this instance', {
+        statusCode: 404,
+        statusText: 'Not Found',
+        code: 'NOT_FOUND',
+        headers: {},
+        body: null,
+        type: 'api_error',
+      });
     }
+
+    const { files, nzbHash: contentHash } = await resolveFileList(
+      playbackInfo,
+      resolved?.contentHash ?? nzbHash,
+      providers,
+      options,
+      this.owner,
+      existing?.files.length
+        ? existing.files.map((f) => ({
+            name: f.name,
+            size: f.size,
+            index: f.index,
+            path: f.path,
+          }))
+        : undefined,
+      signal
+    );
 
     const selected = await selectStreamFile(playbackInfo, filename, files);
     if (!selected) {
@@ -280,21 +305,22 @@ export class NativeUsenetService implements UsenetDebridService {
       });
     }
 
-    UsenetLibraryRepository.touch(nzbHash).catch(() => {});
+    UsenetLibraryRepository.touch(contentHash).catch(() => {});
 
     const chosenFilename = selected.name ?? filename;
     const token = encodeUsenetStreamToken({
       nzb: playbackInfo.nzb,
-      hash: nzbHash,
+      hash: contentHash,
       fileIndex: selected.index,
       innerPath: selected.path,
       filename: chosenFilename,
+      releaseKey: playbackInfo.releaseKey,
     });
 
     const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}`;
     logger.debug(
       {
-        hash: nzbHash,
+        hash: contentHash,
         filename: chosenFilename,
         fileIndex: selected.index,
         innerPath: selected.path,
@@ -325,7 +351,7 @@ export class NativeUsenetService implements UsenetDebridService {
   async listNzbs(id?: string): Promise<DebridDownload[]> {
     this.assertAuthorised();
     if (id) {
-      const entry = await UsenetLibraryRepository.get(id);
+      const entry = (await UsenetLibraryRepository.getResolved(id))?.entry;
       return entry ? [libraryEntryToDownload(entry)] : [];
     }
     const { entries } = await UsenetLibraryRepository.list({
@@ -338,7 +364,7 @@ export class NativeUsenetService implements UsenetDebridService {
   /** Fetch a single library entry (file list included) by NZB hash. */
   async getNzb(nzbId: string): Promise<DebridDownload> {
     this.assertAuthorised();
-    const entry = await UsenetLibraryRepository.get(nzbId);
+    const entry = (await UsenetLibraryRepository.getResolved(nzbId))?.entry;
     if (!entry) {
       throw new DebridError('nzb not found in library', {
         statusCode: 404,
@@ -352,10 +378,11 @@ export class NativeUsenetService implements UsenetDebridService {
     return libraryEntryToDownload(entry);
   }
 
-  /** Remove a library entry by NZB hash. */
+  /** Remove a library entry by NZB hash (any alias of it works). */
   async removeNzb(nzbId: string): Promise<void> {
     this.assertAuthorised();
-    await UsenetLibraryRepository.delete(nzbId);
+    const resolved = await UsenetLibraryRepository.getResolved(nzbId);
+    await UsenetLibraryRepository.delete(resolved?.entry.nzbHash ?? nzbId);
   }
 
   /**

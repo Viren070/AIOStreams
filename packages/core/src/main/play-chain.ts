@@ -287,13 +287,13 @@ export async function getPlayChain(
   const fallbacks: ResolvedFallback[] = [];
 
   /** Add up to `sameReleaseLimit` fresh same-release variants at `rank`. */
-  const addVariants = (
-    vs: PlayChainItem[] | undefined,
-    rank: number
-  ): void => {
+  const addVariants = (vs: PlayChainItem[] | undefined, rank: number): void => {
     let perRelease = 0;
     for (const v of vs ?? []) {
-      if (fallbacks.length >= maxAttempts || perRelease >= record.sameReleaseLimit)
+      if (
+        fallbacks.length >= maxAttempts ||
+        perRelease >= record.sameReleaseLimit
+      )
         return;
       if (!passesFilter(v)) continue;
       const key = targetIdentity(v);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { toast } from 'sonner';
+import type { QueryKey } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -62,14 +63,17 @@ export function ResetSettingsModal({
   scope,
   scopeLabel,
   keys,
+  invalidate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scope: 'section' | 'all';
   scopeLabel: string;
   keys: SettingsKey[];
+  /** Query keys to refetch after a reset (scoped callers pass their own). */
+  invalidate?: QueryKey[];
 }) {
-  const { mutateAsync, isPending } = useResetSettings();
+  const { mutateAsync, isPending } = useResetSettings(invalidate);
 
   // Only DB-sourced keys are actually resettable. Env-locked keys are still
   // counted for the heads-up note so the math feels honest.

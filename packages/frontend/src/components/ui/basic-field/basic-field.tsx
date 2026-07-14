@@ -1,5 +1,7 @@
 import { cva } from 'class-variance-authority';
 import * as React from 'react';
+import { AiOutlineExclamationCircle } from 'react-icons/ai';
+import { Popover } from '../popover';
 import { cn, ComponentAnatomy, defineStyleAnatomy } from '../core/styling';
 
 /* -------------------------------------------------------------------------------------------------
@@ -46,6 +48,10 @@ export type BasicFieldOptions = ComponentAnatomy<typeof BasicFieldAnatomy> & {
    */
   help?: React.ReactNode;
   /**
+   * Additional help content shown in a popover next to the label.
+   */
+  moreHelp?: React.ReactNode;
+  /**
    * Error text to display below the field.
    */
   error?: string;
@@ -76,6 +82,7 @@ export function extractBasicFieldProps<Props extends BasicFieldOptions>(
     label,
     labelProps,
     help,
+    moreHelp,
     error,
     required,
     disabled = false,
@@ -96,6 +103,7 @@ export function extractBasicFieldProps<Props extends BasicFieldOptions>(
       name,
       label,
       help,
+      moreHelp,
       error,
       disabled,
       required,
@@ -114,6 +122,7 @@ export function extractBasicFieldProps<Props extends BasicFieldOptions>(
       | 'label'
       | 'name'
       | 'help'
+      | 'moreHelp'
       | 'error'
       | 'disabled'
       | 'required'
@@ -150,6 +159,7 @@ export const BasicField = React.memo(
       label,
       error,
       help,
+      moreHelp,
       disabled,
       readonly,
       required,
@@ -169,24 +179,36 @@ export const BasicField = React.memo(
         ref={ref}
       >
         {!!label && (
-          <label
-            htmlFor={disabled ? undefined : id}
-            className={cn(BasicFieldAnatomy.fieldLabel(), fieldLabelClass)}
-            data-error={!!error}
-            {...labelProps}
-          >
-            {label}
-            {required && (
-              <span
-                className={cn(
-                  BasicFieldAnatomy.fieldAsterisk(),
-                  fieldAsteriskClass
-                )}
+          <div className="flex items-center gap-1">
+            <label
+              htmlFor={disabled ? undefined : id}
+              className={cn(BasicFieldAnatomy.fieldLabel(), fieldLabelClass)}
+              data-error={!!error}
+              {...labelProps}
+            >
+              {label}
+              {required && (
+                <span
+                  className={cn(
+                    BasicFieldAnatomy.fieldAsterisk(),
+                    fieldAsteriskClass
+                  )}
+                >
+                  *
+                </span>
+              )}
+            </label>
+            {!!moreHelp && (
+              <Popover
+                className="text-sm"
+                trigger={
+                  <AiOutlineExclamationCircle className="transition-opacity opacity-45 hover:opacity-90" />
+                }
               >
-                *
-              </span>
+                {moreHelp}
+              </Popover>
             )}
-          </label>
+          </div>
         )}
 
         {children}

@@ -33,6 +33,7 @@ import {
 } from './routes/chilllink/index.js';
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import sabnzbdRouter from './routes/api/sabnzbd.js';
+import publicBlocklistRouter from './routes/blocklist.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -200,6 +201,8 @@ builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
 builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
+
+app.use('/blocklist', publicBlocklistRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately

@@ -9,6 +9,7 @@ import {
 } from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
+import { toUnixSeconds, usenetKey } from '../../release-blocklist/index.js';
 import { BaseNabApi, SearchResultItem } from '../base/nab/api.js';
 import {
   BaseNabAddon,
@@ -172,7 +173,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       seenNzbs.add(nzbUrl);
 
       const zyclopsHealth = result.newznab?.zyclopsHealth?.toString();
-      const md5 = result.newznab?.infohash?.toString() || hashNzbUrl(nzbUrl);
+      const md5 = hashNzbUrl(nzbUrl);
 
       let date = result.pubDate?.toString();
       if (typeof result.newznab?.usenetdate === 'string') {
@@ -204,6 +205,23 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
         type: 'usenet',
         parsedMediaInfo,
       };
+
+      const keySize =
+        typeof enclosure?.length === 'number' && enclosure.length > 0
+          ? enclosure.length
+          : result.newznab?.size
+            ? Number(result.newznab.size)
+            : 0;
+      const releaseKey = usenetKey(
+        keySize,
+        typeof result.newznab?.poster === 'string'
+          ? result.newznab.poster
+          : null,
+        toUnixSeconds(date)
+      );
+      if (releaseKey) {
+        nzb.releaseKey = releaseKey;
+      }
 
       if (zyclopsHealth) {
         nzb.zyclopsHealth = zyclopsHealth;

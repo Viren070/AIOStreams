@@ -72,7 +72,10 @@ export class NewznabPreset extends BuiltinAddonPreset {
           { label: 'NzbNoob', value: 'https://nzbnoob.com' },
           { label: 'NzbPlanet', value: 'https://api.nzbplanet.net' },
           { label: 'NZBStars', value: 'https://nzbstars.com/' },
-          { label: 'Treasure Maps (formerly SceneNZBs)', value: 'https://treasure-maps.com' },
+          {
+            label: 'Treasure Maps (formerly SceneNZBs)',
+            value: 'https://treasure-maps.com',
+          },
           {
             label: 'Tabula Rasa',
             value: 'https://www.tabula-rasa.pw/api/v1/',
@@ -181,6 +184,28 @@ export class NewznabPreset extends BuiltinAddonPreset {
           { label: 'Auto', value: 'auto' },
           { label: 'Forced Query', value: 'query' },
           { label: 'Both', value: 'both' },
+        ],
+      },
+      {
+        id: 'seasonPackStrategy',
+        name: 'Season Pack Strategy',
+        description:
+          'Controls episode vs. season-pack search order for series in `Auto` mode - useful for private trackers where season packs replace individual episodes. `Dynamic` decides based on whether the season is still airing. May include individual episodes too - pair with `Season/Episode Matching` in Filters to filter them out.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'episodeOnly',
+        options: [
+          { label: 'Episode Only', value: 'episodeOnly' },
+          { label: 'Dynamic (Season Pack Preferred)', value: 'dynamic' },
+          {
+            label: 'Episode First, Season Pack Fallback',
+            value: 'episodeFirstSeasonPackFallback',
+          },
+          {
+            label: 'Season Pack First, Episode Fallback',
+            value: 'seasonPackFirstEpisodeFallback',
+          },
         ],
       },
       {
@@ -418,6 +443,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
+      seasonPackStrategy: options.seasonPackStrategy ?? 'episodeOnly',
       zyclopsHealthProxy: zyclopsHealthProxyConfig,
     };
 

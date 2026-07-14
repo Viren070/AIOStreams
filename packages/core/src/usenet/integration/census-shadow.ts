@@ -2,6 +2,11 @@ import { createLogger } from '../../logging/logger.js';
 import { UsenetLibraryRepository } from '../../db/index.js';
 import type { UsenetLibraryFile } from '../../db/index.js';
 import {
+  markReleaseDead,
+  retractRelease,
+} from '../../release-blocklist/feedback.js';
+import { nzbContentKey } from '../../release-blocklist/keys.js';
+import {
   classifyHoles,
   serializeHoles,
   type HoleRun,
@@ -120,8 +125,9 @@ export function spawnCensusShadow(args: {
   nzb: Nzb;
   content: NzbContent;
   engine: UsenetEngine;
+  releaseKey?: string;
 }): void {
-  const { nzbHash, name, nzb, content, engine } = args;
+  const { nzbHash, name, nzb, content, engine, releaseKey } = args;
   const census = content.census;
   if (!census) return;
   content.census = undefined;
@@ -184,6 +190,7 @@ export function spawnCensusShadow(args: {
         name,
         'missing_on_providers'
       );
+      markReleaseDead(releaseKey, nzbContentKey(nzbHash));
       return;
     }
 
@@ -219,6 +226,7 @@ export function spawnCensusShadow(args: {
       await UsenetLibraryRepository.setStatus(nzbHash, 'available', {
         guard: { notIn: ['failed', 'queued', 'inspecting', 'streaming'] },
       });
+      retractRelease(releaseKey, nzbContentKey(nzbHash));
     }
   })()
     .catch((err) => {

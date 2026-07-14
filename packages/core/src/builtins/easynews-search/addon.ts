@@ -22,7 +22,7 @@ import {
   BaseDebridConfigSchema,
   SearchMetadata,
 } from '../base/debrid.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import { getTitleLanguagesForUrl } from '../utils/general.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
 import EasynewsApi, {
   EasynewsApiError,
@@ -51,7 +51,7 @@ function easynewsEncode(vcodec?: string): string | undefined {
 export const EasynewsSearchAddonConfigSchema = BaseDebridConfigSchema.extend({
   authentication: z.string(),
   paginate: z.boolean().default(false),
-  apiVersion: z.enum(['2.0', '3.0']).default('2.0'),
+  apiVersion: z.enum(['2.0', '3.0']).default('3.0'),
   aiostreamsAuth: z.string().optional(), // Optional AIOStreams auth for rate limit bypass
 });
 
@@ -121,8 +121,6 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
         throw new Error('Invalid AIOStreams Auth.');
       }
     }
-    const queryLimit = createQueryLimit();
-
     const metadata = await this.getSearchMetadata();
     if (!metadata.primaryTitle) {
       return [];
@@ -140,36 +138,34 @@ export class EasynewsSearchAddon extends BaseDebridAddon<EasynewsSearchAddonConf
 
     logger.info(`Performing Easynews search`, { queries });
 
-    const searchPromises = queries.map((query) =>
-      queryLimit(async () => {
-        const start = Date.now();
-        try {
-          const result = await this.api.search({
-            query,
-            paginate: this.userData.paginate,
-          });
-          logger.info(
-            `Easynews search for "${query}" took ${getTimeTakenSincePoint(start)}`,
-            { results: result.results.length }
-          );
-          return result;
-        } catch (error) {
-          if (error instanceof EasynewsApiError) {
-            if (error.status === 401) {
-              throw error;
-            }
-            logger.error(`Easynews API error: ${error.message}`, {
-              status: error.status,
-            });
-          } else {
-            logger.error(
-              `Easynews search error: ${error instanceof Error ? error.message : String(error)}`
-            );
+    const searchPromises = queries.map(async (query) => {
+      const start = Date.now();
+      try {
+        const result = await this.api.search({
+          query,
+          paginate: this.userData.paginate,
+        });
+        logger.info(
+          `Easynews search for "${query}" took ${getTimeTakenSincePoint(start)}`,
+          { results: result.results.length }
+        );
+        return result;
+      } catch (error) {
+        if (error instanceof EasynewsApiError) {
+          if (error.status === 401) {
+            throw error;
           }
-          return null;
+          logger.error(`Easynews API error: ${error.message}`, {
+            status: error.status,
+          });
+        } else {
+          logger.error(
+            `Easynews search error: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
-      })
-    );
+        return null;
+      }
+    });
 
     const allResults = await Promise.all(searchPromises);
 

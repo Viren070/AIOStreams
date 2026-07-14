@@ -6,7 +6,7 @@ import { IconButton } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
 import { copyToClipboard } from '@/utils/clipboard';
-import { type LibraryEntry } from '../queries';
+import { releaseBlocklistKeys, type LibraryEntry } from '../queries';
 import { formatBytes, formatDateTime, formatLatency } from '@/lib/format';
 
 function copy(text: string, label: string) {
@@ -110,6 +110,44 @@ function NzbUrlRow({ url }: { url: string }) {
   );
 }
 
+const KEY_HINT: Record<string, string> = {
+  wd1: 'Portable release fingerprint based on indexer metadata (size, poster, date)',
+  nh1: 'Exact NZB content hash',
+};
+
+function ReleaseKeysRow({ entry }: { entry: LibraryEntry }) {
+  const keys = releaseBlocklistKeys(entry);
+  if (keys.length === 0) return null;
+  return (
+    <Row label={keys.length === 1 ? 'Release key' : 'Release keys'}>
+      <div className="min-w-0 flex-1 flex flex-col gap-1">
+        {keys.map((key) => (
+          <div key={key} className="flex items-center gap-2">
+            <Tooltip
+              side="left"
+              trigger={
+                <span className="font-mono text-xs break-all cursor-default">
+                  {key}
+                </span>
+              }
+            >
+              {KEY_HINT[key.split(':')[0]] ?? 'Blocklist key'}
+            </Tooltip>
+            <IconButton
+              size="xs"
+              intent="gray-subtle"
+              icon={<BiCopy />}
+              aria-label="Copy release key"
+              className="shrink-0 ml-auto"
+              onClick={() => copy(key, 'Release key')}
+            />
+          </div>
+        ))}
+      </div>
+    </Row>
+  );
+}
+
 /** A cleanly-laid-out details panel for a library entry (replaces card clutter). */
 export function EntryInfoModal({
   entry,
@@ -160,6 +198,7 @@ export function EntryInfoModal({
           }
           onCopy={() => copy(e.nzbHash, 'Hash')}
         />
+        <ReleaseKeysRow entry={e} />
       </div>
     </Modal>
   );

@@ -32,6 +32,8 @@ export class StreamCache {
     const entry = this.read()[key];
     if (!entry) return null;
     if (Date.now() - entry.ts > ttl * 60 * 1000) return null;
+    // Guard against malformed/partial entries coming back from $storage.
+    if (!Array.isArray(entry.results)) return null;
     return entry.results;
   }
 

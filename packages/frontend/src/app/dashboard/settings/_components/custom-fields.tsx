@@ -8,9 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button, IconButton } from '@/components/ui/button';
 import { BasicField } from '@/components/ui/basic-field';
 import { parseDuration, formatDurationMs } from '@/lib/format';
+import MarkdownLite from '@/components/shared/markdown-lite';
 import type { SettingsUiHint } from '../queries';
 /** Sentinel value that signals "clear this secret" on save. */
 export const SECRET_CLEAR_SENTINEL = '\x00CLEAR\x00';
+
+/** Render a help string through MarkdownLite (`code`, **bold**, links, \n). */
+export const md = (text?: string) =>
+  text ? <MarkdownLite>{text}</MarkdownLite> : undefined;
 
 interface CommonProps {
   name: string;
@@ -104,7 +109,7 @@ export function KeyValueListField({
         : 'basis-1/2 grow shrink-0';
 
   return (
-    <BasicField label={label} help={help}>
+    <BasicField label={label} help={md(help)}>
       <div className="space-y-2">
         {rows.length === 0 && (
           <p className="text-xs text-[--muted] italic">No entries.</p>
@@ -203,7 +208,7 @@ export function StringListField({ name, label, help, disabled }: CommonProps) {
   };
 
   return (
-    <BasicField label={label} help={help}>
+    <BasicField label={label} help={md(help)}>
       <div className="space-y-2">
         {rows.length === 0 && (
           <p className="text-xs text-[--muted] italic">No entries.</p>
@@ -263,7 +268,7 @@ export function BoolOrListField({ name, label, help, disabled }: CommonProps) {
   }, [isList]);
 
   return (
-    <BasicField label={label} help={help}>
+    <BasicField label={label} help={md(help)}>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Switch
@@ -368,7 +373,7 @@ export function DurationField({ name, label, help, disabled }: CommonProps) {
   }, [numeric]);
 
   return (
-    <BasicField label={label} help={help} error={err ?? undefined}>
+    <BasicField label={label} help={md(help)} error={err ?? undefined}>
       <TextInput
         value={text}
         disabled={disabled}
@@ -403,7 +408,7 @@ export function MultilineStringField({
     ? `${help ? help + ' · ' : ''}Will be cleared on save.`
     : help;
   return (
-    <BasicField label={label} help={effectiveHelp}>
+    <BasicField label={label} help={md(effectiveHelp)}>
       {secretSet && (
         <div className="flex justify-end mb-1">
           <Button
@@ -497,7 +502,7 @@ export function SizeField({ name, label, help, disabled }: CommonProps) {
   }, [numeric]);
 
   return (
-    <BasicField label={label} help={help} error={err ?? undefined}>
+    <BasicField label={label} help={md(help)} error={err ?? undefined}>
       <TextInput
         value={text}
         disabled={disabled}
@@ -534,7 +539,7 @@ export function JsonField({ name, label, help, disabled }: CommonProps) {
   }, [field.value]);
 
   return (
-    <BasicField label={label} help={help} error={err ?? undefined}>
+    <BasicField label={label} help={md(help)} error={err ?? undefined}>
       <Textarea
         value={text}
         disabled={disabled}

@@ -18,7 +18,9 @@
  *
  * In both versions stored file data is one continuous CBC stream over the
  * file's concatenated volume fragments, seekable at 16-byte boundaries (the
- * preceding ciphertext block is the IV); see {@link ./rar-aes-source.js}.
+ * preceding ciphertext block is the IV); see {@link ./rar-aes-source.js}. Both
+ * key on at most the first 127 characters of the password, as unrar does; see
+ * {@link ./password.js}.
  */
 import {
   createDecipheriv,
@@ -26,6 +28,8 @@ import {
   pbkdf2Sync,
   timingSafeEqual,
 } from 'node:crypto';
+import { ArchiveEncryptedError, ArchiveBadPasswordError } from '../errors.js';
+import { rarPassword } from './password.js';
 
 /** Max KDF exponent the format allows (`2^24` iterations). */
 const MAX_KDF_LOG2 = 24;
@@ -69,16 +73,16 @@ export interface Rar5Keys {
   pwcheck: Buffer;
 }
 
-/** Thrown when an archive is encrypted but no password was supplied. */
-export class RarEncryptedError extends Error {
+/** Thrown when a RAR archive is encrypted but no password was supplied. */
+export class RarEncryptedError extends ArchiveEncryptedError {
   constructor(message = 'rar archive is encrypted (password required)') {
     super(message);
     this.name = 'RarEncryptedError';
   }
 }
 
-/** Thrown when the supplied password fails the archive's password check. */
-export class RarBadPasswordError extends Error {
+/** Thrown when the supplied password fails a RAR archive's password check. */
+export class RarBadPasswordError extends ArchiveBadPasswordError {
   constructor(message = 'rar archive password is incorrect') {
     super(message);
     this.name = 'RarBadPasswordError';
@@ -133,8 +137,9 @@ export function deriveRar5Keys(
     throw new RarBadPasswordError('rar5 kdf count out of range');
   }
   const usableSalt = salt.length > MAX_SALT ? salt.subarray(0, MAX_SALT) : salt;
-  const pass = Buffer.from(password, 'utf8');
-  const ck = cacheKey(password, usableSalt, kdfLog2);
+  const pw = rarPassword(password);
+  const pass = Buffer.from(pw, 'utf8');
+  const ck = cacheKey(pw, usableSalt, kdfLog2);
   const cached = rar5KeyCache.get(ck);
   if (cached) return cached;
 
@@ -175,12 +180,13 @@ const RAR4_IV_SAMPLES = 16;
  * salt per volume.
  */
 export function deriveRar4KeyIv(password: string, salt: Buffer): RarKeyIv {
-  const ck = cacheKey(password, salt, 4);
+  const pw = rarPassword(password);
+  const ck = cacheKey(pw, salt, 4);
   const cached = rar4KeyCache.get(ck);
   if (cached) return cached;
 
   // The password is encoded as UTF-16LE before hashing, as required by RAR4.
-  const pass = Buffer.from(password, 'utf16le');
+  const pass = Buffer.from(pw, 'utf16le');
   const p = Buffer.concat([pass, salt]);
   const unit = p.length + 3; // password+salt followed by the LE24 round counter
   const interval = RAR4_ROUNDS / RAR4_IV_SAMPLES;

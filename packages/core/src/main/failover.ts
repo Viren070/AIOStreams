@@ -93,6 +93,7 @@ function buildPlaybackInfo(
         title: fileInfo.title,
         hash: fileInfo.hash,
         nzb: fileInfo.nzb,
+        releaseKey: fileInfo.releaseKey,
         easynewsUrl: fileInfo.easynewsUrl,
         index: fileInfo.index,
         filename,
@@ -145,11 +146,22 @@ export async function resolvePlaybackTarget(
 }
 
 /**
+ * Smallest body we will accept as a real release.
+ */
+const MIN_PLAUSIBLE_FILE_SIZE = 16 * 1024 * 1024;
+
+/** Total size out of a `Content-Range: bytes 0-0/12345` header, when stated. */
+function parseContentRangeTotal(value: string | null): number | undefined {
+  const total = value?.match(/\/\s*(\d+)\s*$/)?.[1];
+  return total === undefined ? undefined : Number(total);
+}
+
+/**
  * Resolve an external addon debrid URL by probing it without following redirects.
  * Heuristic: a redirect that stays on the addon's own host is probably a static
  * error video served in place of a dead link; a redirect to a different host is the
- * real debrid CDN URL (success). A 2xx video response means the addon serves the
- * bytes directly, so the original URL is returned. Anything else is a retryable
+ * real debrid CDN URL (success). A 2xx video response with some content length / range heuristics
+ * means the addon serves the bytes directly, so the original URL is returned. Anything else is a retryable
  * failure (a plain Error, so the chain advances to the next target).
  *
  * `ctx.clientIp` is forwarded so IP-bound CDN links resolve for the client, not the
@@ -173,47 +185,86 @@ export async function resolveExternalTarget(
     method: 'GET',
     forwardIp: ctx.clientIp,
     signal,
+    headers: { Range: 'bytes=0-0' },
     rawOptions: { redirect: 'manual' },
   });
 
-  if (res.status >= 300 && res.status < 400) {
-    const location = res.headers.get('Location');
-    if (!location) {
-      throw new Error('external target redirect had no Location header');
+  try {
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('Location');
+      if (!location) {
+        throw new Error('external target redirect had no Location header');
+      }
+      let sameHost = false;
+      try {
+        // Resolve relative redirects against the probe URL before comparing hosts.
+        sameHost = new URL(location, url).host === new URL(url).host;
+      } catch {
+        // Unparseable Location, treat as a real (off-host) CDN URL.
+      }
+      if (sameHost) {
+        // Redirect back onto the addon's own host, probably a static error video.
+        throw new Error('external target redirected to an error video');
+      }
+      logger.debug({ host }, 'external target resolved to off-host redirect');
+      return location;
     }
-    let sameHost = false;
-    try {
-      // Resolve relative redirects against the probe URL before comparing hosts.
-      sameHost = new URL(location, url).host === new URL(url).host;
-    } catch {
-      // Unparseable Location, treat as a real (off-host) CDN URL.
-    }
-    if (sameHost) {
-      // Redirect back onto the addon's own host, probably a static error video.
-      throw new Error('external target redirected to an error video');
-    }
-    logger.debug({ host }, 'external target resolved to off-host redirect');
-    return location;
-  }
 
-  if (res.status >= 200 && res.status < 300) {
-    const contentType = res.headers.get('content-type') ?? '';
-    if (
-      contentType.startsWith('video/') ||
-      contentType.startsWith('application/octet-stream')
-    ) {
-      logger.debug(
-        { host, contentType },
-        'external target serves bytes directly; using probe url'
+    if (res.status >= 200 && res.status < 300) {
+      const contentType = res.headers.get('content-type') ?? '';
+      if (
+        !contentType.startsWith('video/') &&
+        !contentType.startsWith('application/octet-stream')
+      ) {
+        throw new Error(
+          `external target returned non-video response (${contentType || res.status})`
+        );
+      }
+
+      if (res.status === 206) {
+        const total = parseContentRangeTotal(res.headers.get('content-range'));
+        if (total !== undefined && total < MIN_PLAUSIBLE_FILE_SIZE) {
+          throw new Error(
+            `external target served a ${total}-byte file, too small to be the release`
+          );
+        }
+        logger.debug(
+          { host, contentType, total },
+          'external target serves ranged bytes; using probe url'
+        );
+        return url;
+      }
+
+      // 200: the server ignored our Range. A link that cannot seek is unusable for
+      // playback anyway, so accept it only if it at least declares a real size.
+      const lengthHeader = res.headers.get('content-length');
+      const length = lengthHeader === null ? undefined : Number(lengthHeader);
+      if (
+        length !== undefined &&
+        Number.isFinite(length) &&
+        length >= MIN_PLAUSIBLE_FILE_SIZE
+      ) {
+        logger.debug(
+          { host, contentType, length },
+          'external target serves bytes directly without range support; using probe url'
+        );
+        return url;
+      }
+      throw new Error(
+        `external target ignored Range and returned ${lengthHeader ?? 'an unsized'} body (${contentType}); treating as an error video`
       );
-      return url; // addon serves the bytes directly
     }
-    throw new Error(
-      `external target returned non-video response (${contentType || '2xx'})`
-    );
-  }
 
-  throw new Error(`external target probe failed with status ${res.status}`);
+    throw new Error(`external target probe failed with status ${res.status}`);
+  } finally {
+    // Never read the body. A server that ignores Range answers 200 with the whole
+    // file, and we only ever needed the headers.
+    try {
+      await res.body?.cancel();
+    } catch {
+      // already closed
+    }
+  }
 }
 
 /** One attempt the orchestrator can race or sequence. */

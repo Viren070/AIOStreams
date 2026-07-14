@@ -247,8 +247,12 @@ class StreamFetcher {
       // Now uses context's cached SeaDex data when available
       await this.precompute.precomputeSeaDexOnly(groupStreams, context);
 
+      // Blocklist runs before dedup so a flagged candidate never survives
+      // as a failover variant harvested from discarded duplicates.
       const filteredStreams = await this.deduplicate.deduplicate(
-        await this.filter.filter(groupStreams, context)
+        await this.filter.filterBlocklisted(
+          await this.filter.filter(groupStreams, context)
+        )
       );
 
       // Run preferred matching AFTER filter

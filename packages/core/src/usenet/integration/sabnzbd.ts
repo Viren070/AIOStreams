@@ -198,11 +198,15 @@ async function listEntries(
   });
   const cats = csv(params.cat ?? params.category);
   const nzoIds = csv(params.nzo_ids).map(fromNzoId);
+  const nzoAliases = nzoIds.length
+    ? await UsenetLibraryRepository.resolveAliases(nzoIds)
+    : new Map<string, string>();
+  const canonicalNzoIds = nzoIds.map((h) => nzoAliases.get(h) ?? h);
   const statuses = csv(params.status);
   const filtered = entries.filter(
     (e) =>
       (cats.length === 0 || cats.includes(e.category ?? '*')) &&
-      (nzoIds.length === 0 || nzoIds.includes(e.nzbHash)) &&
+      (canonicalNzoIds.length === 0 || canonicalNzoIds.includes(e.nzbHash)) &&
       (statuses.length === 0 || statuses.includes(sabStatus(e.status)))
   );
   return { entries: filtered, total, start };
@@ -346,10 +350,11 @@ async function deleteEntries(
     });
     hashes = entries.map((e) => e.nzbHash);
   } else {
-    const known = await UsenetLibraryRepository.getMany(
+    const known = await UsenetLibraryRepository.getManyResolved(
       csv(value).map(fromNzoId)
     );
-    hashes = [...known.keys()];
+    // Delete by the canonical row key: a requested nzo_id may be an alias.
+    hashes = [...new Set([...known.values()].map((e) => e.nzbHash))];
   }
   for (const hash of hashes) {
     await UsenetLibraryRepository.delete(hash);
@@ -382,7 +387,8 @@ async function retryEntries(
 }
 
 async function buildGetFiles(value: string): Promise<SabnzbdResult> {
-  const entry = await UsenetLibraryRepository.get(fromNzoId(value));
+  const entry = (await UsenetLibraryRepository.getResolved(fromNzoId(value)))
+    ?.entry;
   if (!entry) return sabError('not found');
   return {
     payload: {
@@ -616,7 +622,7 @@ export async function handleSabnzbdRequest(
 
       case 'retry': {
         if (!params.value) return sabError('expects a value');
-        const known = await UsenetLibraryRepository.getMany(
+        const known = await UsenetLibraryRepository.getManyResolved(
           csv(params.value).map(fromNzoId)
         );
         return await retryEntries([...known.values()], req.owner);

@@ -9,7 +9,11 @@ import { PrioritySemaphore } from './pool/priority-semaphore.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
 import { FileStream, SeekableStream, SegmentMemo } from './pool/file-stream.js';
-import { trackSeekableStream } from './pool/tracked-stream.js';
+import {
+  trackSeekableStream,
+  reapIdleStreams,
+  UsenetStreamReapedError,
+} from './pool/tracked-stream.js';
 import {
   inspectNzb,
   selectBestVideo,
@@ -157,7 +161,6 @@ export interface EngineLiveStats {
   fingerprint: string;
   tiles: LiveTiles;
   pool: PoolInfo;
-  providers: ProviderStatsSnapshot[];
   cache: CacheStats;
   /** In-flight read streams (live "Streams" view). */
   streams: LiveStreamInfo[];
@@ -190,10 +193,11 @@ export class UsenetEngine {
   /** Live census runs, so close() can cancel their workers promptly. */
   private liveCensus = new Set<CensusRun>();
   /**
-   * Every read stream opened through {@link track}, so close() can destroy
-   * in-flight readers.
+   * Every read stream opened through {@link track}, keyed by its stats stream
+   * id, so close() can destroy in-flight readers and the idle reaper / the
+   * dashboard stop action can destroy one by id.
    */
-  private liveReaders = new Set<Readable>();
+  private liveReaders = new Map<number, Readable>();
   /**
    * Shared probe budget for ALL live censuses (blocking + shadows): N
    * concurrent censuses contend for these slots instead of multiplying
@@ -242,7 +246,10 @@ export class UsenetEngine {
       this.stats
     );
     this.purgeTimer = setInterval(
-      () => this.pool.purgeStaleIdles(),
+      () => {
+        this.pool.purgeStaleIdles();
+        this.reapIdleReaders();
+      },
       Math.max(10_000, this.options.idleConnectionMs)
     );
     this.purgeTimer.unref?.();
@@ -1044,27 +1051,52 @@ export class UsenetEngine {
 
   /**
    * True while this engine is doing real work: a read stream is open (even a
-   * stalled one, since a paused player fetches nothing), article fetches are
-   * in flight (imports, inspections), or a census is still auditing a
+   * stalled one, since a paused player fetches nothing), article transfers
+   * are on the wire (imports, inspections), or a census is still auditing a
    * release. Counting censuses keeps the registry from evicting an engine
    * mid-shadow; the census max-lifetime cap bounds how long that can pin one.
+   * On-wire (not permits held) is deliberate: abandoned fetches parked in a
+   * pool queue must not pin the engine open forever; idle eviction is the
+   * backstop that clears them.
    */
   isBusy(): boolean {
     return (
       this.stats.activeStreams > 0 ||
-      this.pool.downloadsInUse > 0 ||
+      this.pool.downloadsOnWire > 0 ||
       this.liveCensus.size > 0
     );
   }
 
-  /** Unified live snapshot (tiles + pool + per-provider + cache). */
+  /**
+   * Destroy readers that pushed no bytes for `streamIdleTimeoutMs`.
+   */
+  private reapIdleReaders(): void {
+    if (this.options.streamIdleTimeoutMs <= 0) return;
+    reapIdleStreams(
+      this.stats,
+      this.liveReaders,
+      this.options.streamIdleTimeoutMs
+    );
+  }
+
+  /** Destroy one live reader by its stats stream id (dashboard stop action). */
+  destroyReader(id: number): boolean {
+    const reader = this.liveReaders.get(id);
+    if (!reader) return false;
+    reader.destroy(
+      new UsenetStreamReapedError('stream stopped from the dashboard')
+    );
+    return true;
+  }
+
+  /**
+   * Unified live snapshot (tiles + pool + cache + streams).
+   */
   liveStats(): EngineLiveStats {
-    this.touch();
     return {
       fingerprint: this.fingerprint,
       tiles: this.stats.live(),
       pool: this.pool.poolInfo(),
-      providers: this.stats.snapshot(),
       cache: this.cache.stats(),
       streams: this.stats.liveStreams(),
     };
@@ -1097,7 +1129,7 @@ export class UsenetEngine {
     const readers = this.liveReaders.size;
     if (readers > 0) {
       logger.debug({ readers }, 'destroying live readers on engine close');
-      for (const reader of [...this.liveReaders]) {
+      for (const reader of [...this.liveReaders.values()]) {
         reader.destroy(new Error('usenet engine closed'));
       }
     }
@@ -1186,6 +1218,16 @@ export class UsenetEngineRegistry {
     }
     engine.lastUsedAt = Date.now();
     return engine;
+  }
+
+  /**
+   * The warm engine for a provider set, or undefined when none is. Unlike
+   * {@link get} this neither creates an engine nor refreshes its idle clock.
+   */
+  peek(providers: ProviderConfig[]): UsenetEngine | undefined {
+    return this.engines.get(
+      providerSetFingerprint(providers, appConfig.bootstrap.secretKey)
+    );
   }
 
   get size(): number {

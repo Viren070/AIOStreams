@@ -22,6 +22,9 @@ interface DeltaCounters {
   sumDurationMs: number;
   /** Wall-clock busy ms (union of in-flight fetches), for avg throughput. */
   wallClockMs: number;
+  /** Sum of sampled server response times; divide by ttfbSamples, not articles. */
+  sumTtfbMs: number;
+  ttfbSamples: number;
 }
 
 interface ProviderAccumulator {
@@ -29,7 +32,10 @@ interface ProviderAccumulator {
   bytesDownloaded: number;
   missingSegments: number;
   connectionErrors: number;
+  /** Retained server-response-time samples (avg + p95 for the live snapshot). */
   latencies: number[];
+  /** Lifetime sample count, for the reservoir's overwrite cursor. */
+  latencySamples: number;
   delta: DeltaCounters;
   /** In-flight article fetches on this provider (for union busy timing). */
   inFlight: number;
@@ -46,6 +52,7 @@ function emptyAccumulator(): ProviderAccumulator {
     missingSegments: 0,
     connectionErrors: 0,
     latencies: [],
+    latencySamples: 0,
     delta: {
       articles: 0,
       bytes: 0,
@@ -53,6 +60,8 @@ function emptyAccumulator(): ProviderAccumulator {
       missing: 0,
       sumDurationMs: 0,
       wallClockMs: 0,
+      sumTtfbMs: 0,
+      ttfbSamples: 0,
     },
     inFlight: 0,
     busyStart: null,
@@ -123,6 +132,16 @@ class LiveMeter {
 /** Time constant (ms) for the per-stream download-rate EMA. */
 const STREAM_RATE_TAU_MS = 3_000;
 
+/** A tracked stream that exceeded the idle threshold (reaper input). */
+export interface IdleStreamInfo {
+  id: number;
+  nzbHash: string;
+  filename?: string;
+  idleMs: number;
+  bytesServed: number;
+  openedAt: number;
+}
+
 /** One tracked in-flight read stream (live "Streams" view). */
 interface LiveStreamRecord {
   id: number;
@@ -160,14 +179,19 @@ export class StatsAccumulator {
         acc.delta.articles++;
         acc.delta.bytes += event.bytes;
         acc.delta.sumDurationMs += event.durationMs;
+        this.liveMeter.record({ bytes: event.bytes, articles: 1 });
+        break;
+      case 'latency_sample':
+        acc.delta.sumTtfbMs += event.ttfbMs;
+        acc.delta.ttfbSamples++;
+        acc.latencySamples++;
         if (acc.latencies.length < MAX_LATENCY_SAMPLES) {
-          acc.latencies.push(event.durationMs);
+          acc.latencies.push(event.ttfbMs);
         } else {
           // Reservoir-style overwrite to keep a bounded recent window.
-          acc.latencies[acc.segmentsFetched % MAX_LATENCY_SAMPLES] =
-            event.durationMs;
+          acc.latencies[acc.latencySamples % MAX_LATENCY_SAMPLES] =
+            event.ttfbMs;
         }
-        this.liveMeter.record({ bytes: event.bytes, articles: 1 });
         break;
       case 'segment_missing':
         acc.missingSegments++;
@@ -228,6 +252,29 @@ export class StatsAccumulator {
   streamClosed(id: number): void {
     if (this.active > 0) this.active--;
     this.streams.delete(id);
+  }
+
+  /**
+   * Streams whose last pushed chunk (or open, if nothing was ever pushed) is
+   * at least `thresholdMs` old. Feeds the idle-stream reaper; `now` is
+   * injectable for tests.
+   */
+  idleStreams(thresholdMs: number, now = Date.now()): IdleStreamInfo[] {
+    const out: IdleStreamInfo[] = [];
+    for (const s of this.streams.values()) {
+      const idleMs = now - s.lastChunkAt;
+      if (idleMs >= thresholdMs) {
+        out.push({
+          id: s.id,
+          nzbHash: s.nzbHash,
+          filename: s.filename,
+          idleMs,
+          bytesServed: s.bytesServed,
+          openedAt: s.openedAt,
+        });
+      }
+    }
+    return out;
   }
 
   /** Snapshot of in-flight read streams, with decayed current rates. */
@@ -305,7 +352,7 @@ export class StatsAccumulator {
         acc.busyStart = now;
       }
       const d = acc.delta;
-      if (d.articles || d.bytes || d.errors || d.missing) {
+      if (d.articles || d.bytes || d.errors || d.missing || d.ttfbSamples) {
         out.push({ providerId, ...d, wallClockMs: busyMs });
         acc.delta = {
           articles: 0,
@@ -314,6 +361,8 @@ export class StatsAccumulator {
           missing: 0,
           sumDurationMs: 0,
           wallClockMs: 0,
+          sumTtfbMs: 0,
+          ttfbSamples: 0,
         };
       }
     }

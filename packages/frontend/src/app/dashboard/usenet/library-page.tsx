@@ -19,18 +19,27 @@ import {
   BiSortUp,
   BiSortDown,
   BiCloudUpload,
+  BiBlock,
+  BiRefresh,
+  BiDotsVerticalRounded,
 } from 'react-icons/bi';
 import { Card } from '@/components/ui/card';
 import { Button, IconButton } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/text-input';
 import { Select } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { SimpleDropzone } from '@/components/ui/simple-dropzone';
 import {
   Pagination,
   PaginationEllipsis,
   PaginationItem,
   PaginationTrigger,
+  pageWindow,
 } from '@/components/ui/pagination';
 import { cn } from '@/components/ui/core/styling';
 import { useDebounce } from '@/hooks/debounce';
@@ -43,12 +52,15 @@ import {
 import {
   useUsenetLibrary,
   useUsenetLibraryStream,
+  useBlockRelease,
+  useRequeueEntries,
   useDeleteLibraryEntry,
   useDeleteAllLibraryEntries,
   useAddNzb,
   useUploadNzb,
   usePlayUrl,
   usenetNzbExportUrl,
+  releaseBlocklistKeys,
   type LibraryEntry,
   type LibraryStatus,
   type LibrarySort,
@@ -140,25 +152,6 @@ function ViewToggle({
   );
 }
 
-/**
- * Windowed page list for the Pagination primitive: first, last, the current
- * page ±1, with `'…'` markers for the gaps. e.g. `[1, '…', 4, 5, 6, '…', 20]`.
- */
-function pageWindow(current: number, total: number): (number | '…')[] {
-  const pages = new Set<number>([1, total, current - 1, current, current + 1]);
-  const sorted = [...pages]
-    .filter((p) => p >= 1 && p <= total)
-    .sort((a, b) => a - b);
-  const out: (number | '…')[] = [];
-  let prev = 0;
-  for (const p of sorted) {
-    if (prev && p - prev > 1) out.push('…');
-    out.push(p);
-    prev = p;
-  }
-  return out;
-}
-
 function StatusPill({ status }: { status: LibraryStatus }) {
   return (
     <span
@@ -243,12 +236,20 @@ function AddNzb() {
         size="md"
       />
       <SimpleDropzone
-        accept={NZB_ACCEPT as any}
+        accept={NZB_ACCEPT}
         multiple
         className="min-h-[120px] w-full"
         dropzoneText="Drop .nzb files here, or click to choose"
         onValueChange={(files) => {
           if (files.length) void onFiles(files);
+        }}
+        onDropRejected={(rejections) => {
+          const names = rejections.map((r) => r.file.name);
+          toast.error(
+            names.length === 1
+              ? `"${names[0]}" isn't a .nzb file`
+              : `${names.length} files skipped, only .nzb files are supported`
+          );
         }}
       />
       {progress && (
@@ -282,18 +283,23 @@ function AddNzb() {
 }
 
 /**
- * The browse + preview/download/export/info/delete action cluster, shared by the
- * grid card and the list row. Owns the per-entry playback/export handlers.
+ * The per-entry action cluster, shared by the grid card and the list row:
+ * browse/preview/download/delete stay on the row, the rest sit in an overflow
+ * menu. Owns the per-entry playback/export handlers.
  */
 function EntryActions({
   entry: e,
   onBrowse,
   onInfo,
+  onBlock,
+  onRequeue,
   onDelete,
 }: {
   entry: LibraryEntry;
   onBrowse: (e: LibraryEntry) => void;
   onInfo: (e: LibraryEntry) => void;
+  onBlock: (e: LibraryEntry) => void;
+  onRequeue: (hashes: string[]) => void;
   onDelete: (hash: string) => void;
 }) {
   const playUrl = usePlayUrl();
@@ -319,8 +325,10 @@ function EntryActions({
     a.remove();
   };
 
+  const blocklistKeys = releaseBlocklistKeys(e);
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button
         size="sm"
         intent="gray-outline"
@@ -358,32 +366,45 @@ function EntryActions({
         >
           {multiFile ? 'Browse to pick a file' : 'Download'}
         </Tooltip>
-        <Tooltip
+        <DropdownMenu
+          align="end"
           trigger={
             <IconButton
               size="sm"
               intent="gray-subtle"
-              icon={<BiExport />}
-              aria-label="Export NZB"
-              onClick={exportNzb}
+              icon={<BiDotsVerticalRounded />}
+              aria-label="More actions"
             />
           }
         >
-          Export NZB
-        </Tooltip>
-        <Tooltip
-          trigger={
-            <IconButton
-              size="sm"
-              intent="gray-subtle"
-              icon={<BiInfoCircle />}
-              aria-label="Entry details"
-              onClick={() => onInfo(e)}
-            />
-          }
-        >
-          Details
-        </Tooltip>
+          <DropdownMenuItem onSelect={() => onInfo(e)}>
+            <BiInfoCircle />
+            Details
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => onRequeue([e.nzbHash])}
+            disabled={!e.nzbUrl}
+          >
+            <BiRefresh />
+            {e.nzbUrl ? 'Requeue import' : 'No source NZB to re-import'}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={exportNzb}>
+            <BiExport />
+            Export NZB
+          </DropdownMenuItem>
+          {blocklistKeys.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => onBlock(e)}
+                disabled={e.blocked}
+              >
+                <BiBlock />
+                {e.blocked ? 'Already blocked' : 'Block release'}
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenu>
         <Tooltip
           trigger={
             <IconButton
@@ -415,15 +436,19 @@ function EntryCard({
   onToggleSelect,
   onBrowse,
   onInfo,
+  onBlock,
+  onRequeue,
   onDelete,
 }: {
   entry: LibraryEntry;
   view: LibraryView;
   selectMode: boolean;
   selected: boolean;
-  onToggleSelect: (hash: string, value: boolean) => void;
+  onToggleSelect: (e: LibraryEntry, value: boolean) => void;
   onBrowse: (e: LibraryEntry) => void;
   onInfo: (e: LibraryEntry) => void;
+  onBlock: (e: LibraryEntry) => void;
+  onRequeue: (hashes: string[]) => void;
   onDelete: (hash: string) => void;
 }) {
   const e = entry;
@@ -449,7 +474,7 @@ function EntryCard({
     selected && 'ring-1 ring-inset ring-brand/60 bg-brand/[0.06]'
   );
   const onCardClick = selectMode
-    ? () => onToggleSelect(e.nzbHash, !selected)
+    ? () => onToggleSelect(e, !selected)
     : undefined;
 
   if (view === 'list') {
@@ -479,6 +504,8 @@ function EntryCard({
                 entry={e}
                 onBrowse={onBrowse}
                 onInfo={onInfo}
+                onBlock={onBlock}
+                onRequeue={onRequeue}
                 onDelete={onDelete}
               />
             </div>
@@ -528,6 +555,8 @@ function EntryCard({
             entry={e}
             onBrowse={onBrowse}
             onInfo={onInfo}
+            onBlock={onBlock}
+            onRequeue={onRequeue}
             onDelete={onDelete}
           />
         </div>
@@ -538,8 +567,8 @@ function EntryCard({
 
 /**
  * The Library tab: add (dropzone + URL), a status filter, and a responsive
- * entry grid with per-entry browse/preview/download/info/delete plus a
- * multi-select delete mode that operates on the filtered set. The list is kept
+ * entry grid with per-entry browse/preview/download/info/requeue/block/delete
+ * plus a multi-select mode that requeues, blocks or deletes in bulk. The list is kept
  * live via the SSE library stream (see {@link useUsenetLibraryStream}), so
  * imports appear and transition in place without polling.
  */
@@ -552,7 +581,12 @@ export function UsenetLibraryPage() {
   const [browse, setBrowse] = React.useState<LibraryEntry | null>(null);
   const [info, setInfo] = React.useState<LibraryEntry | null>(null);
   const [selectMode, setSelectMode] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  // Keyed by hash, but the entry is kept too: a selection can span pages, and
+  // blocking needs each entry's release keys, which the hash alone can't give
+  // for entries no longer in `entries`.
+  const [selected, setSelected] = React.useState<Map<string, LibraryEntry>>(
+    new Map()
+  );
   const [view, setView] = React.useState<LibraryView>(loadView);
   // On phones the list-view card has no room for the filename (it collapses to
   // one character per line), so force the grid layout there — which is itself a
@@ -593,7 +627,10 @@ export function UsenetLibraryPage() {
   });
   const del = useDeleteLibraryEntry();
   const delAll = useDeleteAllLibraryEntries();
+  const block = useBlockRelease();
+  const requeue = useRequeueEntries();
   const pending = React.useRef<string[]>([]);
+  const [blockTargets, setBlockTargets] = React.useState<LibraryEntry[]>([]);
 
   const entries = query.data?.entries ?? [];
   const total = query.data?.total ?? 0;
@@ -624,8 +661,7 @@ export function UsenetLibraryPage() {
             toast.success(
               hashes.length === 1 ? 'Entry deleted' : 'Entries deleted'
             );
-          setSelected(new Set());
-          setSelectMode(false);
+          exitSelect();
         }
       );
     },
@@ -642,14 +678,83 @@ export function UsenetLibraryPage() {
         .mutateAsync(undefined)
         .then(() => {
           toast.success('Library cleared');
-          setSelected(new Set());
-          setSelectMode(false);
+          exitSelect();
         })
         .catch((e: any) => {
           toast.error(e?.message ?? 'Failed to clear library');
         });
     },
   });
+
+  const blockCount = blockTargets.length;
+  const confirmBlock = useConfirmationDialog({
+    title: blockCount > 1 ? 'Block releases' : 'Block release',
+    description:
+      blockCount > 1
+        ? `Mark ${blockCount} releases as dead on this instance's release blocklist? Their streams stop appearing in results; undo from the Blocklist page.`
+        : `Mark "${blockTargets[0]?.name ?? blockTargets[0]?.nzbHash ?? ''}" as dead on this instance's release blocklist? Its streams stop appearing in results; undo from the Blocklist page.`,
+    actionText: 'Block',
+    actionIntent: 'alert-subtle',
+    onConfirm: () => {
+      if (blockCount === 0) return;
+      block
+        .mutateAsync(blockTargets)
+        .then(() => {
+          toast.success(
+            blockCount === 1
+              ? 'Release blocked'
+              : `${blockCount} releases blocked`
+          );
+          exitSelect();
+        })
+        .catch((err: any) => toast.error(err?.message ?? 'Block failed'));
+    },
+  });
+
+  const onBlock = (entry: LibraryEntry) => {
+    setBlockTargets([entry]);
+    confirmBlock.open();
+  };
+
+  // Entries the search never gave a release key and whose hash isn't a content
+  // hash have nothing to block under; blocking them is a no-op, so they are
+  // dropped from the batch rather than silently counted.
+  const onBlockSelected = () => {
+    const targets = [...selected.values()].filter(
+      (e) => releaseBlocklistKeys(e).length > 0
+    );
+    if (targets.length === 0) {
+      toast.error('None of the selected entries can be blocked');
+      return;
+    }
+    setBlockTargets(targets);
+    confirmBlock.open();
+  };
+
+  const onRequeue = (hashes: string[]) => {
+    if (hashes.length === 0) return;
+    requeue
+      .mutateAsync(hashes)
+      .then((res) => {
+        if (res.requeued === 0) {
+          toast.error(res.error ?? 'Requeue failed');
+          return;
+        }
+        if (res.failed > 0) {
+          toast.warning(
+            `${res.requeued} requeued, ${res.failed} failed: ${res.error ?? ''}`
+          );
+        } else {
+          toast.success(
+            res.requeued === 1
+              ? 'Entry requeued'
+              : `${res.requeued} entries requeued`
+          );
+        }
+        exitSelect();
+      })
+      .catch((err: any) => toast.error(err?.message ?? 'Requeue failed'));
+  };
 
   const onDelete = (hash: string) => {
     pending.current = [hash];
@@ -658,15 +763,15 @@ export function UsenetLibraryPage() {
 
   const onDeleteSelected = () => {
     if (selected.size === 0) return;
-    pending.current = [...selected];
+    pending.current = [...selected.keys()];
     confirm.open();
   };
 
-  const toggleSelect = (hash: string, value: boolean) =>
+  const toggleSelect = (entry: LibraryEntry, value: boolean) =>
     setSelected((s) => {
-      const next = new Set(s);
-      if (value) next.add(hash);
-      else next.delete(hash);
+      const next = new Map(s);
+      if (value) next.set(entry.nzbHash, entry);
+      else next.delete(entry.nzbHash);
       return next;
     });
 
@@ -676,153 +781,179 @@ export function UsenetLibraryPage() {
     entries.length > 0 && entries.every((e) => selected.has(e.nzbHash));
   const toggleSelectAll = () =>
     setSelected((s) => {
-      const next = new Set(s);
+      const next = new Map(s);
       if (allSelected) for (const e of entries) next.delete(e.nzbHash);
-      else for (const e of entries) next.add(e.nzbHash);
+      else for (const e of entries) next.set(e.nzbHash, e);
       return next;
     });
 
   const exitSelect = () => {
     setSelectMode(false);
-    setSelected(new Set());
+    setSelected(new Map());
   };
 
   return (
     <div className="space-y-4 overflow-x-hidden">
       <AddNzb />
 
-      {/* Toolbar: stacks on mobile (search, status, sort each on their own
-          row, then view-toggle + select controls share a row), collapses to a
-          single row from `sm` up. The search grows to fill; everything else is
-          fixed-width so there's no dead space. Widths/flex live on `fieldClass`
-          because that's the actual flex child — the `BasicField` wrapper — and
-          the input/trigger inside it already carry `w-full`. */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
         <TextInput
           leftIcon={<BiSearch />}
           placeholder="Search by name…"
           value={searchInput}
           onValueChange={setSearchInput}
-          fieldClass="sm:flex-1 sm:min-w-0"
+          fieldClass="lg:flex-1 lg:min-w-0"
         />
-        <Select
-          value={status}
-          options={STATUS_OPTIONS}
-          onValueChange={(v) => setStatus(v as LibraryStatus | 'all')}
-          fieldClass="sm:w-36 sm:shrink-0"
-        />
-        {/* Sort criterion + a direction toggle (asc/desc). */}
-        <div className="flex items-stretch gap-2 sm:shrink-0">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:shrink-0">
           <Select
-            value={sortField}
-            options={SORT_FIELD_OPTIONS}
-            onValueChange={(v) => onSortFieldChange(v as LibrarySort)}
-            fieldClass="sm:w-40"
+            value={status}
+            options={STATUS_OPTIONS}
+            onValueChange={(v) => setStatus(v as LibraryStatus | 'all')}
+            fieldClass="sm:w-36 sm:flex-auto lg:flex-none"
           />
-          <Tooltip
-            trigger={
-              <IconButton
-                size="md"
-                intent="gray-outline"
-                icon={sortDir === 'asc' ? <BiSortUp /> : <BiSortDown />}
-                aria-label={sortDir === 'asc' ? 'Ascending' : 'Descending'}
-                onClick={() =>
-                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-                }
-              />
-            }
-          >
-            {sortDir === 'asc' ? 'Ascending' : 'Descending'}
-          </Tooltip>
-        </div>
-        <div className="flex items-center justify-between gap-2 sm:justify-start sm:shrink-0">
-          <div className="hidden sm:block">
-            <ViewToggle value={view} onChange={setViewPersisted} />
+          {/* Sort criterion + a direction toggle (asc/desc). */}
+          <div className="flex items-stretch gap-2 sm:flex-auto lg:flex-none">
+            <Select
+              value={sortField}
+              options={SORT_FIELD_OPTIONS}
+              onValueChange={(v) => onSortFieldChange(v as LibrarySort)}
+              fieldClass="sm:w-40 sm:flex-auto lg:flex-none"
+            />
+            <Tooltip
+              trigger={
+                <IconButton
+                  size="md"
+                  intent="gray-outline"
+                  icon={sortDir === 'asc' ? <BiSortUp /> : <BiSortDown />}
+                  aria-label={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+                  onClick={() =>
+                    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                  }
+                />
+              }
+            >
+              {sortDir === 'asc' ? 'Ascending' : 'Descending'}
+            </Tooltip>
           </div>
-          <div className="flex items-center gap-1.5">
-            {selectMode ? (
-              <>
-                <span className="text-xs text-[--muted] tabular-nums">
-                  {selected.size} selected
-                </span>
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      size="md"
-                      intent="gray-subtle"
-                      icon={
-                        allSelected ? <BiCheckbox /> : <BiCheckboxChecked />
-                      }
-                      aria-label={
-                        allSelected ? 'Clear selection' : 'Select all'
-                      }
-                      disabled={entries.length === 0}
-                      onClick={toggleSelectAll}
-                    />
-                  }
-                >
-                  {allSelected ? 'Clear selection' : 'Select all'}
-                </Tooltip>
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      size="md"
-                      intent="alert-subtle"
-                      icon={<BiTrash />}
-                      aria-label="Delete selected"
-                      disabled={selected.size === 0}
-                      onClick={onDeleteSelected}
-                    />
-                  }
-                >
-                  Delete selected
-                </Tooltip>
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      size="md"
-                      intent="gray-outline"
-                      icon={<BiX />}
-                      aria-label="Done selecting"
-                      onClick={exitSelect}
-                    />
-                  }
-                >
-                  Done
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      size="md"
-                      intent="alert-subtle"
-                      icon={<BiTrash />}
-                      aria-label="Delete all entries"
-                      loading={delAll.isPending}
-                      onClick={confirmDeleteAll.open}
-                    />
-                  }
-                >
-                  Delete all
-                </Tooltip>
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      size="md"
-                      intent="gray-outline"
-                      icon={<BiSelectMultiple />}
-                      aria-label="Select entries"
-                      disabled={entries.length === 0}
-                      onClick={() => setSelectMode(true)}
-                    />
-                  }
-                >
-                  Select
-                </Tooltip>
-              </>
-            )}
+          <div className="flex items-center justify-between gap-2 sm:justify-start sm:shrink-0">
+            <div className="hidden sm:block">
+              <ViewToggle value={view} onChange={setViewPersisted} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              {selectMode ? (
+                <>
+                  <span className="text-xs text-[--muted] tabular-nums">
+                    {selected.size} selected
+                  </span>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="gray-subtle"
+                        icon={
+                          allSelected ? <BiCheckbox /> : <BiCheckboxChecked />
+                        }
+                        aria-label={
+                          allSelected ? 'Clear selection' : 'Select all'
+                        }
+                        disabled={entries.length === 0}
+                        onClick={toggleSelectAll}
+                      />
+                    }
+                  >
+                    {allSelected ? 'Clear selection' : 'Select all'}
+                  </Tooltip>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="gray-subtle"
+                        icon={<BiRefresh />}
+                        aria-label="Requeue selected"
+                        loading={requeue.isPending}
+                        disabled={selected.size === 0}
+                        onClick={() => onRequeue([...selected.keys()])}
+                      />
+                    }
+                  >
+                    Requeue selected
+                  </Tooltip>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="gray-subtle"
+                        icon={<BiBlock />}
+                        aria-label="Block selected"
+                        loading={block.isPending}
+                        disabled={selected.size === 0}
+                        onClick={onBlockSelected}
+                      />
+                    }
+                  >
+                    Block selected releases
+                  </Tooltip>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="alert-subtle"
+                        icon={<BiTrash />}
+                        aria-label="Delete selected"
+                        disabled={selected.size === 0}
+                        onClick={onDeleteSelected}
+                      />
+                    }
+                  >
+                    Delete selected
+                  </Tooltip>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="gray-outline"
+                        icon={<BiX />}
+                        aria-label="Done selecting"
+                        onClick={exitSelect}
+                      />
+                    }
+                  >
+                    Done
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="alert-subtle"
+                        icon={<BiTrash />}
+                        aria-label="Delete all entries"
+                        loading={delAll.isPending}
+                        onClick={confirmDeleteAll.open}
+                      />
+                    }
+                  >
+                    Delete all
+                  </Tooltip>
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        size="md"
+                        intent="gray-outline"
+                        icon={<BiSelectMultiple />}
+                        aria-label="Select entries"
+                        disabled={entries.length === 0}
+                        onClick={() => setSelectMode(true)}
+                      />
+                    }
+                  >
+                    Select
+                  </Tooltip>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -839,7 +970,7 @@ export function UsenetLibraryPage() {
             <div
               className={cn(
                 effectiveView === 'grid'
-                  ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
+                  ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4 5xl:grid-cols-5'
                   : 'flex flex-col gap-2'
               )}
             >
@@ -853,6 +984,8 @@ export function UsenetLibraryPage() {
                   onToggleSelect={toggleSelect}
                   onBrowse={setBrowse}
                   onInfo={setInfo}
+                  onBlock={onBlock}
+                  onRequeue={onRequeue}
                   onDelete={onDelete}
                 />
               ))}
@@ -907,6 +1040,7 @@ export function UsenetLibraryPage() {
       />
       <ConfirmationDialog {...confirm} />
       <ConfirmationDialog {...confirmDeleteAll} />
+      <ConfirmationDialog {...confirmBlock} />
     </div>
   );
 }

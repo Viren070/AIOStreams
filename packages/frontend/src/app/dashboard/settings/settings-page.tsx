@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import type { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -27,15 +28,7 @@ import {
   SECRET_CLEAR_SENTINEL,
 } from './_components/settings-field';
 import { SettingsActionsMenu } from './_components/settings-actions-menu';
-
-function readTabParam(): string | null {
-  return new URLSearchParams(window.location.search).get('tab');
-}
-function writeTabParam(tab: string) {
-  const url = new URL(window.location.href);
-  url.searchParams.set('tab', tab);
-  window.history.replaceState({}, '', url.toString());
-}
+import { useScrollToField } from '@/components/shared/command-palette/use-scroll-to-field';
 
 interface TabModel {
   section: string;
@@ -205,7 +198,9 @@ function TabForm({
                 }
               >
                 {tab.groups.get(sub)!.map((k) => (
-                  <SettingsField key={k.key} k={k} />
+                  <div key={k.key} id={`setting-${k.key}`}>
+                    <SettingsField k={k} />
+                  </div>
                 ))}
               </SettingsCard>
             ))}
@@ -223,18 +218,37 @@ function TabForm({
 export function SettingsPage() {
   const { data, isLoading, error, refetch } = useSettings();
   const tabs = React.useMemo(() => (data ? buildTabs(data.keys) : []), [data]);
+  const search = useSearch({ from: '/dashboard/settings' });
+  const navigate = useNavigate({ from: '/dashboard/settings' });
 
   const [tab, setTab] = React.useState<string>('');
   React.useEffect(() => {
     if (!tabs.length) return;
-    const fromUrl = readTabParam();
-    if (fromUrl && tabs.some((t) => t.section === fromUrl)) setTab(fromUrl);
+    if (search.tab && tabs.some((t) => t.section === search.tab))
+      setTab(search.tab);
     else if (!tab) setTab(tabs[0].section);
-  }, [tabs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tabs, search.tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clearField = React.useCallback(() => {
+    navigate({
+      to: '.',
+      search: (prev) => ({ ...prev, field: undefined }),
+      replace: true,
+      resetScroll: false,
+    });
+  }, [navigate]);
+
+  // A field only exists in the DOM once its tab is the active one.
+  useScrollToField(search.field, Boolean(tab) && tabs.length > 0, clearField);
 
   const onTabChange = (v: string) => {
     setTab(v);
-    writeTabParam(v);
+    navigate({
+      to: '.',
+      search: (prev) => ({ ...prev, tab: v }),
+      replace: true,
+      resetScroll: false,
+    });
   };
 
   if (isLoading)

@@ -1,11 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useDeferredValue, useMemo, useState } from 'react';
 import {
-  CommandDialog,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
-  CommandList,
   CommandShortcut,
 } from '@/components/ui/command/command';
 import { useCommandPalette } from '@/context/command-palette';
@@ -13,7 +9,12 @@ import { useQuickActions } from '@/context/quick-actions';
 import { useMode } from '@/context/mode';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
-import { FIELD_META, type MenuId } from '../../../../core/src/utils/fieldMeta';
+import {
+  FIELD_META,
+  type MenuId,
+} from '../../../../../core/src/utils/fieldMeta';
+import { buildHaystack, parseQuery, scoreItem } from './scoring';
+import { CommandPaletteShell, type CommandPaletteResult } from './shell';
 import {
   BiInfoCircle,
   BiCloud,
@@ -95,48 +96,39 @@ function humanize(value: string): string {
   return value.replace(/-/g, ' ');
 }
 
-// Returns 0–100. Higher = better match.
-function scoreMatch(text: string, query: string): number {
-  const t = text.toLowerCase();
-  const q = query.toLowerCase();
-  if (!q || !t) return 0;
-  if (t === q) return 100;
-  if (t.startsWith(q)) return 90;
-  if (t.includes(q)) return 75;
-  const words = t.split(/[\s\-_/]+/);
-  if (words.some((w) => w.startsWith(q))) return 65;
-  if (words.some((w) => w.includes(q))) return 55;
-  // fuzzy: all query chars appear in order
-  let qi = 0;
-  for (let i = 0; i < t.length && qi < q.length; i++) {
-    if (t[i] === q[qi]) qi++;
-  }
-  if (qi === q.length) return 10 + Math.floor((q.length / t.length) * 30);
-  return 0;
-}
+/** The FIELD_META index never changes, so normalise it once at module load
+ *  rather than on every keystroke. */
+const FIELD_ITEMS = Object.entries(FIELD_META).map(([key, meta]) => {
+  const trail =
+    meta.subTab !== undefined
+      ? `${humanize(meta.menu)} → ${humanize(meta.subTab)}`
+      : (MENU_LABELS[meta.menu] ?? humanize(meta.menu));
+  const fallbackSectionIds =
+    meta.menu === 'filters' && meta.subTab
+      ? [`filter-tab-${meta.subTab}`]
+      : undefined;
+  return {
+    key,
+    label: meta.label,
+    trail,
+    sectionId: meta.sectionId ?? key,
+    menu: meta.menu,
+    subTab: meta.subTab,
+    fallbackSectionIds,
+    haystack: buildHaystack([
+      meta.label,
+      key,
+      meta.menu,
+      meta.subTab,
+      ...(meta.keywords ?? []),
+    ]),
+  };
+});
 
-function bestScore(
-  candidates: Array<string | undefined | null>,
-  query: string
-): number {
-  let best = 0;
-  for (const c of candidates) {
-    if (!c) continue;
-    const s = scoreMatch(c, query);
-    if (s > best) best = s;
-  }
-  return best;
-}
-
-type SearchResult = {
-  id: string;
-  label: string;
-  trail: string;
-  icon?: React.ReactNode;
-  score: number;
-  shortcut?: string;
-  onSelect: () => void;
-};
+const FILTER_TAB_ITEMS = FILTER_TABS.map((tab) => ({
+  ...tab,
+  haystack: buildHaystack(['filter tab', tab.label, tab.id]),
+}));
 
 export function CommandPalette() {
   const { isOpen, close, navigate } = useCommandPalette();
@@ -148,27 +140,39 @@ export function CommandPalette() {
     status?.settings.userAnalyticsEnabled === true &&
     Boolean(user.uuid && user.password);
   const [query, setQuery] = useState('');
-  const isEmpty = query.trim().length === 0;
+  // Keeps typing responsive while the (much larger) result list renders at a
+  // lower priority.
+  const deferredQuery = useDeferredValue(query);
+  const isIdle = deferredQuery.trim().length === 0;
 
   const visibleMenus = useMemo(
     () =>
       MENU_ITEMS.filter(
         (m) =>
           (mode === 'pro' || !m.proOnly) && (!m.requiresStats || statsAvailable)
-      ),
+      ).map((m) => ({ ...m, haystack: buildHaystack([m.label, m.id]) })),
     [mode, statsAvailable]
   );
 
-  const searchResults = useMemo((): SearchResult[] => {
-    if (isEmpty) return [];
-    const q = query.trim();
-    const results: SearchResult[] = [];
+  const quickActionItems = useMemo(
+    () =>
+      quickActions.map((action) => ({
+        action,
+        haystack: buildHaystack(
+          [action.label, ...(action.keywords ?? [])],
+          [action.description]
+        ),
+      })),
+    [quickActions]
+  );
 
-    for (const action of quickActions) {
-      const score = bestScore(
-        [action.label, action.description, ...(action.keywords ?? [])],
-        q
-      );
+  const searchResults = useMemo((): CommandPaletteResult[] => {
+    if (isIdle) return [];
+    const q = parseQuery(deferredQuery);
+    const results: CommandPaletteResult[] = [];
+
+    for (const { action, haystack } of quickActionItems) {
+      const score = scoreItem(haystack, q);
       if (score > 0) {
         results.push({
           id: `action-${action.id}`,
@@ -187,7 +191,7 @@ export function CommandPalette() {
     }
 
     for (const menu of visibleMenus) {
-      const score = bestScore([menu.label, menu.id], q);
+      const score = scoreItem(menu.haystack, q);
       if (score > 0) {
         results.push({
           id: `menu-${menu.id}`,
@@ -203,8 +207,8 @@ export function CommandPalette() {
       }
     }
 
-    for (const tab of FILTER_TABS) {
-      const score = bestScore(['filter tab', tab.label, tab.id], q);
+    for (const tab of FILTER_TAB_ITEMS) {
+      const score = scoreItem(tab.haystack, q);
       if (score > 0) {
         results.push({
           id: `filter-tab-${tab.id}`,
@@ -224,35 +228,21 @@ export function CommandPalette() {
       }
     }
 
-    for (const [key, meta] of Object.entries(FIELD_META) as Array<
-      [string, (typeof FIELD_META)[keyof typeof FIELD_META]]
-    >) {
-      const score = bestScore(
-        [meta.label, key, meta.menu, meta.subTab, ...(meta.keywords ?? [])],
-        q
-      );
+    for (const field of FIELD_ITEMS) {
+      const score = scoreItem(field.haystack, q);
       if (score > 0) {
-        const trail =
-          meta.subTab !== undefined
-            ? `${humanize(meta.menu)} → ${humanize(meta.subTab)}`
-            : (MENU_LABELS[meta.menu] ?? humanize(meta.menu));
-        const sectionId = meta.sectionId ?? key;
-        const fallbacks: string[] = [];
-        if (meta.menu === 'filters' && meta.subTab) {
-          fallbacks.push(`filter-tab-${meta.subTab}`);
-        }
         results.push({
-          id: key,
-          label: meta.label,
-          trail,
+          id: field.key,
+          label: field.label,
+          trail: field.trail,
           score,
           onSelect: () => {
             setQuery('');
             navigate({
-              menu: meta.menu,
-              subTab: meta.subTab,
-              sectionId,
-              fallbackSectionIds: fallbacks,
+              menu: field.menu,
+              subTab: field.subTab,
+              sectionId: field.sectionId,
+              fallbackSectionIds: field.fallbackSectionIds,
             });
           },
         });
@@ -260,33 +250,24 @@ export function CommandPalette() {
     }
 
     return results.sort((a, b) => b.score - a.score);
-  }, [query, isEmpty, quickActions, visibleMenus, navigate, close]);
+  }, [deferredQuery, isIdle, quickActionItems, visibleMenus, navigate, close]);
 
   return (
-    <CommandDialog
+    <CommandPaletteShell
       open={isOpen}
-      onOpenChange={(v) => {
-        if (!v) {
-          close();
-          setQuery('');
-        }
+      onClose={() => {
+        close();
+        setQuery('');
       }}
-      hideCloseButton
-      contentClass="max-w-2xl p-0"
-      commandProps={{ shouldFilter: false, label: 'Settings search' }}
-    >
-      <CommandInput
-        placeholder="Search settings, pages, actions…"
-        autoFocus
-        value={query}
-        onValueChange={setQuery}
-      />
-      <CommandList className="max-h-[60vh]">
-        <CommandEmpty>
-          {isEmpty ? 'Enter a setting to search for…' : 'No matches.'}
-        </CommandEmpty>
-
-        {isEmpty && quickActions.length > 0 && (
+      label="Settings search"
+      placeholder="Search settings, pages, actions…"
+      emptyHint="Enter a setting to search for…"
+      query={query}
+      onQueryChange={setQuery}
+      isIdle={isIdle}
+      results={searchResults}
+      idleGroup={
+        quickActions.length > 0 && (
           <CommandGroup heading="Quick actions">
             {quickActions.map((action) => (
               <CommandItem
@@ -306,29 +287,8 @@ export function CommandPalette() {
               </CommandItem>
             ))}
           </CommandGroup>
-        )}
-
-        {!isEmpty && (
-          <CommandGroup>
-            {searchResults.map((result) => (
-              <CommandItem
-                key={result.id}
-                value={result.id}
-                leftIcon={result.icon}
-                onSelect={result.onSelect}
-              >
-                <span>{result.label}</span>
-                <span className="ml-auto text-xs text-[--muted] capitalize">
-                  {result.trail}
-                </span>
-                {result.shortcut && (
-                  <CommandShortcut>{result.shortcut}</CommandShortcut>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-      </CommandList>
-    </CommandDialog>
+        )
+      }
+    />
   );
 }

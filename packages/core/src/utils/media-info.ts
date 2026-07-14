@@ -322,7 +322,7 @@ export function parseMediaInfo(
     typeof info.format?.dur === 'number' &&
     Number.isFinite(info.format.dur) &&
     info.format.dur > 0
-      ? info.format.dur / 1_000_000
+      ? info.format.dur / 1_000_000_000
       : undefined;
 
   const bitrate =

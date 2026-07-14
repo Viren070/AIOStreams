@@ -161,7 +161,7 @@ export abstract class OrderedParallelStream extends Readable {
   private ended = false;
 
   protected constructor(opts: OrderedParallelStreamOptions) {
-    super({ highWaterMark: opts.highWaterMark });
+    super({ highWaterMark: Math.max(1, Math.ceil(opts.highWaterMark)) });
     this.totalTasks = opts.totalTasks;
     this.maxConcurrency = opts.maxConcurrency;
     this.maxBufferedBytes = opts.maxBufferedBytes;

@@ -5,6 +5,7 @@ import {
   formatZodError,
   getUsenetStatsOverview,
   getUsenetLiveStats,
+  killUsenetStream,
   getUsenetProviders,
   saveUsenetProviders,
   getUsenetSettings,
@@ -13,10 +14,14 @@ import {
   testUsenetProvider,
   runProviderSpeedTest,
   addUsenetNzb,
+  requeueUsenetNzb,
   mintUsenetLibraryToken,
   exportUsenetLibraryNzb,
   UsenetLibraryRepository,
   usenetLibraryBus,
+  ReleaseBlocklistRepository,
+  blocklistEvalOptions,
+  nzbContentKey,
   type UsenetStatsWindow,
   type UsenetLibraryStatusGroup,
   type UsenetLibraryStatus,
@@ -68,12 +73,73 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
-// GET /dashboard/usenet/live — lightweight live tiles + pool (fast polling).
+// GET /dashboard/usenet/live — one-shot live tiles + pool. Seeds the first
+// render (and is the fallback where SSE can't get through); /live/stream is
+// what keeps the dashboard current.
 router.get('/live', (_req, res, next) => {
   try {
     res
       .status(200)
       .json(createResponse({ success: true, data: getUsenetLiveStats() }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+const LIVE_TICK_MS = 1_500;
+const LIVE_HEARTBEAT_MS = 15_000;
+
+router.get('/live/stream', (req, res) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  let closed = false;
+  let last = '';
+  const tick = () => {
+    if (closed) return;
+    try {
+      const frame = JSON.stringify({
+        ...getUsenetLiveStats(),
+        tickMs: LIVE_TICK_MS,
+      });
+      if (frame === last) return;
+      last = frame;
+      res.write(`data: ${frame}\n\n`);
+    } catch {
+      /* skip a frame */
+    }
+  };
+  tick();
+  const timer = setInterval(tick, LIVE_TICK_MS);
+  const hb = setInterval(() => res.write(':hb\n\n'), LIVE_HEARTBEAT_MS);
+
+  req.on('close', () => {
+    closed = true;
+    clearInterval(timer);
+    clearInterval(hb);
+    res.end();
+  });
+});
+
+// DELETE /dashboard/usenet/streams/:id — force-stop one live read stream.
+router.delete('/streams/:id', (req, res, next) => {
+  try {
+    if (!killUsenetStream(req.params.id)) {
+      return res.status(404).json(
+        createResponse({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'stream not found' },
+        })
+      );
+    }
+    logger.info({ id: req.params.id }, 'stream stopped from the dashboard');
+    res
+      .status(200)
+      .json(createResponse({ success: true, data: { stopped: true } }));
   } catch (err) {
     next(err);
   }
@@ -230,6 +296,34 @@ router.get('/library/stream', (req, res) => {
   });
 });
 
+/**
+ * Annotate library rows with whether the release blocklist currently flags
+ * them (under the wd1 fingerprint and/or nh1 content-hash key)
+ */
+async function annotateBlocked<
+  T extends { nzbHash: string; releaseKey?: string },
+>(entries: T[]): Promise<Array<T & { blocked: boolean }>> {
+  const keysFor = (e: T) =>
+    [e.releaseKey, nzbContentKey(e.nzbHash)].filter((k): k is string => !!k);
+  try {
+    const keys = [...new Set(entries.flatMap(keysFor))];
+    if (keys.length === 0) {
+      return entries.map((e) => ({ ...e, blocked: false }));
+    }
+    const verdicts = await ReleaseBlocklistRepository.evaluateKeys(
+      keys,
+      blocklistEvalOptions()
+    );
+    return entries.map((e) => ({
+      ...e,
+      blocked: keysFor(e).some((k) => verdicts.get(k)?.filtered),
+    }));
+  } catch (err) {
+    logger.warn({ err }, 'blocklist annotation of library entries failed');
+    return entries.map((e) => ({ ...e, blocked: false }));
+  }
+}
+
 router.get('/library', async (req, res, next) => {
   try {
     const limit = Number(req.query.limit ?? 50);
@@ -261,7 +355,12 @@ router.get('/library', async (req, res, next) => {
       sort,
       dir,
     });
-    res.status(200).json(createResponse({ success: true, data }));
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { ...data, entries: await annotateBlocked(data.entries) },
+      })
+    );
   } catch (err) {
     next(err);
   }
@@ -270,7 +369,8 @@ router.get('/library', async (req, res, next) => {
 // GET /dashboard/usenet/library/:hash/files — file/folder tree for browsing.
 router.get('/library/:hash/files', async (req, res, next) => {
   try {
-    const entry = await UsenetLibraryRepository.get(req.params.hash);
+    const entry = (await UsenetLibraryRepository.getResolved(req.params.hash))
+      ?.entry;
     if (!entry) {
       return res.status(404).json(
         createResponse({
@@ -354,6 +454,81 @@ router.post(
     }
   }
 );
+
+// POST /dashboard/usenet/library/requeue — re-import entries ({ hashes: [...] }):
+// each source NZB is re-fetched and pushed back through the inspect queue,
+// replacing the existing row. A single-entry requeue is a batch of one.
+const MAX_REQUEUE = 200;
+// Each requeue grabs its NZB from the indexer, so the batch is throttled rather
+// than firing every grab at once.
+const REQUEUE_CONCURRENCY = 4;
+
+router.post('/library/requeue', async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as { hashes?: unknown };
+    const hashes = [
+      ...new Set(
+        (Array.isArray(body.hashes) ? body.hashes : [])
+          .filter((h): h is string => typeof h === 'string')
+          .map((h) => h.trim())
+          .filter(Boolean)
+      ),
+    ];
+    if (hashes.length === 0) {
+      return res.status(400).json(
+        createResponse({
+          success: false,
+          error: { code: 'BAD_REQUEST', message: 'hashes is required' },
+        })
+      );
+    }
+    if (hashes.length > MAX_REQUEUE) {
+      return res.status(400).json(
+        createResponse({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: `at most ${MAX_REQUEUE} entries can be requeued at once`,
+          },
+        })
+      );
+    }
+
+    let cursor = 0;
+    let requeued = 0;
+    const errors: string[] = [];
+    await Promise.all(
+      Array.from(
+        { length: Math.min(REQUEUE_CONCURRENCY, hashes.length) },
+        async () => {
+          while (cursor < hashes.length) {
+            const hash = hashes[cursor++];
+            try {
+              await requeueUsenetNzb(hash);
+              requeued++;
+            } catch (err) {
+              errors.push(
+                err instanceof Error ? err.message : 'failed to requeue'
+              );
+            }
+          }
+        }
+      )
+    );
+    logger.info(
+      { username: username(req), requeued, failed: errors.length },
+      'library entries requeued'
+    );
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { requeued, failed: errors.length, error: errors[0] },
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /dashboard/usenet/library/:hash/play/:fileSel? — minted stream URL.
 // GET /dashboard/usenet/library/:hash/download/:fileSel? — same, as attachment.
@@ -445,7 +620,10 @@ router.delete('/library', async (_req, res, next) => {
 // DELETE /dashboard/usenet/library/:hash — remove one entry.
 router.delete('/library/:hash', async (req, res, next) => {
   try {
-    await UsenetLibraryRepository.delete(req.params.hash);
+    const resolved = await UsenetLibraryRepository.getResolved(req.params.hash);
+    await UsenetLibraryRepository.delete(
+      resolved?.entry.nzbHash ?? req.params.hash
+    );
     res
       .status(200)
       .json(createResponse({ success: true, data: { deleted: true } }));

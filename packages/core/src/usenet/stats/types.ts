@@ -5,9 +5,9 @@ export interface ProviderStatsSnapshot {
   bytesDownloaded: number;
   missingSegments: number;
   connectionErrors: number;
-  /** Mean segment fetch latency in ms (over the retained sample window). */
+  /** Mean server response time in ms (over the retained sample window). */
   avgLatencyMs: number;
-  /** 95th percentile segment fetch latency in ms. */
+  /** 95th percentile server response time in ms. */
   p95LatencyMs: number;
   /** segmentsFetched / (segmentsFetched + missingSegments). */
   successRate: number;
@@ -20,6 +20,11 @@ export type StatsEvent =
       bytes: number;
       durationMs: number;
     }
+  /**
+   * The server's response time on an article fetch: `BODY` written → status line
+   * read, before any payload.
+   */
+  | { type: 'latency_sample'; providerId: string; ttfbMs: number }
   | { type: 'segment_missing'; providerId: string }
   | { type: 'connection_error'; providerId: string };
 
@@ -80,4 +85,9 @@ export interface ProviderMetricDelta {
    * throughput, independent of how many connections ran in parallel.
    */
   wallClockMs: number;
+  /**
+   * Sum of server response times (ms) over {@link ttfbSamples} sampled fetches.
+   */
+  sumTtfbMs: number;
+  ttfbSamples: number;
 }

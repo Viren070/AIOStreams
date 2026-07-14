@@ -20,6 +20,12 @@ const logger = createLogger('usenet/connection');
 export interface ConnectionOptions {
   dialTimeoutMs: number;
   idleConnectionMs: number;
+  /**
+   * Receives the server's response latency (ms) for an article fetch: the gap
+   * between writing `BODY` and reading its status line, before a single payload
+   * byte.
+   */
+  onLatencySample?: (ms: number) => void;
 }
 
 /**
@@ -43,6 +49,12 @@ interface PipelineRequest {
   timeoutMs: number;
   onAbort?: () => void;
   signal?: AbortSignal;
+  /** Epoch ms the command was written; the status line's arrival dates from here. */
+  writtenAt: number;
+  /**
+   * Nothing else was in flight when this command was written
+   */
+  solo: boolean;
   /**
    * Streaming payload: raw chunks are handed here as they arrive (nothing
    * accumulates) and the request resolves with the total payload byte count once
@@ -526,6 +538,10 @@ export class NntpConnection {
         timeoutMs,
         signal,
         consumer,
+        writtenAt: Date.now(),
+        // The command was written immediately before this push, so an empty
+        // queue here means it went out on an otherwise-silent connection.
+        solo: this.queue.length === 0,
       };
       if (signal) {
         // Aborting one request mid-pipeline can't un-send its command, so the
@@ -665,6 +681,9 @@ export class NntpConnection {
       );
       this.finishHead(() => head.reject(err));
       return true;
+    }
+    if (head.solo) {
+      this.opts.onLatencySample?.(Date.now() - head.writtenAt);
     }
     head.stage = 'payload';
     if (head.consumer) {

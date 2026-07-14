@@ -1,4 +1,4 @@
-import { Readable } from 'node:stream';
+import { Readable, addAbortSignal } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { createLogger } from '../../logging/logger.js';
 import { DebridError } from '../../debrid/base.js';
@@ -33,8 +33,10 @@ import {
 } from '../../db/index.js';
 import { type UsenetStreamToken, decodeUsenetStreamToken } from './tokens.js';
 import { friendlyUsenetError } from './errors.js';
+import { markReleaseDead } from '../../release-blocklist/feedback.js';
+import { nzbContentKey } from '../../release-blocklist/keys.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
-import { fetchNzb, parseNzbCached } from './library.js';
+import { fetchNzb, parseNzbCached, canonicaliseNzbHash } from './library.js';
 
 const logger = createLogger('usenet/stream');
 
@@ -267,6 +269,8 @@ function holeHooksFor(
       decoded.filename,
       'missing_on_providers'
     ).catch(() => {});
+    // Pad caps only trip on holes confirmed missing on every provider.
+    markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
     // Drop the warm session so a player retry re-opens fresh and sees the
     // failed entry.
     streamSessions.delete(sessionKey);
@@ -363,13 +367,17 @@ async function getStreamSession(
     // multi-MB NZB twice per playback is pure waste.
     const nzb = await parseNzbCached(decoded.hash, xml);
     const parsedAt = Date.now();
+    // tokens minted before the content-hash rekey carry a search-time
+    // hash. Every library read/write below
+    // must use the canonical hash or it would patch/poison a stray row.
+    const hash = await canonicaliseNzbHash(decoded.hash, nzb, decoded.nzb);
     const engine = usenetEngineRegistry.get(providers, options);
     // Fetched up-front: seeds the hole hooks (persisted hole map → replay
     // pre-pad) and provides addedAt for Last-Modified below.
-    const entry = await UsenetLibraryRepository.get(decoded.hash).catch(
+    const entry = await UsenetLibraryRepository.get(hash).catch(
       () => undefined
     );
-    const holeHooks = holeHooksFor(decoded.hash, decoded, entry, key);
+    const holeHooks = holeHooksFor(hash, decoded, entry, key);
 
     let stream: SeekableStream | undefined;
     let filename = decoded.filename;
@@ -379,11 +387,11 @@ async function getStreamSession(
       // encrypted-7z AES+LZMA decode that makes cold opens of large password 7z
       // packs slow). Any miss/failure falls back to a full parse open.
       if (decoded.innerPath) {
-        const layout = await loadArchiveLayout(decoded.hash, decoded.innerPath);
+        const layout = await loadArchiveLayout(hash, decoded.innerPath);
         if (layout) {
           try {
             const hooks = hasPendingFragments(layout.target)
-              ? lazyHooksFor(decoded.hash, decoded.innerPath, layout, key)
+              ? lazyHooksFor(hash, decoded.innerPath, layout, key)
               : undefined;
             stream = await engine.openArchiveStreamFromLayout(
               nzb,
@@ -396,7 +404,7 @@ async function getStreamSession(
           } catch (err) {
             logger.warn(
               {
-                hash: decoded.hash,
+                hash,
                 innerPath: decoded.innerPath,
                 err: (err as Error)?.message,
               },
@@ -441,11 +449,16 @@ async function getStreamSession(
       ) {
         const friendly = friendlyUsenetError(err);
         UsenetLibraryRepository.markFailed(
-          decoded.hash,
+          hash,
           friendly.reason,
           decoded.filename,
           friendly.code
         ).catch(() => {});
+        // NotStreamableError means the release exists; only an all-provider
+        // article miss is blocklist evidence.
+        if (err instanceof ArticleNotFoundError && err.allProviders) {
+          markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
+        }
       }
       throw err;
     }
@@ -468,7 +481,7 @@ async function getStreamSession(
     const openedAt = Date.now();
     logger.debug(
       {
-        hash: decoded.hash,
+        hash,
         filename,
         size: session.size,
         grabMs: grabbedAt - startedAt,
@@ -497,6 +510,7 @@ export async function openNativeUsenetStream(opts: {
   end?: number;
   signal?: AbortSignal;
 }): Promise<OpenedUsenetStream> {
+  opts.signal?.throwIfAborted();
   const decoded = decodeUsenetStreamToken(opts.token);
   if (!decoded) {
     throw new DebridError('invalid or tampered usenet stream token', {
@@ -522,12 +536,16 @@ export async function openNativeUsenetStream(opts: {
   }
 
   const session = await getStreamSession(decoded, providers, options);
+  opts.signal?.throwIfAborted();
   const { size, filename } = session;
   const start = Math.max(0, opts.start ?? 0);
   const end = Math.min(size, opts.end ?? size);
 
+  const stream = session.stream.createReadStream({ start, end });
+  if (opts.signal) addAbortSignal(opts.signal, stream);
+
   return {
-    stream: session.stream.createReadStream({ start, end }),
+    stream,
     size,
     start,
     end,

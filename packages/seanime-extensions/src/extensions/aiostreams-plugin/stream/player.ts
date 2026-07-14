@@ -1,4 +1,6 @@
+import { log } from '../logger';
 import { ResultsPanel } from '../results-panel';
+import { AutoNextController } from './auto-next';
 import { Context, StreamResult } from '../types';
 
 const URL_TYPES = ['http', 'usenet', 'debrid', 'live', 'info'] as const;
@@ -12,7 +14,8 @@ export class StreamPlayer {
     private readonly ctx: Context,
     private readonly panel: ResultsPanel,
     private readonly pendingAnime: $ui.State<$app.AL_BaseAnime | null>,
-    private readonly pendingEp: $ui.State<$app.Anime_Episode | number | null>
+    private readonly pendingEp: $ui.State<$app.Anime_Episode | number | null>,
+    private readonly autoNext: AutoNextController
   ) {}
 
   play(index: number): void {
@@ -32,7 +35,7 @@ export class StreamPlayer {
     const title = anime.title?.userPreferred ?? 'Unknown';
     const windowTitle = `${title} - Episode ${episodeNumber}`;
 
-    $debug.info('AIOStreams: play stream', {
+    log.info('play stream', {
       type: result.type,
       index,
       playerMode,
@@ -79,6 +82,7 @@ export class StreamPlayer {
 
     if (playerMode === 'external') {
       this.ctx.externalPlayerLink.open(result.url, anime.id, episodeNumber);
+      this.autoNext.reset();
       this.panel.hide();
       this.panel.sendPlayError(index);
       return;
@@ -95,9 +99,17 @@ export class StreamPlayer {
           );
 
     playPromise
-      .then(() => this.panel.hide())
+      .then(() => {
+        this.panel.hide();
+        this.autoNext.onPlaybackStarted(
+          anime,
+          episodeNumber,
+          result,
+          playerMode === 'builtin' ? 'builtin' : 'desktop'
+        );
+      })
       .catch((err: Error) => {
-        console.error('AIOStreams: playback failed', err);
+        log.error('playback failed', err);
         this.ctx.toast.error(`Playback error: ${err.message}`);
         this.panel.sendPlayError(index);
         this.clearAutoPlay();
@@ -169,9 +181,21 @@ export class StreamPlayer {
         torrent,
         clientId,
       })
-      .then(() => this.panel.hide())
+      .then(() => {
+        this.panel.hide();
+        if (torrentstreamPlaybackType === 'externalPlayerLink') {
+          this.autoNext.reset();
+        } else {
+          this.autoNext.onPlaybackStarted(
+            anime,
+            episodeNumber,
+            result,
+            torrentstreamPlaybackType === 'nativeplayer' ? 'builtin' : 'desktop'
+          );
+        }
+      })
       .catch((err: Error) => {
-        console.error('AIOStreams: torrent stream failed', err);
+        log.error('torrent stream failed', err);
         this.ctx.toast.error(`Torrent stream error: ${err.message}`);
         this.panel.sendPlayError(index);
         this.clearAutoPlay();

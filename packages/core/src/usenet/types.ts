@@ -67,6 +67,11 @@ export interface EngineOptions {
   dialTimeoutMs: number;
   /** Idle connection TTL before considered stale. */
   idleConnectionMs: number;
+  /**
+   * Destroy a tracked read stream after this long with no bytes pushed to the
+   * client.
+   */
+  streamIdleTimeoutMs: number;
   /** Consecutive failures before a provider circuit-breaker trips. */
   circuitBreakerThreshold: number;
   /** Cooldown before a tripped provider is probed again. */
@@ -137,6 +142,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   segmentTimeoutMs: 30_000,
   dialTimeoutMs: 15_000,
   idleConnectionMs: 60_000,
+  streamIdleTimeoutMs: 60 * 60_000,
   circuitBreakerThreshold: 5,
   circuitBreakerCooldownMs: 30_000,
   verifyMode: 'census',
@@ -174,9 +180,13 @@ export interface ProviderPoolInfo {
   available: number;
   max: number;
   tripped: boolean;
+  throttled: boolean;
   isBackup: boolean;
   freeSlots: number;
   throughput: number;
+  queued: number;
+  lastDialOkAt?: number;
+  lastDialError?: { at: number; kind: string; message: string };
 }
 
 export interface PoolInfo {
@@ -184,6 +194,10 @@ export interface PoolInfo {
   /** Currently in-use slots of the global download semaphore. */
   globalDownloadsInUse: number;
   globalDownloadMax: number;
+  /** In-use permits whose transfer has actually started on a connection. */
+  globalDownloadsOnWire: number;
+  /** Fetches still waiting for a semaphore permit. */
+  globalDownloadsWaiting: number;
 }
 
 /** Minimal reference to a segment the pool needs to fetch. */

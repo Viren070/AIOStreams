@@ -75,6 +75,7 @@ export function buildUsenetEngineOptions(
     segmentTimeoutMs: u.segmentTimeout * 1000,
     dialTimeoutMs: u.dialTimeout * 1000,
     idleConnectionMs: u.idleConnection * 1000,
+    streamIdleTimeoutMs: u.streamIdleTimeout * 1000,
     circuitBreakerThreshold: u.circuitBreakerThreshold,
     circuitBreakerCooldownMs: u.circuitBreakerCooldown * 1000,
     lazyRarResolution: u.lazyRarResolution,

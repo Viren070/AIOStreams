@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.3...seanime-extensions-v0.9.0) (2026-07-08)
+
+
+### Features
+
+* **seanime-extensions/aiostreams-plugin:** add auto next episode ([a7d12c8](https://github.com/Viren070/AIOStreams/commit/a7d12c8310d286c05111a008d7220b63c64a097a))
+
 ## [0.8.3](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.2...seanime-extensions-v0.8.3) (2026-06-11)
 
 

@@ -79,7 +79,6 @@ export function SettingsCard({
         data-settings-card
         className={cn(
           'group/settings-card relative lg:bg-gray-950/70 scroll-mt-24',
-          'data-[command-target=true]:ring-2 data-[command-target=true]:ring-brand-500 data-[command-target=true]:ring-offset-2 data-[command-target=true]:ring-offset-[--background] transition-shadow',
           className
         )}
         onMouseMove={handleMouseMove}

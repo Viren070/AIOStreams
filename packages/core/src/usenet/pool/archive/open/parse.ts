@@ -3,7 +3,7 @@ import { ArchiveKind } from '../archive-volume.js';
 import { VolumeSet, Volume } from '../usenet-fs.js';
 import { ArchiveEntry } from '../types.js';
 import { RarReader, RarVolumeError } from '../rar/index.js';
-import { RarEncryptedError, RarBadPasswordError } from '../crypto/rar-kdf.js';
+import { ArchiveEncryptedError, ArchiveBadPasswordError } from '../errors.js';
 import { parse7z } from '../sevenzip/parse.js';
 import { FileOpener } from './layout.js';
 
@@ -62,13 +62,15 @@ export function isArticleNotFound(err: unknown): boolean {
   return findArticleNotFound(err) !== undefined;
 }
 
-/** Classify a RAR5 header-encryption failure from a parse error, if any. */
+/**
+ * Classify an archive header-encryption failure from a parse error, if any.
+ */
 export function cryptFailure(
   err: unknown
 ): 'encrypted' | 'bad_password' | undefined {
   for (let e = err; e instanceof Error; e = e.cause as Error | undefined) {
-    if (e instanceof RarBadPasswordError) return 'bad_password';
-    if (e instanceof RarEncryptedError) return 'encrypted';
+    if (e instanceof ArchiveBadPasswordError) return 'bad_password';
+    if (e instanceof ArchiveEncryptedError) return 'encrypted';
   }
   return undefined;
 }

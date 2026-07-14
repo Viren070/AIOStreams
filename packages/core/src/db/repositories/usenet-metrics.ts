@@ -10,6 +10,8 @@ export interface UsenetMetricDelta {
   missing: number;
   sumDurationMs: number;
   wallClockMs: number;
+  sumTtfbMs: number;
+  ttfbSamples: number;
 }
 
 /** Aggregated per-provider rollup over a window. */
@@ -27,6 +29,12 @@ export interface UsenetProviderRollup {
    * before wall-clock tracking) don't inflate the rate.
    */
   speedBytes: number;
+  sumTtfbMs: number;
+  /**
+   * Latency divisor. Only unpipelined fetches can be sampled, so this is a
+   * subset of `articles` (and 0 for rows written before latency tracking).
+   */
+  ttfbSamples: number;
 }
 
 /** One time-series bucket (optionally scoped to a provider). */
@@ -41,6 +49,9 @@ export interface UsenetMetricBucket {
   wallClockMs: number;
   /** Bytes from rows with wall-clock time (avg-speed numerator). */
   speedBytes: number;
+  sumTtfbMs: number;
+  /** Latency divisor (sampled fetches, not articles). */
+  ttfbSamples: number;
 }
 
 interface RollupRow {
@@ -52,6 +63,8 @@ interface RollupRow {
   sum_duration_ms: number | string;
   wall_clock_ms: number | string;
   speed_bytes: number | string;
+  sum_ttfb_ms: number | string;
+  ttfb_samples: number | string;
   [k: string]: unknown;
 }
 
@@ -81,19 +94,29 @@ export class UsenetMetricsRepository {
     const hourMs = hourFloor(atMs);
     const db = getDb();
     for (const d of deltas) {
-      if (!d.articles && !d.bytes && !d.errors && !d.missing) continue;
+      if (
+        !d.articles &&
+        !d.bytes &&
+        !d.errors &&
+        !d.missing &&
+        !d.ttfbSamples
+      ) {
+        continue;
+      }
       await db.exec(
         sql`INSERT INTO usenet_provider_metrics
-              (hour_ms, provider_id, articles, bytes_fetched, errors, missing, sum_duration_ms, wall_clock_ms)
+              (hour_ms, provider_id, articles, bytes_fetched, errors, missing, sum_duration_ms, wall_clock_ms, sum_ttfb_ms, ttfb_samples)
             VALUES
-              (${hourMs}, ${d.providerId}, ${d.articles}, ${d.bytes}, ${d.errors}, ${d.missing}, ${d.sumDurationMs}, ${d.wallClockMs})
+              (${hourMs}, ${d.providerId}, ${d.articles}, ${d.bytes}, ${d.errors}, ${d.missing}, ${d.sumDurationMs}, ${d.wallClockMs}, ${d.sumTtfbMs}, ${d.ttfbSamples})
             ON CONFLICT(hour_ms, provider_id) DO UPDATE SET
               articles = usenet_provider_metrics.articles + EXCLUDED.articles,
               bytes_fetched = usenet_provider_metrics.bytes_fetched + EXCLUDED.bytes_fetched,
               errors = usenet_provider_metrics.errors + EXCLUDED.errors,
               missing = usenet_provider_metrics.missing + EXCLUDED.missing,
               sum_duration_ms = usenet_provider_metrics.sum_duration_ms + EXCLUDED.sum_duration_ms,
-              wall_clock_ms = usenet_provider_metrics.wall_clock_ms + EXCLUDED.wall_clock_ms`
+              wall_clock_ms = usenet_provider_metrics.wall_clock_ms + EXCLUDED.wall_clock_ms,
+              sum_ttfb_ms = usenet_provider_metrics.sum_ttfb_ms + EXCLUDED.sum_ttfb_ms,
+              ttfb_samples = usenet_provider_metrics.ttfb_samples + EXCLUDED.ttfb_samples`
       );
     }
   }
@@ -110,7 +133,9 @@ export class UsenetMetricsRepository {
                  SUM(missing) AS missing,
                  SUM(sum_duration_ms) AS sum_duration_ms,
                  SUM(wall_clock_ms) AS wall_clock_ms,
-                 SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes
+                 SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes,
+                 SUM(sum_ttfb_ms) AS sum_ttfb_ms,
+                 SUM(ttfb_samples) AS ttfb_samples
             FROM usenet_provider_metrics
            WHERE hour_ms >= ${sinceMs}
            GROUP BY provider_id`
@@ -124,6 +149,8 @@ export class UsenetMetricsRepository {
       sumDurationMs: Number(r.sum_duration_ms ?? 0),
       wallClockMs: Number(r.wall_clock_ms ?? 0),
       speedBytes: Number(r.speed_bytes ?? 0),
+      sumTtfbMs: Number(r.sum_ttfb_ms ?? 0),
+      ttfbSamples: Number(r.ttfb_samples ?? 0),
     }));
   }
 
@@ -144,7 +171,9 @@ export class UsenetMetricsRepository {
                  SUM(missing) AS missing,
                  SUM(sum_duration_ms) AS sum_duration_ms,
                  SUM(wall_clock_ms) AS wall_clock_ms,
-                 SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes
+                 SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes,
+                 SUM(sum_ttfb_ms) AS sum_ttfb_ms,
+                 SUM(ttfb_samples) AS ttfb_samples
             FROM usenet_provider_metrics
            WHERE hour_ms >= ${sinceMs}
            GROUP BY bucket_ms
@@ -168,7 +197,9 @@ export class UsenetMetricsRepository {
                  SUM(missing) AS missing,
                  SUM(sum_duration_ms) AS sum_duration_ms,
                  SUM(wall_clock_ms) AS wall_clock_ms,
-                 SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes
+                 SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes,
+                 SUM(sum_ttfb_ms) AS sum_ttfb_ms,
+                 SUM(ttfb_samples) AS ttfb_samples
             FROM usenet_provider_metrics
            WHERE hour_ms >= ${sinceMs}
            GROUP BY bucket_ms, provider_id
@@ -205,5 +236,7 @@ function mapBucket(r: BucketRow): UsenetMetricBucket {
     sumDurationMs: Number(r.sum_duration_ms ?? 0),
     wallClockMs: Number(r.wall_clock_ms ?? 0),
     speedBytes: Number(r.speed_bytes ?? 0),
+    sumTtfbMs: Number(r.sum_ttfb_ms ?? 0),
+    ttfbSamples: Number(r.ttfb_samples ?? 0),
   };
 }

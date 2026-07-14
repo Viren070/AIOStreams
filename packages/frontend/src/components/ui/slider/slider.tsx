@@ -127,10 +127,6 @@ export type SliderProps = BasicFieldOptions &
      */
     marks?: { value: number; label: string }[];
     /**
-     * Additional help text shown in a popover
-     */
-    moreHelp?: React.ReactNode;
-    /**
      * The size of the slider
      */
     size?: 'sm' | 'md' | 'lg';
@@ -152,11 +148,10 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
         labelClass,
         showMarks,
         marks,
-        moreHelp,
         size,
         ...rest
       },
-      { label, ...basicFieldProps },
+      { label, moreHelp, ...basicFieldProps },
     ] = extractBasicFieldProps(props, React.useId());
 
     const isFirst = React.useRef(true);

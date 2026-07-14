@@ -24,3 +24,19 @@ export class NotStreamableError extends Error {
     this.name = 'NotStreamableError';
   }
 }
+
+/** Thrown when an archive is encrypted but no password was supplied. */
+export class ArchiveEncryptedError extends Error {
+  constructor(message = 'archive is encrypted (password required)') {
+    super(message);
+    this.name = 'ArchiveEncryptedError';
+  }
+}
+
+/** Thrown when a supplied password fails the archive's password check. */
+export class ArchiveBadPasswordError extends Error {
+  constructor(message = 'archive password is incorrect') {
+    super(message);
+    this.name = 'ArchiveBadPasswordError';
+  }
+}

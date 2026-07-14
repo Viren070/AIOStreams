@@ -20,8 +20,6 @@ export const bootstrap = {
   authProxy: Env.AIOSTREAMS_AUTH_PROXY,
   authConnectionLimits: Env.AIOSTREAMS_AUTH_CONNECTIONS_LIMIT,
   authPermissions: Env.AIOSTREAMS_AUTH_PERMISSIONS,
-  logLevel: Env.LOG_LEVEL,
-  logFormat: Env.LOG_FORMAT,
   logBufferMaxBytes: Env.LOG_BUFFER_MAX_BYTES,
   logBufferMaxEntries: Env.LOG_BUFFER_MAX_ENTRIES,
   version: Env.VERSION,

@@ -1,7 +1,7 @@
 {
   "id": "aiostreams-plugin",
   "name": "AIOStreams",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "manifestURI": "",
   "language": "typescript",
   "type": "plugin",
@@ -78,6 +78,20 @@
         "name": "autoPlayFirstStream",
         "label": "Auto-play first stream",
         "default": "false"
+      },
+      {
+        "type": "switch",
+        "name": "autoPlayNextEpisode",
+        "label": "Auto-play next episode",
+        "default": "true",
+        "description": "When an episode finishes, automatically play the next episode using the stream that best matches the one you picked. Not available with the external player link."
+      },
+      {
+        "type": "switch",
+        "name": "prefetchNextEpisode",
+        "label": "Prefetch next episode's streams",
+        "default": "false",
+        "description": "Fetches the next episode's streams in the background when playback starts, so they load instantly. Applied automatically when Auto-play next episode is enabled."
       },
       {
         "type": "switch",

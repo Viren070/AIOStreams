@@ -741,7 +741,7 @@ function ProviderRow({
             </BasicField>
             <BasicField
               label="Pipeline depth"
-              help="In-flight requests per connection (NNTP pipelining). 1 = off. Higher hides latency so fewer connections saturate a fast link; falls back to 1 if the provider mishandles it."
+              moreHelp="How many requests can be waiting on each connection at once. 1 (the default) sends one request at a time. Higher values (e.g. 4–8) can reach full speed with far fewer connections — especially useful when the provider's server is far away — and automatically fall back to 1 if the provider doesn't support it."
             >
               <NumberInput
                 value={d.pipelineDepth}
@@ -785,8 +785,8 @@ function ProviderRow({
               label="Backup"
               moreHelp={
                 grouped
-                  ? 'Applies to the whole group — a metered/block group only runs once a primary misses an article.'
-                  : 'Metered/block account: only used once a primary misses an article.'
+                  ? 'Applies to the whole group — backup providers are only used when a download is missing pieces on your main providers.'
+                  : 'Only used when a download is missing pieces on your main providers — ideal for metered block accounts.'
               }
               side="right"
             />

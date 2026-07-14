@@ -27,12 +27,22 @@ function seasonRegex(season: number): RegExp {
   return r;
 }
 
+/** Highest season number this record claims, in any source's coordinates. */
+function advertisedSeasonOf(r: AnimeRecord): number {
+  return Math.max(
+    typeof r.tvdb?.seasonNumber === 'number' ? r.tvdb.seasonNumber : 0,
+    typeof r.tmdb?.seasonNumber === 'number' ? r.tmdb.seasonNumber : 0,
+    typeof r.trakt?.seasonNumber === 'number' ? r.trakt.seasonNumber : 0
+  );
+}
+
 /**
  * Filter candidates by type plausibility for the requested season:
  *   - season undefined: prefer movies.
  *   - season 0: prefer specials/OVA/ONA.
- *   - season >= 1: keep TV, plus non-TV cours advertising a season > 1 via
- *     tvdb/tmdb.seasonNumber.
+ *   - season >= 1: keep TV, plus non-TV cours advertising a season > 1, plus
+ *     non-TV cours advertising exactly the requested season as long as no TV
+ *     record claims that season too.
  *
  * Returns the original list if filtering would empty it.
  */
@@ -41,18 +51,22 @@ export function filterCandidatesBySeasonType(
   season?: number
 ): AnimeRecord[] {
   if (candidates.length <= 1) return candidates;
+  const tvClaimsSeason =
+    season !== undefined &&
+    candidates.some(
+      (r) => r.type === AnimeType.TV && advertisedSeasonOf(r) === season
+    );
   const filtered = candidates.filter((r) => {
     if (r.type === AnimeType.UNKNOWN) return true;
     if (season === undefined) return r.type === AnimeType.MOVIE;
     if (season === 0) {
       return [AnimeType.SPECIAL, AnimeType.OVA, AnimeType.ONA].includes(r.type);
     }
-    const advertisedSeason = Math.max(
-      typeof r.tvdb?.seasonNumber === 'number' ? r.tvdb.seasonNumber : 0,
-      typeof r.tmdb?.seasonNumber === 'number' ? r.tmdb.seasonNumber : 0,
-      typeof r.trakt?.seasonNumber === 'number' ? r.trakt.seasonNumber : 0
-    );
-    if (r.type !== AnimeType.TV && advertisedSeason > 1) return true;
+    if (r.type !== AnimeType.TV) {
+      const advertisedSeason = advertisedSeasonOf(r);
+      if (advertisedSeason > 1) return true;
+      if (!tvClaimsSeason && advertisedSeason === season) return true;
+    }
     return r.type === AnimeType.TV;
   });
   return filtered.length > 0 ? filtered : candidates;
@@ -186,7 +200,10 @@ function scoreBySeasonEpisode(
       }
     }
     // Kitsu IMDb-cour mapping. Exact match.
-    if (typeof r.imdb?.fromSeason === 'number' && r.imdb.fromSeason === season) {
+    if (
+      typeof r.imdb?.fromSeason === 'number' &&
+      r.imdb.fromSeason === season
+    ) {
       const fromEpisode = r.imdb.fromEpisode ?? 1;
       if (episode >= fromEpisode) {
         scored.push({
@@ -232,7 +249,10 @@ function scoreBySeasonEpisode(
       }
     }
     // Anime-Lists XML tmdbSeason match.
-    if (typeof r.tmdb?.seasonNumber === 'number' && r.tmdb.seasonNumber === season) {
+    if (
+      typeof r.tmdb?.seasonNumber === 'number' &&
+      r.tmdb.seasonNumber === season
+    ) {
       const fromEpisode = r.tmdb.fromEpisode ?? 1;
       if (episode >= fromEpisode) {
         scored.push({

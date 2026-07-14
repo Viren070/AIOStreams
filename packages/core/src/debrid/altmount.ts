@@ -142,8 +142,7 @@ export class AltmountService extends UsenetStreamService {
       this.config.clientIp
     );
 
-    const cachedResponse =
-      await UsenetStreamService.resolveCache.get(cacheKey);
+    const cachedResponse = await UsenetStreamService.resolveCache.get(cacheKey);
     if (cachedResponse) {
       this.serviceLogger.debug(`Using cached stream URL for ${nzb}`);
       return cachedResponse;
@@ -152,20 +151,17 @@ export class AltmountService extends UsenetStreamService {
     try {
       const body = new URLSearchParams({ nzb_url: nzb });
 
-      const response = await fetch(
-        `${this.altmountBaseUrl}/api/nzb/streams`,
-        {
-          method: 'POST',
-          headers: {
-            'X-Api-Key': this.altmountApiKey,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: body.toString(),
-          // AltMount blocks until the file is streamable (or the import fails),
-          // which can take several minutes for large releases.
-          signal: AbortSignal.timeout(10 * 60 * 1000),
-        }
-      );
+      const response = await fetch(`${this.altmountBaseUrl}/api/nzb/streams`, {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': this.altmountApiKey,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+        // AltMount blocks until the file is streamable (or the import fails),
+        // which can take several minutes for large releases.
+        signal: AbortSignal.timeout(10 * 60 * 1000),
+      });
 
       // 404 / 405 means this is an older AltMount without the native endpoint
       if (response.status === 404 || response.status === 405) {

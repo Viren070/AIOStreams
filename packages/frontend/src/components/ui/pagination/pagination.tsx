@@ -10,7 +10,7 @@ export const PaginationAnatomy = defineStyleAnatomy({
   root: cva(['UI-Pagination__root', 'flex gap-1 text-xs font-medium']),
   item: cva([
     'UI-Pagination__item',
-    'bg-transparent dark:bg-transparent text-sm text-[--muted] inline-flex h-8 w-8 items-center justify-center rounded-[--radius] border cursor-pointer',
+    'bg-transparent dark:bg-transparent text-sm text-[--muted] inline-flex h-8 min-w-8 px-1 tabular-nums items-center justify-center rounded-[--radius] border cursor-pointer',
     'hover:bg-[--subtle] dark:hover:bg-[--subtle] hover:border-[--subtle] select-none',
     'data-[selected=true]:bg-brand-500 data-[selected=true]:border-transparent data-[selected=true]:text-white data-[selected=true]:hover:bg-brand data-[selected=true]:pointer-events-none', // Selected
     'data-[disabled=true]:opacity-50 data-[disabled=true]:pointer-events-none data-[disabled=true]:cursor-not-allowed', // Disabled
@@ -208,3 +208,26 @@ export const PaginationEllipsis = React.forwardRef<
 });
 
 PaginationEllipsis.displayName = 'PaginationEllipsis';
+
+/* -------------------------------------------------------------------------------------------------
+ * pageWindow
+ * -----------------------------------------------------------------------------------------------*/
+
+/**
+ * Windowed page list for the Pagination primitive: first, last, the current
+ * page ±1, with `'…'` markers for the gaps. e.g. `[1, '…', 4, 5, 6, '…', 20]`.
+ */
+export function pageWindow(current: number, total: number): (number | '…')[] {
+  const pages = new Set<number>([1, total, current - 1, current, current + 1]);
+  const sorted = [...pages]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+  const out: (number | '…')[] = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) out.push('…');
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}

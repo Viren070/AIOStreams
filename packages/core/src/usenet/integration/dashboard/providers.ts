@@ -111,6 +111,7 @@ export async function testUsenetProvider(
 
   const config: ProviderConfig = {
     id: provider.id ?? 'test',
+    name: provider.name,
     host: provider.host,
     port: provider.port,
     tls: provider.tls ?? false,

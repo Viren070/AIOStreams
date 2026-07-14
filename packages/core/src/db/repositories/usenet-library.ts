@@ -107,6 +107,8 @@ export interface UsenetLibraryEntry {
   category?: string;
   /** NZB password (from `<meta>` or a `{{password}}` name token), if any. */
   password?: string;
+  /** Shareable release key (`wd1:`), when indexer metadata allowed one. */
+  releaseKey?: string;
 }
 
 interface UsenetLibraryRow {
@@ -131,6 +133,7 @@ interface UsenetLibraryRow {
   nzb_url: string | null;
   category: string | null;
   password: string | null;
+  release_key: string | null;
   [k: string]: unknown;
 }
 
@@ -192,17 +195,17 @@ function mapRow(row: UsenetLibraryRow): UsenetLibraryEntry {
     nzbUrl: row.nzb_url ?? undefined,
     category: row.category ?? undefined,
     password: row.password ?? undefined,
+    releaseKey: row.release_key ?? undefined,
   };
 }
 
-const COLUMNS = sql`nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, added_at, last_used_at, nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, category, password`;
+const COLUMNS = sql`nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, added_at, last_used_at, nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, category, password, release_key`;
 
 /**
- * Persistence for the native usenet library/history (one row per NZB content
- * hash). Backs the service's `library`/file-list/failed reporting, the
- * dashboard (live imports, history, manual add, browse, deletion) and the
- * SABnzbd-compatible API (`usenet/integration/sabnzbd.ts`), which projects
- * these rows onto queue/history slots.
+ * Persistence for the native usenet library/history, one row per NZB,
+ * keyed by the content hash Search results only know their search-time
+ * hash (`hashNzbUrl` URL MD5), which the `usenet_library_aliases` table maps
+ * onto the canonical key.
  */
 export class UsenetLibraryRepository {
   static async get(nzbHash: string): Promise<UsenetLibraryEntry | undefined> {
@@ -229,6 +232,135 @@ export class UsenetLibraryRepository {
     return result;
   }
 
+  /**
+   * Fetch an entry by any hash it is known under: the canonical content hash
+   * (or a not-yet-rekeyed legacy key) directly, else through the alias table.
+   * Direct-first is safe because {@link rekey} guarantees an alias hash never
+   * coexists with a live row of the same key. Returns the canonical hash so
+   * callers can keep using it for subsequent writes.
+   */
+  static async getResolved(
+    hash: string
+  ): Promise<{ entry: UsenetLibraryEntry; contentHash: string } | undefined> {
+    if (!hash) return undefined;
+    const direct = await this.get(hash);
+    if (direct) return { entry: direct, contentHash: direct.nzbHash };
+    const alias = await getDb().maybeOne<{ nzb_hash: string }>(
+      sql`SELECT nzb_hash FROM usenet_library_aliases WHERE alias_hash = ${hash}`
+    );
+    if (!alias) return undefined;
+    const entry = await this.get(alias.nzb_hash);
+    // A dangling alias (target row deleted) reads as a miss.
+    return entry ? { entry, contentHash: entry.nzbHash } : undefined;
+  }
+
+  /**
+   * Batched {@link getResolved}: direct matches first, then alias resolution
+   * for the misses. The result map is keyed by the *requested* hash (which is
+   * what search-time callers key their own bookkeeping on), even when the
+   * entry was found through an alias.
+   */
+  static async getManyResolved(
+    hashes: string[]
+  ): Promise<Map<string, UsenetLibraryEntry>> {
+    const result = await this.getMany(hashes);
+    const misses = hashes.filter((h) => h && !result.has(h));
+    if (misses.length === 0) return result;
+    const aliases = await this.resolveAliases(misses);
+    if (aliases.size === 0) return result;
+    const targets = await this.getMany([...new Set(aliases.values())]);
+    for (const [requested, canonical] of aliases) {
+      const entry = targets.get(canonical);
+      if (entry) result.set(requested, entry);
+    }
+    return result;
+  }
+
+  /** Batched alias lookup: requested alias hash → canonical content hash. */
+  static async resolveAliases(
+    aliasHashes: string[]
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    const unique = [...new Set(aliasHashes.filter(Boolean))];
+    if (unique.length === 0) return result;
+    const placeholders = join(unique.map((h) => sql`${h}`));
+    const rows = await getDb().query<{ alias_hash: string; nzb_hash: string }>(
+      sql`SELECT alias_hash, nzb_hash FROM usenet_library_aliases WHERE alias_hash IN (${placeholders})`
+    );
+    for (const row of rows) result.set(row.alias_hash, row.nzb_hash);
+    return result;
+  }
+
+  private static aliasUpsert(
+    aliasHash: string,
+    nzbHash: string,
+    nzbUrl?: string
+  ): SqlFragment {
+    return sql`INSERT INTO usenet_library_aliases (alias_hash, nzb_hash, nzb_url)
+          VALUES (${aliasHash}, ${nzbHash}, ${nzbUrl ?? null})
+          ON CONFLICT(alias_hash) DO UPDATE SET
+            nzb_hash = EXCLUDED.nzb_hash,
+            nzb_url = COALESCE(EXCLUDED.nzb_url, usenet_library_aliases.nzb_url)`;
+  }
+
+  /**
+   * Map a search-time hash onto a canonical content hash. No-ops on a
+   * self-alias; no change event (aliases are invisible to the dashboard).
+   */
+  static async recordAlias(
+    aliasHash: string,
+    nzbHash: string,
+    nzbUrl?: string
+  ): Promise<void> {
+    if (!aliasHash || !nzbHash || aliasHash === nzbHash) return;
+    await getDb().exec(this.aliasUpsert(aliasHash, nzbHash, nzbUrl));
+  }
+
+  /**
+   * Move a row keyed by a search-time hash onto its canonical content
+   * hash, recording the old key as an alias. When a content-keyed row already
+   * exists (e.g. the same NZB was also added manually), the content row wins
+   * and the legacy row is dropped, it described the same bytes, and the
+   * content row's state comes from an actual parse+inspect of them. Runs in a
+   * transaction so an alias hash never coexists with a live row of that key.
+   */
+  static async rekey(
+    oldHash: string,
+    newHash: string,
+    opts: { aliasUrl?: string } = {}
+  ): Promise<'rekeyed' | 'merged' | 'noop'> {
+    if (!oldHash || !newHash || oldHash === newHash) return 'noop';
+    const outcome = await getDb().tx(async (tx) => {
+      const contentRow = await tx.maybeOne(
+        sql`SELECT 1 AS present FROM usenet_library WHERE nzb_hash = ${newHash}`
+      );
+      let moved: 'rekeyed' | 'merged' | 'noop' = 'noop';
+      if (contentRow) {
+        const del = await tx.exec(
+          sql`DELETE FROM usenet_library WHERE nzb_hash = ${oldHash}`
+        );
+        if (del.rowCount > 0) moved = 'merged';
+      } else {
+        // A single PK UPDATE carries the whole row (files blob, holes,
+        // layouts, counters) intact on both dialects.
+        const upd = await tx.exec(
+          sql`UPDATE usenet_library
+              SET nzb_hash = ${newHash},
+                  nzo_id = CASE WHEN nzo_id = ${oldHash} THEN ${newHash} ELSE nzo_id END
+              WHERE nzb_hash = ${oldHash}`
+        );
+        if (upd.rowCount > 0) moved = 'rekeyed';
+      }
+      await tx.exec(
+        sql`UPDATE usenet_library_aliases SET nzb_hash = ${newHash} WHERE nzb_hash = ${oldHash}`
+      );
+      await tx.exec(this.aliasUpsert(oldHash, newHash, opts.aliasUrl));
+      return moved;
+    });
+    if (outcome !== 'noop') usenetLibraryBus.emit('change');
+    return outcome;
+  }
+
   /** Create (or reset) a row at the start of an import lifecycle. */
   static async create(entry: {
     nzbHash: string;
@@ -238,14 +370,15 @@ export class UsenetLibraryRepository {
     nzbUrl?: string;
     bytesTotal?: number;
     category?: string;
+    releaseKey?: string;
   }): Promise<void> {
     await getDb().exec(
       sql`INSERT INTO usenet_library
             (nzb_hash, name, files, status, fail_count, last_used_at,
-             nzo_id, progress, bytes_done, bytes_total, owner, source, nzb_url, category)
+             nzo_id, progress, bytes_done, bytes_total, owner, source, nzb_url, category, release_key)
           VALUES
             (${entry.nzbHash}, ${entry.name ?? null}, '[]', 'queued', 0, CURRENT_TIMESTAMP,
-             ${entry.nzbHash}, 0, 0, ${entry.bytesTotal ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.nzbUrl ?? null}, ${entry.category ?? null})
+             ${entry.nzbHash}, 0, 0, ${entry.bytesTotal ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.nzbUrl ?? null}, ${entry.category ?? null}, ${entry.releaseKey ?? null})
           ON CONFLICT(nzb_hash) DO UPDATE SET
             name = COALESCE(EXCLUDED.name, usenet_library.name),
             status = 'queued',
@@ -254,6 +387,7 @@ export class UsenetLibraryRepository {
             source = EXCLUDED.source,
             nzb_url = COALESCE(EXCLUDED.nzb_url, usenet_library.nzb_url),
             category = COALESCE(EXCLUDED.category, usenet_library.category),
+            release_key = COALESCE(EXCLUDED.release_key, usenet_library.release_key),
             last_used_at = CURRENT_TIMESTAMP`
     );
     usenetLibraryBus.emit('change');
@@ -304,16 +438,17 @@ export class UsenetLibraryRepository {
     nzbUrl?: string;
     password?: string;
     status?: 'available' | 'degraded';
+    releaseKey?: string;
   }): Promise<void> {
     const filesJson = JSON.stringify(entry.files ?? []);
     const status = entry.status ?? 'available';
     await getDb().exec(
       sql`INSERT INTO usenet_library
             (nzb_hash, name, size, file_index, files, status, fail_reason, error_code, fail_count, last_used_at,
-             nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, password)
+             nzo_id, progress, bytes_done, bytes_total, owner, source, import_ms, nzb_url, password, release_key)
           VALUES
             (${entry.nzbHash}, ${entry.name ?? null}, ${entry.size ?? null}, ${entry.fileIndex ?? null}, ${filesJson}, ${status}, NULL, NULL, 0, CURRENT_TIMESTAMP,
-             ${entry.nzbHash}, 1, ${entry.size ?? 0}, ${entry.size ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.importMs ?? null}, ${entry.nzbUrl ?? null}, ${entry.password ?? null})
+             ${entry.nzbHash}, 1, ${entry.size ?? 0}, ${entry.size ?? 0}, ${entry.owner ?? null}, ${entry.source ?? 'auto'}, ${entry.importMs ?? null}, ${entry.nzbUrl ?? null}, ${entry.password ?? null}, ${entry.releaseKey ?? null})
           ON CONFLICT(nzb_hash) DO UPDATE SET
             name = EXCLUDED.name,
             size = EXCLUDED.size,
@@ -330,6 +465,7 @@ export class UsenetLibraryRepository {
             import_ms = COALESCE(EXCLUDED.import_ms, usenet_library.import_ms),
             nzb_url = COALESCE(EXCLUDED.nzb_url, usenet_library.nzb_url),
             password = COALESCE(EXCLUDED.password, usenet_library.password),
+            release_key = COALESCE(EXCLUDED.release_key, usenet_library.release_key),
             last_used_at = CURRENT_TIMESTAMP`
     );
     usenetLibraryBus.emit('change');
@@ -476,12 +612,16 @@ export class UsenetLibraryRepository {
     await getDb().exec(
       sql`DELETE FROM usenet_library WHERE nzb_hash = ${nzbHash}`
     );
+    await getDb().exec(
+      sql`DELETE FROM usenet_library_aliases WHERE nzb_hash = ${nzbHash} OR alias_hash = ${nzbHash}`
+    );
     usenetLibraryBus.emit('change');
   }
 
   /** Remove every entry from the library. */
   static async clear(): Promise<void> {
     await getDb().exec(sql`DELETE FROM usenet_library`);
+    await getDb().exec(sql`DELETE FROM usenet_library_aliases`);
     usenetLibraryBus.emit('change');
   }
 

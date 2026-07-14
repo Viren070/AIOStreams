@@ -2,6 +2,7 @@ import { RandomAccess } from '../random-access.js';
 import { ArchiveEntry, DataFragment, AesStoredRegion } from '../types.js';
 import { decodeLzma1 } from './lzma.js';
 import { CODER_AES, parseAesParams, decryptAesAll } from '../crypto/aes7z.js';
+import { ArchiveEncryptedError, ArchiveBadPasswordError } from '../errors.js';
 import { createLogger } from '../../../../logging/logger.js';
 
 const logger = createLogger('usenet/7z');
@@ -488,10 +489,28 @@ export async function parse7z(
     describeFolders('encoded-header', si.folders);
     if (si.folders.length !== 1)
       throw new Error('7z: expected one header folder');
-    const decoded = await decodeFolder(ra, si, 0, baseStart, password);
-    headerBuf = decoded;
+    // with a wrong password, decode "succeeds" into garbage, so a decode
+    // throw or a first decoded byte that isn't ID_HEADER indicates a bad password.
+    const headerEncrypted = si.folders[0].coders.some((c) => isAesCoder(c));
+    try {
+      headerBuf = await decodeFolder(ra, si, 0, baseStart, password);
+    } catch (err) {
+      if (
+        headerEncrypted &&
+        password &&
+        !(err instanceof ArchiveEncryptedError)
+      )
+        throw new ArchiveBadPasswordError(
+          '7z: header decrypt failed (wrong password)'
+        );
+      throw err;
+    }
     r = new ByteReader(headerBuf);
     id = r.readByte();
+    if (id !== ID_HEADER && headerEncrypted && password)
+      throw new ArchiveBadPasswordError(
+        '7z: header decrypt produced invalid data (wrong password)'
+      );
   }
   if (id !== ID_HEADER) throw new Error('7z: unexpected header id ' + id);
 
@@ -539,7 +558,7 @@ function runCoder(
   }
   if (isAesCoder(coder)) {
     if (!password) {
-      throw new Error('7z: encrypted (password required)');
+      throw new ArchiveEncryptedError('7z: encrypted (password required)');
     }
     if (!coder.properties) throw new Error('7z: AES missing properties');
     return decryptAesAll(

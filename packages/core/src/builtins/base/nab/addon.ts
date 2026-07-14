@@ -63,6 +63,14 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
   forceInitialLimit: z.number().min(1).max(10000).optional(),
+  seasonPackStrategy: z
+    .enum([
+      'episodeOnly',
+      'dynamic',
+      'episodeFirstSeasonPackFallback',
+      'seasonPackFirstEpisodeFallback',
+    ])
+    .default('episodeOnly'),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -204,7 +212,40 @@ export abstract class BaseNabAddon<
       const allResults = await Promise.all(searchPromises);
       results = allResults.flat();
     } else {
-      results = await this.fetchResults(searchFunction, queryParams);
+      const canApplySeasonPackStrategy =
+        parsedId.mediaType === 'series' &&
+        !this.userData.forceQuerySearch &&
+        searchCapabilities.supportedParams.includes('season') &&
+        queryParams.season &&
+        queryParams.ep;
+
+      let primaryParams = queryParams;
+      let fallbackParams: Record<string, string> | undefined;
+      if (canApplySeasonPackStrategy) {
+        const { ep, ...seasonOnlyParams } = queryParams;
+        let strategy = this.userData.seasonPackStrategy;
+        if (strategy === 'dynamic') {
+          strategy =
+            metadata.ongoingSeason === true
+              ? 'episodeOnly'
+              : 'seasonPackFirstEpisodeFallback';
+        }
+        if (strategy === 'seasonPackFirstEpisodeFallback') {
+          primaryParams = seasonOnlyParams;
+          fallbackParams = queryParams;
+        } else if (strategy === 'episodeFirstSeasonPackFallback') {
+          fallbackParams = seasonOnlyParams;
+        }
+      }
+
+      results = await this.fetchResults(searchFunction, primaryParams);
+      if (results.length === 0 && fallbackParams) {
+        this.logger.debug(
+          'No results for initial search, retrying with alternate season/episode params',
+          { season: queryParams.season, episode: queryParams.ep }
+        );
+        results = await this.fetchResults(searchFunction, fallbackParams);
+      }
     }
     this.logger.info(
       `Completed search for ${capabilities.server.title} in ${getTimeTakenSincePoint(start)}`,

@@ -867,7 +867,7 @@ export const builtinsSchema = {
     },
     maxPages: {
       schema: positiveInt,
-      default: 5,
+      default: 8,
       label: 'Easynews max pages',
       env: 'BUILTIN_EASYNEWS_SEARCH_MAX_PAGES',
       description:

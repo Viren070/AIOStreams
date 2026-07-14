@@ -18,6 +18,7 @@ export interface StreamResult {
   seadexBest: boolean | null;
   magnetLink: string | null;
   fileIdx: number | null;
+  bingeGroup: string | null;
 }
 
 export interface StatEntry {
@@ -67,6 +68,8 @@ interface Preferences {
   playback: {
     mode: PlayerMode;
     autoPlayFirstStream: boolean;
+    autoNext: boolean;
+    prefetchNext: boolean;
   };
   cacheTtl: number;
   downloadLocation: string;

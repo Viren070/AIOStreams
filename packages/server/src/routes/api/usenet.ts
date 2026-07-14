@@ -73,9 +73,12 @@ router.get(
     const controller = new AbortController();
     const onClose = () => controller.abort();
     res.on('close', onClose);
+    const socket = req.socket;
+    socket.setKeepAlive(true, 60_000);
 
+    let opened: Awaited<ReturnType<typeof openNativeUsenetStream>> | undefined;
     try {
-      const opened = await openNativeUsenetStream({
+      opened = await openNativeUsenetStream({
         token,
         start: requested?.start,
         end: requested?.endExclusive,
@@ -139,15 +142,25 @@ router.get(
         return;
       }
 
+      stream.once('error', (err: NodeJS.ErrnoException) => {
+        if (err?.code === 'USENET_STREAM_REAPED' && !socket.destroyed) {
+          socket.resetAndDestroy();
+        }
+      });
+
       await pipeline(stream, res);
     } catch (err) {
+      if (opened && !opened.stream.destroyed) opened.stream.destroy();
+
       const code = (err as NodeJS.ErrnoException)?.code;
       const isClientDisconnect =
         controller.signal.aborted ||
         code === 'ERR_STREAM_PREMATURE_CLOSE' ||
         code === 'ECONNRESET' ||
         code === 'EPIPE' ||
-        code === 'ERR_STREAM_DESTROYED';
+        code === 'ERR_STREAM_DESTROYED' ||
+        code === 'ABORT_ERR' ||
+        code === 'USENET_STREAM_REAPED';
 
       if (isClientDisconnect) {
         logger.debug({ code }, 'client disconnected from usenet stream');

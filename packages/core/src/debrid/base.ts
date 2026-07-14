@@ -1,5 +1,6 @@
 ﻿import { z } from 'zod';
 import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
+import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
 type DebridErrorCode =
   | 'BAD_GATEWAY'
@@ -221,6 +222,7 @@ const UsenetInfoSchema = BaseFileInfoSchema.extend({
   hash: z.string(),
   easynewsUrl: z.string().optional(),
   nzb: z.string(),
+  releaseKey: z.string().regex(WD1_KEY_REGEX).optional().catch(undefined),
   type: z.literal('usenet'),
 });
 

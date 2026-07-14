@@ -71,6 +71,10 @@ class StreamParser {
 
   constructor(protected readonly addon: Addon) {}
 
+  protected getReleaseKey(stream: Stream): string | undefined {
+    return undefined;
+  }
+
   parse(stream: Stream): ParsedStream | { skip: true } {
     if (this.shouldSkip(stream)) {
       return { skip: true };
@@ -88,6 +92,7 @@ class StreamParser {
       proxied: this.isProxied(stream),
       url: this.applyUrlModifications(stream.url ?? undefined),
       nzbUrl: stream.nzbUrl || undefined,
+      releaseKey: this.getReleaseKey(stream),
       tarUrls: stream.tarUrls ?? undefined,
       tgzUrls: stream.tgzUrls ?? undefined,
       '7zipUrls': stream['7zipUrls'] ?? undefined,

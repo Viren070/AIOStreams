@@ -381,6 +381,7 @@ export class FileStream implements SeekableStream {
     let firstByteSeen = false;
     void this.locateSegment(start)
       .then(({ segmentIndex, segmentStartByte }) => {
+        if (out.destroyed) return;
         const segments = this.source.segments.slice(segmentIndex);
         // Playback hole handling: local task index → absolute segment index.
         const holes = this.holes;

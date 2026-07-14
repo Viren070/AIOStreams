@@ -8,11 +8,18 @@ import {
   formatIdForSearch,
 } from '../../../lib/aiostreams-resolver';
 import { parseStremioId } from '../../../lib/stremio-id';
+import { log } from '../logger';
 import { ResultsPanel } from '../results-panel';
 import { StreamCache } from './cache';
 import { StreamPlayer } from './player';
 import { toStreamResult } from './mapping';
-import { Context, LookupInfo, StreamResult, WebviewState } from '../types';
+import {
+  Context,
+  LookupInfo,
+  StatEntry,
+  StreamResult,
+  WebviewState,
+} from '../types';
 
 export type SearchIdPref = 'imdbId' | 'kitsuId' | 'anilistId';
 
@@ -90,12 +97,26 @@ function parseStremioCustomSourceId(
       mediaType,
     };
   } catch (err) {
-    $debug.warn(
-      'Failed to parse custom source ID, falling back to AniList ID',
+    log.warn(
+      'failed to parse custom source ID, falling back to AniList ID',
       err
     );
     return null;
   }
+}
+
+interface SearchOutcome {
+  results: StreamResult[];
+  episodeInfo: string;
+  lookup: LookupInfo;
+  cacheKey: string;
+  fromCache: boolean;
+  errors: StatEntry[];
+  statistics: StatEntry[];
+  animeLookupMs: number | null;
+  searchMs: number | null;
+  timeTakenMs: number;
+  error: string | null;
 }
 
 export class StreamFetcher {
@@ -112,72 +133,45 @@ export class StreamFetcher {
     private readonly resetDownloadSession: () => void
   ) {}
 
-  async fetch(
-    anime: $app.AL_BaseAnime,
-    episode: $app.Anime_Episode | number
-  ): Promise<void> {
-    const episodeNumber =
-      typeof episode === 'number' ? episode : episode.episodeNumber;
-    const aniDBEpisode =
-      typeof episode === 'object' ? episode.aniDBEpisode : undefined;
+  private createApi(opts: { silent: boolean }): AIOStreamsAPI | null {
     const manifestUrl = $getUserPreference('manifestUrl') ?? '';
-    const searchId = ($getUserPreference('searchId') ??
-      'imdbId') as SearchIdPref;
-
     let creds: ReturnType<typeof parseManifestUrl>;
     try {
       creds = parseManifestUrl(manifestUrl);
     } catch (err) {
-      console.warn('AIOStreams: manifest URL invalid/missing', err);
-      this.ctx.toast.error(
-        'AIOStreams manifest URL is invalid or missing. Configure it in the extension settings.'
-      );
-      return;
+      log.warn('manifest URL invalid/missing', err);
+      if (!opts.silent) {
+        this.ctx.toast.error(
+          'AIOStreams manifest URL is invalid or missing. Configure it in the extension settings.'
+        );
+      }
+      return null;
     }
-    const api = new AIOStreamsAPI(
+    return new AIOStreamsAPI(
       creds.baseUrl,
       creds.uuid,
       creds.encryptedPassword
     );
+  }
 
-    $debug.info('AIOStreams: fetching streams', {
-      animeId: anime.id,
-      episodeNumber,
-      searchId,
-      format: anime.format ?? null,
-    });
-    $debug.debug('AIOStreams: anime details', anime);
-    $debug.debug('AIOStreams: episode details', episode);
+  // Resolves the media id, checks the cache and queries the search endpoint.
+  private async performSearch(
+    api: AIOStreamsAPI,
+    anime: $app.AL_BaseAnime,
+    episode: $app.Anime_Episode | number
+  ): Promise<SearchOutcome> {
+    const episodeNumber =
+      typeof episode === 'number' ? episode : episode.episodeNumber;
+    const aniDBEpisode =
+      typeof episode === 'object' ? episode.aniDBEpisode : undefined;
+    const searchId = ($getUserPreference('searchId') ??
+      'imdbId') as SearchIdPref;
 
     const animeTitle = anime.title?.userPreferred ?? 'Unknown';
     const isMovie = String(anime.format ?? '').toUpperCase() === 'MOVIE';
     const episodeInfo = isMovie
       ? animeTitle
       : `${animeTitle} \xb7 Episode ${episodeNumber}`;
-
-    this.pendingAnime.set(anime);
-    this.pendingEp.set(episode);
-
-    const autoPlay = this.ctx.preferences.playback.autoPlayFirstStream;
-    const sessionId = this.setSessionId();
-    this.resetDownloadSession();
-
-    this.panel.wvState.set({
-      results: [],
-      loading: true,
-      error: null,
-      episodeInfo,
-      timeTakenMs: null,
-      animeLookupMs: null,
-      searchMs: null,
-      fromCache: false,
-      errors: [],
-      statistics: [],
-      lookup: null,
-      sessionId,
-      autoPlay,
-    });
-    this.panel.show();
 
     const startTime = Date.now();
     let animeLookupMs: number | null = null;
@@ -217,7 +211,7 @@ export class StreamFetcher {
             parsedId.season = undefined;
             parsedId.episode = undefined;
           }
-          $debug.debug('AIOStreams: resolved id mapping', {
+          log.debug('resolved id mapping', {
             originalId,
             mappedId: parsedId,
             animeLookupMs,
@@ -225,56 +219,51 @@ export class StreamFetcher {
         }
       } catch (err) {
         animeLookupMs = Date.now() - animeLookupStart;
-        $debug.warn(
-          'Failed to fetch anime details from AIOStreams, falling back to AniList ID search',
+        log.warn(
+          'failed to fetch anime details from AIOStreams, falling back to AniList ID search',
           err
         );
       }
     }
 
     const lookup = buildLookup(originalId, parsedId, anime, mediaType);
-
     const cacheKey = StreamCache.keyFor(parsedId);
-    this.lastCacheKey = cacheKey;
+
+    const base = {
+      episodeInfo,
+      lookup,
+      cacheKey,
+      animeLookupMs,
+    };
 
     const cachedResults = this.cache.get(cacheKey);
     if (cachedResults) {
-      $debug.info('AIOStreams: cache hit', {
+      log.info('cache hit', {
         cacheKey,
         count: cachedResults.length,
       });
-      this.applyResultsToPanel({
+      return {
+        ...base,
         results: cachedResults,
-        loading: false,
-        error: null,
-        episodeInfo,
-        timeTakenMs: Date.now() - startTime,
-        animeLookupMs,
-        searchMs: null,
         fromCache: true,
         errors: [],
         statistics: [],
-        lookup,
-        sessionId,
-        autoPlay: autoPlay && cachedResults.length > 0,
-      });
-      if (autoPlay && cachedResults.length > 0) this.player.play(0);
-      return;
+        searchMs: null,
+        timeTakenMs: Date.now() - startTime,
+        error: null,
+      };
     }
 
-    $debug.info('AIOStreams: cache miss, querying API', { cacheKey });
+    log.info('cache miss, querying API', { cacheKey });
     const searchStart = Date.now();
     try {
       const id = formatIdForSearch(parsedId);
-      $debug.debug(
-        'AIOStreams: final id, type, season, episode sent to search endpoint',
-        {
-          id,
-          type: mediaType,
-          season: parsedId.season,
-          episode: parsedId.episode,
-        }
-      );
+      log.debug('final id, type, season, episode sent to search endpoint', {
+        id,
+        type: mediaType,
+        season: parsedId.season,
+        episode: parsedId.episode,
+      });
       const searchResponse = await api.search(
         mediaType,
         id,
@@ -284,47 +273,226 @@ export class StreamFetcher {
       searchMs = Date.now() - searchStart;
       const results = searchResponse.results.map(toStreamResult);
       this.cache.set(cacheKey, results);
-      $debug.info('AIOStreams: search complete', {
+      log.info('search complete', {
         count: results.length,
         searchMs,
         errorCount: searchResponse.errors?.length ?? 0,
       });
-      this.applyResultsToPanel({
+      return {
+        ...base,
         results,
-        loading: false,
-        error: null,
-        episodeInfo,
-        timeTakenMs: Date.now() - startTime,
-        animeLookupMs,
-        searchMs,
         fromCache: false,
         errors: searchResponse.errors ?? [],
         statistics: searchResponse.statistics ?? [],
-        lookup,
-        sessionId,
-        autoPlay: autoPlay && results.length > 0,
-      });
-      if (autoPlay && results.length > 0) this.player.play(0);
+        searchMs,
+        timeTakenMs: Date.now() - startTime,
+        error: null,
+      };
     } catch (err) {
       searchMs = Date.now() - searchStart;
-      console.error('AIOStreams: stream search failed', err);
+      log.error('stream search failed', err);
       const msg = err instanceof Error ? err.message : String(err);
-      this.applyResultsToPanel({
+      return {
+        ...base,
         results: [],
-        loading: false,
-        error: msg,
-        episodeInfo,
-        timeTakenMs: Date.now() - startTime,
-        animeLookupMs,
-        searchMs,
         fromCache: false,
         errors: [],
         statistics: [],
-        lookup,
-        sessionId,
-        autoPlay: false,
-      });
+        searchMs,
+        timeTakenMs: Date.now() - startTime,
+        error: msg,
+      };
     }
+  }
+
+  private outcomeToState(
+    outcome: SearchOutcome,
+    sessionId: string,
+    autoPlay: boolean
+  ): WebviewState {
+    return {
+      results: outcome.results,
+      loading: false,
+      error: outcome.error,
+      episodeInfo: outcome.episodeInfo,
+      timeTakenMs: outcome.timeTakenMs,
+      animeLookupMs: outcome.animeLookupMs,
+      searchMs: outcome.searchMs,
+      fromCache: outcome.fromCache,
+      errors: outcome.errors,
+      statistics: outcome.statistics,
+      lookup: outcome.lookup,
+      sessionId,
+      autoPlay,
+    };
+  }
+
+  async fetch(
+    anime: $app.AL_BaseAnime,
+    episode: $app.Anime_Episode | number
+  ): Promise<void> {
+    const episodeNumber =
+      typeof episode === 'number' ? episode : episode.episodeNumber;
+    const api = this.createApi({ silent: false });
+    if (!api) return;
+    const searchId = ($getUserPreference('searchId') ??
+      'imdbId') as SearchIdPref;
+
+    log.info('fetching streams', {
+      animeId: anime.id,
+      episodeNumber,
+      searchId,
+      format: anime.format ?? null,
+    });
+    log.debug('anime details', anime);
+    log.debug('episode details', episode);
+
+    const animeTitle = anime.title?.userPreferred ?? 'Unknown';
+    const isMovie = String(anime.format ?? '').toUpperCase() === 'MOVIE';
+    const episodeInfo = isMovie
+      ? animeTitle
+      : `${animeTitle} \xb7 Episode ${episodeNumber}`;
+
+    this.pendingAnime.set(anime);
+    this.pendingEp.set(episode);
+
+    const autoPlay = this.ctx.preferences.playback.autoPlayFirstStream;
+    const sessionId = this.setSessionId();
+    this.resetDownloadSession();
+
+    this.panel.wvState.set({
+      results: [],
+      loading: true,
+      error: null,
+      episodeInfo,
+      timeTakenMs: null,
+      animeLookupMs: null,
+      searchMs: null,
+      fromCache: false,
+      errors: [],
+      statistics: [],
+      lookup: null,
+      sessionId,
+      autoPlay,
+    });
+    this.panel.show();
+
+    const outcome = await this.performSearch(api, anime, episode);
+    this.lastCacheKey = outcome.cacheKey;
+    if (!Array.isArray(outcome.results)) outcome.results = [];
+
+    const play = !outcome.error && autoPlay && outcome.results.length > 0;
+    this.applyResultsToPanel(this.outcomeToState(outcome, sessionId, play));
+    if (play) this.player.play(0);
+  }
+
+  // Silently fetches and caches results for an episode without touching the
+  // panel or pending refs
+  async prefetch(
+    anime: $app.AL_BaseAnime,
+    episode: $app.Anime_Episode | number
+  ): Promise<void> {
+    const api = this.createApi({ silent: true });
+    if (!api) return;
+    try {
+      const outcome = await this.performSearch(api, anime, episode);
+      if (outcome.error) {
+        log.warn('prefetch failed', outcome.error);
+      } else {
+        log.info('prefetched episode streams', {
+          cacheKey: outcome.cacheKey,
+          count: outcome.results.length,
+          fromCache: outcome.fromCache,
+        });
+      }
+    } catch (err) {
+      log.warn('prefetch failed', err);
+    }
+  }
+
+  // fetches the given episode's streams with the panel
+  // hidden and plays the first result whose bingeGroup matches the stream the
+  // user originally picked. Falls back to the regular presentation (panel /
+  // autoPlayFirstStream) when nothing matches.
+  async fetchAutoNext(
+    anime: $app.AL_BaseAnime,
+    episode: $app.Anime_Episode | number,
+    bingeGroup: string | null
+  ): Promise<void> {
+    const episodeNumber =
+      typeof episode === 'number' ? episode : episode.episodeNumber;
+    const api = this.createApi({ silent: false });
+    if (!api) return;
+
+    log.info('auto-next fetching streams', {
+      animeId: anime.id,
+      episodeNumber,
+      bingeGroup,
+    });
+
+    this.pendingAnime.set(anime);
+    this.pendingEp.set(episode);
+
+    const sessionId = this.setSessionId();
+    this.resetDownloadSession();
+
+    const outcome = await this.performSearch(api, anime, episode);
+    this.lastCacheKey = outcome.cacheKey;
+    if (!Array.isArray(outcome.results)) outcome.results = [];
+
+    if (outcome.error) {
+      this.applyResultsToPanel(this.outcomeToState(outcome, sessionId, false));
+      this.ctx.toast.error(
+        `Could not fetch the next episode: ${outcome.error}`
+      );
+      this.panel.show();
+      return;
+    }
+
+    if (outcome.results.length === 0) {
+      this.applyResultsToPanel(this.outcomeToState(outcome, sessionId, false));
+      this.ctx.toast.info('No streams found for the next episode.');
+      this.panel.show();
+      return;
+    }
+
+    const matchIndex =
+      bingeGroup !== null
+        ? outcome.results.findIndex((r) => r.bingeGroup === bingeGroup)
+        : -1;
+
+    if (matchIndex >= 0) {
+      log.info('auto-next bingeGroup match', {
+        matchIndex,
+        bingeGroup,
+        stream: outcome.results[matchIndex].name,
+      });
+      this.applyResultsToPanel(this.outcomeToState(outcome, sessionId, true));
+      this.ctx.toast.info(`Playing Episode ${episodeNumber}…`);
+      this.player.play(matchIndex);
+      return;
+    }
+
+    log.info('auto-next found no bingeGroup match', {
+      bingeGroup,
+      resultCount: outcome.results.length,
+      autoPlayFirstStream: this.ctx.preferences.playback.autoPlayFirstStream,
+    });
+
+    if (this.ctx.preferences.playback.autoPlayFirstStream) {
+      this.applyResultsToPanel(this.outcomeToState(outcome, sessionId, true));
+      this.ctx.toast.info(
+        `No matching stream, playing the first result for Episode ${episodeNumber}.`
+      );
+      this.player.play(0);
+      return;
+    }
+
+    this.applyResultsToPanel(this.outcomeToState(outcome, sessionId, false));
+    this.ctx.toast.info(
+      'No matching stream for auto-play, pick one to continue.'
+    );
+    this.panel.show();
   }
 
   private applyResultsToPanel(state: WebviewState): void {

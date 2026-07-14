@@ -4,6 +4,7 @@ import { useAppSidebarContext } from '@/components/ui/app-layout';
 import { cn } from '@/components/ui/core/styling';
 import type { VerticalMenuItem } from '@/components/ui/vertical-menu';
 import { Sidebar } from '@/components/sidebar/Sidebar';
+import { CommandPaletteSearchButton } from '@/components/shared/command-palette/search-button';
 import { useStatus } from '@/context/status';
 import { useMenu, MenuId } from '@/context/menu';
 import { useUserData } from '@/context/userData';
@@ -77,10 +78,6 @@ export function MainSidebar() {
   const { status, error, loading } = useStatus();
   const { mode, setMode } = useMode();
   const { open: openCommandPalette } = useCommandPalette();
-  const isMac =
-    typeof navigator !== 'undefined' &&
-    /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-  const shortcutLabel = isMac ? '⌘K' : 'Ctrl K';
 
   const confirmClearConfig = useConfirmationDialog({
     title: 'Sign Out',
@@ -237,44 +234,10 @@ export function MainSidebar() {
           </span>
         )}
       </div>
-      <div className={cn('mb-3', isCollapsed ? 'flex justify-center' : 'px-4')}>
-        {isCollapsed ? (
-          <Tooltip
-            side="right"
-            trigger={
-              <button
-                type="button"
-                onClick={() => {
-                  openCommandPalette();
-                  ctx.setOpen(false);
-                }}
-                className="group/search flex w-11 h-10 items-center justify-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-0"
-                aria-label="Search settings"
-              >
-                <BiSearch className="text-base shrink-0" />
-              </button>
-            }
-          >
-            Search settings ({shortcutLabel})
-          </Tooltip>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              openCommandPalette();
-              ctx.setOpen(false);
-            }}
-            className="group/search flex w-full h-9 items-center gap-2 rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors px-3 text-sm"
-            aria-label="Search settings"
-          >
-            <BiSearch className="text-base shrink-0" />
-            <span className="flex-1 text-left">Search settings…</span>
-            <kbd className="font-mono text-xs px-1.5 py-0.5 rounded border border-[--border] bg-[--background] text-[--muted] leading-none">
-              {shortcutLabel}
-            </kbd>
-          </button>
-        )}
-      </div>
+      <CommandPaletteSearchButton
+        label="Search settings"
+        onOpen={openCommandPalette}
+      />
     </>
   );
 

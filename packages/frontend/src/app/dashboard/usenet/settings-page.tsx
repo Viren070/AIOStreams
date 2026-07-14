@@ -1,20 +1,29 @@
 import React from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { BiCog } from 'react-icons/bi';
 import { useFormContext, useWatch, type UseFormReturn } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { Card } from '@/components/ui/card';
 import { DashboardLoading } from '@/components/shared/dashboard-query-boundary';
-import { SettingsCard } from '../settings/_components/settings-card';
+import {
+  SettingsCard,
+  SettingsPageHeader,
+} from '../settings/_components/settings-card';
 import { SettingsField, toName } from '../settings/_components/settings-field';
 import {
   SettingsSubmitButton,
   SettingsIsDirty,
 } from '../settings/_components/settings-submit-button';
 import type { SettingsKey } from '../settings/queries';
+import { SettingsActionsMenu } from '../settings/_components/settings-actions-menu';
+import MarkdownLite from '@/components/shared/markdown-lite';
+import { useScrollToField } from '@/components/shared/command-palette/use-scroll-to-field';
 import {
   useUsenetSettings,
   useSaveUsenetSettings,
+  USENET_SETTINGS_QUERY_KEY,
   type UsenetProfiles,
 } from './queries';
 
@@ -28,6 +37,16 @@ const PROFILE_LEAF = 'performanceProfile';
 
 const usenetKey = (leaf: string) => `usenet.${leaf}`;
 
+/** Scope for the settings actions menu: every usenet engine key except the
+ *  provider accounts (managed in their own editor). Mirrors the backend's
+ *  `isManagedUsenetKey` so reset/import/export can never touch providers. */
+const USENET_SCOPE = {
+  includes: (key: string) =>
+    key.startsWith('usenet.') && key !== 'usenet.providers',
+  fileStem: 'aiostreams-usenet-settings',
+  noun: 'usenet',
+} as const;
+
 /**
  * Curated section layout for the usenet engine settings. Keys are grouped by
  * leaf name (the part after `usenet.`); anything unmapped falls into "Other" so
@@ -37,7 +56,7 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
   {
     title: 'Performance',
     leaves: [PROFILE_LEAF, ...BUNDLED_LEAVES],
-    note: 'Pick a profile to fill in the values below with sensible defaults — editing any of them switches the profile to “custom”. The active profile is what the engine actually uses.',
+    note: 'Pick a profile and the values below are filled in for you — that is all most setups need. Editing any of the values switches the profile to **custom**.',
   },
   {
     title: 'Connections & timeouts',
@@ -46,6 +65,7 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
       'segmentTimeout',
       'dialTimeout',
       'idleConnection',
+      'streamIdleTimeout',
     ],
   },
   {
@@ -66,15 +86,13 @@ const SECTIONS: { title: string; leaves: string[]; note?: string }[] = [
       'censusMaxLifetime',
     ],
     note:
-      'Before a stream URL is minted, AIOStreams runs checks so dead or incomplete releases fail upfront instead of mid-playback: ' +
-      '(1) a per-file probe body-fetches the first segment of each file to identify the content and catch missing or undecodable files; ' +
-      '(2) a census audits every data segment of the release with cheap STAT existence probes, running alongside the import so it adds no latency — badly damaged releases fail the import, lightly damaged ones import as “degraded” (per the damage policy) and are zero-filled during playback, and whatever the import window did not cover finishes in the background. ' +
-      'That background tail runs at the census background concurrency below and is bounded by the census max lifetime. ' +
-      'Providers whose STAT answers prove untrustworthy (gateways that claim articles they cannot deliver) are excluded from census evidence automatically, and a provider that keeps missing a release during playback is demoted so a healthy one serves it.',
+      'When something is imported, AIOStreams checks that it can actually be downloaded from your providers — so broken or incomplete releases are caught up front instead of failing mid-playback. ' +
+      'The checks run alongside the import, so they normally add no waiting time: badly damaged releases are rejected, slightly damaged ones can still play (the damage policy below decides), and any checking that did not finish during the import simply continues in the background. ' +
+      'Providers that give unreliable answers are detected and ignored automatically.',
   },
   {
     title: 'Import & API',
-    leaves: ['maxNzbSize', 'sabnzbdApiEnabled'],
+    leaves: ['maxNzbSize', 'maxConcurrentInspects', 'sabnzbdApiEnabled'],
   },
 ];
 
@@ -167,6 +185,21 @@ export function UsenetSettingsPage() {
   const query = useUsenetSettings();
   const { mutateAsync, isPending } = useSaveUsenetSettings();
   const methodsRef = React.useRef<UseFormReturn<any> | null>(null);
+  const search = useSearch({ from: '/dashboard/usenet/settings' });
+  const navigate = useNavigate({ from: '/dashboard/usenet/settings' });
+
+  const clearField = React.useCallback(() => {
+    navigate({
+      to: '.',
+      search: (prev) => ({ ...prev, field: undefined }),
+      replace: true,
+      resetScroll: false,
+    });
+  }, [navigate]);
+
+  // Must run before the early-return guards below, to satisfy the rules of
+  // hooks. The fields only exist once the settings payload has arrived.
+  useScrollToField(search.field, Boolean(query.data), clearField);
 
   const keys = query.data?.keys ?? [];
   const profiles = query.data?.profiles ?? {};
@@ -213,74 +246,92 @@ export function UsenetSettingsPage() {
   const profileNameKey = toName(usenetKey(PROFILE_LEAF));
 
   return (
-    <Form
-      // Re-key on the loaded values so a refetch after save re-seeds defaults.
-      key={keys.map((k) => `${k.key}:${String(k.value)}`).join('|')}
-      schema={schema}
-      defaultValues={defaults}
-      stackClass="space-y-4 relative"
-      onSubmit={async (data: Record<string, unknown>) => {
-        // When a non-custom profile is active the engine derives the four
-        // bundled values from it, so we don't persist those fields (they'd just
-        // be stale shadows) — only the profile choice itself.
-        const profileActive = data[profileNameKey] !== 'custom';
-        const patch: Record<string, unknown> = {};
-        for (const [n, val] of Object.entries(data)) {
-          const k = byName.get(n);
-          if (!k || k.source === 'environment') continue;
-          if (profileActive && bundledNames.has(n)) continue;
-          const isNullable = k.value === null || k.default === null;
-          const normalised = isNullable && val === '' ? null : val;
-          if (JSON.stringify(normalised) !== JSON.stringify(k.value)) {
-            patch[k.key] = normalised;
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-2">
+        <SettingsPageHeader
+          title="Settings"
+          description="Configuration for the built-in usenet engine"
+          icon={BiCog}
+        />
+        <div className="pt-1">
+          <SettingsActionsMenu
+            sectionKeys={keys}
+            sectionLabel="Usenet"
+            invalidate={[USENET_SETTINGS_QUERY_KEY]}
+            scope={USENET_SCOPE}
+          />
+        </div>
+      </div>
+      <Form
+        // Re-key on the loaded values so a refetch after save re-seeds defaults.
+        key={keys.map((k) => `${k.key}:${String(k.value)}`).join('|')}
+        schema={schema}
+        defaultValues={defaults}
+        stackClass="space-y-4 relative"
+        onSubmit={async (data: Record<string, unknown>) => {
+          const profileActive = data[profileNameKey] !== 'custom';
+          const patch: Record<string, unknown> = {};
+          for (const [n, val] of Object.entries(data)) {
+            const k = byName.get(n);
+            if (!k || k.source === 'environment') continue;
+            if (profileActive && bundledNames.has(n)) continue;
+            const isNullable = k.value === null || k.default === null;
+            const normalised = isNullable && val === '' ? null : val;
+            if (JSON.stringify(normalised) !== JSON.stringify(k.value)) {
+              patch[k.key] = normalised;
+            }
           }
-        }
-        if (Object.keys(patch).length === 0) {
-          toast.info('No changes to save.');
-          methodsRef.current?.reset(data, { keepValues: true });
-          return;
-        }
-        try {
-          const res = await mutateAsync(patch);
-          toast.success(
-            `Saved ${res.updated.length} setting${res.updated.length === 1 ? '' : 's'}.`
+          if (Object.keys(patch).length === 0) {
+            toast.info('No changes to save.');
+            methodsRef.current?.reset(data, { keepValues: true });
+            return;
+          }
+          try {
+            const res = await mutateAsync(patch);
+            toast.success(
+              `Saved ${res.updated.length} setting${res.updated.length === 1 ? '' : 's'}.`
+            );
+            methodsRef.current?.reset(data, { keepValues: true });
+            if (res.requiresRestart)
+              toast.warning('Some changes require a restart to take effect.', {
+                duration: 8000,
+              });
+          } catch (e: any) {
+            const issues = e?.issues as Record<string, string> | undefined;
+            if (issues)
+              for (const [key, msg] of Object.entries(issues))
+                toast.error(`${key}: ${msg}`);
+            else toast.error(e?.message ?? 'Failed to save settings');
+          }
+        }}
+      >
+        {(methods) => {
+          methodsRef.current = methods;
+          return (
+            <>
+              <ProfileLinker profiles={profiles} />
+              {groups.map((g) => (
+                <SettingsCard key={g.title} title={g.title}>
+                  {g.note && (
+                    <p className="text-xs text-[--muted] -mt-1 mb-1">
+                      <MarkdownLite>{g.note}</MarkdownLite>
+                    </p>
+                  )}
+                  {g.keys.map((k) => (
+                    <div key={k.key} id={`setting-${k.key}`}>
+                      <SettingsField k={k} />
+                    </div>
+                  ))}
+                </SettingsCard>
+              ))}
+              <div className="flex justify-end">
+                <SettingsSubmitButton isPending={isPending} />
+              </div>
+              <SettingsIsDirty isPending={isPending} />
+            </>
           );
-          methodsRef.current?.reset(data, { keepValues: true });
-          if (res.requiresRestart)
-            toast.warning('Some changes require a restart to take effect.', {
-              duration: 8000,
-            });
-        } catch (e: any) {
-          const issues = e?.issues as Record<string, string> | undefined;
-          if (issues)
-            for (const [key, msg] of Object.entries(issues))
-              toast.error(`${key}: ${msg}`);
-          else toast.error(e?.message ?? 'Failed to save settings');
-        }
-      }}
-    >
-      {(methods) => {
-        methodsRef.current = methods;
-        return (
-          <>
-            <ProfileLinker profiles={profiles} />
-            {groups.map((g) => (
-              <SettingsCard key={g.title} title={g.title}>
-                {g.note && (
-                  <p className="text-xs text-[--muted] -mt-1 mb-1">{g.note}</p>
-                )}
-                {g.keys.map((k) => (
-                  <SettingsField key={k.key} k={k} />
-                ))}
-              </SettingsCard>
-            ))}
-            <div className="flex justify-end">
-              <SettingsSubmitButton isPending={isPending} />
-            </div>
-            <SettingsIsDirty isPending={isPending} />
-          </>
-        );
-      }}
-    </Form>
+        }}
+      </Form>
+    </div>
   );
 }

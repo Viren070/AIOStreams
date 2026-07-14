@@ -290,7 +290,8 @@ pre {
 
 .halo:after {
   opacity: 0.1;
-  background-image: radial-gradient(at 27% 37%, #fd3a67 0, transparent 50%),
+  background-image:
+    radial-gradient(at 27% 37%, #fd3a67 0, transparent 50%),
     radial-gradient(at 97% 21%, #9772fe 0, transparent 70%),
     radial-gradient(at 52% 99%, #fd3a4e 0, transparent 50%),
     radial-gradient(at 10% 29%, #fc5ab0 0, transparent 50%),
@@ -310,7 +311,8 @@ pre {
 
 .halo-2:after {
   opacity: 0.1;
-  background-image: radial-gradient(at 27% 37%, #fd3a67 0, transparent 30%),
+  background-image:
+    radial-gradient(at 27% 37%, #fd3a67 0, transparent 30%),
     radial-gradient(at 97% 21%, #9772fe 0, transparent 70%),
     radial-gradient(at 52% 99%, #fd3a4e 0, transparent 20%),
     radial-gradient(at 10% 29%, #fc5ab0 0, transparent 20%),
@@ -339,4 +341,39 @@ pre {
   /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
+}
+
+/* The pulse the command palette leaves on whatever it scrolled you to.
+   Duration is mirrored by HIGHLIGHT_MS in command-palette/scroll-highlight.ts.
+ */
+[data-command-target='true'] {
+  border-radius: var(--radius-md);
+  animation: command-target-pulse 1.6s ease-out;
+}
+
+@keyframes command-target-pulse {
+  0% {
+    background-color: rgb(var(--color-brand-500) / 0);
+    box-shadow:
+      0 0 0 2px rgb(var(--color-brand-500) / 0),
+      0 0 20px 4px rgb(var(--color-brand-500) / 0);
+  }
+  12% {
+    background-color: rgb(var(--color-brand-500) / 0.14);
+    box-shadow:
+      0 0 0 2px rgb(var(--color-brand-500) / 0.85),
+      0 0 20px 4px rgb(var(--color-brand-500) / 0.3);
+  }
+  60% {
+    background-color: rgb(var(--color-brand-500) / 0.08);
+    box-shadow:
+      0 0 0 2px rgb(var(--color-brand-500) / 0.45),
+      0 0 16px 3px rgb(var(--color-brand-500) / 0.15);
+  }
+  100% {
+    background-color: rgb(var(--color-brand-500) / 0);
+    box-shadow:
+      0 0 0 2px rgb(var(--color-brand-500) / 0),
+      0 0 16px 3px rgb(var(--color-brand-500) / 0);
+  }
 }

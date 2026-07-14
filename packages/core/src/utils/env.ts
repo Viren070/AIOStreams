@@ -265,25 +265,6 @@ export const Env = cleanEnv(process.env, {
     default: 30,
     desc: 'How often (seconds) each instance polls the DB settings version and reloads runtime config if another instance changed it. Set 0 to disable (single-instance deployments).',
   }),
-  LOG_LEVEL: str({
-    default: 'info',
-    desc: 'Log level for the addon',
-    choices: [
-      'info',
-      'debug',
-      'warn',
-      'error',
-      'verbose',
-      'silly',
-      'http',
-      'trace',
-    ],
-  }),
-  LOG_FORMAT: str({
-    default: 'json',
-    desc: 'Log format for the addon',
-    choices: ['text', 'json'],
-  }),
   LOG_BUFFER_MAX_BYTES: num({
     default: 67108864,
     desc: 'Max bytes of recent log lines kept in memory for the dashboard Logs page.',

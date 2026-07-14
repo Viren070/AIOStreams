@@ -16,3 +16,4 @@ export { presetsSchema } from './presets.js';
 export { builtinsSchema } from './builtins.js';
 export { analyticsSchema } from './analytics.js';
 export { usenetSchema } from './usenet.js';
+export { releaseBlocklistSchema } from './release-blocklist.js';

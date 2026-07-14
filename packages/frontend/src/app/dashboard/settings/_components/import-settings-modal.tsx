@@ -2,6 +2,7 @@ import React from 'react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
 import { BiArrowBack } from 'react-icons/bi';
+import type { QueryKey } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
@@ -14,6 +15,9 @@ interface ParsedFile {
   settings: Record<string, unknown>;
   /** Secret keys deliberately stripped from the payload (masked in source). */
   maskedSecrets: string[];
+  /** Keys dropped because they fell outside the menu's scope (e.g. a full-config
+   *  backup imported on a scoped page). */
+  outOfScope: string[];
   /** Total entries seen in the source file (including filtered secrets). */
   totalEntries: number;
   exportedAt?: string;
@@ -24,9 +28,15 @@ interface ParsedFile {
 /**
  * Parse and lightly validate a settings export JSON. Filters out masked
  * secrets (value=null + key in maskedSecretKeys) so the server doesn't try
- * to write null into a non-nullable secret field.
+ * to write null into a non-nullable secret field. When `restrict` is given
+ * (scoped menus), keys outside the scope are dropped and reported so a
+ * full-config backup imported on e.g. the usenet page only applies its own keys.
  */
-function parseExportFile(text: string, fileName: string): ParsedFile {
+function parseExportFile(
+  text: string,
+  fileName: string,
+  restrict?: (key: string) => boolean
+): ParsedFile {
   const parsed = JSON.parse(text) as {
     settings?: unknown;
     maskedSecretKeys?: unknown;
@@ -50,7 +60,12 @@ function parseExportFile(text: string, fileName: string): ParsedFile {
   const source = parsed.settings as Record<string, unknown>;
   const filtered: Record<string, unknown> = {};
   const maskedSecrets: string[] = [];
+  const outOfScope: string[] = [];
   for (const [key, value] of Object.entries(source)) {
+    if (restrict && !restrict(key)) {
+      outOfScope.push(key);
+      continue;
+    }
     if (masked.has(key) && value === null) {
       maskedSecrets.push(key);
       continue;
@@ -60,6 +75,7 @@ function parseExportFile(text: string, fileName: string): ParsedFile {
   return {
     settings: filtered,
     maskedSecrets,
+    outOfScope,
     totalEntries: Object.keys(source).length,
     exportedAt:
       typeof parsed.exportedAt === 'string' ? parsed.exportedAt : undefined,
@@ -93,11 +109,18 @@ const stepTransition = {
 export function ImportSettingsModal({
   open,
   onOpenChange,
+  restrict,
+  invalidate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When set, keys failing this predicate are dropped before import (scoped
+   *  menus, e.g. usenet only accepts `usenet.*`). */
+  restrict?: (key: string) => boolean;
+  /** Query keys to refetch after a successful import. */
+  invalidate?: QueryKey[];
 }) {
-  const { mutateAsync, isPending } = useImportSettings();
+  const { mutateAsync, isPending } = useImportSettings(invalidate);
 
   const [step, setStep] = React.useState<Step>('pick');
   const [file, setFile] = React.useState<ParsedFile | null>(null);
@@ -118,7 +141,7 @@ export function ImportSettingsModal({
     setParseError(null);
     try {
       const text = await f.text();
-      const parsed = parseExportFile(text, f.name);
+      const parsed = parseExportFile(text, f.name, restrict);
       setFile(parsed);
       setStep('review');
     } catch (e: any) {
@@ -254,6 +277,15 @@ export function ImportSettingsModal({
                     {file.totalEntries === 1 ? 'y' : 'ies'} in source.
                   </span>
                 }
+                isClosable={false}
+              />
+            )}
+
+            {file.outOfScope.length > 0 && (
+              <Alert
+                intent="info"
+                title={`${file.outOfScope.length} entr${file.outOfScope.length === 1 ? 'y' : 'ies'} outside this section ignored`}
+                description="Only keys managed by this page will be imported; everything else in the file is left untouched."
                 isClosable={false}
               />
             )}

@@ -242,6 +242,7 @@ export function describeSettings(): Record<string, SettingsUiHint> {
       if (ui?.multiline) hint.multiline = true;
       if (ui?.mapWidth) hint.mapWidth = ui.mapWidth;
       if (ui?.min !== undefined) hint.min = ui.min;
+      if (ui?.options) hint.options = [...ui.options];
       if (ui?.hidden) hint.hidden = true;
       out[key] = hint;
     }

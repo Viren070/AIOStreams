@@ -1,4 +1,5 @@
 export * from './engine.js';
+export * from './inspect-scheduler.js';
 export * from './tokens.js';
 export * from './naming.js';
 export * from './errors.js';

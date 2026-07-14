@@ -1,4 +1,6 @@
 import { createHash, createDecipheriv } from 'node:crypto';
+import { ArchiveBadPasswordError } from '../errors.js';
+import { MAX_ARCHIVE_PASSWORD } from './password.js';
 
 /**
  * 7-zip AES-256-CBC + SHA-256 decryption, ported from `bodgit/sevenzip`. Used
@@ -50,13 +52,17 @@ const keyCache = new Map<string, Buffer>();
 
 /**
  * Derive the AES-256 key from the password (UTF-16LE), salt and cycles.
- * `cycles === 0x3f` copies salt+password directly into the key.
+ * `cycles === 0x3f` copies salt+password directly into the key. An over-long
+ * password is rejected
  */
 export function deriveAesKey(
   password: string,
   cycles: number,
   salt: Buffer
 ): Buffer {
+  if (password.length > MAX_ARCHIVE_PASSWORD) {
+    throw new ArchiveBadPasswordError('7z password exceeds the maximum length');
+  }
   const cacheKey = `${cycles}:${salt.toString('hex')}:${password}`;
   const cached = keyCache.get(cacheKey);
   if (cached) return cached;

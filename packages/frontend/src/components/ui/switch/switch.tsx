@@ -115,7 +115,6 @@ export type SwitchProps = BasicFieldOptions &
      */
     inputRef?: React.Ref<HTMLInputElement>;
     className?: string;
-    moreHelp?: React.ReactNode;
   };
 
 export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
@@ -132,10 +131,9 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         defaultValue,
         inputRef,
         side,
-        moreHelp,
         ...rest
       },
-      { label, ...basicFieldProps },
+      { label, moreHelp, ...basicFieldProps },
     ] = extractBasicFieldProps(props, React.useId());
 
     const isFirst = React.useRef(true);

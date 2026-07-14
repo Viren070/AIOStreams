@@ -1,7 +1,9 @@
 import { parseSemVersion, compareSemVersions } from '../../lib/version';
 import { DownloadManager } from './download-manager';
+import { log } from './logger';
 import { getPreferences } from './preferences';
 import { ResultsPanel } from './results-panel';
+import { AutoNextController } from './stream/auto-next';
 import { StreamCache } from './stream/cache';
 import { StreamFetcher } from './stream/fetcher';
 import { StreamPlayer } from './stream/player';
@@ -47,17 +49,24 @@ function init() {
   $ui.register<Context>((ctx) => {
     checkSeanimeVersion();
     ctx.preferences = getPreferences();
-    console.log(
-      `AIOStreams plugin loaded (Seanime v${$app.getVersion as unknown as string})`
+    log.info(
+      `plugin loaded (Seanime v${$app.getVersion as unknown as string})`
     );
-    $debug.debug('AIOStreams: resolved preferences', ctx.preferences);
+    log.debug('resolved preferences', ctx.preferences);
 
     let resultsSessionId = newSessionId();
     const cache = new StreamCache(ctx, SK_CACHE_STORE);
     const panel = new ResultsPanel(ctx, emptyWebviewState(resultsSessionId));
     const pendingAnime = ctx.state<$app.AL_BaseAnime | null>(null);
     const pendingEp = ctx.state<$app.Anime_Episode | number | null>(null);
-    const player = new StreamPlayer(ctx, panel, pendingAnime, pendingEp);
+    const autoNext = new AutoNextController(ctx);
+    const player = new StreamPlayer(
+      ctx,
+      panel,
+      pendingAnime,
+      pendingEp,
+      autoNext
+    );
     const downloads = new DownloadManager(ctx, panel, () => resultsSessionId);
 
     const fetcher = new StreamFetcher(
@@ -73,6 +82,8 @@ function init() {
       },
       () => downloads.resetSession()
     );
+    autoNext.wire(fetcher);
+    if (ctx.preferences.playback.autoNext) autoNext.registerListeners();
 
     // Tray event handlers
     const reopenPanelHandlerId = ctx.eventHandler('aio-reopen-panel', () => {

@@ -13,6 +13,7 @@ export * from './formatters/index.js';
 export * from './transformers/index.js';
 export * from './debrid/index.js';
 export * from './usenet/integration/index.js';
+export * from './release-blocklist/index.js';
 export * from './proxy/index.js';
 export {
   TorBoxSearchAddon,

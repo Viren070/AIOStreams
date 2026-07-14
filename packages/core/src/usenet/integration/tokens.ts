@@ -16,6 +16,8 @@ export interface UsenetStreamToken {
   innerPath?: string;
   /** Best-effort display filename. */
   filename: string;
+  /** Shareable release key (`wd1:`), when the indexer metadata allowed one. */
+  releaseKey?: string;
 }
 
 /**

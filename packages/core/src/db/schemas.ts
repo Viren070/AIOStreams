@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import * as constants from '../utils/constants.js';
 import { config } from '../config/index.js';
+import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
 /**
  * Stream Expression Language string with a runtime-configurable maximum length
@@ -945,9 +946,16 @@ export const NNTPServersSchema = z.array(NNTPServerSchema);
 
 export type NNTPServers = z.infer<typeof NNTPServersSchema>;
 
+export const ReleaseKeySchema = z
+  .string()
+  .regex(WD1_KEY_REGEX)
+  .optional()
+  .catch(undefined);
+
 export const StreamSchema = z.looseObject({
   url: z.string().or(z.null()).optional(),
   nzbUrl: z.string().or(z.null()).optional(),
+  releaseKey: ReleaseKeySchema,
   servers: z.array(z.string().min(1)).nullable().optional(),
   rarUrls: z.array(SourceSchema).nullable().optional(),
   zipUrls: z.array(SourceSchema).nullable().optional(),
@@ -1094,6 +1102,7 @@ export const ParsedStreamSchema = z.object({
   passthrough: PassthroughSchema.optional(),
   url: z.string().optional(),
   nzbUrl: z.string().optional(),
+  releaseKey: ReleaseKeySchema,
   // Same-release failover targets harvested from discarded duplicates by the
   // deduplicator merge step. Each is another playback URL for the *same*
   // release (a different indexer's NZB or another addon's debrid link).
@@ -1316,6 +1325,7 @@ export const AIOStream = StreamSchema.extend({
       indexer: z.string().optional(),
       age: z.number().or(z.string()).optional(), // Age in hours since upload
       nzbUrl: z.string().or(z.null()).optional(),
+      releaseKey: ReleaseKeySchema,
       torrent: z
         .object({
           infoHash: z.string().min(1).optional(),

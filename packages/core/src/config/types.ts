@@ -34,6 +34,11 @@ export interface RuntimeConfigUiOverride {
   /** Minimum allowed value for `number` fields (default: 0). */
   min?: number;
   /**
+   * For `enum` - the values offered in the UI, when they are narrower than the
+   * ones the schema accepts
+   */
+  options?: string[];
+  /**
    * Hide this field from the generic settings page. Used for fields managed by
    * a bespoke editor elsewhere (e.g. `usenet.providers` lives in the usenet
    * dashboard). The value is still stored/served via that editor, never here.

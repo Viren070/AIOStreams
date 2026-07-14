@@ -1,6 +1,6 @@
 import { cva } from 'class-variance-authority';
 import * as React from 'react';
-import { Accept, FileError, useDropzone } from 'react-dropzone';
+import { Accept, FileError, FileRejection, useDropzone } from 'react-dropzone';
 import {
   BasicField,
   BasicFieldOptions,
@@ -128,6 +128,11 @@ export type SimpleDropzoneProps = Omit<
      */
     onError?: (err: Error) => void;
     /**
+     * Callback fired when one or more files are rejected (wrong type, too
+     * large, too many, etc.). Each rejection carries the file and its errors.
+     */
+    onDropRejected?: (fileRejections: FileRejection[]) => void;
+    /**
      * Custom file validator function
      */
     validator?: <T extends File>(file: T) => FileError | FileError[] | null;
@@ -169,6 +174,7 @@ export const SimpleDropzone = React.forwardRef<
       noClick,
       noDrag,
       onError,
+      onDropRejected,
       validator,
       multiple,
       value, // ignored
@@ -218,6 +224,7 @@ export const SimpleDropzone = React.forwardRef<
       validator,
       accept,
       onError,
+      onDropRejected,
     });
 
   return (

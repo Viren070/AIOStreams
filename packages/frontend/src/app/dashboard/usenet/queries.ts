@@ -4,6 +4,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { SettingsKey } from '../settings/queries';
@@ -39,15 +40,26 @@ export interface ProviderPoolInfo {
   available: number;
   max: number;
   tripped: boolean;
+  throttled: boolean;
   isBackup: boolean;
   freeSlots: number;
   throughput: number;
+  /** Requests waiting in the pool's queues (not yet on a connection). */
+  queued: number;
+  /** Epoch ms of the last successful dial; undefined if never dialed. */
+  lastDialOkAt?: number;
+  /** Most recent failed dial attempt (not cleared by later successes). */
+  lastDialError?: { at: number; kind: string; message: string };
 }
 
 export interface PoolInfo {
   providers: ProviderPoolInfo[];
   globalDownloadsInUse: number;
   globalDownloadMax: number;
+  /** In-use permits whose transfer has actually started on a connection. */
+  globalDownloadsOnWire: number;
+  /** Fetches still waiting for a semaphore permit (e.g. prefetch bursts). */
+  globalDownloadsWaiting: number;
 }
 
 export interface CacheStats {
@@ -81,7 +93,8 @@ export interface UsenetProviderStatRow {
   bytes: number;
   errors: number;
   missing: number;
-  avgLatencyMs: number;
+  avgLatencyMs: number | null;
+  avgArticleMs: number;
   avgBytesPerSec: number;
   errorRate: number;
   missRate: number;
@@ -94,7 +107,7 @@ export interface UsenetThroughputPoint {
   bytes: number;
   errors: number;
   missing: number;
-  avgLatencyMs: number;
+  avgLatencyMs: number | null;
   avgBytesPerSec: number;
 }
 
@@ -110,7 +123,8 @@ export interface UsenetStatsOverview {
     bytes: number;
     errors: number;
     missing: number;
-    avgLatencyMs: number;
+    avgLatencyMs: number | null;
+    avgArticleMs: number;
     avgBytesPerSec: number;
   };
   providers: UsenetProviderStatRow[];
@@ -135,6 +149,18 @@ export interface LiveStats {
   pool: PoolInfo;
   cache: CacheStats;
   streams: LiveStreamInfo[];
+  /**
+   * The server's sampling interval, present only on streamed frames.
+   */
+  tickMs?: number;
+}
+
+/** Ease window when no frame has arrived yet. */
+export const LIVE_FRAME_FALLBACK_MS = 500;
+
+/** How long the UI should take to ease from the last live frame to this one. */
+export function liveFrameMs(d: LiveStats | undefined): number {
+  return d?.tickMs ?? LIVE_FRAME_FALLBACK_MS;
 }
 
 export interface MaskedProvider {
@@ -214,9 +240,27 @@ export interface LibraryEntry {
   nzbUrl?: string;
   category?: string;
   password?: string;
+  releaseKey?: string;
+  blocked?: boolean;
+}
+
+/**
+ * Every blocklist key a library entry is known by: the portable `wd1:`
+ * fingerprint (when the search recorded one) plus the exact-post `nh1:`
+ * content hash that parsed rows are keyed under.
+ */
+export function releaseBlocklistKeys(e: LibraryEntry): string[] {
+  const keys: string[] = [];
+  if (e.releaseKey) keys.push(e.releaseKey);
+  if (/^[0-9a-f]{40}$/.test(e.nzbHash)) keys.push(`nh1:${e.nzbHash}`);
+  return keys;
 }
 
 const ROOT = ['dashboard', 'usenet'] as const;
+
+/** Query key for the usenet engine settings; exported so the settings actions
+ *  menu can invalidate it after a scoped reset/import. */
+export const USENET_SETTINGS_QUERY_KEY = [...ROOT, 'settings'] as const;
 
 export function useUsenetStats(window: UsenetWindow) {
   return useQuery({
@@ -228,12 +272,58 @@ export function useUsenetStats(window: UsenetWindow) {
   });
 }
 
+const LIVE_QUERY_KEY = [...ROOT, 'live'] as const;
+
+/**
+ * The live stream is shared: `useUsenetLive` can mount in more than one place,
+ * and browsers cap concurrent connections per host, so refcount a single
+ * EventSource instead of opening one per consumer.
+ */
+let liveSource: EventSource | null = null;
+let liveRefs = 0;
+
+function subscribeLive(qc: QueryClient): () => void {
+  liveRefs++;
+  if (!liveSource) {
+    liveSource = new EventSource('/api/v1/dashboard/usenet/live/stream', {
+      withCredentials: true,
+    });
+    // Browsers auto-reconnect SSE on transient errors; nothing to do on error.
+    liveSource.onmessage = (e) => {
+      try {
+        qc.setQueryData(LIVE_QUERY_KEY, JSON.parse(e.data) as LiveStats);
+      } catch {
+        /* ignore a malformed frame */
+      }
+    };
+  }
+  return () => {
+    if (--liveRefs > 0) return;
+    liveSource?.close();
+    liveSource = null;
+  };
+}
+
 export function useUsenetLive(enabled = true) {
+  const qc = useQueryClient();
+  React.useEffect(() => {
+    if (!enabled) return;
+    return subscribeLive(qc);
+  }, [qc, enabled]);
   return useQuery({
-    queryKey: [...ROOT, 'live'],
+    queryKey: LIVE_QUERY_KEY,
     queryFn: () => api<LiveStats>('/dashboard/usenet/live'),
-    refetchInterval: 4_000,
+    staleTime: Infinity,
     enabled,
+  });
+}
+
+export function useStopStream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api(`DELETE /dashboard/usenet/streams/${encodeURIComponent(id)}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: LIVE_QUERY_KEY }),
   });
 }
 
@@ -288,14 +378,15 @@ export interface UsenetProfilePreset {
 }
 export type UsenetProfiles = Record<string, UsenetProfilePreset>;
 
-export function useUsenetSettings() {
+export function useUsenetSettings(opts?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: [...ROOT, 'settings'],
+    queryKey: USENET_SETTINGS_QUERY_KEY,
     queryFn: () =>
       api<{ keys: SettingsKey[]; profiles: UsenetProfiles }>(
         '/dashboard/usenet/settings'
       ),
     staleTime: 10_000,
+    enabled: opts?.enabled ?? true,
   });
 }
 
@@ -307,7 +398,8 @@ export function useSaveUsenetSettings() {
         'PATCH /dashboard/usenet/settings',
         { body: patch }
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...ROOT, 'settings'] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: USENET_SETTINGS_QUERY_KEY }),
   });
 }
 
@@ -448,6 +540,54 @@ export function usePlayUrl() {
  */
 export function usenetNzbExportUrl(hash: string): string {
   return `/api/v1/dashboard/usenet/library/${encodeURIComponent(hash)}/nzb`;
+}
+
+/**
+ * Mark library entries' releases dead on this instance's blocklist, each under
+ * every key it is known by. Entries with no blocklist key are dropped, so the
+ * caller must ensure at least one entry has keys. Refetches the library (for
+ * the `blocked` flag) and the blocklist pages.
+ */
+export function useBlockRelease() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (entries: LibraryEntry[]) =>
+      api('POST /dashboard/blocklist/mark', {
+        body: {
+          releases: entries
+            .map(releaseBlocklistKeys)
+            .filter((keys) => keys.length > 0),
+          verdict: 'dead',
+        },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...ROOT, 'library'] });
+      qc.invalidateQueries({ queryKey: ['dashboard', 'blocklist'] });
+    },
+  });
+}
+
+export interface RequeueResult {
+  requeued: number;
+  failed: number;
+  /** The first failure's message, when any entry failed. */
+  error?: string;
+}
+
+/**
+ * Re-import library entries: each source NZB is re-fetched and pushed back
+ * through the inspect queue, replacing the existing row. Partial failures come
+ * back in the result rather than as a rejection.
+ */
+export function useRequeueEntries() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (hashes: string[]) =>
+      api<RequeueResult>('POST /dashboard/usenet/library/requeue', {
+        body: { hashes },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...ROOT, 'library'] }),
+  });
 }
 
 export function useDeleteLibraryEntry() {

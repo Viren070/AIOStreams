@@ -14,6 +14,7 @@ import {
   extractNamesFromExpression,
 } from '../parser/streamExpression.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
+import { applyReleaseBlocklist } from '../release-blocklist/filter.js';
 import {
   normaliseTitle,
   preprocessTitle,
@@ -73,6 +74,7 @@ export interface FilterStatistics {
     requiredFilterCondition: Reason;
     size: Reason;
     bitrate: Reason;
+    blocklisted: Reason;
   };
   included: {
     passthrough: Reason;
@@ -178,6 +180,7 @@ class StreamFilterer {
         requiredFilterCondition: { total: 0, details: {} },
         size: { total: 0, details: {} },
         bitrate: { total: 0, details: {} },
+        blocklisted: { total: 0, details: {} },
       },
       included: {
         passthrough: { total: 0, details: {} },
@@ -239,6 +242,15 @@ class StreamFilterer {
 
   public getFilterStatistics() {
     return this.filterStatistics;
+  }
+
+  /** Instance-wide release-blocklist pass, applied before deduplication. */
+  public async filterBlocklisted(
+    streams: ParsedStream[]
+  ): Promise<ParsedStream[]> {
+    return applyReleaseBlocklist(streams, (_stream, verdict) =>
+      this.incrementRemovalReason('blocklisted', verdict.verdict ?? 'flagged')
+    );
   }
 
   public getFilterTimings(): FilterTimings {

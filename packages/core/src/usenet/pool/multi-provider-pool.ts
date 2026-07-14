@@ -62,10 +62,32 @@ export class MultiProviderPool {
    * article.
    */
   private inflightHeads = new Map<string, Promise<SegmentHeadData>>();
+  /**
+   * Budget permits whose transfer has actually started on a connection.
+   */
+  private onWireCount = 0;
 
   /** The pinned decoded-body tier (owned by the segment cache). */
   private get arena(): SegmentArena {
     return this.cache.arena;
+  }
+
+  /** Tracks one permit-holding fetch's transition onto the wire. */
+  private wireTracker(): { start: () => void; end: () => void } {
+    let onWire = false;
+    return {
+      // Failover may invoke `run` once per candidate; count the fetch once.
+      start: () => {
+        if (onWire) return;
+        onWire = true;
+        this.onWireCount++;
+      },
+      end: () => {
+        if (!onWire) return;
+        onWire = false;
+        this.onWireCount--;
+      },
+    };
   }
 
   constructor(
@@ -300,12 +322,15 @@ export class MultiProviderPool {
     } catch {
       throw new NntpError('connection', 'aborted');
     }
+    const wire = this.wireTracker();
     try {
       const data = await this.fetcher.fetchBody(
         segment,
         nzbHash,
         priority,
-        out
+        out,
+        signal,
+        wire.start
       );
       // Write-through for ALL priorities, including import probes that still take
       // the full path (par2, mid-volume header reads). RAM is protected by the
@@ -314,6 +339,7 @@ export class MultiProviderPool {
       this.cache.set(segment.messageId, data, { skipMem: out !== undefined });
       return data;
     } finally {
+      wire.end();
       releaseGlobal();
     }
   }
@@ -358,9 +384,17 @@ export class MultiProviderPool {
           priority,
           undefined
         );
+        const wire = this.wireTracker();
         try {
-          return await this.fetcher.fetchHead(segment, nzbHash, priority, want);
+          return await this.fetcher.fetchHead(
+            segment,
+            nzbHash,
+            priority,
+            want,
+            wire.start
+          );
         } finally {
+          wire.end();
           releaseGlobal();
         }
       })();
@@ -432,13 +466,16 @@ export class MultiProviderPool {
       CommandPriority.Low,
       signal
     );
+    const wire = this.wireTracker();
     try {
       return await this.fetcher.probeBodyOnProvider(
         segment,
         providerId,
-        signal
+        signal,
+        wire.start
       );
     } finally {
+      wire.end();
       releaseGlobal();
     }
   }
@@ -453,11 +490,18 @@ export class MultiProviderPool {
     return this.globalDownloads.inUse;
   }
 
+  /** Leased download slots whose transfer has actually started on a connection. */
+  get downloadsOnWire(): number {
+    return this.onWireCount;
+  }
+
   poolInfo(): PoolInfo {
     return {
       providers: this.fetcher.info(),
       globalDownloadsInUse: this.globalDownloads.inUse,
       globalDownloadMax: this.globalDownloads.capacity,
+      globalDownloadsOnWire: this.onWireCount,
+      globalDownloadsWaiting: this.globalDownloads.waiting,
     };
   }
 

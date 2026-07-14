@@ -3759,7 +3759,8 @@ function Content() {
                           !userData.deduplicator?.merge?.enabled
                         }
                         value={
-                          userData.deduplicator?.merge?.failoverVariants ?? false
+                          userData.deduplicator?.merge?.failoverVariants ??
+                          false
                         }
                         onValueChange={(value) => {
                           setUserData((prev) => ({

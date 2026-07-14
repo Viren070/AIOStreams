@@ -18,6 +18,7 @@ import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boun
 import { useDebounce } from '@/hooks/debounce';
 import { api } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
+import { copyToClipboard } from '@/utils/clipboard';
 
 interface UserItem {
   uuid: string;
@@ -276,12 +277,12 @@ export function UsersPage() {
                       <td
                         className="p-3 font-mono text-xs cursor-pointer"
                         title={u.uuid}
-                        onClick={() => {
-                          navigator.clipboard
-                            ?.writeText(u.uuid)
-                            .catch(() => {});
-                          toast.success('UUID copied');
-                        }}
+                        onClick={() =>
+                          void copyToClipboard(u.uuid, {
+                            onSuccess: () => toast.success('UUID copied'),
+                            onError: () => toast.error('Copy failed'),
+                          })
+                        }
                       >
                         {u.uuid.slice(0, 8)}…{u.uuid.slice(-4)}
                       </td>

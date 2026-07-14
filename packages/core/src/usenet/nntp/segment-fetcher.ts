@@ -69,14 +69,17 @@ export interface SegmentFetcher {
     segment: NzbSegmentRef,
     nzbHash: string,
     priority: CommandPriority,
-    out?: () => Buffer
+    out?: () => Buffer,
+    signal?: AbortSignal,
+    onWireStart?: () => void
   ): Promise<SegmentData>;
   /** Head-only probe: decode the leading `want` bytes + yEnc header fields. */
   fetchHead(
     segment: NzbSegmentRef,
     nzbHash: string,
     priority: CommandPriority,
-    want: number
+    want: number,
+    onWireStart?: () => void
   ): Promise<SegmentHeadData>;
   /** STAT existence probe across providers (no download budget). */
   statSegment(
@@ -97,7 +100,8 @@ export interface SegmentFetcher {
   probeBodyOnProvider(
     segment: NzbSegmentRef,
     providerId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onWireStart?: () => void
   ): Promise<'ok' | 'not_found' | 'unreachable'>;
   /** Configured provider ids, in priority order. */
   providerIds(): string[];
@@ -302,6 +306,14 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           circuitBreakerCooldownMs: opts.circuitBreakerCooldownMs,
           pipelineDepth: depthOf(p),
           streamingPriority: opts.streamingPriority,
+          onDialError: () =>
+            this.stats.record({ type: 'connection_error', providerId: p.id }),
+          onLatencySample: (ttfbMs) =>
+            this.stats.record({
+              type: 'latency_sample',
+              providerId: p.id,
+              ttfbMs,
+            }),
         };
         return new ProviderWorkerPool(p, poolOpts);
       });
@@ -311,13 +323,16 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     segment: NzbSegmentRef,
     nzbHash: string,
     priority: CommandPriority,
-    out?: () => Buffer
+    out?: () => Buffer,
+    signal?: AbortSignal,
+    onWireStart?: () => void
   ): Promise<SegmentData> {
     return this.submitWithFailover<SegmentData>(
       segment,
       nzbHash,
       priority,
       async (conn) => {
+        onWireStart?.();
         const raw = await conn.body(
           segment.messageId,
           undefined,
@@ -334,7 +349,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           size: decoded.size,
         };
         return { value: data, bytes: data.size };
-      }
+      },
+      signal
     );
   }
 
@@ -342,13 +358,15 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     segment: NzbSegmentRef,
     nzbHash: string,
     priority: CommandPriority,
-    want: number
+    want: number,
+    onWireStart?: () => void
   ): Promise<SegmentHeadData> {
     return this.submitWithFailover<SegmentHeadData>(
       segment,
       nzbHash,
       priority,
       async (conn) => {
+        onWireStart?.();
         const capture = new YencHeadCapture(want);
         const rawBytes = await conn.bodyStreaming(
           segment.messageId,
@@ -409,6 +427,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         const { value: exists } = await awaitAbortable(
           pool.submit<boolean>({
             priority,
+            signal,
             run: async (conn) => ({
               value: await conn.stat(
                 messageId,
@@ -451,7 +470,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
   async probeBodyOnProvider(
     segment: NzbSegmentRef,
     providerId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onWireStart?: () => void
   ): Promise<'ok' | 'not_found' | 'unreachable'> {
     const pool = this.pools.find((p) => p.id === providerId);
     if (!pool) return 'unreachable';
@@ -459,7 +479,9 @@ export class LocalSegmentFetcher implements SegmentFetcher {
       await awaitAbortable(
         pool.submit<number>({
           priority: CommandPriority.Low,
+          signal,
           run: async (conn) => {
+            onWireStart?.();
             // Raw transfer only: the calibration signal is 222-vs-430, and
             // skipping the decode keeps corrupt-but-delivered articles from
             // reading as a lying STAT.
@@ -511,7 +533,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     segment: NzbSegmentRef,
     nzbHash: string | undefined,
     priority: CommandPriority,
-    run: (conn: NntpConnection) => Promise<{ value: T; bytes: number }>
+    run: (conn: NntpConnection) => Promise<{ value: T; bytes: number }>,
+    signal?: AbortSignal
   ): Promise<T> {
     const notFound = new Set<string>();
     let lastTransient: NntpError | null = null;
@@ -525,6 +548,9 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     const candidates = this.orderedCandidates(nzbHash);
     let escalationLogged = false;
     for (const pool of candidates) {
+      if (signal?.aborted) {
+        throw new NntpError('connection', 'aborted');
+      }
       if (
         pool.isBackup &&
         !escalationLogged &&
@@ -545,6 +571,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         const { value, bytes, durationMs } = await pool.submit<T>({
           priority,
           run,
+          signal,
         });
         if (nzbHash) this.affinity.record(nzbHash, pool.id, false, 'body');
         this.stats.record({
@@ -709,8 +736,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         return b.freeSlots - a.freeSlots;
       }
       // Unmeasured (0) sorts as fastest so a fresh provider gets sampled.
-      const la = a.avgLatencyMs || 0;
-      const lb = b.avgLatencyMs || 0;
+      const la = a.avgServiceTimeMs || 0;
+      const lb = b.avgServiceTimeMs || 0;
       return la - lb;
     };
     healthy.sort(order);

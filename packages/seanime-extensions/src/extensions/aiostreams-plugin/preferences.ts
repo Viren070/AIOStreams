@@ -6,6 +6,8 @@ export function getPreferences(): Context['preferences'] {
     playback: {
       mode: getPlayerModePref(),
       autoPlayFirstStream: prefBool('autoPlayFirstStream', false),
+      autoNext: prefBool('autoPlayNextEpisode', true),
+      prefetchNext: prefBool('prefetchNextEpisode', false),
     },
     cacheTtl: getCacheTtlMinutes(),
     downloadLocation: resolveDownloadDir(),

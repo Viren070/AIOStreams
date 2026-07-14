@@ -250,6 +250,7 @@ export class DiskBackedCache<V> {
       this.misses++;
       return undefined;
     }
+    await this.ready.catch(() => {});
     const fileKey = this.fileKey(key);
     if (!this.disk.has(fileKey)) {
       this.misses++;

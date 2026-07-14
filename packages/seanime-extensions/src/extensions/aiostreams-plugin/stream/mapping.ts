@@ -23,5 +23,6 @@ export function toStreamResult(r: AIOStreamsSearchApiResult): StreamResult {
     seadexBest: r.seadexBest ?? null,
     magnetLink: buildMagnetLink(r),
     fileIdx: r.fileIdx ?? null,
+    bingeGroup: r.bingeGroup ?? null,
   };
 }

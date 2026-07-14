@@ -26,6 +26,7 @@ import { requireAdmin } from '../../middlewares/auth.js';
 import { createResponse } from '../../utils/responses.js';
 import { getSystemMetrics } from '../../utils/system-metrics.js';
 import usenetDashboard from './dashboard-usenet.js';
+import blocklistDashboard from './dashboard-blocklist.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
@@ -35,6 +36,9 @@ router.use(requireAdmin);
 
 // Native usenet engine: stats, providers, library.
 router.use('/usenet', usenetDashboard);
+
+// Release blocklist: sources, entries, overrides, import/export.
+router.use('/blocklist', blocklistDashboard);
 
 function csv(v: unknown): string[] | undefined {
   if (typeof v !== 'string' || !v.trim()) return undefined;

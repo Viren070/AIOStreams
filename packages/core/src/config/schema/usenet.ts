@@ -111,11 +111,11 @@ export const usenetSchema = {
     default: 'balanced',
     label: 'Performance profile',
     description:
-      'Bundled speed/resource preset. `balanced` (default) suits a typical ' +
-      'box; `high` saturates a fast link on a beefy machine; `conservative` ' +
-      'is gentle on low-RAM/CPU hosts; `custom` uses the individual fields ' +
-      'below. A profile sets the per-stream read-ahead window and disk cache ' +
-      'size together.',
+      'How hard the engine works. **balanced** (the default) is right for ' +
+      'most setups. **high** downloads more aggressively — best with a fast ' +
+      'connection and a powerful machine. **conservative** uses less memory ' +
+      'and CPU — best for small servers and NAS boxes. **custom** lets you ' +
+      'tune the individual values below yourself.',
     env: 'USENET_PERFORMANCE_PROFILE',
     requiresRestart: false,
     secret: false,
@@ -126,14 +126,25 @@ export const usenetSchema = {
     default: 0,
     label: 'Max concurrent downloads',
     description:
-      'Hard ceiling on concurrent article/body downloads in flight across ' +
-      'every stream. This counts downloads, not sockets: with pipeline depth D ' +
-      'it is roughly value ÷ D connections per account, and each account is ' +
-      'still bounded by its own max connections. `0` (default) means auto: the ' +
-      'sum of every enabled provider’s max connections × its pipeline depth, so ' +
-      'the default never throttles pipelining; set a lower value to cap total ' +
-      'concurrency (e.g. to protect a weak host).',
+      'The most download requests the engine will run at the same time, ' +
+      'across everything it does. **0** (the default) works this out ' +
+      'automatically from your providers’ connection limits — leave it ' +
+      'there unless AIOStreams is putting too much load on the machine it ' +
+      'runs on, in which case set a lower number.',
     env: ['USENET_MAX_CONCURRENT_DOWNLOADS', 'USENET_MAX_DOWNLOAD_CONNECTIONS'],
+    requiresRestart: false,
+    secret: false,
+    ui: HIDDEN,
+  },
+  maxConcurrentInspects: {
+    schema: nonNegativeInt,
+    default: 4,
+    label: 'Max concurrent imports',
+    description:
+      'How many NZB imports may run at the same time. ' +
+      'Extra imports wait in a queue, and playback-triggered imports are ' +
+      'served before background adds. **0** removes the limit.',
+    env: 'USENET_MAX_CONCURRENT_INSPECTS',
     requiresRestart: false,
     secret: false,
     ui: HIDDEN,
@@ -143,13 +154,9 @@ export const usenetSchema = {
     default: 32,
     label: 'Read-ahead (segments)',
     description:
-      'Per-stream read-ahead window, in segments: how many segments a single ' +
-      'stream fetches in parallel ahead of the read cursor (and the reorder-' +
-      'buffer size). This is the per-stream parallelism — one stream can use the ' +
-      'whole connection budget, and the global max bounds how many run at once, ' +
-      'so concurrent streams fair-share it. Higher saturates a fast link and ' +
-      'rides out latency jitter at the cost of memory. Used when the performance ' +
-      'profile is `custom`.',
+      'How many pieces of the file each stream downloads ahead of the ' +
+      'current playback position. Higher values give faster, smoother ' +
+      'streaming on a good connection, but use more memory per stream. ',
     env: 'USENET_PREFETCH_SEGMENTS',
     requiresRestart: false,
     secret: false,
@@ -160,11 +167,10 @@ export const usenetSchema = {
     default: 0.8,
     label: 'Streaming priority share',
     description:
-      'When playback and background work (inspect/health/import) compete for the ' +
-      'same connections, the share (0–1) of grants given to playback; the rest go ' +
-      'to background so it keeps progressing instead of being starved. `0.8` ' +
-      '(default) strongly favours playback while letting imports advance; `1` = ' +
-      'strict — playback always wins. Only applies under contention.',
+      'How strongly active playback is favoured over background work (like ' +
+      'imports and health checks) when both want to download at once, from ' +
+      '0 to 1. **0.8** (the default) keeps playback smooth while background ' +
+      'work still makes progress; **1** means playback always goes first.',
     env: 'USENET_STREAMING_PRIORITY',
     requiresRestart: false,
     secret: false,
@@ -175,8 +181,9 @@ export const usenetSchema = {
     default: 2 * GB,
     label: 'Segment disk cache size',
     description:
-      'On-disk decoded-segment cache size (survives restarts). Set to `0` to ' +
-      'disable caching. Accepts plain bytes or `2GB`-style strings.',
+      'How much disk space to use for keeping recently downloaded data. ' +
+      'The cache survives restarts and makes seeking and re-watching ' +
+      'faster. Set to **0** to disable it.',
     env: 'USENET_SEGMENT_DISK_CACHE_BYTES',
     requiresRestart: false,
     secret: false,
@@ -187,7 +194,7 @@ export const usenetSchema = {
     default: 30,
     label: 'Segment timeout',
     description:
-      'Per-command/segment hard timeout. Accepts seconds or a duration string (e.g. 30s, 1m).',
+      'How long to wait for one piece of a download before giving up on it and retrying elsewhere.',
     env: 'USENET_SEGMENT_TIMEOUT',
     requiresRestart: false,
     secret: false,
@@ -198,7 +205,7 @@ export const usenetSchema = {
     default: 15,
     label: 'Dial timeout',
     description:
-      'TCP/TLS connection dial timeout. Accepts seconds or a duration string (e.g. 15s).',
+      'How long to wait when opening a connection to a provider before giving up.',
     env: 'USENET_DIAL_TIMEOUT',
     requiresRestart: false,
     secret: false,
@@ -209,8 +216,23 @@ export const usenetSchema = {
     default: 60,
     label: 'Idle connection TTL',
     description:
-      'How long an idle connection is kept before it is purged. Accepts seconds or a duration string (e.g. 1m).',
+      'How long to keep unused provider connections open. Keeping them ' +
+      'around for a little while makes the next request start faster.',
     env: 'USENET_IDLE_CONNECTION',
+    requiresRestart: false,
+    secret: false,
+    ui: { kind: 'duration' as const, hidden: true },
+  },
+  streamIdleTimeout: {
+    schema: seconds,
+    default: 3600,
+    label: 'Stream idle timeout',
+    description:
+      'Close a playback stream that has sent no data for this long, so ' +
+      'abandoned connections cannot hold provider connections and memory ' +
+      'forever. A paused player simply reconnects when it resumes. Set to ' +
+      '**0** to disable.',
+    env: 'USENET_STREAM_IDLE_TIMEOUT',
     requiresRestart: false,
     secret: false,
     ui: { kind: 'duration' as const, hidden: true },
@@ -220,8 +242,8 @@ export const usenetSchema = {
     default: 5,
     label: 'Circuit breaker threshold',
     description:
-      'Consecutive failures before a provider circuit-breaker trips and the ' +
-      'provider is briefly taken out of rotation.',
+      'How many times in a row a provider can fail before the engine ' +
+      'temporarily stops using it.',
     env: 'USENET_CIRCUIT_BREAKER_THRESHOLD',
     requiresRestart: false,
     secret: false,
@@ -232,7 +254,7 @@ export const usenetSchema = {
     default: 30,
     label: 'Circuit breaker cooldown',
     description:
-      'Cooldown before a tripped provider is probed again. Accepts seconds or a duration string (e.g. 30s).',
+      'How long a failing provider is rested before the engine tries it again.',
     env: 'USENET_CIRCUIT_BREAKER_COOLDOWN',
     requiresRestart: false,
     secret: false,
@@ -243,11 +265,10 @@ export const usenetSchema = {
     default: true,
     label: 'Lazy RAR resolution',
     description:
-      'For multi-volume RAR sets whose exact volume sizes are recoverable ' +
-      'from PAR2 descriptors, skip the middle-volume probes at import and ' +
-      'read each volume header on first touch during playback instead — ' +
-      'season-pack imports drop from one fetch per volume to roughly one per ' +
-      'inner file. Disable to restore exhaustive per-volume probing.',
+      'Makes importing large multi-part RAR releases (like season packs) ' +
+      'much faster by reading some archive details on demand during ' +
+      'playback instead of all up front. Leave this on unless you are ' +
+      'troubleshooting a release that will not play.',
     env: 'USENET_LAZY_RAR_RESOLUTION',
     requiresRestart: false,
     secret: false,
@@ -258,12 +279,11 @@ export const usenetSchema = {
     default: false,
     label: 'Strict archive membership',
     description:
-      'For obfuscated split-7z posts (random-named parts whose real .7z.NNN ' +
-      'names live only in the yEnc headers), probe every volume so each is ' +
-      'identified authoritatively (by yEnc name / PAR2 descriptor) instead of ' +
-      'inferring names by position. Eliminates rare mis-grouping of such sets ' +
-      'at the cost of one first-segment fetch per volume. The default ' +
-      '(off) uses a cheaper size-checked inference that handles the common case.',
+      'Some releases hide their real file names (“obfuscated” posts). ' +
+      'Turning this on makes the engine identify every part of such split ' +
+      'archives individually, which fixes rare cases of parts being ' +
+      'matched up wrongly — at the cost of slower imports for those ' +
+      'releases. Leave off unless an obfuscated release imports broken.',
     env: 'USENET_STRICT_ARCHIVE_MEMBERSHIP',
     requiresRestart: false,
     secret: false,
@@ -274,15 +294,12 @@ export const usenetSchema = {
     default: 'census',
     label: 'Verify mode',
     description:
-      'Import-time availability verification. `census` (default) audits every ' +
-      'data segment of the release with cheap STAT existence probes, run ' +
-      'concurrently with the import so it adds no latency: releases with ' +
-      'catastrophic damage fail the import, small damage imports as ' +
-      '“degraded” (see damage policy), and whatever the import window did not ' +
-      'cover finishes in the background right after. Providers whose STAT ' +
-      'answers prove untrustworthy (cache gateways that claim articles they ' +
-      'cannot deliver) are detected and excluded automatically. `none` skips ' +
-      'verification entirely.',
+      'Whether to check that a release is actually complete on your ' +
+      'providers when it is imported. **census** (the default) checks every ' +
+      'part of the download without slowing the import down — badly ' +
+      'damaged releases are rejected straight away, and slightly damaged ' +
+      'ones are handled by the damage policy below. **none** skips the ' +
+      'check; broken releases will then only fail once you try to play them.',
     env: 'USENET_VERIFY_MODE',
     requiresRestart: false,
     secret: false,
@@ -293,11 +310,11 @@ export const usenetSchema = {
     default: 0,
     label: 'Verify budget',
     description:
-      'Extra milliseconds an import may wait for census evidence after ' +
-      'inspection finishes. The default 0 never delays the import (the ' +
-      'census still runs concurrently and completes in the background); ' +
-      'raise it to trade import latency for more damage detection before ' +
-      'the first byte is served.',
+      'Extra time (in milliseconds) an import may spend waiting on the ' +
+      'completeness check before finishing. **0** (the default) never ' +
+      'delays imports — the check simply carries on in the background. ' +
+      'Raise it to catch more damage before a stream is offered, at the ' +
+      'cost of slower imports.',
     env: 'USENET_VERIFY_BUDGET_MS',
     requiresRestart: false,
     secret: false,
@@ -308,13 +325,10 @@ export const usenetSchema = {
     default: 12,
     label: 'Census background concurrency',
     description:
-      'How many probe requests the census keeps in flight per release once ' +
-      'the import has returned and the audit continues in the background. ' +
-      'The import-time share always uses the full budget (up to 40, bounded ' +
-      'by max concurrent downloads); this only throttles the background ' +
-      'tail. Lower is gentler on provider connections during playback; ' +
-      'higher finishes the audit (and the final degraded/failed verdict) ' +
-      'sooner.',
+      'How many checks run at the same time when a completeness check ' +
+      'carries on in the background after an import. Lower is gentler on ' +
+      'your provider connections while you are streaming; higher reaches ' +
+      'the final verdict sooner.',
     env: 'USENET_CENSUS_SHADOW_CONCURRENCY',
     requiresRestart: false,
     secret: false,
@@ -325,12 +339,9 @@ export const usenetSchema = {
     default: 1800,
     label: 'Census max lifetime',
     description:
-      'Hard cap on how long one census may run in total (import share plus ' +
-      'background tail) before it is cancelled. Bounds how long a background ' +
-      'audit can keep the engine and its connections warm; a cancelled ' +
-      'census leaves the import-time verdict in place. Raise it if very ' +
-      'large releases end their audit incomplete at the default background ' +
-      'concurrency. Accepts seconds or a duration string (e.g. 30m).',
+      'The longest a completeness check may keep running before it is ' +
+      'stopped. Raise this if checks on very large releases are being cut ' +
+      'off before they finish.',
     env: 'USENET_CENSUS_MAX_LIFETIME',
     requiresRestart: false,
     secret: false,
@@ -341,12 +352,11 @@ export const usenetSchema = {
     default: 'tolerant',
     label: 'Damage policy',
     description:
-      'What to do when verification finds SMALL damage (a few missing ' +
-      'articles, within the playback padding caps). `tolerant` (default) ' +
-      'imports the release as “degraded”: playback zero-fills the missing ' +
-      'ranges, which shows up as brief glitches instead of a dead stream. ' +
-      '`strict` fails the import so another release can be picked instead. ' +
-      'Releases damaged beyond the padding caps fail under both policies.',
+      'What to do when a release has a small amount of damage (a few ' +
+      'missing pieces). **tolerant** (the default) imports it anyway, ' +
+      'marked as “degraded” — playback skips over the gaps, which may show ' +
+      'as a brief glitch. **strict** rejects it so a different release can ' +
+      'be picked instead. Heavily damaged releases are always rejected.',
     env: 'USENET_DAMAGE_POLICY',
     requiresRestart: false,
     secret: false,
@@ -357,10 +367,9 @@ export const usenetSchema = {
     default: 150 * MB,
     label: 'Max NZB size',
     description:
-      'Largest accepted .nzb file, applied to dashboard uploads, the SABnzbd ' +
-      'API and indexer grabs alike. Season packs of split archives can reach ' +
-      'tens of MB; raise this if imports are rejected as too large. Accepts ' +
-      'plain bytes or `150MB`-style strings.',
+      'The largest NZB file the engine will accept — whether uploaded in ' +
+      'the dashboard, grabbed from an indexer, or sent through the SABnzbd ' +
+      'API. Raise it if large season packs are being rejected as too big.',
     env: 'USENET_MAX_NZB_SIZE',
     requiresRestart: false,
     secret: false,
@@ -371,11 +380,10 @@ export const usenetSchema = {
     default: true,
     label: 'SABnzbd-compatible API',
     description:
-      'Serve a SABnzbd-compatible API at `/api/v1/sabnzbd/api` so tools like ' +
-      'Sonarr, Radarr and Prowlarr can send NZBs to the built-in usenet ' +
-      'engine as if it were a SABnzbd download client (use `/api/v1/sabnzbd` ' +
-      'as the client’s URL base). The `apikey` is an `AIOSTREAMS_AUTH` ' +
-      'credential in `username:password` form.',
+      'Lets apps like Sonarr, Radarr and Prowlarr send downloads to ' +
+      'AIOStreams as if it were a SABnzbd download client. Point them at ' +
+      '`/api/v1/sabnzbd`, with an `AIOSTREAMS_AUTH` credential in ' +
+      '`username:password` form as the API key.',
     env: 'USENET_SABNZBD_API_ENABLED',
     requiresRestart: false,
     secret: false,

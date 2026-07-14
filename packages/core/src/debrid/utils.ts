@@ -54,43 +54,49 @@ export function cleanNzbUrl(url: string): string {
 }
 
 /**
- * Compute an MD5 hash of a cleaned NZB URL.
+ * Known NZB download URL shapes that have identifiers in query parameters.
+ */
+const NZB_URL_SHAPES: ReadonlyArray<{
+  pathSuffix: string;
+  /** Params retained in the hashed URL; all must be present for a match. */
+  keep: readonly string[];
+  matches?: (params: URLSearchParams) => boolean;
+}> = [
+  {
+    // newznab t=get / t=g requests. `t` is kept as part of the canonical form,
+    // not because it identifies the release.
+    pathSuffix: '/api',
+    keep: ['t', 'id'],
+    matches: (params) => ['get', 'g'].includes(params.get('t')!),
+  },
+  // prowlarr nzb urls
+  { pathSuffix: '/download', keep: ['link'] },
+  { pathSuffix: '/getnzb', keep: ['id'] },
+];
+
+const md5 = (value: string): string =>
+  createHash('md5').update(value).digest('hex');
+
+/**
+ * Compute an MD5 hash identifying an NZB URL.
  */
 export function hashNzbUrl(url: string, clean: boolean = true): string {
   try {
     const u = new URL(url);
     const pathName = u.pathname.replace(/\/$/, '');
-    // newznab t=get or t=g requests
-    if (pathName.endsWith('/api')) {
-      const t = u.searchParams.get('t');
-      const id = u.searchParams.get('id');
-      if ((t === 'get' || t === 'g') && id) {
-        const keys = Array.from(u.searchParams.keys());
-        for (const key of keys) {
-          if (key !== 't' && key !== 'id') {
-            u.searchParams.delete(key);
-          }
+    for (const shape of NZB_URL_SHAPES) {
+      if (!pathName.endsWith(shape.pathSuffix)) continue;
+      if (shape.keep.some((key) => !u.searchParams.get(key))) continue;
+      if (shape.matches && !shape.matches(u.searchParams)) continue;
+      for (const key of Array.from(u.searchParams.keys())) {
+        if (!shape.keep.includes(key)) {
+          u.searchParams.delete(key);
         }
-        return createHash('md5').update(u.toString()).digest('hex');
       }
-    }
-    // prowlarr nzb urls
-    if (pathName.endsWith('/download')) {
-      const link = u.searchParams.get('link');
-      if (link) {
-        const keys = Array.from(u.searchParams.keys());
-        for (const key of keys) {
-          if (key !== 'link') {
-            u.searchParams.delete(key);
-          }
-        }
-        return createHash('md5').update(u.toString()).digest('hex');
-      }
+      return md5(u.toString());
     }
   } catch {}
-  return createHash('md5')
-    .update(clean ? cleanNzbUrl(url) : url)
-    .digest('hex');
+  return md5(clean ? cleanNzbUrl(url) : url);
 }
 
 /**
@@ -201,6 +207,7 @@ export interface NZB extends BaseFile {
   easynewsUrl?: string;
   zyclopsHealth?: string;
   serviceItemId?: string;
+  releaseKey?: string;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {

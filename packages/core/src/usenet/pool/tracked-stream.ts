@@ -1,6 +1,52 @@
 import { Readable } from 'node:stream';
 import { StatsAccumulator } from '../stats/accumulator.js';
 import { SeekableStream } from './file-stream.js';
+import { createLogger } from '../../logging/logger.js';
+
+const logger = createLogger('usenet/tracked-stream');
+
+/**
+ * The engine force-closed a read stream
+ */
+export class UsenetStreamReapedError extends Error {
+  readonly code = 'USENET_STREAM_REAPED';
+}
+
+/**
+ * Destroy every tracked reader that has pushed no bytes for `thresholdMs`.
+ * Cleanup then flows through the reader's own 'close' handler (the one
+ * registered at open), so there is no second bookkeeping path. Returns the
+ * number of readers reaped.
+ */
+export function reapIdleStreams(
+  stats: StatsAccumulator,
+  liveReaders: ReadonlyMap<number, Readable>,
+  thresholdMs: number,
+  now = Date.now()
+): number {
+  let reaped = 0;
+  for (const idle of stats.idleStreams(thresholdMs, now)) {
+    const reader = liveReaders.get(idle.id);
+    if (!reader || reader.destroyed) continue;
+    logger.warn(
+      {
+        id: idle.id,
+        filename: idle.filename,
+        nzbHash: idle.nzbHash,
+        idleMs: idle.idleMs,
+        bytesServed: idle.bytesServed,
+      },
+      'reaping idle usenet stream'
+    );
+    reader.destroy(
+      new UsenetStreamReapedError(
+        `stream idle for ${Math.round(idle.idleMs / 1000)}s`
+      )
+    );
+    reaped++;
+  }
+  return reaped;
+}
 
 /**
  * Wrap a {@link SeekableStream} handed out by the engine so every read stream
@@ -14,7 +60,7 @@ export function trackSeekableStream(
   stream: SeekableStream,
   stats: StatsAccumulator,
   nzbHash: string,
-  liveReaders?: Set<Readable>
+  liveReaders?: Map<number, Readable>
 ): SeekableStream {
   return new TrackedSeekableStream(stream, stats, nzbHash, liveReaders);
 }
@@ -24,7 +70,7 @@ class TrackedSeekableStream implements SeekableStream {
     private readonly inner: SeekableStream,
     private readonly stats: StatsAccumulator,
     private readonly nzbHash: string,
-    private readonly liveReaders?: Set<Readable>
+    private readonly liveReaders?: Map<number, Readable>
   ) {}
 
   get filename(): string | undefined {
@@ -77,11 +123,13 @@ class TrackedSeekableStream implements SeekableStream {
       }
       return push(chunk, encoding);
     };
-    this.liveReaders?.add(out);
+    this.liveReaders?.set(id, out);
     // 'close' always follows end/destroy (autoDestroy default), so neither
-    // the gauge nor the live-reader registry can leak an open entry.
+    // the gauge nor the live-reader registry can leak an open entry as long
+    // as the reader is eventually destroyed; the engine's idle reaper is the
+    // backstop for readers whose response socket never closes.
     out.once('close', () => {
-      this.liveReaders?.delete(out);
+      this.liveReaders?.delete(id);
       this.stats.streamClosed(id);
     });
     return out;

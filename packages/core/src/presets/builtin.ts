@@ -10,9 +10,16 @@ import {
   toUrlSafeBase64,
 } from '../utils/index.js';
 import { Preset } from './preset.js';
+import { releaseKeyKind } from '../release-blocklist/keys.js';
 import { stremthruSpecialCases } from './stremthru.js';
 
 export class BuiltinStreamParser extends StreamParser {
+  protected override getReleaseKey(stream: Stream): string | undefined {
+    return releaseKeyKind(stream.releaseKey) === 'usenet'
+      ? stream.releaseKey
+      : undefined;
+  }
+
   protected override getLanguages(
     stream: Stream,
     currentParsedStream: ParsedStream

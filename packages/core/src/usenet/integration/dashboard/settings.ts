@@ -1,4 +1,8 @@
 import { settingsStore, describeSettings } from '../../../config/index.js';
+import {
+  saveManagedSettings,
+  type ManagedSettingsPatchResult,
+} from '../../../config/managed.js';
 import { createLogger } from '../../../logging/logger.js';
 // Re-exported so the dashboard route + frontend can show the concrete values
 // each performance profile applies (single source of truth lives in the schema).
@@ -61,38 +65,16 @@ export function getUsenetSettings(): UsenetSettingDescriptor[] {
 export async function saveUsenetSettings(
   patch: Record<string, unknown>,
   username: string
-): Promise<{
-  updated: string[];
-  requiresRestart: boolean;
-  errors: Record<string, string>;
-}> {
-  const updated: string[] = [];
-  const errors: Record<string, string> = {};
-  let requiresRestart = false;
-  const meta = new Map(settingsStore.metadata.map((m) => [m.key, m]));
-  for (const [key, value] of Object.entries(patch)) {
-    if (!isManagedUsenetKey(key)) {
-      errors[key] = 'Not a usenet engine setting';
-      continue;
-    }
-    const m = meta.get(key);
-    if (!m) {
-      errors[key] = 'Unknown setting';
-      continue;
-    }
-    if (m.source === 'environment') {
-      errors[key] = `Overridden by ${m.env}`;
-      continue;
-    }
-    try {
-      await settingsStore.set(key, value, username);
-      updated.push(key);
-      if (m.requiresRestart) requiresRestart = true;
-    } catch (err) {
-      errors[key] = err instanceof Error ? err.message : 'Invalid value';
-    }
-  }
-  if (updated.length)
-    logger.info({ updated, username }, 'usenet settings updated');
-  return { updated, requiresRestart, errors };
+): Promise<ManagedSettingsPatchResult> {
+  const result = await saveManagedSettings(patch, {
+    isManaged: isManagedUsenetKey,
+    username,
+    unmanagedMessage: 'Not a usenet engine setting',
+  });
+  if (result.updated.length)
+    logger.info(
+      { updated: result.updated, username },
+      'usenet settings updated'
+    );
+  return result;
 }

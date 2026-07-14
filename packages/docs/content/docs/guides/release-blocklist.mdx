@@ -1,0 +1,107 @@
+---
+title: Release Blocklist
+description: Share verdicts about dead, fake and mislabeled releases between instances.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The release blocklist is an instance-wide filter of known-bad releases. When the built-in usenet engine proves a release is gone from every provider, it records a verdict; verdicts from your own instance and from any lists you subscribe to are then used to drop those releases from stream results before anything is fetched, and the whole pool can be shared with other instances.
+
+## Release keys
+
+Every verdict is keyed by a credential-free release identity that is identical on any server:
+
+- **Torrents**: `btih:<infohash>`.
+- **Usenet, by release**: `wd1:<fingerprint>`, a hash of the indexer-reported size, poster and posting day. Computable at search time, so it powers list-time filtering, but it needs indexer metadata: only Newznab-based addons provide it (the Prowlarr addon's API exposes neither the poster nor a precise date), and weak metadata (no size, or neither poster nor date) yields no key.
+- **Usenet, by post**: `nh1:<content hash>`, a hash of the NZB's segment message-ids. This is the exact identity of one post: it is only known once the NZB has been fetched and parsed, so it cannot filter search results, but it exists for *every* parsed NZB — including Prowlarr results and manual imports — and it fails a doomed resolve fast, before any provider is contacted.
+
+A usenet verdict is recorded under both keys when both are known, and under `nh1:` alone when there is no indexer metadata. Keys carry no titles, URLs or account information, so lists are safe to publish.
+
+## Verdicts
+
+| Verdict | Meaning | Recorded by |
+| --- | --- | --- |
+| `dead` | Articles missing from usenet on every provider | Automatic + manual |
+| `defective` | Downloads but unusable (corrupt, encrypted, no video) | Manual |
+| `fake` | Deliberately wrong content | Manual |
+| `mislabeled` | Wrong title, quality or language | Manual |
+
+Only `dead` is recorded automatically, and only from all-provider article-miss evidence: import verification, the background census, or playback hitting its padding caps. Torrent verdicts are always manual; a debrid cache miss proves nothing about a torrent.
+
+`fake` and `mislabeled` differ in what is wrong: a **fake** release's content is not what it claims to be at all (malware, spam, padded junk uploaded under a real release's name) and is never worth keeping, while a **mislabeled** release is real content with wrong metadata (the wrong episode, language or an upscale sold as 2160p) that might be fine under its true name.
+
+Verdicts self-heal: when a release marked `dead` later imports or plays successfully, the local verdict is removed and an **override** is written that suppresses remote verdicts for that release. Overrides are visible (and clearable) on the dashboard.
+
+## Sources and trust
+
+The **Blocklists** dashboard page manages the sources verdicts come from:
+
+- **local** — this instance's own verdicts plus manual marks. Always present and always trusted.
+- **remote** — a subscribed URL, refetched on its own interval.
+- **imported** — an uploaded list. Imports never merge into your local list.
+
+Each remote or imported source has a trust level that decides how much weight its verdicts carry:
+
+- **full** (default for new subscriptions) — the source is believed outright: any release it flags is filtered, on that source's word alone. Use this for lists you chose deliberately and trust, such as another instance you run yourself or a curated community list. Your local source is always full trust.
+- **corroborate** — the source only gets a vote. A release flagged by corroborate sources is filtered once at least the configured **quorum** of distinct corroborate sources (`RELEASE_BLOCKLIST_QUORUM`, default 2) all flag it; below the quorum its verdicts do nothing. Use this to hedge against a single list being wrong or malicious by requiring independent agreement. Note the arithmetic: with only one corroborate source and the default quorum of 2, that source never filters anything, so either add a second independent list or lower the quorum.
+- **observe** — the source never filters. Its entries are stored, counted and visible in the entries browser, but have no effect on streams. Use this to evaluate an unknown list (what would it block? does it overlap with sources you already trust?) before promoting it to corroborate or full.
+
+Full-trust sources ignore the quorum entirely; it only ever applies to corroborate sources.
+
+## Backbone scope
+
+A usenet release can be dead on one backbone and fine on another, so shared `dead` verdicts record which provider backbones observed them and are matched against yours (`RELEASE_BLOCKLIST_BACKBONE_SCOPE`):
+
+- `overlap` (default) — the verdict applies if it was observed on at least one backbone you use.
+- `covers` — the verdict must have been observed on every backbone you use.
+- `off` — verdicts apply regardless of backbone.
+
+Verdicts record the full provider hostnames that observed them. How those hosts are compared is set by `RELEASE_BLOCKLIST_BACKBONE_GROUPING`:
+
+- `backbone` (default) — comparisons run through a built-in reseller map: a verdict from `news.newshosting.com` matches a provider on `news.usenetserver.com` (both Omicron). Right for takedowns, which remove an article from the backbone's shared storage for every reseller at once.
+- `domain` — hosts only match within the same provider domain. Backbones enforce retention per reseller, so an old article can be expired on a short-retention brand yet intact on a full-retention one riding the same backbone; domain grouping keeps a verdict recorded on one brand from filtering releases for another, at the cost of far fewer shared verdicts applying to you. Consider it only if you stream old content on a long-retention provider.
+
+In both modes exact hostnames win over root domains, so providers whose servers sit on different backbones per subdomain (bonus servers and the like) are told apart; other hosts fall back to their root domain, which keeps different server aliases of one provider together. Verdicts with no recorded backbone apply everywhere, and `RELEASE_BLOCKLIST_TRUSTED_BACKBONES` can whitelist additional backbones (root domains, hostnames or backbone ids — ids expand to their known provider domains under `domain` grouping).
+
+## Enforcement
+
+Flagged releases are removed from stream lists before deduplication and show up in the filter statistics as **Blocklisted**. If every stream in a response is flagged, everything is shown instead so a viewer is never left with an empty list.
+
+At playback the two usenet keys behave differently, on purpose:
+
+- `wd1:` verdicts from remote lists never block a resolve — they already filtered the stream out at list time, so an explicit play is treated as deliberate: the attempt either proves the release works (which retracts the verdicts) or records a first-hand failure. Only your local `wd1:` verdicts short-circuit.
+- `nh1:` verdicts block the resolve itself (under the same trust, quorum and backbone rules), right after the NZB is parsed and before any provider is contacted. A post identity can't appear in search results, so resolve is its only enforcement point — and since it names one exact post, a trusted verdict leaves nothing worth re-checking. Failover simply moves on to the next stream.
+
+## Sharing your list
+
+- **Export/import**: the dashboard exports NDJSON in the native format or in the Warden format used by nzbdav-based tools, and imports either transparently (gzipped files included). The Warden dialect has no verdict field and only understands `wd1:` fingerprints, so it carries only that `dead` subset; `nh1:` content-hash keys travel in the native format.
+- **Public endpoint**: enable `RELEASE_BLOCKLIST_PUBLIC_EXPORT` to serve your list at `/blocklist/export`, which other instances (or Warden consumers) can subscribe to directly. Set `RELEASE_BLOCKLIST_PUBLIC_EXPORT_PASSWORD` to require `?key=<value>` in the URL, and share the full URL only with instances you want to allow.
+- **Publish targets**: if your instance is not publicly reachable (or you'd rather not hand out its URL), the **Publishing** section of the Blocklists page pushes your list to remote destinations instead, on a per-target interval and on demand. Consumers then subscribe to the destination's URL, never to your instance.
+
+## Publish targets
+
+A target is a destination plus a set of files to upload: any combination of format (native or Warden) and scope (**local** — your own verdicts, the default — or **all** — everything, deduplicated). Unchanged lists are skipped, so an interval push of a quiet list costs nothing.
+
+One provider is supported:
+
+- **GitHub Gist** — leave the gist ID blank and the first push creates the gist (secret by default; note that secret gists are unlisted, not private — anyone with the URL can read them). The shareable `gist.githubusercontent.com/.../raw/...` URL is shown next to each file and always serves the latest revision.
+
+<Callout title="Use fine-grained tokens">
+  The classic `gist` OAuth scope grants read/write access to *all* of your
+  gists. Prefer a GitHub fine-grained personal access token scoped to just the
+  gist account the target writes to. Tokens are stored encrypted with your
+  instance's `SECRET_KEY`.
+</Callout>
+
+<Callout type="warn" title="Republishing the 'all' scope">
+  Publishing the **all** scope rebroadcasts lists you merely subscribe to. To
+  anyone consuming both your list and the original, one upstream verdict then
+  looks like two independent confirmations, which quietly defeats
+  corroborate-trust quorums. Publish **local** unless you are deliberately
+  running an aggregator, and say so if you are.
+</Callout>
+
+<Callout title="Subscribed lists fail closed">
+  A refresh that returns an empty or corrupt payload never wipes a source's
+  existing entries. To empty a source, clear or delete it on the dashboard.
+</Callout>

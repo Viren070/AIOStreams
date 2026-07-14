@@ -16,6 +16,7 @@ import {
   DurationField,
   SizeField,
   SECRET_CLEAR_SENTINEL,
+  md,
 } from './custom-fields';
 
 export { SECRET_CLEAR_SENTINEL };
@@ -43,11 +44,11 @@ function SecretTextField({
   return (
     <BasicField
       label={label}
-      help={
+      help={md(
         isClearing
           ? `${help ? help + ' · ' : ''}Will be cleared on save.`
           : help
-      }
+      )}
     >
       <div className="flex items-center gap-2">
         <div className="flex-1">
@@ -149,7 +150,7 @@ export function SettingsField({ k }: { k: SettingsKey }) {
         <Field.Switch
           name={name}
           label={labelNode as unknown as string}
-          help={help}
+          help={md(help)}
           side="right"
           disabled={disabled}
         />
@@ -159,7 +160,7 @@ export function SettingsField({ k }: { k: SettingsKey }) {
         <Field.Number
           name={name}
           label={labelNode as unknown as string}
-          help={help}
+          help={md(help)}
           disabled={disabled}
           min={k.ui.min}
         />
@@ -169,7 +170,7 @@ export function SettingsField({ k }: { k: SettingsKey }) {
         <Field.Select
           name={name}
           label={labelNode as unknown as string}
-          help={help}
+          help={md(help)}
           disabled={disabled}
           options={(k.ui.options ?? []).map((o) => ({ label: o, value: o }))}
         />
@@ -247,7 +248,7 @@ export function SettingsField({ k }: { k: SettingsKey }) {
         <Field.Text
           name={name}
           label={labelNode as unknown as string}
-          help={help}
+          help={md(help)}
           disabled={disabled}
         />
       );

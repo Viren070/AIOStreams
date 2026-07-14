@@ -16,6 +16,7 @@ import {
 import { StreamParser } from '../parser/index.js';
 import { createLogger } from '../utils/index.js';
 import { parseAgeString } from '../parser/utils.js';
+import { releaseKeyKind } from '../release-blocklist/keys.js';
 
 const logger = createLogger('parser');
 
@@ -71,6 +72,10 @@ class AIOStreamsStreamParser extends StreamParser {
           : aioStream.streamData?.age,
       message: aioStream.streamData?.message,
       torrent: aioStream.streamData?.torrent,
+      releaseKey:
+        releaseKeyKind(aioStream.streamData?.releaseKey) === 'usenet'
+          ? aioStream.streamData?.releaseKey
+          : undefined,
       parsedFile: aioStream.streamData?.parsedFile,
       keywordMatched: aioStream.streamData?.keywordMatched,
       streamExpressionMatched:

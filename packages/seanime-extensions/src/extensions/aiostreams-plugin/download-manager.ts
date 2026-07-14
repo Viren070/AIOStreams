@@ -1,3 +1,4 @@
+import { log } from './logger';
 import { ResultsPanel } from './results-panel';
 import { Context, DownloadRecord } from './types';
 
@@ -69,7 +70,7 @@ export class DownloadManager {
     const filePath = $filepath.join(baseDir, filename);
     this.active.add(index);
 
-    $debug.info('AIOStreams: starting download', { url, filePath });
+    log.info('starting download', { url, filePath });
     const downloadId = this.ctx.downloader.download(url, filePath);
 
     const dismissHandlerId = this.ctx.eventHandler(
@@ -143,10 +144,10 @@ export class DownloadManager {
         this.onChange();
 
         if (status === 'completed') {
-          console.log('AIOStreams: download completed', filePath);
+          log.info('download completed', filePath);
           this.ctx.toast.success(`Downloaded to: ${filePath}`);
         } else if (status === 'error') {
-          console.error('AIOStreams: download failed', { error, filePath });
+          log.error('download failed', { error, filePath });
           this.ctx.toast.error(`Download failed: ${error ?? 'Unknown error'}`);
         }
       }

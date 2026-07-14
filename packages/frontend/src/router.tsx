@@ -13,6 +13,10 @@ import {
   UsersPage,
   TasksPage,
   CachePage,
+  BlocklistLayout,
+  BlocklistSourcesPage,
+  BlocklistEntriesPage,
+  BlocklistPublishingPage,
   UsenetLayout,
   UsenetLibraryPage,
   UsenetStreamsPage,
@@ -154,9 +158,21 @@ const dashboardSystemRoute = createRoute({
   component: SystemPage,
 });
 
+/** `field` is a transient deep-link target: the settings page scrolls to it,
+ *  highlights it, then strips it from the URL. Every key is optional, so
+ *  navigating to these routes without a search object stays valid. */
+const optionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value ? value : undefined;
+
 const dashboardSettingsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: 'settings',
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { tab?: string; field?: string } => ({
+    tab: optionalString(search.tab),
+    field: optionalString(search.field),
+  }),
   component: SettingsPage,
 });
 
@@ -182,6 +198,38 @@ const dashboardCacheRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: 'cache',
   component: CachePage,
+});
+
+const dashboardBlocklistRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'blocklist',
+  component: BlocklistLayout,
+});
+
+const dashboardBlocklistIndexRoute = createRoute({
+  getParentRoute: () => dashboardBlocklistRoute,
+  path: '/',
+  beforeLoad: () => {
+    throw redirect({ to: '/dashboard/blocklist/sources' });
+  },
+});
+
+const dashboardBlocklistSourcesRoute = createRoute({
+  getParentRoute: () => dashboardBlocklistRoute,
+  path: 'sources',
+  component: BlocklistSourcesPage,
+});
+
+const dashboardBlocklistEntriesRoute = createRoute({
+  getParentRoute: () => dashboardBlocklistRoute,
+  path: 'entries',
+  component: BlocklistEntriesPage,
+});
+
+const dashboardBlocklistPublishingRoute = createRoute({
+  getParentRoute: () => dashboardBlocklistRoute,
+  path: 'publishing',
+  component: BlocklistPublishingPage,
 });
 
 const dashboardUsenetRoute = createRoute({
@@ -226,6 +274,9 @@ const dashboardUsenetProvidersRoute = createRoute({
 const dashboardUsenetSettingsRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'settings',
+  validateSearch: (search: Record<string, unknown>): { field?: string } => ({
+    field: optionalString(search.field),
+  }),
   component: UsenetSettingsPage,
 });
 
@@ -246,6 +297,12 @@ const routeTree = rootRoute.addChildren([
     dashboardUsersRoute,
     dashboardTasksRoute,
     dashboardCacheRoute,
+    dashboardBlocklistRoute.addChildren([
+      dashboardBlocklistIndexRoute,
+      dashboardBlocklistSourcesRoute,
+      dashboardBlocklistEntriesRoute,
+      dashboardBlocklistPublishingRoute,
+    ]),
     dashboardUsenetRoute.addChildren([
       dashboardUsenetIndexRoute,
       dashboardUsenetLibraryRoute,
