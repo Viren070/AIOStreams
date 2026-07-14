@@ -158,9 +158,21 @@ const dashboardSystemRoute = createRoute({
   component: SystemPage,
 });
 
+/** `field` is a transient deep-link target: the settings page scrolls to it,
+ *  highlights it, then strips it from the URL. Every key is optional, so
+ *  navigating to these routes without a search object stays valid. */
+const optionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value ? value : undefined;
+
 const dashboardSettingsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: 'settings',
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { tab?: string; field?: string } => ({
+    tab: optionalString(search.tab),
+    field: optionalString(search.field),
+  }),
   component: SettingsPage,
 });
 
@@ -262,6 +274,9 @@ const dashboardUsenetProvidersRoute = createRoute({
 const dashboardUsenetSettingsRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'settings',
+  validateSearch: (search: Record<string, unknown>): { field?: string } => ({
+    field: optionalString(search.field),
+  }),
   component: UsenetSettingsPage,
 });
 

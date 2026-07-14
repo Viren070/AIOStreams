@@ -378,7 +378,7 @@ export interface UsenetProfilePreset {
 }
 export type UsenetProfiles = Record<string, UsenetProfilePreset>;
 
-export function useUsenetSettings() {
+export function useUsenetSettings(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: USENET_SETTINGS_QUERY_KEY,
     queryFn: () =>
@@ -386,6 +386,7 @@ export function useUsenetSettings() {
         '/dashboard/usenet/settings'
       ),
     staleTime: 10_000,
+    enabled: opts?.enabled ?? true,
   });
 }
 

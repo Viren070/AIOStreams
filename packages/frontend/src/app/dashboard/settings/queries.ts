@@ -54,11 +54,12 @@ const KEY = SETTINGS_QUERY_KEY;
 
 const DASHBOARD_SCOPE = ['dashboard'] as const;
 
-export function useSettings() {
+export function useSettings(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: KEY,
     queryFn: () => api<{ keys: SettingsKey[] }>('/dashboard/settings'),
     staleTime: 10_000,
+    enabled: opts?.enabled ?? true,
   });
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { BiCog } from 'react-icons/bi';
@@ -19,6 +19,7 @@ import {
 import type { SettingsKey } from '../settings/queries';
 import { SettingsActionsMenu } from '../settings/_components/settings-actions-menu';
 import MarkdownLite from '@/components/shared/markdown-lite';
+import { useScrollToField } from '@/components/shared/command-palette/use-scroll-to-field';
 import {
   useUsenetSettings,
   useSaveUsenetSettings,
@@ -184,27 +185,21 @@ export function UsenetSettingsPage() {
   const query = useUsenetSettings();
   const { mutateAsync, isPending } = useSaveUsenetSettings();
   const methodsRef = React.useRef<UseFormReturn<any> | null>(null);
-  const location = useLocation();
+  const search = useSearch({ from: '/dashboard/usenet/settings' });
+  const navigate = useNavigate({ from: '/dashboard/usenet/settings' });
 
-  // Scroll effect must run unconditionally — before the early-return guards
-  // for loading/error — to satisfy React's rules of hooks.
-  React.useEffect(() => {
-    const fieldKey = new URLSearchParams(location.search).get('field');
-    if (!fieldKey) return;
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`setting-${fieldKey}`);
-      if (!el) return;
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Toggle the attribute so the CSS animation replays every time
-      el.removeAttribute('data-command-target');
-      void el.offsetWidth;
-      el.setAttribute('data-command-target', 'true');
-      setTimeout(() => {
-        el.removeAttribute('data-command-target');
-      }, 1400);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [location.search]);
+  const clearField = React.useCallback(() => {
+    navigate({
+      to: '.',
+      search: (prev) => ({ ...prev, field: undefined }),
+      replace: true,
+      resetScroll: false,
+    });
+  }, [navigate]);
+
+  // Must run before the early-return guards below, to satisfy the rules of
+  // hooks. The fields only exist once the settings payload has arrived.
+  useScrollToField(search.field, Boolean(query.data), clearField);
 
   const keys = query.data?.keys ?? [];
   const profiles = query.data?.profiles ?? {};

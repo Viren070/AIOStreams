@@ -1,47 +1,24 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext } from 'react';
+import {
+  useCommandPaletteState,
+  type CommandPaletteState,
+} from '@/components/shared/command-palette/state';
 
-type DashboardCommandPaletteContextType = {
-  isOpen: boolean;
-  open: () => void;
-  close: () => void;
-  toggle: () => void;
-};
-
-const DashboardCommandPaletteContext =
-  createContext<DashboardCommandPaletteContextType>({
-    isOpen: false,
-    open: () => {},
-    close: () => {},
-    toggle: () => {},
-  });
+const DashboardCommandPaletteContext = createContext<CommandPaletteState>({
+  isOpen: false,
+  open: () => {},
+  close: () => {},
+  toggle: () => {},
+});
 
 export function DashboardCommandPaletteProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen((v) => !v), []);
-
-  // Global Ctrl/Cmd+K shortcut
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-        e.preventDefault();
-        setIsOpen((v) => !v);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
+  const state = useCommandPaletteState();
   return (
-    <DashboardCommandPaletteContext.Provider
-      value={{ isOpen, open, close, toggle }}
-    >
+    <DashboardCommandPaletteContext.Provider value={state}>
       {children}
     </DashboardCommandPaletteContext.Provider>
   );
