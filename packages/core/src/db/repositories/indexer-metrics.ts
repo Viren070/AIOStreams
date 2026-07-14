@@ -53,10 +53,12 @@ export class IndexerMetricsRepository {
   ): Promise<void> {
     if (deltas.length === 0) return;
     const hourMs = hourFloor(atMs);
-    const db = getDb();
-    for (const d of deltas) {
-      await db.exec(
-        sql`INSERT INTO indexer_metrics
+    // One transaction so a mid-batch failure rolls back cleanly instead of
+    // leaving some deltas applied (a retry would then double-count them).
+    await getDb().tx(async (tx) => {
+      for (const d of deltas) {
+        await tx.exec(
+          sql`INSERT INTO indexer_metrics
               (hour_ms, instance_id, name, searches, results, errors, latency_ms_sum, latency_samples)
             VALUES
               (${hourMs}, ${d.instanceId}, ${d.name}, ${d.searches}, ${d.results}, ${d.errors}, ${d.latencyMsSum}, ${d.latencySamples})
@@ -67,8 +69,9 @@ export class IndexerMetricsRepository {
               errors = indexer_metrics.errors + EXCLUDED.errors,
               latency_ms_sum = indexer_metrics.latency_ms_sum + EXCLUDED.latency_ms_sum,
               latency_samples = indexer_metrics.latency_samples + EXCLUDED.latency_samples`
-      );
-    }
+        );
+      }
+    });
   }
 
   /** Per-indexer totals over [sinceMs, now]. Newest name per instance wins. */
