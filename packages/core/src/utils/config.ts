@@ -754,6 +754,33 @@ export function applyMigrations(config: any): UserData {
     });
   }
 
+  // migrate seasonPackStrategy (torznab/newznab) to seasonEpisodeStrategy
+  if (config.presets && Array.isArray(config.presets)) {
+    const seasonPackStrategyMap: Record<string, string> = {
+      episodeOnly: 'episode',
+      dynamic: 'dynamic',
+      episodeFirstSeasonPackFallback: 'episodeFirst',
+      seasonPackFirstEpisodeFallback: 'season',
+    };
+    config.presets = config.presets.map((preset: any) => {
+      if (
+        typeof preset.options?.seasonPackStrategy === 'string' &&
+        preset.options.seasonEpisodeStrategy === undefined
+      ) {
+        const { seasonPackStrategy, ...restOptions } = preset.options;
+        return {
+          ...preset,
+          options: {
+            ...restOptions,
+            seasonEpisodeStrategy:
+              seasonPackStrategyMap[seasonPackStrategy] ?? 'episode',
+          },
+        };
+      }
+      return preset;
+    });
+  }
+
   if (config.formatter && config.formatter.definition) {
     config.formatter.definitions = {
       ...(config.formatter.definitions ?? {}),

@@ -63,14 +63,9 @@ export const NabAddonConfigSchema = BaseDebridConfigSchema.extend({
   forceQuerySearch: z.boolean().default(false),
   paginate: z.boolean().default(false),
   forceInitialLimit: z.number().min(1).max(10000).optional(),
-  seasonPackStrategy: z
-    .enum([
-      'episodeOnly',
-      'dynamic',
-      'episodeFirstSeasonPackFallback',
-      'seasonPackFirstEpisodeFallback',
-    ])
-    .default('episodeOnly'),
+  seasonEpisodeStrategy: z
+    .enum(['episode', 'season', 'episodeFirst', 'dynamic'])
+    .default('episode'),
 });
 export type NabAddonConfig = z.infer<typeof NabAddonConfigSchema>;
 
@@ -223,17 +218,13 @@ export abstract class BaseNabAddon<
       let fallbackParams: Record<string, string> | undefined;
       if (canApplySeasonPackStrategy) {
         const { ep, ...seasonOnlyParams } = queryParams;
-        let strategy = this.userData.seasonPackStrategy;
+        let strategy = this.userData.seasonEpisodeStrategy;
         if (strategy === 'dynamic') {
-          strategy =
-            metadata.ongoingSeason === true
-              ? 'episodeOnly'
-              : 'seasonPackFirstEpisodeFallback';
+          strategy = metadata.ongoingSeason ? 'episode' : 'season';
         }
-        if (strategy === 'seasonPackFirstEpisodeFallback') {
+        if (strategy === 'season') {
           primaryParams = seasonOnlyParams;
-          fallbackParams = queryParams;
-        } else if (strategy === 'episodeFirstSeasonPackFallback') {
+        } else if (strategy === 'episodeFirst') {
           fallbackParams = seasonOnlyParams;
         }
       }

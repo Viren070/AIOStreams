@@ -187,24 +187,21 @@ export class NewznabPreset extends BuiltinAddonPreset {
         ],
       },
       {
-        id: 'seasonPackStrategy',
-        name: 'Season Pack Strategy',
+        id: 'seasonEpisodeStrategy',
+        name: 'Season/Episode Search Strategy',
         description:
-          'Controls episode vs. season-pack search order for series in `Auto` mode - useful for private trackers where season packs replace individual episodes. `Dynamic` decides based on whether the season is still airing. May include individual episodes too - pair with `Season/Episode Matching` in Filters to filter them out.',
+          "Controls whether series searches in `Auto` mode query at the episode level, the season level, or both - useful for private trackers where season packs replace individual episodes. A season-level search may return season packs, individual episodes, or both, depending on the indexer. `Dynamic` decides based on whether the season is still airing. Pair with `Season/Episode Matching` in Filters to filter out results that don't match.",
         type: 'select',
         required: false,
         showInSimpleMode: false,
-        default: 'episodeOnly',
+        default: 'episode',
         options: [
-          { label: 'Episode Only', value: 'episodeOnly' },
-          { label: 'Dynamic (Season Pack Preferred)', value: 'dynamic' },
+          { label: 'Episode', value: 'episode' },
+          { label: 'Season', value: 'season' },
+          { label: 'Dynamic (Season Preferred)', value: 'dynamic' },
           {
-            label: 'Episode First, Season Pack Fallback',
-            value: 'episodeFirstSeasonPackFallback',
-          },
-          {
-            label: 'Season Pack First, Episode Fallback',
-            value: 'seasonPackFirstEpisodeFallback',
+            label: 'Episode First, Season Fallback',
+            value: 'episodeFirst',
           },
         ],
       },
@@ -443,7 +440,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
       proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
-      seasonPackStrategy: options.seasonPackStrategy ?? 'episodeOnly',
+      seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
       zyclopsHealthProxy: zyclopsHealthProxyConfig,
     };
 
