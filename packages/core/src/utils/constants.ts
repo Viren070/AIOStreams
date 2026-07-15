@@ -1025,6 +1025,7 @@ const RESOLUTIONS = [
 
 const QUALITIES = [
   'BluRay REMUX',
+  'DVD REMUX',
   'BluRay',
   'WEB-DL',
   'WEBRip',
