@@ -160,20 +160,15 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       controlledValue ?? defaultValue
     );
 
-    const handleOnValueChange = React.useCallback(
-      (value: string) => {
-        if (value === '__placeholder__') {
-          if (controlledValue === undefined) _setValue('');
-          onValueChange?.('');
-          return;
-        }
-        // When controlled externally, don't touch internal state — the
-        // parent owns the displayed value via the `value` prop.
-        if (controlledValue === undefined) _setValue(value);
-        onValueChange?.(value);
-      },
-      [controlledValue, onValueChange]
-    );
+    const handleOnValueChange = React.useCallback((value: string) => {
+      if (value === '__placeholder__') {
+        _setValue('');
+        onValueChange?.('');
+        return;
+      }
+      _setValue(value);
+      onValueChange?.(value);
+    }, []);
 
     React.useEffect(() => {
       if (!defaultValue || !isFirst.current) {
@@ -190,7 +185,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
 
           <SelectPrimitive.Root
             dir={dir}
-            value={controlledValue ?? _value}
+            value={_value}
             onValueChange={handleOnValueChange}
             onOpenChange={onOpenChange}
             defaultValue={defaultValue}
@@ -341,7 +336,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
             aria-hidden="true"
             required={basicFieldProps.required}
             disabled={basicFieldProps.disabled}
-            value={controlledValue ?? _value}
+            value={_value}
             tabIndex={-1}
             onChange={() => {}}
             onFocusCapture={() => buttonRef.current?.focus()}

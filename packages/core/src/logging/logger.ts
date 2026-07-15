@@ -45,18 +45,6 @@ export const LEGACY_LOG_LEVELS = [
   'warning',
 ] as const;
 
-const VALID_LEVELS = new Set<string>([
-  'silly',
-  'trace',
-  'debug',
-  'verbose',
-  'http',
-  'info',
-  'warn',
-  'error',
-  'fatal',
-]);
-
 // --- Pino root setup ------------------------------------------------------
 
 export function normaliseLevel(raw: string | undefined): Level {
@@ -320,51 +308,6 @@ function wrap(pinoInstance: PinoLogger): Logger {
 // --- Public API -----------------------------------------------------------
 
 export const logger: Logger = wrap(root);
-
-/** The underlying pino root logger for runtime level changes. */
-export const pinoRoot: PinoLogger = root;
-
-/**
- * Change the log level at runtime without restarting.
- * Accepts pino level names: trace, debug, info, warn, error, fatal.
- * Returns true if the level was valid and applied.
- */
-export function setLogLevel(level: string): boolean {
-  const normalized = normalizeLevel(level);
-  // Only accept levels that map identically (no fallback).
-  // Check against the lowercased input so case-insensitive variants (e.g.
-  // "Info", "TRACE") are accepted as long as they match a known name.
-  if (!VALID_LEVELS.has(level.toLowerCase())) return false;
-  root.level = normalized;
-  return true;
-}
-
-/** The current effective log level (pino-native name). */
-export function getLogLevel(): string {
-  return root.level;
-}
-
-/**
- * The current log level as a user-facing display name matching the
- * LOG_LEVEL env var options (e.g. "silly" instead of pino's "trace").
- */
-export function getLogLevelDisplay(): string {
-  switch (root.level) {
-    case 'trace':
-      return 'silly';
-    case 'debug':
-      return 'debug';
-    case 'info':
-      return 'info';
-    case 'warn':
-      return 'warn';
-    case 'error':
-    case 'fatal':
-      return 'error';
-    default:
-      return 'info';
-  }
-}
 
 /**
  * Create a logger pre-tagged with a module name. Equivalent to
