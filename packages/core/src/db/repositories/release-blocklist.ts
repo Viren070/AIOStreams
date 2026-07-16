@@ -383,17 +383,36 @@ export class ReleaseBlocklistRepository {
   /**
    * The release was proven working: drop the local verdict and write an
    * override that suppresses remote verdicts for the key.
+   *
+   * `onlyIfBlocked` skips the override when no remote source flags the
+   * release, so automatic retractions do not pile up overrides for
+   * releases nothing has ever blocked.
    */
-  static async retract(key: string): Promise<void> {
+  static async retract(
+    key: string,
+    opts?: { onlyIfBlocked?: boolean }
+  ): Promise<void> {
     requireValidKey(key);
     const now = nowSeconds();
     await getDb().tx(async (tx) => {
+      let writeOverride = true;
+      if (opts?.onlyIfBlocked) {
+        const remote = await tx.query(
+          sql`SELECT 1 FROM release_blocklist_entries e
+              JOIN release_blocklist_keys kt ON kt.id = e.key_id
+              WHERE kt.k = ${key}
+                AND e.source_rid <> ${sourceRidSql(LOCAL_SOURCE_ID)}
+              LIMIT 1`
+        );
+        writeOverride = remote.length > 0;
+      }
       await tx.exec(
         sql`DELETE FROM release_blocklist_entries
             WHERE source_rid = ${sourceRidSql(LOCAL_SOURCE_ID)}
               AND key_id = ${keyIdSql(key)}`
       );
       await gcKeys(tx, key);
+      if (!writeOverride) return;
       await tx.exec(
         sql`INSERT INTO release_blocklist_overrides (k, created_at)
             VALUES (${key}, ${now})

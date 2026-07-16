@@ -32,16 +32,17 @@ export function markReleaseDead(
 
 /**
  * The release was proven working: drop any local verdicts and suppress
- * remote ones, under every key it is known by. Fire-and-forget; missing or
- * invalid keys are skipped.
+ * remote ones, under every key it is known by. Only keys a remote source
+ * actually flags get an override. Fire-and-forget; missing or invalid keys
+ * are skipped.
  */
 export function retractRelease(
   ...keys: Array<string | null | undefined>
 ): void {
   for (const key of keys) {
     if (!key || releaseKeyKind(key) === null) continue;
-    void ReleaseBlocklistRepository.retract(key).catch((err) =>
-      logger.warn(`failed to retract ${key}: ${err}`)
-    );
+    void ReleaseBlocklistRepository.retract(key, {
+      onlyIfBlocked: true,
+    }).catch((err) => logger.warn(`failed to retract ${key}: ${err}`));
   }
 }
