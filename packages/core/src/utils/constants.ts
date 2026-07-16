@@ -1053,6 +1053,7 @@ const VISUAL_TAGS = [
   '3D',
   'IMAX',
   'AI',
+  'Upscaled',
   'SDR',
   'H-OU',
   'H-SBS',
