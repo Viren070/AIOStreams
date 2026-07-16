@@ -12,6 +12,7 @@ import {
 } from 'react-icons/bi';
 import { Card } from '@/components/ui/card';
 import { Button, IconButton } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { TextInput } from '@/components/ui/text-input';
 import { Textarea } from '@/components/ui/textarea';
 import { NumberInput } from '@/components/ui/number-input';
@@ -19,6 +20,7 @@ import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Modal } from '@/components/ui/modal';
 import { SimpleDropzone } from '@/components/ui/simple-dropzone';
+import { cn } from '@/components/ui/core/styling';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -67,6 +69,13 @@ function SourcesView({
   const [editing, setEditing] = React.useState<BlocklistSource>();
   const [pendingDelete, setPendingDelete] = React.useState<BlocklistSource>();
   const [pendingClear, setPendingClear] = React.useState<BlocklistSource>();
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [batchEditOpen, setBatchEditOpen] = React.useState(false);
+
+  const sources = snapshot.sources;
+  const allOnPageSelected =
+    sources.length > 0 && sources.every((s) => selectedIds.has(s.id));
+  const nonLocalSources = sources.filter((s) => s.id !== 'local');
 
   const patchSource = useMutation({
     mutationFn: (args: { id: string; body: Record<string, unknown> }) =>
@@ -105,6 +114,54 @@ function SourcesView({
     onError: (e: any) => toast.error(e?.message ?? 'Clear failed'),
   });
 
+  // Batch mutations
+  const batchRemove = useMutation({
+    mutationFn: (ids: string[]) =>
+      api('POST /dashboard/blocklist/batch/sources/remove', { body: { ids } }),
+    onSuccess: (result: any) => {
+      toast.success(`Removed ${result.removed} source${result.removed === 1 ? '' : 's'}`);
+      setSelectedIds(new Set());
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Failed'),
+  });
+
+  const batchClear = useMutation({
+    mutationFn: (ids: string[]) =>
+      api('POST /dashboard/blocklist/batch/sources/clear', { body: { ids } }),
+    onSuccess: (result: any) => {
+      toast.success(`Cleared ${result.cleared} source${result.cleared === 1 ? '' : 's'}`);
+      setSelectedIds(new Set());
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Failed'),
+  });
+
+  const batchRefresh = useMutation({
+    mutationFn: (ids: string[]) =>
+      api('POST /dashboard/blocklist/batch/sources/refresh', { body: { ids } }),
+    onSuccess: (result: any) => {
+      toast.success(`Refreshed ${result.refreshed} source${result.refreshed === 1 ? '' : 's'}`);
+      setSelectedIds(new Set());
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Failed'),
+  });
+
+  const batchPatch = useMutation({
+    mutationFn: (args: { ids: string[]; body: Record<string, unknown> }) =>
+      api('POST /dashboard/blocklist/batch/sources/patch', {
+        body: { ids: args.ids, ...args.body },
+      }),
+    onSuccess: (result: any) => {
+      toast.success(`Updated ${result.patched} source${result.patched === 1 ? '' : 's'}`);
+      setSelectedIds(new Set());
+      setBatchEditOpen(false);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Failed'),
+  });
+
   const confirmDelete = useConfirmationDialog({
     title: 'Remove source',
     description:
@@ -122,6 +179,52 @@ function SourcesView({
     actionIntent: 'alert-subtle',
     onConfirm: () => pendingClear && clearSource.mutate(pendingClear.id),
   });
+
+  const confirmBatchRemove = useConfirmationDialog({
+    title: 'Remove selected sources',
+    description: `${selectedIds.size} selected source${selectedIds.size === 1 ? '' : 's'}: the source and every entry it contributed will be removed. This cannot be undone. The local source is skipped.`,
+    actionText: 'Remove all',
+    actionIntent: 'alert-subtle',
+    onConfirm: () => batchRemove.mutate([...selectedIds]),
+  });
+
+  const confirmBatchClear = useConfirmationDialog({
+    title: 'Clear entries from selected sources',
+    description: `${selectedIds.size} selected source${selectedIds.size === 1 ? '' : 's'}: entries are removed but the sources themselves are kept.`,
+    actionText: 'Clear all',
+    actionIntent: 'alert-subtle',
+    onConfirm: () => batchClear.mutate([...selectedIds]),
+  });
+
+  const confirmBatchRefresh = useConfirmationDialog({
+    title: 'Refresh selected sources',
+    description: `${selectedIds.size} selected source${selectedIds.size === 1 ? '' : 's'}: refetch their lists from their remote URLs now.`,
+    actionText: 'Refresh all',
+    actionIntent: 'primary-subtle',
+    onConfirm: () => batchRefresh.mutate([...selectedIds]),
+  });
+
+  const confirmRemoveAllNonLocal = useConfirmationDialog({
+    title: 'Remove all non-local sources',
+    description: `Remove every source except this instance's own list (${nonLocalSources.length} source${nonLocalSources.length === 1 ? '' : 's'}). This cannot be undone.`,
+    actionText: 'Remove all',
+    actionIntent: 'alert-subtle',
+    onConfirm: () =>
+      batchRemove.mutate(nonLocalSources.map((s) => s.id)),
+  });
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const hasRemoteSelected = [...selectedIds].some(
+    (id) => sources.find((s) => s.id === id)?.kind === 'remote'
+  );
 
   return (
     <div className="space-y-4">
@@ -150,13 +253,83 @@ function SourcesView({
         >
           Export
         </Button>
+        <div className="flex-1" />
+        {nonLocalSources.length > 0 && (
+          <Button
+            size="sm"
+            intent="alert-subtle"
+            onClick={confirmRemoveAllNonLocal.open}
+            title="Remove all sources except the local one"
+          >
+            Remove all (except local)
+          </Button>
+        )}
       </div>
+
+      {/* Batch actions toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[--accent]/10 border border-[--accent]/20">
+          <span className="text-sm font-medium tabular-nums">
+            {selectedIds.size} selected
+          </span>
+          <div className="flex-1" />
+          <Button
+            size="sm"
+            intent="gray-subtle"
+            leftIcon={<BiRefresh />}
+            loading={batchRefresh.isPending}
+            onClick={confirmBatchRefresh.open}
+            disabled={!hasRemoteSelected}
+          >
+            Refresh
+          </Button>
+          <Button
+            size="sm"
+            intent="gray-subtle"
+            leftIcon={<BiPencil />}
+            onClick={() => setBatchEditOpen(true)}
+          >
+            Edit...
+          </Button>
+          <Button
+            size="sm"
+            intent="gray-subtle"
+            leftIcon={<BiBlock />}
+            loading={batchClear.isPending}
+            onClick={confirmBatchClear.open}
+          >
+            Clear entries
+          </Button>
+          <Button
+            size="sm"
+            intent="alert-subtle"
+            leftIcon={<BiTrash />}
+            loading={batchRemove.isPending}
+            onClick={confirmBatchRemove.open}
+          >
+            Remove
+          </Button>
+        </div>
+      )}
 
       <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
               <tr className="text-left">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    value={allOnPageSelected}
+                    onValueChange={(checked) => {
+                      if (checked) {
+                        setSelectedIds(new Set(sources.map((s) => s.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                    aria-label="Select all"
+                  />
+                </th>
                 <th className="p-3">Name</th>
                 <th className="p-3">Kind</th>
                 <th className="p-3">Trust</th>
@@ -171,8 +344,20 @@ function SourcesView({
               {snapshot.sources.map((source) => (
                 <tr
                   key={source.id}
-                  className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                  className={cn(
+                    'border-t border-[--border]/50',
+                    selectedIds.has(source.id)
+                      ? 'bg-[--accent]/5'
+                      : 'hover:bg-[--subtle]/30'
+                  )}
                 >
+                  <td className="p-3">
+                    <Checkbox
+                      value={selectedIds.has(source.id)}
+                      onValueChange={() => toggleSelect(source.id)}
+                      aria-label={`Select ${source.name}`}
+                    />
+                  </td>
                   <td className="p-3 font-medium">{source.name}</td>
                   <td className="p-3">
                     <Badge className={KIND_BADGE[source.kind]}>
@@ -187,13 +372,13 @@ function SourcesView({
                   <td className="p-3 tabular-nums">
                     {source.kind === 'remote'
                       ? formatInterval(source.refreshSeconds)
-                      : '—'}
+                      : '\u2014'}
                   </td>
                   <td
                     className="p-3 text-xs text-[--muted] max-w-[220px] truncate"
                     title={source.status ?? undefined}
                   >
-                    {source.status ?? '—'}
+                    {source.status ?? '\u2014'}
                   </td>
                   <td className="p-3 text-right tabular-nums">
                     <div>{source.count}</div>
@@ -208,7 +393,7 @@ function SourcesView({
                   </td>
                   <td className="p-3">
                     {source.kind === 'local' ? (
-                      '—'
+                      '\u2014'
                     ) : (
                       <Switch
                         value={source.enabled}
@@ -294,8 +479,21 @@ function SourcesView({
           invalidate={invalidate}
         />
       )}
+      {batchEditOpen && (
+        <BatchEditSourceModal
+          selectedIds={[...selectedIds]}
+          sources={sources}
+          onSave={(patch) => batchPatch.mutate({ ids: [...selectedIds], body: patch })}
+          loading={batchPatch.isPending}
+          onClose={() => setBatchEditOpen(false)}
+        />
+      )}
       <ConfirmationDialog {...confirmDelete} />
       <ConfirmationDialog {...confirmClear} />
+      <ConfirmationDialog {...confirmBatchRemove} />
+      <ConfirmationDialog {...confirmBatchClear} />
+      <ConfirmationDialog {...confirmBatchRefresh} />
+      <ConfirmationDialog {...confirmRemoveAllNonLocal} />
     </div>
   );
 }
@@ -610,7 +808,7 @@ function ExportModal({
         <Select
           label="Scope"
           options={[
-            { label: 'This instance’s own verdicts', value: 'local' },
+            { label: "This instance's own verdicts", value: 'local' },
             { label: 'Everything (all sources, deduplicated)', value: 'all' },
           ]}
           value={scope}
@@ -628,6 +826,94 @@ function ExportModal({
           </Button>
           <Button intent="primary" leftIcon={<BiDownload />} onClick={download}>
             Download
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function BatchEditSourceModal({
+  selectedIds,
+  sources,
+  onSave,
+  loading,
+  onClose,
+}: {
+  selectedIds: string[];
+  sources: BlocklistSource[];
+  onSave: (body: Record<string, unknown>) => void;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const selected = sources.filter((s) => selectedIds.includes(s.id));
+  const hasRemote = selected.some((s) => s.kind === 'remote');
+  const [trust, setTrust] = React.useState<Trust | ''>('');
+  const [refreshHours, setRefreshHours] = React.useState(24);
+  const [enabled, setEnabled] = React.useState<boolean | ''>('');
+
+  const buildPatch = (): Record<string, unknown> => {
+    const body: Record<string, unknown> = {};
+    if (trust) body.trust = trust;
+    if (hasRemote && refreshHours > 0) {
+      body.refreshSeconds = Math.round(refreshHours * 3600);
+    }
+    if (enabled !== '') body.enabled = enabled;
+    return body;
+  };
+
+  return (
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title={`Edit ${selectedIds.length} source${selectedIds.length === 1 ? '' : 's'}`}
+      description="Set common fields for all selected sources. Blank fields are left unchanged."
+    >
+      <div className="space-y-3">
+        <Select
+          label="Trust"
+          options={[
+            { label: 'Leave unchanged', value: '' },
+            ...TRUSTS.map((t) => ({ label: t, value: t })),
+          ]}
+          value={trust}
+          onValueChange={(v) => setTrust(v as Trust | '')}
+          help="full filters on its own; corroborate needs the quorum; observe never filters"
+        />
+        {hasRemote && (
+          <NumberInput
+            label="Refresh (hours)"
+            value={refreshHours}
+            min={1}
+            max={720}
+            onValueChange={(v) => setRefreshHours(v || 24)}
+            help="Only applies to remote sources"
+          />
+        )}
+        <Select
+          label="Enabled"
+          options={[
+            { label: 'Leave unchanged', value: '' },
+            { label: 'Enable', value: 'true' },
+            { label: 'Disable', value: 'false' },
+          ]}
+          value={enabled === '' ? '' : String(enabled)}
+          onValueChange={(v) =>
+            setEnabled(v === '' ? '' : v === 'true')
+          }
+          help="Enable or disable the source. The local source cannot be disabled."
+        />
+        <div className="flex justify-end gap-2">
+          <Button intent="gray-outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            intent="primary"
+            loading={loading}
+            disabled={Object.keys(buildPatch()).length === 0}
+            onClick={() => onSave(buildPatch())}
+          >
+            Save
           </Button>
         </div>
       </div>

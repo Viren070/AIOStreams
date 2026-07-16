@@ -821,6 +821,115 @@ router.delete('/entries', async (req, res, next) => {
   }
 });
 
+const BatchSourceIdsSchema = z.object({
+  ids: z.array(z.string().trim().min(1)).min(1).max(200),
+});
+
+const BatchPatchSourceSchema = z.object({
+  ids: z.array(z.string().trim().min(1)).min(1).max(200),
+  trust: TrustSchema.optional(),
+  refreshSeconds: RefreshSecondsSchema.optional(),
+  enabled: z.boolean().optional(),
+});
+
+// POST /dashboard/blocklist/batch/sources/remove - batch remove non-local sources.
+router.post('/batch/sources/remove', async (req, res, next) => {
+  try {
+    const body = BatchSourceIdsSchema.parse(req.body ?? {});
+    let removed = 0;
+    for (const id of body.ids) {
+      if (id === LOCAL_SOURCE_ID) continue;
+      try {
+        await ReleaseBlocklistRepository.removeSource(id);
+        removed++;
+      } catch {}
+    }
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { removed, ...(await snapshot()) },
+      })
+    );
+  } catch (err) {
+    if (err instanceof ZodError) return badRequest(res, zodMessage(err));
+    next(err);
+  }
+});
+
+// POST /dashboard/blocklist/batch/sources/clear - batch clear source entries.
+router.post('/batch/sources/clear', async (req, res, next) => {
+  try {
+    const body = BatchSourceIdsSchema.parse(req.body ?? {});
+    let cleared = 0;
+    for (const id of body.ids) {
+      try {
+        await ReleaseBlocklistRepository.clearSource(id);
+        cleared++;
+      } catch {}
+    }
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { cleared, ...(await snapshot()) },
+      })
+    );
+  } catch (err) {
+    if (err instanceof ZodError) return badRequest(res, zodMessage(err));
+    next(err);
+  }
+});
+
+// POST /dashboard/blocklist/batch/sources/refresh - batch refresh remote sources.
+router.post('/batch/sources/refresh', async (req, res, next) => {
+  try {
+    const body = BatchSourceIdsSchema.parse(req.body ?? {});
+    let refreshed = 0;
+    for (const id of body.ids) {
+      try {
+        await ReleaseBlocklistRemoteService.refreshByIds([id]);
+        refreshed++;
+      } catch {}
+    }
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { refreshed, ...(await snapshot()) },
+      })
+    );
+  } catch (err) {
+    if (err instanceof ZodError) return badRequest(res, zodMessage(err));
+    next(err);
+  }
+});
+
+// POST /dashboard/blocklist/batch/sources/patch - batch edit source fields.
+router.post('/batch/sources/patch', async (req, res, next) => {
+  try {
+    const body = BatchPatchSourceSchema.parse(req.body ?? {});
+    let patched = 0;
+    for (const id of body.ids) {
+      if (id === LOCAL_SOURCE_ID && (body.enabled !== undefined || body.trust !== undefined)) continue;
+      try {
+        await ReleaseBlocklistRepository.updateSource(id, {
+          trust: body.trust as never,
+          refreshSeconds: body.refreshSeconds,
+          enabled: body.enabled,
+        });
+        patched++;
+      } catch {}
+    }
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { patched, ...(await snapshot()) },
+      })
+    );
+  } catch (err) {
+    if (err instanceof ZodError) return badRequest(res, zodMessage(err));
+    next(err);
+  }
+});
+
 // POST /dashboard/blocklist/unmark - allow a release on this instance:
 // deletes any local verdict and writes an override suppressing remote ones.
 router.post('/unmark', async (req, res, next) => {
