@@ -397,14 +397,12 @@ export class ReleaseBlocklistRepository {
     await getDb().tx(async (tx) => {
       let writeOverride = true;
       if (opts?.onlyIfBlocked) {
-        const remote = await tx.query(
-          sql`SELECT 1 FROM release_blocklist_entries e
-              JOIN release_blocklist_keys kt ON kt.id = e.key_id
-              WHERE kt.k = ${key}
-                AND e.source_rid <> ${sourceRidSql(LOCAL_SOURCE_ID)}
-              LIMIT 1`
+        const remote = await tx.maybeOne(
+          sql`SELECT 1 AS present FROM release_blocklist_entries
+              WHERE source_rid <> ${sourceRidSql(LOCAL_SOURCE_ID)}
+                AND key_id = ${keyIdSql(key)} LIMIT 1`
         );
-        writeOverride = remote.length > 0;
+        writeOverride = remote !== null;
       }
       await tx.exec(
         sql`DELETE FROM release_blocklist_entries
