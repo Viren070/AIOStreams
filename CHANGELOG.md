@@ -1,5 +1,53 @@
 # Changelog
 
+## [2.31.1](https://github.com/Viren070/AIOStreams/compare/v2.31.0...v2.31.1) (2026-07-17)
+
+
+### Features
+
+* add `DISK_CACHE_DIR` for overriding disk backed cache directory ([d27bbab](https://github.com/Viren070/AIOStreams/commit/d27bbab0c864cf6b3ea053b8c19a84521b9745f4)), closes [#1100](https://github.com/Viren070/AIOStreams/issues/1100)
+* **config:** support marking settings as deprecated ([f0e6eea](https://github.com/Viren070/AIOStreams/commit/f0e6eea85d95cf1977f8e7734982f6377fe04973))
+* **dashboard:** add clear logs button ([#1076](https://github.com/Viren070/AIOStreams/issues/1076)) ([2159015](https://github.com/Viren070/AIOStreams/commit/21590151e10cab558f1b122899ec042b1f92fb65))
+* **parser/regex:** add `DVD REMUX` quality ([#1103](https://github.com/Viren070/AIOStreams/issues/1103)) ([d0ce2a3](https://github.com/Viren070/AIOStreams/commit/d0ce2a30b21a8030982b26708641506a20b95e5d))
+* **seadex:** always apply group matching and expose match method ([28c82eb](https://github.com/Viren070/AIOStreams/commit/28c82eb6b0fcee4b5a58e69bd737c23ead7147e9)), closes [#990](https://github.com/Viren070/AIOStreams/issues/990)
+
+
+### Bug Fixes
+
+* **api/nab:** handle rss request and other fixes ([8c08077](https://github.com/Viren070/AIOStreams/commit/8c080770aeb4cc99c6d927ea3a2ece6810febdfd))
+* **blocklists:** derivce source name from username for raw gist urls automatically ([8ae4914](https://github.com/Viren070/AIOStreams/commit/8ae49146e8bd2d9fc53d9df6d1fce2bd753804d4)), closes [#1102](https://github.com/Viren070/AIOStreams/issues/1102)
+* **builtins/knaben:** calculate age based on lastSeen ([21814d4](https://github.com/Viren070/AIOStreams/commit/21814d43399e9e01f4dad62345c742a38239bbbf))
+* **builtins:** only create infoHash field for torrents ([06256f7](https://github.com/Viren070/AIOStreams/commit/06256f768e430c8fa027ab5a15ab97032b5420bc))
+* **config:** fix parsing for builtin title lang setting ([f9afa75](https://github.com/Viren070/AIOStreams/commit/f9afa75b289cbd2c978dbed159d884e67a2d77a0))
+* **core/formatter:** update small caps map ([edf9ca5](https://github.com/Viren070/AIOStreams/commit/edf9ca5a3480a0f8723c8ed47bad92747380fa45)), closes [#1112](https://github.com/Viren070/AIOStreams/issues/1112)
+* **debrid:** encode webdav path for webdav based playback services ([50d199f](https://github.com/Viren070/AIOStreams/commit/50d199fd450a90c791671268d4a1910b8d2c962a)), closes [#1006](https://github.com/Viren070/AIOStreams/issues/1006)
+* **deduplicator:** handle stremio-usenet type when detecting usenet stream ([c0be37d](https://github.com/Viren070/AIOStreams/commit/c0be37d74600d8561155294b93d5be727c115e42))
+* **filterer:** only apply digital release tolerance to unreleased content ([35315d1](https://github.com/Viren070/AIOStreams/commit/35315d108350f1f2d1f57da85309e7484c5c5145))
+* **filterer:** re-evaluate included stream expressions on the full result set ([e7aee6b](https://github.com/Viren070/AIOStreams/commit/e7aee6bb863cabc0bc3e043f8047ea31f86a04f8)), closes [#387](https://github.com/Viren070/AIOStreams/issues/387)
+* **frontend:** try to improve password manager compatibility ([a9542b6](https://github.com/Viren070/AIOStreams/commit/a9542b605a96c2bddcddc1dabb0b16cd2e4e208a))
+* **http:** follow redirects manually to re-evaluate header/proxy rules ([8d582af](https://github.com/Viren070/AIOStreams/commit/8d582af3ae06d9703edc22437d0f74dcf6f69702))
+* improve failover logs ([5585ee7](https://github.com/Viren070/AIOStreams/commit/5585ee7d7c9614c7e790be0812ce3acd3790c2e6))
+* **logging:** redact sensitive info in all log sinks and hash credentials in cache/lock keys ([3f2a970](https://github.com/Viren070/AIOStreams/commit/3f2a9701fb0534bd87aa24827c0b2e96a2de9310)), closes [#849](https://github.com/Viren070/AIOStreams/issues/849) [#952](https://github.com/Viren070/AIOStreams/issues/952)
+* loosen released schema to string instead of strict datetime ([87967d2](https://github.com/Viren070/AIOStreams/commit/87967d29987e12170e5707e66a95cddc2a54dbaf)), closes [#831](https://github.com/Viren070/AIOStreams/issues/831)
+* **metadata/tmdb:** use `original_name` field for TVDetails ([f3aea6b](https://github.com/Viren070/AIOStreams/commit/f3aea6b03ed21cd5c51dd543310c82ffe55b2593))
+* **parser/regex:** adjust `AI` filter and add separate `Upscaled` filter ([#1105](https://github.com/Viren070/AIOStreams/issues/1105)) ([4db1272](https://github.com/Viren070/AIOStreams/commit/4db12724d2ce576366b5b3e9a844075cbe4c9b3e))
+* **parser:** adjust bluray regex ([bf80194](https://github.com/Viren070/AIOStreams/commit/bf80194cb62e1a79fa98c3c4215e0a104994071c))
+* **parser:** check for plus symbol separately to avoid false positives in service parser ([f5c84b1](https://github.com/Viren070/AIOStreams/commit/f5c84b1ada59da27144b0288b8028d53bcec449d))
+* **parser:** use language-aware transliteration for scrape queries and title matching ([7c51cec](https://github.com/Viren070/AIOStreams/commit/7c51cec9837d7453d14781b3c7cb5bcdce6771d7)), closes [#1030](https://github.com/Viren070/AIOStreams/issues/1030)
+* **presets/argentinaTv:** only override streams with URL as live ([4cae141](https://github.com/Viren070/AIOStreams/commit/4cae14179e7bada45dc3cb6acdc6423646cc4242)), closes [#859](https://github.com/Viren070/AIOStreams/issues/859)
+* **release-blocklist:** only write an override when a remote source flags the release ([#1104](https://github.com/Viren070/AIOStreams/issues/1104)) ([b527742](https://github.com/Viren070/AIOStreams/commit/b52774277cc65aa33ebb02072cb122653a5dbd18))
+* split at first colon only to allow passwords with colons in `AIOSTREAMS_AUTH` ([041a2c3](https://github.com/Viren070/AIOStreams/commit/041a2c3c272188c682bf5dbacf73b81311eedec4))
+* update parser ([4f4a866](https://github.com/Viren070/AIOStreams/commit/4f4a8661512a91ff88ae9611b3166e99523aba7c))
+* **usenet:** name archive-inner downloads by their display name ([dc05750](https://github.com/Viren070/AIOStreams/commit/dc05750409f4669e8482b5ef51badb2c634187d3))
+* **usenet:** recognize old-style .sNN–.zNN rar volume rollover ([98c33db](https://github.com/Viren070/AIOStreams/commit/98c33dbf304028bce72530806ab36094dd61c0b6))
+* **usenet:** report the specific reason for unstreamable archives ([9569bc5](https://github.com/Viren070/AIOStreams/commit/9569bc58d42f036374dd91d46868517a5848e3bd))
+* **usenet:** use PAR2 names when obfuscation fragments a rar set ([7fd76c1](https://github.com/Viren070/AIOStreams/commit/7fd76c1c49416567f29ecde2283d302e6998ba38))
+
+
+### Code Refactoring
+
+* centralise auth check and give detailed reason ([16d3e09](https://github.com/Viren070/AIOStreams/commit/16d3e0998bb08160d8421a547ecfec2d00051049))
+
 ## [2.31.0](https://github.com/Viren070/AIOStreams/compare/v2.30.6...v2.31.0) (2026-07-14)
 
 
