@@ -823,31 +823,53 @@ router.delete('/entries', async (req, res, next) => {
 
 const BatchSourceIdsSchema = z.object({
   ids: z.array(z.string().trim().min(1)).min(1).max(200),
-});
+}).refine(
+  (data) => new Set(data.ids).size === data.ids.length,
+  { message: 'duplicate IDs are not allowed', path: ['ids'] }
+);
 
 const BatchPatchSourceSchema = z.object({
   ids: z.array(z.string().trim().min(1)).min(1).max(200),
   trust: TrustSchema.optional(),
   refreshSeconds: RefreshSecondsSchema.optional(),
   enabled: z.boolean().optional(),
-});
+})
+  .refine(
+    (data) => new Set(data.ids).size === data.ids.length,
+    { message: 'duplicate IDs are not allowed', path: ['ids'] }
+  )
+  .refine(
+    (data) =>
+      data.trust !== undefined ||
+      data.refreshSeconds !== undefined ||
+      data.enabled !== undefined,
+    {
+      message:
+        'at least one of trust, refreshSeconds, or enabled must be provided',
+      path: ['trust'],
+    }
+  );
 
 // POST /dashboard/blocklist/batch/sources/remove - batch remove non-local sources.
 router.post('/batch/sources/remove', async (req, res, next) => {
   try {
     const body = BatchSourceIdsSchema.parse(req.body ?? {});
     let removed = 0;
+    let failed = 0;
     for (const id of body.ids) {
       if (id === LOCAL_SOURCE_ID) continue;
       try {
         await ReleaseBlocklistRepository.removeSource(id);
         removed++;
-      } catch {}
+      } catch (err) {
+        failed++;
+        logger.warn({ id, err }, 'batch remove source failed');
+      }
     }
     res.status(200).json(
       createResponse({
         success: true,
-        data: { removed, ...(await snapshot()) },
+        data: { removed, failed, ...(await snapshot()) },
       })
     );
   } catch (err) {
@@ -861,16 +883,20 @@ router.post('/batch/sources/clear', async (req, res, next) => {
   try {
     const body = BatchSourceIdsSchema.parse(req.body ?? {});
     let cleared = 0;
+    let failed = 0;
     for (const id of body.ids) {
       try {
         await ReleaseBlocklistRepository.clearSource(id);
         cleared++;
-      } catch {}
+      } catch (err) {
+        failed++;
+        logger.warn({ id, err }, 'batch clear source failed');
+      }
     }
     res.status(200).json(
       createResponse({
         success: true,
-        data: { cleared, ...(await snapshot()) },
+        data: { cleared, failed, ...(await snapshot()) },
       })
     );
   } catch (err) {
@@ -880,20 +906,38 @@ router.post('/batch/sources/clear', async (req, res, next) => {
 });
 
 // POST /dashboard/blocklist/batch/sources/refresh - batch refresh remote sources.
+// Processes up to CONCURRENT_REFRESHES at a time via a bounded worker pool.
+const CONCURRENT_REFRESHES = 5;
 router.post('/batch/sources/refresh', async (req, res, next) => {
   try {
     const body = BatchSourceIdsSchema.parse(req.body ?? {});
     let refreshed = 0;
-    for (const id of body.ids) {
-      try {
-        await ReleaseBlocklistRemoteService.refreshByIds([id]);
-        refreshed++;
-      } catch {}
-    }
+    let failed = 0;
+    let nextIndex = 0;
+    const ids = body.ids;
+    const worker = async () => {
+      while (nextIndex < ids.length) {
+        const i = nextIndex++;
+        const id = ids[i];
+        try {
+          await ReleaseBlocklistRemoteService.refreshByIds([id]);
+          refreshed++;
+        } catch (err) {
+          failed++;
+          logger.warn({ id, err }, 'batch refresh source failed');
+        }
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(CONCURRENT_REFRESHES, ids.length) },
+        () => worker()
+      )
+    );
     res.status(200).json(
       createResponse({
         success: true,
-        data: { refreshed, ...(await snapshot()) },
+        data: { refreshed, failed, ...(await snapshot()) },
       })
     );
   } catch (err) {
@@ -907,6 +951,7 @@ router.post('/batch/sources/patch', async (req, res, next) => {
   try {
     const body = BatchPatchSourceSchema.parse(req.body ?? {});
     let patched = 0;
+    let failed = 0;
     for (const id of body.ids) {
       if (id === LOCAL_SOURCE_ID && (body.enabled !== undefined || body.trust !== undefined)) continue;
       try {
@@ -916,12 +961,15 @@ router.post('/batch/sources/patch', async (req, res, next) => {
           enabled: body.enabled,
         });
         patched++;
-      } catch {}
+      } catch (err) {
+        failed++;
+        logger.warn({ id, err }, 'batch patch source failed');
+      }
     }
     res.status(200).json(
       createResponse({
         success: true,
-        data: { patched, ...(await snapshot()) },
+        data: { patched, failed, ...(await snapshot()) },
       })
     );
   } catch (err) {

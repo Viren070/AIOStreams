@@ -286,7 +286,7 @@ function SourcesView({
             leftIcon={<BiRefresh />}
             loading={batchRefresh.isPending}
             onClick={confirmBatchRefresh.open}
-            disabled={!hasRemoteSelected}
+            disabled={hasLocalSelected}
           >
             Refresh
           </Button>
@@ -861,12 +861,13 @@ function BatchEditSourceModal({
   const hasRemote = selected.some((s) => s.kind === 'remote');
   const [trust, setTrust] = React.useState<Trust | ''>('');
   const [refreshHours, setRefreshHours] = React.useState(24);
+  const [refreshChanged, setRefreshChanged] = React.useState(false);
   const [enabled, setEnabled] = React.useState<boolean | ''>('');
 
   const buildPatch = (): Record<string, unknown> => {
     const body: Record<string, unknown> = {};
     if (trust) body.trust = trust;
-    if (hasRemote && refreshHours > 0) {
+    if (hasRemote && refreshChanged && refreshHours > 0) {
       body.refreshSeconds = Math.round(refreshHours * 3600);
     }
     if (enabled !== '') body.enabled = enabled;
@@ -897,7 +898,10 @@ function BatchEditSourceModal({
             value={refreshHours}
             min={1}
             max={720}
-            onValueChange={(v) => setRefreshHours(v || 24)}
+            onValueChange={(v) => {
+              setRefreshHours(v || 24);
+              setRefreshChanged(true);
+            }}
             help="Only applies to remote sources"
           />
         )}
