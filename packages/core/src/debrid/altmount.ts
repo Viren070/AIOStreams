@@ -14,6 +14,7 @@ import {
   createLogger,
   fromUrlSafeBase64,
   appConfig,
+  makeUrlLogSafe,
 } from '../utils/index.js';
 import {
   selectFileInTorrentOrNZB,
@@ -144,7 +145,9 @@ export class AltmountService extends UsenetStreamService {
 
     const cachedResponse = await UsenetStreamService.resolveCache.get(cacheKey);
     if (cachedResponse) {
-      this.serviceLogger.debug(`Using cached stream URL for ${nzb}`);
+      this.serviceLogger.debug(
+        `Using cached stream URL for ${makeUrlLogSafe(nzb)}`
+      );
       return cachedResponse;
     }
 

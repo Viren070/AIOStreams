@@ -3,6 +3,7 @@ import { StreamProxyConfig } from '../db/schemas.js';
 import {
   Cache,
   createLogger,
+  getSimpleTextHash,
   maskSensitiveInfo,
   Env,
   constants,
@@ -82,7 +83,7 @@ export abstract class BaseProxy {
       return null;
     }
 
-    const cacheKey = `${this.config.id}:${this.config.url}:${this.config.credentials}`;
+    const cacheKey = `${this.config.id}:${this.config.url}:${getSimpleTextHash(this.config.credentials ?? '')}`;
     const cachedPublicIp = cache ? await cache.get(cacheKey) : null;
     if (cachedPublicIp) {
       logger.debug(

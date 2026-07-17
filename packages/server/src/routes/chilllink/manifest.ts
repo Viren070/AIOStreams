@@ -68,7 +68,7 @@ router.get(
     res: Response<ChillLinkManifest>,
     next: NextFunction
   ) => {
-    logger.debug('Manifest request received', { userData: req.userData });
+    logger.debug('Manifest request received', { uuid: req.userData?.uuid });
     try {
       res.status(200).json(await manifest(req.userData));
     } catch (error) {

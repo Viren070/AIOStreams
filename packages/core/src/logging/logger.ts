@@ -2,7 +2,7 @@ import pino, { type DestinationStream, type Logger as PinoLogger } from 'pino';
 import { prettyFactory } from 'pino-pretty';
 import { Writable } from 'stream';
 import { formatMilliseconds } from '../utils/time.js';
-import { redactUrlParams } from './redact.js';
+import { redactForLog, redactLogField } from './redact.js';
 import { logRingBuffer } from './ring-buffer.js';
 
 export interface Logger {
@@ -84,7 +84,8 @@ let currentFormat: LogFormat = normaliseFormat(process.env.LOG_FORMAT);
  * format, so json-vs-text is a per-line rendering decision rather than a
  * property of the stream — which is what lets the format change at runtime
  * without rebuilding the root logger. json is forwarded verbatim to SonicBoom;
- * text is parsed, URL-redacted and re-emitted through pino-pretty.
+ * text is parsed and re-emitted through pino-pretty. Redaction happens
+ * upstream in the wrapper/serializers, so both renderings are equally safe.
  *
  * A bare `write` object rather than a `Writable`: multistream only calls
  * `write`, and this sits on the hot path for every log line.
@@ -102,9 +103,6 @@ function buildStdoutStream(): DestinationStream {
         if (!line) continue;
         try {
           const obj = JSON.parse(line) as Record<string, unknown>;
-          if (typeof obj.msg === 'string') {
-            obj.msg = redactUrlParams(obj.msg);
-          }
           process.stdout.write(prettify(obj));
         } catch {
           process.stdout.write(line + '\n');
@@ -117,9 +115,10 @@ function buildStdoutStream(): DestinationStream {
 /**
  * Stream B for the multistream: tees every NDJSON line into the in-memory
  * ring buffer that backs the dashboard Logs page. Lines arrive already
- * redacted (pino applies `redact` before any stream sees the record), so the
- * dashboard can never leak secrets. Chunks are not guaranteed to be
- * line-aligned, so we buffer a partial trailing fragment.
+ * redacted (the wrapper redacts `msg` and the `err` serializer redacts error
+ * text before pino writes), so the dashboard sees exactly what stdout sees.
+ * Chunks are not guaranteed to be line-aligned, so we buffer a partial
+ * trailing fragment.
  */
 function buildRingStream(): Writable {
   let partial = '';
@@ -151,7 +150,18 @@ const root: PinoLogger = pino(
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     serializers: {
-      err: pino.stdSerializers.err,
+      err(e: unknown) {
+        const serialized = pino.stdSerializers.err(e as Error);
+        if (serialized && typeof serialized === 'object') {
+          if (typeof serialized.message === 'string') {
+            serialized.message = redactForLog(serialized.message);
+          }
+          if (typeof serialized.stack === 'string') {
+            serialized.stack = redactForLog(serialized.stack);
+          }
+        }
+        return serialized;
+      },
     },
   },
   pino.multistream([
@@ -282,10 +292,15 @@ function wrap(pinoInstance: PinoLogger): Logger {
       deconflictReservedKeys(obj);
       deriveLatencyHuman(obj);
       if (msg === undefined && Object.keys(obj).length === 0) return;
+      for (const key of Object.keys(obj)) {
+        if (typeof obj[key] === 'string') {
+          obj[key] = redactLogField(key, obj[key] as string);
+        }
+      }
       if (msg === undefined) {
         pinoInstance[target](obj);
       } else {
-        pinoInstance[target](obj, msg);
+        pinoInstance[target](obj, redactForLog(msg));
       }
     };
 

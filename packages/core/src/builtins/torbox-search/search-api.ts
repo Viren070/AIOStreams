@@ -8,11 +8,11 @@ import {
   createLogger,
   DistributedLock,
   formatZodError,
+  getSimpleTextHash,
 } from '../../utils/index.js';
 
 import { config as appConfig } from '../../config/index.js';
 import { IdType } from '../../utils/id-parser.js';
-import { maskSensitiveInfo } from '../../logging/redact.js';
 
 type TorboxSuccessResponse<T> = {
   success: true;
@@ -98,9 +98,7 @@ class TorboxSearchApi {
     );
 
     if (cached) {
-      logger.debug(
-        `Found cached result for ${key.replace(this.apiKey, maskSensitiveInfo(this.apiKey))}`
-      );
+      logger.debug(`Found cached result for ${key}`);
     }
 
     return result;
@@ -206,7 +204,7 @@ class TorboxSearchApi {
     const endpoint = `/torrents/${idType}:${id}`;
     const lockKey =
       params.search_user_engines === 'true'
-        ? `${this.apiKey}:${endpoint}:${params.season}:${params.episode}`
+        ? `${getSimpleTextHash(this.apiKey)}:${endpoint}:${params.season}:${params.episode}`
         : `${endpoint}:${params.season}:${params.episode}`;
 
     return this.createRequestLock(lockKey, () =>
@@ -243,7 +241,7 @@ class TorboxSearchApi {
     const endpoint = `/usenet/${idType}:${id}`;
     const lockKey =
       params.search_user_engines === 'true'
-        ? `${this.apiKey}:${endpoint}:${params.season}:${params.episode}`
+        ? `${getSimpleTextHash(this.apiKey)}:${endpoint}:${params.season}:${params.episode}`
         : `${endpoint}:${params.season}:${params.episode}`;
 
     return this.createRequestLock(lockKey, () =>

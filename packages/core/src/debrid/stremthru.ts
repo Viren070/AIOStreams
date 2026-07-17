@@ -8,6 +8,7 @@ import {
   Cache,
   DistributedLock,
   getTimeTakenSincePoint,
+  makeUrlLogSafe,
 } from '../utils/index.js';
 import {
   selectFileInTorrentOrNZB,
@@ -85,7 +86,9 @@ export class StremThruService
   };
 
   // Shared caches across all StremThruService instances.
-  // Cache keys include serviceName + token so different services never collide.
+  // Cache keys include serviceName + a hash of the token so different
+  // services/accounts never collide; hashed because these keys reach log
+  // lines (distributed locks) and file lock paths.
   private static playbackLinkCache = Cache.getInstance<string, string | null>(
     'st:link'
   );
@@ -156,7 +159,7 @@ export class StremThruService
   //  Shared library helpers (pagination, stale-while-revalidate)
 
   private getLibraryCacheKey(type: 'torrent' | 'usenet'): string {
-    return `${type}:${this.serviceName}:${this.config.stremthru.token}`;
+    return `${type}:${this.serviceName}:${getSimpleTextHash(this.config.stremthru.token)}`;
   }
 
   private getLibraryLimit(): number {
@@ -929,10 +932,10 @@ export class StremThruService
       (await this.checkCacheGet(hash))?.status !== 'cached'
     ) {
       logger.debug(
-        `Adding torrent to ${this.serviceName} for ${playbackInfo.downloadUrl}`
+        `Adding torrent to ${this.serviceName} for ${makeUrlLogSafe(playbackInfo.downloadUrl)}`
       );
       magnetDownload = await this.addTorrent(playbackInfo.downloadUrl);
-      logger.debug(`Torrent added for ${playbackInfo.downloadUrl}`, {
+      logger.debug(`Torrent added for ${makeUrlLogSafe(playbackInfo.downloadUrl)}`, {
         status: magnetDownload.status,
         id: magnetDownload.id,
       });
@@ -945,9 +948,11 @@ export class StremThruService
         magnet += `&tr=${playbackInfo.sources.join('&tr=')}`;
       }
 
-      logger.debug(`Adding magnet to ${this.serviceName} for ${magnet}`);
+      logger.debug(
+        `Adding magnet to ${this.serviceName} for ${makeUrlLogSafe(magnet)}`
+      );
       magnetDownload = await this.addMagnet(magnet);
-      logger.debug(`Magnet download added for ${magnet}`, {
+      logger.debug(`Magnet download added for ${makeUrlLogSafe(magnet)}`, {
         status: magnetDownload.status,
         id: magnetDownload.id,
       });
@@ -1165,7 +1170,9 @@ export class StremThruService
     const cachedLink = await StremThruService.playbackLinkCache.get(cacheKey);
 
     if (cachedLink !== undefined) {
-      logger.debug(`Using cached link for ${nzb || hash}`);
+      logger.debug(
+        `Using cached link for ${nzb ? makeUrlLogSafe(nzb) : hash}`
+      );
       if (cachedLink === null) {
         if (!cacheAndPlay) {
           return undefined;
@@ -1219,11 +1226,13 @@ export class StremThruService
         name: usenetDownload.name,
       });
     } else {
-      logger.debug(`Adding usenet download for ${nzb}`, { hash });
+      logger.debug(`Adding usenet download for ${makeUrlLogSafe(nzb)}`, {
+        hash,
+      });
 
       usenetDownload = await this.addNzb(nzb, filename);
 
-      logger.debug(`Usenet download added for ${nzb}`, {
+      logger.debug(`Usenet download added for ${makeUrlLogSafe(nzb)}`, {
         status: usenetDownload.status,
         id: usenetDownload.id,
       });
@@ -1261,7 +1270,7 @@ export class StremThruService
           setTimeout(resolve, this.cacheAndPlayOptions.pollingInterval)
         );
         const polledDownload = await this.getNzb(usenetDownload.id.toString());
-        logger.debug(`Polled status for ${nzb || hash}`, {
+        logger.debug(`Polled status for ${nzb ? makeUrlLogSafe(nzb) : hash}`, {
           attempt: i + 1,
           status: polledDownload.status,
         });

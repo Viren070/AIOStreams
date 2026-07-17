@@ -4,6 +4,7 @@
   INTERNAL_SECRET_HEADER,
   Env,
   maskSensitiveInfo,
+  redactForLog,
 } from './index.js';
 import { config as appConfig } from '../config/index.js';
 import {
@@ -33,19 +34,19 @@ export class PossibleRecursiveRequestError extends Error {
   }
 }
 export function makeUrlLogSafe(url: string) {
-  // for each component of the path, if it is longer than 10 characters, mask it
-  // and replace the query params of key 'password' with '****'
-  return url
-    .split('/')
-    .map((component) => {
-      if (component.length > 10 && !component.includes('.')) {
-        return maskSensitiveInfo(component);
-      }
-      return component;
-    })
-    .join('/')
-    .replace(/(?<![^?&])(password=[^&]+)/g, 'password=****')
-    .replace(/(?<![^?&])(apikey=[^&]+)/gi, 'apikey=****');
+  // Long opaque path components are masked; credential query/fragment
+  // params and userinfo passwords are stripped by the shared redaction pass.
+  return redactForLog(
+    url
+      .split('/')
+      .map((component) => {
+        if (component.length > 10 && !component.includes('.')) {
+          return maskSensitiveInfo(component);
+        }
+        return component;
+      })
+      .join('/')
+  );
 }
 
 /**
@@ -116,7 +117,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
       'detected possible recursive requests, blocking'
     );
     throw new PossibleRecursiveRequestError(
-      `Possible recursive request to ${urlObj.toString()}`
+      `Possible recursive request to ${makeUrlLogSafe(urlObj.toString())}`
     );
   }
   if (currentCount > 0) {
