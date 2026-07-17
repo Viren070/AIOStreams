@@ -73,9 +73,15 @@ function SourcesView({
   const [batchEditOpen, setBatchEditOpen] = React.useState(false);
 
   const sources = snapshot.sources;
+  const nonLocalSources = sources.filter((s) => s.id !== 'local');
   const allOnPageSelected =
     sources.length > 0 && sources.every((s) => selectedIds.has(s.id));
-  const nonLocalSources = sources.filter((s) => s.id !== 'local');
+
+  // Clear selection when the source list changes (subscribe, import, delete)
+  const sourcesKey = sources.map((s) => s.id).sort().join(',');
+  React.useEffect(() => {
+    setSelectedIds(new Set());
+  }, [sourcesKey]);
 
   const patchSource = useMutation({
     mutationFn: (args: { id: string; body: Record<string, unknown> }) =>
@@ -225,6 +231,7 @@ function SourcesView({
   const hasRemoteSelected = [...selectedIds].some(
     (id) => sources.find((s) => s.id === id)?.kind === 'remote'
   );
+  const hasLocalSelected = selectedIds.has('local');
 
   return (
     <div className="space-y-4">
@@ -288,6 +295,7 @@ function SourcesView({
             intent="gray-subtle"
             leftIcon={<BiPencil />}
             onClick={() => setBatchEditOpen(true)}
+            disabled={hasLocalSelected}
           >
             Edit...
           </Button>
@@ -306,6 +314,7 @@ function SourcesView({
             leftIcon={<BiTrash />}
             loading={batchRemove.isPending}
             onClick={confirmBatchRemove.open}
+            disabled={hasLocalSelected}
           >
             Remove
           </Button>
@@ -318,17 +327,19 @@ function SourcesView({
             <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
               <tr className="text-left">
                 <th className="p-3 w-10">
-                  <Checkbox
-                    value={allOnPageSelected}
-                    onValueChange={(checked) => {
-                      if (checked) {
-                        setSelectedIds(new Set(sources.map((s) => s.id)));
-                      } else {
-                        setSelectedIds(new Set());
-                      }
-                    }}
-                    aria-label="Select all"
-                  />
+                  {nonLocalSources.length > 0 && (
+                    <Checkbox
+                      value={allOnPageSelected}
+                      onValueChange={(checked) => {
+                        if (checked) {
+                          setSelectedIds(new Set(sources.map((s) => s.id)));
+                        } else {
+                          setSelectedIds(new Set());
+                        }
+                      }}
+                      aria-label="Select all"
+                    />
+                  )}
                 </th>
                 <th className="p-3">Name</th>
                 <th className="p-3">Kind</th>
