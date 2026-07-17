@@ -7,6 +7,7 @@ import {
   Cache,
   DistributedLock,
   getTimeTakenSincePoint,
+  makeUrlLogSafe,
   Time,
 } from '../utils/index.js';
 import { StremThruService } from './stremthru.js';
@@ -425,7 +426,7 @@ export class TorboxDebridService
       return this._fetchNzbList(id);
     }
 
-    const cacheKey = `torbox:usenet:${this.config.token}`;
+    const cacheKey = `torbox:usenet:${getSimpleTextHash(this.config.token)}`;
     const limit = Math.min(
       Math.max(appConfig.builtins.debrid.libraryPageSize, 100),
       1000
@@ -579,7 +580,7 @@ export class TorboxDebridService
 
     // Refresh NZBs
     if (includeNzbs) {
-      const cacheKey = `torbox:usenet:${this.config.token}`;
+      const cacheKey = `torbox:usenet:${getSimpleTextHash(this.config.token)}`;
       const limit = Math.min(
         Math.max(appConfig.builtins.debrid.libraryPageSize, 100),
         1000
@@ -689,7 +690,7 @@ export class TorboxDebridService
       await TorboxDebridService.playbackLinkCache.get(cacheKey);
 
     if (cachedLink !== undefined) {
-      logger.debug(`Using cached link for ${nzb}`);
+      logger.debug(`Using cached link for ${nzb ? makeUrlLogSafe(nzb) : hash}`);
       if (cachedLink === null) {
         if (!cacheAndPlay) {
           return undefined;
@@ -746,13 +747,13 @@ export class TorboxDebridService
         name: usenetDownload.name,
       });
     } else {
-      logger.debug(`Adding usenet download for ${nzb}`, {
+      logger.debug(`Adding usenet download for ${makeUrlLogSafe(nzb)}`, {
         hash,
       });
 
       usenetDownload = await this.addNzb(nzb, filename);
 
-      logger.debug(`Usenet download added for ${nzb}`, {
+      logger.debug(`Usenet download added for ${makeUrlLogSafe(nzb)}`, {
         status: usenetDownload.status,
         id: usenetDownload.id,
       });
@@ -794,9 +795,11 @@ export class TorboxDebridService
           (usenet) => usenet.hash === hash || usenet.id === usenetDownload.id
         );
         if (!usenetDownloadInList) {
-          logger.warn(`Failed to find ${nzb || hash} in list`);
+          logger.warn(
+            `Failed to find ${nzb ? makeUrlLogSafe(nzb) : hash} in list`
+          );
         } else {
-          logger.debug(`Polled status for ${nzb || hash}`, {
+          logger.debug(`Polled status for ${nzb ? makeUrlLogSafe(nzb) : hash}`, {
             attempt: i + 1,
             status: usenetDownloadInList.status,
           });

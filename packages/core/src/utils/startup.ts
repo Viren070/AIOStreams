@@ -39,7 +39,9 @@ export const logStartupInfo = () => {
     : appConfig.bootstrap.databaseUri.replace(/:\/\/[^@]+@/, '://***@');
   logger.info(`  Database:      ${dbType}  ${dbDisplay}`);
   if (appConfig.bootstrap.redisUri) {
-    logger.info(`  Redis:         ${appConfig.bootstrap.redisUri}`);
+    logger.info(
+      `  Redis:         ${appConfig.bootstrap.redisUri.replace(/:\/\/[^@]+@/, '://***@')}`
+    );
   }
   logger.info('');
 

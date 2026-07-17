@@ -8,6 +8,7 @@ import {
   BuiltinServiceId,
   constants,
   Cache,
+  getSimpleTextHash,
 } from '@aiostreams/core';
 import { createLogger } from '@aiostreams/core';
 import { StaticFiles } from '../../app.js';
@@ -182,7 +183,7 @@ router.get(
       }
 
       // Rate limit: max once per 5 minutes per service+credential
-      const rateKey = `${svcId}:${credential}`;
+      const rateKey = `${svcId}:${getSimpleTextHash(credential)}`;
       const lastRefresh = await lastRefreshMap.get(rateKey);
       const now = Date.now();
       if (lastRefresh && now - lastRefresh < REFRESH_COOLDOWN_MS) {

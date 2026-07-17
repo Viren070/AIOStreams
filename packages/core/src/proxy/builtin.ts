@@ -8,6 +8,7 @@ import {
   encryptString,
   decryptString,
   Cache,
+  getSimpleTextHash,
   toUrlSafeBase64,
   constants,
   checkAuthToken,
@@ -61,7 +62,7 @@ export class BuiltinProxy extends BaseProxy {
       return this.config.publicIp;
     }
 
-    const cacheKey = `${this.config.id}:${this.config.url}:${this.config.credentials}`;
+    const cacheKey = `${this.config.id}:${this.config.url}:${getSimpleTextHash(this.config.credentials ?? '')}`;
     const cachedPublicIp = cache ? await cache.get(cacheKey) : null;
     if (cachedPublicIp) {
       logger.debug('returning cached public ip');

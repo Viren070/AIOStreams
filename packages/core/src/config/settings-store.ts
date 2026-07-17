@@ -163,6 +163,7 @@ export type SettingsChangeListener<TSections extends SectionSchemas> = (
 export class SettingsStore<TSections extends SectionSchemas> {
   private snapshot: Snapshot<TSections>;
   private version = 0;
+  private initialisedFlag = false;
   private storedKeys: Set<string> = new Set();
   private fieldsByKey: Map<string, FieldEntry>;
   private listeners: Set<SettingsChangeListener<TSections>> = new Set();
@@ -192,6 +193,14 @@ export class SettingsStore<TSections extends SectionSchemas> {
 
   get current(): Snapshot<TSections> {
     return this.snapshot;
+  }
+
+  /**
+   * False until the first successful reload replaces the throwing seed
+   * snapshot.
+   */
+  get initialised(): boolean {
+    return this.initialisedFlag;
   }
 
   /** Monotonic settings version (bumped by every DB write across all replicas). */
@@ -272,6 +281,7 @@ export class SettingsStore<TSections extends SectionSchemas> {
     }
     this.storedKeys = new Set(stored.keys());
     this.snapshot = this.buildSnapshot(stored);
+    this.initialisedFlag = true;
     this.version = await SettingsRepository.getVersion();
     if (!emit) return new Set();
     const changed = this.diffKeys(previous, this.snapshot);

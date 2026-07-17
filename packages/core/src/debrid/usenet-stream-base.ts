@@ -8,6 +8,8 @@
   DistributedLock,
   fromUrlSafeBase64,
   formatZodError,
+  getSimpleTextHash,
+  makeUrlLogSafe,
   Time,
 } from '../utils/index.js';
 import {
@@ -147,8 +149,16 @@ export class SABnzbdApi {
       url.searchParams.append(key, val);
     });
 
+    // `name` is the NZB URL for addUrl requests and can embed credentials in
+    // its path (query-param and apikey-field redaction happen in the logger).
     this.logger.debug(
-      { service: this.serviceName, ...params },
+      {
+        service: this.serviceName,
+        ...params,
+        ...(typeof params.name === 'string'
+          ? { name: makeUrlLogSafe(params.name) }
+          : {}),
+      },
       'making api request'
     );
 
@@ -696,12 +706,18 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     return directories;
   }
 
+  // Token hashed: library keys reach distributed-lock log lines and file
+  // lock paths.
+  private getLibraryCacheKey(): string {
+    return `${this.serviceName}:${getSimpleTextHash(this.config.token)}`;
+  }
+
   /**
    * Fetch the category folders under the content path prefix by listing the
    * base WebDAV directory.
    */
   private async getCategories(): Promise<string[]> {
-    const cacheKey = `${this.serviceName}:${this.config.token}:categories`;
+    const cacheKey = `${this.getLibraryCacheKey()}:categories`;
     const cached = await UsenetStreamService.categoriesCache.get(cacheKey);
     if (cached) return cached;
 
@@ -745,7 +761,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   }
 
   public async listNzbs(): Promise<DebridDownload[]> {
-    const cacheKey = `${this.serviceName}:${this.config.token}`;
+    const cacheKey = this.getLibraryCacheKey();
 
     // Check for stale cache before acquiring the lock
     const cached = await UsenetStreamService.libraryCache.get(cacheKey);
@@ -903,7 +919,7 @@ export abstract class UsenetStreamService implements UsenetDebridService {
   public async refreshLibraryCache(
     sources?: ('torrent' | 'nzb')[]
   ): Promise<void> {
-    const cacheKey = `${this.serviceName}:${this.config.token}`;
+    const cacheKey = this.getLibraryCacheKey();
     await UsenetStreamService.libraryCache.delete(cacheKey);
     await this.fetchAndCacheNzbs(cacheKey);
   }
@@ -1051,7 +1067,9 @@ export abstract class UsenetStreamService implements UsenetDebridService {
     const cachedResponse = await UsenetStreamService.resolveCache.get(cacheKey);
 
     if (cachedResponse) {
-      this.serviceLogger.debug(`Using cached stream URL for ${nzb}`);
+      this.serviceLogger.debug(
+        `Using cached stream URL for ${makeUrlLogSafe(nzb)}`
+      );
       return cachedResponse;
     }
 

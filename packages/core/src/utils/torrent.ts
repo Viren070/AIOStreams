@@ -6,7 +6,7 @@ import {
 } from '../builtins/utils/debrid.js';
 import { createLogger } from '../logging/logger.js';
 import { GrabCache } from './grab-cache.js';
-import { makeRequest } from './http.js';
+import { makeRequest, makeUrlLogSafe } from './http.js';
 import parseTorrent, { Instance } from 'parse-torrent';
 import { config as appConfig } from '../config/index.js';
 import { getTimeTakenSincePoint } from './index.js';
@@ -107,7 +107,9 @@ export class TorrentGrabber {
     try {
       return await fetchPromise;
     } catch (error: any) {
-      logger.warn(`Failed to fetch metadata for ${url}: ${error.message}`);
+      logger.warn(
+        `Failed to fetch metadata for ${makeUrlLogSafe(url)}: ${error.message}`
+      );
       if (torrent.hash) {
         // If we have a hash but metadata fetch failed, return basic info
         return {
@@ -151,17 +153,17 @@ export class TorrentGrabber {
       );
       if (!hash) {
         if (redirectCount >= 3) {
-          throw new Error(`Too many redirects: ${redirectUrl}`);
+          throw new Error(`Too many redirects: ${makeUrlLogSafe(redirectUrl)}`);
         }
         logger.debug(
-          `Invalid magnet URL in redirect: ${redirectUrl}, retrying...`
+          `Invalid magnet URL in redirect: ${makeUrlLogSafe(redirectUrl)}, retrying...`
         );
         return this.#fetchMetadata(torrent, redirectCount + 1);
       }
 
       const sources = extractTrackersFromMagnet(redirectUrl);
       logger.debug(
-        `Got info for ${downloadUrl} from magnet redirect in ${getTimeTakenSincePoint(start)}`,
+        `Got info for ${makeUrlLogSafe(downloadUrl)} from magnet redirect in ${getTimeTakenSincePoint(start)}`,
         {
           hash,
         }
@@ -187,7 +189,7 @@ export class TorrentGrabber {
       }
 
       logger.debug(
-        `Got info for ${downloadUrl} from downloaded torrent in ${getTimeTakenSincePoint(start)}`,
+        `Got info for ${makeUrlLogSafe(downloadUrl)} from downloaded torrent in ${getTimeTakenSincePoint(start)}`,
         {
           hash: parsedTorrent.infoHash,
         }

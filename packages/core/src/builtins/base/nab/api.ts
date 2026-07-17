@@ -3,6 +3,7 @@ import {
   Cache,
   DistributedLock,
   formatZodError,
+  getSimpleTextHash,
   getTimeTakenSincePoint,
   createLogger,
   makeRequest,
@@ -369,7 +370,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     searchFunction: string = 'search',
     params: Record<string, string | number | boolean> = {}
   ): Promise<SearchResponse<N>> {
-    const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
+    const cacheKey = `${this.baseUrl}${this.apiPath}?t=${searchFunction}&${JSON.stringify(params)}&apikey=${this.apiKey ? getSimpleTextHash(this.apiKey) : ''}&${JSON.stringify(this.params)}`;
 
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache as Cache<string, SearchResponse<N>>,
@@ -405,7 +406,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
     params: Record<string, string | number | boolean> = {},
     timeout?: number
   ): Promise<T> {
-    const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey}&${JSON.stringify(this.params)}`;
+    const lockKey = `${this.baseUrl}${this.apiPath}?t=${func}&${JSON.stringify(params)}&apikey=${this.apiKey ? getSimpleTextHash(this.apiKey) : ''}&${JSON.stringify(this.params)}`;
     const { result } = await DistributedLock.getInstance().withLock(
       lockKey,
       () => this._request(func, schema, params, timeout),

@@ -1,4 +1,9 @@
-import { Cache, createLogger, makeRequest } from '../../utils/index.js';
+import {
+  Cache,
+  createLogger,
+  getSimpleTextHash,
+  makeRequest,
+} from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
 import {
   GDriveFile,
@@ -164,7 +169,9 @@ export class GoogleOAuth {
   }
 
   private async refreshAccessToken(): Promise<void> {
-    const cachedToken = await accessTokenCache.get(this.refreshToken);
+    const cachedToken = await accessTokenCache.get(
+      getSimpleTextHash(this.refreshToken)
+    );
     if (cachedToken) {
       this.accessToken = cachedToken;
       return;
@@ -200,7 +207,11 @@ export class GoogleOAuth {
       }
 
       const { access_token, expires_in } = parsedResponse.data;
-      accessTokenCache.set(this.refreshToken, access_token, expires_in);
+      accessTokenCache.set(
+        getSimpleTextHash(this.refreshToken),
+        access_token,
+        expires_in
+      );
       this.accessToken = access_token;
     } catch (error) {
       if (error instanceof GoogleOAuthError) {

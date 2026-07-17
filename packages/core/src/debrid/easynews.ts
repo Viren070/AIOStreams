@@ -12,6 +12,8 @@ import {
   ServiceId,
   createLogger,
   fromUrlSafeBase64,
+  getSimpleTextHash,
+  makeUrlLogSafe,
 } from '../utils/index.js';
 import { buildResolveKey } from './utils.js';
 import { NNTPServers, NNTPServersSchema } from '../db/schemas.js';
@@ -91,7 +93,7 @@ export class EasynewsService implements UsenetDebridService {
     }
     const { easynewsUrl } = playbackInfo;
 
-    const cacheKey = `${easynewsUrl}:${this.auth.username}:${this.auth.password}`;
+    const cacheKey = `${easynewsUrl}:${getSimpleTextHash(`${this.auth.username}:${this.auth.password}`)}`;
     const cachedLink = await EasynewsService.playbackLinkCache.get(cacheKey);
 
     if (cachedLink !== undefined) {
@@ -134,7 +136,9 @@ export class EasynewsService implements UsenetDebridService {
       );
     }
 
-    logger.debug(`Resolved Easynews URL to final URL: ${finalUrl}`);
+    logger.debug(
+      `Resolved Easynews URL to final URL: ${makeUrlLogSafe(finalUrl)}`
+    );
 
     await EasynewsService.playbackLinkCache.set(
       cacheKey,
