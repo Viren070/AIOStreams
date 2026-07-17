@@ -61,7 +61,8 @@ export const PARSE_REGEX: PARSE_REGEX = {
     '144p': createRegex('(bd|hd|m)?(144(p|i)?)'),
   },
   qualities: {
-    'BluRay REMUX': createRegex('(bd|br|b|uhd)?remux'),
+    'BluRay REMUX': createRegex('(?<!dvd.*)(bd|br|b|uhd)?remux(?!.*dvd)'),
+    'DVD REMUX': createRegex('(hd[ .\\-_]?)?dvd.*remux|remux.*(hd[ .\\-_]?)?dvd'),
     BluRay: createRegex(
       '(?<!remux.*)((bd|blu[ .\\-_]?ray)([ .\\-_]?rip)?|br[ .\\-_]?rip)(?!.*remux)'
     ),

@@ -44,6 +44,7 @@ export const defaultPreferredQualities: Quality[] = [
   'WEBRip',
   'HDRip',
   'HC HD-Rip',
+  'DVD REMUX',
   'DVDRip',
   'HDTV',
   'CAM',

@@ -1030,6 +1030,7 @@ const QUALITIES = [
   'WEBRip',
   'HDRip',
   'HC HD-Rip',
+  'DVD REMUX',
   'DVDRip',
   'HDTV',
   'CAM',
