@@ -177,13 +177,31 @@ export class ReleaseBlocklistRemoteService {
     };
   }
 
-  /** Refresh specific sources now, regardless of their interval. */
-  static async refreshByIds(ids: string[]): Promise<void> {
-    for (const id of ids) {
-      const source = await ReleaseBlocklistRepository.getSource(id);
-      if (source?.kind === 'remote' && source.url) {
-        await this.refreshOne(source);
+  /**
+   * Refresh specific sources now, regardless of their interval. Remote sources
+   * are fetched with bounded concurrency; non-remote ids are skipped. Returns
+   * how many were refreshed vs errored (refreshOne records status rather than
+   * throwing, so failures are read from its returned status string).
+   */
+  static async refreshByIds(
+    ids: string[]
+  ): Promise<{ refreshed: number; failed: number }> {
+    const CONCURRENCY = 5;
+    let refreshed = 0;
+    let failed = 0;
+    let next = 0;
+    const worker = async () => {
+      while (next < ids.length) {
+        const source = await ReleaseBlocklistRepository.getSource(ids[next++]);
+        if (source?.kind !== 'remote' || !source.url) continue;
+        const status = await this.refreshOne(source);
+        if (status.startsWith('error')) failed++;
+        else refreshed++;
       }
-    }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, ids.length) }, () => worker())
+    );
+    return { refreshed, failed };
   }
 }
