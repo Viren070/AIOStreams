@@ -1111,7 +1111,13 @@ export async function getSubtitles(
         return false;
       }
 
-      if (subtitleUrl.host === proxyUrl.host) {
+      // Skip only URLs that are already proxy URLs (same host-match logic as
+      // evaluateProxyStream), not every URL that merely shares the proxy host —
+      // an internal subtitle URL on that host still needs proxying.
+      if (
+        subtitleUrl.host === proxyUrl.host &&
+        (proxy.id === 'mediaflow' || subtitleUrl.pathname.includes('/v0/proxy'))
+      ) {
         return false;
       }
 
