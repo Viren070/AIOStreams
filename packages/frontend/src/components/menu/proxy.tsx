@@ -276,10 +276,10 @@ function Content() {
                 emptyMessage="No services available"
               />
               <p className="text-[--muted] text-sm">
-                Only streams (that are detected to be) from these services and
-                selected subtitle URLs will be proxied. Select Subtitles to
-                proxy subtitle URLs. Select None to enable proxying of streams
-                that are not detected to be from a service.
+                For non-internal URLs, streams detected from these services
+                (and selected subtitle URLs) are proxied. Select Subtitles to
+                proxy subtitle URLs, or None to proxy streams with no detected
+                service. Internal HTTP URLs are always proxied regardless.
               </p>
             </div>
 
@@ -300,8 +300,9 @@ function Content() {
                 emptyMessage="No addons available"
               />
               <p className="text-[--muted] text-sm">
-                Only streams and subtitle URLs from these addons will be
-                proxied
+                For non-internal URLs, only streams and subtitle URLs from
+                these addons are proxied. Internal HTTP URLs are always proxied
+                regardless.
               </p>
             </div>
           </SettingsCard>
