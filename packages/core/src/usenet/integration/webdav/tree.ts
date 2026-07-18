@@ -178,16 +178,32 @@ function classify(entry: UsenetLibraryEntry, file: UsenetLibraryFile): MediaClas
   const basis = file.name ?? entry.name ?? entry.nzbHash;
   const parsed = parseTorrentTitle(basis);
   const fallbackParsed = parseTorrentTitle(entry.name ?? '');
-  const season = parsed.seasons?.[0] ?? fallbackParsed.seasons?.[0];
-  const episode = parsed.episodes?.[0] ?? fallbackParsed.episodes?.[0];
+  // Take the season/episode markers and the title/year from the SAME parse
+  // result: prefer the file's own parse, but fall back to the entry name only
+  // when the file itself carries no markers. Mixing them lets a generic inner
+  // filename (e.g. "video.mkv") borrow the entry's season yet keep "video" as
+  // the show name, bucketing it under Series/video/Season 03.
+  const markerSource =
+    parsed.seasons?.length || parsed.episodes?.length
+      ? parsed
+      : fallbackParsed.seasons?.length || fallbackParsed.episodes?.length
+        ? fallbackParsed
+        : undefined;
+  // A season or episode marker (including season packs with no episode) means
+  // series; only titles with neither are treated as movies.
+  if (markerSource) {
+    const title =
+      markerSource.title?.trim() || (entry.name ?? '').trim() || 'Unknown';
+    return {
+      kind: 'series',
+      title,
+      season: markerSource.seasons?.[0],
+      year: markerSource.year,
+    };
+  }
   const title =
     parsed.title?.trim() || fallbackParsed.title?.trim() || (entry.name ?? '');
   const year = parsed.year ?? fallbackParsed.year;
-  // A season or episode marker (including season packs with no episode) means
-  // series; only titles with neither are treated as movies.
-  if (season != null || episode != null) {
-    return { kind: 'series', title: title || 'Unknown', season, year };
-  }
   return { kind: 'movie', title: title || 'Unknown', year };
 }
 
