@@ -86,18 +86,8 @@ export async function serveUsenetStreamToken(
 ): Promise<void> {
   const requested = parseRange(req.headers.range);
 
-  // Reject reversed from-ranges (e.g. bytes=100-0) up front. Beyond-EOF and
-  // suffix ranges need the file size, so the engine resolves/validates those.
-  if (
-    requested &&
-    'start' in requested &&
-    requested.endExclusive !== undefined &&
-    requested.start >= requested.endExclusive
-  ) {
-    res.status(416).set('Content-Range', 'bytes */*').end();
-    return;
-  }
-
+  // Range validation (reversed, beyond-EOF, suffix) is left to the engine,
+  // which knows the file size and returns a size-aware `bytes */<size>` 416.
   const controller = new AbortController();
   const onClose = () => controller.abort();
   res.on('close', onClose);
