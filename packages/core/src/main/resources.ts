@@ -1140,12 +1140,28 @@ export async function getSubtitles(
       return subtitles;
     }
 
-    const proxiedUrls = await createProxy(proxy).generateUrls(
-      proxyTargets.map(({ subtitle }) => ({
-        url: subtitle.url,
-        type: 'stream',
-      }))
-    );
+    const proxiedUrls = await (async () => {
+      try {
+        return await createProxy(proxy).generateUrls(
+          proxyTargets.map(({ subtitle }) => ({
+            url: subtitle.url,
+            type: 'stream',
+          }))
+        );
+      } catch (error) {
+        // A rejected generateUrls would otherwise bubble to the addon-level
+        // catch and drop the subtitles we already fetched. Keep the originals.
+        errors.push({
+          title: 'Proxifier Error',
+          description: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    })();
+
+    if (proxiedUrls === null) {
+      return subtitles;
+    }
 
     if (!proxiedUrls || 'error' in proxiedUrls) {
       errors.push({

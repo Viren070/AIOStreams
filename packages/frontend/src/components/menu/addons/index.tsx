@@ -234,16 +234,24 @@ function Content() {
         return;
       }
       const autoProxyDecision = shouldAutoProxyInternalAddon(values.options);
-      const baseNext = {
-        ...userData,
-        presets: [...userData.presets, newPreset],
-      };
-      const autoProxyResult = autoProxyDecision.shouldAutoProxy
-        ? applyInternalAddonProxyConfig(baseNext, newPreset.instanceId)
-        : null;
-      const nextUserData = autoProxyResult?.nextUserData ?? baseNext;
-      const autoEnabledProxy = autoProxyResult?.autoEnabledProxy ?? false;
-      setUserData(() => nextUserData);
+      // Build from the setter's latest state so a concurrent update isn't
+      // clobbered; surface whether proxy auto-enabled for the toast below.
+      let autoEnabledProxy = false;
+      setUserData((prev) => {
+        const baseNext = {
+          ...prev,
+          presets: [...prev.presets, newPreset],
+        };
+        if (!autoProxyDecision.shouldAutoProxy) {
+          return baseNext;
+        }
+        const result = applyInternalAddonProxyConfig(
+          baseNext,
+          newPreset.instanceId
+        );
+        autoEnabledProxy = result.autoEnabledProxy;
+        return result.nextUserData;
+      });
       toast.info('Addon installed successfully!');
       if (autoProxyDecision.shouldAutoProxy) {
         if (autoEnabledProxy) {
@@ -259,18 +267,25 @@ function Content() {
       setModalOpen(false);
     } else if (modalMode === 'edit' && editingAddonId) {
       const autoProxyDecision = shouldAutoProxyInternalAddon(values.options);
-      const baseNext = {
-        ...userData,
-        presets: userData.presets.map((a) =>
-          a.instanceId === editingAddonId ? { ...a, options: values.options } : a
-        ),
-      };
-      const autoProxyResult = autoProxyDecision.shouldAutoProxy
-        ? applyInternalAddonProxyConfig(baseNext, editingAddonId)
-        : null;
-      const nextUserData = autoProxyResult?.nextUserData ?? baseNext;
-      const autoEnabledProxy = autoProxyResult?.autoEnabledProxy ?? false;
-      setUserData(() => nextUserData);
+      // Build from the setter's latest state so a concurrent update isn't
+      // clobbered; surface whether proxy auto-enabled for the toast below.
+      let autoEnabledProxy = false;
+      setUserData((prev) => {
+        const baseNext = {
+          ...prev,
+          presets: prev.presets.map((a) =>
+            a.instanceId === editingAddonId
+              ? { ...a, options: values.options }
+              : a
+          ),
+        };
+        if (!autoProxyDecision.shouldAutoProxy) {
+          return baseNext;
+        }
+        const result = applyInternalAddonProxyConfig(baseNext, editingAddonId);
+        autoEnabledProxy = result.autoEnabledProxy;
+        return result.nextUserData;
+      });
       toast.info('Addon updated successfully!');
       if (autoProxyDecision.shouldAutoProxy) {
         if (autoEnabledProxy) {
