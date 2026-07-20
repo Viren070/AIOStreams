@@ -245,6 +245,14 @@ function SourcesView({
   const hasRemoteSelected = [...selectedIds].some(
     (id) => sources.find((s) => s.id === id)?.kind === 'remote'
   );
+  const hasLocalSelected = [...selectedIds].some(
+    (id) => sources.find((s) => s.id === id)?.kind === 'local'
+  );
+  // When any local source is in the selection, only Clear applies;
+  // the other batch actions (Refresh, Edit, Remove) are unavailable.
+  const canBatchEdit = !hasLocalSelected;
+  const canBatchRemove = !hasLocalSelected;
+  const canBatchRefresh = !hasLocalSelected && hasRemoteSelected;
 
   return (
     <div className="space-y-4">
@@ -289,18 +297,29 @@ function SourcesView({
               intent="gray-subtle"
               icon={<BiRefresh />}
               aria-label="Refresh selected"
-              title="Refresh selected"
+              title={
+                canBatchRefresh
+                  ? 'Refresh selected'
+                  : hasLocalSelected
+                    ? 'Cannot refresh local sources'
+                    : 'No remote sources selected'
+              }
               loading={refreshSources.isPending}
               onClick={askBatchRefresh}
-              disabled={!hasRemoteSelected}
+              disabled={!canBatchRefresh}
             />
             <IconButton
               size="sm"
               intent="gray-subtle"
               icon={<BiPencil />}
               aria-label="Edit selected"
-              title="Edit selected"
+              title={
+                canBatchEdit
+                  ? 'Edit selected'
+                  : 'Cannot edit the local source'
+              }
               onClick={() => setBatchEditOpen(true)}
+              disabled={!canBatchEdit}
             />
             <IconButton
               size="sm"
@@ -316,9 +335,14 @@ function SourcesView({
               intent="alert-subtle"
               icon={<BiTrash />}
               aria-label="Remove selected"
-              title="Remove selected"
+              title={
+                canBatchRemove
+                  ? 'Remove selected'
+                  : 'Cannot remove the local source'
+              }
               loading={removeSources.isPending}
               onClick={askBatchRemove}
+              disabled={!canBatchRemove}
             />
           </div>
           {selectedIds.size === 0 && nonLocalSources.length > 0 && (
