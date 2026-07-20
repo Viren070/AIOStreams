@@ -1,7 +1,22 @@
-import { ReactNode, useCallback, useRef } from 'react';
+import { ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useDisclosure } from '@/hooks/disclosure';
 import { toast } from 'sonner';
-import { arrayMove } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  TouchSensor,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { CSS } from '@dnd-kit/utilities';
 import { IconButton } from '../../../ui/button';
 import { TextInput } from '../../../ui/text-input';
 import { NumberInput } from '../../../ui/number-input';
@@ -16,8 +31,6 @@ import {
   FaRegTrashAlt,
   FaFileExport,
   FaFileImport,
-  FaArrowUp,
-  FaArrowDown,
   FaLink,
 } from 'react-icons/fa';
 import { UserData } from '@aiostreams/core';
@@ -137,31 +150,6 @@ function PlaceholderRow<T>({
   );
 }
 
-/** Map items, rendering PlaceholderRow for synced-URL entries and a custom render for normal items. */
-function renderItemsWithPlaceholders<T>(
-  items: T[],
-  getField: (item: T) => string,
-  onItemsChange: (items: T[]) => void,
-  renderItem: (item: T, index: number) => React.ReactNode,
-  options?: { syncEnabled?: boolean; iconPosition?: 'inside' | 'outside' }
-): React.ReactNode[] {
-  return items.map((item, index) => {
-    const url = options?.syncEnabled ? parseSyncedUrl(getField(item)) : null;
-    if (url) {
-      return (
-        <PlaceholderRow
-          key={index}
-          items={items}
-          index={index}
-          onItemsChange={onItemsChange}
-          url={url}
-          iconPosition={options?.iconPosition}
-        />
-      );
-    }
-    return renderItem(item, index);
-  });
-}
 
 /** Derive a filename from a label, e.g. "Required Keywords" → "required-keywords-2026-02-08.14-56".json */
 function labelToFilename(label: string) {
@@ -173,6 +161,61 @@ function labelToFilename(label: string) {
   const min = String(now.getMinutes()).padStart(2, '0');
   const dateStr = `${yyyy}-${mm}-${dd}.${hh}-${min}`;
   return `${label.toLowerCase().replace(/\s+/g, '-')}-${dateStr}.json`;
+}
+
+// --- Drag-and-drop shared helpers ---
+
+/** Create pointer + touch sensors shared by all sortable lists. */
+function useDragSensors() {
+  return useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 8 },
+    })
+  );
+}
+
+/**
+ * Wraps children with a drag handle and `useSortable` inside a bordered
+ * card, matching the visual style of the sorting primary-sort-order editor.
+ * The caller must wrap the list in `<DndContext>` + `<SortableContext>`.
+ */
+function SortableItemWrapper({
+  id,
+  children,
+}: {
+  id: string;
+  children: ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="px-2.5 py-2 bg-[var(--background)] rounded-[--radius-md] border flex gap-3 relative">
+        <div
+          className="rounded-full w-6 h-auto bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight] cursor-move shrink-0"
+          {...attributes}
+          {...listeners}
+        />
+        <div className="flex-1 min-w-0 flex gap-2">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -210,36 +253,18 @@ interface ItemActionsProps<T> {
   onItemsChange: (items: T[]) => void;
 }
 
-/** Move-up / Move-down / Delete buttons shared by every list item. */
+/** Delete button shared by every list item. */
 function ItemActions<T>({ items, index, onItemsChange }: ItemActionsProps<T>) {
   return (
-    <>
-      <IconButton
-        size="sm"
-        rounded
-        icon={<FaArrowUp />}
-        intent="primary-subtle"
-        disabled={index === 0}
-        onClick={() => onItemsChange(arrayMove(items, index, index - 1))}
-      />
-      <IconButton
-        size="sm"
-        rounded
-        icon={<FaArrowDown />}
-        intent="primary-subtle"
-        disabled={index === items.length - 1}
-        onClick={() => onItemsChange(arrayMove(items, index, index + 1))}
-      />
-      <IconButton
-        size="sm"
-        rounded
-        icon={<FaRegTrashAlt />}
-        intent="alert-subtle"
-        onClick={() =>
-          onItemsChange([...items.slice(0, index), ...items.slice(index + 1)])
-        }
-      />
-    </>
+    <IconButton
+      size="sm"
+      rounded
+      icon={<FaRegTrashAlt />}
+      intent="alert-subtle"
+      onClick={() =>
+        onItemsChange([...items.slice(0, index), ...items.slice(index + 1)])
+      }
+    />
   );
 }
 
@@ -328,6 +353,49 @@ export function TextInputs({
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
+  const sensors = useDragSensors();
+
+  const stableKeysRef = useRef<string[]>([]);
+  const keyCounterRef = useRef(0);
+
+  // Sync stable keys with values array length
+  if (stableKeysRef.current.length < values.length) {
+    for (
+      let i = stableKeysRef.current.length;
+      i < values.length;
+      i++
+    ) {
+      stableKeysRef.current.push(`k-${keyCounterRef.current++}`);
+    }
+  } else if (stableKeysRef.current.length > values.length) {
+    stableKeysRef.current.length = values.length;
+  }
+
+  const isSynced = useCallback(
+    (v: string) => (syncConfig ? parseSyncedUrl(v) !== null : false),
+    [syncConfig]
+  );
+
+  const sortableIds = useMemo(
+    () =>
+      stableKeysRef.current.filter((_, i) => !isSynced(values[i])),
+    [values, isSynced]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const keys = stableKeysRef.current;
+      const oldIndex = keys.findIndex((k) => k === active.id);
+      const newIndex = keys.findIndex((k) => k === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      stableKeysRef.current = arrayMove(keys, oldIndex, newIndex);
+      onValuesChange(arrayMove(valuesRef.current, oldIndex, newIndex));
+    },
+    [onValuesChange]
+  );
+
   const getExportData = useCallback(() => ({ values: valuesRef.current }), []);
   const handleImportData = useCallback(
     (data: any) => {
@@ -364,31 +432,56 @@ export function TextInputs({
       description={help}
       key={label}
     >
-      {renderItemsWithPlaceholders(
-        values,
-        (v) => v,
-        onValuesChange,
-        (value, index) => (
-          <div key={index} className="flex gap-2">
-            <div className="flex-1">
-              <TextInput
-                value={value}
-                label={itemName}
-                placeholder={placeholder}
-                onValueChange={(newValue) => handleValueChange(newValue, index)}
-              />
-            </div>
-            <div className="flex gap-1 items-end pb-1">
-              <ItemActions
-                items={values}
-                index={index}
-                onItemsChange={onValuesChange}
-              />
-            </div>
+      <DndContext
+        sensors={sensors}
+        modifiers={[restrictToVerticalAxis]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortableIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+          {values.map((value, index) => {
+            const syncedUrl = syncConfig ? parseSyncedUrl(value) : null;
+            if (syncedUrl) {
+              return (
+                <PlaceholderRow
+                  key={index}
+                  items={values}
+                  index={index}
+                  onItemsChange={onValuesChange}
+                  url={syncedUrl}
+                  iconPosition="inside"
+                />
+              );
+            }
+            const itemKey = stableKeysRef.current[index];
+            return (
+              <SortableItemWrapper key={itemKey} id={itemKey}>
+                <div className="flex-1">
+                  <TextInput
+                    value={value}
+                    label={itemName}
+                    placeholder={placeholder}
+                    onValueChange={(newValue) =>
+                      handleValueChange(newValue, index)
+                    }
+                  />
+                </div>
+                <div className="flex gap-1 items-end pb-1">
+                  <ItemActions
+                    items={values}
+                    index={index}
+                    onItemsChange={onValuesChange}
+                  />
+                </div>
+              </SortableItemWrapper>
+            );
+          })}
           </div>
-        ),
-        { syncEnabled: !!syncConfig, iconPosition: 'inside' }
-      )}
+        </SortableContext>
+      </DndContext>
       <ListFooter
         onAdd={() => onValuesChange([...values, ''])}
         onImportClick={modal.open}
@@ -433,6 +526,49 @@ export function ToggleableTextInputs({
 }: ToggleableTextInputProps) {
   const valuesRef = useRef(values);
   valuesRef.current = values;
+
+  const sensors = useDragSensors();
+
+  const stableKeysRef = useRef<string[]>([]);
+  const keyCounterRef = useRef(0);
+
+  if (stableKeysRef.current.length < values.length) {
+    for (
+      let i = stableKeysRef.current.length;
+      i < values.length;
+      i++
+    ) {
+      stableKeysRef.current.push(`k-${keyCounterRef.current++}`);
+    }
+  } else if (stableKeysRef.current.length > values.length) {
+    stableKeysRef.current.length = values.length;
+  }
+
+  const isSynced = useCallback(
+    (v: { expression: string; enabled: boolean }) =>
+      syncConfig ? parseSyncedUrl(v.expression) !== null : false,
+    [syncConfig]
+  );
+
+  const sortableIds = useMemo(
+    () =>
+      stableKeysRef.current.filter((_, i) => !isSynced(values[i])),
+    [values, isSynced]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const keys = stableKeysRef.current;
+      const oldIndex = keys.findIndex((k) => k === active.id);
+      const newIndex = keys.findIndex((k) => k === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      stableKeysRef.current = arrayMove(keys, oldIndex, newIndex);
+      onValuesChange(arrayMove(valuesRef.current, oldIndex, newIndex));
+    },
+    [onValuesChange]
+  );
 
   const getExportData = useCallback(
     () =>
@@ -482,46 +618,71 @@ export function ToggleableTextInputs({
       title={title}
       description={description}
     >
-      {renderItemsWithPlaceholders(
-        values,
-        (v) => v.expression,
-        onValuesChange,
-        (value, index) => (
-          <div key={index} className="flex gap-2 items-end">
-            <div className="flex items-center pb-0.5">
-              <Checkbox
-                value={value.enabled ?? true}
-                defaultValue={true}
-                size="lg"
-                onValueChange={(v) => {
-                  if (onEnabledChange) {
-                    onEnabledChange(v === true, index);
-                  }
-                }}
-              />
-            </div>
-            <div className="flex-1">
-              <TextInput
-                value={value.expression}
-                label="Expression"
-                placeholder={placeholder}
-                disabled={value.enabled === false}
-                onValueChange={(newValue) =>
-                  onExpressionChange(newValue, index)
-                }
-              />
-            </div>
-            <div className="flex gap-1 items-end pb-1">
-              <ItemActions
-                items={values}
-                index={index}
-                onItemsChange={onValuesChange}
-              />
-            </div>
+      <DndContext
+        sensors={sensors}
+        modifiers={[restrictToVerticalAxis]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortableIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+          {values.map((value, index) => {
+            const syncedUrl =
+              syncConfig
+                ? parseSyncedUrl(value.expression)
+                : null;
+            if (syncedUrl) {
+              return (
+                <PlaceholderRow
+                  key={index}
+                  items={values as any}
+                  index={index}
+                  onItemsChange={onValuesChange as any}
+                  url={syncedUrl}
+                />
+              );
+            }
+            const itemKey = stableKeysRef.current[index];
+            return (
+              <SortableItemWrapper key={itemKey} id={itemKey}>
+                <div className="flex items-end pb-1">
+                  <Checkbox
+                    value={value.enabled ?? true}
+                    defaultValue={true}
+                    size="lg"
+                    onValueChange={(v) => {
+                      if (onEnabledChange) {
+                        onEnabledChange(v === true, index);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <TextInput
+                    value={value.expression}
+                    label="Expression"
+                    placeholder={placeholder}
+                    disabled={value.enabled === false}
+                    onValueChange={(newValue) =>
+                      onExpressionChange(newValue, index)
+                    }
+                  />
+                </div>
+                <div className="flex gap-1 items-end pb-1">
+                  <ItemActions
+                    items={values}
+                    index={index}
+                    onItemsChange={onValuesChange}
+                  />
+                </div>
+              </SortableItemWrapper>
+            );
+          })}
           </div>
-        ),
-        { syncEnabled: !!syncConfig }
-      )}
+        </SortableContext>
+      </DndContext>
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { expression: '', enabled: true }])
@@ -579,6 +740,49 @@ export function TwoTextInputs({
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
+  const sensors = useDragSensors();
+
+  const stableKeysRef = useRef<string[]>([]);
+  const keyCounterRef = useRef(0);
+
+  if (stableKeysRef.current.length < values.length) {
+    for (
+      let i = stableKeysRef.current.length;
+      i < values.length;
+      i++
+    ) {
+      stableKeysRef.current.push(`k-${keyCounterRef.current++}`);
+    }
+  } else if (stableKeysRef.current.length > values.length) {
+    stableKeysRef.current.length = values.length;
+  }
+
+  const isSynced = useCallback(
+    (v: { name: string; value: string }) =>
+      syncConfig ? parseSyncedUrl(v.value) !== null : false,
+    [syncConfig]
+  );
+
+  const sortableIds = useMemo(
+    () =>
+      stableKeysRef.current.filter((_, i) => !isSynced(values[i])),
+    [values, isSynced]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const keys = stableKeysRef.current;
+      const oldIndex = keys.findIndex((k) => k === active.id);
+      const newIndex = keys.findIndex((k) => k === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      stableKeysRef.current = arrayMove(keys, oldIndex, newIndex);
+      onValuesChange(arrayMove(valuesRef.current, oldIndex, newIndex));
+    },
+    [onValuesChange]
+  );
+
   const getExportData = useCallback(
     () =>
       valuesRef.current.map((v) => ({ [keyId]: v.name, [valueId]: v.value })),
@@ -613,39 +817,66 @@ export function TwoTextInputs({
 
   return (
     <SettingsCard title={title} description={description}>
-      {renderItemsWithPlaceholders(
-        values,
-        (v) => v.value,
-        onValuesChange,
-        (value, index) => (
-          <div key={index} className="flex gap-2">
-            <div className="flex-1">
-              <TextInput
-                value={value.name}
-                label={keyName}
-                placeholder={keyPlaceholder}
-                onValueChange={(newValue) => onKeyChange(newValue, index)}
-              />
-            </div>
-            <div className="flex-1">
-              <TextInput
-                value={value.value}
-                label={valueName}
-                placeholder={valuePlaceholder}
-                onValueChange={(newValue) => onValueChange(newValue, index)}
-              />
-            </div>
-            <div className="flex gap-1 items-end pb-1">
-              <ItemActions
-                items={values}
-                index={index}
-                onItemsChange={onValuesChange}
-              />
-            </div>
+      <DndContext
+        sensors={sensors}
+        modifiers={[restrictToVerticalAxis]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortableIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+          {values.map((value, index) => {
+            const syncedUrl = syncConfig
+              ? parseSyncedUrl(value.value)
+              : null;
+            if (syncedUrl) {
+              return (
+                <PlaceholderRow
+                  key={index}
+                  items={values as any}
+                  index={index}
+                  onItemsChange={onValuesChange as any}
+                  url={syncedUrl}
+                  iconPosition="inside"
+                />
+              );
+            }
+            const itemKey = stableKeysRef.current[index];
+            return (
+              <SortableItemWrapper key={itemKey} id={itemKey}>
+                <div className="flex-1">
+                  <TextInput
+                    value={value.name}
+                    label={keyName}
+                    placeholder={keyPlaceholder}
+                    onValueChange={(newValue) => onKeyChange(newValue, index)}
+                  />
+                </div>
+                <div className="flex-1">
+                  <TextInput
+                    value={value.value}
+                    label={valueName}
+                    placeholder={valuePlaceholder}
+                    onValueChange={(newValue) =>
+                      onValueChange(newValue, index)
+                    }
+                  />
+                </div>
+                <div className="flex gap-1 items-end pb-1">
+                  <ItemActions
+                    items={values}
+                    index={index}
+                    onItemsChange={onValuesChange}
+                  />
+                </div>
+              </SortableItemWrapper>
+            );
+          })}
           </div>
-        ),
-        { syncEnabled: !!syncConfig, iconPosition: 'inside' }
-      )}
+        </SortableContext>
+      </DndContext>
       <ListFooter
         onAdd={() => onValuesChange([...values, { name: '', value: '' }])}
         onImportClick={modal.open}
@@ -693,6 +924,50 @@ export function RankedExpressionInputs({
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
+  const sensors = useDragSensors();
+
+  const stableKeysRef = useRef<string[]>([]);
+  const keyCounterRef = useRef(0);
+
+  if (stableKeysRef.current.length < values.length) {
+    for (
+      let i = stableKeysRef.current.length;
+      i < values.length;
+      i++
+    ) {
+      stableKeysRef.current.push(`k-${keyCounterRef.current++}`);
+    }
+  } else if (stableKeysRef.current.length > values.length) {
+    stableKeysRef.current.length = values.length;
+  }
+
+  const isSynced = useCallback(
+    (
+      v: { expression: string; score: number; enabled: boolean }
+    ) => (syncConfig ? parseSyncedUrl(v.expression) !== null : false),
+    [syncConfig]
+  );
+
+  const sortableIds = useMemo(
+    () =>
+      stableKeysRef.current.filter((_, i) => !isSynced(values[i])),
+    [values, isSynced]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const keys = stableKeysRef.current;
+      const oldIndex = keys.findIndex((k) => k === active.id);
+      const newIndex = keys.findIndex((k) => k === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      stableKeysRef.current = arrayMove(keys, oldIndex, newIndex);
+      onValuesChange(arrayMove(valuesRef.current, oldIndex, newIndex));
+    },
+    [onValuesChange]
+  );
+
   const getExportData = useCallback(
     () =>
       valuesRef.current.map((v) => ({
@@ -738,60 +1013,85 @@ export function RankedExpressionInputs({
       title={title}
       description={description}
     >
-      {renderItemsWithPlaceholders(
-        values,
-        (v) => v.expression,
-        onValuesChange,
-        (value, index) => (
-          <div key={index} className="flex gap-2 items-end">
-            <div className="flex items-center pb-0.5">
-              <Checkbox
-                value={value.enabled ?? true}
-                defaultValue={true}
-                size="lg"
-                onValueChange={(v) => {
-                  if (onEnabledChange) {
-                    onEnabledChange(v === true, index);
-                  }
-                }}
-              />
-            </div>
-            <div className="flex-[3]">
-              <TextInput
-                value={value.expression}
-                label="Expression"
-                placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-                disabled={value.enabled === false}
-                onValueChange={(newValue) =>
-                  onExpressionChange(newValue, index)
-                }
-              />
-            </div>
-            <div className="flex-1 min-w-[100px]">
-              <NumberInput
-                value={value.score || 0}
-                defaultValue={0}
-                label="Score"
-                disabled={value.enabled === false}
-                onValueChange={(newValue) =>
-                  onScoreChange(newValue || 0, index)
-                }
-                min={-1_000_000}
-                max={1_000_000}
-                step={50}
-              />
-            </div>
-            <div className="pb-1 gap-1 flex items-end">
-              <ItemActions
-                items={values}
-                index={index}
-                onItemsChange={onValuesChange}
-              />
-            </div>
+      <DndContext
+        sensors={sensors}
+        modifiers={[restrictToVerticalAxis]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortableIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+          {values.map((value, index) => {
+            const syncedUrl =
+              syncConfig
+                ? parseSyncedUrl(value.expression)
+                : null;
+            if (syncedUrl) {
+              return (
+                <PlaceholderRow
+                  key={index}
+                  items={values as any}
+                  index={index}
+                  onItemsChange={onValuesChange as any}
+                  url={syncedUrl}
+                />
+              );
+            }
+            const itemKey = stableKeysRef.current[index];
+            return (
+              <SortableItemWrapper key={itemKey} id={itemKey}>
+                <div className="flex items-center pb-0.5">
+                  <Checkbox
+                    value={value.enabled ?? true}
+                    defaultValue={true}
+                    size="lg"
+                    onValueChange={(v) => {
+                      if (onEnabledChange) {
+                        onEnabledChange(v === true, index);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex-[3]">
+                  <TextInput
+                    value={value.expression}
+                    label="Expression"
+                    placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+                    disabled={value.enabled === false}
+                    onValueChange={(newValue) =>
+                      onExpressionChange(newValue, index)
+                    }
+                  />
+                </div>
+                <div className="flex-1 min-w-[100px]">
+                  <NumberInput
+                    value={value.score || 0}
+                    defaultValue={0}
+                    label="Score"
+                    disabled={value.enabled === false}
+                    onValueChange={(newValue) =>
+                      onScoreChange(newValue || 0, index)
+                    }
+                    min={-1_000_000}
+                    max={1_000_000}
+                    step={50}
+                  />
+                </div>
+                <div className="pb-1 gap-1 flex items-end">
+                  <ItemActions
+                    items={values}
+                    index={index}
+                    onItemsChange={onValuesChange}
+                  />
+                </div>
+              </SortableItemWrapper>
+            );
+          })}
           </div>
-        ),
-        { syncEnabled: !!syncConfig }
-      )}
+        </SortableContext>
+      </DndContext>
       <ListFooter
         onAdd={() =>
           onValuesChange([
@@ -842,6 +1142,50 @@ export function RankedRegexInputs({
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
+  const sensors = useDragSensors();
+
+  const stableKeysRef = useRef<string[]>([]);
+  const keyCounterRef = useRef(0);
+
+  if (stableKeysRef.current.length < values.length) {
+    for (
+      let i = stableKeysRef.current.length;
+      i < values.length;
+      i++
+    ) {
+      stableKeysRef.current.push(`k-${keyCounterRef.current++}`);
+    }
+  } else if (stableKeysRef.current.length > values.length) {
+    stableKeysRef.current.length = values.length;
+  }
+
+  const isSynced = useCallback(
+    (
+      v: NonNullable<UserData['rankedRegexPatterns']>[number]
+    ) => (syncConfig ? parseSyncedUrl(v.pattern) !== null : false),
+    [syncConfig]
+  );
+
+  const sortableIds = useMemo(
+    () =>
+      stableKeysRef.current.filter((_, i) => !isSynced(values[i])),
+    [values, isSynced]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const keys = stableKeysRef.current;
+      const oldIndex = keys.findIndex((k) => k === active.id);
+      const newIndex = keys.findIndex((k) => k === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      stableKeysRef.current = arrayMove(keys, oldIndex, newIndex);
+      onValuesChange(arrayMove(valuesRef.current, oldIndex, newIndex));
+    },
+    [onValuesChange]
+  );
+
   const getExportData = useCallback(
     () =>
       valuesRef.current.map((v) => ({
@@ -881,56 +1225,84 @@ export function RankedRegexInputs({
 
   return (
     <SettingsCard title={title} description={description}>
-      {renderItemsWithPlaceholders(
-        values,
-        (v) => v.pattern,
-        onValuesChange,
-        (value, index) => (
-          <div
-            key={index}
-            className="flex flex-col gap-2 p-3 border rounded-md border-[--border]"
-          >
-            <div className="w-full">
-              <TextInput
-                value={value.pattern}
-                label="Pattern"
-                placeholder="Regex Pattern"
-                onValueChange={(newValue) => onPatternChange(newValue, index)}
-              />
-            </div>
-            <div className="flex gap-2 items-end">
-              <div className="flex-1">
-                <TextInput
-                  value={value.name || ''}
-                  label="Name"
-                  placeholder="Name (Optional)"
-                  onValueChange={(newValue) => onNameChange(newValue, index)}
-                />
-              </div>
-              <div className="w-[20%] min-w-[100px]">
-                <NumberInput
-                  value={value.score}
-                  label="Score"
-                  onValueChange={(newValue) =>
-                    onScoreChange(newValue ?? 0, index)
-                  }
-                  min={-1_000_000}
-                  max={1_000_000}
-                  step={50}
-                />
-              </div>
-              <div className="flex gap-1 pb-1">
-                <ItemActions
-                  items={values}
+      <DndContext
+        sensors={sensors}
+        modifiers={[restrictToVerticalAxis]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortableIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+          {values.map((value, index) => {
+            const syncedUrl = syncConfig
+              ? parseSyncedUrl(value.pattern)
+              : null;
+            if (syncedUrl) {
+              return (
+                <PlaceholderRow
+                  key={index}
+                  items={values as any}
                   index={index}
-                  onItemsChange={onValuesChange}
+                  onItemsChange={onValuesChange as any}
+                  url={syncedUrl}
+                  iconPosition="inside"
                 />
-              </div>
-            </div>
+              );
+            }
+            const itemKey = stableKeysRef.current[index];
+            return (
+              <SortableItemWrapper key={itemKey} id={itemKey}>
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="w-full">
+                    <TextInput
+                      value={value.pattern}
+                      label="Pattern"
+                      placeholder="Regex Pattern"
+                      onValueChange={(newValue) =>
+                        onPatternChange(newValue, index)
+                      }
+                    />
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <TextInput
+                        value={value.name || ''}
+                        label="Name"
+                        placeholder="Name (Optional)"
+                        onValueChange={(newValue) =>
+                          onNameChange(newValue, index)
+                        }
+                      />
+                    </div>
+                    <div className="w-[20%] min-w-[100px]">
+                      <NumberInput
+                        value={value.score}
+                        label="Score"
+                        onValueChange={(newValue) =>
+                          onScoreChange(newValue ?? 0, index)
+                        }
+                        min={-1_000_000}
+                        max={1_000_000}
+                        step={50}
+                      />
+                    </div>
+                    <div className="flex gap-1 pb-1">
+                      <ItemActions
+                        items={values}
+                        index={index}
+                        onItemsChange={onValuesChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </SortableItemWrapper>
+            );
+          })}
           </div>
-        ),
-        { syncEnabled: !!syncConfig, iconPosition: 'inside' }
-      )}
+        </SortableContext>
+      </DndContext>
       <ListFooter
         onAdd={() =>
           onValuesChange([...values, { pattern: '', name: '', score: 0 }])
