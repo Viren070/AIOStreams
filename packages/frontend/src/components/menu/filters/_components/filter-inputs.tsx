@@ -82,10 +82,20 @@ const rowClass =
 const gripClass =
   'rounded-full w-6 h-auto bg-[--muted] md:bg-[--subtle] md:hover:bg-[--subtle-highlight] cursor-move shrink-0';
 /**
- * Rows are a single line: the card title names the field, so the inputs carry
- * a placeholder and an aria-label instead of a visible one.
+ * A row is one line on desktop: the card title names the field, so the inputs
+ * carry a placeholder and an aria-label instead of a visible one. There is no
+ * room for that below `md`, so the row stacks: the controls take the first
+ * line and every field gets the full width underneath.
  */
-const rowContentClass = 'flex-1 min-w-0 flex gap-2 items-center';
+const rowContentClass =
+  'flex-1 min-w-0 flex flex-col md:flex-row gap-2 md:items-center';
+/** Control strip above the fields while stacked; dissolves into the row at `md`. */
+const rowControlsClass = 'flex items-center justify-end gap-2 md:contents';
+/** The control the strip leads with, opposite the actions. */
+const rowLeadControlClass = 'shrink-0 mr-auto md:mr-0';
+/** Actions head the stack but trail the row, so they are reordered at `md`. */
+const rowActionsClass = 'flex gap-1 justify-end md:order-last';
+const scoreFieldClass = 'md:flex-1 md:min-w-[100px]';
 
 interface SortableRows {
   /** Row count, including synced placeholders. */
@@ -295,15 +305,19 @@ function PlaceholderRow({
 
   return (
     <>
-      {iconPosition !== 'inside' && linkButton}
-      <div className="flex-1 min-w-0 flex items-center gap-2 rounded-[--radius] bg-[--paper] border border-[--border] shadow-sm h-10 px-3 opacity-75 overflow-hidden">
+      <div className={rowControlsClass}>
+        {iconPosition !== 'inside' && (
+          <div className={rowLeadControlClass}>{linkButton}</div>
+        )}
+        <div className={rowActionsClass}>
+          <ItemActions rows={rows} index={index} />
+        </div>
+      </div>
+      <div className="md:flex-1 min-w-0 flex items-center gap-2 rounded-[--radius] bg-[--paper] border border-[--border] shadow-sm h-10 px-3 opacity-75 overflow-hidden">
         {iconPosition === 'inside' && linkButton}
         <span className="text-sm text-[--muted] font-mono truncate min-w-0 flex-1">
           {url}
         </span>
-      </div>
-      <div className="flex gap-1">
-        <ItemActions rows={rows} index={index} />
       </div>
     </>
   );
@@ -533,7 +547,10 @@ export function TextInputs({
           (v) => v,
           (value, index) => (
             <>
-              <div className="flex-1">
+              <div className={rowActionsClass}>
+                <ItemActions rows={rows} index={index} />
+              </div>
+              <div className="md:flex-1">
                 <TextInput
                   value={value}
                   aria-label={itemName}
@@ -542,9 +559,6 @@ export function TextInputs({
                     handleValueChange(newValue, index)
                   }
                 />
-              </div>
-              <div className="flex gap-1">
-                <ItemActions rows={rows} index={index} />
               </div>
             </>
           ),
@@ -653,20 +667,25 @@ export function ToggleableTextInputs({
           (v) => v.expression,
           (value, index) => (
             <>
-              <div className="shrink-0">
-                <Checkbox
-                  value={value.enabled ?? true}
-                  defaultValue={true}
-                  size="lg"
-                  aria-label="Enabled"
-                  onValueChange={(v) => {
-                    if (onEnabledChange) {
-                      onEnabledChange(v === true, index);
-                    }
-                  }}
-                />
+              <div className={rowControlsClass}>
+                <div className={rowLeadControlClass}>
+                  <Checkbox
+                    value={value.enabled ?? true}
+                    defaultValue={true}
+                    size="lg"
+                    aria-label="Enabled"
+                    onValueChange={(v) => {
+                      if (onEnabledChange) {
+                        onEnabledChange(v === true, index);
+                      }
+                    }}
+                  />
+                </div>
+                <div className={rowActionsClass}>
+                  <ItemActions rows={rows} index={index} />
+                </div>
               </div>
-              <div className="flex-1">
+              <div className="md:flex-1">
                 <TextInput
                   value={value.expression}
                   aria-label="Expression"
@@ -676,9 +695,6 @@ export function ToggleableTextInputs({
                     onExpressionChange(newValue, index)
                   }
                 />
-              </div>
-              <div className="flex gap-1">
-                <ItemActions rows={rows} index={index} />
               </div>
             </>
           ),
@@ -785,7 +801,10 @@ export function TwoTextInputs({
           (v) => v.value,
           (value, index) => (
             <>
-              <div className="flex-1">
+              <div className={rowActionsClass}>
+                <ItemActions rows={rows} index={index} />
+              </div>
+              <div className="md:flex-1">
                 <TextInput
                   value={value.name}
                   aria-label={keyName}
@@ -793,16 +812,13 @@ export function TwoTextInputs({
                   onValueChange={(newValue) => onKeyChange(newValue, index)}
                 />
               </div>
-              <div className="flex-1">
+              <div className="md:flex-1">
                 <TextInput
                   value={value.value}
                   aria-label={valueName}
                   placeholder={valuePlaceholder}
                   onValueChange={(newValue) => onValueChange(newValue, index)}
                 />
-              </div>
-              <div className="flex gap-1">
-                <ItemActions rows={rows} index={index} />
               </div>
             </>
           ),
@@ -910,20 +926,25 @@ export function RankedExpressionInputs({
           (v) => v.expression,
           (value, index) => (
             <>
-              <div className="shrink-0">
-                <Checkbox
-                  value={value.enabled ?? true}
-                  defaultValue={true}
-                  size="lg"
-                  aria-label="Enabled"
-                  onValueChange={(v) => {
-                    if (onEnabledChange) {
-                      onEnabledChange(v === true, index);
-                    }
-                  }}
-                />
+              <div className={rowControlsClass}>
+                <div className={rowLeadControlClass}>
+                  <Checkbox
+                    value={value.enabled ?? true}
+                    defaultValue={true}
+                    size="lg"
+                    aria-label="Enabled"
+                    onValueChange={(v) => {
+                      if (onEnabledChange) {
+                        onEnabledChange(v === true, index);
+                      }
+                    }}
+                  />
+                </div>
+                <div className={rowActionsClass}>
+                  <ItemActions rows={rows} index={index} />
+                </div>
               </div>
-              <div className="flex-[3]">
+              <div className="md:flex-[3]">
                 <TextInput
                   value={value.expression}
                   aria-label="Expression"
@@ -934,7 +955,7 @@ export function RankedExpressionInputs({
                   }
                 />
               </div>
-              <div className="flex-1 min-w-[100px]">
+              <div className={scoreFieldClass}>
                 <NumberInput
                   value={value.score || 0}
                   defaultValue={0}
@@ -947,9 +968,6 @@ export function RankedExpressionInputs({
                   max={1_000_000}
                   step={50}
                 />
-              </div>
-              <div className="flex gap-1">
-                <ItemActions rows={rows} index={index} />
               </div>
             </>
           ),
@@ -1054,7 +1072,10 @@ export function RankedRegexInputs({
           (v) => v.pattern,
           (value, index) => (
             <>
-              <div className="flex-[3]">
+              <div className={rowActionsClass}>
+                <ItemActions rows={rows} index={index} />
+              </div>
+              <div className="md:flex-[3]">
                 <TextInput
                   value={value.pattern}
                   aria-label="Pattern"
@@ -1062,7 +1083,7 @@ export function RankedRegexInputs({
                   onValueChange={(newValue) => onPatternChange(newValue, index)}
                 />
               </div>
-              <div className="flex-[2]">
+              <div className="md:flex-[2]">
                 <TextInput
                   value={value.name || ''}
                   aria-label="Name"
@@ -1070,7 +1091,7 @@ export function RankedRegexInputs({
                   onValueChange={(newValue) => onNameChange(newValue, index)}
                 />
               </div>
-              <div className="flex-1 min-w-[100px]">
+              <div className={scoreFieldClass}>
                 <NumberInput
                   value={value.score}
                   aria-label="Score"
@@ -1081,9 +1102,6 @@ export function RankedRegexInputs({
                   max={1_000_000}
                   step={50}
                 />
-              </div>
-              <div className="flex gap-1">
-                <ItemActions rows={rows} index={index} />
               </div>
             </>
           ),
