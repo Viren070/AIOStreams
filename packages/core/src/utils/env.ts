@@ -245,6 +245,10 @@ export const Env = cleanEnv(process.env, {
     default: 3000,
     desc: 'Port to run the addon on',
   }),
+  MAX_REQUEST_BODY_SIZE: str({
+    default: '1mb',
+    desc: 'Maximum request body size accepted by the server (e.g. 500kb, 1mb). Large configurations can exceed the previous 100kb default, causing config saves to fail with PayloadTooLargeError.',
+  }),
   SECRET_KEY: secretKey({
     desc: 'Session/encryption secret used to derive keys for stored configurations. Must be a 64-character hex string. Generate with `openssl rand -hex 32`. Cannot be changed after first run. (Legacy alias `SESSION_SECRET` is still accepted for one minor release.)',
     example: 'Generate using: openssl rand -hex 32',

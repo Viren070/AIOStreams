@@ -7,6 +7,7 @@ import { Env } from '../utils/env.js';
 export const bootstrap = {
   nodeEnv: Env.NODE_ENV,
   port: Env.PORT,
+  maxRequestBodySize: Env.MAX_REQUEST_BODY_SIZE,
   baseUrl: Env.BASE_URL,
   internalUrl: Env.INTERNAL_URL,
   internalSecret: Env.INTERNAL_SECRET,
