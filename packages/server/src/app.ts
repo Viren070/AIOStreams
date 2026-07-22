@@ -97,8 +97,13 @@ export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
 app.use(loggerMiddleware);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: appConfig.bootstrap.maxRequestBodySize }));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: appConfig.bootstrap.maxRequestBodySize,
+  })
+);
 
 // Allow all origins in development for easier testing
 if (appConfig.bootstrap.nodeEnv === 'development') {
