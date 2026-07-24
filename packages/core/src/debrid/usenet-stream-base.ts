@@ -525,6 +525,25 @@ export abstract class UsenetStreamService implements UsenetDebridService {
 
       const files = contents.filter((item) => item.type === 'file');
 
+      // Some WebDAV servers (e.g. NWebDav-based ones like NzbDAV) answer a
+      // `Depth: infinity` PROPFIND with 207 but only depth-1 results instead
+      // of the RFC 4918 403 propfind-finite-depth rejection. A "successful"
+      // deep listing that contains directories but no files is therefore
+      // indistinguishable from a truncated one — fall back to manual
+      // traversal rather than reporting an empty download (bites releases
+      // whose video sits inside a nested folder, e.g.
+      // Release.Name/Release.Name/video.mkv scene layouts).
+      if (
+        files.length === 0 &&
+        contents.some((item) => item.type === 'directory')
+      ) {
+        this.serviceLogger.debug(
+          `Deep listing returned directories but no files; falling back to manual traversal`,
+          { path }
+        );
+        return this.collectFilesManually(path, 0);
+      }
+
       return { files, depth: 0 };
     } catch (error) {
       this.serviceLogger.warn(
