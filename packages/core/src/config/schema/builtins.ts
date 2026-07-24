@@ -293,14 +293,14 @@ export const builtinsSchema = {
         ui:
           'Control which titles built-in addons use for text-based queries, per indexer. ' +
           'Keys are matched in priority order: exact indexer hostname (e.g. `my-indexer.com`), auto-extracted indexer name (Jackett/NZBHydra2), addon ID (`newznab`, `torznab`, `easynews`, `knaben`, `prowlarr`, `torrent-galaxy`), then `*` as the fallback for everything else. ' +
-          'Each value is one or more comma-separated specs: `default` (primary/English-style title), `all` (all alternative titles up to the title limit), `original` (TMDB original-language title), or an ISO 639-1 code (e.g. `de`, `fr`). ' +
+          'Each value is one or more comma-separated specs: `default` (primary/English-style title), `all` (all alternative titles up to the title limit), `original` (TMDB original-language title), `scene` (scene-release titles from the scene mappings, e.g. "360 Grad Geo Reportage"), or an ISO 639-1 code (e.g. `de`, `fr`). ' +
           'Only the highest-priority matching key applies; duplicates are removed and the primary title is always kept as a fallback. ' +
           'Example: `*` = `default,original` queries every indexer with the primary and TMDB original-language titles.',
         env:
           'Fine-grained alternative-title control, per indexer hostname, indexer name, or addon type. ' +
           'Format: `<key>:<spec>[,<spec>...][,<key>:<spec>...]`. ' +
           'Keys (checked in priority order): exact indexer hostname (e.g. `my-indexer.com`); auto-extracted indexer name (Jackett `/api/v2.0/indexers/<name>/...`, NZBHydra2 `?indexers=<name>`); addon-id (`newznab`, `torznab`, `easynews`, `knaben`, `prowlarr`, `torrent-galaxy`); `*` wildcard fallback. ' +
-          'Specs: `default` (primary/English-style title), `all` (all alternative titles up to BUILTIN_SCRAPE_TITLE_LIMIT), `original` (TMDB original-language title), `<lang>` (ISO 639-1 code, e.g. `de`, `fr`). ' +
+          'Specs: `default` (primary/English-style title), `all` (all alternative titles up to BUILTIN_SCRAPE_TITLE_LIMIT), `original` (TMDB original-language title), `scene` (scene-release titles from the scene mappings, e.g. "360 Grad Geo Reportage"), `<lang>` (ISO 639-1 code, e.g. `de`, `fr`). ' +
           'Multiple specs under one key are combined (duplicates removed); only the highest-priority matching key applies; always falls back to the primary title. ' +
           'Examples: `*:default,original` — every indexer gets default + TMDB original-language title. `*:default,newznab:default,original,de` — newznab indexers query English + original + German, others English only. `*:default,germanindexer.com:de,default` — germanindexer.com queries German + English, all others English only.',
       },

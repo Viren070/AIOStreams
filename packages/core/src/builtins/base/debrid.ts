@@ -507,6 +507,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
               )
             : undefined;
           if (match) selected.add(cleanTitle(match.title, match.language));
+        } else if (spec === 'scene') {
+          metadata.sceneTitles
+            ?.slice(0, appConfig.builtins.scrape.titleLimit)
+            .forEach((title) => selected.add(cleanTitle(title)));
         } else {
           // take only the first matching title.
           const match = metadata.titlesWithLang?.find(
@@ -609,7 +613,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       }
       if (metadata.absoluteEpisode) {
         addQuery(
-          `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
+          metadata.isAnime
+            ? `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`
+            : `${titlePlaceholder} E${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
           seriesTitles
         );
       } else if (parsedId.episode && !parsedId.season) {
