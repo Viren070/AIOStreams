@@ -633,7 +633,7 @@ export class TorboxDebridService
     autoRemoveDownloads?: boolean,
     signal?: AbortSignal
   ): Promise<string | undefined> {
-    if (playbackInfo.type === 'torrent') {
+    if (playbackInfo.type === 'torrent' || playbackInfo.type === 'usenet') {
       return this.stremthru.resolve(
         playbackInfo,
         filename,
