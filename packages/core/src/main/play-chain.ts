@@ -309,6 +309,9 @@ function targetIdentity(it: PlayChainItem): string {
  * de-duplication by resolvable target (so a release surviving dedup or harvested
  * under multiple winners is never tried twice), and the overall `maxAttempts` cap
  * — done last so dedup never shrinks the effective budget.
+ *
+ * Targets run from the clicked item to the end of the list, then wrap around
+ * from the top.
  */
 export async function getPlayChain(
   decoded: { index: number; count: number; listKey: string },
@@ -356,8 +359,13 @@ export async function getPlayChain(
   addVariants(clickedItem?.variants, 0);
 
   // Then each subsequent distinct release (increasing rank) + its variants.
+  // Tail first, then wrap to the head; a click near the bottom has little below it.
+  const ordered = [
+    ...record.items.slice(decoded.index + 1),
+    ...record.items.slice(0, Math.max(decoded.index, 0)),
+  ];
   let rank = 1;
-  for (const item of record.items.slice(decoded.index + 1)) {
+  for (const item of ordered) {
     if (fallbacks.length >= maxAttempts) break;
     if (!passesFilter(item)) continue;
     const key = targetIdentity(item);
