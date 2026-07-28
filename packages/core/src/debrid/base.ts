@@ -252,6 +252,7 @@ const UsenetInfoSchema = BaseFileInfoSchema.extend({
   nzb: z.string(),
   releaseKey: z.string().regex(WD1_KEY_REGEX).optional().catch(undefined),
   indexer: z.string().optional(),
+  quotaBucket: z.enum(['torrentclaw']).optional(),
   type: z.literal('usenet'),
 });
 

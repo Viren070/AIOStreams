@@ -300,7 +300,7 @@ export class Wrapper {
       this.addon.preset.type,
       this.manifestUrl
     );
-    const streams = await this.makeResourceRequest(
+    const upstreamStreams = await this.makeResourceRequest(
       'stream',
       { type, id },
       this.addon.timeout,
@@ -315,6 +315,28 @@ export class Wrapper {
         options: this.addon.preset.options,
       })
     );
+    const streams = await this.preset.transformStreamResponse({
+      addon: this.addon,
+      type,
+      id,
+      streams: upstreamStreams,
+      fetchStreams: async (replacementId: string): Promise<Stream[]> => {
+        const replacementUrl = this.buildResourceUrl(
+          'stream',
+          type,
+          replacementId
+        );
+        const response = await makeRequest(replacementUrl, {
+          timeout: this.addon.timeout,
+          headers: this.addon.headers,
+          forwardIp: this.addon.ip,
+        });
+        if (!response.ok) {
+          throw new Error(`${response.status} - ${response.statusText}`);
+        }
+        return validator(await response.json());
+      },
+    });
     const start = Date.now();
     const parser = new (this.preset.getParser())(this.addon);
     let invalidateCache: boolean = false;

@@ -5,6 +5,7 @@ import { CustomPreset } from './custom.js';
 import { MediaFusionPreset } from './mediafusion.js';
 import { StremthruStorePreset } from './stremthruStore.js';
 import { TorrentioPreset } from './torrentio.js';
+import { TorrentClawPreset } from './torrentclaw.js';
 import { TorboxAddonPreset } from './torbox.js';
 import { EasynewsPreset } from './easynews.js';
 import { EasynewsPlusPreset } from './easynewsPlus.js';
@@ -87,6 +88,7 @@ let PRESET_LIST: string[] = [
   'newznab',
   'aiostreams',
   'torrentio',
+  'torrentclaw',
   'comet',
   'meteor',
   'mediafusion',
@@ -185,6 +187,8 @@ export class PresetManager {
     switch (id) {
       case 'torrentio':
         return TorrentioPreset;
+      case 'torrentclaw':
+        return TorrentClawPreset;
       case 'stremthruStore':
         return StremthruStorePreset;
       case 'stremthruTorz':

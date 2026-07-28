@@ -64,6 +64,10 @@ export {
   type ConfigProfile,
   type ConfigAliasTarget,
 } from './repositories/config-profiles.js';
+export {
+  reserveTorrentClawNzbBytes,
+  TORRENTCLAW_NZB_MONTHLY_LIMIT_BYTES,
+} from './repositories/torrentclaw-nzb-quota.js';
 export * from './schemas.js';
 
 export { sql, raw, join, SqlFragment } from './sql.js';

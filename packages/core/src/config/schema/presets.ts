@@ -235,6 +235,13 @@ export const presetsSchema = {
     timeoutEnv: 'DEFAULT_TORRENTIO_TIMEOUT',
     userAgentEnv: 'DEFAULT_TORRENTIO_USER_AGENT',
   }),
+  torrentclaw: basicPreset({
+    label: 'TorrentClaw',
+    default: ['https://torrentclaw.com/api/stremio'],
+    envBase: 'TORRENTCLAW_URL',
+    timeoutEnv: 'DEFAULT_TORRENTCLAW_TIMEOUT',
+    userAgentEnv: 'DEFAULT_TORRENTCLAW_USER_AGENT',
+  }),
   orion: basicPreset({
     label: 'Orion',
     default: ['https://5a0d1888fa64-orion.baby-beamup.club'],

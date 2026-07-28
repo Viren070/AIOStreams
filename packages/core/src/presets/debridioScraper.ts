@@ -1,5 +1,12 @@
-import { Addon, Option, UserData, Resource, Stream } from '../db/index.js';
-import { Preset, baseOptions } from './preset.js';
+import {
+  Addon,
+  Option,
+  ParsedStream,
+  UserData,
+  Resource,
+  Stream,
+} from '../db/index.js';
+import { Preset, baseOptions, StreamResponseHookOptions } from './preset.js';
 import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
@@ -9,10 +16,28 @@ import {
   debridioLogo,
   debridioApiKeyOption,
 } from './debridio.js';
+import { toDebridioP2PStream } from './debridio-p2p.js';
+
+type DebridioPresetOptions = {
+  p2pFallback?: boolean;
+  p2pMode?: boolean;
+};
 
 class DebridioStreamParser extends StreamParser {
   protected override get indexerRegex(): RegExp | undefined {
     return undefined;
+  }
+
+  protected override getService(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): ParsedStream['service'] | undefined {
+    if (stream.infoHash && !stream.url) return undefined;
+    return super.getService(stream, currentParsedStream);
+  }
+
+  protected override getIndexer(): string {
+    return 'Debridio';
   }
 }
 
@@ -71,6 +96,15 @@ export class DebridioPreset extends Preset {
         default: [],
         showInSimpleMode: false,
       },
+      {
+        id: 'p2pFallback',
+        name: 'P2P Mode When No Debrid Is Enabled',
+        description:
+          'When zero supported debrid services are enabled, return every Debridio result as a standard torrent info-hash stream for P2P-only apps. If any debrid is enabled, Debridio remains fully debrid-only. Playing P2P streams exposes your IP to peers; use a VPN if you play them.',
+        type: 'boolean',
+        required: false,
+        default: true,
+      },
       debridioSocialOption,
     ];
 
@@ -88,7 +122,10 @@ export class DebridioPreset extends Preset {
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION: 'Torrent streaming using Debrid providers.',
       OPTIONS: options,
-      SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
+      SUPPORTED_STREAM_TYPES: [
+        constants.DEBRID_STREAM_TYPE,
+        constants.P2P_STREAM_TYPE,
+      ],
       SUPPORTED_RESOURCES: supportedResources,
     };
   }
@@ -97,14 +134,53 @@ export class DebridioPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<Addon[]> {
+    const enabledServices = (userData.services || []).filter(
+      (service) =>
+        this.METADATA.SUPPORTED_SERVICES.includes(service.id) &&
+        service.enabled &&
+        service.credentials
+    );
+
     if (options?.url?.endsWith('/manifest.json')) {
-      return [this.generateAddon(userData, options)];
+      return [
+        this.generateAddon(userData, {
+          ...options,
+          p2pMode:
+            options.p2pFallback !== false && enabledServices.length === 0,
+        }),
+      ];
     }
 
     if (!options.debridioApiKey) {
       throw new Error(
         `${this.METADATA.NAME} requires a Debridio API Key, please provide one in the configuration`
       );
+    }
+
+    if (enabledServices.length === 0 && options.p2pFallback !== false) {
+      const preferredServices: ServiceId[] = options.services?.length
+        ? options.services
+        : this.METADATA.SUPPORTED_SERVICES;
+      const scrapeService = preferredServices
+        .map((serviceId) =>
+          (userData.services || []).find(
+            (service) =>
+              service.id === serviceId && Boolean(service.credentials)
+          )
+        )
+        .find((service) => Boolean(service));
+      if (!scrapeService) {
+        throw new Error(
+          `${this.METADATA.NAME} P2P mode needs the stored credentials of a supported debrid service for Debridio's scraper API. The service may remain disabled.`
+        );
+      }
+      return [
+        this.generateAddon(
+          userData,
+          { ...options, p2pMode: true },
+          scrapeService.id
+        ),
+      ];
     }
 
     const usableServices = this.getUsableServices(
@@ -123,8 +199,17 @@ export class DebridioPreset extends Preset {
     }
 
     return usableServices.map((service) =>
-      this.generateAddon(userData, options, service.id)
+      this.generateAddon(userData, { ...options, p2pMode: false }, service.id)
     );
+  }
+
+  static override async transformStreamResponse({
+    addon,
+    streams,
+  }: StreamResponseHookOptions): Promise<Stream[]> {
+    const options = (addon.preset.options || {}) as DebridioPresetOptions;
+    if (!options.p2pMode) return streams;
+    return streams.map(toDebridioP2PStream);
   }
 
   private static generateAddon(
@@ -134,12 +219,16 @@ export class DebridioPreset extends Preset {
   ): Addon {
     return {
       name: options.name || this.METADATA.NAME,
-      displayIdentifier: service
-        ? `${constants.SERVICE_DETAILS[service].shortName}`
-        : 'custom',
-      identifier: service
-        ? `${constants.SERVICE_DETAILS[service].shortName}`
-        : 'custom',
+      displayIdentifier: options.p2pMode
+        ? 'P2P'
+        : service
+          ? `${constants.SERVICE_DETAILS[service].shortName}`
+          : 'custom',
+      identifier: options.p2pMode
+        ? 'p2p'
+        : service
+          ? `${constants.SERVICE_DETAILS[service].shortName}`
+          : 'custom',
       manifestUrl: this.generateManifestUrl(userData, options, service),
       enabled: true,
       mediaTypes: options.mediaTypes || [],

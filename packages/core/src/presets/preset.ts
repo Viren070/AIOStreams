@@ -109,6 +109,14 @@ export interface CacheKeyRequestOptions {
   extras?: string;
 }
 
+export interface StreamResponseHookOptions {
+  addon: Addon;
+  type: string;
+  id: string;
+  streams: Stream[];
+  fetchStreams: (id: string) => Promise<Stream[]>;
+}
+
 export abstract class Preset {
   static get METADATA(): PresetMetadata {
     throw new Error('METADATA must be implemented by derived classes');
@@ -124,6 +132,16 @@ export abstract class Preset {
 
   static getCacheKey(options: CacheKeyRequestOptions): string | undefined {
     return undefined;
+  }
+
+  /**
+   * Optional preset-specific processing after a stream response has been
+   * validated but before individual streams are parsed by AIOStreams.
+   */
+  static async transformStreamResponse(
+    options: StreamResponseHookOptions
+  ): Promise<Stream[]> {
+    return options.streams;
   }
 
   /**

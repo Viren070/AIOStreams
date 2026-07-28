@@ -55,12 +55,29 @@ export class StremioTransformer {
     index: number,
     options?: { disableAutoplay?: boolean; provideStreamData?: boolean }
   ): Promise<AIOStream> {
-    const { name, description } = stream.addon.formatPassthrough
-      ? {
-          name: stream.originalName || stream.addon.name,
-          description: stream.originalDescription,
+    const perStreamPassthrough = stream.extra?.formattingPassthrough === true;
+    let { name, description } =
+      stream.addon.formatPassthrough || perStreamPassthrough
+        ? {
+            name: stream.originalName || stream.addon.name,
+            description: stream.originalDescription,
+          }
+        : await formatter.format(stream);
+
+    if (!stream.addon.formatPassthrough && !perStreamPassthrough) {
+      const suffix = stream.extra?.formattingSuffix;
+      if (Array.isArray(suffix)) {
+        const cleanSuffix = suffix.filter(
+          (line): line is string =>
+            typeof line === 'string' && line.trim() !== ''
+        );
+        if (cleanSuffix.length) {
+          description = [description, ...cleanSuffix]
+            .filter(Boolean)
+            .join('\n');
         }
-      : await formatter.format(stream);
+      }
+    }
 
     const bingeGroup = options?.disableAutoplay
       ? undefined
