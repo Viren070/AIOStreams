@@ -22,6 +22,7 @@ import { StremThruPreset } from './stremthru.js';
 type DebridioPresetOptions = {
   p2pFallback?: boolean;
   p2pMode?: boolean;
+  playbackMode?: 'auto' | 'debrid' | 'p2p';
 };
 
 class DebridioStreamParser extends StreamParser {
@@ -96,6 +97,20 @@ export class DebridioPreset extends Preset {
         showInSimpleMode: false,
       },
       {
+        id: 'playbackMode',
+        name: 'Playback Mode',
+        description:
+          'Auto uses debrid when enabled and P2P otherwise. P2P always converts Debridio results to raw torrent info hashes; a stored supported provider credential is still used only to authenticate Debridio scraping and may remain disabled in AIOStreams.',
+        type: 'select',
+        required: false,
+        default: 'p2p',
+        options: [
+          { label: 'Auto (debrid, then P2P)', value: 'auto' },
+          { label: 'Debrid only', value: 'debrid' },
+          { label: 'P2P info hashes', value: 'p2p' },
+        ],
+      },
+      {
         id: 'p2pFallback',
         name: 'P2P Mode When No Debrid Is Enabled',
         description:
@@ -139,13 +154,21 @@ export class DebridioPreset extends Preset {
         service.enabled &&
         service.credentials
     );
+    const playbackMode = (options.playbackMode || 'p2p') as
+      | 'auto'
+      | 'debrid'
+      | 'p2p';
+    const forceP2P = playbackMode === 'p2p';
 
     if (options?.url?.endsWith('/manifest.json')) {
       return [
         this.generateAddon(userData, {
           ...options,
           p2pMode:
-            options.p2pFallback !== false && enabledServices.length === 0,
+            forceP2P ||
+            (playbackMode !== 'debrid' &&
+              options.p2pFallback !== false &&
+              enabledServices.length === 0),
         }),
       ];
     }
@@ -156,7 +179,12 @@ export class DebridioPreset extends Preset {
       );
     }
 
-    if (enabledServices.length === 0 && options.p2pFallback !== false) {
+    if (
+      forceP2P ||
+      (playbackMode !== 'debrid' &&
+        enabledServices.length === 0 &&
+        options.p2pFallback !== false)
+    ) {
       const preferredServices: ServiceId[] = options.services?.length
         ? options.services
         : this.METADATA.SUPPORTED_SERVICES;
@@ -164,13 +192,15 @@ export class DebridioPreset extends Preset {
         .map((serviceId) =>
           (userData.services || []).find(
             (service) =>
-              service.id === serviceId && Boolean(service.credentials)
+              service.id === serviceId &&
+              this.METADATA.SUPPORTED_SERVICES.includes(service.id) &&
+              Boolean(service.credentials)
           )
         )
         .find((service) => Boolean(service));
       if (!scrapeService) {
         throw new Error(
-          `${this.METADATA.NAME} P2P mode needs the stored credentials of a supported debrid service for Debridio's scraper API. The service may remain disabled.`
+          `${this.METADATA.NAME} P2P mode needs one stored credential for a Debridio-supported provider because Debridio rejects provider-free requests. The provider may remain disabled; AIOStreams uses it only for scraping and returns raw P2P info hashes.`
         );
       }
       return [
@@ -243,6 +273,7 @@ export class DebridioPreset extends Preset {
       },
     };
   }
+
 
   private static generateManifestUrl(
     userData: UserData,
