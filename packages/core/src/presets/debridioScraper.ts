@@ -17,6 +17,7 @@ import {
   debridioApiKeyOption,
 } from './debridio.js';
 import { toDebridioP2PStream } from './debridio-p2p.js';
+import { StremThruPreset } from './stremthru.js';
 
 type DebridioPresetOptions = {
   p2pFallback?: boolean;
@@ -47,14 +48,12 @@ export class DebridioPreset extends Preset {
   }
 
   static override get METADATA() {
+    // Keep Debridio aligned with the complete torrent-capable service set used
+    // by AIOStreams/StremThru (including Offcloud and PikPak). Usenet-only
+    // services are intentionally excluded because Debridio's scraper API is
+    // torrent/provider based.
     const supportedServices: ServiceId[] = [
-      constants.REALDEBRID_SERVICE,
-      constants.ALLDEBRID_SERVICE,
-      constants.DEBRIDLINK_SERVICE,
-      constants.PREMIUMIZE_SERVICE,
-      constants.TORBOX_SERVICE,
-      constants.EASYDEBRID_SERVICE,
-      constants.DEBRIDER_SERVICE,
+      ...StremThruPreset.supportedServices,
     ];
     const supportedResources = [constants.STREAM_RESOURCE];
 
