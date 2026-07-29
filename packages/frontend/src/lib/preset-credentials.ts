@@ -7,6 +7,9 @@ export function redactPresetOptions(
 ): Record<string, any> {
   return Object.fromEntries(
     Object.entries(options ?? {}).flatMap(([id, value]): [string, any][] => {
+      // Removed legacy Unarr field. Never export an orphaned server-wide
+      // AIOSTREAMS_AUTH credential from an older saved config.
+      if (id === 'proxyAuth') return [];
       const meta = optionMeta?.find((opt) => opt.id === id);
       if (meta?.type === 'password') {
         return placeholder !== undefined && value !== undefined && value !== ''

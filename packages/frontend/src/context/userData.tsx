@@ -258,6 +258,13 @@ export function applyMigrations(config: any): UserData {
   if (config.presets && Array.isArray(config.presets)) {
     config.presets = config.presets.map((preset: any) => {
       if (
+        preset.type === 'unarr-indexer' &&
+        preset.options?.proxyAuth !== undefined
+      ) {
+        const { proxyAuth: _legacyProxyAuth, ...options } = preset.options;
+        preset = { ...preset, options };
+      }
+      if (
         preset.options?.forceToTop === true &&
         preset.options.pinPosition === undefined
       ) {

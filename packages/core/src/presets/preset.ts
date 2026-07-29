@@ -10,6 +10,10 @@ import {
 import { StreamParser } from '../parser/index.js';
 import { ServiceId, constants, toUrlSafeBase64 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+
+export interface PresetGenerationContext {
+  presetInstanceId?: string;
+}
 /**
  *
  * What modifications are needed for each preset:
@@ -158,7 +162,8 @@ export abstract class Preset {
 
   static generateAddons(
     userData: UserData,
-    options: Record<string, any>
+    options: Record<string, any>,
+    _context?: PresetGenerationContext
   ): Promise<Addon[]> {
     throw new Error('generateAddons must be implemented by derived classes');
   }

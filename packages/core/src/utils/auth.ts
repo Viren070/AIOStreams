@@ -33,6 +33,23 @@ interface SessionPayload {
   s?: 'oidc';
 }
 
+const CONFIG_PROXY_GRANT_PREFIX = 'pcg_';
+
+export type ConfigProxyGrantAudience = 'unarr-nzb';
+
+interface ConfigProxyGrantPayload {
+  v: 1;
+  c: string;
+  a: ConfigProxyGrantAudience;
+  o: string;
+}
+
+export interface ConfigProxyGrant {
+  identity: string;
+  audience: ConfigProxyGrantAudience;
+  origin: string;
+}
+
 function constantTimeEquals(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
@@ -266,6 +283,99 @@ export function decodeSignedPayload<T>(token: string | undefined): T | null {
     return JSON.parse(fromUrlSafeBase64(body)) as T;
   } catch {
     return null;
+  }
+}
+
+function configProxySubject(configId: string): string {
+  return createHmac('sha256', appConfig.bootstrap.secretKey)
+    .update(`config-proxy-subject:${configId}`)
+    .digest('base64url')
+    .slice(0, 24);
+}
+
+/** Issue a stateless proxy grant scoped to one saved config and HTTPS origin. */
+export function issueConfigProxyGrant(
+  configId: string,
+  audience: ConfigProxyGrantAudience,
+  origin: string
+): string {
+  if (!configId || configId.length > 256) {
+    throw new Error('A valid config instance id is required for proxy access');
+  }
+  const target = new URL(origin);
+  if (target.protocol !== 'https:') {
+    throw new Error('Config proxy grants require an HTTPS origin');
+  }
+  const payload: ConfigProxyGrantPayload = {
+    v: 1,
+    c: configProxySubject(configId),
+    a: audience,
+    o: target.origin,
+  };
+  const body = toUrlSafeBase64(JSON.stringify(payload));
+  return `${CONFIG_PROXY_GRANT_PREFIX}${body}.${sign(`config-proxy-grant:${body}`)}`;
+}
+
+/** Verify a config proxy grant without consulting user credentials or a DB. */
+export function verifyConfigProxyGrant(
+  token: string | undefined | null
+): ConfigProxyGrant | null {
+  if (
+    typeof token !== 'string' ||
+    !token.startsWith(CONFIG_PROXY_GRANT_PREFIX) ||
+    token.length > 1024
+  ) {
+    return null;
+  }
+  const encoded = token.slice(CONFIG_PROXY_GRANT_PREFIX.length);
+  const dot = encoded.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const body = encoded.slice(0, dot);
+  const signature = encoded.slice(dot + 1);
+  if (!constantTimeEquals(signature, sign(`config-proxy-grant:${body}`))) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(
+      fromUrlSafeBase64(body)
+    ) as ConfigProxyGrantPayload;
+    if (
+      payload.v !== 1 ||
+      payload.a !== 'unarr-nzb' ||
+      typeof payload.c !== 'string' ||
+      !/^[A-Za-z0-9_-]{24}$/.test(payload.c) ||
+      typeof payload.o !== 'string'
+    ) {
+      return null;
+    }
+    const origin = new URL(payload.o);
+    if (origin.protocol !== 'https:' || origin.origin !== payload.o) {
+      return null;
+    }
+    return {
+      identity: `config:${payload.c}`,
+      audience: payload.a,
+      origin: payload.o,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Config grants may fetch only NZBs from their signed Unarr API origin. */
+export function isConfigProxyRequestAllowed(
+  grant: ConfigProxyGrant,
+  data: { url: string; type?: 'nzb' | 'stream' }
+): boolean {
+  if (grant.audience !== 'unarr-nzb' || data.type !== 'nzb') return false;
+  try {
+    const target = new URL(data.url);
+    return (
+      target.origin === grant.origin &&
+      target.pathname === '/api/internal/agent/nzb-download'
+    );
+  } catch {
+    return false;
   }
 }
 

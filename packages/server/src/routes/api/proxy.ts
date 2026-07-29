@@ -23,6 +23,8 @@ import {
   BuiltinProxy,
   streamRegistry,
   proxyTargetKey,
+  verifyConfigProxyGrant,
+  isConfigProxyRequestAllowed,
 } from '@aiostreams/core';
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
@@ -185,7 +187,23 @@ function decodeAndAuthorizeRequest(
   const data = ProxyDataSchema.parse(JSON.parse(rawData));
   const auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
 
-  if (!validateCredentials(auth.username, auth.password)) {
+  const configGrant = verifyConfigProxyGrant(auth.password);
+  if (configGrant) {
+    if (
+      encodeMode !== 'e' ||
+      auth.username !== configGrant.identity ||
+      !isConfigProxyRequestAllowed(configGrant, data)
+    ) {
+      logger.warn(`[${requestId}] Config proxy grant rejected`, {
+        username: auth.username,
+      });
+      throw new APIError(
+        constants.ErrorCode.FORBIDDEN,
+        undefined,
+        'Config proxy grant is not permitted for this request'
+      );
+    }
+  } else if (!validateCredentials(auth.username, auth.password)) {
     logger.warn(`[${requestId}] Authentication failed`, {
       username: auth.username,
     });
@@ -196,7 +214,7 @@ function decodeAndAuthorizeRequest(
     );
   }
 
-  if (!hasPermission(auth.username, Permission.Proxy)) {
+  if (!configGrant && !hasPermission(auth.username, Permission.Proxy)) {
     logger.warn(`[${requestId}] Proxy access denied`, {
       username: auth.username,
     });

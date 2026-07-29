@@ -13,6 +13,7 @@ import {
   checkAuthToken,
   Permission,
   isAdminUser,
+  verifyConfigProxyGrant,
 } from '../utils/index.js';
 import z from 'zod';
 
@@ -26,6 +27,15 @@ export class BuiltinProxy extends BaseProxy {
     password: string;
     admin: boolean;
   } {
+    const grant = verifyConfigProxyGrant(auth);
+    if (grant) {
+      return {
+        username: grant.identity,
+        password: auth,
+        admin: false,
+      };
+    }
+
     const check = checkAuthToken(auth, Permission.Proxy);
     if (!check.ok) {
       throw new Error(`Invalid AIOStreams auth: ${check.reason}`);

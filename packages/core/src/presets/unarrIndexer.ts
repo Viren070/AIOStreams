@@ -1,11 +1,14 @@
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
+import type { PresetGenerationContext } from './preset.js';
 import {
   appConfig,
   constants,
   encryptString,
+  issueConfigProxyGrant,
   ServiceId,
 } from '../utils/index.js';
+import { validateUnarrApiUrl } from '../builtins/unarr-indexer/addon.js';
 
 const SUPPORTED_SERVICES = [
   constants.TORBOX_SERVICE,
@@ -33,6 +36,23 @@ type UnarrStreamMetadata = {
   publishedAt?: string;
   attributes?: Record<string, string>;
 };
+
+export function issueUnarrConfigProxyGrant(
+  presetInstanceId: string | undefined,
+  apiUrl: string
+): string {
+  if (!presetInstanceId) {
+    throw new Error(
+      'TorrentClaw Unarr (Index Only) could not resolve its per-config proxy identity.'
+    );
+  }
+  const validatedApiUrl = validateUnarrApiUrl(apiUrl);
+  return issueConfigProxyGrant(
+    presetInstanceId,
+    'unarr-nzb',
+    new URL(validatedApiUrl).origin
+  );
+}
 
 export class UnarrIndexerStreamParser extends BuiltinStreamParser {
   private get formatting(): UnarrFormattingOptions {
@@ -136,14 +156,6 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
         description:
           'Connect with a single-use `unarr-authkey-…` or validate an existing `tc_…` API key. Your Unarr email/password is never entered into AIOStreams.',
         type: 'unarr-auth',
-        required: true,
-      },
-      {
-        id: 'proxyAuth',
-        name: 'AIOStreams Proxy Auth',
-        description:
-          'A username:password entry allowed by `AIOSTREAMS_AUTH`. It encrypts and authenticates NZB retrieval so the Unarr API key is never sent to a playback client.',
-        type: 'password',
         required: true,
       },
       {
@@ -316,7 +328,8 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
 
   static async generateAddons(
     userData: UserData,
-    options: Record<string, any>
+    options: Record<string, any>,
+    context?: PresetGenerationContext
   ): Promise<Addon[]> {
     const usableServices = this.getUsableServices(
       userData,
@@ -339,16 +352,19 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
         `${this.METADATA.NAME} requires a connected Unarr account. Use Connect Unarr before saving.`
       );
     }
-    if (!options.proxyAuth) {
-      throw new Error(`${this.METADATA.NAME} requires AIOStreams proxy auth.`);
-    }
+
+    const validatedApiUrl = validateUnarrApiUrl(apiUrl);
+    const proxyGrant = issueUnarrConfigProxyGrant(
+      context?.presetInstanceId,
+      validatedApiUrl
+    );
 
     const services = usableServices.map((service) => service.id);
     const config = {
       ...this.getBaseConfig(userData, services),
-      apiUrl,
+      apiUrl: validatedApiUrl,
       apiKey,
-      proxyAuth: options.proxyAuth,
+      proxyAuth: proxyGrant,
       maxResults: options.maxResults ?? 30,
       timeout: options.timeout ?? 30_000,
       enforceUnarrQuota: options.enforceUnarrQuota ?? true,
@@ -362,11 +378,12 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
       ...options,
       unarrAuth: {
         ...(auth || {}),
-        apiUrl,
+        apiUrl: validatedApiUrl,
         apiKey,
       },
       apiKey: undefined,
       apiUrl: undefined,
+      proxyAuth: undefined,
     };
 
     return [

@@ -80,7 +80,9 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
         ? { ...preset.options, services: [] }
         : preset.options;
 
-      const addons = await Preset.generateAddons(normalUserData, options);
+      const addons = await Preset.generateAddons(normalUserData, options, {
+        presetInstanceId: preset.instanceId,
+      });
 
       // When service wrapping, don't add addons that fell into P2P mode
       // due to having no usable services — those would be unmarked duplicates
@@ -127,7 +129,8 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
           const p2pOptions = { ...preset.options, services: [] };
           const p2pAddons = await Preset.generateAddons(
             p2pUserData,
-            p2pOptions
+            p2pOptions,
+            { presetInstanceId: preset.instanceId }
           );
           // Only keep addons that are actually P2P (not debrid addons from presets that don't care about services)
           ctx.addons.push(

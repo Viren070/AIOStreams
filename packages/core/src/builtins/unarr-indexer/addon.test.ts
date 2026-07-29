@@ -6,8 +6,16 @@ import {
   validateUnarrApiUrl,
 } from './addon.js';
 import type { ParsedId } from '../../utils/id-parser.js';
-import { UnarrIndexerStreamParser } from '../../presets/unarrIndexer.js';
+import {
+  issueUnarrConfigProxyGrant,
+  UnarrIndexerStreamParser,
+} from '../../presets/unarrIndexer.js';
 import type { Addon, ParsedStream, Stream } from '../../db/index.js';
+import {
+  isConfigProxyRequestAllowed,
+  issueConfigProxyGrant,
+  verifyConfigProxyGrant,
+} from '../../utils/index.js';
 
 class TestUnarrParser extends UnarrIndexerStreamParser {
   extras(stream: Stream, parsed: ParsedStream) {
@@ -84,6 +92,97 @@ test('rejects non-Unarr credentials before making a network request', async () =
     connectUnarr({ apiUrl: 'https://unarr.app', credential: 'not-a-key' }),
     /tc_|unarr-authkey-/
   );
+});
+
+test('issues deterministic, isolated per-config proxy grants', () => {
+  const first = issueConfigProxyGrant(
+    'preset-instance-a',
+    'unarr-nzb',
+    'https://unarr.app'
+  );
+  const repeated = issueConfigProxyGrant(
+    'preset-instance-a',
+    'unarr-nzb',
+    'https://unarr.app'
+  );
+  const second = issueConfigProxyGrant(
+    'preset-instance-b',
+    'unarr-nzb',
+    'https://unarr.app'
+  );
+
+  assert.equal(first, repeated);
+  assert.notEqual(first, second);
+  assert.match(verifyConfigProxyGrant(first)?.identity ?? '', /^config:/);
+});
+
+test('rejects tampered or malformed config proxy grants', () => {
+  const grant = issueConfigProxyGrant(
+    'preset-instance-a',
+    'unarr-nzb',
+    'https://unarr.app'
+  );
+  const replacement = grant.endsWith('A') ? 'B' : 'A';
+  assert.equal(verifyConfigProxyGrant(grant.slice(0, -1) + replacement), null);
+  assert.equal(verifyConfigProxyGrant('pcg_not-a-grant'), null);
+  assert.throws(() =>
+    issueConfigProxyGrant('preset-instance-a', 'unarr-nzb', 'http://unarr.app')
+  );
+});
+
+test('binds Unarr grants to NZB downloads on the signed origin', () => {
+  const token = issueConfigProxyGrant(
+    'preset-instance-a',
+    'unarr-nzb',
+    'https://unarr.app'
+  );
+  const grant = verifyConfigProxyGrant(token);
+  assert.ok(grant);
+  assert.equal(
+    isConfigProxyRequestAllowed(grant, {
+      url: 'https://unarr.app/api/internal/agent/nzb-download?nzbId=123',
+      type: 'nzb',
+    }),
+    true
+  );
+  assert.equal(
+    isConfigProxyRequestAllowed(grant, {
+      url: 'https://unarr.app/api/internal/agent/nzb-download?nzbId=123',
+      type: 'stream',
+    }),
+    false
+  );
+  assert.equal(
+    isConfigProxyRequestAllowed(grant, {
+      url: 'https://evil.example/api/internal/agent/nzb-download?nzbId=123',
+      type: 'nzb',
+    }),
+    false
+  );
+  assert.equal(
+    isConfigProxyRequestAllowed(grant, {
+      url: 'https://unarr.app/api/internal/agent/me',
+      type: 'nzb',
+    }),
+    false
+  );
+});
+
+test('generates a per-config Unarr proxy grant without AIOSTREAMS_AUTH input', () => {
+  const options = {
+    name: 'Unarr test',
+    unarrAuth: {
+      apiUrl: 'https://unarr.app',
+      apiKey: 'tc_test-only-key',
+    },
+  };
+  const grant = issueUnarrConfigProxyGrant(
+    'unarr-config-test',
+    'https://unarr.app'
+  );
+  assert.match(grant, /^pcg_/);
+  assert.ok(verifyConfigProxyGrant(grant));
+  assert.equal(options.proxyAuth, undefined);
 });
 
 test('formats Unarr NZBs with TorrentClaw metadata and pack sizes', () => {
