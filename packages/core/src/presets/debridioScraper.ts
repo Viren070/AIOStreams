@@ -55,6 +55,10 @@ export class DebridioPreset extends Preset {
     // torrent/provider based.
     const supportedServices: ServiceId[] = [
       ...StremThruPreset.supportedServices,
+      // Debridio accepts these provider identifiers in newer deployments even
+      // though they are not part of StremThru's torrent bridge list.
+      constants.SEEDR_SERVICE,
+      constants.PUTIO_SERVICE,
     ];
     const supportedResources = [constants.STREAM_RESOURCE];
 
