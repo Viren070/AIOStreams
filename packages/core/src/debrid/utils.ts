@@ -211,6 +211,10 @@ export interface NZB extends BaseFile {
   zyclopsHealth?: string;
   serviceItemId?: string;
   releaseKey?: string;
+  /** Stable, secret-free key used to charge a monthly quota only once. */
+  quotaReservationKey?: string;
+  /** Bytes charged when this NZB is first played through any Usenet service. */
+  quotaBytes?: number;
 }
 
 export interface TorrentWithSelectedFile extends Torrent {

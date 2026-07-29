@@ -17,6 +17,7 @@ import {
   PLAYBACK_PATH_PREFIX,
 } from '../debrid/utils.js';
 import { isFailoverRetryableError } from './play-chain.js';
+import { reserveTorrentClawNzbBytesOnce } from '../db/index.js';
 
 const logger = createLogger('failover');
 
@@ -96,6 +97,8 @@ function buildPlaybackInfo(
         releaseKey: fileInfo.releaseKey,
         indexer: fileInfo.indexer,
         quotaBucket: fileInfo.quotaBucket,
+        quotaReservationKey: fileInfo.quotaReservationKey,
+        quotaBytes: fileInfo.quotaBytes,
         easynewsUrl: fileInfo.easynewsUrl,
         index: fileInfo.index,
         filename,
@@ -132,6 +135,17 @@ export async function resolvePlaybackTarget(
 
   const metadata = await metadataStore().get(target.metadataId);
   const playbackInfo = buildPlaybackInfo(fileInfo, metadata, target.filename);
+
+  if (
+    playbackInfo.type === 'usenet' &&
+    playbackInfo.quotaBucket === 'torrentclaw' &&
+    playbackInfo.quotaReservationKey
+  ) {
+    await reserveTorrentClawNzbBytesOnce(
+      playbackInfo.quotaReservationKey,
+      playbackInfo.quotaBytes ?? 0
+    );
+  }
 
   const service = getDebridService(
     storeAuth.id,

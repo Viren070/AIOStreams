@@ -877,10 +877,13 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             hash: torrentOrNzb.hash,
             releaseKey: torrentOrNzb.releaseKey,
             indexer: torrentOrNzb.indexer,
-            quotaBucket:
-              torrentOrNzb.indexer?.toLowerCase() === 'torrentclaw'
-                ? 'torrentclaw'
-                : undefined,
+            quotaBucket: torrentOrNzb.indexer
+              ?.toLowerCase()
+              .includes('torrentclaw')
+              ? 'torrentclaw'
+              : undefined,
+            quotaReservationKey: torrentOrNzb.quotaReservationKey,
+            quotaBytes: torrentOrNzb.quotaBytes,
             index: torrentOrNzb.file.index,
             easynewsUrl:
               torrentOrNzb.service?.id === 'easynews'

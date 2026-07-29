@@ -30,6 +30,7 @@ import {
   ReleaseBlocklistRepository,
   UsenetLibraryRepository,
   reserveTorrentClawNzbBytes,
+  reserveTorrentClawNzbBytesOnce,
   type UsenetLibraryEntry,
 } from '../db/index.js';
 import { markReleaseDeadForCode } from '../release-blocklist/feedback.js';
@@ -342,7 +343,14 @@ export class NativeUsenetService implements UsenetDebridService {
 
     const chosenFilename = selected.name ?? filename;
     if (playbackInfo.quotaBucket === 'torrentclaw') {
-      await reserveTorrentClawNzbBytes(selected.size ?? 0);
+      if (playbackInfo.quotaReservationKey) {
+        await reserveTorrentClawNzbBytesOnce(
+          playbackInfo.quotaReservationKey,
+          playbackInfo.quotaBytes ?? selected.size ?? 0
+        );
+      } else {
+        await reserveTorrentClawNzbBytes(selected.size ?? 0);
+      }
     }
     const token = encodeUsenetStreamToken({
       nzb: playbackInfo.nzb,

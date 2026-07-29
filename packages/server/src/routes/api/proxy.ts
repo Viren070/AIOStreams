@@ -252,7 +252,9 @@ async function serveNzbFromGrabCache(
 ): Promise<void> {
   let nzb: Buffer;
   try {
-    nzb = await downloadManager.fetchNzb(data.url);
+    nzb = await downloadManager.fetchNzb(data.url, {
+      headers: data.requestHeaders,
+    });
   } catch (error) {
     if (error instanceof NzbTooLargeError) {
       throw new APIError(constants.ErrorCode.BAD_REQUEST, 413, error.message);

@@ -2,6 +2,7 @@ import { GrabCache } from './grab-cache.js';
 import { makeRequest } from './http.js';
 import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
+import { getSimpleTextHash } from './crypto.js';
 
 const logger = createLogger('download-manager');
 
@@ -18,6 +19,8 @@ export interface GrabOptions {
   timeoutMs?: number;
   /** User-Agent fallback; per-host overrides still win (see {@link makeRequest}). */
   userAgent?: string | null;
+  /** Additional authenticated upstream headers. Never logged. */
+  headers?: Record<string, string>;
 }
 
 /** The grab URL answered with a non-OK HTTP status. */
@@ -82,7 +85,13 @@ class DownloadManager {
     // Default user-agent; a `[nzb_grabs]` (or per-host) override in
     // REQUEST_HEADER_OVERRIDES takes priority inside makeRequest.
     const userAgent = appConfig.http.defaultUserAgent;
-    return this.nzbCache().fetch(url, () =>
+    const headerEntries = Object.entries(opts.headers ?? {}).sort(([a], [b]) =>
+      a.localeCompare(b)
+    );
+    const cacheKey = headerEntries.length
+      ? `${url}#headers=${getSimpleTextHash(JSON.stringify(headerEntries))}`
+      : url;
+    return this.nzbCache().fetch(cacheKey, () =>
       this.download(url, { ...opts, userAgent })
     );
   }
@@ -96,7 +105,10 @@ class DownloadManager {
       // `[nzb_grabs]` overrides (a UA or `{preset}`) take priority inside
       // makeRequest; this user-agent is the default fallback.
       context: 'nzb_grabs',
-      headers: opts.userAgent ? { 'User-Agent': opts.userAgent } : undefined,
+      headers: {
+        ...(opts.userAgent ? { 'User-Agent': opts.userAgent } : {}),
+        ...opts.headers,
+      },
     });
     if (!response.ok) {
       throw new GrabHttpError(response.status, response.statusText);

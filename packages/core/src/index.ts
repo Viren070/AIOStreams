@@ -25,6 +25,7 @@ export {
   GDriveAPI,
   TorznabAddon,
   NewznabAddon,
+  UnarrIndexerAddon,
   ProwlarrAddon,
   KnabenAddon,
   EztvAddon,
