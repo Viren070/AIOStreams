@@ -298,6 +298,7 @@ const OptionDefinition = z.looseObject({
     'subsection',
     'custom-nntp-servers',
     'nab-endpoint',
+    'unarr-auth',
   ]),
   nab: z
     .object({

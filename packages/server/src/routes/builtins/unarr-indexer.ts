@@ -1,5 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { decryptString, UnarrIndexerAddon } from '@aiostreams/core';
+import {
+  connectUnarr,
+  decryptString,
+  UnarrConnectInputSchema,
+  UnarrIndexerAddon,
+} from '@aiostreams/core';
+import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
+import { createResponse } from '../../utils/responses.js';
 
 const router: Router = Router();
 
@@ -10,6 +17,31 @@ function config(encodedConfig: string): unknown {
   }
   return JSON.parse(decrypted.data);
 }
+
+router.post(
+  '/auth',
+  userApiRateLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const input = UnarrConnectInputSchema.parse(req.body);
+      const result = await connectUnarr(input);
+      res.set('Cache-Control', 'no-store');
+      res.set('Pragma', 'no-cache');
+      res.json(createResponse({ success: true, data: result }));
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json(
+          createResponse({
+            success: false,
+            detail: error.message,
+          })
+        );
+        return;
+      }
+      next(error);
+    }
+  }
+);
 
 router.get(
   '/:encodedConfig/manifest.json',

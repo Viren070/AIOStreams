@@ -17,6 +17,7 @@ const VALID_INPUT_TYPES = new Set([
   'subsection',
   'custom-nntp-servers',
   'nab-endpoint',
+  'unarr-auth',
 ]);
 
 const VALID_SOCIAL_IDS = new Set([
@@ -480,6 +481,7 @@ export function validateTemplate(
         }
         case 'string':
         case 'password':
+        case 'unarr-auth':
         case 'url': {
           if (
             input.default !== undefined &&

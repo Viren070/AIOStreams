@@ -13,6 +13,20 @@ export function redactPresetOptions(
           ? [[id, placeholder]]
           : [];
       }
+      if (meta?.type === 'unarr-auth') {
+        if (!value || typeof value !== 'object') return [];
+        const apiKey = value.apiKey;
+        return [
+          [
+            id,
+            {
+              ...value,
+              apiKey:
+                placeholder !== undefined && apiKey ? placeholder : undefined,
+            },
+          ],
+        ];
+      }
       const subOptions = meta?.subOptions as Option[] | undefined;
       if (
         subOptions?.length &&

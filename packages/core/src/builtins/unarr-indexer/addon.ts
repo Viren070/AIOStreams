@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import { ParsedId } from '../../utils/id-parser.js';
 import {
   appConfig,
@@ -7,7 +8,13 @@ import {
   getSimpleTextHash,
   makeRequest,
 } from '../../utils/index.js';
-import { NZB, Torrent, hashNzbUrl } from '../../debrid/index.js';
+import {
+  NZB,
+  NZBWithSelectedFile,
+  Torrent,
+  TorrentWithSelectedFile,
+  hashNzbUrl,
+} from '../../debrid/index.js';
 import {
   BaseDebridAddon,
   BaseDebridConfigSchema,
@@ -19,11 +26,13 @@ import {
   getTorrentClawNzbQuotaStatus,
   TORRENTCLAW_NZB_MONTHLY_LIMIT_BYTES,
 } from '../../db/index.js';
+import type { Stream } from '../../db/index.js';
+import type { BuiltinServiceId } from '../../utils/index.js';
 
 const logger = createLogger('unarr-indexer');
 
 const UnarrNzbSearchResultSchema = z.object({
-  title: z.string().min(1),
+  title: z.string().min(1).max(500),
   nzbId: z.string().min(1),
   category: z.string().optional().default(''),
   size: z.number().int().nonnegative().optional().default(0),
@@ -31,7 +40,10 @@ const UnarrNzbSearchResultSchema = z.object({
   grabs: z.number().int().nonnegative().optional().default(0),
   group: z.string().optional().default(''),
   poster: z.string().optional().default(''),
-  attributes: z.record(z.string(), z.string()).optional().default({}),
+  attributes: z
+    .record(z.string().max(100), z.string().max(500))
+    .optional()
+    .default({}),
 });
 
 const UnarrNzbSearchResponseSchema = z.object({
@@ -47,6 +59,36 @@ const UnarrUsenetUsageSchema = z.object({
   remainingBytes: z.number().optional().default(0),
   quotaResetDate: z.string().optional().default(''),
 });
+
+const UnarrAccountSchema = z.object({
+  plan: z.string().optional().default(''),
+  isPro: z.boolean().optional().default(false),
+  trialActive: z.boolean().optional().default(false),
+  trialDaysLeft: z.number().int().nonnegative().optional().default(0),
+});
+
+const UnarrAuthKeyExchangeSchema = z.object({
+  apiKey: z.string().startsWith('tc_'),
+  userId: z.string().optional(),
+  apiUrl: z.string().optional(),
+});
+
+export const UnarrConnectInputSchema = z.object({
+  apiUrl: z.string().default('https://unarr.app'),
+  credential: z.string().trim().min(1).max(512),
+});
+
+export interface UnarrConnectResult {
+  apiUrl: string;
+  apiKey: string;
+  account: {
+    plan: string;
+    isPro: boolean;
+    trialActive: boolean;
+    trialDaysLeft: number;
+  };
+  exchanged: boolean;
+}
 
 export const UnarrIndexerAddonConfigSchema = BaseDebridConfigSchema.extend({
   apiUrl: z.url().default('https://unarr.app'),
@@ -108,6 +150,87 @@ export function validateUnarrApiUrl(value: string): string {
   url.search = '';
   url.hash = '';
   return url.toString().replace(/\/$/, '');
+}
+
+async function unarrJsonRequest(
+  url: string,
+  options: {
+    method?: string;
+    apiKey?: string;
+    body?: unknown;
+    timeout?: number;
+  } = {}
+): Promise<unknown> {
+  const response = await makeRequest(url, {
+    method: options.method ?? 'GET',
+    timeout: options.timeout ?? 20_000,
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'AIOStreams TorrentClaw Unarr connection',
+      ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Unarr rejected this credential');
+    }
+    if (response.status === 409) {
+      throw new Error(
+        'This Unarr one-time auth key is expired, used, or revoked. Generate a new one.'
+      );
+    }
+    if (response.status === 429) {
+      throw new Error('Unarr rate limit reached; try again later');
+    }
+    throw new Error(`Unarr connection failed (${response.status})`);
+  }
+  return response.json();
+}
+
+/**
+ * Validate a durable tc_ key or exchange a single-use unarr-authkey- value.
+ * The caller must persist only the returned apiKey, never the one-time input.
+ */
+export async function connectUnarr(
+  input: z.input<typeof UnarrConnectInputSchema>
+): Promise<UnarrConnectResult> {
+  const parsed = UnarrConnectInputSchema.parse(input);
+  let apiUrl = validateUnarrApiUrl(parsed.apiUrl);
+  let apiKey = parsed.credential;
+  let exchanged = false;
+
+  if (apiKey.startsWith('unarr-authkey-')) {
+    const exchange = UnarrAuthKeyExchangeSchema.parse(
+      await unarrJsonRequest(`${apiUrl}/api/internal/agent/authkey/exchange`, {
+        method: 'POST',
+        body: {
+          authKey: apiKey,
+          agentId: randomUUID(),
+          hostname: 'aiostreams-unarr-indexer',
+          platform: 'aiostreams/index-only',
+        },
+      })
+    );
+    apiKey = exchange.apiKey;
+    if (exchange.apiUrl) apiUrl = validateUnarrApiUrl(exchange.apiUrl);
+    exchanged = true;
+  } else if (!apiKey.startsWith('tc_')) {
+    throw new Error(
+      'Use an Unarr API key beginning with tc_ or a one-time key beginning with unarr-authkey-'
+    );
+  }
+
+  const account = UnarrAccountSchema.parse(
+    await unarrJsonRequest(`${apiUrl}/api/internal/agent/me`, { apiKey })
+  );
+  return {
+    apiUrl,
+    apiKey,
+    account,
+    exchanged,
+  };
 }
 
 export class UnarrIndexerAddon extends BaseDebridAddon<UnarrIndexerAddonConfig> {
@@ -255,9 +378,17 @@ export class UnarrIndexerAddon extends BaseDebridAddon<UnarrIndexerAddonConfig> 
         nzb: proxiedUrls[index],
         size: result.size,
         age,
+        group: result.group || undefined,
         indexer: 'TorrentClaw / Unarr',
         quotaReservationKey: stableId,
         quotaBytes: result.size,
+        unarr: {
+          grabs: result.grabs,
+          category: result.category || undefined,
+          group: result.group || undefined,
+          publishedAt: result.publishedAt || undefined,
+          attributes: result.attributes,
+        },
       };
       const releaseKey = usenetKey(
         result.size,
@@ -271,6 +402,33 @@ export class UnarrIndexerAddon extends BaseDebridAddon<UnarrIndexerAddonConfig> 
 
   protected async _searchTorrents(_parsedId: ParsedId): Promise<Torrent[]> {
     return [];
+  }
+
+  protected override _createStream(
+    torrentOrNzb: TorrentWithSelectedFile | NZBWithSelectedFile,
+    metadataId: string,
+    encryptedStoreAuths: Record<BuiltinServiceId, string | string[]>
+  ): Stream {
+    const stream = super._createStream(
+      torrentOrNzb,
+      metadataId,
+      encryptedStoreAuths
+    );
+    if (torrentOrNzb.type === 'usenet' && torrentOrNzb.unarr) {
+      stream.unarr = torrentOrNzb.unarr;
+      const badges = [
+        'Unarr',
+        typeof torrentOrNzb.unarr.grabs === 'number' &&
+        torrentOrNzb.unarr.grabs > 0
+          ? `${torrentOrNzb.unarr.grabs.toLocaleString('en-US')} grabs`
+          : undefined,
+        torrentOrNzb.unarr.category,
+      ].filter((value): value is string => Boolean(value));
+      stream.description = [stream.description, `🦞 ${badges.join(' · ')}`]
+        .filter(Boolean)
+        .join('\n');
+    }
+    return stream;
   }
 }
 

@@ -673,10 +673,160 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         />
       );
     }
+    case 'unarr-auth': {
+      return (
+        <UnarrAuthInput
+          option={option}
+          value={forcedValue ?? value ?? defaultValue}
+          onChange={onChange}
+          disabled={isDisabled}
+        />
+      );
+    }
     default:
       return null;
   }
 };
+
+interface UnarrAuthValue {
+  apiUrl?: string;
+  apiKey?: string;
+  account?: {
+    plan?: string;
+    isPro?: boolean;
+    trialActive?: boolean;
+    trialDaysLeft?: number;
+  };
+}
+
+interface UnarrConnectResponse {
+  apiUrl: string;
+  apiKey: string;
+  account: NonNullable<UnarrAuthValue['account']>;
+  exchanged: boolean;
+}
+
+function UnarrAuthInput({
+  option,
+  value,
+  onChange,
+  disabled,
+}: {
+  option: Option;
+  value: UnarrAuthValue | undefined;
+  onChange: (value: UnarrAuthValue) => void;
+  disabled?: boolean;
+}) {
+  const current = value ?? {};
+  const [credential, setCredential] = useState('');
+  const [connecting, setConnecting] = useState(false);
+  const connected = current.apiKey?.startsWith('tc_') === true;
+
+  const connect = async () => {
+    const supplied = credential.trim() || current.apiKey || '';
+    if (!supplied) {
+      toast.error('Enter an Unarr one-time auth key or API key');
+      return;
+    }
+    setConnecting(true);
+    try {
+      const response = await fetch('/builtins/unarr-indexer/auth', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiUrl: current.apiUrl || 'https://unarr.app',
+          credential: supplied,
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.detail || 'Could not connect Unarr');
+      }
+      const result = json.data as UnarrConnectResponse;
+      onChange({
+        apiUrl: result.apiUrl,
+        apiKey: result.apiKey,
+        account: result.account,
+      });
+      setCredential('');
+      toast.success(
+        result.exchanged
+          ? 'Unarr connected; the one-time key was replaced securely'
+          : 'Unarr API key verified'
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not connect Unarr'
+      );
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const accountLabel = current.account?.plan
+    ? current.account.plan.toUpperCase()
+    : current.account?.trialActive
+      ? `TRIAL${current.account.trialDaysLeft ? ` · ${current.account.trialDaysLeft} days` : ''}`
+      : 'CONNECTED';
+
+  return (
+    <div className="space-y-3 rounded-[--radius] border border-[--border] bg-[--subtle] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="font-medium">{option.name}</div>
+          <div className="text-xs text-[--muted] mt-1">
+            <MarkdownLite>{option.description}</MarkdownLite>
+          </div>
+        </div>
+        {connected && (
+          <div className="shrink-0 rounded-full bg-green-500/15 px-3 py-1 text-xs font-semibold text-green-500">
+            {accountLabel}
+          </div>
+        )}
+      </div>
+
+      <PasswordInput
+        label={
+          connected ? 'Replace or revalidate credential' : 'Unarr credential'
+        }
+        value={credential}
+        onValueChange={setCredential}
+        placeholder="unarr-authkey-… or tc_…"
+        disabled={disabled || connecting}
+        autoComplete="new-password"
+      />
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Button
+          type="button"
+          intent="gray-subtle"
+          onClick={() =>
+            window.open(
+              'https://unarr.app/profile?tab=apikey',
+              '_blank',
+              'noopener,noreferrer'
+            )
+          }
+          disabled={disabled || connecting}
+        >
+          Get key from Unarr
+        </Button>
+        <Button
+          type="button"
+          intent="primary"
+          onClick={connect}
+          loading={connecting}
+          disabled={
+            disabled || connecting || (!credential.trim() && !connected)
+          }
+        >
+          {connected && !credential.trim() ? 'Revalidate' : 'Connect Unarr'}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface NabEndpointValue {
   url?: string;

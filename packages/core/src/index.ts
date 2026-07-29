@@ -26,6 +26,8 @@ export {
   TorznabAddon,
   NewznabAddon,
   UnarrIndexerAddon,
+  connectUnarr,
+  UnarrConnectInputSchema,
   ProwlarrAddon,
   KnabenAddon,
   EztvAddon,

@@ -215,6 +215,14 @@ export interface NZB extends BaseFile {
   quotaReservationKey?: string;
   /** Bytes charged when this NZB is first played through any Usenet service. */
   quotaBytes?: number;
+  /** Rich, non-secret metadata supplied by Unarr's index-only search API. */
+  unarr?: {
+    grabs?: number;
+    category?: string;
+    group?: string;
+    publishedAt?: string;
+    attributes?: Record<string, string>;
+  };
 }
 
 export interface TorrentWithSelectedFile extends Torrent {

@@ -1,5 +1,5 @@
-import { Addon, Option, UserData } from '../db/index.js';
-import { BuiltinAddonPreset } from './builtin.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import {
   appConfig,
   constants,
@@ -16,7 +16,110 @@ const SUPPORTED_SERVICES = [
   constants.AIOSTREAMS_SERVICE,
 ] as ServiceId[];
 
+type UnarrFormattingOptions = {
+  useAioFormatter?: boolean;
+  showEpisodeAndPackSizes?: boolean;
+  showCacheStatus?: boolean;
+  showUnarr?: boolean;
+  showGrabs?: boolean;
+  showCategory?: boolean;
+  showGroup?: boolean;
+};
+
+type UnarrStreamMetadata = {
+  grabs?: number;
+  category?: string;
+  group?: string;
+  publishedAt?: string;
+  attributes?: Record<string, string>;
+};
+
+export class UnarrIndexerStreamParser extends BuiltinStreamParser {
+  private get formatting(): UnarrFormattingOptions {
+    return (this.addon.preset.options?.formatting ??
+      {}) as UnarrFormattingOptions;
+  }
+
+  private metadata(stream: Stream): UnarrStreamMetadata {
+    const value = (stream as Record<string, unknown>).unarr;
+    return value && typeof value === 'object'
+      ? (value as UnarrStreamMetadata)
+      : {};
+  }
+
+  protected override getIndexer(): string {
+    return 'TorrentClaw';
+  }
+
+  protected override getFolderSize(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): number | undefined {
+    if (this.formatting.showEpisodeAndPackSizes === false) return undefined;
+    return super.getFolderSize(stream, currentParsedStream);
+  }
+
+  protected override getReleaseGroup(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string | undefined {
+    if (this.formatting.showGroup === false) return undefined;
+    return (
+      this.metadata(stream).group ||
+      super.getReleaseGroup(stream, currentParsedStream)
+    );
+  }
+
+  protected override getExtras(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): ParsedStream['extra'] {
+    const metadata = this.metadata(stream);
+    const badges: string[] = [];
+    if (this.formatting.showUnarr !== false) badges.push('Unarr');
+    if (
+      this.formatting.showGrabs !== false &&
+      typeof metadata.grabs === 'number' &&
+      metadata.grabs > 0
+    ) {
+      badges.push(`${metadata.grabs.toLocaleString('en-US')} grabs`);
+    }
+    if (this.formatting.showCategory !== false && metadata.category) {
+      badges.push(metadata.category);
+    }
+
+    let status: string | undefined;
+    if (this.formatting.showCacheStatus !== false) {
+      if (currentParsedStream.library) status = '🗃️ Library';
+      else if (currentParsedStream.service?.cached === true)
+        status = '⚡ Cached';
+      else if (currentParsedStream.service?.cached === false)
+        status = '⏳ Uncached';
+    }
+
+    const suffix = [
+      badges.length ? `🦞 ${badges.join(' · ')}` : undefined,
+      status,
+    ].filter((line): line is string => Boolean(line));
+
+    return {
+      ...(super.getExtras(stream, currentParsedStream) || {}),
+      torrentClaw: {
+        unarr: true,
+        score: undefined,
+        trueSpec: false,
+      },
+      unarr: metadata,
+      formattingSuffix: suffix,
+    };
+  }
+}
+
 export class UnarrIndexerPreset extends BuiltinAddonPreset {
+  static override getParser() {
+    return UnarrIndexerStreamParser;
+  }
+
   static override get METADATA() {
     const options: Option[] = [
       {
@@ -28,27 +131,18 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
         default: 'TorrentClaw Unarr (Index Only)',
       },
       {
-        id: 'apiUrl',
-        name: 'Unarr API URL',
+        id: 'unarrAuth',
+        name: 'Connect Unarr',
         description:
-          'The official Unarr API host. This mode accepts HTTPS unarr.app hosts only.',
-        type: 'url',
-        required: true,
-        default: 'https://unarr.app',
-      },
-      {
-        id: 'apiKey',
-        name: 'Unarr API Key',
-        description:
-          'Use an Unarr agent API key (tc_…), not your Unarr email or website password.',
-        type: 'password',
+          'Connect with a single-use `unarr-authkey-…` or validate an existing `tc_…` API key. Your Unarr email/password is never entered into AIOStreams.',
+        type: 'unarr-auth',
         required: true,
       },
       {
         id: 'proxyAuth',
         name: 'AIOStreams Proxy Auth',
         description:
-          'A username:password entry allowed by AIOSTREAMS_AUTH. It encrypts and authenticates NZB retrieval so the Unarr API key is never sent to a playback client.',
+          'A username:password entry allowed by `AIOSTREAMS_AUTH`. It encrypts and authenticates NZB retrieval so the Unarr API key is never sent to a playback client.',
         type: 'password',
         required: true,
       },
@@ -83,6 +177,94 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
           max: appConfig.userLimits.timeouts.maxTimeout,
           forceInUi: false,
         },
+      },
+      {
+        id: 'formatting',
+        name: 'TorrentClaw Formatting',
+        description:
+          'Use TorrentClaw-style suffixes while preserving truthful Usenet service and library state.',
+        type: 'subsection',
+        subsectionIntent: 'pill',
+        subOptions: [
+          {
+            id: 'useAioFormatter',
+            name: 'Use AIOStreams Formatter',
+            description:
+              'Apply your normal AIOStreams formatter and append TorrentClaw/Unarr badges.',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            id: 'showEpisodeAndPackSizes',
+            name: 'Episode + Season Pack Sizes',
+            description:
+              'Show selected-file size and full NZB/season-pack size when they differ.',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            id: 'showCacheStatus',
+            name: 'Cache / Library Status',
+            description:
+              'Show Cached, Uncached, or Library using the selected Usenet service’s real status.',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            id: 'showUnarr',
+            name: 'Unarr Indicator',
+            description: 'Append an Unarr source badge.',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            id: 'showGrabs',
+            name: 'Grab Count',
+            description:
+              'Show Unarr’s result popularity/grab count when available.',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            id: 'showCategory',
+            name: 'Usenet Category',
+            description: 'Show the category supplied by Unarr.',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            id: 'showGroup',
+            name: 'Release Group',
+            description: 'Preserve Unarr’s release-group field.',
+            type: 'boolean',
+            default: true,
+          },
+        ],
+      },
+      {
+        id: 'pinPosition',
+        name: 'Pin Position',
+        description:
+          'Optionally pin TorrentClaw/Unarr results in the final list.',
+        type: 'select',
+        required: false,
+        default: undefined,
+        options: [
+          { label: 'None', value: undefined },
+          { label: 'Top', value: 'top' },
+          { label: 'Bottom', value: 'bottom' },
+        ],
+        showInSimpleMode: false,
+      },
+      {
+        id: 'resultPassthrough',
+        name: 'Always Keep Results',
+        description:
+          'Prevent TorrentClaw/Unarr results from being removed by final result filtering.',
+        type: 'boolean',
+        required: false,
+        default: false,
+        showInSimpleMode: false,
       },
       {
         id: 'mediaTypes',
@@ -146,8 +328,16 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
         `${this.METADATA.NAME} requires at least one configured Usenet service.`
       );
     }
-    if (!options.apiKey) {
-      throw new Error(`${this.METADATA.NAME} requires an Unarr agent API key.`);
+
+    const auth = options.unarrAuth as
+      | { apiUrl?: string; apiKey?: string }
+      | undefined;
+    const apiKey = auth?.apiKey || options.apiKey;
+    const apiUrl = auth?.apiUrl || options.apiUrl || 'https://unarr.app';
+    if (!apiKey?.startsWith('tc_')) {
+      throw new Error(
+        `${this.METADATA.NAME} requires a connected Unarr account. Use Connect Unarr before saving.`
+      );
     }
     if (!options.proxyAuth) {
       throw new Error(`${this.METADATA.NAME} requires AIOStreams proxy auth.`);
@@ -156,8 +346,8 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
     const services = usableServices.map((service) => service.id);
     const config = {
       ...this.getBaseConfig(userData, services),
-      apiUrl: options.apiUrl || 'https://unarr.app',
-      apiKey: options.apiKey,
+      apiUrl,
+      apiKey,
       proxyAuth: options.proxyAuth,
       maxResults: options.maxResults ?? 30,
       timeout: options.timeout ?? 30_000,
@@ -167,6 +357,17 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
     if (!encrypted.success || !encrypted.data) {
       throw new Error('Failed to encrypt the Unarr addon configuration.');
     }
+
+    const persistedOptions = {
+      ...options,
+      unarrAuth: {
+        ...(auth || {}),
+        apiUrl,
+        apiKey,
+      },
+      apiKey: undefined,
+      apiUrl: undefined,
+    };
 
     return [
       {
@@ -183,10 +384,11 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
         preset: {
           id: '',
           type: this.METADATA.ID,
-          options,
+          options: persistedOptions,
         },
-        formatPassthrough: false,
-        resultPassthrough: false,
+        formatPassthrough: options.formatting?.useAioFormatter === false,
+        resultPassthrough: options.resultPassthrough ?? false,
+        pinPosition: options.pinPosition || undefined,
         headers: { 'User-Agent': this.METADATA.USER_AGENT },
       },
     ];
