@@ -161,6 +161,7 @@ export type DebridFile = z.infer<typeof DebridFileSchema>;
 export interface DebridDownload {
   id: string | number;
   library?: boolean;
+  libraryType?: 'torrent' | 'usenet';
   hash?: string;
   name?: string;
   private?: boolean;

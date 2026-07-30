@@ -42,6 +42,48 @@ function convertStremThruError(error: StremThruError): DebridError {
   });
 }
 
+type StremThruLibraryType = 'torrent' | 'usenet';
+
+type RawStremThruLibraryItem = {
+  id: string | number;
+  hash?: string;
+  name?: string;
+  size?: number;
+  status: DebridDownload['status'];
+  private?: boolean;
+  added_at?: string;
+  kind?: string;
+  type?: string;
+  source?: string;
+};
+
+function stremThruLibraryType(
+  item: RawStremThruLibraryItem,
+  fallback: StremThruLibraryType
+): StremThruLibraryType {
+  return [item.kind, item.type, item.source].some(
+    (value) => typeof value === 'string' && value.toLowerCase() === 'usenet'
+  )
+    ? 'usenet'
+    : fallback;
+}
+
+export function mapStremThruLibraryItems(
+  items: RawStremThruLibraryItem[],
+  fallbackType: StremThruLibraryType
+): DebridDownload[] {
+  return items.map((item) => ({
+    id: item.id,
+    hash: item.hash,
+    name: item.name,
+    size: item.size,
+    status: item.status as DebridDownload['status'],
+    private: item.private,
+    addedAt: item.added_at,
+    libraryType: stremThruLibraryType(item, fallbackType),
+  }));
+}
+
 export interface StremThruServiceConfig {
   serviceName: ServiceId;
   clientIp?: string;
@@ -450,17 +492,12 @@ export class StremThruService
         offset,
       });
       totalItems = Math.min(result.data.total_items, maxItems);
-      for (const item of result.data.items) {
-        allItems.push({
-          id: item.id,
-          hash: item.hash,
-          name: item.name,
-          size: (item as any).size,
-          status: item.status,
-          private: item.private,
-          addedAt: item.added_at,
-        });
-      }
+      allItems.push(
+        ...mapStremThruLibraryItems(
+          result.data.items as RawStremThruLibraryItem[],
+          'torrent'
+        )
+      );
       offset += limit;
       if (result.data.items.length < limit) break;
     }
@@ -721,16 +758,12 @@ export class StremThruService
           offset,
         });
         totalItems = Math.min(result.data.total_items, maxItems);
-        for (const item of result.data.items) {
-          allItems.push({
-            id: item.id,
-            hash: item.hash,
-            name: item.name,
-            size: item.size,
-            status: item.status as DebridDownload['status'],
-            addedAt: item.added_at,
-          });
-        }
+        allItems.push(
+          ...mapStremThruLibraryItems(
+            result.data.items as RawStremThruLibraryItem[],
+            'usenet'
+          )
+        );
         offset += limit;
         if (result.data.items.length < limit) break;
       } catch (error) {

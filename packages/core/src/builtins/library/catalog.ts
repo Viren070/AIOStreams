@@ -45,6 +45,12 @@ interface ParsedCatalogItem {
   normalisedTitle: string;
 }
 
+export function libraryCatalogItemType(
+  item: Pick<DebridDownload, 'libraryType'>
+): 'torrent' | 'usenet' {
+  return item.libraryType === 'usenet' ? 'usenet' : 'torrent';
+}
+
 function parseCatalogItems(items: CatalogItem[]): ParsedCatalogItem[] {
   return items.map((item) => {
     const parsed = parseTorrentTitle(item.name ?? '');
@@ -159,7 +165,7 @@ export async function fetchCatalog(
         ...item,
         serviceId,
         serviceCredential,
-        itemType: 'torrent',
+        itemType: libraryCatalogItemType(item),
       });
     }
   } else {
