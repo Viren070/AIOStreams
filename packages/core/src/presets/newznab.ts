@@ -43,6 +43,7 @@ const NEWZNAB_INDEXERS: {
     value: 'https://feed.animetosho.xyz/api',
     apiKeyUrl: 'https://animetosho.xyz/profile',
   },
+  { label: 'Aninzb', value: 'https://aninzb.moe/api' },
   { label: 'ClubNZB', value: 'https://clubnzb.com/api' },
   { label: 'DOGnzb', value: 'https://api.dognzb.cr/api' },
   {
