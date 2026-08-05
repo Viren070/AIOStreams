@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.32.1](https://github.com/Viren070/AIOStreams/compare/v2.32.0...v2.32.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **config/oidc:** preserve trailing slashes ([36bd3a9](https://github.com/Viren070/AIOStreams/commit/36bd3a9b50b0516d359d115e69f7b2a603732599)), closes [#1157](https://github.com/Viren070/AIOStreams/issues/1157)
+* preserve addon-provided subtitles field on Stream objects ([#1155](https://github.com/Viren070/AIOStreams/issues/1155)) ([6f8b078](https://github.com/Viren070/AIOStreams/commit/6f8b07841e417b3ca062333e81b2d3b2736d4b81)), closes [#1154](https://github.com/Viren070/AIOStreams/issues/1154)
+* **sel:** update service list for `service()` ([ee3d39b](https://github.com/Viren070/AIOStreams/commit/ee3d39be9aa71fc9db253b49ab4b1a20c2fd52e9))
+
 ## [2.32.0](https://github.com/Viren070/AIOStreams/compare/v2.31.1...v2.32.0) (2026-08-05)
 
 
