@@ -109,6 +109,7 @@ class StreamParser {
       servers: stream.servers ?? undefined,
       externalUrl: stream.externalUrl ?? undefined,
       ytId: stream.ytId ?? undefined,
+      subtitles: stream.subtitles ?? undefined,
       requestHeaders: stream.behaviorHints?.proxyHeaders?.request,
       responseHeaders: stream.behaviorHints?.proxyHeaders?.response,
       notWebReady: stream.behaviorHints?.notWebReady ?? undefined,
