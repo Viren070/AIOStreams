@@ -193,6 +193,31 @@ export abstract class BaseNabAddon<
       queryParams.ep = `${mm}/${dd}`;
     }
 
+    queryParams.extended = '1';
+
+    const canApplySeasonPackStrategy =
+      parsedId.mediaType === 'series' &&
+      !this.userData.forceQuerySearch &&
+      !isDailySearch &&
+      searchCapabilities.supportedParams.includes('season') &&
+      queryParams.season &&
+      queryParams.ep;
+
+    let primaryParams = queryParams;
+    let fallbackParams: Record<string, string> | undefined;
+    if (canApplySeasonPackStrategy) {
+      const { ep, ...seasonOnlyParams } = queryParams;
+      let strategy = this.userData.seasonEpisodeStrategy;
+      if (strategy === 'dynamic') {
+        strategy = metadata.ongoingSeason ? 'episode' : 'season';
+      }
+      if (strategy === 'season') {
+        primaryParams = seasonOnlyParams;
+      } else if (strategy === 'episodeFirst') {
+        fallbackParams = seasonOnlyParams;
+      }
+    }
+
     let queries: string[] = [];
     if (
       !queryParams.imdbid &&
@@ -215,41 +240,26 @@ export abstract class BaseNabAddon<
       });
       searchType = 'query';
     }
-    queryParams.extended = '1';
     let results: SearchResultItem<A['namespace']>[] = [];
     if (queries.length > 0) {
-      this.logger.debug('Performing queries', { queries });
-      const searchPromises = queries.map((q) =>
-        queryLimit(() =>
-          this.fetchResults(searchFunction, { ...queryParams, q })
-        )
-      );
-      const allResults = await Promise.all(searchPromises);
-      results = allResults.flat();
-    } else {
-      const canApplySeasonPackStrategy =
-        parsedId.mediaType === 'series' &&
-        !this.userData.forceQuerySearch &&
-        !isDailySearch &&
-        searchCapabilities.supportedParams.includes('season') &&
-        queryParams.season &&
-        queryParams.ep;
+      const runQueries = (params: Record<string, string>) => {
+        this.logger.debug('Performing queries', { queries });
+        return Promise.all(
+          queries.map((q) =>
+            queryLimit(() => this.fetchResults(searchFunction, { ...params, q }))
+          )
+        ).then((allResults) => allResults.flat());
+      };
 
-      let primaryParams = queryParams;
-      let fallbackParams: Record<string, string> | undefined;
-      if (canApplySeasonPackStrategy) {
-        const { ep, ...seasonOnlyParams } = queryParams;
-        let strategy = this.userData.seasonEpisodeStrategy;
-        if (strategy === 'dynamic') {
-          strategy = metadata.ongoingSeason ? 'episode' : 'season';
-        }
-        if (strategy === 'season') {
-          primaryParams = seasonOnlyParams;
-        } else if (strategy === 'episodeFirst') {
-          fallbackParams = seasonOnlyParams;
-        }
+      results = await runQueries(primaryParams);
+      if (results.length === 0 && fallbackParams) {
+        this.logger.debug(
+          'No results for initial queries, retrying with alternate season/episode params',
+          { season: queryParams.season, episode: queryParams.ep }
+        );
+        results = await runQueries(fallbackParams);
       }
-
+    } else {
       results = await this.fetchResults(searchFunction, primaryParams);
       if (results.length === 0 && fallbackParams) {
         this.logger.debug(
