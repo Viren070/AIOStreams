@@ -275,9 +275,30 @@ export type NabTestResult = {
   server?: Capabilities['server'];
   limits?: Capabilities['limits'];
   searchModes?: string[];
-  idSearchParams?: string[];
+  /** ID params actually usable per media type - movie-search/tv-search each advertise their own supportedParams, and one may support IDs while the other doesn't. */
+  idSearchParams?: { movie: string[]; series: string[] };
   resultCount?: number;
   error?: { code?: number; message: string };
+};
+
+/**
+ * Mirrors BaseNabAddon.getSearchFunction's matching: a keyword-matching
+ * function (e.g. "movie"/"tv") if available, else the generic `search`.
+ */
+const findIdSearchParams = (
+  searching: Capabilities['searching'],
+  keyword: string
+): string[] => {
+  const key = Object.keys(searching).find((s) =>
+    s.toLowerCase().includes(keyword)
+  );
+  const fn =
+    (key && searching[key]?.available && searching[key]) ||
+    (searching.search?.available && searching.search) ||
+    undefined;
+  return (fn?.supportedParams ?? []).filter((param) =>
+    NAB_ID_SEARCH_PARAMS.includes(param)
+  );
 };
 
 const resolveTestStage = (
@@ -487,15 +508,10 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       server: capabilities.server,
       limits: capabilities.limits,
       searchModes: available.map(([name]) => name),
-      idSearchParams: [
-        ...new Set(
-          available.flatMap(([, fn]) =>
-            (fn.supportedParams ?? []).filter((param) =>
-              NAB_ID_SEARCH_PARAMS.includes(param)
-            )
-          )
-        ),
-      ],
+      idSearchParams: {
+        movie: findIdSearchParams(capabilities.searching, 'movie'),
+        series: findIdSearchParams(capabilities.searching, 'tv'),
+      },
     };
 
     try {

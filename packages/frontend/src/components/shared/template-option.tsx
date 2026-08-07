@@ -692,7 +692,7 @@ interface NabTestResult {
     max?: number | string | boolean;
   };
   searchModes?: string[];
-  idSearchParams?: string[];
+  idSearchParams?: { movie: string[]; series: string[] };
   resultCount?: number;
   error?: { code?: number; message: string };
 }
@@ -702,6 +702,22 @@ const NAB_TEST_STAGE_HINTS: Record<string, string> = {
   auth: 'The endpoint is reachable, but the API key was rejected.',
   search: 'The endpoint is reachable, but the search request failed.',
 };
+
+function describeIdSearch(
+  idSearchParams: NabTestResult['idSearchParams']
+): string {
+  const movie = idSearchParams?.movie ?? [];
+  const series = idSearchParams?.series ?? [];
+  if (movie.length === 0 && series.length === 0) {
+    return 'No ID search, results are matched by title only';
+  }
+  const sameForBoth =
+    movie.length === series.length && movie.every((p) => series.includes(p));
+  if (sameForBoth) {
+    return `ID search: ${movie.join(', ')}`;
+  }
+  return `ID search: ${movie.length ? movie.join(', ') : 'none'} (movies), ${series.length ? series.join(', ') : 'none'} (series)`;
+}
 
 export interface NabEndpointInputProps {
   option: Option;
@@ -866,12 +882,8 @@ function NabTestSummary({ result }: { result: NabTestResult }) {
     );
   }
 
-  const supportsIdSearch = !!result.idSearchParams?.length;
-
   const details = [
-    supportsIdSearch
-      ? `ID search: ${result.idSearchParams!.join(', ')}`
-      : 'No ID search, results are matched by title only',
+    describeIdSearch(result.idSearchParams),
     result.resultCount !== undefined && `${result.resultCount} results`,
     result.limits?.max !== undefined && `max ${result.limits.max} per request`,
     result.searchModes?.length && `supports ${result.searchModes.join(', ')}`,
