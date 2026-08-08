@@ -5,6 +5,7 @@ import { Select } from '../../../ui/select';
 import { TextInput } from '../../../ui/text-input';
 import { Combobox } from '../../../ui/combobox';
 import { IconButton } from '../../../ui/button';
+import { Switch } from '../../../ui/switch';
 import { FaPlus, FaRegTrashAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { arrayMove } from '@dnd-kit/sortable';
 
@@ -137,6 +138,25 @@ export function AddonFetchingBehaviorCard() {
                 : "Parallel: Begin fetching from all groups simultaneously. When group 1's results arrive, evaluate group 2's condition. If true, wait for group 2's results; if false, return results without waiting."
             }
           />
+
+          {userData.groups?.behaviour === 'parallel' && (
+            <Switch
+              label="Always add results from finished queries"
+              value={
+                userData.groups?.includeFinishedResultsOnEarlyExit ?? false
+              }
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  groups: {
+                    ...prev.groups,
+                    includeFinishedResultsOnEarlyExit: value,
+                  },
+                }));
+              }}
+              help="If a group condition fails during parallel fetching, still include results from that group or later groups if they have already finished. Unfinished groups are not waited on."
+            />
+          )}
 
           {(() => {
             const handleGroupsChange = (newGroups: any[]) => {
