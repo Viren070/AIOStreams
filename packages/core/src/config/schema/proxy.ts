@@ -133,7 +133,7 @@ export const proxySchema = {
       default: null as string[] | null,
       label: 'Default proxied services',
       description:
-        'List of serviceIds to proxy by default. JSON array of strings.',
+        'List of serviceIds to proxy by default. Use `subtitle` to proxy subtitle URLs. JSON array of strings.',
       env: 'DEFAULT_PROXY_PROXIED_SERVICES',
       requiresRestart: false,
       secret: false,
@@ -208,7 +208,8 @@ export const proxySchema = {
       schema: proxiedServicesList,
       default: null as string[] | null,
       label: 'Forced proxied services',
-      description: 'List of serviceIds to force-proxy. JSON array of strings.',
+      description:
+        'List of serviceIds to force-proxy. Use `subtitle` to proxy subtitle URLs. JSON array of strings.',
       env: 'FORCE_PROXY_PROXIED_SERVICES',
       requiresRestart: false,
       secret: false,

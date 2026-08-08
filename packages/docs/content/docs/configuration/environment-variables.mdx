@@ -234,28 +234,28 @@ neither the environment variable nor a stored value is present.
 
 #### Default
 
-| Environment Variable             | UI Setting                 | Type   | Default   | Description                                                                                 |
-| -------------------------------- | -------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------- |
-| `DEFAULT_PROXY_ENABLED`          | Default › Enabled          | json   | —         | When set, used as the default proxy enabled state for new users.                            |
-| `DEFAULT_PROXY_ID`               | Default › ID               | string | —         | Default proxy service identifier.                                                           |
-| `DEFAULT_PROXY_URL`              | Default › URL              | string | —         | Default proxy URL.                                                                          |
-| `DEFAULT_PROXY_PUBLIC_URL`       | Default › Public URL       | string | —         | Public-facing default proxy URL surfaced to clients (when different from the internal one). |
-| `DEFAULT_PROXY_CREDENTIALS`      | Default › Credentials      | string | _(unset)_ | Credentials for the default proxy. _(secret)_                                               |
-| `DEFAULT_PROXY_PUBLIC_IP`        | Default › Public IP        | string | —         | Public IP of the default proxy.                                                             |
-| `DEFAULT_PROXY_PROXIED_SERVICES` | Default › Proxied Services | list   | —         | List of serviceIds to proxy by default. JSON array of strings.                              |
+| Environment Variable             | UI Setting                 | Type   | Default   | Description                                                                                           |
+| -------------------------------- | -------------------------- | ------ | --------- | ----------------------------------------------------------------------------------------------------- |
+| `DEFAULT_PROXY_ENABLED`          | Default › Enabled          | json   | —         | When set, used as the default proxy enabled state for new users.                                      |
+| `DEFAULT_PROXY_ID`               | Default › ID               | string | —         | Default proxy service identifier.                                                                     |
+| `DEFAULT_PROXY_URL`              | Default › URL              | string | —         | Default proxy URL.                                                                                    |
+| `DEFAULT_PROXY_PUBLIC_URL`       | Default › Public URL       | string | —         | Public-facing default proxy URL surfaced to clients (when different from the internal one).           |
+| `DEFAULT_PROXY_CREDENTIALS`      | Default › Credentials      | string | _(unset)_ | Credentials for the default proxy. _(secret)_                                                         |
+| `DEFAULT_PROXY_PUBLIC_IP`        | Default › Public IP        | string | —         | Public IP of the default proxy.                                                                       |
+| `DEFAULT_PROXY_PROXIED_SERVICES` | Default › Proxied Services | list   | —         | List of serviceIds to proxy by default. Use `subtitle` to proxy subtitle URLs. JSON array of strings. |
 
 #### Force
 
-| Environment Variable                 | UI Setting                     | Type    | Default   | Description                                                                  |
-| ------------------------------------ | ------------------------------ | ------- | --------- | ---------------------------------------------------------------------------- |
-| `FORCE_PROXY_ENABLED`                | Force › Enabled                | json    | —         | Override user choice of whether the proxy is enabled.                        |
-| `FORCE_PROXY_ID`                     | Force › ID                     | string  | —         | Override user choice of proxy service identifier.                            |
-| `FORCE_PROXY_URL`                    | Force › URL                    | string  | —         | Override user choice of proxy URL.                                           |
-| `FORCE_PROXY_PUBLIC_URL`             | Force › Public URL             | string  | —         | Override user choice of proxy public URL.                                    |
-| `FORCE_PROXY_CREDENTIALS`            | Force › Credentials            | string  | _(unset)_ | Override user choice of proxy credentials. _(secret)_                        |
-| `FORCE_PROXY_PUBLIC_IP`              | Force › Public IP              | string  | —         | Override user choice of proxy public IP.                                     |
-| `FORCE_PROXY_DISABLE_PROXIED_ADDONS` | Force › Disable Proxied Addons | boolean | `false`   | When forcing a proxy, also disable any addons that already proxy themselves. |
-| `FORCE_PROXY_PROXIED_SERVICES`       | Force › Proxied Services       | list    | —         | List of serviceIds to force-proxy. JSON array of strings.                    |
+| Environment Variable                 | UI Setting                     | Type    | Default   | Description                                                                                      |
+| ------------------------------------ | ------------------------------ | ------- | --------- | ------------------------------------------------------------------------------------------------ |
+| `FORCE_PROXY_ENABLED`                | Force › Enabled                | json    | —         | Override user choice of whether the proxy is enabled.                                            |
+| `FORCE_PROXY_ID`                     | Force › ID                     | string  | —         | Override user choice of proxy service identifier.                                                |
+| `FORCE_PROXY_URL`                    | Force › URL                    | string  | —         | Override user choice of proxy URL.                                                               |
+| `FORCE_PROXY_PUBLIC_URL`             | Force › Public URL             | string  | —         | Override user choice of proxy public URL.                                                        |
+| `FORCE_PROXY_CREDENTIALS`            | Force › Credentials            | string  | _(unset)_ | Override user choice of proxy credentials. _(secret)_                                            |
+| `FORCE_PROXY_PUBLIC_IP`              | Force › Public IP              | string  | —         | Override user choice of proxy public IP.                                                         |
+| `FORCE_PROXY_DISABLE_PROXIED_ADDONS` | Force › Disable Proxied Addons | boolean | `false`   | When forcing a proxy, also disable any addons that already proxy themselves.                     |
+| `FORCE_PROXY_PROXIED_SERVICES`       | Force › Proxied Services       | list    | —         | List of serviceIds to force-proxy. Use `subtitle` to proxy subtitle URLs. JSON array of strings. |
 
 #### IP
 
