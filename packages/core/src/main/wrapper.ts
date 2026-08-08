@@ -705,7 +705,9 @@ export class Wrapper {
         cacheKey: effectiveCacheKey,
         cacheTtl,
         shouldCache: (data: T) =>
-          resource !== 'stream' || (Array.isArray(data) && data.length > 0),
+          resource === 'catalog'
+            ? Array.isArray(data) && data.length > 0
+            : resource !== 'stream' || (Array.isArray(data) && data.length > 0),
       });
       const count = this.resultCountOf(data);
       track({
