@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.33.1](https://github.com/Viren070/AIOStreams/compare/v2.33.0...v2.33.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **presets/mediafusion:** add torrin as supported service ([#1176](https://github.com/Viren070/AIOStreams/issues/1176)) ([a2231a9](https://github.com/Viren070/AIOStreams/commit/a2231a9ec3687b5af7c10c880b8498267be9ede2))
+
+
+### Miscellaneous Chores
+
+* update header presets ([2e12d3d](https://github.com/Viren070/AIOStreams/commit/2e12d3d3f2d5efcd37208c0e53c871dc7ad1ebbb))
+
 ## [2.33.0](https://github.com/Viren070/AIOStreams/compare/v2.32.1...v2.33.0) (2026-08-09)
 
 
