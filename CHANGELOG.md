@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.33.0](https://github.com/Viren070/AIOStreams/compare/v2.32.1...v2.33.0) (2026-08-09)
+
+
+### Features
+
+* add configuration variants with CEL ([b912080](https://github.com/Viren070/AIOStreams/commit/b912080a7ec11fb709c9d4ba3a7b7caa4acc34d4))
+
+
+### Bug Fixes
+
+* **builtins/nab:** apply seasonEpisodeStrategy for indexers without ID support ([#1165](https://github.com/Viren070/AIOStreams/issues/1165)) ([877b6c4](https://github.com/Viren070/AIOStreams/commit/877b6c4ff821fd5865343c821670779c2076e7be))
+* **builtins/nab:** break down ID search support by media type in connection test ([#1166](https://github.com/Viren070/AIOStreams/issues/1166)) ([1ddb54a](https://github.com/Viren070/AIOStreams/commit/1ddb54a1346a21b1da750385461c041cace6846e))
+
 ## [2.32.1](https://github.com/Viren070/AIOStreams/compare/v2.32.0...v2.32.1) (2026-08-05)
 
 
