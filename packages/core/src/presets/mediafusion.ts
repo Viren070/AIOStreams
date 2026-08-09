@@ -149,6 +149,7 @@ export class MediaFusionPreset extends Preset {
       constants.PIKPAK_SERVICE,
       constants.SEEDR_SERVICE,
       constants.EASYNEWS_SERVICE,
+      constants.TORRIN_SERVICE,
     ];
 
     const supportedResources = [
