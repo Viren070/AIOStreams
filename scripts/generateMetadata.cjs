@@ -23,7 +23,7 @@ const os = require('os');
 
 let tag;
 try {
-  if (isDev && refArg) {
+  if ((isDev || isNightly) && refArg) {
     tag = refArg;
   } else if (isNightly) {
     tag = execSync('git describe --tags --abbrev=0').toString().trim();
@@ -58,7 +58,9 @@ if (commitArg) {
 
 let commitTime;
 try {
-  commitTime = new Date(execSync('git log -1 --format=%cd --date=iso').toString().trim()).toISOString();
+  commitTime = new Date(
+    execSync('git log -1 --format=%cd --date=iso').toString().trim()
+  ).toISOString();
 } catch {
   commitTime = new Date().toISOString();
 }
