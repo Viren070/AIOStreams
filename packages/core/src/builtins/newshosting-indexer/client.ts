@@ -49,12 +49,38 @@ function xmlEscape(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
+export function decodeNewshostingXmlText(value: string): string {
+  return value.replace(
+    /&(?:#x([0-9a-f]+)|#(\d+)|(amp|lt|gt|quot|apos));/gi,
+    (entity, hex: string | undefined, decimal: string | undefined, named: string | undefined) => {
+      if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+      if (decimal) return String.fromCodePoint(Number.parseInt(decimal, 10));
+      switch (named?.toLowerCase()) {
+        case 'amp':
+          return '&';
+        case 'lt':
+          return '<';
+        case 'gt':
+          return '>';
+        case 'quot':
+          return '"';
+        case 'apos':
+          return "'";
+        default:
+          return entity;
+      }
+    }
+  );
+}
+
 function attrValue(xml: string, name: string): string {
-  return xml.match(new RegExp(`\\b${name}="([^"]*)"`, 'i'))?.[1] || '';
+  return decodeNewshostingXmlText(
+    xml.match(new RegExp(`\\b${name}="([^"]*)"`, 'i'))?.[1] || ''
+  );
 }
 
 function tagValue(xml: string, tag: string): string {
-  return (
+  return decodeNewshostingXmlText(
     xml
       .match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1]
       ?.trim() || ''

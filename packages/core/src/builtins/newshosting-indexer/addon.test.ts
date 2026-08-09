@@ -9,6 +9,7 @@ import {
 } from './addon.js';
 import {
   buildNewshostingNzb,
+  decodeNewshostingXmlText,
   parseNewshostingGroups,
 } from './client.js';
 import {
@@ -67,6 +68,14 @@ test('builds valid escaped NZB XML', () => {
   assert.match(nzb, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
   assert.match(nzb, /Episode &amp; One\.mkv/);
   assert.match(nzb, /part&amp;one@example/);
+});
+
+test('decodes Newshosting XML entities before building article ids', () => {
+  assert.equal(
+    decodeNewshostingXmlText('&lt;part&amp;one&#64;example&gt;'),
+    '<part&one@example>'
+  );
+  assert.equal(decodeNewshostingXmlText('part&#x40;example'), 'part@example');
 });
 
 test('builds the proven episode-first search plan', () => {

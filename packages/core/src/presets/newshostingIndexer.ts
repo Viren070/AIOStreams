@@ -170,6 +170,16 @@ export class NewshostingIndexerPreset extends BuiltinAddonPreset {
         default: undefined,
         emptyIsUndefined: true,
       },
+      {
+        id: 'resultPassthrough',
+        name: 'Always Keep Results',
+        description:
+          'Prevent Newshosting results from being removed by final filtering, deduplication, or result limits.',
+        type: 'boolean',
+        required: false,
+        default: false,
+        showInSimpleMode: false,
+      },
     ];
 
     return {
