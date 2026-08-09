@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.9.0...seanime-extensions-v0.10.0) (2026-08-09)
+
+
+### Features
+
+* **seanime-extensions:** support variants ([234b580](https://github.com/Viren070/AIOStreams/commit/234b58018a4fb27770a6c0013faf7b4c4e13ab96))
+
+
+### Bug Fixes
+
+* **seanime-extensions:** keep manifest query params on resource requests ([fc969bb](https://github.com/Viren070/AIOStreams/commit/fc969bbfb31fc1530046b0b07865407ef88fa6f2))
+
 ## [0.9.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.8.3...seanime-extensions-v0.9.0) (2026-07-08)
 
 
