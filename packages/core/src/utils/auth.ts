@@ -35,7 +35,7 @@ interface SessionPayload {
 
 const CONFIG_PROXY_GRANT_PREFIX = 'pcg_';
 
-export type ConfigProxyGrantAudience = 'unarr-nzb';
+export type ConfigProxyGrantAudience = 'unarr-nzb' | 'newshosting-nzb';
 
 interface ConfigProxyGrantPayload {
   v: 1;
@@ -341,7 +341,7 @@ export function verifyConfigProxyGrant(
     ) as ConfigProxyGrantPayload;
     if (
       payload.v !== 1 ||
-      payload.a !== 'unarr-nzb' ||
+      !['unarr-nzb', 'newshosting-nzb'].includes(payload.a) ||
       typeof payload.c !== 'string' ||
       !/^[A-Za-z0-9_-]{24}$/.test(payload.c) ||
       typeof payload.o !== 'string'
@@ -362,18 +362,24 @@ export function verifyConfigProxyGrant(
   }
 }
 
-/** Config grants may fetch only NZBs from their signed Unarr API origin. */
+/** Config grants may fetch only NZBs from their audience-specific signed origin. */
 export function isConfigProxyRequestAllowed(
   grant: ConfigProxyGrant,
   data: { url: string; type?: 'nzb' | 'stream' }
 ): boolean {
-  if (grant.audience !== 'unarr-nzb' || data.type !== 'nzb') return false;
+  if (data.type !== 'nzb') return false;
   try {
     const target = new URL(data.url);
-    return (
-      target.origin === grant.origin &&
-      target.pathname === '/api/internal/agent/nzb-download'
-    );
+    if (target.origin !== grant.origin) return false;
+    if (grant.audience === 'unarr-nzb') {
+      return target.pathname === '/api/internal/agent/nzb-download';
+    }
+    if (grant.audience === 'newshosting-nzb') {
+      return /^\/builtins\/newshosting-indexer\/[A-Za-z0-9_-]{32,16384}\/nzb\/[A-Za-z0-9_-]{8,4096}$/.test(
+        target.pathname
+      );
+    }
+    return false;
   } catch {
     return false;
   }

@@ -63,6 +63,7 @@ import { ZileanPreset } from './zilean.js';
 import { AnimeToshoPreset } from './animetosho.js';
 import { NewznabPreset } from './newznab.js';
 import { UnarrIndexerPreset } from './unarrIndexer.js';
+import { NewshostingIndexerPreset } from './newshostingIndexer.js';
 import { ProwlarrPreset } from './prowlarr.js';
 import { JackettPreset } from './jackett.js';
 import { NZBHydraPreset } from './nzbhydra.js';
@@ -88,6 +89,7 @@ let PRESET_LIST: string[] = [
   'torznab',
   'newznab',
   'unarr-indexer',
+  'newshosting-indexer',
   'aiostreams',
   'torrentio',
   'torrentclaw',
@@ -309,6 +311,8 @@ export class PresetManager {
         return NewznabPreset;
       case 'unarr-indexer':
         return UnarrIndexerPreset;
+      case 'newshosting-indexer':
+        return NewshostingIndexerPreset;
       case 'zilean':
         return ZileanPreset;
       case 'animetosho':

@@ -42,6 +42,7 @@ import {
   torznab,
   newznab,
   unarrIndexer,
+  newshostingIndexer,
   prowlarr,
   knaben,
   eztv,
@@ -246,6 +247,7 @@ builtinsRouter.use('/torbox-search', torboxSearch);
 builtinsRouter.use('/torznab', torznab);
 builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/unarr-indexer', unarrIndexer);
+builtinsRouter.use('/newshosting-indexer', newshostingIndexer);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/eztv', eztv);

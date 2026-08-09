@@ -74,6 +74,7 @@ This fork keeps the current nightly built-ins and adds a focused set of integrat
 
 - **TorrentClaw**: Native torrent preset with truthful cached/uncached detection, title remapping, season-pack sizes, passthrough metadata, and formatter-compatible suffixes.
 - **TorrentClaw Unarr (Index Only)**: A separate Usenet indexer preset. It searches Unarr for NZBs, then hands playback to the AIOStreams Usenet services you selected. Authentication is stored per configuration and its optional monthly quota ceiling can be disabled.
+- **Newshosting as an Indexer**: A self-contained built-in preset that signs in to Newshosting per configuration, performs native episode-aware search, filtering, and ranking, and securely hands generated NZBs to any supported AIOStreams Usenet service. It does not require a companion bridge or expose the Newshosting login to downstream services.
 - **Addon performance rankings**: Privacy-safe daily aggregates compare availability, surviving results, top-result wins, largest-source wins, errors, and latency without retaining titles, media IDs, stream URLs, IP addresses, or credentials.
 - **NNTP emergency tiers**: Tier 0 is primary; tiers 1 and above are ordered fallbacks for metered block accounts. Legacy `isBackup` configurations map to tier 1.
 - **Latest-nightly foundations**: The rewritten formatter/editor, diagnostics, native episode resolver, repair/caching improvements, stream tracking, configuration profiles, OIDC, and configuration variants remain upstream-native.
