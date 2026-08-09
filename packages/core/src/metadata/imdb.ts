@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import { Cache, makeRequest, TYPES } from '../utils/index.js';
 import { Metadata } from './utils.js';
 import { Meta, MetaSchema } from '../db/schemas.js';

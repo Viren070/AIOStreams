@@ -1,4 +1,4 @@
-﻿import { UserData } from '../schemas.js';
+import { UserData } from '../schemas.js';
 import { getDb } from '../db.js';
 import { sql } from '../sql.js';
 import { config as appConfig } from '../../config/index.js';

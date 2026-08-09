@@ -1,4 +1,4 @@
-﻿import {
+import {
   CacheAndPlaySchema,
   Manifest,
   Meta,

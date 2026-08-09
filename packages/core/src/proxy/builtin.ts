@@ -1,4 +1,4 @@
-﻿import { BaseProxy, ProxyStream } from './base.js';
+import { BaseProxy, ProxyStream } from './base.js';
 import {
   appConfig,
   createLogger,

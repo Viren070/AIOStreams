@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildUnarrSearchParams,
   connectUnarr,
+  unarrQuotaMetadata,
   validateUnarrApiUrl,
 } from './addon.js';
 import type { ParsedId } from '../../utils/id-parser.js';
@@ -85,6 +86,17 @@ test('allows only the official HTTPS Unarr host family', () => {
   );
   assert.throws(() => validateUnarrApiUrl('http://unarr.app'));
   assert.throws(() => validateUnarrApiUrl('https://unarr.app.example.com'));
+});
+
+test('fully bypasses local quota metadata when the ceiling is disabled', () => {
+  assert.deepEqual(unarrQuotaMetadata(false, 'release-key', 42), {
+    indexer: 'Unarr',
+  });
+  assert.deepEqual(unarrQuotaMetadata(true, 'release-key', 42), {
+    indexer: 'TorrentClaw / Unarr',
+    quotaReservationKey: 'release-key',
+    quotaBytes: 42,
+  });
 });
 
 test('rejects non-Unarr credentials before making a network request', async () => {

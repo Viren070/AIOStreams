@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import {
   Addon,
   Manifest,

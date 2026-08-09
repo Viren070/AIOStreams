@@ -1,4 +1,4 @@
-﻿import { Option, UserData } from '../db/index.js';
+import { Option, UserData } from '../db/index.js';
 import { appConfig, constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
 import { StremThruPreset } from './stremthru.js';

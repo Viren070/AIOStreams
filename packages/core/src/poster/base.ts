@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import { Cache } from '../utils/cache.js';
 import { makeRequest } from '../utils/http.js';
 import { IdParser } from '../utils/id-parser.js';

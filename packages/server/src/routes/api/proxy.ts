@@ -1,4 +1,4 @@
-﻿import { NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import {
   APIError,
   constants,

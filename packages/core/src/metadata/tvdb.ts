@@ -1,4 +1,4 @@
-﻿import { createLogger } from '../logging/logger.js';
+import { createLogger } from '../logging/logger.js';
 import { Cache, appConfig, formatZodError, ParsedId } from '../utils/index.js';
 import { Metadata, MetadataTitle } from './utils.js';
 import { iso6392ToIso6391 } from '../utils/languages.js';

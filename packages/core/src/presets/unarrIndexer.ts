@@ -160,9 +160,9 @@ export class UnarrIndexerPreset extends BuiltinAddonPreset {
       },
       {
         id: 'enforceUnarrQuota',
-        name: 'Enforce Unarr Usage Ceiling',
+        name: 'Enforce 200 GiB Monthly Ceiling',
         description:
-          'Use the lower of Unarr’s reported remaining allowance and the local 200 GiB monthly TorrentClaw allowance.',
+          'Use the lower of Unarr’s reported remaining allowance and the local 200 GiB monthly TorrentClaw allowance. Turn this off when your account is not subject to that limit; search and playback reservations will both bypass the local ceiling.',
         type: 'boolean',
         required: false,
         default: true,

@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import { RedisClientType } from 'redis';
 import { REDIS_PREFIX } from './index.js';
 import { createLogger } from '../logging/logger.js';

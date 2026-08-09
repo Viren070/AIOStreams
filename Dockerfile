@@ -43,9 +43,18 @@ COPY packages/seanime-extensions ./packages/seanime-extensions
 COPY scripts ./scripts
 COPY resources ./resources
 
-
-# Build the project.
-RUN rm -rf packages/*/dist && find . -name "*.tsbuildinfo" -delete && pnpm run metadata && pnpm run build
+# Generate metadata exactly once for the requested image channel, then build
+# packages without the root build script overwriting it with stable defaults.
+ARG AIOSTREAMS_BUILD_CHANNEL=stable
+ARG AIOSTREAMS_BUILD_REF=
+ARG AIOSTREAMS_BUILD_COMMIT=
+RUN rm -rf packages/*/dist \
+  && find . -name "*.tsbuildinfo" -delete \
+  && node scripts/generateMetadata.cjs \
+    "--channel=${AIOSTREAMS_BUILD_CHANNEL}" \
+    "--ref=${AIOSTREAMS_BUILD_REF}" \
+    "--commit=${AIOSTREAMS_BUILD_COMMIT}" \
+  && pnpm run build:packages
 
 # Remove development dependencies.
 RUN rm -rf node_modules
@@ -93,7 +102,7 @@ RUN apt-get update \
 FROM gcr.io/distroless/nodejs24-debian12 AS production
 
 LABEL org.opencontainers.image.title="AIOStreams"
-LABEL org.opencontainers.image.source="https://github.com/Viren070/AIOStreams"
+LABEL org.opencontainers.image.source="https://github.com/Cxsmo-ai/AIOStreams"
 LABEL org.opencontainers.image.description="AIOStreams consolidates multiple Stremio addons and debrid services - including its own suite of built-in addons - into a single, highly customisable super-addon."
 LABEL org.opencontainers.image.licenses="GPL-3.0"
 

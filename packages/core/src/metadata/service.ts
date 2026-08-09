@@ -1,4 +1,4 @@
-﻿import { DistributedLock } from '../utils/distributed-lock.js';
+import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   deduplicateTitles,
   Metadata,

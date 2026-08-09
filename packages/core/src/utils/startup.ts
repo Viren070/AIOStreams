@@ -1,4 +1,4 @@
-﻿import { createLogger } from '../logging/logger.js';
+import { createLogger } from '../logging/logger.js';
 import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('startup');

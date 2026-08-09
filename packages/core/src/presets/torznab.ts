@@ -1,4 +1,4 @@
-﻿import { Addon, Option, Stream, UserData } from '../db/index.js';
+import { Addon, Option, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { appConfig, RESOURCES, ServiceId, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';

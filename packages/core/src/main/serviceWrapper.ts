@@ -1,4 +1,4 @@
-﻿import { Addon, ParsedStream, UserData } from '../db/schemas.js';
+import { Addon, ParsedStream, UserData } from '../db/schemas.js';
 import {
   constants,
   createLogger,

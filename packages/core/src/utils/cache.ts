@@ -1,4 +1,4 @@
-﻿import {
+import {
   CacheBackend,
   MemoryCacheBackend,
   RedisCacheBackend,

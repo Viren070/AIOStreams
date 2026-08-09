@@ -1,4 +1,4 @@
-﻿import rateLimit, { MemoryStore, ipKeyGenerator } from 'express-rate-limit';
+import rateLimit, { MemoryStore, ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
 import { RedisStore } from 'rate-limit-redis';
 import {

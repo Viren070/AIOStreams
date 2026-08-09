@@ -116,6 +116,10 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
+          build-args: |
+            AIOSTREAMS_BUILD_CHANNEL=${{ needs.setup.outputs.channel }}
+            AIOSTREAMS_BUILD_REF=${{ inputs.ref || github.ref_name }}
+            AIOSTREAMS_BUILD_COMMIT=${{ github.sha }}
           outputs: type=image,name=ghcr.io/${{ env.REPO }},push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
@@ -168,5 +172,3 @@ jobs:
               "ghcr.io/${REPO}@$(cat /tmp/digests/amd64)" \
               "ghcr.io/${REPO}@$(cat /tmp/digests/arm64)"
           done
-
-      

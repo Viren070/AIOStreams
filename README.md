@@ -26,8 +26,8 @@
     <a href="https://github.com/sponsors/Viren070">
         <img src="https://img.shields.io/github/sponsors/viren070?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors">
     </a>
-    <a href="https://hub.docker.com/r/Cxsmo-ai/AIOStreams">
-        <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry-stats.viren070.me%2Fapi%2Fdh%3Aviren070%2Faiostreams%2Cghcr%3Aviren070%2Faiostreams%2Faiostreams&query=%24.total_downloads_formatted&logo=docker&label=pulls&style=for-the-badge" alt="Docker Pulls">
+    <a href="https://github.com/Cxsmo-ai/AIOStreams/pkgs/container/aiostreams">
+        <img src="https://img.shields.io/badge/GHCR-multi--arch-2496ED?style=for-the-badge&logo=github" alt="GHCR multi-architecture image">
     </a>
     <a href="https://discord.viren070.me">
         <img src="https://img.shields.io/discord/1225024298490662974?style=for-the-badge&logo=discord&color=7289DA" alt="Discord Server">
@@ -68,19 +68,18 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 
 </p>
 
-### 🧩 Built-in Addons & Indexers
+### 🧩 Built-in Addons & Custom Integrations
 
-AIOStreams includes built-in search engines, indexers, and integrations hosted directly alongside your instance:
+This fork keeps the current nightly built-ins and adds a focused set of integrations without publishing private instance URLs or per-config credentials:
 
-- **TorrentClaw Integration**: Advanced cache detection (`[Cached]` / `[Uncached]`), automatic title remapping, season pack sizing, and custom TorrentClaw formatting hooks for clean, standardized stream layouts across torrent and Usenet results.
-- **TorrentClaw Usenet Indexer**: Toggle allowing TorrentClaw to serve as a Usenet indexer for AIOStreams (supporting NNTP, Unarr indexer integration, and smart quota optimization designed to sustain 200GB download limits through heavy monthly usage).
-- **Unarr Indexer**: Native Usenet indexer support with per-config key validation.
-- **Evidence-based Addon Rankings**: A privacy-safe dashboard ranks addon availability, surviving contribution, top-result wins, errors, latency, and source-size leadership. Statistics use normalized daily counter rollups instead of retaining titles, media IDs, stream URLs, or per-result records.
-- **NNTP Emergency Tiers**: Put unlimited accounts in primary tier 0 and metered block accounts in ordered fallback tiers 1, 2, and upward. Providers can still load-balance inside a tier, and existing `isBackup` configurations remain compatible as tier 1.
-- **Built-in Search Engines & Integrations**: Support for Google Drive, TorBox Search, Knaben, Easynews, SeaDex, Prowlarr, Jackett, Newznab, Torznab, and library browsing.
+- **TorrentClaw**: Native torrent preset with truthful cached/uncached detection, title remapping, season-pack sizes, passthrough metadata, and formatter-compatible suffixes.
+- **TorrentClaw Unarr (Index Only)**: A separate Usenet indexer preset. It searches Unarr for NZBs, then hands playback to the AIOStreams Usenet services you selected. Authentication is stored per configuration and its optional monthly quota ceiling can be disabled.
+- **Addon performance rankings**: Privacy-safe daily aggregates compare availability, surviving results, top-result wins, largest-source wins, errors, and latency without retaining titles, media IDs, stream URLs, IP addresses, or credentials.
+- **NNTP emergency tiers**: Tier 0 is primary; tiers 1 and above are ordered fallbacks for metered block accounts. Legacy `isBackup` configurations map to tier 1.
+- **Latest-nightly foundations**: The rewritten formatter/editor, diagnostics, native episode resolver, repair/caching improvements, stream tracking, configuration profiles, OIDC, and configuration variants remain upstream-native.
 
 > [!NOTE]
-> Built-in addons that search for torrents require a debrid service. Usenet results can be streamed by AIOStreams' built-in usenet engine, via external tools like [NzbDAV](https://github.com/nzbdav-dev/nzbdav) or [AltMount](https://github.com/javi11/altmount), natively by Stremio itself, or through TorBox.
+> Built-in addons that search for torrents require a debrid service. Usenet results can be streamed by AIOStreams' own built-in usenet engine, via external tools like [NzbDAV](https://github.com/nzbdav-dev/nzbdav) or [AltMount](https://github.com/javi11/altmount), natively by Stremio itself, or through TorBox (Pro plan) - see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet). All built-in addons support anime and Kitsu/MAL catalogs.
 
 ### 🌐 Debrid & Usenet Service Support
 

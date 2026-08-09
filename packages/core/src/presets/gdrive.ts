@@ -1,4 +1,4 @@
-﻿import { baseOptions, Preset } from './preset.js';
+import { baseOptions, Preset } from './preset.js';
 import { appConfig, constants, createLogger } from '../utils/index.js';
 import {
   PresetMetadata,

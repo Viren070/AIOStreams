@@ -1,4 +1,4 @@
-﻿import { ParsedStream, UserData } from '../db/schemas.js';
+import { ParsedStream, UserData } from '../db/schemas.js';
 import * as constants from '../utils/constants.js';
 import { createLogger } from '../logging/logger.js';
 import { formatHours, makeSmall } from './utils.js';

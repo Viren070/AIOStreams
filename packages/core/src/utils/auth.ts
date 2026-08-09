@@ -1,4 +1,4 @@
-﻿import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { createLogger } from '../logging/logger.js';
 import { APIError, ErrorCode } from './constants.js';
 import { toUrlSafeBase64, fromUrlSafeBase64 } from './general.js';

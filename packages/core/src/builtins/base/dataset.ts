@@ -1,4 +1,4 @@
-﻿import fs from 'fs/promises';
+import fs from 'fs/promises';
 import path from 'path';
 import type { Logger } from '../../logging/logger.js';
 import { DistributedLock } from '../../utils/distributed-lock.js';

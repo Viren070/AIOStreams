@@ -111,6 +111,24 @@ export interface UnarrSearchParams {
   limit: number;
 }
 
+export function unarrQuotaMetadata(
+  enforceQuota: boolean,
+  reservationKey: string,
+  size: number
+): {
+  indexer: string;
+  quotaReservationKey?: string;
+  quotaBytes?: number;
+} {
+  return enforceQuota
+    ? {
+        indexer: 'TorrentClaw / Unarr',
+        quotaReservationKey: reservationKey,
+        quotaBytes: size,
+      }
+    : { indexer: 'Unarr' };
+}
+
 export function buildUnarrSearchParams(
   parsedId: ParsedId,
   metadata: SearchMetadata,
@@ -291,9 +309,10 @@ export class UnarrIndexerAddon extends BaseDebridAddon<UnarrIndexerAddonConfig> 
   }
 
   private async effectiveRemainingBytes(): Promise<number> {
+    if (!this.userData.enforceUnarrQuota) return Number.MAX_SAFE_INTEGER;
+
     const local = await getTorrentClawNzbQuotaStatus();
     let remaining = local.remainingBytes;
-    if (!this.userData.enforceUnarrQuota) return remaining;
 
     try {
       const usage = UnarrUsenetUsageSchema.parse(
@@ -370,6 +389,11 @@ export class UnarrIndexerAddon extends BaseDebridAddon<UnarrIndexerAddonConfig> 
         ? Math.ceil(Math.abs(Date.now() - published) / 3_600_000)
         : 0;
       const stableId = getSimpleTextHash(`unarr:${result.nzbId}`);
+      const quota = unarrQuotaMetadata(
+        this.userData.enforceUnarrQuota,
+        stableId,
+        result.size
+      );
       const nzb: NZB = {
         type: 'usenet',
         confirmed: Boolean(params.imdbId || params.tvdbId),
@@ -379,9 +403,7 @@ export class UnarrIndexerAddon extends BaseDebridAddon<UnarrIndexerAddonConfig> 
         size: result.size,
         age,
         group: result.group || undefined,
-        indexer: 'TorrentClaw / Unarr',
-        quotaReservationKey: stableId,
-        quotaBytes: result.size,
+        ...quota,
         unarr: {
           grabs: result.grabs,
           category: result.category || undefined,

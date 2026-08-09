@@ -1,4 +1,4 @@
-﻿import { constants } from '../index.js';
+import { constants } from '../index.js';
 import { config as appConfig } from '../config/index.js';
 import { ParsedStream, UserData } from '../db/index.js';
 

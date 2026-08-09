@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { createResponse } from '../utils/responses.js';
 import { constants, appConfig } from '@aiostreams/core';
 

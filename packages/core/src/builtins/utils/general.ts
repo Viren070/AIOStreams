@@ -1,4 +1,4 @@
-﻿import type { Logger } from '../../logging/logger.js';
+import type { Logger } from '../../logging/logger.js';
 import { Cache } from '../../utils/cache.js';
 import { createLogger } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';

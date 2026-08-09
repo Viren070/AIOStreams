@@ -1,4 +1,4 @@
-﻿import { PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
+import { PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
 import { CometPreset } from './comet.js';
 import { MeteorPreset } from './meteor.js';
 import { CustomPreset } from './custom.js';

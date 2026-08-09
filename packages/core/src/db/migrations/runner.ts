@@ -1,4 +1,4 @@
-﻿import type { DbDriver } from '../driver/types.js';
+import type { DbDriver } from '../driver/types.js';
 import { createLogger } from '../../logging/logger.js';
 import { MIGRATIONS, type Migration } from './index.js';
 

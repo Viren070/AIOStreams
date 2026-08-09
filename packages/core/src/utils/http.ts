@@ -1,4 +1,4 @@
-﻿import {
+import {
   Cache,
   HEADERS_FOR_IP_FORWARDING,
   INTERNAL_SECRET_HEADER,

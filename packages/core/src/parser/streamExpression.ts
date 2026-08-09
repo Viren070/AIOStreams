@@ -1,4 +1,4 @@
-﻿import { Parser } from 'expr-eval';
+import { Parser } from 'expr-eval';
 import {
   ParsedStream,
   ParsedStreams,

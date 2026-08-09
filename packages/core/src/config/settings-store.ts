@@ -1,4 +1,4 @@
-﻿import { z, ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { SettingsRepository } from '../db/repositories/settings.js';
 import { createLogger } from '../logging/logger.js';
 import { formatZodError } from '../utils/format-zod-error.js';

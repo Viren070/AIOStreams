@@ -1,4 +1,4 @@
-﻿import type { DbDriver } from './driver/types.js';
+import type { DbDriver } from './driver/types.js';
 import { createDriver } from './connect.js';
 import {
   runMigrations,

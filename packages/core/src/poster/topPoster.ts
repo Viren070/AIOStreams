@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import { BasePosterService } from './base.js';
 import { makeRequest } from '../utils/http.js';
 import { TopPosterIsValidResponse } from '../db/schemas.js';

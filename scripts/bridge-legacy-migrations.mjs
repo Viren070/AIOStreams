@@ -17,6 +17,24 @@ const mappings = [
     newId: 900001,
     newName: 'legacy_household_activity',
   },
+  {
+    oldId: 18,
+    oldName: 'torrentclaw_nzb_quota',
+    newId: 900003,
+    newName: 'torrentclaw_nzb_quota',
+  },
+  {
+    oldId: 19,
+    oldName: 'torrentclaw_nzb_reservations',
+    newId: 900004,
+    newName: 'torrentclaw_nzb_reservations',
+  },
+  {
+    oldId: 20,
+    oldName: 'addon_performance',
+    newId: 900005,
+    newName: 'addon_performance',
+  },
 ];
 
 function usage(message) {
@@ -58,7 +76,7 @@ function migrationRows(db) {
   if (!exists) throw new Error('The database has no _migrations table');
   return db
     .prepare(
-      'SELECT id, name, applied_at FROM _migrations WHERE id IN (16, 17, 900001, 900002) ORDER BY id'
+      'SELECT id, name, applied_at FROM _migrations WHERE id IN (16, 17, 18, 19, 20, 900001, 900002, 900003, 900004, 900005) ORDER BY id'
     )
     .all();
 }
@@ -75,15 +93,10 @@ function inspect(rows) {
       pending.push(mapping);
       continue;
     }
-    if (!source && target?.name === mapping.newName) continue;
-
-    // Once nightly migration 16 has run, the old household marker should be
-    // at 900001 while id 16 belongs to usenet_indexer_metrics.
-    if (
-      mapping.oldId === 16 &&
-      source?.name === 'usenet_indexer_metrics' &&
-      target?.name === mapping.newName
-    ) {
+    // After the bridge and nightly migrations run, the old numeric id is
+    // either absent or belongs to an official migration while the private
+    // marker remains at its high id.
+    if (target?.name === mapping.newName && source?.name !== mapping.oldName) {
       continue;
     }
 

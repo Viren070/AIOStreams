@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '../../ui/modal';
 import { ConfirmationDialog } from '../confirmation-dialog';

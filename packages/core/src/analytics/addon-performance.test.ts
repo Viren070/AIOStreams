@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { rm } from 'node:fs/promises';
 import test from 'node:test';
 import { SqliteDriver } from '../db/driver/sqlite.js';
-import { addonPerformance } from '../db/migrations/0020_addon_performance.js';
+import { addonPerformance } from '../db/migrations/900005_addon_performance.js';
 
 test('stores compact addon performance rollups without request identity', async () => {
   const filename = `.addon-performance-${process.pid}.sqlite`;

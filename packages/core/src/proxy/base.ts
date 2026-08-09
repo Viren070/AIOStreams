@@ -1,4 +1,4 @@
-﻿import z from 'zod';
+import z from 'zod';
 import { StreamProxyConfig } from '../db/schemas.js';
 import {
   Cache,

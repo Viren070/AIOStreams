@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import { Time } from './time.js';
 import path from 'path';

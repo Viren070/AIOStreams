@@ -1,4 +1,4 @@
-﻿import z from 'zod';
+import z from 'zod';
 import { UserData } from '../db/schemas.js';
 import { config } from '../config/index.js';
 import {

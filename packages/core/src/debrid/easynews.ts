@@ -1,4 +1,4 @@
-﻿import {
+import {
   DebridDownload,
   DebridError,
   DebridServiceConfig,

@@ -1,4 +1,4 @@
-﻿import { BaseProxy, ProxyStream } from './base.js';
+import { BaseProxy, ProxyStream } from './base.js';
 import { createLogger, maskSensitiveInfo } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import path from 'path';

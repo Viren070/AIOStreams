@@ -1,4 +1,4 @@
-﻿import { StremThru, StremThruError } from 'stremthru';
+import { StremThru, StremThruError } from 'stremthru';
 import {
   Env,
   appConfig,

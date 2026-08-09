@@ -98,6 +98,10 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
+          build-args: |
+            AIOSTREAMS_BUILD_CHANNEL=dev
+            AIOSTREAMS_BUILD_REF=${{ needs.setup.outputs.tag }}
+            AIOSTREAMS_BUILD_COMMIT=${{ steps.commit.outputs.sha }}
           outputs: type=image,name=ghcr.io/${{ env.REPO }},push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
@@ -145,6 +149,6 @@ jobs:
           TAG: ${{ needs.setup.outputs.tag }}
         run: |
           docker buildx imagetools create \
-            -t "ghcr.io/viren070/aiostreams:${TAG}" \
-            "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/amd64)" \
-            "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/arm64)"
+            -t "ghcr.io/${REPO}:${TAG}" \
+            "ghcr.io/${REPO}@$(cat /tmp/digests/amd64)" \
+            "ghcr.io/${REPO}@$(cat /tmp/digests/arm64)"

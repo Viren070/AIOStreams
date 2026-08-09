@@ -1,4 +1,4 @@
-﻿import { config as appConfig } from '../config/index.js';
+import { config as appConfig } from '../config/index.js';
 import { Cache } from '../utils/index.js';
 import type { MetaPreview } from '../db/schemas.js';
 

@@ -1,4 +1,4 @@
-﻿import { Torrent, UnprocessedTorrent, DebridFile } from '../debrid/index.js';
+import { Torrent, UnprocessedTorrent, DebridFile } from '../debrid/index.js';
 import {
   extractInfoHashFromMagnet,
   validateInfoHash,

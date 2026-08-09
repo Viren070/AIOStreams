@@ -1,4 +1,4 @@
-﻿import { createLogger } from '../logging/logger.js';
+import { createLogger } from '../logging/logger.js';
 import { SeaDexDataset } from '../builtins/seadex/dataset.js';
 
 const logger = createLogger('seadex');

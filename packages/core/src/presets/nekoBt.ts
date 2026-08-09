@@ -1,4 +1,4 @@
-﻿import {
+import {
   Addon,
   Option,
   ParsedFile,

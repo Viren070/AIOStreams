@@ -1,4 +1,4 @@
-﻿import { TorboxApi } from '@torbox/torbox-api';
+import { TorboxApi } from '@torbox/torbox-api';
 import {
   appConfig,
   ServiceId,
