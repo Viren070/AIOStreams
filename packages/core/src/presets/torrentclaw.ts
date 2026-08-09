@@ -30,7 +30,6 @@ type TorrentClawFormattingOptions = {
   showScore?: boolean;
   showTorBoxIndicator?: boolean;
   showTrueSpec?: boolean;
-  
 };
 
 type TorrentClawRemappingOptions = {
@@ -653,7 +652,6 @@ export class TorrentClawPreset extends Preset {
             type: 'boolean',
             default: true,
           },
-          
         ],
       },
       {
@@ -733,9 +731,7 @@ export class TorrentClawPreset extends Preset {
     const playback = options.playback || {};
     const remapping = options.remapping || {};
     const original = filterTorrentClawPlaybackActions(streams, playback).filter(
-      (stream) =>
-        
-        stream.type !== constants.STREMIO_USENET_STREAM_TYPE
+      (stream) => stream.type !== constants.STREMIO_USENET_STREAM_TYPE
     );
 
     if (remapping.enabled === false || !/^tt\d+/i.test(id)) {

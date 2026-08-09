@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/Cxsmo-ai/AIOStreams/actions/workflows/deploy-docker.yml"> 
+    <a href="https://github.com/Cxsmo-ai/AIOStreams/actions/workflows/deploy-docker.yml">
         <img src="https://img.shields.io/github/actions/workflow/status/Cxsmo-ai/AIOStreams/deploy-docker.yml?style=for-the-badge&logo=github" alt="Build Status">
     </a>
     <a href="https://github.com/Cxsmo-ai/AIOStreams/releases/latest">
