@@ -51,6 +51,8 @@ interface Draft {
   /** NNTP pipeline depth (in-flight commands per connection); 1 = off. */
   pipelineDepth: number;
   isBackup: boolean;
+  /** 0 = primary, 1+ = ordered emergency/block-account tier. */
+  backupTier: number;
   enabled: boolean;
   /**
    * Cascade rank and grouping key. Lower = tried first; providers that share a
@@ -106,7 +108,8 @@ function fromMasked(p: MaskedProvider): Draft {
     hasPassword: p.hasPassword,
     maxConnections: p.maxConnections,
     pipelineDepth: p.pipelineDepth ?? 1,
-    isBackup: p.isBackup ?? false,
+    isBackup: (p.backupTier ?? (p.isBackup ? 1 : 0)) > 0,
+    backupTier: p.backupTier ?? (p.isBackup ? 1 : 0),
     enabled: p.enabled !== false,
     priority: p.priority,
   };
@@ -124,7 +127,7 @@ function normalize(drafts: Draft[]): Draft[] {
   const sorted = drafts
     .map((d, i) => ({ d, i }))
     .sort((a, b) => {
-      const tier = (a.d.isBackup ? 1 : 0) - (b.d.isBackup ? 1 : 0);
+      const tier = a.d.backupTier - b.d.backupTier;
       if (tier !== 0) return tier;
       if (a.d.priority !== b.d.priority) return a.d.priority - b.d.priority;
       return a.i - b.i;
@@ -132,12 +135,12 @@ function normalize(drafts: Draft[]): Draft[] {
     .map(({ d }) => d);
   let groupNo = 0;
   let prevPriority: number | null = null;
-  let prevTier: boolean | null = null;
+  let prevTier: number | null = null;
   return sorted.map((d) => {
-    if (d.priority !== prevPriority || d.isBackup !== prevTier) {
+    if (d.priority !== prevPriority || d.backupTier !== prevTier) {
       groupNo++;
       prevPriority = d.priority;
-      prevTier = d.isBackup;
+      prevTier = d.backupTier;
     }
     return { ...d, priority: groupNo };
   });
@@ -173,6 +176,7 @@ function emptyDraft(): Draft {
     maxConnections: 10,
     pipelineDepth: 1,
     isBackup: false,
+    backupTier: 0,
     enabled: true,
     priority: 1,
   };
@@ -197,7 +201,8 @@ function toPayload(d: Draft) {
     maxConnections: d.maxConnections,
     pipelineDepth: d.pipelineDepth > 1 ? d.pipelineDepth : undefined,
     priority: d.priority,
-    isBackup: d.isBackup || undefined,
+    backupTier: d.backupTier || undefined,
+    isBackup: d.backupTier > 0 || undefined,
     enabled: d.enabled,
   };
 }
@@ -264,8 +269,9 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
           if (d.id !== id) return d;
           const joinTier = ds.find(
             (o) => o.id !== id && o.priority === n
-          )?.isBackup;
-          return { ...d, priority: n, isBackup: joinTier ?? d.isBackup };
+          )?.backupTier;
+          const backupTier = joinTier ?? d.backupTier;
+          return { ...d, priority: n, backupTier, isBackup: backupTier > 0 };
         })
       );
     });
@@ -278,11 +284,17 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
       if (!cur || cur.priority <= 1) return ds;
       const targetPriority = cur.priority - 1;
       const targetTier =
-        ds.find((d) => d.priority === targetPriority)?.isBackup ?? cur.isBackup;
+        ds.find((d) => d.priority === targetPriority)?.backupTier ??
+        cur.backupTier;
       return normalize(
         ds.map((d) =>
           d.id === id
-            ? { ...d, priority: targetPriority, isBackup: targetTier }
+            ? {
+                ...d,
+                priority: targetPriority,
+                backupTier: targetTier,
+                isBackup: targetTier > 0,
+              }
             : d
         )
       );
@@ -300,14 +312,30 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
       );
     });
 
-  // Backup toggle is a group control: flip the whole priority group's tier.
+  // Backup toggle is a group control: primary (0) or first emergency tier (1).
   const setBackup = (id: string, value: boolean) =>
     setDrafts((ds) => {
       const cur = ds.find((d) => d.id === id);
       if (!cur) return ds;
       return normalize(
         ds.map((d) =>
-          d.priority === cur.priority ? { ...d, isBackup: value } : d
+          d.priority === cur.priority
+            ? { ...d, isBackup: value, backupTier: value ? 1 : 0 }
+            : d
+        )
+      );
+    });
+
+  const setBackupTier = (id: string, value: number) =>
+    setDrafts((ds) => {
+      const cur = ds.find((d) => d.id === id);
+      if (!cur) return ds;
+      const backupTier = Math.min(99, Math.max(0, Math.round(value) || 0));
+      return normalize(
+        ds.map((d) =>
+          d.priority === cur.priority
+            ? { ...d, backupTier, isBackup: backupTier > 0 }
+            : d
         )
       );
     });
@@ -382,9 +410,9 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
             priority to put them in one load-balanced group (shown bracketed) so
             they split load by free capacity instead of one sitting idle as
             failover — the up arrow groups a provider with the one above, the
-            down arrow splits it back out. Mark metered block accounts as
-            backups (the toggle applies to the whole group) so they’re only used
-            when a primary misses an article.
+            down arrow splits it back out. Tier 0 is primary; put metered block
+            accounts in emergency tiers 1, 2 and upward. Every lower tier is
+            exhausted before the next tier is touched.
           </p>
         </div>
         <Button
@@ -424,6 +452,7 @@ export function ProviderEditor({ providers }: { providers: MaskedProvider[] }) {
                 onGroupUp={() => groupUp(d.id)}
                 onUngroup={() => ungroup(d.id)}
                 onSetBackup={(v) => setBackup(d.id, v)}
+                onSetBackupTier={(v) => setBackupTier(d.id, v)}
                 onRemove={() => remove(d.id)}
                 onTest={() => runTest(d)}
                 onSpeedTest={() => runSpeed(d)}
@@ -545,6 +574,7 @@ function ProviderRow({
   onGroupUp,
   onUngroup,
   onSetBackup,
+  onSetBackupTier,
   onRemove,
   onTest,
   onSpeedTest,
@@ -567,6 +597,7 @@ function ProviderRow({
   onGroupUp: () => void;
   onUngroup: () => void;
   onSetBackup: (v: boolean) => void;
+  onSetBackupTier: (v: number) => void;
   onRemove: () => void;
   onTest: () => void;
   onSpeedTest: () => void;
@@ -637,7 +668,9 @@ function ProviderRow({
               <span className="font-medium text-sm">
                 {d.name || d.host || 'New provider'}
               </span>
-              {d.isBackup && <Pill intent="warning">backup</Pill>}
+              {d.isBackup && (
+                <Pill intent="warning">emergency tier {d.backupTier}</Pill>
+              )}
               {grouped && <Pill intent="success">load-balanced</Pill>}
               <StateBadge result={testResult} />
               <SpeedBadge result={speedResult} />
@@ -785,11 +818,21 @@ function ProviderRow({
               label="Backup"
               moreHelp={
                 grouped
-                  ? 'Applies to the whole group — backup providers are only used when a download is missing pieces on your main providers.'
-                  : 'Only used when a download is missing pieces on your main providers — ideal for metered block accounts.'
+                  ? 'Applies to the whole group and moves it between primary tier 0 and emergency tier 1.'
+                  : 'Moves this provider between primary tier 0 and emergency tier 1. Use the tier field for deeper fallback levels.'
               }
               side="right"
             />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[--muted]">Emergency tier</span>
+              <NumberInput
+                value={d.backupTier}
+                min={0}
+                max={99}
+                className="w-20"
+                onValueChange={onSetBackupTier}
+              />
+            </div>
             <Switch
               value={d.tlsSkipVerify}
               onValueChange={(v) => onChange({ tlsSkipVerify: v })}

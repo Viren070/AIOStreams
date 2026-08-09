@@ -14,19 +14,19 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/Viren070/AIOStreams/actions/workflows/deploy-docker.yml"> 
-        <img src="https://img.shields.io/github/actions/workflow/status/viren070/aiostreams/deploy-docker.yml?style=for-the-badge&logo=github" alt="Build Status">
+    <a href="https://github.com/Cxsmo-ai/AIOStreams/actions/workflows/deploy-docker.yml"> 
+        <img src="https://img.shields.io/github/actions/workflow/status/Cxsmo-ai/AIOStreams/deploy-docker.yml?style=for-the-badge&logo=github" alt="Build Status">
     </a>
-    <a href="https://github.com/Viren070/AIOStreams/releases/latest">
-        <img src="https://img.shields.io/github/v/release/viren070/aiostreams?style=for-the-badge&logo=github" alt="Latest Release">
+    <a href="https://github.com/Cxsmo-ai/AIOStreams/releases/latest">
+        <img src="https://img.shields.io/github/v/release/Cxsmo-ai/AIOStreams?style=for-the-badge&logo=github" alt="Latest Release">
     </a>
-    <a href="https://github.com/Viren070/AIOStreams/stargazers">
-        <img src="https://img.shields.io/github/stars/Viren070/AIOStreams?style=for-the-badge&logo=github " alt="GitHub Stars">
+    <a href="https://github.com/Cxsmo-ai/AIOStreams/stargazers">
+        <img src="https://img.shields.io/github/stars/Cxsmo-ai/AIOStreams?style=for-the-badge&logo=github " alt="GitHub Stars">
     </a>
     <a href="https://github.com/sponsors/Viren070">
         <img src="https://img.shields.io/github/sponsors/viren070?style=for-the-badge&logo=githubsponsors" alt="GitHub Sponsors">
     </a>
-    <a href="https://hub.docker.com/r/viren070/aiostreams">
+    <a href="https://hub.docker.com/r/Cxsmo-ai/AIOStreams">
         <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry-stats.viren070.me%2Fapi%2Fdh%3Aviren070%2Faiostreams%2Cghcr%3Aviren070%2Faiostreams%2Faiostreams&query=%24.total_downloads_formatted&logo=docker&label=pulls&style=for-the-badge" alt="Docker Pulls">
     </a>
     <a href="https://discord.viren070.me">
@@ -68,34 +68,19 @@ Add any Stremio addon you already use - Torrentio, Comet, MediaFusion, and many 
 
 </p>
 
-### 🧩 Built-in Addons
+### 🧩 Built-in Addons & Indexers
 
-AIOStreams ships with a suite of its own addons - search engines and integrations that are hosted alongside AIOStreams itself and available exclusively to your instance. They're configured and used just like any other addon in the marketplace.
+AIOStreams includes built-in search engines, indexers, and integrations hosted directly alongside your instance:
+
+- **TorrentClaw Integration**: Advanced cache detection (`[Cached]` / `[Uncached]`), automatic title remapping, season pack sizing, and custom TorrentClaw formatting hooks for clean, standardized stream layouts across torrent and Usenet results.
+- **TorrentClaw Usenet Indexer**: Toggle allowing TorrentClaw to serve as a Usenet indexer for AIOStreams (supporting NNTP, Unarr indexer integration, and smart quota optimization designed to sustain 200GB download limits through heavy monthly usage).
+- **Unarr Indexer**: Native Usenet indexer support with per-config key validation.
+- **Evidence-based Addon Rankings**: A privacy-safe dashboard ranks addon availability, surviving contribution, top-result wins, errors, latency, and source-size leadership. Statistics use normalized daily counter rollups instead of retaining titles, media IDs, stream URLs, or per-result records.
+- **NNTP Emergency Tiers**: Put unlimited accounts in primary tier 0 and metered block accounts in ordered fallback tiers 1, 2, and upward. Providers can still load-balance inside a tier, and existing `isBackup` configurations remain compatible as tier 1.
+- **Built-in Search Engines & Integrations**: Support for Google Drive, TorBox Search, Knaben, Easynews, SeaDex, Prowlarr, Jackett, Newznab, Torznab, and library browsing.
 
 > [!NOTE]
-> Built-in addons that search for torrents require a debrid service. Usenet results can be streamed by AIOStreams' own built-in usenet engine, via external tools like [NzbDAV](https://github.com/nzbdav-dev/nzbdav) or [AltMount](https://github.com/javi11/altmount), natively by Stremio itself, or through TorBox (Pro plan) - see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet). All built-in addons support anime and Kitsu/MAL catalogs.
-
-The built-in addons include:
-
-| Addon               | Description                                                      |
-| ------------------- | ---------------------------------------------------------------- |
-| **Stremio GDrive**  | Stream files directly from your Google Drive.                    |
-| **TorBox Search**   | Search TorBox's index with more options than the official addon. |
-| **Knaben**          | Proxy search across The Pirate Bay, 1337x, Nyaa.si, and more.    |
-| **Zilean**          | Scrape a Zilean DMM hashlist instance.                           |
-| **AnimeTosho**      | Mirror of most Nyaa.si and TokyoTosho anime releases.            |
-| **Torrent Galaxy**  | Search Torrent Galaxy for results.                               |
-| **Easynews Search** | Text-based search of Easynews' Usenet index.                     |
-| **SeaDex**          | Best-release database for anime (community curated).             |
-| **NekoBT**          | Anime results via nekoBT.                                        |
-| **EZTV**            | TV show torrent search via EZTV.                                 |
-| **Bitmagnet**       | Connect your self-hosted Bitmagnet DHT crawler.                  |
-| **Jackett**         | Connect your Jackett instance by URL and API key.                |
-| **Prowlarr**        | Connect your Prowlarr instance by URL and API key.               |
-| **NZBHydra2**       | Connect your NZBHydra2 instance to search Usenet indexers.       |
-| **Newznab**         | Directly configure any Newznab-compatible Usenet indexer.        |
-| **Torznab**         | Configure any Torznab API to search torrent results.             |
-| **Library**         | Browse and stream content from your debrid/usenet library        |
+> Built-in addons that search for torrents require a debrid service. Usenet results can be streamed by AIOStreams' built-in usenet engine, via external tools like [NzbDAV](https://github.com/nzbdav-dev/nzbdav) or [AltMount](https://github.com/javi11/altmount), natively by Stremio itself, or through TorBox.
 
 ### 🌐 Debrid & Usenet Service Support
 
@@ -208,7 +193,7 @@ For full setup and configuration instructions, see the **[documentation](https:/
 
 AIOStreams is a passion project developed and maintained for free. If you find it useful, please consider:
 
-- ⭐ **[Star the repository](https://github.com/Viren070/AIOStreams)** on GitHub.
+- ⭐ **[Star the repository](https://github.com/Cxsmo-ai/AIOStreams)** on GitHub.
 - ⭐ **[Star the addon](https://stremio-addons.net/addons/aiostreams)** in the Stremio Community Catalog.
 - 🤝 **Contribute**: Report issues, suggest features, or submit pull requests.
 - ☕ **Donate**:
@@ -220,7 +205,7 @@ AIOStreams is a passion project developed and maintained for free. If you find i
 <h2 align="center">⭐ Star History</h2>
 
 <p align="center">
-  <img src="https://api.star-history.com/svg?repos=Viren070/AIOStreams&type=Date" href="https://www.star-history.com/#Viren070/AIOStreams&Date" alt="Star History" width="750"/>
+  <img src="https://api.star-history.com/svg?repos=Cxsmo-ai/AIOStreams&type=Date" href="https://www.star-history.com/#Cxsmo-ai/AIOStreams&Date" alt="Star History" width="750"/>
 </p>
 
 ---

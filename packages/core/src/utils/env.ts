@@ -173,7 +173,7 @@ export function resolveServiceTime(
 
 export const Env = cleanEnv(process.env, {
   VERSION: readonly({
-    default: metadata?.version || 'unknown',
+    default: metadata?.version && metadata.version !== 'unknown' ? metadata.version : '2.31.1',
     desc: 'Version of the addon',
   }),
   TAG: readonly({
@@ -186,7 +186,7 @@ export const Env = cleanEnv(process.env, {
     desc: 'Build channel of the addon',
   }),
   DESCRIPTION: readonly({
-    default: metadata?.description || 'unknown',
+    default: metadata?.description && metadata.description !== 'unknown' ? metadata.description : 'Consolidate multiple Stremio addons and debrid/usenet services into a single super-addon with custom filtering, sorting, and formatting.',
     desc: 'Description of the addon',
   }),
   NODE_ENV: str({

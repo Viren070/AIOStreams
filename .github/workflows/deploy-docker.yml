@@ -1,6 +1,8 @@
 name: Build and Deploy Docker Images
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
@@ -21,7 +23,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Calculate tags
@@ -30,8 +32,12 @@ jobs:
           INPUT_REF: ${{ inputs.ref }}
         run: |
           declare TAGS=""
-          case "${INPUT_REF}" in
-          v[0-9]*.[0-9]*.[0-9]*)
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            TAGS="latest main-${GITHUB_SHA::7}"
+            CHANNEL="nightly"
+          else
+            case "${INPUT_REF}" in
+            v[0-9]*.[0-9]*.[0-9]*)
             TAGS="${INPUT_REF}"
             if [[ "$(git rev-parse origin/main)" = "$(git rev-parse "${INPUT_REF}")" ]]; then
               MAJOR_MINOR=$(echo "${INPUT_REF}" | sed -E 's/v([0-9]+)\.([0-9]+)\.[0-9]+/\1.\2/')
@@ -45,10 +51,11 @@ jobs:
             CHANNEL="nightly"
             ;;
           *)
-            echo "Invalid Input Ref: ${INPUT_REF}"
-            exit 1
-            ;;
-          esac
+              echo "Invalid Input Ref: ${INPUT_REF}"
+              exit 1
+              ;;
+            esac
+          fi
 
           if [[ -z "${TAGS}" ]]; then
             echo "Empty Tags!"
@@ -78,15 +85,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      - name: Set lower case repository name
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -112,7 +116,7 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          outputs: type=image,name=ghcr.io/viren070/aiostreams,push-by-digest=true,name-canonical=true
+          outputs: type=image,name=ghcr.io/${{ env.REPO }},push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
 
@@ -141,12 +145,9 @@ jobs:
           pattern: '{amd64,arm64}'
           merge-multiple: true
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      - name: Set lower case repository name
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -163,105 +164,9 @@ jobs:
         run: |
           for tag in ${TAGS}; do
             docker buildx imagetools create \
-              -t "viren070/aiostreams:${tag}" \
-              -t "ghcr.io/viren070/aiostreams:${tag}" \
-              "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/amd64)" \
-              "ghcr.io/viren070/aiostreams@$(cat /tmp/digests/arm64)"
+              -t "ghcr.io/${REPO}:${tag}" \
+              "ghcr.io/${REPO}@$(cat /tmp/digests/amd64)" \
+              "ghcr.io/${REPO}@$(cat /tmp/digests/arm64)"
           done
 
-      - name: Send Discord Notification
-        env:
-          CHANNEL: ${{ needs.setup.outputs.channel }}
-          TAGS: ${{ needs.setup.outputs.tags }}
-        run: |
-          # Determine role based on channel
-          if [ "$CHANNEL" = "stable" ]; then
-            ROLE_ID="<@&1384627130272452638>"
-            COLOR=5763719  # Green
-            TITLE="🎉 Stable Release"
-          else
-            ROLE_ID="<@&1384627462155272242>"
-            COLOR=15844367  # Orange
-            TITLE="🌙 Nightly Build"
-          fi
-
-          # Format tags for display (each tag on a new line with bullet points)
-          FORMATTED_TAGS=""
-          for tag in $TAGS; do
-            if [ -z "$FORMATTED_TAGS" ]; then
-              FORMATTED_TAGS="• \`$tag\`"
-            else
-              FORMATTED_TAGS="$FORMATTED_TAGS\n• \`$tag\`"
-            fi
-          done
-
-          # Get current timestamp in ISO 8601 format UTC
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-          # Create JSON payload file
-          cat << EOF > discord_payload.json
-          {
-            "content": "$ROLE_ID",
-            "embeds": [
-              {
-                "title": "$TITLE - Docker Images Published",
-                "description": "New Docker images have been built and pushed to registries.",
-                "color": $COLOR,
-                "fields": [
-                  {
-                    "name": "📦 Channel",
-                    "value": "• \`$CHANNEL\`",
-                    "inline": true
-                  },
-                  {
-                    "name": "🏷️ Tags Published",
-                    "value": "$FORMATTED_TAGS",
-                    "inline": false
-                  },
-                  {
-                    "name": "📍 View Images",
-                    "value": "[Docker Hub](https://hub.docker.com/r/viren070/aiostreams) · [GHCR](https://github.com/Viren070/AIOStreams/pkgs/container/aiostreams)",
-                    "inline": false
-                  },
-                  {
-                    "name": "📝 View Release Notes",
-                    "value": "[GitHub](https://github.com/Viren070/AIOStreams/releases/tag/${{ inputs.ref }})",
-                    "inline": false
-                  },
-                  {
-                    "name": "🔗 View Build",
-                    "value": "[GitHub Actions](https://github.com/Viren070/aiostreams/actions/runs/${{ github.run_id }})",
-                    "inline": false
-                  }
-                ],
-                "footer": {
-                  "text": "AIOStreams CI",
-                  "icon_url": "https://github.com/Viren070.png"
-                },
-                "timestamp": "$TIMESTAMP"
-              }
-            ]
-          }
-          EOF
-
-          echo "Sending to Discord:"
-          cat discord_payload.json
-
-          # Send payload to Discord and capture response and status code
-          http_response=$(curl -s -w "\n%{http_code}" -H "Content-Type: application/json" \
-            -X POST \
-            -d @discord_payload.json \
-            "${{ secrets.DISCORD_WEBHOOK_URL }}")
-
-          http_body=$(echo "$http_response" | sed '$d')
-          http_code=$(echo "$http_response" | tail -n1)
-
-          echo "HTTP Status Code: $http_code"
-          echo "Discord Response Body: $http_body"
-
-          if [ "$http_code" != "204" ]; then
-            echo "Error sending to Discord webhook."
-            exit 1
-          fi
-
-          echo "Message sent successfully!"
+      

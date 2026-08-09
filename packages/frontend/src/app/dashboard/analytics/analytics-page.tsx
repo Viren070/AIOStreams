@@ -7,7 +7,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { AreaChart, BarChart, DonutChart, Stat } from '@/components/ui/charts';
-import { formatCompact } from '@/lib/format';
+import { formatBytes, formatCompact } from '@/lib/format';
 
 /**
  * A number shown in compact form (`1.2M`) with the exact value revealed in a
@@ -34,10 +34,12 @@ import {
   useUsersAnalytics,
   useRequestsAnalytics,
   useAddonsAnalytics,
+  useAddonPerformanceAnalytics,
   useFeaturesAnalytics,
   useUserActivity,
   type Range,
   type FeatureEntry,
+  type AddonPerformanceRow,
 } from './queries';
 
 const RANGES: Range[] = ['24h', '7d', '30d', 'all'];
@@ -223,6 +225,198 @@ function UserActivityModal({
   );
 }
 
+type PerformanceSortKey =
+  | 'score'
+  | 'requests'
+  | 'availabilityRate'
+  | 'finalResults'
+  | 'finalShare'
+  | 'topRankRate'
+  | 'largestSourceRate'
+  | 'avgSizeBytes'
+  | 'maxSizeBytes'
+  | 'errorRate'
+  | 'avgLatencyMs';
+
+const PERFORMANCE_COLUMNS: Array<{
+  key: PerformanceSortKey;
+  label: string;
+  title: string;
+}> = [
+  { key: 'score', label: 'Score', title: 'Size-neutral overall score' },
+  { key: 'requests', label: 'Samples', title: 'Requests measured' },
+  {
+    key: 'availabilityRate',
+    label: 'Found %',
+    title: 'Requests where the addon returned at least one source',
+  },
+  {
+    key: 'finalResults',
+    label: 'Final',
+    title: 'Sources surviving the complete AIOStreams pipeline',
+  },
+  {
+    key: 'finalShare',
+    label: 'Share %',
+    title: 'Share of all surviving sources in this range',
+  },
+  {
+    key: 'topRankRate',
+    label: '#1 %',
+    title: 'Requests where this addon supplied the first-ranked result',
+  },
+  {
+    key: 'largestSourceRate',
+    label: 'Largest %',
+    title: 'Requests where this addon supplied the largest known-size result',
+  },
+  {
+    key: 'avgSizeBytes',
+    label: 'Avg size',
+    title: 'Average known source size',
+  },
+  {
+    key: 'maxSizeBytes',
+    label: 'Max size',
+    title: 'Largest known source size',
+  },
+  { key: 'errorRate', label: 'Err %', title: 'Addon request error rate' },
+  {
+    key: 'avgLatencyMs',
+    label: 'Avg ms',
+    title: 'Average addon response latency',
+  },
+];
+
+function numericPerformanceValue(
+  row: AddonPerformanceRow,
+  key: PerformanceSortKey
+): number {
+  return Number(row[key] ?? -1);
+}
+
+function AddonPerformanceTable({ rows }: { rows: AddonPerformanceRow[] }) {
+  const [sortKey, setSortKey] = React.useState<PerformanceSortKey>('score');
+  const [ascending, setAscending] = React.useState(false);
+  const sorted = React.useMemo(
+    () =>
+      [...rows].sort((a, b) => {
+        const delta =
+          numericPerformanceValue(a, sortKey) -
+          numericPerformanceValue(b, sortKey);
+        return (ascending ? delta : -delta) || b.requests - a.requests;
+      }),
+    [ascending, rows, sortKey]
+  );
+  const selectSort = (key: PerformanceSortKey) => {
+    if (key === sortKey) setAscending((value) => !value);
+    else {
+      setSortKey(key);
+      setAscending(key === 'avgLatencyMs' || key === 'errorRate');
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto -mx-4 px-4">
+      <table className="w-full min-w-[1180px] text-sm">
+        <thead className="text-xs uppercase text-[--muted]">
+          <tr className="border-b border-[--border] text-left">
+            <th className="py-2 pr-3">Rank / addon</th>
+            {PERFORMANCE_COLUMNS.map((column) => (
+              <th key={column.key} className="py-2 px-2 text-right">
+                <button
+                  type="button"
+                  title={column.title}
+                  className={cn(
+                    'whitespace-nowrap hover:text-[--foreground]',
+                    sortKey === column.key && 'text-brand'
+                  )}
+                  onClick={() => selectSort(column.key)}
+                >
+                  {column.label}
+                  {sortKey === column.key ? (ascending ? ' ↑' : ' ↓') : ''}
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row, index) => (
+            <tr
+              key={`${row.presetId}:${row.instanceHash}`}
+              className="border-b border-[--border]/50 align-top"
+            >
+              <td className="py-2.5 pr-3">
+                <div className="flex gap-2">
+                  <span className="w-6 shrink-0 text-right font-semibold text-[--muted]">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium">{row.addonName}</div>
+                    <div className="text-[10px] text-[--muted]">
+                      {row.presetId} · {row.instanceHash.slice(0, 8)} · cached{' '}
+                      {row.streamTypes.cached} · uncached{' '}
+                      {row.streamTypes.uncached} · p2p {row.streamTypes.p2p} ·
+                      usenet {row.streamTypes.usenet}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td className="py-2.5 px-2 text-right font-semibold tabular-nums">
+                {row.score}
+                <div
+                  className="text-[10px] font-normal text-[--muted]"
+                  title="Confidence reaches 100% at 25 measured requests"
+                >
+                  {row.confidence}% conf.
+                </div>
+              </td>
+              <td className="py-2.5 px-2 text-right">
+                <CompactNumber value={row.requests} />
+              </td>
+              <td className="py-2.5 px-2 text-right tabular-nums">
+                {row.availabilityRate}%
+              </td>
+              <td className="py-2.5 px-2 text-right">
+                <CompactNumber value={row.finalResults} />
+                <div className="text-[10px] text-[--muted]">
+                  {row.survivalRate}% survived
+                </div>
+              </td>
+              <td className="py-2.5 px-2 text-right tabular-nums">
+                {row.finalShare}%
+              </td>
+              <td className="py-2.5 px-2 text-right tabular-nums">
+                {row.topRankRate}%
+              </td>
+              <td className="py-2.5 px-2 text-right tabular-nums">
+                {row.largestSourceRate}%
+              </td>
+              <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                {row.avgSizeBytes ? formatBytes(row.avgSizeBytes) : '—'}
+              </td>
+              <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                {row.maxSizeBytes ? formatBytes(row.maxSizeBytes) : '—'}
+              </td>
+              <td
+                className={cn(
+                  'py-2.5 px-2 text-right tabular-nums',
+                  row.errorRate > 10 && 'text-red-500'
+                )}
+              >
+                {row.errorRate}%
+              </td>
+              <td className="py-2.5 pl-2 text-right tabular-nums">
+                {row.avgLatencyMs ?? '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function AnalyticsPage() {
   const [range, setRange] = React.useState<Range>('7d');
   const [selectedUser, setSelectedUser] = React.useState<string | null>(null);
@@ -230,6 +424,7 @@ export function AnalyticsPage() {
   const users = useUsersAnalytics(range);
   const requests = useRequestsAnalytics(range);
   const addons = useAddonsAnalytics(range);
+  const addonPerformance = useAddonPerformanceAnalytics(range);
   const features = useFeaturesAnalytics(range);
 
   const o = overview.data;
@@ -307,6 +502,67 @@ export function AnalyticsPage() {
               height={260}
             />
           )}
+        </DashboardQueryBoundary>
+      </Card>
+
+      {/* Durable addon quality evidence. One compact row per addon/day is
+          stored; no titles, media ids, URLs or user identifiers. */}
+      <Card className="p-4">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">Addon performance ranking</h3>
+            <p className="text-xs text-[--muted]">
+              Sort any column to compare availability, surviving results,
+              first-place wins, largest-source wins, size, errors and latency.
+            </p>
+          </div>
+          {addonPerformance.data ? (
+            <Tooltip
+              trigger={
+                <span className="inline-flex cursor-help items-center gap-1 text-xs text-[--muted]">
+                  <FiInfo /> How score works
+                </span>
+              }
+            >
+              {addonPerformance.data.scoreFormula}
+            </Tooltip>
+          ) : null}
+        </div>
+        <DashboardQueryBoundary
+          query={addonPerformance}
+          errorTitle="Failed to load addon performance"
+        >
+          {(d) =>
+            d.addons.length ? (
+              <>
+                <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Stat
+                    label="Measured addon calls"
+                    value={<CompactNumber value={d.totalRequests} />}
+                  />
+                  <Stat
+                    label="Surviving sources"
+                    value={<CompactNumber value={d.totalFinalResults} />}
+                  />
+                  <Stat
+                    label="Top overall"
+                    value={d.addons[0]?.addonName ?? '—'}
+                    hint={d.addons[0] ? `score ${d.addons[0].score}` : ''}
+                  />
+                  <Stat
+                    label="Storage model"
+                    value="Daily rollup"
+                    hint="compact counters only"
+                  />
+                </div>
+                <AddonPerformanceTable rows={d.addons} />
+              </>
+            ) : (
+              <p className="text-sm text-[--muted]">
+                No stream requests have been measured for this range yet.
+              </p>
+            )
+          }
         </DashboardQueryBoundary>
       </Card>
 

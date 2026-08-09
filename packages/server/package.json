@@ -7,7 +7,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest watch",
     "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc --build --force",
     "prepublish": "npm run build"
   },
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",

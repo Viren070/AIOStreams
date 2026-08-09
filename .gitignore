@@ -6,6 +6,5 @@ out/
 next-env.d.ts
 .wrangler/
 .env
-metadata.json
 data/
 testing/

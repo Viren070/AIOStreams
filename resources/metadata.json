@@ -1,0 +1,9 @@
+{
+  "version": "2.31.1",
+  "description": "Consolidate multiple Stremio addons and debrid/usenet services into a single super-addon with custom filtering, sorting, and formatting.",
+  "tag": "v2.31.1",
+  "channel": "stable",
+  "commitHash": "cdd98358",
+  "buildTime": "2026-08-02T17:15:00.000Z",
+  "commitTime": "2026-08-02T17:15:00.000Z"
+}

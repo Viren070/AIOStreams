@@ -21,6 +21,7 @@ import { legacyHouseholdActivity } from './900001_legacy_household_activity.js';
 import { legacyVpnManagement } from './900002_legacy_vpn_management.js';
 import { torrentclawNzbQuota } from './900003_torrentclaw_nzb_quota.js';
 import { torrentclawNzbReservations } from './900004_torrentclaw_nzb_reservations.js';
+import { addonPerformance } from './900005_addon_performance.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -47,6 +48,7 @@ export const MIGRATIONS: readonly Migration[] = [
   legacyVpnManagement,
   torrentclawNzbQuota,
   torrentclawNzbReservations,
+  addonPerformance,
 ];
 
 export type { Migration } from './types.js';

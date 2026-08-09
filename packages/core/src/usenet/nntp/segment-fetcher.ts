@@ -550,20 +550,20 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     // erroring), reordered by per-NZB affinity so a provider known to be
     // missing this release stops being body-tried first on every segment.
     const candidates = this.orderedCandidates(nzbHash);
-    let escalationLogged = false;
+    let activeTier = 0;
     for (const pool of candidates) {
       if (signal?.aborted) {
         throw new NntpError('connection', 'aborted');
       }
-      if (
-        pool.isBackup &&
-        !escalationLogged &&
-        (notFound.size > 0 || undecodable.size > 0 || lastTransient)
-      ) {
-        escalationLogged = true;
+      if (pool.backupTier > activeTier) {
+        activeTier = pool.backupTier;
         logger.debug(
-          { messageId: segment.messageId, notFoundOn: [...notFound] },
-          'escalating segment fetch to backup providers'
+          {
+            messageId: segment.messageId,
+            emergencyTier: activeTier,
+            notFoundOn: [...notFound],
+          },
+          'escalating segment fetch to emergency provider tier'
         );
       }
       triedAny = true;
@@ -590,7 +590,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
             messageId: segment.messageId,
             bytes,
             latency: durationMs,
-            useBackup: pool.isBackup,
+            emergencyTier: pool.backupTier,
           },
           'segment fetched'
         );
@@ -685,7 +685,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
   }
 
   /**
-   * The full provider order for one fetch: primaries before backups, each tier
+   * The full provider order for one fetch: primary tier 0 followed by numeric
+   * emergency tiers, each ordered by
    * ordered by {@link orderProviders}, then STABLE-sorted by per-NZB affinity.
    * Only providers DEMOTED for this release (missing the bulk of it) sink to the
    * back; everyone else keeps the {@link orderProviders} order (which load-
@@ -694,10 +695,12 @@ export class LocalSegmentFetcher implements SegmentFetcher {
    * data (or a single provider) this is exactly the tier order.
    */
   private orderedCandidates(nzbHash: string | undefined): ProviderWorkerPool[] {
-    const list = [
-      ...this.orderProviders(false, EMPTY_EXCLUDE),
-      ...this.orderProviders(true, EMPTY_EXCLUDE),
-    ];
+    const tiers = [...new Set(this.pools.map((pool) => pool.backupTier))].sort(
+      (a, b) => a - b
+    );
+    const list = tiers.flatMap((tier) =>
+      this.orderProviders(tier, EMPTY_EXCLUDE)
+    );
     if (!nzbHash || list.length < 2) return list;
     return list
       .map((pool, i) => ({
@@ -719,11 +722,11 @@ export class LocalSegmentFetcher implements SegmentFetcher {
    * set still attempts one connection.
    */
   private orderProviders(
-    useBackup: boolean,
+    backupTier: number,
     exclude: Set<string>
   ): ProviderWorkerPool[] {
     const eligible = this.pools.filter(
-      (p) => p.isBackup === useBackup && !exclude.has(p.id)
+      (p) => p.backupTier === backupTier && !exclude.has(p.id)
     );
     const healthy = eligible.filter((p) => !p.tripped);
     const tripped = eligible.filter((p) => p.tripped);

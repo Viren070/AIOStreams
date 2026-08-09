@@ -20,8 +20,14 @@ export interface ProviderConfig {
   password?: string;
   /** Hard ceiling on simultaneous connections for this account. */
   maxConnections: number;
-  /** Lower number = higher priority. Primaries should be < backups. */
+  /** Lower number = higher priority inside the same emergency tier. */
   priority: number;
+  /**
+   * Emergency account tier. `0` is primary/unmetered; `1+` are increasingly
+   * expensive block-account fallbacks. Every lower tier is exhausted before
+   * the next tier is touched.
+   */
+  backupTier?: number;
   /**
    * Block/backup account: only used after primaries return 430 for a segment.
    * Keeps metered block usage low.
@@ -36,6 +42,15 @@ export interface ProviderConfig {
    * unset.
    */
   pipelineDepth?: number;
+}
+
+/** Resolve new numeric tiers while preserving every legacy `isBackup` config. */
+export function providerBackupTier(provider: ProviderConfig): number {
+  const configured = provider.backupTier;
+  if (configured !== undefined && Number.isFinite(configured)) {
+    return Math.max(0, Math.floor(configured));
+  }
+  return provider.isBackup ? 1 : 0;
 }
 
 /** Tunable engine behaviour (sourced from global usenet settings). */
@@ -186,6 +201,7 @@ export interface ProviderPoolInfo {
   tripped: boolean;
   throttled: boolean;
   isBackup: boolean;
+  backupTier: number;
   freeSlots: number;
   throughput: number;
   queued: number;
@@ -253,7 +269,7 @@ export function providerSetFingerprint(
       credHash: credFingerprint(p, secret),
       maxConnections: p.maxConnections,
       priority: p.priority,
-      isBackup: !!p.isBackup,
+      backupTier: providerBackupTier(p),
       // Depth changes pool sizing (pipeline slots), so it must rebuild the engine.
       pipelineDepth: p.pipelineDepth ?? 0,
     }))

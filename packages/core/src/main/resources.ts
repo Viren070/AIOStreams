@@ -608,15 +608,26 @@ function emitAddonContributions(args: {
   ctx: AIOStreamsContext;
   dispositions: AddonDispositionMap;
   byManifestUrl: Map<string, ParsedStream[]>;
+  topManifestUrl?: string;
 }): void {
-  if (!userAnalyticsEnabled()) return;
+  // Global performance rows are anonymous even when per-user analytics is off.
   const uuid = args.ctx.userData?.uuid;
-  if (!uuid) return; // anonymous/probe traffic — nothing to attribute
-  let uuidHash: string;
-  try {
-    uuidHash = hmac(uuid);
-  } catch {
-    return;
+  let uuidHash: string | undefined;
+  if (uuid && userAnalyticsEnabled()) {
+    try {
+      uuidHash = hmac(uuid);
+    } catch {
+      uuidHash = undefined;
+    }
+  }
+
+  let globalLargestSize = 0;
+  for (const streams of args.byManifestUrl.values()) {
+    for (const stream of streams) {
+      if (stream.size && Number.isFinite(stream.size)) {
+        globalLargestSize = Math.max(globalLargestSize, stream.size);
+      }
+    }
   }
 
   for (const [manifestUrl, info] of args.dispositions) {
@@ -639,12 +650,19 @@ function emitAddonContributions(args: {
       serviceBreakdown = map;
     }
 
-    let addonName: string | null = null;
-    if (info.addon.name) {
-      addonName = info.addon.name;
-      if (info.addon.displayIdentifier) {
-        addonName += ` (${info.addon.displayIdentifier})`;
-      }
+    const sizes = survivors
+      .map((s) => s.size)
+      .filter(
+        (size): size is number =>
+          size !== undefined && Number.isFinite(size) && size > 0
+      );
+    const maxSize = sizes.length ? Math.max(...sizes) : 0;
+    const streamBreakdown = { cached: 0, uncached: 0, p2p: 0, usenet: 0 };
+    for (const stream of survivors) {
+      if (stream.service?.cached) streamBreakdown.cached += 1;
+      else if (stream.service) streamBreakdown.uncached += 1;
+      if (stream.type === 'p2p') streamBreakdown.p2p += 1;
+      if (stream.type === 'usenet') streamBreakdown.usenet += 1;
     }
     track({
       event_type: 'addon_contribution',
@@ -652,7 +670,8 @@ function emitAddonContributions(args: {
       uuid_hash: uuidHash,
       preset_id: info.addon.preset?.type ?? null,
       addon_instance_hash: hmac(manifestUrl),
-      addon_name: addonName,
+      // Deliberately omit displayIdentifier: it can contain endpoint hints.
+      addon_name: info.addon.name ?? null,
       url_overridden: false,
       status: info.status,
       error_kind: info.errorKind ?? null,
@@ -661,6 +680,12 @@ function emitAddonContributions(args: {
       final_count: survivors.length,
       disposition: info.disposition,
       service_breakdown: serviceBreakdown,
+      size_sum_bytes: sizes.reduce((sum, size) => sum + size, 0),
+      size_count: sizes.length,
+      max_size_bytes: maxSize,
+      top_rank_win: args.topManifestUrl === manifestUrl,
+      largest_source_win: maxSize > 0 && maxSize === globalLargestSize,
+      stream_breakdown: streamBreakdown,
     });
   }
 }
@@ -954,6 +979,7 @@ export async function getStreams(
     ctx,
     dispositions,
     byManifestUrl,
+    topManifestUrl: finalStreams[0]?.addon?.manifestUrl,
   });
 
   if (ctx.userData?.uuid) {

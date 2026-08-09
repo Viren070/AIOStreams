@@ -58,6 +58,7 @@ const providerConfigSchema = z.object({
   password: z.string().optional(),
   maxConnections: z.number().int().positive(),
   priority: z.number().int(),
+  backupTier: z.number().int().min(0).max(99).optional(),
   isBackup: z.boolean().optional(),
   enabled: z.boolean().optional(),
   pipelineDepth: z.number().int().min(1).max(20).optional(),
@@ -91,13 +92,14 @@ export const usenetSchema = {
     description: {
       ui:
         'NNTP provider accounts used by the built-in usenet engine. Passwords ' +
-        'are encrypted at rest. Lower `priority` = preferred; mark metered ' +
-        'block accounts as backups so they are only used when primaries miss a ' +
-        'segment.',
+        'are encrypted at rest. Tier 0 is primary; use emergency tiers 1, 2, ' +
+        'and upward for metered block accounts. Lower priority wins inside a ' +
+        'tier, and every lower tier is exhausted before the next is used.',
       env:
         'JSON array of NNTP provider objects: ' +
         '{ id, name?, host, port, tls, tlsSkipVerify?, username?, password?, ' +
-        'maxConnections, priority, isBackup?, enabled? }.',
+        'maxConnections, priority, backupTier?, isBackup?, enabled? }. ' +
+        'Legacy isBackup=true is read as backupTier=1.',
     },
     env: 'USENET_PROVIDERS',
     requiresRestart: false,

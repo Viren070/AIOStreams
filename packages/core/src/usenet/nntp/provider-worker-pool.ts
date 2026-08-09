@@ -7,6 +7,7 @@ import {
   ProviderConfig,
   ProviderPoolInfo,
   ProviderState,
+  providerBackupTier,
 } from '../types.js';
 
 const logger = createLogger('usenet/worker-pool');
@@ -144,7 +145,10 @@ export class ProviderWorkerPool {
     return this.config.name ?? this.config.id;
   }
   get isBackup(): boolean {
-    return !!this.config.isBackup;
+    return this.backupTier > 0;
+  }
+  get backupTier(): number {
+    return providerBackupTier(this.config);
   }
   get depth(): number {
     return Math.max(1, this.opts.pipelineDepth);
@@ -623,6 +627,7 @@ export class ProviderWorkerPool {
       tripped: this.tripped,
       throttled: this.throttled,
       isBackup: this.isBackup,
+      backupTier: this.backupTier,
       freeSlots: this.freeSlots,
       throughput: Math.round(this.throughputEwma * this.depth * 1000),
       queued: this.prioQ.length + this.normalQ.length,

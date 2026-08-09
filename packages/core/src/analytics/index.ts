@@ -1,4 +1,4 @@
-﻿import { createHmac } from 'crypto';
+import { createHmac } from 'crypto';
 import { getDb } from '../db/db.js';
 import { sql, join } from '../db/sql.js';
 import { config } from '../config/index.js';
@@ -44,6 +44,14 @@ export type AnalyticsServiceBreakdown = Record<
   { ok: number; cached: number; uncached: number }
 >;
 
+/** Privacy-safe stream-kind counters used only by aggregate addon metrics. */
+export interface AnalyticsStreamBreakdown {
+  cached: number;
+  uncached: number;
+  p2p: number;
+  usenet: number;
+}
+
 export interface AnalyticsEvent {
   ts: number;
   event_type: string;
@@ -66,6 +74,13 @@ export interface AnalyticsEvent {
   service_breakdown?: AnalyticsServiceBreakdown | null;
   /** Per-user `addon_contribution`: the addon's user-set display name at request time. */
   addon_name?: string | null;
+  /** Aggregate-only numeric size evidence; never written to raw event rows. */
+  size_sum_bytes?: number | null;
+  size_count?: number | null;
+  max_size_bytes?: number | null;
+  top_rank_win?: boolean;
+  largest_source_win?: boolean;
+  stream_breakdown?: AnalyticsStreamBreakdown | null;
   /** Global `config_feature` events: which dimension is being sampled. */
   feature_dim?: 'service' | 'formatter' | 'preset' | null;
   /** Global `config_feature` events: dimension key (e.g. `realdebrid`, `custom`, `torrentio`). */
@@ -218,19 +233,190 @@ async function flush(): Promise<void> {
           : null;
       return sql`(${e.ts}, ${e.event_type}, ${e.resource ?? null}, ${e.uuid_hash ?? null}, ${e.addon_id ?? null}, ${e.addon_instance_hash ?? null}, ${e.preset_id ?? null}, ${e.url_overridden ?? false}, ${e.status ?? null}, ${e.error_stage ?? null}, ${e.error_kind ?? null}, ${e.latency_ms ?? null}, ${e.result_count ?? null}, ${e.final_count ?? null}, ${e.disposition ?? null}, ${serviceBreakdown}, ${e.addon_name ?? null}, ${e.feature_dim ?? null}, ${e.feature_key ?? null}, ${e.ip_prefix ?? null})`;
     });
-    // Chunk to keep parameter counts sane.
-    const CHUNK = 500;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const slice = rows.slice(i, i + CHUNK);
-      await db.exec(
-        sql`INSERT INTO analytics_events
-          (ts, event_type, resource, uuid_hash, addon_id, addon_instance_hash, preset_id, url_overridden, status, error_stage, error_kind, latency_ms, result_count, final_count, disposition, service_breakdown, addon_name, feature_dim, feature_key, ip_prefix)
-          VALUES ${join(slice)}`
-      );
-    }
+    const performance = aggregateAddonPerformance(batch);
+    // Keep raw event insertion and durable daily counters atomic. If either
+    // side fails, neither is committed and the warning below is honest.
+    await db.tx(async (tx) => {
+      // Chunk to keep parameter counts sane.
+      const CHUNK = 500;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const slice = rows.slice(i, i + CHUNK);
+        await tx.exec(
+          sql`INSERT INTO analytics_events
+            (ts, event_type, resource, uuid_hash, addon_id, addon_instance_hash, preset_id, url_overridden, status, error_stage, error_kind, latency_ms, result_count, final_count, disposition, service_breakdown, addon_name, feature_dim, feature_key, ip_prefix)
+            VALUES ${join(slice)}`
+        );
+      }
+      for (const d of performance.values()) {
+        await tx.exec(
+          sql`INSERT INTO addon_performance_entities
+            (preset_id, instance_hash, addon_name)
+            VALUES (${d.presetId}, ${d.instanceHash}, ${d.addonName})
+            ON CONFLICT (preset_id, instance_hash) DO UPDATE SET
+              addon_name = excluded.addon_name`
+        );
+        const entity = await tx.query<{ id: number | string }>(
+          sql`SELECT id FROM addon_performance_entities
+              WHERE preset_id = ${d.presetId}
+                AND instance_hash = ${d.instanceHash}`
+        );
+        const addonId = Number(entity[0]?.id);
+        if (!Number.isFinite(addonId)) {
+          throw new Error('failed to resolve addon performance entity');
+        }
+        await tx.exec(
+          sql`INSERT INTO addon_performance_daily
+            (day, addon_id, requests, with_results,
+             merged, cut_off, not_started, errors, empty, raw_sum, final_sum,
+             latency_sum, latency_count, sized_streams, size_sum_bytes,
+             max_size_bytes, top_rank_wins, largest_source_wins,
+             cached_streams, uncached_streams, p2p_streams, usenet_streams)
+            VALUES
+            (${d.day}, ${addonId}, ${d.requests}, ${d.withResults}, ${d.merged}, ${d.cutOff},
+             ${d.notStarted}, ${d.errors}, ${d.empty}, ${d.rawSum},
+             ${d.finalSum}, ${d.latencySum}, ${d.latencyCount},
+             ${d.sizedStreams}, ${d.sizeSumBytes}, ${d.maxSizeBytes},
+             ${d.topRankWins}, ${d.largestSourceWins}, ${d.cachedStreams},
+             ${d.uncachedStreams}, ${d.p2pStreams}, ${d.usenetStreams})
+            ON CONFLICT (day, addon_id) DO UPDATE SET
+              requests = addon_performance_daily.requests + excluded.requests,
+              with_results = addon_performance_daily.with_results + excluded.with_results,
+              merged = addon_performance_daily.merged + excluded.merged,
+              cut_off = addon_performance_daily.cut_off + excluded.cut_off,
+              not_started = addon_performance_daily.not_started + excluded.not_started,
+              errors = addon_performance_daily.errors + excluded.errors,
+              empty = addon_performance_daily.empty + excluded.empty,
+              raw_sum = addon_performance_daily.raw_sum + excluded.raw_sum,
+              final_sum = addon_performance_daily.final_sum + excluded.final_sum,
+              latency_sum = addon_performance_daily.latency_sum + excluded.latency_sum,
+              latency_count = addon_performance_daily.latency_count + excluded.latency_count,
+              sized_streams = addon_performance_daily.sized_streams + excluded.sized_streams,
+              size_sum_bytes = addon_performance_daily.size_sum_bytes + excluded.size_sum_bytes,
+              max_size_bytes = CASE
+                WHEN addon_performance_daily.max_size_bytes > excluded.max_size_bytes
+                THEN addon_performance_daily.max_size_bytes
+                ELSE excluded.max_size_bytes
+              END,
+              top_rank_wins = addon_performance_daily.top_rank_wins + excluded.top_rank_wins,
+              largest_source_wins = addon_performance_daily.largest_source_wins + excluded.largest_source_wins,
+              cached_streams = addon_performance_daily.cached_streams + excluded.cached_streams,
+              uncached_streams = addon_performance_daily.uncached_streams + excluded.uncached_streams,
+              p2p_streams = addon_performance_daily.p2p_streams + excluded.p2p_streams,
+              usenet_streams = addon_performance_daily.usenet_streams + excluded.usenet_streams`
+        );
+      }
+    });
   } catch (err) {
     logger.warn({ err, dropped: batch.length }, 'analytics flush failed');
   }
+}
+
+interface AddonPerformanceDelta {
+  day: string;
+  presetId: string;
+  instanceHash: string;
+  addonName: string;
+  requests: number;
+  withResults: number;
+  merged: number;
+  cutOff: number;
+  notStarted: number;
+  errors: number;
+  empty: number;
+  rawSum: number;
+  finalSum: number;
+  latencySum: number;
+  latencyCount: number;
+  sizedStreams: number;
+  sizeSumBytes: number;
+  maxSizeBytes: number;
+  topRankWins: number;
+  largestSourceWins: number;
+  cachedStreams: number;
+  uncachedStreams: number;
+  p2pStreams: number;
+  usenetStreams: number;
+}
+
+function finiteNonNegative(value: number | null | undefined): number {
+  return Number.isFinite(value) && Number(value) > 0 ? Number(value) : 0;
+}
+
+/** Collapse hot-path contribution events into small, identity-free daily rows. */
+function aggregateAddonPerformance(
+  events: readonly AnalyticsEvent[]
+): Map<string, AddonPerformanceDelta> {
+  const out = new Map<string, AddonPerformanceDelta>();
+  for (const e of events) {
+    if (
+      e.event_type !== 'addon_contribution' ||
+      !e.preset_id ||
+      !e.addon_instance_hash
+    ) {
+      continue;
+    }
+    const day = dayKey(e.ts);
+    const key = `${day}|${e.preset_id}|${e.addon_instance_hash}`;
+    const d =
+      out.get(key) ??
+      ({
+        day,
+        presetId: e.preset_id,
+        instanceHash: e.addon_instance_hash,
+        addonName: e.addon_name ?? e.preset_id,
+        requests: 0,
+        withResults: 0,
+        merged: 0,
+        cutOff: 0,
+        notStarted: 0,
+        errors: 0,
+        empty: 0,
+        rawSum: 0,
+        finalSum: 0,
+        latencySum: 0,
+        latencyCount: 0,
+        sizedStreams: 0,
+        sizeSumBytes: 0,
+        maxSizeBytes: 0,
+        topRankWins: 0,
+        largestSourceWins: 0,
+        cachedStreams: 0,
+        uncachedStreams: 0,
+        p2pStreams: 0,
+        usenetStreams: 0,
+      } satisfies AddonPerformanceDelta);
+
+    d.addonName = e.addon_name ?? d.addonName;
+    d.requests += 1;
+    const raw = finiteNonNegative(e.result_count);
+    const final = finiteNonNegative(e.final_count);
+    d.rawSum += raw;
+    d.finalSum += final;
+    if (raw > 0) d.withResults += 1;
+    if (e.status === 'error' || e.disposition === 'error') d.errors += 1;
+    if (e.status === 'empty') d.empty += 1;
+    if (e.disposition === 'merged') d.merged += 1;
+    if (e.disposition === 'cut_off') d.cutOff += 1;
+    if (e.disposition === 'not_started') d.notStarted += 1;
+    if (e.latency_ms != null && Number.isFinite(e.latency_ms)) {
+      d.latencySum += Math.max(0, e.latency_ms);
+      d.latencyCount += 1;
+    }
+    const sizeCount = finiteNonNegative(e.size_count);
+    const sizeSum = finiteNonNegative(e.size_sum_bytes);
+    const maxSize = finiteNonNegative(e.max_size_bytes);
+    d.sizedStreams += sizeCount;
+    d.sizeSumBytes += sizeSum;
+    d.maxSizeBytes = Math.max(d.maxSizeBytes, maxSize);
+    if (e.top_rank_win) d.topRankWins += 1;
+    if (e.largest_source_win) d.largestSourceWins += 1;
+    d.cachedStreams += finiteNonNegative(e.stream_breakdown?.cached);
+    d.uncachedStreams += finiteNonNegative(e.stream_breakdown?.uncached);
+    d.p2pStreams += finiteNonNegative(e.stream_breakdown?.p2p);
+    d.usenetStreams += finiteNonNegative(e.stream_breakdown?.usenet);
+    out.set(key, d);
+  }
+  return out;
 }
 
 function dayKey(ms: number): string {

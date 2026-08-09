@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Read side of analytics for the dashboard. Recent ranges (≤ event retention)
  * read raw `analytics_events`; longer ranges read the `analytics_daily`
  * rollup.
@@ -40,6 +40,10 @@ function dayExpr(col: string) {
   return getDb().dialect === 'postgres'
     ? `to_char(${col}, 'YYYY-MM-DD')`
     : `strftime('%Y-%m-%d', ${col})`;
+}
+
+function dayKeyFromMs(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
 }
 
 export const AnalyticsRepository = {
@@ -207,6 +211,162 @@ export const AnalyticsRepository = {
       }),
       n(custom[0]?.c)
     );
+  },
+
+  /**
+   * Durable, privacy-safe addon quality evidence. This reads one normalized
+   * counter row per addon/day; it never touches media ids, titles or URLs.
+   * File size is reported separately and deliberately excluded from the
+   * quality score because a larger encode is not inherently a better result.
+   */
+  async addonPerformance(range: AnalyticsRange) {
+    const db = getDb();
+    const cutoffDay =
+      range === 'all'
+        ? null
+        : dayKeyFromMs(
+            Date.now() - (range === '24h' ? 1 : range === '7d' ? 7 : 30) * DAY
+          );
+    const where = cutoffDay ? sql`WHERE d.day >= ${cutoffDay}` : sql``;
+    const rows = await db.query<{
+      preset_id: string;
+      instance_hash: string;
+      addon_name: string;
+      requests: number | string;
+      with_results: number | string;
+      merged: number | string;
+      cut_off: number | string;
+      not_started: number | string;
+      errors: number | string;
+      empty: number | string;
+      raw_sum: number | string;
+      final_sum: number | string;
+      latency_sum: number | string;
+      latency_count: number | string;
+      sized_streams: number | string;
+      size_sum_bytes: number | string;
+      max_size_bytes: number | string;
+      top_rank_wins: number | string;
+      largest_source_wins: number | string;
+      cached_streams: number | string;
+      uncached_streams: number | string;
+      p2p_streams: number | string;
+      usenet_streams: number | string;
+    }>(
+      sql`SELECT e.preset_id, e.instance_hash, e.addon_name,
+                 SUM(d.requests) AS requests,
+                 SUM(d.with_results) AS with_results,
+                 SUM(d.merged) AS merged,
+                 SUM(d.cut_off) AS cut_off,
+                 SUM(d.not_started) AS not_started,
+                 SUM(d.errors) AS errors,
+                 SUM(d.empty) AS empty,
+                 SUM(d.raw_sum) AS raw_sum,
+                 SUM(d.final_sum) AS final_sum,
+                 SUM(d.latency_sum) AS latency_sum,
+                 SUM(d.latency_count) AS latency_count,
+                 SUM(d.sized_streams) AS sized_streams,
+                 SUM(d.size_sum_bytes) AS size_sum_bytes,
+                 MAX(d.max_size_bytes) AS max_size_bytes,
+                 SUM(d.top_rank_wins) AS top_rank_wins,
+                 SUM(d.largest_source_wins) AS largest_source_wins,
+                 SUM(d.cached_streams) AS cached_streams,
+                 SUM(d.uncached_streams) AS uncached_streams,
+                 SUM(d.p2p_streams) AS p2p_streams,
+                 SUM(d.usenet_streams) AS usenet_streams
+          FROM addon_performance_daily d
+          JOIN addon_performance_entities e ON e.id = d.addon_id
+          ${where}
+          GROUP BY e.id, e.preset_id, e.instance_hash, e.addon_name`
+    );
+
+    const totalFinal = rows.reduce((sum, r) => sum + n(r.final_sum), 0);
+    const pct = (part: number, whole: number) =>
+      whole ? +((part / whole) * 100).toFixed(1) : 0;
+    const clamp = (value: number) => Math.max(0, Math.min(100, value));
+
+    const addons = rows.map((r) => {
+      const requests = n(r.requests);
+      const withResults = n(r.with_results);
+      const merged = n(r.merged);
+      const errors = n(r.errors);
+      const rawResults = n(r.raw_sum);
+      const finalResults = n(r.final_sum);
+      const latencyCount = n(r.latency_count);
+      const sizedStreams = n(r.sized_streams);
+      const availabilityRate = pct(withResults, requests);
+      const contributionRate = pct(merged, requests);
+      const survivalRate = clamp(pct(finalResults, rawResults));
+      const topRankRate = pct(n(r.top_rank_wins), requests);
+      const reliabilityRate = 100 - pct(errors, requests);
+      // Transparent, size-neutral quality score. Sample count and confidence
+      // are returned beside it so a perfect score from two requests cannot be
+      // mistaken for stronger evidence than a 95 from hundreds.
+      const score = +(
+        availabilityRate * 0.3 +
+        contributionRate * 0.25 +
+        survivalRate * 0.2 +
+        topRankRate * 0.15 +
+        reliabilityRate * 0.1
+      ).toFixed(1);
+      return {
+        presetId: r.preset_id,
+        instanceHash: r.instance_hash,
+        addonName: r.addon_name || r.preset_id,
+        requests,
+        confidence: Math.min(100, Math.round((requests / 25) * 100)),
+        score,
+        withResults,
+        availabilityRate,
+        merged,
+        contributionRate,
+        cutOff: n(r.cut_off),
+        cutOffRate: pct(n(r.cut_off), requests),
+        notStarted: n(r.not_started),
+        errors,
+        errorRate: pct(errors, requests),
+        empty: n(r.empty),
+        emptyRate: pct(n(r.empty), requests),
+        rawResults,
+        finalResults,
+        finalShare: pct(finalResults, totalFinal),
+        survivalRate,
+        avgRawResults: requests ? +(rawResults / requests).toFixed(1) : 0,
+        avgFinalResults: requests ? +(finalResults / requests).toFixed(1) : 0,
+        avgLatencyMs: latencyCount
+          ? Math.round(n(r.latency_sum) / latencyCount)
+          : null,
+        sizedStreams,
+        avgSizeBytes: sizedStreams
+          ? Math.round(n(r.size_sum_bytes) / sizedStreams)
+          : null,
+        maxSizeBytes: n(r.max_size_bytes),
+        topRankWins: n(r.top_rank_wins),
+        topRankRate,
+        largestSourceWins: n(r.largest_source_wins),
+        largestSourceRate: pct(n(r.largest_source_wins), requests),
+        streamTypes: {
+          cached: n(r.cached_streams),
+          uncached: n(r.uncached_streams),
+          p2p: n(r.p2p_streams),
+          usenet: n(r.usenet_streams),
+        },
+      };
+    });
+
+    addons.sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.confidence - a.confidence ||
+        b.requests - a.requests
+    );
+    return {
+      scoreFormula:
+        '30% availability + 25% contribution frequency + 20% result survival + 15% top-rank wins + 10% reliability; file size is ranked separately',
+      totalRequests: addons.reduce((sum, a) => sum + a.requests, 0),
+      totalFinalResults: totalFinal,
+      addons,
+    };
   },
 
   /** Top active uuid_hash by request count (recent window). */

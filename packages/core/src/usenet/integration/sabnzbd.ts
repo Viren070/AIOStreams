@@ -11,6 +11,7 @@ import { createLogger } from '../../logging/logger.js';
 import { addUsenetNzb } from './library.js';
 import { baseName, stripNzbExt, stripReleaseExt } from './naming.js';
 import { getUsenetProviders, getUsenetLiveStats } from './dashboard/index.js';
+import { providerBackupTier } from '../types.js';
 
 const logger = createLogger('usenet/sabnzbd');
 
@@ -465,7 +466,7 @@ function buildGetConfig(req: SabnzbdRequest, cats: string[]): SabnzbdResult {
           connections: p.maxConnections,
           ssl: p.tls ? 1 : 0,
           enable: p.enabled !== false ? 1 : 0,
-          optional: p.isBackup ? 1 : 0,
+          optional: providerBackupTier(p) > 0 ? 1 : 0,
           priority: p.priority,
           username: p.username ?? '',
           password: p.hasPassword ? '**********' : '',
@@ -516,7 +517,7 @@ function buildStatus(): SabnzbdResult {
             serveractive: p.enabled !== false,
             servererror: poolInfo?.tripped ? 'circuit breaker tripped' : '',
             serverpriority: p.priority,
-            serveroptional: p.isBackup ? 1 : 0,
+            serveroptional: providerBackupTier(p) > 0 ? 1 : 0,
             serverbps: humanSize(0),
             serverconnections: [] as unknown[],
           };

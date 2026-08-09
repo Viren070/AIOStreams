@@ -364,7 +364,7 @@ function LivePanel() {
                     <span className="truncate">{p.name || p.id}</span>
                     {p.isBackup && (
                       <span className="text-xs text-[--muted] shrink-0">
-                        backup
+                        tier {p.backupTier}
                       </span>
                     )}
                     {degraded && (
@@ -477,7 +477,9 @@ function ProviderTable({ providers }: { providers: UsenetProviderStatRow[] }) {
                   />
                   <span className="font-medium">{p.name || p.host}</span>
                   {p.isBackup && (
-                    <span className="text-xs text-[--muted]">backup</span>
+                    <span className="text-xs text-[--muted]">
+                      tier {p.backupTier}
+                    </span>
                   )}
                   {!p.enabled && (
                     <span className="text-xs text-[--muted]">(disabled)</span>
@@ -559,9 +561,11 @@ function indexerFailBreakdown(i: UsenetIndexerStatRow): string {
 }
 
 /** Popover shape mirroring {@link ProviderHealthPopover} for grab errors. */
-function indexerErrorInfo(
-  e: NonNullable<UsenetIndexerStatRow['lastError']>
-): { tone: 'bad' | 'warn'; label: string; hint: string } {
+function indexerErrorInfo(e: NonNullable<UsenetIndexerStatRow['lastError']>): {
+  tone: 'bad' | 'warn';
+  label: string;
+  hint: string;
+} {
   if (e.status === 401 || e.status === 403) {
     return {
       tone: 'bad',

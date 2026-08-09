@@ -6,7 +6,7 @@
   "scripts": {
     "test": "tsx --test --test-force-exit --import ./test/setup.ts \"src/**/*.test.ts\"",
     "test:watch": "tsx --test --watch --import ./test/setup.ts \"src/**/*.test.ts\"",
-    "build": "tsc",
+    "build": "tsc --build --force",
     "dev": "tsc -w --preserveWatchOutput"
   },
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",

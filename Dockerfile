@@ -45,7 +45,7 @@ COPY resources ./resources
 
 
 # Build the project.
-RUN pnpm run build
+RUN rm -rf packages/*/dist && find . -name "*.tsbuildinfo" -delete && pnpm run metadata && pnpm run build
 
 # Remove development dependencies.
 RUN rm -rf node_modules

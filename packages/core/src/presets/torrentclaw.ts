@@ -30,7 +30,7 @@ type TorrentClawFormattingOptions = {
   showScore?: boolean;
   showTorBoxIndicator?: boolean;
   showTrueSpec?: boolean;
-  showUnarr?: boolean;
+  
 };
 
 type TorrentClawRemappingOptions = {
@@ -44,7 +44,6 @@ type TorrentClawRemappingOptions = {
 };
 
 type TorrentClawPresetOptions = {
-  usenetEnabled?: boolean;
   playback?: TorrentClawPlaybackOptions;
   remapping?: TorrentClawRemappingOptions;
   formatting?: TorrentClawFormattingOptions;
@@ -428,7 +427,6 @@ export class TorrentClawStreamParser extends StreamParser {
     const lines = this.getLines(stream);
     const score = lines.find((line) => /\b\d{1,3}\/100\b/.test(line));
     const trueSpec = lines.find((line) => /\btruespec\b/i.test(line));
-    const unarr = lines.find((line) => /\bunarr\b/i.test(line));
     const isAction = !stream.url && Boolean(stream.externalUrl);
     const suffix: string[] = [];
 
@@ -440,7 +438,6 @@ export class TorrentClawStreamParser extends StreamParser {
       );
     }
     if (this.options.showTrueSpec !== false && trueSpec) suffix.push(trueSpec);
-    if (this.options.showUnarr !== false && unarr) suffix.push(unarr);
 
     return {
       ...(super.getExtras(stream, currentParsedStream) || {}),
@@ -450,7 +447,6 @@ export class TorrentClawStreamParser extends StreamParser {
           : undefined,
         torBox: /\bTB\b/.test(score || ''),
         trueSpec: Boolean(trueSpec),
-        unarr: Boolean(unarr),
       },
       formattingPassthrough: isAction,
       formattingSuffix: suffix,
@@ -479,27 +475,6 @@ export class TorrentClawPreset extends Preset {
           appConfig.presets.defaultTimeout,
         appConfig.presets.torrentclaw.url
       ),
-      {
-        id: 'usenetEnabled',
-        name: 'Enable NZB / Usenet',
-        description:
-          'Accept TorrentClaw NZB-compatible results and route them through the configured AIOStreams NNTP providers. TorrentClaw itself currently publishes torrent results; this stays dormant until an NZB result is present.',
-        type: 'boolean',
-        required: false,
-        default: false,
-        showInSimpleMode: true,
-      },
-      {
-        id: 'nzbMonthlyLimitGb',
-        name: 'TorrentClaw NZB Monthly Limit (GB)',
-        description:
-          'Hard reservation cap for TorrentClaw-originated native NZB playback. The enforced default is 200 GB and resets each UTC calendar month.',
-        type: 'number',
-        required: false,
-        default: 200,
-        constraints: { min: 1, max: 200 },
-        showInSimpleMode: false,
-      },
       {
         id: 'mediaTypes',
         name: 'Media Types',
@@ -678,14 +653,7 @@ export class TorrentClawPreset extends Preset {
             type: 'boolean',
             default: true,
           },
-          {
-            id: 'showUnarr',
-            name: 'Unarr Indicator',
-            description:
-              'Preserve the Unarr indicator whenever TorrentClaw supplies it.',
-            type: 'boolean',
-            default: true,
-          },
+          
         ],
       },
       {
@@ -734,7 +702,7 @@ export class TorrentClawPreset extends Preset {
         appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
-        'AI-verified torrent, debrid and Unarr streams with quality scores, TrueSpec indicators, and automatic metadata-ID repair.',
+        'AI-verified torrent and debrid streams with quality scores, TrueSpec indicators, and automatic metadata-ID repair.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [
         constants.P2P_STREAM_TYPE,
@@ -766,7 +734,7 @@ export class TorrentClawPreset extends Preset {
     const remapping = options.remapping || {};
     const original = filterTorrentClawPlaybackActions(streams, playback).filter(
       (stream) =>
-        options.usenetEnabled === true ||
+        
         stream.type !== constants.STREMIO_USENET_STREAM_TYPE
     );
 

@@ -569,6 +569,13 @@ router.get('/analytics/addons', async (req, res) => {
   res.status(200).json(createResponse({ success: true, data }));
 });
 
+router.get('/analytics/addon-performance', async (req, res) => {
+  const data = await AnalyticsRepository.addonPerformance(
+    parseRange(req.query.range)
+  );
+  res.status(200).json(createResponse({ success: true, data }));
+});
+
 router.get('/analytics/features', async (req, res) => {
   const data = await AnalyticsRepository.features(parseRange(req.query.range));
   res.status(200).json(createResponse({ success: true, data }));

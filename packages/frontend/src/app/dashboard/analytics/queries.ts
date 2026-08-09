@@ -67,6 +67,63 @@ export const useAddonsAnalytics = (range: Range) =>
     staleTime: 30_000,
   });
 
+export interface AddonPerformanceRow {
+  presetId: string;
+  instanceHash: string;
+  addonName: string;
+  requests: number;
+  confidence: number;
+  score: number;
+  withResults: number;
+  availabilityRate: number;
+  merged: number;
+  contributionRate: number;
+  cutOff: number;
+  cutOffRate: number;
+  notStarted: number;
+  errors: number;
+  errorRate: number;
+  empty: number;
+  emptyRate: number;
+  rawResults: number;
+  finalResults: number;
+  finalShare: number;
+  survivalRate: number;
+  avgRawResults: number;
+  avgFinalResults: number;
+  avgLatencyMs: number | null;
+  sizedStreams: number;
+  avgSizeBytes: number | null;
+  maxSizeBytes: number;
+  topRankWins: number;
+  topRankRate: number;
+  largestSourceWins: number;
+  largestSourceRate: number;
+  streamTypes: {
+    cached: number;
+    uncached: number;
+    p2p: number;
+    usenet: number;
+  };
+}
+
+export interface AddonPerformanceData {
+  scoreFormula: string;
+  totalRequests: number;
+  totalFinalResults: number;
+  addons: AddonPerformanceRow[];
+}
+
+export const useAddonPerformanceAnalytics = (range: Range) =>
+  useQuery({
+    queryKey: ['dashboard', 'analytics', 'addon-performance', range],
+    queryFn: () =>
+      api<AddonPerformanceData>(
+        `/dashboard/analytics/addon-performance?range=${range}`
+      ),
+    staleTime: 30_000,
+  });
+
 /**
  * Global feature-usage rollups: which services/formatters/presets users
  * actually configure across the instance. Each entry's `count` is the number

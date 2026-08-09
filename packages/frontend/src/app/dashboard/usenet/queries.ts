@@ -42,6 +42,7 @@ export interface ProviderPoolInfo {
   tripped: boolean;
   throttled: boolean;
   isBackup: boolean;
+  backupTier: number;
   freeSlots: number;
   throughput: number;
   /** Requests waiting in the pool's queues (not yet on a connection). */
@@ -87,6 +88,7 @@ export interface UsenetProviderStatRow {
   host: string;
   enabled: boolean;
   isBackup: boolean;
+  backupTier: number;
   priority: number;
   live: ProviderLiveInfo;
   articles: number;
@@ -193,6 +195,7 @@ export interface MaskedProvider {
   maxConnections: number;
   pipelineDepth?: number;
   priority: number;
+  backupTier?: number;
   isBackup?: boolean;
   enabled?: boolean;
   hasPassword: boolean;

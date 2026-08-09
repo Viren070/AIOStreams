@@ -66,6 +66,9 @@ jobs:
           ref: ${{ needs.setup.outputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lower case repository name
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -95,7 +98,7 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          outputs: type=image,name=ghcr.io/viren070/aiostreams,push-by-digest=true,name-canonical=true
+          outputs: type=image,name=ghcr.io/${{ env.REPO }},push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
 
@@ -124,6 +127,9 @@ jobs:
           pattern: '{amd64,arm64}'
           merge-multiple: true
 
+      - name: Set lower case repository name
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:

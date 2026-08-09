@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   AIOStreams,
   APIError,
@@ -37,10 +37,17 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
     name: config?.addonName || appConfig.branding.addonName,
     id: addonId,
     version:
-      appConfig.bootstrap.version === 'unknown'
-        ? '0.0.0'
+      !appConfig.bootstrap.version ||
+      appConfig.bootstrap.version === 'unknown' ||
+      appConfig.bootstrap.version === '0.0.0'
+        ? '2.31.1'
         : appConfig.bootstrap.version,
-    description: config?.addonDescription || appConfig.bootstrap.description,
+    description:
+      config?.addonDescription ||
+      (appConfig.bootstrap.description &&
+      appConfig.bootstrap.description !== 'unknown'
+        ? appConfig.bootstrap.description
+        : 'Consolidate multiple Stremio addons and debrid/usenet services into a single super-addon with custom filtering, sorting, and formatting.'),
     catalogs,
     resources,
     types: resources.reduce((types, resource) => {

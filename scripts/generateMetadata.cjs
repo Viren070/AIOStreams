@@ -22,21 +22,25 @@ let { version, description } = require('../package.json');
 const os = require('os');
 
 let tag;
-if (isDev && refArg) {
-  tag = refArg;
-} else if (isNightly) {
-  tag = execSync('git describe --tags --abbrev=0').toString().trim();
-} else {
-  if (os.platform() === 'win32') {
-    tag = execSync('git tag --sort=-version:refname')
-      .toString()
-      .trim()
-      .split('\n')[0];
+try {
+  if (isDev && refArg) {
+    tag = refArg;
+  } else if (isNightly) {
+    tag = execSync('git describe --tags --abbrev=0').toString().trim();
   } else {
-    tag = execSync('git tag --sort=-version:refname | head -n 1')
-      .toString()
-      .trim();
+    if (os.platform() === 'win32') {
+      tag = execSync('git tag --sort=-version:refname')
+        .toString()
+        .trim()
+        .split('\n')[0];
+    } else {
+      tag = execSync('git tag --sort=-version:refname | head -n 1')
+        .toString()
+        .trim();
+    }
   }
+} catch {
+  tag = `v${version}`;
 }
 
 // Get the current Git commit hash
@@ -51,9 +55,13 @@ if (commitArg) {
     commitHash = 'unknown';
   }
 }
-const commitTime = execSync('git log -1 --format=%cd --date=iso')
-  .toString()
-  .trim();
+
+let commitTime;
+try {
+  commitTime = new Date(execSync('git log -1 --format=%cd --date=iso').toString().trim()).toISOString();
+} catch {
+  commitTime = new Date().toISOString();
+}
 
 // Create the version info object
 const versionInfo = {
