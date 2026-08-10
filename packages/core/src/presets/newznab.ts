@@ -30,21 +30,33 @@ const NEWZNAB_INDEXERS: {
   label: string;
   value: string;
   apiKeyUrl?: string;
+  noApiKeyRequired?: boolean;
 }[] = [
   {
     label: 'altHUB',
     value: 'https://api.althub.co.za/api',
     apiKeyUrl: 'https://althub.co.za/profile',
   },
-  // AnimeTosho needs no key at all
-  { label: 'AnimeTosho', value: 'https://feed.animetosho.org/api' },
+  {
+    label: 'AnimeTosho',
+    value: 'https://feed.animetosho.org/api',
+    noApiKeyRequired: true,
+  },
   {
     label: 'AnimeTosho (NEW)',
     value: 'https://feed.animetosho.xyz/api',
     apiKeyUrl: 'https://animetosho.xyz/profile',
   },
-  { label: 'Aninzb', value: 'https://aninzb.moe/api' },
-  { label: 'ClubNZB', value: 'https://clubnzb.com/api' },
+  {
+    label: 'Aninzb',
+    value: 'https://aninzb.moe/api',
+    noApiKeyRequired: true,
+  },
+  {
+    label: 'ClubNZB',
+    value: 'https://clubnzb.com/api',
+    noApiKeyRequired: true,
+  },
   { label: 'DOGnzb', value: 'https://api.dognzb.cr/api' },
   {
     label: 'DrunkenSlug',
@@ -86,10 +98,15 @@ const NEWZNAB_INDEXERS: {
     value: 'https://api.nzbplanet.net/api',
     apiKeyUrl: 'https://nzbplanet.net/profile',
   },
-  { label: 'NZBStars', value: 'https://nzbstars.com/api' },
+  {
+    label: 'NZBStars',
+    value: 'https://nzbstars.com/api',
+    noApiKeyRequired: true,
+  },
   {
     label: 'Treasure Maps (formerly SceneNZBs)',
     value: 'https://treasure-maps.com/api',
+    apiKeyUrl: 'https://treasure-maps.com/account',
   },
   {
     label: 'Tabula Rasa',
@@ -106,6 +123,13 @@ const NEWZNAB_INDEXERS: {
     value: 'https://www.usenet-crawler.com/api',
     apiKeyUrl: 'https://www.usenet-crawler.com/profile',
   },
+];
+
+const NEWZNAB_INDEXER_OPTIONS = [
+  { label: 'No API key required', value: '__group_no_key__', disabled: true },
+  ...NEWZNAB_INDEXERS.filter((indexer) => indexer.noApiKeyRequired),
+  { label: 'Requires API key', value: '__group_needs_key__', disabled: true },
+  ...NEWZNAB_INDEXERS.filter((indexer) => !indexer.noApiKeyRequired),
 ];
 
 export class NewznabPreset extends BuiltinAddonPreset {
@@ -144,10 +168,10 @@ export class NewznabPreset extends BuiltinAddonPreset {
             id: 'url',
             name: 'Newznab URL',
             description:
-              'Pick an indexer, or choose `Custom` to enter the full URL of the Newznab API endpoint (including the path, usually `/api`).',
+              'Pick an indexer, or choose `Custom` to enter the full URL of the Newznab API endpoint (including the path, usually `/api`). New to Usenet indexers? Compare options at [nzb-sources](https://hampelmen.github.io/nzb-sources/).',
             type: 'select-with-custom',
             required: true,
-            options: NEWZNAB_INDEXERS,
+            options: NEWZNAB_INDEXER_OPTIONS,
           },
           {
             id: 'apiKey',

@@ -188,7 +188,7 @@ interface SelectWithCustomProps {
   label: string;
   value: any;
   onChange: (value: string | undefined) => void;
-  options?: { label: string; value: any }[];
+  options?: { label: string; value: any; disabled?: boolean }[];
   required?: boolean;
   disabled?: boolean;
 }
@@ -215,7 +215,11 @@ function SelectWithCustom({
   };
 
   const optionsWithCustom = [
-    ...(options?.map((opt) => ({ label: opt.label, value: opt.value })) ?? []),
+    ...(options?.map((opt) => ({
+      label: opt.label,
+      value: opt.value,
+      disabled: opt.disabled,
+    })) ?? []),
     { label: 'Custom', value: 'Custom' },
   ];
 
@@ -750,10 +754,11 @@ export function NabEndpointInput({
     onChange({ ...current, ...patch });
   };
 
-  // only point at a key page for indexers we have a confirmed link for
-  const apiKeyUrl = urlOption?.options?.find(
+  const selectedIndexer = urlOption?.options?.find(
     (entry) => entry.value === current.url
-  )?.apiKeyUrl;
+  );
+  // only point at a key page for indexers we have a confirmed link for
+  const apiKeyUrl = selectedIndexer?.apiKeyUrl;
   const apiKeyDescription = [
     apiKeyOption?.description,
     apiKeyUrl && `[Find your API key](${apiKeyUrl})`,
@@ -841,7 +846,7 @@ export function NabEndpointInput({
         </div>
       )}
 
-      {apiKeyOption && (
+      {apiKeyOption && !selectedIndexer?.noApiKeyRequired && (
         <div>
           <PasswordInput
             label={apiKeyOption.name}

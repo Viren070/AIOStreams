@@ -324,6 +324,10 @@ const OptionDefinition = z.looseObject({
         label: z.string().min(1),
         // for 'nab-endpoint': where this indexer shows the user their api key
         apiKeyUrl: z.string().url().optional(),
+        // for 'nab-endpoint': true if this indexer needs no api key at all
+        noApiKeyRequired: z.boolean().optional(),
+        // non-selectable, e.g. a section header separating grouped options
+        disabled: z.boolean().optional(),
       })
     )
     .optional(),
