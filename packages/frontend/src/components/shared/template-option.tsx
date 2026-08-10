@@ -757,6 +757,14 @@ export function NabEndpointInput({
   const selectedIndexer = urlOption?.options?.find(
     (entry) => entry.value === current.url
   );
+
+  const handleUrlChange = (url: string | undefined) => {
+    const selected = urlOption?.options?.find((entry) => entry.value === url);
+    update({
+      url,
+      ...(selected?.noApiKeyRequired ? { apiKey: undefined } : {}),
+    });
+  };
   // only point at a key page for indexers we have a confirmed link for
   const apiKeyUrl = selectedIndexer?.apiKeyUrl;
   const apiKeyDescription = [
@@ -807,7 +815,7 @@ export function NabEndpointInput({
             <SelectWithCustom
               label={urlOption.name}
               value={current.url}
-              onChange={(url) => update({ url })}
+              onChange={handleUrlChange}
               options={urlOption.options}
               required={urlOption.required}
               disabled={disabled}
