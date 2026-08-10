@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.33.2](https://github.com/Viren070/AIOStreams/compare/v2.33.1...v2.33.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* **usenet:** type archive inner files by magic bytes ([9a1b6d7](https://github.com/Viren070/AIOStreams/commit/9a1b6d7f4954dc38113153893c070580ecd1faef))
+* **variants:** support path param based selector and make default ([9778afc](https://github.com/Viren070/AIOStreams/commit/9778afcf07f2b994b226d69031caa454d5127aec))
+
 ## [2.33.1](https://github.com/Viren070/AIOStreams/compare/v2.33.0...v2.33.1) (2026-08-09)
 
 
