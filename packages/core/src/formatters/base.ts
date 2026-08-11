@@ -59,6 +59,7 @@ export interface ParseValue {
     resolution: string | null;
     subbed: boolean;
     dubbed: boolean;
+    mediaInfoQuality: string | null;
     languages: string[] | null;
     uLanguages: string[] | null;
     subtitles: string[] | null;
@@ -498,6 +499,7 @@ export abstract class BaseFormatter {
         subbed:
           stream.parsedFile?.subbed || !!stream.parsedFile?.subtitles?.length,
         dubbed: stream.parsedFile?.dubbed || false,
+        mediaInfoQuality: stream.parsedFile?.mediaInfoQuality ?? null,
         get languages() {
           return languageVariants().sortedValues;
         },

@@ -190,6 +190,9 @@ export class NekoBtStreamParser extends BuiltinStreamParser {
         }
       }
       // audio languages
+      if (fileMetadata.audioLanguages?.length) {
+        parsedFile.mediaInfoQuality = 'indexer';
+      }
       [...(fileMetadata.audioLanguages ?? [])]
         .map(NekoBtStreamParser.normalizeNekoBtLangCode)
         .map(mapLanguageCode)

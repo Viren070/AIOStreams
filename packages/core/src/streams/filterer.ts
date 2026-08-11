@@ -1976,9 +1976,12 @@ class StreamFilterer {
         !skipLanguageFiltering &&
         this.userData.requiredLanguages &&
         this.userData.requiredLanguages.length > 0 &&
-        !this.userData.requiredLanguages.some((lang) =>
-          (file?.languages.length ? file.languages : ['Unknown']).includes(lang)
-        )
+        ((this.userData.requiredLanguagesPrecise && !file?.mediaInfoQuality) ||
+          !this.userData.requiredLanguages.some((lang) =>
+            (file?.languages.length ? file.languages : ['Unknown']).includes(
+              lang
+            )
+          ))
       ) {
         this.incrementRemovalReason(
           'requiredLanguage',
