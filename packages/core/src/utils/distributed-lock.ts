@@ -56,8 +56,11 @@ export function flattenError(err: Error) {
     message: err.message,
   };
   for (const [k, v] of Object.entries(err)) {
-    // cause may hold a raw, non-JSON-safe SDK error (circular refs) - skip it.
-    if (k !== 'cause') flat[k] = v;
+    // cause may hold a non-JSON-safe SDK error (circular refs) - drop it,
+    // and never let a field clobber a protocol key.
+    if (k !== 'cause' && k !== '__lockError' && k !== 'className') {
+      flat[k] = v;
+    }
   }
   return flat;
 }

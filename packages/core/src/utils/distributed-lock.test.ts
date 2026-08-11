@@ -98,6 +98,17 @@ describe('distributed-lock error serialization', () => {
     assert.equal((revived.error as any).cause, undefined);
   });
 
+  test('an error field named like a protocol key cannot clobber it', () => {
+    const err = new TestDebridError('collision', 'UNKNOWN', 500);
+    (err as any).__lockError = false;
+    (err as any).className = 'not-the-real-class-name';
+
+    const wire = stringifyLockResult({ error: err });
+    const revived = parseLockResult<{ error: Error }>(wire);
+    assert.ok(revived.error instanceof TestDebridError);
+    assert.equal(revived.error.message, 'collision');
+  });
+
   test('a circular field elsewhere (e.g. body) falls back to a minimal error instead of throwing', () => {
     const circular: any = {};
     circular.self = circular;
