@@ -4,6 +4,7 @@ import {
   decryptString,
   NewshostingIndexerAddon,
   NewshostingPrivateConfigSchema,
+  verifyConfigProxyGrant,
 } from '@aiostreams/core';
 
 const router: Router = Router();
@@ -78,6 +79,10 @@ router.get(
       const config = NewshostingPrivateConfigSchema.parse(
         decryptJson(req.params.nzbConfig, 'NZB')
       );
+      const grant = verifyConfigProxyGrant(config.proxyAuth);
+      if (!grant || grant.audience !== 'newshosting-nzb') {
+        throw new Error('Invalid Newshosting NZB proxy authorization');
+      }
       const content = Buffer.from(
         await createNewshostingNzb(req.params.encodedId, config),
         'utf8'

@@ -158,7 +158,7 @@ export class DebridioPreset extends Preset {
         service.enabled &&
         service.credentials
     );
-    const playbackMode = (options.playbackMode || 'p2p') as
+    const playbackMode = (options.playbackMode || 'auto') as
       | 'auto'
       | 'debrid'
       | 'p2p';
@@ -253,12 +253,12 @@ export class DebridioPreset extends Preset {
     return {
       name: options.name || this.METADATA.NAME,
       displayIdentifier: options.p2pMode
-        ? 'P2P'
+        ? 'debridio-p2p'
         : service
           ? `${constants.SERVICE_DETAILS[service].shortName}`
           : 'custom',
       identifier: options.p2pMode
-        ? 'p2p'
+        ? 'debridio-p2p'
         : service
           ? `${constants.SERVICE_DETAILS[service].shortName}`
           : 'custom',

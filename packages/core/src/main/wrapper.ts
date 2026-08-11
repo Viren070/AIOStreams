@@ -315,7 +315,9 @@ export class Wrapper {
         options: this.addon.preset.options,
       })
     );
-    const streams = await this.preset.transformStreamResponse({
+    let streams: Stream[];
+    try {
+      streams = await this.preset.transformStreamResponse({
       addon: this.addon,
       type,
       id,
@@ -336,7 +338,11 @@ export class Wrapper {
         }
         return validator(await response.json());
       },
-    });
+      });
+    } catch (error) {
+      await streamsCache.delete(cacheKey);
+      throw error;
+    }
     const start = Date.now();
     const parser = new (this.preset.getParser())(this.addon);
     let invalidateCache: boolean = false;

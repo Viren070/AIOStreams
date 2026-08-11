@@ -698,18 +698,21 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     const tiers = [...new Set(this.pools.map((pool) => pool.backupTier))].sort(
       (a, b) => a - b
     );
-    const list = tiers.flatMap((tier) =>
+    const lists = tiers.map((tier) =>
       this.orderProviders(tier, EMPTY_EXCLUDE)
     );
+    const list = lists.flat();
     if (!nzbHash || list.length < 2) return list;
-    return list
-      .map((pool, i) => ({
-        pool,
-        i,
-        demoted: this.affinity.isDemoted(nzbHash, pool.id) ? 1 : 0,
-      }))
-      .sort((a, b) => a.demoted - b.demoted || a.i - b.i)
-      .map((x) => x.pool);
+    return lists.flatMap((tierPools) =>
+      tierPools
+        .map((pool, i) => ({
+          pool,
+          i,
+          demoted: this.affinity.isDemoted(nzbHash, pool.id) ? 1 : 0,
+        }))
+        .sort((a, b) => a.demoted - b.demoted || a.i - b.i)
+        .map((x) => x.pool)
+    );
   }
 
   /**

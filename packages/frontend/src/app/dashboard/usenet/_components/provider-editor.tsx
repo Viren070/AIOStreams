@@ -826,6 +826,7 @@ function ProviderRow({
             <div className="flex items-center gap-2">
               <span className="text-xs text-[--muted]">Emergency tier</span>
               <NumberInput
+                aria-label="Emergency tier"
                 value={d.backupTier}
                 min={0}
                 max={99}

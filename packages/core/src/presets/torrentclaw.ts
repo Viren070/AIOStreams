@@ -126,10 +126,15 @@ async function probeEpisodeSize(url: string): Promise<number | undefined> {
     // Size enrichment is best-effort and must never hide a playable stream.
   }
 
-  if (episodeSizeCache.size > 2_000) {
+  if (episodeSizeCache.size >= 2_000) {
     const now = Date.now();
     for (const [key, entry] of episodeSizeCache) {
       if (entry.expires <= now) episodeSizeCache.delete(key);
+    }
+    while (episodeSizeCache.size >= 2_000) {
+      const oldest = episodeSizeCache.keys().next().value as string | undefined;
+      if (!oldest) break;
+      episodeSizeCache.delete(oldest);
     }
   }
   episodeSizeCache.set(url, {

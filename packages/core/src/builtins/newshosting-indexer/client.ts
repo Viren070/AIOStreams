@@ -53,8 +53,14 @@ export function decodeNewshostingXmlText(value: string): string {
   return value.replace(
     /&(?:#x([0-9a-f]+)|#(\d+)|(amp|lt|gt|quot|apos));/gi,
     (entity, hex: string | undefined, decimal: string | undefined, named: string | undefined) => {
-      if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
-      if (decimal) return String.fromCodePoint(Number.parseInt(decimal, 10));
+      if (hex) {
+        const codePoint = Number.parseInt(hex, 16);
+        return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity;
+      }
+      if (decimal) {
+        const codePoint = Number.parseInt(decimal, 10);
+        return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity;
+      }
       switch (named?.toLowerCase()) {
         case 'amp':
           return '&';
@@ -186,6 +192,7 @@ export function buildNewshostingNzb(
 
 export class NewshostingClient {
   private socket?: tls.TLSSocket;
+  private socketErrorHandler?: (error: Error) => void;
   private requestId = 0;
   private readonly sessionId = randomUUID().replace(/-/g, '');
   private readonly options: Required<NewshostingClientOptions>;
@@ -207,24 +214,24 @@ export class NewshostingClient {
       host: this.options.ip,
       port: this.options.port,
       servername: this.options.host,
-      // The proven desktop protocol connects to a fixed IP with SNI. Keep its
-      // compatibility behavior; credentials are still carried inside TLS.
-      rejectUnauthorized: false,
       timeout: this.options.timeoutMs,
     });
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
       const onSecure = () => cleanup(resolve);
-      const onError = (error: Error) => cleanup(() => reject(error));
+      const onError = (error: Error) => {
+        if (!settled) cleanup(() => reject(error));
+      };
       const onTimeout = () =>
         cleanup(() => reject(new Error('newshosting_connect_timeout')));
       const cleanup = (done: () => void) => {
-        this.socket?.off('secureConnect', onSecure);
-        this.socket?.off('error', onError);
-        this.socket?.off('timeout', onTimeout);
+        settled = true;
+        this.socket?.off('secureConnect', onSecure);`r`n        this.socket?.off('timeout', onTimeout);
         done();
       };
       this.socket?.once('secureConnect', onSecure);
-      this.socket?.once('error', onError);
+      this.socketErrorHandler = onError;
+      this.socket?.on('error', onError);
       this.socket?.once('timeout', onTimeout);
     });
     await this.send('<login/>');
@@ -238,6 +245,10 @@ export class NewshostingClient {
   }
 
   close(): void {
+    if (this.socket && this.socketErrorHandler) {
+      this.socket.off('error', this.socketErrorHandler);
+      this.socketErrorHandler = undefined;
+    }
     this.socket?.destroy();
   }
 

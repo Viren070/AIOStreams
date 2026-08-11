@@ -7,6 +7,17 @@ function period(now = Date.now()): string {
   return new Date(now).toISOString().slice(0, 7);
 }
 
+function reservationAmount(bytes: number): number {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    throw new Error('TorrentClaw NZB reservation bytes must be positive');
+  }
+  const amount = Math.floor(bytes);
+  if (amount <= 0) {
+    throw new Error('TorrentClaw NZB reservation bytes must be positive');
+  }
+  return amount;
+}
+
 export async function getTorrentClawNzbQuotaStatus(
   now = Date.now(),
   limit = TORRENTCLAW_NZB_MONTHLY_LIMIT_BYTES
@@ -35,7 +46,7 @@ export async function reserveTorrentClawNzbBytes(
   now = Date.now(),
   limit = TORRENTCLAW_NZB_MONTHLY_LIMIT_BYTES
 ): Promise<{ period: string; reservedBytes: number; limitBytes: number }> {
-  const amount = Math.max(0, Math.floor(bytes));
+  const amount = reservationAmount(bytes);
   const key = period(now);
   const db = getDb();
   const result = await db.tx(async (tx) => {
@@ -81,7 +92,7 @@ export async function reserveTorrentClawNzbBytesOnce(
   if (!stableKey) {
     throw new Error('TorrentClaw NZB reservation key is required');
   }
-  const amount = Math.max(0, Math.floor(bytes));
+  const amount = reservationAmount(bytes);
   const db = getDb();
   const result = await db.tx(async (tx) => {
     await tx.exec(

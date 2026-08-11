@@ -14,7 +14,7 @@ export function encodeNewshostingFrame(xml: string): Buffer {
 async function readExactly(
   stream: NodeJS.ReadableStream,
   size: number,
-  timeoutMs: number
+  deadline: number
 ): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let total = 0;
@@ -55,7 +55,7 @@ async function readExactly(
         stream.off('end', onEnd);
         done();
       };
-      const timeout = setTimeout(onTimeout, timeoutMs);
+      const timeout = setTimeout(onTimeout, Math.max(1, deadline - Date.now()));
       stream.once('readable', onReadable);
       stream.once('error', onError);
       stream.once('end', onEnd);
@@ -69,9 +69,10 @@ export async function decodeNewshostingFrame(
   stream: NodeJS.ReadableStream,
   timeoutMs = 25_000
 ): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
   const headerBytes: number[] = [];
   while (true) {
-    const byte = await readExactly(stream, 1, timeoutMs);
+    const byte = await readExactly(stream, 1, deadline);
     headerBytes.push(byte[0]);
     if (
       headerBytes.length >= 2 &&
@@ -99,12 +100,14 @@ export async function decodeNewshostingFrame(
     throw new Error('newshosting_frame_too_large');
   }
 
-  const body = await readExactly(stream, bodyLength, timeoutMs);
+  const body = await readExactly(stream, bodyLength, deadline);
   const uncompressedLength = body.readUInt32BE(0);
   if (uncompressedLength > NEWSHOSTING_MAX_FRAME_BYTES) {
     throw new Error('newshosting_frame_too_large');
   }
-  const inflated = inflateSync(body.subarray(4));
+  const inflated = inflateSync(body.subarray(4), {
+    maxOutputLength: NEWSHOSTING_MAX_FRAME_BYTES,
+  });
   if (inflated.length !== uncompressedLength) {
     throw new Error('newshosting_invalid_uncompressed_length');
   }

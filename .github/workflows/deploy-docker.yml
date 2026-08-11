@@ -20,6 +20,7 @@ jobs:
       tags: ${{ steps.tags.outputs.tags }}
       channel: ${{ steps.tags.outputs.channel }}
       build_ref: ${{ steps.tags.outputs.build_ref }}
+      build_commit: ${{ steps.tags.outputs.build_commit }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -38,6 +39,10 @@ jobs:
             CHANNEL="nightly"
             BUILD_REF=$(node -p "require('./resources/metadata.json').tag")
           else
+            if [[ ! "${INPUT_REF}" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+|[0-9]+\.[0-9]+\.[0-9]+-nightly)$ ]]; then
+              echo "Invalid Input Ref: ${INPUT_REF}"
+              exit 1
+            fi
             case "${INPUT_REF}" in
             v[0-9]*.[0-9]*.[0-9]*)
             TAGS="${INPUT_REF}"
@@ -69,6 +74,7 @@ jobs:
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
           echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
           echo "build_ref=${BUILD_REF}" >> $GITHUB_OUTPUT
+          echo "build_commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
   build:
     name: build (${{ matrix.suffix }})
@@ -90,7 +96,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.setup.outputs.build_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set lower case repository name
@@ -111,7 +117,7 @@ jobs:
           node-version: 24
 
       - name: Generate metadata
-        run: node scripts/generateMetadata.cjs --channel=${{ needs.setup.outputs.channel }} --ref=${{ needs.setup.outputs.build_ref }} --commit=${{ github.sha }}
+        run: node scripts/generateMetadata.cjs --channel=${{ needs.setup.outputs.channel }} --ref=${{ needs.setup.outputs.build_ref }} --commit=${{ needs.setup.outputs.build_commit }}
 
       - name: Build & Push
         id: build
@@ -124,7 +130,7 @@ jobs:
           build-args: |
             AIOSTREAMS_BUILD_CHANNEL=${{ needs.setup.outputs.channel }}
             AIOSTREAMS_BUILD_REF=${{ needs.setup.outputs.build_ref }}
-            AIOSTREAMS_BUILD_COMMIT=${{ github.sha }}
+            AIOSTREAMS_BUILD_COMMIT=${{ needs.setup.outputs.build_commit }}
           outputs: type=image,name=ghcr.io/${{ env.REPO }},push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
