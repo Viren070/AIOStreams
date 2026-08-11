@@ -2,6 +2,8 @@ import * as constants from './constants.js';
 import { normaliseLanguage, normaliseLangCode } from './languages.js';
 
 export interface ParsedMediaInfo {
+  /** Provenance tier; unset means unconfirmed. */
+  mediaInfoQuality?: 'probe' | 'indexer' | 'addon';
   languages?: string[];
   subtitles?: string[];
   audioTags?: string[];
@@ -265,7 +267,22 @@ export function normaliseParsedMediaInfo(
       : undefined;
   }
 
+  const hasAnyData =
+    languages.length > 0 ||
+    subtitles.length > 0 ||
+    audioTags.length > 0 ||
+    audioChannels.length > 0 ||
+    visualTags.length > 0 ||
+    !!encode ||
+    !!resolution ||
+    !!parsedMediaInfo?.duration ||
+    !!parsedMediaInfo?.bitrate ||
+    !!parsedMediaInfo?.hasChapters;
+
   const result: ParsedMediaInfo = {
+    ...(parsedMediaInfo.mediaInfoQuality && hasAnyData
+      ? { mediaInfoQuality: parsedMediaInfo.mediaInfoQuality }
+      : {}),
     ...(languages.length > 0 ? { languages } : {}),
     ...(subtitles.length > 0 ? { subtitles } : {}),
     ...(audioTags.length > 0 ? { audioTags } : {}),
@@ -333,6 +350,7 @@ export function parseMediaInfo(
       : undefined;
 
   const normalised = normaliseParsedMediaInfo({
+    mediaInfoQuality: 'probe',
     languages,
     subtitles,
     audioTags,
@@ -355,6 +373,7 @@ export function mergeParsedMediaInfo(
   if (!base && !preferred) return undefined;
 
   const merged = normaliseParsedMediaInfo({
+    mediaInfoQuality: preferred?.mediaInfoQuality ?? base?.mediaInfoQuality,
     languages: preferred?.languages ?? base?.languages,
     subtitles: preferred?.subtitles ?? base?.subtitles,
     audioTags: preferred?.audioTags ?? base?.audioTags,

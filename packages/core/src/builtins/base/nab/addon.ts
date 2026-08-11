@@ -52,6 +52,7 @@ export function parseNabParsedFileInfo(args: {
   subtitleLanguages?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
   return normaliseParsedMediaInfo({
+    mediaInfoQuality: 'indexer',
     languages: parseNabLanguages(args.audioLanguages),
     subtitles: parseNabLanguages(args.subtitleLanguages),
   });
