@@ -750,11 +750,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           totalEpisodesBeforeCurrentSeason += s.episodes;
         }
 
-        const calculated = totalEpisodesBeforeCurrentSeason + episodeNum;
-        // Only set if different from regular episode number
-        if (calculated !== episodeNum) {
-          relativeAbsoluteEpisode = calculated;
-        }
+        // Set even when equal to the requested episode: an entry starting at
+        // that season numbers it from 1. Query building dedupes separately.
+        relativeAbsoluteEpisode = totalEpisodesBeforeCurrentSeason + episodeNum;
       }
 
       const parsedSeasonRecord = seasons.find(
