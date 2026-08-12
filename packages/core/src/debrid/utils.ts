@@ -198,6 +198,12 @@ export interface UnprocessedTorrent extends BaseFile {
   type: 'torrent';
   hash?: string;
   downloadUrl?: string;
+  /**
+   * Stable per-release identifier from the indexer, where one is published.
+   * Unlike `downloadUrl`, which some indexers re-sign on every response, this
+   * is safe to use as a cache key.
+   */
+  guid?: string;
   sources: string[];
   private?: boolean;
   serviceItemId?: string;

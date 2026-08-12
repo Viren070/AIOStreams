@@ -83,18 +83,24 @@ export class TorrentGrabber {
 
     const cache = this.#cache;
     const url = torrent.downloadUrl;
+    // Proxying indexers re-sign the download URL per response, so it cannot
+    // key a cache. A guid is only unique within its indexer, so both are
+    // required; otherwise fall back to the URL.
+    const guid = torrent.guid?.trim();
+    const indexer = torrent.indexer?.trim();
+    const key = guid && indexer ? `${indexer}\u0000${guid}` : url;
     const lazy = appConfig.builtins.getTorrent.lazily;
 
     // Cache hit — done.
-    const cached = await cache.cached(url);
+    const cached = await cache.cached(key);
     if (cached) return cached;
 
-    // Already fetching this URL: lazy callers bail, eager callers join.
-    const inFlight = cache.inFlight(url);
+    // Already fetching this release: lazy callers bail, eager callers join.
+    const inFlight = cache.inFlight(key);
     if (inFlight) return lazy ? undefined : inFlight.catch(() => undefined);
 
     // Kick off a single-flighted, concurrency-limited grab+parse.
-    const fetchPromise = cache.fetch(url, () =>
+    const fetchPromise = cache.fetch(key, () =>
       this.#fetchLimit(() => this.#fetchMetadata(torrent))
     );
 

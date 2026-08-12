@@ -133,6 +133,17 @@ const createTorznabItemSchema = () =>
         .transform((arr) =>
           arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
         ),
+      prowlarrindexer: z
+        .array(
+          z.object({
+            _: z.string(),
+            $: z.object({ id: z.string() }),
+          })
+        )
+        .optional()
+        .transform((arr) =>
+          arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
+        ),
       type: z
         .array(z.string()) // usually "public", "semi-private" or "private" in Jackett responses
         .optional()
@@ -163,6 +174,7 @@ const createTorznabItemSchema = () =>
       guid: item.guid,
       pubDate: item.pubDate,
       jackettindexer: item.jackettindexer,
+      prowlarrindexer: item.prowlarrindexer,
       type: item.type,
       size: item.size,
       enclosure: item.enclosure,
