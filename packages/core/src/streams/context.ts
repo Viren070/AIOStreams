@@ -12,6 +12,7 @@ import {
   enrichParsedIdWithAnimeEntry,
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
+import { normaliseTitle } from '../parser/utils.js';
 import {
   calculateAbsoluteEpisode,
   isNonAnimeAbsoluteEligible,
@@ -21,12 +22,76 @@ import { iso6391ToLanguage } from '../utils/languages.js';
 const logger = createLogger('stream-context');
 
 /**
+ * Map the titles a season is released under to that season's number.
+ *
+ * Anime seasons frequently ship under a name of their own and are numbered
+ * from episode 1 rather than continuing the series count, so a release that
+ * carries an episode number but no season can only be placed by the name it
+ * uses. Each season's own AniDB entry supplies those names.
+ *
+ * A name claimed by more than one season identifies neither, so it is dropped.
+ */
+function buildSeasonTitleMap(
+  tvdbId: number,
+  seasons: { season_number: number }[]
+): Record<string, number> {
+  const db = AnimeDatabase.getInstance();
+  const map: Record<string, number> = {};
+  const ambiguous = new Set<string>();
+
+  for (const { season_number } of seasons) {
+    if (season_number < 1) continue;
+    const entry = db.getEntryById('thetvdbId', tvdbId, season_number);
+    if (!entry) continue;
+
+    // Trust the entry's own season rather than the one asked for, so a lookup
+    // that falls back to another season cannot mislabel its titles.
+    const entrySeason =
+      entry.tvdb?.seasonNumber ??
+      entry.imdb?.seasonNumber ??
+      entry.trakt?.seasonNumber ??
+      entry.tmdb?.seasonNumber;
+    if (entrySeason !== season_number) continue;
+
+    // Only season-specific names may be used. The imdb/trakt titles name the
+    // series as a whole and repeat across every season, so including them
+    // would mark the real per-season names ambiguous and discard them.
+    //
+    // `title` is romanised; releases outside fansub circles use the English
+    // broadcast name, which the Anime-Planet slug carries.
+    const planetSlug = entry.mappings?.animePlanetId;
+    const titles = [
+      entry.title,
+      typeof planetSlug === 'string' ? planetSlug : undefined,
+      ...(entry.synonyms ?? []),
+    ];
+
+    for (const title of titles) {
+      const norm = title ? normaliseTitle(title) : '';
+      if (!norm) continue;
+      if (map[norm] !== undefined && map[norm] !== season_number) {
+        ambiguous.add(norm);
+      } else {
+        map[norm] = season_number;
+      }
+    }
+  }
+
+  // A name claimed by more than one season identifies neither.
+  for (const norm of ambiguous) delete map[norm];
+  logger.debug({ tvdbId, map, ambiguous: [...ambiguous] }, 'season title map');
+  return map;
+}
+
+/**
  * Extended metadata that includes additional fields computed during context build
  */
 export interface ExtendedMetadata extends Metadata {
   absoluteEpisode?: number;
   relativeAbsoluteEpisode?: number; // Episode number within current AniDB entry (for split entries)
   seasonYear?: number; // For anime, the year of the season (e.g., 2021 for "Winter 2021")
+  /** Normalised title -> season number, for seasons released under their own name. */
+  seasonTitles?: Record<string, number>;
 }
 
 export interface ExpressionContext {
@@ -310,6 +375,10 @@ export class StreamContext {
           ...metadata,
           absoluteEpisode,
           relativeAbsoluteEpisode,
+          seasonTitles:
+            this.isAnime && metadata.tvdbId && metadata.seasons
+              ? buildSeasonTitleMap(metadata.tvdbId, metadata.seasons)
+              : undefined,
           seasonYear: this.animeEntry?.animeSeason?.year ?? undefined,
         };
 
