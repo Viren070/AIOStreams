@@ -317,6 +317,16 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    seriesTitleOnlyQuery: {
+      schema: z.boolean(),
+      default: true,
+      label: 'Series title-only query',
+      description:
+        'Also search series by title alone, with no season or episode. Finds complete-series and multi-season packs, whose names carry neither; the episode is then selected from the pack\'s file list. Costs one extra query per title per indexer.',
+      env: 'BUILTIN_SCRAPE_SERIES_TITLE_ONLY_QUERY',
+      requiresRestart: false,
+      secret: false,
+    },
     queryConcurrency: {
       schema: positiveInt,
       default: 5,
