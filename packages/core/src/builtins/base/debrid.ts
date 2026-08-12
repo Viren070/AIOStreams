@@ -524,7 +524,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       if (titles.length === 0) {
         titles = [metadata.primaryTitle];
       }
-    } else if (options?.useAllTitles) {
+    } else if (options?.useAllTitles || metadata.isAnime) {
+      // Anime seasons are released under their own titles, so the primary
+      // title alone matches nothing past season one.
       titles = (
         metadata.titlesWithLang ??
         metadata.titles.map((title) => ({ title, language: undefined }))
