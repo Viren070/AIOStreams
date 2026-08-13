@@ -385,6 +385,14 @@ neither the environment variable nor a stored value is present.
 | `DEFAULT_COMET_USER_AGENT` | Comet › Default User Agent | string | —                               | Default User-Agent for the Comet addon. Supports `{version}`/`{random}` placeholders.            |
 | `COMET_PUBLIC_API_TOKEN`   | Comet › Public API Token   | list   | —                               | Public API token(s) used by Comet. JSON array or single string.                                  |
 
+#### Torrentclaw
+
+| Environment Variable             | UI Setting                       | Type   | Default                                         | Description                                                                                            |
+| -------------------------------- | -------------------------------- | ------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `TORRENTCLAW_URL`                | Torrentclaw › URL                | list   | `["https://addon.torrentclaw.com/api/stremio"]` | Upstream URL(s) for the TorrentClaw addon.                                                             |
+| `DEFAULT_TORRENTCLAW_TIMEOUT`    | Torrentclaw › Default Timeout    | number | —                                               | Default timeout for the TorrentClaw addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_TORRENTCLAW_USER_AGENT` | Torrentclaw › Default User Agent | string | —                                               | Default User-Agent for the TorrentClaw addon. Supports `{version}`/`{random}` placeholders.            |
+
 #### Meteor
 
 | Environment Variable        | UI Setting                  | Type   | Default                                           | Description                                                                                       |
