@@ -377,6 +377,10 @@ test('resolves Deepbrid content in bounded batches and stops at max results', as
     resolved.map((item) => item.file.name),
     ['a.mkv', 'b.mkv']
   );
+  assert.equal(
+    resolved.every((item) => item.archiveExpanded === false),
+    true
+  );
 });
 
 test('returns partial Deepbrid results when another content lookup fails', async () => {

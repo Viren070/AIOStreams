@@ -387,6 +387,7 @@ type RankedDeepbridResult = {
 
 type ResolvedDeepbridFile = RankedDeepbridResult & {
   file: DeepbridFinderFile;
+  archiveExpanded: boolean;
 };
 
 export interface ResolveDeepbridOptions {
@@ -443,6 +444,7 @@ export async function resolveDeepbridFiles(
             timeoutMs,
             signal: options.signal,
           });
+          let archiveExpanded = false;
           if (content.hasPassword) return [];
           if (content.files.some((file) => isDeepbridArchiveName(file.name))) {
             timeoutMs = remainingRequestBudget(options.deadline, now);
@@ -451,6 +453,7 @@ export async function resolveDeepbridFiles(
               timeoutMs,
               signal: options.signal,
             });
+            archiveExpanded = true;
           }
           const files = chooseDeepbridVideoFiles(
             content.files,
@@ -458,7 +461,7 @@ export async function resolveDeepbridFiles(
             item.result.title
           );
           if (!options.probeFile) {
-            return files.map((file) => ({ ...item, file }));
+            return files.map((file) => ({ ...item, file, archiveExpanded }));
           }
           const probed = await Promise.all(
             files.map(async (file) => {
@@ -468,7 +471,7 @@ export async function resolveDeepbridFiles(
                 timeoutMs,
                 signal: options.signal,
               }))
-                ? { ...item, file }
+                ? { ...item, file, archiveExpanded }
                 : undefined;
             })
           );
@@ -592,7 +595,7 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
     );
 
     const base = appConfig.bootstrap.baseUrl.replace(/\/+$/, '');
-    return resolved.map(({ result, file }) => {
+    return resolved.map(({ result, file, archiveExpanded }) => {
       const target = validateDeepbridDownloadUrl(file.link);
       const playbackUrl = `${base}/builtins/deepbrid-usenet/play/${createDeepbridPlaybackToken(
         {
@@ -615,6 +618,9 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
           filename: file.name,
           videoSize: file.size || result.size || undefined,
           bingeGroup: `deepbrid-usenet|${file.name.toLowerCase()}`,
+          deepbridSeasonPack:
+            parseNewshostingRelease(result.title).seasonPack === true,
+          deepbridArchiveExpanded: archiveExpanded,
         },
       } satisfies Stream;
     });
