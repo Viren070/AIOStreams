@@ -120,7 +120,7 @@ export function buildStatistics(
   ) {
     const filterTimings = filterer.getFilterTimings();
     const accumulatedPrecompute = precomputer.getPrecomputeTimings();
-    // totalMs uses pipeline-phase timings only (fetchMs already contains the fetcher filter/precompute)
+    // totalMs uses pipeline-phase timings only (fetchMs already contains the fetcher filter/precompute/remuxDb)
     const totalMs =
       fetchMs +
       pipelineTimings.serviceWrapMs +
@@ -136,6 +136,9 @@ export function buildStatistics(
         `📥 Fetch: ${fmtMs(fetchMs)}`,
         `🔗 Service Wrap: ${fmtMs(pipelineTimings.serviceWrapMs)}`,
       ];
+      if (pipelineTimings.remuxDbMs > 0) {
+        lines.push(`🎞️ RemuxDB: ${fmtMs(pipelineTimings.remuxDbMs)}`);
+      }
       // Show accumulated filter total (fetcher + optional re-filter pass)
       if (filterTimings.totalMs > 0) {
         lines.push(`🔍 Filter: ${fmtMs(filterTimings.totalMs)}`);
