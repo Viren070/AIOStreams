@@ -86,7 +86,10 @@ export type WizardStep =
   | 'browse'
   | 'templateInputs'
   | 'selectService'
-  | 'inputs';
+  | 'inputs'
+  // Reached only when an update would change a setting the user has since
+  // changed themselves. A first-time apply never sees it.
+  | 'resolveConflicts';
 
 /** Snapshot of all wizard state saved before each forward navigation step. */
 export interface WizardSnapshot {

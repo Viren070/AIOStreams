@@ -21,6 +21,7 @@ import { TemplateValidationModal } from './validation-modal';
 import { TemplateImportModal } from './import-modal';
 
 import type { ConfigTemplatesModalProps } from '@/lib/templates/types';
+import { TemplateConflictStep } from './conflict-step';
 
 export function ConfigTemplatesModal({
   open,
@@ -270,6 +271,26 @@ export function ConfigTemplatesModal({
               onConfirm={wizard.confirmLoadTemplate}
             />
           )}
+        </div>
+      </Modal>
+
+      {/* Settings the update would change that the user has changed */}
+      <Modal
+        open={open && wizard.currentStep === 'resolveConflicts'}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) wizard.cancelConflicts();
+        }}
+        title="Keep your changes?"
+        description="This update changes settings you have since changed yourself"
+        contentClass="max-w-xl"
+      >
+        <div className="flex flex-col gap-4 overflow-hidden max-h-[calc(100svh-8rem)] md:max-h-[calc(100svh-10rem)]">
+          <TemplateConflictStep
+            conflicts={wizard.pendingConflicts}
+            isLoading={wizard.isLoading}
+            onCancel={wizard.cancelConflicts}
+            onConfirm={wizard.resolveConflicts}
+          />
         </div>
       </Modal>
 
