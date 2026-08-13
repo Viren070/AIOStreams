@@ -78,6 +78,16 @@ export function isDeepbridHost(hostname: string): boolean {
   return host === 'deepbrid.com' || host.endsWith('.deepbrid.com');
 }
 
+/** Hosts currently used by Deepbrid Finder for resolved Usenet media. */
+export function isDeepbridStorageHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === 'myfast.link' || host.endsWith('.myfast.link');
+}
+
+export function isTrustedDeepbridDownloadHost(hostname: string): boolean {
+  return isDeepbridHost(hostname) || isDeepbridStorageHost(hostname);
+}
+
 export function validateDeepbridDownloadUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== 'https:' || url.username || url.password) {

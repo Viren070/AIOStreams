@@ -3,6 +3,7 @@ import { config as appConfig } from '../config/index.js';
 import { constants, encryptString } from '../utils/index.js';
 import { DeepbridUsenetConfigSchema } from '../builtins/deepbrid-usenet/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
+import { withInternalTimeoutMargin } from './timeout.js';
 
 type DeepbridUsenetFormattingOptions = {
   useAioFormatter?: boolean;
@@ -199,7 +200,7 @@ export class DeepbridUsenetPreset extends BuiltinAddonPreset {
         enabled: true,
         resources: options.resources || undefined,
         mediaTypes: options.mediaTypes || [],
-        timeout: options.timeout || this.METADATA.TIMEOUT,
+        timeout: withInternalTimeoutMargin(options.timeout, config.timeout),
         preset: { id: '', type: this.METADATA.ID, options },
         formatPassthrough: deepbridUsenetFormatPassthrough(formatting),
         resultPassthrough: options.resultPassthrough ?? false,

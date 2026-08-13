@@ -7,6 +7,7 @@ import {
   decryptString,
   makeRequest,
   isDeepbridHost,
+  isTrustedDeepbridDownloadHost,
   validateDeepbridDownloadUrl,
 } from '@aiostreams/core';
 
@@ -95,31 +96,34 @@ router.get(
     res.once('close', onClose);
     try {
       const payload = decodeDeepbridPlaybackToken(req.params.token);
-      const target = validateDeepbridDownloadUrl(payload.url);
-      if (!isDeepbridHost(target.hostname)) {
-        throw new Error(
-          'Deepbrid authenticated playback proxy rejected an external host.'
-        );
+      let target = validateDeepbridDownloadUrl(payload.url);
+      if (!isTrustedDeepbridDownloadHost(target.hostname)) {
+        throw new Error('Deepbrid playback proxy rejected an untrusted host.');
       }
-      const headers: Record<string, string> = {
-        Accept: '*/*',
-        Authorization: `Bearer ${payload.apiKey}`,
-        'User-Agent': DEEPBRID_FINDER_USER_AGENT,
-      };
-      if (typeof req.headers.range === 'string')
-        headers.Range = req.headers.range;
-      if (typeof req.headers['if-none-match'] === 'string')
-        headers['If-None-Match'] = req.headers['if-none-match'];
-      if (typeof req.headers['if-modified-since'] === 'string')
-        headers['If-Modified-Since'] = req.headers['if-modified-since'];
+      let upstream: Awaited<ReturnType<typeof makeRequest>> | undefined;
+      for (let redirects = 0; redirects <= 3; redirects++) {
+        const headers: Record<string, string> = {
+          Accept: '*/*',
+          'Accept-Encoding': 'identity',
+          'User-Agent': DEEPBRID_FINDER_USER_AGENT,
+        };
+        if (isDeepbridHost(target.hostname)) {
+          headers.Authorization = `Bearer ${payload.apiKey}`;
+        }
+        if (typeof req.headers.range === 'string')
+          headers.Range = req.headers.range;
+        if (typeof req.headers['if-none-match'] === 'string')
+          headers['If-None-Match'] = req.headers['if-none-match'];
+        if (typeof req.headers['if-modified-since'] === 'string')
+          headers['If-Modified-Since'] = req.headers['if-modified-since'];
 
-      const upstream = await makeRequest(target.toString(), {
-        timeout: 120_000,
-        signal: controller.signal,
-        headers,
-        rawOptions: { redirect: 'manual' },
-      });
-      if (upstream.status >= 300 && upstream.status < 400) {
+        upstream = await makeRequest(target.toString(), {
+          timeout: 120_000,
+          signal: controller.signal,
+          headers,
+          rawOptions: { redirect: 'manual' },
+        });
+        if (upstream.status < 300 || upstream.status >= 400) break;
         const location = upstream.headers.get('location');
         await upstream.body?.cancel().catch(() => {});
         if (!location) {
@@ -129,11 +133,15 @@ router.get(
         const redirected = validateDeepbridDownloadUrl(
           new URL(location, target).toString()
         );
-        if (isDeepbridHost(redirected.hostname)) {
+        if (!isTrustedDeepbridDownloadHost(redirected.hostname)) {
           res.status(502).end();
           return;
         }
-        res.redirect(302, redirected.toString());
+        target = redirected;
+      }
+      if (!upstream || (upstream.status >= 300 && upstream.status < 400)) {
+        await upstream?.body?.cancel().catch(() => {});
+        res.status(502).end();
         return;
       }
       if (!upstream.ok && upstream.status !== 304) {

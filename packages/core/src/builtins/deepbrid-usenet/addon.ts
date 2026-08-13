@@ -7,6 +7,7 @@ import {
   decryptString,
   encodeSignedPayload,
   encryptString,
+  makeRequest,
 } from '../../utils/index.js';
 import { IdParser } from '../../utils/id-parser.js';
 import { config as appConfig } from '../../config/index.js';
@@ -32,6 +33,7 @@ import {
   DeepbridFinderResult,
   isDeepbridArchiveName,
   isDeepbridHost,
+  isTrustedDeepbridDownloadHost,
   isDeepbridVideoName,
   validateDeepbridDownloadUrl,
 } from './client.js';
@@ -64,7 +66,10 @@ export function createDeepbridPlaybackToken(
   payload: DeepbridPlaybackPayload
 ): string {
   const validated = PlaybackPayloadSchema.parse(payload);
-  validateDeepbridDownloadUrl(validated.url);
+  const target = validateDeepbridDownloadUrl(validated.url);
+  if (!isTrustedDeepbridDownloadHost(target.hostname)) {
+    throw new Error('Untrusted Deepbrid playback host.');
+  }
   const encrypted = encryptString(JSON.stringify(validated));
   if (!encrypted.success || !encrypted.data) {
     throw new Error('Failed to encrypt Deepbrid playback capability.');
@@ -87,7 +92,10 @@ export function decodeDeepbridPlaybackToken(
   if (!decrypted.success || !decrypted.data)
     throw new Error('Invalid Deepbrid playback capability.');
   const payload = PlaybackPayloadSchema.parse(JSON.parse(decrypted.data));
-  validateDeepbridDownloadUrl(payload.url);
+  const target = validateDeepbridDownloadUrl(payload.url);
+  if (!isTrustedDeepbridDownloadHost(target.hostname)) {
+    throw new Error('Untrusted Deepbrid playback host.');
+  }
   return payload;
 }
 
@@ -167,7 +175,8 @@ function rankResult(
 
 export function chooseDeepbridVideoFiles(
   files: DeepbridFinderFile[],
-  media: NewshostingMediaRequest
+  media: NewshostingMediaRequest,
+  releaseTitle?: string
 ): DeepbridFinderFile[] {
   const videos = files.filter(
     (file) =>
@@ -180,7 +189,174 @@ export function chooseDeepbridVideoFiles(
     'i'
   );
   const exact = videos.filter((file) => code.test(file.name));
-  return exact.length ? exact : videos.length === 1 ? videos : [];
+  if (exact.length) return exact;
+
+  // Expanded season archives frequently name files as E01/01 without
+  // repeating S01. Only interpret those short forms when the parent release
+  // is a confirmed pack for the requested season.
+  const release = releaseTitle
+    ? parseNewshostingRelease(releaseTitle)
+    : undefined;
+  if (release?.season === media.season && release.seasonPack) {
+    const packEpisode = videos.filter((file) => {
+      const parsed = parseNewshostingRelease(file.name);
+      return (
+        parsed.episode === media.episode ||
+        parsed.absoluteEpisode === media.episode ||
+        Boolean(
+          parsed.episodeRange &&
+          media.episode &&
+          parsed.episodeRange.start <= media.episode &&
+          parsed.episodeRange.end >= media.episode
+        )
+      );
+    });
+    if (packEpisode.length) return packEpisode;
+  }
+
+  return videos.length === 1 ? videos : [];
+}
+
+export function buildDeepbridQueries(
+  metadata: NewshostingMediaMetadata,
+  media: NewshostingMediaRequest
+): string[] {
+  const standard = buildNewshostingQueries(metadata, media);
+  if (media.type !== 'series' || !media.season || !media.episode) {
+    return standard.slice(0, 2);
+  }
+  const broad = standard.find((query) => !/\bS\d{2}E\d{2,3}\b/i.test(query));
+  const season = broad
+    ? `${broad} S${String(media.season).padStart(2, '0')}`
+    : undefined;
+  return [...new Set([standard[0], season, broad].filter(Boolean))] as string[];
+}
+
+function looksLikeVideoBytes(filename: string, bytes: Uint8Array): boolean {
+  const extension = filename.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
+  if (!extension || bytes.length < 4) return false;
+  const ascii = (start: number, length: number) =>
+    String.fromCharCode(...bytes.slice(start, start + length));
+  switch (extension) {
+    case 'mkv':
+    case 'webm':
+      return (
+        bytes[0] === 0x1a &&
+        bytes[1] === 0x45 &&
+        bytes[2] === 0xdf &&
+        bytes[3] === 0xa3
+      );
+    case 'mp4':
+    case 'm4v':
+    case 'mov':
+      return ascii(4, 4) === 'ftyp' || ascii(4, 4) === 'moov';
+    case 'avi':
+      return ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'AVI ';
+    case 'flv':
+      return ascii(0, 3) === 'FLV';
+    case 'wmv':
+      return (
+        bytes[0] === 0x30 &&
+        bytes[1] === 0x26 &&
+        bytes[2] === 0xb2 &&
+        bytes[3] === 0x75
+      );
+    case 'mpg':
+    case 'mpeg':
+      return (
+        bytes[0] === 0 &&
+        bytes[1] === 0 &&
+        bytes[2] === 1 &&
+        (bytes[3] === 0xba || bytes[3] === 0xb3)
+      );
+    case 'ts':
+    case 'm2ts':
+      return bytes[0] === 0x47 || bytes[4] === 0x47;
+    default:
+      return false;
+  }
+}
+
+export async function probeDeepbridVideo(
+  file: DeepbridFinderFile,
+  apiKey: string,
+  options: { timeoutMs: number; signal?: AbortSignal }
+): Promise<boolean> {
+  let target = validateDeepbridDownloadUrl(file.link);
+  for (let redirects = 0; redirects <= 3; redirects++) {
+    if (!isTrustedDeepbridDownloadHost(target.hostname)) return false;
+    const headers: Record<string, string> = {
+      Accept: '*/*',
+      'Accept-Encoding': 'identity',
+      Range: 'bytes=0-65535',
+    };
+    if (isDeepbridHost(target.hostname)) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+    let response: Response;
+    try {
+      response = await makeRequest(target.toString(), {
+        timeout: options.timeoutMs,
+        signal: options.signal,
+        headers,
+        rawOptions: { redirect: 'manual' },
+      });
+    } catch {
+      return false;
+    }
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      await response.body?.cancel().catch(() => {});
+      if (!location) return false;
+      try {
+        target = validateDeepbridDownloadUrl(
+          new URL(location, target).toString()
+        );
+      } catch {
+        return false;
+      }
+      continue;
+    }
+    const contentRange = response.headers.get('content-range') || '';
+    if (
+      response.status !== 206 ||
+      !/^bytes\s+0-\d+\/(?:\d+|\*)$/i.test(contentRange) ||
+      !response.body
+    ) {
+      await response.body?.cancel().catch(() => {});
+      return false;
+    }
+    const contentType = (
+      response.headers.get('content-type') || ''
+    ).toLowerCase();
+    if (/json|html|text\//.test(contentType)) {
+      await response.body.cancel().catch(() => {});
+      return false;
+    }
+    const reader = response.body.getReader();
+    try {
+      const chunks: Uint8Array[] = [];
+      let length = 0;
+      while (length < 16) {
+        const chunk = await reader.read();
+        if (chunk.done || !chunk.value) break;
+        chunks.push(chunk.value);
+        length += chunk.value.length;
+      }
+      const bytes = new Uint8Array(length);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.length;
+      }
+      return looksLikeVideoBytes(file.name, bytes);
+    } catch {
+      return false;
+    } finally {
+      await reader.cancel().catch(() => {});
+    }
+  }
+  return false;
 }
 
 type RankedDeepbridResult = {
@@ -204,6 +380,10 @@ export interface ResolveDeepbridOptions {
     archives: boolean,
     options: { timeoutMs: number; signal?: AbortSignal }
   ) => Promise<DeepbridFinderContent>;
+  probeFile?: (
+    file: DeepbridFinderFile,
+    options: { timeoutMs: number; signal?: AbortSignal }
+  ) => Promise<boolean>;
 }
 
 const DEEPBRID_CALL_TIMEOUT_MS = 7_000;
@@ -252,10 +432,29 @@ export async function resolveDeepbridFiles(
               signal: options.signal,
             });
           }
-          return chooseDeepbridVideoFiles(content.files, media).map((file) => ({
-            ...item,
-            file,
-          }));
+          const files = chooseDeepbridVideoFiles(
+            content.files,
+            media,
+            item.result.title
+          );
+          if (!options.probeFile) {
+            return files.map((file) => ({ ...item, file }));
+          }
+          const probed = await Promise.all(
+            files.map(async (file) => {
+              const timeoutMs = remainingRequestBudget(options.deadline, now);
+              if (timeoutMs < DEEPBRID_MIN_REQUEST_BUDGET_MS) return undefined;
+              return (await options.probeFile!(file, {
+                timeoutMs,
+                signal: options.signal,
+              }))
+                ? { ...item, file }
+                : undefined;
+            })
+          );
+          return probed.filter(
+            (value): value is ResolvedDeepbridFile => value !== undefined
+          );
         } catch (error) {
           if (error instanceof DeepbridApiError && error.code === 'api_12') {
             return [];
@@ -301,7 +500,7 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
     this._searchMetadataPromise = this._getSearchMetadata(parsedId, type);
     const metadata = metadataForSearch(await this.getSearchMetadata());
     const media = mediaForSearch(parsedId);
-    const queries = buildNewshostingQueries(metadata, media).slice(0, 2);
+    const queries = buildDeepbridQueries(metadata, media);
     if (!queries.length) return [];
 
     const client = new DeepbridFinderClient(
@@ -356,6 +555,8 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
       signal,
       getContent: (token, archives, requestOptions) =>
         client.getContent(token, archives, requestOptions),
+      probeFile: (file, requestOptions) =>
+        probeDeepbridVideo(file, this.userData.apiKey, requestOptions),
     });
     this.logger.info(
       {
@@ -373,14 +574,14 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
     const base = appConfig.bootstrap.baseUrl.replace(/\/+$/, '');
     return resolved.map(({ result, file }) => {
       const target = validateDeepbridDownloadUrl(file.link);
-      const playbackUrl = isDeepbridHost(target.hostname)
-        ? `${base}/builtins/deepbrid-usenet/play/${createDeepbridPlaybackToken({
-            apiKey: this.userData.apiKey,
-            url: target.toString(),
-            filename: file.name,
-            size: file.size || undefined,
-          })}/${encodeURIComponent(file.name)}`
-        : target.toString();
+      const playbackUrl = `${base}/builtins/deepbrid-usenet/play/${createDeepbridPlaybackToken(
+        {
+          apiKey: this.userData.apiKey,
+          url: target.toString(),
+          filename: file.name,
+          size: file.size || undefined,
+        }
+      )}/${encodeURIComponent(file.name)}`;
       return {
         name: '[DB⚡] Deepbrid Usenet',
         title: result.title,

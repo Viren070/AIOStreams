@@ -32,6 +32,8 @@ export {
   DEEPBRID_API_BASE,
   DEEPBRID_FINDER_USER_AGENT,
   isDeepbridHost,
+  isDeepbridStorageHost,
+  isTrustedDeepbridDownloadHost,
   decodeDeepbridPlaybackToken,
   validateDeepbridDownloadUrl,
   NewshostingPrivateConfigSchema,

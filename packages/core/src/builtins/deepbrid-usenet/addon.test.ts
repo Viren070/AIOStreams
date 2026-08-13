@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildDeepbridQueries,
   chooseDeepbridVideoFiles,
   createDeepbridPlaybackToken,
   decodeDeepbridPlaybackToken,
@@ -8,6 +9,8 @@ import {
 } from './addon.js';
 import {
   isDeepbridArchiveName,
+  isDeepbridStorageHost,
+  isTrustedDeepbridDownloadHost,
   isDeepbridVideoName,
   validateDeepbridDownloadUrl,
 } from './client.js';
@@ -65,6 +68,14 @@ test('accepts HTTPS download hosts without embedded credentials', () => {
   );
 });
 
+test('trusts only Deepbrid API and recovered Finder storage hosts', () => {
+  assert.equal(isDeepbridStorageHost('usenet-2.myfast.link'), true);
+  assert.equal(isTrustedDeepbridDownloadHost('www.deepbrid.com'), true);
+  assert.equal(isTrustedDeepbridDownloadHost('usenet-2.myfast.link'), true);
+  assert.equal(isTrustedDeepbridDownloadHost('myfast.link.evil.test'), false);
+  assert.equal(isTrustedDeepbridDownloadHost('storage.example'), false);
+});
+
 test('round-trips encrypted, signed playback capabilities', () => {
   const payload = {
     apiKey: 'test-only-key-1234567890',
@@ -76,6 +87,12 @@ test('round-trips encrypted, signed playback capabilities', () => {
   assert.ok(!token.includes(payload.apiKey));
   assert.deepEqual(decodeDeepbridPlaybackToken(token), payload);
   assert.throws(() => decodeDeepbridPlaybackToken(`${token.slice(0, -1)}x`));
+  assert.throws(() =>
+    createDeepbridPlaybackToken({
+      ...payload,
+      url: 'https://storage.example/video.mkv',
+    })
+  );
 });
 
 test('recognizes archive and video names', () => {
@@ -162,6 +179,49 @@ test('does not guess among multiple wrong episode files', () => {
     chooseDeepbridVideoFiles(files, { type: 'series', season: 1, episode: 2 }),
     []
   );
+});
+
+test('selects short episode names only inside a confirmed season pack', () => {
+  const files = [
+    {
+      name: 'Tower Prep - 01 - New Kid.mkv',
+      link: 'https://usenet-2.myfast.link/1',
+      size: 1,
+      sizeHuman: '',
+    },
+    {
+      name: 'Tower Prep - 02 - Monitored.mkv',
+      link: 'https://usenet-2.myfast.link/2',
+      size: 1,
+      sizeHuman: '',
+    },
+  ];
+  assert.deepEqual(
+    chooseDeepbridVideoFiles(
+      files,
+      { type: 'series', season: 1, episode: 1 },
+      'Tower.Prep.S01.Complete.720p.HDTV'
+    ).map((file) => file.name),
+    ['Tower Prep - 01 - New Kid.mkv']
+  );
+  assert.deepEqual(
+    chooseDeepbridVideoFiles(files, {
+      type: 'series',
+      season: 1,
+      episode: 1,
+    }),
+    []
+  );
+});
+
+test('adds an explicit season query without dropping exact episode search', () => {
+  const queries = buildDeepbridQueries(
+    { title: 'Tower Prep', aliases: [] },
+    { type: 'series', season: 1, episode: 1 }
+  );
+  assert.equal(queries[0], 'Tower Prep S01E01');
+  assert.equal(queries.includes('Tower Prep S01'), true);
+  assert.equal(queries.includes('Tower Prep'), true);
 });
 
 test('parses Deepbrid direct links as formatted Usenet without a fake service', () => {
@@ -328,6 +388,56 @@ test('returns partial Deepbrid results when another content lookup fails', async
   assert.deepEqual(
     resolved.map((item) => item.file.name),
     ['good.mkv']
+  );
+});
+
+test('drops failed playback probes and continues into later batches', async () => {
+  const calls: string[] = [];
+  const ranked = ['dead', 'working'].map((token) => ({
+    result: {
+      token,
+      title: token,
+      category: '',
+      categoryName: '',
+      kind: '',
+      size: 1,
+      sizeHuman: '',
+      date: '',
+      sources: 1,
+    },
+    score: 100,
+    confirmed: true,
+  }));
+  const resolved = await resolveDeepbridFiles(
+    ranked,
+    { type: 'movie' },
+    {
+      concurrency: 1,
+      maxResults: 1,
+      deadline: Date.now() + 10_000,
+      getContent: async (token) => ({
+        title: token,
+        files: [
+          {
+            name: `${token}.mkv`,
+            link: `https://usenet-2.myfast.link/${token}.mkv`,
+            size: 1,
+            sizeHuman: '',
+          },
+        ],
+        hasPassword: false,
+        password: '',
+      }),
+      probeFile: async (file) => {
+        calls.push(file.name);
+        return file.name === 'working.mkv';
+      },
+    }
+  );
+  assert.deepEqual(calls, ['dead.mkv', 'working.mkv']);
+  assert.deepEqual(
+    resolved.map((item) => item.file.name),
+    ['working.mkv']
   );
 });
 
