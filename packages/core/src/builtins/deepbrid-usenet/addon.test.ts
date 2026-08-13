@@ -181,6 +181,44 @@ test('does not guess among multiple wrong episode files', () => {
   );
 });
 
+test('rejects a single video that explicitly names the wrong episode', () => {
+  const files = [
+    {
+      name: 'Tower.Prep.S01E11.720p.HDTV.mkv',
+      link: 'https://usenet-2.myfast.link/11',
+      size: 1,
+      sizeHuman: '',
+    },
+  ];
+  assert.deepEqual(
+    chooseDeepbridVideoFiles(
+      files,
+      { type: 'series', season: 1, episode: 9 },
+      'Tower Prep S01E09'
+    ),
+    []
+  );
+});
+
+test('keeps a single video with no episode marker for a matched release', () => {
+  const files = [
+    {
+      name: 'video.mkv',
+      link: 'https://usenet-2.myfast.link/video',
+      size: 1,
+      sizeHuman: '',
+    },
+  ];
+  assert.deepEqual(
+    chooseDeepbridVideoFiles(
+      files,
+      { type: 'series', season: 1, episode: 9 },
+      'Tower Prep S01E09'
+    ),
+    files
+  );
+});
+
 test('selects short episode names only inside a confirmed season pack', () => {
   const files = [
     {

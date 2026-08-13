@@ -214,7 +214,27 @@ export function chooseDeepbridVideoFiles(
     if (packEpisode.length) return packEpisode;
   }
 
-  return videos.length === 1 ? videos : [];
+  if (videos.length !== 1) return [];
+  const only = parseNewshostingRelease(videos[0].name);
+  const explicitSeasonMismatch =
+    only.season !== undefined && only.season !== media.season;
+  const explicitEpisodeMatch =
+    only.episode === media.episode ||
+    only.absoluteEpisode === media.episode ||
+    Boolean(
+      only.episodeRange &&
+      media.episode &&
+      only.episodeRange.start <= media.episode &&
+      only.episodeRange.end >= media.episode
+    );
+  const hasExplicitEpisode =
+    only.episode !== undefined ||
+    only.absoluteEpisode !== undefined ||
+    only.episodeRange !== undefined;
+  return !explicitSeasonMismatch &&
+    (!hasExplicitEpisode || explicitEpisodeMatch)
+    ? videos
+    : [];
 }
 
 export function buildDeepbridQueries(
