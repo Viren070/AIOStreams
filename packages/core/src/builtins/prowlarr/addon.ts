@@ -18,6 +18,7 @@ import {
 } from '../utils/debrid.js';
 import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
+import { collectProwlarrResultsUntilDeadline } from './deadline.js';
 
 export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
   url: z.string(),
@@ -224,15 +225,14 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
         return data;
       })
     );
-    const settled = await Promise.allSettled(searchPromises);
-    const allResults = settled.flatMap((entry) => {
-      if (entry.status === 'fulfilled') return entry.value;
-      this.logger.warn(
-        `Prowlarr ${protocol} query failed: ${entry.reason instanceof Error ? entry.reason.message : String(entry.reason)}`
-      );
-      return [];
-    });
-    return allResults;
+    return collectProwlarrResultsUntilDeadline(
+      searchPromises,
+      appConfig.builtins.prowlarr.searchTimeout + 10_000,
+      (error) =>
+        this.logger.warn(
+          `Prowlarr ${protocol} query failed: ${error instanceof Error ? error.message : String(error)}`
+        )
+    );
   }
 
   protected async _searchTorrents(
