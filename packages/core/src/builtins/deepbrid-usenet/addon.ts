@@ -320,9 +320,11 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
         })
       )
     );
+    const finderResults = searched.flatMap((entry) =>
+      entry.status === 'fulfilled' ? entry.value : []
+    );
     const seen = new Set<string>();
-    const ranked = searched
-      .flatMap((entry) => (entry.status === 'fulfilled' ? entry.value : []))
+    const ranked = finderResults
       .filter((item) => !seen.has(item.token) && seen.add(item.token))
       .map((result) => ({ result, ...rankResult(result, media, metadata) }))
       .filter((item) => item.confirmed && item.score > 0)
@@ -334,6 +336,19 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
       )
       .slice(0, this.userData.maxContentResolves);
 
+    this.logger.info(
+      {
+        type,
+        queryCount: queries.length,
+        successfulQueries: searched.filter(
+          (entry) => entry.status === 'fulfilled'
+        ).length,
+        finderResults: finderResults.length,
+        confirmedResults: ranked.length,
+      },
+      'Deepbrid Finder search completed'
+    );
+
     const resolved = await resolveDeepbridFiles(ranked, media, {
       concurrency: this.userData.resolveConcurrency,
       maxResults: this.userData.maxResults,
@@ -342,6 +357,18 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
       getContent: (token, archives, requestOptions) =>
         client.getContent(token, archives, requestOptions),
     });
+    this.logger.info(
+      {
+        type,
+        confirmedResults: ranked.length,
+        resolvedFiles: resolved.length,
+        elapsedMs:
+          this.userData.timeout -
+          DEEPBRID_DEADLINE_MARGIN_MS -
+          Math.max(0, deadline - Date.now()),
+      },
+      'Deepbrid Finder resolution completed'
+    );
 
     const base = appConfig.bootstrap.baseUrl.replace(/\/+$/, '');
     return resolved.map(({ result, file }) => {

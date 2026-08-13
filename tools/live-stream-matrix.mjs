@@ -56,8 +56,12 @@ for (const item of cases) {
         status: response.status,
         elapsedMs: Math.round(performance.now() - started),
         streamCount: streams.length,
-        deepbridCount: streams.filter((stream) =>
-          /deepbrid/i.test(`${stream.name || ''}\n${stream.description || ''}`)
+        deepbridCount: streams.filter(
+          (stream) =>
+            typeof stream.url === 'string' &&
+            /(?:deepbrid|\bDB\b)/i.test(
+              `${stream.name || ''}\n${stream.description || ''}`
+            )
         ).length,
         errors,
       })}\n`
