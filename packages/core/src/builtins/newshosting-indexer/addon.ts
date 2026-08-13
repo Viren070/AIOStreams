@@ -8,11 +8,7 @@ import {
   getSimpleTextHash,
   toUrlSafeBase64,
 } from '../../utils/index.js';
-import {
-  hashNzbUrl,
-  NZB,
-  Torrent,
-} from '../../debrid/index.js';
+import { hashNzbUrl, NZB, Torrent } from '../../debrid/index.js';
 import {
   BaseDebridAddon,
   BaseDebridConfigSchema,
@@ -20,10 +16,7 @@ import {
 } from '../base/debrid.js';
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 import type { BuiltinServiceId } from '../../utils/index.js';
-import {
-  NewshostingClient,
-  NewshostingResult,
-} from './client.js';
+import { NewshostingClient, NewshostingResult } from './client.js';
 import {
   NewshostingMediaMetadata,
   NewshostingMediaRequest,
@@ -51,6 +44,7 @@ export const NewshostingPrivateConfigSchema = z.object({
   port: z.number().int().min(1).max(65_535).default(5598),
   maxNzbFiles: z.number().int().min(1).max(500).default(32),
   nzbTimeout: z.number().int().min(1_000).max(120_000).default(30_000),
+  proxyAuth: z.string().min(1),
 });
 export type NewshostingPrivateConfig = z.infer<
   typeof NewshostingPrivateConfigSchema
@@ -65,12 +59,7 @@ export const NewshostingIndexerAddonConfigSchema =
     port: z.number().int().min(1).max(65_535).default(5598),
     maxResults: z.number().int().min(1).max(40).default(24),
     maxNzbFiles: z.number().int().min(1).max(500).default(32),
-    searchTimeout: z
-      .number()
-      .int()
-      .min(1_000)
-      .max(120_000)
-      .default(8_000),
+    searchTimeout: z.number().int().min(1_000).max(120_000).default(8_000),
     nzbTimeout: z.number().int().min(1_000).max(120_000).default(30_000),
     proxyAuth: z.string().min(1),
     nzbConfig: z.string().min(32).max(16_384),
@@ -185,9 +174,7 @@ function hasBadReleaseSignal(title: string): boolean {
     /\b(?:sample|trailer|camrip|cam|telesync|hdts|tsrip|tc|telecine|screener|xbet|password|encrypted)\b/i.test(
       title
     ) ||
-    /(?:^|[.\s_-])(?:exe|scr|bat|cmd|msi|iso|img)(?:$|[.\s_-])/i.test(
-      title
-    )
+    /(?:^|[.\s_-])(?:exe|scr|bat|cmd|msi|iso|img)(?:$|[.\s_-])/i.test(title)
   );
 }
 
@@ -223,9 +210,7 @@ export function rankNewshostingResult(
   return score;
 }
 
-function metadataForSearch(
-  metadata: SearchMetadata
-): NewshostingMediaMetadata {
+function metadataForSearch(metadata: SearchMetadata): NewshostingMediaMetadata {
   const aliases = [metadata.primaryTitle, ...(metadata.titles || [])].filter(
     (value): value is string => Boolean(value)
   );
@@ -366,8 +351,7 @@ export class NewshostingIndexerAddon extends BaseDebridAddon<NewshostingIndexerA
           !isArchiveRelease(result.name)
       )
       .filter(
-        (result) =>
-          !result.files || result.files <= this.userData.maxNzbFiles
+        (result) => !result.files || result.files <= this.userData.maxNzbFiles
       )
       .filter((result) => looksLikeVideoRelease(result.name))
       .filter((result) => !hasBadReleaseSignal(result.name))

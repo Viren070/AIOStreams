@@ -5,6 +5,7 @@ export * from './torznab/index.js';
 export * from './newznab/index.js';
 export * from './unarr-indexer/index.js';
 export * from './newshosting-indexer/index.js';
+export * from './deepbrid-usenet/index.js';
 export * from './prowlarr/index.js';
 export * from './knaben/index.js';
 export * from './eztv/index.js';

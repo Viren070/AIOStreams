@@ -64,6 +64,7 @@ import { AnimeToshoPreset } from './animetosho.js';
 import { NewznabPreset } from './newznab.js';
 import { UnarrIndexerPreset } from './unarrIndexer.js';
 import { NewshostingIndexerPreset } from './newshostingIndexer.js';
+import { DeepbridUsenetPreset } from './deepbridUsenet.js';
 import { ProwlarrPreset } from './prowlarr.js';
 import { JackettPreset } from './jackett.js';
 import { NZBHydraPreset } from './nzbhydra.js';
@@ -90,6 +91,7 @@ let PRESET_LIST: string[] = [
   'newznab',
   'unarr-indexer',
   'newshosting-indexer',
+  'deepbrid-usenet',
   'aiostreams',
   'torrentio',
   'torrentclaw',
@@ -313,6 +315,8 @@ export class PresetManager {
         return UnarrIndexerPreset;
       case 'newshosting-indexer':
         return NewshostingIndexerPreset;
+      case 'deepbrid-usenet':
+        return DeepbridUsenetPreset;
       case 'zilean':
         return ZileanPreset;
       case 'animetosho':

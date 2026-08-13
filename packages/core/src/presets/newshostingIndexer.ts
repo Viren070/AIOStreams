@@ -221,6 +221,11 @@ export class NewshostingIndexerPreset extends BuiltinAddonPreset {
     }
 
     const connection = options.connection || {};
+    const proxyGrant = issueConfigProxyGrant(
+      context.presetInstanceId,
+      'newshosting-nzb',
+      new URL(appConfig.bootstrap.baseUrl).origin
+    );
     const privateConfig = NewshostingPrivateConfigSchema.parse({
       username: options.username,
       password: options.password,
@@ -229,17 +234,13 @@ export class NewshostingIndexerPreset extends BuiltinAddonPreset {
       port: connection.port ?? 5598,
       maxNzbFiles: options.maxNzbFiles ?? 32,
       nzbTimeout: options.nzbTimeout ?? 30_000,
+      proxyAuth: proxyGrant,
     });
     const encryptedNzbConfig = encryptString(JSON.stringify(privateConfig));
     if (!encryptedNzbConfig.success || !encryptedNzbConfig.data) {
       throw new Error('Failed to encrypt the Newshosting NZB configuration.');
     }
 
-    const proxyGrant = issueConfigProxyGrant(
-      context.presetInstanceId,
-      'newshosting-nzb',
-      new URL(appConfig.bootstrap.baseUrl).origin
-    );
     const services = usableServices.map((service) => service.id);
     const config = {
       ...this.getBaseConfig(userData, services),

@@ -9,6 +9,7 @@ const WHIELIST = [
   '/newznab/test',
   '/torznab/test',
   '/unarr-indexer/auth',
+  '/deepbrid-usenet/play',
 ];
 
 export const internalMiddleware = (

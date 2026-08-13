@@ -1,9 +1,6 @@
 import tls from 'node:tls';
 import { randomUUID } from 'node:crypto';
-import {
-  decodeNewshostingFrame,
-  encodeNewshostingFrame,
-} from './protocol.js';
+import { decodeNewshostingFrame, encodeNewshostingFrame } from './protocol.js';
 
 export interface NewshostingClientOptions {
   username: string;
@@ -52,7 +49,12 @@ function xmlEscape(value: string): string {
 export function decodeNewshostingXmlText(value: string): string {
   return value.replace(
     /&(?:#x([0-9a-f]+)|#(\d+)|(amp|lt|gt|quot|apos));/gi,
-    (entity, hex: string | undefined, decimal: string | undefined, named: string | undefined) => {
+    (
+      entity,
+      hex: string | undefined,
+      decimal: string | undefined,
+      named: string | undefined
+    ) => {
       if (hex) {
         const codePoint = Number.parseInt(hex, 16);
         return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity;
@@ -99,11 +101,8 @@ function blocks(xml: string, tag: string): string[] {
   ].map((match) => match[0]);
 }
 
-export function parseNewshostingGroups(
-  xml: string
-): NewshostingSearchResponse {
-  const groups =
-    xml.match(/<groups\b[^>]*>[\s\S]*?<\/groups>/i)?.[0] || '';
+export function parseNewshostingGroups(xml: string): NewshostingSearchResponse {
+  const groups = xml.match(/<groups\b[^>]*>[\s\S]*?<\/groups>/i)?.[0] || '';
   const totalItems =
     Number.parseInt(attrValue(groups, 'items') || '0', 10) || 0;
   const totalPages =
@@ -133,8 +132,7 @@ function parseGroupDetail(xml: string): {
   const newsgroups = blocks(group, 'newsgroup')
     .map((block) => block.replace(/<\/?newsgroup[^>]*>/gi, '').trim())
     .filter(Boolean);
-  const filesBlock =
-    group.match(/<files\b[^>]*>[\s\S]*?<\/files>/i)?.[0] || '';
+  const filesBlock = group.match(/<files\b[^>]*>[\s\S]*?<\/files>/i)?.[0] || '';
   const files = blocks(filesBlock, 'file').map((file) => {
     const id = file.match(/<id\b[^>]*\/?>/i)?.[0] || '';
     return {
@@ -226,7 +224,8 @@ export class NewshostingClient {
         cleanup(() => reject(new Error('newshosting_connect_timeout')));
       const cleanup = (done: () => void) => {
         settled = true;
-        this.socket?.off('secureConnect', onSecure);`r`n        this.socket?.off('timeout', onTimeout);
+        this.socket?.off('secureConnect', onSecure);
+        this.socket?.off('timeout', onTimeout);
         done();
       };
       this.socket?.once('secureConnect', onSecure);
