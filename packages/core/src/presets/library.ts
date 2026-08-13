@@ -3,6 +3,7 @@ import StreamParser from '../parser/streams.js';
 import { appConfig, constants, ServiceId } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import { StremThruPreset } from './stremthru.js';
+import { withInternalTimeoutMargin } from './timeout.js';
 
 class LibraryStreamParser extends BuiltinStreamParser {
   protected isInfoStream(stream: Stream): string | undefined {
@@ -177,7 +178,11 @@ export class LibraryPreset extends BuiltinAddonPreset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<Addon[]> {
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     if (!usableServices || usableServices.length === 0) {
       throw new Error(
         `${this.METADATA.NAME} requires at least one usable service, but none were found. Please enable at least one of the following services: ${this.METADATA.SUPPORTED_SERVICES.join(
@@ -220,7 +225,10 @@ export class LibraryPreset extends BuiltinAddonPreset {
       library: true,
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
       mediaTypes: options.mediaTypes || [],
-      timeout: options.timeout || this.METADATA.TIMEOUT,
+      // Library matching is fast, but playback resolution can involve more
+      // than one configured service. Preserve a bounded processing window
+      // instead of letting old 7-second configs abort after matches are found.
+      timeout: withInternalTimeoutMargin(options.timeout, 20_000),
       preset: {
         id: '',
         type: this.METADATA.ID,
