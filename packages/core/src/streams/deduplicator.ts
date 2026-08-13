@@ -310,7 +310,20 @@ class StreamDeduplicator {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
-        const mode = deduplicator[type as keyof typeof deduplicator] as string;
+        // Direct Usenet streams (for example, a built-in addon that already
+        // resolved its own HTTP playback URL) intentionally have no AIOStreams
+        // service. They therefore stay in the literal `usenet`/
+        // `stremio-usenet` groups instead of being classified as cached or
+        // uncached above. Reuse the uncached policy for those groups, but fall
+        // back from `per_service` to `per_addon` because a service-less stream
+        // cannot be partitioned by service. Previously the lookup returned an
+        // undefined mode and every stream in these groups was silently lost.
+        const mode =
+          type === 'usenet' || type === 'stremio-usenet'
+            ? deduplicator.uncached === 'per_service'
+              ? 'per_addon'
+              : deduplicator.uncached
+            : (deduplicator[type as keyof typeof deduplicator] as string);
         if (mode === 'disabled') {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
