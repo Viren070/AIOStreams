@@ -6,7 +6,13 @@ const input = process.env.TEST_INPUT_FILE
 const manifestUrl = process.env.AIOSTREAMS_MANIFEST_URL || input?.manifest;
 if (!manifestUrl) throw new Error('AIOSTREAMS_MANIFEST_URL is required');
 
-const base = manifestUrl.replace(/\/manifest\.json$/, '');
+const manifest = new URL(manifestUrl);
+if (process.env.TEST_ORIGIN) {
+  const origin = new URL(process.env.TEST_ORIGIN);
+  manifest.protocol = origin.protocol;
+  manifest.host = origin.host;
+}
+const base = manifest.toString().replace(/\/manifest\.json$/, '');
 const delayMs = Math.max(1_000, Number(process.env.TEST_DELAY_MS || 5_000));
 const timeoutMs = Math.max(10_000, Number(process.env.TEST_TIMEOUT_MS || 150_000));
 const cases = input?.cases || JSON.parse(process.env.TEST_CASES_JSON || '[]');

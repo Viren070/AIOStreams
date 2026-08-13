@@ -1,5 +1,6 @@
 import { Addon, Option, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
+import { withInternalTimeoutMargin } from './timeout.js';
 import {
   Env,
   appConfig,
@@ -214,7 +215,11 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<Addon[]> {
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     if (!usableServices || usableServices.length === 0) {
       throw new Error(
         `${this.METADATA.NAME} requires at least one usable service, but none were found. Please enable at least one of the following services: ${this.METADATA.SUPPORTED_SERVICES.join(
@@ -255,7 +260,10 @@ export class ProwlarrPreset extends BuiltinAddonPreset {
       library: options.libraryAddon ?? false,
       resources: options.resources || undefined,
       mediaTypes: options.mediaTypes || [],
-      timeout: options.timeout || this.METADATA.TIMEOUT,
+      timeout: withInternalTimeoutMargin(
+        options.timeout,
+        appConfig.builtins.prowlarr.searchTimeout
+      ),
       preset: {
         id: '',
         type: this.METADATA.ID,

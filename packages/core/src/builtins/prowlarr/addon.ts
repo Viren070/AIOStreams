@@ -224,8 +224,15 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
         return data;
       })
     );
-    const allResults = await Promise.all(searchPromises);
-    return allResults.flat();
+    const settled = await Promise.allSettled(searchPromises);
+    const allResults = settled.flatMap((entry) => {
+      if (entry.status === 'fulfilled') return entry.value;
+      this.logger.warn(
+        `Prowlarr ${protocol} query failed: ${entry.reason instanceof Error ? entry.reason.message : String(entry.reason)}`
+      );
+      return [];
+    });
+    return allResults;
   }
 
   protected async _searchTorrents(

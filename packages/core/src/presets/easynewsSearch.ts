@@ -1,6 +1,7 @@
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { appConfig, ServiceId, constants } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
+import { withInternalTimeoutMargin } from './timeout.js';
 
 /**
  * Custom parser for Easynews streams that extracts duration
@@ -178,7 +179,11 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       );
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     if (!usableServices || usableServices.length === 0) {
       throw new Error(
         `${this.METADATA.NAME} requires at least one usable service, but none were found. Please enable at least one of the following services: ${this.METADATA.SUPPORTED_SERVICES.join(
@@ -231,7 +236,10 @@ export class EasynewsSearchPreset extends BuiltinAddonPreset {
       library: options.libraryAddon ?? false,
       resources: options.resources || undefined,
       mediaTypes: options.mediaTypes || [],
-      timeout: options.timeout || this.METADATA.TIMEOUT,
+      timeout: withInternalTimeoutMargin(
+        options.timeout,
+        appConfig.builtins.easynews.searchTimeout
+      ),
       preset: {
         id: '',
         type: this.METADATA.ID,
