@@ -1,4 +1,3 @@
-import pLimit from 'p-limit';
 import { z } from 'zod';
 import { ParsedId } from '../../utils/id-parser.js';
 import {
@@ -28,6 +27,7 @@ import {
 import {
   DeepbridApiError,
   DeepbridFinderClient,
+  DeepbridFinderContent,
   DeepbridFinderFile,
   DeepbridFinderResult,
   isDeepbridArchiveName,
@@ -183,6 +183,97 @@ export function chooseDeepbridVideoFiles(
   return exact.length ? exact : videos.length === 1 ? videos : [];
 }
 
+type RankedDeepbridResult = {
+  result: DeepbridFinderResult;
+  score: number;
+  confirmed: boolean;
+};
+
+type ResolvedDeepbridFile = RankedDeepbridResult & {
+  file: DeepbridFinderFile;
+};
+
+export interface ResolveDeepbridOptions {
+  concurrency: number;
+  maxResults: number;
+  deadline: number;
+  signal?: AbortSignal;
+  now?: () => number;
+  getContent: (
+    token: string,
+    archives: boolean,
+    options: { timeoutMs: number; signal?: AbortSignal }
+  ) => Promise<DeepbridFinderContent>;
+}
+
+const DEEPBRID_CALL_TIMEOUT_MS = 7_000;
+const DEEPBRID_DEADLINE_MARGIN_MS = 3_000;
+const DEEPBRID_MIN_REQUEST_BUDGET_MS = 750;
+
+function remainingRequestBudget(deadline: number, now: () => number): number {
+  return Math.min(DEEPBRID_CALL_TIMEOUT_MS, deadline - now());
+}
+
+export async function resolveDeepbridFiles(
+  ranked: RankedDeepbridResult[],
+  media: NewshostingMediaRequest,
+  options: ResolveDeepbridOptions
+): Promise<ResolvedDeepbridFile[]> {
+  const now = options.now ?? Date.now;
+  const resolved: ResolvedDeepbridFile[] = [];
+  const concurrency = Math.max(1, Math.min(5, options.concurrency));
+
+  for (let offset = 0; offset < ranked.length; offset += concurrency) {
+    if (
+      resolved.length >= options.maxResults ||
+      options.signal?.aborted ||
+      remainingRequestBudget(options.deadline, now) <
+        DEEPBRID_MIN_REQUEST_BUDGET_MS
+    ) {
+      break;
+    }
+
+    const batch = ranked.slice(offset, offset + concurrency);
+    const batchResolved = await Promise.all(
+      batch.map(async (item): Promise<ResolvedDeepbridFile[]> => {
+        try {
+          let timeoutMs = remainingRequestBudget(options.deadline, now);
+          if (timeoutMs < DEEPBRID_MIN_REQUEST_BUDGET_MS) return [];
+          let content = await options.getContent(item.result.token, false, {
+            timeoutMs,
+            signal: options.signal,
+          });
+          if (content.hasPassword) return [];
+          if (content.files.some((file) => isDeepbridArchiveName(file.name))) {
+            timeoutMs = remainingRequestBudget(options.deadline, now);
+            if (timeoutMs < DEEPBRID_MIN_REQUEST_BUDGET_MS) return [];
+            content = await options.getContent(item.result.token, true, {
+              timeoutMs,
+              signal: options.signal,
+            });
+          }
+          return chooseDeepbridVideoFiles(content.files, media).map((file) => ({
+            ...item,
+            file,
+          }));
+        } catch (error) {
+          if (error instanceof DeepbridApiError && error.code === 'api_12') {
+            return [];
+          }
+          logger.debug(
+            { error: error instanceof Error ? error.message : String(error) },
+            'Deepbrid content resolution failed'
+          );
+          return [];
+        }
+      })
+    );
+    resolved.push(...batchResolved.flat());
+  }
+
+  return resolved.slice(0, options.maxResults);
+}
+
 export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
   readonly id = 'deepbrid-usenet';
   readonly name = 'Deepbrid Usenet';
@@ -193,7 +284,17 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
     super(config, DeepbridUsenetConfigSchema, clientIp);
   }
 
-  override async getStreams(type: string, id: string): Promise<Stream[]> {
+  override async getStreams(
+    type: string,
+    id: string,
+    signal?: AbortSignal
+  ): Promise<Stream[]> {
+    const deadline =
+      Date.now() +
+      Math.max(
+        DEEPBRID_MIN_REQUEST_BUDGET_MS,
+        this.userData.timeout - DEEPBRID_DEADLINE_MARGIN_MS
+      );
     const parsedId = IdParser.parse(id, type);
     if (!parsedId || !this.supportedIdTypes.includes(parsedId.type))
       throw new Error(`Unsupported ID: ${id}`);
@@ -207,11 +308,15 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
       this.userData.apiKey,
       this.userData.timeout
     );
+    const searchTimeout = remainingRequestBudget(deadline, Date.now);
+    if (searchTimeout < DEEPBRID_MIN_REQUEST_BUDGET_MS) return [];
     const searched = await Promise.allSettled(
       queries.map((query) =>
         client.search(query, {
           category: categoryFor(media, metadata.isAnime),
           limit: 50,
+          timeoutMs: searchTimeout,
+          signal,
         })
       )
     );
@@ -229,66 +334,42 @@ export class DeepbridUsenetAddon extends BaseDebridAddon<DeepbridUsenetConfig> {
       )
       .slice(0, this.userData.maxContentResolves);
 
-    const limit = pLimit(this.userData.resolveConcurrency);
-    const resolved = await Promise.all(
-      ranked.map((item) =>
-        limit(async () => {
-          try {
-            let content = await client.getContent(item.result.token, false);
-            if (content.hasPassword) return [];
-            if (
-              content.files.some((file) => isDeepbridArchiveName(file.name))
-            ) {
-              content = await client.getContent(item.result.token, true);
-            }
-            return chooseDeepbridVideoFiles(content.files, media).map(
-              (file) => ({ ...item, file })
-            );
-          } catch (error) {
-            if (error instanceof DeepbridApiError && error.code === 'api_12')
-              return [];
-            logger.debug(
-              { error: error instanceof Error ? error.message : String(error) },
-              'Deepbrid content resolution failed'
-            );
-            return [];
-          }
-        })
-      )
-    );
+    const resolved = await resolveDeepbridFiles(ranked, media, {
+      concurrency: this.userData.resolveConcurrency,
+      maxResults: this.userData.maxResults,
+      deadline,
+      signal,
+      getContent: (token, archives, requestOptions) =>
+        client.getContent(token, archives, requestOptions),
+    });
 
     const base = appConfig.bootstrap.baseUrl.replace(/\/+$/, '');
-    return resolved
-      .flat()
-      .slice(0, this.userData.maxResults)
-      .map(({ result, file }) => {
-        const target = validateDeepbridDownloadUrl(file.link);
-        const playbackUrl = isDeepbridHost(target.hostname)
-          ? `${base}/builtins/deepbrid-usenet/play/${createDeepbridPlaybackToken(
-              {
-                apiKey: this.userData.apiKey,
-                url: target.toString(),
-                filename: file.name,
-                size: file.size || undefined,
-              }
-            )}/${encodeURIComponent(file.name)}`
-          : target.toString();
-        return {
-          name: '[DB⚡] Deepbrid Usenet',
-          title: result.title,
-          description: `${result.title}\n${file.name}\n🔍 Deepbrid Usenet${result.sources ? ` · ${result.sources} sources` : ''}`,
-          url: playbackUrl,
-          type: 'usenet',
-          idMatched: true,
-          age: ageHours(result.date),
-          behaviorHints: {
-            notWebReady: false,
+    return resolved.map(({ result, file }) => {
+      const target = validateDeepbridDownloadUrl(file.link);
+      const playbackUrl = isDeepbridHost(target.hostname)
+        ? `${base}/builtins/deepbrid-usenet/play/${createDeepbridPlaybackToken({
+            apiKey: this.userData.apiKey,
+            url: target.toString(),
             filename: file.name,
-            videoSize: file.size || result.size || undefined,
-            bingeGroup: `deepbrid-usenet|${file.name.toLowerCase()}`,
-          },
-        } satisfies Stream;
-      });
+            size: file.size || undefined,
+          })}/${encodeURIComponent(file.name)}`
+        : target.toString();
+      return {
+        name: '[DB⚡] Deepbrid Usenet',
+        title: result.title,
+        description: `${result.title}\n${file.name}\n🔍 Deepbrid Usenet${result.sources ? ` · ${result.sources} sources` : ''}`,
+        url: playbackUrl,
+        type: 'usenet',
+        idMatched: true,
+        age: ageHours(result.date),
+        behaviorHints: {
+          notWebReady: false,
+          filename: file.name,
+          videoSize: file.size || result.size || undefined,
+          bingeGroup: `deepbrid-usenet|${file.name.toLowerCase()}`,
+        },
+      } satisfies Stream;
+    });
   }
 
   protected async _searchTorrents(_parsedId: ParsedId): Promise<Torrent[]> {

@@ -48,6 +48,10 @@ router.get(
     res: Response,
     next: NextFunction
   ) => {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    req.once('aborted', abort);
+    res.once('close', abort);
     try {
       const addon = new DeepbridUsenetAddon(
         config(req.params.encodedConfig) as any,
@@ -55,10 +59,17 @@ router.get(
       );
       res.set('Cache-Control', 'private, no-store');
       res.json({
-        streams: await addon.getStreams(req.params.type, req.params.id),
+        streams: await addon.getStreams(
+          req.params.type,
+          req.params.id,
+          controller.signal
+        ),
       });
     } catch (error) {
       next(error);
+    } finally {
+      req.removeListener('aborted', abort);
+      res.removeListener('close', abort);
     }
   }
 );

@@ -57,6 +57,11 @@ export interface DeepbridFinderContent {
   password: string;
 }
 
+export interface DeepbridRequestOptions {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
 export class DeepbridApiError extends Error {
   constructor(
     message: string,
@@ -115,9 +120,21 @@ export class DeepbridFinderClient {
       throw new DeepbridApiError('Deepbrid API key is required.');
   }
 
-  private async getJson(path: string): Promise<Record<string, unknown>> {
+  private async getJson(
+    path: string,
+    options: DeepbridRequestOptions = {}
+  ): Promise<Record<string, unknown>> {
+    const timeoutMs = Math.max(
+      250,
+      Math.min(this.timeoutMs, options.timeoutMs ?? this.timeoutMs)
+    );
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, timeoutSignal])
+      : timeoutSignal;
     const response = await makeRequest(`${DEEPBRID_API_BASE}${path}`, {
-      timeout: this.timeoutMs,
+      timeout: timeoutMs,
+      signal,
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
@@ -167,7 +184,13 @@ export class DeepbridFinderClient {
 
   async search(
     query: string,
-    options: { category?: string; offset?: number; limit?: number } = {}
+    options: {
+      category?: string;
+      offset?: number;
+      limit?: number;
+      timeoutMs?: number;
+      signal?: AbortSignal;
+    } = {}
   ): Promise<DeepbridFinderResult[]> {
     const trimmed = query.trim();
     if (trimmed.length < 3) return [];
@@ -179,7 +202,7 @@ export class DeepbridFinderClient {
       limit: String(limit),
     });
     if (options.category) params.set('category', options.category);
-    const json = await this.getJson(`/usenet/finder/search?${params}`);
+    const json = await this.getJson(`/usenet/finder/search?${params}`, options);
     const items = Array.isArray(json.items) ? json.items : [];
     return items.flatMap((value) => {
       const parsed = ResultSchema.safeParse(value);
@@ -205,7 +228,8 @@ export class DeepbridFinderClient {
 
   async getContent(
     token: string,
-    archives: boolean
+    archives: boolean,
+    options: DeepbridRequestOptions = {}
   ): Promise<DeepbridFinderContent> {
     if (!token.trim())
       throw new DeepbridApiError('Deepbrid content token is required.');
@@ -213,7 +237,10 @@ export class DeepbridFinderClient {
       token: token.trim(),
       archives: archives ? '1' : '0',
     });
-    const json = await this.getJson(`/usenet/finder/content?${params}`);
+    const json = await this.getJson(
+      `/usenet/finder/content?${params}`,
+      options
+    );
     const values = Array.isArray(json.files) ? json.files : [];
     const files = values.flatMap((value) => {
       const parsed = FileSchema.safeParse(value);

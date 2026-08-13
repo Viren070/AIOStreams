@@ -10,12 +10,12 @@ import {
 import {
   buildNewshostingNzb,
   decodeNewshostingXmlText,
+  isOfficialNewshostingFinderEndpoint,
+  NEWSHOSTING_FINDER_CERT_FINGERPRINT,
   parseNewshostingGroups,
+  validateNewshostingFinderFingerprint,
 } from './client.js';
-import {
-  decodeNewshostingFrame,
-  encodeNewshostingFrame,
-} from './protocol.js';
+import { decodeNewshostingFrame, encodeNewshostingFrame } from './protocol.js';
 import {
   parseNewshostingRelease,
   scoreNewshostingReleaseMatch,
@@ -58,9 +58,7 @@ test('builds valid escaped NZB XML', () => {
         name: 'Episode & One.mkv',
         author: 'poster@example',
         timestamp: '2026-01-02T03:04:05Z',
-        articles: [
-          { number: 1, bytes: 42, messageId: 'part&one@example' },
-        ],
+        articles: [{ number: 1, bytes: 42, messageId: 'part&one@example' }],
       },
     ],
     ['alt.binaries.test']
@@ -76,6 +74,50 @@ test('decodes Newshosting XML entities before building article ids', () => {
     '<part&one@example>'
   );
   assert.equal(decodeNewshostingXmlText('part&#x40;example'), 'part@example');
+});
+
+test('pins only the exact official Newshosting Finder endpoint', () => {
+  assert.equal(
+    isOfficialNewshostingFinderEndpoint({
+      host: 'srv.aboutusenet.com',
+      ip: '81.171.93.8',
+      port: 5598,
+    }),
+    true
+  );
+  assert.equal(
+    isOfficialNewshostingFinderEndpoint({
+      host: 'srv.aboutusenet.com',
+      ip: '81.171.93.9',
+      port: 5598,
+    }),
+    false
+  );
+  assert.equal(
+    isOfficialNewshostingFinderEndpoint({
+      host: 'custom.example',
+      ip: '81.171.93.8',
+      port: 5598,
+    }),
+    false
+  );
+});
+
+test('accepts only the pinned Newshosting Finder certificate fingerprint', () => {
+  assert.doesNotThrow(() =>
+    validateNewshostingFinderFingerprint(NEWSHOSTING_FINDER_CERT_FINGERPRINT)
+  );
+  assert.throws(
+    () =>
+      validateNewshostingFinderFingerprint(
+        '00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00'
+      ),
+    /fingerprint_mismatch/
+  );
+  assert.throws(
+    () => validateNewshostingFinderFingerprint(undefined),
+    /fingerprint_mismatch/
+  );
 });
 
 test('builds the proven episode-first search plan', () => {

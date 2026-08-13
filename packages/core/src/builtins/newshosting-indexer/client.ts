@@ -2,6 +2,35 @@ import tls from 'node:tls';
 import { randomUUID } from 'node:crypto';
 import { decodeNewshostingFrame, encodeNewshostingFrame } from './protocol.js';
 
+export const NEWSHOSTING_FINDER_CERT_FINGERPRINT =
+  '81:EA:23:69:98:33:60:AD:02:D1:FC:79:B0:C1:22:3D:16:77:BC:EF:DD:A9:61:33:3B:3D:5F:2B:BA:20:60:93';
+const NEWSHOSTING_FINDER_HOST = 'srv.aboutusenet.com';
+const NEWSHOSTING_FINDER_IP = '81.171.93.8';
+const NEWSHOSTING_FINDER_PORT = 5598;
+
+export function isOfficialNewshostingFinderEndpoint(options: {
+  host: string;
+  ip: string;
+  port: number;
+}): boolean {
+  return (
+    options.host.toLowerCase() === NEWSHOSTING_FINDER_HOST &&
+    options.ip === NEWSHOSTING_FINDER_IP &&
+    options.port === NEWSHOSTING_FINDER_PORT
+  );
+}
+
+export function validateNewshostingFinderFingerprint(
+  fingerprint: string | undefined
+): void {
+  if (
+    !fingerprint ||
+    fingerprint.toUpperCase() !== NEWSHOSTING_FINDER_CERT_FINGERPRINT
+  ) {
+    throw new Error('newshosting_certificate_fingerprint_mismatch');
+  }
+}
+
 export interface NewshostingClientOptions {
   username: string;
   password: string;
@@ -208,15 +237,35 @@ export class NewshostingClient {
   }
 
   async connect(): Promise<void> {
+    const pinnedOfficialEndpoint = isOfficialNewshostingFinderEndpoint(
+      this.options
+    );
     this.socket = tls.connect({
       host: this.options.ip,
       port: this.options.port,
       servername: this.options.host,
       timeout: this.options.timeoutMs,
+      // The official proprietary Finder endpoint uses a long-lived self-signed
+      // certificate. Trust only its exact SHA-256 fingerprint; custom endpoints
+      // continue to use the normal platform CA and hostname validation.
+      rejectUnauthorized: !pinnedOfficialEndpoint,
     });
     await new Promise<void>((resolve, reject) => {
       let settled = false;
-      const onSecure = () => cleanup(resolve);
+      const onSecure = () => {
+        if (pinnedOfficialEndpoint) {
+          try {
+            validateNewshostingFinderFingerprint(
+              this.socket?.getPeerCertificate().fingerprint256
+            );
+          } catch (error) {
+            cleanup(() => reject(error));
+            this.socket?.destroy();
+            return;
+          }
+        }
+        cleanup(resolve);
+      };
       const onError = (error: Error) => {
         if (!settled) cleanup(() => reject(error));
       };

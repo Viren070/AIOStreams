@@ -4,6 +4,7 @@ import {
   chooseDeepbridVideoFiles,
   createDeepbridPlaybackToken,
   decodeDeepbridPlaybackToken,
+  resolveDeepbridFiles,
 } from './addon.js';
 import {
   isDeepbridArchiveName,
@@ -227,4 +228,149 @@ test('uses AIOStreams formatting by default and supports an explicit opt-out', (
     deepbridUsenetFormatPassthrough({ useAioFormatter: false }),
     true
   );
+});
+
+test('resolves Deepbrid content in bounded batches and stops at max results', async () => {
+  const calls: string[] = [];
+  const ranked = ['a', 'b', 'c', 'd'].map((token, index) => ({
+    result: {
+      token,
+      title: `Movie ${token}`,
+      category: '',
+      categoryName: '',
+      kind: '',
+      size: 1,
+      sizeHuman: '',
+      date: '',
+      sources: 4 - index,
+    },
+    score: 100 - index,
+    confirmed: true,
+  }));
+
+  const resolved = await resolveDeepbridFiles(
+    ranked,
+    { type: 'movie' },
+    {
+      concurrency: 2,
+      maxResults: 2,
+      deadline: Date.now() + 10_000,
+      getContent: async (token) => {
+        calls.push(token);
+        return {
+          title: token,
+          files: [
+            {
+              name: `${token}.mkv`,
+              link: `https://storage.example/${token}.mkv`,
+              size: 1,
+              sizeHuman: '',
+            },
+          ],
+          hasPassword: false,
+          password: '',
+        };
+      },
+    }
+  );
+
+  assert.deepEqual(calls, ['a', 'b']);
+  assert.deepEqual(
+    resolved.map((item) => item.file.name),
+    ['a.mkv', 'b.mkv']
+  );
+});
+
+test('returns partial Deepbrid results when another content lookup fails', async () => {
+  const ranked = ['good', 'slow'].map((token) => ({
+    result: {
+      token,
+      title: token,
+      category: '',
+      categoryName: '',
+      kind: '',
+      size: 1,
+      sizeHuman: '',
+      date: '',
+      sources: 1,
+    },
+    score: 100,
+    confirmed: true,
+  }));
+
+  const resolved = await resolveDeepbridFiles(
+    ranked,
+    { type: 'movie' },
+    {
+      concurrency: 2,
+      maxResults: 10,
+      deadline: Date.now() + 10_000,
+      getContent: async (token) => {
+        if (token === 'slow')
+          throw new DOMException('timed out', 'TimeoutError');
+        return {
+          title: token,
+          files: [
+            {
+              name: `${token}.mkv`,
+              link: `https://storage.example/${token}.mkv`,
+              size: 1,
+              sizeHuman: '',
+            },
+          ],
+          hasPassword: false,
+          password: '',
+        };
+      },
+    }
+  );
+
+  assert.deepEqual(
+    resolved.map((item) => item.file.name),
+    ['good.mkv']
+  );
+});
+
+test('does not begin another Deepbrid batch after its deadline budget is spent', async () => {
+  let now = 1_000;
+  const calls: string[] = [];
+  const ranked = ['first', 'second'].map((token) => ({
+    result: {
+      token,
+      title: token,
+      category: '',
+      categoryName: '',
+      kind: '',
+      size: 1,
+      sizeHuman: '',
+      date: '',
+      sources: 1,
+    },
+    score: 100,
+    confirmed: true,
+  }));
+
+  const resolved = await resolveDeepbridFiles(
+    ranked,
+    { type: 'movie' },
+    {
+      concurrency: 1,
+      maxResults: 10,
+      deadline: 3_000,
+      now: () => now,
+      getContent: async (token) => {
+        calls.push(token);
+        now = 2_500;
+        return {
+          title: token,
+          files: [],
+          hasPassword: false,
+          password: '',
+        };
+      },
+    }
+  );
+
+  assert.deepEqual(calls, ['first']);
+  assert.deepEqual(resolved, []);
 });
