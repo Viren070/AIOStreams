@@ -14,8 +14,21 @@ if (process.env.TEST_ORIGIN) {
 }
 const base = manifest.toString().replace(/\/manifest\.json$/, '');
 const delayMs = Math.max(1_000, Number(process.env.TEST_DELAY_MS || 5_000));
-const timeoutMs = Math.max(10_000, Number(process.env.TEST_TIMEOUT_MS || 150_000));
-const cases = input?.cases || JSON.parse(process.env.TEST_CASES_JSON || '[]');
+const timeoutMs = Math.max(
+  10_000,
+  Number(process.env.TEST_TIMEOUT_MS || 150_000)
+);
+const allCases =
+  input?.cases || JSON.parse(process.env.TEST_CASES_JSON || '[]');
+const labels = new Set(
+  String(process.env.TEST_LABELS || '')
+    .split('|')
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
+const cases = labels.size
+  ? allCases.filter((item) => labels.has(item.label))
+  : allCases;
 
 for (const item of cases) {
   const started = performance.now();
