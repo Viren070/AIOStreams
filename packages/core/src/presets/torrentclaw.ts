@@ -364,7 +364,7 @@ export class TorrentClawPreset extends Preset {
           : options.url?.endsWith('/manifest.json')
             ? undefined
             : 'p2p',
-      manifestUrl: this.generateManifestUrl(userData, options, services),
+      manifestUrl: this.generateManifestUrl(options),
       enabled: true,
       mediaTypes: options.mediaTypes || [],
       resources: options.resources || this.METADATA.SUPPORTED_RESOURCES,
@@ -380,11 +380,13 @@ export class TorrentClawPreset extends Preset {
     };
   }
 
-  private static generateManifestUrl(
-    userData: UserData,
-    options: Record<string, any>,
-    services: ServiceId[]
-  ): string {
+  /**
+   * Takes neither `userData` nor the service list, unlike most presets: the
+   * config blob carries no credentials. TorrentClaw resolves the debrid provider
+   * from the account behind the API key, so the services stay on the addon
+   * (`preset.options.services`) for stream attribution and never reach the URL.
+   */
+  private static generateManifestUrl(options: Record<string, any>): string {
     const url = options.url || this.DEFAULT_URL;
     if (url.endsWith('/manifest.json')) {
       return url;
@@ -397,11 +399,6 @@ export class TorrentClawPreset extends Preset {
     if (options.lang) {
       config.lang = options.lang;
     }
-
-    // TorrentClaw resolves the debrid provider from the account behind the API
-    // key, so the service list is not part of the config blob. It is still
-    // carried on the addon (`preset.options.services`) for stream attribution.
-    void services;
 
     const base = url.replace(/\/$/, '');
 
