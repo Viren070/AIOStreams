@@ -63,6 +63,9 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.torznab?.language,
         subtitleLanguages: result.torznab?.subs,
+        resolution: result.torznab?.resolution,
+        codec: result.torznab?.video,
+        audio: result.torznab?.audio,
       });
 
       torrents.push({
@@ -82,6 +85,10 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
             ? result.torznab.downloadvolumefactor
             : undefined,
         indexer: result.jackettindexer?.name ?? undefined,
+        group:
+          typeof result.torznab?.team === 'string'
+            ? result.torznab.team
+            : undefined,
         title: result.title,
         size:
           result.size ??

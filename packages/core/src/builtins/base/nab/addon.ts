@@ -4,8 +4,11 @@ import {
   getTimeTakenSincePoint,
   normaliseLanguage,
   normaliseParsedMediaInfo,
+  normaliseResolution,
   ParsedMediaInfo,
 } from '../../../utils/index.js';
+import { matchPattern, matchMultiplePatterns } from '../../../parser/file.js';
+import { PARSE_REGEX } from '../../../parser/regex.js';
 import { config as appConfig } from '../../../config/index.js';
 import {
   BaseDebridAddon,
@@ -47,13 +50,32 @@ export function parseNabLanguages(
     });
 }
 
+/** Per the Torznab spec, e.g. "1280x716 1.78:1". */
+function parseNabResolution(
+  value: string | number | boolean | undefined
+): string | undefined {
+  if (typeof value !== 'string' || !value) return undefined;
+  const dims = value.match(/(\d{3,5})\s*[x×]\s*(\d{3,5})/i);
+  if (!dims) return undefined;
+  return normaliseResolution(Number(dims[1]), Number(dims[2]));
+}
+
 export function parseNabParsedFileInfo(args: {
   audioLanguages?: string | number | boolean;
   subtitleLanguages?: string | number | boolean;
+  resolution?: string | number | boolean;
+  codec?: string | number | boolean;
+  audio?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
+  const audioText = typeof args.audio === 'string' ? args.audio : '';
+  const codecText = typeof args.codec === 'string' ? args.codec : '';
   return normaliseParsedMediaInfo({
     languages: parseNabLanguages(args.audioLanguages),
     subtitles: parseNabLanguages(args.subtitleLanguages),
+    resolution: parseNabResolution(args.resolution),
+    encode: matchPattern(codecText, PARSE_REGEX.encodes),
+    audioTags: matchMultiplePatterns(audioText, PARSE_REGEX.audioTags),
+    audioChannels: matchMultiplePatterns(audioText, PARSE_REGEX.audioChannels),
   });
 }
 
