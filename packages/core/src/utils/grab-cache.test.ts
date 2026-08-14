@@ -9,6 +9,7 @@ import {
   NzbTooLargeError,
   assertLikelyNzbPayload,
 } from './download-manager.js';
+import { DiskBackedCache } from './disk-backed-cache.js';
 import { GrabCache } from './grab-cache.js';
 
 const bufferCodec = {
@@ -191,6 +192,52 @@ describe('GrabCache.delete', () => {
       await cache.fetch('target', async () => Buffer.from('fresh')),
       Buffer.from('fresh')
     );
+  });
+
+  it('waits for a pending cached L2 read before deletion', async (t) => {
+    const cache = await testCache(t, {
+      maxMemBytes: 0,
+      maxDiskBytes: 1024,
+    });
+    const key = 'https://indexer.test/api?t=get&id=pending-read';
+    const stale = Buffer.from('stale');
+    await cache.fetch(key, async () => stale);
+
+    const backing = (cache as unknown as { cache: DiskBackedCache<Buffer> })
+      .cache;
+    await backing.flush();
+    backing.resize(1024);
+
+    const readStarted = deferred<void>();
+    const releaseRead = deferred<void>();
+    const originalGetAsync = backing.getAsync.bind(backing);
+    let firstRead = true;
+    t.mock.method(backing, 'getAsync', async (readKey: string) => {
+      if (!firstRead) return originalGetAsync(readKey);
+      firstRead = false;
+      readStarted.resolve();
+      await releaseRead.promise;
+      // Model getAsync's completed L2-read promotion after invalidation began.
+      backing.set(readKey, stale, { skipDisk: true });
+      return stale;
+    });
+    const originalDelete = backing.delete.bind(backing);
+    const deleteBacking = t.mock.method(
+      backing,
+      'delete',
+      (deleteKey: string) => originalDelete(deleteKey)
+    );
+
+    const reading = cache.cached(key);
+    await readStarted.promise;
+    const deleting = cache.delete(key);
+    assert.equal(deleteBacking.mock.callCount(), 0);
+
+    releaseRead.resolve();
+    assert.deepEqual(await reading, stale);
+    assert.equal(await deleting, true);
+    assert.equal(deleteBacking.mock.callCount(), 1);
+    assert.equal(await originalGetAsync(key), undefined);
   });
 });
 

@@ -122,8 +122,10 @@ export class DiskBackedCache<V> {
   private readonly indexPath: string;
   private readonly opts: DiskBackedCacheOptions<V>;
 
-  /** In-flight disk writes keyed by file key, so reads can await consistency. */
-  private pendingWrites = new Map<string, Promise<void>>();
+  /** Every in-flight disk write keyed by file key, so reads/deletes can drain all. */
+  private pendingWrites = new Map<string, Set<Promise<void>>>();
+  /** Total in-flight writes across all keys (the map itself counts keys). */
+  private pendingWriteCount = 0;
   /** Approximate bytes held by in-flight disk writes (serialized payloads). */
   private pendingWriteBytes = 0;
   /** Serialises index persistence. */
@@ -258,7 +260,7 @@ export class DiskBackedCache<V> {
     }
     // Ensure any in-flight write for this key has settled before reading.
     const pending = this.pendingWrites.get(fileKey);
-    if (pending) await pending.catch(() => {});
+    if (pending) await Promise.allSettled([...pending]);
     try {
       const buf = await fs.readFile(this.filePath(fileKey));
       const value = this.opts.deserialize(buf);
@@ -350,7 +352,7 @@ export class DiskBackedCache<V> {
   /** Update the disk index synchronously; write the file in the background. */
   private persistToDisk(key: string, value: V, size: number): void {
     if (
-      this.pendingWrites.size >= DiskBackedCache.MAX_PENDING_WRITES ||
+      this.pendingWriteCount >= DiskBackedCache.MAX_PENDING_WRITES ||
       this.pendingWriteBytes >= DiskBackedCache.MAX_PENDING_WRITE_BYTES
     ) {
       return; // saturated — skip this persist rather than queue it
@@ -382,7 +384,14 @@ export class DiskBackedCache<V> {
       payload = this.opts.serialize(value);
     }
 
+    let pendingForKey = this.pendingWrites.get(fileKey);
+    if (!pendingForKey) {
+      pendingForKey = new Set();
+      this.pendingWrites.set(fileKey, pendingForKey);
+    }
+
     let write: Promise<void>;
+    this.pendingWriteCount++;
     this.pendingWriteBytes += size;
     const run = async (): Promise<void> => {
       try {
@@ -396,14 +405,19 @@ export class DiskBackedCache<V> {
         );
       } finally {
         if (slot) this.releaseWriteBuf(slot);
+        this.pendingWriteCount--;
         this.pendingWriteBytes -= size;
-        if (this.pendingWrites.get(fileKey) === write) {
+        pendingForKey.delete(write);
+        if (
+          pendingForKey.size === 0 &&
+          this.pendingWrites.get(fileKey) === pendingForKey
+        ) {
           this.pendingWrites.delete(fileKey);
         }
       }
     };
     write = run();
-    this.pendingWrites.set(fileKey, write);
+    pendingForKey.add(write);
   }
 
   /** Evict least-recently-used disk entries until within budget. */
@@ -451,15 +465,16 @@ export class DiskBackedCache<V> {
     }
     const fileKey = this.fileKey(key);
     const pending = this.pendingWrites.get(fileKey);
+    const earlierWrites = pending ? [...pending] : [];
     if (this.disk.has(fileKey)) {
       this.dropDisk(fileKey);
       removed = true;
     }
 
     // dropDisk() removes eagerly, but a write that was already in progress can
-    // recreate the file afterwards. Wait for that exact write and remove once
-    // more before allowing GrabCache's per-key lock to admit a new producer.
-    if (pending) await pending.catch(() => {});
+    // recreate the file afterwards. Wait for every write that started before
+    // this deletion and remove once more before GrabCache admits a new producer.
+    if (earlierWrites.length > 0) await Promise.allSettled(earlierWrites);
     if (this.diskEnabled()) {
       await fs.rm(this.filePath(fileKey), { force: true }).catch(() => {});
     }
@@ -537,7 +552,10 @@ export class DiskBackedCache<V> {
    */
   async flush(): Promise<void> {
     await this.ready.catch(() => {});
-    await Promise.allSettled([...this.pendingWrites.values()]);
+    const writes = [...this.pendingWrites.values()].flatMap((pending) => [
+      ...pending,
+    ]);
+    await Promise.allSettled(writes);
     await this.flushIndex();
   }
 

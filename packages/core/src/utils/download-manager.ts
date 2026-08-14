@@ -56,6 +56,58 @@ export class InvalidNzbPayloadError extends Error {
   }
 }
 
+/** Offset of the first XML element after legal prolog constructs. */
+function xmlRootOffset(xml: string): number | undefined {
+  let offset = 0;
+  let sawDoctype = false;
+  for (;;) {
+    while (/[ \t\r\n]/.test(xml[offset] ?? '')) offset++;
+
+    if (xml.startsWith('<!--', offset)) {
+      const end = xml.indexOf('-->', offset + 4);
+      if (end < 0) return undefined;
+      offset = end + 3;
+      continue;
+    }
+    if (xml.startsWith('<?', offset)) {
+      const end = xml.indexOf('?>', offset + 2);
+      if (end < 0) return undefined;
+      offset = end + 2;
+      continue;
+    }
+
+    const rest = xml.slice(offset);
+    const doctype = /^<!doctype\s+([A-Za-z_:][A-Za-z0-9_.:-]*)/i.exec(rest);
+    if (doctype) {
+      if (sawDoctype || doctype[1].toLowerCase() !== 'nzb') return undefined;
+      sawDoctype = true;
+      let quote: '"' | "'" | undefined;
+      let subsetDepth = 0;
+      let end: number | undefined;
+      for (let i = offset + doctype[0].length; i < xml.length; i++) {
+        const char = xml[i];
+        if (quote) {
+          if (char === quote) quote = undefined;
+        } else if (char === '"' || char === "'") {
+          quote = char;
+        } else if (char === '[') {
+          subsetDepth++;
+        } else if (char === ']' && subsetDepth > 0) {
+          subsetDepth--;
+        } else if (char === '>' && subsetDepth === 0) {
+          end = i + 1;
+          break;
+        }
+      }
+      if (end === undefined) return undefined;
+      offset = end;
+      continue;
+    }
+
+    return offset;
+  }
+}
+
 /** Reject obvious non-NZB responses before they can enter the grab cache. */
 export function assertLikelyNzbPayload(contentType: string, buf: Buffer): void {
   const head = buf
@@ -68,9 +120,11 @@ export function assertLikelyNzbPayload(contentType: string, buf: Buffer): void {
     contentType.toLowerCase().includes('text/html') ||
     /<!doctype\s+html|<html(?:\s|>)/i.test(head);
 
-  const containsNzbRoot = /<nzb(?:\s|>)/i.test(head);
+  const rootOffset = xmlRootOffset(head);
+  const hasNzbRoot =
+    rootOffset !== undefined && /^<nzb(?:\s|>)/i.test(head.slice(rootOffset));
 
-  if (buf.length === 0 || looksLikeHtml || !containsNzbRoot) {
+  if (buf.length === 0 || looksLikeHtml || !hasNzbRoot) {
     throw new InvalidNzbPayloadError(contentType, buf.length);
   }
 }

@@ -42,6 +42,8 @@ export class GrabCache<V> {
   private readonly inflight = new Map<string, Promise<V>>();
   /** Full fetch lifecycle, including the async L2 lookup before production. */
   private readonly fetches = new Map<string, Promise<V>>();
+  /** Standalone cached() reads that may promote an L2 hit back into L1. */
+  private readonly reads = new Map<string, Set<Promise<V | undefined>>>();
   /** Per-key invalidations; unrelated grab URLs never block one another. */
   private readonly deletions = new Map<string, Promise<boolean>>();
 
@@ -64,7 +66,21 @@ export class GrabCache<V> {
       if (!deleting) break;
       await deleting.catch(() => false);
     }
-    return this.cache.getAsync(key);
+
+    let readsForKey = this.reads.get(key);
+    if (!readsForKey) {
+      readsForKey = new Set();
+      this.reads.set(key, readsForKey);
+    }
+    let read!: Promise<V | undefined>;
+    read = this.cache.getAsync(key).finally(() => {
+      readsForKey.delete(read);
+      if (readsForKey.size === 0 && this.reads.get(key) === readsForKey) {
+        this.reads.delete(key);
+      }
+    });
+    readsForKey.add(read);
+    return read;
   }
 
   /** The in-flight producer for `key`, if one is running. */
@@ -129,6 +145,8 @@ export class GrabCache<V> {
     deletion = (async () => {
       const running = this.fetches.get(key);
       if (running) await running.catch(() => undefined);
+      const reads = this.reads.get(key);
+      if (reads) await Promise.allSettled([...reads]);
       return this.cache.delete(key);
     })().finally(() => {
       if (this.deletions.get(key) === deletion) this.deletions.delete(key);

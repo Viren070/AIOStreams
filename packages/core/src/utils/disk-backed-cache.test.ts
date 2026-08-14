@@ -30,6 +30,17 @@ function makeCache(dir: string, name = 'disk-test'): DiskBackedCache<Buffer> {
   });
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 it('persists unaffected keys and keeps a targeted deletion across reloads', async (t) => {
   const dir = await tempDir(t);
   const first = makeCache(dir);
@@ -71,4 +82,49 @@ it('drains a pending write before deletion and cannot overwrite a fresh rewrite'
   await reopened.whenReady();
   assert.deepEqual(await reopened.getAsync(key), fresh);
   await reopened.close();
+});
+
+it('drains overlapping writes that settle in reverse order before deletion', async (t) => {
+  const dir = await tempDir(t);
+  const name = 'overlapping-writes';
+  const key = 'https://indexer.test/api?t=get&id=overlapping';
+  const fileKey = createHash('sha1').update(key).digest('hex');
+  const filePath = path.join(dir, name, fileKey);
+  const cache = makeCache(dir, name);
+  await cache.whenReady();
+
+  const originalWriteFile = fs.writeFile.bind(fs);
+  const releases = [deferred<void>(), deferred<void>()];
+  const completed = [deferred<void>(), deferred<void>()];
+  let dataWrites = 0;
+  t.mock.method(fs, 'writeFile', async (target, data, options) => {
+    if (String(target) !== filePath) {
+      return originalWriteFile(target, data, options);
+    }
+    const index = dataWrites++;
+    assert.ok(index < releases.length);
+    await releases[index].promise;
+    await originalWriteFile(target, data, options);
+    completed[index].resolve();
+  });
+
+  cache.set(key, Buffer.from('older'));
+  cache.set(key, Buffer.from('newer'));
+  assert.equal(dataWrites, 2);
+
+  let deletionSettled = false;
+  const deleting = cache.delete(key).then((removed) => {
+    deletionSettled = true;
+    return removed;
+  });
+
+  releases[1].resolve();
+  await completed[1].promise;
+  assert.equal(deletionSettled, false);
+
+  releases[0].resolve();
+  await completed[0].promise;
+  assert.equal(await deleting, true);
+  await assert.rejects(() => fs.stat(filePath), { code: 'ENOENT' });
+  await cache.close();
 });

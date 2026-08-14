@@ -43,6 +43,13 @@ describe('assertLikelyNzbPayload', () => {
     assert.doesNotThrow(() => assertLikelyNzbPayload('application/xml', body));
   });
 
+  it('accepts comments and an NZB doctype before the document root', () => {
+    const body = Buffer.from(
+      '<?xml version="1.0"?><!-- generated --><!DOCTYPE nzb PUBLIC "-//newzBin//DTD NZB 1.1//EN" "http://www.newzbin.com/DTD/nzb/nzb-1.1.dtd"><nzb></nzb>'
+    );
+    assert.doesNotThrow(() => assertLikelyNzbPayload('application/xml', body));
+  });
+
   it('rejects an empty body with the typed payload error', () => {
     assert.throws(
       () => assertLikelyNzbPayload('application/x-nzb', Buffer.alloc(0)),
@@ -99,6 +106,17 @@ describe('assertLikelyNzbPayload', () => {
     });
   }
 
+  it('rejects an NZB element nested under a non-NZB document root', () => {
+    assert.throws(
+      () =>
+        assertLikelyNzbPayload(
+          'application/xml',
+          Buffer.from('<?xml version="1.0"?><error><nzb></nzb></error>')
+        ),
+      InvalidNzbPayloadError
+    );
+  });
+
   it('only sniffs the first 64 KiB for the NZB root', () => {
     const body = Buffer.concat([
       Buffer.alloc(64 * 1024, 0x20),
@@ -115,6 +133,7 @@ describe('DownloadManager NZB cache admission', () => {
   it('does not cache a 200 HTML response and does cache a valid NZB', async () => {
     const nonce = randomUUID();
     const htmlPath = `/html-${nonce}`;
+    const nestedPath = `/nested-${nonce}`;
     const validPath = `/valid-${nonce}`;
     const requests = new Map<string, number>();
     const server = createServer((req, res) => {
@@ -123,6 +142,11 @@ describe('DownloadManager NZB cache admission', () => {
       if (pathname === htmlPath) {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end('<!doctype html><html><body>Login required</body></html>');
+        return;
+      }
+      if (pathname === nestedPath) {
+        res.writeHead(200, { 'Content-Type': 'application/xml' });
+        res.end('<error><nzb></nzb></error>');
         return;
       }
       if (pathname === validPath) {
@@ -141,6 +165,7 @@ describe('DownloadManager NZB cache admission', () => {
     assert.ok(address && typeof address === 'object');
     const baseUrl = `http://127.0.0.1:${address.port}`;
     const htmlUrl = `${baseUrl}${htmlPath}`;
+    const nestedUrl = `${baseUrl}${nestedPath}`;
     const validUrl = `${baseUrl}${validPath}`;
 
     try {
@@ -154,11 +179,22 @@ describe('DownloadManager NZB cache admission', () => {
       );
       assert.equal(requests.get(htmlPath), 2);
 
+      await assert.rejects(
+        downloadManager.fetchNzb(nestedUrl),
+        InvalidNzbPayloadError
+      );
+      await assert.rejects(
+        downloadManager.fetchNzb(nestedUrl),
+        InvalidNzbPayloadError
+      );
+      assert.equal(requests.get(nestedPath), 2);
+
       assert.deepEqual(await downloadManager.fetchNzb(validUrl), VALID_NZB);
       assert.deepEqual(await downloadManager.fetchNzb(validUrl), VALID_NZB);
       assert.equal(requests.get(validPath), 1);
     } finally {
       await downloadManager.invalidateNzb(htmlUrl);
+      await downloadManager.invalidateNzb(nestedUrl);
       await downloadManager.invalidateNzb(validUrl);
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
