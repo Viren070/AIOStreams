@@ -66,14 +66,10 @@ import {
   grabHttpStatus,
   grabErrorMessage,
 } from './grab-metrics.js';
+import { LOCAL_NZB_SCHEME } from './nzb-source.js';
+import { parseWithNzbGrabInvalidation } from './nzb-grab-invalidation.js';
 
 const logger = createLogger('usenet/library');
-
-/**
- * Synthetic URL scheme for NZBs uploaded directly (no indexer URL). The
- * contents are persisted on disk so the entry stays streamable after upload.
- */
-const LOCAL_NZB_SCHEME = 'local-nzb://';
 
 /** Directory holding the raw XML of directly-uploaded NZBs. */
 function localNzbDir(): string {
@@ -644,7 +640,9 @@ export async function resolveFileList(
   const grabbedAt = Date.now();
   let nzb: Nzb;
   try {
-    nzb = await parseNzbCached(nzbHash, xml);
+    nzb = await parseWithNzbGrabInvalidation(playbackInfo.nzb, () =>
+      parseNzbCached(nzbHash, xml)
+    );
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(playbackInfo.indexer, playbackInfo.nzb),
@@ -911,11 +909,13 @@ export async function addUsenetNzb(opts: {
   const startedAt = Date.now();
   let xml: string | Buffer;
   let grabMs: number | undefined;
+  let grabbedUrl: string | undefined;
   if (opts.xml != null) {
     xml = opts.xml;
   } else {
+    grabbedUrl = opts.url!;
     try {
-      xml = await fetchNzb(opts.url!);
+      xml = await fetchNzb(grabbedUrl);
     } catch (err) {
       recordGrabOutcome({
         indexer: indexerLabelFor(undefined, opts.url),
@@ -930,7 +930,7 @@ export async function addUsenetNzb(opts: {
   }
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    nzb = await parseWithNzbGrabInvalidation(grabbedUrl, () => parseNzb(xml));
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, opts.url),
@@ -1090,7 +1090,7 @@ async function requeueEntry(
   const grabMs = Date.now() - fetchStart;
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    nzb = await parseWithNzbGrabInvalidation(nzbUrl, () => parseNzb(xml));
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, nzbUrl),

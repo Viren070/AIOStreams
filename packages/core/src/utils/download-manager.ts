@@ -45,6 +45,36 @@ export class NzbTooLargeError extends Error {
   }
 }
 
+/** A successful grab response did not contain a plausible NZB document. */
+export class InvalidNzbPayloadError extends Error {
+  constructor(
+    readonly contentType: string,
+    readonly bytes: number
+  ) {
+    super('grab response is not an NZB document');
+    this.name = 'InvalidNzbPayloadError';
+  }
+}
+
+/** Reject obvious non-NZB responses before they can enter the grab cache. */
+export function assertLikelyNzbPayload(contentType: string, buf: Buffer): void {
+  const head = buf
+    .subarray(0, Math.min(buf.length, 64 * 1024))
+    .toString('utf8')
+    .replace(/^\uFEFF/, '')
+    .trimStart();
+
+  const looksLikeHtml =
+    contentType.toLowerCase().includes('text/html') ||
+    /<!doctype\s+html|<html(?:\s|>)/i.test(head);
+
+  const containsNzbRoot = /<nzb(?:\s|>)/i.test(head);
+
+  if (buf.length === 0 || looksLikeHtml || !containsNzbRoot) {
+    throw new InvalidNzbPayloadError(contentType, buf.length);
+  }
+}
+
 /**
  * Process-wide download manager for grabbed `.nzb` files: a disk-backed,
  * restart-surviving, single-flighted grab layer (so a player resuming a stream
@@ -87,6 +117,11 @@ class DownloadManager {
     );
   }
 
+  /** Remove exactly one grabbed NZB, keyed by its original URL string. */
+  invalidateNzb(url: string): Promise<boolean> {
+    return this.nzbCache().delete(url);
+  }
+
   private async download(url: string, opts: GrabOptions): Promise<Buffer> {
     const startedAt = Date.now();
     const maxBytes = appConfig.usenet.maxNzbSize;
@@ -111,6 +146,7 @@ class DownloadManager {
     if (buf.length > maxBytes) {
       throw new NzbTooLargeError(buf.length, maxBytes);
     }
+    assertLikelyNzbPayload(response.headers.get('content-type') ?? '', buf);
     logger.debug(
       { bytes: buf.length, latencyMs: Date.now() - startedAt },
       'grabbed nzb'

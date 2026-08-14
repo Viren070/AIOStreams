@@ -23,6 +23,7 @@ import {
   type HoleHooks,
   type HoleInfo,
   type HoleDecision,
+  type Nzb,
   type ArchiveStreamLayout,
   type LazyResolveHooks,
   type DataFragment,
@@ -49,6 +50,7 @@ import {
 } from '../../stream-sessions/index.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
 import { fetchNzb, parseNzbCached, canonicaliseNzbHash } from './library.js';
+import { parseWithNzbGrabInvalidation } from './nzb-grab-invalidation.js';
 import { noteStreamActivity, pruneStreamActivity } from './damage-policy.js';
 
 const logger = createLogger('usenet/stream');
@@ -447,7 +449,9 @@ async function getStreamSession(
     const grabbedAt = Date.now();
     // Reuses the model the resolve just parsed (same hash); parsing the same
     // multi-MB NZB twice per playback is pure waste.
-    const nzb = await parseNzbCached(decoded.hash, xml);
+    const nzb: Nzb = await parseWithNzbGrabInvalidation(decoded.nzb, () =>
+      parseNzbCached(decoded.hash, xml)
+    );
     const parsedAt = Date.now();
     // tokens minted before the content-hash rekey carry a search-time
     // hash. Every library read/write below

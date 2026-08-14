@@ -440,6 +440,8 @@ export class DiskBackedCache<V> {
   }
 
   async delete(key: string): Promise<boolean> {
+    await this.ready.catch(() => {});
+
     let removed = false;
     const memEntry = this.mem.get(key);
     if (memEntry) {
@@ -448,9 +450,18 @@ export class DiskBackedCache<V> {
       removed = true;
     }
     const fileKey = this.fileKey(key);
+    const pending = this.pendingWrites.get(fileKey);
     if (this.disk.has(fileKey)) {
       this.dropDisk(fileKey);
       removed = true;
+    }
+
+    // dropDisk() removes eagerly, but a write that was already in progress can
+    // recreate the file afterwards. Wait for that exact write and remove once
+    // more before allowing GrabCache's per-key lock to admit a new producer.
+    if (pending) await pending.catch(() => {});
+    if (this.diskEnabled()) {
+      await fs.rm(this.filePath(fileKey), { force: true }).catch(() => {});
     }
     return removed;
   }
