@@ -230,6 +230,11 @@ test('queued work waits for an idle probe instead of pipelining behind it', asyn
     await submitStat(pool, 'warmup@test.invalid');
     runKeepalive(pool);
     await waitFor(() => probeSocket !== undefined, 'reader probe command');
+    assert.equal(
+      pool.freeSlots,
+      0,
+      "a reader probe reserves the slot's full pipeline capacity"
+    );
 
     const queued = submitStat(pool, 'after-probe@test.invalid');
     await delay(25);

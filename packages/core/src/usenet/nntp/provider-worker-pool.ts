@@ -164,7 +164,14 @@ export class ProviderWorkerPool {
   /** Total pipeline slots free right now (used for least-busy provider ordering). */
   get freeSlots(): number {
     if (this.state !== 'online') return 0;
-    return Math.max(0, this.allowed * this.depth - this.inFlightTotal());
+    const probeReservations = this.slots.reduce((total, slot) => {
+      if (!slot.probing) return total;
+      return total + Math.max(0, this.depth - (slot.conn?.inFlight ?? 0));
+    }, 0);
+    return Math.max(
+      0,
+      this.allowed * this.depth - this.inFlightTotal() - probeReservations
+    );
   }
 
   get inFlight(): number {
