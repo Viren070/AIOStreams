@@ -74,17 +74,13 @@ export class MetadataService {
             let cinemetaVideos: CinemetaVideo[] | undefined;
 
             // Check anime database first
-            const animeEntry = AnimeDatabase.getInstance().getEntryById(
+            const animeDb = AnimeDatabase.getInstance();
+            const animeEntry = animeDb.getEntryById(
               id.type,
               id.value,
               id.season ? Number(id.season) : undefined,
               id.episode ? Number(id.episode) : undefined
             );
-
-            const suppressWholeShowAliases =
-              appConfig.metadata.animeDb.suppressSiblingAliases &&
-              !!animeEntry &&
-              AnimeDatabase.getInstance().hasSiblingRecords(id.type, id.value);
 
             let tmdbId: number | null =
               id.type === 'themoviedbId'
@@ -126,6 +122,17 @@ export class MetadataService {
                 );
               }
             }
+
+            const hasSiblingAnimeRecords =
+              (!!tmdbId && animeDb.hasSiblingRecords('themoviedbId', tmdbId)) ||
+              (!!tvdbId && animeDb.hasSiblingRecords('thetvdbId', tvdbId)) ||
+              (!!imdbId && animeDb.hasSiblingRecords('imdbId', imdbId)) ||
+              animeDb.hasSiblingRecords(id.type, id.value);
+
+            const suppressWholeShowAliases =
+              appConfig.metadata.animeDb.suppressSiblingAliases &&
+              !!animeEntry &&
+              hasSiblingAnimeRecords;
 
             if (animeEntry) {
               const aliases: MetadataTitle[] = [];
@@ -171,7 +178,7 @@ export class MetadataService {
             // TVDB metadata
             const idForTvdb = tvdbId
               ? `tvdb:${tvdbId}`
-              : (imdbId ?? (tmdbId ? `tmdb:${tmdbId}` : null));
+              : (imdbId ?? (tmdbId ? `tvdb:${tvdbId}` : null));
             const parsedIdForTvdb = idForTvdb
               ? IdParser.parse(idForTvdb, type)
               : null;
