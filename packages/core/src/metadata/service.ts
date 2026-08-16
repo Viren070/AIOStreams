@@ -1,4 +1,4 @@
-﻿import { DistributedLock } from '../utils/distributed-lock.js';
+import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   deduplicateTitles,
   Metadata,
@@ -80,6 +80,11 @@ export class MetadataService {
               id.season ? Number(id.season) : undefined,
               id.episode ? Number(id.episode) : undefined
             );
+
+            const suppressWholeShowAliases =
+              appConfig.metadata.animeDb.suppressSiblingAliases &&
+              !!animeEntry &&
+              AnimeDatabase.getInstance().hasSiblingRecords(id.type, id.value);
 
             let tmdbId: number | null =
               id.type === 'themoviedbId'
@@ -435,7 +440,9 @@ export class MetadataService {
             }
 
             const mediaType = type === 'movie' ? 'movie' : 'series';
-            let merged = mergeMetadata(contributions, mediaType);
+            let merged = mergeMetadata(contributions, mediaType, {
+              suppressWholeShowAliases,
+            });
 
             // series only: movie results carry a year already
             let titleConflictsPromise: Promise<TitleConflict[]> | undefined;
@@ -779,7 +786,9 @@ export class MetadataService {
             }
 
             // re-merge: the episode and scene steps added contributions
-            merged = mergeMetadata(contributions, mediaType);
+            merged = mergeMetadata(contributions, mediaType, {
+              suppressWholeShowAliases,
+            });
 
             if (
               !merged.titles.length ||
