@@ -337,4 +337,9 @@ export class AnimeDatabase {
     if (!chosen) return null;
     return buildAnimeEntry(chosen);
   }
+
+  public hasSiblingRecords(idType: IdType, idValue: IdValue): boolean {
+    const posting = this.indexes.get(idType)?.get(canonicalIdValue(idValue));
+    return Array.isArray(posting) && posting.length > 1;
+  }
 }
