@@ -93,6 +93,11 @@ router.get(
 
       const clientIp = req.userIp;
 
+      // Probe each resolved URL before serving it, so a debrid service answering
+      // a dead link with its short "content unavailable" clip fails the attempt
+      // and the chain moves on instead of playing the error video.
+      const verify = chain?.verifyPlayback ?? false;
+
       const arrivedViaOurProxy = !!req.query[constants.INTERNAL_PROXY_MARKER];
       const proxyConfig = chain?.proxyConfig;
 
@@ -139,8 +144,8 @@ router.get(
           }
           const target = parsePlaybackUrl(item.url);
           return target
-            ? resolvePlaybackTarget(target, { clientIp }, signal).then((url) =>
-                maybeProxy(url, item.proxied)
+            ? resolvePlaybackTarget(target, { clientIp, verify }, signal).then(
+                (url) => maybeProxy(url, item.proxied)
               )
             : Promise.reject(new Error('unparseable fallback url'));
         };
@@ -154,7 +159,13 @@ router.get(
           resolve: (signal) =>
             resolvePlaybackTarget(
               { encryptedStoreAuth, fileInfoRaw, metadataId, filename },
-              { clientIp },
+              {
+                clientIp,
+                // With nothing to fail over to, rejecting the clicked item only
+                // trades an error video for an error page — so don't risk a
+                // false positive.
+                verify: verify && hasFailover,
+              },
               signal
             ).then((url) => maybeProxy(url, chain?.clickedProxied)),
         },

@@ -198,6 +198,19 @@ export function BuiltinSettings() {
             }));
           }}
         />
+        <Switch
+          label="Verify Playback Before Serving"
+          side="right"
+          disabled={!userData.failover?.enabled}
+          help="Check each resolved link before handing it to your player. Debrid services answer a dead link with a short 'content unavailable' video instead of an error; when that is detected, the link is rejected and failover moves on to the next result. Costs one extra request per attempt, so playback starts slightly slower."
+          value={userData.failover?.verifyPlayback ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              failover: { ...prev.failover, verifyPlayback: value },
+            }));
+          }}
+        />
         {/* --- How many to try (budget) --- */}
         <NumberInput
           label="Max Failover Attempts"

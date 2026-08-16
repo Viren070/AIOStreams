@@ -82,6 +82,8 @@ export interface PlayChainRecord {
   sameReleaseLimit: number;
   /** Delay between launching same-release variant attempts (ms). */
   duplicateStaggerMs: number;
+  /** Probe resolved playback URLs and fail over off debrid error videos. */
+  verifyPlayback: boolean;
 }
 
 /** Build-time options derived from the user's `failover` config. */
@@ -102,6 +104,8 @@ export interface BuildPlayChainOptions {
   sameReleaseLimit: number;
   /** Delay between launching same-release variant attempts (ms). */
   duplicateStaggerMs: number;
+  /** Probe resolved playback URLs and fail over off debrid error videos. */
+  verifyPlayback?: boolean;
 }
 
 function chainCache() {
@@ -215,6 +219,7 @@ export async function buildPlayChain(
     proxyConfig: opts.proxyConfig?.enabled ? opts.proxyConfig : undefined,
     sameReleaseLimit: opts.sameReleaseLimit,
     duplicateStaggerMs: opts.duplicateStaggerMs,
+    verifyPlayback: opts.verifyPlayback ?? false,
   };
   await chainCache().set(
     listKey,
@@ -287,6 +292,8 @@ export interface ResolvedPlayChain {
   clickedProxied?: boolean;
   /** Delay between launching same-release variant attempts (ms). */
   duplicateStaggerMs: number;
+  /** Probe resolved playback URLs and fail over off debrid error videos. */
+  verifyPlayback: boolean;
 }
 
 /** Stable identity of a resolvable target, ignoring the display-only fallback-key
@@ -391,6 +398,8 @@ export async function getPlayChain(
     clicked: clickedItem,
     clickedProxied: clickedItem?.proxied,
     duplicateStaggerMs: record.duplicateStaggerMs,
+    // Chains cached before this field existed default to the old behaviour.
+    verifyPlayback: record.verifyPlayback ?? false,
   };
 }
 

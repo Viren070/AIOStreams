@@ -901,6 +901,8 @@ export const UserDataSchema = z.object({
       precacheFailover: z.boolean().optional(),
       /** Include non-owned addon debrid URLs (resolved by probing) as failover targets. Default false. */
       includeExternalFailover: z.boolean().optional(),
+      /** Probe each resolved playback URL and fail over when the debrid service serves a short error video instead of the release. Costs one extra request per attempt. Default false. */
+      verifyPlayback: z.boolean().optional(),
       /** Max same-release variant attempts tried per release before moving on (0 disables). */
       sameReleaseLimit: z.number().min(0).optional(),
       /** Delay between launching same-release variant attempts (ms). Default 0. */

@@ -453,6 +453,7 @@ Stremio NNTP results are excluded — playback happens entirely inside Stremio. 
 - **Failover Content Types** — whether Usenet and/or debrid results may be used as targets.
 - **Allow Cross-Type Failover** — let a failed Usenet result fall through to a debrid result (or vice versa) if that's what's next in the list. Off keeps failover within the clicked result's own kind.
 - **Include External Addon Targets** — see above.
+- **Verify Playback Before Serving** — check each resolved link before your player is redirected to it. Debrid services answer a dead link with a short "content unavailable" video rather than an HTTP error, which otherwise looks like a successful resolve and plays as a few seconds of nothing; when one is detected the link is rejected and failover moves on to the next result. Costs one extra request per attempt, so playback starts slightly slower. Off by default.
 - **Max Failover Attempts** — how many fallback results to try before giving up.
 - **Same-Release Failover Attempts** — see [below](#same-release-variants-deduplicator-merging).
 - **Parallel Attempts** and its timing knobs (backup delay, preferred-item grace, …) — advanced: race several attempts and take the first healthy one.

@@ -69,3 +69,15 @@ export type {
   RunPlayChainConfig,
   RunPlayChainResult,
 } from './main/failover.js';
+export {
+  classifyProbedBody,
+  createProbeSignal,
+  verifyPlaybackUrl,
+  MIN_PLAUSIBLE_FILE_SIZE,
+  DEFAULT_PROBE_TIMEOUT_MS,
+} from './main/playback-probe.js';
+export type {
+  ProbeVerdict,
+  ProbedBody,
+  VerifyPlaybackOptions,
+} from './main/playback-probe.js';

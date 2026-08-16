@@ -222,6 +222,9 @@ export const BUILTIN_PROXY_PATH_PREFIX = '/api/v1/proxy/';
 /** Whether external addon debrid URLs may be used as failover targets. */
 export const DEFAULT_FAILOVER_INCLUDE_EXTERNAL = false;
 
+/** Whether resolved playback URLs are probed for debrid error videos. */
+export const DEFAULT_FAILOVER_VERIFY_PLAYBACK = false;
+
 /** Max same-release variant attempts tried per release before moving on (0 = off). */
 export const DEFAULT_FAILOVER_SAME_RELEASE_LIMIT = 2;
 /** Delay between launching same-release variant attempts (ms). 0 = no delay. */

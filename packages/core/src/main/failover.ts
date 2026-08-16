@@ -17,6 +17,12 @@ import {
   PLAYBACK_PATH_PREFIX,
 } from '../debrid/utils.js';
 import { isFailoverRetryableError } from './play-chain.js';
+import {
+  classifyProbedBody,
+  createProbeSignal,
+  verifyPlaybackUrl,
+  DEFAULT_PROBE_TIMEOUT_MS,
+} from './playback-probe.js';
 
 const logger = createLogger('failover');
 
@@ -107,10 +113,19 @@ function buildPlaybackInfo(
  * Decode + resolve a single owned playback target to a servable URL (or
  * undefined if the source is still downloading). Used uniformly for the clicked
  * item and every failover target.
+ *
+ * With `ctx.verify`, the resolved URL is probed before it is handed back, so a
+ * debrid provider answering a dead link with its "content unavailable" clip
+ * fails the attempt and the chain advances to the next stream instead of
+ * playing the error video.
  */
 export async function resolvePlaybackTarget(
   target: PlaybackTarget,
-  ctx: { clientIp?: string },
+  ctx: {
+    clientIp?: string;
+    /** Probe the resolved URL and reject error videos. */
+    verify?: boolean;
+  },
   signal?: AbortSignal
 ): Promise<string | undefined> {
   const fileInfo = await decodeFileInfo(target.fileInfoRaw);
@@ -137,24 +152,19 @@ export async function resolvePlaybackTarget(
     storeAuth.credential,
     ctx.clientIp
   );
-  return service.resolve(
+  const url = await service.resolve(
     playbackInfo,
     target.filename,
     fileInfo.cacheAndPlay ?? false,
     fileInfo.autoRemoveDownloads,
     signal
   );
-}
 
-/**
- * Smallest body we will accept as a real release.
- */
-const MIN_PLAUSIBLE_FILE_SIZE = 16 * 1024 * 1024;
-
-/** Total size out of a `Content-Range: bytes 0-0/12345` header, when stated. */
-function parseContentRangeTotal(value: string | null): number | undefined {
-  const total = value?.match(/\/\s*(\d+)\s*$/)?.[1];
-  return total === undefined ? undefined : Number(total);
+  // undefined = still downloading; there is nothing to probe yet.
+  if (url && ctx.verify) {
+    await verifyPlaybackUrl(url, { clientIp: ctx.clientIp, signal });
+  }
+  return url;
 }
 
 /**
@@ -182,10 +192,12 @@ export async function resolveExternalTarget(
   })();
   logger.debug({ host }, 'probing external failover target');
   const res = await makeRequest(url, {
-    timeout: 10000,
+    timeout: DEFAULT_PROBE_TIMEOUT_MS,
     method: 'GET',
     forwardIp: ctx.clientIp,
-    signal,
+    // makeRequest ignores `timeout` whenever a signal is given, so combine the
+    // two or this probe would inherit the whole failover deadline.
+    signal: createProbeSignal(DEFAULT_PROBE_TIMEOUT_MS, signal),
     headers: { Range: 'bytes=0-0' },
     rawOptions: { redirect: 'manual' },
   });
@@ -211,52 +223,18 @@ export async function resolveExternalTarget(
       return location;
     }
 
-    if (res.status >= 200 && res.status < 300) {
-      const contentType = res.headers.get('content-type') ?? '';
-      if (
-        !contentType.startsWith('video/') &&
-        !contentType.startsWith('application/octet-stream')
-      ) {
-        throw new Error(
-          `external target returned non-video response (${contentType || res.status})`
-        );
-      }
-
-      if (res.status === 206) {
-        const total = parseContentRangeTotal(res.headers.get('content-range'));
-        if (total !== undefined && total < MIN_PLAUSIBLE_FILE_SIZE) {
-          throw new Error(
-            `external target served a ${total}-byte file, too small to be the release`
-          );
-        }
-        logger.debug(
-          { host, contentType, total },
-          'external target serves ranged bytes; using probe url'
-        );
-        return url;
-      }
-
-      // 200: the server ignored our Range. A link that cannot seek is unusable for
-      // playback anyway, so accept it only if it at least declares a real size.
-      const lengthHeader = res.headers.get('content-length');
-      const length = lengthHeader === null ? undefined : Number(lengthHeader);
-      if (
-        length !== undefined &&
-        Number.isFinite(length) &&
-        length >= MIN_PLAUSIBLE_FILE_SIZE
-      ) {
-        logger.debug(
-          { host, contentType, length },
-          'external target serves bytes directly without range support; using probe url'
-        );
-        return url;
-      }
-      throw new Error(
-        `external target ignored Range and returned ${lengthHeader ?? 'an unsized'} body (${contentType}); treating as an error video`
-      );
+    const verdict = classifyProbedBody({
+      status: res.status,
+      headers: res.headers,
+    });
+    if (!verdict.ok) {
+      throw new Error(`external target ${verdict.reason}`);
     }
-
-    throw new Error(`external target probe failed with status ${res.status}`);
+    logger.debug(
+      { host, status: res.status },
+      'external target serves the release; using probe url'
+    );
+    return url;
   } finally {
     // Never read the body. A server that ignores Range answers 200 with the whole
     // file, and we only ever needed the headers.
