@@ -178,7 +178,7 @@ export class MetadataService {
             // TVDB metadata
             const idForTvdb = tvdbId
               ? `tvdb:${tvdbId}`
-              : (imdbId ?? (tmdbId ? `tvdb:${tvdbId}` : null));
+              : (imdbId ?? (tmdbId ? `tmdb:${tmdbId}` : null));
             const parsedIdForTvdb = idForTvdb
               ? IdParser.parse(idForTvdb, type)
               : null;
