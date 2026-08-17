@@ -159,9 +159,9 @@ test('reader probe accepts a missing article and leaves the connection reusable'
   }
 });
 
-for (const { code, message } of [
-  { code: 223, message: 'article exists' },
-  { code: 423, message: 'no article with that number' },
+for (const { code, message, expectedResult } of [
+  { code: 223, message: 'article exists', expectedResult: true },
+  { code: 423, message: 'no article with that number', expectedResult: false },
 ] as const) {
   test(`reader probe accepts ${code}`, async () => {
     const fake = await startFakeNntpServer((command, socket) => {
@@ -175,7 +175,14 @@ for (const { code, message } of [
         CONNECTION_OPTIONS
       );
       await conn.probeReader(undefined, 1_000);
-      assert.deepEqual(fake.commands, [HEALTHCHECK_COMMAND]);
+      assert.equal(
+        await conn.stat('second@test.invalid', undefined, 1_000),
+        expectedResult
+      );
+      assert.deepEqual(fake.commands, [
+        HEALTHCHECK_COMMAND,
+        'STAT <second@test.invalid>',
+      ]);
       assert.equal(conn.isUsable, true);
     } finally {
       conn?.destroy();
