@@ -159,6 +159,31 @@ test('reader probe accepts a missing article and leaves the connection reusable'
   }
 });
 
+for (const { code, message } of [
+  { code: 223, message: 'article exists' },
+  { code: 423, message: 'no article with that number' },
+] as const) {
+  test(`reader probe accepts ${code}`, async () => {
+    const fake = await startFakeNntpServer((command, socket) => {
+      if (command.startsWith('STAT ')) reply(socket, code, message);
+    });
+    let conn: NntpConnection | undefined;
+
+    try {
+      conn = await NntpConnection.connect(
+        provider(fake.port),
+        CONNECTION_OPTIONS
+      );
+      await conn.probeReader(undefined, 1_000);
+      assert.deepEqual(fake.commands, [HEALTHCHECK_COMMAND]);
+      assert.equal(conn.isUsable, true);
+    } finally {
+      conn?.destroy();
+      await fake.close();
+    }
+  });
+}
+
 test('dashboard provider test uses the reader probe after authentication', async () => {
   const fake = await startFakeNntpServer((command, socket) => {
     if (command.startsWith('AUTHINFO USER '))
