@@ -96,6 +96,43 @@ test('accepts octet-stream, which debrid CDNs use for direct downloads', () => {
   assert.deepEqual(verdict, { ok: true });
 });
 
+test('accepts a video content type regardless of case', () => {
+  // RFC 9110 §8.3: media type and subtype are case-insensitive.
+  const verdict = classifyProbedBody({
+    status: 206,
+    headers: headers({
+      'content-type': 'Video/MP4',
+      'content-range': `bytes 0-0/${20 * GiB}`,
+    }),
+  });
+
+  assert.deepEqual(verdict, { ok: true });
+});
+
+test('accepts an octet-stream content type regardless of case', () => {
+  const verdict = classifyProbedBody({
+    status: 200,
+    headers: headers({
+      'content-type': 'Application/Octet-Stream',
+      'content-length': String(20 * GiB),
+    }),
+  });
+
+  assert.deepEqual(verdict, { ok: true });
+});
+
+test('accepts a video content type carrying parameters', () => {
+  const verdict = classifyProbedBody({
+    status: 206,
+    headers: headers({
+      'content-type': 'VIDEO/x-matroska; charset=binary',
+      'content-range': `bytes 0-0/${20 * GiB}`,
+    }),
+  });
+
+  assert.deepEqual(verdict, { ok: true });
+});
+
 test('rejects a response that ignored Range and declared a tiny body', () => {
   const verdict = classifyProbedBody({
     status: 200,

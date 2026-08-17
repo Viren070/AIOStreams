@@ -52,9 +52,12 @@ export function classifyProbedBody({
   }
 
   const contentType = headers.get('content-type') ?? '';
+  // RFC 9110 §8.3: type and subtype are case-insensitive, so a CDN answering
+  // `Video/MP4` is serving a perfectly good file.
+  const mediaType = contentType.toLowerCase();
   if (
-    !contentType.startsWith('video/') &&
-    !contentType.startsWith('application/octet-stream')
+    !mediaType.startsWith('video/') &&
+    !mediaType.startsWith('application/octet-stream')
   ) {
     return {
       ok: false,
