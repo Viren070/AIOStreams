@@ -272,12 +272,20 @@ interface SelectionReport {
 // helpers
 export const isSeasonWrong = (
   parsed: { seasons?: number[]; episodes?: number[] },
-  metadata?: { season?: number; absoluteEpisode?: number }
+  metadata?: {
+    season?: number;
+    absoluteEpisode?: number;
+    alternateSeasonNumber?: number;
+  }
 ) => {
   if (
     parsed.seasons?.length &&
     metadata?.season &&
-    !parsed.seasons.includes(metadata.season)
+    !parsed.seasons.includes(metadata.season) &&
+    !(
+      metadata.alternateSeasonNumber !== undefined &&
+      parsed.seasons.includes(metadata.alternateSeasonNumber)
+    )
   ) {
     // allow if season is "wrong" with value of 1 but absolute episode is correct
     if (

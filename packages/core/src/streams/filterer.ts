@@ -1194,6 +1194,11 @@ class StreamFilterer {
           )
         ) {
           // allow if relative absolute episode (AniDB episode) matches AND season is 1
+        } else if (
+          requestedMetadata?.alternateSeasonNumber !== undefined &&
+          seasons.includes(requestedMetadata.alternateSeasonNumber)
+        ) {
+          // allow if the release uses the other (year vs. ordinal) season convention
         } else {
           return false;
         }
