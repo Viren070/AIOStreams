@@ -18,6 +18,7 @@ import { streamSessions } from './0017_stream_sessions.js';
 import { taskState } from './0018_task_state.js';
 import { configProfiles } from './0019_config_profiles.js';
 import { animeDatabase } from './0020_anime_database.js';
+import { analyticsIndexes } from './0021_analytics_indexes.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -41,6 +42,7 @@ export const MIGRATIONS: readonly Migration[] = [
   taskState,
   configProfiles,
   animeDatabase,
+  analyticsIndexes,
 ];
 
 export type { Migration } from './types.js';
