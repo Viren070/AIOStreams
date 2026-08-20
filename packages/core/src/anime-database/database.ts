@@ -14,6 +14,7 @@ import { getTimeTakenSincePoint } from '../utils/time.js';
 import { IdParser, type IdType } from '../utils/id-parser.js';
 import {
   AnimeRepository,
+  decidePublish,
   type AnimeBuildInfo,
   type PublishOutcome,
 } from '../db/repositories/anime.js';
@@ -47,9 +48,6 @@ const CACHE_MAX_ENTRIES = 64;
 const SOURCE_LOCK_MS = 5 * 60 * 1000;
 
 const ALL_SOURCE_IDS = ANIME_SOURCES.map((source) => source.id);
-
-const isComplete = (ids: readonly string[]): boolean =>
-  ALL_SOURCE_IDS.every((id) => ids.includes(id));
 
 const PUBLISH_MESSAGE: Record<PublishOutcome, string> = {
   published: 'published the rebuilt store',
@@ -230,7 +228,7 @@ export class AnimeDatabase {
       if (current) {
         logger.info(
           { reason, records: current.records, sources: current.sources.length },
-          'stored store matches the sources on disk, skipping rebuild'
+          'stored store already covers this replica, skipping rebuild'
         );
         return;
       }
@@ -295,21 +293,20 @@ export class AnimeDatabase {
   }
 
   /**
-   * The stored build, when it already holds what this replica would produce.
-   * Whoever publishes a fingerprint first spares every replica reaching this
-   * later the parse.
+   * The stored build, when building here would only produce something
+   * `publish` would discard. Whoever publishes a fingerprint first spares
+   * every replica reaching this later the parse.
    */
   private async currentBuild(
     onDisk: readonly AnimeSource[]
   ): Promise<AnimeBuildInfo | null> {
     const stored = await AnimeRepository.readBuild();
-    if (!stored || stored.records === 0) return null;
-    if (stored.fingerprint !== (await this.fingerprint(onDisk))) return null;
-    // A build missing a source must not stop a replica that has them all, or
-    // one failed download would leave the store short until a source changes.
-    const ids = onDisk.map((source) => source.id);
-    if (isComplete(ids) && !isComplete(stored.sources)) return null;
-    return stored;
+    const outcome = decidePublish(stored, {
+      fingerprint: await this.fingerprint(onDisk),
+      sources: onDisk.map((source) => source.id),
+      allSources: ALL_SOURCE_IDS,
+    });
+    return outcome === 'published' ? null : stored;
   }
 
   /** Registered sources whose cache file is on disk, in registry order. */

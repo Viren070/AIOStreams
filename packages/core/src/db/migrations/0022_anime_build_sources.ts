@@ -6,8 +6,8 @@ import type { Migration } from './types.js';
  * cannot answer this: it covers only the sources that were available, and a
  * replica missing one simply produces a different fingerprint.
  *
- * Existing rows default to `[]`, i.e. incomplete, so the first replica with
- * every source republishes once after the upgrade.
+ * Existing rows default to `[]`. That reads as incomplete, so the first
+ * replica with every source republishes once and records them.
  */
 export const animeBuildSources: Migration = {
   id: 22,

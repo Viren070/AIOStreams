@@ -44,9 +44,8 @@ export interface AnimeBuildInfo {
   sources: string[];
 }
 
-/** A merged store, ready to replace whatever is stored. */
-export interface AnimeBuild {
-  records: readonly AnimeRecord[];
+/** Everything {@link decidePublish} needs, which a caller knows before building. */
+export interface AnimeBuildIdentity {
   /** Identity of the source revisions this was built from. */
   fingerprint: string;
   /** Source ids that went into it. */
@@ -55,6 +54,11 @@ export interface AnimeBuild {
   allSources: readonly string[];
   /** Publish regardless of what is stored. */
   force?: boolean;
+}
+
+/** A merged store, ready to replace whatever is stored. */
+export interface AnimeBuild extends AnimeBuildIdentity {
+  records: readonly AnimeRecord[];
 }
 
 export type PublishOutcome =
@@ -131,19 +135,25 @@ function explode(records: readonly AnimeRecord[]) {
 /**
  * Which of `stored` and `build` the store should end up holding.
  *
- * A build made from every registered source outranks one that is missing any,
- * so a replica whose download failed cannot overwrite a complete store with a
- * smaller one. Completeness is measured against `allSources` on both sides, so
- * retiring a source does not freeze the store at the last build that had it.
+ * A build made from every registered source outranks one missing any, on
+ * whichever side it sits. Completeness is measured against `allSources` both
+ * times, so retiring a source does not freeze the store at the last build that
+ * had it.
+ *
+ * Needs only what a caller knows before building, so the same rule answers
+ * whether building is worth starting.
  */
-function decide(
+export function decidePublish(
   stored: AnimeBuildInfo | null,
-  build: AnimeBuild
+  build: AnimeBuildIdentity
 ): PublishOutcome {
   if (build.force || !stored || stored.records === 0) return 'published';
   const complete = (ids: readonly string[]) =>
     build.allSources.every((id) => ids.includes(id));
-  if (complete(stored.sources) && !complete(build.sources)) return 'superseded';
+  const mine = complete(build.sources);
+  const theirs = complete(stored.sources);
+  if (theirs && !mine) return 'superseded';
+  if (mine && !theirs) return 'published';
   if (stored.fingerprint === build.fingerprint) return 'unchanged';
   return 'published';
 }
@@ -215,9 +225,9 @@ export class AnimeRepository {
    * Replace the stored store with `build`, in one transaction so readers keep
    * the previous one until it commits.
    *
-   * Concurrent rebuilds need no outside lock: {@link decide} runs against the
-   * row this transaction is about to overwrite, so a redundant build is
-   * discarded rather than written twice.
+   * Concurrent rebuilds need no outside lock: {@link decidePublish} runs
+   * against the row this transaction is about to overwrite, so a redundant
+   * build is discarded rather than written twice.
    */
   static async publish(build: AnimeBuild): Promise<PublishOutcome> {
     const { ids, synonyms } = explode(build.records);
@@ -228,7 +238,7 @@ export class AnimeRepository {
               IN EXCLUSIVE MODE`
         );
       }
-      const outcome = decide(await readBuildWith(tx), build);
+      const outcome = decidePublish(await readBuildWith(tx), build);
       if (outcome !== 'published') return outcome;
 
       await tx.exec(sql`DELETE FROM anime_synonyms`);
