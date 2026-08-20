@@ -1,9 +1,15 @@
-import { ParsedStream, PresetMetadata, Stream } from '../db/index.js';
+import {
+  ParsedFile,
+  ParsedStream,
+  PresetMetadata,
+  Stream,
+} from '../db/index.js';
 import { EasynewsPreset, EasynewsParser } from './easynews.js';
 import { constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { arrayMerge } from '../parser/merge.js';
 
 class EasynewsPlusPlusParser extends EasynewsParser {
   protected override get ageRegex(): RegExp {
@@ -26,6 +32,33 @@ class EasynewsPlusPlusParser extends EasynewsParser {
         ?.map((lang) => this.convertISO6392ToLanguage(lang.trim()))
         .filter((lang) => lang !== undefined) || []
     );
+  }
+
+  protected override getParsedFile(
+    stream: Stream,
+    parsedStream: ParsedStream
+  ): ParsedFile | undefined {
+    const parsedFile = super.getParsedFile(stream, parsedStream);
+    if (!parsedFile) {
+      return undefined;
+    }
+
+    // Easynews++ emits a `💬` subtitle-language line alongside the `🌐` audio
+    // line, using the same comma-separated ISO 639-2 codes. Parse it the same way
+    // getLanguages() handles audio, and merge into the file's subtitle languages.
+    const regex = this.getRegexForTextAfterEmojis(['💬']);
+    const subtitles =
+      stream.description
+        ?.match(regex)?.[1]
+        ?.split(',')
+        ?.map((lang) => this.convertISO6392ToLanguage(lang.trim()))
+        .filter((lang) => lang !== undefined) || [];
+
+    if (subtitles.length > 0) {
+      parsedFile.subtitles = arrayMerge(parsedFile.subtitles, subtitles);
+    }
+
+    return parsedFile;
   }
 }
 
