@@ -109,6 +109,19 @@ const TITLE_ORDER: readonly {
   { source: 'scene', kind: 'aliases' },
 ];
 
+const WHOLE_SHOW_ALIAS_SOURCES: readonly MetadataSource[] = [
+  'tmdb',
+  'tvdb',
+  'trakt',
+];
+
+/**
+ * If suppression leaves fewer titles than this, the anime DB's own record is
+ * too thin to safely stand alone - fall back to including the whole-show
+ * sources after all, rather than under-covering title matching.
+ */
+const MIN_TITLES_BEFORE_FALLBACK = 5;
+
 /** Which source won a field, or undefined if none offered it. */
 export function resolveSource(
   contributions: SourceContributions,
@@ -207,9 +220,12 @@ function resolveYears(
  * scene mappings key off this list's head, not `metadata.title`.
  */
 export function assembleTitles(
-  contributions: SourceContributions
+  contributions: SourceContributions,
+  options?: { suppressWholeShowAliases?: boolean }
 ): MetadataTitle[] {
+  const shouldSuppress = options?.suppressWholeShowAliases ?? false;
   const titles: MetadataTitle[] = [];
+
   for (const { source, kind } of TITLE_ORDER) {
     const contribution = contributions[source];
     if (!contribution) continue;
@@ -217,9 +233,24 @@ export function assembleTitles(
       if (contribution.primaryTitle)
         titles.push({ title: contribution.primaryTitle });
     } else if (contribution.aliases?.length) {
+      if (shouldSuppress && WHOLE_SHOW_ALIAS_SOURCES.includes(source)) {
+        continue;
+      }
       titles.push(...contribution.aliases);
     }
   }
+
+  // Fallback: if the anime DB record is too thin (< 5 titles), re-include whole-show aliases
+  if (shouldSuppress && titles.length < MIN_TITLES_BEFORE_FALLBACK) {
+    for (const { source, kind } of TITLE_ORDER) {
+      if (kind !== 'aliases' || !WHOLE_SHOW_ALIAS_SOURCES.includes(source)) {
+        continue;
+      }
+      const contribution = contributions[source];
+      if (contribution?.aliases?.length) titles.push(...contribution.aliases);
+    }
+  }
+
   return titles;
 }
 
@@ -249,7 +280,8 @@ export type MergedMetadata = Pick<
 /** Returns `title: ''` when no source had one; callers decide if that is fatal. */
 export function mergeMetadata(
   contributions: SourceContributions,
-  mediaType: MediaType
+  mediaType: MediaType,
+  options?: { suppressWholeShowAliases?: boolean }
 ): MergedMetadata {
   const primaryTitle = forType(PRIMARY_TITLE_PRIORITY, mediaType)
     .map((source) => contributions[source]?.primaryTitle)
@@ -261,7 +293,7 @@ export function mergeMetadata(
     mediaType
   );
 
-  const titles = assembleTitles(contributions);
+  const titles = assembleTitles(contributions, options);
   if (primaryTitle) titles.unshift({ title: primaryTitle });
   const uniqueTitles = deduplicateTitles(titles, originalLanguage);
 
