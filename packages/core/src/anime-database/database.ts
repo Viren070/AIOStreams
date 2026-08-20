@@ -1,28 +1,30 @@
 /**
  * Anime database singleton.
  *
- * Owns the merged canonical record list, the per-id-type lookup indexes, and
- * the refresh tasks (one per source, registered with the global TaskManager).
- *
- * Parsed source entries are not retained between rebuilds: memory holds only
- * the merged canonical store and indexes. When a source refreshes, every
- * source file is re-parsed from disk into a new canonical store and atomically
- * swapped in; lookups stay served against the previous store until the swap.
+ * Owns the refresh tasks (one per source, registered with the global
+ * TaskManager) and the rebuild pipeline. The merged canonical store lives in
+ * SQL; only a small lookup cache is held in memory.
  */
+import { createHash } from 'crypto';
+import fs from 'fs/promises';
 import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import { TaskManager } from '../tasks/index.js';
 import { getTimeTakenSincePoint } from '../utils/time.js';
 import { IdParser, type IdType } from '../utils/id-parser.js';
+import { AnimeRepository } from '../db/repositories/anime.js';
 import {
   canonicalIdValue,
   type AnimeEntry,
-  type AnimeRecord,
   type IdValue,
   type SourceEntry,
 } from './types.js';
 import { ANIME_SOURCES, type AnimeSource } from './sources/index.js';
-import { fetchWithEtag, invalidateCache } from './storage/fetcher.js';
+import {
+  fetchWithEtag,
+  invalidateCache,
+  readCachedEtag,
+} from './storage/fetcher.js';
 import { mergeSources, type SourceBatch } from './merger.js';
 import { filterCandidatesBySeasonType, selectBestRecord } from './selector.js';
 import { buildAnimeEntry } from './builder.js';
@@ -30,20 +32,14 @@ import { buildAnimeEntry } from './builder.js';
 const logger = createLogger('anime-database');
 
 /**
- * Lookup index: idType -> idValue -> record index, or a list of indices on the
- * rare occasions two records share an id. Length-1 postings store a bare number
- * to avoid allocating an array.
+ * Several subsystems resolve the same parsed id within one request, so a small
+ * cache absorbs the repeats.
  */
-type IdPosting = number | number[];
-type IdIndex = Map<IdType, Map<IdValue, IdPosting>>;
+const CACHE_MAX_ENTRIES = 64;
 
 export class AnimeDatabase {
   private static instance: AnimeDatabase | null = null;
 
-  /** Merged canonical records, indexable by `record.rid`. */
-  private records: AnimeRecord[] = [];
-  /** Per-id-type → idValue (string|number) → record indices into `records`. */
-  private indexes: IdIndex = new Map();
   /** Sources whose on-disk cache is current (i.e. downloaded successfully). */
   private readonly availableSources = new Set<string>();
   /** Sources whose cache file was re-downloaded by their latest refresh. */
@@ -54,6 +50,10 @@ export class AnimeDatabase {
   private rebuildInFlight: Promise<void> | null = null;
   private rebuildQueued = false;
   private isInitialised = false;
+  /** Set when the detail level is `none`; every lookup then resolves to null. */
+  private disabled = false;
+  /** LRU over resolved entries, cleared whenever the store is replaced. */
+  private readonly cache = new Map<string, AnimeEntry | null>();
 
   public static getInstance(): AnimeDatabase {
     if (!AnimeDatabase.instance) AnimeDatabase.instance = new AnimeDatabase();
@@ -67,9 +67,8 @@ export class AnimeDatabase {
   // ---------------------------------------------------------------------
 
   /**
-   * Register a TaskManager refresh task per source and run them all once.
-   * After every successful refresh the canonical store is re-merged and the
-   * id indexes are rebuilt.
+   * Register a refresh task per source and run them all once, then rebuild
+   * only if the sources the store was built from have changed.
    */
   public async initialise(): Promise<void> {
     if (this.isInitialised) {
@@ -79,6 +78,7 @@ export class AnimeDatabase {
 
     if (appConfig.metadata.animeDb.levelOfDetail === 'none') {
       logger.info('detail level is none, skipping initialisation');
+      this.disabled = true;
       this.isInitialised = true;
       return;
     }
@@ -95,16 +95,40 @@ export class AnimeDatabase {
         );
       }
     }
-    // First full rebuild from disk; background refreshes can trigger their
-    // own from now on.
-    await this.rebuildFromDisk('initial');
-    this.allowIncrementalRebuild = true;
 
+    const fingerprint = await this.computeFingerprint();
+    const stored = await AnimeRepository.readBuild();
+    if (stored && stored.records > 0 && stored.fingerprint === fingerprint) {
+      logger.info(
+        { records: stored.records, sources: this.availableSources.size },
+        'stored store matches the current sources, skipping rebuild'
+      );
+    } else {
+      await this.rebuildFromDisk(stored ? 'sources changed' : 'initial');
+    }
+    this.allowIncrementalRebuild = true;
     this.isInitialised = true;
-    logger.info(
-      { records: this.records.length, sources: this.availableSources.size },
-      'initialised'
-    );
+  }
+
+  /**
+   * Identity of the data the store was built from. The ETag is the real
+   * signal; file size covers the rare source that serves none.
+   *
+   * A parsing change with no source change is not covered: run the
+   * `anime-db-rebuild` task, or wait for the next refresh.
+   */
+  private async computeFingerprint(): Promise<string> {
+    const parts: string[] = [];
+    for (const source of ANIME_SOURCES) {
+      if (!this.availableSources.has(source.id)) continue;
+      const etag = await readCachedEtag(source.filePath);
+      const size = await fs
+        .stat(source.filePath)
+        .then((s) => s.size)
+        .catch(() => -1);
+      parts.push(`${source.id}|${source.url}|${etag ?? ''}|${size}`);
+    }
+    return createHash('sha1').update(parts.join('\n')).digest('hex');
   }
 
   private registerRefreshTasks(): void {
@@ -118,7 +142,8 @@ export class AnimeDatabase {
         intervalMs: source.refreshIntervalMs(),
         enabled: true,
         destructive: false,
-        multiReplica: 'all',
+        // The store is shared, so one replica rebuilding it is enough.
+        multiReplica: 'single',
         run: async () => {
           await this.refreshOneSource(source);
           return { ok: true, message: `${source.name} refreshed` };
@@ -129,6 +154,23 @@ export class AnimeDatabase {
         'registered auto-refresh task'
       );
     }
+    TaskManager.register({
+      id: 'anime-db-rebuild',
+      label: 'Rebuild anime database',
+      description:
+        'Re-parse every cached source file and replace the stored anime ' +
+        'database. Use after a parsing change, which no source refresh would ' +
+        'otherwise announce.',
+      category: 'data-sync',
+      kind: 'manual',
+      enabled: true,
+      destructive: false,
+      multiReplica: 'single',
+      run: async () => {
+        await this.scheduleRebuild('manual');
+        return { ok: true, message: 'anime database rebuilt' };
+      },
+    });
   }
 
   private async refreshOneSource(source: AnimeSource): Promise<void> {
@@ -143,7 +185,7 @@ export class AnimeDatabase {
 
     if (this.allowIncrementalRebuild) {
       // Fire-and-forget; rebuilds serialise via `rebuildInFlight`. Errors
-      // (including merge/index failures) are caught inside `scheduleRebuild`,
+      // (including merge/write failures) are caught inside `scheduleRebuild`,
       // so the dropped promise can never reject unhandled.
       void this.scheduleRebuild(source.id);
     }
@@ -179,8 +221,7 @@ export class AnimeDatabase {
 
   /**
    * Re-parse every available source file from disk, merge into a fresh
-   * canonical store, and atomically swap. The previous records / indexes
-   * remain serving lookups until the swap completes.
+   * canonical store, and write it.
    */
   private async rebuildFromDisk(reason: string): Promise<void> {
     const start = Date.now();
@@ -211,16 +252,16 @@ export class AnimeDatabase {
       entryCounts[source.id] = entries.length;
     }
 
-    const newRecords = mergeSources(batches);
-    const newIndexes = this.buildIndexes(newRecords);
-
-    this.records = newRecords;
-    this.indexes = newIndexes;
+    const records = mergeSources(batches);
+    // After parsing, so a source dropped for a parse failure is excluded.
+    const fingerprint = await this.computeFingerprint();
+    await AnimeRepository.replaceAll(records, fingerprint);
+    this.cache.clear();
 
     logger.info(
       {
         reason,
-        records: newRecords.length,
+        records: records.length,
         sources: entryCounts,
         timeTaken: getTimeTakenSincePoint(start),
       },
@@ -228,73 +269,61 @@ export class AnimeDatabase {
     );
   }
 
-  private buildIndexes(records: AnimeRecord[]): IdIndex {
-    const indexes: IdIndex = new Map();
-    for (const r of records) {
-      for (const [idType, idValue] of Object.entries(r.ids) as Array<
-        [IdType, IdValue]
-      >) {
-        if (idValue === undefined || idValue === null || idValue === '') {
-          continue;
-        }
-        let perType = indexes.get(idType);
-        if (!perType) {
-          perType = new Map();
-          indexes.set(idType, perType);
-        }
-        // Index under a single canonical form; the lookup path canonicalises
-        // the same way, so callers can pass either `'123'` or `123`.
-        const key = canonicalIdValue(idValue);
-        const existing = perType.get(key);
-        if (existing === undefined) {
-          // Bare rid for the common length-1 case to avoid an array.
-          perType.set(key, r.rid);
-        } else if (typeof existing === 'number') {
-          if (existing !== r.rid) perType.set(key, [existing, r.rid]);
-        } else {
-          if (!existing.includes(r.rid)) existing.push(r.rid);
-        }
-      }
-    }
-    return indexes;
-  }
-
   // ---------------------------------------------------------------------
   // Public lookup API
   // ---------------------------------------------------------------------
 
-  public isAnime(id: string): boolean {
+  /** The entry `id` resolves to, if any. */
+  public async resolve(id: string): Promise<AnimeEntry | null> {
     const parsedId = IdParser.parse(id, 'unknown');
-    if (!parsedId) return false;
-    return (
-      this.getEntryById(
-        parsedId.type,
-        parsedId.value,
-        parsedId.season ? Number(parsedId.season) : undefined,
-        parsedId.episode ? Number(parsedId.episode) : undefined
-      ) !== null
+    if (!parsedId) return null;
+    return this.getEntryById(
+      parsedId.type,
+      parsedId.value,
+      parsedId.season ? Number(parsedId.season) : undefined,
+      parsedId.episode ? Number(parsedId.episode) : undefined
     );
   }
 
-  public getEntryById(
+  public async isAnime(id: string): Promise<boolean> {
+    return (await this.resolve(id)) !== null;
+  }
+
+  public async getEntryById(
     idType: IdType,
     idValue: IdValue,
     season?: number,
     episode?: number
-  ): AnimeEntry | null {
-    const posting = this.indexes.get(idType)?.get(canonicalIdValue(idValue));
-    if (posting === undefined) return null;
+  ): Promise<AnimeEntry | null> {
+    if (this.disabled) return null;
+    const key = `${idType}:${canonicalIdValue(idValue)}:${season ?? ''}:${episode ?? ''}`;
+    const cached = this.cache.get(key);
+    if (cached !== undefined) {
+      // Re-insert so the hot set survives eviction.
+      this.cache.delete(key);
+      this.cache.set(key, cached);
+      return cached;
+    }
 
-    const candidates =
-      typeof posting === 'number'
-        ? this.records[posting]
-          ? [this.records[posting]]
-          : []
-        : posting.map((rid) => this.records[rid]).filter(Boolean);
-    if (candidates.length === 0) return null;
-    const filtered = filterCandidatesBySeasonType(candidates, season);
-    const chosen = selectBestRecord(filtered, idType, idValue, season, episode);
-    if (!chosen) return null;
-    return buildAnimeEntry(chosen);
+    const candidates = await AnimeRepository.findCandidates(idType, idValue);
+    let entry: AnimeEntry | null = null;
+    if (candidates.length > 0) {
+      const filtered = filterCandidatesBySeasonType(candidates, season);
+      const chosen = selectBestRecord(
+        filtered,
+        idType,
+        idValue,
+        season,
+        episode
+      );
+      if (chosen) entry = buildAnimeEntry(chosen);
+    }
+
+    this.cache.set(key, entry);
+    if (this.cache.size > CACHE_MAX_ENTRIES) {
+      const oldest = this.cache.keys().next();
+      if (!oldest.done) this.cache.delete(oldest.value);
+    }
+    return entry;
   }
 }

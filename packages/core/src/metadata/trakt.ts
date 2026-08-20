@@ -52,7 +52,7 @@ export async function getTraktAliases(
   let imdbId = parsedId.type === 'imdbId' ? parsedId.value : null;
   // try to get imdb ID from anime database
   if (!imdbId) {
-    const animeEntry = AnimeDatabase.getInstance().getEntryById(
+    const animeEntry = await AnimeDatabase.getInstance().getEntryById(
       parsedId.type,
       parsedId.value
     );
