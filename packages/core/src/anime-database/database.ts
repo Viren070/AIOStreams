@@ -15,6 +15,7 @@ import { TaskManager } from '../tasks/index.js';
 import { getTimeTakenSincePoint } from '../utils/time.js';
 import { IdParser, type IdType } from '../utils/id-parser.js';
 import {
+  canonicalIdValue,
   type AnimeEntry,
   type AnimeRecord,
   type IdValue,
@@ -36,19 +37,6 @@ const logger = createLogger('anime-database');
 type IdPosting = number | number[];
 type IdIndex = Map<IdType, Map<IdValue, IdPosting>>;
 
-/**
- * Reduce numeric-string ids (`'123'`) and equivalent numbers (`123`) to one
- * canonical key. Non-numeric strings (slugs etc.) are returned unchanged.
- */
-function canonicalIdValue(v: IdValue): IdValue {
-  if (typeof v === 'string') {
-    if (v === '') return v;
-    const n = Number(v);
-    if (Number.isInteger(n) && String(n) === v) return n;
-  }
-  return v;
-}
-
 export class AnimeDatabase {
   private static instance: AnimeDatabase | null = null;
 
@@ -58,6 +46,8 @@ export class AnimeDatabase {
   private indexes: IdIndex = new Map();
   /** Sources whose on-disk cache is current (i.e. downloaded successfully). */
   private readonly availableSources = new Set<string>();
+  /** Sources whose cache file was re-downloaded by their latest refresh. */
+  private readonly freshlyDownloaded = new Set<string>();
   /** Suppress mid-init rebuilds; flipped on after the first batch load. */
   private allowIncrementalRebuild = false;
   /** In-flight rebuild lock; a second refresh during a rebuild queues one. */
@@ -142,50 +132,14 @@ export class AnimeDatabase {
   }
 
   private async refreshOneSource(source: AnimeSource): Promise<void> {
-    const start = Date.now();
     const { refreshed } = await fetchWithEtag(
       source.id,
       source.url,
       source.filePath
     );
-
-    // Sanity-parse the cached file to fail fast on corrupt bytes. Entries
-    // aren't retained; the upcoming rebuild re-parses them.
-    let count = 0;
-    try {
-      for await (const e of source.parse(source.filePath)) {
-        if (e) count++;
-      }
-    } catch (error) {
-      // Cache we didn't just re-download is probably stale/corrupt, so
-      // invalidate to force a fresh download next refresh. If a fresh download
-      // still failed, the remote data is broken, so keep the cache to avoid
-      // looping every tick.
-      if (!refreshed) {
-        logger.error(
-          { source: source.name, error },
-          'parse of cached file failed; invalidating'
-        );
-        await invalidateCache(source.filePath);
-      } else {
-        logger.error(
-          { source: source.name, error },
-          'parse of freshly-downloaded file failed; keeping cache'
-        );
-      }
-      this.availableSources.delete(source.id);
-      throw error;
-    }
+    if (refreshed) this.freshlyDownloaded.add(source.id);
 
     this.availableSources.add(source.id);
-    logger.info(
-      {
-        source: source.name,
-        entries: count,
-        timeTaken: getTimeTakenSincePoint(start),
-      },
-      'verified source cache'
-    );
 
     if (this.allowIncrementalRebuild) {
       // Fire-and-forget; rebuilds serialise via `rebuildInFlight`. Errors
@@ -231,7 +185,7 @@ export class AnimeDatabase {
   private async rebuildFromDisk(reason: string): Promise<void> {
     const start = Date.now();
     const batches: SourceBatch[] = [];
-    const sourceIdsUsed: string[] = [];
+    const entryCounts: Record<string, number> = {};
     // Iterate ANIME_SOURCES in registry order so merge precedence is stable.
     for (const source of ANIME_SOURCES) {
       if (!this.availableSources.has(source.id)) continue;
@@ -241,14 +195,20 @@ export class AnimeDatabase {
           if (e) entries.push(e);
         }
       } catch (error) {
+        const fresh = this.freshlyDownloaded.has(source.id);
         logger.error(
           { source: source.name, error },
-          'failed to re-parse source during rebuild; skipping'
+          fresh
+            ? 'parse of freshly-downloaded file failed; keeping cache'
+            : 'parse of cached file failed; invalidating'
         );
+        if (!fresh) await invalidateCache(source.filePath);
+        this.availableSources.delete(source.id);
         continue;
       }
+      this.freshlyDownloaded.delete(source.id);
       batches.push({ sourceId: source.id, entries });
-      sourceIdsUsed.push(source.id);
+      entryCounts[source.id] = entries.length;
     }
 
     const newRecords = mergeSources(batches);
@@ -261,7 +221,7 @@ export class AnimeDatabase {
       {
         reason,
         records: newRecords.length,
-        sources: sourceIdsUsed,
+        sources: entryCounts,
         timeTaken: getTimeTakenSincePoint(start),
       },
       'rebuilt canonical store'
