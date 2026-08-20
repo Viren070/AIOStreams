@@ -12,7 +12,12 @@ import { createLogger } from '../logging/logger.js';
 import { TaskManager } from '../tasks/index.js';
 import { getTimeTakenSincePoint } from '../utils/time.js';
 import { IdParser, type IdType } from '../utils/id-parser.js';
-import { AnimeRepository } from '../db/repositories/anime.js';
+import {
+  AnimeRepository,
+  type AnimeBuildInfo,
+  type PublishOutcome,
+} from '../db/repositories/anime.js';
+import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   canonicalIdValue,
   type AnimeEntry,
@@ -20,6 +25,7 @@ import {
   type SourceEntry,
 } from './types.js';
 import { ANIME_SOURCES, type AnimeSource } from './sources/index.js';
+import { ANIME_DATABASE_PATH } from './storage/paths.js';
 import {
   fetchWithEtag,
   invalidateCache,
@@ -37,18 +43,34 @@ const logger = createLogger('anime-database');
  */
 const CACHE_MAX_ENTRIES = 64;
 
+/** How long a replica waits for another to finish downloading a source. */
+const SOURCE_LOCK_MS = 5 * 60 * 1000;
+
+const ALL_SOURCE_IDS = ANIME_SOURCES.map((source) => source.id);
+
+const isComplete = (ids: readonly string[]): boolean =>
+  ALL_SOURCE_IDS.every((id) => ids.includes(id));
+
+const PUBLISH_MESSAGE: Record<PublishOutcome, string> = {
+  published: 'published the rebuilt store',
+  unchanged: 'store was already current, discarded this build',
+  superseded:
+    'stored store has sources this replica is missing, discarded this build',
+};
+
 export class AnimeDatabase {
   private static instance: AnimeDatabase | null = null;
 
-  /** Sources whose on-disk cache is current (i.e. downloaded successfully). */
-  private readonly availableSources = new Set<string>();
-  /** Sources whose cache file was re-downloaded by their latest refresh. */
-  private readonly freshlyDownloaded = new Set<string>();
-  /** Suppress mid-init rebuilds; flipped on after the first batch load. */
-  private allowIncrementalRebuild = false;
-  /** In-flight rebuild lock; a second refresh during a rebuild queues one. */
-  private rebuildInFlight: Promise<void> | null = null;
-  private rebuildQueued = false;
+  /**
+   * Per source, the file version a parse failure has already spent a
+   * re-download on. Cleared once that source parses.
+   */
+  private readonly retriedVersions = new Map<string, string | null>();
+  /** Suppress mid-init syncs; flipped on once the initial one has run. */
+  private allowIncrementalSync = false;
+  /** In-flight sync; a refresh landing during one queues a single follow-up. */
+  private syncInFlight: Promise<void> | null = null;
+  private queuedSync: { force: boolean } | null = null;
   private isInitialised = false;
   /** Set when the detail level is `none`; every lookup then resolves to null. */
   private disabled = false;
@@ -67,8 +89,8 @@ export class AnimeDatabase {
   // ---------------------------------------------------------------------
 
   /**
-   * Register a refresh task per source and run them all once, then rebuild
-   * only if the sources the store was built from have changed.
+   * Register a refresh task per source, run them all once, then bring the
+   * shared store in line with whatever landed on disk.
    */
   public async initialise(): Promise<void> {
     if (this.isInitialised) {
@@ -96,39 +118,11 @@ export class AnimeDatabase {
       }
     }
 
-    const fingerprint = await this.computeFingerprint();
-    const stored = await AnimeRepository.readBuild();
-    if (stored && stored.records > 0 && stored.fingerprint === fingerprint) {
-      logger.info(
-        { records: stored.records, sources: this.availableSources.size },
-        'stored store matches the current sources, skipping rebuild'
-      );
-    } else {
-      await this.rebuildFromDisk(stored ? 'sources changed' : 'initial');
-    }
-    this.allowIncrementalRebuild = true;
+    // Through `scheduleSync`, so a failure here still leaves the replica able
+    // to rebuild on its next refresh.
+    await this.scheduleSync('initial');
+    this.allowIncrementalSync = true;
     this.isInitialised = true;
-  }
-
-  /**
-   * Identity of the data the store was built from. The ETag is the real
-   * signal; file size covers the rare source that serves none.
-   *
-   * A parsing change with no source change is not covered: run the
-   * `anime-db-rebuild` task, or wait for the next refresh.
-   */
-  private async computeFingerprint(): Promise<string> {
-    const parts: string[] = [];
-    for (const source of ANIME_SOURCES) {
-      if (!this.availableSources.has(source.id)) continue;
-      const etag = await readCachedEtag(source.filePath);
-      const size = await fs
-        .stat(source.filePath)
-        .then((s) => s.size)
-        .catch(() => -1);
-      parts.push(`${source.id}|${source.url}|${etag ?? ''}|${size}`);
-    }
-    return createHash('sha1').update(parts.join('\n')).digest('hex');
   }
 
   private registerRefreshTasks(): void {
@@ -142,8 +136,7 @@ export class AnimeDatabase {
         intervalMs: source.refreshIntervalMs(),
         enabled: true,
         destructive: false,
-        // The store is shared, so one replica rebuilding it is enough.
-        multiReplica: 'single',
+        multiReplica: 'all',
         run: async () => {
           await this.refreshOneSource(source);
           return { ok: true, message: `${source.name} refreshed` };
@@ -167,96 +160,128 @@ export class AnimeDatabase {
       destructive: false,
       multiReplica: 'single',
       run: async () => {
-        await this.scheduleRebuild('manual');
+        await this.scheduleSync('manual', true);
         return { ok: true, message: 'anime database rebuilt' };
       },
     });
   }
 
   private async refreshOneSource(source: AnimeSource): Promise<void> {
-    const { refreshed } = await fetchWithEtag(
-      source.id,
-      source.url,
-      source.filePath
+    // Lives beside the files it protects, so it only serialises replicas that
+    // share a data volume.
+    await DistributedLock.getInstance().withLock(
+      `anime-source-${source.id}`,
+      () => fetchWithEtag(source.id, source.url, source.filePath),
+      {
+        type: 'file',
+        lockDir: ANIME_DATABASE_PATH,
+        timeout: SOURCE_LOCK_MS,
+        ttl: SOURCE_LOCK_MS,
+      }
     );
-    if (refreshed) this.freshlyDownloaded.add(source.id);
 
-    this.availableSources.add(source.id);
-
-    if (this.allowIncrementalRebuild) {
-      // Fire-and-forget; rebuilds serialise via `rebuildInFlight`. Errors
-      // (including merge/write failures) are caught inside `scheduleRebuild`,
-      // so the dropped promise can never reject unhandled.
-      void this.scheduleRebuild(source.id);
+    if (this.allowIncrementalSync) {
+      // Fire-and-forget; syncs serialise via `syncInFlight`, and errors are
+      // caught inside `scheduleSync`, so the dropped promise cannot reject.
+      void this.scheduleSync(source.id);
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Rebuilding the shared store
+  // ---------------------------------------------------------------------
+
   /**
-   * Ensure exactly one rebuild is running at a time. If a rebuild is already
-   * in flight when this is called, a single additional rebuild is queued to
-   * run immediately after.
+   * Ensure exactly one sync runs at a time on this replica. If one is already
+   * in flight, a single follow-up is queued to absorb whatever triggered it.
    */
-  private scheduleRebuild(reason: string): Promise<void> {
-    if (this.rebuildInFlight) {
-      this.rebuildQueued = true;
-      return this.rebuildInFlight;
+  private scheduleSync(reason: string, force = false): Promise<void> {
+    if (this.syncInFlight) {
+      this.queuedSync = { force: force || (this.queuedSync?.force ?? false) };
+      return this.syncInFlight;
     }
-    this.rebuildInFlight = (async () => {
+    this.syncInFlight = (async () => {
       try {
-        await this.rebuildFromDisk(reason);
+        await this.syncStore(reason, force);
       } catch (error) {
-        logger.error({ reason, error }, 'rebuild from disk failed');
+        logger.error({ reason, error }, 'failed to sync the anime store');
       } finally {
-        const requeue = this.rebuildQueued;
-        this.rebuildQueued = false;
-        this.rebuildInFlight = null;
-        if (requeue) {
-          // Run another pass to absorb whatever triggered the queue.
-          await this.scheduleRebuild('coalesced');
-        }
+        const queued = this.queuedSync;
+        this.queuedSync = null;
+        this.syncInFlight = null;
+        if (queued) await this.scheduleSync('coalesced', queued.force);
       }
     })();
-    return this.rebuildInFlight;
+    return this.syncInFlight;
   }
 
   /**
-   * Re-parse every available source file from disk, merge into a fresh
-   * canonical store, and write it.
+   * Bring the shared store in line with this replica's source files.
+   *
+   * Every replica runs this, and nothing coordinates them: {@link currentBuild}
+   * keeps a replica from parsing what the store already holds, and
+   * `AnimeRepository.publish` settles whoever still writes at the same time.
    */
-  private async rebuildFromDisk(reason: string): Promise<void> {
+  private async syncStore(reason: string, force = false): Promise<void> {
+    const onDisk = await this.sourcesOnDisk();
+
+    if (!force) {
+      const current = await this.currentBuild(onDisk);
+      if (current) {
+        logger.info(
+          { reason, records: current.records, sources: current.sources.length },
+          'stored store matches the sources on disk, skipping rebuild'
+        );
+        return;
+      }
+    }
+
     const start = Date.now();
+    const built: AnimeSource[] = [];
     const batches: SourceBatch[] = [];
     const entryCounts: Record<string, number> = {};
-    // Iterate ANIME_SOURCES in registry order so merge precedence is stable.
-    for (const source of ANIME_SOURCES) {
-      if (!this.availableSources.has(source.id)) continue;
+    // `onDisk` follows registry order, so merge precedence is stable.
+    for (const source of onDisk) {
       const entries: SourceEntry[] = [];
       try {
         for await (const e of source.parse(source.filePath)) {
           if (e) entries.push(e);
         }
       } catch (error) {
-        const fresh = this.freshlyDownloaded.has(source.id);
+        // Dropping the cache is worth one attempt per version of the file. A
+        // fresh copy of a version that already failed will fail the same way,
+        // so from the second failure on, the parser is the suspect.
+        const version = await readCachedEtag(source.filePath);
+        const retried = this.retriedVersions.get(source.id) === version;
         logger.error(
           { source: source.name, error },
-          fresh
-            ? 'parse of freshly-downloaded file failed; keeping cache'
+          retried
+            ? 'parse failed again on the same file version; keeping cache'
             : 'parse of cached file failed; invalidating'
         );
-        if (!fresh) await invalidateCache(source.filePath);
-        this.availableSources.delete(source.id);
+        if (!retried) {
+          this.retriedVersions.set(source.id, version);
+          await invalidateCache(source.filePath);
+        }
         continue;
       }
-      this.freshlyDownloaded.delete(source.id);
+      this.retriedVersions.delete(source.id);
+      built.push(source);
       batches.push({ sourceId: source.id, entries });
       entryCounts[source.id] = entries.length;
     }
 
     const records = mergeSources(batches);
-    // After parsing, so a source dropped for a parse failure is excluded.
-    const fingerprint = await this.computeFingerprint();
-    await AnimeRepository.replaceAll(records, fingerprint);
-    this.cache.clear();
+    const outcome = await AnimeRepository.publish({
+      records,
+      // Over `built`, not `onDisk`: a source that failed to parse is not in
+      // this build and must not be claimed as part of it.
+      fingerprint: await this.fingerprint(built),
+      sources: built.map((source) => source.id),
+      allSources: ALL_SOURCE_IDS,
+      force,
+    });
+    if (outcome === 'published') this.cache.clear();
 
     logger.info(
       {
@@ -265,8 +290,59 @@ export class AnimeDatabase {
         sources: entryCounts,
         timeTaken: getTimeTakenSincePoint(start),
       },
-      'rebuilt canonical store'
+      PUBLISH_MESSAGE[outcome]
     );
+  }
+
+  /**
+   * The stored build, when it already holds what this replica would produce.
+   * Whoever publishes a fingerprint first spares every replica reaching this
+   * later the parse.
+   */
+  private async currentBuild(
+    onDisk: readonly AnimeSource[]
+  ): Promise<AnimeBuildInfo | null> {
+    const stored = await AnimeRepository.readBuild();
+    if (!stored || stored.records === 0) return null;
+    if (stored.fingerprint !== (await this.fingerprint(onDisk))) return null;
+    // A build missing a source must not stop a replica that has them all, or
+    // one failed download would leave the store short until a source changes.
+    const ids = onDisk.map((source) => source.id);
+    if (isComplete(ids) && !isComplete(stored.sources)) return null;
+    return stored;
+  }
+
+  /** Registered sources whose cache file is on disk, in registry order. */
+  private async sourcesOnDisk(): Promise<AnimeSource[]> {
+    const present = await Promise.all(
+      ANIME_SOURCES.map((source) =>
+        fs
+          .access(source.filePath)
+          .then(() => true)
+          .catch(() => false)
+      )
+    );
+    return ANIME_SOURCES.filter((_, i) => present[i]);
+  }
+
+  /**
+   * Identity of the data a build was made from. The ETag is the real signal;
+   * file size covers the rare source that serves none.
+   *
+   * A parsing change with no source change is not covered: run the
+   * `anime-db-rebuild` task, or wait for the next refresh.
+   */
+  private async fingerprint(sources: readonly AnimeSource[]): Promise<string> {
+    const parts: string[] = [];
+    for (const source of sources) {
+      const etag = await readCachedEtag(source.filePath);
+      const size = await fs
+        .stat(source.filePath)
+        .then((st) => st.size)
+        .catch(() => -1);
+      parts.push(`${source.id}|${source.url}|${etag ?? ''}|${size}`);
+    }
+    return createHash('sha1').update(parts.join('\n')).digest('hex');
   }
 
   // ---------------------------------------------------------------------

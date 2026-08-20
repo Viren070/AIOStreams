@@ -7,6 +7,7 @@
  */
 import { getDb } from '../db.js';
 import { sql, join } from '../sql.js';
+import type { DbDriver } from '../driver/types.js';
 import type { IdType } from '../../utils/id-parser.js';
 import {
   canonicalIdValue,
@@ -39,7 +40,30 @@ export interface AnimeBuildInfo {
   fingerprint: string;
   records: number;
   builtAt: number;
+  /** Source ids the stored build was made from. */
+  sources: string[];
 }
+
+/** A merged store, ready to replace whatever is stored. */
+export interface AnimeBuild {
+  records: readonly AnimeRecord[];
+  /** Identity of the source revisions this was built from. */
+  fingerprint: string;
+  /** Source ids that went into it. */
+  sources: readonly string[];
+  /** Every source id it could have used. */
+  allSources: readonly string[];
+  /** Publish regardless of what is stored. */
+  force?: boolean;
+}
+
+export type PublishOutcome =
+  /** Written; this is now the stored store. */
+  | 'published'
+  /** Identical to what is stored. */
+  | 'unchanged'
+  /** The stored store was built from sources this one is missing. */
+  | 'superseded';
 
 function num(value: number | string | null | undefined): number {
   if (value == null) return 0;
@@ -104,6 +128,46 @@ function explode(records: readonly AnimeRecord[]) {
   return { ids, synonyms };
 }
 
+/**
+ * Which of `stored` and `build` the store should end up holding.
+ *
+ * A build made from every registered source outranks one that is missing any,
+ * so a replica whose download failed cannot overwrite a complete store with a
+ * smaller one. Completeness is measured against `allSources` on both sides, so
+ * retiring a source does not freeze the store at the last build that had it.
+ */
+function decide(
+  stored: AnimeBuildInfo | null,
+  build: AnimeBuild
+): PublishOutcome {
+  if (build.force || !stored || stored.records === 0) return 'published';
+  const complete = (ids: readonly string[]) =>
+    build.allSources.every((id) => ids.includes(id));
+  if (complete(stored.sources) && !complete(build.sources)) return 'superseded';
+  if (stored.fingerprint === build.fingerprint) return 'unchanged';
+  return 'published';
+}
+
+/** The stored build, as seen through `db` (which may be a transaction). */
+async function readBuildWith(db: DbDriver): Promise<AnimeBuildInfo | null> {
+  const row = await db.maybeOne<{
+    fingerprint: string;
+    records: number | string;
+    built_at: number | string;
+    sources: string;
+  }>(
+    sql`SELECT fingerprint, records, built_at, sources
+          FROM anime_build WHERE id = 1`
+  );
+  if (!row) return null;
+  return {
+    fingerprint: row.fingerprint,
+    records: num(row.records),
+    builtAt: num(row.built_at),
+    sources: JSON.parse(row.sources) as string[],
+  };
+}
+
 export class AnimeRepository {
   /**
    * Every record carrying `idValue` under `idType`, ascending by `rid`.
@@ -144,34 +208,35 @@ export class AnimeRepository {
 
   /** What the stored store was built from, or null if it never has been. */
   static async readBuild(): Promise<AnimeBuildInfo | null> {
-    const row = await getDb().maybeOne<{
-      fingerprint: string;
-      records: number | string;
-      built_at: number | string;
-    }>(
-      sql`SELECT fingerprint, records, built_at FROM anime_build WHERE id = 1`
-    );
-    if (!row) return null;
-    return {
-      fingerprint: row.fingerprint,
-      records: num(row.records),
-      builtAt: num(row.built_at),
-    };
+    return readBuildWith(getDb());
   }
 
-  /** One transaction, so readers keep the previous store until it commits. */
-  static async replaceAll(
-    records: readonly AnimeRecord[],
-    fingerprint: string
-  ): Promise<void> {
-    const { ids, synonyms } = explode(records);
-    await getDb().tx(async (tx) => {
+  /**
+   * Replace the stored store with `build`, in one transaction so readers keep
+   * the previous one until it commits.
+   *
+   * Concurrent rebuilds need no outside lock: {@link decide} runs against the
+   * row this transaction is about to overwrite, so a redundant build is
+   * discarded rather than written twice.
+   */
+  static async publish(build: AnimeBuild): Promise<PublishOutcome> {
+    const { ids, synonyms } = explode(build.records);
+    return getDb().tx(async (tx) => {
+      if (tx.dialect === 'postgres') {
+        await tx.exec(
+          sql`LOCK TABLE anime_records, anime_ids, anime_synonyms, anime_build
+              IN EXCLUSIVE MODE`
+        );
+      }
+      const outcome = decide(await readBuildWith(tx), build);
+      if (outcome !== 'published') return outcome;
+
       await tx.exec(sql`DELETE FROM anime_synonyms`);
       await tx.exec(sql`DELETE FROM anime_ids`);
       await tx.exec(sql`DELETE FROM anime_records`);
 
-      for (let i = 0; i < records.length; i += RECORD_CHUNK_ROWS) {
-        const chunk = records.slice(i, i + RECORD_CHUNK_ROWS);
+      for (let i = 0; i < build.records.length; i += RECORD_CHUNK_ROWS) {
+        const chunk = build.records.slice(i, i + RECORD_CHUNK_ROWS);
         await tx.exec(
           sql`INSERT INTO anime_records
                 (rid, type, ids, title, season, year,
@@ -209,9 +274,11 @@ export class AnimeRepository {
 
       await tx.exec(sql`DELETE FROM anime_build`);
       await tx.exec(
-        sql`INSERT INTO anime_build (id, fingerprint, built_at, records)
-            VALUES (1, ${fingerprint}, ${Date.now()}, ${records.length})`
+        sql`INSERT INTO anime_build (id, fingerprint, built_at, records, sources)
+            VALUES (1, ${build.fingerprint}, ${Date.now()},
+                    ${build.records.length}, ${JSON.stringify(build.sources)})`
       );
+      return 'published';
     });
   }
 }
