@@ -13,6 +13,7 @@ import { NntpConnection } from '../../nntp/connection.js';
 import { NntpError } from '../../nntp/errors.js';
 import { getSpeedTestEngineConfig, usenetEngineRegistry } from '../engine.js';
 import { fetchNzb } from '../library.js';
+import { parseWithNzbGrabInvalidation } from '../nzb-grab-invalidation.js';
 
 const logger = createLogger('usenet/dashboard');
 
@@ -216,7 +217,9 @@ async function resolveSpeedTestSource(
   }
   try {
     const xml = await fetchNzb(SPEEDTEST_NZB_URL, signal);
-    const nzb = await parseNzb(xml);
+    const nzb = await parseWithNzbGrabInvalidation(SPEEDTEST_NZB_URL, () =>
+      parseNzb(xml)
+    );
     const fileIndexes = dataFileIndexes(nzb);
     if (fileIndexes.length === 0) return null;
     const source: SpeedTestSource = { nzb, fileIndexes };
