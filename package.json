@@ -23,7 +23,7 @@
     "start:frontend:dev": "pnpm -F frontend run dev"
   },
   "author": "Viren070",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "workspaces": [
     "packages/*"
   ],

@@ -95,7 +95,7 @@ FROM gcr.io/distroless/nodejs24-debian12 AS production
 LABEL org.opencontainers.image.title="AIOStreams"
 LABEL org.opencontainers.image.source="https://github.com/Viren070/AIOStreams"
 LABEL org.opencontainers.image.description="AIOStreams consolidates multiple Stremio addons and debrid services - including its own suite of built-in addons - into a single, highly customisable super-addon."
-LABEL org.opencontainers.image.licenses="GPL-3.0"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 
 WORKDIR /app
 
