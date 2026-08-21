@@ -90,6 +90,7 @@ const NEWZNAB_INDEXERS: {
   {
     label: 'Treasure Maps (formerly SceneNZBs)',
     value: 'https://treasure-maps.com/api',
+    apiKeyUrl: 'https://treasure-maps.com/account',
   },
   {
     label: 'Tabula Rasa',
