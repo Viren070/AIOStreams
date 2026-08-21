@@ -144,7 +144,7 @@ export class NewznabPreset extends BuiltinAddonPreset {
             id: 'url',
             name: 'Newznab URL',
             description:
-              'Pick an indexer, or choose `Custom` to enter the full URL of the Newznab API endpoint (including the path, usually `/api`).',
+              'Pick an indexer, or choose `Custom` to enter the full URL of the Newznab API endpoint (including the path, usually `/api`). New to Usenet indexers? Compare options at [nzb-sources](https://hampelmen.github.io/nzb-sources/).',
             type: 'select-with-custom',
             required: true,
             options: NEWZNAB_INDEXERS,
