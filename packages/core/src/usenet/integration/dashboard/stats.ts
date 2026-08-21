@@ -1,4 +1,5 @@
 import { settingsStore } from '../../../config/index.js';
+import { createLogger } from '../../../logging/logger.js';
 import {
   UsenetMetricsRepository,
   UsenetIndexerMetricsRepository,
@@ -17,8 +18,14 @@ import { usenetEngineRegistry, getUsenetEngineConfig } from '../engine.js';
 
 export type UsenetStatsWindow = '24h' | '7d' | '30d' | 'all';
 
+const logger = createLogger('usenet/stats');
+
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
+
+function configProviders(): ProviderConfig[] {
+  return (settingsStore.current.usenet?.providers ?? []) as ProviderConfig[];
+}
 
 /** Live connection summary for one provider. */
 export interface ProviderLiveInfo {
@@ -54,6 +61,8 @@ export interface UsenetProviderStatRow {
   missRate: number;
   /** articles / total articles across providers in the window. */
   articleShare: number;
+  /** Has recorded stats but is no longer configured. */
+  removed: boolean;
 }
 
 /** Per-indexer grab aggregates over the window (import-time outcomes only). */
@@ -219,6 +228,105 @@ export async function pruneUsenetMetrics(
   return providerRows + indexerRows;
 }
 
+// ---------------------------------------------------------------------------
+// Resetting recorded stats
+// ---------------------------------------------------------------------------
+
+export type UsenetStatsResetTarget = 'providers' | 'indexers' | 'all';
+
+export interface UsenetStatsResetInput {
+  target: UsenetStatsResetTarget;
+  /** Provider id or indexer label; omit to reset every row of that kind. */
+  id?: string;
+  /** Inclusive lower bound on the hour bucket. */
+  sinceMs?: number;
+  /** Exclusive upper bound on the hour bucket. */
+  untilMs?: number;
+  /** Report what would be removed without removing it. */
+  dryRun?: boolean;
+  username?: string;
+}
+
+export interface UsenetStatsResetResult {
+  dryRun: boolean;
+  providerRows: number;
+  providerArticles: number;
+  providerBytes: number;
+  indexerRows: number;
+  indexerGrabs: number;
+  lastErrorRows: number;
+}
+
+/**
+ * Persist what the warm engines still hold, or the next drain re-materialises
+ * the hour just cleared. Must be `drain()`, not `StatsAccumulator.reset()`,
+ * which discards the in-flight busy intervals live streams are mid-way through.
+ * Sibling replicas hold their own, so a drain interval of theirs can still land.
+ */
+async function flushBeforeDelete(): Promise<void> {
+  try {
+    await drainUsenetMetrics();
+  } catch (err) {
+    logger.warn({ err }, 'drain before stats reset failed');
+  }
+}
+
+/** Reset recorded rollups for one provider/indexer, or for all of them. */
+export async function resetUsenetStats(
+  input: UsenetStatsResetInput
+): Promise<UsenetStatsResetResult> {
+  const { target, id, sinceMs, untilMs, dryRun = false, username } = input;
+  const touchesProviders = target === 'providers' || target === 'all';
+  const touchesIndexers = target === 'indexers' || target === 'all';
+  const providerScope = { providerId: id, sinceMs, untilMs };
+  const indexerScope = { indexer: id, sinceMs, untilMs };
+
+  if (!dryRun) await flushBeforeDelete();
+
+  const provider = touchesProviders
+    ? await UsenetMetricsRepository.sumScope(providerScope)
+    : { rows: 0, articles: 0, bytes: 0 };
+  const indexer = touchesIndexers
+    ? await UsenetIndexerMetricsRepository.sumScope(indexerScope)
+    : { rows: 0, grabs: 0 };
+
+  // The last-error row carries no hour, so only an unbounded reset can clear it.
+  const clearsLastError =
+    touchesIndexers && sinceMs === undefined && untilMs === undefined;
+
+  let lastErrorRows = 0;
+  if (!dryRun) {
+    if (touchesProviders)
+      await UsenetMetricsRepository.deleteScope(providerScope);
+    if (touchesIndexers)
+      await UsenetIndexerMetricsRepository.deleteScope(indexerScope);
+    if (clearsLastError)
+      lastErrorRows = await UsenetIndexerMetricsRepository.deleteLastError(id);
+    logger.warn(
+      {
+        username,
+        target,
+        id,
+        sinceMs,
+        untilMs,
+        providerRows: provider.rows,
+        indexerRows: indexer.rows,
+      },
+      'usenet stats reset'
+    );
+  }
+
+  return {
+    dryRun,
+    providerRows: provider.rows,
+    providerArticles: provider.articles,
+    providerBytes: provider.bytes,
+    indexerRows: indexer.rows,
+    indexerGrabs: indexer.grabs,
+    lastErrorRows,
+  };
+}
+
 /**
  * Pool shape for a configured provider set with no engine warm: known accounts,
  * nothing dialled. Mirrors what a freshly-built engine's pool reports before its
@@ -284,8 +392,7 @@ export async function getUsenetStatsOverview(
   window: UsenetStatsWindow
 ): Promise<UsenetStatsOverview> {
   const { sinceMs, bucketMs } = resolveWindow(window);
-  const configProviders = (settingsStore.current.usenet?.providers ??
-    []) as ProviderConfig[];
+  const configured = configProviders();
 
   const { live, pool, cache } = getUsenetLiveStats();
   const poolById = new Map(pool.providers.map((p) => [p.id, p]));
@@ -325,14 +432,16 @@ export async function getUsenetStatsOverview(
   };
 
   // Build a row per configured provider (so idle providers still show), plus
-  // any provider that appears in metrics but is no longer configured.
+  // any provider that appears in metrics but is no longer configured. Nothing
+  // records what a deleted provider was called, so the row can only be flagged
+  // `removed` and offered up for deletion.
   const ids = new Set<string>([
-    ...configProviders.map((p) => p.id),
+    ...configured.map((p) => p.id),
     ...summary.map((s) => s.providerId),
   ]);
 
   const providers: UsenetProviderStatRow[] = [...ids].map((id) => {
-    const cfg = configProviders.find((p) => p.id === id);
+    const cfg = configured.find((p) => p.id === id);
     const agg = summaryById.get(id);
     const info = poolById.get(id);
     const articles = agg?.articles ?? 0;
@@ -342,6 +451,7 @@ export async function getUsenetStatsOverview(
       id,
       name: cfg?.name,
       host: cfg?.host ?? id,
+      removed: !cfg,
       enabled: cfg ? cfg.enabled !== false : false,
       isBackup: cfg?.isBackup ?? info?.isBackup ?? false,
       priority: cfg?.priority ?? 0,

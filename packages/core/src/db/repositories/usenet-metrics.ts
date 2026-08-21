@@ -1,5 +1,5 @@
 import { getDb } from '../db.js';
-import { sql } from '../sql.js';
+import { join, sql, type SqlFragment } from '../sql.js';
 
 /** A drained per-provider delta to fold into an hourly bucket. */
 export interface UsenetMetricDelta {
@@ -12,6 +12,15 @@ export interface UsenetMetricDelta {
   wallClockMs: number;
   sumTtfbMs: number;
   ttfbSamples: number;
+}
+
+/** An empty scope matches every row. */
+export interface UsenetMetricScope {
+  providerId?: string;
+  /** Inclusive lower bound on `hour_ms`. */
+  sinceMs?: number;
+  /** Exclusive upper bound on `hour_ms`. */
+  untilMs?: number;
 }
 
 /** Aggregated per-provider rollup over a window. */
@@ -76,6 +85,15 @@ const HOUR_MS = 3_600_000;
 
 function hourFloor(ts: number): number {
   return ts - (ts % HOUR_MS);
+}
+
+function scopeWhere(s: UsenetMetricScope): SqlFragment {
+  const parts: SqlFragment[] = [];
+  if (s.providerId !== undefined)
+    parts.push(sql`provider_id = ${s.providerId}`);
+  if (s.sinceMs !== undefined) parts.push(sql`hour_ms >= ${s.sinceMs}`);
+  if (s.untilMs !== undefined) parts.push(sql`hour_ms < ${s.untilMs}`);
+  return parts.length === 0 ? sql`1 = 1` : join(parts, ' AND ');
 }
 
 /**
@@ -215,6 +233,36 @@ export class UsenetMetricsRepository {
     );
     const v = row?.hour_ms;
     return v == null ? undefined : Number(v);
+  }
+
+  /** Totals for a scope, for previewing what a reset would remove. */
+  static async sumScope(
+    scope: UsenetMetricScope
+  ): Promise<{ rows: number; articles: number; bytes: number }> {
+    // `rows` is a reserved word in postgres; alias around it.
+    const row = await getDb().maybeOne<{
+      row_count: number | string;
+      articles: number | string | null;
+      bytes: number | string | null;
+    }>(
+      sql`SELECT COUNT(*) AS row_count,
+                 SUM(articles) AS articles,
+                 SUM(bytes_fetched) AS bytes
+            FROM usenet_provider_metrics
+           WHERE ${scopeWhere(scope)}`
+    );
+    return {
+      rows: Number(row?.row_count ?? 0),
+      articles: Number(row?.articles ?? 0),
+      bytes: Number(row?.bytes ?? 0),
+    };
+  }
+
+  static async deleteScope(scope: UsenetMetricScope): Promise<number> {
+    const res = await getDb().exec(
+      sql`DELETE FROM usenet_provider_metrics WHERE ${scopeWhere(scope)}`
+    );
+    return res.rowCount ?? 0;
   }
 
   /** Delete rollups older than the cutoff. Returns rows removed. */
