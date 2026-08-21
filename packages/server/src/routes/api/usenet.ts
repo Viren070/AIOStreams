@@ -182,10 +182,7 @@ router.get(
       }
 
       if (err instanceof DebridError) {
-        logger.warn(
-          { err: err.message, code: err.code, status: err.statusCode },
-          'usenet stream failed before any bytes were sent'
-        );
+        logger.warn({ err }, 'usenet stream failed before any bytes were sent');
         if (req.query.download !== undefined) {
           res.status(err.statusCode || 502).json({
             success: false,

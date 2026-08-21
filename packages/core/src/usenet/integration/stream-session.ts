@@ -49,6 +49,12 @@ import {
 } from '../../stream-sessions/index.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
 import { fetchNzb, parseNzbCached, canonicaliseNzbHash } from './library.js';
+import {
+  indexerLabelFor,
+  recordGrabOutcome,
+  grabHttpStatus,
+  grabErrorMessage,
+} from './grab-metrics.js';
 import { noteStreamActivity, pruneStreamActivity } from './damage-policy.js';
 
 const logger = createLogger('usenet/stream');
@@ -443,7 +449,21 @@ async function getStreamSession(
     // disconnect mid-open must not poison it for everyone (segment timeouts
     // still bound the work). Phase timings (grab/parse/open) are logged so a
     // cold-start slowdown can be attributed.
-    const xml = await fetchNzb(decoded.nzb);
+    let xml: Buffer;
+    try {
+      xml = await fetchNzb(decoded.nzb);
+    } catch (err) {
+      // Failures only: a byte-path grab usually hits the
+      // grab cache, so counting successes would inflate the denominator.
+      recordGrabOutcome({
+        indexer: indexerLabelFor(decoded.indexer, decoded.nzb),
+        outcome: 'failed',
+        errorCode: 'nzb_fetch_failed',
+        httpStatus: grabHttpStatus(err),
+        errorMessage: grabErrorMessage(err),
+      });
+      throw err;
+    }
     const grabbedAt = Date.now();
     // Reuses the model the resolve just parsed (same hash); parsing the same
     // multi-MB NZB twice per playback is pure waste.
