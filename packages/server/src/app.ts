@@ -35,6 +35,7 @@ import {
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import sabnzbdRouter from './routes/api/sabnzbd.js';
 import publicBlocklistRouter from './routes/blocklist.js';
+import webdavRouter from './routes/webdav.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -264,6 +265,12 @@ builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
 
 app.use('/blocklist', publicBlocklistRouter);
+
+// Built-in WebDAV server: exposes the native usenet library as a browsable,
+// streamable filesystem at /dav (Basic Auth against AIOSTREAMS_AUTH). The
+// router gates itself on `usenet.webdavEnabled`, throttles failed logins per IP
+// (so streaming is never rate-limited), and handles its own method dispatch.
+app.use('/dav', webdavRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately
