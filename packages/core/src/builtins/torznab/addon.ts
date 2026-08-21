@@ -68,6 +68,7 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
       torrents.push({
         confirmed: meta.searchType === 'id',
         hash: infoHash,
+        guid: result.guid,
         downloadUrl,
         sources: result.torznab?.magneturl?.toString()
           ? extractTrackersFromMagnet(result.torznab.magneturl.toString())
