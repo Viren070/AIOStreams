@@ -379,7 +379,7 @@ export const presetsSchema = {
   }),
   marvelUniverse: basicPreset({
     label: 'Marvel Universe',
-    default: ['https://addon-marvel.onrender.com'],
+    default: ['https://addon-marvel.gonp.deno.net'],
     envBase: 'MARVEL_UNIVERSE_URL',
     timeoutEnv: 'DEFAULT_MARVEL_CATALOG_TIMEOUT',
     userAgentEnv: 'DEFAULT_MARVEL_CATALOG_USER_AGENT',
