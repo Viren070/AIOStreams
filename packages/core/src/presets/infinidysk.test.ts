@@ -221,7 +221,7 @@ test('refuses an unsafe failover endpoint without sending stream metadata', asyn
   assert.deepEqual(failures, ['Failed to report InfiniDysk failover order']);
 });
 
-test('failover callback rejects redirects without logging the token URL', async () => {
+test('failover callback rejects redirects without failing the stream response', async () => {
   previousDispatcher = getGlobalDispatcher();
   mockAgent = new MockAgent();
   mockAgent.disableNetConnect();
@@ -251,8 +251,4 @@ test('failover callback rejects redirects without logging the token URL', async 
     )
   );
   assert.deepEqual(failures, ['Failed to report InfiniDysk failover order']);
-  assert.equal(
-    failures.some((message) => message.includes('profile-token')),
-    false
-  );
 });
