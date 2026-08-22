@@ -377,8 +377,8 @@ async function processTorrentsForDebridService(
 
     if (file) {
       const parsedMediaInfo = mergeParsedMediaInfos(
-        parseMediaInfo(file.mediaInfo),
-        torrent.parsedMediaInfo
+        torrent.parsedMediaInfo,
+        parseMediaInfo(file.mediaInfo)
       );
 
       results.push({

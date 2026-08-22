@@ -123,30 +123,28 @@ export class StreamContext {
 
   /**
    * Create a StreamContext for a request.
-   * This performs initial synchronous lookups from the AnimeDatabase.
+   * This performs the initial AnimeDatabase lookup for the request.
    */
-  public static create(
+  public static async create(
     type: string,
     id: string,
     userData: UserData
-  ): StreamContext {
+  ): Promise<StreamContext> {
     const start = Date.now();
     const parsedId = IdParser.parse(id, type);
     let isAnime = id.startsWith('kitsu');
 
     const animeDb = AnimeDatabase.getInstance();
-    if (animeDb.isAnime(id)) {
-      isAnime = true;
-    }
 
     let animeEntry: AnimeEntry | null = null;
     if (parsedId) {
-      animeEntry = animeDb.getEntryById(
+      animeEntry = await animeDb.getEntryById(
         parsedId.type,
         parsedId.value,
         parsedId.season ? Number(parsedId.season) : undefined,
         parsedId.episode ? Number(parsedId.episode) : undefined
       );
+      if (animeEntry) isAnime = true;
 
       // Enrich parsedId with anime entry data if available and no season specified
       if (animeEntry && !parsedId.season) {

@@ -1,6 +1,10 @@
 import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
-import type { UserData, Variant } from '../db/schemas.js';
+import type {
+  UserData,
+  Variant,
+  VariantSelectorLocation,
+} from '../db/schemas.js';
 import {
   applyCelProgram,
   runCelProgram,
@@ -18,6 +22,15 @@ const logger = createLogger('variants');
 
 /** Query parameter that selects variants on addon and ChillLink URLs. */
 export const VARIANT_QUERY_PARAM = 'v';
+
+/**
+ * The selector may instead sit in the path, between the encrypted password and
+ * the resource.
+ */
+export const VARIANT_PATH_SEGMENT = 'v';
+export const VARIANT_PATH_PARAM = 'variantSelector';
+/** Suffix for a `:uuid/:encryptedPassword` mount path. */
+export const VARIANT_PATH_ROUTE = `/${VARIANT_PATH_SEGMENT}/:${VARIANT_PATH_PARAM}`;
 
 export function getVariantLimits(): CelLimits {
   const limits = appConfig.userLimits.variants;
@@ -283,16 +296,38 @@ function assertNoVariantCycles(programs: Map<string, CelProgram>): void {
   for (const id of programs.keys()) walk(id, []);
 }
 
-/** Appends the variant selector to a URL built for the current request. */
-export function withVariantQuery(
-  url: string,
-  activeVariants: string[] | undefined
+export interface VariantSelection {
+  ids: string[];
+  location: VariantSelectorLocation;
+}
+
+/** The path form wins when both are present: it is the installed one. */
+export function resolveVariantSelector(
+  pathValue: unknown,
+  queryValue: unknown
+): VariantSelection {
+  const fromPath = parseVariantSelector(pathValue);
+  if (fromPath.length) return { ids: fromPath, location: 'path' };
+  return { ids: parseVariantSelector(queryValue), location: 'query' };
+}
+
+/**
+ * `base` must end at the encrypted password, since the path form goes between
+ * it and `resource`.
+ */
+export function withVariantSelector(
+  base: string,
+  resource: string,
+  activeVariants: string[] | undefined,
+  location: VariantSelectorLocation = 'query'
 ): string {
-  if (!activeVariants?.length) return url;
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}${VARIANT_QUERY_PARAM}=${activeVariants
-    .map(encodeURIComponent)
-    .join(',')}`;
+  if (!activeVariants?.length) return `${base}${resource}`;
+  const ids = activeVariants.map(encodeURIComponent).join(',');
+  if (location === 'path') {
+    return `${base}/${VARIANT_PATH_SEGMENT}/${ids}${resource}`;
+  }
+  const url = `${base}${resource}`;
+  return `${url}${url.includes('?') ? '&' : '?'}${VARIANT_QUERY_PARAM}=${ids}`;
 }
 
 export function logVariantNotes(

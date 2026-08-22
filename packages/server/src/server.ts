@@ -1,4 +1,9 @@
 ﻿import app from './app.js';
+import {
+  startMetricsHistory,
+  settleMetricsHistory,
+  stopMetricsHistory,
+} from './utils/system-metrics.js';
 
 import {
   Env,
@@ -280,6 +285,7 @@ async function initialiseAuth() {
 
 async function start() {
   try {
+    startMetricsHistory();
     await initialiseDatabase();
     // Before anything registers a task: it is the identity runs are recorded
     // under.
@@ -314,6 +320,7 @@ async function start() {
       logger.info(
         `Server running on port ${appConfig.bootstrap.port}: ${JSON.stringify(server.address())}`
       );
+      settleMetricsHistory();
     });
   } catch (error) {
     if (error instanceof ConfigStartupError) throw error;
@@ -324,6 +331,7 @@ async function start() {
 
 async function shutdown() {
   TaskManager.stopAll();
+  stopMetricsHistory();
   // Write live sessions out so the next boot doesn't reclaim them as stale.
   streamRegistry.closeAll('stale');
   await flushStreamSessions().catch(() => undefined);

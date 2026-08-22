@@ -396,10 +396,18 @@ class AIOStreamsAPI {
   }
 }
 
-/** Query parameter that selects config variants on AIOStreams URLs. */
+/** Query parameter, and path segment, that select config variants. */
 const VARIANT_QUERY_PARAM = 'v';
+const VARIANT_PATH_SEGMENT = 'v';
 
-function parseVariants(url: string): string[] {
+function collectVariants(list: string, into: string[]): void {
+  for (const id of list.split(',')) {
+    const trimmed = id.trim().toLowerCase();
+    if (trimmed && into.indexOf(trimmed) === -1) into.push(trimmed);
+  }
+}
+
+function parseQueryVariants(url: string): string[] {
   const query = url.split('#')[0].split('?')[1];
   if (!query) return [];
 
@@ -409,15 +417,12 @@ function parseVariants(url: string): string[] {
     if (separator === -1 || pair.slice(0, separator) !== VARIANT_QUERY_PARAM) {
       continue;
     }
-    for (const id of decodeURIComponent(pair.slice(separator + 1)).split(',')) {
-      const trimmed = id.trim().toLowerCase();
-      if (trimmed && ids.indexOf(trimmed) === -1) ids.push(trimmed);
-    }
+    collectVariants(decodeURIComponent(pair.slice(separator + 1)), ids);
   }
   return ids;
 }
 
-// supports manifest URLs in the format of <baseUrl>/stremio/<uuid>/<encryptedPassword>/manifest.json
+// supports manifest URLs in the format of <baseUrl>/stremio/<uuid>/<encryptedPassword>[/v/<variants>]/manifest.json
 function parseManifestUrl(url: string): {
   baseUrl: string;
   uuid: string;
@@ -439,7 +444,7 @@ function parseManifestUrl(url: string): {
   // if url is of alias format e.g <baseUrl>/stremio/u/<alias>/manifest.json
   // throw a more specific error.
   const aliasMatch = parsedUrl.pathname.match(
-    /^\/stremio\/u\/([^/]+)\/manifest\.json$/
+    /^\/stremio\/u\/([^/]+)(?:\/v\/[^/]+)?\/manifest\.json$/
   );
   if (aliasMatch) {
     const alias = aliasMatch[1];
@@ -464,8 +469,13 @@ function parseManifestUrl(url: string): {
     throw new Error('Manifest URL is missing uuid or password token');
   }
 
+  const variants = parseQueryVariants(clean);
+  if (segments[3] === VARIANT_PATH_SEGMENT && segments[4]) {
+    collectVariants(decodeURIComponent(segments[4]), variants);
+  }
+
   const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
-  return { baseUrl, uuid, encryptedPassword, variants: parseVariants(clean) };
+  return { baseUrl, uuid, encryptedPassword, variants };
 }
 
 export {

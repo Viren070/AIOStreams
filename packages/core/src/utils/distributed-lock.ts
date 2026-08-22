@@ -413,51 +413,41 @@ export class DistributedLock {
       }
     };
 
-    if (await acquireLock()) {
+    const runHolder = async (): Promise<LockResult<T>> => {
       logger.debug(`File lock acquired for key: ${key}`);
-      let result: T;
       try {
-        result = await fn();
-      } catch (e: any) {
-        throw e;
+        return { result: await fn(), cached: false };
       } finally {
         await releaseLock();
       }
-      return { result, cached: false };
-    }
+    };
+
+    if (await acquireLock()) return runHolder();
 
     logger.debug(
       `Waiting for file lock on key ${key} to be released by another process...`
     );
 
-    return new Promise<LockResult<T>>((resolve, reject) => {
-      const startTime = Date.now();
-      const checkInterval = options.retryInterval || 500;
+    const retryInterval = options.retryInterval || 500;
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      await new Promise((res) => setTimeout(res, retryInterval));
 
-      const timeoutId = setTimeout(() => {
-        clearInterval(pollInterval);
-        const errorMessage = `Timed out waiting for file lock on key: ${key}`;
-        logger.error(errorMessage);
-        reject(new Error(errorMessage));
-      }, timeout);
+      const stats = await fs.stat(lockPath).catch(() => null);
+      if (!stats) {
+        logger.debug(`File lock released for key ${key}`);
+        return { result: undefined as T, cached: true };
+      }
+      // Only an acquirer clears a stale lock, so a waiter that never re-tries
+      // waits out the whole timeout behind a holder that died.
+      if (Date.now() - stats.mtimeMs > STALE_TIMEOUT && (await acquireLock())) {
+        return runHolder();
+      }
+    }
 
-      // Poll for lock release
-      const pollInterval = setInterval(async () => {
-        const exists = await fs
-          .access(lockPath)
-          .then(() => true)
-          .catch(() => false);
-
-        // Lock was released
-        if (!exists) {
-          clearTimeout(timeoutId);
-          clearInterval(pollInterval);
-          logger.debug(`File lock released for key ${key}`);
-          // We mark cached=true to indicate we waited for another process
-          resolve({ result: undefined as any, cached: true });
-        }
-      }, checkInterval);
-    });
+    const errorMessage = `Timed out waiting for file lock on key: ${key}`;
+    logger.error(errorMessage);
+    throw new Error(errorMessage);
   }
 
   private async withSqlLock<T>(

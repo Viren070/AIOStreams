@@ -469,6 +469,11 @@ export const VariantSchema = z.object({
 
 export type Variant = z.infer<typeof VariantSchema>;
 
+export const VariantSelectorLocationSchema = z.enum(['query', 'path']);
+export type VariantSelectorLocation = z.infer<
+  typeof VariantSelectorLocationSchema
+>;
+
 const MergeStrategy = z.enum(['inherit', 'extend', 'override']);
 const BinaryMergeStrategy = z.enum(['inherit', 'override']);
 
@@ -515,6 +520,8 @@ export const UserDataSchema = z.object({
     .optional(),
   /** Request scoped: the variant ids applied to this instance. Never persisted. */
   activeVariants: z.array(z.string()).optional(),
+  /** Request scoped: where the selector sat in the URL. Never persisted. */
+  variantSelectorLocation: VariantSelectorLocationSchema.optional(),
   encryptedPassword: z.string().min(1).optional(),
   trusted: z.boolean().optional(),
   showChanges: z.boolean().optional(),

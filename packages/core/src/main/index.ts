@@ -11,7 +11,7 @@ import {
   IdParser,
   userScopeKey,
 } from '../utils/index.js';
-import { withVariantQuery } from '../variants/runtime.js';
+import { withVariantSelector } from '../variants/runtime.js';
 import Proxifier from '../streams/proxifier.js';
 import StreamLimiter from '../streams/limiter.js';
 import {
@@ -48,9 +48,11 @@ export class AIOStreams {
     this.ctx = {
       userData,
       options,
-      manifestUrl: withVariantQuery(
-        `${appConfig.bootstrap.baseUrl}/stremio/${userData.uuid}/${userData.encryptedPassword}/manifest.json`,
-        userData.activeVariants
+      manifestUrl: withVariantSelector(
+        `${appConfig.bootstrap.baseUrl}/stremio/${userData.uuid}/${userData.encryptedPassword}`,
+        '/manifest.json',
+        userData.activeVariants,
+        userData.variantSelectorLocation
       ),
       manifests: {},
       supportedResources: {},

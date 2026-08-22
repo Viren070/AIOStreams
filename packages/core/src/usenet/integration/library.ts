@@ -321,7 +321,12 @@ function collectLibraryFiles(
         continue;
       }
       files.push({
-        name: innerDisplayName(inner.path, innerCount, releaseName),
+        name: innerDisplayName(
+          inner.path,
+          innerCount,
+          releaseName,
+          inner.format
+        ),
         size: inner.size,
         index: innerSeq++,
         path: inner.path,

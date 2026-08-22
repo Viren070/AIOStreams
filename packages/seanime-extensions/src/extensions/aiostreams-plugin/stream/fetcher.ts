@@ -141,8 +141,9 @@ export class StreamFetcher {
     } catch (err) {
       log.warn('manifest URL invalid/missing', err);
       if (!opts.silent) {
+        const msg = err instanceof Error ? err.message : String(err);
         this.ctx.toast.error(
-          'AIOStreams manifest URL is invalid or missing. Configure it in the extension settings.'
+          `AIOStreams manifest URL is invalid or missing: ${msg}`
         );
       }
       return null;

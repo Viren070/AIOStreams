@@ -2,3 +2,9 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 @plugin 'tailwindcss-animate';
+
+:is(#nd-sidebar, #nd-sidebar-mobile)
+  [data-radix-scroll-area-viewport]
+  :is(a, button) {
+  margin-block: calc(var(--spacing) * 1);
+}

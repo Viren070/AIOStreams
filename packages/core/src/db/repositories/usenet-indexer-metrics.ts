@@ -1,5 +1,5 @@
 import { getDb } from '../db.js';
-import { sql } from '../sql.js';
+import { join, sql, type SqlFragment } from '../sql.js';
 
 /** One concluded grab attempt to fold into an hourly bucket. */
 export interface UsenetIndexerGrabDelta {
@@ -64,10 +64,27 @@ interface RollupRow {
   [k: string]: unknown;
 }
 
+/** An empty scope matches every row. */
+export interface UsenetIndexerScope {
+  indexer?: string;
+  /** Inclusive lower bound on `hour_ms`. */
+  sinceMs?: number;
+  /** Exclusive upper bound on `hour_ms`. */
+  untilMs?: number;
+}
+
 const HOUR_MS = 3_600_000;
 
 function hourFloor(ts: number): number {
   return ts - (ts % HOUR_MS);
+}
+
+function scopeWhere(s: UsenetIndexerScope): SqlFragment {
+  const parts: SqlFragment[] = [];
+  if (s.indexer !== undefined) parts.push(sql`indexer = ${s.indexer}`);
+  if (s.sinceMs !== undefined) parts.push(sql`hour_ms >= ${s.sinceMs}`);
+  if (s.untilMs !== undefined) parts.push(sql`hour_ms < ${s.untilMs}`);
+  return parts.length === 0 ? sql`1 = 1` : join(parts, ' AND ');
 }
 
 /**
@@ -177,6 +194,43 @@ export class UsenetIndexerMetricsRepository {
         importSamples: Number(r.import_samples ?? 0),
       };
     });
+  }
+
+  /** Totals for a scope, for previewing what a reset would remove. */
+  static async sumScope(
+    scope: UsenetIndexerScope
+  ): Promise<{ rows: number; grabs: number }> {
+    // `rows` is a reserved word in postgres; alias around it.
+    const row = await getDb().maybeOne<{
+      row_count: number | string;
+      grabs: number | string | null;
+    }>(
+      sql`SELECT COUNT(*) AS row_count,
+                 SUM(ok + degraded + failed) AS grabs
+            FROM usenet_indexer_metrics
+           WHERE ${scopeWhere(scope)}`
+    );
+    return {
+      rows: Number(row?.row_count ?? 0),
+      grabs: Number(row?.grabs ?? 0),
+    };
+  }
+
+  static async deleteScope(scope: UsenetIndexerScope): Promise<number> {
+    const res = await getDb().exec(
+      sql`DELETE FROM usenet_indexer_metrics WHERE ${scopeWhere(scope)}`
+    );
+    return res.rowCount ?? 0;
+  }
+
+  /** Drops every indexer's row when `indexer` is omitted. */
+  static async deleteLastError(indexer?: string): Promise<number> {
+    const res = await getDb().exec(
+      indexer === undefined
+        ? sql`DELETE FROM usenet_indexer_last_error`
+        : sql`DELETE FROM usenet_indexer_last_error WHERE indexer = ${indexer}`
+    );
+    return res.rowCount ?? 0;
   }
 
   /** Delete rollups older than the cutoff. Last-error rows are kept (1 per indexer). */

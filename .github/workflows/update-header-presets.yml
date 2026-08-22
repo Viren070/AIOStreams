@@ -1,0 +1,76 @@
+name: Update Header Presets
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: update-header-presets
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Update header presets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_BODY_FILE: ${{ runner.temp }}/pr-body.md
+        run: node scripts/update-header-presets.mjs
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- packages/core/src/utils/header-presets.ts; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY_FILE: ${{ runner.temp }}/pr-body.md
+        run: |
+          gh auth setup-git
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -B chore/update-header-presets
+          git add packages/core/src/utils/header-presets.ts
+          git commit -m 'chore: update header presets'
+          git push --force origin chore/update-header-presets
+
+          pr_number="$(gh pr list \
+            --head chore/update-header-presets \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number')"
+
+          if [[ -z "$pr_number" || "$pr_number" == 'null' ]]; then
+            gh pr create \
+              --title 'chore: update header presets' \
+              --body-file "$PR_BODY_FILE" \
+              --head chore/update-header-presets \
+              --base main
+          else
+            gh pr edit "$pr_number" --body-file "$PR_BODY_FILE"
+          fi

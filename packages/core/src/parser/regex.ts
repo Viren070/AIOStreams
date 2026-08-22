@@ -114,6 +114,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
       'dts(?![ .\\-:_]?(x(?=[\\s\\)\\]_.\\-,]|$)|hd[ .\\-_]?(ma)?|es))'
     ),
     TrueHD: createRegex('true[ .\\-_]?hd'),
+    PCM: createRegex('l?pcm'),
     OPUS: createRegex('opus'),
     AAC: createRegex('q?aac(?:[ .\\-_]?2)?'),
     FLAC: createRegex('flac(?:[ .\\-_]?(lossless|2\\.0|x[2-4]))?'),
@@ -137,6 +138,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     'VC-1': createRegex('vc[ .\\-_]?1'),
     XviD: createRegex('xvid'),
     DivX: createRegex('divx|dvix'),
+    'MPEG-4': createRegex('mpeg[ .\\-_]?4'),
   },
   languages: {
     Multi: createLanguageRegex('multi'),

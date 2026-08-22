@@ -216,6 +216,8 @@ export interface SegmentData {
   body: Buffer;
   byteRange?: [number, number];
   fileSize?: number;
+  /** Part count from the yEnc `=ybegin total=` header, if present. */
+  totalParts?: number;
   /** Filename from the yEnc `=ybegin name=` header, if present. */
   name?: string;
   /** Decoded byte length. */

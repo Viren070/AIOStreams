@@ -347,6 +347,7 @@ export class NativeUsenetService implements UsenetDebridService {
       innerPath: selected.path,
       filename: chosenFilename,
       releaseKey: playbackInfo.releaseKey,
+      indexer: playbackInfo.indexer,
       owner: this.owner,
     });
 

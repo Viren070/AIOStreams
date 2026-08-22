@@ -9,6 +9,15 @@
 import { createReadStream } from 'fs';
 import readline from 'readline';
 import { streamArray } from 'stream-json/streamers/stream-array.js';
+
+/**
+ * Return `value` with no shared backing store when it is a string.
+ */
+export function detachString<T>(value: T): T {
+  return typeof value === 'string' && value.length > 0
+    ? (Buffer.from(value, 'utf16le').toString('utf16le') as T)
+    : value;
+}
 /**
  * Iterate over each element of a top-level JSON array stored at `filePath`.
  * The file must start with `[` (after optional whitespace) and contain a flat

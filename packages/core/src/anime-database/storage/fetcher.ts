@@ -44,6 +44,13 @@ async function readFileOrNull(filePath: string): Promise<string | null> {
   }
 }
 
+/**
+ * The ETag last stored for `filePath`, or null if there isn't one.
+ */
+export async function readCachedEtag(filePath: string): Promise<string | null> {
+  return readFileOrNull(etagPathFor(filePath));
+}
+
 async function fetchRemoteEtag(url: string): Promise<string | null> {
   try {
     const response = await makeRequest(url, { method: 'HEAD', timeout: 15000 });

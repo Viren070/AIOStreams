@@ -498,6 +498,15 @@ export const presetsSchema = {
     timeoutEnv: 'DEFAULT_USA_TV_TIMEOUT',
     userAgentEnv: 'DEFAULT_USA_TV_USER_AGENT',
   }),
+  usaTvNext: basicPreset({
+    label: 'USA TV Next',
+    default: [
+      'https://raw.githubusercontent.com/yowmamasita/usa-tv-next/main/manifest.json',
+    ],
+    envBase: 'USA_TV_NEXT_URL',
+    timeoutEnv: 'DEFAULT_USA_TV_NEXT_TIMEOUT',
+    userAgentEnv: 'DEFAULT_USA_TV_NEXT_USER_AGENT',
+  }),
   argentinaTv: basicPreset({
     label: 'Argentina TV',
     default: ['https://848b3516657c-argentinatv.baby-beamup.club'],

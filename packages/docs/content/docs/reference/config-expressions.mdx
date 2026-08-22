@@ -6,7 +6,7 @@ description: Complete reference for config variants and the CEL instruction set 
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-A **variant** is a named script that adjusts your configuration at request time. Variants live inside one config and are selected with a query parameter on the manifest URL, so a single UUID can serve several differently-behaving addons.
+A **variant** is a named script that adjusts your configuration at request time. Variants live inside one config and are selected by the install URL, so a single UUID can serve several differently-behaving addons.
 
 The scripts are written in the **Config Expression Language (CEL)**. Where the [Stream Expression Language](/reference/stream-expressions) is evaluated against a list of streams, CEL is declarative: a list of edits applied to your configuration, top to bottom.
 
@@ -25,7 +25,7 @@ Prefer a variant where you can. Most differences are a line or two, the preview 
 diff before you save, and there is no second configuration to create and keep track of.
 
 Sharing does not settle it either way. Giving your config to someone whose TV cannot handle
-Dolby Vision is a variant: `add excludedVisualTags "DV Only"` and hand them `?v=no-dv`.
+Dolby Vision is a variant: `add excludedVisualTags "DV Only"` and hand them `/v/no-dv`.
 They get your config exactly, minus the one thing their hardware cannot do, and it stays
 one config when you change it.
 
@@ -62,17 +62,30 @@ Hit preview to see exactly which fields change, then save.
 </Step>
 
 <Step>
-On **Save/Install**, pick the variant. Every install link gains `?v=phone`:
+On **Save/Install**, pick the variant. Every install link gains `/v/phone`:
 
 ```
-https://your-instance/stremio/<uuid>/<password>/manifest.json?v=phone
+https://your-instance/stremio/<uuid>/<password>/v/phone/manifest.json
 ```
 
 </Step>
 
 </Steps>
 
-Clients should keep the query string when they request streams, catalogs, meta and subtitles, so the variant applies for the whole session.
+---
+
+## Where the selector goes
+
+**Selector location** on the install page switches between two forms:
+
+```
+https://your-instance/stremio/<uuid>/<password>/v/phone/manifest.json
+https://your-instance/stremio/<uuid>/<password>/manifest.json?v=phone
+```
+
+They do the same thing and both work everywhere, so the path form is the default: it is the one that survives a client rebuilding its request URLs from a base you gave it rather than following the manifest URL. A client keeping the query string is what the other form needs, and not all of them do.
+
+The Search and Newznab/Torznab APIs take the query form only, as `&v=`, since they are single endpoints rather than a base a client extends.
 
 ---
 
@@ -81,15 +94,15 @@ Clients should keep the query string when they request streams, catalogs, meta a
 Comma-separate to combine. They apply left to right, so later instructions win:
 
 ```
-.../manifest.json?v=phone,rd2
+.../v/phone,rd2/manifest.json
 ```
 
 An unknown or disabled id is an error, surfaced as an error stream, rather than a silent fall back to the base config.
 
-The selector also works on ChillLink, the Seanime extension URLs, and the Search and Newznab/Torznab APIs (as `&v=`).
+The selector also works on ChillLink and the Seanime extension URLs.
 
 <Callout type="warn">
-The configure page always edits the **base** config, even if opened with `?v=`.
+The configure page always edits the **base** config, even when a variant is selected.
 </Callout>
 
 ---
@@ -295,7 +308,7 @@ use variant phone
 add excludedVisualTags "3D"
 ```
 
-or keep them independent and combine at install time with `?v=phone,no3d`.
+or keep them independent and combine at install time with `/v/phone,no3d`.
 
 ---
 
