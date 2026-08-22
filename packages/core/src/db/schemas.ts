@@ -169,6 +169,8 @@ const ServiceSchema = z.object({
   id: ServiceIds,
   enabled: z.boolean().optional(),
   credentials: z.record(z.string().min(1), z.string()),
+  // Skipped while this URL answers 5xx. Absent means never skipped.
+  healthCheckUrl: z.string().url().optional(),
 });
 
 export type Service = z.infer<typeof ServiceSchema>;
@@ -202,6 +204,9 @@ const AddonSchema = z.object({
   // forceToTop: z.boolean().optional(),
   pinPosition: z.enum(['top', 'bottom']).optional(),
   serviceWrapped: z.boolean().optional(),
+  // For an addon whose dependency cannot be inferred, such as a custom manifest
+  // carrying a provider's key. Skipped while this URL answers 5xx.
+  healthCheckUrl: z.string().url().optional(),
   headers: z.record(z.string().min(1), z.string().min(1)).optional(),
   ip: z.string().optional(),
 });
