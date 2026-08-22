@@ -65,6 +65,11 @@ const TVDBBaseRecordSchema = z.object({
   status: TVDBStatusSchema,
 });
 
+const TVDBSeriesSeasonSchema = z.object({
+  type: z.object({ type: z.string() }),
+  number: z.number(),
+});
+
 const TVDBSeriesRecordSchema = TVDBBaseRecordSchema.extend({
   firstAired: z.string().optional(),
   lastAired: z.string().optional(),
@@ -139,6 +144,15 @@ export const RemoteIdSearchResponseSchema = z.discriminatedUnion('status', [
 
 export const SeriesResponseSchema = z.discriminatedUnion('status', [
   TVDBSuccessSchema(TVDBSeriesRecordSchema),
+  TVDBErrorSchema,
+]);
+
+const TVDBSeriesSeasonsSchema = z.object({
+  seasons: z.array(TVDBSeriesSeasonSchema).optional(),
+});
+
+export const SeriesSeasonsResponseSchema = z.discriminatedUnion('status', [
+  TVDBSuccessSchema(TVDBSeriesSeasonsSchema),
   TVDBErrorSchema,
 ]);
 
@@ -268,6 +282,21 @@ export class TVDBMetadata {
     } catch (error) {
       logger.warn(
         `Failed to fetch TVDB episodes for series ${tvdbId} season ${seasonNumber}: ${error instanceof Error ? error.message : error}`
+      );
+      return undefined;
+    }
+  }
+
+  public async getSeasonNumbers(tvdbId: number): Promise<number[] | undefined> {
+    try {
+      await this.ensureToken();
+      const response = await this.api.getSeriesSeasons(tvdbId);
+      return response.data?.seasons
+        ?.filter((s) => s.type.type === 'official' && s.number !== 0)
+        .map((s) => s.number);
+    } catch (error) {
+      logger.warn(
+        `Failed to fetch TVDB season numbers for series ${tvdbId}: ${error instanceof Error ? error.message : error}`
       );
       return undefined;
     }
@@ -441,6 +470,8 @@ class TVDBApi {
     series: Cache.getInstance<number, z.infer<typeof SeriesResponseSchema>>(
       'tvdb:series'
     ),
+    // prettier-ignore
+    seriesSeasons: Cache.getInstance<number, z.infer<typeof SeriesSeasonsResponseSchema>>('tvdb:seriesSeasons'),
     movie: Cache.getInstance<number, z.infer<typeof MovieResponseSchema>>(
       'tvdb:movie'
     ),
@@ -547,6 +578,25 @@ class TVDBApi {
           `/series/${id}`,
           {
             schema: SeriesResponseSchema,
+            timeout: 5000,
+          }
+        );
+      },
+      id,
+      7 * 24 * 60 * 60 // 7 days
+    );
+  }
+
+  public async getSeriesSeasons(
+    id: number
+  ): Promise<z.infer<typeof SeriesSeasonsResponseSchema>> {
+    return this.cache.seriesSeasons.wrap(
+      async () => {
+        logger.debug(`Getting series seasons: ${id}`);
+        return this.request<z.infer<typeof SeriesSeasonsResponseSchema>>(
+          `/series/${id}/extended?short=true`,
+          {
+            schema: SeriesSeasonsResponseSchema,
             timeout: 5000,
           }
         );
