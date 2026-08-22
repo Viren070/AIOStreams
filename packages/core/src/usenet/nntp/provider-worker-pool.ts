@@ -56,13 +56,15 @@ interface Slot {
   conn: NntpConnection | null;
   /** A dial is in progress for this slot. */
   connecting: boolean;
+  /** An idle reader probe owns this slot; real work must wait for it to settle. */
+  probing: boolean;
   /** Consecutive failures on this slot's connection (per-connection breaker). */
   failures: number;
 }
 
 /** Additive-increase step interval for the adaptive connection-limit throttle. */
 const THROTTLE_STEP_MS = 5_000;
-/** Keepalive DATE interval on otherwise-idle warm connections. */
+/** Reader-probe interval on otherwise-idle warm connections. */
 const KEEPALIVE_MS = 30_000;
 /** Backoff after a transient dial/connection failure before re-dialing. */
 const DIAL_BACKOFF_MS = 1_000;
@@ -129,6 +131,7 @@ export class ProviderWorkerPool {
     this.slots = Array.from({ length: max }, () => ({
       conn: null,
       connecting: false,
+      probing: false,
       failures: 0,
     }));
     this.state = config.enabled === false ? 'disabled' : 'online';
@@ -161,7 +164,14 @@ export class ProviderWorkerPool {
   /** Total pipeline slots free right now (used for least-busy provider ordering). */
   get freeSlots(): number {
     if (this.state !== 'online') return 0;
-    return Math.max(0, this.allowed * this.depth - this.inFlightTotal());
+    const probeReservations = this.slots.reduce((total, slot) => {
+      if (!slot.probing) return total;
+      return total + Math.max(0, this.depth - (slot.conn?.inFlight ?? 0));
+    }, 0);
+    return Math.max(
+      0,
+      this.allowed * this.depth - this.inFlightTotal() - probeReservations
+    );
   }
 
   get inFlight(): number {
@@ -328,7 +338,7 @@ export class ProviderWorkerPool {
     // 1) Fill EXISTING usable connections' pipelines with compatible work first.
     for (const slot of this.slots) {
       if (!this.hasWork()) break;
-      if (slot.connecting) continue;
+      if (slot.connecting || slot.probing) continue;
       if (!slot.conn || !slot.conn.isUsable) {
         slot.conn = null;
         continue;
@@ -358,7 +368,7 @@ export class ProviderWorkerPool {
     }
     for (const slot of this.slots) {
       if (toDial <= 0) break;
-      if (slot.connecting || slot.conn) continue;
+      if (slot.connecting || slot.probing || slot.conn) continue;
       this.beginDial(slot);
       toDial--;
     }
@@ -449,7 +459,7 @@ export class ProviderWorkerPool {
         slot.failures = 0;
         // Refresh staleness on real work so purge only reaps genuinely idle
         // connections (touch-at-connect-only redialed active streams every
-        // stale interval). Keepalive DATEs deliberately don't touch.
+        // stale interval). Idle reader probes deliberately don't touch.
         conn.touch();
         this.recordServiceTime(durationMs);
         if (res.bytes > 0) this.recordThroughput(res.bytes, durationMs);
@@ -574,19 +584,29 @@ export class ProviderWorkerPool {
     for (const req of all) req.reject(err);
   }
 
-  /** Periodic DATE on idle warm connections so the server doesn't reap them. */
+  /** Periodic no-payload reader probe on idle warm connections. */
   private keepalive(): void {
     if (this.closed) return;
     if (this.hasWork()) this.dispatch();
     for (const slot of this.slots) {
       const conn = slot.conn;
-      if (!conn || !conn.isUsable || conn.inFlight > 0) continue;
+      if (!conn || slot.probing || !conn.isUsable || conn.inFlight > 0)
+        continue;
+      slot.probing = true;
       conn
-        .date(undefined, this.opts.idleConnectionMs)
+        .probeReader(undefined, this.opts.idleConnectionMs)
         .catch(() => {
-          if (slot.conn === conn) slot.conn = null;
+          if (slot.conn === conn) {
+            // A failed probe leaves transport/protocol state uncertain. Close it
+            // explicitly before releasing the slot so the socket cannot leak.
+            conn.destroy();
+            slot.conn = null;
+          }
         })
-        .finally(() => this.dispatch());
+        .finally(() => {
+          slot.probing = false;
+          this.dispatch();
+        });
     }
   }
 

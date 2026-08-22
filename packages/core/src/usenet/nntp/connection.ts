@@ -17,6 +17,9 @@ import {
 
 const logger = createLogger('usenet/connection');
 
+/** Guaranteed-missing id used for a no-payload reader capability probe. */
+const READER_PROBE_MESSAGE_ID = 'aiostreams-healthcheck@invalid';
+
 export interface ConnectionOptions {
   dialTimeoutMs: number;
   idleConnectionMs: number;
@@ -426,7 +429,16 @@ export class NntpConnection {
     );
   }
 
-  /** DATE: cheap health check / keepalive. */
+  /**
+   * Verify that an authenticated connection can issue reader commands without
+   * downloading an article. STAT is a mandatory reader command; both 223
+   * (unexpectedly present) and 430/423 (missing) prove the connection is usable.
+   */
+  async probeReader(signal?: AbortSignal, timeoutMs = 15_000): Promise<void> {
+    await this.stat(READER_PROBE_MESSAGE_ID, signal, timeoutMs);
+  }
+
+  /** Return the server's current date when the optional DATE command is supported. */
   async date(signal?: AbortSignal, timeoutMs = 15_000): Promise<void> {
     const resp = await this.command('DATE', signal, timeoutMs);
     const status = parseStatusLine(resp);
