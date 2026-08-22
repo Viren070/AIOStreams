@@ -18,6 +18,7 @@ import {
   CopyIcon,
   DownloadIcon,
   PlusIcon,
+  RefreshCw,
   Rss,
   SearchIcon,
   UploadIcon,
@@ -47,6 +48,7 @@ import { redactPresetOptions } from '@/lib/preset-credentials';
 import { useSave } from '@/context/save';
 import { FiExternalLink } from 'react-icons/fi';
 import { ProfileCard } from './profile-card';
+import { AIOManagerSyncModal } from './aiomanager-sync-modal';
 import { useSession } from '@/context/session';
 import { useQuery } from '@tanstack/react-query';
 import { configProfilesQuery } from '@/lib/queries';
@@ -445,6 +447,7 @@ interface InstallCardProps {
   usingAlias: boolean;
   onCopyManifestUrl: () => void;
   onOpenChillio: () => void;
+  onOpenAIOManager: () => void;
   onOpenSeanime: () => void;
   onOpenJellyfin: () => void;
   onOpenAniyomi: () => void;
@@ -466,6 +469,7 @@ function InstallCard({
   variantSelector,
   onCopyManifestUrl,
   onOpenChillio,
+  onOpenAIOManager,
   onOpenSeanime,
   onOpenJellyfin,
   onOpenAniyomi,
@@ -600,6 +604,12 @@ function InstallCard({
               unofficial
               author="worldInColors"
               onClick={onOpenAniyomi}
+            />
+            <AppCard
+              icon={<RefreshCw className="h-5 w-5" />}
+              name="AIOManager"
+              description="Sync into your Stremio account"
+              onClick={onOpenAIOManager}
             />
           </div>
         </div>
@@ -1426,6 +1436,7 @@ function Content() {
   const aniyomiModal = useDisclosure(false);
   const nabIndexerModal = useDisclosure(false);
   const searchApiModal = useDisclosure(false);
+  const aioManagerModal = useDisclosure(false);
   const { handleSave: handleSaveContext, loading: saveLoading } = useSave();
   const confirmResetProps = useConfirmationDialog({
     title: 'Confirm Reset',
@@ -1840,6 +1851,7 @@ function Content() {
               }
               onCopyManifestUrl={copyManifestUrl}
               onOpenChillio={chillLinkModal.open}
+              onOpenAIOManager={aioManagerModal.open}
               onOpenSeanime={seanimeModal.open}
               onOpenJellyfin={jellyfinModal.open}
               onOpenAniyomi={aniyomiModal.open}
@@ -2061,6 +2073,13 @@ function Content() {
             </div>
           </div>
         </Modal>
+
+        {/* AIOManager sync modal */}
+        <AIOManagerSyncModal
+          open={aioManagerModal.isOpen}
+          onOpenChange={aioManagerModal.toggle}
+          manifestUrl={manifestUrl}
+        />
 
         {/* Seanime modal */}
         <Modal

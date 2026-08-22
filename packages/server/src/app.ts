@@ -14,6 +14,7 @@ import {
   proxyApi,
   templatesApi,
   syncApi,
+  aiomanagerApi,
   authApi,
   dashboardApi,
   usenetApi,
@@ -176,6 +177,7 @@ apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
+apiRouter.use('/aiomanager', aiomanagerApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);

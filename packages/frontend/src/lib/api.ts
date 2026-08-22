@@ -559,6 +559,35 @@ export async function fetchManifest(url: string): Promise<any> {
   return response.json();
 }
 
+export interface AIOManagerStatus {
+  supported: boolean;
+  capabilities?: Record<string, unknown>;
+}
+
+/**
+ * Ask whether an AIOManager instance serves the Hydra API. Instances that
+ * predate it report unsupported rather than failing.
+ */
+export async function checkAIOManagerStatus(instanceUrl: string) {
+  return api<AIOManagerStatus>(
+    `GET /aiomanager/status?instanceUrl=${encodeURIComponent(instanceUrl)}`
+  );
+}
+
+/**
+ * Install or update this addon in the user's AIOManager account. The key is
+ * relayed by the server, so it never leaves this origin.
+ */
+export async function syncToAIOManager(options: {
+  instanceUrl: string;
+  apiKey: string;
+  addonUrl: string;
+}) {
+  return api<Record<string, unknown>>('POST /aiomanager/reinstall', {
+    body: options,
+  });
+}
+
 export type {
   ParsedStream,
   LoadUserResponse,
