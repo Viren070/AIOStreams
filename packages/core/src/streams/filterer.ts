@@ -1152,6 +1152,20 @@ class StreamFilterer {
 
       let seasons = stream.parsedFile?.seasons;
 
+      // A seasonless release may still name its season; that title is the
+      // only thing separating it from a sibling season's same episode number.
+      let seasonFromTitle = false;
+      if (!seasons?.length && stream.parsedFile?.title) {
+        const inferred =
+          requestedMetadata?.seasonTitles?.[
+            normaliseTitle(stream.parsedFile.title)
+          ];
+        if (inferred !== undefined) {
+          seasons = [inferred];
+          seasonFromTitle = true;
+        }
+      }
+
       // if the requested content is series and no season or episode info is present, filter out if strict is true
       if (type === 'series' && seasonEpisodeMatchingOptions.strict) {
         if (
@@ -1163,9 +1177,11 @@ class StreamFilterer {
 
         if (
           !stream.parsedFile.seasons?.length &&
-          stream.parsedFile.episodes?.length
+          stream.parsedFile.episodes?.length &&
+          !seasonFromTitle
         ) {
-          // assume season is 1 when empty and episode is present in strict mode.
+          // assume season is 1 when empty and episode is present in strict
+          // mode, unless the title already placed it in a specific season
           seasons = [1];
         }
       }
@@ -1177,14 +1193,20 @@ class StreamFilterer {
         !seasons.includes(requestedSeason)
       ) {
         if (
-          seasons[0] === 1 &&
+          (seasons[0] === 1 || seasonFromTitle) &&
           stream.parsedFile?.episodes?.length &&
           requestedMetadata?.absoluteEpisode &&
           stream.parsedFile?.episodes?.includes(
             requestedMetadata.absoluteEpisode
           )
         ) {
-          // allow if absolute episode matches AND season is 1
+          // allow if absolute episode matches AND season is 1, or the title
+          // named a season but the release is numbered continuously across the
+          // series, which outranks the name
+        } else if (seasonFromTitle) {
+          // the title named a different season and the episode number is not
+          // series-absolute, so this is that other season's episode
+          return false;
         } else if (
           seasons[0] === 1 &&
           stream.parsedFile?.episodes?.length &&
