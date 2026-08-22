@@ -1,4 +1,4 @@
-import { ParsedStream, PassthroughStage } from '../db/schemas.js';
+import { ParsedStream, PassthroughStage, UserData } from '../db/schemas.js';
 
 /**
  * Check if a stream should passthrough a specific stage.
@@ -28,6 +28,22 @@ export function shouldPassthroughStage(
   }
 
   return false;
+}
+
+/** Whether resolveServiceWrappedStreams will actually pick up this stream. */
+export function isServiceWrapEligibleP2PStream(
+  stream: ParsedStream,
+  userData: UserData
+): boolean {
+  if (!userData.serviceWrap?.enabled || stream.type !== 'p2p') return false;
+  if (stream.addon.serviceWrapped) return true;
+
+  const serviceWrapPresets = userData.serviceWrap.presets;
+  const isPresetInScope =
+    !serviceWrapPresets?.length ||
+    serviceWrapPresets.includes(stream.addon.preset.id);
+
+  return !!stream.torrent?.infoHash && isPresetInScope;
 }
 
 class StreamUtils {
