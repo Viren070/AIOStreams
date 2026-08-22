@@ -355,14 +355,11 @@ export function mergeParsedMediaInfo(
   if (!base && !preferred) return undefined;
 
   const merged = normaliseParsedMediaInfo({
-    languages: [...(base?.languages ?? []), ...(preferred?.languages ?? [])],
-    subtitles: [...(base?.subtitles ?? []), ...(preferred?.subtitles ?? [])],
-    audioTags: [...(base?.audioTags ?? []), ...(preferred?.audioTags ?? [])],
-    audioChannels: [
-      ...(base?.audioChannels ?? []),
-      ...(preferred?.audioChannels ?? []),
-    ],
-    visualTags: [...(base?.visualTags ?? []), ...(preferred?.visualTags ?? [])],
+    languages: preferred?.languages ?? base?.languages,
+    subtitles: preferred?.subtitles ?? base?.subtitles,
+    audioTags: preferred?.audioTags ?? base?.audioTags,
+    audioChannels: preferred?.audioChannels ?? base?.audioChannels,
+    visualTags: preferred?.visualTags ?? base?.visualTags,
     encode: preferred?.encode ?? base?.encode,
     resolution: preferred?.resolution ?? base?.resolution,
     duration: preferred?.duration ?? base?.duration,
