@@ -71,6 +71,22 @@ test('validates InfiniDysk manifest URLs', () => {
       parseInfiniDyskManifestUrl('My InfiniDysk', '/relative/manifest.json'),
     /invalid Manifest URL/
   );
+  assert.throws(
+    () =>
+      parseInfiniDyskManifestUrl(
+        'My InfiniDysk',
+        'http://127.0.0.1/adapters/addon/profile-token/manifest.json'
+      ),
+    /invalid Manifest URL/
+  );
+  assert.throws(
+    () =>
+      parseInfiniDyskManifestUrl(
+        'My InfiniDysk',
+        'http://[::1]/adapters/addon/profile-token/manifest.json'
+      ),
+    /invalid Manifest URL/
+  );
   assert.doesNotThrow(() =>
     parseInfiniDyskManifestUrl(
       'My InfiniDysk',
@@ -183,7 +199,29 @@ test('reports final stream order to the sibling failover endpoint', async () => 
   mockAgent.assertNoPendingInterceptors();
 });
 
-test('failover callback failure does not throw and does not log the token URL', async () => {
+test('refuses an unsafe failover endpoint without sending stream metadata', async () => {
+  previousDispatcher = getGlobalDispatcher();
+  mockAgent = new MockAgent();
+  mockAgent.disableNetConnect();
+  setGlobalDispatcher(mockAgent);
+
+  const failures: string[] = [];
+  await assert.doesNotReject(() =>
+    reportFailoverOrder(
+      [{ extra: { failoverId: 'first' } }],
+      'http://127.0.0.1/adapters/addon/profile-token/failover_order',
+      'InfiniDysk-Test',
+      {
+        onFailure: () => {
+          failures.push('Failed to report InfiniDysk failover order');
+        },
+      }
+    )
+  );
+  assert.deepEqual(failures, ['Failed to report InfiniDysk failover order']);
+});
+
+test('failover callback rejects redirects without logging the token URL', async () => {
   previousDispatcher = getGlobalDispatcher();
   mockAgent = new MockAgent();
   mockAgent.disableNetConnect();
@@ -194,7 +232,10 @@ test('failover callback failure does not throw and does not log the token URL', 
       path: '/adapters/addon/profile-token/failover_order',
       method: 'POST',
     })
-    .reply({ statusCode: 500 });
+    .reply({
+      statusCode: 302,
+      headers: { location: 'http://127.0.0.1/internal' },
+    });
 
   const failures: string[] = [];
   await assert.doesNotReject(() =>
