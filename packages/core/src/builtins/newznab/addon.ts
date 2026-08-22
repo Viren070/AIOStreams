@@ -192,6 +192,9 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.newznab?.language,
         subtitleLanguages: result.newznab?.subs,
+        resolution: result.newznab?.resolution,
+        codec: result.newznab?.video,
+        audio: result.newznab?.audio,
       });
       const nzb: NZB = {
         confirmed: meta.searchType === 'id',
@@ -209,6 +212,10 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
           (result.newznab?.size ? Number(result.newznab.size) : undefined) ??
           enclosure?.length ??
           0,
+        group:
+          typeof result.newznab?.team === 'string'
+            ? result.newznab.team
+            : undefined,
         type: 'usenet',
         parsedMediaInfo,
       };
