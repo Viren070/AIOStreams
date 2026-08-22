@@ -1,5 +1,43 @@
 # Changelog
 
+## [2.34.0](https://github.com/Viren070/AIOStreams/compare/v2.33.2...v2.34.0) (2026-08-22)
+
+
+### Features
+
+* **core:** add MPEG-4 encode and PCM audio tag ([#1204](https://github.com/Viren070/AIOStreams/issues/1204)) ([f909749](https://github.com/Viren070/AIOStreams/commit/f909749956aabfaf00576b42a3b93087d475a1c6))
+* **dashboard:** add memory graph ([eb6a32e](https://github.com/Viren070/AIOStreams/commit/eb6a32e70abedfef580430c8c5ccdb043a41b12a))
+* **presets:** add USA TV Next preset ([a6969b2](https://github.com/Viren070/AIOStreams/commit/a6969b26ac89e3ca8ea6b16c1aa34ab279d6602a)), closes [#1031](https://github.com/Viren070/AIOStreams/issues/1031)
+* **presets:** ingest Easynews++ subtitle languages from the 💬 line ([#1133](https://github.com/Viren070/AIOStreams/issues/1133)) ([20fbd41](https://github.com/Viren070/AIOStreams/commit/20fbd41962f6a8464e8d746dbce0c3142f83d54d))
+* **usenet:** reset recorded stats per provider/indexer and flag removed providers ([3d7e9d8](https://github.com/Viren070/AIOStreams/commit/3d7e9d8efe5bdd97b8814b5a53f68f8f008d6a45))
+
+
+### Bug Fixes
+
+* **anime-database:** correctly handle empty stored sources ([9e59c4a](https://github.com/Viren070/AIOStreams/commit/9e59c4aa98783b57bfc740f2f6350d4ebb5dbec1))
+* **anime-database:** make the shared store safe across replicas ([8ef429f](https://github.com/Viren070/AIOStreams/commit/8ef429ffe8702e092c8f47ded3d57edd2016d13c))
+* **builtins/torznab:** use prowlarrindexer as indexer ([61e8236](https://github.com/Viren070/AIOStreams/commit/61e8236780b080e8ea74c0332271800704583153))
+* **core:** let real probe data override indexer and filename-derived language/subtitle guesses ([#1185](https://github.com/Viren070/AIOStreams/issues/1185)) ([6fdbc62](https://github.com/Viren070/AIOStreams/commit/6fdbc622bc6a2ebd0cfcfa7263d7d7a569ce8a75))
+* **core:** skip language/subtitle filters for P2P streams pending service wrap ([#1187](https://github.com/Viren070/AIOStreams/issues/1187)) ([7e0a73a](https://github.com/Viren070/AIOStreams/commit/7e0a73a3c910e9ebbcd9fc3ddec9a7fa74685732))
+* **distributed-lock:** let a file-lock waiter take over a stale lock ([a554c9f](https://github.com/Viren070/AIOStreams/commit/a554c9f0d89e7888b4c7922b8b4843ed063aa619))
+* key torrent grabs on guid and indexer where available ([e0a5b4c](https://github.com/Viren070/AIOStreams/commit/e0a5b4c559a42cefc5aab0f1aa7a9077db4d68ec)), closes [#1192](https://github.com/Viren070/AIOStreams/issues/1192)
+* preserve word boundary when stripping : and ; in cleanTitle ([#1188](https://github.com/Viren070/AIOStreams/issues/1188)) ([6b9ee1c](https://github.com/Viren070/AIOStreams/commit/6b9ee1c8eaf9fb200c69d083315a58bf4ea54018))
+* **presets:** update Marvel Universe default URL ([861ee6b](https://github.com/Viren070/AIOStreams/commit/861ee6b3c38ecc57ce5627c0c36be79d625dc06c))
+* **torrent:** lower the default get-torrent concurrency ([#1193](https://github.com/Viren070/AIOStreams/issues/1193)) ([c01b81a](https://github.com/Viren070/AIOStreams/commit/c01b81a7d2089e9c6ee39ba8cb77a1521f4e9d00))
+* **usenet:** attribute byte-path nzb grab failures and improve error log ([a5bdb4f](https://github.com/Viren070/AIOStreams/commit/a5bdb4fd59bbae18bc89ecee8ea0a7746ef3de4e))
+* **usenet:** don't size a file from `=ybegin size=` when it holds only some parts ([e211efa](https://github.com/Viren070/AIOStreams/commit/e211efa9d29fe0d36849a4303f2ca2e158f0fb97))
+* **usenet:** merge NZBs that list one file per article ([f1ff3c5](https://github.com/Viren070/AIOStreams/commit/f1ff3c51ce93017dc4a69d66ea6f7b5258c57116))
+
+
+### Performance Improvements
+
+* **analytics:** drop unreachable and redundant analytics_events indexes ([764a123](https://github.com/Viren070/AIOStreams/commit/764a1230f5322d9d1d7353fe99eb24dab2b3f524))
+* **anime-database:** move the canonical store into the database ([efca465](https://github.com/Viren070/AIOStreams/commit/efca46516286280a304dbcadaea500a7297f4869))
+* **anime-database:** reduce store memory and rebuild cost ([383b06b](https://github.com/Viren070/AIOStreams/commit/383b06b1268333680bcf1312fe8a88747ffa6df4))
+* **id-mappings:** use typed arrays and a binary cache file ([dae294c](https://github.com/Viren070/AIOStreams/commit/dae294c9605a268c59c812e60b0aed3e3879636d))
+* lazy load user agents library ([c5b716c](https://github.com/Viren070/AIOStreams/commit/c5b716c4ad3ab857c23bbd77252a2dddd3be70ec))
+* set max semi space size to 8 ([2cee29f](https://github.com/Viren070/AIOStreams/commit/2cee29fd80ffbb57fe29d40bd5056234248f487a))
+
 ## [2.33.2](https://github.com/Viren070/AIOStreams/compare/v2.33.1...v2.33.2) (2026-08-10)
 
 
