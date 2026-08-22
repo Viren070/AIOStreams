@@ -10,7 +10,7 @@ import {
   StreamSelector,
   extractNamesFromExpression,
 } from '../parser/streamExpression.js';
-import { StreamContext } from './context.js';
+import type { StreamContext } from './context.js';
 
 const logger = createLogger('precomputer');
 

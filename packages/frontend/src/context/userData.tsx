@@ -77,6 +77,7 @@ export function applyMigrations(config: any): UserData {
       enabled: config.disableGroups ? false : true,
       groupings: config.groups,
       behaviour: 'parallel',
+      includeFinishedResultsOnEarlyExit: false,
     };
   }
 
