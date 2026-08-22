@@ -9,6 +9,10 @@ import {
 } from '@aiostreams/core';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
+  planTemplateUpdate,
+  type TemplateUpdateConflict,
+} from '@/lib/templates/merge';
+import {
   applyTemplateConditionals,
   resolveCredentialRefs,
 } from '@/lib/templates/processors/conditionals';
@@ -22,6 +26,7 @@ import {
 import {
   getLocalStorageTemplateInputs,
   saveLocalStorageTemplateInputs,
+  templateSnapshot,
 } from '@/lib/templates/storage';
 import {
   processTemplate,
@@ -47,6 +52,11 @@ export interface UseTemplateWizardParams {
 export interface UseTemplateWizard {
   // State
   currentStep: WizardStep;
+  /** Settings an update would change that the user has already changed. */
+  pendingConflicts: TemplateUpdateConflict[];
+  /** Applies the update, keeping the named fields as the user has them. */
+  resolveConflicts: (keepMine: string[]) => void;
+  cancelConflicts: () => void;
   processedTemplate: ProcessedTemplate | null;
   selectedServices: string[];
   inputValues: Record<string, string>;
@@ -92,6 +102,14 @@ export function useTemplateWizard({
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [pendingTemplate, setPendingTemplate] = useState<Template | null>(null);
+  // An apply held at the conflict step, with everything needed to finish it once
+  // the user has said which settings to keep.
+  const [pendingConflicts, setPendingConflicts] = useState<
+    TemplateUpdateConflict[]
+  >([]);
+  const [pendingCommit, setPendingCommit] = useState<
+    ((keepMine: string[]) => void) | null
+  >(null);
   const [templateInputOptions, setTemplateInputOptions] = useState<Option[]>(
     []
   );
@@ -157,6 +175,34 @@ export function useTemplateWizard({
    * Migrates config, stamps in input values, filters services,
    * resolves credential refs, merges into userData, then resets wizard state.
    */
+  /**
+   * Finishes an apply that stopped at the conflict step. keepMine names the
+   * fields to leave as the user has them; everything else takes the update.
+   */
+  const resolveConflicts = (keepMine: string[]) => {
+    // The pending call writes the config and then runs the same completion the
+    // immediate path runs, so the notifications and the save-install switch
+    // happen here too rather than only when there was nothing to ask about.
+    pendingCommit?.(keepMine);
+  };
+
+  /**
+   * Abandons an apply held at the conflict step. Clears the same transient
+   * state a cancel does, or a later apply can reopen on a stale snapshot.
+   */
+  const cancelConflicts = () => {
+    setPendingConflicts([]);
+    setPendingCommit(null);
+    setProcessedTemplate(null);
+    setPendingTemplate(null);
+    setTemplateInputValues({});
+    setSelectedServices([]);
+    setInputValues({});
+    setWizardHistory([]);
+    setCurrentStep('browse');
+    setIsLoading(false);
+  };
+
   const applyTemplate = async ({
     config,
     inputs,
@@ -181,6 +227,11 @@ export function useTemplateWizard({
     setIsLoading(true);
     try {
       const migratedData = applyMigrations(JSON.parse(JSON.stringify(config)));
+
+      // The template as applied, kept so a later update can tell what the user
+      // changed from what the template set. Taken before the loop below stamps
+      // the user's inputs in, since those include service credentials.
+      const appliedConfig = templateSnapshot(migratedData);
 
       inputs.forEach((input) => {
         const value = resolvedValues[input.key];
@@ -234,48 +285,125 @@ export function useTemplateWizard({
       }
 
       resolveCredentialRefs(migratedData, resolvedValues);
-      setUserData((prev: any) => ({ ...prev, ...migratedData }));
 
-      if (templateId && templateVersion) {
-        setUserData((prev: any) => ({
-          ...prev,
-          appliedTemplates: [
-            ...((prev.appliedTemplates ?? []) as any[]).filter(
-              (t: any) => t.id !== templateId
-            ),
-            {
-              id: templateId,
-              version: templateVersion,
-              ...(templateSourceUrl ? { url: templateSourceUrl } : {}),
-            },
-          ],
-        }));
+      // Everything the user has changed since this template was applied, that
+      // the update would change back. Empty on a first apply, and empty on an
+      // update that touches nothing the user has an opinion about.
+      const applied = (userData?.appliedTemplates ?? []).find(
+        (t: any) => t.id === templateId
+      );
+      const plan = templateId
+        ? planTemplateUpdate(applied?.config, userData, migratedData)
+        : { changed: Object.keys(migratedData), conflicts: [] };
+      const conflicts = plan.conflicts;
+
+      // Writes the update, minus any field the user chose to keep, and records
+      // the template as applied. The base stored here is the template's own
+      // config either way, so a kept setting still reads as the user's change
+      // at the next update rather than becoming the new baseline.
+      const commit = (keepMine: string[] = []) => {
+        // Only what the update actually changes, minus anything the user chose
+        // to keep. Applying the whole config would reset customisations to
+        // settings this update never touched, which is the thing the prompt
+        // exists to prevent.
+        const incoming: any = {};
+        for (const field of plan.changed) {
+          if (keepMine.includes(field)) continue;
+          incoming[field] = (migratedData as any)[field];
+        }
+        setUserData((prev: any) => {
+          // Credentials are left out of the conflict comparison, since they are
+          // the user's rather than the template's. That means an update whose
+          // services carry empty credentials raises no conflict — so without
+          // this the keys would be replaced by nothing, unasked, by a step whose
+          // whole promise is to ask first.
+          //
+          // Computed into a new array rather than assigned back into `incoming`:
+          // an updater has to be safe to call twice, and `incoming` is from the
+          // enclosing scope.
+          if (!Array.isArray(incoming.services))
+            return { ...prev, ...incoming };
+          const services = incoming.services.map((service: any) => {
+            const existing = (prev.services ?? []).find(
+              (s: any) => s.id === service.id
+            );
+            const credentials = { ...(existing?.credentials ?? {}) };
+            for (const [key, value] of Object.entries(
+              service.credentials ?? {}
+            )) {
+              if (value !== '' && value !== undefined) credentials[key] = value;
+            }
+            return { ...service, credentials };
+          });
+          return { ...prev, ...incoming, services };
+        });
+
+        if (templateId && templateVersion) {
+          setUserData((prev: any) => ({
+            ...prev,
+            appliedTemplates: [
+              ...((prev.appliedTemplates ?? []) as any[]).filter(
+                (t: any) => t.id !== templateId
+              ),
+              {
+                id: templateId,
+                version: templateVersion,
+                config: appliedConfig,
+                ...(templateSourceUrl ? { url: templateSourceUrl } : {}),
+              },
+            ],
+          }));
+        }
+      };
+
+      // Everything that happens once a template has actually been applied. Held
+      // in one place because the conflict step applies it later, from a
+      // different call, and a second copy of this would drift.
+      const finish = () => {
+        const addonsNeedingSetup = (migratedData.presets || [])
+          .filter((preset: any) =>
+            ['gdrive'].some((type) => preset.type.toLowerCase().includes(type))
+          )
+          .map((preset: any) => preset.options?.name || preset.type);
+
+        toast.success(`Template "${templateName}" loaded successfully`);
+
+        if (addonsNeedingSetup.length > 0) {
+          setTimeout(() => {
+            toast.info(
+              `Note: ${addonsNeedingSetup.join(', ')} require additional setup. Please configure them in the Addons section.`,
+              { duration: 8000 }
+            );
+          }, 1000);
+        }
+
+        setProcessedTemplate(null);
+        setCurrentStep('browse');
+        setSelectedServices([]);
+        setInputValues({});
+        setWizardHistory([]);
+        setPendingTemplate(null);
+        setTemplateInputValues({});
+        setPendingConflicts([]);
+        setPendingCommit(null);
+        setIsLoading(false);
+        if (setToSaveInstallMenu) setSelectedMenu('save-install');
+        onOpenChange(false);
+      };
+
+      if (conflicts.length > 0) {
+        setPendingConflicts(conflicts);
+        setPendingCommit(() => (keepMine: string[]) => {
+          commit(keepMine);
+          finish();
+        });
+        setCurrentStep('resolveConflicts');
+        setIsLoading(false);
+        return;
       }
 
-      const addonsNeedingSetup = (migratedData.presets || [])
-        .filter((preset: any) =>
-          ['gdrive'].some((type) => preset.type.toLowerCase().includes(type))
-        )
-        .map((preset: any) => preset.options?.name || preset.type);
-
-      toast.success(`Template "${templateName}" loaded successfully`);
-
-      if (addonsNeedingSetup.length > 0) {
-        setTimeout(() => {
-          toast.info(
-            `Note: ${addonsNeedingSetup.join(', ')} require additional setup. Please configure them in the Addons section.`,
-            { duration: 8000 }
-          );
-        }, 1000);
-      }
-
-      setProcessedTemplate(null);
-      setCurrentStep('browse');
-      setSelectedServices([]);
-      setInputValues({});
-      setWizardHistory([]);
-      if (setToSaveInstallMenu) setSelectedMenu('save-install');
-      onOpenChange(false);
+      commit();
+      finish();
     } catch (err) {
       console.error('Error loading template:', err);
       toast.error('Failed to load template');
@@ -635,6 +763,9 @@ export function useTemplateWizard({
 
   return {
     currentStep,
+    pendingConflicts,
+    resolveConflicts,
+    cancelConflicts,
     processedTemplate,
     selectedServices,
     inputValues,

@@ -537,6 +537,11 @@ export const UserDataSchema = z.object({
         id: z.string(),
         version: z.string(),
         url: z.string().optional(),
+        // The template's config as it was applied, so an update can be merged
+        // against what the user started from rather than overwriting it. Never
+        // contains credentials: it is captured before the user's inputs are
+        // stamped in.
+        config: z.record(z.string(), z.unknown()).optional(),
         dismissedVersion: z.string().optional(), // dismissed update notification up to this version
         ignored: z.boolean().optional(), // permanently ignore all future update notifications
       })

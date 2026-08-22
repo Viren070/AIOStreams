@@ -73,3 +73,26 @@ export const compareVersions = (v1: string, v2: string): number => {
 
   return 0;
 };
+
+/**
+ * The template's config as applied, stored so a later update can be merged
+ * against what the user started from instead of overwriting it.
+ *
+ * Takes only the template's own config. The user's inputs — which include
+ * service credentials — are stamped into the config after this point, so a
+ * snapshot that had access to them could write API keys into userData a second
+ * time. Keeping them out of this signature is what makes that impossible rather
+ * than merely avoided.
+ */
+export function templateSnapshot(config: unknown): Record<string, unknown> {
+  const snapshot = JSON.parse(JSON.stringify(config ?? {}));
+  // Emptied rather than trusted. The snapshot is taken before the user's inputs
+  // are stamped in, so there is nothing to strip today; doing it anyway means a
+  // future call moved a few lines later cannot write credentials into userData.
+  // A merge has no use for them either: they are the user's, and an update must
+  // never overwrite them.
+  for (const service of (snapshot?.services ?? []) as any[]) {
+    if (service && typeof service === 'object') service.credentials = {};
+  }
+  return snapshot;
+}
