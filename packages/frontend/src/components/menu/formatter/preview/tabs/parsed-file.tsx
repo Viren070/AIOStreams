@@ -151,6 +151,14 @@ const COMMON_ROWS: readonly Row[] = [
     options: constants.LANGUAGES,
   },
   {
+    key: 'mediaInfoQuality',
+    label: 'Media info quality',
+    field: 'stream.mediaInfoQuality',
+    kind: 'enum',
+    options: ['probe', 'indexer', 'addon'],
+    help: 'Set when media info is confirmed, rather than guessed',
+  },
+  {
     key: 'subtitles',
     label: 'Subtitles',
     field: SUBTITLE_FIELDS,

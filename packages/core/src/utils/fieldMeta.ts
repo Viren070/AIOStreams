@@ -100,6 +100,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   excludedLanguages: { label: 'Excluded Languages', group: 'filters', type: 'list', menu: 'filters', subTab: 'language' },
   includedLanguages: { label: 'Included Languages', group: 'filters', type: 'list', menu: 'filters', subTab: 'language' },
   requiredLanguages: { label: 'Required Languages', group: 'filters', type: 'list', menu: 'filters', subTab: 'language' },
+  requiredLanguagesPrecise: { label: 'Require Confirmed Audio Language', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'language' },
   preferredLanguages: { label: 'Preferred Languages', group: 'filters', type: 'list', menu: 'filters', subTab: 'language' },
 
   excludedSubtitles: { label: 'Excluded Subtitles', group: 'filters', type: 'list', menu: 'filters', subTab: 'subtitle', keywords: ['subs'] },

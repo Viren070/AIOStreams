@@ -1039,6 +1039,20 @@ function Content() {
                     .join(' '),
                   value: language,
                 }))}
+                requiredExtra={
+                  <Switch
+                    label="Require Confirmed Audio Language"
+                    help="Exclude streams if their audio language isn't confirmed, even when Required Languages would otherwise match"
+                    side="right"
+                    value={userData.requiredLanguagesPrecise ?? false}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredLanguagesPrecise: value,
+                      }));
+                    }}
+                  />
+                }
               />
             </>
           </TabsContent>

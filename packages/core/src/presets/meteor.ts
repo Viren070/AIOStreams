@@ -60,6 +60,7 @@ class MeteorStreamParser extends StreamParser {
         .filter((lang) => lang !== undefined) as string[];
       if (audioLangs.length > 0) {
         overrides.languages = audioLangs;
+        overrides.mediaInfoQuality = 'addon';
       }
     }
 

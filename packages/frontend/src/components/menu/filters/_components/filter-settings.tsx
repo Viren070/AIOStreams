@@ -33,6 +33,8 @@ export type FilterSettingsProps<T extends string> = {
   onExcludedChange: (excluded: T[]) => void;
   onIncludedChange: (included: T[]) => void;
   options: { name: string; value: T }[];
+  /** Rendered after the Required control. */
+  requiredExtra?: React.ReactNode;
 };
 
 // FilterSettings
@@ -48,6 +50,7 @@ export function FilterSettings<T extends string>({
   onExcludedChange,
   onIncludedChange,
   options,
+  requiredExtra,
 }: FilterSettingsProps<T>) {
   const [required, setRequired] = useState<T[]>(requiredOptions);
   const [excluded, setExcluded] = useState<T[]>(excludedOptions);
@@ -149,6 +152,7 @@ export function FilterSettings<T extends string>({
               placeholder={`Select required ${filterName.toLowerCase()}...`}
             />
           )}
+          {mode === 'pro' && requiredExtra}
           <div>
             <Combobox
               label={`Excluded ${filterName}`}
