@@ -1,3 +1,5 @@
+import { isUnsafeRemoteUrl } from '../release-blocklist/url-safety.js';
+
 export const FAILOVER_ORDER_PATH = 'failover_order';
 
 export type InfiniDyskStreamLike = {
@@ -16,6 +18,20 @@ export type InfiniDyskFailoverStream = {
   originalName?: string;
   extra?: { failoverId?: unknown };
 };
+
+type FailoverOrderRequest = (
+  url: string,
+  init: {
+    method: 'POST';
+    body: string;
+    headers: Record<string, string>;
+    signal: AbortSignal;
+    redirect: 'error';
+  }
+) => Promise<{
+  body?: { cancel(): Promise<void> } | null;
+  ok: boolean;
+}>;
 
 function getMetadata(stream: InfiniDyskStreamLike): Record<string, unknown> {
   const metadata = stream.meta;
@@ -121,7 +137,8 @@ export function parseInfiniDyskManifestUrl(
 
   if (
     !['http:', 'https:'].includes(parsedManifestUrl.protocol) ||
-    !parsedManifestUrl.pathname.endsWith('/manifest.json')
+    !parsedManifestUrl.pathname.endsWith('/manifest.json') ||
+    isUnsafeRemoteUrl(parsedManifestUrl.toString())
   ) {
     throw getManifestUrlError(name);
   }
@@ -138,7 +155,9 @@ export function getFailoverOrderEndpoint(
       /\/manifest\.json$/i,
       `/${FAILOVER_ORDER_PATH}`
     );
-    return endpoint.toString();
+    return isUnsafeRemoteUrl(endpoint.toString())
+      ? undefined
+      : endpoint.toString();
   } catch {
     return undefined;
   }
@@ -166,15 +185,19 @@ export function reportFailoverOrder(
   endpoint: string,
   userAgent: string,
   options: {
-    fetchImpl?: typeof fetch;
+    request?: FailoverOrderRequest;
     onFailure?: () => void;
   } = {}
 ): Promise<void> {
   const body = buildFailoverOrderBody(streams);
-  if (body.streams.length === 0) return Promise.resolve();
+  if (body.streams.length === 0 || isUnsafeRemoteUrl(endpoint)) {
+    if (body.streams.length > 0) options.onFailure?.();
+    return Promise.resolve();
+  }
 
-  const fetchImpl = options.fetchImpl ?? fetch;
-  return fetchImpl(endpoint, {
+  const request: FailoverOrderRequest =
+    options.request ?? ((url, init) => fetch(url, init));
+  return request(endpoint, {
     method: 'POST',
     body: JSON.stringify(body),
     headers: {
@@ -182,9 +205,10 @@ export function reportFailoverOrder(
       'User-Agent': userAgent,
     },
     signal: AbortSignal.timeout(5000),
+    redirect: 'error',
   })
-    .then((response) => {
-      response.body?.cancel();
+    .then(async (response) => {
+      await response.body?.cancel();
       if (!response.ok) options.onFailure?.();
     })
     .catch(() => {

@@ -11,6 +11,7 @@ import {
   appConfig,
   constants,
   createLogger,
+  makeRequest,
   normaliseLanguage,
 } from '../utils/index.js';
 import {
@@ -199,6 +200,14 @@ export class InfiniDyskPreset extends Preset {
         continue;
       }
       reportFailoverOrder(list, endpoint, this.METADATA.USER_AGENT, {
+        request: (url, init) =>
+          makeRequest(url, {
+            method: init.method,
+            body: init.body ?? undefined,
+            headers: init.headers,
+            timeout: 5000,
+            rawOptions: { redirect: 'error' },
+          }),
         onFailure: () => {
           logger.debug('Failed to report InfiniDysk failover order');
         },
