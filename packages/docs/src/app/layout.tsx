@@ -1,20 +1,29 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Provider } from '@/components/provider';
+import { SITE_URL, sharedOpenGraph } from '@/lib/site';
 import Script from 'next/script';
 import './global.css';
 
+const DESCRIPTION =
+  'A single Stremio super-addon: your addons, debrid and usenet services, built-in indexers and a native usenet engine, all deduplicated, filtered and sorted.';
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://docs.aiostreams.viren070.me'),
+  metadataBase: new URL(SITE_URL),
   title: {
     template: '%s | AIOStreams',
     default: 'AIOStreams',
   },
-  description:
-    'The all-in-one Stremio addon aggregator. Combine, filter, sort, and customise streams from every source.',
-  icons: {
-    icon: '/favicon.png',
-    apple: '/logo.png',
+  description: DESCRIPTION,
+  openGraph: {
+    ...sharedOpenGraph,
+    type: 'website',
+    url: SITE_URL,
+    title: {
+      template: '%s | AIOStreams',
+      default: 'AIOStreams',
+    },
+    description: DESCRIPTION,
   },
 };
 

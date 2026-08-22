@@ -75,6 +75,7 @@ type IgnoredKeys =
   | 'encryptedPassword'
   | 'trusted'
   | 'activeVariants'
+  | 'variantSelectorLocation'
   | 'addons'
   | 'proxies'
   | 'ip'

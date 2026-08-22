@@ -15,6 +15,10 @@ export interface DecodedSegment {
   byteRange?: [number, number];
   /** Total decoded file size from `=ybegin size=`, if present. */
   fileSize?: number;
+  /**
+   * Number of parts the whole file was posted in, from `=ybegin total=`.
+   */
+  totalParts?: number;
   /** Filename from `=ybegin name=`, if present. */
   name?: string;
   /** Decoded byte length of this part (body.length). */
@@ -92,6 +96,7 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
   }
 
   let fileSize: number | undefined;
+  let totalParts: number | undefined;
   let name: string | undefined;
   let byteRange: [number, number] | undefined;
 
@@ -106,8 +111,9 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
     const lineEnd = eol > pos && raw[eol - 1] === CR ? eol - 1 : eol;
     const line = raw.toString('latin1', pos, lineEnd);
     if (first) {
-      // `=ybegin line=128 size=768000 name=...`
+      // `=ybegin part=1 total=6 line=128 size=768000 name=...`
       fileSize = toInt(/(?:^|\s)size=(\d+)/.exec(line)?.[1]);
+      totalParts = toInt(/(?:^|\s)total=(\d+)/.exec(line)?.[1]);
       name = /(?:^|\s)name=(.*)$/.exec(line)?.[1];
       first = false;
     } else if (line.startsWith('=ypart ')) {
@@ -141,7 +147,7 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
   const written = yencode.decodeTo(slice, dst, true);
   const body = dst.subarray(0, written);
 
-  return { body, byteRange, fileSize, name, size: written };
+  return { body, byteRange, fileSize, totalParts, name, size: written };
 }
 
 /**
@@ -155,8 +161,18 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
 export function isImplausibleYencFileSize(
   fileSize: number,
   numParts: number,
-  ref: { encodedSize?: number; firstPartLen?: number }
+  ref: {
+    encodedSize?: number;
+    firstPartLen?: number;
+    yencTotalParts?: number;
+  }
 ): boolean {
+  // `=ybegin size=` measures the whole file, so it is only this file's size
+  // when this file holds every part. An NZB that splits one post across
+  // several <file> elements leaves each holding a fraction of `total`.
+  if (ref.yencTotalParts !== undefined && ref.yencTotalParts > numParts) {
+    return true;
+  }
   if (numParts <= 1) return false; // single part: `=ybegin size=` IS the part
   if (ref.encodedSize && ref.encodedSize > 0) {
     return fileSize < ref.encodedSize * 0.5;
@@ -232,6 +248,7 @@ export class YencHeadCapture {
 
   byteRange?: [number, number];
   fileSize?: number;
+  totalParts?: number;
   name?: string;
 
   constructor(private want: number) {}
@@ -252,6 +269,7 @@ export class YencHeadCapture {
     head: Buffer;
     byteRange?: [number, number];
     fileSize?: number;
+    totalParts?: number;
     name?: string;
     size?: number;
   } {
@@ -270,6 +288,7 @@ export class YencHeadCapture {
       head,
       byteRange: this.byteRange,
       fileSize: this.fileSize,
+      totalParts: this.totalParts,
       name: this.name,
       size,
     };
@@ -335,6 +354,7 @@ export class YencHeadCapture {
       dataStart += part[0].length;
     }
     this.fileSize = toInt(attrs.match(/(?:^| )size=(\d+)/)?.[1]);
+    this.totalParts = toInt(attrs.match(/(?:^| )total=(\d+)/)?.[1]);
     this.name = attrs.match(/(?:^| )name=(.*)$/)?.[1];
     this.byteRange = byteRange;
     this.headerParsed = true;

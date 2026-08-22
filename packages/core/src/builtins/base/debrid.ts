@@ -670,7 +670,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   ): Promise<SearchMetadata> {
     const start = Date.now();
 
-    const animeEntry = AnimeDatabase.getInstance().getEntryById(
+    const animeEntry = await AnimeDatabase.getInstance().getEntryById(
       parsedId.type,
       parsedId.value,
       parsedId.season ? Number(parsedId.season) : undefined,

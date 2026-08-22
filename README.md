@@ -10,7 +10,7 @@
 <p align="center">
   <strong>One addon to rule them all.</strong>
   <br />
-  AIOStreams consolidates multiple Stremio addons and debrid/usenet services - including its own suite of built-in addons - into a single, highly customisable super-addon.
+  AIOStreams consolidates multiple Stremio addons and debrid/usenet services - including its own suite of built-in addons and a native Usenet streaming engine - into a single, highly customisable super-addon.
 </p>
 
 <p align="center">
@@ -220,7 +220,7 @@ AIOStreams is a passion project developed and maintained for free. If you find i
 <h2 align="center">⭐ Star History</h2>
 
 <p align="center">
-  <img src="https://api.star-history.com/svg?repos=Viren070/AIOStreams&type=Date" href="https://www.star-history.com/#Viren070/AIOStreams&Date" alt="Star History" width="750"/>
+  <img src="https://star-history.dera.page/svg?repos=Viren070/AIOStreams&type=Date" href="https://star-history.dera.page/#Viren070/AIOStreams&Date" alt="Star History" width="750"/>
 </p>
 
 ---

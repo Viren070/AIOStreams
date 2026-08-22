@@ -137,11 +137,16 @@ export async function inspectFile(
         !isImplausibleYencFileSize(first.fileSize, file.segments.length, {
           encodedSize: file.encodedSize,
           firstPartLen,
+          yencTotalParts: first.totalParts,
         });
+      const isFragment =
+        first.totalParts !== undefined &&
+        first.totalParts > file.segments.length;
 
+      // For a fragment `=ypart end=` is an offset into the whole file, not a size.
       size =
         (trustYencSize ? first.fileSize : undefined) ??
-        first.byteRange?.[1] ??
+        (isFragment ? undefined : first.byteRange?.[1]) ??
         first.size ??
         file.encodedSize;
       // Exact when the (trusted) yEnc header carries the total size, or the
@@ -149,7 +154,9 @@ export async function inspectFile(
       // estimate.
       sizeExact =
         trustYencSize ||
-        (file.segments.length === 1 && first.byteRange !== undefined);
+        (!isFragment &&
+          file.segments.length === 1 &&
+          first.byteRange !== undefined);
 
       // Fetch the last segment's header for the exact part-grid size when the
       // first segment's `=ybegin size=` is missing/untrustworthy, OR for an

@@ -197,6 +197,7 @@ export interface Torrent extends BaseFile {
 export interface UnprocessedTorrent extends BaseFile {
   type: 'torrent';
   hash?: string;
+  guid?: string;
   downloadUrl?: string;
   sources: string[];
   private?: boolean;

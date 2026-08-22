@@ -1,4 +1,5 @@
 import { isProbablyObfuscated } from '../index.js';
+import { extensionForFormat } from '../pool/file-type.js';
 import { MAX_ARCHIVE_PASSWORD } from '../pool/archive/crypto/password.js';
 
 /**
@@ -32,17 +33,20 @@ export function stripNzbExt(name: string): string {
  * Display name for an archive inner file. When an archive holds a SINGLE file
  * whose inner name is obfuscated (a random release-group name), show it as the
  * release name + the inner file's real extension instead. The inner `path` (the
- * open selector) is never changed.
+ * open selector) is never changed. Obfuscated members often carry no extension
+ * at all, in which case `format` (the detected container) supplies one.
  */
 export function innerDisplayName(
   innerPath: string,
   innerCount: number,
-  releaseName?: string
+  releaseName?: string,
+  format?: string
 ): string {
   const base = baseName(innerPath);
   if (innerCount === 1 && releaseName && isProbablyObfuscated(base)) {
     const dot = base.lastIndexOf('.');
-    const ext = dot > 0 ? base.slice(dot) : '';
+    const detected = extensionForFormat(format);
+    const ext = dot > 0 ? base.slice(dot) : detected ? `.${detected}` : '';
     return `${releaseName}${ext}`;
   }
   return base;

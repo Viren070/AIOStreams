@@ -47,6 +47,7 @@ export interface SegmentHeadData {
   head: Buffer;
   byteRange?: [number, number];
   fileSize?: number;
+  totalParts?: number;
   name?: string;
   size?: number;
 }
@@ -346,6 +347,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           body: decoded.body,
           byteRange: decoded.byteRange,
           fileSize: decoded.fileSize,
+          totalParts: decoded.totalParts,
           name: decoded.name,
           size: decoded.size,
         };

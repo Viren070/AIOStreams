@@ -48,6 +48,7 @@ function metaBufOf(s: SegmentData): Buffer {
     JSON.stringify({
       byteRange: s.byteRange,
       fileSize: s.fileSize,
+      totalParts: s.totalParts,
       name: s.name,
       size: s.size,
     }),
@@ -90,6 +91,7 @@ function deserializeSegment(buf: Buffer): SegmentData {
     body,
     byteRange: meta.byteRange,
     fileSize: meta.fileSize,
+    totalParts: meta.totalParts,
     name: meta.name,
     size: meta.size ?? body.length,
   };

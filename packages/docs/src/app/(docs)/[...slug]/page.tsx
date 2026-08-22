@@ -1,4 +1,5 @@
 import { getPageImage, source } from '@/lib/source';
+import { canonical, sharedOpenGraph } from '@/lib/site';
 import {
   DocsBody,
   DocsDescription,
@@ -61,7 +62,10 @@ export async function generateMetadata(
   return {
     title: page.data.title,
     description: page.data.description,
+    alternates: { canonical: canonical(page.url) },
     openGraph: {
+      ...sharedOpenGraph,
+      url: canonical(page.url),
       images: getPageImage(page).url,
     },
   };

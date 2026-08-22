@@ -13,7 +13,10 @@ import {
   StreamSelector,
   extractNamesFromExpression,
 } from '../parser/streamExpression.js';
-import StreamUtils, { shouldPassthroughStage } from './utils.js';
+import StreamUtils, {
+  shouldPassthroughStage,
+  isServiceWrapEligibleP2PStream,
+} from './utils.js';
 import { applyReleaseBlocklist } from '../release-blocklist/filter.js';
 import {
   normaliseTitle,
@@ -1478,8 +1481,17 @@ class StreamFilterer {
     const shouldKeepStream = (stream: ParsedStream): boolean => {
       const file = stream.parsedFile;
 
-      const skipLanguageFiltering = shouldPassthroughStage(stream, 'language');
-      const skipSubtitleFiltering = shouldPassthroughStage(stream, 'subtitle');
+      const isPendingServiceWrapResolution = isServiceWrapEligibleP2PStream(
+        stream,
+        this.userData
+      );
+
+      const skipLanguageFiltering =
+        shouldPassthroughStage(stream, 'language') ||
+        isPendingServiceWrapResolution;
+      const skipSubtitleFiltering =
+        shouldPassthroughStage(stream, 'subtitle') ||
+        isPendingServiceWrapResolution;
 
       if (originalLanguage && LANGUAGES.includes(originalLanguage as any)) {
         if (
@@ -1745,13 +1757,8 @@ class StreamFilterer {
         }
       }
 
-      // Skip stream type filtering for P2P streams when service wrapping is enabled.
-      // These will be converted to debrid streams by _resolveServiceWrappedStreams later.
-      const skipStreamTypeFilter =
-        stream.type === 'p2p' && this.userData.serviceWrap?.enabled;
-
       if (
-        !skipStreamTypeFilter &&
+        !isPendingServiceWrapResolution &&
         this.userData.excludedStreamTypes?.includes(stream.type)
       ) {
         // Track stream type exclusions
@@ -1761,7 +1768,7 @@ class StreamFilterer {
 
       // Track required stream type misses
       if (
-        !skipStreamTypeFilter &&
+        !isPendingServiceWrapResolution &&
         this.userData.requiredStreamTypes &&
         this.userData.requiredStreamTypes.length > 0 &&
         !this.userData.requiredStreamTypes.includes(stream.type)

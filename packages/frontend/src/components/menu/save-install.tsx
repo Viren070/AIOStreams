@@ -32,6 +32,7 @@ import { copyToClipboard } from '@/utils/clipboard';
 import { PageControls } from '../shared/page-controls';
 import { useDisclosure } from '@/hooks/disclosure';
 import { Modal } from '../ui/modal';
+import { Select } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
@@ -41,7 +42,7 @@ import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '../shared/confirmation-dialog';
-import { UserData } from '@aiostreams/core';
+import { UserData, VariantSelectorLocation } from '@aiostreams/core';
 import { redactPresetOptions } from '@/lib/preset-credentials';
 import { useSave } from '@/context/save';
 import { FiExternalLink } from 'react-icons/fi';
@@ -362,12 +363,16 @@ interface VariantSelectorProps {
   variants: NonNullable<UserData['variants']>;
   selected: string[];
   onChange: (selected: string[]) => void;
+  location: VariantSelectorLocation;
+  onLocationChange: (location: VariantSelectorLocation) => void;
 }
 
 function VariantSelector({
   variants,
   selected,
   onChange,
+  location,
+  onLocationChange,
 }: VariantSelectorProps) {
   const toggle = (id: string) =>
     onChange(
@@ -410,6 +415,26 @@ function VariantSelector({
           </button>
         ))}
       </div>
+      {selected.length > 0 && (
+        <div className="mt-5 pt-4 border-t border-gray-700/50 max-w-md">
+          <Select
+            label="Selector location"
+            help={
+              location === 'path'
+                ? 'In the path, as /v/id. Survives clients that rebuild request URLs from the base and would drop a query string.'
+                : 'In the query string, as ?v=id. Some clients drop it after the manifest.'
+            }
+            value={location}
+            onValueChange={(value) =>
+              onLocationChange(value as VariantSelectorLocation)
+            }
+            options={[
+              { value: 'path', label: 'Path segment (/v/)' },
+              { value: 'query', label: 'Query parameter (?v=)' },
+            ]}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -724,6 +749,8 @@ interface StremioCustomSourceModalProps {
 }
 
 const DEFAULT_NAME_TEMPLATE = '{catalog.name} - {catalog.type}';
+
+const VARIANT_LOCATION_STORAGE_KEY = 'aiostreams:install:variant-location';
 
 const STREMIO_CUSTOM_SOURCE_STORAGE_KEYS = {
   manifestUrl: 'aiostreams:seanime:stremio-custom-source:manifest-url',
@@ -1383,6 +1410,15 @@ function Content() {
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
     React.useState(true);
   const [selectedVariants, setSelectedVariants] = React.useState<string[]>([]);
+  const [variantLocation, setVariantLocation] =
+    React.useState<VariantSelectorLocation>(() =>
+      safeGetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY) === 'query'
+        ? 'query'
+        : 'path'
+    );
+  React.useEffect(() => {
+    safeSetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY, variantLocation);
+  }, [variantLocation]);
   const chillLinkModal = useDisclosure(false);
   const seanimeModal = useDisclosure(false);
   const stremioCustomSourceModal = useDisclosure(false);
@@ -1569,17 +1605,23 @@ function Content() {
   const activeVariants = selectedVariants.filter((id) =>
     enabledVariants.some((variant) => variant.id === id)
   );
-  const variantQuery = activeVariants.length
-    ? `?v=${activeVariants.map(encodeURIComponent).join(',')}`
-    : '';
+  const variantIds = activeVariants.map(encodeURIComponent).join(',');
+  const variantPath =
+    activeVariants.length && variantLocation === 'path'
+      ? `/v/${variantIds}`
+      : '';
+  const variantQuery =
+    activeVariants.length && variantLocation === 'query'
+      ? `?v=${variantIds}`
+      : '';
 
   const manifestUrl = !uuid
     ? ''
     : aliasForInstall
-      ? `${baseUrl}/stremio/u/${aliasForInstall}/manifest.json${variantQuery}`
-      : `${baseUrl}/stremio/${uuid}/${encryptedPassword}/manifest.json${variantQuery}`;
+      ? `${baseUrl}/stremio/u/${aliasForInstall}${variantPath}/manifest.json${variantQuery}`
+      : `${baseUrl}/stremio/${uuid}/${encryptedPassword}${variantPath}/manifest.json${variantQuery}`;
   const chillLinkUrl = uuid
-    ? `${baseUrl}/chilllink/${uuid}/${encryptedPassword}${variantQuery}`
+    ? `${baseUrl}/chilllink/${uuid}/${encryptedPassword}${variantPath}${variantQuery}`
     : '';
   const encodedManifest = encodeURIComponent(manifestUrl);
 
@@ -1587,10 +1629,10 @@ function Content() {
     !!uuid && !!encryptedPassword && uuidRegex.test(uuid);
 
   const seanimePluginUrl = hasSeanimePersonalUrl
-    ? `${baseUrl}/seanime/${uuid}/${encryptedPassword}/extensions/aiostreams-plugin.json${variantQuery}`
+    ? `${baseUrl}/seanime/${uuid}/${encryptedPassword}${variantPath}/extensions/aiostreams-plugin.json${variantQuery}`
     : `${baseUrl}/seanime/extensions/aiostreams-plugin.json`;
   const seanimeProviderUrl = hasSeanimePersonalUrl
-    ? `${baseUrl}/seanime/${uuid}/${encryptedPassword}/extensions/aiostreams-torrent-provider.json${variantQuery}`
+    ? `${baseUrl}/seanime/${uuid}/${encryptedPassword}${variantPath}/extensions/aiostreams-torrent-provider.json${variantQuery}`
     : `${baseUrl}/seanime/extensions/aiostreams-torrent-provider.json`;
   const copyManifestUrl = async () => {
     await copyToClipboard(manifestUrl, {
@@ -1791,6 +1833,8 @@ function Content() {
                     variants={enabledVariants}
                     selected={activeVariants}
                     onChange={setSelectedVariants}
+                    location={variantLocation}
+                    onLocationChange={setVariantLocation}
                   />
                 ) : undefined
               }

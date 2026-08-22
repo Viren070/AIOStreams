@@ -74,7 +74,7 @@ export class MetadataService {
             let cinemetaVideos: CinemetaVideo[] | undefined;
 
             // Check anime database first
-            const animeEntry = AnimeDatabase.getInstance().getEntryById(
+            const animeEntry = await AnimeDatabase.getInstance().getEntryById(
               id.type,
               id.value,
               id.season ? Number(id.season) : undefined,

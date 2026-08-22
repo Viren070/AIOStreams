@@ -710,6 +710,14 @@ neither the environment variable nor a stored value is present.
 | `DEFAULT_USA_TV_TIMEOUT`    | Usa Tv › Default Timeout    | number | —                                                 | Default timeout for the USA TV addon (milliseconds). Falls back to the global default when unset. |
 | `DEFAULT_USA_TV_USER_AGENT` | Usa Tv › Default User Agent | string | —                                                 | Default User-Agent for the USA TV addon. Supports `{version}`/`{random}` placeholders.            |
 
+#### Usa Tv Next
+
+| Environment Variable             | UI Setting                       | Type   | Default                                                                            | Description                                                                                            |
+| -------------------------------- | -------------------------------- | ------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `USA_TV_NEXT_URL`                | Usa Tv Next › URL                | list   | `["https://raw.githubusercontent.com/yowmamasita/usa-tv-next/main/manifest.json"]` | Upstream URL(s) for the USA TV Next addon.                                                             |
+| `DEFAULT_USA_TV_NEXT_TIMEOUT`    | Usa Tv Next › Default Timeout    | number | —                                                                                  | Default timeout for the USA TV Next addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_USA_TV_NEXT_USER_AGENT` | Usa Tv Next › Default User Agent | string | —                                                                                  | Default User-Agent for the USA TV Next addon. Supports `{version}`/`{random}` placeholders.            |
+
 #### Argentina Tv
 
 | Environment Variable              | UI Setting                        | Type   | Default                                                 | Description                                                                                             |
@@ -875,7 +883,7 @@ neither the environment variable nor a stored value is present.
 | Environment Variable              | UI Setting                | Type    | Default | Description                                                                                       |
 | --------------------------------- | ------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------- |
 | `BUILTIN_GET_TORRENT_TIMEOUT`     | Get Torrent › Timeout     | number  | `5000`  | Timeout for fetching torrent files.                                                               |
-| `BUILTIN_GET_TORRENT_CONCURRENCY` | Get Torrent › Concurrency | number  | `100`   | Maximum concurrent torrent fetches.                                                               |
+| `BUILTIN_GET_TORRENT_CONCURRENCY` | Get Torrent › Concurrency | number  | `5`     | Maximum concurrent torrent fetches.                                                               |
 | `BUILTIN_GET_TORRENT_LAZILY`      | Get Torrent › Lazily      | boolean | `true`  | Fetch torrents lazily in the background. First search returns immediately with available results. |
 
 #### Torrent

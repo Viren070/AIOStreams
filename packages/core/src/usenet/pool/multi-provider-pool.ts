@@ -431,6 +431,7 @@ export class MultiProviderPool {
       head: Buffer.from(d.body.subarray(0, want)),
       byteRange: d.byteRange,
       fileSize: d.fileSize,
+      totalParts: d.totalParts,
       name: d.name,
       size: d.size,
     });

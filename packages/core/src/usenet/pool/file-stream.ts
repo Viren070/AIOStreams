@@ -169,6 +169,7 @@ export class FileStream implements SeekableStream {
       !isImplausibleYencFileSize(first.fileSize, segments.length, {
         encodedSize,
         firstPartLen: firstEnd - firstBegin,
+        yencTotalParts: first.totalParts,
       });
 
     if (segments.length === 1) {

@@ -2,12 +2,17 @@ import pLimit from 'p-limit';
 import { createLogger } from '../../../../logging/logger.js';
 import { detectFileType, FileCategory } from '../../file-type.js';
 import { RandomAccess } from '../random-access.js';
-import { ArchiveKind, groupVolumeSets } from '../archive-volume.js';
+import {
+  ArchiveKind,
+  groupVolumeSets,
+  groupNumericSplitSets,
+} from '../archive-volume.js';
 import { ArchiveEntry } from '../types.js';
 import { ArchiveErrorCode } from '../errors.js';
 import {
   InnerDescriptor,
   descriptorOf,
+  entrySource,
   hasPendingFragments,
 } from './descriptor.js';
 import { ArchiveStreamLayout, FileOpener } from './layout.js';
@@ -147,8 +152,8 @@ function failureInner(
 }
 
 /** Map one archive entry to an inner-listing entry. */
-function toInnerOne(e: ArchiveEntry): ArchiveInnerEntry {
-  const type = detectFileType(Buffer.alloc(0), e.name);
+function toInnerOne(e: ArchiveEntry, sample?: Buffer): ArchiveInnerEntry {
+  const type = detectFileType(sample ?? NO_SAMPLE, e.name);
   const reason = entryReason(e);
   return {
     path: e.name,
@@ -158,6 +163,103 @@ function toInnerOne(e: ArchiveEntry): ArchiveInnerEntry {
     streamable: reason === undefined,
     reason,
   };
+}
+
+const NO_SAMPLE = Buffer.alloc(0);
+
+/** Sized to reach the ISO 9660 volume descriptor at 0x9001. */
+const MAGIC_SAMPLE_BYTES = 40 * 1024;
+/** Below this an entry is nfo/sfv/artwork noise, never a playback target. */
+const MAGIC_MIN_SIZE = 1024 * 1024;
+/** Most entries magic-typed per archive, largest first. */
+const MAGIC_MAX_ENTRIES = 4;
+
+/**
+ * Type the entries a filename can't.
+ *
+ * Skipped once a name-typed video is at least as large as the best candidate.
+ */
+async function magicSamples(
+  source: RandomAccess,
+  entries: ArchiveEntry[],
+  password: string,
+  signal?: AbortSignal
+): Promise<Map<ArchiveEntry, Buffer>> {
+  const out = new Map<ArchiveEntry, Buffer>();
+  const splitMembers = new Set(
+    groupNumericSplitSets(
+      entries.map((e, index) => ({ index, filename: e.name }))
+    ).flatMap((g) => g.members.map((m) => m.filename))
+  );
+  let namedVideo = 0;
+  const candidates: ArchiveEntry[] = [];
+  for (const e of entries) {
+    if (e.isDir) continue;
+    // Compressed/solid/undecryptable entries can neither be read here nor
+    // streamed later, so they are no reason to skip and no use as a candidate.
+    if (entryReason(e) !== undefined) continue;
+    if (detectFileType(NO_SAMPLE, e.name).category === 'video') {
+      namedVideo = Math.max(namedVideo, e.size);
+      continue;
+    }
+    if (e.size < MAGIC_MIN_SIZE) continue;
+    if (splitMembers.has(e.name)) continue;
+    if (!headIsExact(e)) continue;
+    candidates.push(e);
+  }
+  candidates.sort((a, b) => b.size - a.size);
+  if (candidates.length === 0 || namedVideo >= candidates[0].size) return out;
+
+  await Promise.all(
+    candidates.slice(0, MAGIC_MAX_ENTRIES).map(async (e) => {
+      try {
+        const want = Math.min(MAGIC_SAMPLE_BYTES, e.size);
+        const head = Buffer.allocUnsafe(want);
+        const read = await entrySource(
+          source,
+          descriptorOf(e),
+          password
+        ).readAtInto(head, 0, 0, want, signal);
+        const sample = read === want ? head : head.subarray(0, read);
+        out.set(e, sample);
+        const typed = detectFileType(sample, e.name);
+        if (typed.category !== detectFileType(NO_SAMPLE, e.name).category) {
+          logger.debug(
+            {
+              name: e.name,
+              size: e.size,
+              category: typed.category,
+              format: typed.format,
+            },
+            'typed inner file by magic bytes'
+          );
+        }
+      } catch (err) {
+        // Never fail an import over a probe: the entry keeps its name verdict.
+        logger.debug(
+          { name: e.name, size: e.size, err: (err as Error).message },
+          'magic sample read failed'
+        );
+      }
+    })
+  );
+  return out;
+}
+
+/**
+ * Whether the entry's leading {@link MAGIC_SAMPLE_BYTES} come from resolved
+ * fragments. A lazy parse leaves middle volumes as capacity estimates, which
+ * would sample the wrong bytes.
+ */
+function headIsExact(e: ArchiveEntry): boolean {
+  if (e.aes) return true; // one contiguous region, no fragment map
+  let covered = 0;
+  for (const f of e.fragments) {
+    if (f.pending !== undefined) return false;
+    covered += f.length;
+    if (covered >= MAGIC_SAMPLE_BYTES) break;
+  }
+  return true;
 }
 
 /**
@@ -179,13 +281,19 @@ async function listInnerRecursive(
   const nestedMembers = new Set(
     groups.flatMap((g) => g.members.map((m) => m.name))
   );
+  const samples = await magicSamples(
+    source,
+    entries.filter((e) => !nestedMembers.has(e.name)),
+    password,
+    signal
+  );
 
   const out: ArchiveInnerEntry[] = [];
   for (const e of entries) {
     if (e.isDir) continue;
     // Members of a nested set are surfaced via expansion below, not as-is.
     if (nestedMembers.has(e.name)) continue;
-    const one = toInnerOne(e);
+    const one = toInnerOne(e, samples.get(e));
     // Capture the rebuild recipe for streamable files (the only ones a later
     // open will reconstruct); non-streamable parts never get streamed.
     if (one.streamable) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.10.0...seanime-extensions-v0.10.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **seanime-extensions:** support parsing path based variant selectors ([5e64202](https://github.com/Viren070/AIOStreams/commit/5e642023d32502be032a2d5602b62dcd2022ae75))
+
 ## [0.10.0](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.9.0...seanime-extensions-v0.10.0) (2026-08-09)
 
 

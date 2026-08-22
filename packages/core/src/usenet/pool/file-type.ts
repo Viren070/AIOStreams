@@ -68,6 +68,22 @@ export function detectFileType(
   return { category: 'other', streamable: false };
 }
 
+/**
+ * Conventional extension for a {@link DetectedType.format}
+ */
+export function extensionForFormat(format?: string): string | undefined {
+  if (!format) return undefined;
+  const mapped = FORMAT_EXT[format];
+  if (mapped) return mapped;
+  return VIDEO_EXT.has(format) ? format : undefined;
+}
+
+const FORMAT_EXT: Record<string, string> = {
+  matroska: 'mkv',
+  mpegts: 'ts',
+  iso: 'iso',
+};
+
 function detectByMagic(b: Buffer): DetectedType | undefined {
   if (b.length < 4) return undefined;
 

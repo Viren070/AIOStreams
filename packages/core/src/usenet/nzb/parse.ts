@@ -6,7 +6,7 @@ import {
   NzbSegment,
   sortSegments,
 } from './model.js';
-import { parseSubjectFilename } from './subject.js';
+import { parseSubjectFilename, parseSubjectPartNumber } from './subject.js';
 import {
   scanNzb,
   NzbScanError,
@@ -50,7 +50,8 @@ export async function parseNzb(xml: string | Buffer): Promise<Nzb> {
     }
     throw err;
   }
-  const files = doc.files.map(buildFile);
+  const scanned = mergeSegmentPerFile(doc.files);
+  const files = scanned.map(buildFile);
   if (files.length === 0) {
     throw new Error('Invalid NZB: no files with segments found');
   }
@@ -65,6 +66,81 @@ export async function parseNzb(xml: string | Buffer): Promise<Nzb> {
     'parsed nzb'
   );
   return nzb;
+}
+
+/**
+ * Repair NZBs that wrap every article in its own `<file>` element instead of
+ * listing a file's articles as `<segment>`s of one `<file>`.
+ */
+function mergeSegmentPerFile(files: ScannedFile[]): ScannedFile[] {
+  if (files.length < 2) return files;
+
+  const byName = new Map<string, ScannedFile[]>();
+  for (const f of files) {
+    if (f.segments.length !== 1) continue;
+    const name = parseSubjectFilename(f.subject);
+    if (!name) continue;
+    const group = byName.get(name);
+    if (group) group.push(f);
+    else byName.set(name, [f]);
+  }
+
+  const merged = new Map<ScannedFile, ScannedFile>();
+  const absorbed = new Set<ScannedFile>();
+  for (const [name, group] of byName) {
+    if (group.length < 2) continue;
+    const ordered = orderCompleteRun(group);
+    if (!ordered) continue;
+    const head = ordered[0];
+    const groups = [...new Set(ordered.flatMap((f) => f.groups))];
+    merged.set(head, {
+      subject: head.subject,
+      poster: head.poster,
+      date: head.date,
+      groups,
+      segments: ordered.map((f) => f.segments[0]),
+    });
+    for (const f of ordered) if (f !== head) absorbed.add(f);
+    logger.warn(
+      { filename: name, parts: ordered.length },
+      'nzb lists one file per article; merged the parts into a single file'
+    );
+  }
+  if (merged.size === 0) return files;
+
+  const out: ScannedFile[] = [];
+  for (const f of files) {
+    if (absorbed.has(f)) continue;
+    out.push(merged.get(f) ?? f);
+  }
+  return out;
+}
+
+/**
+ * Order single-segment files by part number, but only when those numbers form a
+ * complete 1..N run
+ */
+function orderCompleteRun(group: ScannedFile[]): ScannedFile[] | undefined {
+  for (const useSubject of [false, true]) {
+    const seen = new Set<number>();
+    const keyed: Array<{ file: ScannedFile; part: number }> = [];
+    for (const f of group) {
+      const part = useSubject
+        ? parseSubjectPartNumber(f.subject)
+        : f.segments[0].number;
+      if (part === undefined || !Number.isFinite(part) || part < 1) break;
+      if (part > group.length || seen.has(part)) break;
+      seen.add(part);
+      keyed.push({ file: f, part });
+    }
+    if (keyed.length !== group.length) continue;
+    keyed.sort((a, b) => a.part - b.part);
+    // Carry the resolved ordinal onto the segment so the merged file sorts by
+    // it even when the `number` attributes were missing.
+    for (const k of keyed) k.file.segments[0].number = k.part;
+    return keyed.map((k) => k.file);
+  }
+  return undefined;
 }
 
 /** Build one file: filename, encoded size, segment ordering. */

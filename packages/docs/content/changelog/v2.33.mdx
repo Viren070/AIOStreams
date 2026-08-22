@@ -1,6 +1,6 @@
 ---
 title: Variants
-description: One configuration, several addons. A named script adjusts your config at request time, selected with ?v= on the manifest URL.
+description: One configuration, several addons. A named script adjusts your config at request time, selected by the install URL.
 date: 2026-08-09
 version: 2.33.0
 ---
@@ -20,8 +20,8 @@ its own place in your password manager — for what is often a one-line differen
 
 **Variants** are the lighter option. A variant is a named set of instructions that adjusts
 your configuration at request time. They live inside the config you already have, and you
-pick one with a query parameter on the manifest URL, so a single UUID can serve several
-differently-behaving addons.
+pick one in the install URL, so a single UUID can serve several differently-behaving
+addons.
 
 ## Writing one
 
@@ -65,30 +65,36 @@ own Stremio addon id, so it installs alongside the base config rather than repla
 ![The installation card with the 4K Only variant selected, and the shortened alias manifest URL ending in ?v=4k-only](/changelog/v2.33/variants-install.png)
 
 ```
+https://your-instance/stremio/<uuid>/<password>/v/4k-only/manifest.json
+```
+
+Comma-separate to combine them, applied left to right so later instructions win. The same
+selector works on ChillLink and Seanime extension URLs; the Search and Newznab/Torznab APIs
+take it as `&v=`.
+
+**Selector location**, on the same card, is the one choice to make. It defaults to the path,
+as above. The alternative appends it as a
+query parameter, which is what the screenshot shows:
+
+```
 https://your-instance/stremio/<uuid>/<password>/manifest.json?v=4k-only
 ```
 
+Both are accepted everywhere. Pick whichever form you prefer but know that some clients rebuild request URLs from the base and drop the query string, so
+the variant selector would be lost. The path form survives that, so it is the default. Stremio, Nuvio, the Seanime extensions, the APIs (Search and Newznab/Torznab)
+all support both. Chillio only supports the path form, so if you hand out a Chillio link, use that.
+
 <Callout type="info">
-  The URL in the screenshot is shorter than that — `/stremio/u/main/manifest.json?v=4k-only`
+  The URL in the screenshot is shorter than either — `/stremio/u/main/manifest.json?v=4k-only`
   — because that configuration has a profile alias. The alias stands in for the UUID and
   password, and the selector works the same on either form. See an easy way on creating aliases
   in last release's changelog under [configuration profiles](/changelog/v2.32#configuration-profiles).
 </Callout>
 
-Comma-separate to combine them, applied left to right so later instructions win. The same
-selector works on Seanime extension URLs, and the Search and
-Newznab/Torznab APIs as `&v=`. While the query parameter is supported on ChillLink routes too,
-Chillio does not forward the query string to stream requests so it does not work there.
-
-<Callout type="info">
-  Clients should keep the query string when they request streams, catalogs, meta and
-  subtitles, so the variant applies for the whole session. Stremio does.
-</Callout>
-
 ## Things worth knowing
 
-- **The configure page always edits the base config**, even when opened with `?v=`. There
-  is one configuration; variants are a lens over it.
+- **The configure page always edits the base config**, even when opened with a variant
+  selected. There is one configuration; variants are a lens over it.
 - **An unknown or disabled id is an error**, surfaced as an error stream, rather than a
   silent fall back to the base config. Under a variant URL, quietly serving something else
   is worse than failing.
@@ -116,7 +122,7 @@ commit to it, and there is no second configuration to create, name and remember.
 
 Sharing is not the dividing line. Hand your config to someone whose TV chokes on Dolby
 Vision and that is still a variant — `add excludedVisualTags "DV Only"`, give them
-`?v=no-dv`, and they get your setup exactly, minus the one thing their hardware cannot do.
+`/v/no-dv`, and they get your setup exactly, minus the one thing their hardware cannot do.
 You keep one config, and it stays one config when you change it.
 
 What a variant cannot do is give somebody a configuration of their own. A child config is
