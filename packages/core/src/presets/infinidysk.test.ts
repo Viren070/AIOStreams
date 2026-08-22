@@ -200,18 +200,18 @@ test('reports final stream order to the sibling failover endpoint', async () => 
 });
 
 test('refuses an unsafe failover endpoint without sending stream metadata', async () => {
-  previousDispatcher = getGlobalDispatcher();
-  mockAgent = new MockAgent();
-  mockAgent.disableNetConnect();
-  setGlobalDispatcher(mockAgent);
-
   const failures: string[] = [];
+  let requests = 0;
   await assert.doesNotReject(() =>
     reportFailoverOrder(
       [{ extra: { failoverId: 'first' } }],
       'http://127.0.0.1/adapters/addon/profile-token/failover_order',
       'InfiniDysk-Test',
       {
+        request: async () => {
+          requests += 1;
+          throw new Error('Unsafe endpoint must not be requested');
+        },
         onFailure: () => {
           failures.push('Failed to report InfiniDysk failover order');
         },
@@ -219,6 +219,7 @@ test('refuses an unsafe failover endpoint without sending stream metadata', asyn
     )
   );
   assert.deepEqual(failures, ['Failed to report InfiniDysk failover order']);
+  assert.equal(requests, 0);
 });
 
 test('failover callback rejects redirects without failing the stream response', async () => {
