@@ -733,6 +733,9 @@ export const UserDataSchema = z.object({
         )
         .optional(),
       behaviour: z.enum(['sequential', 'parallel']).optional(),
+      onConditionFailure: z
+        .enum(['stop', 'skip', 'includeFinished'])
+        .optional(),
     })
     .optional(),
   sortCriteria: z.object({

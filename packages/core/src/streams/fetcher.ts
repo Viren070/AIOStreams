@@ -485,6 +485,8 @@ class StreamFetcher {
       }
 
       const behaviour = this.userData.groups.behaviour || 'parallel';
+      const onConditionFailure =
+        this.userData.groups.onConditionFailure || 'stop';
       let totalTimeTaken = 0;
       let previousGroupStreams: ParsedStream[] = [];
       let previousGroupTimeTaken = 0;
@@ -503,18 +505,38 @@ class StreamFetcher {
           return fetchAndProcessAddons(groupAddons);
         });
 
+        type GroupResult = Awaited<(typeof groupPromises)[number]>;
+
+        const mergeGroupResult = (groupResult: GroupResult | undefined) => {
+          if (!groupResult) return;
+          allStreams.push(...groupResult.streams);
+          allErrors.push(...groupResult.errors);
+          allStatisticStreams.push(...groupResult.statistics);
+          totalTimeTaken = Math.max(totalTimeTaken, groupResult.totalTime);
+          previousGroupStreams = groupResult.streams;
+          previousGroupTimeTaken = groupResult.totalTime;
+        };
+
+        // Resolves with the group's result only if it has already settled,
+        // otherwise undefined.
+        const peekSettled = (
+          promise: (typeof groupPromises)[number]
+        ): Promise<GroupResult | undefined> =>
+          Promise.race([promise, Promise.resolve(undefined)]).catch((error) => {
+            logger.debug(
+              { err: error instanceof Error ? error.message : String(error) },
+              'discarding failed group that was not being waited on'
+            );
+            return undefined;
+          });
+
+        let stopWaiting = false;
+
         for (let i = 0; i < this.userData.groups.groupings.length; i++) {
           const groupPromise = groupPromises[i];
 
           if (i === 0) {
-            const groupResult = await groupPromise;
-            if (!groupResult) continue;
-            allStreams.push(...groupResult.streams);
-            allErrors.push(...groupResult.errors);
-            allStatisticStreams.push(...groupResult.statistics);
-            totalTimeTaken = groupResult.totalTime;
-            previousGroupStreams = groupResult.streams;
-            previousGroupTimeTaken = groupResult.totalTime;
+            mergeGroupResult(await groupPromise);
             continue;
           }
           // For groups other than the first, check their condition
@@ -534,25 +556,37 @@ class StreamFetcher {
 
           if (shouldIncludeAndContinue) {
             logger.debug(
-              { group: i + 1 },
-              'condition met for parallel group, awaiting results'
+              { group: i + 1, waiting: !stopWaiting },
+              'condition met for parallel group'
             );
-            const groupResult = await groupPromise;
-            if (!groupResult) continue;
-            allStreams.push(...groupResult.streams);
-            allErrors.push(...groupResult.errors);
-            allStatisticStreams.push(...groupResult.statistics);
-            totalTimeTaken = Math.max(totalTimeTaken, groupResult.totalTime);
-            previousGroupStreams = groupResult.streams;
-            previousGroupTimeTaken = groupResult.totalTime;
-          } else {
-            logger.debug(
-              { group: i + 1 },
-              'condition not met for parallel group, skipping remaining groups'
+            mergeGroupResult(
+              stopWaiting ? await peekSettled(groupPromise) : await groupPromise
             );
-            // exit early.
+            continue;
+          }
+
+          logger.debug(
+            { group: i + 1, onConditionFailure },
+            'condition not met for parallel group'
+          );
+
+          if (onConditionFailure === 'includeFinished') {
+            const settled = await Promise.all(
+              groupPromises.slice(i).map(peekSettled)
+            );
+            for (const result of settled) {
+              mergeGroupResult(result);
+            }
             break;
           }
+
+          if (onConditionFailure === 'skip') {
+            stopWaiting = true;
+            continue;
+          }
+
+          // 'stop': discard this group and everything after it.
+          break;
         }
       } else {
         // Sequential behavior - fetch and evaluate one group at a time

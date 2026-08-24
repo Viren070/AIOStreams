@@ -83,6 +83,13 @@ export function AddonFetchingBehaviorCard() {
       'All addons start fetching at the same time. As soon as any addon returns results, the exit condition is evaluated. If the condition is met, results are returned immediately and any remaining addon results are ignored.',
   };
 
+  const conditionFailureDescriptions = {
+    stop: 'Discard this group and every group after it, including any results they had already returned.',
+    skip: "Discard this group, then carry on checking the remaining groups' conditions as normal. A later group is included only if its condition passes and it has already finished. Nothing is waited on.",
+    includeFinished:
+      'Include this group and every group after it that has already finished, ignoring their conditions. Nothing is waited on.',
+  };
+
   const placeholderExitConditions = [
     'count(resolution(totalStreams, "2160p")) > 0 or totalTimeTaken > 5000',
     "queryType == 'anime' ? (count(resolution(totalStreams, '1080p')) > 0 or totalTimeTaken > 5000) : false",
@@ -137,6 +144,38 @@ export function AddonFetchingBehaviorCard() {
                 : "Parallel: Begin fetching from all groups simultaneously. When group 1's results arrive, evaluate group 2's condition. If true, wait for group 2's results; if false, return results without waiting."
             }
           />
+
+          {userData.groups?.behaviour !== 'sequential' && (
+            <Select
+              label="When a Condition Fails"
+              value={userData.groups?.onConditionFailure ?? 'stop'}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  groups: {
+                    ...prev.groups,
+                    onConditionFailure: value as
+                      | 'stop'
+                      | 'skip'
+                      | 'includeFinished',
+                  },
+                }));
+              }}
+              options={[
+                { label: 'Stop', value: 'stop' },
+                { label: 'Skip group and keep checking', value: 'skip' },
+                {
+                  label: 'Keep everything already finished',
+                  value: 'includeFinished',
+                },
+              ]}
+              help={
+                conditionFailureDescriptions[
+                  userData.groups?.onConditionFailure ?? 'stop'
+                ]
+              }
+            />
+          )}
 
           {(() => {
             const handleGroupsChange = (newGroups: any[]) => {
