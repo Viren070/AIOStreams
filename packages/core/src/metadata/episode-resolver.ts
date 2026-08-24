@@ -146,12 +146,11 @@ export async function resolveEpisodeFacts(
   // when they disagree do we scan the available TVDB seasons for TMDB's title.
   // This makes the resolved numbers safe to use for provider queries without
   // changing normally-numbered series.
-  if (
-    !input.isAnime &&
-    input.fetchTmdbEpisode &&
-    input.fetchTvdbSeasonEpisodes &&
-    nonSpecialSeasons.length
-  ) {
+  // A source's season list can use the same partitioning as the request
+  // (TMDB), so do not use it as the upper bound for a TVDB title lookup.
+  // The conventional TVDB range keeps this rare fallback bounded while
+  // allowing a shorter TMDB list to resolve a later TVDB season.
+  if (!input.isAnime && input.fetchTmdbEpisode && input.fetchTvdbSeasonEpisodes) {
     try {
       const tmdbEpisode = await input.fetchTmdbEpisode(season, episode);
       const tmdbTitles = new Set(
@@ -166,13 +165,19 @@ export async function resolveEpisodeFacts(
           ? tmdbTitles.has(normaliseEpisodeTitle(directEpisode.name))
           : false;
         if (!directMatches) {
-          for (const candidateSeason of nonSpecialSeasons) {
-            const episodes = await input.fetchTvdbSeasonEpisodes(candidateSeason.season_number);
+          const candidateSeasonNumbers = [
+            ...new Set([
+              ...nonSpecialSeasons.map((item) => item.season_number),
+              ...Array.from({ length: 40 }, (_, index) => index + 1),
+            ]),
+          ];
+          for (const candidateSeasonNumber of candidateSeasonNumbers) {
+            const episodes = await input.fetchTvdbSeasonEpisodes(candidateSeasonNumber);
             const match = episodes?.find(
               (item) => item.name && tmdbTitles.has(normaliseEpisodeTitle(item.name))
             );
             if (match) {
-              resolution.resolvedSeasonNumber = candidateSeason.season_number;
+              resolution.resolvedSeasonNumber = candidateSeasonNumber;
               resolution.resolvedEpisodeNumber = match.number;
               break;
             }

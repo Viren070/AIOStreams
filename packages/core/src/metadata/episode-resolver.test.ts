@@ -14,7 +14,6 @@ test('maps a TMDB episode title to its differently-numbered TVDB episode', async
     isAnime: false,
     seasons: [
       { season_number: 11, episode_count: 10 },
-      { season_number: 14, episode_count: 10 },
     ],
     fetchTmdbEpisode: async () => ({
       airDate: '2024-01-01',
