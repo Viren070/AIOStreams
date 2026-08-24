@@ -7,14 +7,21 @@ import { Button } from '../ui/button';
 interface ModeSelectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Runs after the mode is chosen, to continue a first-run walkthrough. */
+  onContinue?: () => void;
 }
 
-export function ModeSelectModal({ open, onOpenChange }: ModeSelectModalProps) {
+export function ModeSelectModal({
+  open,
+  onOpenChange,
+  onContinue,
+}: ModeSelectModalProps) {
   const { mode, setMode, setIsFirstTime } = useMode();
 
   const handleContinue = () => {
     setIsFirstTime(false);
     onOpenChange(false);
+    onContinue?.();
   };
 
   return (

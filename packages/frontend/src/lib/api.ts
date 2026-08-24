@@ -193,7 +193,11 @@ export async function api<T>(
 // =============================================================================
 
 // Import types from core package (types only)
-import type { UserData, ParsedStream } from '@aiostreams/core';
+import type {
+  UserData,
+  ParsedStream,
+  PlatformDescriptor,
+} from '@aiostreams/core';
 
 /**
  * User configuration response types
@@ -544,6 +548,128 @@ export async function fetchUserAnalytics(
   return api<UserAnalyticsResponse>(`GET /user/analytics?range=${range}`, {
     headers: { Authorization: basicAuthHeader(uuid, password) },
   });
+}
+
+export type LinkedAccountPlatformId = 'stremio' | 'aiomanager';
+
+export type LinkedAccountPlatformInfo = PlatformDescriptor;
+
+export interface LinkedAccount {
+  id: string;
+  platform: LinkedAccountPlatformId;
+  label: string;
+  identity: string | null;
+  config: {
+    instanceUrl?: string;
+    mintedSession?: boolean;
+    manifestUrls: string[];
+  };
+  autoPush: boolean;
+  lastSyncedAt?: number;
+  lastStatus?: 'ok' | 'error' | 'expired';
+  lastError?: string;
+  lastPushedManifestHash?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface LinkedAccountProbeResult {
+  ok: boolean;
+  message?: string;
+  version?: string;
+}
+
+export interface LinkedAccountPushResult {
+  outcomes: Array<{
+    url: string;
+    status: 'installed' | 'refreshed' | 'unchanged';
+  }>;
+}
+
+export interface LinkedAccountPushAllResult {
+  id: string;
+  label: string;
+  ok: boolean;
+  error?: string;
+}
+
+type Credentials = { uuid: string; password: string };
+
+function authed(credentials: Credentials) {
+  return {
+    headers: {
+      Authorization: basicAuthHeader(credentials.uuid, credentials.password),
+    },
+  };
+}
+
+export async function fetchLinkedAccountPlatforms(credentials: Credentials) {
+  return api<LinkedAccountPlatformInfo[]>(
+    'GET /linked-accounts/platforms',
+    authed(credentials)
+  );
+}
+
+export async function fetchLinkedAccounts(credentials: Credentials) {
+  return api<LinkedAccount[]>('GET /linked-accounts', authed(credentials));
+}
+
+export async function probeLinkedAccount(
+  credentials: Credentials,
+  platform: LinkedAccountPlatformId,
+  instanceUrl?: string
+) {
+  return api<LinkedAccountProbeResult>('POST /linked-accounts/probe', {
+    ...authed(credentials),
+    body: { platform, instanceUrl },
+  });
+}
+
+export async function linkAccount(
+  credentials: Credentials,
+  body: {
+    platform: LinkedAccountPlatformId;
+    input: Record<string, unknown>;
+    manifestUrls: string[];
+    label?: string;
+  }
+) {
+  return api<LinkedAccount>('POST /linked-accounts', {
+    ...authed(credentials),
+    body,
+  });
+}
+
+export async function updateLinkedAccount(
+  credentials: Credentials,
+  id: string,
+  patch: { label?: string; autoPush?: boolean; manifestUrls?: string[] }
+) {
+  return api<LinkedAccount>(`PATCH /linked-accounts/${id}`, {
+    ...authed(credentials),
+    body: patch,
+  });
+}
+
+export async function unlinkAccount(credentials: Credentials, id: string) {
+  return api<{ unlinked: boolean }>(
+    `DELETE /linked-accounts/${id}`,
+    authed(credentials)
+  );
+}
+
+export async function pushLinkedAccount(credentials: Credentials, id: string) {
+  return api<LinkedAccountPushResult>(
+    `POST /linked-accounts/${id}/push`,
+    authed(credentials)
+  );
+}
+
+export async function pushAllLinkedAccounts(credentials: Credentials) {
+  return api<LinkedAccountPushAllResult[]>(
+    'POST /linked-accounts/push',
+    authed(credentials)
+  );
 }
 
 /**

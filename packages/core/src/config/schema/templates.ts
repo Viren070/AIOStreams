@@ -44,7 +44,7 @@ export const templatesSchema = {
     default: [],
     label: 'Featured template IDs',
     description:
-      'Up to 2 template IDs featured on the about page. Defaults to the first 2 available templates when unset.',
+      'Up to 2 template IDs featured on the about page. The first is also the one offered during first-time setup. Defaults to the first 2 available templates when unset.',
     env: 'FEATURED_TEMPLATE_IDS',
     requiresRestart: false,
     secret: false,

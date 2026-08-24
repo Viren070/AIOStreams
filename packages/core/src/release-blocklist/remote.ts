@@ -3,7 +3,7 @@ import { createLogger } from '../logging/logger.js';
 import { ReleaseBlocklistRepository } from '../db/repositories/release-blocklist.js';
 import type { BlocklistSource } from './types.js';
 import { parseNdjson } from './io.js';
-import { isUnsafeRemoteUrl } from './url-safety.js';
+import { isUnsafeRemoteUrl } from '../utils/url-safety.js';
 
 const logger = createLogger('release-blocklist');
 

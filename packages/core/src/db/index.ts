@@ -66,6 +66,10 @@ export {
   type ConfigProfile,
   type ConfigAliasTarget,
 } from './repositories/config-profiles.js';
+export {
+  LinkedAccountRepository,
+  MAX_LINKED_ACCOUNTS_PER_USER,
+} from './repositories/linked-accounts.js';
 export * from './schemas.js';
 
 export { sql, raw, join, SqlFragment } from './sql.js';

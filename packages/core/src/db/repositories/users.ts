@@ -20,6 +20,7 @@ import {
   assertConfigAccessKey,
 } from '../../utils/index.js';
 import { ConfigProfileRepository } from './config-profiles.js';
+import { LinkedAccountRepository } from './linked-accounts.js';
 
 const APIError = constants.APIError;
 const logger = createLogger('users');
@@ -536,6 +537,11 @@ export class UserRepository {
         // Saved configurations hold the same blob as the install URL, so they
         // break on the next password change unless rotated with it.
         await ConfigProfileRepository.reencryptForUuid(
+          tx,
+          uuid,
+          newEncryptedPasswordToken
+        );
+        await LinkedAccountRepository.rewriteManifestUrlsForUuid(
           tx,
           uuid,
           newEncryptedPasswordToken

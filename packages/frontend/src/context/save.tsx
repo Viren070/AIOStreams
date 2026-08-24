@@ -3,7 +3,16 @@ import { UserData } from '@aiostreams/core';
 import { useUserData, DefaultUserData } from './userData';
 import { useStatus } from './status';
 import { useMenu } from './menu';
-import { loadRawUserConfig, updateUserConfig, fetchManifest } from '@/lib/api';
+import {
+  loadRawUserConfig,
+  updateUserConfig,
+  fetchManifest,
+  pushAllLinkedAccounts,
+  type LinkedAccountPushAllResult,
+} from '@/lib/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { linkedAccountsQuery, LINKED_ACCOUNTS_QUERY_ROOT } from '@/lib/queries';
+import { manifestFingerprint } from '../../../core/src/utils/manifest-fingerprint';
 import { computeUserDataDiff } from '../utils/diff/userData';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
@@ -25,14 +34,57 @@ interface SaveContextType {
     authenticated?: boolean;
   }) => Promise<void>;
   loading: boolean;
+  /** Fingerprint of the manifest as it is served right now. */
+  currentManifestFingerprint: string | null;
+  /** The URL that fingerprint was taken from. */
+  currentManifestUrl: string | null;
 }
 
-const storageKeys = {
-  allManifestChangesDismissed: (uuid: string) =>
-    `aiostreams-manifest-all-dismissed-${uuid}`,
-  insignificantManifestChangesDismissed: (uuid: string) =>
-    `aiostreams-manifest-insignificant-dismissed-${uuid}`,
-};
+type ManifestNotice = NonNullable<UserData['manifestNotice']>;
+
+/**
+ * These two booleans used to be the whole setting, per browser. They are still
+ * read so an existing choice carries over, but nothing writes them any more:
+ * the preference now lives in the configuration and follows the user.
+ */
+function legacyManifestNotice(uuid: string): ManifestNotice {
+  if (typeof window === 'undefined') return 'always';
+  if (
+    localStorage.getItem(`aiostreams-manifest-all-dismissed-${uuid}`) === 'true'
+  ) {
+    return 'never';
+  }
+  if (
+    localStorage.getItem(
+      `aiostreams-manifest-insignificant-dismissed-${uuid}`
+    ) === 'true'
+  ) {
+    return 'significant';
+  }
+  return 'always';
+}
+
+/**
+ * Pushes every destination the user opted in, reporting failures as toasts.
+ * Never throws: a failed push must not block or undo a successful save.
+ */
+async function runAutoPush(
+  uuid: string,
+  password: string
+): Promise<LinkedAccountPushAllResult[] | null> {
+  try {
+    const results = await pushAllLinkedAccounts({ uuid, password });
+    for (const result of results.filter((entry) => !entry.ok)) {
+      toast.error(`Could not push to ${result.label}: ${result.error ?? ''}`);
+    }
+    return results;
+  } catch (error) {
+    toast.error(
+      error instanceof Error ? error.message : 'Could not push your changes'
+    );
+    return null;
+  }
+}
 
 const SaveContext = React.createContext<SaveContextType | undefined>(undefined);
 
@@ -61,7 +113,21 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
   const [remoteConfig, setRemoteConfig] = React.useState<UserData | null>(null);
 
+  const [pushResults, setPushResults] = React.useState<
+    LinkedAccountPushAllResult[] | null
+  >(null);
+  const [alwaysPush, setAlwaysPush] = React.useState(false);
+  const [pushing, setPushing] = React.useState(false);
+
+  const pushBehaviour = userData.linkedAccounts?.pushBehaviour ?? 'ask';
+  const manifestNotice: ManifestNotice =
+    userData.manifestNotice ?? (uuid ? legacyManifestNotice(uuid) : 'always');
+
   const [savedManifest, setSavedManifest] = React.useState<any>(null);
+  const currentManifestFingerprint = React.useMemo(
+    () => (savedManifest ? manifestFingerprint(savedManifest) : null),
+    [savedManifest]
+  );
   const [pendingNewManifest, setPendingNewManifest] = React.useState<any>(null);
   const [preSaveManifest, setPreSaveManifest] = React.useState<any>(null);
 
@@ -78,6 +144,13 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         ? `${baseUrl}/stremio/${uuid}/${encryptedPassword}/manifest.json`
         : `${baseUrl}/stremio/u/${uuid}/manifest.json`
       : null;
+
+  const queryClient = useQueryClient();
+  const credentials = uuid && password ? { uuid, password } : null;
+  const { data: linkedAccountsData } = useQuery(
+    linkedAccountsQuery(credentials)
+  );
+  const linkedAccounts = linkedAccountsData ?? [];
 
   // fetch manifest on login
   React.useEffect(() => {
@@ -120,29 +193,38 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     if (!manifestUrl || !uuid) return;
     try {
       const newManifest = await fetchManifest(manifestUrl);
-      const dismissedKey = storageKeys.allManifestChangesDismissed(uuid);
-      const dismissedManifestStr = localStorage.getItem(dismissedKey);
-
       const currentSavedManifest = savedManifestRef.current;
 
       const hasChanged =
         currentSavedManifest !== null &&
         hasAnyManifestChanges(currentSavedManifest, newManifest);
 
-      const isDismissed = dismissedManifestStr === 'true';
+      // Runs before the notice is considered, so an automatic push still
+      // happens for someone who dismissed the notice permanently.
+      if (hasChanged && pushBehaviour === 'auto' && password) {
+        const results = await runAutoPush(uuid, password);
+        void queryClient.invalidateQueries({
+          queryKey: LINKED_ACCOUNTS_QUERY_ROOT,
+        });
+        if (results?.some((result) => result.ok)) {
+          const ok = results.filter((result) => result.ok).length;
+          toast.success(
+            `Pushed to ${ok} linked ${ok === 1 ? 'account' : 'accounts'}`
+          );
+        }
+        // The push already happened, so the diff is not worth interrupting for.
+        setSavedManifest(newManifest);
+        return;
+      }
+      setPushResults(null);
 
-      if (hasChanged && !isDismissed) {
+      if (hasChanged && manifestNotice !== 'never') {
         const severe = hasSevereManifestChanges(
           currentSavedManifest,
           newManifest
         );
-        const insignificantKey =
-          storageKeys.insignificantManifestChangesDismissed(uuid);
-        const insignificantDismissed =
-          localStorage.getItem(insignificantKey) === 'true';
 
-        if (!severe && insignificantDismissed) {
-          // Silently accept the insignificant change
+        if (!severe && manifestNotice === 'significant') {
           setSavedManifest(newManifest);
           return;
         }
@@ -158,7 +240,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // not critical, ignore
     }
-  }, [manifestUrl, uuid]);
+  }, [manifestUrl, uuid, password, pushBehaviour, manifestNotice, queryClient]);
 
   const handleSave = React.useCallback(
     async (options?: { skipDiff?: boolean }) => {
@@ -231,18 +313,35 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   );
 
   const handleManifestDismiss = () => {
-    if (dontShowManifestAgain && uuid) {
-      localStorage.setItem(
-        storageKeys.allManifestChangesDismissed(uuid),
-        'true'
+    const notice: UserData['manifestNotice'] | undefined = dontShowManifestAgain
+      ? 'never'
+      : dontShowInsignificantAgain && !manifestHasSignificantChanges
+        ? 'significant'
+        : undefined;
+    const changed = notice !== undefined || alwaysPush;
+    const next: UserData = {
+      ...userData,
+      ...(notice ? { manifestNotice: notice } : {}),
+      ...(alwaysPush
+        ? {
+            linkedAccounts: {
+              ...userData.linkedAccounts,
+              pushBehaviour: 'auto' as const,
+            },
+          }
+        : {}),
+    };
+
+    // The notice only appears straight after a successful save, so there are
+    // no unsaved edits for this extra write to pick up.
+    if (changed && uuid && password) {
+      setUserData(() => next);
+      updateUserConfig(uuid, next, password).catch(() =>
+        toast.warning('Could not remember that preference')
       );
     }
-    if (dontShowInsignificantAgain && uuid && !manifestHasSignificantChanges) {
-      localStorage.setItem(
-        storageKeys.insignificantManifestChangesDismissed(uuid),
-        'true'
-      );
-    }
+    setAlwaysPush(false);
+    setPushResults(null);
     setSavedManifest(pendingNewManifest);
     setManifestChangedModalOpen(false);
     setManifestDiffModalOpen(false);
@@ -253,7 +352,14 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SaveContext.Provider value={{ handleSave, loading }}>
+    <SaveContext.Provider
+      value={{
+        handleSave,
+        loading,
+        currentManifestFingerprint,
+        currentManifestUrl: manifestUrl,
+      }}
+    >
       {children}
 
       <Modal
@@ -317,6 +423,77 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
               See what changed →
             </Button>
           )}
+          {pushResults !== null && (
+            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+              <div className="flex-1">
+                <div className="text-sm font-medium text-white">
+                  {pushResults.every((result) => result.ok)
+                    ? `Pushed to ${pushResults.length} linked ${
+                        pushResults.length === 1 ? 'account' : 'accounts'
+                      }`
+                    : `Pushed to ${pushResults.filter((r) => r.ok).length} of ${pushResults.length} linked accounts`}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {pushResults.every((result) => result.ok)
+                    ? 'They are now up to date with this change'
+                    : 'Open the install page to see what failed'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {pushResults === null &&
+            pushBehaviour === 'ask' &&
+            linkedAccounts.length > 0 && (
+              <>
+                <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                  <div className="flex-1 pr-3">
+                    <div className="text-sm font-medium text-white">
+                      Push to your linked{' '}
+                      {linkedAccounts.length === 1
+                        ? linkedAccounts[0].label
+                        : `${linkedAccounts.length} accounts`}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Send this change now so they pick it up without a
+                      reinstall
+                    </div>
+                  </div>
+                  <Button
+                    intent="primary"
+                    loading={pushing}
+                    onClick={async () => {
+                      if (!uuid || !password) return;
+                      setPushing(true);
+                      setPushResults(await runAutoPush(uuid, password));
+                      void queryClient.invalidateQueries({
+                        queryKey: LINKED_ACCOUNTS_QUERY_ROOT,
+                      });
+                      setPushing(false);
+                    }}
+                  >
+                    Push now
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-white">
+                      Push automatically when a reinstall is needed
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Whenever a save changes your manifest, push it without
+                      asking
+                    </div>
+                  </div>
+                  <Switch
+                    id="always-push-linked-accounts"
+                    value={alwaysPush}
+                    onValueChange={setAlwaysPush}
+                  />
+                </div>
+              </>
+            )}
+
           {!manifestHasSignificantChanges && (
             <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
               <div className="flex-1">

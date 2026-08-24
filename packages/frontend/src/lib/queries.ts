@@ -1,5 +1,13 @@
 import { queryOptions } from '@tanstack/react-query';
-import { getSession, listConfigProfiles, api } from './api';
+import {
+  getSession,
+  listConfigProfiles,
+  fetchLinkedAccounts,
+  fetchLinkedAccountPlatforms,
+  api,
+  type LinkedAccount,
+  type LinkedAccountPlatformInfo,
+} from './api';
 import type { StatusResponse } from '@aiostreams/core';
 
 export const sessionQuery = queryOptions({
@@ -23,3 +31,36 @@ export const configProfilesQuery = queryOptions({
   staleTime: 30_000,
   retry: false,
 });
+
+/**
+ * Shared so the install card and the save flow cannot disagree about what is
+ * linked. The password is deliberately not part of the key.
+ */
+export const linkedAccountsQuery = (
+  credentials: { uuid: string; password: string } | null
+) =>
+  queryOptions({
+    queryKey: ['linked-accounts', credentials?.uuid ?? null] as const,
+    queryFn: (): Promise<LinkedAccount[]> =>
+      credentials ? fetchLinkedAccounts(credentials) : Promise.resolve([]),
+    enabled: !!credentials,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+export const LINKED_ACCOUNTS_QUERY_ROOT = ['linked-accounts'] as const;
+
+/** Descriptors are static per instance, so they are cached for the session. */
+export const linkedAccountPlatformsQuery = (
+  credentials: { uuid: string; password: string } | null
+) =>
+  queryOptions({
+    queryKey: ['linked-account-platforms'] as const,
+    queryFn: (): Promise<LinkedAccountPlatformInfo[]> =>
+      credentials
+        ? fetchLinkedAccountPlatforms(credentials)
+        : Promise.resolve([]),
+    enabled: !!credentials,
+    staleTime: Infinity,
+    retry: false,
+  });

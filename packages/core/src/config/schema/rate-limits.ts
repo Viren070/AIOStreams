@@ -130,6 +130,12 @@ export const rateLimitsSchema = {
     envPrefix: 'STREMIO_META',
     label: 'Stremio meta',
   }),
+  linkedAccountsApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 20,
+    envPrefix: 'LINKED_ACCOUNTS_API',
+    label: 'linked accounts API',
+  }),
   login: rateLimit({
     windowDefault: 300,
     maxDefault: 5,

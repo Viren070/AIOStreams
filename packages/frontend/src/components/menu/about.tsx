@@ -194,7 +194,7 @@ function Content() {
   const { userData, setUserData, uuid, setUuid, password, setPassword } =
     useUserData();
   const { mode, setMode, isFirstTime } = useMode();
-  const modeSelectModal = useDisclosure(isFirstTime);
+  const modeSelectModal = useDisclosure(isFirstTime && !uuid);
   const addonName =
     userData.addonName || status?.settings?.addonName || 'AIOStreams';
   const defaultDescription = `
@@ -220,6 +220,14 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
   const [appUpdatesCount, setAppUpdatesCount] = React.useState(0);
   const [featuredTemplateToOpen, setFeaturedTemplateToOpen] =
     React.useState<Template | null>(null);
+  const featuredTemplates = React.useMemo(() => {
+    const ids = (status?.settings?.featuredTemplateIds ?? []).slice(0, 2);
+    if (ids.length === 0) return loader.templates.slice(0, 2);
+    return ids
+      .map((id) => loader.templates.find((t) => t.metadata.id === id))
+      .filter((t): t is Template => t !== undefined);
+  }, [status?.settings?.featuredTemplateIds, loader.templates]);
+  const recommendedTemplate = featuredTemplates[0] ?? null;
   const customHtml = status?.settings?.customHtml;
   const pathname =
     typeof window !== 'undefined' ? window.location.pathname : '';
@@ -463,18 +471,7 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
           </div>
         ) : loader.templates.length > 0 ? (
           (() => {
-            const envIds = (status?.settings?.featuredTemplateIds ?? []).slice(
-              0,
-              2
-            );
-            const featured =
-              envIds.length > 0
-                ? envIds
-                    .map((id) =>
-                      loader.templates.find((t) => t.metadata.id === id)
-                    )
-                    .filter((t): t is Template => t !== undefined)
-                : loader.templates.slice(0, 2);
+            const featured = featuredTemplates;
             if (featured.length === 0) return null;
             return (
               <div>
@@ -528,6 +525,12 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
                   onChange={setMode}
                   className="w-full h-11 text-sm"
                 />
+                <button
+                  onClick={modeSelectModal.open}
+                  className="mt-2 w-full text-center text-xs text-gray-500 hover:text-[--brand] hover:underline"
+                >
+                  Run first-time setup again
+                </button>
               </div>
 
               <div className="flex flex-col gap-3 mt-auto">
@@ -653,6 +656,7 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
       <ModeSelectModal
         open={modeSelectModal.isOpen}
         onOpenChange={modeSelectModal.toggle}
+        onContinue={setupChoiceModal.open}
       />
       <ConfigModal
         open={signInModal.isOpen}
@@ -690,8 +694,12 @@ AIOStreams consolidates multiple Stremio addons and debrid services - including 
         }}
         onUseTemplate={() => {
           setupChoiceModal.close();
+          if (recommendedTemplate) {
+            setFeaturedTemplateToOpen(recommendedTemplate);
+          }
           templatesModal.open();
         }}
+        recommendedTemplateName={recommendedTemplate?.metadata.name}
         nextMenuText={uuid && password ? 'Continue Setup' : 'Start Fresh'}
         nextMenuDescription={
           uuid && password
@@ -1350,6 +1358,7 @@ function SetupChoiceModal({
   nextMenuDescription,
   useTemplateText,
   useTemplateDescription,
+  recommendedTemplateName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1359,6 +1368,7 @@ function SetupChoiceModal({
   nextMenuDescription: string;
   useTemplateText: string;
   useTemplateDescription: string;
+  recommendedTemplateName?: string;
 }) {
   return (
     <Modal
@@ -1402,9 +1412,9 @@ function SetupChoiceModal({
                 {useTemplateText}
               </h3>
               <p className="text-sm text-gray-400">
-                {/* Start with a pre-configured template. Great for getting up and
-                running quickly with recommended settings. */}
-                {useTemplateDescription}
+                {recommendedTemplateName
+                  ? `Start from ${recommendedTemplateName}, then adjust anything you want. The quickest way to a working setup.`
+                  : useTemplateDescription}
               </p>
             </div>
           </div>
