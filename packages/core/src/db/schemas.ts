@@ -1087,6 +1087,7 @@ export const ParsedFileSchema = z.object({
   audioChannels: z.array(z.string()),
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
+  mediaInfoQuality: z.enum(['probe', 'indexer', 'addon']).optional(),
   languages: z.array(z.string()),
   subtitles: z.array(z.string()).optional(),
   subbed: z.boolean().optional(),

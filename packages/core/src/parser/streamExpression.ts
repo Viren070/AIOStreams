@@ -840,6 +840,29 @@ export abstract class StreamExpressionEngine {
 
     this.parser.functions.subtitles = this.parser.functions.subtitle;
 
+    this.parser.functions.mediaInfoQuality = function (
+      streams: ParsedStream[],
+      ...qualities: string[]
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        qualities.length === 0 ||
+        qualities.some((q) => typeof q !== 'string')
+      ) {
+        throw new Error(
+          'You must provide one or more mediaInfoQuality strings'
+        );
+      }
+      return streams.filter((stream) =>
+        qualities
+          .map((q) => q.toLowerCase())
+          .includes(
+            stream.parsedFile?.mediaInfoQuality?.toLowerCase() || 'unknown'
+          )
+      );
+    };
+
     this.parser.functions.seeders = function (
       streams: ParsedStream[],
       minSeeders?: number,

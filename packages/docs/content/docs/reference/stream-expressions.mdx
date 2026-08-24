@@ -285,6 +285,24 @@ encode(streams, 'H.265', 'HEVC')
 
 ---
 
+#### `mediaInfoQuality()`
+
+Filter by how a stream's media info (languages, subtitles, audio, etc.) was determined. Streams with no confirmed media info match `'unknown'`.
+
+**Accepted values:** `'probe'` `'indexer'` `'addon'` `'unknown'`
+
+```
+mediaInfoQuality(streams, 'probe', 'indexer')
+```
+
+To select only streams with *any* confirmed media info, negate the `'unknown'` match:
+
+```
+negate(mediaInfoQuality(streams, 'unknown'), streams)
+```
+
+---
+
 #### `type()`
 
 Filter by stream type.
