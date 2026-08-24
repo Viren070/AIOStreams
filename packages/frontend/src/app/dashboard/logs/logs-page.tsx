@@ -231,7 +231,8 @@ export function LogsPage() {
     [debouncedSearch, regex, regexError, levels, module]
   );
 
-  const { rows, loading, connected, error, clear, retry } = useLogStream(filters);
+  const { rows, loading, connected, error, clear, retry } =
+    useLogStream(filters);
 
   // Defer rendering the heavy virtualizer until the page-entry animation settles (~400ms spring)
   const [ready, setReady] = useState(false);

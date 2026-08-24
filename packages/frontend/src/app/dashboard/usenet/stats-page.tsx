@@ -618,9 +618,11 @@ function indexerFailBreakdown(i: UsenetIndexerStatRow): string {
 }
 
 /** Popover shape mirroring {@link ProviderHealthPopover} for grab errors. */
-function indexerErrorInfo(
-  e: NonNullable<UsenetIndexerStatRow['lastError']>
-): { tone: 'bad' | 'warn'; label: string; hint: string } {
+function indexerErrorInfo(e: NonNullable<UsenetIndexerStatRow['lastError']>): {
+  tone: 'bad' | 'warn';
+  label: string;
+  hint: string;
+} {
   if (e.status === 401 || e.status === 403) {
     return {
       tone: 'bad',

@@ -255,4 +255,3 @@ export function validateClusterStart(
   }
   return { ok: false };
 }
-

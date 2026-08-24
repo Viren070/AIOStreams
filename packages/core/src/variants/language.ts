@@ -532,7 +532,10 @@ function parsePath(s: Scanner, limits: CelLimits): CelPath {
       if (s.peek() === '*' && s.peek(1) === ']') {
         s.advance();
         segments.push({ kind: 'all' });
-      } else if (isDigit(s.peek()) || (s.peek() === '-' && isDigit(s.peek(1)))) {
+      } else if (
+        isDigit(s.peek()) ||
+        (s.peek() === '-' && isDigit(s.peek(1)))
+      ) {
         const indexStart = s.pos;
         const index = readNumber(s);
         if (!Number.isInteger(index)) {
@@ -626,7 +629,10 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
       if (s.peek() !== '=') s.fail(`expected "=" after the path in ${keyword}`);
       s.advance();
       const value = parseValue(s, limits);
-      if (keyword === 'merge' && (value === null || typeof value !== 'object')) {
+      if (
+        keyword === 'merge' &&
+        (value === null || typeof value !== 'object')
+      ) {
         s.fail('merge requires an object or array value', { index });
       }
       return { op: keyword, path, value, index, line };
@@ -846,7 +852,11 @@ export function tokenizeCel(src: string): CelToken[] {
         push('verb', start, pos);
         afterVerb = true;
       } else if (afterVerb && !afterDot) {
-        push(word === 'formatter' || word === 'variant' ? 'verb' : 'root', start, pos);
+        push(
+          word === 'formatter' || word === 'variant' ? 'verb' : 'root',
+          start,
+          pos
+        );
         afterVerb = word === 'formatter' || word === 'variant';
       } else {
         push('property', start, pos);
@@ -1147,7 +1157,11 @@ function runProgram(
       const nested = options.resolveVariant?.(statement.id);
       if (!nested) {
         notes.push(
-          note(statement, `unknown variant "${statement.id}"`, 'unknown-variant')
+          note(
+            statement,
+            `unknown variant "${statement.id}"`,
+            'unknown-variant'
+          )
         );
         continue;
       }

@@ -18,7 +18,11 @@ const VERBS: Completion[] = [
   { label: 'remove', type: 'keyword', detail: 'remove <path> [<value>, ...]' },
   { label: 'enable', type: 'keyword', detail: 'enable <path>' },
   { label: 'disable', type: 'keyword', detail: 'disable <path>' },
-  { label: 'use formatter ', type: 'keyword', detail: 'apply a saved formatter' },
+  {
+    label: 'use formatter ',
+    type: 'keyword',
+    detail: 'apply a saved formatter',
+  },
   { label: 'use variant ', type: 'keyword', detail: 'apply another variant' },
 ];
 
@@ -100,7 +104,9 @@ export function celCompletion({
 
         const presetType = /presets\[type\s*!?\*?=\s*"?([\w-]*)$/.exec(before);
         if (presetType) {
-          const types = [...new Set((userData.presets ?? []).map((p) => p.type))];
+          const types = [
+            ...new Set((userData.presets ?? []).map((p) => p.type)),
+          ];
           return {
             from: context.pos - presetType[1].length,
             options: types.map((type) => ({

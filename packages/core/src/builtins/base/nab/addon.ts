@@ -247,7 +247,9 @@ export abstract class BaseNabAddon<
         this.logger.debug('Performing queries', { queries });
         return Promise.all(
           queries.map((q) =>
-            queryLimit(() => this.fetchResults(searchFunction, { ...params, q }))
+            queryLimit(() =>
+              this.fetchResults(searchFunction, { ...params, q })
+            )
           )
         ).then((allResults) => allResults.flat());
       };

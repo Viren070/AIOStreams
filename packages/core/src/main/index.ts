@@ -5,12 +5,7 @@ import {
   StrictManifestResource,
   UserData,
 } from '../db/index.js';
-import {
-  Cache,
-  createLogger,
-  IdParser,
-  userScopeKey,
-} from '../utils/index.js';
+import { Cache, createLogger, IdParser, userScopeKey } from '../utils/index.js';
 import { withVariantSelector } from '../variants/runtime.js';
 import Proxifier from '../streams/proxifier.js';
 import StreamLimiter from '../streams/limiter.js';

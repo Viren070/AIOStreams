@@ -676,7 +676,8 @@ export abstract class BaseFormatter {
         daysSinceFirstAired: this.formatterContext.daysSinceFirstAired ?? null,
         daysSinceLastAired: this.formatterContext.daysSinceLastAired ?? null,
         hasNextEpisode: this.formatterContext.hasNextEpisode ?? false,
-        daysUntilNextEpisode: this.formatterContext.daysUntilNextEpisode ?? null,
+        daysUntilNextEpisode:
+          this.formatterContext.daysUntilNextEpisode ?? null,
         anilistId: this.formatterContext.anilistId ?? null,
         malId: this.formatterContext.malId ?? null,
         hasSeaDex: this.formatterContext.hasSeaDex ?? false,

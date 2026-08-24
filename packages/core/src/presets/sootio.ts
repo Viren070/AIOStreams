@@ -159,7 +159,11 @@ export class SootioPreset extends Preset {
       return [this.generateAddon(userData, options, undefined)];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
 
     if (
       (!options.httpProviders || options.httpProviders.length === 0) &&

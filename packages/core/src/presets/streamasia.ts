@@ -338,7 +338,11 @@ there is no need to provide these details here.
       return [this.generateAddon(userData, options, [])];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     if (
       usableServices?.length === 0 &&
       options.ddlCatalogs &&

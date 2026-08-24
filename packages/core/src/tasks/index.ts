@@ -299,7 +299,12 @@ class TaskManagerImpl {
     try {
       // An on-demand run is not due by the schedule; the request is the reason.
       owned = await (manual
-        ? TaskStateRepository.claimNow(id, this.instance, now, now + CLAIM_TTL_MS)
+        ? TaskStateRepository.claimNow(
+            id,
+            this.instance,
+            now,
+            now + CLAIM_TTL_MS
+          )
         : TaskStateRepository.claimDue(
             id,
             this.instance,

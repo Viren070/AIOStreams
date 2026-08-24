@@ -278,7 +278,11 @@ export class MeteorPreset extends Preset {
       return [this.generateAddon(userData, options, [])];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     if (!usableServices || usableServices.length === 0) {
       return [this.generateAddon(userData, options, [])];
     }

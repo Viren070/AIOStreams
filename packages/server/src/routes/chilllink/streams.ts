@@ -12,7 +12,6 @@ const router: Router = Router();
 
 const logger = createLogger('server');
 
-
 const ChillLinkQuerySchema = z.object({
   type: z.string(),
   tmdbID: z.string(),
