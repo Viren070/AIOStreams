@@ -33,12 +33,19 @@ export interface EpisodeResolverInput {
   /** Returns the episodes of a TVDB season (default order), or undefined when unavailable. */
   fetchTvdbSeasonEpisodes?: (
     seasonNumber: number
-  ) => Promise<{ number: number; aired: string | null }[] | undefined>;
+  ) => Promise<
+    | {
+        number: number;
+        aired: string | null;
+        name?: string;
+      }[]
+    | undefined
+  >;
   /** Returns TMDB episode details, undefined on 404/unavailable. */
   fetchTmdbEpisode?: (
     seasonNumber: number,
     episodeNumber: number
-  ) => Promise<{ airDate?: string } | undefined>;
+  ) => Promise<{ airDate?: string; titles?: { title: string }[] } | undefined>;
   config: {
     enabled: boolean;
     episodeCountThreshold: number;
@@ -50,6 +57,8 @@ export interface EpisodeResolution {
   isDateBased: boolean;
   episodeAirDates?: string[];
   resolvedSeasonNumber?: number;
+  /** Episode number in the resolved season when title matching changes schemes. */
+  resolvedEpisodeNumber?: number;
   resolvedSeasonFirstEpisode?: number;
 }
 
@@ -131,6 +140,51 @@ export async function resolveEpisodeFacts(
     resolvedSeasonFirstEpisode,
   };
 
+  // TMDB and TVDB can use different season partitions (for example, a
+  // streaming revival may be one TMDB season but several TVDB seasons). A
+  // direct S/E lookup is deliberately retained when the titles agree. Only
+  // when they disagree do we scan the available TVDB seasons for TMDB's title.
+  // This makes the resolved numbers safe to use for provider queries without
+  // changing normally-numbered series.
+  if (
+    !input.isAnime &&
+    input.fetchTmdbEpisode &&
+    input.fetchTvdbSeasonEpisodes &&
+    nonSpecialSeasons.length
+  ) {
+    try {
+      const tmdbEpisode = await input.fetchTmdbEpisode(season, episode);
+      const tmdbTitles = new Set(
+        (tmdbEpisode?.titles ?? [])
+          .map((item) => normaliseEpisodeTitle(item.title))
+          .filter(Boolean)
+      );
+      if (tmdbTitles.size) {
+        const directEpisodes = await input.fetchTvdbSeasonEpisodes(season);
+        const directEpisode = directEpisodes?.find((item) => item.number === episode);
+        const directMatches = directEpisode?.name
+          ? tmdbTitles.has(normaliseEpisodeTitle(directEpisode.name))
+          : false;
+        if (!directMatches) {
+          for (const candidateSeason of nonSpecialSeasons) {
+            const episodes = await input.fetchTvdbSeasonEpisodes(candidateSeason.season_number);
+            const match = episodes?.find(
+              (item) => item.name && tmdbTitles.has(normaliseEpisodeTitle(item.name))
+            );
+            if (match) {
+              resolution.resolvedSeasonNumber = candidateSeason.season_number;
+              resolution.resolvedEpisodeNumber = match.number;
+              break;
+            }
+          }
+        }
+      }
+    } catch {
+      // Number-based and date-based resolution remains available if either
+      // metadata provider is temporarily unavailable.
+    }
+  }
+
   if (!isDateBased) {
     return resolution;
   }
@@ -187,4 +241,14 @@ export async function resolveEpisodeFacts(
     resolution.episodeAirDates = [airDate];
   }
   return resolution;
+}
+
+function normaliseEpisodeTitle(title: string): string {
+  return String(title)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0027\u2018\u2019]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }

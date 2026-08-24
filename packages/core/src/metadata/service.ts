@@ -817,6 +817,7 @@ export class MetadataService {
               episodeAirDates: episodeFacts?.episodeAirDates,
               episodeAirDate: episodeFacts?.episodeAirDates?.[0],
               resolvedSeasonNumber: episodeFacts?.resolvedSeasonNumber,
+              resolvedEpisodeNumber: episodeFacts?.resolvedEpisodeNumber,
               resolvedSeasonFirstEpisode:
                 episodeFacts?.resolvedSeasonFirstEpisode,
               sceneTitles,

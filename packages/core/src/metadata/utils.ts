@@ -108,6 +108,8 @@ export interface Metadata {
   episodeAirDate?: string;
   /** Season number the requested season resolved to (differs from the request under ordinal fallback). */
   resolvedSeasonNumber?: number;
+  /** Episode number in resolvedSeasonNumber when cross-provider title matching succeeds. */
+  resolvedEpisodeNumber?: number;
   /** First episode number of the resolved season (>1 means continuous absolute numbering). */
   resolvedSeasonFirstEpisode?: number;
   /** Scene-mapping search titles for this series, best (non-identity) first. */
