@@ -13,7 +13,11 @@ import { Preset, baseOptions } from './preset.js';
 import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
-import { FileParser, StreamParser } from '../parser/index.js';
+import {
+  FileParser,
+  StreamParser,
+  getRegexForTextAfterEmojis,
+} from '../parser/index.js';
 
 class WebStreamrStreamParser extends StreamParser {
   protected get indexerEmojis(): string[] {
@@ -37,7 +41,7 @@ class WebStreamrStreamParser extends StreamParser {
     currentParsedStream: ParsedStream
   ): ParsedStream['error'] | undefined {
     const indexer = this.getIndexer(stream, currentParsedStream);
-    const errorRegex = this.getRegexForTextAfterEmojis([
+    const errorRegex = getRegexForTextAfterEmojis([
       '❌',
       '⏳',
       '🐢',
@@ -61,7 +65,7 @@ class WebStreamrStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    const messageRegex = this.getRegexForTextAfterEmojis(['⚠️']);
+    const messageRegex = getRegexForTextAfterEmojis(['⚠️']);
     return (
       stream.name?.match(messageRegex)?.[1] ||
       stream.description?.match(messageRegex)?.[1]

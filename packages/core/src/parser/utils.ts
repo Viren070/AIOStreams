@@ -368,3 +368,17 @@ export function getLanguagesAfterMarker(
   const match = text?.match(getFlagRegex(indicator));
   return match ? extractLanguagesFromFlags(match[1]) : undefined;
 }
+
+export function getRegexForTextAfterEmojis(emojis: string[]): RegExp {
+  // Boundary also matches char+U+FE0F (e.g. ⚙️ needs it to render as emoji).
+  // Keeps all JS line terminators out of the separator/capture so lines
+  // can't bleed together.
+  const lineTerminators = '\\r\\n\\u2028\\u2029';
+  const escapedEmojis = emojis.map((emoji) =>
+    emoji.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  );
+  return new RegExp(
+    `(?:${escapedEmojis.join('|')})[^\\S${lineTerminators}]*([^\\p{Emoji_Presentation}${lineTerminators}]*?)(?=\\p{Emoji_Presentation}|.\\uFE0F|[${lineTerminators}]|$)`,
+    'u'
+  );
+}

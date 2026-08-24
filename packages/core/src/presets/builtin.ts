@@ -1,5 +1,5 @@
 import { ParsedStream, Stream, UserData } from '../db/index.js';
-import { StreamParser } from '../parser/index.js';
+import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 import FileParser from '../parser/file.js';
 import {
   arrayMerge,
@@ -204,7 +204,7 @@ export class BuiltinStreamParser extends StreamParser {
     currentParsedStream: ParsedStream
   ): string | undefined {
     return stream.description?.match(
-      this.getRegexForTextAfterEmojis(['🏷️'])
+      getRegexForTextAfterEmojis(['🏷️'])
     )?.[1];
   }
 }
