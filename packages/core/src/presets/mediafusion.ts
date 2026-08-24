@@ -10,7 +10,7 @@ import { baseOptions, CacheKeyRequestOptions, Preset } from './preset.js';
 import { createLogger, getSimpleTextHash } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
-import { StreamParser } from '../parser/index.js';
+import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 
 const logger = createLogger('core');
 
@@ -43,8 +43,8 @@ class MediaFusionStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    const nameRegex = this.getRegexForTextAfterEmojis(['📂']);
-    const filenameRegex = this.getRegexForTextAfterEmojis(['📄']);
+    const nameRegex = getRegexForTextAfterEmojis(['📂']);
+    const filenameRegex = getRegexForTextAfterEmojis(['📄']);
 
     const name = stream.description?.match(nameRegex)?.[1];
     const filename = stream.description?.match(filenameRegex)?.[1];
@@ -100,7 +100,7 @@ class MediaFusionStreamParser extends StreamParser {
   ): string | undefined {
     const indexer = super.getIndexer(stream, currentParsedStream);
     const contributor = stream.description?.match(
-      this.getRegexForTextAfterEmojis(['🧑‍💻'])
+      getRegexForTextAfterEmojis(['🧑‍💻'])
     )?.[1];
     let indexerParts = [];
     if (indexer) {
@@ -117,7 +117,7 @@ class MediaFusionStreamParser extends StreamParser {
     currentParsedStream: ParsedStream
   ): string[] {
     const languages = super.getLanguages(stream, currentParsedStream);
-    const regex = this.getRegexForTextAfterEmojis(['🌐']);
+    const regex = getRegexForTextAfterEmojis(['🌐']);
     const languagesString = stream.description?.match(regex)?.[1];
     if (languagesString) {
       return languages.concat(

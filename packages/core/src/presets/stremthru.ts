@@ -5,7 +5,7 @@ import {
   Stream,
   UserData,
 } from '../db/index.js';
-import { StreamParser } from '../parser/index.js';
+import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { Preset } from './preset.js';
 
@@ -28,7 +28,7 @@ export class StremThruStreamParser extends StreamParser {
   }
 
   protected get filenameRegex(): RegExp | undefined {
-    return this.getRegexForTextAfterEmojis(['📄', '📁']);
+    return getRegexForTextAfterEmojis(['📄', '📁']);
   }
 
   protected override getFolderSize(
@@ -79,6 +79,13 @@ export class StremThruStreamParser extends StreamParser {
       if (subtitleLangs.length > 0) {
         overrides.subtitles = subtitleLangs;
       }
+    }
+
+    const editionText = stream.description
+      ?.match(getRegexForTextAfterEmojis(['🏷️']))?.[1]
+      .trim();
+    if (editionText) {
+      overrides.editions = [editionText];
     }
 
     return overrides;

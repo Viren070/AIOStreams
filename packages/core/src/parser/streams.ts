@@ -13,6 +13,7 @@ import {
   parseAgeString,
   parseDuration,
   extractInfoHashFromMagnet,
+  getRegexForTextAfterEmojis,
 } from './utils.js';
 import {
   mergeParsedFiles,
@@ -59,18 +60,11 @@ class StreamParser {
   }
 
   protected get indexerRegex(): RegExp | undefined {
-    return this.getRegexForTextAfterEmojis(this.indexerEmojis);
+    return getRegexForTextAfterEmojis(this.indexerEmojis);
   }
 
   protected get ageRegex(): RegExp | undefined {
     return undefined;
-  }
-
-  protected getRegexForTextAfterEmojis(emojis: string[]): RegExp {
-    return new RegExp(
-      `(?:${emojis.join('|')})\\s*([^\\p{Emoji_Presentation}\\n]*?)(?=\\p{Emoji_Presentation}|$|\\n)`,
-      'u'
-    );
   }
 
   constructor(protected readonly addon: Addon) {}

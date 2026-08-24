@@ -324,3 +324,12 @@ export function extractInfoHashFromMagnet(magnet: string): string | undefined {
   if (match.length === 40) return match.toLowerCase();
   return base32ToHex(match);
 }
+
+export function getRegexForTextAfterEmojis(emojis: string[]): RegExp {
+  // Some emoji (e.g. ⚙️) are text-presentation by default, so also treat
+  // any char + U+FE0F (emoji variation selector) as a boundary.
+  return new RegExp(
+    `(?:${emojis.join('|')})\\s*([^\\p{Emoji_Presentation}\\n]*?)(?=\\p{Emoji_Presentation}|.\\uFE0F|$|\\n)`,
+    'u'
+  );
+}
