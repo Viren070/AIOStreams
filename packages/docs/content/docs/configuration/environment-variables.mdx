@@ -138,11 +138,11 @@ neither the environment variable nor a stored value is present.
 
 ### Templates
 
-| Environment Variable        | UI Setting       | Type     | Default | Description                                                                                                         |
-| --------------------------- | ---------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
-| `FEATURED_TEMPLATE_IDS`     | Featured Ids     | list     | —       | Up to 2 template IDs featured on the about page. Defaults to the first 2 available templates when unset.            |
-| `TEMPLATE_URLS`             | Urls             | list     | —       | Remote template URLs to fetch and cache locally. Templates are downloaded once and refreshed on the schedule below. |
-| `TEMPLATE_REFRESH_INTERVAL` | Refresh Interval | duration | `86400` | How often remote templates are refreshed (accepts e.g. "12h", "1d"). Set to 0 to disable automatic refresh.         |
+| Environment Variable        | UI Setting       | Type     | Default | Description                                                                                                                                                         |
+| --------------------------- | ---------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FEATURED_TEMPLATE_IDS`     | Featured Ids     | list     | —       | Up to 2 template IDs featured on the about page. The first is also the one offered during first-time setup. Defaults to the first 2 available templates when unset. |
+| `TEMPLATE_URLS`             | Urls             | list     | —       | Remote template URLs to fetch and cache locally. Templates are downloaded once and refreshed on the schedule below.                                                 |
+| `TEMPLATE_REFRESH_INTERVAL` | Refresh Interval | duration | `86400` | How often remote templates are refreshed (accepts e.g. "12h", "1d"). Set to 0 to disable automatic refresh.                                                         |
 
 ### Metadata
 
@@ -346,6 +346,13 @@ neither the environment variable nor a stored value is present.
 | -------------------------------------- | --------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------- |
 | `STREMIO_META_RATE_LIMIT_WINDOW`       | Stremio Meta › Window       | number | `5`     | Sliding-window length (seconds) for the Stremio meta rate limiter. _(restart required)_           |
 | `STREMIO_META_RATE_LIMIT_MAX_REQUESTS` | Stremio Meta › Max Requests | number | `15`    | Maximum requests per IP within the window for the Stremio meta rate limiter. _(restart required)_ |
+
+#### Linked Accounts API
+
+| Environment Variable                          | UI Setting                         | Type   | Default | Description                                                                                              |
+| --------------------------------------------- | ---------------------------------- | ------ | ------- | -------------------------------------------------------------------------------------------------------- |
+| `LINKED_ACCOUNTS_API_RATE_LIMIT_WINDOW`       | Linked Accounts API › Window       | number | `60`    | Sliding-window length (seconds) for the linked accounts API rate limiter. _(restart required)_           |
+| `LINKED_ACCOUNTS_API_RATE_LIMIT_MAX_REQUESTS` | Linked Accounts API › Max Requests | number | `20`    | Maximum requests per IP within the window for the linked accounts API rate limiter. _(restart required)_ |
 
 #### Login
 
@@ -576,11 +583,11 @@ neither the environment variable nor a stored value is present.
 
 #### Marvel Universe
 
-| Environment Variable                | UI Setting                           | Type   | Default                                 | Description                                                                                                |
-| ----------------------------------- | ------------------------------------ | ------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `MARVEL_UNIVERSE_URL`               | Marvel Universe › URL                | list   | `["https://addon-marvel.onrender.com"]` | Upstream URL(s) for the Marvel Universe addon.                                                             |
-| `DEFAULT_MARVEL_CATALOG_TIMEOUT`    | Marvel Universe › Default Timeout    | number | —                                       | Default timeout for the Marvel Universe addon (milliseconds). Falls back to the global default when unset. |
-| `DEFAULT_MARVEL_CATALOG_USER_AGENT` | Marvel Universe › Default User Agent | string | —                                       | Default User-Agent for the Marvel Universe addon. Supports `{version}`/`{random}` placeholders.            |
+| Environment Variable                | UI Setting                           | Type   | Default                                  | Description                                                                                                |
+| ----------------------------------- | ------------------------------------ | ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `MARVEL_UNIVERSE_URL`               | Marvel Universe › URL                | list   | `["https://addon-marvel.gonp.deno.net"]` | Upstream URL(s) for the Marvel Universe addon.                                                             |
+| `DEFAULT_MARVEL_CATALOG_TIMEOUT`    | Marvel Universe › Default Timeout    | number | —                                        | Default timeout for the Marvel Universe addon (milliseconds). Falls back to the global default when unset. |
+| `DEFAULT_MARVEL_CATALOG_USER_AGENT` | Marvel Universe › Default User Agent | string | —                                        | Default User-Agent for the Marvel Universe addon. Supports `{version}`/`{random}` placeholders.            |
 
 #### Dc Universe
 
@@ -1208,6 +1215,13 @@ neither the environment variable nor a stored value is present.
 | `USER_ANALYTICS_ENABLED`         | User Analytics Enabled | boolean | `false` | When enabled, the configure-page "Stats" tab is available to every authenticated user. Adds one event per addon per stream request.             |
 | `ANALYTICS_EVENT_RETENTION_DAYS` | Event Retention Days   | number  | `7`     | How many days of raw per-request analytics events to keep before the rollup task prunes them. The per-user Stats tab is limited to this window. |
 | `ANALYTICS_DAILY_RETENTION_DAYS` | Daily Retention Days   | number  | `90`    | How many days of aggregated daily analytics to keep.                                                                                            |
+
+### Linked Accounts
+
+| Environment Variable                 | UI Setting         | Type    | Default | Description                                                                                                                                                                                                                                                                                |
+| ------------------------------------ | ------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `LINKED_ACCOUNTS_ENABLED`            | Enabled            | boolean | `true`  | Let users link a Stremio account or an AIOManager instance and push their addon to it when their configuration changes. Turning this off hides the feature and rejects every request to it; existing links are kept but never used.                                                        |
+| `LINKED_ACCOUNTS_ALLOW_PRIVATE_URLS` | Allow Private Urls | boolean | `false` | Allow linking an AIOManager instance on a private or loopback address, such as `http://aiomanager:1610` on a Docker network. This lets anyone who can create a configuration make this server send requests to your internal network, so only enable it on a trusted, non-public instance. |
 
 ### Release Blocklist
 

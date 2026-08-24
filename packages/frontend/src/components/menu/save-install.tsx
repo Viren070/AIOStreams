@@ -9,13 +9,13 @@ import {
   CreateUserResponse,
 } from '@/lib/api';
 import { PageWrapper } from '@/components/shared/page-wrapper';
-import { cn } from '@/components/ui/core/styling';
 import { Alert } from '@/components/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
   Code2,
   CopyIcon,
+  Settings2,
   DownloadIcon,
   PlusIcon,
   Rss,
@@ -47,9 +47,12 @@ import { redactPresetOptions } from '@/lib/preset-credentials';
 import { useSave } from '@/context/save';
 import { FiExternalLink } from 'react-icons/fi';
 import { ProfileCard } from './profile-card';
+import { LinkedAccountsSection } from './linked-accounts';
+import { LinkOfferModal, linkOfferDismissed } from './link-offer-modal';
+import { VariantPills } from '@/components/shared/variant-pills';
 import { useSession } from '@/context/session';
 import { useQuery } from '@tanstack/react-query';
-import { configProfilesQuery } from '@/lib/queries';
+import { configProfilesQuery, linkedAccountsQuery } from '@/lib/queries';
 
 // Reusable modal option button component
 interface ModalOptionButtonProps {
@@ -235,13 +238,104 @@ function CreateConfigCard({
   );
 }
 
+type ManifestNotice = 'always' | 'significant' | 'never';
+type PushBehaviour = 'ask' | 'auto' | 'never';
+
+interface SavePreferencesModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  showChanges: boolean;
+  onShowChangesChange: (value: boolean) => void;
+  manifestNotice: ManifestNotice;
+  onManifestNoticeChange: (value: ManifestNotice) => void;
+  pushBehaviour: PushBehaviour;
+  onPushBehaviourChange: (value: PushBehaviour) => void;
+  /**
+   * Hides the push preference when there is nowhere to push to, unless it has
+   * been set to something, which must stay reachable to be undone.
+   */
+  hasLinkedAccounts: boolean;
+}
+
+/**
+ * The notice's own switches can only ever turn things off, and once off the
+ * notice never appears again to turn them back on. This is where they are
+ * reachable from.
+ */
+function SavePreferencesModal({
+  open,
+  onOpenChange,
+  showChanges,
+  onShowChangesChange,
+  manifestNotice,
+  onManifestNoticeChange,
+  pushBehaviour,
+  onPushBehaviourChange,
+  hasLinkedAccounts,
+}: SavePreferencesModalProps) {
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Save preferences"
+      description="These apply wherever you open this configuration. Remember to save."
+      contentClass="max-w-lg"
+    >
+      <div className="min-w-0 space-y-4">
+        <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+          <div className="flex-1 pr-3">
+            <div className="text-sm font-medium text-white">
+              Show changes before saving
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              Review a diff of what you changed before it is written
+            </div>
+          </div>
+          <Switch
+            id="show-changes"
+            value={showChanges}
+            onValueChange={onShowChangesChange}
+          />
+        </div>
+        <Select
+          label="Manifest change notices"
+          help="Stremio caches your manifest, so a change can need a reinstall. This is when you get told."
+          value={manifestNotice}
+          onValueChange={(value) =>
+            onManifestNoticeChange(value as ManifestNotice)
+          }
+          options={[
+            { value: 'always', label: 'On every change' },
+            { value: 'significant', label: 'Only significant changes' },
+            { value: 'never', label: 'Never' },
+          ]}
+        />
+        {hasLinkedAccounts && (
+          <Select
+            label="Push to linked accounts"
+            help="What happens when a saved change means your linked accounts need the update."
+            value={pushBehaviour}
+            onValueChange={(value) =>
+              onPushBehaviourChange(value as PushBehaviour)
+            }
+            options={[
+              { value: 'ask', label: 'Ask each time' },
+              { value: 'auto', label: 'Push automatically' },
+              { value: 'never', label: 'Never push' },
+            ]}
+          />
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 interface SaveConfigCardProps {
   uuid: string;
   onCopyUuid: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   saveLoading: boolean;
-  showChanges: boolean;
-  onShowChangesChange: (value: boolean) => void;
+  onOpenPreferences: () => void;
 }
 
 function SaveConfigCard({
@@ -249,8 +343,7 @@ function SaveConfigCard({
   onCopyUuid,
   onSave,
   saveLoading,
-  showChanges,
-  onShowChangesChange,
+  onOpenPreferences,
 }: SaveConfigCardProps) {
   return (
     <SettingsCard
@@ -286,14 +379,16 @@ function SaveConfigCard({
           <Button type="submit" intent="white" loading={saveLoading} rounded>
             Save
           </Button>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-changes"
-              label="Show changes before saving"
-              value={showChanges}
-              onValueChange={onShowChangesChange}
-            />
-          </div>
+          <Button
+            type="button"
+            intent="gray-outline"
+            size="sm"
+            rounded
+            leftIcon={<Settings2 className="h-4 w-4" />}
+            onClick={onOpenPreferences}
+          >
+            Preferences
+          </Button>
         </div>
       </form>
     </SettingsCard>
@@ -374,21 +469,6 @@ function VariantSelector({
   location,
   onLocationChange,
 }: VariantSelectorProps) {
-  const toggle = (id: string) =>
-    onChange(
-      selected.includes(id)
-        ? selected.filter((value) => value !== id)
-        : [...selected, id]
-    );
-
-  const pill = (active: boolean) =>
-    cn(
-      'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
-      active
-        ? 'bg-[--brand]/20 text-[--brand] border-[--brand]/50'
-        : 'bg-transparent text-[--muted] border-[--border] hover:bg-[--subtle]'
-    );
-
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
       <h3 className="text-lg font-semibold text-white">Variant</h3>
@@ -396,25 +476,12 @@ function VariantSelector({
         The links below install the selected variant. Each one appears as a
         separate addon in your client; pick more than one to combine them.
       </p>
-      <div className="flex flex-wrap gap-1.5 mt-4">
-        <button
-          type="button"
-          onClick={() => onChange([])}
-          className={pill(selected.length === 0)}
-        >
-          Base config
-        </button>
-        {variants.map((variant) => (
-          <button
-            key={variant.id}
-            type="button"
-            onClick={() => toggle(variant.id)}
-            className={pill(selected.includes(variant.id))}
-          >
-            {variant.name || variant.id}
-          </button>
-        ))}
-      </div>
+      <VariantPills
+        className="mt-4"
+        variants={variants}
+        value={selected}
+        onChange={onChange}
+      />
       {selected.length > 0 && (
         <div className="mt-5 pt-4 border-t border-gray-700/50 max-w-md">
           <Select
@@ -562,6 +629,8 @@ function InstallCard({
             </div>
           </div>
         </div>
+
+        <LinkedAccountsSection manifestUrl={manifestUrl} />
 
         {/* Other apps — playback clients you install the addon into */}
         <div>
@@ -1370,9 +1439,19 @@ function Content() {
     encryptedPassword,
     setEncryptedPassword,
   } = useUserData();
+  const { data: linkedAccounts } = useQuery(
+    linkedAccountsQuery(uuid && password ? { uuid, password } : null)
+  );
+  const preferencesModal = useDisclosure(false);
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [createLoading, setCreateLoading] = React.useState(false);
+  // Set only by a successful create, so the offer is never shown to an
+  // existing configuration.
+  const [linkOfferFor, setLinkOfferFor] = React.useState<{
+    uuid: string;
+    password: string;
+  } | null>(null);
   const [passwordRequirements, setPasswordRequirements] = React.useState<
     string[]
   >([]);
@@ -1484,6 +1563,9 @@ function Content() {
       setUuid(result.uuid);
       setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
       setPassword(newPassword);
+      if (!linkOfferDismissed()) {
+        setLinkOfferFor({ uuid: result.uuid, password: newPassword });
+      }
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Failed to create configuration'
@@ -1817,10 +1899,7 @@ function Content() {
                 handleSaveContext();
               }}
               saveLoading={saveLoading}
-              showChanges={userData?.showChanges ?? false}
-              onShowChangesChange={(val) =>
-                setUserData((prev) => ({ ...prev, showChanges: val }))
-              }
+              onOpenPreferences={preferencesModal.open}
             />
 
             <InstallCard
@@ -2378,6 +2457,38 @@ function Content() {
           </div>
         </Modal>
 
+        <SavePreferencesModal
+          open={preferencesModal.isOpen}
+          onOpenChange={(open) =>
+            open ? preferencesModal.open() : preferencesModal.close()
+          }
+          showChanges={userData?.showChanges ?? false}
+          onShowChangesChange={(val) =>
+            setUserData((prev) => ({ ...prev, showChanges: val }))
+          }
+          manifestNotice={userData?.manifestNotice ?? 'always'}
+          onManifestNoticeChange={(val) =>
+            setUserData((prev) => ({ ...prev, manifestNotice: val }))
+          }
+          pushBehaviour={userData?.linkedAccounts?.pushBehaviour ?? 'ask'}
+          onPushBehaviourChange={(val) =>
+            setUserData((prev) => ({
+              ...prev,
+              linkedAccounts: { ...prev.linkedAccounts, pushBehaviour: val },
+            }))
+          }
+          hasLinkedAccounts={(linkedAccounts?.length ?? 0) > 0}
+        />
+        {linkOfferFor && (
+          <LinkOfferModal
+            open
+            onOpenChange={(open) => {
+              if (!open) setLinkOfferFor(null);
+            }}
+            credentials={linkOfferFor}
+            manifestUrl={manifestUrl}
+          />
+        )}
         <ConfirmationDialog {...confirmDelete} />
         <ConfirmationDialog {...confirmResetProps} />
 

@@ -14,6 +14,7 @@ import {
   proxyApi,
   templatesApi,
   syncApi,
+  linkedAccountsApi,
   authApi,
   dashboardApi,
   usenetApi,
@@ -56,6 +57,7 @@ import {
   errorMiddleware,
   corsMiddleware,
   staticRateLimiter,
+  linkedAccountsRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
   stremioManifestRateLimiter,
@@ -176,6 +178,7 @@ apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
+apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);

@@ -31,6 +31,8 @@ export * from './id-parser.js';
 export * from '../anime-database/index.js';
 export * from './regex.js';
 export * from './general.js';
+export * from './url-safety.js';
+export * from './manifest-fingerprint.js';
 export * from './disk-backed-cache.js';
 export * from './grab-cache.js';
 export * from './download-manager.js';

@@ -1,4 +1,5 @@
 import { DiffAnnotation } from '@/components/shared/diff-viewer';
+import { normaliseManifest } from '../../../../core/src/utils/manifest-fingerprint';
 import { DiffItem, getObjectDiff } from './diff';
 
 interface ManifestCatalog {
@@ -71,32 +72,6 @@ function isCatalogObject(v: any): boolean {
     typeof v.id === 'string' &&
     typeof v.name === 'string'
   );
-}
-
-/**
- * Produces a clean diff between two manifests.
- * - Ignores volatile fields (id, version, description, name, logo, behaviorHints, stremioAddonsConfig)
- * - Keeps catalogs, resources, idPrefixes, types, addonCatalogs
- */
-function normaliseManifest(m: Manifest): Partial<Manifest> {
-  const {
-    id,
-    version,
-    description,
-    name,
-    logo,
-    behaviorHints,
-    stremioAddonsConfig,
-    ...rest
-  } = m;
-  void id;
-  void version;
-  void description;
-  void name;
-  void logo;
-  void behaviorHints;
-  void stremioAddonsConfig;
-  return rest;
 }
 
 /**
