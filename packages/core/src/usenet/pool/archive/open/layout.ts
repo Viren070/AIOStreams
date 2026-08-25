@@ -250,6 +250,7 @@ export async function rebuildArchiveStream(
       layout.target.fragments ?? [],
       { concurrency: openConcurrency, hooks: opts.lazyHooks }
     );
+    resolver.resolveAllInBackground();
   }
   return entrySource(source, layout.target, password, streamOpts, resolver);
 }

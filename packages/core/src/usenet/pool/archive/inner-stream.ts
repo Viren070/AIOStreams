@@ -101,6 +101,7 @@ export class ArchiveInnerStream implements SeekableStream {
     signal?: AbortSignal
   ): Promise<number> {
     if (length <= 0 || offset >= this._size) return 0;
+    this.resolver?.noteRead();
     if (this.resolver?.hasPending()) {
       // Resolve enough pending fragments that the read maps through exact
       // lengths, anchored from whichever side is cheaper
