@@ -7,7 +7,7 @@ import { APIError, ErrorCode } from '../utils/constants.js';
 import { createLogger } from '../logging/logger.js';
 import { manifestSetFingerprint } from '../utils/manifest-fingerprint.js';
 import { requestJson } from './http.js';
-import { assertOwnManifestUrls } from './manifest-urls.js';
+import { assertOwnManifestUrls, type OwnManifestUrl } from './manifest-urls.js';
 import { getPlatform } from './registry.js';
 import type {
   LinkedAccount,
@@ -80,7 +80,10 @@ export class LinkedAccountService {
       label: (label?.trim() || connected.label).slice(0, 64),
       identity: connected.identity,
       credentials: connected.credentials,
-      config: { ...connected.config, manifestUrls: urls },
+      config: {
+        ...connected.config,
+        manifestUrls: urls.map((entry) => entry.url),
+      },
     });
   }
 
@@ -98,7 +101,9 @@ export class LinkedAccountService {
         ? undefined
         : {
             ...existing.config,
-            manifestUrls: await assertOwnManifestUrls(patch.manifestUrls, uuid),
+            manifestUrls: (
+              await assertOwnManifestUrls(patch.manifestUrls, uuid)
+            ).map((entry) => entry.url),
           };
 
     const updated = await LinkedAccountRepository.update(uuid, id, {
@@ -197,11 +202,13 @@ export class LinkedAccountService {
   }
 }
 
-async function fetchManifests(urls: string[]): Promise<ResolvedManifest[]> {
+async function fetchManifests(
+  urls: OwnManifestUrl[]
+): Promise<ResolvedManifest[]> {
   const resolved: ResolvedManifest[] = [];
-  for (const url of urls) {
+  for (const { url, fetchUrl } of urls) {
     const { status, json, redirected } =
-      await requestJson<Record<string, unknown>>(url);
+      await requestJson<Record<string, unknown>>(fetchUrl);
     if (
       redirected ||
       status >= 400 ||

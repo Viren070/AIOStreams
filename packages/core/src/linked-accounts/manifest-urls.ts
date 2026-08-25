@@ -1,13 +1,23 @@
 import { config as appConfig } from '../config/index.js';
-import { ConfigProfileRepository } from '../db/repositories/config-profiles.js';
-import { isConfigUuid, normaliseAlias } from '../utils/config-alias.js';
+import { resolveConfigAlias } from '../db/repositories/config-profiles.js';
+import { isConfigUuid } from '../utils/config-alias.js';
 import { APIError, ErrorCode } from '../utils/constants.js';
 
 /** `/stremio/u/<alias>/...` or `/stremio/<uuid>/<encryptedPassword>/...`, with an optional `/v/<ids>`. */
 const MANIFEST_PATH =
-  /^\/stremio\/(?:u\/([^/]+)|([^/]+)\/([^/]+))(?:\/v\/[^/]+)?\/manifest\.json$/;
+  /^\/stremio\/(?:u\/([^/]+)|([^/]+)\/([^/]+))((?:\/v\/[^/]+)?)\/manifest\.json$/;
 
 export const MAX_MANIFEST_URLS = 8;
+
+/** One of our manifest URLs, in the form we hand out and the form we read. */
+export interface OwnManifestUrl {
+  /** What we store and hand out. */
+  url: string;
+  /**
+   * The same manifest with the alias expanded.
+   */
+  fetchUrl: string;
+}
 
 function baseUrl(): string {
   const configured = appConfig.bootstrap.baseUrl;
@@ -34,7 +44,7 @@ function reject(message: string): never {
 export async function assertOwnManifestUrl(
   rawUrl: string,
   uuid: string
-): Promise<string> {
+): Promise<OwnManifestUrl> {
   const base = baseUrl();
   const url = rawUrl.trim();
 
@@ -64,29 +74,35 @@ export async function assertOwnManifestUrl(
       reject('A manifest URL cannot carry extra query parameters.');
   }
 
-  const [, alias, pathUuid] = match;
+  const [, alias, pathUuid, , variant] = match;
 
   if (alias !== undefined) {
-    const target = (await ConfigProfileRepository.aliasMap()).get(
-      normaliseAlias(decodeURIComponent(alias))
-    );
+    // Resolved the way the request path resolves it, so a URL that validates
+    // here is one the alias route will answer.
+    const target = await resolveConfigAlias(decodeURIComponent(alias));
     if (!target || target.uuid !== uuid) {
       reject('That manifest URL belongs to a different configuration.');
     }
-  } else if (
+    return {
+      url,
+      fetchUrl: `${base}/stremio/${target.uuid}/${target.encryptedPassword}${variant}/manifest.json${parsed.search}`,
+    };
+  }
+
+  if (
     !isConfigUuid(pathUuid) ||
     pathUuid.toLowerCase() !== uuid.toLowerCase()
   ) {
     reject('That manifest URL belongs to a different configuration.');
   }
 
-  return url;
+  return { url, fetchUrl: url };
 }
 
 export async function assertOwnManifestUrls(
   urls: string[],
   uuid: string
-): Promise<string[]> {
+): Promise<OwnManifestUrl[]> {
   if (urls.length === 0) {
     reject('At least one manifest URL is required.');
   }
@@ -94,11 +110,11 @@ export async function assertOwnManifestUrls(
     reject(`At most ${MAX_MANIFEST_URLS} manifest URLs can be kept in sync.`);
   }
   const seen = new Set<string>();
-  const validated: string[] = [];
+  const validated: OwnManifestUrl[] = [];
   for (const url of urls) {
     const ok = await assertOwnManifestUrl(url, uuid);
-    if (seen.has(ok)) continue;
-    seen.add(ok);
+    if (seen.has(ok.url)) continue;
+    seen.add(ok.url);
     validated.push(ok);
   }
   return validated;
