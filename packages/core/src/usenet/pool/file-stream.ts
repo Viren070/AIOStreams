@@ -422,6 +422,7 @@ export class FileStream implements SeekableStream {
           // the whole account, while concurrent streams fair-share it via that
           // semaphore; there is no separate per-stream connection cap.
           maxWorkers: this.opts.prefetchSegments,
+          taskBytes: this.avgDecodedSize,
           // Buffer sized to the same window so completed-but-not-yet-emitted
           // segments can ride out per-segment latency jitter without stalling
           // dispatch.

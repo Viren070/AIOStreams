@@ -39,6 +39,8 @@ export interface SegmentsStreamOptions {
    * map: zero-filled immediately, without burning a failover round-trip.
    */
   knownHoles?: ReadonlySet<number>;
+  /** See OrderedParallelStreamOptions.taskBytes. */
+  taskBytes: number;
 }
 
 /**
@@ -68,6 +70,7 @@ export class SegmentsStream extends OrderedParallelStream {
       highWaterMark: opts.bufferSizeBytes,
       totalTasks: opts.segments.length,
       maxConcurrency: maxWorkers,
+      taskBytes: opts.taskBytes,
       maxBufferedBytes: Math.max(1, opts.bufferSizeBytes),
       slotCap: 2 * maxWorkers + 16,
       initialMaxSlot: 1 << 20,

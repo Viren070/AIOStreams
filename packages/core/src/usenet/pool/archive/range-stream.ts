@@ -7,12 +7,6 @@ const logger = createLogger('usenet/archive-range');
 /** Window 0, kept inside one segment so the first byte costs one fetch. */
 const PRIME_WINDOW_BYTES = 128 * 1024;
 
-/**
- * Windows in flight until window 0 lands. The full burst splits the link while
- * the client waits on the first window.
- */
-const PRIME_CONCURRENCY = 4;
-
 export interface ParallelRangeStreamOptions {
   /**
    * Random-access into-reader for the source being streamed; each call
@@ -93,7 +87,7 @@ export class ParallelRangeStream extends OrderedParallelStream {
           ? Math.min(1, span)
           : 1 + Math.ceil((span - primeBytes) / windowBytes),
       maxConcurrency: concurrency,
-      initialConcurrency: PRIME_CONCURRENCY,
+      taskBytes: windowBytes,
       maxBufferedBytes,
       slotCap: prefetchWindows + concurrency + 16,
       initialMaxSlot: windowBytes,
