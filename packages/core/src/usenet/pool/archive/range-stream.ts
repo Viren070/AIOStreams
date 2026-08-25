@@ -4,6 +4,12 @@ import type { HoleDecision, HoleKind } from '../../holes.js';
 
 const logger = createLogger('usenet/archive-range');
 
+/**
+ * Windows in flight until window 0 lands. The full burst splits the link while
+ * the client waits on the first window.
+ */
+const PRIME_CONCURRENCY = 4;
+
 export interface ParallelRangeStreamOptions {
   /**
    * Random-access into-reader for the source being streamed; each call
@@ -74,6 +80,7 @@ export class ParallelRangeStream extends OrderedParallelStream {
       highWaterMark: Math.max(1, opts.maxBufferedBytes),
       totalTasks: Math.ceil((end - start) / windowBytes),
       maxConcurrency: concurrency,
+      initialConcurrency: PRIME_CONCURRENCY,
       maxBufferedBytes,
       slotCap: prefetchWindows + concurrency + 16,
       initialMaxSlot: windowBytes,

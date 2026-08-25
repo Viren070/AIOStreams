@@ -129,6 +129,8 @@ export interface OrderedParallelStreamOptions {
   maxBufferedBytes: number;
   slotCap: number;
   initialMaxSlot: number;
+  /** In flight until the first task settles; defaults to `maxConcurrency`. */
+  initialConcurrency?: number;
   /** Subclass logger so log scopes stay per stream kind. */
   logger: Logger;
 }
@@ -149,12 +151,14 @@ export abstract class OrderedParallelStream extends Readable {
 
   private readonly totalTasks: number;
   private readonly maxConcurrency: number;
+  private readonly initialConcurrency: number;
   private readonly maxBufferedBytes: number;
   private readonly logger: Logger;
 
   private nextDispatch = 0;
   private nextEmit = 0;
   private inflight = 0;
+  private settled = 0;
   private buffered = new Map<number, Buffer>();
   private bufferedBytes = 0;
   private paused = false;
@@ -166,6 +170,13 @@ export abstract class OrderedParallelStream extends Readable {
     super({ highWaterMark: Math.max(1, Math.ceil(opts.highWaterMark)) });
     this.totalTasks = opts.totalTasks;
     this.maxConcurrency = opts.maxConcurrency;
+    this.initialConcurrency = Math.max(
+      1,
+      Math.min(
+        opts.initialConcurrency ?? opts.maxConcurrency,
+        opts.maxConcurrency
+      )
+    );
     this.maxBufferedBytes = opts.maxBufferedBytes;
     this.logger = opts.logger;
     this.slots = new SlotPool({
@@ -206,6 +217,7 @@ export abstract class OrderedParallelStream extends Readable {
   protected completeTask(idx: number, body: Buffer): void {
     if (this.destroyedFlag || this.ended) return;
     this.inflight--;
+    this.settled++;
     this.buffered.set(idx, body);
     this.bufferedBytes += body.length;
     this.flush();
@@ -215,6 +227,7 @@ export abstract class OrderedParallelStream extends Readable {
   protected failTask(idx: number, err: unknown): void {
     if (this.destroyedFlag || this.ended) return;
     this.inflight--;
+    this.settled++;
     if (this.shouldIgnoreTaskError(err)) return;
     this.logger.debug(
       { ...this.logContext(idx), err },
@@ -276,10 +289,12 @@ export abstract class OrderedParallelStream extends Readable {
   }
 
   private dispatch(): void {
+    const allowed =
+      this.settled > 0 ? this.maxConcurrency : this.initialConcurrency;
     while (
       !this.destroyedFlag &&
       !this.ended &&
-      this.inflight < this.maxConcurrency &&
+      this.inflight < allowed &&
       this.nextDispatch < this.totalTasks &&
       this.bufferedBytes < this.maxBufferedBytes
     ) {
