@@ -149,6 +149,9 @@ export class UsenetStreamerPreset extends Preset {
       SUPPORTED_SERVICES: supportedServices,
       SUPPORTED_RESOURCES: supportedResources,
       SUPPORTED_STREAM_TYPES: [constants.USENET_STREAM_TYPE],
+      // Its servers are reachability-checked one by one, so an addon-wide URL
+      // would answer a question that is already answered per server.
+      SUPPORTS_HEALTH_CHECK: false,
       OPTIONS: options,
     };
   }

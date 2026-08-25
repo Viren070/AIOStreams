@@ -3,6 +3,7 @@ import {
   userApi,
   profilesApi,
   healthApi,
+  healthCheckApi,
   statusApi,
   formatApi,
   catalogApi,
@@ -167,6 +168,7 @@ const apiRouter = express.Router();
 apiRouter.use('/user', userApi);
 apiRouter.use('/profiles', profilesApi);
 apiRouter.use('/health', healthApi);
+apiRouter.use('/health-check', healthCheckApi);
 apiRouter.use('/status', statusApi);
 apiRouter.use('/format', formatApi);
 apiRouter.use('/catalogs', catalogApi);

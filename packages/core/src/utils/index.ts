@@ -1,4 +1,5 @@
 export * from './cache.js';
+export * from './health-gate.js';
 export * from './constants.js';
 export * from './env.js';
 export * from '../logging/logger.js';

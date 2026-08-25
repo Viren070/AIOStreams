@@ -1,4 +1,5 @@
-﻿import { PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
+﻿import { Option, PresetMetadata, PresetMinimalMetadata } from '../db/index.js';
+import { healthCheckUrlOption } from './preset.js';
 import { CometPreset } from './comet.js';
 import { MeteorPreset } from './meteor.js';
 import { CustomPreset } from './custom.js';
@@ -165,6 +166,20 @@ let PRESET_LIST: string[] = [
 ].filter(Boolean);
 
 export class PresetManager {
+  /**
+   * A preset's options plus the ones every preset carries. The health check is
+   * offered on all of them rather than declared eighty-four times, and it is
+   * applied centrally in main/setup.ts, so both halves stay in one place.
+   */
+  static optionsFor(metadata: PresetMetadata): Option[] {
+    // Compared against false rather than read as a boolean: absent means the
+    // option is offered, so an undefined read as falsy would withhold it from
+    // every preset that never mentions it.
+    return metadata.SUPPORTS_HEALTH_CHECK === false
+      ? [...metadata.OPTIONS]
+      : [...metadata.OPTIONS, healthCheckUrlOption];
+  }
+
   static getPresetList(): PresetMinimalMetadata[] {
     return PRESET_LIST.map((presetId) => this.fromId(presetId).METADATA).map(
       (metadata: PresetMetadata) => ({
@@ -175,7 +190,7 @@ export class PresetManager {
         SUPPORTED_RESOURCES: metadata.SUPPORTED_RESOURCES,
         SUPPORTED_STREAM_TYPES: metadata.SUPPORTED_STREAM_TYPES,
         SUPPORTED_SERVICES: metadata.SUPPORTED_SERVICES,
-        OPTIONS: metadata.OPTIONS,
+        OPTIONS: this.optionsFor(metadata),
         BUILTIN: metadata.BUILTIN,
         DISABLED: metadata.DISABLED,
         CATEGORY: metadata.CATEGORY,

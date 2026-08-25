@@ -5,6 +5,7 @@ import {
   getAddonName,
   getTimeTakenSincePoint,
 } from '../utils/index.js';
+import { resolveHealthy } from '../utils/health-gate.js';
 import { Wrapper } from '../main/wrapper.js';
 import {
   ExitConditionEvaluator,
@@ -105,7 +106,20 @@ class StreamFetcher {
       });
     }
 
+    // A custom manifest can carry a provider's key, and nothing in the config
+    // says which provider that is. The user declares it; we skip while it is down.
+    const healthy = await resolveHealthy(addons, (a) => a);
     addons = addons.filter((addon) => {
+      if (!healthy.has(addon)) {
+        // At warn rather than debug: results are missing a provider, which is
+        // the one thing an operator has to be able to see without turning on a
+        // level that logs credential-bearing request paths.
+        logger.warn(
+          { addon: getAddonName(addon) },
+          'skipping addon: its health check says the service it depends on is down'
+        );
+        return false;
+      }
       if (
         addon.mediaTypes &&
         addon.mediaTypes.length > 0 &&

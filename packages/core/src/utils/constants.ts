@@ -467,6 +467,14 @@ const SERVICE_DETAILS: Record<
     knownNames: string[];
     signUpText: string;
     credentials: Option[];
+    /**
+     * Whether a health check URL can be set on this service. Defaults to true:
+     * a service is a remote thing with an address, so asking whether it answers
+     * is meaningful. Set false where the service is a local engine over servers
+     * the user supplies — those are checked per server instead, and one URL for
+     * the whole set would drop every provider when one of them is down.
+     */
+    supportsHealthCheck?: boolean;
   }
 > = {
   [REALDEBRID_SERVICE]: {
@@ -561,6 +569,8 @@ const SERVICE_DETAILS: Record<
   },
   [STREMIO_NNTP_SERVICE]: {
     id: STREMIO_NNTP_SERVICE,
+    // The servers live in this service's own config and are checked one by one.
+    supportsHealthCheck: false,
     name: 'Stremio NNTP',
     shortName: 'SN',
     knownNames: ['SN', 'Stremio NNTP', 'StremioNntp', 'Stremio-NNTP'],
@@ -650,6 +660,9 @@ const SERVICE_DETAILS: Record<
   },
   [AIOSTREAMS_SERVICE]: {
     id: AIOSTREAMS_SERVICE,
+    // Its NNTP providers are set globally rather than on this service, so there
+    // is nothing here for a URL to report on.
+    supportsHealthCheck: false,
     name: 'AIOStreams',
     shortName: 'AIO',
     knownNames: ['AIO', 'AIO Usenet', 'NZB', 'Usenet', 'Native Usenet'],

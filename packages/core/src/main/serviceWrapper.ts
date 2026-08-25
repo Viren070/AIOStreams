@@ -18,6 +18,7 @@ import {
   FileInfo,
 } from '../debrid/index.js';
 import { processTorrents } from '../builtins/utils/debrid.js';
+import { resolveHealthy } from '../utils/health-gate.js';
 import { StreamContext } from '../streams/context.js';
 import { isServiceWrapEligibleP2PStream } from '../streams/utils.js';
 import { parseTorrentTitleCached } from '../parser/title.js';
@@ -138,7 +139,7 @@ export async function resolveServiceWrappedStreams(
   );
 
   // Build BuiltinDebridServices from user's service configuration
-  const debridServices = buildDebridServices(userData);
+  const debridServices = await buildDebridServices(userData);
 
   if (debridServices.length === 0) {
     errors.push({
@@ -255,9 +256,21 @@ export async function resolveServiceWrappedStreams(
 // Helper functions
 // ---------------------------------------------------------------------------
 
-function buildDebridServices(userData: UserData): BuiltinDebridServices {
-  const enabledServices =
+async function buildDebridServices(
+  userData: UserData
+): Promise<BuiltinDebridServices> {
+  const candidates =
     userData.services?.filter((s) => s.enabled !== false) ?? [];
+  const healthy = await resolveHealthy(candidates, (s) => s.id);
+  const enabledServices = candidates.filter((s) => {
+    if (healthy.has(s.id)) return true;
+    // At warn rather than debug: see the note in fetcher.ts.
+    logger.warn(
+      { service: s.id },
+      'skipping service: its health check says it is down'
+    );
+    return false;
+  });
   const serviceWrapFilter = userData.serviceWrap?.services;
   const builtinServiceIds = new Set(constants.BUILTIN_SUPPORTED_SERVICES);
   const debridServices: BuiltinDebridServices = [];

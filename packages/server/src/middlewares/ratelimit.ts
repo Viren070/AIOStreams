@@ -82,6 +82,14 @@ const lazyLimiter = (
   };
 };
 
+// The test endpoint fetches a URL the caller supplies, on demand and
+// uncached — unlike the gate, which only re-probes a saved value every thirty
+// seconds. Refusing private targets bounds where it can reach, not how often.
+const healthCheckApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.healthCheckApi,
+  'health-check-api'
+);
+
 const userApiRateLimiter = lazyLimiter(
   () => appConfig.rateLimits.userApi,
   'user-api'
@@ -163,6 +171,7 @@ const communityApiRateLimiter = lazyLimiter(
 );
 
 export {
+  healthCheckApiRateLimiter,
   userApiRateLimiter,
   userCreateRateLimiter,
   linkedAccountsRateLimiter,

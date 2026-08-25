@@ -203,9 +203,7 @@ export class BuiltinStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    return stream.description?.match(
-      getRegexForTextAfterEmojis(['🏷️'])
-    )?.[1];
+    return stream.description?.match(getRegexForTextAfterEmojis(['🏷️']))?.[1];
   }
 }
 
