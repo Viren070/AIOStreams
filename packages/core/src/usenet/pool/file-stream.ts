@@ -67,6 +67,8 @@ export interface SegmentMemo {
   len: number;
   /** Lazily allocated, grown only when a larger body appears; reused in place. */
   buf?: Buffer;
+  /** Measured part length, shared across a set; see `hintedPartSize`. */
+  partHint?: number;
 }
 
 /**
@@ -483,20 +485,26 @@ export class FileStream implements SeekableStream {
       return { segmentIndex: 0, segmentStartByte: firstRange.begin };
     }
 
+    // Dropped the moment it mislocates.
+    let hinted =
+      this.lockedPartSize === undefined ? this.hintedPartSize() : undefined;
     let guard = 0;
     while (lo <= hi && guard++ < segments.length + 8) {
       // Interpolate an index guess: exact arithmetic once the uniform part
       // size is locked, the running average estimate otherwise.
-      const est = this.lockedPartSize ?? Math.max(1, this.avgDecodedSize);
+      const est =
+        this.lockedPartSize ?? hinted ?? Math.max(1, this.avgDecodedSize);
       let guess = Math.floor(targetByte / est);
       guess = Math.min(hi, Math.max(lo, guess));
 
       const range = await this.rangeForSegment(guess);
       if (targetByte < range.begin) {
+        hinted = undefined;
         hi = guess - 1;
         // Refine avg estimate downward.
         this.avgDecodedSize = Math.max(1, range.begin / Math.max(1, guess));
       } else if (targetByte >= range.end) {
+        hinted = undefined;
         lo = guess + 1;
         this.avgDecodedSize = Math.max(1, range.end / Math.max(1, guess + 1));
       } else {
@@ -526,6 +534,21 @@ export class FileStream implements SeekableStream {
     const len = first.end - first.begin;
     const n = this.source.segments.length;
     if (len <= 0) return undefined;
+    return len * (n - 1) < this._size && this._size <= len * n
+      ? len
+      : undefined;
+  }
+
+  /**
+   * Part length measured on a sibling volume, accepted only when this file's
+   * own exact size and segment count admit a grid of that length. Aims the
+   * interpolation search and nothing else, so a wrong hint costs one extra
+   * probe, never a wrong offset; do not feed it to {@link partGridSize}.
+   */
+  private hintedPartSize(): number | undefined {
+    const len = this.memo?.partHint;
+    if (!len || len <= 0 || !this.sizeExact) return undefined;
+    const n = this.source.segments.length;
     return len * (n - 1) < this._size && this._size <= len * n
       ? len
       : undefined;
@@ -614,6 +637,9 @@ export class FileStream implements SeekableStream {
         }
       } else if (index > 0 && len > 0 && begin === index * len) {
         this.lockedPartSize = len;
+      }
+      if (this.memo && len > 0 && begin === index * len) {
+        this.memo.partHint = len;
       }
     }
     return range;
