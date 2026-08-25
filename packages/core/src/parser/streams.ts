@@ -13,6 +13,7 @@ import {
   parseAgeString,
   parseDuration,
   extractInfoHashFromMagnet,
+  convertFlagToLanguage,
 } from './utils.js';
 import {
   mergeParsedFiles,
@@ -622,24 +623,9 @@ class StreamParser {
       ...(descriptionMatches ? [...new Set(descriptionMatches)] : []),
       ...(nameMatches ? [...new Set(nameMatches)] : []),
     ];
-    const languages = flags
-      .map((flag) => this.convertFlagToLanguage(flag))
+    return flags
+      .map((flag) => convertFlagToLanguage(flag))
       .filter((language) => language !== undefined);
-    return languages;
-  }
-
-  protected convertFlagToLanguage(flag: string): string | undefined {
-    const possibleLanguages = FULL_LANGUAGE_MAPPING.filter(
-      (language) => language.flag === flag
-    );
-
-    const language =
-      possibleLanguages.find((l) => l.flag_priority) || possibleLanguages[0];
-    if (!language) return undefined;
-    const languageName = getLanguageDisplayName(language);
-    return constants.LANGUAGES.includes(languageName as any)
-      ? languageName
-      : undefined;
   }
 
   protected convertISO6392ToLanguage(code: string): string | undefined {
