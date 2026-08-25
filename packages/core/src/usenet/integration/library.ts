@@ -116,6 +116,15 @@ const parsedNzbCache = new Map<
 /** Lookup-key aliases (search-time hash → content hash), FIFO-capped. */
 const parsedNzbAliases = new Map<string, string>();
 
+// Sweep the parsed-NZB cache every minute to evict expired entries.
+const parsedNzbSweepTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of parsedNzbCache) {
+    if (now - v.at > PARSED_NZB_TTL_MS) parsedNzbCache.delete(k);
+  }
+}, 60_000);
+parsedNzbSweepTimer.unref?.();
+
 function rememberParsedNzbAlias(hash: string, contentHash: string): void {
   if (hash === contentHash) return;
   parsedNzbAliases.delete(hash);
