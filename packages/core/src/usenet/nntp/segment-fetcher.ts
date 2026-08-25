@@ -339,7 +339,8 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           segment.messageId,
           undefined,
           this.opts.segmentStallTimeoutMs,
-          this.opts.segmentTimeoutMs
+          this.opts.segmentTimeoutMs,
+          segment.bytes
         );
         // don't decode an abandoned fetch, wasted CPU.
         if (signal?.aborted) {

@@ -2,6 +2,7 @@ import { Readable } from 'node:stream';
 import type { Logger } from '../../logging/logger.js';
 import { definitiveLossKind } from '../nntp/errors.js';
 import type { HoleKind } from '../holes.js';
+import { roundSlotSize } from './slot-size.js';
 
 /**
  * Read-ahead budget floor, in tasks. Keeps the link busy until the first task
@@ -52,17 +53,24 @@ export class SlotPool {
   /** Check out a slot of at least `need` bytes for task `idx`. */
   acquire(idx: number, need: number): Buffer {
     this.reclaim();
-    let buf: Buffer | undefined;
-    while ((buf = this.free.pop()) && buf.length < need) {
-      // Undersized slot (mixed task sizes): drop it.
-      this.allocated--;
+    const size = roundSlotSize(need);
+    // Smallest free slot that fits; on a miss one undersized slot is dropped
+    // so the pool converges on the larger size rather than growing.
+    let best = -1;
+    for (let i = 0; i < this.free.length; i++) {
+      const len = this.free[i].length;
+      if (len >= size && (best < 0 || len < this.free[best].length)) best = i;
     }
-    if (!buf) {
+    let buf: Buffer;
+    if (best >= 0) {
+      buf = this.free.splice(best, 1)[0];
+    } else {
+      if (this.free.pop()) this.allocated--;
       if (this.allocated >= this.slotCap) {
         return Buffer.allocUnsafe(need);
       }
       this.allocated++;
-      buf = Buffer.allocUnsafe(need);
+      buf = Buffer.allocUnsafe(size);
     }
     if (buf.length > this.maxSlotBytes) this.maxSlotBytes = buf.length;
     this.live.set(idx, buf);
