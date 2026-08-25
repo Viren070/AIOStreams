@@ -8,7 +8,6 @@ import {
   RarBadPasswordError,
   RarEncryptedError,
   cryptKeyIv,
-  decryptCbc,
 } from './rar-kdf.js';
 
 /** Resolve key/IV, mapping crypto errors to streamability verdicts. */
@@ -44,7 +43,6 @@ function resolveKeyIv(crypt: RarCryptInfo, password: string): RarKeyIv {
  * fragment prefix sums onto {@link parent}.
  */
 export class RarAesSource extends CbcSeekableSource {
-  private readonly key: Buffer;
   private readonly parent: RandomAccess;
   private readonly fragments: DataFragment[];
   private readonly cipherTotal: number;
@@ -57,8 +55,7 @@ export class RarAesSource extends CbcSeekableSource {
     password: string
   ) {
     const resolved = resolveKeyIv(crypt, password);
-    super(plainSize, resolved.iv);
-    this.key = resolved.key;
+    super(plainSize, resolved.iv, resolved.key);
     this.parent = parent;
     this.fragments = fragments;
     this.cipherTotal = fragments.reduce((a, f) => a + f.length, 0);
@@ -102,9 +99,5 @@ export class RarAesSource extends CbcSeekableSource {
       remaining -= n;
     }
     return written;
-  }
-
-  protected decryptBlocks(iv: Buffer, cipher: Buffer): Buffer {
-    return decryptCbc(this.key, iv, cipher);
   }
 }

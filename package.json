@@ -10,7 +10,7 @@
     "metadata": "node scripts/generateMetadata.cjs",
     "update:header-presets": "node scripts/update-header-presets.mjs",
     "gen:env-docs": "pnpm -F docs run gen:env-docs",
-    "build": "pnpm -F core run build && pnpm -F server run build && pnpm -F frontend run build && pnpm -F seanime-extensions run build",
+    "build": "pnpm -F crypto run build && pnpm -F core run build && pnpm -F server run build && pnpm -F frontend run build && pnpm -F seanime-extensions run build",
     "dev": "pnpm -F core -F server -F frontend --parallel dev",
     "docs:build": "pnpm -F docs run build",
     "docs:dev": "pnpm -F docs run dev",

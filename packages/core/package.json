@@ -11,6 +11,7 @@
   },
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {
+    "@aiostreams/crypto": "workspace:*",
     "@torbox/torbox-api": "github:viren070/torbox-sdk-js#dist",
     "@viren070/parse-torrent-title": "^0.8.6",
     "bcrypt": "^6.0.0",

@@ -116,23 +116,3 @@ export function decryptAesAll(
   return out.subarray(0, outSize);
 }
 
-/**
- * Decrypt a block-aligned region of an AES-256-CBC stream starting at
- * ciphertext block `startBlock`, using `prevBlock` (the preceding 16-byte
- * ciphertext block, or the stream IV for block 0) as the CBC IV. Enables
- * seekable decryption: any 16-byte boundary can be decrypted from the prior
- * block. `ciphertext` must be a multiple of 16 bytes.
- */
-export function decryptAesRegion(
-  key: Buffer,
-  prevBlock: Buffer,
-  ciphertext: Buffer
-): Buffer {
-  const decipher = createDecipheriv('aes-256-cbc', key, prevBlock);
-  decipher.setAutoPadding(false);
-  // With padding off and block-aligned input, update() yields all plaintext
-  // and final() is empty, so the concat (a full extra copy) can be skipped.
-  const out = decipher.update(ciphertext);
-  const fin = decipher.final();
-  return fin.length === 0 ? out : Buffer.concat([out, fin]);
-}

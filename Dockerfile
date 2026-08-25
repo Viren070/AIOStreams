@@ -26,6 +26,7 @@ COPY packages/server/package*.json ./packages/server/
 COPY packages/core/package*.json ./packages/core/
 COPY packages/frontend/package*.json ./packages/frontend/
 COPY packages/seanime-extensions/package*.json ./packages/seanime-extensions/
+COPY packages/crypto/package*.json ./packages/crypto/
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY patches ./patches
@@ -40,6 +41,7 @@ COPY packages/server ./packages/server
 COPY packages/core ./packages/core
 COPY packages/frontend ./packages/frontend
 COPY packages/seanime-extensions ./packages/seanime-extensions
+COPY packages/crypto ./packages/crypto
 COPY scripts ./scripts
 COPY resources ./resources
 
@@ -69,6 +71,9 @@ COPY --from=builder /build/patches ./patches
 
 COPY --from=builder /build/packages/core/package.*json ./packages/core/
 COPY --from=builder /build/packages/server/package.*json ./packages/server/
+
+# Loader + built binary; core's node_modules symlink into packages/ resolves it.
+COPY --from=builder /build/packages/crypto ./packages/crypto
 
 COPY --from=builder /build/packages/core/dist ./packages/core/dist
 COPY --from=builder /build/packages/frontend/dist ./packages/frontend/dist
