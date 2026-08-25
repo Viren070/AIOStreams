@@ -897,7 +897,7 @@ const SERVICE_DETAILS: Record<
     id: TORRIN_SERVICE,
     name: 'Torrin',
     shortName: 'TR',
-    knownNames: ['TR', 'TI', 'Torrin'],
+    knownNames: ['TR', 'TI', 'TRN', 'Torrin'],
     signUpText:
       "Don't have an account? [Sign up here](https://torrin.app). Torrin is an open-source debrid service.",
     credentials: [
