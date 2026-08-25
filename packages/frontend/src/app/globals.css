@@ -177,6 +177,9 @@ body {
 html {
   background-color: var(--background);
   color: var(--foreground);
+  /* always reserve the scrollbar's space, so neither a route change nor an
+     overlay's scroll lock can change the viewport width */
+  scrollbar-gutter: stable;
 }
 
 html * {
@@ -244,21 +247,14 @@ h6 {
   display: none !important;
 }
 
-/*body[data-scroll-locked] {*/
-/*    --removed-body-scroll-bar-size: 0 !important;*/
-/*    margin-right: 0 !important;*/
-/*    overflow-y: auto !important;*/
-/*}*/
-
-body[data-scroll-locked] .scroll-locked-offset {
-  padding-right: 10px;
+/* the gutter above is permanent, so react-remove-scroll's own compensation
+   would double up and pull the page left while an overlay is open */
+@supports (scrollbar-gutter: stable) {
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    --removed-body-scroll-bar-size: 0px !important;
+  }
 }
-
-body[data-scroll-locked] .media-page-header-scroll-locked {
-  /*right: 10px;*/
-}
-
-/**/
 
 pre {
   overflow-x: auto;
