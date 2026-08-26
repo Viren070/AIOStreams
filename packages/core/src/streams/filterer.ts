@@ -855,7 +855,12 @@ class StreamFilterer {
         requestedTitleStrings
       );
 
-      const normalisedStreamTitle = normaliseTitle(streamTitle);
+      const animeEntryBareEpisodeAlias =
+        getAnimeEntryBareEpisodeAlias(stream);
+
+      const normalisedStreamTitle = normaliseTitle(
+        animeEntryBareEpisodeAlias ?? streamTitle
+      );
 
       // Single-pass match that also returns the language of the best matching title
       let result: { matched: boolean; language?: string };
@@ -1065,6 +1070,60 @@ class StreamFilterer {
       return overlaps(requestedYearRange[0], requestedYearRange[1]);
     };
 
+    const getAnimeEntryBareEpisodeAlias = (
+      stream: ParsedStream
+    ): string | undefined => {
+      const animeEpisode = context.animeEpisode;
+      const animeEntry = context.animeEntry;
+
+      if (
+        !isAnime ||
+        !animeEntry ||
+        animeEpisode === undefined ||
+        !stream.filename
+      ) {
+        return undefined;
+      }
+
+      // Keep token boundaries while folding punctuation/separators so
+      // bare-episode filenames can be matched conservatively.
+      const normaliseBareEpisodeText = (value: string) =>
+        value
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/&/g, ' and ')
+          .replace(/[^\p{L}\p{N}]+/gu, ' ')
+          .trim();
+
+      const normalisedFilename = normaliseBareEpisodeText(stream.filename);
+      const aliases = [
+        animeEntry.title,
+        ...(animeEntry.synonyms ?? []),
+      ].filter((title): title is string => !!title);
+
+      const matchedAlias = aliases.find((alias) => {
+        const normalisedAlias = normaliseBareEpisodeText(alias);
+        if (!normalisedAlias) return false;
+
+        const escapedAlias = normalisedAlias.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+
+        return new RegExp(
+          `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${animeEpisode}(?:v\\d+)?(?:\\s|$)`,
+          'u'
+        ).test(normalisedFilename);
+      });
+
+      if (!matchedAlias) {
+        return undefined;
+      }
+
+      return matchedAlias;
+    };
+
     const performSeasonEpisodeMatch = (stream: ParsedStream) => {
       const seasonEpisodeMatchingOptions = this.userData.seasonEpisodeMatching;
       if (
@@ -1124,14 +1183,15 @@ class StreamFilterer {
       if (type === 'series' && seasonEpisodeMatchingOptions.strict) {
         if (
           !stream.parsedFile?.seasons?.length &&
-          !stream.parsedFile?.episodes?.length
+          !stream.parsedFile?.episodes?.length &&
+          !getAnimeEntryBareEpisodeAlias(stream)
         ) {
           return false;
         }
 
         if (
-          !stream.parsedFile.seasons?.length &&
-          stream.parsedFile.episodes?.length
+          !stream.parsedFile?.seasons?.length &&
+          stream.parsedFile?.episodes?.length
         ) {
           // assume season is 1 when empty and episode is present in strict mode.
           seasons = [1];

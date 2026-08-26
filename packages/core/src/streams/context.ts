@@ -74,6 +74,9 @@ export class StreamContext {
   public readonly animeEntry: AnimeEntry | null;
   public readonly queryType: string; // 'anime.movie', 'anime.series', 'movie', 'series'
 
+  /** Original episode from a seasonless MAL/Kitsu request before parent-TV enrichment. */
+  public readonly animeEpisode: number | undefined;
+
   // Metadata (fetched from TMDB/TVDB/IMDB)
   private _metadata: ExtendedMetadata | undefined;
   private _metadataPromise: Promise<ExtendedMetadata | undefined> | undefined;
@@ -110,6 +113,7 @@ export class StreamContext {
       isAnime: boolean;
       animeEntry: AnimeEntry | null;
       queryType: string;
+      animeEpisode?: number;
     }
   ) {
     this.type = type;
@@ -119,6 +123,7 @@ export class StreamContext {
     this.isAnime = options.isAnime;
     this.animeEntry = options.animeEntry;
     this.queryType = options.queryType;
+    this.animeEpisode = options.animeEpisode;
   }
 
   /**
@@ -132,6 +137,17 @@ export class StreamContext {
   ): Promise<StreamContext> {
     const start = Date.now();
     const parsedId = IdParser.parse(id, type);
+
+    // Preserve the anime-entry-local episode before enrichment maps a direct
+    // MAL/Kitsu request into the parent TV show's coordinates.
+    const animeEpisode =
+      parsedId &&
+      !parsedId.season &&
+      parsedId.episode &&
+      ['kitsuId', 'malId'].includes(parsedId.type)
+        ? Number(parsedId.episode)
+        : undefined;
+
     let isAnime = id.startsWith('kitsu');
 
     const animeDb = AnimeDatabase.getInstance();
@@ -171,6 +187,7 @@ export class StreamContext {
       isAnime,
       animeEntry,
       queryType,
+      animeEpisode,
     });
   }
 
@@ -302,6 +319,17 @@ export class StreamContext {
               }
             }
           }
+        }
+
+        // A direct MAL/Kitsu request provides an authoritative episode number
+        // within the selected anime entry. Preserve it alongside the parent
+        // absolute coordinate when those numbering systems differ.
+        if (
+          this.animeEntry &&
+          this.animeEpisode !== undefined &&
+          this.animeEpisode !== absoluteEpisode
+        ) {
+          relativeAbsoluteEpisode = this.animeEpisode;
         }
 
         const extendedMetadata: ExtendedMetadata = {
