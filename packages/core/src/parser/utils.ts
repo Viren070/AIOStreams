@@ -146,27 +146,128 @@ export function titleMatchWithLang(
   };
 }
 
+/**
+ * Tags the parser lifts out of a title: the country codes its country handler
+ * knows, and a year.
+ */
+const STRIPPED_TITLE_SUFFIX = /\b(?:19\d{2}|20\d{2}|UK|US|AU|NZ)\b/g;
+
+/**
+ * Long forms a known title spells a tag out as
+ */
+const COUNTRY_TAG_LONG_FORMS: Record<string, string[]> = {
+  US: ['USA'],
+  AU: ['Australia'],
+  NZ: ['New Zealand'],
+};
+
+const SEPARATOR_PATTERNS = [
+  /\s*[\/\|]\s*/,
+  /[\s\.\-\(\[]+a[\s\.]?k[\s\.]?a[\s\.\)\-\]]+/i,
+  /\s*\(([^)]+)\)$/,
+];
+
+/**
+ * The parts of preprocessTitle that depend only on the known titles, Keyed on array identity; every field is filled on first use.
+ */
+interface TitleIndex {
+  normalised?: Set<string>;
+  /** Per SEPARATOR_PATTERNS entry: common enough in the list to not split on. */
+  separatorIsCommon: (boolean | undefined)[];
+}
+
+const titleIndexes = new WeakMap<string[], TitleIndex>();
+
+function getTitleIndex(titles: string[]): TitleIndex {
+  let index = titleIndexes.get(titles);
+  if (!index) {
+    index = { separatorIsCommon: [] };
+    titleIndexes.set(titles, index);
+  }
+  return index;
+}
+
+/**
+ * The country tag or year the parser moved out of the title, if putting it back
+ * names a known title.
+ */
+function strippedTitleSuffix(
+  parsedTitle: string,
+  names: (string | undefined)[],
+  titles: string[],
+  index: TitleIndex
+): string | undefined {
+  const base = normaliseTitle(parsedTitle);
+  if (!base || !titles.length) return undefined;
+
+  const tags = names.flatMap(
+    (name) => name?.match(STRIPPED_TITLE_SUFFIX) ?? []
+  );
+  if (!tags.length) return undefined;
+
+  const known = (index.normalised ??= new Set(titles.map(normaliseTitle)));
+  // A known title already matches the title as parsed, so leave it alone.
+  if (known.has(base)) return undefined;
+
+  for (const tag of tags) {
+    for (const form of [tag, ...(COUNTRY_TAG_LONG_FORMS[tag] ?? [])]) {
+      if (known.has(base + normaliseTitle(form))) return form;
+    }
+  }
+
+  return undefined;
+}
+
+export interface ReconciledName {
+  title?: string;
+  year?: string;
+}
+
+/**
+ * Settles a parsed name against the known titles once, so every consumer reads
+ * the same one. A year that turns out to name the title is not also a release
+ * date, unless the requested item was released that year.
+ */
+export function reconcileParsedName(
+  parsed: ReconciledName,
+  names: (string | undefined)[],
+  titles: string[],
+  requestedYear?: number
+): ReconciledName {
+  const { title, year } = parsed;
+  if (!title) return parsed;
+
+  const suffix = strippedTitleSuffix(
+    title,
+    names,
+    titles,
+    getTitleIndex(titles)
+  );
+  if (!suffix) return parsed;
+
+  return {
+    title: `${title} ${suffix}`,
+    year: suffix === year && requestedYear !== Number(year) ? undefined : year,
+  };
+}
+
 export function preprocessTitle(
   parsedTitle: string,
-  filename: string,
+  names: (string | undefined)[],
   titles: string[]
 ) {
   let preprocessedTitle = parsedTitle;
+  const index = getTitleIndex(titles);
 
-  const separatorPatterns = [
-    /\s*[\/\|]\s*/,
-    /[\s\.\-\(\[]+a[\s\.]?k[\s\.]?a[\s\.\)\-\]]+/i,
-    /\s*\(([^)]+)\)$/,
-  ];
-  for (const pattern of separatorPatterns) {
+  for (const [i, pattern] of SEPARATOR_PATTERNS.entries()) {
     const match = preprocessedTitle.match(pattern);
 
     if (match) {
       // if more than 20% of titles contain the separator pattern, consider it common and do not split
-      const hasExistingTitleWithSeparator =
+      const hasExistingTitleWithSeparator = (index.separatorIsCommon[i] ??=
         titles.filter((title) => pattern.test(title.toLowerCase())).length /
           titles.length >
-        0.2;
+        0.2);
 
       if (!hasExistingTitleWithSeparator) {
         const parts = preprocessedTitle.split(pattern);
@@ -182,15 +283,8 @@ export function preprocessTitle(
     }
   }
 
-  if (
-    titles.some((title) => title.toLowerCase().includes('saga')) &&
-    filename?.toLowerCase().includes('saga') &&
-    !preprocessedTitle.toLowerCase().includes('saga')
-  ) {
-    preprocessedTitle += ' Saga';
-  }
-
-  return preprocessedTitle;
+  const suffix = strippedTitleSuffix(preprocessedTitle, names, titles, index);
+  return suffix ? `${preprocessedTitle} ${suffix}` : preprocessedTitle;
 }
 
 // Collapse digraph transliterations so releases named either way

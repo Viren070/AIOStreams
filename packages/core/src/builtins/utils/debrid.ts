@@ -261,7 +261,6 @@ async function processTorrentsForDebridService(
   const normTitles: Set<string> | null = metadata?.titles?.length
     ? new Set(metadata.titles.map(normaliseTitle))
     : null;
-  const titleCache = new Map<string, string>();
 
   // Filter torrents that pass validation checks
   let filteredFailed = 0,
@@ -284,16 +283,11 @@ async function processTorrentsForDebridService(
     );
 
     if (metadata && parsedTorrent) {
-      const parsedTitleKey = parsedTorrent.title ?? '';
-      let preprocessedTitle = titleCache.get(parsedTitleKey);
-      if (preprocessedTitle === undefined) {
-        preprocessedTitle = preprocessTitle(
-          parsedTitleKey,
-          torrent.title ?? magnetCheckResult?.name ?? '',
-          metadata.titles
-        );
-        titleCache.set(parsedTitleKey, preprocessedTitle);
-      }
+      const preprocessedTitle = preprocessTitle(
+        parsedTorrent.title ?? '',
+        [torrent.title ?? magnetCheckResult?.name],
+        metadata.titles
+      );
       if (torrent.confirmed !== true) {
         if (isCountryWrong(parsedTorrent, metadata)) {
           filteredTitle++;
@@ -652,7 +646,6 @@ async function processNZBsForDebridService(
   const normTitles: Set<string> | null = metadata?.titles?.length
     ? new Set(metadata.titles.map(normaliseTitle))
     : null;
-  const titleCache = new Map<string, string>();
 
   // Filter NZBs that pass validation checks
   const validNZBs: {
@@ -674,16 +667,11 @@ async function processNZBsForDebridService(
     );
 
     if (metadata && parsedNzb) {
-      const parsedTitleKey = parsedNzb.title ?? '';
-      let preprocessedTitle = titleCache.get(parsedTitleKey);
-      if (preprocessedTitle === undefined) {
-        preprocessedTitle = preprocessTitle(
-          parsedTitleKey,
-          nzb.title ?? nzbCheckResult?.name ?? '',
-          metadata.titles
-        );
-        titleCache.set(parsedTitleKey, preprocessedTitle);
-      }
+      const preprocessedTitle = preprocessTitle(
+        parsedNzb.title ?? '',
+        [nzb.title ?? nzbCheckResult?.name],
+        metadata.titles
+      );
       if (nzb.confirmed !== true) {
         if (isCountryWrong(parsedNzb, metadata)) {
           continue;

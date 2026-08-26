@@ -32,7 +32,7 @@ export function isItemMatch(
   const parsed = parseTorrentTitleCached(itemName);
   const preprocessedTitle = preprocessTitle(
     parsed.title ?? '',
-    itemName,
+    [itemName],
     metadata.titles
   );
 

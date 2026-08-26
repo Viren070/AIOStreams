@@ -410,7 +410,7 @@ export async function selectFileInTorrentOrNZB(
   const normTitles: Set<string> | null = metadata?.titles?.length
     ? new Set(metadata.titles.map(normaliseTitle))
     : null;
-  const titleCache = new Map<string, string>();
+  const knownTitles = metadata?.titles ?? [];
   const files = debridDownload.files;
   const maxSize =
     torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
@@ -635,15 +635,11 @@ export async function selectFileInTorrentOrNZB(
 
     // Title matching (third priority)
     if (parsed?.title && (videoExists ? isVideo[index] : true)) {
-      let preprocessed = titleCache.get(parsed.title);
-      if (preprocessed === undefined) {
-        preprocessed = preprocessTitle(
-          parsed.title,
-          torrentOrNZB.title ?? '',
-          metadata?.titles ?? []
-        );
-        titleCache.set(parsed.title, preprocessed);
-      }
+      const preprocessed = preprocessTitle(
+        parsed.title,
+        [file.name, torrentOrNZB.title],
+        knownTitles
+      );
       const titleMatches =
         normTitles === null
           ? true
