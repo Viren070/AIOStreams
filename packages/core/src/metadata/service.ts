@@ -45,6 +45,24 @@ export interface MetadataServiceConfig {
   tvdbApiKey?: string;
 }
 
+/**
+ * TVDB and Skyhook use the resolved provider-facing numbering when a title
+ * match has reconciled different TMDB and TVDB season partitions.
+ */
+export function getProviderEpisodeNumbers(
+  season: string | number,
+  episode: string | number,
+  episodeFacts?: Pick<
+    EpisodeResolution,
+    'resolvedSeasonNumber' | 'resolvedEpisodeNumber'
+  >
+): { seasonNumber: number; episodeNumber: number } {
+  return {
+    seasonNumber: episodeFacts?.resolvedSeasonNumber ?? Number(season),
+    episodeNumber: episodeFacts?.resolvedEpisodeNumber ?? Number(episode),
+  };
+}
+
 export class MetadataService {
   private readonly lock: DistributedLock;
   private readonly config: MetadataServiceConfig;
@@ -593,9 +611,11 @@ export class MetadataService {
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
             if (type === 'series' && id.season && id.episode) {
-              const seasonNumber =
-                episodeFacts?.resolvedSeasonNumber ?? Number(id.season);
-              const episodeNumber = Number(id.episode);
+              const { seasonNumber, episodeNumber } = getProviderEpisodeNumbers(
+                id.season,
+                id.episode,
+                episodeFacts
+              );
               const yearOf = (date?: string | null) => {
                 if (!date) return undefined;
                 const year = new Date(date).getFullYear();

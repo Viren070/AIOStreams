@@ -31,9 +31,7 @@ export interface EpisodeResolverInput {
   seasons?: SeasonRecord[];
   cinemetaVideos?: CinemetaVideo[];
   /** Returns the episodes of a TVDB season (default order), or undefined when unavailable. */
-  fetchTvdbSeasonEpisodes?: (
-    seasonNumber: number
-  ) => Promise<
+  fetchTvdbSeasonEpisodes?: (seasonNumber: number) => Promise<
     | {
         number: number;
         aired: string | null;
@@ -60,6 +58,12 @@ export interface EpisodeResolution {
   /** Episode number in the resolved season when title matching changes schemes. */
   resolvedEpisodeNumber?: number;
   resolvedSeasonFirstEpisode?: number;
+}
+
+interface EpisodeTitleMatch {
+  seasonNumber: number;
+  episodeNumber: number;
+  aired?: string | null;
 }
 
 /**
@@ -150,7 +154,11 @@ export async function resolveEpisodeFacts(
   // (TMDB), so do not use it as the upper bound for a TVDB title lookup.
   // The conventional TVDB range keeps this rare fallback bounded while
   // allowing a shorter TMDB list to resolve a later TVDB season.
-  if (!input.isAnime && input.fetchTmdbEpisode && input.fetchTvdbSeasonEpisodes) {
+  if (
+    !input.isAnime &&
+    input.fetchTmdbEpisode &&
+    input.fetchTvdbSeasonEpisodes
+  ) {
     try {
       const tmdbEpisode = await input.fetchTmdbEpisode(season, episode);
       const tmdbTitles = new Set(
@@ -160,27 +168,61 @@ export async function resolveEpisodeFacts(
       );
       if (tmdbTitles.size) {
         const directEpisodes = await input.fetchTvdbSeasonEpisodes(season);
-        const directEpisode = directEpisodes?.find((item) => item.number === episode);
+        const directEpisode = directEpisodes?.find(
+          (item) => item.number === episode
+        );
         const directMatches = directEpisode?.name
           ? tmdbTitles.has(normaliseEpisodeTitle(directEpisode.name))
           : false;
         if (!directMatches) {
           const candidateSeasonNumbers = [
             ...new Set([
+              // TVDB occasionally classifies an episode from a regular TMDB
+              // season as a special. Include Season 0 in the title fallback.
+              0,
               ...nonSpecialSeasons.map((item) => item.season_number),
               ...Array.from({ length: 40 }, (_, index) => index + 1),
             ]),
           ];
+          const titleMatches = new Map<string, EpisodeTitleMatch>();
           for (const candidateSeasonNumber of candidateSeasonNumbers) {
-            const episodes = await input.fetchTvdbSeasonEpisodes(candidateSeasonNumber);
-            const match = episodes?.find(
-              (item) => item.name && tmdbTitles.has(normaliseEpisodeTitle(item.name))
+            const episodes = await input.fetchTvdbSeasonEpisodes(
+              candidateSeasonNumber
             );
-            if (match) {
-              resolution.resolvedSeasonNumber = candidateSeasonNumber;
-              resolution.resolvedEpisodeNumber = match.number;
-              break;
+            for (const candidate of episodes ?? []) {
+              if (
+                candidate.name &&
+                tmdbTitles.has(normaliseEpisodeTitle(candidate.name))
+              ) {
+                const match: EpisodeTitleMatch = {
+                  seasonNumber: candidateSeasonNumber,
+                  episodeNumber: candidate.number,
+                  aired: candidate.aired,
+                };
+                titleMatches.set(
+                  `${match.seasonNumber}:${match.episodeNumber}`,
+                  match
+                );
+              }
             }
+          }
+
+          const matches = [...titleMatches.values()];
+          const tmdbAirDate = tmdbEpisode?.airDate;
+          const dateMatches = tmdbAirDate
+            ? matches.filter((match) =>
+                sameCalendarDate(match.aired, tmdbAirDate)
+              )
+            : [];
+          const resolvedMatch =
+            matches.length === 1
+              ? matches[0]
+              : dateMatches.length === 1
+                ? dateMatches[0]
+                : undefined;
+          if (resolvedMatch) {
+            resolution.resolvedSeasonNumber = resolvedMatch.seasonNumber;
+            resolution.resolvedEpisodeNumber = resolvedMatch.episodeNumber;
           }
         }
       }
@@ -256,4 +298,11 @@ function normaliseEpisodeTitle(title: string): string {
     .replace(/[\u0027\u2018\u2019]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+function sameCalendarDate(
+  firstAired: string | null | undefined,
+  tmdbAirDate: string
+): boolean {
+  return !!firstAired && firstAired.slice(0, 10) === tmdbAirDate.slice(0, 10);
 }
