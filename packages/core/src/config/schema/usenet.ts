@@ -43,6 +43,13 @@ export type PerformanceProfile = (typeof PERFORMANCE_PROFILE_NAMES)[number];
 const HIDDEN = { hidden: true } as const;
 
 /**
+ * Read-ahead ceiling: past ~2x the connection count it only buys buffer
+ * depth, at ~3x prefetch x segment size of memory per stream and a full
+ * re-fetch of it on every seek.
+ */
+const MAX_PREFETCH_SEGMENTS = 256;
+
+/**
  * A single NNTP provider/account. Mirrors the engine's `ProviderConfig`
  * (packages/core/src/usenet/types.ts). Stored encrypted at rest because the
  * `providers` field is marked `secret` (passwords live here).
@@ -150,17 +157,21 @@ export const usenetSchema = {
     ui: HIDDEN,
   },
   prefetchSegments: {
-    schema: positiveInt,
+    schema: positiveInt.refine((n) => n <= MAX_PREFETCH_SEGMENTS, {
+      message: `Expected at most ${MAX_PREFETCH_SEGMENTS}.`,
+    }),
     default: 32,
     label: 'Read-ahead (segments)',
     description:
       'How many pieces of the file each stream downloads ahead of the ' +
-      'current playback position. Higher values give faster, smoother ' +
-      'streaming on a good connection, but use more memory per stream. ',
+      'current playback position, up to ' +
+      MAX_PREFETCH_SEGMENTS +
+      '. Higher values ride out provider stalls better, but use more memory ' +
+      'per stream and re-fetch the whole read-ahead on every seek.',
     env: 'USENET_PREFETCH_SEGMENTS',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
+    ui: { ...HIDDEN, min: 1, max: MAX_PREFETCH_SEGMENTS },
   },
   streamingPriority: {
     schema: unitInterval,
