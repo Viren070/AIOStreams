@@ -611,6 +611,10 @@ export class MetadataService {
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
             if (type === 'series' && id.season && id.episode) {
+              // Cinemeta describes the request as it was originally made.
+              // Its videos must not be queried using TVDB-facing remaps.
+              const cinemetaSeason = Number(id.season);
+              const cinemetaEpisode = Number(id.episode);
               const { seasonNumber, episodeNumber } = getProviderEpisodeNumbers(
                 id.season,
                 id.episode,
@@ -697,7 +701,7 @@ export class MetadataService {
               }
               if (!seasonYear && cinemetaVideos?.length) {
                 for (const video of cinemetaVideos) {
-                  if (video.season !== seasonNumber || !video.released)
+                  if (video.season !== cinemetaSeason || !video.released)
                     continue;
                   const year = yearOf(video.released);
                   if (year && (seasonYear === undefined || year < seasonYear)) {
@@ -713,7 +717,7 @@ export class MetadataService {
               // request was made in says they mean.
               const cinemetaReleased = cinemetaVideos?.find(
                 (v) =>
-                  v.season === Number(id.season) && v.episode === episodeNumber
+                  v.season === cinemetaSeason && v.episode === cinemetaEpisode
               )?.released;
               const referenceAirDate =
                 // the request's own provider is authoritative
