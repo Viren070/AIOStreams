@@ -844,22 +844,23 @@ class StreamFilterer {
         return true;
       }
 
-      if (!streamTitle || !stream.filename) {
-        // only filter out movies without a year as series results usually don't include a year
-        return false;
-      }
-
-      streamTitle = preprocessTitle(
-        streamTitle,
-        [stream.filename, stream.folderName],
-        requestedTitleStrings
-      );
-
       const animeEntryBareEpisodeAlias =
         getAnimeEntryBareEpisodeAlias(stream);
 
+      if ((!streamTitle || !stream.filename) && !animeEntryBareEpisodeAlias) {
+        return false;
+      }
+
+      if (streamTitle) {
+        streamTitle = preprocessTitle(
+          streamTitle,
+          [stream.filename, stream.folderName],
+          requestedTitleStrings
+        );
+      }
+
       const normalisedStreamTitle = normaliseTitle(
-        animeEntryBareEpisodeAlias ?? streamTitle
+        animeEntryBareEpisodeAlias ?? streamTitle!
       );
 
       // Single-pass match that also returns the language of the best matching title
@@ -1085,8 +1086,6 @@ class StreamFilterer {
         return undefined;
       }
 
-      // Keep token boundaries while folding punctuation/separators so
-      // bare-episode filenames can be matched conservatively.
       const normaliseBareEpisodeText = (value: string) =>
         value
           .normalize('NFKD')
@@ -1096,17 +1095,37 @@ class StreamFilterer {
           .replace(/[^\p{L}\p{N}]+/gu, ' ')
           .trim();
 
-      const normalisedReleaseText = normaliseBareEpisodeText(
-       [stream.folderName, stream.filename]
-         .filter((value): value is string => !!value)
-         .join(' ')
-      );
       const aliases = [
         animeEntry.title,
         ...(animeEntry.synonyms ?? []),
       ].filter((title): title is string => !!title);
 
-      const matchedAlias = aliases.find((alias) => {
+      const findRequestedAlias = (value: string) =>
+        aliases.find((alias) => {
+          const normalisedAlias = normaliseBareEpisodeText(alias);
+          if (!normalisedAlias) return false;
+
+          const escapedAlias = normalisedAlias.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&'
+          );
+
+          return new RegExp(
+            `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${animeEpisode}(?:v\\d+)?(?:\\s|$)`,
+            'u'
+          ).test(value);
+        });
+
+      const normalisedFilename = stream.filename
+        ? normaliseBareEpisodeText(stream.filename)
+        : '';
+
+      const filenameAlias = findRequestedAlias(normalisedFilename);
+      if (filenameAlias) {
+        return filenameAlias;
+      }
+
+      const hasConflictingFilenameEpisode = aliases.some((alias) => {
         const normalisedAlias = normaliseBareEpisodeText(alias);
         if (!normalisedAlias) return false;
 
@@ -1115,17 +1134,25 @@ class StreamFilterer {
           '\\$&'
         );
 
-        return new RegExp(
-          `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${animeEpisode}(?:v\\d+)?(?:\\s|$)`,
+        const match = new RegExp(
+          `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*(\\d+)(?:v\\d+)?(?:\\s|$)`,
           'u'
-        ).test(normalisedReleaseText);
+        ).exec(normalisedFilename);
+
+        return !!match && Number(match[1]) !== animeEpisode;
       });
 
-      if (!matchedAlias) {
+      if (hasConflictingFilenameEpisode) {
         return undefined;
       }
 
-      return matchedAlias;
+      const normalisedReleaseText = normaliseBareEpisodeText(
+        [stream.folderName, stream.filename]
+          .filter((value): value is string => !!value)
+          .join(' ')
+      );
+
+      return findRequestedAlias(normalisedReleaseText);
     };
 
     const performSeasonEpisodeMatch = (stream: ParsedStream) => {
