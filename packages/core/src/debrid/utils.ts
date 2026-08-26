@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import {
   constants,
   createLogger,
@@ -415,6 +415,49 @@ export async function selectFileInTorrentOrNZB(
   const maxSize =
     torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
 
+  const normaliseBareEpisodeText = (value: string) =>
+    value
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+
+  const matchesAnimeEntryRelativeEpisode = (
+    filename: string | undefined,
+    parsed: ParsedResult
+  ): boolean => {
+    const relativeEpisode = metadata?.relativeAbsoluteEpisode;
+    const aliases = metadata?.animeEntryTitles;
+
+    if (
+      !filename ||
+      relativeEpisode === undefined ||
+      !aliases?.length ||
+      parsed.episodes?.length ||
+      parsed.seasons?.length
+    ) {
+      return false;
+    }
+
+    const normalisedFilename = normaliseBareEpisodeText(filename);
+    return aliases.some((alias) => {
+      const normalisedAlias = normaliseBareEpisodeText(alias);
+      if (!normalisedAlias) return false;
+
+      const escapedAlias = normalisedAlias.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&'
+      );
+
+      return new RegExp(
+        `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${relativeEpisode}(?:v\\d+)?(?:\\s|$)`,
+        'u'
+      ).test(normalisedFilename);
+    });
+  };
+
   // Score each file
   const fileScores = [];
   for (let index = 0; index < debridDownload.files.length; index++) {
@@ -510,6 +553,10 @@ export async function selectFileInTorrentOrNZB(
       }
     }
 
+    const matchesBareRelativeEpisode = matchesAnimeEntryRelativeEpisode(
+      file.name,
+      parsed
+    );
     const parsedDate = parsed?.date || undefined;
     if (parsedDate && metadata?.airDates?.length) {
       if (metadata.airDates.includes(parsedDate)) {
@@ -520,6 +567,10 @@ export async function selectFileInTorrentOrNZB(
         score -= 800;
         fileReport.scoreBreakdown.wrongDatePenalty = -800;
       }
+    } else if (matchesBareRelativeEpisode) {
+      score += 400;
+      fileReport.scoreBreakdown.episodeMatchType = 'bareRelativeAbsolute';
+      fileReport.scoreBreakdown.episodeScore = 400;
     } else if (parsed && !isEpisodeWrong(parsed, metadata)) {
       const parsedEpisodesCount = parsed.episodes?.length || 0;
       const parsedHasSeason = parsed.seasons && parsed.seasons.length > 0;
@@ -625,6 +676,7 @@ export async function selectFileInTorrentOrNZB(
       }
     }
     if (
+      !matchesBareRelativeEpisode &&
       !parsed?.episodes?.length &&
       (metadata?.episode || metadata?.absoluteEpisode) &&
       !metadata?.isDateBased
