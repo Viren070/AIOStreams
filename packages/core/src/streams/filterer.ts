@@ -1080,7 +1080,7 @@ class StreamFilterer {
         !isAnime ||
         !animeEntry ||
         animeEpisode === undefined ||
-        !stream.filename
+        (!stream.filename && !stream.folderName)
       ) {
         return undefined;
       }
@@ -1096,7 +1096,11 @@ class StreamFilterer {
           .replace(/[^\p{L}\p{N}]+/gu, ' ')
           .trim();
 
-      const normalisedFilename = normaliseBareEpisodeText(stream.filename);
+      const normalisedReleaseText = normaliseBareEpisodeText(
+       [stream.folderName, stream.filename]
+         .filter((value): value is string => !!value)
+         .join(' ')
+      );
       const aliases = [
         animeEntry.title,
         ...(animeEntry.synonyms ?? []),
@@ -1114,7 +1118,7 @@ class StreamFilterer {
         return new RegExp(
           `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${animeEpisode}(?:v\\d+)?(?:\\s|$)`,
           'u'
-        ).test(normalisedFilename);
+        ).test(normalisedReleaseText);
       });
 
       if (!matchedAlias) {
