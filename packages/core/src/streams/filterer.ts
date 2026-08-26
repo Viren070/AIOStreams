@@ -1086,6 +1086,8 @@ class StreamFilterer {
         return undefined;
       }
 
+      // Keep token boundaries while folding punctuation/separators so
+      // bare-episode filenames can be matched conservatively.
       const normaliseBareEpisodeText = (value: string) =>
         value
           .normalize('NFKD')
@@ -1095,37 +1097,17 @@ class StreamFilterer {
           .replace(/[^\p{L}\p{N}]+/gu, ' ')
           .trim();
 
+      const normalisedReleaseText = normaliseBareEpisodeText(
+        [stream.folderName, stream.filename]
+          .filter((value): value is string => !!value)
+          .join(' ')
+      );
       const aliases = [
         animeEntry.title,
         ...(animeEntry.synonyms ?? []),
       ].filter((title): title is string => !!title);
 
-      const findRequestedAlias = (value: string) =>
-        aliases.find((alias) => {
-          const normalisedAlias = normaliseBareEpisodeText(alias);
-          if (!normalisedAlias) return false;
-
-          const escapedAlias = normalisedAlias.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            '\\$&'
-          );
-
-          return new RegExp(
-            `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${animeEpisode}(?:v\\d+)?(?:\\s|$)`,
-            'u'
-          ).test(value);
-        });
-
-      const normalisedFilename = stream.filename
-        ? normaliseBareEpisodeText(stream.filename)
-        : '';
-
-      const filenameAlias = findRequestedAlias(normalisedFilename);
-      if (filenameAlias) {
-        return filenameAlias;
-      }
-
-      const hasConflictingFilenameEpisode = aliases.some((alias) => {
+      const matchedAlias = aliases.find((alias) => {
         const normalisedAlias = normaliseBareEpisodeText(alias);
         if (!normalisedAlias) return false;
 
@@ -1134,25 +1116,17 @@ class StreamFilterer {
           '\\$&'
         );
 
-        const match = new RegExp(
-          `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*(\\d+)(?:v\\d+)?(?:\\s|$)`,
+        return new RegExp(
+          `(?:^|\\s)${escapedAlias}\\s+(?:e\\s*)?0*${animeEpisode}(?:v\\d+)?(?:\\s|$)`,
           'u'
-        ).exec(normalisedFilename);
-
-        return !!match && Number(match[1]) !== animeEpisode;
+        ).test(normalisedReleaseText);
       });
 
-      if (hasConflictingFilenameEpisode) {
+      if (!matchedAlias) {
         return undefined;
       }
 
-      const normalisedReleaseText = normaliseBareEpisodeText(
-        [stream.folderName, stream.filename]
-          .filter((value): value is string => !!value)
-          .join(' ')
-      );
-
-      return findRequestedAlias(normalisedReleaseText);
+      return matchedAlias;
     };
 
     const performSeasonEpisodeMatch = (stream: ParsedStream) => {
