@@ -6,6 +6,7 @@ import { DataFragment } from '../types.js';
 import { RarCryptInfo } from '../crypto/rar-kdf.js';
 import { LazyFragmentResolver, LazyResolveHooks } from '../lazy-resolver.js';
 import { ArchiveStreamOptions } from '../inner-stream.js';
+import type { SlotBank } from '../../slot-bank.js';
 import {
   InnerDescriptor,
   entrySource,
@@ -198,6 +199,7 @@ export async function rebuildArchiveStream(
     lazyHooks?: LazyResolveHooks;
     /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
     onHole?: ArchiveStreamOptions['onHole'];
+    slotBank?: SlotBank;
   } = {}
 ): Promise<SeekableStream> {
   const password = opts.password ?? '';
@@ -207,6 +209,7 @@ export async function rebuildArchiveStream(
     windowBytes: opts.windowBytes,
     prefetchWindows: opts.prefetchWindows,
     onHole: opts.onHole,
+    slotBank: opts.slotBank,
   };
   const outerVolumes: Volume[] = layout.memberIndices.map((index, i) => ({
     filename: `vol-${index}`,

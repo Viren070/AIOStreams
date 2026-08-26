@@ -104,8 +104,11 @@ class TrackedSeekableStream implements SeekableStream {
     });
   }
 
-  createReadStream(range?: { start?: number; end?: number }): Readable {
-    const out = this.inner.createReadStream(range);
+  createReadStream(
+    range?: { start?: number; end?: number },
+    signal?: AbortSignal
+  ): Readable {
+    const out = this.inner.createReadStream(range, signal);
     const id = this.stats.streamOpened({
       nzbHash: this.nzbHash,
       filename: this.inner.filename,

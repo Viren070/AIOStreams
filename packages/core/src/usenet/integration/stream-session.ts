@@ -1,4 +1,4 @@
-import { Readable, addAbortSignal } from 'node:stream';
+import { Readable } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { createLogger } from '../../logging/logger.js';
 import { DebridError } from '../../debrid/base.js';
@@ -732,7 +732,7 @@ export async function openNativeUsenetStream(opts: {
   const end = Math.min(size, opts.end ?? size);
   handle.setInfo({ size, filename });
 
-  let stream = session.stream.createReadStream({ start, end });
+  let stream = session.stream.createReadStream({ start, end }, opts.signal);
   if (session.matroska && appConfig.usenet.matroskaHoleFill) {
     stream = wrapMatroskaHoleFill(stream, {
       startOffset: start,
@@ -742,7 +742,6 @@ export async function openNativeUsenetStream(opts: {
       nzbHash: session.hash,
     });
   }
-  if (opts.signal) addAbortSignal(opts.signal, stream);
   // Intercept push rather than listening for 'data', which would flip the
   // stream into flowing mode before the response attaches and lose chunks.
   const push = stream.push.bind(stream);

@@ -5,6 +5,7 @@ import { ArchiveKind, archiveKindOf } from '../archive-volume.js';
 import { ArchiveEntry } from '../types.js';
 import { NotStreamableError } from '../errors.js';
 import { ArchiveStreamOptions } from '../inner-stream.js';
+import type { SlotBank } from '../../slot-bank.js';
 import { entrySource } from './descriptor.js';
 import { FileOpener } from './layout.js';
 import {
@@ -41,6 +42,7 @@ export interface OpenInnerOptions {
   prefetchWindows?: number;
   /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
   onHole?: ArchiveStreamOptions['onHole'];
+  slotBank?: SlotBank;
 }
 
 /** Build the playback tuning passed to the final inner {@link ArchiveInnerStream}. */
@@ -50,6 +52,7 @@ function streamOptsFrom(opts: OpenInnerOptions): ArchiveStreamOptions {
     windowBytes: opts.windowBytes,
     prefetchWindows: opts.prefetchWindows,
     onHole: opts.onHole,
+    slotBank: opts.slotBank,
   };
 }
 

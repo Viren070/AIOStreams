@@ -7,6 +7,7 @@ import {
   ParallelRangeStream,
   type ParallelRangeStreamOptions,
 } from './range-stream.js';
+import type { SlotBank } from '../slot-bank.js';
 
 /** Default read window: roughly one NZB segment, so a window ≈ one fetch. */
 const DEFAULT_WINDOW_BYTES = 1 << 20; // 1 MiB
@@ -25,6 +26,7 @@ export interface ArchiveStreamOptions {
   prefetchWindows?: number;
   /** Hole (all-providers 430) pad-vs-fail hook for the final range stream. */
   onHole?: ParallelRangeStreamOptions['onHole'];
+  slotBank?: SlotBank;
 }
 
 /**
@@ -40,6 +42,7 @@ export class ArchiveInnerStream implements SeekableStream {
   private readonly concurrency: number;
   private readonly prefetchWindows: number;
   private readonly onHole?: ParallelRangeStreamOptions['onHole'];
+  private readonly slotBank?: SlotBank;
 
   constructor(
     private source: RandomAccess,
@@ -74,6 +77,7 @@ export class ArchiveInnerStream implements SeekableStream {
       streamOpts.prefetchWindows ?? DEFAULT_PREFETCH_WINDOWS
     );
     this.onHole = streamOpts.onHole;
+    this.slotBank = streamOpts.slotBank;
   }
 
   size(): number {
@@ -140,7 +144,10 @@ export class ArchiveInnerStream implements SeekableStream {
     return written;
   }
 
-  createReadStream(range?: { start?: number; end?: number }): Readable {
+  createReadStream(
+    range?: { start?: number; end?: number },
+    signal?: AbortSignal
+  ): Readable {
     const start = Math.max(0, range?.start ?? 0);
     const end = Math.min(this._size, range?.end ?? this._size);
     if (end <= start) return Readable.from([]);
@@ -157,6 +164,8 @@ export class ArchiveInnerStream implements SeekableStream {
       concurrency: this.concurrency,
       maxBufferedBytes: this.prefetchWindows * this.windowBytes,
       onHole: this.onHole,
+      slotBank: this.slotBank,
+      signal,
     });
   }
 }

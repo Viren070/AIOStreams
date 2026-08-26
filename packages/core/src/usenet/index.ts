@@ -1,3 +1,4 @@
+import type { SlotBank } from './pool/slot-bank.js';
 import { readdir, rm } from 'fs/promises';
 import { join } from 'path';
 import type { Readable } from 'node:stream';
@@ -1013,6 +1014,7 @@ export class UsenetEngine {
     concurrency: number;
     windowBytes: number;
     prefetchWindows: number;
+    slotBank: SlotBank;
     onHole?: (info: {
       windowOffset: number;
       windowLength: number;
@@ -1040,6 +1042,7 @@ export class UsenetEngine {
       ),
       windowBytes: ARCHIVE_WINDOW_BYTES,
       prefetchWindows,
+      slotBank: this.pool.slotBank,
       onHole:
         holeHooks && repFileIndex !== undefined
           ? (info) =>

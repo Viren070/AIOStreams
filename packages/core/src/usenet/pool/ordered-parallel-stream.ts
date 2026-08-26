@@ -1,8 +1,9 @@
-import { Readable } from 'node:stream';
+import { Readable, addAbortSignal } from 'node:stream';
 import type { Logger } from '../../logging/logger.js';
 import { definitiveLossKind } from '../nntp/errors.js';
 import type { HoleKind } from '../holes.js';
 import { roundSlotSize } from './slot-size.js';
+import type { SlotBank } from './slot-bank.js';
 
 /**
  * Read-ahead budget floor, in tasks. Keeps the link busy until the first task
@@ -12,12 +13,17 @@ import { roundSlotSize } from './slot-size.js';
 const FLOOR_TASKS = 4;
 
 export interface SlotPoolOptions {
-  /** Hard cap on pooled slots; beyond it acquire() returns throwaway buffers. */
+  /**
+   * Hard cap on pooled slots; beyond it acquire() returns throwaway buffers.
+   * Size it for everything live at once: reorder buffer, in flight, the
+   * Readable's queue and the reclaim allowance.
+   */
   slotCap: number;
   /** Floor for the reclaim allowance's largest-slot term. */
   initialMaxSlot: number;
   /** Bytes still queued inside the owning Readable (its `readableLength`). */
   queuedBytes: () => number;
+  bank?: SlotBank;
 }
 
 /**
@@ -43,11 +49,15 @@ export class SlotPool {
   private pushedFifo: Array<{ idx: number; pushedEnd: number }> = [];
   private pushedBytes = 0;
   private maxSlotBytes: number;
+  private readonly bank?: SlotBank;
+  private destroyed = false;
+  private retireRequested = false;
 
   constructor(opts: SlotPoolOptions) {
     this.slotCap = opts.slotCap;
     this.queuedBytes = opts.queuedBytes;
     this.maxSlotBytes = opts.initialMaxSlot;
+    this.bank = opts.bank;
   }
 
   /** Check out a slot of at least `need` bytes for task `idx`. */
@@ -65,24 +75,32 @@ export class SlotPool {
     if (best >= 0) {
       buf = this.free.splice(best, 1)[0];
     } else {
-      if (this.free.pop()) this.allocated--;
+      const dropped = this.free.pop();
+      if (dropped) {
+        this.allocated--;
+        this.bank?.give(dropped);
+      }
       if (this.allocated >= this.slotCap) {
         return Buffer.allocUnsafe(need);
       }
       this.allocated++;
-      buf = Buffer.allocUnsafe(size);
+      buf = this.bank?.take(size) ?? Buffer.allocUnsafe(size);
     }
     if (buf.length > this.maxSlotBytes) this.maxSlotBytes = buf.length;
     this.live.set(idx, buf);
     return buf;
   }
 
-  /** Return `idx`'s pooled slot to the free list (no-op for throwaways). */
+  /**
+   * Return `idx`'s pooled slot to the free list, or to the bank once the
+   * stream is destroyed (no-op for throwaways).
+   */
   release(idx: number): void {
     const slot = this.live.get(idx);
     if (slot) {
       this.live.delete(idx);
-      this.free.push(slot);
+      if (this.destroyed) this.bank?.give(slot);
+      else this.free.push(slot);
     }
   }
 
@@ -114,12 +132,30 @@ export class SlotPool {
   }
 
   /**
-   * Drop all bookkeeping on stream destroy; a task settling later still holds
-   * its own slot reference and is dropped by the stream's destroyed guard.
+   * Stream destroy. Only slots nothing can still reference are banked now:
+   * the free list and `unemitted` completed chunks. In-flight slots follow
+   * when their task settles ({@link release}), pushed chunks when the
+   * consumer is done ({@link retire})
    */
-  clear(): void {
+  destroy(unemitted: Iterable<number>): void {
+    this.destroyed = true;
+    for (const slot of this.free) this.bank?.give(slot);
     this.free = [];
-    this.live.clear();
+    for (const idx of unemitted) this.release(idx);
+    if (this.retireRequested) this.retire();
+  }
+
+  /**
+   * The consumer holds no pushed chunk any more. Pending socket writes may
+   * still read a pushed slot until its response has closed, so this is the
+   * only safe point to recycle them.
+   */
+  retire(): void {
+    if (!this.destroyed) {
+      this.retireRequested = true;
+      return;
+    }
+    for (const { idx } of this.pushedFifo) this.release(idx);
     this.pushedFifo = [];
   }
 
@@ -148,6 +184,9 @@ export interface OrderedParallelStreamOptions {
   taskBytes: number;
   /** Subclass logger so log scopes stay per stream kind. */
   logger: Logger;
+  slotBank?: SlotBank;
+  /** See SeekableStream.createReadStream. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -192,7 +231,14 @@ export abstract class OrderedParallelStream extends Readable {
       slotCap: opts.slotCap,
       initialMaxSlot: opts.initialMaxSlot,
       queuedBytes: () => this.readableLength,
+      bank: opts.slotBank,
     });
+    if (opts.signal) {
+      addAbortSignal(opts.signal, this);
+      opts.signal.addEventListener('abort', () => this.slots.retire(), {
+        once: true,
+      });
+    }
   }
 
   /**
@@ -224,7 +270,10 @@ export abstract class OrderedParallelStream extends Readable {
   protected onEnd(): void {}
 
   protected completeTask(idx: number, body: Buffer): void {
-    if (this.destroyedFlag || this.ended) return;
+    if (this.destroyedFlag || this.ended) {
+      this.slots.release(idx);
+      return;
+    }
     this.inflight--;
     this.buffered.set(idx, body);
     this.bufferedBytes += body.length;
@@ -233,7 +282,10 @@ export abstract class OrderedParallelStream extends Readable {
   }
 
   protected failTask(idx: number, err: unknown): void {
-    if (this.destroyedFlag || this.ended) return;
+    if (this.destroyedFlag || this.ended) {
+      this.slots.release(idx);
+      return;
+    }
     this.inflight--;
     if (this.shouldIgnoreTaskError(err)) return;
     this.logger.debug(
@@ -289,9 +341,9 @@ export abstract class OrderedParallelStream extends Readable {
   override _destroy(err: Error | null, cb: (e?: Error | null) => void): void {
     this.destroyedFlag = true;
     this.onDestroy();
+    this.slots.destroy(this.buffered.keys());
     this.buffered.clear();
     this.bufferedBytes = 0;
-    this.slots.clear();
     cb(err);
   }
 

@@ -3,6 +3,7 @@ import { MultiProviderPool } from './multi-provider-pool.js';
 import { OrderedParallelStream } from './ordered-parallel-stream.js';
 import { CommandPriority, NzbSegmentRef } from '../types.js';
 import type { HoleDecision, HoleKind } from '../holes.js';
+import type { SlotBank } from './slot-bank.js';
 
 const logger = createLogger('usenet/segments');
 
@@ -20,6 +21,7 @@ export interface SegmentsStreamOptions {
   /** Maximum number of (post-skip) bytes to emit, then EOF. */
   limitBytes?: number;
   priority?: CommandPriority;
+  /** See OrderedParallelStreamOptions.signal. */
   signal?: AbortSignal;
   /**
    * Exact decoded size of task `idx` (LOCAL index within `segments`), or
@@ -41,6 +43,7 @@ export interface SegmentsStreamOptions {
   knownHoles?: ReadonlySet<number>;
   /** See OrderedParallelStreamOptions.taskBytes. */
   taskBytes: number;
+  slotBank?: SlotBank;
 }
 
 /**
@@ -54,12 +57,10 @@ export class SegmentsStream extends OrderedParallelStream {
   private segments: NzbSegmentRef[];
   private nzbHash: string;
   private priority: CommandPriority;
-  private signal?: AbortSignal;
 
   private skipRemaining: number;
   private limitRemaining: number;
   private abortController = new AbortController();
-  private onExternalAbort?: () => void;
   private sizeForSegment?: (idx: number) => number | undefined;
   private onHole?: (idx: number, bytes: number, kind: HoleKind) => HoleDecision;
   private knownHoles?: ReadonlySet<number>;
@@ -72,30 +73,21 @@ export class SegmentsStream extends OrderedParallelStream {
       maxConcurrency: maxWorkers,
       taskBytes: opts.taskBytes,
       maxBufferedBytes: Math.max(1, opts.bufferSizeBytes),
-      slotCap: 2 * maxWorkers + 16,
+      slotCap: 3 * maxWorkers + 16,
       initialMaxSlot: 1 << 20,
       logger,
+      slotBank: opts.slotBank,
+      signal: opts.signal,
     });
     this.pool = opts.pool;
     this.segments = opts.segments;
     this.nzbHash = opts.nzbHash;
     this.priority = opts.priority ?? CommandPriority.High;
-    this.signal = opts.signal;
     this.skipRemaining = opts.skipBytes ?? 0;
     this.limitRemaining = opts.limitBytes ?? Number.POSITIVE_INFINITY;
     this.sizeForSegment = opts.sizeForSegment;
     this.onHole = opts.onHole;
     this.knownHoles = opts.knownHoles;
-
-    if (this.signal) {
-      if (this.signal.aborted) this.abortController.abort();
-      else {
-        this.onExternalAbort = () => this.abortController.abort();
-        this.signal.addEventListener('abort', this.onExternalAbort, {
-          once: true,
-        });
-      }
-    }
   }
 
   protected startTask(idx: number): void {
@@ -179,9 +171,6 @@ export class SegmentsStream extends OrderedParallelStream {
 
   protected override onDestroy(): void {
     this.abortController.abort();
-    if (this.signal && this.onExternalAbort) {
-      this.signal.removeEventListener('abort', this.onExternalAbort);
-    }
   }
 
   /**

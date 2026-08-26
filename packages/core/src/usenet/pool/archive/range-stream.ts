@@ -1,6 +1,7 @@
 import { createLogger } from '../../../logging/logger.js';
 import { OrderedParallelStream } from '../ordered-parallel-stream.js';
 import type { HoleDecision, HoleKind } from '../../holes.js';
+import type { SlotBank } from '../slot-bank.js';
 
 const logger = createLogger('usenet/archive-range');
 
@@ -31,6 +32,9 @@ export interface ParallelRangeStreamOptions {
   concurrency: number;
   /** Soft cap on buffered (fetched-but-not-yet-emitted) bytes (read-ahead). */
   maxBufferedBytes: number;
+  slotBank?: SlotBank;
+  /** See OrderedParallelStreamOptions.signal. */
+  signal?: AbortSignal;
   /**
    * Decision hook for a window whose read died on a definitive all-providers
    * verdict: `pad` zero-fills the window and keeps streaming, `fail` destroys
@@ -89,9 +93,11 @@ export class ParallelRangeStream extends OrderedParallelStream {
       maxConcurrency: concurrency,
       taskBytes: windowBytes,
       maxBufferedBytes,
-      slotCap: prefetchWindows + concurrency + 16,
+      slotCap: 2 * prefetchWindows + concurrency + 16,
       initialMaxSlot: windowBytes,
       logger,
+      slotBank: opts.slotBank,
+      signal: opts.signal,
     });
     this.readAtIntoFn = opts.readAtInto;
     this.start = start;

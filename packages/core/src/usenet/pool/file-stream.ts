@@ -1,4 +1,4 @@
-import { Readable } from 'node:stream';
+import { Readable, addAbortSignal } from 'node:stream';
 import { createLogger } from '../../logging/logger.js';
 import { MultiProviderPool } from './multi-provider-pool.js';
 import { SegmentsStream } from './segments-stream.js';
@@ -31,7 +31,10 @@ export interface SeekableStream {
   readonly filename?: string;
   size(): number;
   open(signal?: AbortSignal): Promise<void>;
-  createReadStream(range?: { start?: number; end?: number }): Readable;
+  createReadStream(
+    range?: { start?: number; end?: number },
+    signal?: AbortSignal
+  ): Readable;
   readAt(offset: number, length: number): Promise<Buffer>;
   /**
    * Zero-alloc variant of {@link readAt}: write into `dst` at `dstOffset`,
@@ -350,7 +353,10 @@ export class FileStream implements SeekableStream {
   /**
    * Serve a half-open byte range [start, end). `end` defaults to file size.
    */
-  createReadStream(range?: { start?: number; end?: number }): Readable {
+  createReadStream(
+    range?: { start?: number; end?: number },
+    signal?: AbortSignal
+  ): Readable {
     if (!this.opened) {
       throw new Error('FileStream.open() must be called before reading');
     }
@@ -367,10 +373,14 @@ export class FileStream implements SeekableStream {
     }
 
     // Find the segment containing `start`.
-    return this.openRangeStream(start, length);
+    return this.openRangeStream(start, length, signal);
   }
 
-  private openRangeStream(start: number, length: number): Readable {
+  private openRangeStream(
+    start: number,
+    length: number,
+    signal?: AbortSignal
+  ): Readable {
     // Deferred passthrough: do the (async) interpolation search, then wire up a
     // SegmentsStream. We use a PassThrough-like Readable that begins emitting
     // once the start segment is located.
@@ -379,6 +389,7 @@ export class FileStream implements SeekableStream {
         /* pushed by the inner stream */
       },
     });
+    if (signal) addAbortSignal(signal, out);
 
     const requestedAt = Date.now();
     let firstByteSeen = false;
@@ -433,6 +444,8 @@ export class FileStream implements SeekableStream {
           skipBytes: start - segmentStartByte,
           limitBytes: length,
           priority: CommandPriority.High,
+          slotBank: this.pool.slotBank,
+          signal,
         });
         inner.on('data', (chunk: Buffer) => {
           if (!firstByteSeen) {
