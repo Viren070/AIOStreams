@@ -239,6 +239,25 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    globalTimeout: {
+      schema: positiveInt,
+      default: 10000,
+      label: 'Debrid global timeout (ms)',
+      description: 'Timeout for most debrid API calls (lookups/status checks).',
+      env: 'BUILTIN_DEBRID_GLOBAL_TIMEOUT',
+      requiresRestart: false,
+      secret: false,
+    },
+    addTimeout: {
+      schema: positiveInt,
+      default: 30000,
+      label: 'Debrid add timeout (ms)',
+      description:
+        'Timeout for the slower debrid "add" calls (e.g. adding a magnet or NZB for download).',
+      env: 'BUILTIN_DEBRID_ADD_TIMEOUT',
+      requiresRestart: false,
+      secret: false,
+    },
     downloadPollInterval: {
       schema: serviceTimeMap,
       default: {

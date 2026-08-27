@@ -25,6 +25,9 @@ import {
   TorrentDebridService,
   UsenetDebridService,
   DebridFailureCache,
+  debridGlobalTimeoutMs,
+  debridAddTimeoutMs,
+  timeoutError,
 } from './base.js';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../parser/title.js';
@@ -113,8 +116,8 @@ export class StremThruService
       maxWaitTime: config.cacheAndPlayOptions?.maxWaitTime ?? 120000,
     };
     const timeouts = {
-      add: 30000,
-      global: 10000,
+      add: debridAddTimeoutMs(),
+      global: debridGlobalTimeoutMs(),
     };
     this.stremthru = new StremThru({
       baseUrl: config.stremthru.baseUrl,
@@ -1034,13 +1037,10 @@ export class StremThruService
         }
       }
       if (magnetDownload.status !== 'downloaded') {
-        throw new DebridError(`Timed out waiting for magnet to download`, {
-          statusCode: 408,
-          statusText: `Timed out waiting for magnet to download`,
-          code: 'TIMEOUT',
-          headers: {},
-          body: magnetDownload,
-        });
+        throw timeoutError(
+          'Timed out waiting for magnet to download',
+          magnetDownload
+        );
       }
     }
 
@@ -1302,15 +1302,9 @@ export class StremThruService
         }
       }
       if (usenetDownload.status !== 'downloaded') {
-        throw new DebridError(
-          `Timed out waiting for usenet download to complete`,
-          {
-            statusCode: 408,
-            statusText: `Timed out waiting for usenet download to complete`,
-            code: 'TIMEOUT',
-            headers: {},
-            body: usenetDownload,
-          }
+        throw timeoutError(
+          'Timed out waiting for usenet download to complete',
+          usenetDownload
         );
       }
     }

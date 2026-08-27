@@ -3,6 +3,52 @@ import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
 import { registerLockErrorClass } from '../utils/lock-error-registry.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
+export function debridGlobalTimeoutMs(): number {
+  return appConfig.builtins.debrid.globalTimeout;
+}
+
+export function debridAddTimeoutMs(): number {
+  return appConfig.builtins.debrid.addTimeout;
+}
+
+export function timeoutError(
+  message: string,
+  body: unknown = null,
+  cause?: unknown
+): DebridError {
+  return new DebridError(message, {
+    statusCode: 408,
+    statusText: 'Timeout',
+    code: 'TIMEOUT',
+    headers: {},
+    body,
+    type: 'api_error',
+    cause,
+  });
+}
+
+// For SDK clients with no built-in per-call timeout (e.g. Torbox's raw usenet API).
+export function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(timeoutError(`Request timed out after ${ms}ms`)),
+      ms
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+export function isAbortTimeoutError(error: unknown): boolean {
+  if (error instanceof DebridError) {
+    return error.code === 'TIMEOUT';
+  }
+  return (
+    error instanceof Error &&
+    (error.name === 'TimeoutError' || error.name === 'AbortError')
+  );
+}
+
 type DebridErrorCode =
   | 'BAD_GATEWAY'
   | 'BAD_REQUEST'

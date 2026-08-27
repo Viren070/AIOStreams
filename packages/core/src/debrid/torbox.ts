@@ -26,6 +26,10 @@ import {
   UsenetDebridService,
   DebridFailureCache,
   convertStatusCodeToError,
+  debridGlobalTimeoutMs,
+  debridAddTimeoutMs,
+  raceTimeout,
+  timeoutError,
 } from './base.js';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../parser/title.js';
@@ -66,6 +70,9 @@ const TORBOX_ERROR_CODES: Record<string, NonNullable<DebridError['code']>> = {
 };
 
 function convertTorBoxError(error: any): DebridError {
+  if (error instanceof DebridError) {
+    return error;
+  }
   if (typeof error.message === 'string') {
     // The SDK folds the response body into its message as a `Body: {...}` line.
     const body = (() => {
@@ -173,6 +180,10 @@ export class TorboxDebridService
     this.maxWaitTime = options?.maxWaitTime ?? Time.Minute * 2;
     this.torboxApi = new TorboxApi({
       token: config.token,
+      // backstop only, kept strictly above the longest raceTimeout below so
+      // that one always wins the race and keeps the TIMEOUT/408 classification
+      timeoutMs:
+        Math.max(debridGlobalTimeoutMs(), debridAddTimeoutMs()) + Time.Second,
     });
 
     this.stremthru = new StremThruService({
@@ -199,12 +210,18 @@ export class TorboxDebridService
 
   public async removeNzb(nzbId: string): Promise<void> {
     try {
-      await this.torboxApi.usenet.controlUsenetDownload(this.apiVersion, {
-        usenet_id: parseInt(nzbId, 10),
-        operation: 'delete',
-      });
+      await raceTimeout(
+        this.torboxApi.usenet.controlUsenetDownload(this.apiVersion, {
+          usenet_id: parseInt(nzbId, 10),
+          operation: 'delete',
+        }),
+        debridGlobalTimeoutMs()
+      );
       logger.debug(`Removed usenet download ${nzbId} from Torbox`);
     } catch (error: any) {
+      if (error instanceof DebridError) {
+        throw error;
+      }
       throw new DebridError(
         `Failed to remove usenet download: ${error.message}`,
         {
@@ -266,13 +283,13 @@ export class TorboxDebridService
       let newResults: DebridDownload[] = [];
 
       try {
-        const result = await this.torboxApi.usenet.getUsenetCachedAvailability(
-          this.apiVersion,
-          {
+        const result = await raceTimeout(
+          this.torboxApi.usenet.getUsenetCachedAvailability(this.apiVersion, {
             hashes: hashesToCheck,
             format: 'list',
             listFiles: 'true',
-          }
+          }),
+          debridGlobalTimeoutMs()
         );
         if (!result.data?.success) {
           throw new DebridError(`Failed to check instant availability`, {
@@ -331,12 +348,12 @@ export class TorboxDebridService
 
   public async addNzb(nzb: string, name: string): Promise<DebridDownload> {
     try {
-      const res = await this.torboxApi.usenet.createUsenetDownload(
-        this.apiVersion,
-        {
+      const res = await raceTimeout(
+        this.torboxApi.usenet.createUsenetDownload(this.apiVersion, {
           link: nzb,
           name,
-        }
+        }),
+        debridAddTimeoutMs()
       );
 
       if (!res.data?.data?.usenetdownloadId) {
@@ -369,10 +386,13 @@ export class TorboxDebridService
   private async _fetchNzbList(id?: string): Promise<DebridDownload[]> {
     let nzbInfo;
     try {
-      nzbInfo = await this.torboxApi.usenet.getUsenetList(this.apiVersion, {
-        id,
-        bypassCache: 'true',
-      });
+      nzbInfo = await raceTimeout(
+        this.torboxApi.usenet.getUsenetList(this.apiVersion, {
+          id,
+          bypassCache: 'true',
+        }),
+        debridGlobalTimeoutMs()
+      );
     } catch (error: any) {
       throw convertTorBoxError(error);
     }
@@ -520,10 +540,13 @@ export class TorboxDebridService
     while (offset < maxItems) {
       let nzbInfo;
       try {
-        nzbInfo = await this.torboxApi.usenet.getUsenetList(this.apiVersion, {
-          limit: limit.toString(),
-          offset: offset.toString(),
-        });
+        nzbInfo = await raceTimeout(
+          this.torboxApi.usenet.getUsenetList(this.apiVersion, {
+            limit: limit.toString(),
+            offset: offset.toString(),
+          }),
+          debridGlobalTimeoutMs()
+        );
       } catch (error: any) {
         throw convertTorBoxError(error);
       }
@@ -638,15 +661,15 @@ export class TorboxDebridService
     fileId?: string,
     clientIp?: string
   ): Promise<string> {
-    const link = await this.torboxApi.usenet.requestDownloadLink(
-      this.apiVersion,
-      {
+    const link = await raceTimeout(
+      this.torboxApi.usenet.requestDownloadLink(this.apiVersion, {
         usenetId: downloadId,
         fileId: fileId,
         userIp: clientIp,
         redirect: 'false',
         token: this.config.token,
-      }
+      }),
+      debridGlobalTimeoutMs()
     );
 
     if (!link.data?.data) {
@@ -873,16 +896,9 @@ export class TorboxDebridService
         }
       }
       if (usenetDownload.status !== 'downloaded') {
-        throw new DebridError(
+        throw timeoutError(
           `Usenet download timed out waiting for completion (status: ${usenetDownload.status})`,
-          {
-            statusCode: 408,
-            statusText: 'Timeout',
-            code: 'TIMEOUT',
-            headers: {},
-            body: usenetDownload,
-            type: 'api_error',
-          }
+          usenetDownload
         );
       }
     }
