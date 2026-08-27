@@ -404,7 +404,21 @@ export class StreamContext {
               seasonNumber !== originalSeason ||
               episodeNumber < fromEpisode
             ) {
-              episodeNumber = fromEpisode + episodeNumber - 1;
+              // Kitsu/MAL requests without an explicit season are enriched
+              // in place before StreamContext is created, so parsedId.episode
+              // may already include the anime entry's external offset. Reparse
+              // the original request id to recover the entry-relative episode
+              // before translating it into TMDB's numbering.
+              const requestParsedId = IdParser.parse(this.id, this.type);
+              const requestEpisode =
+                requestParsedId &&
+                !requestParsedId.season &&
+                requestParsedId.episode &&
+                ['kitsuId', 'malId'].includes(requestParsedId.type)
+                  ? Number(requestParsedId.episode)
+                  : undefined;
+              episodeNumber =
+                fromEpisode + (requestEpisode ?? episodeNumber) - 1;
             }
           }
           logger.debug(
