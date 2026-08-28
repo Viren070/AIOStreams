@@ -51,7 +51,15 @@ const statusInfo = async (): Promise<StatusResponse> => {
         autoRedirect: appConfig.oidc.autoRedirect,
         localLoginEnabled: appConfig.oidc.allowLocalLogin,
       },
-      tmdbApiAvailable: !!appConfig.metadata.tmdb.accessToken,
+      metadata: {
+        tmdb: {
+          accessToken: !!appConfig.metadata.tmdb.accessToken,
+          apiKey: !!appConfig.metadata.tmdb.apiKey,
+        },
+        tvdb: {
+          apiKey: !!appConfig.metadata.tvdb.apiKey,
+        },
+      },
       regexAccess: {
         level: appConfig.userLimits.regex.access,
         ...allowedRegexes,

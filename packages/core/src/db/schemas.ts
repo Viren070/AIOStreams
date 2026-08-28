@@ -1522,7 +1522,10 @@ const StatusResponseSchema = z.object({
     searchApiDisabled: z.boolean(),
     nabApiDisabled: z.boolean(),
     seanimeExtensionVersion: z.string().nullable(),
-    tmdbApiAvailable: z.boolean(),
+    metadata: z.object({
+      tmdb: z.object({ accessToken: z.boolean(), apiKey: z.boolean() }),
+      tvdb: z.object({ apiKey: z.boolean() }),
+    }),
     /** Global analytics master switch (false = no events written anywhere). */
     analyticsEnabled: z.boolean(),
     /** Per-user analytics (configure-page Stats tab) enabled state. */

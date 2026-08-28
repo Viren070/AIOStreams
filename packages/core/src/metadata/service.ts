@@ -140,6 +140,16 @@ export class MetadataService {
             // ids already known without asking a provider
             contributions.request = { tmdbId, tvdbId };
 
+            const tmdbAvailable = !!(
+              this.config.tmdbAccessToken ||
+              this.config.tmdbApiKey ||
+              appConfig.metadata.tmdb.accessToken ||
+              appConfig.metadata.tmdb.apiKey
+            );
+            const tvdbAvailable = !!(
+              this.config.tvdbApiKey || appConfig.metadata.tvdb.apiKey
+            );
+
             // Setup parallel API requests
             const promises = [];
 
@@ -150,7 +160,7 @@ export class MetadataService {
             const parsedIdForTmdb = idForTmdb
               ? IdParser.parse(idForTmdb, type)
               : null;
-            if (parsedIdForTmdb) {
+            if (parsedIdForTmdb && tmdbAvailable) {
               promises.push(
                 (async () => {
                   return new TMDBMetadata({
@@ -170,7 +180,7 @@ export class MetadataService {
             const parsedIdForTvdb = idForTvdb
               ? IdParser.parse(idForTvdb, type)
               : null;
-            if (parsedIdForTvdb) {
+            if (parsedIdForTvdb && tvdbAvailable) {
               promises.push(
                 (async () => {
                   return new TVDBMetadata({
@@ -482,16 +492,6 @@ export class MetadataService {
               }
               return { seasonNumber, episodeNumber };
             };
-
-            const tvdbAvailable = !!(
-              this.config.tvdbApiKey || appConfig.metadata.tvdb.apiKey
-            );
-            const tmdbAvailable = !!(
-              this.config.tmdbAccessToken ||
-              this.config.tmdbApiKey ||
-              appConfig.metadata.tmdb.accessToken ||
-              appConfig.metadata.tmdb.apiKey
-            );
 
             if (
               !merged.nextAirDate &&

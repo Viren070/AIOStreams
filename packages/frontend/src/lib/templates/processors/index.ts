@@ -130,12 +130,30 @@ export const processTemplate = (
     'openposterdbParameters',
   ] as const;
 
+  // The server falls back to these at call time, so an empty value is fine.
+  const instanceProvided: Partial<
+    Record<(typeof topLevelFields)[number], boolean>
+  > = {
+    tmdbApiKey: !!status?.settings?.metadata?.tmdb?.apiKey,
+    tmdbAccessToken: !!status?.settings?.metadata?.tmdb?.accessToken,
+    tvdbApiKey: !!status?.settings?.metadata?.tvdb?.apiKey,
+  };
+
   topLevelFields.forEach((field) => {
     const value = template.config?.[field];
     const placeholder = parsePlaceholder(value);
 
     if (placeholder.isPlaceholder) {
       const detail = constants.TOP_LEVEL_OPTION_DETAILS?.[field];
+      const provided = instanceProvided[field] === true;
+      const description = provided
+        ? [
+            detail?.description,
+            'This instance provides a default. Leave blank to use it, or enter your own to override.',
+          ]
+            .filter(Boolean)
+            .join(' ')
+        : detail?.description;
       // Most top-level fields are API keys/tokens (secret), but a few are plain
       // config values that should not be masked in the template input UI.
       const type: AllowedInputType =
@@ -148,9 +166,9 @@ export const processTemplate = (
         key: `toplevel_${field}`,
         path: field,
         label: detail?.name || field,
-        description: detail?.description,
+        description,
         type,
-        required: placeholder.required,
+        required: placeholder.required && !provided,
         value: userData?.[field] || '',
       });
     }
