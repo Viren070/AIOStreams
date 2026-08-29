@@ -26,6 +26,7 @@ import { AboutHero } from './_components/hero';
 import { GetStartedCard } from './_components/get-started-card';
 import { FeaturedSetups } from './_components/featured-setups';
 import { Resources } from './_components/resources';
+import { InterfaceMode } from './_components/interface-mode';
 import { WhatsNew } from './_components/whats-new';
 import { InstanceUpdatedModal } from './_components/instance-updated-modal';
 import { CustomizeModal } from './_components/customize-modal';
@@ -258,6 +259,8 @@ function Content() {
           docsEntries={docsEntries}
           docsLoading={docsLoading}
         />
+
+        <InterfaceMode />
 
         <Resources
           discordUrl={discordUrl}

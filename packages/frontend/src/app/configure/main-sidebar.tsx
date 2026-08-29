@@ -24,8 +24,6 @@ import {
   BiSearch,
   BiGridAlt,
   BiBarChartAlt2,
-  BiToggleLeft,
-  BiToggleRight,
 } from 'react-icons/bi';
 import { useCommandPalette } from '@/context/command-palette';
 import { useRegisterQuickAction } from '@/context/quick-actions';
