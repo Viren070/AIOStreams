@@ -1,6 +1,7 @@
 import { APIError, ErrorCode } from '../../utils/constants.js';
 import { createLogger } from '../../logging/logger.js';
 import { requestJson, unexpectedResponse } from '../http.js';
+import { addonUrlKey, addonUrlOf, matchInstalled } from '../matching.js';
 import type {
   ConnectResult,
   LinkedAccountPlatform,
@@ -34,16 +35,6 @@ interface StremioError {
 interface StremioEnvelope<T> {
   result?: T | null;
   error?: StremioError | string | null;
-}
-
-/** Matches how Stremio-side tooling compares addon URLs. */
-function urlKey(url: string): string {
-  return url
-    .trim()
-    .replace(/^stremio:\/\//i, 'https://')
-    .replace(/\/manifest\.json$/i, '')
-    .replace(/\/+$/, '')
-    .toLowerCase();
 }
 
 async function call<T>(
@@ -270,29 +261,49 @@ export const stremioPlatform: LinkedAccountPlatform = {
 
     const merged = current.slice();
     const outcomes: PushOutcome[] = [];
+    // URL keys we rewrote or dropped on purpose, and the entries to drop.
+    const claimed = new Set<string>();
+    const dropped = new Set<number>();
 
     for (const { url, manifest } of manifests) {
-      const key = urlKey(url);
-      const index = merged.findIndex(
-        (addon) => urlKey(String(addon.transportUrl ?? '')) === key
+      const { index, staleIndices } = matchInstalled(
+        merged,
+        {
+          url,
+          manifestId: typeof manifest.id === 'string' ? manifest.id : undefined,
+        },
+        (_entry, at) => !dropped.has(at)
       );
 
-      if (index >= 0) {
-        if (merged[index].flags?.protected) {
-          outcomes.push({ url, status: 'unchanged' });
-          continue;
-        }
-        // Stremio caches the manifest it was given, so the entry has to be
-        // rewritten with the current one.
-        merged[index] = { ...merged[index], transportUrl: url, manifest };
-        outcomes.push({ url, status: 'refreshed' });
-      } else {
+      if (index < 0) {
         merged.push({ transportUrl: url, manifest });
         outcomes.push({ url, status: 'installed' });
+        continue;
+      }
+
+      const existing = merged[index];
+      if (existing.flags?.protected) {
+        outcomes.push({ url, status: 'unchanged' });
+        continue;
+      }
+
+      // Stremio caches the manifest it was given, so the entry has to be
+      // rewritten with the current one.
+      claimed.add(addonUrlKey(addonUrlOf(existing)));
+      merged[index] = { ...existing, transportUrl: url, manifest };
+      outcomes.push({ url, status: 'refreshed' });
+
+      // Earlier pushes of this same addon, left behind under a URL it has
+      // since rotated away from. Keeping them shows the user two of it.
+      for (const stale of staleIndices) {
+        if (merged[stale].flags?.protected) continue;
+        claimed.add(addonUrlKey(addonUrlOf(merged[stale])));
+        dropped.add(stale);
       }
     }
 
-    assertSafeReplacement(current, merged);
+    const next = merged.filter((_, index) => !dropped.has(index));
+    assertSafeReplacement(current, next, claimed, dropped.size);
 
     if (outcomes.every((outcome) => outcome.status === 'unchanged')) {
       return { outcomes };
@@ -300,11 +311,11 @@ export const stremioPlatform: LinkedAccountPlatform = {
 
     const written = await call('AddonCollectionSet', {
       authKey,
-      addons: merged,
+      addons: next,
     });
     if (written.error) throw rejected(written.error);
     logger.info(
-      { count: merged.length, pushed: manifests.length },
+      { count: next.length, pushed: manifests.length, removed: dropped.size },
       'pushed manifest to stremio'
     );
     return { outcomes };
@@ -313,13 +324,16 @@ export const stremioPlatform: LinkedAccountPlatform = {
 
 /**
  * `AddonCollectionSet` replaces the whole collection, so a bad read would
- * silently wipe every addon the user has. Refuse anything that loses entries.
+ * silently wipe every addon the user has. Everything that was there has to
+ * still be there, bar the entries we claimed as our own.
  */
 function assertSafeReplacement(
   current: StremioAddon[],
-  next: StremioAddon[]
+  next: StremioAddon[],
+  claimed: ReadonlySet<string>,
+  removed: number
 ): void {
-  if (next.length < current.length) {
+  if (next.length < current.length - removed) {
     throw new APIError(
       ErrorCode.INTERNAL_SERVER_ERROR,
       500,
@@ -327,10 +341,11 @@ function assertSafeReplacement(
     );
   }
   const surviving = new Set(
-    next.map((addon) => urlKey(String(addon.transportUrl ?? '')))
+    next.map((addon) => addonUrlKey(addonUrlOf(addon)))
   );
   for (const addon of current) {
-    if (!surviving.has(urlKey(String(addon.transportUrl ?? '')))) {
+    const key = addonUrlKey(addonUrlOf(addon));
+    if (!surviving.has(key) && !claimed.has(key)) {
       throw new APIError(
         ErrorCode.INTERNAL_SERVER_ERROR,
         500,

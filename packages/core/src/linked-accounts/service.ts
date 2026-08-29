@@ -7,7 +7,11 @@ import { APIError, ErrorCode } from '../utils/constants.js';
 import { createLogger } from '../logging/logger.js';
 import { manifestSetFingerprint } from '../utils/manifest-fingerprint.js';
 import { requestJson } from './http.js';
-import { assertOwnManifestUrls, type OwnManifestUrl } from './manifest-urls.js';
+import {
+  assertOwnManifestUrl,
+  assertOwnManifestUrls,
+  type OwnManifestUrl,
+} from './manifest-urls.js';
 import { getPlatform } from './registry.js';
 import type {
   LinkedAccount,
@@ -101,9 +105,11 @@ export class LinkedAccountService {
         ? undefined
         : {
             ...existing.config,
-            manifestUrls: (
-              await assertOwnManifestUrls(patch.manifestUrls, uuid)
-            ).map((entry) => entry.url),
+            manifestUrls: await keepStoredUrls(
+              await assertOwnManifestUrls(patch.manifestUrls, uuid),
+              existing.config.manifestUrls,
+              uuid
+            ),
           };
 
     const updated = await LinkedAccountRepository.update(uuid, id, {
@@ -200,6 +206,29 @@ export class LinkedAccountService {
     }
     return results;
   }
+}
+
+/**
+ * Keeps the URL already on the row when the incoming one names the same addon.
+ * The configure page rebuilds every URL from the session's encrypted password,
+ * which is minted fresh each time, so an edit that only renames the account
+ * would otherwise hand the platform a URL it has never seen.
+ */
+async function keepStoredUrls(
+  incoming: OwnManifestUrl[],
+  stored: string[],
+  uuid: string
+): Promise<string[]> {
+  const known = new Map<string, string>();
+  for (const url of stored) {
+    try {
+      const entry = await assertOwnManifestUrl(url, uuid);
+      known.set(entry.identity, entry.url);
+    } catch {
+      // A stored URL that no longer validates has nothing worth keeping.
+    }
+  }
+  return incoming.map((entry) => known.get(entry.identity) ?? entry.url);
 }
 
 async function fetchManifests(

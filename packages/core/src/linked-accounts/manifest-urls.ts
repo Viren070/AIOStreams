@@ -17,6 +17,11 @@ export interface OwnManifestUrl {
    * The same manifest with the alias expanded.
    */
   fetchUrl: string;
+  /**
+   * The addon this URL names, with the encrypted password masked out. Two URLs
+   * that differ only by a re-minted password share one.
+   */
+  identity: string;
 }
 
 function baseUrl(): string {
@@ -86,6 +91,7 @@ export async function assertOwnManifestUrl(
     return {
       url,
       fetchUrl: `${base}/stremio/${target.uuid}/${target.encryptedPassword}${variant}/manifest.json${parsed.search}`,
+      identity: `${base}/stremio/u/${decodeURIComponent(alias)}${variant}/manifest.json${parsed.search}`,
     };
   }
 
@@ -96,7 +102,11 @@ export async function assertOwnManifestUrl(
     reject('That manifest URL belongs to a different configuration.');
   }
 
-  return { url, fetchUrl: url };
+  return {
+    url,
+    fetchUrl: url,
+    identity: `${base}/stremio/${pathUuid.toLowerCase()}/*${variant}/manifest.json${parsed.search}`,
+  };
 }
 
 export async function assertOwnManifestUrls(

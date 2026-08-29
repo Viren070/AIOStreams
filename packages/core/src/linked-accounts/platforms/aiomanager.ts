@@ -7,6 +7,7 @@ import {
   requestJson,
   unexpectedResponse,
 } from '../http.js';
+import { addonUrlKey } from '../matching.js';
 import type {
   ConnectResult,
   LinkedAccountPlatform,
@@ -286,7 +287,7 @@ async function reinstall(
 function assertDistinctInAioManager(urls: string[]): void {
   const seen = new Set<string>();
   for (const url of urls) {
-    const key = url.replace(/\?.*$/, '').replace(/\/+$/, '').toLowerCase();
+    const key = addonUrlKey(url.replace(/\?.*$/, ''));
     if (seen.has(key)) {
       throw new APIError(
         ErrorCode.BAD_REQUEST,
