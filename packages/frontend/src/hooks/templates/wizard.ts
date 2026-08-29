@@ -29,6 +29,7 @@ import {
   filterUnavailablePresets,
   applyInputValue,
   getVisibleOptions,
+  pruneStaleInputValues,
 } from '@/lib/templates/processors';
 import { UseValidationModal } from './validationModal';
 import { Mode } from '@/context/mode';
@@ -382,7 +383,10 @@ export function useTemplateWizard({
           }
         }
       }
-      const saved = getLocalStorageTemplateInputs(template.metadata.id);
+      const saved = pruneStaleInputValues(
+        options,
+        getLocalStorageTemplateInputs(template.metadata.id)
+      );
 
       const mergeWithDefaults = (
         base: Record<string, any>,

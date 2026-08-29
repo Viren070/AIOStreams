@@ -374,3 +374,50 @@ export const getVisibleOptions = (
     acc.push(cloned);
     return acc;
   }, []);
+
+/**
+ * Drop persisted input values that the template's current options no longer
+ * accept: ids that no longer exist, and select values that are no longer
+ * offered.
+ */
+export const pruneStaleInputValues = (
+  options: Option[],
+  saved: Record<string, any>
+): Record<string, any> => {
+  const byId = new Map((options ?? []).map((opt) => [opt.id, opt]));
+  const isOffered = (opt: Option, value: any) =>
+    (opt.options ?? []).some((o) => String(o.value) === String(value));
+  const result: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(saved ?? {})) {
+    const opt = byId.get(key);
+    if (!opt) continue;
+
+    if (opt.type === 'subsection') {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = pruneStaleInputValues(
+          (opt.subOptions as Option[]) ?? [],
+          value
+        );
+      }
+      continue;
+    }
+
+    // 'select-with-custom' accepts values outside its option list
+    if (opt.options?.length && opt.type === 'select') {
+      if (!isOffered(opt, value)) continue;
+    } else if (opt.options?.length && opt.type === 'multi-select') {
+      if (Array.isArray(value)) {
+        const kept = value.filter((v) => isOffered(opt, v));
+        // every entry went stale: fall back to the option's default
+        if (kept.length === 0 && value.length > 0) continue;
+        result[key] = kept;
+        continue;
+      }
+    }
+
+    result[key] = value;
+  }
+
+  return result;
+};
