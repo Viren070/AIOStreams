@@ -21,6 +21,8 @@ import {
   ConfigStartupError,
   ProwlarrAddon,
   TemplateManager,
+  CommunityService,
+  CommunityFederation,
   SeaDexDataset,
   SceneMappingDataset,
   IdMappingDataset,
@@ -271,6 +273,8 @@ async function initialiseProwlarr() {
 async function initialiseTemplates() {
   try {
     await TemplateManager.loadTemplates();
+    await CommunityService.registerTrustedOnBoot();
+    CommunityFederation.initialise();
   } catch (error) {
     logger.error('Failed to initialise templates:', error);
   }

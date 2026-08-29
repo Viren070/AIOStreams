@@ -106,6 +106,7 @@ neither the environment variable nor a stored value is present.
 | `STREMIO_ADDONS_CONFIG_ISSUER`    | Stremio Addons Config Issuer    | string     | `https://stremio-addons.net`                 | Issuer URL declared in the manifest for the Stremio Addons Config integration.                                                                                                                                                                                                         |
 | `STREMIO_ADDONS_CONFIG_SIGNATURE` | Stremio Addons Config Signature | string     | _(unset)_                                    | Signed JWT for the Stremio Addons Config integration. Both issuer and signature must be set for the manifest field to be emitted. _(secret)_                                                                                                                                           |
 | `TRUSTED_IPS`                     | Trusted Ips                     | list       | `["172.17.0.0/16","127.0.0.1/32","::1/128"]` | Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting.                                                                                                                          |
+| `MAX_JSON_BODY_SIZE`              | Max Json Body Size              | size       | `262144`                                     | Largest JSON request body the API accepts, which bounds saved configurations and uploaded templates. Raise it if large templates are refused with a 413. _(restart required)_                                                                                                          |
 
 ### Branding
 
@@ -284,6 +285,13 @@ neither the environment variable nor a stored value is present.
 | `USER_API_RATE_LIMIT_WINDOW`       | User API › Window       | number | `5`     | Sliding-window length (seconds) for the user API rate limiter. _(restart required)_           |
 | `USER_API_RATE_LIMIT_MAX_REQUESTS` | User API › Max Requests | number | `5`     | Maximum requests per IP within the window for the user API rate limiter. _(restart required)_ |
 
+#### User Create
+
+| Environment Variable                  | UI Setting                 | Type   | Default | Description                                                                                          |
+| ------------------------------------- | -------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------------- |
+| `USER_CREATE_RATE_LIMIT_WINDOW`       | User Create › Window       | number | `3600`  | Sliding-window length (seconds) for the config creation rate limiter. _(restart required)_           |
+| `USER_CREATE_RATE_LIMIT_MAX_REQUESTS` | User Create › Max Requests | number | `10`    | Maximum requests per IP within the window for the config creation rate limiter. _(restart required)_ |
+
 #### Stream API
 
 | Environment Variable                 | UI Setting                | Type   | Default | Description                                                                                     |
@@ -353,6 +361,13 @@ neither the environment variable nor a stored value is present.
 | --------------------------------------------- | ---------------------------------- | ------ | ------- | -------------------------------------------------------------------------------------------------------- |
 | `LINKED_ACCOUNTS_API_RATE_LIMIT_WINDOW`       | Linked Accounts API › Window       | number | `60`    | Sliding-window length (seconds) for the linked accounts API rate limiter. _(restart required)_           |
 | `LINKED_ACCOUNTS_API_RATE_LIMIT_MAX_REQUESTS` | Linked Accounts API › Max Requests | number | `20`    | Maximum requests per IP within the window for the linked accounts API rate limiter. _(restart required)_ |
+
+#### Community API
+
+| Environment Variable                    | UI Setting                   | Type   | Default | Description                                                                                        |
+| --------------------------------------- | ---------------------------- | ------ | ------- | -------------------------------------------------------------------------------------------------- |
+| `COMMUNITY_API_RATE_LIMIT_WINDOW`       | Community API › Window       | number | `60`    | Sliding-window length (seconds) for the community API rate limiter. _(restart required)_           |
+| `COMMUNITY_API_RATE_LIMIT_MAX_REQUESTS` | Community API › Max Requests | number | `60`    | Maximum requests per IP within the window for the community API rate limiter. _(restart required)_ |
 
 #### Login
 
@@ -1215,6 +1230,18 @@ neither the environment variable nor a stored value is present.
 | `USER_ANALYTICS_ENABLED`         | User Analytics Enabled | boolean | `false` | When enabled, the configure-page "Stats" tab is available to every authenticated user. Adds one event per addon per stream request.             |
 | `ANALYTICS_EVENT_RETENTION_DAYS` | Event Retention Days   | number  | `7`     | How many days of raw per-request analytics events to keep before the rollup task prunes them. The per-user Stats tab is limited to this window. |
 | `ANALYTICS_DAILY_RETENTION_DAYS` | Daily Retention Days   | number  | `90`    | How many days of aggregated daily analytics to keep.                                                                                            |
+
+### Community
+
+| Environment Variable                | UI Setting              | Type     | Default    | Description                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------- | ----------------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `COMMUNITY_FORMATTERS`              | Formatters              | enum     | `approval` | Whether users can share formatters with everyone on this instance. **off** hides the feature, **open** publishes submissions immediately, **approval** holds them until an admin approves them in the dashboard. Names, descriptions and tags are free text shown to everyone, so approval is the safe default. |
+| `COMMUNITY_TEMPLATES`               | Templates               | enum     | `approval` | Whether users can share configuration templates with everyone on this instance. **off** hides the feature, **open** publishes submissions immediately, **approval** holds them until an admin reviews them in the dashboard. Templates can point addons at arbitrary hosts, so approval is the safe default.    |
+| `COMMUNITY_MIN_ACCOUNT_AGE`         | Min Account Age         | duration | `86400`    | How old a configuration must be before it can submit or like community items. Raises the cost of creating throwaway configurations to skew likes.                                                                                                                                                               |
+| `COMMUNITY_MAX_SUBMISSIONS_PER_DAY` | Max Submissions Per Day | number   | `10`       | How many community items (new or updated) one configuration may submit within 24 hours. 0 blocks submissions entirely while keeping the browser available.                                                                                                                                                      |
+| `COMMUNITY_REMOTE_SOURCES`          | Remote Sources          | list     | —          | Other AIOStreams instances whose approved community items are shown here read-only. Give the instance URL or its `/community/export.json` directly. Items from remote sources cannot be liked.                                                                                                                  |
+| `COMMUNITY_REMOTE_REFRESH_INTERVAL` | Remote Refresh Interval | duration | `86400`    | How often remote community sources are re-fetched. Set to 0 to disable automatic refresh.                                                                                                                                                                                                                       |
+| `COMMUNITY_PUBLIC_EXPORT`           | Public Export           | boolean  | `true`     | Serve this instance's approved community items at `/community/export.json` so other instances can list them as a remote source.                                                                                                                                                                                 |
 
 ### Linked Accounts
 

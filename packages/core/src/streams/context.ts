@@ -17,6 +17,7 @@ import {
   isNonAnimeAbsoluteEligible,
 } from '../builtins/utils/general.js';
 import { iso6391ToLanguage } from '../utils/languages.js';
+import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('stream-context');
 
@@ -658,6 +659,8 @@ export class StreamContext {
 
     return {
       userData: this.userData,
+      addonName: appConfig.branding.addonName,
+      onWarning: (message) => logger.warn(message),
       type: this.type,
       isAnime: this.isAnime,
       queryType: this.queryType,

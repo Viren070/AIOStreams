@@ -12,6 +12,7 @@ import { config as appConfig } from '../config/index.js';
 import { makeRequest } from './http.js';
 import { TaskManager } from '../tasks/index.js';
 import { subscribeToConfig } from '../config/index.js';
+import { collectTrustedStrings } from './template-sanitise.js';
 
 const logger = createLogger('templates');
 
@@ -363,40 +364,6 @@ export class TemplateManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Extract all possible string leaf values from a template config field that
-   * may contain template directives
-   */
-  private static extractTemplateStrings(value: any): string[] {
-    if (typeof value === 'string') return value ? [value] : [];
-    if (Array.isArray(value))
-      return value.flatMap((v) => this.extractTemplateStrings(v));
-    if (value === null || typeof value !== 'object') return [];
-
-    // __if + __value  OR  bare __value
-    if ('__value' in value) {
-      return this.extractTemplateStrings(value.__value);
-    }
-
-    // __switch: extract from every case and the default
-    if ('__switch' in value) {
-      const caseVals = Object.values(value.cases ?? {});
-      const def = value.default ?? null;
-      return [
-        ...caseVals.flatMap((v) => this.extractTemplateStrings(v)),
-        ...(def !== null ? this.extractTemplateStrings(def) : []),
-      ];
-    }
-
-    // __remove: nothing to extract
-    if ((value as any).__remove === true) return [];
-
-    // Regex pattern object: { pattern: string, … }
-    if (typeof value.pattern === 'string') return [value.pattern];
-
-    return [];
-  }
-
-  /**
    * Ensure every template has a unique ID.
    * First occurrence of an ID wins; subsequent duplicates get a `-2`, `-3`, … suffix.
    */
@@ -431,38 +398,27 @@ export class TemplateManager {
     return result;
   }
 
-  /**
-   * Register regex patterns and synced URLs from templates as trusted.
-   */
   private static registerTrustedAccess(templates: Template[]): void {
-    const ex = (v: any) => this.extractTemplateStrings(v);
-
-    const patterns = templates.flatMap((t) => [
-      ...ex(t.config.excludedRegexPatterns),
-      ...ex(t.config.includedRegexPatterns),
-      ...ex(t.config.requiredRegexPatterns),
-      ...ex(t.config.preferredRegexPatterns),
-      ...ex(t.config.rankedRegexPatterns),
-    ]);
-
-    const syncedSelUrls = templates.flatMap((t) => [
-      ...ex(t.config.syncedExcludedStreamExpressionUrls),
-      ...ex(t.config.syncedIncludedStreamExpressionUrls),
-      ...ex(t.config.syncedRequiredStreamExpressionUrls),
-      ...ex(t.config.syncedPreferredStreamExpressionUrls),
-      ...ex(t.config.syncedRankedStreamExpressionUrls),
-    ]);
-
-    const syncedRegexUrls = templates.flatMap((t) => [
-      ...ex(t.config.syncedExcludedRegexUrls),
-      ...ex(t.config.syncedIncludedRegexUrls),
-      ...ex(t.config.syncedRequiredRegexUrls),
-      ...ex(t.config.syncedPreferredRegexUrls),
-      ...ex(t.config.syncedRankedRegexUrls),
-    ]);
-
-    if (patterns.length > 0) RegexAccess.addPatterns(patterns);
-    if (syncedSelUrls.length > 0) SelAccess.addAllowedUrls(syncedSelUrls);
-    if (syncedRegexUrls.length > 0) RegexAccess.addAllowedUrls(syncedRegexUrls);
+    registerTemplateTrust(templates);
   }
+}
+
+/**
+ * Whitelist a template's regex patterns and synced URLs for every user. Only
+ * for templates the operator vouches for; community uploads stay out unless
+ * an admin marks one trusted.
+ */
+export function registerTemplateTrust(templates: Template[]): void {
+  const patterns: string[] = [];
+  const selUrls: string[] = [];
+  const regexUrls: string[] = [];
+  for (const template of templates) {
+    const collected = collectTrustedStrings(template.config);
+    patterns.push(...collected.patterns);
+    selUrls.push(...collected.selUrls);
+    regexUrls.push(...collected.regexUrls);
+  }
+  if (patterns.length > 0) RegexAccess.addPatterns(patterns);
+  if (selUrls.length > 0) SelAccess.addAllowedUrls(selUrls);
+  if (regexUrls.length > 0) RegexAccess.addAllowedUrls(regexUrls);
 }

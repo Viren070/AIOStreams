@@ -29,6 +29,7 @@ import {
 import usenetDashboard from './usenet.js';
 import blocklistDashboard from './blocklist.js';
 import streamsDashboard from './streams.js';
+import communityDashboard from './community.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
@@ -44,6 +45,9 @@ router.use('/blocklist', blocklistDashboard);
 
 // Unified stream accounting: live sessions, history, bandwidth, bans.
 router.use('/streams', streamsDashboard);
+
+// Community-shared formatters and templates: review queue, blocks.
+router.use('/community', communityDashboard);
 
 function csv(v: unknown): string[] | undefined {
   if (typeof v !== 'string' || !v.trim()) return undefined;

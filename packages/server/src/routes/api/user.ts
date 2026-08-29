@@ -13,7 +13,10 @@ import {
   UserRepository,
   type UserAnalyticsRange,
 } from '@aiostreams/core';
-import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
+import {
+  userApiRateLimiter,
+  userCreateRateLimiter,
+} from '../../middlewares/ratelimit.js';
 import { attachSession, injectAccessKey } from '../../middlewares/auth.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
 import { createResponse } from '../../utils/responses.js';
@@ -134,7 +137,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // new user creation
-router.post('/', async (req, res, next) => {
+router.post('/', userCreateRateLimiter, async (req, res, next) => {
   const { config, password } = req.body;
   if (!config || !password) {
     next(

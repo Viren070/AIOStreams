@@ -43,7 +43,7 @@ import {
   useConfirmationDialog,
 } from '../shared/confirmation-dialog';
 import { UserData, VariantSelectorLocation } from '@aiostreams/core';
-import { redactPresetOptions } from '@/lib/preset-credentials';
+import { sanitiseTemplateConfig } from '../../../../core/src/utils/template-sanitise';
 import { useSave } from '@/context/save';
 import { FiExternalLink } from 'react-icons/fi';
 import { ProfileCard } from './profile-card';
@@ -1603,50 +1603,12 @@ function Content() {
     reader.readAsText(file);
   };
 
-  const filterCredentials = (data: UserData): UserData => {
-    const clonedData = structuredClone(data);
-
-    return {
-      ...clonedData,
-      ip: undefined,
-      uuid: undefined,
-      accessKey: undefined,
-      tmdbAccessToken: undefined,
-      tmdbApiKey: undefined,
-      tvdbApiKey: undefined,
-      rpdbApiKey: undefined,
-      topPosterApiKey: undefined,
-      aioratingsApiKey: undefined,
-      aioratingsProfileId: undefined,
-      openposterdbApiKey: undefined,
-      openposterdbUrl: undefined,
-      openposterdbParameters: undefined,
-      services: clonedData?.services?.map((service) => ({
-        ...service,
-        credentials: {},
-      })),
-      // Scripts commonly carry a swapped service credential.
-      variants: clonedData?.variants?.map((variant) => ({
-        ...variant,
-        script: '# [redacted] variant scripts may contain credentials',
-      })),
-      proxy: {
-        ...clonedData?.proxy,
-        credentials: undefined,
-        url: undefined,
-        publicUrl: undefined,
-      },
-      presets: clonedData?.presets?.map((preset) => {
-        const presetMeta = status?.settings.presets.find(
-          (p) => p.ID === preset.type
-        );
-        return {
-          ...preset,
-          options: redactPresetOptions(preset.options, presetMeta?.OPTIONS),
-        };
-      }),
-    };
-  };
+  const filterCredentials = (data: UserData): UserData =>
+    sanitiseTemplateConfig(
+      data,
+      (type: string) =>
+        status?.settings.presets.find((p) => p.ID === type)?.OPTIONS
+    );
 
   const handleExport = () => {
     try {
@@ -2535,7 +2497,7 @@ function Content() {
               <Alert
                 intent="warning"
                 isClosable={false}
-                description="While excluding credentials removes your API keys, any custom addon URLs or manually overridden URLs in your config are not removed. These may contain sensitive information - double-check before sharing."
+                description="While excluding credentials removes your API keys, custom addon URLs, manually overridden URLs and variant scripts are left as written. These may contain sensitive information - double-check before sharing."
               />
             </div>
           </div>

@@ -30,7 +30,7 @@ export const TemplateSchema = z.object({
     description: z.string().min(1).max(1000),
     author: z.string().min(1).max(20),
     source: z
-      .enum(['builtin', 'custom', 'external'])
+      .enum(['builtin', 'custom', 'external', 'community'])
       .optional()
       .default('builtin'),
     version: z
@@ -38,6 +38,7 @@ export const TemplateSchema = z.object({
       .optional()
       .default('1.0.0'),
     category: z.string().min(1).max(20),
+    tags: z.array(z.string().min(1).max(20)).max(5).optional(),
     services: z.array(z.enum(constants.SERVICES)).optional(),
     serviceRequired: z.boolean().optional(),
     setToSaveInstallMenu: z.boolean().optional().default(true),

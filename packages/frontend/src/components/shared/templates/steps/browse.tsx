@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Template } from '@aiostreams/core';
+import { Template, type CommunityItemPublic } from '@aiostreams/core';
 import {
   SearchIcon,
   AlertTriangleIcon,
   Trash2Icon,
   CheckIcon,
+  HeartIcon,
   ScrollText,
+  Share2Icon,
+  UserIcon,
 } from 'lucide-react';
+import { templateTags } from '../../../../../../core/src/utils/template-sanitise';
 import { BiImport } from 'react-icons/bi';
 import { Button, IconButton } from '../../../ui/button';
 import { TextInput } from '../../../ui/text-input';
@@ -39,6 +43,15 @@ interface TemplateBrowseStepProps {
   onDeleteRequest: (t: Template) => void;
   totalTemplateCount: number;
   initialExpandedTemplate?: Template;
+  communityItems?: Record<string, CommunityItemPublic>;
+  onLike?: (id: string) => void;
+  likeDisabledReason?: string;
+  /** Opens the list of the user's own shared templates. */
+  onMineOpen?: () => void;
+  /** Shares an imported template JSON verbatim with the community. */
+  onShare?: (t: Template) => void;
+  /** Shown on a disabled share button when sharing is on but unavailable to this user. */
+  shareDisabledReason?: string;
 }
 
 interface TemplateCardProps {
@@ -48,6 +61,11 @@ interface TemplateCardProps {
   onLoadTemplate: (t: Template) => void;
   onDeleteRequest: (t: Template) => void;
   onReadMore: (t: Template) => void;
+  community?: CommunityItemPublic;
+  onLike?: (id: string) => void;
+  likeDisabledReason?: string;
+  onShare?: (t: Template) => void;
+  shareDisabledReason?: string;
 }
 
 function TemplateCard({
@@ -57,6 +75,11 @@ function TemplateCard({
   onLoadTemplate,
   onDeleteRequest,
   onReadMore,
+  community,
+  onLike,
+  likeDisabledReason,
+  onShare,
+  shareDisabledReason,
 }: TemplateCardProps) {
   const descRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -121,6 +144,13 @@ function TemplateCard({
                 External
               </span>
             )}
+            {template.metadata.source === 'community' && (
+              <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                {community?.federated
+                  ? `From ${community.origin}`
+                  : 'Community'}
+              </span>
+            )}
             {(hasWarnings || hasErrors) && (
               <button
                 onClick={() => setShowValidation(true)}
@@ -167,10 +197,17 @@ function TemplateCard({
         <div className="flex-1 space-y-3">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <div className="text-gray-500 text-xs mb-1.5">Category</div>
-              <span className="text-xs bg-gray-800/60 text-gray-300 px-2 py-1 rounded inline-block">
-                {template.metadata.category}
-              </span>
+              <div className="text-gray-500 text-xs mb-1.5">Tags</div>
+              <div className="flex flex-wrap gap-1">
+                {templateTags(template.metadata).map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-xs bg-gray-800/60 text-gray-300 px-2 py-1 rounded inline-block"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
             <div>
               <div className="text-gray-500 text-xs mb-1.5">Author</div>
@@ -225,6 +262,32 @@ function TemplateCard({
         </div>
 
         <div className="flex gap-2 mt-4 pt-3 border-t border-gray-800/80">
+          {community && (
+            <Tooltip
+              trigger={
+                <span>
+                  <button
+                    type="button"
+                    disabled={!onLike || community.federated}
+                    onClick={() => onLike?.(community.id)}
+                    className={cn(
+                      'h-full flex items-center gap-1 rounded-md border px-2.5 text-xs transition-colors',
+                      !onLike || community.federated
+                        ? 'border-gray-800 text-gray-500 cursor-not-allowed'
+                        : 'border-pink-500/30 text-pink-300 hover:bg-pink-500/10'
+                    )}
+                  >
+                    <HeartIcon className="w-3.5 h-3.5" />
+                    {community.likes}
+                  </button>
+                </span>
+              }
+            >
+              {community.federated
+                ? 'Likes only work for templates published on this instance'
+                : (likeDisabledReason ?? 'Like this template')}
+            </Tooltip>
+          )}
           {template.metadata.source === 'external' && (
             <IconButton
               icon={<Trash2Icon className="w-4 h-4" />}
@@ -235,6 +298,28 @@ function TemplateCard({
               }}
             />
           )}
+          {template.metadata.source === 'external' &&
+            (onShare || shareDisabledReason) && (
+              <Tooltip
+                trigger={
+                  <span>
+                    <IconButton
+                      icon={<Share2Icon className="w-4 h-4" />}
+                      intent="gray-outline"
+                      disabled={!onShare}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShare?.(template);
+                      }}
+                    />
+                  </span>
+                }
+              >
+                {onShare
+                  ? 'Share this JSON with the community (updates your existing submission of the same name)'
+                  : shareDisabledReason}
+              </Tooltip>
+            )}
           {hasChangelog && (
             <IconButton
               icon={<ScrollText className="w-4 h-4" />}
@@ -316,6 +401,12 @@ export function TemplateBrowseStep({
   onDeleteRequest,
   totalTemplateCount,
   initialExpandedTemplate,
+  communityItems,
+  onLike,
+  likeDisabledReason,
+  onMineOpen,
+  onShare,
+  shareDisabledReason,
 }: TemplateBrowseStepProps) {
   const [expandedTemplate, setExpandedTemplate] = useState<Template | null>(
     null
@@ -349,6 +440,7 @@ export function TemplateBrowseStep({
                 builtin: 'Provided with AIOStreams',
                 custom: 'Added by the instance hoster',
                 external: 'Imported by you',
+                community: 'Shared by users of this instance',
               };
               const colorClasses: Record<string, string> = {
                 all: 'bg-gray-700/50 text-gray-300 hover:bg-gray-700',
@@ -364,12 +456,17 @@ export function TemplateBrowseStep({
                   selectedSource === 'external'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                     : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20',
+                community:
+                  selectedSource === 'community'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20',
               };
               const tooltipColorClasses: Record<string, string> = {
                 all: 'bg-gray-800 text-white border-gray-700',
                 builtin: 'bg-brand-600 text-white border-brand-500',
                 custom: 'bg-purple-600 text-white border-purple-500',
                 external: 'bg-emerald-600 text-white border-emerald-500',
+                community: 'bg-amber-600 text-white border-amber-500',
               };
               return (
                 <Tooltip
@@ -396,7 +493,7 @@ export function TemplateBrowseStep({
         </div>
 
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm text-gray-400 flex-shrink-0">Category:</span>
+          <span className="text-sm text-gray-400 flex-shrink-0">Tags:</span>
           <div className="flex gap-1.5 overflow-x-auto min-w-0 flex-1 pb-2">
             {categories.map((category) => (
               <Button
@@ -434,6 +531,11 @@ export function TemplateBrowseStep({
               onLoadTemplate={onLoadTemplate}
               onDeleteRequest={onDeleteRequest}
               onReadMore={setExpandedTemplate}
+              community={communityItems?.[template.metadata.id]}
+              onLike={onLike}
+              likeDisabledReason={likeDisabledReason}
+              onShare={onShare}
+              shareDisabledReason={shareDisabledReason}
             />
           ))
         )}
@@ -445,6 +547,19 @@ export function TemplateBrowseStep({
           {totalTemplateCount !== 1 ? 's' : ''} available
         </div>
         <div className="flex gap-2">
+          {onMineOpen && (
+            <Tooltip
+              trigger={
+                <IconButton
+                  intent="primary-outline"
+                  icon={<UserIcon className="w-4 h-4" />}
+                  onClick={onMineOpen}
+                />
+              }
+            >
+              My shared templates
+            </Tooltip>
+          )}
           <Tooltip
             trigger={
               <IconButton
@@ -476,9 +591,19 @@ export function TemplateBrowseStep({
               <span className="text-xs text-gray-400">
                 by {expandedTemplate.metadata.author}
               </span>
-              <span className="text-xs bg-gray-800/60 text-gray-300 px-2 py-1 rounded">
-                {expandedTemplate.metadata.category}
-              </span>
+              {templateTags(expandedTemplate.metadata).map((tag) => (
+                <span
+                  key={tag}
+                  className="text-xs bg-gray-800/60 text-gray-300 px-2 py-1 rounded"
+                >
+                  {tag}
+                </span>
+              ))}
+              {expandedTemplate.metadata.source === 'community' && (
+                <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                  Community
+                </span>
+              )}
               {expandedTemplate.metadata.source === 'builtin' && (
                 <span className="text-xs bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded border border-brand-500/30">
                   Built-in

@@ -4,11 +4,18 @@ import {
   listConfigProfiles,
   fetchLinkedAccounts,
   fetchLinkedAccountPlatforms,
+  fetchCommunityItems,
+  fetchMyCommunityItems,
   api,
   type LinkedAccount,
   type LinkedAccountPlatformInfo,
 } from './api';
-import type { StatusResponse } from '@aiostreams/core';
+import type {
+  CommunityItemMine,
+  CommunityItemPublic,
+  CommunityKind,
+  StatusResponse,
+} from '@aiostreams/core';
 
 export const sessionQuery = queryOptions({
   queryKey: ['session'] as const,
@@ -62,5 +69,29 @@ export const linkedAccountPlatformsQuery = (
         : Promise.resolve([]),
     enabled: !!credentials,
     staleTime: Infinity,
+    retry: false,
+  });
+
+export const COMMUNITY_QUERY_ROOT = ['community'] as const;
+export const MY_COMMUNITY_QUERY_ROOT = ['community-mine'] as const;
+
+export const communityItemsQuery = (kind: CommunityKind) =>
+  queryOptions({
+    queryKey: [...COMMUNITY_QUERY_ROOT, kind] as const,
+    queryFn: (): Promise<CommunityItemPublic[]> => fetchCommunityItems(kind),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+/** The password is deliberately not part of the key. */
+export const myCommunityQuery = (
+  credentials: { uuid: string; password: string } | null
+) =>
+  queryOptions({
+    queryKey: [...MY_COMMUNITY_QUERY_ROOT, credentials?.uuid ?? null] as const,
+    queryFn: (): Promise<CommunityItemMine[]> =>
+      credentials ? fetchMyCommunityItems(credentials) : Promise.resolve([]),
+    enabled: !!credentials,
+    staleTime: 15_000,
     retry: false,
   });

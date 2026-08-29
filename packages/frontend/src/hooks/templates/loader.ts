@@ -1,7 +1,11 @@
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Template, StatusResponse } from '@aiostreams/core';
-import { fetchTemplates } from '@/lib/api';
+import {
+  Template,
+  StatusResponse,
+  type CommunityItemPublic,
+} from '@aiostreams/core';
+import { fetchCommunityItems, fetchTemplates } from '@/lib/api';
 import { TemplateValidation, TEMPLATE_CACHE } from '@/lib/templates/types';
 import {
   getLocalStorageTemplates,
@@ -27,12 +31,20 @@ export interface UseTemplateLoader {
   >;
   loadTemplates(): Promise<void>;
   appliedTemplateUpdates: AppliedTemplateUpdate[];
+  /** Community metadata (likes, origin) keyed by template id. */
+  communityItems: Record<string, CommunityItemPublic>;
+  setCommunityItems: React.Dispatch<
+    React.SetStateAction<Record<string, CommunityItemPublic>>
+  >;
 }
 
 export function useTemplateLoader(
   status: StatusResponse | null
 ): UseTemplateLoader {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [communityItems, setCommunityItems] = useState<
+    Record<string, CommunityItemPublic>
+  >({});
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [templateValidations, setTemplateValidations] = useState<
     Record<string, TemplateValidation>
@@ -210,8 +222,26 @@ export function useTemplateLoader(
         return true;
       });
 
+      // Community templates are fetched fresh: they change as people share.
+      let communityTemplates: Template[] = [];
+      if (status?.settings.community?.templates !== 'off') {
+        try {
+          const items = await fetchCommunityItems('template');
+          setCommunityItems(
+            Object.fromEntries(items.map((item) => [item.id, item]))
+          );
+          communityTemplates = items.map((item) => item.payload as Template);
+        } catch (error) {
+          console.warn('Failed to load community templates:', error);
+        }
+      }
+
       // Merge, keeping external first (they take priority on duplicate IDs)
-      const allTemplates = [...localTemplates, ...fetchedTemplates];
+      const allTemplates = [
+        ...localTemplates,
+        ...fetchedTemplates,
+        ...communityTemplates,
+      ];
       const uniqueTemplates = allTemplates.reduce(
         (acc: Template[], template) => {
           if (!acc.some((t) => t.metadata.id === template.metadata.id)) {
@@ -250,5 +280,7 @@ export function useTemplateLoader(
     setTemplateValidations,
     loadTemplates,
     appliedTemplateUpdates,
+    communityItems,
+    setCommunityItems,
   };
 }

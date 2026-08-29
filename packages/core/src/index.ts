@@ -17,6 +17,7 @@ export * from './release-blocklist/index.js';
 export * from './stream-sessions/index.js';
 export * from './proxy/index.js';
 export * from './linked-accounts/index.js';
+export * from './community/index.js';
 export { SceneMappingDataset } from './metadata/scene-mappings.js';
 export { IdMappingDataset } from './metadata/id-mappings.js';
 export {

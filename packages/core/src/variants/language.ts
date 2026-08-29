@@ -1194,6 +1194,7 @@ function runProgram(
       config.formatter = {
         ...config.formatter,
         id: 'custom',
+        selectedSaved: undefined,
         definitions: {
           ...config.formatter?.definitions,
           custom: { name: saved.name, description: saved.description },

@@ -10,9 +10,12 @@ export function getTemplates(data: UserData): {
   const id = data.formatter.id;
   const defs = data.formatter.definitions;
   if (id === constants.CUSTOM_FORMATTER) {
+    const selected = data.formatter.selectedSaved;
+    const definition =
+      (selected ? defs?.saved?.[selected] : undefined) ?? defs?.custom;
     return {
-      name: defs?.custom?.name ?? '',
-      description: defs?.custom?.description ?? '',
+      name: definition?.name ?? '',
+      description: definition?.description ?? '',
     };
   }
   const override = defs?.overrides?.[id];
@@ -20,4 +23,17 @@ export function getTemplates(data: UserData): {
     return { name: override.name, description: override.description };
   const builtin = BUILTIN_FORMATTER_DEFINITIONS[id];
   return { name: builtin?.name ?? '', description: builtin?.description ?? '' };
+}
+
+/** The saved formatter currently being edited in place, if any. */
+export function getActiveSavedName(data: UserData): string | undefined {
+  const selected = data.formatter.selectedSaved;
+  if (
+    data.formatter.id === constants.CUSTOM_FORMATTER &&
+    selected &&
+    data.formatter.definitions?.saved?.[selected]
+  ) {
+    return selected;
+  }
+  return undefined;
 }

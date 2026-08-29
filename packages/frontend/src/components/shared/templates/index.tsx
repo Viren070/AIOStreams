@@ -1,12 +1,28 @@
 ﻿import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '../../ui/modal';
-import { ConfirmationDialog } from '../confirmation-dialog';
+import {
+  ConfirmationDialog,
+  useConfirmationDialog,
+} from '../confirmation-dialog';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { useMenu } from '@/context/menu';
 import { useMode } from '@/context/mode';
-import { APIError } from '@/lib/api';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { Template } from '@aiostreams/core';
+import { APIError, likeCommunityItem } from '@/lib/api';
+import { myCommunityQuery } from '@/lib/queries';
+import {
+  SHARE_TEMPLATE_CONFIRMATION,
+  shareOutcomeMessage,
+  shareTemplateJson,
+} from '@/lib/templates/share';
+import {
+  sanitiseTemplateConfig,
+  templateTags,
+} from '../../../../../core/src/utils/template-sanitise';
+import { MyTemplatesModal } from './my-templates-modal';
 
 import { useValidationModal } from '@/hooks/templates/validationModal';
 import { useTemplateLoader } from '@/hooks/templates/loader';
@@ -30,7 +46,7 @@ export function ConfigTemplatesModal({
   deepLinkTemplateId,
   initialExpandedTemplateId,
 }: ConfigTemplatesModalProps) {
-  const { setUserData, userData } = useUserData();
+  const { setUserData, userData, uuid, password } = useUserData();
   const { status } = useStatus();
   const { setSelectedMenu } = useMenu();
   const { mode, setMode } = useMode();
@@ -38,6 +54,7 @@ export function ConfigTemplatesModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [mineOpen, setMineOpen] = useState(false);
 
   const deepLinkFetchedRef = React.useRef<string | null>(null);
 
@@ -121,12 +138,50 @@ export function ConfigTemplatesModal({
   const categories = useMemo(
     () => [
       'all',
-      ...Array.from(new Set(loader.templates.map((t) => t.metadata.category))),
+      ...Array.from(
+        new Set(loader.templates.flatMap((t) => templateTags(t.metadata)))
+      ),
     ],
     [loader.templates]
   );
 
-  const sources = ['all', 'builtin', 'custom', 'external'];
+  const sources = ['all', 'builtin', 'custom', 'external', 'community'];
+
+  const credentials = uuid && password ? { uuid, password } : null;
+  const communityTemplatesOn = status?.settings.community?.templates !== 'off';
+  const mine = useQuery({
+    ...myCommunityQuery(credentials),
+    enabled: open && !!credentials && communityTemplatesOn,
+  });
+  // Imported JSON is shared verbatim so hand-written inputs and conditionals survive.
+  const shareJson = useMutation({
+    mutationFn: (template: Template) =>
+      shareTemplateJson(credentials!, template, mine.data),
+    onSuccess: ({ item, updated }) => {
+      toast.success(shareOutcomeMessage(item, updated));
+      mine.refetch();
+      void loader.loadTemplates();
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Failed to share'),
+  });
+  const pendingShare = React.useRef<Template | null>(null);
+  const shareConfirm = useConfirmationDialog({
+    ...SHARE_TEMPLATE_CONFIRMATION,
+    onConfirm: () => {
+      if (pendingShare.current) shareJson.mutate(pendingShare.current);
+    },
+  });
+  const like = useMutation({
+    mutationFn: (id: string) => likeCommunityItem(credentials!, id),
+    onSuccess: (result, id) => {
+      loader.setCommunityItems((prev) =>
+        prev[id]
+          ? { ...prev, [id]: { ...prev[id], likes: result.likes } }
+          : prev
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Failed to like'),
+  });
 
   const filteredTemplates = useMemo(
     () =>
@@ -144,7 +199,7 @@ export function ConfigTemplatesModal({
 
         const matchesCategory =
           selectedCategory === 'all' ||
-          template.metadata.category === selectedCategory;
+          templateTags(template.metadata).includes(selectedCategory);
 
         const matchesSource =
           selectedSource === 'all' ||
@@ -188,6 +243,31 @@ export function ConfigTemplatesModal({
               importer.confirmDeleteTemplate.open();
             }}
             totalTemplateCount={loader.templates.length}
+            communityItems={loader.communityItems}
+            onLike={credentials ? (id) => like.mutate(id) : undefined}
+            likeDisabledReason={
+              credentials
+                ? undefined
+                : 'Create or load your configuration (UUID and password) first; likes are tied to it'
+            }
+            onMineOpen={
+              credentials && communityTemplatesOn
+                ? () => setMineOpen(true)
+                : undefined
+            }
+            onShare={
+              credentials && communityTemplatesOn
+                ? (t) => {
+                    pendingShare.current = t;
+                    shareConfirm.open();
+                  }
+                : undefined
+            }
+            shareDisabledReason={
+              communityTemplatesOn && !credentials
+                ? 'Create or load your configuration (UUID and password) first; shared templates are tied to it'
+                : undefined
+            }
             initialExpandedTemplate={
               initialExpandedTemplateId
                 ? (loader.templates.find(
@@ -216,7 +296,11 @@ export function ConfigTemplatesModal({
             options={wizard.templateInputOptions}
             values={wizard.templateInputValues}
             onValuesChange={wizard.setTemplateInputValues}
-            trusted={wizard.pendingTemplate?.metadata?.source !== 'external'}
+            trusted={
+              !['external', 'community'].includes(
+                wizard.pendingTemplate?.metadata?.source ?? ''
+              )
+            }
             selectedServices={wizard.selectedServices}
             onBack={wizard.handleBack}
             onNext={wizard.handleTemplateInputsNext}
@@ -303,6 +387,24 @@ export function ConfigTemplatesModal({
       />
 
       <ConfirmationDialog {...importer.confirmDeleteTemplate} />
+      <ConfirmationDialog {...shareConfirm} />
+
+      {credentials && (
+        <MyTemplatesModal
+          open={mineOpen}
+          onOpenChange={setMineOpen}
+          credentials={credentials}
+          userData={userData}
+          filterCredentials={(data) =>
+            sanitiseTemplateConfig(
+              data,
+              (type: string) =>
+                status?.settings.presets.find((p) => p.ID === type)?.OPTIONS
+            )
+          }
+          onChanged={() => void loader.loadTemplates()}
+        />
+      )}
     </>
   );
 }

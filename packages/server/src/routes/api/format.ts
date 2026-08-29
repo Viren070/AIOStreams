@@ -9,6 +9,7 @@ import {
   APIError,
   constants,
   FormatterContext,
+  config as appConfig,
 } from '@aiostreams/core';
 import { formatApiRateLimiter } from '../../middlewares/ratelimit.js';
 import z from 'zod';
@@ -73,6 +74,7 @@ function createDummyFormatterContext(
 ): FormatterContext {
   return {
     userData,
+    addonName: appConfig.branding.addonName,
     type: 'movie',
     isAnime: false,
     queryType: 'movie',

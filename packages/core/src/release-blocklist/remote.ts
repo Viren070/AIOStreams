@@ -3,7 +3,7 @@ import { createLogger } from '../logging/logger.js';
 import { ReleaseBlocklistRepository } from '../db/repositories/release-blocklist.js';
 import type { BlocklistSource } from './types.js';
 import { parseNdjson } from './io.js';
-import { isUnsafeRemoteUrl } from '../utils/url-safety.js';
+import { fetchRemoteCapped } from '../utils/safe-fetch.js';
 
 const logger = createLogger('release-blocklist');
 
@@ -23,68 +23,13 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-async function readBodyCapped(res: Response): Promise<Buffer> {
-  const declared = Number(res.headers.get('content-length') ?? 0);
-  if (declared > MAX_DOWNLOAD_BYTES) {
-    throw new Error(`list exceeds the ${MAX_DOWNLOAD_BYTES} byte limit`);
-  }
-  if (!res.body) return Buffer.alloc(0);
-  const chunks: Buffer[] = [];
-  let total = 0;
-  for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
-    total += chunk.byteLength;
-    if (total > MAX_DOWNLOAD_BYTES) {
-      throw new Error(`list exceeds the ${MAX_DOWNLOAD_BYTES} byte limit`);
-    }
-    chunks.push(Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks);
-}
-
-/**
- * Fetch a list URL following redirects manually so every hop is re-checked
- * against the SSRF guard. Returns `notModified` on a 304.
- */
-async function fetchListUrl(
-  url: string,
-  etag: string | null
-): Promise<
-  | { notModified: true }
-  | { notModified: false; body: Buffer; etag: string | null }
-> {
-  let current = url;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    if (isUnsafeRemoteUrl(current)) {
-      throw new Error('URL refused (unsafe scheme or private address)');
-    }
-    const headers: Record<string, string> = { Accept: '*/*' };
-    if (etag && current === url) headers['If-None-Match'] = etag;
-    const res = await fetch(current, {
-      headers,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-
-    if (res.status === 304) {
-      await res.body?.cancel().catch(() => {});
-      return { notModified: true };
-    }
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      await res.body?.cancel().catch(() => {});
-      if (!location)
-        throw new Error(`redirect without location (${res.status})`);
-      current = new URL(location, current).toString();
-      continue;
-    }
-    if (!res.ok) {
-      await res.body?.cancel().catch(() => {});
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const body = await readBodyCapped(res);
-    return { notModified: false, body, etag: res.headers.get('etag') };
-  }
-  throw new Error('too many redirects');
+function fetchListUrl(url: string, etag: string | null) {
+  return fetchRemoteCapped(url, {
+    etag,
+    maxBytes: MAX_DOWNLOAD_BYTES,
+    timeoutMs: FETCH_TIMEOUT_MS,
+    maxRedirects: MAX_REDIRECTS,
+  });
 }
 
 export function decodeListBody(body: Buffer): string {

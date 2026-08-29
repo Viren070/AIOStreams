@@ -11,10 +11,12 @@ import {
   BiBlock,
   BiPlayCircle,
   BiCog,
+  BiShareAlt,
 } from 'react-icons/bi';
 import { SECTIONS } from '@/app/dashboard/usenet/sections';
 import { BLOCKLIST_SECTIONS } from '@/app/dashboard/blocklist/sections';
 import { STREAMS_SECTIONS } from '@/app/dashboard/streams/sections';
+import { COMMUNITY_SECTIONS } from '@/app/dashboard/community/sections';
 import type { DashboardSection } from '@/components/shared/section-nav-select';
 
 export interface DashboardNavItem {
@@ -37,6 +39,7 @@ export const NAV: DashboardNavItem[] = [
   { label: 'Streams', href: '/dashboard/streams', icon: BiPlayCircle },
   { label: 'Usenet', href: '/dashboard/usenet', icon: BiCloudDownload },
   { label: 'Blocklists', href: '/dashboard/blocklist', icon: BiBlock },
+  { label: 'Community', href: '/dashboard/community', icon: BiShareAlt },
   { label: 'Settings', href: '/dashboard/settings', icon: BiCog },
 ];
 
@@ -49,4 +52,5 @@ export const SECTIONED: Record<string, readonly DashboardSection[]> = {
   '/dashboard/streams': STREAMS_SECTIONS,
   '/dashboard/usenet': SECTIONS,
   '/dashboard/blocklist': BLOCKLIST_SECTIONS,
+  '/dashboard/community': COMMUNITY_SECTIONS,
 };

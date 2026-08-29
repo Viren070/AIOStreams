@@ -18,6 +18,7 @@ import {
   authApi,
   dashboardApi,
   usenetApi,
+  communityApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -36,6 +37,7 @@ import {
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import sabnzbdRouter from './routes/api/sabnzbd.js';
 import publicBlocklistRouter from './routes/blocklist.js';
+import publicCommunityRouter from './routes/community.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -58,6 +60,7 @@ import {
   corsMiddleware,
   staticRateLimiter,
   linkedAccountsRateLimiter,
+  communityApiRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
   stremioManifestRateLimiter,
@@ -143,7 +146,12 @@ export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
 app.use(loggerMiddleware);
-app.use(express.json());
+// Built on the first request: runtime settings are not loaded at module load.
+let jsonParser: express.RequestHandler | undefined;
+app.use((req, res, next) => {
+  jsonParser ??= express.json({ limit: appConfig.api.maxJsonBodySize });
+  jsonParser(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Allow all origins in development for easier testing
@@ -179,6 +187,7 @@ apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
 apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
+apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);
@@ -267,6 +276,7 @@ builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
 
 app.use('/blocklist', publicBlocklistRouter);
+app.use('/community', publicCommunityRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately

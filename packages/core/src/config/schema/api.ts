@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { commaSeparatedList, seconds } from './helpers.js';
+import { byteSize, commaSeparatedList, seconds } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 const nullableString = z.string().nullable();
@@ -169,6 +169,16 @@ export const apiSchema = {
       'Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting.',
     env: 'TRUSTED_IPS',
     requiresRestart: false,
+    secret: false,
+  },
+  maxJsonBodySize: {
+    schema: byteSize,
+    default: 256 * 1024,
+    label: 'Max JSON request body',
+    description:
+      'Largest JSON request body the API accepts, which bounds saved configurations and uploaded templates. Raise it if large templates are refused with a 413.',
+    env: 'MAX_JSON_BODY_SIZE',
+    requiresRestart: true,
     secret: false,
   },
 } as const satisfies RuntimeConfigSection;

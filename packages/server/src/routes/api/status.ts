@@ -43,6 +43,11 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : undefined,
       alternateDesign: appConfig.branding.alternateDesign,
       protected: appConfig.api.authRequired,
+      community: {
+        formatters: appConfig.community.formatters,
+        templates: appConfig.community.templates,
+        minAccountAge: appConfig.community.minAccountAge,
+      },
       // Public endpoint: the button renders pre-auth, so nothing identifying
       // the provider goes here.
       oidc: {

@@ -43,3 +43,4 @@ export * from './user-scope.js';
 export * from './xml.js';
 export { config as appConfig } from '../config/index.js';
 export * from './formatter-definitions.js';
+export * from './template-sanitise.js';

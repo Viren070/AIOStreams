@@ -37,6 +37,15 @@ export enum ErrorCode {
   OIDC_CLAIMS_INVALID = 'OIDC_CLAIMS_INVALID',
   OIDC_USERNAME_CONFLICT = 'OIDC_USERNAME_CONFLICT',
   OIDC_NO_PERMISSIONS = 'OIDC_NO_PERMISSIONS',
+  // Community sharing
+  COMMUNITY_DISABLED = 'COMMUNITY_DISABLED',
+  COMMUNITY_BLOCKED = 'COMMUNITY_BLOCKED',
+  COMMUNITY_ACCOUNT_TOO_NEW = 'COMMUNITY_ACCOUNT_TOO_NEW',
+  COMMUNITY_SUBMISSION_LIMIT = 'COMMUNITY_SUBMISSION_LIMIT',
+  COMMUNITY_INVALID_ITEM = 'COMMUNITY_INVALID_ITEM',
+  COMMUNITY_NOT_FOUND = 'COMMUNITY_NOT_FOUND',
+  COMMUNITY_ALREADY_LIKED = 'COMMUNITY_ALREADY_LIKED',
+  COMMUNITY_VERSION_NOT_NEWER = 'COMMUNITY_VERSION_NOT_NEWER',
 }
 
 interface ErrorDetails {
@@ -160,6 +169,38 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
   [ErrorCode.OIDC_NO_PERMISSIONS]: {
     statusCode: 403,
     message: 'Your account is not mapped to any AIOStreams permissions',
+  },
+  [ErrorCode.COMMUNITY_DISABLED]: {
+    statusCode: 403,
+    message: 'Community sharing is disabled on this instance',
+  },
+  [ErrorCode.COMMUNITY_BLOCKED]: {
+    statusCode: 403,
+    message: 'You have been blocked from community sharing on this instance',
+  },
+  [ErrorCode.COMMUNITY_ACCOUNT_TOO_NEW]: {
+    statusCode: 403,
+    message: 'This configuration is too new to take part in community sharing',
+  },
+  [ErrorCode.COMMUNITY_SUBMISSION_LIMIT]: {
+    statusCode: 429,
+    message: 'You have reached the daily submission limit',
+  },
+  [ErrorCode.COMMUNITY_INVALID_ITEM]: {
+    statusCode: 400,
+    message: 'The submitted item is invalid',
+  },
+  [ErrorCode.COMMUNITY_NOT_FOUND]: {
+    statusCode: 404,
+    message: 'That community item does not exist',
+  },
+  [ErrorCode.COMMUNITY_ALREADY_LIKED]: {
+    statusCode: 409,
+    message: 'This item has already been liked from your network',
+  },
+  [ErrorCode.COMMUNITY_VERSION_NOT_NEWER]: {
+    statusCode: 400,
+    message: 'The version must be higher than the published one',
   },
 };
 

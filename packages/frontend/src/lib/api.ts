@@ -3,6 +3,12 @@
  *
  */
 
+import type {
+  CommunityItemMine,
+  CommunityItemPublic,
+  CommunityKind,
+} from '@aiostreams/core';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -232,11 +238,6 @@ interface ResolveSyncedResponse {
   errors?: { url: string; error: string }[];
 }
 
-interface FormatStreamResponse {
-  name: string;
-  description: string;
-}
-
 interface CatalogInfo {
   id: string;
   type: string;
@@ -453,15 +454,6 @@ export async function resolveStreamExpressions(
 }
 
 /**
- * Format stream for display
- */
-export async function getFormattedStream(stream: ParsedStream, context?: any) {
-  return api<FormatStreamResponse>('POST /format', {
-    body: { stream, context },
-  });
-}
-
-/**
  * Get catalogs for user data
  */
 export async function fetchCatalogs(userData: UserData) {
@@ -614,6 +606,85 @@ export async function fetchLinkedAccounts(credentials: Credentials) {
   return api<LinkedAccount[]>('GET /linked-accounts', authed(credentials));
 }
 
+// =============================================================================
+// Community sharing
+// =============================================================================
+
+export interface SubmitCommunityFormatterInput extends Record<string, unknown> {
+  name: string;
+  description: string;
+  author: string;
+  version?: string;
+  tags?: string[];
+  payload: { name: string; description: string };
+}
+
+export async function fetchCommunityItems(kind: CommunityKind) {
+  return api<CommunityItemPublic[]>(`GET /community/${kind}s`);
+}
+
+export async function fetchMyCommunityItems(credentials: Credentials) {
+  return api<CommunityItemMine[]>('GET /community/mine', authed(credentials));
+}
+
+export async function submitCommunityFormatter(
+  credentials: Credentials,
+  body: SubmitCommunityFormatterInput
+) {
+  return api<CommunityItemMine>('POST /community/formatters', {
+    ...authed(credentials),
+    body,
+  });
+}
+
+export async function submitCommunityTemplate(
+  credentials: Credentials,
+  template: unknown
+) {
+  return api<CommunityItemMine>('POST /community/templates', {
+    ...authed(credentials),
+    body: { template },
+  });
+}
+
+export async function updateCommunityItem(
+  credentials: Credentials,
+  id: string,
+  body: Record<string, unknown>
+) {
+  return api<CommunityItemMine>(
+    `PUT /community/items/${encodeURIComponent(id)}`,
+    { ...authed(credentials), body }
+  );
+}
+
+export async function withdrawCommunityDraft(
+  credentials: Credentials,
+  id: string
+) {
+  return api<CommunityItemMine>(
+    `DELETE /community/items/${encodeURIComponent(id)}/draft`,
+    authed(credentials)
+  );
+}
+
+export async function deleteCommunityItem(
+  credentials: Credentials,
+  id: string
+) {
+  return api<{ deleted: boolean }>(
+    `DELETE /community/items/${encodeURIComponent(id)}`,
+    authed(credentials)
+  );
+}
+
+export async function likeCommunityItem(credentials: Credentials, id: string) {
+  return api<{ liked: boolean; likes: number }>(
+    `POST /community/items/${encodeURIComponent(id)}/like`,
+    authed(credentials)
+  );
+}
+
 export async function probeLinkedAccount(
   credentials: Credentials,
   platform: LinkedAccountPlatformId,
@@ -692,7 +763,6 @@ export type {
   UpdateUserResponse,
   ResolvePatternsResponse,
   ResolveSyncedResponse,
-  FormatStreamResponse,
   CatalogInfo,
   GDriveTokenResponse,
 };

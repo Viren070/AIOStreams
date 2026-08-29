@@ -62,7 +62,7 @@ let trustedUuidsSource: string | null | undefined;
 let trustedUuidPatterns: RegExp[] = [];
 
 /** Recompiles only when the configured list changes, not per request. */
-function isTrustedUuid(uuid: string): boolean {
+export function isTrustedUuid(uuid: string): boolean {
   const source = appConfig.userLimits.trusted.uuids;
   if (source !== trustedUuidsSource) {
     trustedUuidsSource = source;
