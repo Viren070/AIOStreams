@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useAppSidebarContext } from '@/components/ui/app-layout';
 import { cn } from '@/components/ui/core/styling';
 import type { VerticalMenuItem } from '@/components/ui/vertical-menu';
 import { Sidebar } from '@/components/sidebar/Sidebar';
@@ -25,6 +24,8 @@ import {
   BiSearch,
   BiGridAlt,
   BiBarChartAlt2,
+  BiToggleLeft,
+  BiToggleRight,
 } from 'react-icons/bi';
 import { useCommandPalette } from '@/context/command-palette';
 import { useRegisterQuickAction } from '@/context/quick-actions';
@@ -46,8 +47,6 @@ type MenuItem = VerticalMenuItem & {
 };
 
 export function MainSidebar() {
-  const ctx = useAppSidebarContext();
-  const isCollapsed = !ctx.isBelowBreakpoint;
   const navigate = useNavigate();
   const { selectedMenu, setSelectedMenu } = useMenu();
   const pathname =
@@ -258,18 +257,12 @@ export function MainSidebar() {
       iconType: BiHeart,
       onClick: () => donationModal.open(),
     },
-    // Sign in/out lives in the mobile top-navbar, so only show it in the
-    // sidebar footer on desktop (and never on the About page).
-    ...(isCollapsed && selectedMenu !== 'about'
-      ? [
-          {
-            name: isSignedIn ? 'Sign Out' : 'Sign In',
-            iconType: isSignedIn ? BiLogOutCircle : BiLogInCircle,
-            onClick: () =>
-              isSignedIn ? confirmClearConfig.open() : signInModal.open(),
-          },
-        ]
-      : []),
+    {
+      name: isSignedIn ? 'Sign Out' : 'Sign In',
+      iconType: isSignedIn ? BiLogOutCircle : BiLogInCircle,
+      onClick: () =>
+        isSignedIn ? confirmClearConfig.open() : signInModal.open(),
+    },
   ];
 
   return (

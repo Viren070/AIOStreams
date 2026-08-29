@@ -377,8 +377,8 @@ const config: Config = {
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.15s linear',
-        'accordion-up': 'accordion-up 0.15s linear',
+        'accordion-down': 'accordion-down 0.24s cubic-bezier(0.33, 1, 0.68, 1)',
+        'accordion-up': 'accordion-up 0.2s cubic-bezier(0.32, 0, 0.67, 0)',
         'slide-down': 'slide-down 0.15s ease-in-out',
         'slide-up': 'slide-up 0.15s ease-in-out',
         'indeterminate-progress': 'indeterminate-progress 1s infinite ease-out',

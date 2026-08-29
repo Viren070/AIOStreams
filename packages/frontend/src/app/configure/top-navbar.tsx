@@ -7,7 +7,7 @@ import { cn } from '@/components/ui/core/styling';
 import React from 'react';
 import { PageControls } from '@/components/shared/page-controls';
 import { useMenu } from '@/context/menu';
-import { Button, IconButton } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/button';
 import { useDisclosure } from '@/hooks/disclosure';
 import { DonationModal } from '@/components/shared/donation-modal';
 import { BiLogInCircle, BiLogOutCircle, BiSearch } from 'react-icons/bi';
@@ -66,7 +66,7 @@ export function TopNavbar(props: TopNavbarProps) {
               label="Search settings"
               onOpen={openCommandPalette}
             />
-            {selectedMenu !== 'about' ? (
+            {selectedMenu !== 'about' && (
               <div className="flex items-center gap-2 lg:hidden">
                 <PageControls
                   middleContent={
@@ -92,26 +92,6 @@ export function TopNavbar(props: TopNavbarProps) {
                     />
                   }
                 />
-              </div>
-            ) : (
-              <div className="block lg:hidden">
-                <Button
-                  intent="primary-subtle"
-                  size="md"
-                  iconClass="text-3xl"
-                  leftIcon={
-                    uuid && password ? <BiLogOutCircle /> : <BiLogInCircle />
-                  }
-                  onClick={() => {
-                    if (uuid && password) {
-                      confirmClearConfig.open();
-                    } else {
-                      signInModal.open();
-                    }
-                  }}
-                >
-                  {uuid && password ? 'Sign Out' : 'Sign In'}
-                </Button>
               </div>
             )}
           </div>
