@@ -76,7 +76,7 @@ export function FormatterCard({
       )}
 
       {preview?.error ? (
-        <div className="rounded-md border border-red-900/60 bg-red-950/30 p-3 text-xs text-red-300 break-words">
+        <div className="rounded-md border border-red-600/60 bg-red-700/30 p-3 text-xs text-red-300 break-words">
           {preview.error}
         </div>
       ) : (

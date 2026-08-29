@@ -763,8 +763,8 @@ function DangerZoneCard({
     <SettingsCard
       title="Danger Zone"
       description="Perform potentially destructive actions that cannot be undone"
-      className="lg:bg-red-950/70 border-red-500/20"
-      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-950/20"
+      className="lg:bg-red-700/70 border-red-500/20"
+      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-700/20"
     >
       <div className="flex flex-wrap items-center gap-3">
         {hasUser && (

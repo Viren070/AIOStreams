@@ -216,7 +216,7 @@ export function StreamServices() {
               cat === 'debrid'
                 ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-700'
                 : cat === 'usenet'
-                  ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700'
+                  ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/40 dark:text-blue-300 dark:border-blue-500'
                   : 'bg-[--subtle-highlight] text-[--foreground] border-[--border]';
             return (
               <button
@@ -399,12 +399,12 @@ function ServiceItemRow({
               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
                 Debrid
               </span>
-              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-500/30 dark:text-blue-400">
                 Usenet
               </span>
             </>
           ) : usenet ? (
-            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-500/30 dark:text-blue-400">
               Usenet
             </span>
           ) : (
