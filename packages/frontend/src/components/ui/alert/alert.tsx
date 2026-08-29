@@ -212,7 +212,11 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         ref={ref}
       >
         <div
-          className={cn(AlertAnatomy.detailsContainer(), detailsContainerClass)}
+          className={cn(
+            AlertAnatomy.detailsContainer(),
+            !title && 'items-center',
+            detailsContainerClass
+          )}
         >
           {icon ? (
             icon
@@ -223,7 +227,13 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
               {Icon && Icon}
             </div>
           )}
-          <div className={cn(AlertAnatomy.textContainer(), textContainerClass)}>
+          <div
+            className={cn(
+              AlertAnatomy.textContainer(),
+              !title && 'self-center',
+              textContainerClass
+            )}
+          >
             {!!title && (
               <span className={cn(AlertAnatomy.title(), titleClass)}>
                 {title}
