@@ -47,6 +47,8 @@ interface TemplateBrowseStepProps {
   onDeleteRequest: (t: Template) => void;
   totalTemplateCount: number;
   initialExpandedTemplate?: Template;
+  /** Fired once the detail panel has been opened, so the caller can forget it. */
+  onInitialExpandedConsumed?: () => void;
   communityItems?: Record<string, CommunityItemPublic>;
   onLike?: (id: string) => void;
   likeDisabledReason?: string;
@@ -541,6 +543,7 @@ export function TemplateBrowseStep({
   onDeleteRequest,
   totalTemplateCount,
   initialExpandedTemplate,
+  onInitialExpandedConsumed,
   communityItems,
   onLike,
   likeDisabledReason,
@@ -554,7 +557,9 @@ export function TemplateBrowseStep({
   // Pre-open the detail panel when a featured card was clicked, and when the
   // template first resolves from the loader (templates load async).
   useEffect(() => {
-    if (initialExpandedTemplate) setDetailTemplate(initialExpandedTemplate);
+    if (!initialExpandedTemplate) return;
+    setDetailTemplate(initialExpandedTemplate);
+    onInitialExpandedConsumed?.();
   }, [initialExpandedTemplate?.metadata.id]);
 
   const sourceCounts = useMemo(() => {

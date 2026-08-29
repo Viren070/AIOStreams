@@ -60,9 +60,7 @@ export function ConfigTemplatesModal({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
   const [mineOpen, setMineOpen] = useState(false);
-  const [autoOpenTemplateId, setAutoOpenTemplateId] = useState<string | null>(
-    null
-  );
+  const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
 
   const deepLinkFetchedRef = React.useRef<string | null>(null);
   const wasOpenRef = React.useRef(false);
@@ -97,7 +95,7 @@ export function ConfigTemplatesModal({
   useEffect(() => {
     if (open && !wasOpenRef.current) {
       wizard.resetTo(startAtWelcome ? 'welcome' : 'browse');
-      setAutoOpenTemplateId(null);
+      setPendingDetailId(initialExpandedTemplateId ?? null);
     }
     wasOpenRef.current = open;
   }, [open, startAtWelcome]);
@@ -293,7 +291,7 @@ export function ConfigTemplatesModal({
               onUseTemplate={() => {
                 // The card promised a specific setup, so open it rather than
                 // dropping the user into an undifferentiated list.
-                setAutoOpenTemplateId(recommendedTemplate?.metadata.id ?? null);
+                setPendingDetailId(recommendedTemplate?.metadata.id ?? null);
                 wizard.goToStep('browse');
               }}
               onStartFresh={() => {
@@ -333,7 +331,10 @@ export function ConfigTemplatesModal({
               loadingTemplates={loader.loadingTemplates}
               templateValidations={loader.templateValidations}
               isLoading={wizard.isLoading}
-              onLoadTemplate={wizard.handleLoadTemplate}
+              onLoadTemplate={(t) => {
+                setPendingDetailId(t.metadata.id);
+                wizard.handleLoadTemplate(t);
+              }}
               onImportOpen={() => importer.setShowImportModal(true)}
               onDeleteRequest={(t) => {
                 importer.setTemplateToDelete(t);
@@ -365,13 +366,14 @@ export function ConfigTemplatesModal({
                   ? 'Create or load your configuration (UUID and password) first; shared templates are tied to it'
                   : undefined
               }
-              initialExpandedTemplate={(() => {
-                const id = initialExpandedTemplateId ?? autoOpenTemplateId;
-                return id
-                  ? (loader.templates.find((t) => t.metadata.id === id) ??
-                      undefined)
-                  : undefined;
-              })()}
+              initialExpandedTemplate={
+                pendingDetailId
+                  ? (loader.templates.find(
+                      (t) => t.metadata.id === pendingDetailId
+                    ) ?? undefined)
+                  : undefined
+              }
+              onInitialExpandedConsumed={() => setPendingDetailId(null)}
             />
           ),
           footer: canGoBack ? <SetupFooter onBack={wizard.handleBack} /> : null,
