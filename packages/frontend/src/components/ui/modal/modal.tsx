@@ -19,7 +19,7 @@ export const ModalAnatomy = defineStyleAnatomy({
   ]),
   content: cva([
     'UI-Modal__content',
-    'z-50 grid relative w-full w-full shadow-xl border border-[rgb(255_255_255_/_5%)] max-w-lg gap-4 bg-[--background] p-6 shadow-xl duration-200',
+    'z-50 grid relative w-full w-full shadow-xl border border-[rgb(255_255_255_/_5%)] max-w-lg gap-4 bg-[--paper] p-6 duration-200',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     // "data-[state=open]:slide-in-from-top-[40%] data-[state=closed]:slide-out-to-bottom-[40%]",
@@ -27,7 +27,7 @@ export const ModalAnatomy = defineStyleAnatomy({
     'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
     // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "mt-10",
     // process.env.NEXT_PUBLIC_PLATFORM === "desktop" && "select-none",
-    'sm:rounded-xl',
+    'sm:rounded-2xl',
   ]),
   close: cva(['UI-Modal__close', 'absolute right-4 top-4 !mt-0']),
   header: cva([

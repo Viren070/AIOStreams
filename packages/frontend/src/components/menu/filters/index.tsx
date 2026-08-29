@@ -303,6 +303,7 @@ function Content() {
       <Tabs
         value={tab}
         onValueChange={handleTabChange}
+        variant="pill"
         className={tabsRootClass}
         triggerClass={tabsTriggerClass}
         listClass={tabsListClass}

@@ -1115,7 +1115,6 @@ function AddonListItem({
           <Switch
             value={preset.enabled ?? false}
             onValueChange={onToggleEnabled}
-            className="h-5 w-9 md:h-6 md:w-11"
           />
           {isConfigurable && (
             <IconButton
