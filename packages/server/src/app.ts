@@ -69,6 +69,7 @@ import {
   stremioSubtitleRateLimiter,
   requireSessionIfAuthRequired,
 } from './middlewares/index.js';
+import { isTrustedIp } from './middlewares/ip.js';
 
 import {
   config as appConfig,
@@ -83,6 +84,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 const app: Express = express();
+app.set('trust proxy', (addr: string) => isTrustedIp(addr));
 const logger = createLogger('server');
 
 export enum StaticFiles {

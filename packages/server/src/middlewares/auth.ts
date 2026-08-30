@@ -15,13 +15,6 @@ import {
 
 export const SESSION_COOKIE = 'aiostreams.session';
 
-/**
- * Whether to set the `Secure` cookie attribute. Derived from BASE_URL.
- */
-export function cookieSecure(): boolean {
-  return appConfig.bootstrap.baseUrl?.startsWith('https://') ?? false;
-}
-
 function readCookie(req: Request, name: string): string | undefined {
   const header = req.headers.cookie;
   if (!header) return undefined;
@@ -37,6 +30,7 @@ function readCookie(req: Request, name: string): string | undefined {
 }
 
 export function setSessionCookie(
+  req: Request,
   res: Response,
   user: { username: string; permissions?: Permission[]; source?: SessionSource }
 ): void {
@@ -46,7 +40,7 @@ export function setSessionCookie(
   });
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: cookieSecure(),
+    secure: req.secure,
     sameSite: 'strict',
     path: '/',
     maxAge: appConfig.api.sessionTtlSeconds * 1000,
@@ -80,6 +74,7 @@ export interface OidcStateBlob {
  * provider's origin, and a 'strict' cookie is withheld from it.
  */
 export function setOidcStateCookie(
+  req: Request,
   res: Response,
   blob: Omit<OidcStateBlob, 'exp'>
 ): void {
@@ -89,7 +84,7 @@ export function setOidcStateCookie(
   };
   res.cookie(OIDC_STATE_COOKIE, encodeSignedPayload(payload), {
     httpOnly: true,
-    secure: cookieSecure(),
+    secure: req.secure,
     sameSite: 'lax',
     path: OIDC_COOKIE_PATH,
     maxAge: OIDC_STATE_TTL_SECONDS * 1000,

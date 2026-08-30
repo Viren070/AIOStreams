@@ -501,6 +501,9 @@ importers:
       multer:
         specifier: ^2.1.1
         version: 2.2.0
+      proxy-addr:
+        specifier: ^2.0.7
+        version: 2.0.7
       rate-limit-redis:
         specifier: ^4.3.1
         version: 4.3.1(express-rate-limit@8.5.2(express@5.2.1))
@@ -520,6 +523,9 @@ importers:
       '@types/node':
         specifier: ^20.19.39
         version: 20.19.43
+      '@types/proxy-addr':
+        specifier: ^2.0.3
+        version: 2.0.3
 
 packages:
 
@@ -3051,6 +3057,9 @@ packages:
 
   '@types/pg@8.20.0':
     resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
+
+  '@types/proxy-addr@2.0.3':
+    resolution: {integrity: sha512-TgAHHO4tNG3HgLTUhB+hM4iwW6JUNeQHCLnF1DjaDA9c69PN+IasoFu2MYDhubFc+ZIw5c5t9DMtjvrD6R3Egg==}
 
   '@types/qs@6.15.1':
     resolution: {integrity: sha512-GZHUBZR9hckSUhrxmp1nG6NwdpM9fCunJwyThLW1X3AyHgd9IlHb6VANpQQqDr2o/qQp6McZ3y/IA2rVzKzSbw==}
@@ -9514,6 +9523,10 @@ snapshots:
       '@types/node': 20.19.43
       pg-protocol: 1.14.0
       pg-types: 2.2.0
+
+  '@types/proxy-addr@2.0.3':
+    dependencies:
+      '@types/node': 25.9.3
 
   '@types/qs@6.15.1': {}
 

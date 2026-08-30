@@ -288,9 +288,9 @@ export interface OidcIdentity {
 
 /**
  * Exchange the authorization code and resolve the identity behind it. The
- * callback URL is rebuilt from config, not the request: `trust proxy` is off,
- * and the redirect_uri sent to the token endpoint must byte-match the one sent
- * to the authorization endpoint.
+ * callback URL is rebuilt from config, not the request: the redirect_uri sent
+ * to the token endpoint must byte-match the one sent to the authorization
+ * endpoint.
  */
 export async function completeOidcLogin(
   callbackQuery: string,

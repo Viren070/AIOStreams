@@ -166,7 +166,7 @@ export const apiSchema = {
     default: ['172.17.0.0/16', '127.0.0.1/32', '::1/128'],
     label: 'Trusted IPs',
     description:
-      'Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting.',
+      'Comma-separated list of trusted IPs / CIDR ranges. Forwarded headers (X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host) are only honoured from these addresses, which decides the requesting IP used for rate limiting and whether session cookies are marked Secure. User IP is always trusted via headers regardless of this setting.',
     env: 'TRUSTED_IPS',
     requiresRestart: false,
     secret: false,
