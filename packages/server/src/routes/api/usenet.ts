@@ -32,19 +32,25 @@ function mimeForFilename(name: string): string {
   return MIME_BY_EXT[ext] ?? 'application/octet-stream';
 }
 
+type RequestedRange =
+  | { start: number; endExclusive?: number; suffixLength?: undefined }
+  | { start?: undefined; endExclusive?: undefined; suffixLength: number };
+
 /**
- * Parse a single-range `Range` header. Returns `undefined` for no range or an
- * unsupported suffix range (`bytes=-N`), in which case the full file is served.
- * `endExclusive` is `undefined` for open-ended ranges (`bytes=START-`).
+ * Parse a single-range `Range` header. Returns `undefined` for no range or a
+ * malformed/multi-range header, in which case the full file is served.
+ * `endExclusive` is `undefined` for open-ended ranges (`bytes=START-`);
+ * `suffixLength` is set for suffix ranges (`bytes=-N`, the last N bytes).
  */
-function parseRange(
-  header: string | undefined
-): { start: number; endExclusive?: number } | undefined {
+function parseRange(header: string | undefined): RequestedRange | undefined {
   if (!header) return undefined;
   const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
   if (!match) return undefined;
   const [, rawStart, rawEnd] = match;
-  if (rawStart === '') return undefined; // suffix range: serve full
+  if (rawStart === '') {
+    if (rawEnd === '') return undefined;
+    return { suffixLength: Number(rawEnd) };
+  }
   const start = Number(rawStart);
   const endExclusive = rawEnd === '' ? undefined : Number(rawEnd) + 1;
   return { start, endExclusive };
@@ -83,6 +89,7 @@ router.get(
         token,
         start: requested?.start,
         end: requested?.endExclusive,
+        suffixLength: requested?.suffixLength,
         signal: controller.signal,
         clientIp: req.requestIp || req.ip || req.socket.remoteAddress,
       });
@@ -109,8 +116,8 @@ router.get(
         return;
       }
 
-      // Unsatisfiable range.
-      if (requested && requested.start >= size) {
+      // Unsatisfiable range (includes `bytes=-0`, which resolves to start=size).
+      if (requested && start >= size) {
         res.removeListener('close', onClose);
         stream.destroy();
         res.status(416).set('Content-Range', `bytes */${size}`).end();

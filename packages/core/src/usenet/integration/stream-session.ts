@@ -630,6 +630,8 @@ export async function openNativeUsenetStream(opts: {
   token: string;
   start?: number;
   end?: number;
+  /** Serve the last N bytes (`bytes=-N`); overrides start/end. */
+  suffixLength?: number;
   signal?: AbortSignal;
   /** Client address, for stream accounting. */
   clientIp?: string;
@@ -728,9 +730,14 @@ export async function openNativeUsenetStream(opts: {
     throw err;
   }
   const { size, filename } = session;
-  const start = Math.max(0, opts.start ?? 0);
-  const end = Math.min(size, opts.end ?? size);
-  handle.setInfo({ size, filename });
+  const suffix = opts.suffixLength;
+  const start =
+    suffix !== undefined
+      ? Math.max(0, size - suffix)
+      : Math.max(0, opts.start ?? 0);
+  const end = suffix !== undefined ? size : Math.min(size, opts.end ?? size);
+  // A suffix range's position is only known now that the size is.
+  handle.setInfo({ size, filename, start });
 
   let stream = session.stream.createReadStream({ start, end }, opts.signal);
   if (session.matroska && appConfig.usenet.matroskaHoleFill) {
