@@ -35,7 +35,7 @@ export function GetStartedCard({
         </h3>
         <p className="text-sm text-[--muted] mt-1">
           {hasConfig
-            ? 'Pick up where you left off, or install it to Stremio.'
+            ? 'Pick up where you left off, or grab your install link.'
             : 'Pick a ready-made setup or build one yourself. It takes a couple of minutes.'}
           {hasConfig && !isSignedIn && (
             <span className="block text-xs text-gray-500 mt-1">
@@ -65,7 +65,7 @@ export function GetStartedCard({
               className="w-full sm:flex-1 h-11"
               onClick={onInstall}
             >
-              Install to Stremio
+              Save &amp; install
             </Button>
           </>
         ) : (

@@ -1,17 +1,16 @@
 import React from 'react';
-import { toast } from 'sonner';
 import type { Template } from '@aiostreams/core';
 
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { SettingsCard } from '@/components/shared/settings-card';
 import { DonationModal } from '@/components/shared/donation-modal';
-import { ConfigModal } from '@/components/config-modal';
 import { ConfigTemplatesModal } from '@/components/shared/templates';
 import { useDisclosure } from '@/hooks/disclosure';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { useMenu } from '@/context/menu';
 import { useMode } from '@/context/mode';
+import { useConfigAuth } from '@/context/config-auth';
 import {
   useTemplateLoader,
   type AppliedTemplateUpdate,
@@ -50,11 +49,9 @@ function Content() {
 
   const donationModal = useDisclosure(false);
   const customizeModal = useDisclosure(false);
-  const signInModal = useDisclosure(false);
   const templatesModal = useDisclosure(false);
   const templateUpdateModal = useDisclosure(false);
 
-  const [initialUuid, setInitialUuid] = React.useState<string | null>(null);
   const [startAtWelcome, setStartAtWelcome] = React.useState(false);
   const [featuredTemplateToOpen, setFeaturedTemplateToOpen] =
     React.useState<Template | null>(null);
@@ -72,7 +69,7 @@ function Content() {
 
   const hasOpenedUpdateModalRef = React.useRef(false);
 
-  const isSignedIn = Boolean(uuid && password);
+  const { isSignedIn, openSignIn, toggleSession } = useConfigAuth();
   const addonName =
     userData.addonName || status?.settings?.addonName || 'AIOStreams';
   const addonDescription =
@@ -133,15 +130,6 @@ function Content() {
       url.searchParams.delete('templateId');
       window.history.replaceState({}, '', url.toString());
     }
-  }, []);
-
-  React.useEffect(() => {
-    const pathname =
-      typeof window !== 'undefined' ? window.location.pathname : '';
-    const uuidMatch = pathname.match(
-      /stremio\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/.*\/configure/
-    );
-    if (uuidMatch) setInitialUuid(uuidMatch[1]);
   }, []);
 
   // Reset the session guard whenever the user's identity changes (sign in /
@@ -223,6 +211,8 @@ function Content() {
           commit={status?.commit}
           onCustomize={customizeModal.open}
           onDonate={donationModal.open}
+          isSignedIn={isSignedIn}
+          onToggleSession={toggleSession}
         />
 
         {customHtml && (
@@ -241,7 +231,7 @@ function Content() {
           onContinue={() => nextMenu()}
           onBrowseSetups={() => openSetup()}
           onInstall={() => setSelectedMenu('save-install')}
-          onSignIn={signInModal.open}
+          onSignIn={() => openSignIn()}
         />
 
         <FeaturedSetups
@@ -299,18 +289,6 @@ function Content() {
         currentDescription={userData.addonDescription}
       />
 
-      <ConfigModal
-        open={signInModal.isOpen}
-        onSuccess={() => {
-          signInModal.close();
-          toast.success('Signed in successfully');
-        }}
-        onOpenChange={(v) => {
-          if (!v) signInModal.close();
-        }}
-        initialUuid={initialUuid || undefined}
-      />
-
       <ConfigTemplatesModal
         open={templatesModal.isOpen}
         onOpenChange={(v) => {
@@ -326,7 +304,7 @@ function Content() {
         initialExpandedTemplateId={featuredTemplateToOpen?.metadata.id}
         startAtWelcome={startAtWelcome}
         onStartFresh={() => nextMenu()}
-        onSignIn={signInModal.open}
+        onSignIn={() => openSignIn()}
       />
 
       <TemplateUpdatesModal

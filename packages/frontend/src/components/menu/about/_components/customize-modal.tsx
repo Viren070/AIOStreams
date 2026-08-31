@@ -64,7 +64,7 @@ export function CustomizeModal({
               placeholder="Enter addon name"
             />
             <p className="text-xs text-[--muted]">
-              This name will be displayed in Stremio
+              This name is shown wherever the addon is installed
             </p>
           </div>
 
@@ -91,7 +91,7 @@ export function CustomizeModal({
               rows={3}
             />
             <p className="text-xs text-[--muted]">
-              This description will be displayed in Stremio
+              This description is shown wherever the addon is installed
             </p>
           </div>
 

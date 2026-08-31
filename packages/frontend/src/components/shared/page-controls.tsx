@@ -1,16 +1,11 @@
 import { Button, IconButton } from '../ui/button';
 import { useMenu } from '@/context/menu';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
-import { BiSave } from 'react-icons/bi';
+import { BiLogInCircle, BiLogOutCircle, BiSave } from 'react-icons/bi';
 import { useSave } from '@/context/save';
-import { useUserData } from '@/context/userData';
-import React from 'react';
+import { useConfigAuth } from '@/context/config-auth';
 
-interface PageControlsProps {
-  middleContent?: React.ReactNode;
-}
-
-export function PageControls({ middleContent }: PageControlsProps) {
+export function PageControls() {
   const {
     setSelectedMenu,
     selectedMenu,
@@ -20,8 +15,7 @@ export function PageControls({ middleContent }: PageControlsProps) {
     lastMenu,
   } = useMenu();
   const { handleSave, loading: saveLoading } = useSave();
-  const { uuid, password } = useUserData();
-  const isLoggedIn = !!(uuid && password);
+  const { isSignedIn, toggleSession } = useConfigAuth();
 
   return (
     <div className="flex flex-1 gap-2 items-center">
@@ -54,8 +48,14 @@ export function PageControls({ middleContent }: PageControlsProps) {
       >
         Previous
       </Button>
-      {middleContent}
-      {isLoggedIn && (
+      <IconButton
+        icon={isSignedIn ? <BiLogOutCircle /> : <BiLogInCircle />}
+        intent="white-outline"
+        rounded
+        size="md"
+        onClick={toggleSession}
+      />
+      {isSignedIn && (
         <IconButton
           icon={<BiSave />}
           intent="white-outline"

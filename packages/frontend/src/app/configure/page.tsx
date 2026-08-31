@@ -19,6 +19,7 @@ import { ModeProvider } from '@/context/mode';
 import { SubTabProvider } from '@/context/sub-tab';
 import { QuickActionsProvider } from '@/context/quick-actions';
 import { CommandPaletteProvider } from '@/context/command-palette';
+import { ConfigAuthProvider } from '@/context/config-auth';
 import { CommandPalette } from '@/components/shared/command-palette';
 import { useQueryClient } from '@tanstack/react-query';
 import { statusQuery } from '@/lib/queries';
@@ -51,34 +52,36 @@ function AppContent() {
   }
 
   return (
-    <MenuProvider>
-      <SubTabProvider>
-        <QuickActionsProvider>
-          <CommandPaletteProvider>
-            <SaveProvider>
-              <AppSidebarProvider>
-                <AppLayout withSidebar sidebarSize="slim">
-                  <AppLayoutSidebar>
-                    <MainSidebar />
-                  </AppLayoutSidebar>
-                  <AppLayout>
-                    <AppLayoutContent>
-                      <div data-main-layout-container className="h-auto">
-                        <TopNavbar />
-                        <div data-main-layout-content>
-                          <MenuContent />
+    <ConfigAuthProvider>
+      <MenuProvider>
+        <SubTabProvider>
+          <QuickActionsProvider>
+            <CommandPaletteProvider>
+              <SaveProvider>
+                <AppSidebarProvider>
+                  <AppLayout withSidebar sidebarSize="slim">
+                    <AppLayoutSidebar>
+                      <MainSidebar />
+                    </AppLayoutSidebar>
+                    <AppLayout>
+                      <AppLayoutContent>
+                        <div data-main-layout-container className="h-auto">
+                          <TopNavbar />
+                          <div data-main-layout-content>
+                            <MenuContent />
+                          </div>
                         </div>
-                      </div>
-                    </AppLayoutContent>
+                      </AppLayoutContent>
+                    </AppLayout>
                   </AppLayout>
-                </AppLayout>
-              </AppSidebarProvider>
-            </SaveProvider>
-            <CommandPalette />
-          </CommandPaletteProvider>
-        </QuickActionsProvider>
-      </SubTabProvider>
-    </MenuProvider>
+                </AppSidebarProvider>
+              </SaveProvider>
+              <CommandPalette />
+            </CommandPaletteProvider>
+          </QuickActionsProvider>
+        </SubTabProvider>
+      </MenuProvider>
+    </ConfigAuthProvider>
   );
 }
 

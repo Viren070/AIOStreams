@@ -299,7 +299,7 @@ function SavePreferencesModal({
         </div>
         <Select
           label="Manifest change notices"
-          help="Stremio caches your manifest, so a change can need a reinstall. This is when you get told."
+          help="Some clients (e.g. Stremio) cache your manifest, so a change can need a reinstall. This is when you get told."
           value={manifestNotice}
           onValueChange={(value) =>
             onManifestNoticeChange(value as ManifestNotice)
@@ -1827,7 +1827,7 @@ function Content() {
         <div>
           <h2>Install Addon</h2>
           <p className="text-[--muted]">
-            Configure and install your personalized Stremio addon
+            Configure and install your personalized addon
           </p>
         </div>
         <div className="hidden lg:block lg:ml-auto">

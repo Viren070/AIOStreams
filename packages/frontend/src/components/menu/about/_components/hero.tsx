@@ -1,5 +1,5 @@
 import React from 'react';
-import { PencilIcon, HeartIcon } from 'lucide-react';
+import { PencilIcon, HeartIcon, LogInIcon, LogOutIcon } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/button';
 
 export function AboutHero({
@@ -11,6 +11,8 @@ export function AboutHero({
   commit,
   onCustomize,
   onDonate,
+  isSignedIn,
+  onToggleSession,
 }: {
   addonName: string;
   addonDescription: string;
@@ -20,6 +22,8 @@ export function AboutHero({
   commit?: string;
   onCustomize: () => void;
   onDonate: () => void;
+  isSignedIn: boolean;
+  onToggleSession: () => void;
 }) {
   return (
     <div className="flex items-start gap-4 sm:gap-5 w-full">
@@ -65,17 +69,34 @@ export function AboutHero({
           {addonDescription}
         </p>
       </div>
-      <Button
-        intent="gray-outline"
-        size="sm"
-        rounded
-        hideTextOnSmallScreen
-        leftIcon={<HeartIcon className="w-4 h-4" />}
-        onClick={onDonate}
-        className="shrink-0 border-red-400/30 text-red-300 hover:bg-red-500/10 hover:border-red-400/50 hover:text-red-200"
-      >
-        Donate
-      </Button>
+      <div className="hidden lg:flex items-center gap-2 shrink-0">
+        <Button
+          intent="gray-outline"
+          size="sm"
+          rounded
+          leftIcon={<HeartIcon className="w-4 h-4" />}
+          onClick={onDonate}
+          className="shrink-0 border-red-400/30 text-red-300 hover:bg-red-500/10 hover:border-red-400/50 hover:text-red-200"
+        >
+          Donate
+        </Button>
+        <Button
+          intent="gray-outline"
+          size="sm"
+          rounded
+          leftIcon={
+            isSignedIn ? (
+              <LogOutIcon className="w-4 h-4" />
+            ) : (
+              <LogInIcon className="w-4 h-4" />
+            )
+          }
+          onClick={onToggleSession}
+          className="shrink-0"
+        >
+          {isSignedIn ? 'Sign Out' : 'Sign In'}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -146,7 +146,7 @@ function StatsView({ data }: { data: UserAnalyticsResponse }) {
       <Alert
         intent="info"
         title="No stream requests yet"
-        description="Once Stremio plays something, your stats will start populating. You can refresh this page after watching a few items."
+        description="Once you start requesting streams, your stats will start populating. You can refresh this page after watching a few items."
       />
     );
   }
