@@ -89,8 +89,14 @@ async function runAutoPush(
 const SaveContext = React.createContext<SaveContextType | undefined>(undefined);
 
 export function SaveProvider({ children }: { children: React.ReactNode }) {
-  const { userData, setUserData, uuid, password, encryptedPassword } =
-    useUserData();
+  const {
+    userData,
+    setUserData,
+    uuid,
+    password,
+    encryptedPassword,
+    setBaseline,
+  } = useUserData();
   const { status } = useStatus();
   const { setSelectedMenu } = useMenu();
 
@@ -286,6 +292,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       try {
         await updateUserConfig(uuid, userData, password);
+        setBaseline(userData);
         if (!suppressSuccessToast) {
           toast.success('Configuration updated successfully');
         }
@@ -309,6 +316,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       checkManifestChange,
       setSelectedMenu,
       setUserData,
+      setBaseline,
     ]
   );
 

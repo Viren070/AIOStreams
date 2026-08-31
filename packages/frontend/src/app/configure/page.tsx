@@ -21,6 +21,7 @@ import { QuickActionsProvider } from '@/context/quick-actions';
 import { CommandPaletteProvider } from '@/context/command-palette';
 import { ConfigAuthProvider } from '@/context/config-auth';
 import { CommandPalette } from '@/components/shared/command-palette';
+import { DraftRestoreBanner } from '@/components/shared/draft-restore-banner';
 import { useQueryClient } from '@tanstack/react-query';
 import { statusQuery } from '@/lib/queries';
 
@@ -67,6 +68,7 @@ function AppContent() {
                       <AppLayoutContent>
                         <div data-main-layout-container className="h-auto">
                           <TopNavbar />
+                          <DraftRestoreBanner />
                           <div data-main-layout-content>
                             <MenuContent />
                           </div>

@@ -33,8 +33,13 @@ export function ConfigModal({
   onOpenChange,
   initialUuid,
 }: ConfigModalProps) {
-  const { setUserData, setUuid, setPassword, setEncryptedPassword } =
-    useUserData();
+  const {
+    setUserData,
+    setUuid,
+    setPassword,
+    setEncryptedPassword,
+    setBaseline,
+  } = useUserData();
   const { user: sessionUser } = useSession();
   const queryClient = useQueryClient();
   const [uuid, setUuidInput] = React.useState(initialUuid || '');
@@ -60,12 +65,20 @@ export function ConfigModal({
     async (loadUuid: string, loadPassword: string) => {
       const result = await loadRawUserConfig(loadUuid, loadPassword);
       setUserData(() => result.userData);
+      setBaseline(result.userData);
       setUuid(loadUuid);
       setPassword(loadPassword);
       setEncryptedPassword(result.encryptedPassword);
       onSuccess();
     },
-    [setUserData, setUuid, setPassword, setEncryptedPassword, onSuccess]
+    [
+      setUserData,
+      setBaseline,
+      setUuid,
+      setPassword,
+      setEncryptedPassword,
+      onSuccess,
+    ]
   );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

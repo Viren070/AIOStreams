@@ -6,6 +6,7 @@ import {
   useConfirmationDialog,
 } from '@/components/shared/confirmation-dialog';
 import { useUserData } from '@/context/userData';
+import { clearDrafts } from '@/lib/drafts';
 
 type ConfigAuthContextType = {
   isSignedIn: boolean;
@@ -56,6 +57,9 @@ export function ConfigAuthProvider({
     title: 'Sign Out',
     description: 'Are you sure you want to sign out?',
     onConfirm: () => {
+      // Must run while the uuid is known; the reset below only sees the
+      // signed-out identity.
+      clearDrafts(uuid);
       setUserData(null);
       setUuid(null);
       setPassword(null);
