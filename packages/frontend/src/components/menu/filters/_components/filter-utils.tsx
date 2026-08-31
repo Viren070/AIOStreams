@@ -75,6 +75,11 @@ export const tabsListClass = cn(
   'lg:block p-2 lg:p-0'
 );
 
+// display:contents below lg so mobile keeps the flat wrapped pill list
+export const tabsGroupClass = cn(
+  'contents lg:block border-0 bg-transparent lg:border lg:bg-[--paper] overflow-clip p-1'
+);
+
 export const tabsContentClass = cn(
   'space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-300'
 );
