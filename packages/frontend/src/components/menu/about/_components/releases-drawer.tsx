@@ -161,7 +161,11 @@ export function ReleasesDrawer({
           <Accordion
             type="multiple"
             defaultValue={
-              releases.releases[0] ? [releases.releases[0].tag_name] : []
+              newerTags.size
+                ? releases.newer.map((r) => r.tag_name).slice(0, 5)
+                : releases.releases[0]
+                  ? [releases.releases[0].tag_name]
+                  : []
             }
             className="space-y-2"
           >
