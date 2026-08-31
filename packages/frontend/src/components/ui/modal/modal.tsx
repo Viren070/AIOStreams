@@ -32,7 +32,7 @@ export const ModalAnatomy = defineStyleAnatomy({
   close: cva(['UI-Modal__close', 'absolute right-4 top-4 !mt-0']),
   header: cva([
     'UI-Modal__header',
-    'flex flex-col space-y-1.5 text-center sm:text-left',
+    'flex flex-col space-y-1.5 min-w-0 text-center sm:text-left',
   ]),
   footer: cva([
     'UI-Modal__footer',
@@ -40,7 +40,7 @@ export const ModalAnatomy = defineStyleAnatomy({
   ]),
   title: cva([
     'UI-Modal__title',
-    'text-xl font-semibold leading-none tracking-tight',
+    'text-xl font-semibold leading-snug tracking-tight break-words',
   ]),
   description: cva(['UI-Modal__description', 'text-sm text-[--muted]']),
 });
