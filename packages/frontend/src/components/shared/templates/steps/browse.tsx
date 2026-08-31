@@ -272,124 +272,124 @@ function TemplateDetail({
 
   return (
     <div className="flex flex-col gap-5 h-full min-h-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <SourceBadge template={template} community={community} />
-        <span className="text-xs text-gray-500">
-          v{template.metadata.version || '1.0.0'} · by{' '}
-          {template.metadata.author}
-        </span>
-      </div>
-
-      {(hasErrors || hasWarnings) && (
-        <button
-          type="button"
-          onClick={() => setShowValidation(true)}
-          className={cn(
-            'flex items-center gap-2 text-left text-xs rounded-lg border px-3 py-2 transition-colors',
-            hasErrors
-              ? 'border-red-400/30 bg-red-500/5 text-red-200 hover:bg-red-500/10'
-              : 'border-yellow-400/30 bg-yellow-500/5 text-yellow-300 hover:bg-yellow-500/10'
-          )}
-        >
-          <AlertTriangleIcon className="w-4 h-4 shrink-0" />
-          {hasErrors
-            ? `${validation!.errors.length} problem${validation!.errors.length === 1 ? '' : 's'} with this template — view details`
-            : `${validation!.warnings.length} warning${validation!.warnings.length === 1 ? '' : 's'} — view details`}
-        </button>
-      )}
-
-      {(services.length > 0 ||
-        addons.length > 0 ||
-        servicesChosenDuringSetup ||
-        skipsServiceSelection) && (
-        <div className="rounded-lg border border-gray-700/70 bg-gray-800/40 p-4 space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            What this sets up
-          </div>
-          {services.length > 0 ? (
-            <div className="flex items-start gap-2.5 text-sm">
-              <CloudIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-gray-300">
-                  {template.metadata.serviceRequired === true
-                    ? 'You will need an account for'
-                    : 'Optionally works with'}
-                </div>
-                <div className="text-gray-400 mt-0.5">
-                  {services.join(', ')}
-                </div>
-              </div>
-            </div>
-          ) : servicesChosenDuringSetup ? (
-            <div className="flex items-start gap-2.5 text-sm">
-              <CloudIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-gray-300">
-                  {template.metadata.serviceRequired === true
-                    ? 'Needs a debrid or usenet service'
-                    : 'Works with or without a service'}
-                </div>
-                <div className="text-gray-400 mt-0.5">
-                  You choose which ones during setup.
-                </div>
-              </div>
-            </div>
-          ) : skipsServiceSelection ? (
-            <div className="flex items-start gap-2.5 text-sm">
-              <CloudOffIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-gray-300">No service to pick</div>
-                <div className="text-gray-400 mt-0.5">
-                  This setup does not ask you to choose a service.
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {addons.length > 0 && (
-            <div className="flex items-start gap-2.5 text-sm">
-              <PuzzleIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-gray-300">
-                  {addonsVary ? 'Up to ' : ''}
-                  {addons.length} addon{addons.length === 1 ? '' : 's'}
-                  {addonsVary && (
-                    <span className="text-gray-500">
-                      {' '}
-                      — the exact set depends on your answers
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {addons.map((addon, i) => (
-                    <span
-                      key={`${addon}-${i}`}
-                      className="text-xs bg-gray-700/50 text-gray-300 px-2 py-0.5 rounded"
-                    >
-                      {addon}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <SourceBadge template={template} community={community} />
+          <span className="text-xs text-gray-500">
+            v{template.metadata.version || '1.0.0'} · by{' '}
+            {template.metadata.author}
+          </span>
         </div>
-      )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+        {(hasErrors || hasWarnings) && (
+          <button
+            type="button"
+            onClick={() => setShowValidation(true)}
+            className={cn(
+              'flex items-center gap-2 text-left text-xs rounded-lg border px-3 py-2 transition-colors',
+              hasErrors
+                ? 'border-red-400/30 bg-red-500/5 text-red-200 hover:bg-red-500/10'
+                : 'border-yellow-400/30 bg-yellow-500/5 text-yellow-300 hover:bg-yellow-500/10'
+            )}
+          >
+            <AlertTriangleIcon className="w-4 h-4 shrink-0" />
+            {hasErrors
+              ? `${validation!.errors.length} problem${validation!.errors.length === 1 ? '' : 's'} with this template — view details`
+              : `${validation!.warnings.length} warning${validation!.warnings.length === 1 ? '' : 's'} — view details`}
+          </button>
+        )}
+
+        {(services.length > 0 ||
+          addons.length > 0 ||
+          servicesChosenDuringSetup ||
+          skipsServiceSelection) && (
+          <div className="rounded-lg border border-gray-700/70 bg-gray-800/40 p-4 space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              What this sets up
+            </div>
+            {services.length > 0 ? (
+              <div className="flex items-start gap-2.5 text-sm">
+                <CloudIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-gray-300">
+                    {template.metadata.serviceRequired === true
+                      ? 'You will need an account for'
+                      : 'Optionally works with'}
+                  </div>
+                  <div className="text-gray-400 mt-0.5">
+                    {services.join(', ')}
+                  </div>
+                </div>
+              </div>
+            ) : servicesChosenDuringSetup ? (
+              <div className="flex items-start gap-2.5 text-sm">
+                <CloudIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-gray-300">
+                    {template.metadata.serviceRequired === true
+                      ? 'Needs a debrid or usenet service'
+                      : 'Works with or without a service'}
+                  </div>
+                  <div className="text-gray-400 mt-0.5">
+                    You choose which ones during setup.
+                  </div>
+                </div>
+              </div>
+            ) : skipsServiceSelection ? (
+              <div className="flex items-start gap-2.5 text-sm">
+                <CloudOffIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-gray-300">No service to pick</div>
+                  <div className="text-gray-400 mt-0.5">
+                    This setup does not ask you to choose a service.
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {addons.length > 0 && (
+              <div className="flex items-start gap-2.5 text-sm">
+                <PuzzleIcon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-gray-300">
+                    {addonsVary ? 'Up to ' : ''}
+                    {addons.length} addon{addons.length === 1 ? '' : 's'}
+                    {addonsVary && (
+                      <span className="text-gray-500">
+                        {' '}
+                        — the exact set depends on your answers
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {addons.map((addon, i) => (
+                      <span
+                        key={`${addon}-${i}`}
+                        className="text-xs bg-gray-700/50 text-gray-300 px-2 py-0.5 rounded"
+                      >
+                        {addon}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <MarkdownLite className="text-sm text-gray-300 [&_a]:text-[--brand] [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-0.5">
           {template.metadata.description}
         </MarkdownLite>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {templateTags(template.metadata).map((tag) => (
-          <span
-            key={tag}
-            className="text-xs bg-gray-800/60 text-gray-400 px-2 py-1 rounded"
-          >
-            {tag}
-          </span>
-        ))}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {templateTags(template.metadata).map((tag) => (
+            <span
+              key={tag}
+              className="text-xs bg-gray-800/60 text-gray-400 px-2 py-1 rounded"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 pt-3 border-t border-gray-700/60">
