@@ -91,6 +91,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       userAnalyticsEnabled:
         appConfig.analytics.enabled !== false &&
         appConfig.analytics.userAnalyticsEnabled === true,
+      configSessionsEnabled: appConfig.api.configSessionsEnabled !== false,
       forced: {
         proxy: {
           enabled: appConfig.proxy.force.enabled ?? null,

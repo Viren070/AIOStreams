@@ -62,7 +62,7 @@ export function CommunityTab({ enabled, onInstall }: CommunityTabProps) {
   const { userData, uuid, password } = useUserData();
   const { status } = useStatus();
   const mode = status?.settings.community?.formatters ?? 'off';
-  const credentials = uuid && password ? { uuid, password } : null;
+  const credentials = uuid ? { uuid, password } : null;
 
   const [showMine, setShowMine] = useState(false);
   const [search, setSearch] = useState('');

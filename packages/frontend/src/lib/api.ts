@@ -290,19 +290,61 @@ function basicAuthHeader(uuid: string, password: string): string {
   return `Basic ${btoa(binary)}`;
 }
 
-/**
- * Load user configuration
- */
-export async function loadUserConfig(uuid: string, password: string) {
-  return api<LoadUserResponse>('GET /user', {
+// A null password means the session cookie authenticates the request instead.
+function configAuth(uuid: string, password: string | null) {
+  return password === null
+    ? {}
+    : { headers: { Authorization: basicAuthHeader(uuid, password) } };
+}
+
+export interface ConfigSession {
+  uuid: string;
+  remembered: boolean;
+  expiresAt: number;
+}
+
+export function hasConfigSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie
+    .split(';')
+    .some((part) => part.trim().startsWith('aiostreams.has-config-session='));
+}
+
+export async function createConfigSession(
+  uuid: string,
+  password: string,
+  remember: boolean
+) {
+  return api<ConfigSession>('POST /user/session', {
+    body: { remember },
     headers: { Authorization: basicAuthHeader(uuid, password) },
   });
 }
 
-export async function loadRawUserConfig(uuid: string, password: string) {
-  return api<LoadUserResponse>('GET /user?raw=true', {
-    headers: { Authorization: basicAuthHeader(uuid, password) },
-  });
+export async function endConfigSession() {
+  return api<void>('DELETE /user/session');
+}
+
+export async function endAllConfigSessions() {
+  return api<{ count: number }>('DELETE /user/sessions');
+}
+
+/**
+ * Load user configuration
+ */
+export async function loadUserConfig(uuid: string, password: string | null) {
+  return api<LoadUserResponse>('GET /user', configAuth(uuid, password));
+}
+
+export async function loadRawUserConfig(uuid: string, password: string | null) {
+  return api<LoadUserResponse>(
+    'GET /user?raw=true',
+    configAuth(uuid, password)
+  );
+}
+
+export async function loadConfigFromSession() {
+  return api<LoadUserResponse>('GET /user?raw=true');
 }
 
 /**
@@ -320,11 +362,11 @@ export async function createUserConfig(config: UserData, password: string) {
 export async function updateUserConfig(
   uuid: string,
   config: UserData,
-  password: string
+  password: string | null
 ) {
   return api<UpdateUserResponse>('PUT /user', {
     body: { config },
-    headers: { Authorization: basicAuthHeader(uuid, password) },
+    ...configAuth(uuid, password),
   });
 }
 
@@ -419,7 +461,7 @@ export async function resolveSynced(
     regexUrls?: string[];
     selUrls?: string[];
   },
-  credentials?: { uuid: string; password: string }
+  credentials?: { uuid: string; password: string | null }
 ) {
   return api<ResolveSyncedResponse>('POST /sync/resolve', {
     body: {
@@ -436,7 +478,7 @@ export async function resolveSynced(
  */
 export async function resolveRegexPatterns(
   urls: string[],
-  credentials?: { uuid: string; password: string }
+  credentials?: Credentials
 ) {
   const result = await resolveSynced({ regexUrls: urls }, credentials);
   return { patterns: result.patterns || [], errors: result.errors };
@@ -447,7 +489,7 @@ export async function resolveRegexPatterns(
  */
 export async function resolveStreamExpressions(
   urls: string[],
-  credentials?: { uuid: string; password: string }
+  credentials?: Credentials
 ) {
   const result = await resolveSynced({ selUrls: urls }, credentials);
   return { expressions: result.expressions || [], errors: result.errors };
@@ -534,12 +576,13 @@ export interface UserAnalyticsResponse {
 
 export async function fetchUserAnalytics(
   uuid: string,
-  password: string,
+  password: string | null,
   range: '24h' | '7d'
 ) {
-  return api<UserAnalyticsResponse>(`GET /user/analytics?range=${range}`, {
-    headers: { Authorization: basicAuthHeader(uuid, password) },
-  });
+  return api<UserAnalyticsResponse>(
+    `GET /user/analytics?range=${range}`,
+    configAuth(uuid, password)
+  );
 }
 
 export type LinkedAccountPlatformId = 'stremio' | 'aiomanager';
@@ -585,14 +628,11 @@ export interface LinkedAccountPushAllResult {
   error?: string;
 }
 
-type Credentials = { uuid: string; password: string };
+/** A null password means a remembered sign-in cookie carries the auth. */
+export type Credentials = { uuid: string; password: string | null };
 
 function authed(credentials: Credentials) {
-  return {
-    headers: {
-      Authorization: basicAuthHeader(credentials.uuid, credentials.password),
-    },
-  };
+  return configAuth(credentials.uuid, credentials.password);
 }
 
 export async function fetchLinkedAccountPlatforms(credentials: Credentials) {

@@ -70,7 +70,7 @@ function legacyManifestNotice(uuid: string): ManifestNotice {
  */
 async function runAutoPush(
   uuid: string,
-  password: string
+  password: string | null
 ): Promise<LinkedAccountPushAllResult[] | null> {
   try {
     const results = await pushAllLinkedAccounts({ uuid, password });
@@ -152,7 +152,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       : null;
 
   const queryClient = useQueryClient();
-  const credentials = uuid && password ? { uuid, password } : null;
+  const credentials = uuid ? { uuid, password } : null;
   const { data: linkedAccountsData } = useQuery(
     linkedAccountsQuery(credentials)
   );
@@ -207,7 +207,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
       // Runs before the notice is considered, so an automatic push still
       // happens for someone who dismissed the notice permanently.
-      if (hasChanged && pushBehaviour === 'auto' && password) {
+      if (hasChanged && pushBehaviour === 'auto') {
         const results = await runAutoPush(uuid, password);
         void queryClient.invalidateQueries({
           queryKey: LINKED_ACCOUNTS_QUERY_ROOT,
@@ -255,7 +255,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       pendingSkipDiffRef.current = false;
 
       // navigate to save-install page if no uuid or password (should not happen since save button is hidden)
-      if (!uuid || !password) {
+      if (!uuid) {
         setSelectedMenu('save-install');
         toast.info('Please create a configuration first');
         return;
@@ -342,7 +342,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
     // The notice only appears straight after a successful save, so there are
     // no unsaved edits for this extra write to pick up.
-    if (changed && uuid && password) {
+    if (changed && uuid) {
       setUserData(() => next);
       updateUserConfig(uuid, next, password).catch(() =>
         toast.warning('Could not remember that preference')
@@ -471,7 +471,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
                     intent="primary"
                     loading={pushing}
                     onClick={async () => {
-                      if (!uuid || !password) return;
+                      if (!uuid) return;
                       setPushing(true);
                       setPushResults(await runAutoPush(uuid, password));
                       void queryClient.invalidateQueries({

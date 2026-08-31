@@ -602,15 +602,9 @@ interface UserDataContextType {
   setPassword: (password: string | null) => void;
   encryptedPassword: string | null;
   setEncryptedPassword: (encryptedPassword: string | null) => void;
-  /**
-   * Marks a configuration as saved state. Everything after it counts as an
-   * unsaved edit and is kept as a draft; matching it again clears the draft.
-   */
+  /** Edits past this point count as a draft; matching it again clears one. */
   setBaseline: (data: UserData) => void;
-  /**
-   * An unsaved draft found on this browser, awaiting an explicit decision.
-   * Null unless it belongs to the configuration currently held.
-   */
+  /** Null unless it belongs to the configuration currently held. */
   pendingDraft: Draft | null;
   restoreDraft: () => void;
   discardDraft: () => void;
@@ -625,8 +619,7 @@ const UserDataContext = React.createContext<UserDataContextType | undefined>(
 export function UserDataProvider({ children }: { children: React.ReactNode }) {
   const { status } = useStatus();
 
-  // Only a same-tab reload restores silently. Anything older is offered
-  // through a prompt so it cannot be mistaken for a session.
+  // Only a same-tab reload restores silently; anything older is offered.
   const [boot] = React.useState(() => {
     migrateLegacyDraft(hasWork);
     const session = readSessionDraft();
@@ -654,10 +647,8 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     string | null
   >(null);
 
-  // Last configuration known to be saved. Drafts exist only while userData
-  // differs from it.
+  // Last configuration known to be saved; a draft exists only while it differs.
   const baselineRef = React.useRef<UserData>(DefaultUserData);
-  // The signed-out baseline, restored on sign out.
   const anonBaselineRef = React.useRef<UserData>(DefaultUserData);
   const [baselineReady, setBaselineReady] = React.useState(false);
 
@@ -671,8 +662,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     if (!status || statusApplied.current) return;
     statusApplied.current = true;
 
-    // The baseline takes the same overlay, so instance defaults never read
-    // as an unsaved edit.
+    // The baseline takes the same overlay, or defaults read as unsaved edits.
     const anonBaseline = applyStatusDefaults(DefaultUserData, status);
     anonBaselineRef.current = anonBaseline;
     baselineRef.current = anonBaseline;
@@ -729,8 +719,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Clearing means signing out. Resetting to the signed-out baseline rather
-  // than DefaultUserData keeps the result clean, so no draft is written.
+  // Clearing means signing out; resetting to the baseline writes no draft.
   const safeSetUserData = (
     data: ((prev: UserData) => UserData | null) | null
   ) => {

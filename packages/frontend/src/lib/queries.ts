@@ -1,3 +1,4 @@
+import type { Credentials } from '@/lib/api';
 import { queryOptions } from '@tanstack/react-query';
 import {
   getSession,
@@ -44,7 +45,7 @@ export const configProfilesQuery = queryOptions({
  * linked. The password is deliberately not part of the key.
  */
 export const linkedAccountsQuery = (
-  credentials: { uuid: string; password: string } | null
+  credentials: { uuid: string; password: string | null } | null
 ) =>
   queryOptions({
     queryKey: ['linked-accounts', credentials?.uuid ?? null] as const,
@@ -58,9 +59,7 @@ export const linkedAccountsQuery = (
 export const LINKED_ACCOUNTS_QUERY_ROOT = ['linked-accounts'] as const;
 
 /** Descriptors are static per instance, so they are cached for the session. */
-export const linkedAccountPlatformsQuery = (
-  credentials: { uuid: string; password: string } | null
-) =>
+export const linkedAccountPlatformsQuery = (credentials: Credentials | null) =>
   queryOptions({
     queryKey: ['linked-account-platforms'] as const,
     queryFn: (): Promise<LinkedAccountPlatformInfo[]> =>
@@ -84,9 +83,7 @@ export const communityItemsQuery = (kind: CommunityKind) =>
   });
 
 /** The password is deliberately not part of the key. */
-export const myCommunityQuery = (
-  credentials: { uuid: string; password: string } | null
-) =>
+export const myCommunityQuery = (credentials: Credentials | null) =>
   queryOptions({
     queryKey: [...MY_COMMUNITY_QUERY_ROOT, credentials?.uuid ?? null] as const,
     queryFn: (): Promise<CommunityItemMine[]> =>

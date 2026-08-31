@@ -1536,6 +1536,8 @@ const StatusResponseSchema = z.object({
     analyticsEnabled: z.boolean(),
     /** Per-user analytics (configure-page Stats tab) enabled state. */
     userAnalyticsEnabled: z.boolean(),
+    /** Whether "stay signed in" is offered when loading a configuration. */
+    configSessionsEnabled: z.boolean(),
     forced: z.object({
       proxy: z.object({
         enabled: z.boolean().or(z.null()),

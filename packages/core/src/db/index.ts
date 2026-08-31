@@ -67,6 +67,11 @@ export {
   type ConfigAliasTarget,
 } from './repositories/config-profiles.js';
 export {
+  ConfigSessionRepository,
+  type ConfigSessionCredentials,
+  type IssuedConfigSession,
+} from './repositories/config-sessions.js';
+export {
   LinkedAccountRepository,
   MAX_LINKED_ACCOUNTS_PER_USER,
 } from './repositories/linked-accounts.js';

@@ -3,18 +3,17 @@ import type { UserData } from '@aiostreams/core';
 /**
  * Unsaved-configuration drafts, in two tiers. `sessionStorage` dies with the
  * tab, so a refresh restores silently. `localStorage` outlives the tab and is
- * never applied on its own: silently hydrating it is what made people believe
- * they were signed in.
+ * only ever offered, never applied on its own.
  */
 
 const SESSION_KEY = 'aiostreams-draft-session';
 const LOCAL_PREFIX = 'aiostreams-draft:';
 const OPT_OUT_KEY = 'aiostreams-draft-opt-out';
 
-/** Pre-two-tier key. Migrated once, then removed. */
+/** Pre-two-tier key, migrated once then removed. */
 const LEGACY_KEY = 'aiostreams-user-data';
 
-/** Drafts older than this are dropped when they are read. */
+// No tab-close event to hook, so age is judged on read.
 export const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const DRAFT_VERSION = 1;
@@ -96,10 +95,7 @@ function build(
 /* Opt-out                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Blocks the localStorage tier only. sessionStorage still covers a refresh and
- * goes away with the tab.
- */
+/** Blocks the localStorage tier only; sessionStorage still covers a refresh. */
 export function isDraftOptOut(): boolean {
   return safeGet(localStorage, OPT_OUT_KEY) === '1';
 }
@@ -133,7 +129,6 @@ export function clearSessionDraft(): void {
 /* Local tier                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Returns the stored draft, dropping it first if it has aged out. */
 export function readLocalDraft(uuid: DraftIdentity): Draft | null {
   const key = localKey(uuid);
   const draft = parse(safeGet(localStorage, key));
@@ -161,10 +156,7 @@ export function clearLocalDraft(uuid: DraftIdentity): void {
   safeRemove(localStorage, localKey(uuid));
 }
 
-/**
- * The newest surviving draft across every configuration. Boot identity is
- * always signed-out, so a draft made while signed in is found by scan, not key.
- */
+// Boot identity may be signed-out, so a signed-in draft is found by scan, not key.
 export function readAnyLocalDraft(): Draft | null {
   let newest: Draft | null = null;
   try {
@@ -204,16 +196,15 @@ function clearAllLocalDrafts(): void {
 /* Combined                                                                    */
 /* -------------------------------------------------------------------------- */
 
-/** Drops both tiers for one configuration. Used on save and on sign out. */
+/** Drops both tiers for one configuration. */
 export function clearDrafts(uuid: DraftIdentity): void {
   clearSessionDraft();
   clearLocalDraft(uuid);
 }
 
 /**
- * Carries a pre-two-tier blob over as a draft so unsaved work survives the
- * upgrade as a prompt. `hasWork` keeps the prompt off browsers whose blob is
- * only instance defaults. The legacy key is removed either way.
+ * Carries a pre-two-tier blob over as a draft. `hasWork` keeps the prompt off
+ * browsers whose blob is only defaults. The legacy key is removed either way.
  */
 export function migrateLegacyDraft(hasWork: (data: UserData) => boolean) {
   const raw = safeGet(localStorage, LEGACY_KEY);

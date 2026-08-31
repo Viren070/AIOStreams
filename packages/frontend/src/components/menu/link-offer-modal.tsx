@@ -10,7 +10,7 @@ import {
   linkedAccountPlatformsQuery,
   LINKED_ACCOUNTS_QUERY_ROOT,
 } from '@/lib/queries';
-import { linkAccount, pushLinkedAccount } from '@/lib/api';
+import { linkAccount, pushLinkedAccount, type Credentials } from '@/lib/api';
 import {
   PlatformCredentialFields,
   initialCredentialState,
@@ -30,7 +30,7 @@ export function linkOfferDismissed(): boolean {
 interface LinkOfferModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  credentials: { uuid: string; password: string };
+  credentials: Credentials;
   manifestUrl: string;
 }
 

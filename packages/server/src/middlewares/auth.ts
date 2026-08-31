@@ -51,6 +51,52 @@ export function clearSessionCookie(res: Response): void {
   res.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 
+export const CONFIG_SESSION_COOKIE = 'aiostreams.config-session';
+
+/** Carries no secret; lets the page tell whether a restore is worth a request. */
+export const CONFIG_SESSION_MARKER_COOKIE = 'aiostreams.has-config-session';
+
+const CONFIG_SESSION_PATH = '/api';
+
+// Must be readable from the configure page, which is not under /api.
+const CONFIG_SESSION_MARKER_PATH = '/';
+
+export function readConfigSessionToken(req: Request): string | undefined {
+  return readCookie(req, CONFIG_SESSION_COOKIE);
+}
+
+export function setConfigSessionCookie(
+  req: Request,
+  res: Response,
+  token: string,
+  remembered: boolean,
+  expiresAt: number
+): void {
+  // No maxAge means the browser drops it on close.
+  const maxAge = remembered ? Math.max(expiresAt - Date.now(), 0) : undefined;
+  res.cookie(CONFIG_SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: req.secure,
+    sameSite: 'strict',
+    path: CONFIG_SESSION_PATH,
+    ...(maxAge === undefined ? {} : { maxAge }),
+  });
+  res.cookie(CONFIG_SESSION_MARKER_COOKIE, '1', {
+    httpOnly: false,
+    secure: req.secure,
+    sameSite: 'strict',
+    path: CONFIG_SESSION_MARKER_PATH,
+    ...(maxAge === undefined ? {} : { maxAge }),
+  });
+}
+
+export function clearConfigSessionCookie(res: Response): void {
+  res.clearCookie(CONFIG_SESSION_COOKIE, { path: CONFIG_SESSION_PATH });
+  res.clearCookie(CONFIG_SESSION_MARKER_COOKIE, {
+    path: CONFIG_SESSION_MARKER_PATH,
+  });
+}
+
 export const OIDC_STATE_COOKIE = 'aiostreams.oidc';
 const OIDC_COOKIE_PATH = '/api/v1/auth/oidc';
 const OIDC_STATE_TTL_SECONDS = 600;

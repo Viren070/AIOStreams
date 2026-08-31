@@ -32,6 +32,7 @@ import {
   initialiseOidc,
   startAnalytics,
   stopAnalytics,
+  ConfigSessionRepository,
   TaskManager,
   instanceId,
   drainUsenetMetrics,
@@ -79,6 +80,24 @@ function registerPruneTask() {
         appConfig.tasks.pruning.maxDays
       );
       return { ok: true, message: `pruned ${n} users` };
+    },
+  });
+}
+
+function registerConfigSessionTask() {
+  TaskManager.register({
+    id: 'prune-config-sessions',
+    label: 'Prune expired sign-in sessions',
+    description: 'Deletes remembered configuration sign-ins that have expired.',
+    category: 'users',
+    kind: 'scheduled',
+    intervalMs: 60 * 60 * 1000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => {
+      const n = await ConfigSessionRepository.prune();
+      return { ok: true, message: `pruned ${n} sessions` };
     },
   });
 }
@@ -305,6 +324,7 @@ async function start() {
     SelAccess.initialise();
     await initialiseProwlarr();
     registerPruneTask();
+    registerConfigSessionTask();
     registerCacheTasks();
     registerUsenetTasks();
     registerStreamTasks();

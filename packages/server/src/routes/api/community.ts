@@ -15,7 +15,7 @@ import {
   type CommunityKind,
 } from '@aiostreams/core';
 import { createResponse } from '../../utils/responses.js';
-import { parseBasicAuthHeader } from '../../utils/basic-auth.js';
+import { resolveConfigCredentials } from '../../utils/basic-auth.js';
 
 const router: Router = Router();
 const logger = createLogger('server');
@@ -70,8 +70,13 @@ const UpdateSchema = z.object({
     .optional(),
 });
 
-async function authenticate(req: Request): Promise<CommunityIdentity> {
-  const creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+async function authenticate(
+  req: Request,
+  res: Response
+): Promise<CommunityIdentity> {
+  const creds = await resolveConfigCredentials(req, res, {
+    allowEncrypted: false,
+  });
   if (!creds) {
     throw new APIError(
       constants.ErrorCode.MISSING_REQUIRED_FIELDS,
@@ -90,7 +95,7 @@ function handle(
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   return async (req, res, next) => {
     try {
-      const identity = await authenticate(req);
+      const identity = await authenticate(req, res);
       const data = await fn(req, identity);
       res.status(200).json(createResponse({ success: true, data }));
     } catch (error) {

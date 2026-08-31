@@ -91,6 +91,36 @@ export const apiSchema = {
     requiresRestart: false,
     secret: false,
   },
+  configSessionsEnabled: {
+    schema: z.boolean(),
+    default: true,
+    label: 'Remembered configuration sign-ins',
+    description:
+      'Lets someone stay signed in to their configuration after closing the tab, using a cookie the browser cannot read rather than a stored password. Turn it off to require the UUID and password every time.',
+    env: 'CONFIG_SESSIONS_ENABLED',
+    requiresRestart: false,
+    secret: false,
+  },
+  configSessionTtlSeconds: {
+    schema: seconds,
+    default: 2592000,
+    label: 'Remembered sign-in lifetime',
+    description:
+      'How long a remembered sign-in survives without being used. Every use pushes it forward again. Defaults to 30 days (30d).',
+    env: 'CONFIG_SESSION_TTL_SECONDS',
+    requiresRestart: false,
+    secret: false,
+  },
+  configSessionMaxTtlSeconds: {
+    schema: seconds,
+    default: 7776000,
+    label: 'Remembered sign-in maximum lifetime',
+    description:
+      'Hard cap on a remembered sign-in, counted from when it was created and never extended by use. Defaults to 90 days (90d).',
+    env: 'CONFIG_SESSION_MAX_TTL_SECONDS',
+    requiresRestart: false,
+    secret: false,
+  },
   aliasedConfigurations: {
     schema: aliasedConfigurations,
     default: {} as Record<string, { uuid: string; password: string }>,

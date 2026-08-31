@@ -139,7 +139,7 @@ function Content() {
   }, [uuid]);
 
   React.useEffect(() => {
-    if (!uuid || !password) return;
+    if (!uuid) return;
     if (hasOpenedUpdateModalRef.current) return;
     if (loader.appliedTemplateUpdates.length === 0) return;
     hasOpenedUpdateModalRef.current = true;

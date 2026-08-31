@@ -1440,7 +1440,7 @@ function Content() {
     setEncryptedPassword,
   } = useUserData();
   const { data: linkedAccounts } = useQuery(
-    linkedAccountsQuery(uuid && password ? { uuid, password } : null)
+    linkedAccountsQuery(uuid ? { uuid, password } : null)
   );
   const preferencesModal = useDisclosure(false);
   const [newPassword, setNewPassword] = React.useState('');
@@ -1532,7 +1532,7 @@ function Content() {
     const requirements: string[] = [];
 
     // already created a config
-    if (uuid && password) {
+    if (uuid) {
       setPasswordRequirements([]);
       return;
     }

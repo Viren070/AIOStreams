@@ -164,7 +164,7 @@ export function ConfigTemplatesModal({
 
   const sources = ['all', 'builtin', 'custom', 'external', 'community'];
 
-  const credentials = uuid && password ? { uuid, password } : null;
+  const credentials = uuid ? { uuid, password } : null;
   const communityTemplatesOn = status?.settings.community?.templates !== 'off';
   const mine = useQuery({
     ...myCommunityQuery(credentials),
@@ -287,7 +287,7 @@ export function ConfigTemplatesModal({
             <WelcomeStep
               recommendedTemplateName={recommendedTemplate?.metadata.name}
               templateCount={loader.templates.length}
-              hasExistingConfig={!!(uuid && password)}
+              hasExistingConfig={!!uuid}
               onUseTemplate={() => {
                 // The card promised a specific setup, so open it rather than
                 // dropping the user into an undifferentiated list.
@@ -299,7 +299,7 @@ export function ConfigTemplatesModal({
                 onStartFresh?.();
               }}
               onSignIn={
-                uuid && password
+                uuid
                   ? undefined
                   : () => {
                       wizard.handleCancel();

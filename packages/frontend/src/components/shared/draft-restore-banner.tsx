@@ -4,10 +4,7 @@ import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
 import { relativeTime } from '@/lib/format';
 
-/**
- * Offers unsaved work found on this browser. An offer rather than a restore:
- * the configuration appearing on its own used to read as being signed in.
- */
+/** Offers unsaved work found on this browser, rather than applying it. */
 export function DraftRestoreBanner() {
   const { pendingDraft, restoreDraft, discardDraft, disableDrafts, uuid } =
     useUserData();
@@ -15,7 +12,7 @@ export function DraftRestoreBanner() {
 
   if (!pendingDraft) return null;
 
-  // Only worth naming when it was renamed away from what this instance serves.
+  // Only worth naming when renamed away from what this instance serves.
   const name = pendingDraft.addonName?.trim();
   const customName =
     name && name !== (status?.settings?.addonName || 'AIOStreams')

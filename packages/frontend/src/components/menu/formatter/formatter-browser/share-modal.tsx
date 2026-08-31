@@ -8,7 +8,11 @@ import { Button } from '../../../ui/button';
 import { TextInput } from '../../../ui/text-input';
 import { Textarea } from '../../../ui/textarea';
 import { BasicField } from '../../../ui/basic-field';
-import { submitCommunityFormatter, updateCommunityItem } from '@/lib/api';
+import {
+  submitCommunityFormatter,
+  updateCommunityItem,
+  type Credentials,
+} from '@/lib/api';
 import { COMMUNITY_QUERY_ROOT, MY_COMMUNITY_QUERY_ROOT } from '@/lib/queries';
 import { bumpPatch } from '../../../../../../core/src/community/version';
 import { MAX_COMMUNITY_TAGS, parseTags } from '@/lib/tags';
@@ -16,7 +20,7 @@ import { MAX_COMMUNITY_TAGS, parseTags } from '@/lib/tags';
 export interface ShareFormatterModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  credentials: { uuid: string; password: string };
+  credentials: Credentials;
   definition: FormatterDefinition;
   /** Present when pushing a new revision of an existing submission. */
   existing?: CommunityItemMine;

@@ -1,11 +1,13 @@
 import type { CommunityItemMine, Template } from '@aiostreams/core';
-import { submitCommunityTemplate, updateCommunityItem } from '@/lib/api';
+import {
+  submitCommunityTemplate,
+  updateCommunityItem,
+  type Credentials,
+} from '@/lib/api';
 import {
   bumpPatch,
   compareVersions,
 } from '../../../../core/src/community/version';
-
-type Credentials = { uuid: string; password: string };
 
 /** Every share path shows this; the server stores exactly what it is sent. */
 export const SHARE_TEMPLATE_CONFIRMATION = {

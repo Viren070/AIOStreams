@@ -700,10 +700,9 @@ export function SyncedUrlInputs({
     if (urls.length === 0) return;
 
     const abortController = new AbortController();
-    const credentials =
-      userData.uuid && password
-        ? { uuid: userData.uuid, password: password }
-        : undefined;
+    const credentials = userData.uuid
+      ? { uuid: userData.uuid, password }
+      : undefined;
 
     // Mark all URLs as loading
     setFetchedData((prev) => {

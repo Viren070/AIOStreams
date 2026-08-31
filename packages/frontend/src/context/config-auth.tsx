@@ -1,11 +1,19 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { ConfigModal } from '@/components/config-modal';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '@/components/shared/confirmation-dialog';
 import { useUserData } from '@/context/userData';
+import { useStatus } from '@/context/status';
+import {
+  endAllConfigSessions,
+  endConfigSession,
+  hasConfigSessionCookie,
+  loadConfigFromSession,
+} from '@/lib/api';
 import { clearDrafts } from '@/lib/drafts';
 
 type ConfigAuthContextType = {
@@ -47,23 +55,47 @@ export function ConfigAuthProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { uuid, password, setUserData, setUuid, setPassword } = useUserData();
+  const {
+    uuid,
+    setUserData,
+    setUuid,
+    setPassword,
+    setEncryptedPassword,
+    setBaseline,
+  } = useUserData();
+  const { status } = useStatus();
   const [signInOpen, setSignInOpen] = React.useState(false);
   const [initialUuid, setInitialUuid] = React.useState<string | undefined>();
+  const [signOutEverywhere, setSignOutEverywhere] = React.useState(false);
 
-  const isSignedIn = Boolean(uuid && password);
+  const sessionsEnabled = status?.settings.configSessionsEnabled !== false;
+  const [restoring, setRestoring] = React.useState(
+    () => sessionsEnabled && hasConfigSessionCookie()
+  );
 
-  const confirmSignOut = useConfirmationDialog({
-    title: 'Sign Out',
-    description: 'Are you sure you want to sign out?',
-    onConfirm: () => {
+  const isSignedIn = Boolean(uuid);
+
+  const signOut = React.useCallback(
+    (everywhere: boolean) => {
       // Must run while the uuid is known; the reset below only sees the
       // signed-out identity.
       clearDrafts(uuid);
       setUserData(null);
       setUuid(null);
       setPassword(null);
+      setEncryptedPassword(null);
+      const revoke = everywhere ? endAllConfigSessions() : endConfigSession();
+      void revoke.catch(() => {
+        /* the local state is already cleared; the row expires on its own */
+      });
     },
+    [uuid, setUserData, setUuid, setPassword, setEncryptedPassword]
+  );
+
+  const confirmSignOut = useConfirmationDialog({
+    title: 'Sign Out',
+    description: 'Are you sure you want to sign out?',
+    onConfirm: () => signOut(signOutEverywhere),
   });
 
   const openSignIn = React.useCallback((uuidHint?: string) => {
@@ -78,6 +110,27 @@ export function ConfigAuthProvider({
     const match = window.location.pathname.match(CONFIGURE_URL_UUID);
     if (match) openSignIn(match[1]);
   }, [openSignIn]);
+
+  // Failure just means signed out.
+  React.useEffect(() => {
+    if (!restoring) return;
+    let cancelled = false;
+    loadConfigFromSession()
+      .then((result) => {
+        if (cancelled) return;
+        setUserData(() => result.userData);
+        setBaseline(result.userData);
+        setUuid(result.userData.uuid ?? null);
+        setEncryptedPassword(result.encryptedPassword);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setRestoring(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [restoring, setUserData, setBaseline, setUuid, setEncryptedPassword]);
 
   // confirmSignOut's identity changes every render, so read it through a ref
   // to keep the context value stable.
@@ -112,7 +165,23 @@ export function ConfigAuthProvider({
         }}
         initialUuid={initialUuid}
       />
-      <ConfirmationDialog {...confirmSignOut} />
+      <ConfirmationDialog
+        {...confirmSignOut}
+        description={
+          <div className="space-y-4">
+            <p>Are you sure you want to sign out?</p>
+            {sessionsEnabled && (
+              <div className="flex justify-center">
+                <Checkbox
+                  label="Sign out on all devices"
+                  value={signOutEverywhere}
+                  onValueChange={(v) => setSignOutEverywhere(v === true)}
+                />
+              </div>
+            )}
+          </div>
+        }
+      />
     </ConfigAuthContext.Provider>
   );
 }

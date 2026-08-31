@@ -20,6 +20,7 @@ import {
   assertConfigAccessKey,
 } from '../../utils/index.js';
 import { ConfigProfileRepository } from './config-profiles.js';
+import { ConfigSessionRepository } from './config-sessions.js';
 import { LinkedAccountRepository } from './linked-accounts.js';
 
 const APIError = constants.APIError;
@@ -546,6 +547,8 @@ export class UserRepository {
           uuid,
           newEncryptedPasswordToken
         );
+        // Not rotated like the above: a password change ends them everywhere.
+        await ConfigSessionRepository.deleteAllForUuid(uuid, tx);
       });
       logger.info(`Changed password for user ${uuid}`);
       return { encryptedPassword: newEncryptedPasswordToken };

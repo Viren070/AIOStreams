@@ -16,6 +16,7 @@ import {
   deleteCommunityItem,
   updateCommunityItem,
   withdrawCommunityDraft,
+  type Credentials,
 } from '@/lib/api';
 import {
   COMMUNITY_QUERY_ROOT,
@@ -36,7 +37,7 @@ import {
 export interface MyTemplatesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  credentials: { uuid: string; password: string };
+  credentials: Credentials;
   userData: UserData;
   filterCredentials: (data: UserData) => UserData;
   /** Re-fetch the browser's template list after a change. */
