@@ -258,6 +258,7 @@ export class BaseNabApi<N extends NabNamespace> {
       searchCacheKey: cacheKey,
       bgCacheKey: `nab:${cacheKey}`,
       cacheTTL: appConfig.builtins.nab.searchCacheTtl,
+      emptyResultTTL: appConfig.builtins.nab.emptyResultCacheTtl,
       fetchFn: () => this.request(searchFunction, 'search', params),
       isEmptyResult: (result) => result.results.length === 0,
       logger: this.logger,
