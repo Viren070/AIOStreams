@@ -110,7 +110,7 @@ export function NzbBrowser({
         {files.isLoading ? (
           <p className="text-sm text-[--muted]">Loading…</p>
         ) : files.isError ? (
-          <p className="text-sm text-red-500">Failed to load files.</p>
+          <p className="text-sm text-red-400">Failed to load files.</p>
         ) : folders.length === 0 ? (
           <p className="text-sm text-[--muted]">No files.</p>
         ) : (

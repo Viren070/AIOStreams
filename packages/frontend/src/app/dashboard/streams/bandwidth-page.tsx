@@ -95,7 +95,7 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
   }
   const ratio = Math.min(1, used / limit);
   const tone =
-    ratio >= 1 ? 'bg-red-500' : ratio >= 0.85 ? 'bg-amber-500' : 'bg-brand';
+    ratio >= 1 ? 'bg-red-400' : ratio >= 0.85 ? 'bg-amber-500' : 'bg-brand';
   return (
     <div className="flex min-w-[160px] items-center gap-2">
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[--subtle]">

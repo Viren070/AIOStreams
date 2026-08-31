@@ -125,7 +125,7 @@ export function TasksPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">{t.label}</span>
                             {t.destructive && (
-                              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20">
+                              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-400/20">
                                 destructive
                               </span>
                             )}
@@ -140,7 +140,7 @@ export function TasksPage() {
                               {t.enabled ? 'enabled' : 'disabled'}
                             </span>
                             {t.claimedBy && (
-                              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-400/20">
                                 running on {shortId(t.claimedBy)}
                               </span>
                             )}
@@ -157,7 +157,7 @@ export function TasksPage() {
                           <span>Last run</span>
                           <span
                             className={cn(
-                              t.lastStatus === 'error' && 'text-red-500',
+                              t.lastStatus === 'error' && 'text-red-400',
                               t.lastStatus === 'ok' && 'text-emerald-500'
                             )}
                           >
@@ -217,7 +217,7 @@ export function TasksPage() {
                                 <span
                                   className={cn(
                                     'ml-auto',
-                                    r.lastStatus === 'error' && 'text-red-500',
+                                    r.lastStatus === 'error' && 'text-red-400',
                                     r.lastStatus === 'ok' && 'text-emerald-500'
                                   )}
                                 >
@@ -232,11 +232,11 @@ export function TasksPage() {
                       )}
                       {t.lastStatus === 'error' && t.lastError && (
                         <details className="mt-3 group">
-                          <summary className="cursor-pointer text-xs text-red-500 flex items-center gap-1 list-none [&::-webkit-details-marker]:hidden">
+                          <summary className="cursor-pointer text-xs text-red-400 flex items-center gap-1 list-none [&::-webkit-details-marker]:hidden">
                             <BiChevronDown className="transition-transform group-open:rotate-180" />
                             Last error
                           </summary>
-                          <pre className="mt-2 p-2 text-[11px] font-mono whitespace-pre-wrap break-words bg-red-500/5 border border-red-500/20 rounded text-red-500/90">
+                          <pre className="mt-2 p-2 text-[11px] font-mono whitespace-pre-wrap break-words bg-red-500/5 border border-red-400/20 rounded text-red-400/90">
                             {t.lastError}
                           </pre>
                         </details>

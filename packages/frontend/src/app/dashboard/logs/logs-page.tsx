@@ -47,8 +47,8 @@ const LEVEL_STYLES: Record<string, string> = {
   debug: 'text-sky-500',
   info: 'text-emerald-500',
   warn: 'text-amber-500',
-  error: 'text-red-500',
-  fatal: 'text-red-600 font-bold',
+  error: 'text-red-400',
+  fatal: 'text-red-400 font-bold',
 };
 
 const LEVEL_DOT: Record<string, string> = {
@@ -56,8 +56,8 @@ const LEVEL_DOT: Record<string, string> = {
   debug: 'bg-sky-500',
   info: 'bg-emerald-500',
   warn: 'bg-amber-500',
-  error: 'bg-red-500',
-  fatal: 'bg-red-600',
+  error: 'bg-red-400',
+  fatal: 'bg-red-400',
 };
 
 const ALL_MODULES = '__all__';
@@ -401,7 +401,7 @@ export function LogsPage() {
                   onValueChange={setSearch}
                   className={cn(
                     'flex-1',
-                    regexError && 'border-red-500 focus-within:border-red-500'
+                    regexError && 'border-red-400 focus-within:border-red-400'
                   )}
                 />
                 <button
@@ -413,7 +413,7 @@ export function LogsPage() {
                     regex && !regexError
                       ? 'border-brand bg-brand/10 text-brand'
                       : regex && regexError
-                        ? 'border-red-500 bg-red-500/10 text-red-500'
+                        ? 'border-red-400 bg-red-500/10 text-red-400'
                         : 'border-[--border] text-[--muted] hover:text-[--foreground] hover:border-[--foreground]'
                   )}
                 >
@@ -421,7 +421,7 @@ export function LogsPage() {
                 </button>
               </div>
               {regexError && (
-                <p className="text-xs text-red-500 pl-1">{regexError}</p>
+                <p className="text-xs text-red-400 pl-1">{regexError}</p>
               )}
             </div>
             <div className="flex flex-1 md:flex-none items-center gap-2">

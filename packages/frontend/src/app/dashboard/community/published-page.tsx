@@ -77,7 +77,7 @@ function RemoteSourcesCard() {
                 </td>
                 <td
                   className={
-                    s.error ? 'py-1 text-red-300' : 'py-1 text-green-300'
+                    s.error ? 'py-1 text-red-200' : 'py-1 text-green-300'
                   }
                 >
                   {s.error ?? 'ok'}
@@ -233,7 +233,7 @@ function PublishedRow({ item }: { item: CommunityItem }) {
           <span className="font-medium">{item.name}</span>
           <Pill>v{item.version}</Pill>
           {item.draft && (
-            <Pill className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
+            <Pill className="border-yellow-400/30 bg-yellow-500/10 text-yellow-300">
               update pending
             </Pill>
           )}

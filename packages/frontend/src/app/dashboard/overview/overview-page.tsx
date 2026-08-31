@@ -126,7 +126,7 @@ function Stat({
           'mt-1 text-2xl font-semibold tabular-nums',
           intent === 'ok' && 'text-emerald-500',
           intent === 'warn' && 'text-amber-500',
-          intent === 'err' && 'text-red-500'
+          intent === 'err' && 'text-red-400'
         )}
       >
         {value}
@@ -312,7 +312,7 @@ export function DashboardHome() {
                           className={cn(
                             'inline-block w-2 h-2 rounded-full',
                             t.lastStatus === 'ok' && 'bg-emerald-500',
-                            t.lastStatus === 'error' && 'bg-red-500',
+                            t.lastStatus === 'error' && 'bg-red-400',
                             t.lastStatus === 'skipped' && 'bg-amber-500',
                             !t.lastStatus && 'bg-[--muted]'
                           )}
@@ -361,7 +361,7 @@ export function DashboardHome() {
                           className={cn(
                             'inline-block w-1.5 h-1.5 rounded-full align-middle mr-1.5',
                             parsed.level === 'error' || parsed.level === 'fatal'
-                              ? 'bg-red-500'
+                              ? 'bg-red-400'
                               : 'bg-amber-500'
                           )}
                         />

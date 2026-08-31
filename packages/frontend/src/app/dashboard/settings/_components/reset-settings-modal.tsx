@@ -264,7 +264,7 @@ export function ResetSettingsModal({
                         {k.requiresRestart && (
                           <Tooltip
                             trigger={
-                              <span className="text-[10px] uppercase tracking-wide text-orange-500 font-semibold mt-0.5">
+                              <span className="text-[10px] uppercase tracking-wide text-orange-400 font-semibold mt-0.5">
                                 restart
                               </span>
                             }

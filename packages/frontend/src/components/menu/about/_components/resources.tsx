@@ -32,7 +32,7 @@ function ResourceRow({
 }: ResourceRowProps) {
   const className = cn(
     'group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors text-left w-full',
-    emphasis ? 'bg-red-500/[0.07] hover:bg-red-500/15' : 'hover:bg-gray-800/70'
+    emphasis ? 'bg-red-500/[0.07] hover:bg-red-400/15' : 'hover:bg-gray-800/70'
   );
 
   const content = (
@@ -40,7 +40,7 @@ function ResourceRow({
       <span
         className={cn(
           'shrink-0 transition-colors',
-          emphasis ? 'text-red-400' : 'text-gray-500 group-hover:text-gray-300'
+          emphasis ? 'text-red-300' : 'text-gray-500 group-hover:text-gray-300'
         )}
       >
         {icon}

@@ -76,7 +76,7 @@ export function AboutHero({
           rounded
           leftIcon={<HeartIcon className="w-4 h-4" />}
           onClick={onDonate}
-          className="shrink-0 border-red-400/30 text-red-300 hover:bg-red-500/10 hover:border-red-400/50 hover:text-red-200"
+          className="shrink-0 border-red-300/30 text-red-200 hover:bg-red-500/10 hover:border-red-300/50 hover:text-red-100"
         >
           Donate
         </Button>

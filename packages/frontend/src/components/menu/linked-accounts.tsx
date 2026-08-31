@@ -253,9 +253,9 @@ function LinkedAccountCard({
   const pushed = account.lastStatus === 'ok';
 
   const [dotClass, status] = expired
-    ? ['bg-red-400', 'Sign in again']
+    ? ['bg-red-300', 'Sign in again']
     : failed
-      ? ['bg-red-400', account.lastError ?? 'Last push failed']
+      ? ['bg-red-300', account.lastError ?? 'Last push failed']
       : stale
         ? ['bg-amber-400', 'Changes not pushed']
         : pushed

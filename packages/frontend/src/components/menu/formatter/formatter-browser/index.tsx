@@ -85,7 +85,7 @@ export function FormatterBrowser({
             active={active}
             badge={
               customised ? (
-                <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded border border-yellow-500/30">
+                <span className="text-xs bg-yellow-400/20 text-yellow-400 px-2 py-0.5 rounded border border-yellow-400/30">
                   Customised
                 </span>
               ) : undefined

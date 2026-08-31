@@ -257,7 +257,7 @@ function SavedCard({
                 />
               </div>
               {duplicate && (
-                <p className="text-xs text-red-400">
+                <p className="text-xs text-red-300">
                   A saved formatter with this name already exists.
                 </p>
               )}

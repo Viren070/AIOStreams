@@ -77,8 +77,8 @@ const STATUS_STYLE: Record<LibraryStatus, string> = {
   queued: 'bg-[--subtle] text-[--muted]',
   inspecting: 'bg-amber-500/15 text-amber-500',
   available: 'bg-emerald-500/15 text-emerald-500',
-  degraded: 'bg-orange-500/15 text-orange-500',
-  failed: 'bg-red-500/15 text-red-500',
+  degraded: 'bg-orange-500/15 text-orange-400',
+  failed: 'bg-red-400/15 text-red-400',
 };
 
 /** Status filter options for the Select (single-select; "all" clears it). */
@@ -515,7 +515,7 @@ function EntryCard({
             <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[--muted]">
               {meta}
               {e.status === 'failed' && e.failReason && (
-                <span className="text-red-500" title={e.errorCode}>
+                <span className="text-red-400" title={e.errorCode}>
                   {e.failReason}
                 </span>
               )}
@@ -562,7 +562,7 @@ function EntryCard({
           <StatusPill status={e.status} />
         </div>
         {e.status === 'failed' && e.failReason && (
-          <p className="text-xs text-red-500 mt-0.5" title={e.errorCode}>
+          <p className="text-xs text-red-400 mt-0.5" title={e.errorCode}>
             {e.failReason}
           </p>
         )}

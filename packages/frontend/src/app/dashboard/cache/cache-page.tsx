@@ -35,7 +35,7 @@ interface Describe {
 const BADGE: Record<string, string> = {
   memory: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
   sql: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-  redis: 'bg-red-500/10 text-red-500 border-red-500/20',
+  redis: 'bg-red-500/10 text-red-400 border-red-400/20',
   disk: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
 };
 

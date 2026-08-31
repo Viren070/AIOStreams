@@ -118,7 +118,7 @@ export function ReviewSummaryView({
                     key={o.id}
                     className={
                       o.differsFromDefault
-                        ? 'font-mono text-red-300'
+                        ? 'font-mono text-red-200'
                         : 'font-mono text-[--muted]'
                     }
                   >
@@ -130,7 +130,7 @@ export function ReviewSummaryView({
           </ul>
         )}
         {flagged.length > 0 && (
-          <p className="mt-1 text-red-300">
+          <p className="mt-1 text-red-200">
             {flagged.length} addon{flagged.length === 1 ? '' : 's'} point at a
             non-default host. Those hosts may receive the service credentials of
             anyone who applies this template.

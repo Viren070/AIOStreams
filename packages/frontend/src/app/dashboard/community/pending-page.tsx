@@ -149,12 +149,12 @@ function ReviewCard({ item }: { item: CommunityItem }) {
             <h3 className="text-base font-semibold">{shown.name}</h3>
             <Pill>v{shown.version}</Pill>
             {isUpdate && (
-              <Pill className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
+              <Pill className="border-yellow-400/30 bg-yellow-500/10 text-yellow-300">
                 update to v{item.version}
               </Pill>
             )}
             {item.status === 'rejected' && (
-              <Pill className="border-red-500/30 bg-red-500/10 text-red-300">
+              <Pill className="border-red-400/30 bg-red-500/10 text-red-200">
                 previously rejected
               </Pill>
             )}

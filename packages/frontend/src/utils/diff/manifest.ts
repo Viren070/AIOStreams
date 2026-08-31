@@ -285,7 +285,7 @@ function buildAnnotations(
         const label = catalog ? catalogLabel(catalog) : 'Unknown';
         map.set(pathStr, {
           label: '⚑ CATALOG REMOVED',
-          className: 'bg-red-500/10 text-red-400 border-red-500/20',
+          className: 'bg-red-500/10 text-red-300 border-red-400/20',
           severity: 'critical',
           description: `"${label}" was removed. It will appear empty or broken in Stremio until you reinstall.`,
         });
@@ -331,7 +331,7 @@ function buildAnnotations(
       ) {
         map.set(pathStr, {
           label: '⚑ NEW ID PREFIXES',
-          className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+          className: 'bg-blue-500/10 text-blue-300 border-blue-400/20',
           severity: 'critical',
           description:
             "New ID prefixes were added to the manifest. Stremio won't know that this install supports these new prefixes, so it won't query AIOStreams for matching content until you reinstall.",
@@ -361,7 +361,7 @@ function buildAnnotations(
               : 'this resource';
         map.set(pathStr, {
           label: '⚑ NEW ID PREFIXES',
-          className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+          className: 'bg-blue-500/10 text-blue-300 border-blue-400/20',
           severity: 'critical',
           description: `Stremio won't know that this install supports the new ID prefix(es) for the ${resourceName} resource. Until you reinstall, Stremio won't query AIOStreams for ${resourceName} content with these new prefixes.`,
         });

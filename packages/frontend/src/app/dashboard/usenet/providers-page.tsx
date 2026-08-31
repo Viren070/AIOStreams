@@ -12,7 +12,7 @@ export function UsenetProvidersPage() {
   if (providers.isLoading) return <DashboardLoading />;
   if (providers.isError) {
     return (
-      <Card className="p-6 text-sm text-red-500">
+      <Card className="p-6 text-sm text-red-400">
         Failed to load providers.
       </Card>
     );

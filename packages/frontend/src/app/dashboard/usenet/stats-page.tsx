@@ -80,7 +80,7 @@ const STATE_DOT: Record<ProviderState, string> = {
   online: 'bg-emerald-500',
   connecting: 'bg-amber-500',
   offline: 'bg-[--muted]',
-  auth_failed: 'bg-red-500',
+  auth_failed: 'bg-red-400',
   disabled: 'bg-[--muted]/40',
 };
 
@@ -108,7 +108,7 @@ function poolHealth(p: ProviderPoolInfo): PoolHealth {
   if (p.state === 'auth_failed') {
     return {
       tone: 'bad',
-      cls: 'bg-red-500',
+      cls: 'bg-red-400',
       label: 'Authentication failed',
       hint: 'The provider rejected the username or password. Update the credentials on the Providers page.',
     };
@@ -182,7 +182,7 @@ function ProviderHealthPopover({
           aria-label={`${p.name || p.id}: ${health.label}. Show details`}
           className={cn(
             'shrink-0 -my-1 p-1 rounded-full transition-opacity hover:opacity-70',
-            health.tone === 'bad' ? 'text-red-500' : 'text-amber-500'
+            health.tone === 'bad' ? 'text-red-400' : 'text-amber-500'
           )}
         >
           <BiErrorCircle className="w-4 h-4" />
@@ -384,7 +384,7 @@ function LivePanel() {
                       className={cn(
                         'absolute inset-y-0 left-0',
                         'transition-[width] ease-out motion-reduce:transition-none',
-                        p.tripped ? 'bg-red-500/30' : 'bg-brand/30'
+                        p.tripped ? 'bg-red-400/30' : 'bg-brand/30'
                       )}
                       style={{
                         width: pct(p.total),
@@ -395,7 +395,7 @@ function LivePanel() {
                       className={cn(
                         'absolute inset-y-0 left-0',
                         'transition-[width] ease-out motion-reduce:transition-none',
-                        p.tripped ? 'bg-red-500' : 'bg-brand'
+                        p.tripped ? 'bg-red-400' : 'bg-brand'
                       )}
                       style={{
                         width: pct(p.acquired),
@@ -562,7 +562,7 @@ function ProviderTable({
               <td
                 className={cn(
                   'py-2 px-3 text-right tabular-nums',
-                  p.errorRate > 0.1 && 'text-red-500'
+                  p.errorRate > 0.1 && 'text-red-400'
                 )}
               >
                 {formatPercent(p.errorRate)}
@@ -665,7 +665,7 @@ function IndexerErrorPopover({
           aria-label={`${indexer}: ${info.label}. Show details`}
           className={cn(
             'shrink-0 -my-1 p-1 rounded-full transition-opacity hover:opacity-70',
-            info.tone === 'bad' ? 'text-red-500' : 'text-amber-500'
+            info.tone === 'bad' ? 'text-red-400' : 'text-amber-500'
           )}
         >
           <BiErrorCircle className="w-4 h-4" />
@@ -677,7 +677,7 @@ function IndexerErrorPopover({
           <span
             className={cn(
               'w-2 h-2 rounded-full shrink-0',
-              info.tone === 'bad' ? 'bg-red-500' : 'bg-amber-500'
+              info.tone === 'bad' ? 'bg-red-400' : 'bg-amber-500'
             )}
           />
           <span className="text-sm font-semibold">{info.label}</span>
@@ -783,7 +783,7 @@ function IndexerTable({
               <td
                 className={cn(
                   'py-2 px-3 text-right tabular-nums',
-                  i.grabs > 0 && 1 - i.successRate > 0.1 && 'text-red-500'
+                  i.grabs > 0 && 1 - i.successRate > 0.1 && 'text-red-400'
                 )}
                 title={
                   i.degraded > 0

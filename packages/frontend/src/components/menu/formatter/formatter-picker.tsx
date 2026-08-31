@@ -14,7 +14,7 @@ const KIND = {
   customised: {
     label: 'Customised',
     icon: Layers,
-    badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    badge: 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30',
   },
   saved: {
     label: 'Saved',
