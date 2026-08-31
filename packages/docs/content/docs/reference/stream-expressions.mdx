@@ -295,12 +295,6 @@ Filter by how a stream's media info (languages, subtitles, audio, etc.) was dete
 mediaInfoQuality(streams, 'probe', 'indexer')
 ```
 
-To select only streams with *any* confirmed media info, negate the `'unknown'` match:
-
-```
-negate(mediaInfoQuality(streams, 'unknown'), streams)
-```
-
 ---
 
 #### `type()`
