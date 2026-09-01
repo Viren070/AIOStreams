@@ -950,6 +950,50 @@ export abstract class StreamExpressionEngine {
       });
     };
 
+    this.parser.functions.folderSize = function (
+      streams: ParsedStream[],
+      minSize?: string | number,
+      maxSize?: string | number
+    ) {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      } else if (
+        (minSize !== undefined &&
+          typeof minSize !== 'number' &&
+          typeof minSize !== 'string') ||
+        (maxSize !== undefined &&
+          typeof maxSize !== 'number' &&
+          typeof maxSize !== 'string')
+      ) {
+        throw new Error('Min and max folder size must be a number or string');
+      } else if (minSize === undefined && maxSize === undefined) {
+        throw new Error('You must provide at least one folder size boundary');
+      }
+
+      const minSizeInBytes =
+        typeof minSize === 'string' ? bytes.parse(minSize) : minSize;
+      const maxSizeInBytes =
+        typeof maxSize === 'string' ? bytes.parse(maxSize) : maxSize;
+
+      return streams.filter((stream) => {
+        if (
+          minSize &&
+          minSizeInBytes &&
+          (stream.folderSize ?? 0) < minSizeInBytes
+        ) {
+          return false;
+        }
+        if (
+          maxSize &&
+          maxSizeInBytes &&
+          (stream.folderSize ?? 0) > maxSizeInBytes
+        ) {
+          return false;
+        }
+        return true;
+      });
+    };
+
     this.parser.functions.bitrate = function (
       streams: ParsedStream[],
       minBitrate?: string | number,
