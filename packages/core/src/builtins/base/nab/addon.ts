@@ -263,13 +263,41 @@ export abstract class BaseNabAddon<
         results = await runQueries(fallbackParams);
       }
     } else {
-      results = await this.fetchResults(searchFunction, primaryParams);
+      // whichever params we search with, try both season conventions when they differ
+      const withAlternateSeason = (
+        params: Record<string, string>,
+        allowAlternate: boolean
+      ) => {
+        const sets = [params];
+        if (
+          allowAlternate &&
+          metadata.alternateSeasonNumber &&
+          params.season !== undefined
+        ) {
+          sets.push({
+            ...params,
+            season: metadata.alternateSeasonNumber.toString(),
+          });
+        }
+        return sets;
+      };
+      const searchAll = (
+        params: Record<string, string>,
+        allowAlternate: boolean
+      ) =>
+        Promise.all(
+          withAlternateSeason(params, allowAlternate).map((p) =>
+            this.fetchResults(searchFunction, p)
+          )
+        ).then((allResults) => allResults.flat());
+
+      results = await searchAll(primaryParams, !isDailySearch);
       if (results.length === 0 && fallbackParams) {
         this.logger.debug(
           'No results for initial search, retrying with alternate season/episode params',
           { season: queryParams.season, episode: queryParams.ep }
         );
-        results = await this.fetchResults(searchFunction, fallbackParams);
+        results = await searchAll(fallbackParams, !isDailySearch);
       }
       if (
         isDailySearch &&
@@ -286,10 +314,7 @@ export abstract class BaseNabAddon<
             episode: numericFallbackParams.ep,
           }
         );
-        results = await this.fetchResults(
-          searchFunction,
-          numericFallbackParams
-        );
+        results = await searchAll(numericFallbackParams, true);
       }
     }
     this.logger.info(

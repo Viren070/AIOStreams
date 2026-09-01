@@ -34,6 +34,8 @@ export interface EpisodeResolverInput {
   fetchTvdbSeasonEpisodes?: (
     seasonNumber: number
   ) => Promise<{ number: number; aired: string | null }[] | undefined>;
+  /** Returns TVDB's real official season numbers for the series; only called for year-numbered seasons. */
+  fetchTvdbSeriesSeasons?: () => Promise<number[] | undefined>;
   /** Returns TMDB episode details, undefined on 404/unavailable. */
   fetchTmdbEpisode?: (
     seasonNumber: number,
@@ -51,6 +53,8 @@ export interface EpisodeResolution {
   episodeAirDates?: string[];
   resolvedSeasonNumber?: number;
   resolvedSeasonFirstEpisode?: number;
+  /** The season number under the other (year vs. ordinal) convention, if it differs. */
+  alternateSeasonNumber?: number;
 }
 
 /**
@@ -74,9 +78,23 @@ export async function resolveEpisodeFacts(
 ): Promise<EpisodeResolution> {
   const { season, episode, config } = input;
 
-  const nonSpecialSeasons = (input.seasons ?? [])
+  let nonSpecialSeasons = (input.seasons ?? [])
     .filter((s) => s.season_number > 0)
     .sort((a, b) => a.season_number - b.season_number);
+
+  const hasYearSeasons = nonSpecialSeasons.some((s) => s.season_number > 1900);
+  if (hasYearSeasons && input.fetchTvdbSeriesSeasons) {
+    const seasonNumbers = await input.fetchTvdbSeriesSeasons();
+    const known = new Set(nonSpecialSeasons.map((s) => s.season_number));
+    const missing = (seasonNumbers ?? [])
+      .filter((n) => !known.has(n))
+      .map((season_number) => ({ season_number, episode_count: 0 }));
+    if (missing.length) {
+      nonSpecialSeasons = [...nonSpecialSeasons, ...missing].sort(
+        (a, b) => a.season_number - b.season_number
+      );
+    }
+  }
 
   const directSeason = nonSpecialSeasons.find(
     (s) => s.season_number === season
@@ -92,6 +110,16 @@ export async function resolveEpisodeFacts(
       ? nonSpecialSeasons[season - 1]
       : undefined;
   const resolvedSeason = directSeason ?? ordinalSeason;
+
+  let alternateSeasonNumber: number | undefined;
+  if (hasYearSeasons && resolvedSeason) {
+    const ordinalPosition = nonSpecialSeasons.indexOf(resolvedSeason) + 1;
+    const realNumber = resolvedSeason.season_number;
+    if (realNumber !== ordinalPosition) {
+      alternateSeasonNumber =
+        season === realNumber ? ordinalPosition : realNumber;
+    }
+  }
 
   let resolvedSeasonFirstEpisode: number | undefined;
   if (resolvedSeason && input.cinemetaVideos?.length) {
@@ -119,7 +147,7 @@ export async function resolveEpisodeFacts(
     config.enabled &&
     !input.isAnime &&
     (resolvedSeasonFirstEpisode ?? 1) <= 1 &&
-    (season >= 1900 ||
+    (((resolvedSeason?.season_number ?? season) >= 1900 && largeSeasonSignal) ||
       genres.some((g) => DATE_BASED_GENRES.has(g)) ||
       (largeSeasonSignal &&
         nonSpecialSeasons.length >= config.minSeasons &&
@@ -129,6 +157,7 @@ export async function resolveEpisodeFacts(
     isDateBased,
     resolvedSeasonNumber: resolvedSeason?.season_number,
     resolvedSeasonFirstEpisode,
+    alternateSeasonNumber,
   };
 
   if (!isDateBased) {
