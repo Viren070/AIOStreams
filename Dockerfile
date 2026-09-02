@@ -58,7 +58,10 @@ RUN rm -rf packages/server/node_modules
 RUN rm -rf packages/frontend/node_modules
 RUN rm -rf packages/seanime-extensions/node_modules
 
-RUN pnpm install --prod --frozen-lockfile
+# The store cache mount matches the earlier install step, so production
+# dependencies resolve from cache instead of being re-downloaded.
+RUN --mount=type=cache,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile
 
 
 FROM builder AS runtime
