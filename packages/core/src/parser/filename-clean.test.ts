@@ -43,6 +43,11 @@ describe('stripProviderResidue', () => {
       'Reacher.2022'
     );
   });
+  it('keeps a hex-id name whose tilde suffix has no bitrate marker', () => {
+    const name = 'Show.abcdefabcdefabcdef~Director.Cut';
+    assert.equal(stripProviderResidue(name), name);
+  });
+
 
   it('keeps a filename whose post-extension junk has no provider marker', () => {
     const name = 'Reacher.S01E01.mkvReacher fake no marker';

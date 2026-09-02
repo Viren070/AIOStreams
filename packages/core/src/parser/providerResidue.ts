@@ -35,7 +35,7 @@ export function stripProviderResidue(filename: string): string {
   //   "Show.2022.<32-hex>1080pMKVWEB-DL...~5.8Mbps....pad-X"
   // Cut at the hex token when a container/bitrate marker follows it.
   const hashGlue =
-    /\.[a-f0-9]{16,}(?=[0-9]{3,4}(?:p)?(?:MKV|MP4|WEB|BLURAY)|~)/i;
+    /\.[a-f0-9]{16,}(?=[0-9]{3,4}(?:p)?(?:MKV|MP4|WEB|BLURAY)|~\d+(?:\.\d+)?mbps)/i;
   const hashMatch = hashGlue.exec(filename);
   if (hashMatch) return filename.slice(0, hashMatch.index);
   return filename;
