@@ -47,6 +47,11 @@ describe('stripProviderResidue', () => {
     const name = 'Show.abcdefabcdefabcdef~Director.Cut';
     assert.equal(stripProviderResidue(name), name);
   });
+  it('keeps a legit ".pad-" suffix that has no media-info echo before it', () => {
+    const name = 'Movie.mkv.pad-notes';
+    assert.equal(stripProviderResidue(name), name);
+  });
+
 
 
   it('keeps a filename whose post-extension junk has no provider marker', () => {

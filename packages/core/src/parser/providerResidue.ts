@@ -2,7 +2,8 @@ const MEDIA_EXTENSIONS =
   /\.(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|ts|m2ts|iso)/gi;
 
 /** Residue markers appended by some HTTP providers after the real extension. */
-const RESIDUE_MARKER = /~\d+(?:\.\d+)?mbps|\.pad-/i;
+const RESIDUE_MARKER =
+  /(?:~\d+(?:\.\d+)?mbps)|(?:(?:mkv|mp4|avi|webm|bluray|web-?dl|x264|x265|hevc|av1|\d{3,4}p)[a-z0-9.+-]*\.pad-)/i;
 
 /**
  * Strip provider-appended media-info residue from a release filename.
