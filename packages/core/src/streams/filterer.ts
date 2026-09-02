@@ -1442,6 +1442,10 @@ class StreamFilterer {
           return undefined;
       }
     };
+    // Set once filterableStreams is known: when the resolution floor is
+    // adaptive and NOTHING in the result set meets it, the floor is dropped
+    // for this request so users see what exists instead of nothing.
+    let bypassRequiredResolutions = false;
 
     const shouldKeepStream = (stream: ParsedStream): boolean => {
       const file = stream.parsedFile;
@@ -1762,6 +1766,7 @@ class StreamFilterer {
       }
 
       if (
+        !bypassRequiredResolutions &&
         this.userData.requiredResolutions &&
         this.userData.requiredResolutions.length > 0 &&
         !this.userData.requiredResolutions.includes(
@@ -2397,6 +2402,29 @@ class StreamFilterer {
     const filterableStreams = streams.filter(
       (stream) => !includedWithoutPassthrough.some((s) => s.id === stream.id)
     );
+
+    if (
+      this.userData.adaptiveResolutionFloor &&
+      this.userData.requiredResolutions &&
+      this.userData.requiredResolutions.length > 0
+    ) {
+      const anyMeetsFloor = streams.some((stream) =>
+        this.userData.requiredResolutions!.includes(
+          (stream.parsedFile?.resolution ||
+            'Unknown') as UserData['requiredResolutions'] extends infer R
+            ? R extends readonly (infer T)[]
+              ? T
+              : never
+            : never
+        )
+      );
+      if (!anyMeetsFloor) {
+        bypassRequiredResolutions = true;
+        logger.info(
+          `No stream meets the required resolutions [${this.userData.requiredResolutions.join(', ')}]; adaptive floor dropped for this request`
+        );
+      }
+    }
 
     const hasAnyRegexFilter = !!(
       excludedRegexPatterns ||

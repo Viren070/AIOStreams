@@ -554,6 +554,8 @@ export const UserDataSchema = z.object({
   excludedResolutions: z.array(Resolutions).optional(),
   includedResolutions: z.array(Resolutions).optional(),
   requiredResolutions: z.array(Resolutions).optional(),
+  /** When no stream matches requiredResolutions, keep everything instead of showing nothing. */
+  adaptiveResolutionFloor: z.boolean().optional(),
   preferredResolutions: z.array(Resolutions).optional(),
   excludedQualities: z.array(Qualities).optional(),
   includedQualities: z.array(Qualities).optional(),

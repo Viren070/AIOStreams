@@ -716,6 +716,21 @@ function Content() {
                   value: resolution,
                 }))}
               />
+              <SettingsCard>
+                <Switch
+                  label="Adaptive Resolution Floor"
+                  side="right"
+                  value={userData.adaptiveResolutionFloor ?? false}
+                  help="When Required Resolutions is set and NO stream meets it, show everything available instead of removing all streams."
+                  moreHelp="Applies per request: if at least one stream matches the required resolutions, the requirement is enforced as usual; only when nothing matches is the floor dropped for that request."
+                  onValueChange={(checked) =>
+                    setUserData((prev) => ({
+                      ...prev,
+                      adaptiveResolutionFloor: checked,
+                    }))
+                  }
+                />
+              </SettingsCard>
             </>
           </TabsContent>
           <TabsContent

@@ -90,6 +90,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   excludedResolutions: { label: 'Excluded Resolutions', group: 'filters', type: 'list', menu: 'filters', subTab: 'resolution' },
   includedResolutions: { label: 'Included Resolutions', group: 'filters', type: 'list', menu: 'filters', subTab: 'resolution' },
   requiredResolutions: { label: 'Required Resolutions', group: 'filters', type: 'list', menu: 'filters', subTab: 'resolution' },
+  adaptiveResolutionFloor: { label: 'Adaptive Resolution Floor', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'resolution', keywords: ['fallback'] },
   preferredResolutions: { label: 'Preferred Resolutions', group: 'filters', type: 'list', menu: 'filters', subTab: 'resolution' },
 
   excludedQualities: { label: 'Excluded Qualities', group: 'filters', type: 'list', menu: 'filters', subTab: 'quality' },
