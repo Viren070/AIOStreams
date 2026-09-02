@@ -31,8 +31,9 @@ COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY patches ./patches
 
-# Install dependencies.
-RUN pnpm install --frozen-lockfile
+# Cache the pnpm store across builds; lockfile changes still invalidate correctly.
+RUN --mount=type=cache,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && pnpm install --frozen-lockfile
 
 # Copy source files.
 COPY tsconfig.*json ./
@@ -47,7 +48,8 @@ COPY resources ./resources
 
 
 # Build the project.
-RUN pnpm run build
+RUN --mount=type=cache,target=/build/node_modules/.cache \
+    pnpm run build
 
 # Remove development dependencies.
 RUN rm -rf node_modules
