@@ -399,7 +399,7 @@ export function parseBitrate(bitrateString: string): number | undefined {
   }
 }
 
-function base32ToHex(base32: string): string {
+export function base32ToHex(base32: string): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   let bits = '';
   for (const char of base32.toUpperCase()) {
@@ -414,7 +414,7 @@ function base32ToHex(base32: string): string {
 
 export function extractInfoHashFromMagnet(magnet: string): string | undefined {
   const match = magnet.match(
-    /(?:urn(?::|%3A)btih(?::|%3A))([a-f0-9]{40}|[a-z2-7]{32})/i
+    /(?:urn(?::|%3A)btih(?::|%3A))([a-f0-9]{40}|[a-z2-7]{32})(?=$|[&#])/i
   )?.[1];
   if (!match) return undefined;
   if (match.length === 40) return match.toLowerCase();
