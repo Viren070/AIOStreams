@@ -137,7 +137,11 @@ export class OrionPreset extends Preset {
       return [this.generateAddon(userData, options, [])];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     // if no services are usable, use p2p
     if (!usableServices || usableServices.length === 0) {
       return [this.generateAddon(userData, options, [])];

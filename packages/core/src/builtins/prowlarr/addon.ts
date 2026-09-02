@@ -255,6 +255,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
 
       torrents.push({
         hash: infoHash,
+        guid: result.guid,
         downloadUrl: downloadUrl,
         sources: magnetUrl ? extractTrackersFromMagnet(magnetUrl) : [],
         seeders: result.seeders,

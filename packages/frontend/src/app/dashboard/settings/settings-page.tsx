@@ -288,6 +288,7 @@ export function SettingsPage() {
       <Tabs
         value={tab}
         onValueChange={onTabChange}
+        variant="pill"
         className={cn(
           'w-full grid grid-cols-1 lg:grid lg:grid-cols-[280px,1fr] gap-4'
         )}

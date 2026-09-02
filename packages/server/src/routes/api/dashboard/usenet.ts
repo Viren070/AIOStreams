@@ -5,6 +5,7 @@ import {
   formatZodError,
   getUsenetStatsOverview,
   getUsenetLiveStats,
+  resetUsenetStats,
   getUsenetProviders,
   saveUsenetProviders,
   getUsenetSettings,
@@ -22,6 +23,7 @@ import {
   blocklistEvalOptions,
   nzbContentKey,
   type UsenetStatsWindow,
+  type UsenetStatsResetTarget,
   type UsenetLibraryStatusGroup,
   type UsenetLibraryStatus,
   type UsenetLibrarySort,
@@ -39,6 +41,11 @@ const router: Router = Router();
 const logger = createLogger('dashboard:usenet');
 
 const WINDOWS: UsenetStatsWindow[] = ['24h', '7d', '30d', 'all'];
+const RESET_TARGETS: UsenetStatsResetTarget[] = [
+  'providers',
+  'indexers',
+  'all',
+];
 const STATUS_GROUPS: UsenetLibraryStatusGroup[] = ['active', 'history', 'all'];
 const LIBRARY_STATUSES: UsenetLibraryStatus[] = [
   'queued',
@@ -67,6 +74,64 @@ router.get('/stats', async (req, res, next) => {
     const window = WINDOWS.includes(w) ? w : '24h';
     const overview = await getUsenetStatsOverview(window);
     res.status(200).json(createResponse({ success: true, data: overview }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** A dry run deletes nothing, so it does not need confirming. */
+function confirmed(body: Record<string, unknown>): boolean {
+  return body.confirm === true || body.dryRun === true;
+}
+
+function confirmationRequired(res: Response): void {
+  res.status(400).json(
+    createResponse({
+      success: false,
+      error: {
+        code: 'CONFIRMATION_REQUIRED',
+        message: 'Resetting stats is destructive and requires confirmation.',
+      },
+    })
+  );
+}
+
+function finiteOrUndefined(v: unknown): number | undefined {
+  if ((typeof v !== 'number' && typeof v !== 'string') || v === '') {
+    return undefined;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// POST /dashboard/usenet/stats/reset: drop recorded rollups for one provider
+// or indexer (or all of them), optionally limited to an hour range.
+router.post('/stats/reset', async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const target = body.target as UsenetStatsResetTarget;
+    if (!RESET_TARGETS.includes(target)) {
+      return res.status(400).json(
+        createResponse({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: `target must be one of ${RESET_TARGETS.join(', ')}`,
+          },
+        })
+      );
+    }
+    if (!confirmed(body)) return confirmationRequired(res);
+    const dryRun = body.dryRun === true;
+    const result = await resetUsenetStats({
+      target,
+      id: typeof body.id === 'string' && body.id ? body.id : undefined,
+      sinceMs: finiteOrUndefined(body.sinceMs),
+      untilMs: finiteOrUndefined(body.untilMs),
+      dryRun,
+      username: username(req),
+    });
+    res.status(200).json(createResponse({ success: true, data: result }));
   } catch (err) {
     next(err);
   }

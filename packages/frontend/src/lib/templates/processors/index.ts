@@ -130,12 +130,30 @@ export const processTemplate = (
     'openposterdbParameters',
   ] as const;
 
+  // The server falls back to these at call time, so an empty value is fine.
+  const instanceProvided: Partial<
+    Record<(typeof topLevelFields)[number], boolean>
+  > = {
+    tmdbApiKey: !!status?.settings?.metadata?.tmdb?.apiKey,
+    tmdbAccessToken: !!status?.settings?.metadata?.tmdb?.accessToken,
+    tvdbApiKey: !!status?.settings?.metadata?.tvdb?.apiKey,
+  };
+
   topLevelFields.forEach((field) => {
     const value = template.config?.[field];
     const placeholder = parsePlaceholder(value);
 
     if (placeholder.isPlaceholder) {
       const detail = constants.TOP_LEVEL_OPTION_DETAILS?.[field];
+      const provided = instanceProvided[field] === true;
+      const description = provided
+        ? [
+            detail?.description,
+            'This instance provides a default. Leave blank to use it, or enter your own to override.',
+          ]
+            .filter(Boolean)
+            .join(' ')
+        : detail?.description;
       // Most top-level fields are API keys/tokens (secret), but a few are plain
       // config values that should not be masked in the template input UI.
       const type: AllowedInputType =
@@ -148,9 +166,9 @@ export const processTemplate = (
         key: `toplevel_${field}`,
         path: field,
         label: detail?.name || field,
-        description: detail?.description,
+        description,
         type,
-        required: placeholder.required,
+        required: placeholder.required && !provided,
         value: userData?.[field] || '',
       });
     }
@@ -356,3 +374,50 @@ export const getVisibleOptions = (
     acc.push(cloned);
     return acc;
   }, []);
+
+/**
+ * Drop persisted input values that the template's current options no longer
+ * accept: ids that no longer exist, and select values that are no longer
+ * offered.
+ */
+export const pruneStaleInputValues = (
+  options: Option[],
+  saved: Record<string, any>
+): Record<string, any> => {
+  const byId = new Map((options ?? []).map((opt) => [opt.id, opt]));
+  const isOffered = (opt: Option, value: any) =>
+    (opt.options ?? []).some((o) => String(o.value) === String(value));
+  const result: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(saved ?? {})) {
+    const opt = byId.get(key);
+    if (!opt) continue;
+
+    if (opt.type === 'subsection') {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = pruneStaleInputValues(
+          (opt.subOptions as Option[]) ?? [],
+          value
+        );
+      }
+      continue;
+    }
+
+    // 'select-with-custom' accepts values outside its option list
+    if (opt.options?.length && opt.type === 'select') {
+      if (!isOffered(opt, value)) continue;
+    } else if (opt.options?.length && opt.type === 'multi-select') {
+      if (Array.isArray(value)) {
+        const kept = value.filter((v) => isOffered(opt, v));
+        // every entry went stale: fall back to the option's default
+        if (kept.length === 0 && value.length > 0) continue;
+        result[key] = kept;
+        continue;
+      }
+    }
+
+    result[key] = value;
+  }
+
+  return result;
+};

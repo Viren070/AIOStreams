@@ -374,6 +374,37 @@ export function validateTemplate(
                 seenValues.add(opt.value);
               }
             });
+
+            // a default that isn't offered can never be selected.
+            // 'select-with-custom' also accepts values outside its options.
+            const defaults =
+              input.type === 'multi-select'
+                ? Array.isArray(input.default)
+                  ? input.default
+                  : []
+                : input.default !== undefined
+                  ? [input.default]
+                  : [];
+            defaults.forEach((value: any, vidx: number) => {
+              const dPath =
+                input.type === 'multi-select'
+                  ? `${basePath}.default[${vidx}]`
+                  : `${basePath}.default`;
+              if (typeof value !== 'string' || !value.trim()) {
+                if (input.type === 'multi-select') {
+                  errors.push(`${dPath}: must be a non-empty string`);
+                }
+                return;
+              }
+              if (
+                input.type !== 'select-with-custom' &&
+                !seenValues.has(value)
+              ) {
+                warnings.push(
+                  `${dPath}: "${value}" is not one of the declared option values`
+                );
+              }
+            });
           }
           break;
         }

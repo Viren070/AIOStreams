@@ -36,9 +36,7 @@ export function StreamTab({
           field="stream.type"
           label="Stream type"
           value={input.type}
-          onChange={(type) =>
-            patch({ type: type as PreviewInput['type'] })
-          }
+          onChange={(type) => patch({ type: type as PreviewInput['type'] })}
           options={constants.STREAM_TYPES.map((type) => ({
             label: type.charAt(0).toUpperCase() + type.slice(1),
             value: type,
@@ -90,7 +88,9 @@ export function StreamTab({
           label="Duration (seconds)"
           value={input.duration ? input.duration / 1000 : undefined}
           onChange={(seconds) =>
-            patch({ duration: seconds === undefined ? undefined : seconds * 1000 })
+            patch({
+              duration: seconds === undefined ? undefined : seconds * 1000,
+            })
           }
           min={0}
           step={60}
@@ -182,9 +182,7 @@ export function StreamTab({
             min={0}
             step={1000000}
             placeholder={
-              derivedBitrate
-                ? `Auto: ${formatBitrate(derivedBitrate)}`
-                : 'Auto'
+              derivedBitrate ? `Auto: ${formatBitrate(derivedBitrate)}` : 'Auto'
             }
           />
           <TextField

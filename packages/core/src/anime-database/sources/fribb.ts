@@ -6,7 +6,7 @@ import path from 'path';
 import { config as appConfig } from '../../config/index.js';
 import { AnimeType, type SourceEntry } from '../types.js';
 import { ANIME_DATABASE_PATH } from '../storage/paths.js';
-import { streamJsonArray } from '../storage/streaming.js';
+import { detachString, streamJsonArray } from '../storage/streaming.js';
 import type { AnimeSource } from './base.js';
 
 interface FribbTmdbMapping {
@@ -85,7 +85,7 @@ export const fribbSource: AnimeSource = {
         value: string | number | undefined | null
       ): void => {
         if (value === undefined || value === null || value === '') return;
-        ids[key] = value;
+        ids[key] = detachString(value);
       };
       putId('animePlanetId', raw['anime-planet_id']);
       putId('animecountdownId', raw.animecountdown_id);

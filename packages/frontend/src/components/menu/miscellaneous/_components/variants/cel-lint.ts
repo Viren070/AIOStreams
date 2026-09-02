@@ -27,7 +27,9 @@ export function celLinter(limits: CelLimits) {
             {
               name: `Replace with ${suggestion}`,
               apply(v, aFrom, aTo) {
-                v.dispatch({ changes: { from: aFrom, to: aTo, insert: suggestion } });
+                v.dispatch({
+                  changes: { from: aFrom, to: aTo, insert: suggestion },
+                });
               },
             },
           ];

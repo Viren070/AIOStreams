@@ -59,7 +59,7 @@ router.post('/login', loginRateLimiter, (req, res, next) => {
   }
 
   const permissions = [...getEffectivePermissions(username)];
-  setSessionCookie(res, { username, permissions, source: 'password' });
+  setSessionCookie(req, res, { username, permissions, source: 'password' });
   res.status(200).json(
     createResponse({
       success: true,

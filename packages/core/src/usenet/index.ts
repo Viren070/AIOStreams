@@ -1,3 +1,4 @@
+import type { SlotBank } from './pool/slot-bank.js';
 import { readdir, rm } from 'fs/promises';
 import { join } from 'path';
 import type { Readable } from 'node:stream';
@@ -52,6 +53,7 @@ import {
   type IdentifiedFile,
 } from './pool/archive/volume-identity.js';
 import { NotStreamableError } from './pool/archive/errors.js';
+import { idleGc } from '../utils/idle-gc.js';
 import { parseNzb } from './nzb/parse.js';
 import { Nzb, NzbFile } from './nzb/model.js';
 import {
@@ -1012,6 +1014,7 @@ export class UsenetEngine {
     concurrency: number;
     windowBytes: number;
     prefetchWindows: number;
+    slotBank: SlotBank;
     onHole?: (info: {
       windowOffset: number;
       windowLength: number;
@@ -1039,6 +1042,7 @@ export class UsenetEngine {
       ),
       windowBytes: ARCHIVE_WINDOW_BYTES,
       prefetchWindows,
+      slotBank: this.pool.slotBank,
       onHole:
         holeHooks && repFileIndex !== undefined
           ? (info) =>
@@ -1292,9 +1296,12 @@ export class UsenetEngineRegistry {
 
   private evictIdle(): void {
     const now = Date.now();
+    let evicted = 0;
+    let anyBusy = false;
     for (const [key, engine] of this.engines) {
       if (engine.isBusy()) {
         engine.lastUsedAt = now;
+        anyBusy = true;
         continue;
       }
       if (now - engine.lastUsedAt > this.idleEvictMs) {
@@ -1304,8 +1311,11 @@ export class UsenetEngineRegistry {
         );
         engine.close();
         this.engines.delete(key);
+        evicted++;
       }
     }
+    // Free the Buffers from the dropped the arena, pools and any lingering session state.
+    if (evicted > 0 && !anyBusy) idleGc('engine-evicted');
   }
 
   /**

@@ -87,9 +87,9 @@ export function Variants() {
           <code className="text-xs px-1 py-0.5 rounded bg-[--subtle]">
             ?v=&lt;id&gt;
           </code>{' '}
-          to your manifest URL and your client treats it as a separate addon. Use it
-          for a second formatter, a different debrid account, or a tighter
-          filter set without maintaining a second config.{' '}
+          to your manifest URL and your client treats it as a separate addon.
+          Use it for a second formatter, a different debrid account, or a
+          tighter filter set without maintaining a second config.{' '}
           <a
             href="https://docs.aiostreams.viren070.me/reference/config-expressions"
             target="_blank"

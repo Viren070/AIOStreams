@@ -38,6 +38,7 @@ import { WebStreamrPreset } from './webstreamr.js';
 import { TMDBAddonPreset } from './tmdb.js';
 import { TorrentsDbPreset } from './torrentsDb.js';
 import { USATVPreset } from './usaTv.js';
+import { USATVNextPreset } from './usaTvNext.js';
 import { ArgentinaTVPreset } from './argentinaTv.js';
 import { OpenSubtitlesV3PlusPreset } from './opensubtitles-v3-plus.js';
 import { SubSourcePreset } from './subsource.js';
@@ -133,6 +134,7 @@ let PRESET_LIST: string[] = [
   'yastream',
   'streamasia',
   'usa-tv',
+  'usa-tv-next',
   'argentina-tv',
   'debridio-tv',
   'debridio-watchtower',
@@ -267,6 +269,8 @@ export class PresetManager {
         return TorrentsDbPreset;
       case 'usa-tv':
         return USATVPreset;
+      case 'usa-tv-next':
+        return USATVNextPreset;
       case 'argentina-tv':
         return ArgentinaTVPreset;
       case 'brazuca-torrents':

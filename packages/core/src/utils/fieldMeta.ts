@@ -245,6 +245,8 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
 
   accessKey: { label: 'Config Access Key', group: 'misc', type: 'scalar', menu: 'save-install' },
   showChanges: { label: 'Show Changes', group: 'misc', type: 'scalar', menu: 'save-install' },
+  manifestNotice: { label: 'Manifest Change Notices', group: 'misc', type: 'scalar', menu: 'save-install', keywords: ['reinstall', 'notice', 'diff'] },
+  linkedAccounts: { label: 'Linked Accounts', group: 'misc', type: 'scalar', menu: 'save-install', keywords: ['sync', 'stremio', 'aiomanager', 'push'] },
 
   addonName: { label: 'Addon Name', group: 'branding', type: 'scalar', menu: 'about', keywords: ['branding'] },
   addonLogo: { label: 'Addon Logo', group: 'branding', type: 'scalar', menu: 'about', keywords: ['branding'] },

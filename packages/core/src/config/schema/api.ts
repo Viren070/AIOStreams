@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { commaSeparatedList, seconds } from './helpers.js';
+import { byteSize, commaSeparatedList, seconds } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 const nullableString = z.string().nullable();
@@ -91,6 +91,36 @@ export const apiSchema = {
     requiresRestart: false,
     secret: false,
   },
+  configSessionsEnabled: {
+    schema: z.boolean(),
+    default: true,
+    label: 'Remembered configuration sign-ins',
+    description:
+      'Lets someone stay signed in to their configuration after closing the tab, using a cookie the browser cannot read rather than a stored password. Turn it off to require the UUID and password every time.',
+    env: 'CONFIG_SESSIONS_ENABLED',
+    requiresRestart: false,
+    secret: false,
+  },
+  configSessionTtlSeconds: {
+    schema: seconds,
+    default: 2592000,
+    label: 'Remembered sign-in lifetime',
+    description:
+      'How long a remembered sign-in survives without being used. Every use pushes it forward again. Defaults to 30 days (30d).',
+    env: 'CONFIG_SESSION_TTL_SECONDS',
+    requiresRestart: false,
+    secret: false,
+  },
+  configSessionMaxTtlSeconds: {
+    schema: seconds,
+    default: 7776000,
+    label: 'Remembered sign-in maximum lifetime',
+    description:
+      'Hard cap on a remembered sign-in, counted from when it was created and never extended by use. Defaults to 90 days (90d).',
+    env: 'CONFIG_SESSION_MAX_TTL_SECONDS',
+    requiresRestart: false,
+    secret: false,
+  },
   aliasedConfigurations: {
     schema: aliasedConfigurations,
     default: {} as Record<string, { uuid: string; password: string }>,
@@ -163,12 +193,22 @@ export const apiSchema = {
 
   trustedIps: {
     schema: commaSeparatedList,
-    default: ['172.17.0.0/16', '127.0.0.1/32', '::1/128'],
+    default: ['loopback', 'linklocal', 'uniquelocal'],
     label: 'Trusted IPs',
     description:
-      'Comma-separated list of trusted IPs / CIDR ranges. Used when determining the requesting IP. User IP is always trusted via headers regardless of this setting.',
+      'Comma-separated list of trusted IPs, CIDR ranges, or the named ranges loopback, linklocal and uniquelocal (the default trusts any proxy on the same host or a private network). Forwarded headers (X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host) are only honoured from these addresses, which decides the requesting IP used for rate limiting and whether session cookies are marked Secure. User IP is always trusted via headers regardless of this setting.',
     env: 'TRUSTED_IPS',
     requiresRestart: false,
+    secret: false,
+  },
+  maxJsonBodySize: {
+    schema: byteSize,
+    default: 256 * 1024,
+    label: 'Max JSON request body',
+    description:
+      'Largest JSON request body the API accepts, which bounds saved configurations and uploaded templates. Raise it if large templates are refused with a 413.',
+    env: 'MAX_JSON_BODY_SIZE',
+    requiresRestart: true,
     secret: false,
   },
 } as const satisfies RuntimeConfigSection;

@@ -13,11 +13,15 @@ import {
   StreamSelector,
   extractNamesFromExpression,
 } from '../parser/streamExpression.js';
-import StreamUtils, { shouldPassthroughStage } from './utils.js';
+import StreamUtils, {
+  shouldPassthroughStage,
+  isServiceWrapEligibleP2PStream,
+} from './utils.js';
 import { applyReleaseBlocklist } from '../release-blocklist/filter.js';
 import {
   normaliseTitle,
   preprocessTitle,
+  reconcileParsedName,
   titleMatchWithLang,
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
@@ -439,16 +443,7 @@ class StreamFilterer {
       );
     }
 
-    let yearWithinTitle: string | undefined;
-    let yearWithinTitleRegex: RegExp | undefined;
-
     if (requestedMetadata?.title) {
-      yearWithinTitle = requestedMetadata.title.match(
-        /\b(19\d{2}|20\d{2})\b/
-      )?.[0];
-      if (yearWithinTitle) {
-        yearWithinTitleRegex = new RegExp(yearWithinTitle, 'g');
-      }
       logger.info(`Using metadata from context`, {
         id,
         title: requestedMetadata.title,
@@ -456,6 +451,23 @@ class StreamFilterer {
         hasGenres: !!requestedMetadata.genres?.length,
         originalLanguage: originalLanguage,
       });
+    }
+
+    const requestedTitleStrings =
+      requestedMetadata?.titles?.map((t) => t.title) ?? [];
+
+    if (requestedTitleStrings.length) {
+      for (const stream of streams) {
+        if (!stream.parsedFile?.title) continue;
+        const reconciled = reconcileParsedName(
+          stream.parsedFile,
+          [stream.filename, stream.folderName],
+          requestedTitleStrings,
+          requestedMetadata?.year
+        );
+        stream.parsedFile.title = reconciled.title;
+        stream.parsedFile.year = reconciled.year;
+      }
     }
 
     // fill in bitrate from metadata runtime and size if missing and enabled
@@ -837,10 +849,11 @@ class StreamFilterer {
         return false;
       }
 
-      // Extract title strings for preprocessTitle
-      const titleStrings = requestedMetadata.titles.map((t) => t.title);
-
-      streamTitle = preprocessTitle(streamTitle, stream.filename, titleStrings);
+      streamTitle = preprocessTitle(
+        streamTitle,
+        [stream.filename, stream.folderName],
+        requestedTitleStrings
+      );
 
       const normalisedStreamTitle = normaliseTitle(streamTitle);
 
@@ -959,20 +972,6 @@ class StreamFilterer {
       );
     };
 
-    const findYearInString = (string: string) => {
-      const regexes = [
-        /[([*]?(?!^)(?<!\d|Cap[. ]?)((?:19\d{2}|20[012]\d{2}))(?!\d|kbps)[*)\]]?/i,
-        /[([]?((?:19\d{2}|20[012]\d{1}))(?!\d|kbps)[)\]]?/i,
-      ];
-      for (const regex of regexes) {
-        const match = string.match(regex);
-        if (match && match[1]) {
-          return match[1];
-        }
-      }
-      return undefined;
-    };
-
     const performYearMatch = (stream: ParsedStream) => {
       const yearMatchingOptions = {
         tolerance: 1,
@@ -1003,38 +1002,7 @@ class StreamFilterer {
         return true;
       }
 
-      let streamYear = stream.parsedFile?.year;
-      if (yearWithinTitleRegex && yearWithinTitle) {
-        const filenameWithoutYear = stream.filename
-          ? stream.filename.replace(yearWithinTitleRegex, '')
-          : undefined;
-        const foldernameWithoutYear = stream.folderName
-          ? stream.folderName.replace(yearWithinTitle, '')
-          : undefined;
-
-        const strings = [filenameWithoutYear, foldernameWithoutYear].filter(
-          (s): s is string => s !== undefined
-        );
-
-        for (const string of strings) {
-          const newStreamYear = findYearInString(string);
-          if (newStreamYear) {
-            streamYear = newStreamYear;
-            if (stream.parsedFile) {
-              stream.parsedFile.year = newStreamYear;
-            }
-            break;
-          }
-        }
-
-        if (
-          streamYear === yearWithinTitle &&
-          yearWithinTitle !== requestedMetadata.year.toString()
-        ) {
-          streamYear = undefined;
-          if (stream.parsedFile) stream.parsedFile.year = undefined;
-        }
-      }
+      const streamYear = stream.parsedFile?.year;
 
       if (!streamYear) {
         const strictTypes = yearMatchingOptions.strictTypes ?? ['movie'];
@@ -1478,8 +1446,17 @@ class StreamFilterer {
     const shouldKeepStream = (stream: ParsedStream): boolean => {
       const file = stream.parsedFile;
 
-      const skipLanguageFiltering = shouldPassthroughStage(stream, 'language');
-      const skipSubtitleFiltering = shouldPassthroughStage(stream, 'subtitle');
+      const isPendingServiceWrapResolution = isServiceWrapEligibleP2PStream(
+        stream,
+        this.userData
+      );
+
+      const skipLanguageFiltering =
+        shouldPassthroughStage(stream, 'language') ||
+        isPendingServiceWrapResolution;
+      const skipSubtitleFiltering =
+        shouldPassthroughStage(stream, 'subtitle') ||
+        isPendingServiceWrapResolution;
 
       if (originalLanguage && LANGUAGES.includes(originalLanguage as any)) {
         if (
@@ -1745,13 +1722,8 @@ class StreamFilterer {
         }
       }
 
-      // Skip stream type filtering for P2P streams when service wrapping is enabled.
-      // These will be converted to debrid streams by _resolveServiceWrappedStreams later.
-      const skipStreamTypeFilter =
-        stream.type === 'p2p' && this.userData.serviceWrap?.enabled;
-
       if (
-        !skipStreamTypeFilter &&
+        !isPendingServiceWrapResolution &&
         this.userData.excludedStreamTypes?.includes(stream.type)
       ) {
         // Track stream type exclusions
@@ -1761,7 +1733,7 @@ class StreamFilterer {
 
       // Track required stream type misses
       if (
-        !skipStreamTypeFilter &&
+        !isPendingServiceWrapResolution &&
         this.userData.requiredStreamTypes &&
         this.userData.requiredStreamTypes.length > 0 &&
         !this.userData.requiredStreamTypes.includes(stream.type)

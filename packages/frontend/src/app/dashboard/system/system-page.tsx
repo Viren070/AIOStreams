@@ -10,13 +10,22 @@ import {
   DashboardErrorCard,
   DashboardLoading,
 } from '@/components/shared/dashboard-query-boundary';
-import { DonutChart, LineChart, type Series } from '@/components/ui/charts';
+import {
+  AreaChart,
+  DonutChart,
+  LineChart,
+  type Series,
+} from '@/components/ui/charts';
 import { api } from '@/lib/api';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
 } from '@/components/shared/confirmation-dialog';
-import { useSystemStream, type CpuSample } from './use-system';
+import {
+  useSystemStream,
+  type MetricsSample,
+  type SystemMetrics,
+} from './use-system';
 import { formatBytes, formatDuration } from '@/lib/format';
 
 function Gauge({
@@ -43,6 +52,141 @@ function Gauge({
         centerValue={`${Math.round(pct)}%`}
       />
       <span className="text-xs text-[--muted] mt-2">{detail}</span>
+    </Card>
+  );
+}
+
+const fmtClock = (ts: number) => {
+  const d = new Date(ts);
+  return [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map((n) => String(n).padStart(2, '0'))
+    .join(':');
+};
+
+/**
+ * The parts that add up to RSS.
+ */
+const MEMORY_PARTS = [
+  { key: 'heapUsed', label: 'Heap used', color: 'var(--brand)' },
+  { key: 'heapSlack', label: 'Heap slack', color: '#06b6d4' },
+  { key: 'external', label: 'External', color: '#a855f7' },
+  { key: 'other', label: 'Other', color: '#64748b' },
+] as const;
+
+function memoryParts(memory: MetricsSample['memory']) {
+  return {
+    heapUsed: memory.heapUsed,
+    heapSlack: Math.max(0, memory.heapTotal - memory.heapUsed),
+    external: memory.external,
+    other: Math.max(0, memory.rss - memory.heapTotal - memory.external),
+  };
+}
+
+type MemoryScope = 'system' | 'process';
+
+/**
+ * Process scope stacks the four parts so the stack height is RSS; system scope
+ * is a single series of host memory in use.
+ */
+function buildMemoryChart(
+  history: MetricsSample[],
+  scope: MemoryScope
+): { data: Array<Record<string, number | string>>; series: Series[] } {
+  if (scope === 'system') {
+    return {
+      data: history.map((s) => ({
+        t: fmtClock(s.ts),
+        used: s.memory.used,
+      })),
+      series: [{ key: 'used', label: 'Used' }],
+    };
+  }
+  return {
+    data: history.map((s) => ({ t: fmtClock(s.ts), ...memoryParts(s.memory) })),
+    series: MEMORY_PARTS.map((p) => ({
+      key: p.key,
+      label: p.label,
+      color: p.color,
+    })),
+  };
+}
+
+function MemoryUsage({
+  memory,
+  history,
+}: {
+  memory: SystemMetrics['memory'];
+  history: MetricsSample[];
+}) {
+  const [scope, setScope] = React.useState<MemoryScope>('process');
+  const chart = buildMemoryChart(history, scope);
+  const current = memoryParts(memory);
+  const rows =
+    scope === 'process'
+      ? MEMORY_PARTS.map((p) => ({
+          label: p.label,
+          color: p.color,
+          value: current[p.key],
+        }))
+      : [
+          { label: 'Used', color: 'var(--brand)', value: memory.used },
+          { label: 'Free', color: '#64748b', value: memory.free },
+          { label: 'This process', color: '#a855f7', value: memory.rss },
+        ];
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-sm font-semibold">Memory usage</h3>
+          <span className="text-sm">
+            <span className="text-xs text-[--muted] mr-1">
+              {scope === 'process' ? 'RSS' : 'Used'}
+            </span>
+            <span className="font-medium">
+              {formatBytes(scope === 'process' ? memory.rss : memory.used)}
+            </span>
+            {scope === 'system' && (
+              <span className="text-xs text-[--muted]">
+                {' / '}
+                {formatBytes(memory.total)}
+              </span>
+            )}
+          </span>
+        </div>
+        <Segmented
+          value={scope}
+          onChange={setScope}
+          options={[
+            { value: 'system', label: 'System' },
+            { value: 'process', label: 'Process' },
+          ]}
+        />
+      </div>
+      <AreaChart
+        data={chart.data}
+        xKey="t"
+        series={chart.series}
+        height={200}
+        stacked={scope === 'process'}
+        hideLegend
+        valueFormatter={formatBytes}
+        yTickFormatter={formatBytes}
+      />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+        {rows.map((r) => (
+          <div key={r.label}>
+            <div className="text-xs text-[--muted] flex items-center gap-1.5">
+              <span
+                className="inline-block w-2 h-2 rounded-full shrink-0"
+                style={{ background: r.color }}
+              />
+              {r.label}
+            </div>
+            <div className="font-medium">{formatBytes(r.value)}</div>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -101,29 +245,24 @@ interface CpuChartData {
  * meaningless (process CPU is a single aggregate) so we fall back to average.
  */
 function buildCpuChart(
-  history: CpuSample[],
+  history: MetricsSample[],
   scope: CpuScope,
   view: CpuView
 ): CpuChartData {
-  const fmtTime = (ts: number) => {
-    const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-  };
-
   if (scope === 'process' || view === 'average') {
     const key = scope === 'process' ? 'process' : 'total';
     const label = scope === 'process' ? 'Process' : 'System';
     return {
-      data: history.map((s) => ({ t: fmtTime(s.ts), [key]: s[key] })),
+      data: history.map((s) => ({ t: fmtClock(s.ts), [key]: s.cpu[key] })),
       series: [{ key, label }],
     };
   }
   // system + per-core
-  const cores = history.at(-1)?.perCore.length ?? 0;
+  const cores = history.at(-1)?.cpu.perCore.length ?? 0;
   return {
     data: history.map((s) => {
-      const row: Record<string, number | string> = { t: fmtTime(s.ts) };
-      for (let i = 0; i < cores; i++) row[`c${i}`] = s.perCore[i] ?? 0;
+      const row: Record<string, number | string> = { t: fmtClock(s.ts) };
+      for (let i = 0; i < cores; i++) row[`c${i}`] = s.cpu.perCore[i] ?? 0;
       return row;
     }),
     series: Array.from({ length: cores }, (_, i) => ({
@@ -303,6 +442,8 @@ export function SystemPage() {
         />
       </Card>
 
+      <MemoryUsage memory={m.memory} history={history} />
+
       <Card className="p-4">
         <h3 className="text-sm font-semibold mb-3">Process</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -310,8 +451,6 @@ export function SystemPage() {
             ['Uptime', formatDuration(m.process.uptimeSec)],
             ['Node', m.process.nodeVersion],
             ['PID', String(m.process.pid)],
-            ['Heap', formatBytes(m.memory.heapUsed)],
-            ['RSS', formatBytes(m.memory.rss)],
             ['Platform', m.process.platform],
           ].map(([k, v]) => (
             <div key={k}>

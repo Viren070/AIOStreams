@@ -52,6 +52,7 @@ export function parseNabParsedFileInfo(args: {
   subtitleLanguages?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
   return normaliseParsedMediaInfo({
+    mediaInfoQuality: 'indexer',
     languages: parseNabLanguages(args.audioLanguages),
     subtitles: parseNabLanguages(args.subtitleLanguages),
   });
@@ -246,7 +247,9 @@ export abstract class BaseNabAddon<
         this.logger.debug('Performing queries', { queries });
         return Promise.all(
           queries.map((q) =>
-            queryLimit(() => this.fetchResults(searchFunction, { ...params, q }))
+            queryLimit(() =>
+              this.fetchResults(searchFunction, { ...params, q })
+            )
           )
         ).then((allResults) => allResults.flat());
       };

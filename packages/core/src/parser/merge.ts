@@ -69,11 +69,7 @@ export function applySeasonPackHeuristics(
 ): ParsedFile {
   if (parsedFile.seasonPack || !parsedFile.episodes?.length) return parsedFile;
 
-  if (
-    sizes.folderSize &&
-    sizes.size &&
-    sizes.folderSize > sizes.size * 2
-  ) {
+  if (sizes.folderSize && sizes.size && sizes.folderSize > sizes.size * 2) {
     parsedFile.seasonPack = true;
   } else if (parsedFile.episodes.length > 5) {
     parsedFile.seasonPack = true;

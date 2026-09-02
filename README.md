@@ -220,7 +220,7 @@ AIOStreams is a passion project developed and maintained for free. If you find i
 <h2 align="center">⭐ Star History</h2>
 
 <p align="center">
-  <img src="https://api.star-history.com/svg?repos=Viren070/AIOStreams&type=Date" href="https://www.star-history.com/#Viren070/AIOStreams&Date" alt="Star History" width="750"/>
+  <img src="https://star-history.dera.page/svg?repos=Viren070/AIOStreams&type=Date" href="https://star-history.dera.page/#Viren070/AIOStreams&Date" alt="Star History" width="750"/>
 </p>
 
 ---

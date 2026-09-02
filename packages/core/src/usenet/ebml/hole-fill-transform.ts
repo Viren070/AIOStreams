@@ -33,6 +33,8 @@ const logger = createLogger('usenet/ebml-fill');
 
 /** Scan carry: longest cluster-header prefix that can straddle a chunk edge. */
 const SCAN_CARRY_BYTES = 27;
+/** Bytes of a span that decide a header starting inside the carry. */
+const SCAN_HEAD_BYTES = 64;
 const CLUSTER_MAGIC = Buffer.from([0x1f, 0x43, 0xb6, 0x75]);
 const TRACK_VINT_ONE = Buffer.from([0x81]);
 const EMPTY = Buffer.alloc(0);
@@ -523,26 +525,50 @@ export class MatroskaHoleFillTransform extends Transform {
     span: Buffer,
     spanAbs: number
   ): number | undefined {
-    const work =
-      state.carry.length > 0 ? Buffer.concat([state.carry, span]) : span;
-    const workAbs = state.carry.length > 0 ? state.carryAbs : spanAbs;
-    let from = 0;
-    for (;;) {
-      const c = work.indexOf(CLUSTER_MAGIC, from);
-      if (c < 0) break;
-      const v = validateClusterStart(work, c);
-      if ('ok' in v && v.ok) return workAbs + c;
-      if ('needMore' in v) {
-        // Revisit this candidate when more bytes arrive.
-        state.carry = Buffer.from(work.subarray(c));
-        state.carryAbs = workAbs + c;
-        return undefined;
+    const carryLen = state.carry.length;
+    const passes: Array<[work: Buffer, workAbs: number, limit: number]> =
+      carryLen > 0
+        ? [
+            [
+              Buffer.concat([state.carry, span.subarray(0, SCAN_HEAD_BYTES)]),
+              state.carryAbs,
+              carryLen,
+            ],
+            [span, spanAbs, span.length],
+          ]
+        : [[span, spanAbs, span.length]];
+    for (const [work, workAbs, limit] of passes) {
+      let from = 0;
+      for (;;) {
+        const c = work.indexOf(CLUSTER_MAGIC, from);
+        if (c < 0 || c >= limit) break;
+        const v = validateClusterStart(work, c);
+        if ('ok' in v && v.ok) return workAbs + c;
+        if ('needMore' in v) {
+          // Revisit this candidate when more bytes arrive.
+          const abs = workAbs + c;
+          state.carry =
+            abs < spanAbs
+              ? Buffer.concat([
+                  state.carry.subarray(abs - state.carryAbs),
+                  span,
+                ])
+              : Buffer.from(span.subarray(abs - spanAbs));
+          state.carryAbs = abs;
+          return undefined;
+        }
+        from = c + 1;
       }
-      from = c + 1;
     }
-    const tail = Math.min(SCAN_CARRY_BYTES, work.length);
-    state.carry = Buffer.from(work.subarray(work.length - tail));
-    state.carryAbs = workAbs + work.length - tail;
+    // A span shorter than the carry window keeps the old carry's tail too.
+    const src =
+      carryLen > 0 && span.length < SCAN_CARRY_BYTES
+        ? Buffer.concat([state.carry, span])
+        : span;
+    const srcAbs = src === span ? spanAbs : state.carryAbs;
+    const tail = Math.min(SCAN_CARRY_BYTES, src.length);
+    state.carry = Buffer.from(src.subarray(src.length - tail));
+    state.carryAbs = srcAbs + src.length - tail;
     return undefined;
   }
 }

@@ -91,13 +91,14 @@ export type SortCriterion = z.infer<typeof SortCriterion>;
 const StreamTypes = z.enum(constants.STREAM_TYPES);
 const Languages = z.enum(constants.LANGUAGES);
 
-const FormatterTemplateShape = z.object({
+export const FormatterTemplateShape = z.object({
   name: formatterTemplate(),
   description: formatterTemplate(),
 });
 
 const Formatter = z.object({
   id: z.enum(constants.FORMATTERS),
+  selectedSaved: z.string().optional(),
   definitions: z
     .object({
       custom: FormatterTemplateShape.optional(),
@@ -525,6 +526,14 @@ export const UserDataSchema = z.object({
   encryptedPassword: z.string().min(1).optional(),
   trusted: z.boolean().optional(),
   showChanges: z.boolean().optional(),
+  /** How often the manifest change notice appears after a save. */
+  manifestNotice: z.enum(['always', 'significant', 'never']).optional(),
+  /** Preferences only. The credentials themselves live in `linked_accounts`. */
+  linkedAccounts: z
+    .object({
+      pushBehaviour: z.enum(['ask', 'auto', 'never']).optional(),
+    })
+    .optional(),
   accessKey: z.string().optional(),
   ip: z.string().optional(),
   addonName: z.string().min(1).max(300).optional(),
@@ -733,6 +742,9 @@ export const UserDataSchema = z.object({
         )
         .optional(),
       behaviour: z.enum(['sequential', 'parallel']).optional(),
+      onConditionFailure: z
+        .enum(['stop', 'skip', 'includeFinished'])
+        .optional(),
     })
     .optional(),
   sortCriteria: z.object({
@@ -1087,6 +1099,7 @@ export const ParsedFileSchema = z.object({
   audioChannels: z.array(z.string()),
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
+  mediaInfoQuality: z.enum(['probe', 'indexer', 'addon']).optional(),
   languages: z.array(z.string()),
   subtitles: z.array(z.string()).optional(),
   subbed: z.boolean().optional(),
@@ -1480,6 +1493,11 @@ const StatusResponseSchema = z.object({
     featuredTemplateIds: z.array(z.string()).optional(),
     alternateDesign: z.boolean(),
     protected: z.boolean(),
+    community: z.object({
+      formatters: z.enum(['off', 'open', 'approval']),
+      templates: z.enum(['off', 'open', 'approval']),
+      minAccountAge: z.number(),
+    }),
     oidc: z.object({
       enabled: z.boolean(),
       buttonLabel: z.string(),
@@ -1510,11 +1528,16 @@ const StatusResponseSchema = z.object({
     searchApiDisabled: z.boolean(),
     nabApiDisabled: z.boolean(),
     seanimeExtensionVersion: z.string().nullable(),
-    tmdbApiAvailable: z.boolean(),
+    metadata: z.object({
+      tmdb: z.object({ accessToken: z.boolean(), apiKey: z.boolean() }),
+      tvdb: z.object({ apiKey: z.boolean() }),
+    }),
     /** Global analytics master switch (false = no events written anywhere). */
     analyticsEnabled: z.boolean(),
     /** Per-user analytics (configure-page Stats tab) enabled state. */
     userAnalyticsEnabled: z.boolean(),
+    /** Whether "stay signed in" is offered when loading a configuration. */
+    configSessionsEnabled: z.boolean(),
     forced: z.object({
       proxy: z.object({
         enabled: z.boolean().or(z.null()),
@@ -1603,7 +1626,7 @@ export const TemplateSchema = z.object({
     description: z.string().min(1).max(1000), // description of the template
     author: z.string().min(1).max(20), // author of the template
     source: z
-      .enum(['builtin', 'custom', 'external'])
+      .enum(['builtin', 'custom', 'external', 'community'])
       .optional()
       .default('builtin'),
     version: z
@@ -1611,6 +1634,7 @@ export const TemplateSchema = z.object({
       .optional()
       .default('1.0.0'),
     category: z.string().min(1).max(20), // category of the template
+    tags: z.array(z.string().min(1).max(20)).max(5).optional(), // multi-tag; `category` stays as the single-tag fallback
     services: z.array(ServiceIds).optional(),
     serviceRequired: z.boolean().optional(), // whether a service is required for this template or not.
     setToSaveInstallMenu: z.boolean().optional().default(true), // whether to set the menu to save-install after importing the template

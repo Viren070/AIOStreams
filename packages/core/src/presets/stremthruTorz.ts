@@ -125,7 +125,11 @@ export class StremthruTorzPreset extends StremThruPreset {
       return [this.generateAddon(userData, options, [])];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     let serviceIds: (ServiceId | 'p2p')[] =
       usableServices?.map((s) => s.id) || [];
 

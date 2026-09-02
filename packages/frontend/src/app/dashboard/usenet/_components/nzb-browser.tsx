@@ -105,20 +105,22 @@ export function NzbBrowser({
       title={name || 'Browse NZB'}
       description="Files in this NZB (including stored archive contents)."
       contentClass="max-w-4xl"
+      headerClass="pr-8"
     >
       <div className="max-h-[72vh] overflow-y-auto space-y-4">
         {files.isLoading ? (
           <p className="text-sm text-[--muted]">Loading…</p>
         ) : files.isError ? (
-          <p className="text-sm text-red-500">Failed to load files.</p>
+          <p className="text-sm text-red-400">Failed to load files.</p>
         ) : folders.length === 0 ? (
           <p className="text-sm text-[--muted]">No files.</p>
         ) : (
           folders.map((folder) => (
             <div key={folder || 'root'}>
               {folder && (
-                <div className="flex items-center gap-1.5 text-xs text-[--muted] mb-1">
-                  <BiFolder /> {folder}
+                <div className="flex items-start gap-1.5 text-xs text-[--muted] mb-1">
+                  <BiFolder className="shrink-0 mt-0.5" />
+                  <span className="min-w-0 break-all">{folder}</span>
                 </div>
               )}
               <div className="space-y-1">
@@ -132,24 +134,23 @@ export function NzbBrowser({
                   return (
                     <div
                       key={`${folder}-${i}`}
-                      className="flex items-center gap-2 rounded-md border border-[--border]/60 px-2.5 py-1.5"
+                      className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-[--border]/60 px-2.5 py-1.5"
                     >
-                      <BiFile className="text-[--muted] shrink-0" />
-                      {/* break-all (not truncate) so the full name always shows,
-                          wrapping on narrow screens; items-center keeps the icon,
-                          type, size and actions centred as the row grows. */}
-                      <span className="flex-1 text-sm break-all">
-                        {basename(f)}
-                      </span>
+                      <div className="flex w-full min-w-0 items-start gap-2 sm:w-auto sm:flex-1">
+                        <BiFile className="text-[--muted] shrink-0 mt-0.5" />
+                        <span className="min-w-0 text-sm break-all">
+                          {basename(f)}
+                        </span>
+                      </div>
                       {f.category && (
                         <span className="text-xs text-[--muted] shrink-0">
                           {f.category}
                         </span>
                       )}
-                      <span className="text-xs tabular-nums text-[--muted] w-20 text-right shrink-0">
+                      <span className="text-xs tabular-nums text-[--muted] shrink-0 sm:w-20 sm:text-right">
                         {formatBytes(f.size)}
                       </span>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 ml-auto sm:ml-0">
                         <Tooltip
                           trigger={
                             <IconButton

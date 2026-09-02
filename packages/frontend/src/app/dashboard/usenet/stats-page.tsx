@@ -1,7 +1,8 @@
 import React from 'react';
-import { BiErrorCircle } from 'react-icons/bi';
+import { BiErrorCircle, BiEraser } from 'react-icons/bi';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/button';
 import { Popover } from '@/components/ui/popover';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
@@ -20,6 +21,10 @@ import {
   type UsenetIndexerStatRow,
   type UsenetStatsOverview,
 } from './queries';
+import {
+  ResetStatsModal,
+  type ResetStatsTarget,
+} from './_components/reset-stats-modal';
 import {
   formatBytes,
   formatSpeed,
@@ -75,7 +80,7 @@ const STATE_DOT: Record<ProviderState, string> = {
   online: 'bg-emerald-500',
   connecting: 'bg-amber-500',
   offline: 'bg-[--muted]',
-  auth_failed: 'bg-red-500',
+  auth_failed: 'bg-red-400',
   disabled: 'bg-[--muted]/40',
 };
 
@@ -103,7 +108,7 @@ function poolHealth(p: ProviderPoolInfo): PoolHealth {
   if (p.state === 'auth_failed') {
     return {
       tone: 'bad',
-      cls: 'bg-red-500',
+      cls: 'bg-red-400',
       label: 'Authentication failed',
       hint: 'The provider rejected the username or password. Update the credentials on the Providers page.',
     };
@@ -177,7 +182,7 @@ function ProviderHealthPopover({
           aria-label={`${p.name || p.id}: ${health.label}. Show details`}
           className={cn(
             'shrink-0 -my-1 p-1 rounded-full transition-opacity hover:opacity-70',
-            health.tone === 'bad' ? 'text-red-500' : 'text-amber-500'
+            health.tone === 'bad' ? 'text-red-400' : 'text-amber-500'
           )}
         >
           <BiErrorCircle className="w-4 h-4" />
@@ -379,7 +384,7 @@ function LivePanel() {
                       className={cn(
                         'absolute inset-y-0 left-0',
                         'transition-[width] ease-out motion-reduce:transition-none',
-                        p.tripped ? 'bg-red-500/30' : 'bg-brand/30'
+                        p.tripped ? 'bg-red-400/30' : 'bg-brand/30'
                       )}
                       style={{
                         width: pct(p.total),
@@ -390,7 +395,7 @@ function LivePanel() {
                       className={cn(
                         'absolute inset-y-0 left-0',
                         'transition-[width] ease-out motion-reduce:transition-none',
-                        p.tripped ? 'bg-red-500' : 'bg-brand'
+                        p.tripped ? 'bg-red-400' : 'bg-brand'
                       )}
                       style={{
                         width: pct(p.acquired),
@@ -435,7 +440,27 @@ function LivePanel() {
 // Historical provider performance (windowed)
 // ---------------------------------------------------------------------------
 
-function ProviderTable({ providers }: { providers: UsenetProviderStatRow[] }) {
+/** A deleted provider keeps its stats but not its name, only its uuid. */
+function RemovedProviderName({ id }: { id: string }) {
+  return (
+    <>
+      <span className="font-medium text-[--muted]" title={id}>
+        Removed provider
+      </span>
+      <span className="text-xs text-[--muted] tabular-nums" title={id}>
+        {id.slice(0, 8)}
+      </span>
+    </>
+  );
+}
+
+function ProviderTable({
+  providers,
+  onReset,
+}: {
+  providers: UsenetProviderStatRow[];
+  onReset: (target: ResetStatsTarget) => void;
+}) {
   if (providers.length === 0) {
     return (
       <p className="text-sm text-[--muted]">
@@ -460,7 +485,8 @@ function ProviderTable({ providers }: { providers: UsenetProviderStatRow[] }) {
               Avg latency
             </th>
             <th className="py-2 px-3 text-right">Errors</th>
-            <th className="py-2 pl-3 text-right">Missing</th>
+            <th className="py-2 px-3 text-right">Missing</th>
+            <th className="py-2 pl-3 w-8" aria-label="Actions" />
           </tr>
         </thead>
         <tbody>
@@ -475,12 +501,22 @@ function ProviderTable({ providers }: { providers: UsenetProviderStatRow[] }) {
                     )}
                     title={p.live.state}
                   />
-                  <span className="font-medium">{p.name || p.host}</span>
+                  {p.removed ? (
+                    <RemovedProviderName id={p.id} />
+                  ) : (
+                    <span className="font-medium">{p.name || p.host}</span>
+                  )}
                   {p.isBackup && (
                     <span className="text-xs text-[--muted]">backup</span>
                   )}
-                  {!p.enabled && (
-                    <span className="text-xs text-[--muted]">(disabled)</span>
+                  {p.removed ? (
+                    <span className="text-xs px-1.5 py-0.5 rounded-[--radius] bg-[--subtle] text-[--muted]">
+                      removed
+                    </span>
+                  ) : (
+                    !p.enabled && (
+                      <span className="text-xs text-[--muted]">(disabled)</span>
+                    )
                   )}
                 </div>
               </td>
@@ -526,13 +562,36 @@ function ProviderTable({ providers }: { providers: UsenetProviderStatRow[] }) {
               <td
                 className={cn(
                   'py-2 px-3 text-right tabular-nums',
-                  p.errorRate > 0.1 && 'text-red-500'
+                  p.errorRate > 0.1 && 'text-red-400'
                 )}
               >
                 {formatPercent(p.errorRate)}
               </td>
-              <td className="py-2 pl-3 text-right tabular-nums text-[--muted]">
+              <td className="py-2 px-3 text-right tabular-nums text-[--muted]">
                 {formatPercent(p.missRate)}
+              </td>
+              <td className="py-2 pl-3 text-right">
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      size="sm"
+                      intent="alert-subtle"
+                      icon={<BiEraser />}
+                      onClick={() =>
+                        onReset({
+                          target: 'providers',
+                          id: p.id,
+                          label: p.removed
+                            ? `Removed provider ${p.id.slice(0, 8)}`
+                            : p.name || p.host,
+                        })
+                      }
+                      aria-label="Reset stats for this provider"
+                    />
+                  }
+                >
+                  Reset this provider's recorded stats
+                </Tooltip>
               </td>
             </tr>
           ))}
@@ -559,9 +618,11 @@ function indexerFailBreakdown(i: UsenetIndexerStatRow): string {
 }
 
 /** Popover shape mirroring {@link ProviderHealthPopover} for grab errors. */
-function indexerErrorInfo(
-  e: NonNullable<UsenetIndexerStatRow['lastError']>
-): { tone: 'bad' | 'warn'; label: string; hint: string } {
+function indexerErrorInfo(e: NonNullable<UsenetIndexerStatRow['lastError']>): {
+  tone: 'bad' | 'warn';
+  label: string;
+  hint: string;
+} {
   if (e.status === 401 || e.status === 403) {
     return {
       tone: 'bad',
@@ -604,7 +665,7 @@ function IndexerErrorPopover({
           aria-label={`${indexer}: ${info.label}. Show details`}
           className={cn(
             'shrink-0 -my-1 p-1 rounded-full transition-opacity hover:opacity-70',
-            info.tone === 'bad' ? 'text-red-500' : 'text-amber-500'
+            info.tone === 'bad' ? 'text-red-400' : 'text-amber-500'
           )}
         >
           <BiErrorCircle className="w-4 h-4" />
@@ -616,7 +677,7 @@ function IndexerErrorPopover({
           <span
             className={cn(
               'w-2 h-2 rounded-full shrink-0',
-              info.tone === 'bad' ? 'bg-red-500' : 'bg-amber-500'
+              info.tone === 'bad' ? 'bg-red-400' : 'bg-amber-500'
             )}
           />
           <span className="text-sm font-semibold">{info.label}</span>
@@ -641,7 +702,13 @@ function IndexerErrorPopover({
   );
 }
 
-function IndexerTable({ indexers }: { indexers: UsenetIndexerStatRow[] }) {
+function IndexerTable({
+  indexers,
+  onReset,
+}: {
+  indexers: UsenetIndexerStatRow[];
+  onReset: (target: ResetStatsTarget) => void;
+}) {
   if (indexers.length === 0) {
     return (
       <p className="text-sm text-[--muted]">
@@ -671,11 +738,12 @@ function IndexerTable({ indexers }: { indexers: UsenetIndexerStatRow[] }) {
               Avg grab
             </th>
             <th
-              className="py-2 pl-3 text-right"
+              className="py-2 px-3 text-right"
               title="How long the import/inspection of the release took after the grab."
             >
               Avg import
             </th>
+            <th className="py-2 pl-3 w-8" aria-label="Actions" />
           </tr>
         </thead>
         <tbody>
@@ -715,7 +783,7 @@ function IndexerTable({ indexers }: { indexers: UsenetIndexerStatRow[] }) {
               <td
                 className={cn(
                   'py-2 px-3 text-right tabular-nums',
-                  i.grabs > 0 && 1 - i.successRate > 0.1 && 'text-red-500'
+                  i.grabs > 0 && 1 - i.successRate > 0.1 && 'text-red-400'
                 )}
                 title={
                   i.degraded > 0
@@ -734,8 +802,29 @@ function IndexerTable({ indexers }: { indexers: UsenetIndexerStatRow[] }) {
               <td className="py-2 px-3 text-right tabular-nums">
                 {i.avgGrabMs == null ? '—' : formatDurationMs(i.avgGrabMs)}
               </td>
-              <td className="py-2 pl-3 text-right tabular-nums">
+              <td className="py-2 px-3 text-right tabular-nums">
                 {i.avgImportMs == null ? '—' : formatDurationMs(i.avgImportMs)}
+              </td>
+              <td className="py-2 pl-3 text-right">
+                <Tooltip
+                  trigger={
+                    <IconButton
+                      size="sm"
+                      intent="alert-subtle"
+                      icon={<BiEraser />}
+                      onClick={() =>
+                        onReset({
+                          target: 'indexers',
+                          id: i.indexer,
+                          label: i.indexer,
+                        })
+                      }
+                      aria-label="Reset stats for this indexer"
+                    />
+                  }
+                >
+                  Reset this indexer's recorded stats
+                </Tooltip>
               </td>
             </tr>
           ))}
@@ -745,7 +834,37 @@ function IndexerTable({ indexers }: { indexers: UsenetIndexerStatRow[] }) {
   );
 }
 
-function StatsSection({ data }: { data: UsenetStatsOverview }) {
+function ResetAllButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip
+      trigger={
+        <IconButton
+          size="sm"
+          intent="alert-subtle"
+          icon={<BiEraser />}
+          onClick={onClick}
+          aria-label={label}
+        />
+      }
+    >
+      {label}
+    </Tooltip>
+  );
+}
+
+function StatsSection({
+  data,
+  onReset,
+}: {
+  data: UsenetStatsOverview;
+  onReset: (target: ResetStatsTarget) => void;
+}) {
   const chartData = data.throughput.map((b) => ({
     t: fmtBucketLabel(b.bucketMs, data.window),
     bytes: b.bytes,
@@ -816,10 +935,18 @@ function StatsSection({ data }: { data: UsenetStatsOverview }) {
       </Card>
 
       <Card className="p-4">
-        <h3 className="text-sm font-semibold mb-3">Provider performance</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">Provider performance</h3>
+          <ResetAllButton
+            label="Reset all provider stats"
+            onClick={() =>
+              onReset({ target: 'providers', label: 'All providers' })
+            }
+          />
+        </div>
         {share.length > 0 ? (
           <div className="grid lg:grid-cols-[1fr,240px] gap-6 items-center">
-            <ProviderTable providers={data.providers} />
+            <ProviderTable providers={data.providers} onReset={onReset} />
             <div className="mx-auto w-full max-w-[240px] aspect-square">
               <DonutChart
                 data={share}
@@ -830,15 +957,23 @@ function StatsSection({ data }: { data: UsenetStatsOverview }) {
             </div>
           </div>
         ) : (
-          <ProviderTable providers={data.providers} />
+          <ProviderTable providers={data.providers} onReset={onReset} />
         )}
       </Card>
 
       <Card className="p-4">
-        <h3 className="text-sm font-semibold mb-3">Indexer performance</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">Indexer performance</h3>
+          <ResetAllButton
+            label="Reset all indexer stats"
+            onClick={() =>
+              onReset({ target: 'indexers', label: 'All indexers' })
+            }
+          />
+        </div>
         {grabShare.length > 0 ? (
           <div className="grid lg:grid-cols-[1fr,240px] gap-6 items-center">
-            <IndexerTable indexers={data.indexers} />
+            <IndexerTable indexers={data.indexers} onReset={onReset} />
             <div className="mx-auto w-full max-w-[240px] aspect-square">
               <DonutChart
                 data={grabShare}
@@ -849,7 +984,7 @@ function StatsSection({ data }: { data: UsenetStatsOverview }) {
             </div>
           </div>
         ) : (
-          <IndexerTable indexers={data.indexers} />
+          <IndexerTable indexers={data.indexers} onReset={onReset} />
         )}
       </Card>
     </div>
@@ -866,6 +1001,9 @@ function StatsSection({ data }: { data: UsenetStatsOverview }) {
  */
 export function UsenetStatsPage() {
   const [window, setWindow] = React.useState<UsenetWindow>('24h');
+  const [resetting, setResetting] = React.useState<ResetStatsTarget | null>(
+    null
+  );
   const stats = useUsenetStats(window);
   return (
     <div className="space-y-6">
@@ -879,8 +1017,9 @@ export function UsenetStatsPage() {
         query={stats}
         errorTitle="Failed to load usenet stats"
       >
-        {(d) => <StatsSection data={d} />}
+        {(d) => <StatsSection data={d} onReset={setResetting} />}
       </DashboardQueryBoundary>
+      <ResetStatsModal target={resetting} onClose={() => setResetting(null)} />
     </div>
   );
 }

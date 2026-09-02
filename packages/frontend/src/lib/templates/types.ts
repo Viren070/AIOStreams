@@ -30,7 +30,7 @@ export const TemplateSchema = z.object({
     description: z.string().min(1).max(1000),
     author: z.string().min(1).max(20),
     source: z
-      .enum(['builtin', 'custom', 'external'])
+      .enum(['builtin', 'custom', 'external', 'community'])
       .optional()
       .default('builtin'),
     version: z
@@ -38,6 +38,7 @@ export const TemplateSchema = z.object({
       .optional()
       .default('1.0.0'),
     category: z.string().min(1).max(20),
+    tags: z.array(z.string().min(1).max(20)).max(5).optional(),
     services: z.array(z.enum(constants.SERVICES)).optional(),
     serviceRequired: z.boolean().optional(),
     setToSaveInstallMenu: z.boolean().optional().default(true),
@@ -83,10 +84,22 @@ export interface ProcessedTemplate {
 }
 
 export type WizardStep =
+  | 'welcome'
   | 'browse'
-  | 'templateInputs'
   | 'selectService'
-  | 'inputs';
+  | 'templateInputs'
+  | 'inputs'
+  | 'review';
+
+/** Labels for the setup rail, keyed by step. `welcome` never appears in it. */
+export const WIZARD_STEP_LABELS: Record<WizardStep, string> = {
+  welcome: 'Get started',
+  browse: 'Choose a setup',
+  selectService: 'Services',
+  templateInputs: 'Options',
+  inputs: 'Credentials',
+  review: 'Review',
+};
 
 /** Snapshot of all wizard state saved before each forward navigation step. */
 export interface WizardSnapshot {
@@ -107,8 +120,14 @@ export interface ConfigTemplatesModalProps {
   deepLinkUrl?: string;
   /** If set alongside deepLinkUrl, auto-selects the template with this ID from the fetched list. */
   deepLinkTemplateId?: string;
-  /** If set, the browse step will open with the description modal for this template ID pre-expanded. */
+  /** If set, the browse step will open with the detail panel for this template ID pre-opened. */
   initialExpandedTemplateId?: string;
+  /** Opens on the first-run choice screen instead of straight into the browser. */
+  startAtWelcome?: boolean;
+  /** Chosen from the welcome step: configure by hand instead of using a setup. */
+  onStartFresh?: () => void;
+  /** Chosen from the welcome step: load an existing configuration. */
+  onSignIn?: () => void;
 }
 
 export const TEMPLATE_CACHE = new Map<string, Template[]>();

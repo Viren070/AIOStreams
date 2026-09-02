@@ -138,6 +138,11 @@ export type ComboboxProps = Omit<
      * Maximum items
      */
     maxItems?: number;
+    /**
+     * Maximum selected values rendered as pills. Anything past the cap
+     * collapses into a single count pill.
+     */
+    maxDisplayedItems?: number;
   };
 
 export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
@@ -176,6 +181,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
         inputRef,
         keepOpenOnSelect = true,
         maxItems,
+        maxDisplayedItems,
         ...rest
       },
       {
@@ -250,41 +256,60 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
     const maxReached =
       multiple && typeof maxItems === 'number' && value.length >= maxItems;
 
+    const displayedOptions =
+      multiple && typeof maxDisplayedItems === 'number'
+        ? selectedOptions.slice(0, Math.max(0, maxDisplayedItems))
+        : selectedOptions;
+    const hiddenCount = selectedOptions.length - displayedOptions.length;
+
     const selectedValues =
       !!value.length && !!selectedOptions.length ? (
         multiple ? (
-          selectedOptions.map((option) => (
-            <div
-              key={option.value}
-              className={cn(ComboboxAnatomy.item(), itemClass)}
-            >
-              <span className="truncate">
-                {option.textValue || option.value}
-              </span>
-              <span
-                className={cn(
-                  ComboboxAnatomy.removeItemButton(),
-                  'rounded-full',
-                  removeItemButtonClass
-                )}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleUpdateValue(value.filter((v) => v !== option.value));
-                  setOpen(false);
-                }}
+          <>
+            {displayedOptions.map((option) => (
+              <div
+                key={option.value}
+                className={cn(ComboboxAnatomy.item(), itemClass)}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 16 16"
-                  width="16"
-                  height="16"
-                  fill="currentColor"
+                <span className="truncate">
+                  {option.textValue || option.value}
+                </span>
+                <span
+                  className={cn(
+                    ComboboxAnatomy.removeItemButton(),
+                    'rounded-full',
+                    removeItemButtonClass
+                  )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleUpdateValue(value.filter((v) => v !== option.value));
+                    setOpen(false);
+                  }}
                 >
-                  <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
-                </svg>
-              </span>
-            </div>
-          ))
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 16 16"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                  >
+                    <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>
+                  </svg>
+                </span>
+              </div>
+            ))}
+            {hiddenCount > 0 && (
+              <div
+                className={cn(
+                  ComboboxAnatomy.item(),
+                  'text-[--muted] pr-2',
+                  itemClass
+                )}
+              >
+                +{hiddenCount} more
+              </div>
+            )}
+          </>
         ) : (
           <span className="truncate">{selectedOptions[0].label}</span>
         )

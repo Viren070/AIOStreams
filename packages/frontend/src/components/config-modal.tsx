@@ -9,9 +9,11 @@ import {
   openConfigProfile,
   saveConfigProfile,
   deleteConfigProfile,
+  createConfigSession,
   APIError,
   type ConfigProfile,
 } from '@/lib/api';
+import { useStatus } from '@/context/status';
 import { configProfilesQuery } from '@/lib/queries';
 import { useUserData } from '@/context/userData';
 import { useSession } from '@/context/session';
@@ -33,13 +35,21 @@ export function ConfigModal({
   onOpenChange,
   initialUuid,
 }: ConfigModalProps) {
-  const { setUserData, setUuid, setPassword, setEncryptedPassword } =
-    useUserData();
+  const {
+    setUserData,
+    setUuid,
+    setPassword,
+    setEncryptedPassword,
+    setBaseline,
+  } = useUserData();
   const { user: sessionUser } = useSession();
+  const { status } = useStatus();
+  const sessionsEnabled = status?.settings.configSessionsEnabled !== false;
   const queryClient = useQueryClient();
   const [uuid, setUuidInput] = React.useState(initialUuid || '');
   const [password, setPasswordInput] = React.useState('');
   const [saveToAccount, setSaveToAccount] = React.useState(false);
+  const [staySignedIn, setStaySignedIn] = React.useState(false);
   const [label, setLabel] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [busyProfileId, setBusyProfileId] = React.useState<string | null>(null);
@@ -47,6 +57,9 @@ export function ConfigModal({
   const [pendingDelete, setPendingDelete] =
     React.useState<ConfigProfile | null>(null);
   const [showManualForm, setShowManualForm] = React.useState(false);
+  // handleOpenProfile is an effect dependency; a changing identity re-fires it.
+  const staySignedInRef = React.useRef(staySignedIn);
+  staySignedInRef.current = staySignedIn;
   const passwordRef = React.useRef<HTMLInputElement>(null);
 
   const { data: profileData, isLoading: profilesLoading } = useQuery({
@@ -57,15 +70,33 @@ export function ConfigModal({
   const hasProfiles = profiles.length > 0;
 
   const applyConfig = React.useCallback(
-    async (loadUuid: string, loadPassword: string) => {
+    async (loadUuid: string, loadPassword: string, remember = false) => {
       const result = await loadRawUserConfig(loadUuid, loadPassword);
       setUserData(() => result.userData);
+      setBaseline(result.userData);
       setUuid(loadUuid);
       setPassword(loadPassword);
       setEncryptedPassword(result.encryptedPassword);
+
+      if (sessionsEnabled) {
+        // The configuration is already open, so this failing is not a failed sign in.
+        try {
+          await createConfigSession(loadUuid, loadPassword, remember);
+        } catch {
+          /* ignored */
+        }
+      }
       onSuccess();
     },
-    [setUserData, setUuid, setPassword, setEncryptedPassword, onSuccess]
+    [
+      sessionsEnabled,
+      setUserData,
+      setBaseline,
+      setUuid,
+      setPassword,
+      setEncryptedPassword,
+      onSuccess,
+    ]
   );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -73,7 +104,7 @@ export function ConfigModal({
     setLoading(true);
 
     try {
-      await applyConfig(uuid, password);
+      await applyConfig(uuid, password, staySignedIn);
       if (saveToAccount && sessionUser) {
         try {
           await saveConfigProfile(uuid, password, label.trim() || undefined);
@@ -103,7 +134,7 @@ export function ConfigModal({
       setBusyProfileId(profile.id);
       try {
         const creds = await openConfigProfile(profile.id);
-        await applyConfig(creds.uuid, creds.password);
+        await applyConfig(creds.uuid, creds.password, staySignedInRef.current);
       } catch (err) {
         if (err instanceof APIError) {
           // A stale saved password: prefill the manual form so it can be fixed
@@ -160,6 +191,7 @@ export function ConfigModal({
     if (!open) {
       setPasswordInput('');
       setSaveToAccount(false);
+      setStaySignedIn(false);
       setLabel('');
       setShowManualForm(false);
       setPendingDelete(null);
@@ -185,6 +217,14 @@ export function ConfigModal({
   const manualFormVisible =
     !profilesLoading &&
     (showManualForm || (!!initialUuid && !matchingProfile) || !hasProfiles);
+
+  const staySignedInField = sessionsEnabled ? (
+    <Checkbox
+      label="Stay signed in on this device"
+      value={staySignedIn}
+      onValueChange={(v) => setStaySignedIn(v === true)}
+    />
+  ) : null;
 
   return (
     <Modal
@@ -289,6 +329,7 @@ export function ConfigModal({
                 Use a UUID and password
               </Button>
             )}
+            {!manualFormVisible && staySignedInField}
           </div>
         )}
 
@@ -335,6 +376,7 @@ export function ConfigModal({
                 )}
               </div>
             )}
+            {staySignedInField}
             <div className="flex justify-end gap-2">
               <Button type="button" onClick={handleCancel}>
                 Cancel

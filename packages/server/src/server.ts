@@ -1,4 +1,9 @@
 ﻿import app from './app.js';
+import {
+  startMetricsHistory,
+  settleMetricsHistory,
+  stopMetricsHistory,
+} from './utils/system-metrics.js';
 
 import {
   Env,
@@ -16,6 +21,8 @@ import {
   ConfigStartupError,
   ProwlarrAddon,
   TemplateManager,
+  CommunityService,
+  CommunityFederation,
   SeaDexDataset,
   SceneMappingDataset,
   IdMappingDataset,
@@ -25,6 +32,7 @@ import {
   initialiseOidc,
   startAnalytics,
   stopAnalytics,
+  ConfigSessionRepository,
   TaskManager,
   instanceId,
   drainUsenetMetrics,
@@ -72,6 +80,24 @@ function registerPruneTask() {
         appConfig.tasks.pruning.maxDays
       );
       return { ok: true, message: `pruned ${n} users` };
+    },
+  });
+}
+
+function registerConfigSessionTask() {
+  TaskManager.register({
+    id: 'prune-config-sessions',
+    label: 'Prune expired sign-in sessions',
+    description: 'Deletes remembered configuration sign-ins that have expired.',
+    category: 'users',
+    kind: 'scheduled',
+    intervalMs: 60 * 60 * 1000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    run: async () => {
+      const n = await ConfigSessionRepository.prune();
+      return { ok: true, message: `pruned ${n} sessions` };
     },
   });
 }
@@ -266,6 +292,8 @@ async function initialiseProwlarr() {
 async function initialiseTemplates() {
   try {
     await TemplateManager.loadTemplates();
+    await CommunityService.registerTrustedOnBoot();
+    CommunityFederation.initialise();
   } catch (error) {
     logger.error('Failed to initialise templates:', error);
   }
@@ -280,6 +308,7 @@ async function initialiseAuth() {
 
 async function start() {
   try {
+    startMetricsHistory();
     await initialiseDatabase();
     // Before anything registers a task: it is the identity runs are recorded
     // under.
@@ -295,6 +324,7 @@ async function start() {
     SelAccess.initialise();
     await initialiseProwlarr();
     registerPruneTask();
+    registerConfigSessionTask();
     registerCacheTasks();
     registerUsenetTasks();
     registerStreamTasks();
@@ -314,6 +344,7 @@ async function start() {
       logger.info(
         `Server running on port ${appConfig.bootstrap.port}: ${JSON.stringify(server.address())}`
       );
+      settleMetricsHistory();
     });
   } catch (error) {
     if (error instanceof ConfigStartupError) throw error;
@@ -324,6 +355,7 @@ async function start() {
 
 async function shutdown() {
   TaskManager.stopAll();
+  stopMetricsHistory();
   // Write live sessions out so the next boot doesn't reclaim them as stale.
   streamRegistry.closeAll('stale');
   await flushStreamSessions().catch(() => undefined);

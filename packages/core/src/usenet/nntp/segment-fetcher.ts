@@ -8,6 +8,7 @@ import {
   ArticleNotFoundError,
   NntpError,
   isTransientNntpError,
+  FetchAbandonedError,
 } from './errors.js';
 import {
   decodeArticle,
@@ -338,8 +339,13 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           segment.messageId,
           undefined,
           this.opts.segmentStallTimeoutMs,
-          this.opts.segmentTimeoutMs
+          this.opts.segmentTimeoutMs,
+          segment.bytes
         );
+        // don't decode an abandoned fetch, wasted CPU.
+        if (signal?.aborted) {
+          throw new FetchAbandonedError(conn.label);
+        }
         // Failover attempts run sequentially, so re-decoding a retry into the
         // same target is safe: only the resolving attempt's bytes survive.
         const decoded = decodeArticle(raw, out?.());
@@ -598,6 +604,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         );
         return value;
       } catch (err) {
+        if (signal?.aborted) throw err;
         if (err instanceof NntpError && err.kind === 'article_not_found') {
           notFound.add(pool.id);
           if (nzbHash) this.affinity.record(nzbHash, pool.id, true, 'body');

@@ -122,6 +122,17 @@ const createTorznabItemSchema = () =>
         .transform((arr) => arr?.[0]),
       guid: GuidSchema,
       pubDate: z.array(z.string()).transform((arr) => arr[0]),
+      prowlarrindexer: z
+        .array(
+          z.object({
+            _: z.string(),
+            $: z.object({ id: z.string() }),
+          })
+        )
+        .optional()
+        .transform((arr) =>
+          arr?.[0] ? { name: arr[0]._, id: arr[0].$.id } : undefined
+        ),
       jackettindexer: z
         .array(
           z.object({
@@ -162,6 +173,7 @@ const createTorznabItemSchema = () =>
       link: item.link,
       guid: item.guid,
       pubDate: item.pubDate,
+      prowlarrindexer: item.prowlarrindexer,
       jackettindexer: item.jackettindexer,
       type: item.type,
       size: item.size,

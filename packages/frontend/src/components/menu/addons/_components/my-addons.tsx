@@ -40,10 +40,10 @@ const manifestCache = new Map<string, any>();
 const COLOUR_PALETTE = [
   {
     key: 'blue',
-    bg: 'bg-blue-500/15',
-    text: 'text-blue-400',
-    border: 'border-blue-500/40',
-    swatch: 'bg-blue-500',
+    bg: 'bg-blue-400/15',
+    text: 'text-blue-300',
+    border: 'border-blue-400/40',
+    swatch: 'bg-blue-400',
   },
   {
     key: 'purple',
@@ -84,8 +84,8 @@ const COLOUR_PALETTE = [
     key: 'orange',
     bg: 'bg-orange-500/15',
     text: 'text-orange-400',
-    border: 'border-orange-500/40',
-    swatch: 'bg-orange-500',
+    border: 'border-orange-400/40',
+    swatch: 'bg-orange-400',
   },
   {
     key: 'pink',
@@ -117,10 +117,10 @@ const COLOUR_PALETTE = [
   },
   {
     key: 'red',
-    bg: 'bg-red-500/15',
-    text: 'text-red-400',
-    border: 'border-red-500/40',
-    swatch: 'bg-red-500',
+    bg: 'bg-red-400/15',
+    text: 'text-red-300',
+    border: 'border-red-400/40',
+    swatch: 'bg-red-400',
   },
 ];
 
@@ -1115,7 +1115,6 @@ function AddonListItem({
           <Switch
             value={preset.enabled ?? false}
             onValueChange={onToggleEnabled}
-            className="h-5 w-9 md:h-6 md:w-11"
           />
           {isConfigurable && (
             <IconButton

@@ -16,6 +16,8 @@ export interface SystemMetrics {
     used: number;
     free: number;
     heapUsed: number;
+    heapTotal: number;
+    external: number;
     rss: number;
   };
   disk: { path: string; total: number; used: number; free: number } | null;
@@ -26,15 +28,34 @@ export interface SystemMetrics {
     platform: string;
   };
   lifecycleEnabled?: boolean;
+  /** Server-side rolling window, present on the initial fetch only. */
+  history?: MetricsSample[];
 }
 
-/** Rolling-history sample for the CPU chart. */
-export interface CpuSample {
+/** Rolling-history sample behind the charts. Mirrors the server's shape. */
+export interface MetricsSample {
   ts: number;
-  total: number;
-  process: number;
-  perCore: number[];
+  cpu: { total: number; process: number; perCore: number[] };
+  memory: {
+    used: number;
+    heapUsed: number;
+    heapTotal: number;
+    external: number;
+    rss: number;
+  };
 }
+
+const toSample = (m: SystemMetrics): MetricsSample => ({
+  ts: m.ts,
+  cpu: { total: m.cpu.total, process: m.cpu.process, perCore: m.cpu.perCore },
+  memory: {
+    used: m.memory.used,
+    heapUsed: m.memory.heapUsed,
+    heapTotal: m.memory.heapTotal,
+    external: m.memory.external,
+    rss: m.memory.rss,
+  },
+});
 
 /** Cap on samples retained (5 minutes at ~5s SSE tick = 60 samples; we keep a
  *  bit more headroom so the cap holds across faster manual `setMetrics`). */
@@ -43,29 +64,28 @@ const WINDOW_MS = 5 * 60 * 1000;
 
 /**
  * Live system metrics via SSE plus a 5-minute rolling history used by the
- * dashboard CPU chart. Older samples are dropped both by count (`MAX_SAMPLES`)
- * and by age (`WINDOW_MS`) so the chart can't grow unbounded if the SSE
- * connection stalls and reconnects rapidly.
+ * dashboard charts. The initial fetch seeds the window from the server's own
+ * buffer so the charts open populated; SSE frames extend it from there. Older
+ * samples are dropped both by count (`MAX_SAMPLES`) and by age (`WINDOW_MS`)
+ * so the chart can't grow unbounded if the SSE connection stalls and
+ * reconnects rapidly.
  */
 export function useSystemStream() {
   const [metrics, setMetrics] = React.useState<SystemMetrics | null>(null);
   const [connected, setConnected] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [retryNonce, setRetryNonce] = React.useState(0);
-  const historyRef = React.useRef<CpuSample[]>([]);
-  const [history, setHistory] = React.useState<CpuSample[]>([]);
+  const historyRef = React.useRef<MetricsSample[]>([]);
+  const [history, setHistory] = React.useState<MetricsSample[]>([]);
 
-  const pushSample = React.useCallback((m: SystemMetrics) => {
-    const sample: CpuSample = {
-      ts: m.ts,
-      total: m.cpu.total,
-      process: m.cpu.process,
-      perCore: m.cpu.perCore,
-    };
-    const cutoff = Date.now() - WINDOW_MS;
-    const next = [...historyRef.current, sample]
-      .filter((s) => s.ts >= cutoff)
-      .slice(-MAX_SAMPLES);
+  const pushSamples = React.useCallback((incoming: MetricsSample[]) => {
+    // Keyed by `ts` so the seeded window and the first SSE frame, which can
+    // describe the same moment, collapse to one point.
+    const byTs = new Map(historyRef.current.map((s) => [s.ts, s]));
+    for (const s of incoming) byTs.set(s.ts, s);
+    const merged = [...byTs.values()].sort((a, b) => a.ts - b.ts);
+    const cutoff = (merged.at(-1)?.ts ?? 0) - WINDOW_MS;
+    const next = merged.filter((s) => s.ts >= cutoff).slice(-MAX_SAMPLES);
     historyRef.current = next;
     setHistory(next);
   }, []);
@@ -82,7 +102,7 @@ export function useSystemStream() {
         if (cancelled) return;
         setMetrics(m);
         setError(null);
-        pushSample(m);
+        pushSamples([...(m.history ?? []), toSample(m)]);
       })
       .catch((e) => {
         if (cancelled) return;
@@ -111,7 +131,7 @@ export function useSystemStream() {
           ...m,
           lifecycleEnabled: prev?.lifecycleEnabled,
         }));
-        pushSample(m);
+        pushSamples([toSample(m)]);
       } catch {
         /* ignore */
       }
@@ -120,7 +140,7 @@ export function useSystemStream() {
       cancelled = true;
       es.close();
     };
-  }, [pushSample, retryNonce]);
+  }, [pushSamples, retryNonce]);
 
   return { metrics, connected, history, windowMs: WINDOW_MS, error, retry };
 }

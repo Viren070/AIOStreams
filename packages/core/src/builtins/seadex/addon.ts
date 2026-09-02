@@ -59,7 +59,7 @@ export class SeaDexAddon extends BaseDebridAddon<SeaDexAddonConfig> {
     const animeDb = AnimeDatabase.getInstance();
     const season = parsedId.season ? Number(parsedId.season) : undefined;
     const episode = parsedId.episode ? Number(parsedId.episode) : undefined;
-    const animeEntry = animeDb.getEntryById(
+    const animeEntry = await animeDb.getEntryById(
       parsedId.type,
       parsedId.value,
       season,

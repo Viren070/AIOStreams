@@ -14,7 +14,6 @@ import { createLogger } from '@aiostreams/core';
 const logger = createLogger('server');
 const router: Router = Router();
 
-
 interface ChillLinkManifest {
   id: string;
   version: string;

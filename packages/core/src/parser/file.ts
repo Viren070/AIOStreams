@@ -59,22 +59,8 @@ function matchMultiplePatterns(
 
 class FileParser {
   static parse(filename: string): ParsedFile {
-    // `parsed` is shared by the memo, so the title is adjusted in a local
-    // instead of on the object.
     const parsed = parseTorrentTitleCached(filename);
-    let parsedTitle = parsed.title;
-    if (
-      ['vinland', 'furiosaamadmax', 'horizonanamerican'].includes(
-        (parsedTitle || '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^\p{L}\p{N}+]/gu, '')
-          .toLowerCase()
-      ) &&
-      parsed.complete
-    ) {
-      parsedTitle = `${parsedTitle} Saga`;
-    }
+    const parsedTitle = parsed.title;
     // prevent the title from being parsed for info
     if (parsedTitle && parsedTitle.length > 4) {
       const escapedTitle = parsedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

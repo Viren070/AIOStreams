@@ -13,19 +13,38 @@ export interface IdSet {
   tmdbId?: number;
 }
 
+/**
+ * Column store for one media type, sorted by `imdb` so lookups can binary
+ * search.
+ */
 interface TypeMaps {
-  imdbToTvdb: Map<number, number>;
-  imdbToTmdb: Map<number, number>;
+  imdb: Int32Array;
+  tvdb: Int32Array;
+  tmdb: Int32Array;
 }
 
-interface StoredType {
-  rows: [number, number, number][]; // [imdbNum, tvdbId, tmdbId], 0 = absent
-}
-interface IdMapData {
-  tv: StoredType;
-  movie: StoredType;
-  lastUpdated: number;
-}
+/** [imdbNum, tvdbId, tmdbId] as parsed from an upstream CSV; 0 means absent. */
+type RawRow = [number, number, number];
+
+/**
+ * On-disk format. Holding the processed columns rather than the raw rows keeps
+ * conflict detection and sorting on the sync, so a load is a read plus six
+ * typed-array views over the same buffer.
+ *
+ * Bump FORMAT_VERSION whenever the layout or the processing behind it changes:
+ * `reloadDataFromFile` then throws and BaseDataset re-syncs.
+ *
+ *   0  u32 magic
+ *   4  u32 version
+ *   8  u32 tv row count
+ *  12  u32 movie row count
+ *  16  f64 lastUpdated
+ *  24  tv.imdb, tv.tvdb, tv.tmdb, movie.imdb, movie.tvdb, movie.tmdb
+ */
+const FORMAT_MAGIC = 0x4d4f4941; // 'AIOM'
+const FORMAT_VERSION = 1;
+const HEADER_BYTES = 24;
+const BYTES_PER_ROW = 12;
 
 const imdbToNum = (imdb: string): number | undefined => {
   const m = /^tt(\d+)$/.exec(imdb.trim());
@@ -34,9 +53,24 @@ const imdbToNum = (imdb: string): number | undefined => {
 
 function emptyTypeMaps(): TypeMaps {
   return {
-    imdbToTvdb: new Map(),
-    imdbToTmdb: new Map(),
+    imdb: new Int32Array(0),
+    tvdb: new Int32Array(0),
+    tmdb: new Int32Array(0),
   };
+}
+
+/** Index of `key` in the sorted `imdb` column, or -1. */
+function findRow(maps: TypeMaps, key: number): number {
+  let lo = 0;
+  let hi = maps.imdb.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const v = maps.imdb[mid];
+    if (v === key) return mid;
+    if (v < key) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
 }
 
 export class IdMappingDataset extends BaseDataset {
@@ -47,7 +81,7 @@ export class IdMappingDataset extends BaseDataset {
 
   private constructor() {
     super({
-      dataPath: path.join(getDataFolder(), 'id-mappings', 'mappings.json'),
+      dataPath: path.join(getDataFolder(), 'id-mappings', 'mappings.bin'),
       refreshIntervalSeconds: appConfig.metadata.idMappings.refreshInterval,
       logger,
       taskId: 'id-mappings-refresh',
@@ -69,7 +103,7 @@ export class IdMappingDataset extends BaseDataset {
    * not a legitimate alias, so the whole group is dropped and the id falls back
    * to the normal per-provider lookup.
    */
-  private buildMaps(rows: [number, number, number][], label: string): TypeMaps {
+  private buildColumns(rows: RawRow[], label: string): TypeMaps {
     const conflicted = { tvdb: new Set<number>(), tmdb: new Set<number>() };
     const claimant = {
       tvdb: new Map<number, number>(),
@@ -88,13 +122,35 @@ export class IdMappingDataset extends BaseDataset {
       }
     }
 
-    const maps = emptyTypeMaps();
+    // Collapse to one row per imdb id, keeping the last non-zero value seen
+    // for each provider independently (the previous per-provider `Map.set`
+    // order). Then sort by imdb so `findRow` can binary search.
+    const merged = new Map<number, [number, number]>();
     for (const [imdb, tvdb, tmdb] of rows) {
-      if (imdb && tvdb && !conflicted.tvdb.has(tvdb))
-        maps.imdbToTvdb.set(imdb, tvdb);
-      if (imdb && tmdb && !conflicted.tmdb.has(tmdb))
-        maps.imdbToTmdb.set(imdb, tmdb);
+      if (!imdb) continue;
+      const keepTvdb = tvdb && !conflicted.tvdb.has(tvdb) ? tvdb : 0;
+      const keepTmdb = tmdb && !conflicted.tmdb.has(tmdb) ? tmdb : 0;
+      if (!keepTvdb && !keepTmdb) continue;
+      const existing = merged.get(imdb);
+      if (!existing) merged.set(imdb, [keepTvdb, keepTmdb]);
+      else {
+        if (keepTvdb) existing[0] = keepTvdb;
+        if (keepTmdb) existing[1] = keepTmdb;
+      }
     }
+
+    const keys = Int32Array.from(merged.keys()).sort();
+    const maps: TypeMaps = {
+      imdb: keys,
+      tvdb: new Int32Array(keys.length),
+      tmdb: new Int32Array(keys.length),
+    };
+    for (let i = 0; i < keys.length; i++) {
+      const pair = merged.get(keys[i])!;
+      maps.tvdb[i] = pair[0];
+      maps.tmdb[i] = pair[1];
+    }
+
     if (conflicted.tvdb.size || conflicted.tmdb.size) {
       logger.debug(
         {
@@ -109,26 +165,94 @@ export class IdMappingDataset extends BaseDataset {
   }
 
   protected async reloadDataFromFile(): Promise<void> {
-    const data: IdMapData = JSON.parse(
-      await fs.readFile(this.DATA_PATH, 'utf-8')
+    const buf = await fs.readFile(this.DATA_PATH);
+    if (buf.length < HEADER_BYTES) {
+      throw new Error('id mappings cache is truncated');
+    }
+    if (buf.readUInt32LE(0) !== FORMAT_MAGIC) {
+      throw new Error('id mappings cache has an unrecognised header');
+    }
+    const version = buf.readUInt32LE(4);
+    if (version !== FORMAT_VERSION) {
+      throw new Error(
+        `id mappings cache is format v${version}, expected v${FORMAT_VERSION}`
+      );
+    }
+    const tvCount = buf.readUInt32LE(8);
+    const movieCount = buf.readUInt32LE(12);
+    const expected = HEADER_BYTES + (tvCount + movieCount) * BYTES_PER_ROW;
+    if (buf.length !== expected) {
+      throw new Error(
+        `id mappings cache is ${buf.length} bytes, expected ${expected}`
+      );
+    }
+
+    // An Int32Array view needs 4-byte alignment, so copy if readFile's
+    // buffer is not.
+    const body = buf.subarray(HEADER_BYTES);
+    const aligned = (body.byteOffset & 3) === 0 ? body : Buffer.from(body);
+    const ints = new Int32Array(
+      aligned.buffer,
+      aligned.byteOffset,
+      (tvCount + movieCount) * 3
     );
-    this.tv = this.buildMaps(data.tv.rows, 'tv');
-    this.movie = this.buildMaps(data.movie.rows, 'movie');
+    let offset = 0;
+    const column = (length: number): Int32Array => {
+      const view = ints.subarray(offset, offset + length);
+      offset += length;
+      return view;
+    };
+    this.tv = {
+      imdb: column(tvCount),
+      tvdb: column(tvCount),
+      tmdb: column(tvCount),
+    };
+    this.movie = {
+      imdb: column(movieCount),
+      tvdb: column(movieCount),
+      tmdb: column(movieCount),
+    };
     logger.info(
       {
-        tv: data.tv.rows.length,
-        movie: data.movie.rows.length,
-        tvTvdb: this.tv.imdbToTvdb.size,
-        movieTvdb: this.movie.imdbToTvdb.size,
+        tvRows: tvCount,
+        movieRows: movieCount,
+        bytes: buf.length,
+        lastUpdated: buf.readDoubleLE(16),
       },
       'loaded id mappings'
     );
   }
 
-  private async fetchCsv(
-    url: string,
-    columns: number
-  ): Promise<[number, number, number][]> {
+  private static encode(tv: TypeMaps, movie: TypeMaps): Buffer {
+    const tvCount = tv.imdb.length;
+    const movieCount = movie.imdb.length;
+    const out = Buffer.allocUnsafe(
+      HEADER_BYTES + (tvCount + movieCount) * BYTES_PER_ROW
+    );
+    out.writeUInt32LE(FORMAT_MAGIC, 0);
+    out.writeUInt32LE(FORMAT_VERSION, 4);
+    out.writeUInt32LE(tvCount, 8);
+    out.writeUInt32LE(movieCount, 12);
+    out.writeDoubleLE(Date.now(), 16);
+    let offset = HEADER_BYTES;
+    for (const column of [
+      tv.imdb,
+      tv.tvdb,
+      tv.tmdb,
+      movie.imdb,
+      movie.tvdb,
+      movie.tmdb,
+    ]) {
+      Buffer.from(column.buffer, column.byteOffset, column.byteLength).copy(
+        out,
+        offset
+      );
+      offset += column.byteLength;
+    }
+    return out;
+  }
+
+  private async fetchCsv(url: string, columns: number): Promise<RawRow[]> {
     const response = await makeRequest(url, {
       method: 'GET',
       timeout: 60000,
@@ -138,7 +262,7 @@ export class IdMappingDataset extends BaseDataset {
       throw new Error(`Failed to fetch ${url}: ${response.status}`);
     }
     const text = await response.text();
-    const rows: [number, number, number][] = [];
+    const rows: RawRow[] = [];
     const lines = text.split('\n');
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
@@ -157,20 +281,26 @@ export class IdMappingDataset extends BaseDataset {
 
   protected async performSync(): Promise<void> {
     const cfg = appConfig.metadata.idMappings;
-    const [tv, movie] = await Promise.all([
-      this.fetchCsv(cfg.tvUrl, 4),
-      this.fetchCsv(cfg.movieUrl, 3),
-    ]);
-    const data: IdMapData = {
-      tv: { rows: tv },
-      movie: { rows: movie },
-      lastUpdated: Date.now(),
-    };
+    // Reduced to columns before the next fetch, so both row sets are never
+    // live together.
+    const tv = this.buildColumns(await this.fetchCsv(cfg.tvUrl, 4), 'tv');
+    const movie = this.buildColumns(
+      await this.fetchCsv(cfg.movieUrl, 3),
+      'movie'
+    );
+
     const tempPath = `${this.DATA_PATH}.tmp`;
     await fs.mkdir(path.dirname(tempPath), { recursive: true });
-    await fs.writeFile(tempPath, JSON.stringify(data));
+    await fs.writeFile(tempPath, IdMappingDataset.encode(tv, movie));
     await fs.rename(tempPath, this.DATA_PATH);
-    logger.info({ tv: tv.length, movie: movie.length }, 'synced id mappings');
+    // The JSON cache is no longer read.
+    await fs
+      .unlink(path.join(path.dirname(this.DATA_PATH), 'mappings.json'))
+      .catch(() => undefined);
+    logger.info(
+      { tv: tv.imdb.length, movie: movie.imdb.length },
+      'synced id mappings'
+    );
   }
 
   /**
@@ -181,15 +311,11 @@ export class IdMappingDataset extends BaseDataset {
     const imdbNum = ids.imdbId ? imdbToNum(ids.imdbId) : undefined;
     if (imdbNum === undefined) return {};
     const maps = mediaType === 'movie' ? this.movie : this.tv;
+    const row = findRow(maps, imdbNum);
+    if (row === -1) return {};
     const out: IdSet = {};
-    if (!ids.tvdbId) {
-      const tvdb = maps.imdbToTvdb.get(imdbNum);
-      if (tvdb) out.tvdbId = tvdb;
-    }
-    if (!ids.tmdbId) {
-      const tmdb = maps.imdbToTmdb.get(imdbNum);
-      if (tmdb) out.tmdbId = tmdb;
-    }
+    if (!ids.tvdbId && maps.tvdb[row]) out.tvdbId = maps.tvdb[row];
+    if (!ids.tmdbId && maps.tmdb[row]) out.tmdbId = maps.tmdb[row];
     return out;
   }
 }

@@ -1,14 +1,14 @@
 import { z } from 'zod';
+import { createRequire } from 'module';
+import type UserAgentType from 'user-agents';
 import { parseTime } from '../../utils/time.js';
 import { Env } from '../../utils/env.js';
-import UserAgent from 'user-agents';
 
-/**
- * Replace `{version}` / `{random}` placeholders in user-agent strings.
- */
-export const applyUserAgentTemplate = (value: string): string => {
-  const trimmed = value.toLowerCase().trim();
-  if (['false', 'none', ''].includes(trimmed)) return 'false';
+const requireCjs = createRequire(import.meta.url);
+let UserAgent: typeof UserAgentType | undefined;
+
+const randomUserAgent = (): string => {
+  UserAgent ??= requireCjs('user-agents') as typeof UserAgentType;
   const filters =
     typeof process.env.RANDOM_USER_AGENT_FILTERS === 'string'
       ? (() => {
@@ -19,9 +19,18 @@ export const applyUserAgentTemplate = (value: string): string => {
           }
         })()
       : undefined;
+  return new UserAgent(filters).toString();
+};
+
+/**
+ * Replace `{version}` / `{random}` placeholders in user-agent strings.
+ */
+export const applyUserAgentTemplate = (value: string): string => {
+  const trimmed = value.toLowerCase().trim();
+  if (['false', 'none', ''].includes(trimmed)) return 'false';
   return value
     .replace(/{version}/g, Env.VERSION || 'unknown')
-    .replace(/{random}/g, new UserAgent(filters).toString());
+    .replace(/{random}/g, () => randomUserAgent());
 };
 
 /** Resolve function for nullable user-agent strings. */

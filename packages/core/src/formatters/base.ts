@@ -1,14 +1,10 @@
-﻿import { ParsedStream, UserData } from '../db/schemas.js';
+﻿import type { ParsedStream, UserData } from '../db/schemas.js';
 import * as constants from '../utils/constants.js';
-import { createLogger } from '../logging/logger.js';
 import { formatHours, makeSmall } from './utils.js';
 import { languageToCode, languageToEmoji } from '../utils/languages.js';
-import { config as appConfig } from '../config/index.js';
 import { compileTemplate as engineCompileTemplate } from './engine/compile.js';
 import { NEW_LINE_SENTINEL, REMOVE_LINE_SENTINEL } from './engine/sentinels.js';
 import { comparatorFunctions } from './engine/comparators.js';
-
-const logger = createLogger('formatter');
 
 /**
  *
@@ -59,6 +55,7 @@ export interface ParseValue {
     resolution: string | null;
     subbed: boolean;
     dubbed: boolean;
+    mediaInfoQuality: string | null;
     languages: string[] | null;
     uLanguages: string[] | null;
     subtitles: string[] | null;
@@ -188,8 +185,11 @@ export interface ParseValue {
  */
 type CompiledParseFunction = (parseValue: ParseValue) => string;
 
+// Kept free of node-only imports so the SPA can render previews with it.
 export interface FormatterContext {
   userData: UserData;
+  addonName?: string;
+  onWarning?: (message: string) => void;
   // From ExpressionContext
   type?: string;
   isAnime?: boolean;
@@ -485,7 +485,10 @@ export abstract class BaseFormatter {
     const formattedAge = stream.age ? formatHours(stream.age) : null;
     const parseValue: ParseValue = {
       config: {
-        addonName: this.userData.addonName || appConfig.branding.addonName,
+        addonName:
+          this.userData.addonName ||
+          this.formatterContext.addonName ||
+          'AIOStreams',
       },
       stream: {
         filename: stream.filename || null,
@@ -498,6 +501,7 @@ export abstract class BaseFormatter {
         subbed:
           stream.parsedFile?.subbed || !!stream.parsedFile?.subtitles?.length,
         dubbed: stream.parsedFile?.dubbed || false,
+        mediaInfoQuality: stream.parsedFile?.mediaInfoQuality ?? null,
         get languages() {
           return languageVariants().sortedValues;
         },
@@ -674,7 +678,8 @@ export abstract class BaseFormatter {
         daysSinceFirstAired: this.formatterContext.daysSinceFirstAired ?? null,
         daysSinceLastAired: this.formatterContext.daysSinceLastAired ?? null,
         hasNextEpisode: this.formatterContext.hasNextEpisode ?? false,
-        daysUntilNextEpisode: this.formatterContext.daysUntilNextEpisode ?? null,
+        daysUntilNextEpisode:
+          this.formatterContext.daysUntilNextEpisode ?? null,
         anilistId: this.formatterContext.anilistId ?? null,
         malId: this.formatterContext.malId ?? null,
         hasSeaDex: this.formatterContext.hasSeaDex ?? false,
@@ -743,7 +748,7 @@ export abstract class BaseFormatter {
       },
       comparators: comparatorFunctions,
       onDepthExceeded: (max) =>
-        logger.warn(
+        this.formatterContext.onWarning?.(
           `Template nesting depth exceeded (max ${max}). Returning literal text.`
         ),
     });

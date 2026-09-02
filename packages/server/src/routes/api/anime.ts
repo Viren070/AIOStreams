@@ -55,7 +55,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     return;
   }
   try {
-    const mappingEntry = AnimeDatabase.getInstance().getEntryById(
+    const mappingEntry = await AnimeDatabase.getInstance().getEntryById(
       idType,
       idValue,
       season,

@@ -87,6 +87,11 @@ const userApiRateLimiter = lazyLimiter(
   'user-api'
 );
 
+const userCreateRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.userCreate,
+  'user-create'
+);
+
 const streamApiRateLimiter = lazyLimiter(
   () => appConfig.rateLimits.streamApi,
   'stream-api'
@@ -132,6 +137,11 @@ const stremioMetaRateLimiter = lazyLimiter(
   'stremio-meta'
 );
 
+const linkedAccountsRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.linkedAccountsApi,
+  'linked-accounts-api'
+);
+
 const loginRateLimiter = lazyLimiter(
   () => appConfig.rateLimits.login,
   'auth-login'
@@ -147,8 +157,16 @@ const staticRateLimiter = lazyLimiter(
   'static'
 );
 
+const communityApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.communityApi,
+  'community-api'
+);
+
 export {
   userApiRateLimiter,
+  userCreateRateLimiter,
+  linkedAccountsRateLimiter,
+  communityApiRateLimiter,
   streamApiRateLimiter,
   formatApiRateLimiter,
   catalogApiRateLimiter,

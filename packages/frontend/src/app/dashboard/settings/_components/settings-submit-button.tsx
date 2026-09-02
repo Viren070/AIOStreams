@@ -42,6 +42,7 @@ export function SettingsIsDirty({
   return (
     <Alert
       intent="info"
+      detailsContainerClass="items-center"
       className={cn(
         'fixed z-[50] h-auto p-4 !mt-0 rounded-xl bg-[--background] border shadow-2xl',
         'inset-x-4 bottom-4 w-auto animate-in slide-in-from-bottom-4 duration-300',

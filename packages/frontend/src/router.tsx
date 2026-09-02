@@ -26,6 +26,10 @@ import {
   UsenetStatsPage,
   UsenetProvidersPage,
   UsenetSettingsPage,
+  CommunityLayout,
+  CommunityPendingPage,
+  CommunityPublishedPage,
+  CommunityBlocksPage,
 } from './routes/dashboard-pages';
 import { SplashscreenPage } from './routes/splashscreen-page';
 import { ConfigureRoute } from './routes/configure-route';
@@ -218,6 +222,38 @@ const dashboardStreamsBansRoute = createRoute({
   component: StreamsBansPage,
 });
 
+const dashboardCommunityRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: 'community',
+  component: CommunityLayout,
+});
+
+const dashboardCommunityIndexRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: '/',
+  beforeLoad: () => {
+    throw redirect({ to: '/dashboard/community/pending' });
+  },
+});
+
+const dashboardCommunityPendingRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: 'pending',
+  component: CommunityPendingPage,
+});
+
+const dashboardCommunityPublishedRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: 'published',
+  component: CommunityPublishedPage,
+});
+
+const dashboardCommunityBlocksRoute = createRoute({
+  getParentRoute: () => dashboardCommunityRoute,
+  path: 'blocks',
+  component: CommunityBlocksPage,
+});
+
 const dashboardUsersRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: 'users',
@@ -345,6 +381,12 @@ const routeTree = rootRoute.addChildren([
       dashboardUsenetStatsRoute,
       dashboardUsenetProvidersRoute,
       dashboardUsenetSettingsRoute,
+    ]),
+    dashboardCommunityRoute.addChildren([
+      dashboardCommunityIndexRoute,
+      dashboardCommunityPendingRoute,
+      dashboardCommunityPublishedRoute,
+      dashboardCommunityBlocksRoute,
     ]),
   ]),
 ]);

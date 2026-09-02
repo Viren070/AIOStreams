@@ -290,6 +290,13 @@ set requiredLanguages = ["German", "Multi", "Dual Audio"]
 prepend preferredLanguages "German"
 ```
 
+**A different language, with confirmed media info only.**
+
+```
+set requiredLanguages = ["German"]
+add excludedStreamExpressions { "expression": "mediaInfoQuality(streams, 'unknown')", "enabled": true }
+```
+
 **Reordering the sort.** Put resolution above cache status for a machine that does not mind waiting.
 
 ```

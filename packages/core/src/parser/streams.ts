@@ -13,6 +13,8 @@ import {
   parseAgeString,
   parseDuration,
   extractInfoHashFromMagnet,
+  convertFlagToLanguage,
+  getRegexForTextAfterEmojis,
 } from './utils.js';
 import {
   mergeParsedFiles,
@@ -59,18 +61,11 @@ class StreamParser {
   }
 
   protected get indexerRegex(): RegExp | undefined {
-    return this.getRegexForTextAfterEmojis(this.indexerEmojis);
+    return getRegexForTextAfterEmojis(this.indexerEmojis);
   }
 
   protected get ageRegex(): RegExp | undefined {
     return undefined;
-  }
-
-  protected getRegexForTextAfterEmojis(emojis: string[]): RegExp {
-    return new RegExp(
-      `(?:${emojis.join('|')})\\s*([^\\p{Emoji_Presentation}\\n]*?)(?=\\p{Emoji_Presentation}|$|\\n)`,
-      'u'
-    );
   }
 
   constructor(protected readonly addon: Addon) {}
@@ -622,24 +617,9 @@ class StreamParser {
       ...(descriptionMatches ? [...new Set(descriptionMatches)] : []),
       ...(nameMatches ? [...new Set(nameMatches)] : []),
     ];
-    const languages = flags
-      .map((flag) => this.convertFlagToLanguage(flag))
+    return flags
+      .map((flag) => convertFlagToLanguage(flag))
       .filter((language) => language !== undefined);
-    return languages;
-  }
-
-  protected convertFlagToLanguage(flag: string): string | undefined {
-    const possibleLanguages = FULL_LANGUAGE_MAPPING.filter(
-      (language) => language.flag === flag
-    );
-
-    const language =
-      possibleLanguages.find((l) => l.flag_priority) || possibleLanguages[0];
-    if (!language) return undefined;
-    const languageName = getLanguageDisplayName(language);
-    return constants.LANGUAGES.includes(languageName as any)
-      ? languageName
-      : undefined;
   }
 
   protected convertISO6392ToLanguage(code: string): string | undefined {

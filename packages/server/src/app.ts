@@ -14,9 +14,11 @@ import {
   proxyApi,
   templatesApi,
   syncApi,
+  linkedAccountsApi,
   authApi,
   dashboardApi,
   usenetApi,
+  communityApi,
 } from './routes/api/index.js';
 import {
   configure,
@@ -35,6 +37,7 @@ import {
 import seanimeExtensionsRouter from './routes/seanime/extensions.js';
 import sabnzbdRouter from './routes/api/sabnzbd.js';
 import publicBlocklistRouter from './routes/blocklist.js';
+import publicCommunityRouter from './routes/community.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -56,6 +59,8 @@ import {
   errorMiddleware,
   corsMiddleware,
   staticRateLimiter,
+  linkedAccountsRateLimiter,
+  communityApiRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
   stremioManifestRateLimiter,
@@ -64,6 +69,7 @@ import {
   stremioSubtitleRateLimiter,
   requireSessionIfAuthRequired,
 } from './middlewares/index.js';
+import { isTrustedIp } from './middlewares/ip.js';
 
 import {
   config as appConfig,
@@ -78,6 +84,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 const app: Express = express();
+app.set('trust proxy', (addr: string) => isTrustedIp(addr));
 const logger = createLogger('server');
 
 export enum StaticFiles {
@@ -141,7 +148,12 @@ export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
 app.use(loggerMiddleware);
-app.use(express.json());
+// Built on the first request: runtime settings are not loaded at module load.
+let jsonParser: express.RequestHandler | undefined;
+app.use((req, res, next) => {
+  jsonParser ??= express.json({ limit: appConfig.api.maxJsonBodySize });
+  jsonParser(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Allow all origins in development for easier testing
@@ -176,6 +188,8 @@ apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
 apiRouter.use('/sync', syncApi);
+apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
+apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);
@@ -264,20 +278,19 @@ builtinsRouter.use('/library', library);
 app.use('/builtins', builtinsRouter);
 
 app.use('/blocklist', publicBlocklistRouter);
+app.use('/community', publicCommunityRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately
 // NOT behind staticRateLimiter: a single page load pulls many of these and
 // rate-limiting them is what caused asset fetch failures + the logo flash.
-app.get('/assets/*any', (req, res, next) => {
-  const filePath = path.resolve(frontendRoot, req.path.replace(/^\//, ''));
-  if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    res.sendFile(filePath);
-    return;
-  }
-  next();
-});
+app.use(
+  '/assets',
+  express.static(path.join(frontendRoot, 'assets'), {
+    immutable: true,
+    maxAge: '1y',
+  })
+);
 
 // Root-level static files (not content-hashed). Short cache; kept behind the
 // static rate limiter. The logo honours the alternate-design branding flag.
@@ -307,29 +320,10 @@ app.get(
     '/logo_alt.png',
   ],
   staticRateLimiter,
-  (req, res, next) => {
-    const filePath = path.resolve(frontendRoot, req.path.replace(/^\//, ''));
-    if (filePath.startsWith(frontendRoot) && fs.existsSync(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      res.sendFile(filePath);
-      return;
-    }
-    next();
-  }
+  express.static(frontendRoot, { index: false, maxAge: '1h' })
 );
 
-app.get('/static/*any', corsMiddleware, (req, res, next) => {
-  const filePath = path.resolve(
-    staticRoot,
-    req.path.replace(/^\/static\//, '')
-  );
-  logger.debug(`Static file requested: ${filePath}`);
-  if (filePath.startsWith(staticRoot) && fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-    return;
-  }
-  next();
-});
+app.use('/static', corsMiddleware, express.static(staticRoot));
 
 // legacy route handlers
 app.get(

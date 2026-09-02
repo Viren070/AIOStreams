@@ -16,6 +16,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.1",
     "multer": "^2.1.1",
+    "proxy-addr": "^2.0.7",
     "rate-limit-redis": "^4.3.1",
     "undici": "^7.25.0",
     "zod": "^4.4.3"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
-    "@types/node": "^20.19.39"
+    "@types/node": "^20.19.39",
+    "@types/proxy-addr": "^2.0.3"
   }
 }

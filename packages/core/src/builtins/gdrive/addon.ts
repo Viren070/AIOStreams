@@ -190,7 +190,7 @@ export class GDriveAddon {
     switch (true) {
       case parsedId.type === 'malId':
       case parsedId.type === 'kitsuId': {
-        const animeEntry = AnimeDatabase.getInstance().getEntryById(
+        const animeEntry = await AnimeDatabase.getInstance().getEntryById(
           parsedId.type,
           parsedId.value
         );

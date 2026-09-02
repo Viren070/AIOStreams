@@ -338,7 +338,10 @@ export class DiskBackedCache<V> {
   private acquireWriteBuf(size: number): Buffer {
     const slot = this.writePool.pop();
     if (slot && slot.length >= size) return slot;
-    return Buffer.allocUnsafe(Math.max(size, 1 << 20));
+    // 64 KiB granularity: payloads that vary by a few bytes share one size.
+    return Buffer.allocUnsafe(
+      Math.ceil(Math.max(size, 1 << 20) / 65536) * 65536
+    );
   }
 
   private releaseWriteBuf(buf: Buffer): void {

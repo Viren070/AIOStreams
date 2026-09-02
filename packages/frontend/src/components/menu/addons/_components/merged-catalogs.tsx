@@ -551,7 +551,7 @@ export function MergedCatalogsCard() {
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
                                   {catalog.isDisabled && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-800/20 border border-orange-500/50 text-orange-300">
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/50 text-orange-300">
                                       Disabled
                                     </span>
                                   )}

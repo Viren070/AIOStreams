@@ -1,10 +1,16 @@
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import {
   APIError,
+  ConfigSessionRepository,
   constants,
   decryptString,
   isEncrypted,
 } from '@aiostreams/core';
+import {
+  clearConfigSessionCookie,
+  readConfigSessionToken,
+  setConfigSessionCookie,
+} from '../middlewares/auth.js';
 
 export interface BasicAuthCredentials {
   uuid: string;
@@ -91,5 +97,38 @@ export function parseBasicAuthHeader(
     password = data;
   }
 
+  return { uuid, password };
+}
+
+/**
+ * The `Authorization` header if present, a remembered sign-in cookie otherwise.
+ * Saving a configuration is what a session is for. Changing the password or
+ * deleting the configuration must pass `allowSession: false` so a stolen cookie
+ * cannot do either without the password itself.
+ */
+export async function resolveConfigCredentials(
+  req: Request,
+  res?: Response,
+  opts?: { allowEncrypted?: boolean; allowSession?: boolean }
+): Promise<BasicAuthCredentials | null> {
+  const fromHeader = parseBasicAuthHeader(req, opts);
+  if (fromHeader) return fromHeader;
+
+  if (opts?.allowSession === false || !ConfigSessionRepository.enabled()) {
+    return null;
+  }
+
+  const token = readConfigSessionToken(req);
+  if (!token) return null;
+
+  const resolved = await ConfigSessionRepository.resolve(token);
+  if (!resolved) {
+    if (res) clearConfigSessionCookie(res);
+    return null;
+  }
+  const { uuid, password, renewedUntil } = resolved;
+  if (res && renewedUntil !== undefined) {
+    setConfigSessionCookie(req, res, token, true, renewedUntil);
+  }
   return { uuid, password };
 }

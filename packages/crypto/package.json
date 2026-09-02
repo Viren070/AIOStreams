@@ -1,0 +1,17 @@
+{
+  "name": "@aiostreams/crypto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native AES-CBC decrypt for the usenet engine",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "install": "node build.js || exit 0",
+    "build": "node build.js",
+    "clean": "node-gyp clean"
+  },
+  "devDependencies": {
+    "node-addon-api": "^8.5.0",
+    "node-gyp": "^13.0.0"
+  }
+}

@@ -393,7 +393,7 @@ export const builtinsSchema = {
     },
     concurrency: {
       schema: positiveInt,
-      default: 100,
+      default: 5,
       label: 'Get-torrent concurrency',
       description: 'Maximum concurrent torrent fetches.',
       env: 'BUILTIN_GET_TORRENT_CONCURRENCY',

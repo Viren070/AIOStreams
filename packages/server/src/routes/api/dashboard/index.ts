@@ -22,10 +22,14 @@ import {
 import { ZodError } from 'zod';
 import { requireAdmin } from '../../../middlewares/auth.js';
 import { createResponse } from '../../../utils/responses.js';
-import { getSystemMetrics } from '../../../utils/system-metrics.js';
+import {
+  getSystemMetrics,
+  getMetricsHistory,
+} from '../../../utils/system-metrics.js';
 import usenetDashboard from './usenet.js';
 import blocklistDashboard from './blocklist.js';
 import streamsDashboard from './streams.js';
+import communityDashboard from './community.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
@@ -41,6 +45,9 @@ router.use('/blocklist', blocklistDashboard);
 
 // Unified stream accounting: live sessions, history, bandwidth, bans.
 router.use('/streams', streamsDashboard);
+
+// Community-shared formatters and templates: review queue, blocks.
+router.use('/community', communityDashboard);
 
 function csv(v: unknown): string[] | undefined {
   if (typeof v !== 'string' || !v.trim()) return undefined;
@@ -584,6 +591,7 @@ router.get('/system', async (_req, res) => {
       success: true,
       data: {
         ...(await getSystemMetrics()),
+        history: getMetricsHistory(),
         lifecycleEnabled: appConfig.bootstrap.systemLifecycleEnabled === true,
       },
     })

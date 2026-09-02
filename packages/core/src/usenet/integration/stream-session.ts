@@ -1,4 +1,4 @@
-import { Readable, addAbortSignal } from 'node:stream';
+import { Readable } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { createLogger } from '../../logging/logger.js';
 import { DebridError } from '../../debrid/base.js';
@@ -49,6 +49,12 @@ import {
 } from '../../stream-sessions/index.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from './engine.js';
 import { fetchNzb, parseNzbCached, canonicaliseNzbHash } from './library.js';
+import {
+  indexerLabelFor,
+  recordGrabOutcome,
+  grabHttpStatus,
+  grabErrorMessage,
+} from './grab-metrics.js';
 import { noteStreamActivity, pruneStreamActivity } from './damage-policy.js';
 
 const logger = createLogger('usenet/stream');
@@ -443,7 +449,21 @@ async function getStreamSession(
     // disconnect mid-open must not poison it for everyone (segment timeouts
     // still bound the work). Phase timings (grab/parse/open) are logged so a
     // cold-start slowdown can be attributed.
-    const xml = await fetchNzb(decoded.nzb);
+    let xml: Buffer;
+    try {
+      xml = await fetchNzb(decoded.nzb);
+    } catch (err) {
+      // Failures only: a byte-path grab usually hits the
+      // grab cache, so counting successes would inflate the denominator.
+      recordGrabOutcome({
+        indexer: indexerLabelFor(decoded.indexer, decoded.nzb),
+        outcome: 'failed',
+        errorCode: 'nzb_fetch_failed',
+        httpStatus: grabHttpStatus(err),
+        errorMessage: grabErrorMessage(err),
+      });
+      throw err;
+    }
     const grabbedAt = Date.now();
     // Reuses the model the resolve just parsed (same hash); parsing the same
     // multi-MB NZB twice per playback is pure waste.
@@ -610,6 +630,8 @@ export async function openNativeUsenetStream(opts: {
   token: string;
   start?: number;
   end?: number;
+  /** Serve the last N bytes (`bytes=-N`); overrides start/end. */
+  suffixLength?: number;
   signal?: AbortSignal;
   /** Client address, for stream accounting. */
   clientIp?: string;
@@ -708,11 +730,16 @@ export async function openNativeUsenetStream(opts: {
     throw err;
   }
   const { size, filename } = session;
-  const start = Math.max(0, opts.start ?? 0);
-  const end = Math.min(size, opts.end ?? size);
-  handle.setInfo({ size, filename });
+  const suffix = opts.suffixLength;
+  const start =
+    suffix !== undefined
+      ? Math.max(0, size - suffix)
+      : Math.max(0, opts.start ?? 0);
+  const end = suffix !== undefined ? size : Math.min(size, opts.end ?? size);
+  // A suffix range's position is only known now that the size is.
+  handle.setInfo({ size, filename, start });
 
-  let stream = session.stream.createReadStream({ start, end });
+  let stream = session.stream.createReadStream({ start, end }, opts.signal);
   if (session.matroska && appConfig.usenet.matroskaHoleFill) {
     stream = wrapMatroskaHoleFill(stream, {
       startOffset: start,
@@ -722,7 +749,6 @@ export async function openNativeUsenetStream(opts: {
       nzbHash: session.hash,
     });
   }
-  if (opts.signal) addAbortSignal(opts.signal, stream);
   // Intercept push rather than listening for 'data', which would flip the
   // stream into flowing mode before the response attaches and lose chunks.
   const push = stream.push.bind(stream);

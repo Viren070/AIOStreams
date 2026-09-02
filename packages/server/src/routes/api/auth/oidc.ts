@@ -46,7 +46,7 @@ router.get('/oidc/start', oidcRateLimiter, async (req, res) => {
   try {
     const { url, state, nonce, codeVerifier } =
       await buildOidcAuthorisationRequest();
-    setOidcStateCookie(res, {
+    setOidcStateCookie(req, res, {
       st: state,
       n: nonce,
       v: codeVerifier,
@@ -147,7 +147,7 @@ router.get('/oidc/callback', oidcRateLimiter, async (req, res) => {
     permissions = resolved;
   }
 
-  setSessionCookie(res, { username, permissions, source: 'oidc' });
+  setSessionCookie(req, res, { username, permissions, source: 'oidc' });
   logger.info({ username, permissions }, 'SSO login succeeded');
   res.redirect(302, sanitiseNextPath(blob.nx));
 });

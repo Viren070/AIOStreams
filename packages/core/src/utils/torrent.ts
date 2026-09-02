@@ -83,18 +83,22 @@ export class TorrentGrabber {
 
     const cache = this.#cache;
     const url = torrent.downloadUrl;
+    const key =
+      torrent.guid && torrent.indexer
+        ? `${torrent.indexer}:${torrent.guid}`
+        : url;
     const lazy = appConfig.builtins.getTorrent.lazily;
 
     // Cache hit — done.
-    const cached = await cache.cached(url);
+    const cached = await cache.cached(key);
     if (cached) return cached;
 
     // Already fetching this URL: lazy callers bail, eager callers join.
-    const inFlight = cache.inFlight(url);
+    const inFlight = cache.inFlight(key);
     if (inFlight) return lazy ? undefined : inFlight.catch(() => undefined);
 
     // Kick off a single-flighted, concurrency-limited grab+parse.
-    const fetchPromise = cache.fetch(url, () =>
+    const fetchPromise = cache.fetch(key, () =>
       this.#fetchLimit(() => this.#fetchMetadata(torrent))
     );
 

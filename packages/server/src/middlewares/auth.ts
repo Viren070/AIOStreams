@@ -15,13 +15,6 @@ import {
 
 export const SESSION_COOKIE = 'aiostreams.session';
 
-/**
- * Whether to set the `Secure` cookie attribute. Derived from BASE_URL.
- */
-export function cookieSecure(): boolean {
-  return appConfig.bootstrap.baseUrl?.startsWith('https://') ?? false;
-}
-
 function readCookie(req: Request, name: string): string | undefined {
   const header = req.headers.cookie;
   if (!header) return undefined;
@@ -37,6 +30,7 @@ function readCookie(req: Request, name: string): string | undefined {
 }
 
 export function setSessionCookie(
+  req: Request,
   res: Response,
   user: { username: string; permissions?: Permission[]; source?: SessionSource }
 ): void {
@@ -46,7 +40,7 @@ export function setSessionCookie(
   });
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: cookieSecure(),
+    secure: req.secure,
     sameSite: 'strict',
     path: '/',
     maxAge: appConfig.api.sessionTtlSeconds * 1000,
@@ -55,6 +49,52 @@ export function setSessionCookie(
 
 export function clearSessionCookie(res: Response): void {
   res.clearCookie(SESSION_COOKIE, { path: '/' });
+}
+
+export const CONFIG_SESSION_COOKIE = 'aiostreams.config-session';
+
+/** Carries no secret; lets the page tell whether a restore is worth a request. */
+export const CONFIG_SESSION_MARKER_COOKIE = 'aiostreams.has-config-session';
+
+const CONFIG_SESSION_PATH = '/api';
+
+// Must be readable from the configure page, which is not under /api.
+const CONFIG_SESSION_MARKER_PATH = '/';
+
+export function readConfigSessionToken(req: Request): string | undefined {
+  return readCookie(req, CONFIG_SESSION_COOKIE);
+}
+
+export function setConfigSessionCookie(
+  req: Request,
+  res: Response,
+  token: string,
+  remembered: boolean,
+  expiresAt: number
+): void {
+  // No maxAge means the browser drops it on close.
+  const maxAge = remembered ? Math.max(expiresAt - Date.now(), 0) : undefined;
+  res.cookie(CONFIG_SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: req.secure,
+    sameSite: 'strict',
+    path: CONFIG_SESSION_PATH,
+    ...(maxAge === undefined ? {} : { maxAge }),
+  });
+  res.cookie(CONFIG_SESSION_MARKER_COOKIE, '1', {
+    httpOnly: false,
+    secure: req.secure,
+    sameSite: 'strict',
+    path: CONFIG_SESSION_MARKER_PATH,
+    ...(maxAge === undefined ? {} : { maxAge }),
+  });
+}
+
+export function clearConfigSessionCookie(res: Response): void {
+  res.clearCookie(CONFIG_SESSION_COOKIE, { path: CONFIG_SESSION_PATH });
+  res.clearCookie(CONFIG_SESSION_MARKER_COOKIE, {
+    path: CONFIG_SESSION_MARKER_PATH,
+  });
 }
 
 export const OIDC_STATE_COOKIE = 'aiostreams.oidc';
@@ -80,6 +120,7 @@ export interface OidcStateBlob {
  * provider's origin, and a 'strict' cookie is withheld from it.
  */
 export function setOidcStateCookie(
+  req: Request,
   res: Response,
   blob: Omit<OidcStateBlob, 'exp'>
 ): void {
@@ -89,7 +130,7 @@ export function setOidcStateCookie(
   };
   res.cookie(OIDC_STATE_COOKIE, encodeSignedPayload(payload), {
     httpOnly: true,
-    secure: cookieSecure(),
+    secure: req.secure,
     sameSite: 'lax',
     path: OIDC_COOKIE_PATH,
     maxAge: OIDC_STATE_TTL_SECONDS * 1000,

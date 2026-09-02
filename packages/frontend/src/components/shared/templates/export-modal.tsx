@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '../../ui/modal';
 import { Button } from '../../ui/button';
 import { Alert } from '../../ui/alert';
 import { toast } from 'sonner';
-import { Template, UserData } from '@aiostreams/core';
-import { redactPresetOptions } from '@/lib/preset-credentials';
+import { StatusResponse, Template, UserData } from '@aiostreams/core';
+import { redactPresetOptions } from '../../../../../core/src/utils/template-sanitise';
 import { useStatus } from '@/context/status';
+import { MAX_COMMUNITY_TAGS, parseTags } from '@/lib/tags';
 import { TextInput } from '../../ui/text-input';
 import { Textarea } from '../../ui/textarea';
 
@@ -14,6 +15,99 @@ export interface TemplateExportModalProps {
   onOpenChange: (open: boolean) => void;
   userData: UserData;
   filterCredentials: (data: UserData) => UserData;
+}
+
+const SUGGESTED_TAGS = ['debrid', 'p2p', 'usenet', 'anime', 'minimal', '4k'];
+
+export interface TemplateMetaInput {
+  name: string;
+  description: string;
+  author: string;
+  tags: string[];
+  /** Community updates must beat the published version; defaults to 1.0.0. */
+  version?: string;
+}
+
+/**
+ * Turn the current configuration into a shareable template: credentials
+ * stripped, known secrets swapped for placeholders.
+ */
+export function buildTemplateFromUserData({
+  userData,
+  filterCredentials,
+  presets,
+  meta,
+}: {
+  userData: UserData;
+  filterCredentials: (data: UserData) => UserData;
+  presets: StatusResponse['settings']['presets'];
+  meta: TemplateMetaInput;
+}): Template {
+  const templateData = filterCredentials(userData);
+
+  if (userData.tmdbApiKey) {
+    templateData.tmdbApiKey = '<template_placeholder>';
+  }
+  if (userData.tmdbAccessToken) {
+    templateData.tmdbAccessToken = '<template_placeholder>';
+  }
+  if (userData.tvdbApiKey) {
+    templateData.tvdbApiKey = '<template_placeholder>';
+  }
+  if (userData.rpdbApiKey) {
+    templateData.rpdbApiKey = '<template_placeholder>';
+  }
+
+  if (userData.proxy?.enabled) {
+    templateData.proxy = {
+      ...templateData.proxy,
+      url: userData.proxy.url ? '<template_placeholder>' : undefined,
+      publicUrl: userData.proxy.publicUrl
+        ? '<template_placeholder>'
+        : undefined,
+      credentials: userData.proxy.credentials
+        ? '<template_placeholder>'
+        : undefined,
+      publicIp: userData.proxy.publicIp ? '<template_placeholder>' : undefined,
+    };
+  }
+
+  if (templateData.presets && templateData.presets.length > 0) {
+    templateData.presets = templateData.presets.map((preset) => {
+      const presetMeta = presets.find((p) => p.ID === preset.type);
+      const presetInUserData = userData.presets?.find(
+        (p) => p.instanceId == preset.instanceId
+      );
+      return {
+        ...preset,
+        options: redactPresetOptions(
+          presetInUserData?.options ?? preset.options,
+          presetMeta?.OPTIONS,
+          '<template_placeholder>'
+        ),
+      };
+    });
+  }
+
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const formattedDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  return {
+    metadata: {
+      id: `${meta.name.toLowerCase().replace(/\s+/g, '-')}-${formattedDate}-${Math.random().toString(36).slice(2, 9)}`,
+      name: meta.name.trim(),
+      description: meta.description.trim(),
+      source: 'external',
+      author: meta.author.trim(),
+      version: meta.version ?? '1.0.0',
+      category: meta.tags[0] ?? 'general',
+      tags: meta.tags,
+      services: undefined,
+      serviceRequired: false,
+      setToSaveInstallMenu: true,
+    },
+    config: templateData,
+  };
 }
 
 export function TemplateExportModal({
@@ -26,8 +120,7 @@ export function TemplateExportModal({
   const [templateName, setTemplateName] = useState('');
   const [description, setDescription] = useState('');
   const [author, setAuthor] = useState('');
-  const [category, setCategory] = useState('Debrid');
-  const [customCategory, setCustomCategory] = useState('');
+  const [tagsText, setTagsText] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -35,132 +128,55 @@ export function TemplateExportModal({
       setTemplateName('');
       setDescription('');
       setAuthor('');
-      setCategory('Debrid');
-      setCustomCategory('');
+      setTagsText('');
     }
   }, [open]);
 
-  const handleExport = () => {
-    // Validate required fields
+  const tags = useMemo(() => parseTags(tagsText), [tagsText]);
+  const toggleTag = (tag: string) => {
+    const next = tags.includes(tag)
+      ? tags.filter((t) => t !== tag)
+      : [...tags, tag];
+    setTagsText(next.join(', '));
+  };
+
+  const validate = (): boolean => {
     if (!templateName.trim()) {
       toast.error('Please enter a template name');
-      return;
+      return false;
     }
     if (!description.trim()) {
       toast.error('Please enter a description');
-      return;
+      return false;
     }
     if (!author.trim()) {
       toast.error('Please enter an author name');
-      return;
+      return false;
     }
-    if (category === 'Custom' && !customCategory.trim()) {
-      toast.error('Please enter a custom category name');
-      return;
+    if (tags.length === 0) {
+      toast.error('Please add at least one tag');
+      return false;
     }
+    return true;
+  };
 
+  const buildTemplate = (): Template =>
+    buildTemplateFromUserData({
+      userData,
+      filterCredentials,
+      presets: status?.settings.presets ?? [],
+      meta: {
+        name: templateName,
+        description,
+        author,
+        tags,
+      },
+    });
+
+  const handleExport = () => {
+    if (!validate()) return;
     try {
-      // Start with filtered userData (credentials always removed for templates)
-      const templateData = filterCredentials(userData);
-
-      // Smart handling for services - collect unique service IDs from enabled services
-      const enabledServiceIds =
-        userData.services
-          ?.filter((service) => service.enabled)
-          .map((service) => service.id) || [];
-
-      // Add template placeholders to top-level API keys
-      if (userData.tmdbApiKey) {
-        templateData.tmdbApiKey = '<template_placeholder>';
-      }
-      if (userData.tmdbAccessToken) {
-        templateData.tmdbAccessToken = '<template_placeholder>';
-      }
-      if (userData.tvdbApiKey) {
-        templateData.tvdbApiKey = '<template_placeholder>';
-      }
-      if (userData.rpdbApiKey) {
-        templateData.rpdbApiKey = '<template_placeholder>';
-      }
-
-      // // Handle services - add template placeholders to credentials
-      // if (templateData.services && templateData.services.length > 0) {
-      //   templateData.services = templateData.services.map((service) => {
-      //     const newCredentials: Record<string, string> = {};
-
-      //     // Replace all credential values with template placeholders
-      //     Object.keys(service.credentials || {}).forEach((key) => {
-      //       newCredentials[key] = '<template_placeholder>';
-      //     });
-
-      //     return {
-      //       ...service,
-      //       credentials: newCredentials,
-      //     };
-      //   });
-      // }
-
-      // Handle proxy - if proxy was enabled, keep id and add template placeholders
-      if (userData.proxy?.enabled) {
-        templateData.proxy = {
-          ...templateData.proxy,
-          url: userData.proxy.url ? '<template_placeholder>' : undefined,
-          publicUrl: userData.proxy.publicUrl
-            ? '<template_placeholder>'
-            : undefined,
-          credentials: userData.proxy.credentials
-            ? '<template_placeholder>'
-            : undefined,
-          publicIp: userData.proxy.publicIp
-            ? '<template_placeholder>'
-            : undefined,
-        };
-      }
-
-      // Handle preset password options
-      if (templateData.presets && templateData.presets.length > 0) {
-        templateData.presets = templateData.presets.map((preset) => {
-          const presetMeta = status?.settings.presets.find(
-            (p) => p.ID === preset.type
-          );
-          const presetInUserData = userData.presets?.find(
-            (p) => p.instanceId == preset.instanceId
-          );
-
-          return {
-            ...preset,
-            options: redactPresetOptions(
-              presetInUserData?.options ?? preset.options,
-              presetMeta?.OPTIONS,
-              '<template_placeholder>'
-            ),
-          };
-        });
-      }
-
-      const finalCategory =
-        category === 'Custom' ? customCategory.trim() : category;
-
-      // Create template with new structure
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const formattedDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-      const template: Template = {
-        metadata: {
-          id: `${templateName.toLowerCase().replace(/\s+/g, '-')}-${formattedDate}-${Math.random().toString(36).slice(2, 9)}`,
-          name: templateName,
-          description: description,
-          source: 'external',
-          author: author,
-          version: '1.0.0',
-          category: finalCategory,
-          services: undefined,
-          serviceRequired: false,
-          setToSaveInstallMenu: true,
-        },
-        config: templateData,
-      };
-
+      const template = buildTemplate();
       const dataStr = JSON.stringify(template, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -178,8 +194,6 @@ export function TemplateExportModal({
     }
   };
 
-  const categories = ['Debrid', 'P2P', 'Custom'] as const;
-
   return (
     <Modal
       open={open}
@@ -194,8 +208,9 @@ export function TemplateExportModal({
             <div className="space-y-2 text-sm">
               <p>
                 A template is a configuration file that others can use as a
-                starting point. All personal credentials will be replaced with
-                placeholders.
+                starting point. Service credentials, API keys and addon
+                passwords are replaced with placeholders; variant scripts and
+                other free text are kept as written.
               </p>
               <p>
                 <strong>Want more control?</strong> Edit the exported JSON
@@ -249,41 +264,31 @@ export function TemplateExportModal({
             required
           />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Category
-            </label>
-            <div className="flex gap-2">
-              {categories.map((cat) => (
+          <div className="space-y-2">
+            <TextInput
+              label="Tags"
+              placeholder={`Comma separated, up to ${MAX_COMMUNITY_TAGS}`}
+              value={tagsText}
+              onValueChange={setTagsText}
+              required
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {SUGGESTED_TAGS.map((tag) => (
                 <Button
-                  key={cat}
-                  intent={category === cat ? 'primary' : 'gray-outline'}
+                  key={tag}
+                  intent={tags.includes(tag) ? 'primary' : 'gray-outline'}
                   size="sm"
-                  onClick={() => setCategory(cat)}
+                  onClick={() => toggleTag(tag)}
                   type="button"
                 >
-                  {cat}
+                  {tag}
                 </Button>
               ))}
             </div>
           </div>
-
-          {category === 'Custom' && (
-            <TextInput
-              label="Custom Category"
-              placeholder="Enter category name (max 20 characters)"
-              value={customCategory}
-              onValueChange={(value) => {
-                if (value.length <= 20) {
-                  setCustomCategory(value);
-                }
-              }}
-              required
-            />
-          )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-700">
+        <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-700">
           <Button intent="primary-outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

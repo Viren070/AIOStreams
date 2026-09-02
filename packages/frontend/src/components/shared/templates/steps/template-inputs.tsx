@@ -1,79 +1,93 @@
 import React from 'react';
 import { Option } from '@aiostreams/core';
-import { Button } from '../../../ui/button';
-import { ModeSwitch } from '../../../ui/mode-switch/mode-switch';
+import { ChevronDownIcon } from 'lucide-react';
+import { cn } from '../../../ui/core/styling';
 import TemplateOption from '../../template-option';
-import { Mode } from '@/context/mode';
 import { getVisibleOptions } from '@/lib/templates/processors';
 
 interface TemplateInputsStepProps {
-  mode: Mode;
-  onModeChange: (m: Mode) => void;
   options: Option[];
   values: Record<string, any>;
   onValuesChange: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   trusted: boolean;
   selectedServices: string[];
-  onBack: () => void;
-  onNext: () => void;
 }
 
 export function TemplateInputsStep({
-  mode,
-  onModeChange,
   options,
   values,
   onValuesChange,
   trusted,
   selectedServices,
-  onBack,
-  onNext,
 }: TemplateInputsStepProps) {
-  const visibleOptions = getVisibleOptions(
-    mode,
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  const simpleOptions = getVisibleOptions(
+    'noob',
+    options,
+    values,
+    selectedServices
+  );
+  const allOptions = getVisibleOptions(
+    'pro',
     options,
     values,
     selectedServices
   );
 
+  const simpleIds = new Set(simpleOptions.map((o) => o.id));
+  const advancedOptions = allOptions.filter((o) => !simpleIds.has(o.id));
+
+  const render = (opt: Option) => (
+    <TemplateOption
+      key={opt.id}
+      option={opt}
+      value={values[opt.id] ?? opt.default}
+      trusted={trusted}
+      onChange={(v) => onValuesChange((prev) => ({ ...prev, [opt.id]: v }))}
+    />
+  );
+
+  // Everything this template asks is advanced, so there is nothing to hide behind.
+  const advancedOnly = simpleOptions.length === 0 && advancedOptions.length > 0;
+
   return (
-    <>
-      <ModeSwitch
-        value={mode}
-        onChange={onModeChange}
-        size="sm"
-        className="w-full"
-      />
+    <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-3">
+      {allOptions.length === 0 ? (
+        <p className="text-sm text-[--muted] py-6 text-center">
+          This setup has no options to configure.
+        </p>
+      ) : (
+        <>
+          {simpleOptions.map(render)}
 
-      <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-3">
-        {visibleOptions.length === 0 ? (
-          <div className="text-center py-6 text-gray-400 text-sm">
-            No options available in simple mode. Switch to Advanced to see all
-            options.
-          </div>
-        ) : (
-          visibleOptions.map((opt) => (
-            <TemplateOption
-              key={opt.id}
-              option={opt}
-              value={values[opt.id] ?? opt.default}
-              trusted={trusted}
-              onChange={(v) =>
-                onValuesChange((prev) => ({ ...prev, [opt.id]: v }))
-              }
-            />
-          ))
-        )}
-      </div>
-
-      <div className="flex justify-between gap-2 pt-2 border-t border-gray-700">
-        <Button intent="primary-outline" onClick={onBack}>
-          Back
-        </Button>
-        <Button intent="white" rounded onClick={onNext}>
-          Next
-        </Button>
-      </div>
-    </>
+          {advancedOptions.length > 0 && (
+            <div className="pt-1">
+              {!advancedOnly && (
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  <ChevronDownIcon
+                    className={cn(
+                      'w-4 h-4 transition-transform',
+                      showAdvanced && 'rotate-180'
+                    )}
+                  />
+                  {showAdvanced ? 'Hide' : 'Show'} {advancedOptions.length}{' '}
+                  advanced option{advancedOptions.length === 1 ? '' : 's'}
+                </button>
+              )}
+              {(showAdvanced || advancedOnly) && (
+                <div className="space-y-3 mt-3">
+                  {advancedOptions.map(render)}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

@@ -43,6 +43,11 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : undefined,
       alternateDesign: appConfig.branding.alternateDesign,
       protected: appConfig.api.authRequired,
+      community: {
+        formatters: appConfig.community.formatters,
+        templates: appConfig.community.templates,
+        minAccountAge: appConfig.community.minAccountAge,
+      },
       // Public endpoint: the button renders pre-auth, so nothing identifying
       // the provider goes here.
       oidc: {
@@ -51,7 +56,15 @@ const statusInfo = async (): Promise<StatusResponse> => {
         autoRedirect: appConfig.oidc.autoRedirect,
         localLoginEnabled: appConfig.oidc.allowLocalLogin,
       },
-      tmdbApiAvailable: !!appConfig.metadata.tmdb.accessToken,
+      metadata: {
+        tmdb: {
+          accessToken: !!appConfig.metadata.tmdb.accessToken,
+          apiKey: !!appConfig.metadata.tmdb.apiKey,
+        },
+        tvdb: {
+          apiKey: !!appConfig.metadata.tvdb.apiKey,
+        },
+      },
       regexAccess: {
         level: appConfig.userLimits.regex.access,
         ...allowedRegexes,
@@ -78,6 +91,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       userAnalyticsEnabled:
         appConfig.analytics.enabled !== false &&
         appConfig.analytics.userAnalyticsEnabled === true,
+      configSessionsEnabled: appConfig.api.configSessionsEnabled !== false,
       forced: {
         proxy: {
           enabled: appConfig.proxy.force.enabled ?? null,

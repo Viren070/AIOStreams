@@ -238,7 +238,7 @@ export function UsenetSettingsPage() {
   if (query.isLoading) return <DashboardLoading />;
   if (query.isError) {
     return (
-      <Card className="p-6 text-sm text-red-500">
+      <Card className="p-6 text-sm text-red-400">
         Failed to load usenet settings.
       </Card>
     );

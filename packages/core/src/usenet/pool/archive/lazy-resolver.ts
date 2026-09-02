@@ -10,6 +10,12 @@ const logger = createLogger('usenet/lazy');
 /** Fallback resolve parallelism when the caller doesn't thread one through. */
 const DEFAULT_RESOLVE_CONCURRENCY = 8;
 
+/** Kept narrow so the sweep leaves playback its download budget. */
+const BACKGROUND_RESOLVE_CONCURRENCY = 2;
+const BACKGROUND_RESOLVE_BACKOFF_MS = 250;
+/** Idle stream: stop sweeping rather than keep fetching for a viewer who left. */
+const BACKGROUND_RESOLVE_IDLE_MS = 60_000;
+
 export interface LazyResolveHooks {
   /**
    * A resolution batch committed; `fragments` is the NEW immutable table.
@@ -52,6 +58,11 @@ export class LazyFragmentResolver {
   private readonly limit: ReturnType<typeof pLimit>;
   /** Set on structural mismatch; all further resolution throws this. */
   private invalid?: Error;
+  private sweepRunners = 0;
+  private sweepDone = false;
+  /** Reads waiting on a resolve, which the sweep yields to. */
+  private blocking = 0;
+  private lastReadAt = Date.now();
 
   constructor(
     private readonly source: RandomAccess,
@@ -86,18 +97,23 @@ export class LazyFragmentResolver {
    * slightly; terminates since every iteration resolves ≥1 new volume.
    */
   async resolveThrough(endOffset: number): Promise<DataFragment[]> {
-    for (;;) {
-      if (this.invalid) throw this.invalid;
-      const volumes: number[] = [];
-      let logical = 0;
-      for (const f of this.table) {
-        if (logical >= endOffset) break;
-        if (f.pending !== undefined) volumes.push(f.pending);
-        logical += f.length;
+    this.blocking++;
+    try {
+      for (;;) {
+        if (this.invalid) throw this.invalid;
+        const volumes: number[] = [];
+        let logical = 0;
+        for (const f of this.table) {
+          if (logical >= endOffset) break;
+          if (f.pending !== undefined) volumes.push(f.pending);
+          logical += f.length;
+        }
+        if (volumes.length === 0) return this.table;
+        await Promise.all(volumes.map((v) => this.resolveVolume(v)));
+        this.commit();
       }
-      if (volumes.length === 0) return this.table;
-      await Promise.all(volumes.map((v) => this.resolveVolume(v)));
-      this.commit();
+    } finally {
+      this.blocking--;
     }
   }
 
@@ -109,19 +125,73 @@ export class LazyFragmentResolver {
    * exact even while the prefix stays estimated.
    */
   async resolveFrom(startOffset: number): Promise<DataFragment[]> {
-    for (;;) {
-      if (this.invalid) throw this.invalid;
-      const volumes: number[] = [];
-      let logical = 0;
-      for (const f of this.table) {
-        const fragEnd = logical + f.length;
-        if (fragEnd > startOffset && f.pending !== undefined)
-          volumes.push(f.pending);
-        logical = fragEnd;
+    this.blocking++;
+    try {
+      for (;;) {
+        if (this.invalid) throw this.invalid;
+        const volumes: number[] = [];
+        let logical = 0;
+        for (const f of this.table) {
+          const fragEnd = logical + f.length;
+          if (fragEnd > startOffset && f.pending !== undefined)
+            volumes.push(f.pending);
+          logical = fragEnd;
+        }
+        if (volumes.length === 0) return this.table;
+        await Promise.all(volumes.map((v) => this.resolveVolume(v)));
+        this.commit();
       }
-      if (volumes.length === 0) return this.table;
-      await Promise.all(volumes.map((v) => this.resolveVolume(v)));
-      this.commit();
+    } finally {
+      this.blocking--;
+    }
+  }
+
+  /** Keeps the sweep alive, and restarts one that gave up on an idle stream. */
+  noteRead(): void {
+    this.lastReadAt = Date.now();
+    if (this.sweepRunners === 0 && !this.sweepDone) {
+      this.resolveAllInBackground();
+    }
+  }
+
+  /**
+   * A seek can only be mapped once every pending fragment on one side of it is
+   * exact, so paying for that here spares it a header fetch per volume it skips
+   * over. Fire-and-forget, idempotent.
+   */
+  resolveAllInBackground(): void {
+    if (this.sweepRunners > 0 || this.sweepDone || this.invalid) return;
+    const pending = this.table
+      .filter((f) => f.pending !== undefined)
+      .map((f) => f.pending as number);
+    if (pending.length === 0) {
+      this.sweepDone = true;
+      return;
+    }
+    let next = 0;
+    const step = (): void => {
+      if (this.invalid || next >= pending.length) {
+        this.sweepDone = !this.invalid && next >= pending.length;
+        this.sweepRunners--;
+        return;
+      }
+      if (Date.now() - this.lastReadAt > BACKGROUND_RESOLVE_IDLE_MS) {
+        this.sweepRunners--;
+        return;
+      }
+      if (this.blocking > 0) {
+        setTimeout(step, BACKGROUND_RESOLVE_BACKOFF_MS).unref?.();
+        return;
+      }
+      const volume = pending[next++];
+      this.resolveVolume(volume)
+        .then(() => this.commit())
+        .catch(() => {})
+        .finally(step);
+    };
+    for (let i = 0; i < BACKGROUND_RESOLVE_CONCURRENCY; i++) {
+      this.sweepRunners++;
+      step();
     }
   }
 

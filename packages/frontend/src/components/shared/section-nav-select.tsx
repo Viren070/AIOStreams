@@ -72,7 +72,7 @@ export function SectionNavSelect<Id extends string>({
         {open && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-black/30"
+              className="fixed inset-0 w-screen z-40 bg-black/30"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

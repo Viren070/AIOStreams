@@ -1,5 +1,6 @@
 ﻿import { z } from 'zod';
 import { constants, ServiceId, Cache, appConfig } from '../utils/index.js';
+import { registerLockErrorClass } from '../utils/lock-error-registry.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
 type DebridErrorCode =
@@ -76,6 +77,7 @@ export class DebridError extends Error {
     }
   }
 }
+registerLockErrorClass(DebridError);
 
 export const convertStatusCodeToError = (code: number): DebridError['code'] => {
   switch (code) {

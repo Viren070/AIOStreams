@@ -19,3 +19,5 @@ export { usenetSchema } from './usenet.js';
 export { streamsSchema } from './streams.js';
 export { releaseBlocklistSchema } from './release-blocklist.js';
 export { oidcSchema } from './oidc.js';
+export { linkedAccountsSchema } from './linked-accounts.js';
+export { communitySchema } from './community.js';

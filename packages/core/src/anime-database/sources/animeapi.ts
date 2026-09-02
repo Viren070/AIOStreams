@@ -2,7 +2,7 @@ import path from 'path';
 import { config as appConfig } from '../../config/index.js';
 import { AnimeType, type SourceEntry } from '../types.js';
 import { ANIME_DATABASE_PATH } from '../storage/paths.js';
-import { streamJsonArray } from '../storage/streaming.js';
+import { detachString, streamJsonArray } from '../storage/streaming.js';
 import type { AnimeSource } from './base.js';
 
 interface AnimeApiRaw {
@@ -47,7 +47,7 @@ export const animeApiSource: AnimeSource = {
         k: K,
         v: SourceEntry['ids'][K] | null | undefined
       ) => {
-        if (v !== null && v !== undefined && v !== '') ids[k] = v;
+        if (v !== null && v !== undefined && v !== '') ids[k] = detachString(v);
       };
       set('anidbId', raw.anidb ?? undefined);
       set('anilistId', raw.anilist ?? undefined);
@@ -68,7 +68,8 @@ export const animeApiSource: AnimeSource = {
       const entry: SourceEntry = {
         type: AnimeType.UNKNOWN,
         ids,
-        title: typeof raw.title === 'string' ? raw.title : undefined,
+        title:
+          typeof raw.title === 'string' ? detachString(raw.title) : undefined,
       };
 
       if (
@@ -104,7 +105,7 @@ export const animeApiSource: AnimeSource = {
       ) {
         entry.trakt = {
           id: raw.trakt ?? undefined,
-          slug: raw.trakt_slug ?? undefined,
+          slug: detachString(raw.trakt_slug ?? undefined),
           type: raw.trakt_type ?? undefined,
           seasonNumber:
             typeof raw.trakt_season === 'number' ? raw.trakt_season : undefined,

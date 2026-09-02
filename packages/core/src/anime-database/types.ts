@@ -37,6 +37,19 @@ export enum AnimeSeason {
 export type IdValue = string | number;
 
 /**
+ * Reduce numeric-string ids (`'123'`) and equivalent numbers (`123`) to one
+ * canonical key.
+ */
+export function canonicalIdValue(v: IdValue): IdValue {
+  if (typeof v === 'string') {
+    if (v === '') return v;
+    const n = Number(v);
+    if (Number.isInteger(n) && String(n) === v) return n;
+  }
+  return v;
+}
+
+/**
  * Single anidb-season → tvdb/tmdb-season mapping rule from the Anime-List XML
  * (`anime-list-master.xml`), preserved for episode-range disambiguation.
  */

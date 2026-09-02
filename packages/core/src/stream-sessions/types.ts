@@ -48,7 +48,7 @@ export interface StreamHandle {
   /** Report bytes pushed to the client. */
   addBytes(bytes: number): void;
   /** Fill in details only known after the upstream responded. */
-  setInfo(info: { size?: number; filename?: string }): void;
+  setInfo(info: { size?: number; filename?: string; start?: number }): void;
   /** Register a readable to destroy when the session is killed. */
   attach(stream: Readable): void;
   /** Register arbitrary teardown to run when the session is killed. */

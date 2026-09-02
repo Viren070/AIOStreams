@@ -12,6 +12,7 @@ import {
   BiPalette,
   BiPlayCircle,
   BiPlug,
+  BiShareAlt,
   BiSitemap,
   BiTachometer,
   BiTransferAlt,
@@ -68,6 +69,12 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
   // Wrapping upstream addons, plus what that leans on: metadata drives built-in
   // search and filtering, blocklists drive what gets through.
   presets: { label: 'Presets', icon: BiBox, group: 'Core', order: 110 },
+  community: {
+    label: 'Community',
+    icon: BiShareAlt,
+    group: 'Core',
+    order: 115,
+  },
   builtins: { label: 'Built-ins', icon: BiPlug, group: 'Core', order: 120 },
   resources: {
     label: 'Addon Resources',

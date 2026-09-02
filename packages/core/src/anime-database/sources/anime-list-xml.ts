@@ -15,6 +15,7 @@ import {
   type SourceEntry,
 } from '../types.js';
 import { ANIME_DATABASE_PATH } from '../storage/paths.js';
+import { detachString } from '../storage/streaming.js';
 import type { AnimeSource } from './base.js';
 
 interface RawAttrs {
@@ -143,7 +144,9 @@ export const animeListXmlSource: AnimeSource = {
       const tmdbOffset = parseNum(attrs.tmdboffset);
       const tmdbId = parseNum(attrs.tmdbid);
       const imdbId =
-        attrs.imdbid && attrs.imdbid !== '' ? attrs.imdbid : undefined;
+        attrs.imdbid && attrs.imdbid !== ''
+          ? detachString(attrs.imdbid)
+          : undefined;
 
       const mappings: AnimeListMapping[] = [];
       const mappingList = raw['mapping-list']?.[0]?.mapping;
@@ -161,7 +164,7 @@ export const animeListXmlSource: AnimeSource = {
             end: parseNum(mAttrs.end) ?? undefined,
             offset: parseNum(mAttrs.offset) ?? undefined,
           };
-          if (typeof m._ === 'string') mapping.episodes = m._;
+          if (typeof m._ === 'string') mapping.episodes = detachString(m._);
           mappings.push(mapping);
         }
       }

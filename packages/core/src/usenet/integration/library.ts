@@ -2,7 +2,11 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
-import { downloadManager, NzbTooLargeError } from '../../utils/index.js';
+import {
+  downloadManager,
+  NotAnNzbError,
+  NzbTooLargeError,
+} from '../../utils/index.js';
 import { getDataFolder } from '../../utils/general.js';
 import { createLogger } from '../../logging/logger.js';
 import {
@@ -111,6 +115,15 @@ const parsedNzbCache = new Map<
 >();
 /** Lookup-key aliases (search-time hash → content hash), FIFO-capped. */
 const parsedNzbAliases = new Map<string, string>();
+
+// Sweep the parsed-NZB cache every minute to evict expired entries.
+const parsedNzbSweepTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of parsedNzbCache) {
+    if (now - v.at > PARSED_NZB_TTL_MS) parsedNzbCache.delete(k);
+  }
+}, 60_000);
+parsedNzbSweepTimer.unref?.();
 
 function rememberParsedNzbAlias(hash: string, contentHash: string): void {
   if (hash === contentHash) return;
@@ -221,6 +234,17 @@ export async function fetchNzb(
   try {
     return await downloadManager.fetchNzb(url, { signal });
   } catch (err) {
+    if (err instanceof NotAnNzbError) {
+      throw new DebridError(err.message, {
+        statusCode: 502,
+        statusText: 'Bad Gateway',
+        code: 'BAD_GATEWAY',
+        headers: {},
+        body: null,
+        type: 'upstream_error',
+        cause: err,
+      });
+    }
     if (err instanceof NzbTooLargeError) {
       throw new DebridError(err.message, {
         statusCode: 413,

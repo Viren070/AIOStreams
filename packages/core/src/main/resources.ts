@@ -685,7 +685,7 @@ export async function getStreams(
     'found addons for stream resource'
   );
 
-  const context = StreamContext.create(type, id, ctx.userData);
+  const context = await StreamContext.create(type, id, ctx.userData);
   ctx.streamContext = context;
 
   const pipelineTtl = appConfig.resources.cache.pipeline.ttl;
@@ -1029,7 +1029,7 @@ export async function getMeta(
         meta.links = convertDiscoverDeepLinks(ctx, meta.links);
       }
       if (meta.videos) {
-        const context = StreamContext.create(type, id, ctx.userData);
+        const context = await StreamContext.create(type, id, ctx.userData);
         ctx.streamContext = context;
         meta.videos = await Promise.all(
           meta.videos.map(async (video) => {

@@ -27,11 +27,11 @@ export class AIOratings extends BasePosterService {
    * Override parseId to use different tmdb format.
    * AIOratings uses 'tv' instead of 'series' in the tmdb path.
    */
-  protected override parseId(
+  protected override async parseId(
     type: string,
     id: string
-  ): { idType: 'tmdb' | 'imdb'; idValue: string } | null {
-    const result = super.parseId(type, id);
+  ): Promise<{ idType: 'tmdb' | 'imdb'; idValue: string } | null> {
+    const result = await super.parseId(type, id);
     if (!result) return null;
 
     // AIOratings uses 'tv' instead of 'series' in tmdb IDs

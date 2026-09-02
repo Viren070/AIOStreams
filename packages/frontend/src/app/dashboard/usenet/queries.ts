@@ -99,6 +99,7 @@ export interface UsenetProviderStatRow {
   errorRate: number;
   missRate: number;
   articleShare: number;
+  removed: boolean;
 }
 
 export interface UsenetThroughputPoint {
@@ -281,6 +282,28 @@ const ROOT = ['dashboard', 'usenet'] as const;
  *  menu can invalidate it after a scoped reset/import. */
 export const USENET_SETTINGS_QUERY_KEY = [...ROOT, 'settings'] as const;
 
+export type UsenetStatsResetTarget = 'providers' | 'indexers' | 'all';
+
+export interface UsenetStatsResetInput {
+  target: UsenetStatsResetTarget;
+  /** Provider id or indexer label; omit to reset every row of that kind. */
+  id?: string;
+  /** Inclusive lower bound on the hour bucket. */
+  sinceMs?: number;
+  /** Report what would be removed without removing it. */
+  dryRun?: boolean;
+}
+
+export interface UsenetStatsResetResult {
+  dryRun: boolean;
+  providerRows: number;
+  providerArticles: number;
+  providerBytes: number;
+  indexerRows: number;
+  indexerGrabs: number;
+  lastErrorRows: number;
+}
+
 export function useUsenetStats(window: UsenetWindow) {
   return useQuery({
     queryKey: [...ROOT, 'stats', window],
@@ -334,6 +357,22 @@ export function useUsenetLive(enabled = true) {
     queryFn: () => api<LiveStats>('/dashboard/usenet/live'),
     staleTime: Infinity,
     enabled,
+  });
+}
+
+/**
+ * Wipe recorded rollups.
+ */
+export function useResetUsenetStats() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UsenetStatsResetInput) =>
+      api<UsenetStatsResetResult>('POST /dashboard/usenet/stats/reset', {
+        body: { confirm: true, ...input },
+      }),
+    onSuccess: (_data, input) => {
+      if (!input.dryRun) qc.invalidateQueries({ queryKey: [...ROOT, 'stats'] });
+    },
   });
 }
 

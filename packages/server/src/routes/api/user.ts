@@ -3,6 +3,7 @@ import {
   APIError,
   AnalyticsRepository,
   config as appConfig,
+  ConfigSessionRepository,
   constants,
   createLogger,
   encryptString,
@@ -13,11 +14,24 @@ import {
   UserRepository,
   type UserAnalyticsRange,
 } from '@aiostreams/core';
-import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
-import { attachSession, injectAccessKey } from '../../middlewares/auth.js';
+import {
+  loginRateLimiter,
+  userApiRateLimiter,
+  userCreateRateLimiter,
+} from '../../middlewares/ratelimit.js';
+import {
+  attachSession,
+  clearConfigSessionCookie,
+  injectAccessKey,
+  readConfigSessionToken,
+  setConfigSessionCookie,
+} from '../../middlewares/auth.js';
 import { resolveUuidAliasForUserApi } from '../../middlewares/alias.js';
 import { createResponse } from '../../utils/responses.js';
-import { parseBasicAuthHeader } from '../../utils/basic-auth.js';
+import {
+  parseBasicAuthHeader,
+  resolveConfigCredentials,
+} from '../../utils/basic-auth.js';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -69,7 +83,7 @@ router.head('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   let creds;
   try {
-    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
   } catch (error) {
     next(error);
     return;
@@ -134,7 +148,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // new user creation
-router.post('/', async (req, res, next) => {
+router.post('/', userCreateRateLimiter, async (req, res, next) => {
   const { config, password } = req.body;
   if (!config || !password) {
     next(
@@ -191,7 +205,7 @@ router.post('/', async (req, res, next) => {
 router.put('/', async (req, res, next) => {
   let creds;
   try {
-    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
   } catch (error) {
     next(error);
     return;
@@ -277,6 +291,135 @@ router.delete('/', async (req, res, next) => {
     if (error instanceof APIError) {
       next(error);
     } else {
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
+// Takes the password itself, never a session, so a stolen cookie cannot mint more.
+router.post('/session', loginRateLimiter, async (req, res, next) => {
+  if (!ConfigSessionRepository.enabled()) {
+    next(
+      new APIError(
+        constants.ErrorCode.FORBIDDEN,
+        undefined,
+        'Remembered sign-ins are disabled on this instance'
+      )
+    );
+    return;
+  }
+
+  let creds;
+  try {
+    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+
+  const uuid = req.uuid || creds.uuid;
+  const remember = req.body?.remember === true;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+
+    const previous = readConfigSessionToken(req);
+    if (previous) await ConfigSessionRepository.deleteByToken(previous);
+
+    const session = await ConfigSessionRepository.create(
+      uuid,
+      creds.password,
+      remember
+    );
+    setConfigSessionCookie(
+      req,
+      res,
+      session.token,
+      remember,
+      session.expiresAt
+    );
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Session created successfully',
+        data: {
+          uuid,
+          remembered: session.remembered,
+          expiresAt: session.expiresAt,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
+      next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+  }
+});
+
+// end this browser's remembered sign-in
+router.delete('/session', async (req, res, next) => {
+  try {
+    const token = readConfigSessionToken(req);
+    if (token) await ConfigSessionRepository.deleteByToken(token);
+    clearConfigSessionCookie(res);
+    res.status(204).send();
+  } catch (error) {
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+// end every remembered sign-in for this configuration
+router.delete('/sessions', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) or a session is required'
+      )
+    );
+    return;
+  }
+
+  try {
+    const count = await ConfigSessionRepository.deleteAllForUuid(
+      req.uuid || creds.uuid
+    );
+    clearConfigSessionCookie(res);
+    res.status(200).json(
+      createResponse({
+        success: true,
+        detail: 'Signed out on all devices',
+        data: { count },
+      })
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+    } else {
+      logger.error(error);
       next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
     }
   }
@@ -391,7 +534,7 @@ router.post('/verify', async (req, res, next) => {
 router.get('/analytics', async (req, res, next) => {
   let creds;
   try {
-    creds = parseBasicAuthHeader(req, { allowEncrypted: false });
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
   } catch (error) {
     next(error);
     return;

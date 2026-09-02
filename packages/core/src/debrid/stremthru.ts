@@ -936,10 +936,13 @@ export class StremThruService
         `Adding torrent to ${this.serviceName} for ${makeUrlLogSafe(playbackInfo.downloadUrl)}`
       );
       magnetDownload = await this.addTorrent(playbackInfo.downloadUrl);
-      logger.debug(`Torrent added for ${makeUrlLogSafe(playbackInfo.downloadUrl)}`, {
-        status: magnetDownload.status,
-        id: magnetDownload.id,
-      });
+      logger.debug(
+        `Torrent added for ${makeUrlLogSafe(playbackInfo.downloadUrl)}`,
+        {
+          status: magnetDownload.status,
+          id: magnetDownload.id,
+        }
+      );
     } else {
       let magnet = `magnet:?xt=urn:btih:${hash}`;
       if (playbackInfo.filename) {
@@ -1171,9 +1174,7 @@ export class StremThruService
     const cachedLink = await StremThruService.playbackLinkCache.get(cacheKey);
 
     if (cachedLink !== undefined) {
-      logger.debug(
-        `Using cached link for ${nzb ? makeUrlLogSafe(nzb) : hash}`
-      );
+      logger.debug(`Using cached link for ${nzb ? makeUrlLogSafe(nzb) : hash}`);
       if (cachedLink === null) {
         if (!cacheAndPlay) {
           return undefined;

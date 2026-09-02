@@ -10,7 +10,7 @@ import { baseOptions, Preset } from './preset.js';
 import { createLogger } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
-import { StreamParser } from '../parser/index.js';
+import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 
 const logger = createLogger('core');
 
@@ -33,12 +33,12 @@ class StreamAsiaStreamParser extends StreamParser {
     stream: Stream,
     currentParsedStream: ParsedStream
   ): string | undefined {
-    const regex = this.getRegexForTextAfterEmojis(['🚫', '⚠']);
+    const regex = getRegexForTextAfterEmojis(['🚫', '⚠']);
     const match = stream.description?.match(regex);
     if (match) {
       return match[1];
     }
-    const proxyRegex = this.getRegexForTextAfterEmojis(['🔗 Proxy:']);
+    const proxyRegex = getRegexForTextAfterEmojis(['🔗 Proxy:']);
     const proxyMatch = stream.description?.match(proxyRegex);
     if (proxyMatch) {
       return proxyMatch[1];
@@ -338,7 +338,11 @@ there is no need to provide these details here.
       return [this.generateAddon(userData, options, [])];
     }
 
-    const usableServices = this.getUsableServices(userData, options.services, options.name);
+    const usableServices = this.getUsableServices(
+      userData,
+      options.services,
+      options.name
+    );
     if (
       usableServices?.length === 0 &&
       options.ddlCatalogs &&

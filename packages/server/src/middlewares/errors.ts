@@ -10,6 +10,28 @@ import { ZodError } from 'zod';
 
 const logger = createLogger('server');
 
+function asClientError(err: Error): APIError | undefined {
+  const { status, expose, type, limit } = err as Error & {
+    status?: unknown;
+    expose?: unknown;
+    type?: unknown;
+    limit?: unknown;
+  };
+  if (
+    expose !== true ||
+    typeof status !== 'number' ||
+    status < 400 ||
+    status >= 500
+  ) {
+    return undefined;
+  }
+  const message =
+    type === 'entity.too.large' && typeof limit === 'number'
+      ? `Request body too large (limit ${limit} bytes)`
+      : err.message;
+  return new APIError(constants.ErrorCode.BAD_REQUEST, status, message);
+}
+
 export const errorMiddleware = (
   err: Error,
   req: Request,
@@ -22,13 +44,18 @@ export const errorMiddleware = (
   }
 
   let error;
-  if (!(err instanceof APIError) && !(err instanceof ZodError)) {
-    // log unexpected errors
-    logger.error(err);
-    logger.error(err.stack);
-    error = new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR);
-  } else {
+  if (err instanceof APIError || err instanceof ZodError) {
     error = err;
+  } else {
+    const clientError = asClientError(err);
+    if (clientError) {
+      error = clientError;
+    } else {
+      // log unexpected errors
+      logger.error(err);
+      logger.error(err.stack);
+      error = new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR);
+    }
   }
   if (error instanceof ZodError) {
     res.status(400).json(

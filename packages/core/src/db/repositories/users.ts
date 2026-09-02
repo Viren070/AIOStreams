@@ -20,6 +20,8 @@ import {
   assertConfigAccessKey,
 } from '../../utils/index.js';
 import { ConfigProfileRepository } from './config-profiles.js';
+import { ConfigSessionRepository } from './config-sessions.js';
+import { LinkedAccountRepository } from './linked-accounts.js';
 
 const APIError = constants.APIError;
 const logger = createLogger('users');
@@ -61,7 +63,7 @@ let trustedUuidsSource: string | null | undefined;
 let trustedUuidPatterns: RegExp[] = [];
 
 /** Recompiles only when the configured list changes, not per request. */
-function isTrustedUuid(uuid: string): boolean {
+export function isTrustedUuid(uuid: string): boolean {
   const source = appConfig.userLimits.trusted.uuids;
   if (source !== trustedUuidsSource) {
     trustedUuidsSource = source;
@@ -540,6 +542,13 @@ export class UserRepository {
           uuid,
           newEncryptedPasswordToken
         );
+        await LinkedAccountRepository.rewriteManifestUrlsForUuid(
+          tx,
+          uuid,
+          newEncryptedPasswordToken
+        );
+        // Not rotated like the above: a password change ends them everywhere.
+        await ConfigSessionRepository.deleteAllForUuid(uuid, tx);
       });
       logger.info(`Changed password for user ${uuid}`);
       return { encryptedPassword: newEncryptedPasswordToken };

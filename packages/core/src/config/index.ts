@@ -28,6 +28,8 @@ import {
   streamsSchema,
   releaseBlocklistSchema,
   oidcSchema,
+  linkedAccountsSchema,
+  communitySchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -52,6 +54,8 @@ export const runtimeSchemas = {
   streams: streamsSchema,
   releaseBlocklist: releaseBlocklistSchema,
   oidc: oidcSchema,
+  linkedAccounts: linkedAccountsSchema,
+  community: communitySchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {
