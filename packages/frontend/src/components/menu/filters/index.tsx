@@ -716,7 +716,7 @@ function Content() {
                   value: resolution,
                 }))}
               />
-              <SettingsCard>
+              <SettingsCard id="adaptiveResolutionFloor">
                 <Switch
                   label="Adaptive Resolution Floor"
                   side="right"
