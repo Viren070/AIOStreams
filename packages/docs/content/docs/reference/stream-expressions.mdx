@@ -408,6 +408,22 @@ size(streams, '1GB', '10GB')
 
 ---
 
+#### `folderSize()`
+
+Filter by folder/torrent size. Accepts human-readable strings (`'1GB'`, `'500MB'`) or raw byte counts.
+
+| Parameter | Type                | Description         |
+| --------- | ------------------- | ------------------- |
+| `streams` | `ParsedStream[]` | Stream list         |
+| `min`     | `number \| string?` | Minimum folder size |
+| `max`     | `number \| string?` | Maximum folder size |
+
+```
+folderSize(streams, '10GB')
+```
+
+---
+
 #### `bitrate()`
 
 Filter by bitrate. Accepts `'5Mbps'`, `'5000kbps'`, or raw bits-per-second.
