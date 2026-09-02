@@ -75,8 +75,8 @@ class StreamDeduplicator {
     const start = Date.now();
 
     const merge = deduplicator.merge;
-    const failoverTypes: ('usenet' | 'debrid')[] = this.userData.failover
-      ?.contentTypes ?? ['usenet'];
+    const failoverTypes: ('usenet' | 'debrid' | 'http')[] =
+      this.userData.failover?.contentTypes ?? ['usenet'];
     const includeExternal =
       this.userData.failover?.includeExternalFailover ?? false;
 
@@ -490,7 +490,7 @@ class StreamDeduplicator {
     winner: ParsedStream,
     group: ParsedStream[],
     merge: MergeOptions,
-    failoverTypes: ('usenet' | 'debrid')[],
+    failoverTypes: ('usenet' | 'debrid' | 'http')[],
     includeExternal: boolean,
     tiebreakerCmp: TiebreakerCmp,
     libraryCmp: (a: ParsedStream, b: ParsedStream) => number
@@ -539,7 +539,7 @@ class StreamDeduplicator {
           } catch {}
           entry = {
             url: other.url,
-            type: 'debrid',
+            type: other.type === 'http' ? 'http' : 'debrid',
             serviceId: other.service?.id,
             filename: other.filename,
             identity,

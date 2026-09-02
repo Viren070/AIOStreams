@@ -158,6 +158,7 @@ export function BuiltinSettings() {
           options={[
             { label: 'Usenet', value: 'usenet', textValue: 'Usenet' },
             { label: 'Debrid', value: 'debrid', textValue: 'Debrid' },
+            { label: 'HTTP', value: 'http', textValue: 'HTTP' },
           ]}
           multiple
           emptyMessage="Select at least one content type"
@@ -167,7 +168,7 @@ export function BuiltinSettings() {
               ...prev,
               failover: {
                 ...prev.failover,
-                contentTypes: value as ('usenet' | 'debrid')[],
+                contentTypes: value as ('usenet' | 'debrid' | 'http')[],
               },
             }));
           }}
