@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:24.18.1-slim AS base
 
 ENV PNPM_HOME="/pnpm"
@@ -30,9 +31,9 @@ COPY packages/crypto/package*.json ./packages/crypto/
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY patches ./patches
-
 # Cache the pnpm store across builds; lockfile changes still invalidate correctly.
-RUN --mount=type=cache,target=/pnpm/store \
+# Explicit id + locked sharing prevents corruption under parallel builds.
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && pnpm install --frozen-lockfile
 
 # Copy source files.
@@ -47,8 +48,8 @@ COPY scripts ./scripts
 COPY resources ./resources
 
 
-# Build the project.
-RUN --mount=type=cache,target=/build/node_modules/.cache \
+# Build the project; the bundler cache persists across builds.
+RUN --mount=type=cache,id=build-cache,target=/build/node_modules/.cache,sharing=locked \
     pnpm run build
 
 # Remove development dependencies.
@@ -60,7 +61,7 @@ RUN rm -rf packages/seanime-extensions/node_modules
 
 # The store cache mount matches the earlier install step, so production
 # dependencies resolve from cache instead of being re-downloaded.
-RUN --mount=type=cache,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm install --prod --frozen-lockfile
 
 
