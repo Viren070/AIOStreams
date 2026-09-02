@@ -136,7 +136,7 @@ export function BuiltinSettings() {
       <SettingsCard
         title="Failover"
         id="failover"
-        description="When a stream fails to play, AIOStreams automatically tries the next best result from your sorted list. Works with built-in Usenet and debrid results (those AIOStreams resolves itself)."
+        description="When a stream fails to play, AIOStreams automatically tries the next best result from your sorted list. Works with built-in Usenet and debrid results (those AIOStreams resolves itself), plus HTTP results from addons."
       >
         {/* --- Enable --- */}
         <Switch
@@ -190,7 +190,7 @@ export function BuiltinSettings() {
           label="Include External Addon Targets"
           side="right"
           disabled={!userData.failover?.enabled}
-          help="Also use non-owned debrid links from external addons (on the addon's own host) as failover targets. These are resolved by probing: a redirect to the addon's own host is treated as a dead link, a redirect to a CDN as success. A direct click on an external stream still won't fail over."
+          help="Also use non-owned debrid or HTTP links from external addons (on the addon's own host) as failover targets. HTTP targets require this option. These are resolved by probing: a redirect to the addon's own host is treated as a dead link, a redirect to a CDN as success. A direct click on an external stream still won't fail over."
           value={userData.failover?.includeExternalFailover ?? false}
           onValueChange={(value) => {
             setUserData((prev) => ({

@@ -1,8 +1,20 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { isExternalDebridFailover, buildPlayChain } from '../main/play-chain.js';
-import { ParsedStreamSchema } from '../db/schemas.js';
-import type { ParsedStream, UserData } from '../db/schemas.js';
+import {
+  isExternalFailoverTarget,
+  buildPlayChain,
+  getPlayChain,
+} from '../main/play-chain.js';
+import { ParsedStreamSchema, UserDataSchema } from '../db/schemas.js';
+import type { ParsedStream } from '../db/schemas.js';
+import { decodeFallbackKey } from '../debrid/utils.js';
+import { initDb } from '../db/db.js';
+import { initialiseConfig } from '../config/index.js';
+
+before(async () => {
+  await initDb('sqlite://./play-chain-test.db');
+  await initialiseConfig();
+});
 
 function makeStream(overrides: Partial<ParsedStream>): ParsedStream {
   return ParsedStreamSchema.parse({
@@ -21,13 +33,13 @@ function makeStream(overrides: Partial<ParsedStream>): ParsedStream {
   });
 }
 
-describe('isExternalDebridFailover', () => {
+describe('isExternalFailoverTarget', () => {
   it('accepts http streams hosted on the addon manifest host', () => {
     const stream = makeStream({
       type: 'http',
       url: 'https://addon.example/mirror/file.mkv',
     });
-    assert.equal(isExternalDebridFailover(stream), true);
+    assert.equal(isExternalFailoverTarget(stream), true);
   });
 
   it('accepts debrid streams hosted on the addon manifest host', () => {
@@ -35,16 +47,16 @@ describe('isExternalDebridFailover', () => {
       type: 'debrid',
       url: 'https://addon.example/link',
     });
-    assert.equal(isExternalDebridFailover(stream), true);
+    assert.equal(isExternalFailoverTarget(stream), true);
   });
 
   it('rejects p2p and usenet streams', () => {
     assert.equal(
-      isExternalDebridFailover(makeStream({ type: 'p2p', url: undefined })),
+      isExternalFailoverTarget(makeStream({ type: 'p2p', url: undefined })),
       false
     );
     assert.equal(
-      isExternalDebridFailover(makeStream({ type: 'usenet' })),
+      isExternalFailoverTarget(makeStream({ type: 'usenet' })),
       false
     );
   });
@@ -54,7 +66,7 @@ describe('isExternalDebridFailover', () => {
       type: 'http',
       url: 'https://cdn.other-host.example/file.mkv',
     });
-    assert.equal(isExternalDebridFailover(stream), false);
+    assert.equal(isExternalFailoverTarget(stream), false);
   });
 
   it('rejects owned playback urls', () => {
@@ -62,20 +74,20 @@ describe('isExternalDebridFailover', () => {
       type: 'http',
       url: 'https://addon.example/api/v1/debrid/playback/abc/def',
     });
-    assert.equal(isExternalDebridFailover(stream), false);
+    assert.equal(isExternalFailoverTarget(stream), false);
   });
 
   it('rejects streams without a url', () => {
-    assert.equal(isExternalDebridFailover(makeStream({ url: undefined })), false);
+    assert.equal(isExternalFailoverTarget(makeStream({ url: undefined })), false);
   });
 });
 
 describe('failover contentTypes schema', () => {
   it('accepts http in the failover contentTypes zod enum', () => {
-    const userData = {
+    const parsed = UserDataSchema.pick({ failover: true }).parse({
       failover: { enabled: true, contentTypes: ['debrid', 'http'] },
-    } as unknown as UserData;
-    assert.deepEqual(userData.failover?.contentTypes, ['debrid', 'http']);
+    });
+    assert.deepEqual(parsed.failover?.contentTypes, ['debrid', 'http']);
   });
 
   it('accepts http type on a failoverVariant', () => {
@@ -95,40 +107,43 @@ describe('failover contentTypes schema', () => {
 });
 
 describe('buildPlayChain with http variants', () => {
-  it('stores http external items in the chain when includeExternal is on', async () => {
+  it('stores http external items in the chain and stamps owned urls', async () => {
     const winner = makeStream({
       id: 'owned-winner',
       type: 'debrid',
       url: 'http://localhost:3000/api/v1/debrid/playback/storeAuth/fbk/fileInfo/tt123/file.mkv',
       service: { id: 'torrin', cached: true },
     });
-    const mirror = makeStream({
+    const externalMirror = makeStream({
       id: 'http-mirror',
       type: 'http',
       url: 'https://addon.example/mirror/file.mkv',
       filename: 'file.mkv',
     });
+    const sameReleaseVariant = makeStream({
+      id: 'http-variant-holder',
+      type: 'debrid',
+      url: 'http://localhost:3000/api/v1/debrid/playback/storeAuth2/fbk2/fileInfo2/tt123/file.mkv',
+      service: { id: 'torrin', cached: true },
+    });
     // simulate what the deduplicator merge step produces
-    winner.failoverVariants = [
+    sameReleaseVariant.failoverVariants = [
       {
-        url: mirror.url!,
+        url: externalMirror.url!,
         type: 'http',
-        serviceId: mirror.service?.id,
-        filename: mirror.filename,
+        serviceId: externalMirror.service?.id,
+        filename: externalMirror.filename,
         identity: 'https://addon.example/mirror/file.mkv',
         kind: 'external',
       },
     ];
 
-    let captured: unknown;
-    // buildPlayChain caches into the chain cache; we exercise the public path
-    // and assert it does not throw with an http variant present.
     await buildPlayChain(
-      [winner],
+      [winner, externalMirror, sameReleaseVariant],
       {
+        allowCrossType: true,
         maxAttempts: 3,
         contentTypes: ['usenet', 'debrid', 'http'],
-        allowCrossType: false,
         parallel: 1,
         staggerMs: 0,
         preferredGraceMs: 0,
@@ -138,7 +153,21 @@ describe('buildPlayChain with http variants', () => {
         duplicateStaggerMs: 0,
       },
       'test-user'
-    ).then((r) => (captured = r));
-    assert.equal(captured, undefined); // void return; no throw = success
+    );
+    // The owned stream's URL must have been stamped with its chain position:
+    // /api/v1/debrid/playback/{storeAuth}/{fallbackKey}/...
+    const stamped = new URL(winner.url!);
+    const fallbackKey = stamped.pathname.split('/')[6];
+    const decoded = decodeFallbackKey(fallbackKey);
+    assert.ok(decoded, 'owned url must carry a decodable fallback key');
+
+    // Read the chain back through the resolver the playback route uses.
+    const resolved = await getPlayChain(decoded, 'debrid');
+    assert.ok(resolved, 'chain must be resolvable after build');
+    const httpExternal = resolved!.fallbacks.find(
+      (a) => a.kind === 'external' && a.type === 'http'
+    );
+    assert.ok(httpExternal, 'external http target must be in the chain');
+    assert.equal(httpExternal.url, 'https://addon.example/mirror/file.mkv');
   });
 });

@@ -7,7 +7,7 @@ import {
 } from '../utils/index.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import { shouldProxyStream } from './proxifier.js';
-import { isExternalDebridFailover } from '../main/play-chain.js';
+import { isExternalFailoverTarget } from '../main/play-chain.js';
 import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
 import { arrayMerge } from '../parser/merge.js';
 
@@ -531,7 +531,7 @@ class StreamDeduplicator {
             kind: 'owned',
             proxied: shouldProxyStream(other, this.userData.proxy),
           };
-        } else if (includeExternal && isExternalDebridFailover(other)) {
+        } else if (includeExternal && isExternalFailoverTarget(other)) {
           let identity = other.url;
           try {
             const u = new URL(other.url);

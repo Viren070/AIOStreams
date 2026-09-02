@@ -132,7 +132,7 @@ function isOwnedPlayback(
  * `debrid` or `http` stream, not one of our own playback URLs, and live
  * on the source addon's own host (so probing only hits addon-owned endpoints).
  */
-export function isExternalDebridFailover(
+export function isExternalFailoverTarget(
   s: ParsedStream
 ): s is ParsedStream & { url: string } {
   if (
@@ -172,7 +172,7 @@ export async function buildPlayChain(
   const eligible = streams.filter(
     (s) =>
       isOwnedPlayback(s) ||
-      (opts.includeExternal && isExternalDebridFailover(s))
+      (opts.includeExternal && isExternalFailoverTarget(s))
   );
   if (eligible.length < 2) {
     logger.debug(
