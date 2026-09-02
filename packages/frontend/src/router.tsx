@@ -25,7 +25,7 @@ import {
   UsenetLibraryPage,
   UsenetStatsPage,
   UsenetProvidersPage,
-  UsenetSettingsPage,
+  UsenetSettingsMovedPage,
   CommunityLayout,
   CommunityPendingPage,
   CommunityPublishedPage,
@@ -331,19 +331,29 @@ const dashboardUsenetStatsRoute = createRoute({
   component: UsenetStatsPage,
 });
 
-const dashboardUsenetProvidersRoute = createRoute({
-  getParentRoute: () => dashboardUsenetRoute,
-  path: 'providers',
-  component: UsenetProvidersPage,
-});
-
+// Usenet settings live with every other setting now. This route stays a real
+// page (not a beforeLoad redirect) so it can appear as a section in the
+// usenet sidebar/mobile select and old deep links (and the command palette's
+// links to a field) land somewhere that visibly says it moved before
+// forwarding, rather than jumping silently.
 const dashboardUsenetSettingsRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'settings',
   validateSearch: (search: Record<string, unknown>): { field?: string } => ({
     field: optionalString(search.field),
   }),
-  component: UsenetSettingsPage,
+  component: () => {
+    const { field } = dashboardUsenetSettingsRoute.useSearch();
+    return <UsenetSettingsMovedPage field={field} />;
+  },
+});
+
+// Provider accounts keep their own page: the editor is a substantial thing in
+// its own right (add / test / speed-test / order), not a settings field.
+const dashboardUsenetProvidersRoute = createRoute({
+  getParentRoute: () => dashboardUsenetRoute,
+  path: 'providers',
+  component: UsenetProvidersPage,
 });
 
 const routeTree = rootRoute.addChildren([

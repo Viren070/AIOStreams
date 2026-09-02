@@ -1,0 +1,303 @@
+---
+title: Linked accounts, sharing and a faster usenet engine
+description: Push your addon to Stremio or AIOManager when your config changes, share formatters and templates, a new setup flow, and a usenet engine that seeks faster on less memory and CPU.
+date: 2026-08-29
+version: 2.34.0
+draft: true
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+{/* Screenshots go in packages/docs/public/changelog/v2.34/ and are linked as ![Alt](/changelog/v2.34/name.png). Only add the link once the file exists: a missing image fails the docs build. */}
+
+Another wide one. For everyone: you can now **link a Stremio account or an AIOManager
+instance** and have your addon pushed to it whenever a change needs a reinstall, and you can
+**share formatters and templates** with the other people on your instance, like theirs, and
+use them. The configure page got a new front door, a rebuilt setup wizard, and a formatter
+browser that finally treats your saved formatters as first-class.
+
+For self-hosters: another performance pass on the built-in usenet engine. 2.31 made the
+steady serve path allocation-free; this one goes after everything around it. Seeks start in
+a fraction of the time, password-protected archives no longer cost extra CPU, idle memory
+comes back down, and the process as a whole uses a good deal less memory from boot onwards.
+
+## For everyone
+
+### Linked accounts
+
+Some changes to a configuration change the manifest: the addon name, the catalogs it
+offers, a new variant. Stremio does not notice on its own, so until now every one of those
+meant copying the install URL, opening Stremio and reinstalling.
+
+On **Save/Install**, you can now link an account and let AIOStreams do that for you. Two
+platforms are supported:
+
+- **Stremio**, with your email and password or an auth key. The addon is installed into
+  your account's addon collection and updated there on every push; nothing else in the
+  collection is touched.
+- **AIOManager**, with the instance URL and your account API key. AIOStreams asks the
+  instance to reinstall the addon through its Hydra API.
+
+{/* Screenshot (optional): the Linked accounts card on Save/Install with one Stremio account linked, its push targets and the out-of-date dot */}
+
+Each linked account has its own **push targets**: the base configuration, any of your
+[variants](/changelog/v2.33), or several. One row is one addon, so a row with two variants
+combined installs as a single addon while two rows install as two. An out-of-date dot on the
+account tells you when the copy on the other side no longer matches what you have saved, and
+a push button sends it whenever you like.
+
+What happens on save is up to you. The new **Preferences** button on the same page holds
+two settings: how AIOStreams tells you about manifest changes (**always**, only
+**significant** ones, or **never**) and what to do with linked accounts when a saved
+change needs the update (**ask**, push **automatically**, or **never**). Both used to be
+per-browser "don't show again" toggles; they are now part of your configuration, so they
+follow you between devices.
+
+<Callout type="info">
+  Credentials are stored on the instance, encrypted. Unlinking a Stremio account signs out
+  only the session AIOStreams created for itself, never a key you pasted in. AIOManager
+  support uses its Hydra API, which at the time of writing is only in AIOManager's beta
+  builds.
+</Callout>
+
+### A new front door
+
+The About page is no longer a scrolling wall of GitHub releases. It opens on one action that
+follows the state of your configuration: **Get started** when you have nothing yet,
+**Continue** or **Install** when you do. Below it, a row of **featured setups** you can
+apply in a click, and a **What's new** row that answers "should I update?" in one line and
+links straight to the entry on this site. Browsing every release is a separate drawer.
+
+When the instance you use has been updated since your last visit, a short modal tells you
+what changed, with a link to the relevant changelog entry.
+
+### The setup wizard
+
+Applying a template used to be a chain of four separate modals. It is now **one**, with a
+step rail on desktop and a progress bar on mobile, so you can see how far along you are
+and go back without losing anything.
+
+{/* Screenshot or short video: the setup wizard on the "Which services do you use?" step, showing the step rail on the left */}
+
+1. **Set up AIOStreams**: use a ready-made setup, set it up yourself, or load an existing
+   configuration.
+2. **Choose a setup**: browse the templates available on the instance, by tag.
+3. **Which services do you use?**: pick your debrid or usenet services.
+4. **Options**: the template's own inputs. Advanced ones sit behind a disclosure instead of
+   depending on which mode you are in.
+5. **Credentials**: API keys for the services you picked.
+6. **Ready to apply**: a summary of the addons, services and credentials the setup adds,
+   and a **diff** of your current configuration against the result, so you know exactly
+   what applying it replaces before you do. Nothing is saved to your account until you save
+   on Save/Install.
+
+Templates can now carry several tags rather than one category, and the browser filters on
+them.
+
+### Formatters
+
+The formatter menu opens on a **browser**: a grid of cards, each with a live preview
+rendered from the sample in the preview panel, in three tabs. **Built-in** is what shipped
+with AIOStreams, **Saved** is yours, **Community** is everyone else's (more on that below).
+Previews render in the browser, so they are instant and change as you edit the sample.
+
+{/* Screenshot: the formatter browser, Saved tab, showing cards with mini previews and the Built-in / Saved / Community tabs */}
+
+Saved formatters are **edited in place**. Before, a saved formatter was something you loaded
+into the custom editor and saved back out as a copy under the same name. Now selecting one
+makes it the active formatter, the editor underneath edits it directly, and rename and
+delete are on the card. The picker at the top tells you which kind is active: a built-in,
+a customised built-in, one of your saved ones, or a one-off custom template.
+
+### Sharing formatters and templates
+
+Formatters and templates can be shared with everyone else on your instance.
+
+**Formatters.** The share button in the browser asks for a name, a description, an author
+and some tags, and submits the template you have open. Everyone's submissions appear in the
+**Community** tab, where you can like one and use it, which copies it into your saved
+formatters so you can edit it from there.
+
+**Templates.** The setup browser gains a **Community** source next to the instance's own
+templates, with a like button on each card. Sharing happens from **My templates**: share a
+template JSON you have built, or update a submission you made earlier by sharing one with
+the same name. Imported templates get a share icon on their card.
+
+Templates are uploaded **exactly as they are**. When one is built from your configuration,
+service credentials, API keys and addon passwords are replaced with placeholders, but
+variant scripts, addon URLs, regex patterns and any other free text go in as written, and
+the confirmation says so. Read through it for keys, tokens or personal details before you
+share.
+
+A few things to know:
+
+- Submissions are **held for review by default**. An admin approves them in the dashboard
+  before anyone sees them, unless the instance has opted into publishing immediately.
+- A community template is **not a trusted template** unless an admin marks it as one, so
+  its regex patterns and synced URLs are not whitelisted just because it is on the list.
+- Nothing ties a submission to you beyond a hash of your configuration, and likes are
+  counted by a hash of your address. A configuration has to be at least a day old before it
+  can share or like, and can submit ten items a day. Instances can change both.
+- Items from other instances (see [federation](#community-sharing) below) show where they
+  came from and cannot be liked here.
+
+### Smaller things
+
+- **Parallel groups have a "When a Condition Fails" setting.** With parallel fetching a
+  group can already have results by the time an earlier condition fails. **Stop** discards
+  it and everything after it as before; **Skip group and keep checking** drops just that
+  group and evaluates the rest; **Keep everything already finished** includes every group
+  that has finished, conditions or not. The [groups guide](/guides/groups#when-a-condition-fails)
+  has the details.
+- **`mediaInfoQuality`** tells you where a stream's media info came from: `probe` (read
+  from the file), `indexer` or `addon`. It is available as a formatter field and as a
+  stream expression function.
+- The **groups editor** is rebuilt on the same sortable rows the ranked lists use, so it
+  works on a phone, and a selection of many addons collapses to `+N more` instead of
+  growing the box.
+- **Editions** are shown in the Google Drive, LightGDrive and Prism formatters.
+- New parser tags: **MPEG-4** encode and **PCM** audio.
+- **USA TV Next** is available as a preset, and **Easynews++** subtitle languages are read
+  from its results.
+
+## For self-hosters
+
+### The usenet engine
+
+Another round of performance work, aimed at the things you notice: how quickly a seek
+starts, how much CPU playback costs, and how much memory the process holds on to once
+playback stops.
+
+The numbers are from the
+[usenet streaming benchmark](https://github.com/Viren070/usenet-benchmarks), which runs
+nine applications over the same corpus against a real provider at 20 connections each,
+comparing the pass from before this work with the one on 2.34.
+
+**Seeks and cold starts are much faster.** An archive-backed seek used to fetch dozens of
+articles before the first byte reached the player; it now fetches one. Seek to first byte
+went from 518 ms to **151 ms**, the worst seek on an entry from 723 ms to **284 ms**, a
+full 8 MiB seek read from 715 ms to **567 ms**, and a cold open from 203 ms to **97 ms**.
+AIOStreams was the fastest of the nine from pressing play to the first byte and to
+completing a seek. Read-ahead also grows with what the player has consumed instead of
+filling the whole window on every open, so a seek downloads about half the surplus bytes
+it used to.
+
+**Less CPU.** CPU per GiB delivered went from 5.6 s to **4.7 s**, second only to AltMount,
+and the draw is steadier. Seeking no longer causes a burst of CPU (a 2-core VPS used to
+show a 20 to 25% spike on each one), articles still downloading for a range the player has
+seeked away from are dropped instead of processed, and **password-protected archives now
+cost about the same to stream as unencrypted ones**, thanks to a small native decryption
+module. Posts with unusually large articles, some season packs among them, cost about a
+third of the CPU they did.
+
+**Idle memory comes back down.** The engine already released everything after playback,
+but Node would not return it to the system until its next garbage collection, which an
+idle process never triggers. It now collects after an idle engine is evicted. In a container
+with the stock image environment, memory after a stream fell from **418 MiB to 232 MiB**
+at idle. This needs `--expose-gc`, which the Docker image sets; see
+[Upgrading](#upgrading) for bare metal.
+
+**Prefetch segments is capped at 256.** Some instances ran 512 or 1024, which is 1.5 to
+3 GB of buffer per stream and a full refetch of it on every seek. See
+[Upgrading](#upgrading) if you had it higher.
+
+#### Resetting stats
+
+Provider and indexer statistics can be reset from the usenet **Stats** page: each row has
+a reset button, and **Reset all provider stats** / **Reset all indexer stats** cover the
+lot. Each reset takes a range, **all recorded history**, **just this hour**, the **last 24
+hours** or the **last 7 days**, so you can clear a bad night from a provider's record
+without losing its month. Providers you have removed from the configuration keep their
+history on the page, flagged as removed, until you reset it.
+
+### Less memory overall
+
+The process as a whole uses **roughly 200 MB less memory at boot** in our measurements,
+before a single stream is served. Most of it is heap Node reserved from host RAM and never
+used, which the Docker image and `pnpm start` now cap; the anime database, ID mappings and
+a couple of libraries were slimmed down too. Startup on a fresh database, where the anime
+database has to be built, went from 24 s to **10 s** in the benchmark harness.
+
+To watch it, **Dashboard → System** has a **memory graph**: the last five minutes of this
+process, broken down into heap, buffers and the rest, or the whole machine with this
+process marked on it.
+
+### Community sharing
+
+Everything under [sharing](#sharing-formatters-and-templates) is controlled from
+**Settings → Community**.
+
+- **Community formatters** (`COMMUNITY_FORMATTERS`) and **Community templates**
+  (`COMMUNITY_TEMPLATES`) each take **off**, **open** or **approval**. Both default to
+  **approval**: names, descriptions and tags are free text shown to everyone, and a template
+  can point addons at arbitrary hosts.
+- **Minimum account age** (`COMMUNITY_MIN_ACCOUNT_AGE`, one day) and **Max submissions per
+  day** (`COMMUNITY_MAX_SUBMISSIONS_PER_DAY`, ten) limit how cheaply someone can flood the
+  list or skew the likes. Setting the daily limit to 0 keeps the browser but closes
+  submissions.
+
+Moderation lives at **Dashboard → Community**. The **Review queue** shows pending
+submissions with a summary of what a template touches (its addons, variant scripts and
+regex), and each can be approved, approved **as trusted** (which whitelists its regex
+patterns and synced URLs like the instance's own templates), or rejected with a reason the
+submitter sees. **Published** lists everything live, with a trusted toggle, reset likes and
+delete; an update to an approved item waits as a draft while the live version stays up.
+**Blocks** holds the configurations and addresses you have barred from submitting or
+liking.
+
+**Federation** lets a self-hosted instance show what a public one has approved. Every
+instance serves its approved items at `/community/export.json` (**Public community
+export**, `COMMUNITY_PUBLIC_EXPORT`, on by default; turn it off if you would rather not
+be a source). Point **Remote community sources** (`COMMUNITY_REMOTE_SOURCES`) at one or
+more instance URLs and their items appear read-only in your browser, labelled with where
+they came from, refreshed on the **Remote community refresh interval**
+(`COMMUNITY_REMOTE_REFRESH_INTERVAL`, one day). Only URLs on public addresses are
+accepted.
+
+Two related settings arrived with this. The API's JSON body limit, which a large template
+or configuration could hit, is now **Settings → General → Max JSON request body**
+(`MAX_JSON_BODY_SIZE`, default 256 KiB, restart required), and creating a configuration
+has its own rate limit, `USER_CREATE_RATE_LIMIT_*`, ten per hour per address.
+
+### Linked account settings
+
+**Settings → Linked Accounts** has two switches. **Linked accounts**
+(`LINKED_ACCOUNTS_ENABLED`) turns the feature on or off for the instance; off hides it and
+refuses every request to it, keeping existing links but never using them. **Allow private
+linked account URLs** (`LINKED_ACCOUNTS_ALLOW_PRIVATE_URLS`) is for an AIOManager on a
+private or loopback address, such as `http://aiomanager:1610` on a Docker network. It is
+off by default because it lets anyone who can create a configuration make your server send
+requests to your internal network, so only enable it on a trusted instance. The
+`/api/v1/linked-accounts` endpoints have their own `LINKED_ACCOUNTS_API_RATE_LIMIT_*`.
+
+## Upgrading
+
+Nothing in this release changes URLs, breaks an installed addon or needs a migration. A
+few things are worth checking.
+
+**Prefetch segments above 256.** The setting is now capped. A stored value above the cap
+is reset to the default with a warning in the log; a dashboard save above it is a validation
+error; an environment variable above it is a startup error, like any other invalid value.
+
+**Bare-metal Node flags.** The Docker image now starts Node with
+`--max-semi-space-size=8 --expose-gc`. `pnpm start` includes the first. If you launch
+`node packages/server/dist/server` yourself and want the lower boot memory and the idle
+memory release, add both.
+
+**Building from source.** The native AES module in `packages/crypto` compiles with
+`node-gyp` using the same toolchain [yencode already needs](/getting-started/deployment#from-source).
+If the build fails it prints a warning and the engine falls back to Node's own crypto; the
+only thing you lose is the encrypted-archive CPU improvement. Docker users have nothing to
+do.
+
+**Sharing and linked accounts are on by default.** Sharing starts in approval mode, so
+nothing becomes visible without an admin, but if you want neither feature, set the
+Community modes to **off** and turn **Linked accounts** off.
+
+**The mode prompt is gone.** Existing visitors keep whichever of Simple or Advanced they
+already chose. New ones start in Simple and can switch on the About page.
+
+<Callout type="info">
+  Full commit-level history for this release is in the [GitHub
+  release](https://github.com/Viren070/AIOStreams/releases/tag/v2.34.0).
+</Callout>

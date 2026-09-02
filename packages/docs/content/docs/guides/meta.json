@@ -3,6 +3,7 @@
   "pages": [
     "groups",
     "usenet",
+    "sonarr-radarr",
     "release-blocklist",
     "scored-sorting",
     "seanime",

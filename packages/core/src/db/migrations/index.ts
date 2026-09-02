@@ -23,6 +23,7 @@ import { animeBuildSources } from './0022_anime_build_sources.js';
 import { linkedAccounts } from './0023_linked_accounts.js';
 import { community } from './0024_community.js';
 import { configSessions } from './0025_config_sessions.js';
+import { usenetLibraryArr } from './0026_usenet_library_arr.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -51,6 +52,7 @@ export const MIGRATIONS: readonly Migration[] = [
   linkedAccounts,
   community,
   configSessions,
+  usenetLibraryArr,
 ];
 
 export type { Migration } from './types.js';

@@ -221,6 +221,7 @@ export class StreamRegistry {
     return checkAdmission({
       username: input.username,
       targetKey: input.targetKey,
+      share: input.share,
       activeSessions,
       globalActiveSessions,
       userBytes: (usage.byUser.get(input.username) ?? 0) + liveUser,

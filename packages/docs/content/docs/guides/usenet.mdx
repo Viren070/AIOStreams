@@ -9,7 +9,7 @@ import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
 AIOStreams has first-class Usenet support: addons that search your indexers, and playback services — including a fully built-in NNTP streaming engine — that turn the results into streams on any device.
 
-This guide is organised as a journey: understand [how it works](#how-usenet-streaming-works), [pick a playback service](#1-pick-a-playback-service) and [set it up](#2-set-up-your-service), [add your indexers](#3-add-your-indexers), then [make playback resilient](#4-make-it-resilient-failover) and get familiar with [NZB grabs and indexer rules](#5-nzb-grabs-and-indexer-rules).
+This guide is organised as a journey: understand [how it works](#how-usenet-streaming-works), [pick a playback service](#1-pick-a-playback-service) and [set it up](#2-set-up-your-service), [add your indexers](#3-add-your-indexers), then [make playback resilient](#4-make-it-resilient-failover), get familiar with [NZB grabs and indexer rules](#5-nzb-grabs-and-indexer-rules), and optionally [wire it into Sonarr and Radarr](#6-using-it-with-sonarr-and-radarr).
 
 ## How Usenet Streaming Works
 
@@ -533,3 +533,9 @@ The dashboard has two settings (**Settings → HTTP**) that shape every outbound
 - **Addon proxy URL(s)** and **Addon proxy config** — route outbound requests through one or more HTTP proxies (e.g. a gluetun container for VPN routing). The config map uses the same key scheme as above, with `true`/`false` to enable/disable per key, or a 0-based index to pick a specific proxy from the list. Example: `[newznab]:true`.
 
 Both are also settable via environment variables (`REQUEST_HEADER_OVERRIDES`, `ADDON_PROXY`, `ADDON_PROXY_CONFIG`) — see the [environment variable reference](/configuration/environment-variables).
+
+## 6. Using It With Sonarr and Radarr
+
+Everything above is about streaming to a player. The built-in engine can also act as a **SABnzbd download client** for Sonarr and Radarr: they grab NZBs as usual, nothing is downloaded, and the arr imports a symlink that streams on demand. Your library keeps the arrs' automation — profiles, upgrades, renaming — at no disk cost, and a scheduled recheck replaces releases that get taken down later.
+
+See the [Sonarr / Radarr guide](/guides/sonarr-radarr) for the full setup, including a working Docker stack.

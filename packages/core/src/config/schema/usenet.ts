@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { byteSize, nonNegativeInt, positiveInt, seconds } from './helpers.js';
+import { parseTime } from '../../utils/time.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 const MB = 1000 * 1000;
@@ -39,8 +40,79 @@ export const PERFORMANCE_PROFILE_NAMES = [
 
 export type PerformanceProfile = (typeof PERFORMANCE_PROFILE_NAMES)[number];
 
-/** Hide a usenet field from the generic settings page (managed in the usenet tab). */
-const HIDDEN = { hidden: true } as const;
+/** Recheck cadence by NZB post age: max age -> interval, `*` for older. */
+export const RECHECK_DEFAULT_SCHEDULE: Record<string, string> = {
+  '1d': '1h',
+  '7d': '6h',
+  '30d': '1d',
+  '*': '30d',
+};
+
+function isDuration(value: string): boolean {
+  try {
+    return parseTime(value) > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Accepts the stored record shape or the env form `1d:1h, 7d:6h, *:7d`.
+ * Keys are maximum ages (or `*`); values are intervals or `never`.
+ */
+const recheckSchedule = z
+  .union([
+    z.record(z.string(), z.string()),
+    z.string().transform((value, ctx) => {
+      const trimmed = value.trim();
+      if (!trimmed) return { ...RECHECK_DEFAULT_SCHEDULE };
+      const out: Record<string, string> = {};
+      for (const pair of trimmed.split(',')) {
+        const [key, interval] = pair.split(':').map((s) => s.trim());
+        if (!key || !interval) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Invalid recheck schedule entry "${pair.trim()}". Expected age:interval, e.g. 7d:6h.`,
+          });
+          return z.NEVER;
+        }
+        out[key] = interval;
+      }
+      return out;
+    }),
+  ])
+  .superRefine((schedule, ctx) => {
+    for (const [key, interval] of Object.entries(schedule)) {
+      if (key !== '*' && !isDuration(key)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Invalid recheck age "${key}". Use a duration like 7d, or * for everything older.`,
+        });
+      }
+      if (interval !== 'never' && !isDuration(interval)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Invalid recheck interval "${interval}" for "${key}". Use a duration like 6h, or never.`,
+        });
+      }
+    }
+  });
+
+/** `HH:MM-HH:MM` in local time, or empty for "any hour". */
+const recheckWindow = z.string().refine(
+  (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return true;
+    const match = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec(trimmed);
+    if (!match) return false;
+    const [h1, m1, h2, m2] = match.slice(1).map(Number);
+    return h1 < 24 && h2 < 24 && m1 < 60 && m2 < 60;
+  },
+  {
+    message:
+      'Invalid recheck window. Use `HH:MM-HH:MM` (e.g. 02:00-08:00), or leave it empty.',
+  }
+);
 
 /**
  * Read-ahead ceiling: past ~2x the connection count it only buys buffer
@@ -126,7 +198,6 @@ export const usenetSchema = {
     env: 'USENET_PERFORMANCE_PROFILE',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   maxConcurrentDownloads: {
     schema: nonNegativeInt,
@@ -141,7 +212,6 @@ export const usenetSchema = {
     env: ['USENET_MAX_CONCURRENT_DOWNLOADS', 'USENET_MAX_DOWNLOAD_CONNECTIONS'],
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   maxConcurrentInspects: {
     schema: nonNegativeInt,
@@ -154,7 +224,6 @@ export const usenetSchema = {
     env: 'USENET_MAX_CONCURRENT_INSPECTS',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   prefetchSegments: {
     schema: positiveInt.refine((n) => n <= MAX_PREFETCH_SEGMENTS, {
@@ -171,7 +240,7 @@ export const usenetSchema = {
     env: 'USENET_PREFETCH_SEGMENTS',
     requiresRestart: false,
     secret: false,
-    ui: { ...HIDDEN, min: 1, max: MAX_PREFETCH_SEGMENTS },
+    ui: { min: 1, max: MAX_PREFETCH_SEGMENTS },
   },
   streamingPriority: {
     schema: unitInterval,
@@ -185,7 +254,7 @@ export const usenetSchema = {
     env: 'USENET_STREAMING_PRIORITY',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'number' as const, min: 0.5, max: 1, hidden: true, step: 0.01 },
+    ui: { kind: 'number' as const, min: 0.5, max: 1, step: 0.01 },
   },
   segmentDiskCacheBytes: {
     schema: byteSize,
@@ -198,7 +267,6 @@ export const usenetSchema = {
     env: 'USENET_SEGMENT_DISK_CACHE_BYTES',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   segmentTimeout: {
     schema: seconds,
@@ -211,7 +279,7 @@ export const usenetSchema = {
     env: 'USENET_SEGMENT_TIMEOUT',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   segmentStallTimeout: {
     schema: seconds,
@@ -224,7 +292,7 @@ export const usenetSchema = {
     env: 'USENET_SEGMENT_STALL_TIMEOUT',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   dialTimeout: {
     schema: seconds,
@@ -235,7 +303,7 @@ export const usenetSchema = {
     env: 'USENET_DIAL_TIMEOUT',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   idleConnection: {
     schema: seconds,
@@ -247,7 +315,7 @@ export const usenetSchema = {
     env: 'USENET_IDLE_CONNECTION',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   streamIdleTimeout: {
     schema: seconds,
@@ -261,7 +329,7 @@ export const usenetSchema = {
     env: 'USENET_STREAM_IDLE_TIMEOUT',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   circuitBreakerThreshold: {
     schema: positiveInt,
@@ -273,7 +341,6 @@ export const usenetSchema = {
     env: 'USENET_CIRCUIT_BREAKER_THRESHOLD',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   circuitBreakerCooldown: {
     schema: seconds,
@@ -284,7 +351,7 @@ export const usenetSchema = {
     env: 'USENET_CIRCUIT_BREAKER_COOLDOWN',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   lazyRarResolution: {
     schema: z.boolean(),
@@ -298,7 +365,6 @@ export const usenetSchema = {
     env: 'USENET_LAZY_RAR_RESOLUTION',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   strictArchiveMembership: {
     schema: z.boolean(),
@@ -313,7 +379,6 @@ export const usenetSchema = {
     env: 'USENET_STRICT_ARCHIVE_MEMBERSHIP',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   verifyMode: {
     schema: z.enum(['none', 'census']),
@@ -329,7 +394,6 @@ export const usenetSchema = {
     env: 'USENET_VERIFY_MODE',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   verifyBudgetMs: {
     schema: nonNegativeInt,
@@ -344,7 +408,6 @@ export const usenetSchema = {
     env: 'USENET_VERIFY_BUDGET_MS',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   censusShadowConcurrency: {
     schema: positiveInt,
@@ -358,7 +421,6 @@ export const usenetSchema = {
     env: 'USENET_CENSUS_SHADOW_CONCURRENCY',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   censusMaxLifetime: {
     schema: seconds,
@@ -371,7 +433,7 @@ export const usenetSchema = {
     env: 'USENET_CENSUS_MAX_LIFETIME',
     requiresRestart: false,
     secret: false,
-    ui: { kind: 'duration' as const, hidden: true },
+    ui: { kind: 'duration' as const },
   },
   damagePolicy: {
     schema: z.enum(['tolerant', 'strict']),
@@ -389,7 +451,6 @@ export const usenetSchema = {
     env: 'USENET_DAMAGE_POLICY',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   matroskaHoleFill: {
     schema: z.boolean(),
@@ -402,7 +463,6 @@ export const usenetSchema = {
     env: 'USENET_MATROSKA_HOLE_FILL',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   maxNzbSize: {
     schema: byteSize,
@@ -415,7 +475,6 @@ export const usenetSchema = {
     env: 'USENET_MAX_NZB_SIZE',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
   },
   sabnzbdApiEnabled: {
     schema: z.boolean(),
@@ -429,6 +488,139 @@ export const usenetSchema = {
     env: 'USENET_SABNZBD_API_ENABLED',
     requiresRestart: false,
     secret: false,
-    ui: HIDDEN,
+  },
+  verifyContent: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Verify file contents',
+    description:
+      'After the article audit passes, read the first few kilobytes of each ' +
+      'video file and check it really is the container its name claims. The ' +
+      'audit only proves the articles exist — this catches a release that ' +
+      'was posted or assembled wrong. Costs about one article per file, at ' +
+      'import and on every recheck.',
+    env: 'USENET_VERIFY_CONTENT',
+    requiresRestart: false,
+    secret: false,
+  },
+  arrWaitForCensus: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Hold SABnzbd hand-off for the census',
+    description:
+      'Report a download added through the SABnzbd API as still ' +
+      'downloading until its background article census has finished, so ' +
+      'the client never imports a release the audit is about to fail. Off ' +
+      '(the default) hands the release over as soon as the quick inspect ' +
+      'passes; a failure the census finds later is repaired through the ' +
+      'linked Sonarr/Radarr instance. This covers everything that adds ' +
+      'through the API — Sonarr, Radarr, NZBHydra, an interactive grab — ' +
+      'not only linked instances.',
+    env: 'USENET_ARR_WAIT_FOR_CENSUS',
+    requiresRestart: false,
+    secret: false,
+  },
+  arrCensusHoldTimeout: {
+    schema: seconds,
+    default: 60,
+    label: 'Census hold timeout',
+    description:
+      'The longest the census hold keeps a SABnzbd-API download reported ' +
+      'as downloading. Past this the release is handed over while the check ' +
+      'finishes in the background; a failure found later is repaired through ' +
+      'the linked Sonarr/Radarr instance instead. Only applies when an ' +
+      'instance is linked — without one there is no repair path, so the ' +
+      'hold lasts the whole census however the download was added.',
+    env: 'USENET_ARR_CENSUS_HOLD_TIMEOUT',
+    requiresRestart: false,
+    secret: false,
+    ui: { kind: 'duration' as const },
+  },
+  recheck: {
+    scope: {
+      schema: z.enum(['off', 'sabnzbd', 'all']),
+      default: 'off',
+      label: 'Library recheck',
+      description:
+        'Periodically re-verify library entries against your providers, so ' +
+        'a release taken down after it was added is marked failed (and, when ' +
+        'a linked Sonarr/Radarr grabbed it, replaced) instead of staying ' +
+        'playable on paper. `sabnzbd` rechecks only entries added through ' +
+        'the SABnzbd API, whatever added them; `all` also covers entries ' +
+        'added by playback and from the dashboard.',
+      env: 'USENET_RECHECK_SCOPE',
+      requiresRestart: false,
+      secret: false,
+    },
+    schedule: {
+      schema: recheckSchedule,
+      default: RECHECK_DEFAULT_SCHEDULE,
+      label: 'Recheck schedule',
+      description:
+        'How often to recheck, by NZB post age. Each key is a maximum age ' +
+        'and its value the interval for entries up to that age; `*` covers ' +
+        'everything older. Use `never` to stop rechecking a band. New posts ' +
+        'are the ones that get taken down, so they deserve the shortest ' +
+        'intervals. Env form: `1d:1h, 7d:6h, 30d:1d, *:30d`.',
+      env: 'USENET_RECHECK_SCHEDULE',
+      requiresRestart: false,
+      secret: false,
+      ui: { kind: 'map', mapValueKind: 'string' },
+    },
+    depth: {
+      schema: z.enum(['sample', 'full']),
+      default: 'sample',
+      label: 'Recheck depth',
+      description:
+        '`sample` checks a spread of articles (see the sample size) and only ' +
+        'audits the whole release when it finds something missing; `full` ' +
+        'audits every article on every recheck.',
+      env: 'USENET_RECHECK_DEPTH',
+      requiresRestart: false,
+      secret: false,
+    },
+    sampleSegments: {
+      schema: positiveInt,
+      default: 64,
+      label: 'Recheck sample size',
+      description:
+        'Articles probed per entry in `sample` depth. A takedown removes the ' +
+        'whole post, so a few dozen is plenty; raise it to catch partial ' +
+        'damage sooner.',
+      env: 'USENET_RECHECK_SAMPLE_SEGMENTS',
+      requiresRestart: false,
+      secret: false,
+    },
+    concurrency: {
+      schema: positiveInt,
+      default: 2,
+      label: 'Recheck concurrency',
+      description: 'Entries rechecked at the same time.',
+      env: 'USENET_RECHECK_CONCURRENCY',
+      requiresRestart: false,
+      secret: false,
+    },
+    batchSize: {
+      schema: positiveInt,
+      default: 20,
+      label: 'Recheck batch size',
+      description:
+        'Entries picked up per run of the recheck task (every 5 minutes).',
+      env: 'USENET_RECHECK_BATCH_SIZE',
+      requiresRestart: false,
+      secret: false,
+    },
+    window: {
+      schema: recheckWindow,
+      default: '',
+      label: 'Recheck hours',
+      description:
+        'Only recheck during these hours, as `HH:MM-HH:MM` in the server’s ' +
+        'local time. A range that wraps past midnight (`22:00-06:00`) is ' +
+        'fine. Leave empty to recheck at any hour.',
+      env: 'USENET_RECHECK_WINDOW',
+      requiresRestart: false,
+      secret: false,
+    },
   },
 } as const satisfies RuntimeConfigSection;

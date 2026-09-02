@@ -160,10 +160,13 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
       controlledValue ?? defaultValue ?? [0]
     );
 
-    const handleOnValueChange = React.useCallback((value: number[]) => {
-      _setValue(value);
-      onValueChange?.(value);
-    }, []);
+    const handleOnValueChange = React.useCallback(
+      (value: number[]) => {
+        _setValue(value);
+        onValueChange?.(value);
+      },
+      [onValueChange]
+    );
 
     React.useEffect(() => {
       if (!defaultValue || !isFirst.current) {

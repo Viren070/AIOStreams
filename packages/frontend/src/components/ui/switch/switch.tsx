@@ -144,10 +144,13 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       controlledValue ?? defaultValue ?? false
     );
 
-    const handleOnValueChange = React.useCallback((value: boolean) => {
-      _setValue(value);
-      onValueChange?.(value);
-    }, []);
+    const handleOnValueChange = React.useCallback(
+      (value: boolean) => {
+        _setValue(value);
+        onValueChange?.(value);
+      },
+      [onValueChange]
+    );
 
     React.useEffect(() => {
       if (!defaultValue || !isFirst.current) {

@@ -1,0 +1,577 @@
+---
+title: Sonarr / Radarr
+description: Use the built-in Usenet engine as a download client, so the arrs build a library that streams instead of downloads.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+AIOStreams can act as a **SABnzbd download client** for Sonarr and Radarr. They grab NZBs as usual, but nothing is downloaded: AIOStreams inspects the release, exposes it as a file, and the arr imports a symlink into your library. Plex, Jellyfin or Emby then play it, and the bytes are streamed from Usenet on demand.
+
+What you get out of it:
+
+- A library that costs no disk space and appears the moment a grab is verified.
+- The arr's own automation intact — profiles, upgrades, renaming, monitoring.
+- A [library recheck](#keeping-the-library-honest) that notices when a release is taken down later, and asks the arr for a replacement.
+
+## Before you start
+
+You need three things already working. This guide only connects them.
+
+1. **The built-in Usenet engine**, with at least one provider — **Settings → Usenet**.
+2. **Sonarr or Radarr set up as normal**, with indexers and a quality profile — [Sonarr quick start](https://wiki.servarr.com/sonarr/quick-start-guide), [Radarr quick start](https://wiki.servarr.com/radarr/quick-start-guide). AIOStreams replaces the download client, nothing else.
+3. **A Linux host, if you want AIOStreams to do the mounting itself.** Otherwise any platform that can run rclone.
+
+<Callout type="warn">
+  This is the most involved setup in AIOStreams — budget half an hour. Almost
+  every problem is the same problem: the mount is not at the same absolute path
+  in every container.
+</Callout>
+
+## How the pieces fit
+
+```
+Sonarr/Radarr ──grab──▶ AIOStreams (SABnzbd API) ──▶ inspects the NZB
+      │                                                     │
+      │                                            exposes it as files
+      │                                                     ▼
+      └──imports a symlink from──▶   the mount   ◀── FUSE / NFS / rclone
+                                         │
+                           Plex/Jellyfin read the symlink,
+                        AIOStreams streams the bytes on demand
+```
+
+Three things have to agree:
+
+1. **The arr talks to AIOStreams** over the SABnzbd API.
+2. **The library is mounted** as a real filesystem somewhere — the arrs cannot import from a URL.
+3. **Everyone sees that mount at the same absolute path** — the arr, AIOStreams and your media server. This is the step that goes wrong.
+
+## Setting it up
+
+<Steps>
+
+<Step>
+
+### Create the download-client credential
+
+The arrs authenticate as an `AIOSTREAMS_AUTH` user. If you have one already, use it — otherwise add one:
+
+```bash
+AIOSTREAMS_AUTH=arr:a-long-random-password
+```
+
+That is the whole step. A user with no permissions listed against it has all of them, so there is nothing else to set.
+
+<Callout type="info">
+  Only if you restrict permissions with `AIOSTREAMS_AUTH_PERMISSIONS`: this user
+  needs `sabnzbd`, plus `webdav` if you mount with rclone (`arr=sabnzbd|webdav`).
+  The FUSE and NFS mounts do not authenticate per user and need neither.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Mount the library
+
+Pick one. They expose the same tree and the arrs cannot tell them apart — they differ in what has to be installed and how quickly new downloads appear.
+
+| Mount               | Best when                                        | Cost                                            |
+| ------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| **FUSE**            | Linux host, everything in one Docker stack       | Needs `SYS_ADMIN` + `/dev/fuse`, Linux only     |
+| **NFS**             | Mounting from another Linux machine              | Linux clients only, listings refresh on a timer |
+| **rclone + WebDAV** | Windows or macOS, or rclone already in the stack | An extra container and `rclone.conf`            |
+
+Everything below is set on the **Shares** tab of the dashboard. Each setting names its environment variable in brackets, for anyone who would rather pin it in their deployment — see the [note on that](#a-full-docker-setup) before you do.
+
+<Tabs items={['FUSE (recommended)', 'NFS', 'rclone + WebDAV']}>
+<Tab value="FUSE (recommended)">
+
+AIOStreams mounts the library itself, at a path you choose. Real symlinks, no sidecar, no `rclone.conf`, and a finished download appears the moment it is imported — AIOStreams tells the kernel what changed instead of waiting for a cache to expire.
+
+| Setting                                                     | Value                                    |
+| ----------------------------------------------------------- | ---------------------------------------- |
+| **Shares → Mount the library here** (`SHARES_FUSE_ENABLED`) | on                                       |
+| **Shares → Mount path** (`SHARES_FUSE_MOUNT_PATH`)          | `/mnt/aiostreams`                        |
+| **Shares → Allow other users** (`SHARES_FUSE_ALLOW_OTHER`)  | on, whenever the arrs run as another uid |
+
+The container also needs mount privileges, which are Docker-level and have to be in your compose file — `cap_add: SYS_ADMIN`, `devices: /dev/fuse`, and the mount's parent directory bound `rshared`. The [FUSE stack below](#a-full-docker-setup) has all of it wired up.
+
+**Settings → Shares** then shows a mount status panel: mounted, or exactly what is missing (`/dev/fuse`, `SYS_ADMIN`, a stale mountpoint from a crash), with a button to mount or unmount without restarting. **Connect** on the same tab generates the compose fragment with your own paths.
+
+<Callout type="info">
+  FUSE is Linux only. On Windows or macOS, leave it off and use the rclone tab,
+  or mount the NFS export from a Linux machine.
+</Callout>
+
+<Callout type="warn">
+  **Docker Desktop (Windows/macOS, WSL2 backend) refuses `rshared` binds for
+  normal paths** — only paths under `/mnt/wsl` (a shared tmpfs inside the WSL
+  VM) accept it. There, bind `/mnt/wsl/aiostreams:/mnt:rshared` instead of
+  `/mnt:/mnt:rshared`, and give every consumer the same bind with `rslave`. The
+  stacks below work as written on a native Linux host.
+</Callout>
+
+</Tab>
+<Tab value="NFS">
+
+AIOStreams exports the same tree over NFSv4, which a Linux kernel mounts natively: no rclone container, no `rclone.conf`, and the share's links arrive as real symlinks, so there is no `--links` to forget.
+
+| Setting                                                     | Value                       |
+| ----------------------------------------------------------- | --------------------------- |
+| **Shares → NFS server** (`SHARES_NFS_ENABLED`)              | on                          |
+| **Shares → Allowed clients** (`SHARES_NFS_ALLOWED_CLIENTS`) | private networks by default |
+
+Publish port 2049 from the AIOStreams container (`ports: - 2049:2049`), then mount it from the machine that needs it:
+
+```bash
+mount -t nfs4 -o vers=4.0,ro aiostreams:/ /mnt/aiostreams
+```
+
+<Callout type="warn">
+  **NFSv4 has no login of its own.** **Allowed clients** is the entire access
+  control, so keep port 2049 off the public internet.
+</Callout>
+
+The same propagation rule applies: mount on the host, or in one container with `SYS_ADMIN`, using `rshared`, and give the other containers `rslave`. Windows cannot mount an NFSv4 export, so this is a Linux-host option.
+
+New downloads appear when the client's attribute cache expires — around 30 seconds by default, rather than instantly.
+
+</Tab>
+<Tab value="rclone + WebDAV">
+
+rclone turns the WebDAV share into a filesystem. The option to use on Windows and macOS, or when rclone is already part of your stack.
+
+| Setting                                              | Value |
+| ---------------------------------------------------- | ----- |
+| **Shares → WebDAV server** (`SHARES_WEBDAV_ENABLED`) | on    |
+
+Nothing else in AIOStreams: rclone runs outside it and reads the share over HTTP, using the same `AIOSTREAMS_AUTH` credential as the download client. **Settings → Shares → Connect** generates the commands below filled in with your own URL and paths.
+
+Running rclone yourself:
+
+```bash
+rclone config create aiostreams webdav \
+  url=https://your-aiostreams-instance/webdav \
+  vendor=other \
+  user=arr \
+  pass="$(rclone obscure a-long-random-password)"
+```
+
+```bash
+rclone mount aiostreams: /mnt/aiostreams \
+  --links \
+  --read-only \
+  --dir-cache-time 20s \
+  --vfs-cache-mode off \
+  --allow-other
+```
+
+Running it as a container instead is the [rclone stack below](#a-full-docker-setup) — same flags, written as a compose service.
+
+<Callout type="warn">
+  **`--links` is not optional.** It turns the `.rclonelink` files the share
+  serves into real symlinks. Without it the arrs import small text files and
+  your library fills with unplayable stubs. Needs rclone 1.70.3 or newer.
+</Callout>
+
+The other flags: `--dir-cache-time 20s` keeps new downloads appearing quickly, `--vfs-cache-mode off` avoids caching data you are streaming anyway, and `--allow-other` lets the other containers read the mount.
+
+<Callout type="info">
+  If you run rclone with `--rc`, set **Shares → rclone remote control URL**
+  (`SHARES_RCLONE_RC_URL`) and AIOStreams will tell it to refresh the moment the
+  library changes, instead of waiting for `--dir-cache-time`.
+</Callout>
+
+</Tab>
+</Tabs>
+
+<Callout type="warn">
+  **If you later switch mount mechanism, keep the mount path identical.**
+  Imported symlinks point at the path that existed at import time; move the
+  mount and they dangle, and a media-server rescan drops those episodes. They
+  heal as soon as the mount is back at the old path — it costs a rescan, not a
+  re-import.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Tell AIOStreams where the mount is
+
+**Settings → Sonarr / Radarr → Mount directory** (`ARR_MOUNT_DIR`): the absolute path at which _the arrs_ see the mount, e.g. `/mnt/aiostreams`.
+
+This is reported to the arr as the completed-download folder and used as the target of every symlink, so it must be the same path inside every container. Leave it empty and grabs still work, but imports cannot.
+
+<Callout type="info">
+  With the FUSE mount this is usually the same value as the mount path, and the
+  status panel warns if they differ. They are deliberately separate settings:
+  mount propagation can put the mount at a different path inside another
+  container, and this is the path as _the arr_ sees it.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Add the download client
+
+In Sonarr or Radarr: **Settings → Download Clients → + → SABnzbd**.
+
+| Field       | Value                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------- |
+| Host / Port | your AIOStreams host and port                                                         |
+| URL Base    | `/api/v1/sabnzbd`                                                                     |
+| API Key     | `arr:a-long-random-password` (your `AIOSTREAMS_AUTH` credential, `username:password`) |
+| Category    | `tv` for Sonarr, `movies` for Radarr                                                  |
+| Use SSL     | on if AIOStreams is behind HTTPS                                                      |
+
+Press **Test**. A green tick means the API, the category and the paths all line up.
+
+<Callout type="info">
+  Leave the arr's Username and Password fields empty — the API Key field is the
+  credential.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Point AIOStreams back at the arrs
+
+So far the arrs know about AIOStreams. This is the other direction, and it is what makes the library self-maintaining.
+
+**Settings → Sonarr / Radarr → Sonarr / Radarr instances** (`ARR_INSTANCES`): add one row per arr, with its URL as AIOStreams sees it (e.g. `http://sonarr:8989`) and its API key from the arr's **Settings → General**.
+
+With an instance linked, AIOStreams can:
+
+- **Nudge the arr** the moment a grab is ready, instead of the arr waiting for its next scheduled check. This is the difference between an import landing in seconds and in a minute or two.
+- **[Replace dead releases](#replacing-dead-releases)** — remove the file record and mark the grab failed, so the arr blocklists it and searches again.
+- **[Clear stuck queue items](#cleaning-up-stuck-imports)**, if you turn that on.
+
+<Callout type="warn">
+  Without a linked instance a dead release can still be detected, but nothing
+  can act on it — there is no way to tell the arr. AIOStreams logs a warning at
+  startup if it finds itself in that position.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Check the two path rules
+
+Almost every failed import comes down to one of these.
+
+1. **The arr's root folder must be outside the mount.** The mount is read-only; the library it imports _into_ is ordinary disk. `/mnt/aiostreams` is the source, `/library` (or wherever) is the destination.
+2. **The mount is at the same absolute path everywhere.** If the arr's container sees `/mnt/aiostreams` and AIOStreams was told `/mnt/aio`, the symlinks point at nothing. If they genuinely cannot match, use the arr's **Remote Path Mapping** to translate.
+
+</Step>
+
+</Steps>
+
+## A full Docker setup
+
+Starting from nothing, these are complete working stacks: AIOStreams, Sonarr and a media server sharing one mount. Pick the one matching the mount you chose above.
+
+<Callout type="info">
+  None of these set the mount options as environment variables, because they are
+  runtime settings and belong in the dashboard. Setting the matching variable is
+  allowed but **locks** it: the field goes read-only in the UI until you remove
+  the variable again. Use that only when you want a value pinned by your
+  deployment.
+</Callout>
+
+<Tabs items={['FUSE (recommended)', 'rclone sidecar']}>
+<Tab value="FUSE (recommended)">
+
+```yaml title="docker-compose.yml"
+services:
+  aiostreams:
+    image: ghcr.io/viren070/aiostreams:latest
+    container_name: aiostreams
+    environment:
+      - SECRET_KEY=${SECRET_KEY} # openssl rand -hex 32
+      - BASE_URL=https://aiostreams.example.com
+      - AIOSTREAMS_AUTH=arr:${ARR_PASSWORD}
+    volumes:
+      - ./aiostreams:/app/data
+      # rshared is what makes the mount visible to the other containers
+      - /mnt:/mnt:rshared
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    security_opt:
+      - apparmor:unconfined
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./sonarr:/config
+      - /library:/library # where imported episodes go
+      - /mnt:/mnt:rslave # the mount, at the same path AIOStreams was told
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ./jellyfin:/config
+      - /library:/library
+      - /mnt:/mnt:rslave # needed too: it follows the symlinks into the mount
+    ports:
+      - 8096:8096
+    restart: unless-stopped
+```
+
+</Tab>
+<Tab value="rclone sidecar">
+
+```yaml title="docker-compose.yml"
+services:
+  aiostreams:
+    image: ghcr.io/viren070/aiostreams:latest
+    container_name: aiostreams
+    environment:
+      - SECRET_KEY=${SECRET_KEY} # openssl rand -hex 32
+      - BASE_URL=https://aiostreams.example.com
+      - AIOSTREAMS_AUTH=arr:${ARR_PASSWORD}
+    volumes:
+      - ./aiostreams:/app/data
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+
+  rclone:
+    image: rclone/rclone:latest
+    container_name: rclone
+    command: >
+      mount aiostreams: /mnt/aiostreams
+        --links
+        --read-only
+        --dir-cache-time 20s
+        --vfs-cache-mode off
+        --allow-other
+        --uid 1000 --gid 1000
+    volumes:
+      - ./rclone.conf:/config/rclone/rclone.conf
+      # rshared is what makes the mount visible to the other containers
+      - /mnt:/mnt:rshared
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    security_opt:
+      - apparmor:unconfined
+    depends_on:
+      - aiostreams
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./sonarr:/config
+      - /library:/library # where imported episodes go
+      - /mnt:/mnt:rslave # the mount, at the same path AIOStreams was told
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ./jellyfin:/config
+      - /library:/library
+      - /mnt:/mnt:rslave # needed too: it follows the symlinks into the mount
+    ports:
+      - 8096:8096
+    restart: unless-stopped
+```
+
+```ini title="rclone.conf"
+[aiostreams]
+type = webdav
+url = https://aiostreams.example.com/webdav
+vendor = other
+user = arr
+pass = <output of: rclone obscure YOUR_PASSWORD>
+```
+
+</Tab>
+</Tabs>
+
+The parts that matter, whichever you picked:
+
+- **`rshared` on whichever container owns the mount, `rslave` on everything else.** Without shared mount propagation the other containers see an empty directory where the mount should be. On Docker Desktop (WSL2 backend) only paths under `/mnt/wsl` accept `rshared` — use `/mnt/wsl/aiostreams:/mnt:rshared` there.
+- **`SYS_ADMIN` + `/dev/fuse`** are what let anything mount at all.
+- **Your media server needs the mount too.** It follows the symlinks the arr wrote, and the target lives inside `/mnt/aiostreams`.
+- **Point the media server's libraries at `/library`, not at the mount.** The arr library scans in seconds and every item is real; the raw `content/` tree is laid out as the NZBs were, so a scanner turns a single release with thousands of files into thousands of garbage entries, slowly.
+
+## Import modes
+
+**Settings → Sonarr / Radarr → Import mode** decides what the arr actually imports:
+
+| Mode                | Leaf                               | Use when                                                                           |
+| ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `symlink` (default) | a symlink into `by-id/`            | Almost always. Import is instant and costs no disk.                                |
+| `strm`              | `<file>.strm` holding a stream URL | Jellyfin or Emby with no mount at all.                                             |
+| `content`           | the media bytes                    | Nothing else works. **The arr copies the whole release through Usenet on import.** |
+
+Over rclone the symlink is served as a `.rclonelink` file and materialised by `--links`; over FUSE and NFS it is a real symlink. The arrs treat both the same.
+
+## What the arr sees
+
+The share has three trees, all read-only. Paths are shown as WebDAV URLs; under a mount they are the same tree from `usenet/` down.
+
+| Path                                             | What it is                                                     |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| `/webdav/usenet/completed/<category>/<release>/` | What the arrs import from. One folder per grab, flat.          |
+| `/webdav/usenet/content/<category>/<release>/`   | Everything in your library to browse, laid out as the NZB was. |
+| `/webdav/usenet/by-id/<hash>/<index>/<file>`     | The stable address every symlink points at. Never changes.     |
+
+### When the arr removes a download
+
+Importing a symlink means creating it at the destination and unlinking the source, so the arr deletes files out of `completed/` as it goes. AIOStreams treats that as "the arr has taken this file", not "delete the release": the entry disappears from the completed folder and the client's history, but stays under `by-id/`, so the symlinks already in your library keep working.
+
+Two harmless things you may notice: `completed/` lists companion files (`.nfo` and the like) beside the media — the arrs simply ignore them. And a release with a single file retires its job folder the moment that file is taken, so the arr's follow-up "delete data" logs a _directory not found_ warning; the import has already succeeded by then.
+
+Nothing is ever deleted from your library by an import. To remove a release for real, delete it in the AIOStreams dashboard.
+
+## Keeping the library honest
+
+A release that was fine when it was grabbed can be taken down weeks later. Nothing notices on its own: the arr believes the episode is in hand, and the failure only surfaces when someone presses play.
+
+**Settings → Usenet → Library recheck** re-verifies entries against your providers on a schedule keyed to how old the post is — new posts are the ones that vanish, old survivors rarely change.
+
+| Setting           | What it does                                                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Scope**         | `off`, `sabnzbd` (only entries added through the SABnzbd API), or `all` (everything, including playback)                    |
+| **Schedule**      | Interval per post-age band. Default `1d:1h, 7d:6h, 30d:1d, *:30d`                                                           |
+| **Depth**         | `sample` probes a spread of articles and escalates to a full audit if any are missing; `full` audits everything, every time |
+| **Recheck hours** | Optional `HH:MM-HH:MM` window, so probes stay out of your evening                                                           |
+
+A dead release is marked failed, which stops it being offered as a stream. For a release an arr grabbed, AIOStreams then goes further.
+
+### Replacing dead releases
+
+When **Settings → Sonarr / Radarr → Repair automatically** (`ARR_AUTO_REPAIR`) is on (the default), a dead release is handed back to the [linked arr](#point-aiostreams-back-at-the-arrs) that grabbed it:
+
+1. The file record the import produced is deleted — the arr forgets a corpse.
+2. The grab is marked failed, so the arr blocklists that release.
+3. The arr searches again, if its own **Redownload Failed** setting is on. (Turn on **Search after repair** if it is not.)
+
+**Repair attempts per item** (default 3) stops a title whose releases all come from one dead poster cycling forever: at the limit the release is blocklisted without another search and the item is unmonitored, so the arr leaves it alone until you look at it. The count resets once something imports and stays healthy.
+
+Turn **Repair automatically** off to keep the detection without the action — entries are still marked failed and shown in the library, and each one has a **Retry repair** button.
+
+One quiet corner of this loop: when the arr grabs a release AIOStreams already knows is dead (blocklisted), the add is refused up front — and that refusal is **invisible in the arr's UI**. The arr logs a warning (`Couldn't add release to download queue`) and drops it; there is no queue entry and no history event. The arr moves on to its next candidate, which is the point, but if a grab seems to have vanished, that log line is where it went.
+
+### Verifying contents
+
+**Settings → Usenet → Verify file contents** (off by default) reads the first few kilobytes of each video file and checks it is really the container its name claims. The article audit only proves the segments exist; this catches a release that was posted or assembled wrong. It costs about one article per file.
+
+## Cleaning up stuck imports
+
+Sometimes the arr refuses an import for its own reasons — a pack missing an episode, a title it cannot match, a file it will not treat as video. The download sits in its queue indefinitely, and nothing in AIOStreams sees it.
+
+**Settings → Sonarr / Radarr → Clean up stuck queue items** (off by default) watches the queues of your configured instances and acts on the reason the arr gave:
+
+| Action        | What happens                                      |
+| ------------- | ------------------------------------------------- |
+| **Replace**   | Blocklist the release and search for another      |
+| **Blocklist** | Blocklist it, but do not search again             |
+| **Import**    | Push the import through manually                  |
+| **Remove**    | Clear the queue entry and leave the release alone |
+
+The reasons and their default actions are listed under the toggle; you choose whether each is acted on and which action it takes. **Import** submits the files with the episode or movie the arr itself pre-filled, the same selection Interactive Import would show you, so it is the default for reasons where the files are fine and the arr only wants confirmation: a title it could not match, or a file name that disagrees with the release name about which episode it is. An item must stay stuck for the grace period (default 5 minutes) before anything happens, so a warning the arr clears by itself is left alone. **Only downloads AIOStreams handed over are ever touched** — another download client's queue items are never modified.
+
+This reads the arrs' queues, so it needs the [linked instances](#point-aiostreams-back-at-the-arrs) from the setup steps.
+
+## Using AIOStreams as an indexer
+
+<Callout type="warn">
+  **Add your indexers to Prowlarr (or the arr directly) instead.** That is the
+  normal setup and the one to reach for. What follows is a niche option with
+  real limitations — use it only if you specifically want your AIOStreams
+  filtering applied to what the arrs see.
+</Callout>
+
+AIOStreams can also present itself as a Newznab indexer, so the arrs search _through_ your AIOStreams configuration — your addons, filters, deduplication and sorting — instead of querying indexers directly. The feed hands back the upstream indexer's own NZB URL, so the arr still grabs from the real indexer; AIOStreams only decides which releases it sees.
+
+In Sonarr or Radarr: **Settings → Indexers → + → Newznab**.
+
+| Field      | Value                                             |
+| ---------- | ------------------------------------------------- |
+| URL        | `http://your-aiostreams-host:port/api/v1/newznab` |
+| API Path   | `/api`                                            |
+| API Key    | `<config uuid>:<config password>`                 |
+| Categories | `5000` for Sonarr, `2000` for Radarr              |
+
+The API key is a **configuration** credential (the UUID from your config URL and its password), not an `AIOSTREAMS_AUTH` user — the feed is that configuration's results. A `/api/v1/torznab` endpoint exists too, for torrent results.
+
+What it cannot do, and why RSS is the first thing to turn off:
+
+- **ID lookups only.** Searches by IMDb/TVDB/TMDB id plus season and episode. Free-text search is advertised as unavailable, so an interactive search by title returns nothing.
+- **No RSS feed.** There is nothing to list — the endpoint answers a bare query with a single placeholder item so the arr's **Test** passes. Untick **Enable RSS** on the indexer.
+- **One search is a full pipeline run.** Every query fans out to all your configured addons, so it is slower and far heavier than a real indexer. Keep the number of indexers that hit it small.
+
+Set `ENABLE_NAB_API=false` to switch both endpoints off instance-wide.
+
+## Browsing the share yourself
+
+The `content/` tree is browsable with any WebDAV client, which is handy for checking what is actually in a release.
+
+<Callout type="warn">
+  **Do not map the WebDAV URL as a drive in Windows Explorer.** Explorer's
+  built-in WebDAV client cannot open files larger than 4 GB, and silently shows
+  folders as empty when a file's full path exceeds 260 characters — both are
+  routine for media. Use `rclone mount` with [WinFsp](https://winfsp.dev/)
+  instead:
+
+```powershell
+rclone mount aiostreams: Z: --links --read-only --network-mode
+```
+
+</Callout>
+
+## Troubleshooting
+
+**Test fails in the arr.** Check the URL Base is `/api/v1/sabnzbd` and the API Key is `username:password`. If the arr complains about the category, make sure the category folder is not set to something ending in `*` on its side.
+
+**Downloads complete but never import.** Almost always the paths. Compare the arr's queue entry (its "Output Path") against what `ls /mnt/aiostreams/usenet/completed/` shows inside the arr's container. If they differ, fix the mount directory setting or add a Remote Path Mapping.
+
+**A search finds nothing, or grabs never appear.** Check the arr's quality profile before suspecting the feed — a profile that excludes Remux (the default "Any" profile does) rejects most of what Usenet carries, and the arr reports only `0 reports downloaded`. An interactive search shows the real rejection reason per release.
+
+**The library fills with tiny files.** rclone is mounted without `--links`, so `.rclonelink` files are being imported literally. Add the flag and re-import.
+
+**Imported files are broken symlinks.** The mount is not visible at the same path in the media server's container, or mount propagation is missing (`rshared` on the mount owner, `rslave` on the consumers).
+
+**New downloads take a while to appear in the mount.** The FUSE mount updates immediately. rclone caches directory listings for `--dir-cache-time`: lower it, or set **Settings → Shares → rclone remote control URL** if you run rclone with `--rc`, and AIOStreams will tell it to refresh as soon as the library changes. NFS clients wait for their own attribute cache, around 30 seconds.
+
+**Season packs or library scans hit read errors under `streams.connectionLimits`.** Reads through the share (FUSE, NFS, WebDAV) are exempt from connection caps, so a scan opening many files at once is fine. On versions before this exemption, a per-user default like `{"*": 2}` also capped the share's owner — raise it or update.
