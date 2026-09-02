@@ -2408,14 +2408,13 @@ class StreamFilterer {
       this.userData.requiredResolutions &&
       this.userData.requiredResolutions.length > 0
     ) {
+      const floorResolutions = this.userData.requiredResolutions;
       const anyMeetsFloor = streams.some((stream) =>
-        this.userData.requiredResolutions!.includes(
+        floorResolutions!.includes(
           (stream.parsedFile?.resolution ||
-            'Unknown') as UserData['requiredResolutions'] extends infer R
-            ? R extends readonly (infer T)[]
-              ? T
-              : never
-            : never
+            'Unknown') as NonNullable<
+            UserData['requiredResolutions']
+          >[number]
         )
       );
       if (!anyMeetsFloor) {

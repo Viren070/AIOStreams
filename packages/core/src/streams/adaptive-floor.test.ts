@@ -1,10 +1,13 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, before, after } from 'node:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import assert from 'node:assert/strict';
 import StreamFilterer from './filterer.js';
 import { StreamContext } from './context.js';
 import { ParsedStreamSchema } from '../db/schemas.js';
 import type { ParsedStream, UserData } from '../db/schemas.js';
-import { initDb } from '../db/db.js';
+import { initDb, closeDb } from '../db/db.js';
 import { initialiseConfig } from '../config/index.js';
 
 function makeStream(
@@ -51,12 +54,20 @@ async function filterWith(
 describe('adaptiveResolutionFloor', () => {
   const floor = ['2160p', '1440p', '1080p', '720p'];
 
+  // ':memory:' doesn't survive connect.ts's URL parsing and absolute
+  // Windows paths don't fit its URL scheme, so use a relative path in the
+  // package cwd; after() removes every artifact.
+  const dbPath = 'adaptive-floor-test.db';
   before(async () => {
-    // ':memory:' doesn't survive connect.ts's URL parsing; a relative
-    // sqlite://./file URI lands in the process cwd (packages/core when run
-    // via the test script) and behaves identically for these tests.
-    await initDb('sqlite://./adaptive-floor-test.db');
+    await initDb(`sqlite://./${dbPath}`);
     await initialiseConfig();
+  });
+
+  after(async () => {
+    await closeDb();
+    for (const suffix of ['', '-shm', '-wal']) {
+      fs.rmSync(dbPath + suffix, { force: true });
+    }
   });
 
   it('enforces the floor when at least one stream meets it', async () => {
@@ -70,8 +81,10 @@ describe('adaptiveResolutionFloor', () => {
       makeStream({}, 'Unknown'),
     ];
     const result = await filterWith(userData, streams);
-    const resolutions = result.map((s) => s.parsedFile?.resolution);
-    assert.deepEqual(resolutions.sort(), ['480p', 'Unknown', '720p'].sort().filter(r => r === '720p'));
+    assert.deepEqual(
+      result.map((s) => s.parsedFile?.resolution),
+      ['720p']
+    );
   });
 
   it('drops the floor when nothing meets it, keeping all streams', async () => {
