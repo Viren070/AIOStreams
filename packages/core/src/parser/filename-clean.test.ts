@@ -32,7 +32,16 @@ describe('stripProviderResidue', () => {
 
   it('keeps a legit filename untouched', () => {
     const name = 'Reacher.S01E01.1080p.WEB.h264-KOGi.mkv';
+
     assert.equal(stripProviderResidue(name), name);
+  });
+  it('cuts hex-id glue when the provider dropped the extension entirely', () => {
+    assert.equal(
+      stripProviderResidue(
+        'Reacher.2022.0385306a6e148b9e6afb060f41249b581080pMKVWEB-DLH.264FSL~5.8Mbps1080pmkvweb-dlh.264fsl~5.8mbps.pad-'
+      ),
+      'Reacher.2022'
+    );
   });
 
   it('keeps a filename whose post-extension junk has no provider marker', () => {

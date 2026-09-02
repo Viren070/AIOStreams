@@ -23,9 +23,20 @@ export function stripProviderResidue(filename: string): string {
   for (let m = extPattern.exec(filename); m; m = extPattern.exec(filename)) {
     last = m;
   }
-  if (!last) return filename;
-  const end = last.index + last[0].length;
-  const residue = filename.slice(end);
-  if (!residue || !RESIDUE_MARKER.test(residue)) return filename;
-  return filename.slice(0, end);
+  if (last) {
+    const end = last.index + last[0].length;
+    const residue = filename.slice(end);
+    if (!residue || !RESIDUE_MARKER.test(residue)) return filename;
+    return filename.slice(0, end);
+  }
+
+  // No media extension at all: some providers drop it entirely and glue a
+  // hex id plus the residue straight onto the title, e.g.
+  //   "Show.2022.<32-hex>1080pMKVWEB-DL...~5.8Mbps....pad-X"
+  // Cut at the hex token when a container/bitrate marker follows it.
+  const hashGlue =
+    /\.[a-f0-9]{16,}(?=[0-9]{3,4}(?:p)?(?:MKV|MP4|WEB|BLURAY)|~)/i;
+  const hashMatch = hashGlue.exec(filename);
+  if (hashMatch) return filename.slice(0, hashMatch.index);
+  return filename;
 }
