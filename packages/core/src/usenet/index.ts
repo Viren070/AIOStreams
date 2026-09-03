@@ -9,11 +9,12 @@ import { MultiProviderPool } from './pool/multi-provider-pool.js';
 import { PrioritySemaphore } from './pool/priority-semaphore.js';
 import { SegmentCache, CacheStats } from './pool/segment-cache.js';
 import { StatsAccumulator } from './stats/accumulator.js';
+import { isMediaCategory } from './pool/file-type.js';
 import { FileStream, SeekableStream, SegmentMemo } from './pool/file-stream.js';
 import { trackSeekableStream, reapIdleStreams } from './pool/tracked-stream.js';
 import {
   inspectNzb,
-  selectBestVideo,
+  selectBestMedia,
   startCensus,
   StatTrustCache,
   CENSUS_CONCURRENCY,
@@ -145,7 +146,7 @@ export {
 export type { NzbContent, NzbContentFile } from './pool/inspect/index.js';
 export {
   isSampleName,
-  isEligibleVideoTarget,
+  isEligibleTarget,
   contentTotalSize,
 } from './pool/inspect/index.js';
 export type { CacheStats } from './pool/segment-cache.js';
@@ -178,7 +179,7 @@ export interface EngineLiveStats {
 export interface SelectCriteria {
   /** Explicit file index to open. */
   fileIndex?: number;
-  /** When no index given, pick the largest streamable video (default). */
+  /** When no index given, pick the largest streamable media file (default). */
   auto?: boolean;
 }
 
@@ -386,7 +387,7 @@ export class UsenetEngine {
     census: CensusRun,
     snap: CensusSnapshot
   ): void {
-    const primary = selectBestVideo(content);
+    const primary = selectBestMedia(content);
     if (!primary || !content.streamable) {
       // Nothing playable: the no-streamable verdict path owns this import.
       census.cancel();
@@ -587,8 +588,8 @@ export class UsenetEngine {
           memberIndices: g.members.map((m) => m.index),
           joined: true,
         });
-      } else if (first.category === 'video' && first.streamable) {
-        this.addJoinedVideo(nzb, content, g);
+      } else if (isMediaCategory(first.category) && first.streamable) {
+        this.addJoinedMedia(nzb, content, g);
       }
     }
 
@@ -597,7 +598,7 @@ export class UsenetEngine {
         (f) =>
           f.streamable ||
           (f.archiveInner?.some(
-            (i) => i.streamable && i.category === 'video'
+            (i) => i.streamable && isMediaCategory(i.category)
           ) ??
             false)
       );
@@ -723,7 +724,7 @@ export class UsenetEngine {
             volumes: s.memberIndices.length,
             inner: s.inner.length,
             streamableInner: s.inner.filter((i) => i.streamable).length,
-            videos: s.inner.filter((i) => i.category === 'video').length,
+            media: s.inner.filter((i) => isMediaCategory(i.category)).length,
             failure: s.failure,
             failedMembers: s.failedMemberIndices,
             failureMessageId: s.failureMessageId,
@@ -746,12 +747,12 @@ export class UsenetEngine {
   }
 
   /**
-   * Surface a raw numeric split whose first chunk probed as VIDEO as one
+   * Surface a raw numeric split whose first chunk probed as MEDIA as one
    * joined plain file: an archive-inner entry whose layout concatenates the
    * member files (`kind: 'join'`), streamed through the existing layout/session
    * machinery. Requires exact member sizes (the fragment math depends on them).
    */
-  private addJoinedVideo(
+  private addJoinedMedia(
     nzb: Nzb,
     content: NzbContent,
     g: NumericSplitGroup
@@ -767,7 +768,7 @@ export class UsenetEngine {
     const inner: ArchiveInnerEntry = {
       path: g.baseName,
       size: total,
-      category: 'video',
+      category: first.category,
       format: first.format,
       streamable: true,
       layout: {
@@ -790,7 +791,7 @@ export class UsenetEngine {
         members: g.members.length,
         size: total,
       },
-      'joined raw numeric split as plain video'
+      'joined raw numeric split as plain media'
     );
   }
 
@@ -945,7 +946,7 @@ export class UsenetEngine {
       chosen = content.files.find((f) => f.index === criteria.fileIndex);
     }
     if (!chosen) {
-      chosen = selectBestVideo(content);
+      chosen = selectBestMedia(content);
     }
     if (!chosen) {
       throw new Error('no streamable file found in NZB');

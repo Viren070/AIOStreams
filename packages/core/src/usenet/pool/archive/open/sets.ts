@@ -1,6 +1,10 @@
 import pLimit from 'p-limit';
 import { createLogger } from '../../../../logging/logger.js';
-import { detectFileType, FileCategory } from '../../file-type.js';
+import {
+  detectFileType,
+  isMediaCategory,
+  FileCategory,
+} from '../../file-type.js';
 import { RandomAccess } from '../random-access.js';
 import {
   ArchiveKind,
@@ -177,7 +181,8 @@ const MAGIC_MAX_ENTRIES = 4;
 /**
  * Type the entries a filename can't.
  *
- * Skipped once a name-typed video is at least as large as the best candidate.
+ * Skipped once a name-typed media file is at least as large as the best
+ * candidate.
  */
 async function magicSamples(
   source: RandomAccess,
@@ -191,15 +196,15 @@ async function magicSamples(
       entries.map((e, index) => ({ index, filename: e.name }))
     ).flatMap((g) => g.members.map((m) => m.filename))
   );
-  let namedVideo = 0;
+  let namedMedia = 0;
   const candidates: ArchiveEntry[] = [];
   for (const e of entries) {
     if (e.isDir) continue;
     // Compressed/solid/undecryptable entries can neither be read here nor
     // streamed later, so they are no reason to skip and no use as a candidate.
     if (entryReason(e) !== undefined) continue;
-    if (detectFileType(NO_SAMPLE, e.name).category === 'video') {
-      namedVideo = Math.max(namedVideo, e.size);
+    if (isMediaCategory(detectFileType(NO_SAMPLE, e.name).category)) {
+      namedMedia = Math.max(namedMedia, e.size);
       continue;
     }
     if (e.size < MAGIC_MIN_SIZE) continue;
@@ -208,7 +213,7 @@ async function magicSamples(
     candidates.push(e);
   }
   candidates.sort((a, b) => b.size - a.size);
-  if (candidates.length === 0 || namedVideo >= candidates[0].size) return out;
+  if (candidates.length === 0 || namedMedia >= candidates[0].size) return out;
 
   await Promise.all(
     candidates.slice(0, MAGIC_MAX_ENTRIES).map(async (e) => {

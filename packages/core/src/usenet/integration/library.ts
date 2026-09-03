@@ -28,11 +28,12 @@ import {
   ProviderConfig,
   serializeArchiveLayout,
   parseNzb,
-  isEligibleVideoTarget,
+  isEligibleTarget,
   contentTotalSize,
   type Nzb,
   type NzbContent,
 } from '../index.js';
+import { isMediaCategory } from '../pool/file-type.js';
 import {
   markReleaseDead,
   markReleaseDeadForCode,
@@ -289,7 +290,7 @@ export async function fetchNzb(
  */
 function isPlaybackTarget(f: UsenetLibraryFile): boolean {
   if (f.streamable === false) return false;
-  return f.category === undefined || f.category === 'video';
+  return f.category === undefined || isMediaCategory(f.category);
 }
 
 /** Project a persisted library file onto the shared {@link DebridFile} shape. */
@@ -339,8 +340,7 @@ function collectLibraryFiles(
     if (f.error) continue;
     if (
       f.streamable &&
-      (!opts.eligibleOnly ||
-        isEligibleVideoTarget(f.filename, f.size, releaseSize))
+      (!opts.eligibleOnly || isEligibleTarget(f.filename, f.size, releaseSize))
     ) {
       files.push({
         name: f.filename,
@@ -355,8 +355,8 @@ function collectLibraryFiles(
       if (
         opts.eligibleOnly &&
         (!inner.streamable ||
-          inner.category !== 'video' ||
-          !isEligibleVideoTarget(inner.path, inner.size, releaseSize))
+          !isMediaCategory(inner.category) ||
+          !isEligibleTarget(inner.path, inner.size, releaseSize))
       ) {
         continue;
       }

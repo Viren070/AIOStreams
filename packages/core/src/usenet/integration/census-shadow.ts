@@ -16,6 +16,7 @@ import {
   type NzbContent,
 } from '../index.js';
 import type { CensusRun, CensusSnapshot } from '../pool/inspect/index.js';
+import { isMediaCategory } from '../pool/file-type.js';
 
 const logger = createLogger('usenet/census-shadow');
 
@@ -27,7 +28,7 @@ interface Target {
   repIndex: number;
 }
 
-/** Enumerate the import's playback targets (plain videos + archive inners). */
+/** Enumerate the import's playback targets (plain media + archive inners). */
 function enumerateTargets(content: NzbContent): Target[] {
   const out: Target[] = [];
   for (const f of content.files) {
@@ -35,7 +36,7 @@ function enumerateTargets(content: NzbContent): Target[] {
       out.push({ selector: { index: f.index }, repIndex: f.index });
     }
     for (const inner of f.archiveInner ?? []) {
-      if (!inner.streamable || inner.category !== 'video') continue;
+      if (!inner.streamable || !isMediaCategory(inner.category)) continue;
       out.push({ selector: { path: inner.path }, repIndex: f.index });
     }
   }
@@ -74,7 +75,7 @@ function backingStats(
   };
 }
 
-/** Verdict targets of a live import (plain videos + archive inner files). */
+/** Verdict targets of a live import (plain media + archive inner files). */
 export function targetsFromContent(
   engine: UsenetEngine,
   nzb: Nzb,

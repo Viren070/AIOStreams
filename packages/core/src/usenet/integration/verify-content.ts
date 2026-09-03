@@ -5,7 +5,7 @@ import {
   type UsenetLibraryEntry,
   type UsenetLibraryFile,
 } from '../../db/index.js';
-import { detectFileType } from '../pool/file-type.js';
+import { detectFileType, isMediaCategory } from '../pool/file-type.js';
 import { libraryFileName, libraryFileToken } from './library.js';
 import { openUsenetStream } from './stream-session.js';
 
@@ -41,6 +41,14 @@ const KNOWN_CONTAINERS = new Set([
   'm2ts',
   'iso',
   'img',
+  'm4a',
+  'm4b',
+  'flac',
+  'ogg',
+  'oga',
+  'opus',
+  'wav',
+  'aiff',
 ]);
 
 function extensionOf(name: string): string | undefined {
@@ -92,7 +100,7 @@ async function verifyFile(
   if (!head || head.length < 12) return 'inconclusive';
 
   const detected = detectFileType(head, name);
-  if (detected.category === 'video') return 'ok';
+  if (isMediaCategory(detected.category)) return 'ok';
   // Archives and par2 blocks are legitimate members of a release, just not
   // of a file calling itself an .mkv: that is the assembly going wrong.
   logger.warn(
@@ -107,7 +115,7 @@ async function verifyFile(
 }
 
 /**
- * Verify an entry's video files. Stops at the first bad one: a release with
+ * Verify an entry's media files. Stops at the first bad one: a release with
  * one wrongly-assembled file is already not what it claims to be.
  */
 export async function verifyEntryContent(

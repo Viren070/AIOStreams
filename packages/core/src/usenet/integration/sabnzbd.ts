@@ -507,6 +507,14 @@ async function allCategories(): Promise<string[]> {
     'radarr',
     'lidarr',
     'prowlarr',
+    'books',
+    'audiobooks',
+    'ebooks',
+    'readarr',
+    'Readarr',
+    'chaptarr',
+    'lazylibrarian',
+    'listenarr',
   ];
   const assigned = await UsenetLibraryRepository.distinctCategories();
   return [...new Set([...base, ...assigned])];

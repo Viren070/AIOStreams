@@ -6,15 +6,15 @@
  *   - `probe.ts`      per-file first/last-segment probe
  *   - `par2-names.ts` PAR2 descriptor fetch + filename recovery
  *   - `inspect.ts`    the `inspectNzb` orchestrator
- *   - `select.ts`     best-video selection + sample-name policy
+ *   - `select.ts`     best-media selection + sample-name policy
  */
 export type { NzbContent, NzbContentFile, InspectOptions } from './types.js';
 export { inspectNzb } from './inspect.js';
 export {
   isSampleName,
-  isEligibleVideoTarget,
+  isEligibleTarget,
   contentTotalSize,
-  selectBestVideo,
+  selectBestMedia,
 } from './select.js';
 export {
   startCensus,
