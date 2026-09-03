@@ -698,6 +698,26 @@ export const builtinsSchema = {
       secret: false,
     },
   },
+  animeToshoNew: {
+    url: {
+      schema: urlString,
+      default: 'https://feed.animetosho.xyz',
+      label: 'Anime Tosho (New) URL',
+      env: 'BUILTIN_ANIME_TOSHO_NEW_URL',
+      description: 'Base URL for the Anime Tosho (New) built-in addon.',
+      requiresRestart: false,
+      secret: false,
+    },
+    timeout: {
+      schema: optionalPositiveInt,
+      default: null,
+      label: 'Anime Tosho (New) timeout (ms)',
+      env: 'BUILTIN_DEFAULT_ANIME_TOSHO_NEW_TIMEOUT',
+      description: 'Timeout for Anime Tosho (New) requests.',
+      requiresRestart: false,
+      secret: false,
+    },
+  },
   nekobt: {
     url: {
       schema: urlString,

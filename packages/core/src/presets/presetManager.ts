@@ -61,6 +61,7 @@ import { TorznabPreset } from './torznab.js';
 import { AStreamPreset } from './aStream.js';
 import { ZileanPreset } from './zilean.js';
 import { AnimeToshoPreset } from './animetosho.js';
+import { AnimeToshoNewPreset } from './animeToshoNew.js';
 import { NewznabPreset } from './newznab.js';
 import { ProwlarrPreset } from './prowlarr.js';
 import { JackettPreset } from './jackett.js';
@@ -104,6 +105,7 @@ let PRESET_LIST: string[] = [
   'bitmagnet',
   'seadex',
   'animetosho',
+  'anime-tosho-new',
   'neko-bt',
   'prowlarr',
   'jackett',
@@ -311,6 +313,8 @@ export class PresetManager {
         return ZileanPreset;
       case 'animetosho':
         return AnimeToshoPreset;
+      case 'anime-tosho-new':
+        return AnimeToshoNewPreset;
       case 'neko-bt':
         return NekoBtPreset;
       case 'prowlarr':
