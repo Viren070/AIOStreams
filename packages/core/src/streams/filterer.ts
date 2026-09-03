@@ -269,6 +269,36 @@ class StreamFilterer {
     );
   }
 
+  /**
+   * Request-scope resolution floor pass. filter() runs once per fetch
+   * batch (dynamic fetching / addon groups), so its adaptive-floor
+   * decision only sees that batch. After the fetcher merges every
+   * batch, this re-evaluates the requiredResolutions floor against the
+   * FULL request set and re-applies it: if any stream anywhere meets
+   * the floor, off-floor streams from earlier batches are dropped; if
+   * nothing meets it, everything is kept. No-op when the floor is
+   * unset; statistics counters are untouched (batches already counted).
+   */
+  public applyResolutionFloor(streams: ParsedStream[]): ParsedStream[] {
+    const required = this.userData.requiredResolutions;
+    if (!required || required.length === 0) return streams;
+    const anyMeetsFloor = streams.some((stream) =>
+      required.includes(
+        (stream.parsedFile?.resolution ||
+          'Unknown') as NonNullable<UserData['requiredResolutions']>[number]
+      )
+    );
+    if (anyMeetsFloor) {
+      return streams.filter((stream) =>
+        required.includes(
+          (stream.parsedFile?.resolution ||
+            'Unknown') as NonNullable<UserData['requiredResolutions']>[number]
+        )
+      );
+    }
+    return streams;
+  }
+
   public getFilterTimings(): FilterTimings {
     return {
       ...this.filterTimings,

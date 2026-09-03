@@ -55,9 +55,10 @@ describe('adaptiveResolutionFloor', () => {
   const floor = ['2160p', '1440p', '1080p', '720p'];
 
   // ':memory:' doesn't survive connect.ts's URL parsing and absolute
-  // Windows paths don't fit its URL scheme, so use a relative path in the
-  // package cwd; after() removes every artifact.
-  const dbPath = 'adaptive-floor-test.db';
+  // Windows paths don't fit its URL scheme, so use a relative path in
+  // the package cwd, unique per process so concurrent runs can't touch
+  // each other's files; after() removes every artifact.
+  const dbPath = `adaptive-floor-test-${process.pid}.db`;
   before(async () => {
     await initDb(`sqlite://./${dbPath}`);
     await initialiseConfig();
@@ -128,5 +129,36 @@ describe('adaptiveResolutionFloor', () => {
     assert.ok(resolutions.includes('1080p'));
     assert.ok(!resolutions.includes('480p'));
     assert.ok(!resolutions.includes('Unknown'));
+  });
+
+  it('retracts earlier off-floor batches once a later batch meets the floor', () => {
+    // Request-scope semantics: per-batch filter() calls saw only their
+    // own batch, so batch 1 kept 480p rows; the merged-set pass must
+    // drop them because batch 2 contains a floor-meeting stream.
+    const filterer = new StreamFilterer(
+      makeUserData({ requiredResolutions: floor, adaptiveResolutionFloor: true })
+    );
+    const batch1 = [makeStream({}, '480p'), makeStream({}, 'Unknown')];
+    const batch2 = [makeStream({}, '1080p')];
+    const merged = [...batch1, ...batch2];
+    const result = filterer.applyResolutionFloor(merged);
+    assert.deepEqual(
+      result.map((s) => s.parsedFile?.resolution),
+      ['1080p']
+    );
+  });
+
+  it('keeps all merged streams when no batch ever meets the floor', () => {
+    const filterer = new StreamFilterer(
+      makeUserData({ requiredResolutions: floor, adaptiveResolutionFloor: true })
+    );
+    const merged = [makeStream({}, '480p'), makeStream({}, 'Unknown')];
+    assert.equal(filterer.applyResolutionFloor(merged).length, 2);
+  });
+
+  it('is a no-op when no floor is configured', () => {
+    const filterer = new StreamFilterer(makeUserData({}));
+    const merged = [makeStream({}, '480p')];
+    assert.equal(filterer.applyResolutionFloor(merged).length, 1);
   });
 });

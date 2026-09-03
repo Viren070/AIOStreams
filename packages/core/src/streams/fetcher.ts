@@ -673,6 +673,11 @@ class StreamFetcher {
     for (let i = 0; i < allStatisticStreams.length; i++) {
       allStatisticStreams[i] = statStreamsWithTime[i].stat;
     }
+    // The adaptive floor must be decided at REQUEST scope: per-batch
+    // filter() calls only see their own batch (dynamic fetching/groups),
+    // so a floor met by a late batch has to retract off-floor streams
+    // that earlier batches were allowed to keep.
+    allStreams = this.filter.applyResolutionFloor(allStreams);
     return {
       streams: allStreams,
       errors: allErrors,
