@@ -21,3 +21,4 @@ export { releaseBlocklistSchema } from './release-blocklist.js';
 export { oidcSchema } from './oidc.js';
 export { linkedAccountsSchema } from './linked-accounts.js';
 export { communitySchema } from './community.js';
+export { remuxdbSchema } from './remuxdb.js';

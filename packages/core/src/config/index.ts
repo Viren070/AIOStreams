@@ -30,6 +30,7 @@ import {
   oidcSchema,
   linkedAccountsSchema,
   communitySchema,
+  remuxdbSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -56,6 +57,7 @@ export const runtimeSchemas = {
   oidc: oidcSchema,
   linkedAccounts: linkedAccountsSchema,
   community: communitySchema,
+  remuxdb: remuxdbSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

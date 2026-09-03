@@ -231,6 +231,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   preloadStreams: { label: 'Preload Streams', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
   precacheSelector: { label: 'Precache Selector', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
   precacheSingleStream: { label: 'Precache Single Stream', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
+  remuxDb: { label: 'RemuxDB', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
 
   dynamicAddonFetching: { label: 'Dynamic Addon Fetching', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'addons', sectionId: 'fetchStrategy', keywords: ['exit condition', 'dynamic fetching', 'fetch strategy'] },
   addonCategoryColors: { label: 'Addon Category Colors', group: 'misc', type: 'scalar', menu: 'addons', subTab: 'addons' },

@@ -931,6 +931,12 @@ export const UserDataSchema = z.object({
       reconfigureService: z.boolean().optional(),
     })
     .optional(),
+  remuxDb: z
+    .object({
+      /** Opt-in to RemuxDB probe-data backfill. */
+      enabled: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;

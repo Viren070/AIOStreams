@@ -34,7 +34,7 @@ import {
   CinemetaVideo,
 } from './episode-resolver.js';
 import { SceneMappingDataset } from './scene-mappings.js';
-import { IdMappingDataset } from './id-mappings.js';
+import { resolveCrossProviderIds } from './id-resolution.js';
 import { SkyhookMetadata } from './skyhook.js';
 
 const logger = createLogger('metadata-service');
@@ -81,46 +81,11 @@ export class MetadataService {
               id.episode ? Number(id.episode) : undefined
             );
 
-            let tmdbId: number | null =
-              id.type === 'themoviedbId'
-                ? Number(id.value)
-                : animeEntry?.mappings?.themoviedbId
-                  ? Number(animeEntry.mappings.themoviedbId)
-                  : null;
-            let imdbId: string | null =
-              id.type === 'imdbId'
-                ? id.value.toString()
-                : (animeEntry?.mappings?.imdbId?.toString() ?? null);
-            let tvdbId: number | null =
-              id.type === 'thetvdbId'
-                ? Number(id.value)
-                : animeEntry?.mappings?.thetvdbId && type === 'series'
-                  ? Number(animeEntry.mappings.thetvdbId)
-                  : null;
-
-            // Fill any missing ids from the keyless cross-provider map
-            if (
-              appConfig.metadata.idMappings.enabled &&
-              (!imdbId || !tvdbId || !tmdbId)
-            ) {
-              try {
-                const mapped = IdMappingDataset.getInstance().resolve(
-                  type === 'movie' ? 'movie' : 'series',
-                  {
-                    imdbId: imdbId ?? undefined,
-                    tvdbId: tvdbId ?? undefined,
-                    tmdbId: tmdbId ?? undefined,
-                  }
-                );
-                imdbId = imdbId ?? mapped.imdbId ?? null;
-                tvdbId = tvdbId ?? mapped.tvdbId ?? null;
-                tmdbId = tmdbId ?? mapped.tmdbId ?? null;
-              } catch (error) {
-                logger.debug(
-                  `ID mapping lookup failed for ${id.fullId}: ${error}`
-                );
-              }
-            }
+            const { imdbId, tmdbId, tvdbId } = resolveCrossProviderIds(
+              id,
+              animeEntry,
+              type === 'movie' ? 'movie' : 'series'
+            );
 
             if (animeEntry) {
               const aliases: MetadataTitle[] = [];

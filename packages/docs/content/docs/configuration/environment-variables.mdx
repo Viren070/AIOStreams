@@ -1275,6 +1275,15 @@ neither the environment variable nor a stored value is present.
 | `RELEASE_BLOCKLIST_PUBLIC_EXPORT_SCOPE`    | Public Export Scope    | enum    | `local`    | The most the public export is allowed to serve. With **local**, subscribers only ever receive verdicts this instance recorded first-hand, even if they ask for more. **all** additionally allows `?scope=all` requests, which also serve everything collected from your subscribed and imported lists, including ones you do not trust yourself, so enable it only if you mean to re-publish them.                                                                                                                                                                                                                                                                            |
 | `RELEASE_BLOCKLIST_PUBLIC_EXPORT_PASSWORD` | Public Export Password | string  | _(unset)_  | When set, the public export requires `?key=<value>` in the URL. Share the full URL with instances you want to allow; a missing or wrong key gets the same 404 as a disabled export, so the endpoint stays invisible. _(secret)_                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
+### Remuxdb
+
+| Environment Variable                          | UI Setting                          | Type     | Default                       | Description                                                       |
+| --------------------------------------------- | ----------------------------------- | -------- | ----------------------------- | ----------------------------------------------------------------- |
+| `REMUXDB_BASE_URL`                            | Base URL                            | string   | `https://remuxdb.1632022.xyz` | RemuxDB instance to query.                                        |
+| `REMUXDB_CACHE_TTL`                           | Cache TTL                           | duration | `21600`                       | How long to cache a successful lookup.                            |
+| `REMUXDB_NEGATIVE_CACHE_TTL`                  | Negative Cache TTL                  | duration | `1800`                        | How long to cache a "nothing found" result.                       |
+| `REMUXDB_MINIMUM_BACKGROUND_REFRESH_INTERVAL` | Minimum Background Refresh Interval | duration | `1800`                        | Minimum interval between background refreshes of a cached lookup. |
+
 ### Streams
 
 | Environment Variable             | UI Setting             | Type     | Default | Description                                                                                                                                                                                                                                                                               |
