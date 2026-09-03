@@ -68,6 +68,7 @@ import { NZBHydraPreset } from './nzbhydra.js';
 import { KnabenPreset } from './knaben.js';
 import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
+import { TheRARBGPreset } from './therarbg.js';
 import { BitmagnetPreset } from './bitmagnet.js';
 import { BrazucaTorrentsPreset } from './brazucaTorrents.js';
 import { SootioPreset } from './sootio.js';
@@ -98,6 +99,7 @@ let PRESET_LIST: string[] = [
   'knaben',
   'library',
   'eztv',
+  'therarbg',
   'torrent-galaxy',
   'bitmagnet',
   'seadex',
@@ -323,6 +325,8 @@ export class PresetManager {
         return LibraryPreset;
       case 'eztv':
         return EztvPreset;
+      case 'therarbg':
+        return TheRARBGPreset;
       case 'bitmagnet':
         return BitmagnetPreset;
       case 'seadex':

@@ -30,6 +30,7 @@ export {
   ProwlarrAddon,
   KnabenAddon,
   EztvAddon,
+  TheRARBGAddon,
   TorrentGalaxyAddon,
   SeaDexAddon,
   EasynewsSearchAddon,

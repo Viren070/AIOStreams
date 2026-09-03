@@ -47,6 +47,7 @@ import {
   prowlarr,
   knaben,
   eztv,
+  therarbg,
   torrentGalaxy,
   seadex,
   easynews,
@@ -271,6 +272,7 @@ builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/eztv', eztv);
+builtinsRouter.use('/therarbg', therarbg);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
 builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
