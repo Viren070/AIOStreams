@@ -92,7 +92,10 @@ function forgetGone(
 }
 
 /** The movie/episode a queue item is for, for the per-item repair ceiling. */
-function targetOf(item: ArrQueueItem, type: ArrClient['type']): number | undefined {
+function targetOf(
+  item: ArrQueueItem,
+  type: ArrClient['type']
+): number | undefined {
   return type === 'radarr' ? item.movieId : (item.episodeId ?? item.seriesId);
 }
 

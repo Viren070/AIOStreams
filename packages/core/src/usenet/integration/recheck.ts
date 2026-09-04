@@ -115,7 +115,10 @@ export async function runLibraryRecheck(
   const settings = appConfig.usenet.recheck;
   if (settings.scope === 'off') return { ok: true, message: 'disabled' };
   if (!withinRecheckWindow()) {
-    return { ok: true, message: `outside the recheck hours (${settings.window})` };
+    return {
+      ok: true,
+      message: `outside the recheck hours (${settings.window})`,
+    };
   }
 
   const { providers, options } = getUsenetEngineConfig();

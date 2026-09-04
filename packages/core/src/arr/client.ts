@@ -110,7 +110,11 @@ export class ArrClient {
 
   private async call<T>(
     path: string,
-    opts: { method?: string; body?: unknown; query?: Record<string, string> } = {}
+    opts: {
+      method?: string;
+      body?: unknown;
+      query?: Record<string, string>;
+    } = {}
   ): Promise<T> {
     const url = new URL(
       `/api/v3/${path.replace(/^\//, '')}`,
@@ -169,7 +173,10 @@ export class ArrClient {
     await this.call(`history/failed/${historyId}`, { method: 'POST' });
   }
 
-  async command(name: string, body: Record<string, unknown> = {}): Promise<void> {
+  async command(
+    name: string,
+    body: Record<string, unknown> = {}
+  ): Promise<void> {
     await this.call('command', { method: 'POST', body: { name, ...body } });
   }
 

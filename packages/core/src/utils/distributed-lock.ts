@@ -5,7 +5,10 @@ import { RedisClientType } from 'redis';
 import { Cache, REDIS_PREFIX } from './index.js';
 import { createLogger } from '../logging/logger.js';
 import { Time } from './time.js';
-import { registerLockErrorClass, resolveErrorCtor } from './lock-error-registry.js';
+import {
+  registerLockErrorClass,
+  resolveErrorCtor,
+} from './lock-error-registry.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -585,9 +588,7 @@ export class DistributedLock {
         sql`SELECT result FROM distributed_locks WHERE key = ${key}`
       );
       if (lockRow && lockRow.result) {
-        const storedResult: StoredResult<T> = parseLockResult(
-          lockRow.result
-        );
+        const storedResult: StoredResult<T> = parseLockResult(lockRow.result);
         if (storedResult.error) {
           logger.warn(`Polled error result for key: ${key} from SQL lock.`);
           throw storedResult.error;

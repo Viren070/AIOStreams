@@ -1,8 +1,6 @@
 import { createLogger } from '../../logging/logger.js';
 import { ConnectionOptions, NntpConnection } from './connection.js';
-import { NntpError,
-  FetchAbandonedError,
-} from './errors.js';
+import { NntpError, FetchAbandonedError } from './errors.js';
 import { YencDecodeError } from '../pool/yenc.js';
 import {
   CommandPriority,

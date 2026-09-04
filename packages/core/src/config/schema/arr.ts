@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import type { RuntimeConfigSection } from '../types.js';
-import { QUEUE_CLEANUP_RULE_IDS, DEFAULT_QUEUE_CLEANUP_RULES } from './arr-rules.js';
+import {
+  QUEUE_CLEANUP_RULE_IDS,
+  DEFAULT_QUEUE_CLEANUP_RULES,
+} from './arr-rules.js';
 
 export const arrInstanceSchema = z.object({
   id: z.string().min(1),

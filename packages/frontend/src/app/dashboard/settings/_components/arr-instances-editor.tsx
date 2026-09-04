@@ -239,9 +239,7 @@ export function ArrInstancesEditor() {
                   size="sm"
                   intent="alert-subtle"
                   icon={<BiTrash />}
-                  onClick={() =>
-                    setDrafts(drafts.filter((x) => x.id !== d.id))
-                  }
+                  onClick={() => setDrafts(drafts.filter((x) => x.id !== d.id))}
                 />
               </div>
             </div>

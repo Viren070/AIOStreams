@@ -2,7 +2,11 @@ import { createLogger } from '../logging/logger.js';
 import { appConfig } from '../utils/index.js';
 import { parentIdOf, repairTargetOf, type ArrHistoryRecord } from './client.js';
 import { bumpRepairCount } from './breaker.js';
-import { clientForLink, linkArrProvenance, type ArrLinkedDownload } from './link.js';
+import {
+  clientForLink,
+  linkArrProvenance,
+  type ArrLinkedDownload,
+} from './link.js';
 import type { ArrLink, ArrRepair } from './types.js';
 
 const logger = createLogger('arr/repair');

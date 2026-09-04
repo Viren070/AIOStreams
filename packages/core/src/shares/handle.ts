@@ -41,7 +41,11 @@ interface Slab {
 }
 
 function takeSlab(): Slab {
-  return { buf: slabPool.pop() ?? Buffer.allocUnsafe(SLAB_SIZE), offset: 0, refs: 0 };
+  return {
+    buf: slabPool.pop() ?? Buffer.allocUnsafe(SLAB_SIZE),
+    offset: 0,
+    refs: 0,
+  };
 }
 
 function unrefSlab(slab: Slab): void {
