@@ -40,6 +40,7 @@ import {
   appConfig,
   getTimeTakenSincePoint,
   RequestOptions,
+  DistributedLock,
 } from '../utils/index.js';
 import { Preset, PresetManager } from '../presets/index.js';
 import {
@@ -606,7 +607,16 @@ export class Wrapper {
       return result;
     };
 
-    const requestPromise = processRequest();
+    const maxRequestDuration = doBackground
+      ? (appConfig.resources.background.timeout ??
+        appConfig.userLimits.timeouts.maxTimeout)
+      : timeout;
+    const requestPromise = DistributedLock.getInstance()
+      .withLock(cacheKey, processRequest, {
+        timeout,
+        ttl: maxRequestDuration + 1000,
+      })
+      .then(({ result }) => result);
 
     if (!doBackground) {
       return await requestPromise;
