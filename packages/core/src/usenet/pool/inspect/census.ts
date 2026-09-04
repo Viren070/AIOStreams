@@ -99,6 +99,13 @@ export interface CensusOptions {
   signal?: AbortSignal;
   /** Engine-lifetime per-provider STAT trust state. */
   trust: StatTrustCache;
+  /**
+   * Stop emitting new spread positions after this many definitive answers.
+   * The emission order makes any prefix a uniform sample, so a capped run is
+   * a spot check; run measurement and re-probing of a found miss are
+   * unaffected.
+   */
+  maxSamples?: number;
 }
 
 export interface CensusSnapshot {
@@ -279,6 +286,9 @@ export function startCensus(
   const nextIndex = (): number | undefined => {
     const re = requeue.pop();
     if (re !== undefined) return re; // stays marked checked
+    if (opts.maxSamples !== undefined && sampled >= opts.maxSamples) {
+      return undefined;
+    }
     while (anchorCursor < anchors.length) {
       const a = anchors[anchorCursor++];
       if (!checked[a]) {

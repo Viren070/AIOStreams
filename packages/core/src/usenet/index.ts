@@ -302,18 +302,10 @@ export class UsenetEngine {
     }
     const census =
       verifyMode === 'census' && nzb.files.length > 0
-        ? startCensus(nzb, this.pool, {
-            signal: ac.signal,
-            trust: this.statTrust,
-            concurrency: this.censusGate.capacity,
-            shadowConcurrency: this.options.censusShadowConcurrency,
-            gate: this.censusGate,
-            maxLifetimeMs: this.options.censusMaxLifetimeMs,
-          })
+        ? this.census(nzb, { signal: ac.signal })
         : undefined;
     if (census) {
       census.onCatastrophic(() => ac.abort());
-      this.registerCensus(census);
     }
 
     try {
@@ -470,6 +462,50 @@ export class UsenetEngine {
       (s) => s.memberIndices.includes(fileIndex) || s.index === fileIndex
     );
     return set?.memberIndices ?? [fileIndex];
+  }
+
+  /**
+   * Start a standalone availability census over an already-parsed NZB: STAT
+   * the release against every provider without inspecting, probing or parsing
+   * archives. Used by the periodic library recheck; `maxSamples` turns it into
+   * a spot check (the emission order makes any prefix a uniform sample).
+   */
+  census(
+    nzb: Nzb,
+    opts: {
+      signal?: AbortSignal;
+      maxSamples?: number;
+      maxLifetimeMs?: number;
+    } = {}
+  ): CensusRun {
+    this.lastUsedAt = Date.now();
+    const run = startCensus(nzb, this.pool, {
+      signal: opts.signal,
+      trust: this.statTrust,
+      concurrency: this.censusGate.capacity,
+      shadowConcurrency: this.options.censusShadowConcurrency,
+      gate: this.censusGate,
+      maxLifetimeMs: opts.maxLifetimeMs ?? this.options.censusMaxLifetimeMs,
+      maxSamples: opts.maxSamples,
+    });
+    this.registerCensus(run);
+    return run;
+  }
+
+  /**
+   * Whether any provider could answer right now. A verdict reached while
+   * every provider is down would be about our connectivity, not the release.
+   */
+  providersReachable(): boolean {
+    return this.pool
+      .poolInfo()
+      .providers.some(
+        (p) =>
+          !p.tripped &&
+          p.state !== 'offline' &&
+          p.state !== 'auth_failed' &&
+          p.state !== 'disabled'
+      );
   }
 
   /** Track a live census so {@link close} can cancel its workers promptly. */
