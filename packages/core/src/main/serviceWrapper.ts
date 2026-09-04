@@ -1,4 +1,4 @@
-﻿import { Addon, ParsedStream, UserData } from '../db/schemas.js';
+import { Addon, ParsedStream, UserData } from '../db/schemas.js';
 import {
   constants,
   createLogger,
@@ -337,6 +337,16 @@ async function buildMetadata(
   const contextMetadata = await context.getMetadata();
   if (!contextMetadata) return undefined;
 
+  const animeEntryTitles =
+    context.animeEpisode !== undefined &&
+    context.animeEntry &&
+    contextMetadata.relativeAbsoluteEpisode !== undefined
+      ? [
+          context.animeEntry.title,
+          ...(context.animeEntry.synonyms ?? []),
+        ].filter((title): title is string => !!title)
+      : undefined;
+
   return {
     titles: contextMetadata.titles?.map((t) => t.title) ?? [
       contextMetadata.title,
@@ -349,6 +359,7 @@ async function buildMetadata(
       : undefined,
     absoluteEpisode: contextMetadata.absoluteEpisode,
     relativeAbsoluteEpisode: contextMetadata.relativeAbsoluteEpisode,
+    animeEntryTitles,
     seasonYear: contextMetadata.seasonYear,
   };
 }
