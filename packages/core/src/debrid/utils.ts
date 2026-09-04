@@ -58,15 +58,15 @@ export function cleanNzbUrl(url: string): string {
  * Known NZB download URL shapes that have identifiers in query parameters.
  */
 const NZB_URL_SHAPES: ReadonlyArray<{
-  pathSuffix: string;
+  pathSuffix?: string;
   /** Params retained in the hashed URL; all must be present for a match. */
   keep: readonly string[];
   matches?: (params: URLSearchParams) => boolean;
 }> = [
   {
-    // newznab t=get / t=g requests. `t` is kept as part of the canonical form,
-    // not because it identifies the release.
-    pathSuffix: '/api',
+    // Newznab t=get / t=g requests. Newznab-compatible services can expose
+    // this endpoint at arbitrary paths (e.g. /api/newznab/aiostreams), so the
+    // query shape is the reliable discriminator rather than the URL path.
     keep: ['t', 'id'],
     matches: (params) => ['get', 'g'].includes(params.get('t')!),
   },
@@ -86,7 +86,7 @@ export function hashNzbUrl(url: string, clean: boolean = true): string {
     const u = new URL(url);
     const pathName = u.pathname.replace(/\/$/, '');
     for (const shape of NZB_URL_SHAPES) {
-      if (!pathName.endsWith(shape.pathSuffix)) continue;
+      if (shape.pathSuffix && !pathName.endsWith(shape.pathSuffix)) continue;
       if (shape.keep.some((key) => !u.searchParams.get(key))) continue;
       if (shape.matches && !shape.matches(u.searchParams)) continue;
       for (const key of Array.from(u.searchParams.keys())) {
