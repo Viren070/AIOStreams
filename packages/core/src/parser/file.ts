@@ -4,7 +4,7 @@ import { parseTorrentTitleCached } from './title.js';
 import { RESOLUTIONS } from '../utils/constants.js';
 import { mapLanguageCode, convertLangCodeToName } from '../utils/languages.js';
 
-function matchPattern(
+export function matchPattern(
   filename: string,
   patterns: Record<string, RegExp>
 ): string | undefined {
@@ -48,7 +48,7 @@ function normaliseResolution(
   return undefined;
 }
 
-function matchMultiplePatterns(
+export function matchMultiplePatterns(
   filename: string,
   patterns: Record<string, RegExp>
 ): string[] {
