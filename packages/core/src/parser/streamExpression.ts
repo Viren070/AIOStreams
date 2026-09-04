@@ -77,6 +77,7 @@ export abstract class StreamExpressionEngine {
   }
 
   protected setupExpressionContextConstants(context: ExpressionContext) {
+    this.setupHealthFunction(context.health);
     this.parser.consts.queryType = context.queryType ?? '';
     this.parser.consts.isAnime = context.isAnime ?? false;
     this.parser.consts.season = context.season ?? -1;
@@ -104,9 +105,30 @@ export abstract class StreamExpressionEngine {
     return this._pinInstructions;
   }
 
-  private setupParserFunctions() {
+  protected setupParserFunctions() {
     this.setupMathFunctions();
     this.setupStreamFunctions();
+  }
+
+  /**
+   * Registers `health('<id>')`, which reads a result resolved once per request
+   * rather than fetching: expr-eval calls functions synchronously.
+   *
+   * A check that could not be resolved reads as failing rather than throwing.
+   * An operator can disable the feature under a saved configuration, and a
+   * group condition that threw there would take the whole request down. A
+   * misspelled id is caught when the configuration is saved instead.
+   */
+  protected setupHealthFunction(results?: Record<string, boolean>) {
+    this.parser.functions.health = function (id: string) {
+      const key = String(id).toLowerCase();
+      const value = results?.[key];
+      if (value === undefined) {
+        logger.debug(`health('${key}') has no result for this request`);
+        return false;
+      }
+      return value;
+    };
   }
 
   private setupMathFunctions() {
@@ -382,7 +404,7 @@ export abstract class StreamExpressionEngine {
     };
   }
 
-  private setupStreamFunctions() {
+  protected setupStreamFunctions() {
     this.parser.functions.values = function (
       streams: ParsedStream[],
       attr: string
@@ -1640,9 +1662,11 @@ export class ExitConditionEvaluator extends StreamExpressionEngine {
     private totalTimeTaken: number,
     private queryType: string,
     private queriedAddons: string[],
-    private allAddons: string[]
+    private allAddons: string[],
+    health?: Record<string, boolean>
   ) {
     super();
+    this.setupHealthFunction(health);
     this.parser.consts.totalStreams = this.totalStreams;
     this.parser.consts.totalTimeTaken = this.totalTimeTaken;
     this.parser.consts.queryType = this.queryType;
@@ -1654,13 +1678,14 @@ export class ExitConditionEvaluator extends StreamExpressionEngine {
     return await this.evaluateCondition(condition);
   }
 
-  static async testEvaluate(condition: string) {
+  static async testEvaluate(condition: string, healthIds: string[] = []) {
     const parser = new ExitConditionEvaluator(
       [],
       200,
       'movie',
       ['Test Addon'],
-      ['Test Addon']
+      ['Test Addon'],
+      testHealthResults(healthIds)
     );
     return await parser.evaluate(condition);
   }
@@ -1677,9 +1702,11 @@ export class GroupConditionEvaluator extends StreamExpressionEngine {
     totalStreams: ParsedStream[],
     previousGroupTimeTaken: number,
     totalTimeTaken: number,
-    queryType: string
+    queryType: string,
+    health?: Record<string, boolean>
   ) {
     super();
+    this.setupHealthFunction(health);
 
     this.previousStreams = previousStreams;
     this.totalStreams = totalStreams;
@@ -1698,8 +1725,15 @@ export class GroupConditionEvaluator extends StreamExpressionEngine {
     return await this.evaluateCondition(condition);
   }
 
-  static async testEvaluate(condition: string) {
-    const parser = new GroupConditionEvaluator([], [], 0, 0, 'movie');
+  static async testEvaluate(condition: string, healthIds: string[] = []) {
+    const parser = new GroupConditionEvaluator(
+      [],
+      [],
+      0,
+      0,
+      'movie',
+      testHealthResults(healthIds)
+    );
     return await parser.evaluate(condition);
   }
 }
@@ -1737,8 +1771,14 @@ export class StreamSelector extends StreamExpressionEngine {
     return selectedStreams;
   }
 
-  static async testSelect(condition: string): Promise<ParsedStream[]> {
-    const parser = new StreamSelector({ queryType: 'movie' });
+  static async testSelect(
+    condition: string,
+    healthIds: string[] = []
+  ): Promise<ParsedStream[]> {
+    const parser = new StreamSelector({
+      queryType: 'movie',
+      health: testHealthResults(healthIds),
+    });
     const streams = [
       parser.createTestStream({ type: 'debrid' }),
       parser.createTestStream({ type: 'debrid' }),
@@ -1749,6 +1789,76 @@ export class StreamSelector extends StreamExpressionEngine {
     ];
     return await parser.select(streams, condition);
   }
+}
+
+/**
+ * Every known check reads healthy, so a save-time evaluation exercises the
+ * expression rather than the state of the user's services.
+ */
+export function testHealthResults(ids: string[]): Record<string, boolean> {
+  return Object.fromEntries(ids.map((id) => [id.toLowerCase(), true]));
+}
+
+/**
+ * Literal string arguments at `argIndex` of every `name(...)` call in an
+ * expression. Throws when such an argument is not a quoted literal, which is
+ * what lets a caller resolve them all before evaluation.
+ */
+export function extractLiteralCallArgs(
+  expression: string,
+  name: string,
+  argIndex: number
+): string[] {
+  const found: string[] = [];
+  const callPattern = new RegExp(`\\b${name}\\s*\\(`, 'g');
+  let call: RegExpExecArray | null;
+
+  while ((call = callPattern.exec(expression)) !== null) {
+    let index = call.index + call[0].length;
+    let depth = 1;
+    let arg = 0;
+    let literal: string | undefined;
+    let sawLiteral = false;
+    let sawOther = false;
+
+    while (index < expression.length && depth > 0) {
+      const char = expression[index];
+      if (char === '"' || char === "'") {
+        const quote = char;
+        let value = '';
+        index++;
+        while (index < expression.length && expression[index] !== quote) {
+          if (expression[index] === '\\') index++;
+          value += expression[index];
+          index++;
+        }
+        index++;
+        if (arg === argIndex) {
+          literal = value;
+          sawLiteral = true;
+        }
+        continue;
+      }
+      if (char === '(' || char === '[') depth++;
+      else if (char === ')' || char === ']') depth--;
+      else if (char === ',' && depth === 1) {
+        arg++;
+        index++;
+        continue;
+      } else if (arg === argIndex && char.trim() && depth === 1) {
+        sawOther = true;
+      }
+      index++;
+    }
+
+    if (!sawLiteral || sawOther) {
+      throw new Error(
+        `${name}() needs a quoted value for argument ${argIndex + 1}.`
+      );
+    }
+    if (literal !== undefined && !found.includes(literal)) found.push(literal);
+  }
+  return found;
 }
 
 /**

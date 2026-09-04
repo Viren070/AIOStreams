@@ -20,10 +20,13 @@ import {
   config as appConfig,
   constants,
   createLogger,
-  applyVariants,
+  activateVariants,
+  logVariantNotes,
   parseVariantSelector,
+  recordClientAgent,
   VARIANT_QUERY_PARAM,
 } from '@aiostreams/core';
+import { buildVariantRequestContext } from '../../utils/variant-context.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 import { streamApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { syncUserDataUrls } from '../../utils/syncUserData.js';
@@ -256,8 +259,29 @@ export function createNabRouter(namespace: NabNamespace): Router {
       const selectedVariants = parseVariantSelector(
         req.query[VARIANT_QUERY_PARAM]
       );
-      if (selectedVariants.length) {
-        userData = applyVariants(userData, selectedVariants).userData;
+      const variantContext = {
+        ...buildVariantRequestContext(req, 'nab'),
+        type: built.type,
+        id: built.id,
+      };
+      void recordClientAgent(userData.uuid, variantContext.userAgent, 'nab');
+      const activation = await activateVariants(
+        userData,
+        selectedVariants,
+        variantContext
+      );
+      userData = activation.userData;
+      if (activation.applied.length) {
+        logger.info(
+          {
+            uuid: userData.uuid,
+            resource: 'nab',
+            variants: userData.activeVariants,
+            auto: activation.auto,
+          },
+          'serving request with config variants'
+        );
+        logVariantNotes(userData.uuid, activation);
       }
       userData = await syncUserDataUrls(userData);
       userData = await validateConfig(userData, {

@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { commaSeparatedList, positiveInt, seconds } from './helpers.js';
+import {
+  byteSize,
+  commaSeparatedList,
+  positiveInt,
+  seconds,
+} from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 /**
@@ -11,6 +16,7 @@ import type { RuntimeConfigSection } from '../types.js';
  * - `regex`: regex-filter access policy + whitelisted patterns.
  * - `sel`: SEL sync access + whitelisted URLs + stream-expression limits.
  * - `variants`: config-variant access policy + script/instruction limits.
+ * - `healthChecks`: health-check access policy + fetch limits.
  * - `sync`: shared refresh interval for whitelisted regex/SEL syncs.
  * - `disabled`: hard-disabled addons/services/hosts/stream-types.
  * - `selfScraping`: prevents addons from scraping the same AIOStreams instance.
@@ -333,6 +339,68 @@ export const userLimitsSchema = {
       description:
         'Maximum number of segments in a single variant instruction path.',
       env: 'MAX_VARIANT_PATH_SEGMENTS',
+      requiresRestart: false,
+      secret: false,
+    },
+  },
+  healthChecks: {
+    access: {
+      schema: accessLevel,
+      default: 'all',
+      label: 'Health check access',
+      description:
+        'Who may define health checks, the URLs polled to decide whether a service is up. "all" = everyone, "trusted" = trusted users only, "none" = the feature is disabled.',
+      env: 'HEALTH_CHECK_ACCESS',
+      requiresRestart: false,
+      secret: false,
+    },
+    max: {
+      schema: positiveInt,
+      default: 5,
+      label: 'Max health checks',
+      description: 'Maximum number of health checks a user may define.',
+      env: 'MAX_HEALTH_CHECKS',
+      requiresRestart: false,
+      secret: false,
+    },
+    minTtl: {
+      schema: seconds,
+      default: 60,
+      label: 'Min health check interval',
+      description:
+        'Shortest interval a health check result may be reused for. A user asking for less is raised to this (accepts e.g. "5m", "1h").',
+      env: 'HEALTH_CHECK_MIN_TTL',
+      requiresRestart: false,
+      secret: false,
+      ui: { kind: 'duration' },
+    },
+    maxTimeout: {
+      schema: positiveInt,
+      default: 10000,
+      label: 'Max health check timeout (ms)',
+      description:
+        'Longest a health check may wait for a response. The first request needing a fresh result waits this long at worst.',
+      env: 'HEALTH_CHECK_MAX_TIMEOUT',
+      requiresRestart: false,
+      secret: false,
+    },
+    maxBytes: {
+      schema: byteSize,
+      default: 65536,
+      label: 'Max health check response size',
+      description:
+        'How much of a health check response is read before giving up on it.',
+      env: 'HEALTH_CHECK_MAX_BYTES',
+      requiresRestart: false,
+      secret: false,
+    },
+    allowPrivateUrls: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Allow private health check URLs',
+      description:
+        'Let health checks point at private addresses. Anyone who can save a configuration can then probe your internal network, so only enable this on an instance you trust the users of.',
+      env: 'HEALTH_CHECK_ALLOW_PRIVATE_URLS',
       requiresRestart: false,
       secret: false,
     },

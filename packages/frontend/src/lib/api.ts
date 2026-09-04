@@ -370,6 +370,71 @@ export async function updateUserConfig(
   });
 }
 
+
+export interface ClientAgent {
+  userAgent: string;
+  firstSeen: number;
+  lastSeen: number;
+  requests: number;
+}
+
+export interface HealthCheckResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+  checkedAt: number;
+  latencyMs: number;
+}
+
+export interface VariantConditionOutcome {
+  id: string;
+  when: string;
+  matched: boolean;
+  error?: string;
+}
+
+export interface VariantEvaluation {
+  variants: VariantConditionOutcome[];
+  health: Record<string, HealthCheckResult>;
+}
+
+/** The user agents seen on this configuration's stream and catalogue requests. */
+export async function loadClientAgents(uuid: string, password: string | null) {
+  return api<ClientAgent[]>('GET /user/client-agents', configAuth(uuid, password));
+}
+
+/** Ask the server which variant conditions match a hypothetical request. */
+export async function evaluateVariantConditions(
+  uuid: string,
+  password: string | null,
+  body: {
+    variants?: UserData['variants'];
+    healthChecks?: UserData['healthChecks'];
+    userAgent?: string;
+    resource?: string;
+    type?: string;
+    id?: string;
+    query?: Record<string, string>;
+  }
+) {
+  return api<VariantEvaluation>('POST /user/variants/evaluate', {
+    body,
+    ...configAuth(uuid, password),
+  });
+}
+
+/** Run one health check now, ignoring any cached result. */
+export async function testHealthCheck(
+  uuid: string,
+  password: string | null,
+  check: NonNullable<UserData['healthChecks']>[number]
+) {
+  return api<HealthCheckResult>('POST /user/health-checks/test', {
+    body: check,
+    ...configAuth(uuid, password),
+  });
+}
+
 /**
  * Verify a UUID + password pair (used when linking a parent config)
  */

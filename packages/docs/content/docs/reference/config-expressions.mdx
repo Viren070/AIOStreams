@@ -107,6 +107,65 @@ The configure page always edits the **base** config, even when a variant is sele
 
 ---
 
+## Conditional activation
+
+A variant can also decide for itself. Give it an **activation condition** and it applies whenever that condition matches the incoming request, with nothing added to the URL. One install serves a phone a different config from a TV.
+
+The condition is a [stream expression](/reference/stream-expressions) that evaluates to true or false:
+
+```
+includes(userAgent, 'android')
+```
+
+Selecting a variant in the URL still applies it, condition or not. Where both happen, matched variants apply first and the URL's selection wins on anything they both write to.
+
+### What a condition can read
+
+| Name                     | Is                                                                        |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `userAgent`              | The client's `User-Agent` header, or an empty string                      |
+| `resource`               | `stream`, `manifest.json`, `catalog`, `meta`, `subtitles`, `search`, ...  |
+| `type`                   | `movie`, `series`, ... where the request has one                          |
+| `id`                     | The requested id, e.g. `tt0111161:1:2`                                    |
+| `query('name')`          | A query parameter, or an empty string                                     |
+| `header('name')`         | A request header, or an empty string                                      |
+| `health('id')`           | Whether a health check is currently passing                               |
+| `includes(a, b)`         | Whether `a` contains `b`, ignoring case                                   |
+| `matches(value, 'expr')` | Whether a regular expression matches. Follows this instance's regex rules |
+
+Finding the right `userAgent` is guesswork, so the Variants tab lists the last five that actually reached your configuration. Only stream, catalogue, meta and subtitle requests are counted.
+
+### Health checks
+
+A health check is a URL this instance calls to decide whether something is up. Define them in **Miscellaneous → Health Checks**, then read one as `health('id')`:
+
+```
+not health('rd-up')
+```
+
+| Field              | Default | Meaning                                                          |
+| ------------------ | ------- | ---------------------------------------------------------------- |
+| URL                |         | Called with `GET`, or `HEAD` if you prefer                       |
+| Expected status    | `2xx`   | A code (`200`), a class (`2xx`) or a range (`200-299`)           |
+| JSON path          |         | A dotted path into a JSON body, e.g. `debrid.rd`                 |
+| Expected value     |         | Compared to the value at that path. Empty means any truthy value |
+| Body contains      |         | Text the response body must contain, ignoring case               |
+| Interval           | 300s    | How long a result is reused before it is checked again           |
+| Timeout            | 3000ms  | How long to wait for a response                                  |
+| If the check fails | down    | What a timeout or unreachable URL counts as                      |
+
+`health()` is not limited to variant conditions. It works in group conditions, the dynamic addon fetching exit condition, stream expression filters and rankings, and the precache and preload selectors, so you can also skip a group or drop a service's results while it is down.
+
+Every check a configuration defines is resolved once per request, so one request sees one answer everywhere. Results are cached for the interval you set and shared with everyone whose check names the same URL, which means a service that is down is not re-probed on every request. Once a result is older than the interval, the request that notices is served the old answer and the refresh happens behind it, so a slow endpoint never holds up a stream request twice.
+
+### Things worth knowing
+
+- **A condition that fails counts as no match.** A broken expression, an unreachable check, a typo: the variant does not apply and the request is served as it otherwise would be. Only a variant named in the URL is an error when it cannot be applied.
+- **Automatic variants do not change your addon id.** They share the install URL, which is the point. They are still part of the cache key, so two clients on one URL never see each other's results.
+- **The manifest could be cached by your client**, and Stremio syncs installs between devices, so a condition works best on things the manifest does not describe: filters, sorting, formatting, proxying and which service a stream is played through. Writing to `presets`, `services`, `catalogModifications` or `mergedCatalogs` changes which catalogues and resources the addon offers, and `addonName`, `addonLogo`, `addonBackground` and `addonDescription` change how it presents itself. Those are still served correctly on every request, but a client that cached the manifest at install time may keep showing what it saw then.
+
+---
+
 ## Syntax
 
 One instruction per line. `#` starts a comment, except inside a string. Object and array literals may span lines.
@@ -323,16 +382,22 @@ or keep them independent and combine at install time with `/v/phone,no3d`.
 
 Operators can tune these; defaults shown.
 
-| Limit                           | Default  | Environment variable                        |
-| ------------------------------- | -------- | ------------------------------------------- |
-| Availability                    | everyone | `VARIANT_ACCESS` (`all`, `trusted`, `none`) |
-| Variants per config             | 10       | `MAX_VARIANTS`                              |
-| Characters per script           | 4000     | `MAX_VARIANT_SCRIPT_LENGTH`                 |
-| Characters across all scripts   | 20000    | `MAX_VARIANT_TOTAL_SCRIPT_CHARACTERS`       |
-| Instructions per script         | 100      | `MAX_VARIANT_INSTRUCTIONS`                  |
-| Variants per request            | 4        | `MAX_ACTIVE_VARIANTS`                       |
-| `use variant` nesting depth     | 5        | `MAX_VARIANT_DEPTH`                         |
-| Elements one instruction writes | 200      | `MAX_VARIANT_PATH_MATCHES`                  |
+| Limit                           | Default  | Environment variable                             |
+| ------------------------------- | -------- | ------------------------------------------------ |
+| Availability                    | everyone | `VARIANT_ACCESS` (`all`, `trusted`, `none`)      |
+| Variants per config             | 10       | `MAX_VARIANTS`                                   |
+| Characters per script           | 4000     | `MAX_VARIANT_SCRIPT_LENGTH`                      |
+| Characters across all scripts   | 20000    | `MAX_VARIANT_TOTAL_SCRIPT_CHARACTERS`            |
+| Instructions per script         | 100      | `MAX_VARIANT_INSTRUCTIONS`                       |
+| Variants per request            | 4        | `MAX_ACTIVE_VARIANTS`                            |
+| `use variant` nesting depth     | 5        | `MAX_VARIANT_DEPTH`                              |
+| Elements one instruction writes | 200      | `MAX_VARIANT_PATH_MATCHES`                       |
+| Health checks: availability     | everyone | `HEALTH_CHECK_ACCESS` (`all`, `trusted`, `none`) |
+| Health checks per config        | 5        | `MAX_HEALTH_CHECKS`                              |
+| Shortest health check interval  | 60s      | `HEALTH_CHECK_MIN_TTL`                           |
+| Longest health check timeout    | 10000ms  | `HEALTH_CHECK_MAX_TIMEOUT`                       |
+| Health check response read      | 64KB     | `HEALTH_CHECK_MAX_BYTES`                         |
+| Private health check URLs       | refused  | `HEALTH_CHECK_ALLOW_PRIVATE_URLS`                |
 
 ---
 
@@ -341,4 +406,5 @@ Operators can tune these; defaults shown.
 - **An instruction that matches nothing is skipped** and only logged. Remove Real-Debrid later and a variant that swapped its credentials keeps working instead of breaking every install URL you handed out. The editor preview shows these as warnings while you write.
 - **Syntax errors and forbidden fields are rejected on save**, so they never reach a live request.
 - **A variant's name is a label** for the configuration UI and the install page. Use `set addonName` to change what your client shows.
-- **Variants are not inherited** from a parent config: they reference this config's own addon ids and saved formatter names.
+- **Variants are not inherited** from a parent config: they reference this config's own addon ids and saved formatter names. Neither are health checks.
+- **Health check URLs must be public** unless the instance owner has allowed private ones, and can never point back at the instance itself.

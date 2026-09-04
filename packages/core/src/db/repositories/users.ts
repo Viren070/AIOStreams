@@ -86,6 +86,8 @@ export class UserRepository {
     config.trusted = false;
     config.ip = undefined;
     config.activeVariants = undefined;
+    config.autoVariants = undefined;
+    config.healthResults = undefined;
     config.variantSelectorLocation = undefined;
 
     let configToValidate: UserData = config;
@@ -248,6 +250,8 @@ export class UserRepository {
     decryptedConfig.uuid = uuid;
     decryptedConfig.ip = undefined;
     decryptedConfig.activeVariants = undefined;
+    decryptedConfig.autoVariants = undefined;
+    decryptedConfig.healthResults = undefined;
     decryptedConfig.variantSelectorLocation = undefined;
     return applyMigrations(decryptedConfig);
   }
@@ -365,6 +369,8 @@ export class UserRepository {
     config.trusted = isTrustedUuid(uuid);
     config.ip = undefined;
     config.activeVariants = undefined;
+    config.autoVariants = undefined;
+    config.healthResults = undefined;
     config.variantSelectorLocation = undefined;
 
     const db = getDb();

@@ -59,6 +59,19 @@ The constants available to you depend on where the expression is used.
 | `queryType`      | `string`         | Media type (e.g. `"movie"`, `"series"`, `"anime.series"`, `"anime.movie"`) |
 | `queriedAddons`  | `string[]`       | Addon names queried so far                                                 |
 
+### Variant Conditions
+
+Used by a [config variant](/reference/config-expressions) to activate itself from the incoming request. These conditions describe the request rather than the streams, so the stream helpers do not apply.
+
+| Constant    | Type     | Description                                                              |
+| ----------- | -------- | ------------------------------------------------------------------------ |
+| `userAgent` | `string` | The client's `User-Agent` header, or `''`                                |
+| `resource`  | `string` | `stream`, `manifest.json`, `catalog`, `meta`, `subtitles`, `search`, ... |
+| `type`      | `string` | Media type, where the request has one                                    |
+| `id`        | `string` | The requested id, e.g. `tt0111161:1:2`                                   |
+
+Along with `query()`, `header()`, `includes()` and `matches()`, described below.
+
 ### Stream Expression Filters & Precompute Selector
 
 | Constant               | Type             | Default | Description                                           |
@@ -118,6 +131,79 @@ Reference-only comment (not used as a name — start with `#`):
 ## Function Reference
 
 ### Utility Functions
+
+#### `health()`
+
+Whether a health check is currently passing. Available **everywhere**: filters, rankings, group conditions, exit conditions, the precache and preload selectors, and variant activation conditions.
+
+| Parameter | Type     | Description                                          |
+| --------- | -------- | ---------------------------------------------------- |
+| `id`      | `string` | Id of a health check, quoted. Must be one you defined |
+
+Define health checks in **Miscellaneous → Health Checks**; see [conditional activation](/reference/config-expressions#conditional-activation) for what they can test and how often they run. Every check is resolved once per request, so one request sees one answer everywhere.
+
+```
+# Skip a group entirely while your indexer is down
+health('prowlarr')
+```
+
+```
+# Drop a debrid service's results while its status page says it is degraded
+health('rd-up') ? streams : service(streams, 'realdebrid')
+```
+
+Referring to a check that does not exist is rejected when you save.
+
+---
+
+#### `query()`
+
+A query parameter from the request, or `''`. **Variant conditions only.**
+
+| Parameter | Type     | Description                       |
+| --------- | -------- | --------------------------------- |
+| `name`    | `string` | Parameter name, quoted            |
+
+```
+query('profile') == 'tv'
+```
+
+---
+
+#### `header()`
+
+A request header, or `''`. Names are case-insensitive. Credentials and internal headers are not exposed. **Variant conditions only.**
+
+```
+includes(header('x-forwarded-for'), '10.0.0.')
+```
+
+---
+
+#### `includes()`
+
+Whether one string contains another, ignoring case. **Variant conditions only.**
+
+| Parameter  | Type     | Description        |
+| ---------- | -------- | ------------------ |
+| `haystack` | `string` | String to search   |
+| `needle`   | `string` | String to look for |
+
+```
+includes(userAgent, 'android')
+```
+
+---
+
+#### `matches()`
+
+Whether a regular expression matches a value. The pattern must be a quoted literal, and this instance's regex rules apply. Wrap it as `/pattern/flags` to pass flags, the same as every other regex field. **Variant conditions only.**
+
+```
+matches(userAgent, '/stremio.*(android|ios)/i')
+```
+
+---
 
 #### `negate()`
 

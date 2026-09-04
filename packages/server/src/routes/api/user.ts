@@ -12,8 +12,18 @@ import {
   Permission,
   sessionHasPermission,
   UserRepository,
+  evaluateVariantConditions,
+  formatZodError,
+  getClientAgents,
+  getHealth,
+  HealthCheckSchema,
+  resolveHealthDetails,
+  validateConditionalActivation,
+  validateHealthCheck,
+  VariantSchema,
   type UserAnalyticsRange,
 } from '@aiostreams/core';
+import { z, ZodError } from 'zod';
 import {
   loginRateLimiter,
   userApiRateLimiter,
@@ -35,6 +45,17 @@ import {
 const router: Router = Router();
 
 const logger = createLogger('server');
+
+const VariantEvaluateRequestSchema = z.object({
+  variants: z.array(VariantSchema).optional(),
+  healthChecks: z.array(HealthCheckSchema).optional(),
+  userAgent: z.string().max(512).optional(),
+  resource: z.string().max(32).optional(),
+  type: z.string().max(64).optional(),
+  id: z.string().max(256).optional(),
+  query: z.record(z.string(), z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+});
 
 router.use(userApiRateLimiter);
 router.use(attachSession);
@@ -593,6 +614,187 @@ router.get('/analytics', async (req, res, next) => {
       })
     );
   } catch (error) {
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** The user agents seen on this configuration's stream and catalogue requests. */
+router.get('/client-agents', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+    const agents = await getClientAgents(uuid);
+    res.status(200).json(createResponse({ success: true, data: agents }));
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/**
+ * Why a variant did or did not activate for a given request. Takes the draft
+ * variants and health checks from the body so the editor can try unsaved edits.
+ */
+router.post('/variants/evaluate', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    const body = VariantEvaluateRequestSchema.parse(req.body ?? {});
+    const userData = await UserRepository.getUser(uuid, creds.password);
+    if (!userData) {
+      throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+    }
+    if (body.variants) userData.variants = body.variants;
+    if (body.healthChecks) userData.healthChecks = body.healthChecks;
+
+    try {
+      await validateConditionalActivation(userData);
+    } catch (error: any) {
+      throw new APIError(
+        constants.ErrorCode.USER_INVALID_CONFIG,
+        400,
+        error?.message ?? String(error)
+      );
+    }
+
+    const health = await resolveHealthDetails(userData);
+    userData.healthResults = Object.fromEntries(
+      Object.entries(health).map(([id, result]) => [id, result.ok])
+    );
+
+    const userAgent = body.userAgent ?? '';
+    const activation = await evaluateVariantConditions(userData, {
+      resource: body.resource ?? 'stream',
+      type: body.type,
+      id: body.id,
+      userAgent,
+      query: body.query ?? {},
+      headers: { ...(body.headers ?? {}), 'user-agent': userAgent },
+    });
+
+    res.status(200).json(
+      createResponse({
+        success: true,
+        data: { variants: activation.outcomes, health },
+      })
+    );
+  } catch (error) {
+    if (error instanceof ZodError) {
+      next(
+        new APIError(
+          constants.ErrorCode.BAD_REQUEST,
+          undefined,
+          formatZodError(error)
+        )
+      );
+      return;
+    }
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** Runs one health check now, ignoring the cache, so the editor can show it. */
+router.post('/health-checks/test', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    const check = HealthCheckSchema.parse(req.body ?? {});
+    const userData = await UserRepository.getUser(uuid, creds.password);
+    if (!userData) {
+      throw new APIError(constants.ErrorCode.USER_INVALID_DETAILS);
+    }
+
+    // The same gate a save goes through, so a test cannot reach further than
+    // the check would once stored.
+    try {
+      await validateHealthCheck(userData, check);
+    } catch (error: any) {
+      throw new APIError(
+        constants.ErrorCode.USER_INVALID_CONFIG,
+        400,
+        error?.message ?? String(error)
+      );
+    }
+
+    const result = await getHealth(check, { bypassCache: true });
+    res.status(200).json(createResponse({ success: true, data: result }));
+  } catch (error) {
+    if (error instanceof ZodError) {
+      next(
+        new APIError(
+          constants.ErrorCode.BAD_REQUEST,
+          undefined,
+          formatZodError(error)
+        )
+      );
+      return;
+    }
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
     logger.error(error);
     next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
   }

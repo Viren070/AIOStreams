@@ -1,7 +1,7 @@
 import type { UserData } from '../db/schemas.js';
 import { getSimpleTextHash } from './crypto.js';
 
-type ScopedUser = Pick<UserData, 'uuid' | 'activeVariants'>;
+type ScopedUser = Pick<UserData, 'uuid' | 'activeVariants' | 'autoVariants'>;
 
 /**
  * Identity of a configuration instance: the uuid plus any active variants.
@@ -13,9 +13,8 @@ type ScopedUser = Pick<UserData, 'uuid' | 'activeVariants'>;
  */
 export function userScopeKey(user: ScopedUser): string {
   const uuid = user.uuid ?? '';
-  return user.activeVariants?.length
-    ? `${uuid}#${user.activeVariants.join(',')}`
-    : uuid;
+  const ids = [...(user.activeVariants ?? []), ...(user.autoVariants ?? [])];
+  return ids.length ? `${uuid}#${ids.join(',')}` : uuid;
 }
 
 /**

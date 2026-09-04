@@ -58,6 +58,8 @@ export interface ExpressionContext {
   malId?: number;
   // SeaDex availability
   hasSeaDex?: boolean;
+  /** Health check results for this request, backing `health('<id>')`. */
+  health?: Record<string, boolean>;
 }
 /**
  * StreamContext encapsulates all request-specific data that can be shared
@@ -740,6 +742,7 @@ export class StreamContext {
       hasSeaDex: !!(
         this._seadex?.allHashes?.size || this._seadex?.allGroups?.size
       ),
+      health: this.userData.healthResults,
     };
   }
 }
