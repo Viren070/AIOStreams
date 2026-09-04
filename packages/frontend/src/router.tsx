@@ -25,7 +25,6 @@ import {
   UsenetLibraryPage,
   UsenetStatsPage,
   UsenetProvidersPage,
-  UsenetSettingsPage,
   CommunityLayout,
   CommunityPendingPage,
   CommunityPublishedPage,
@@ -331,19 +330,12 @@ const dashboardUsenetStatsRoute = createRoute({
   component: UsenetStatsPage,
 });
 
+// Provider accounts keep their own page: the editor is a substantial thing in
+// its own right (add / test / speed-test / order), not a settings field.
 const dashboardUsenetProvidersRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'providers',
   component: UsenetProvidersPage,
-});
-
-const dashboardUsenetSettingsRoute = createRoute({
-  getParentRoute: () => dashboardUsenetRoute,
-  path: 'settings',
-  validateSearch: (search: Record<string, unknown>): { field?: string } => ({
-    field: optionalString(search.field),
-  }),
-  component: UsenetSettingsPage,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -380,7 +372,6 @@ const routeTree = rootRoute.addChildren([
       dashboardUsenetLibraryRoute,
       dashboardUsenetStatsRoute,
       dashboardUsenetProvidersRoute,
-      dashboardUsenetSettingsRoute,
     ]),
     dashboardCommunityRoute.addChildren([
       dashboardCommunityIndexRoute,

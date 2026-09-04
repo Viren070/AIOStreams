@@ -8,8 +8,6 @@ import {
   resetUsenetStats,
   getUsenetProviders,
   saveUsenetProviders,
-  getUsenetSettings,
-  saveUsenetSettings,
   PERFORMANCE_PROFILES,
   testUsenetProvider,
   runProviderSpeedTest,
@@ -26,6 +24,7 @@ import {
   type UsenetStatsResetTarget,
   type UsenetLibraryStatusGroup,
   type UsenetLibraryStatus,
+  type UsenetLibraryOrigin,
   type UsenetLibrarySort,
   type UsenetLibrarySortDir,
 } from '@aiostreams/core';
@@ -62,6 +61,11 @@ const LIBRARY_SORTS: UsenetLibrarySort[] = [
   'size',
 ];
 const LIBRARY_SORT_DIRS: UsenetLibrarySortDir[] = ['asc', 'desc'];
+const LIBRARY_ORIGINS: UsenetLibraryOrigin[] = [
+  'playback',
+  'dashboard',
+  'sabnzbd',
+];
 
 function username(req: { user?: { username?: string } }): string {
   return req.user?.username ?? 'admin';
@@ -239,42 +243,13 @@ router.put('/providers', async (req, res) => {
   }
 });
 
-// GET /dashboard/usenet/settings — engine settings (incl. hidden) + values.
+// GET /dashboard/usenet/settings — the performance-profile catalogue.
 router.get('/settings', (_req, res, next) => {
   try {
     res.status(200).json(
       createResponse({
         success: true,
-        data: { keys: getUsenetSettings(), profiles: PERFORMANCE_PROFILES },
-      })
-    );
-  } catch (err) {
-    next(err);
-  }
-});
-
-// PATCH /dashboard/usenet/settings — { [dottedKey]: value } (changed keys only).
-router.patch('/settings', async (req, res, next) => {
-  try {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const { updated, requiresRestart, errors } = await saveUsenetSettings(
-      body,
-      username(req)
-    );
-    const ok = Object.keys(errors).length === 0;
-    res.status(ok ? 200 : 422).json(
-      createResponse({
-        success: ok,
-        data: { updated, requiresRestart },
-        ...(ok
-          ? {}
-          : {
-              error: {
-                code: 'VALIDATION_ERROR',
-                message: 'Some settings could not be saved',
-                issues: errors,
-              },
-            }),
+        data: { profiles: PERFORMANCE_PROFILES },
       })
     );
   } catch (err) {
@@ -390,6 +365,13 @@ router.get('/library', async (req, res, next) => {
     const sort = LIBRARY_SORTS.includes(sortParam) ? sortParam : undefined;
     const dirParam = String(req.query.dir ?? '') as UsenetLibrarySortDir;
     const dir = LIBRARY_SORT_DIRS.includes(dirParam) ? dirParam : undefined;
+    // Optional origin filter (CSV), e.g. ?origin=sabnzbd.
+    const origins = String(req.query.origin ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s): s is UsenetLibraryOrigin =>
+        LIBRARY_ORIGINS.includes(s as UsenetLibraryOrigin)
+      );
     const data = await UsenetLibraryRepository.list({
       limit: Number.isFinite(limit) ? limit : 50,
       offset: Number.isFinite(offset) ? offset : 0,
@@ -398,6 +380,7 @@ router.get('/library', async (req, res, next) => {
       search: search || undefined,
       sort,
       dir,
+      origins,
     });
     res.status(200).json(
       createResponse({
