@@ -45,6 +45,24 @@ export interface MetadataServiceConfig {
   tvdbApiKey?: string;
 }
 
+/**
+ * TVDB and Skyhook use the resolved provider-facing numbering when a title
+ * match has reconciled different TMDB and TVDB season partitions.
+ */
+export function getProviderEpisodeNumbers(
+  season: string | number,
+  episode: string | number,
+  episodeFacts?: Pick<
+    EpisodeResolution,
+    'resolvedSeasonNumber' | 'resolvedEpisodeNumber'
+  >
+): { seasonNumber: number; episodeNumber: number } {
+  return {
+    seasonNumber: episodeFacts?.resolvedSeasonNumber ?? Number(season),
+    episodeNumber: episodeFacts?.resolvedEpisodeNumber ?? Number(episode),
+  };
+}
+
 export class MetadataService {
   private readonly lock: DistributedLock;
   private readonly config: MetadataServiceConfig;
@@ -593,9 +611,15 @@ export class MetadataService {
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
             if (type === 'series' && id.season && id.episode) {
-              const seasonNumber =
-                episodeFacts?.resolvedSeasonNumber ?? Number(id.season);
-              const episodeNumber = Number(id.episode);
+              // Cinemeta describes the request as it was originally made.
+              // Its videos must not be queried using TVDB-facing remaps.
+              const cinemetaSeason = Number(id.season);
+              const cinemetaEpisode = Number(id.episode);
+              const { seasonNumber, episodeNumber } = getProviderEpisodeNumbers(
+                id.season,
+                id.episode,
+                episodeFacts
+              );
               const yearOf = (date?: string | null) => {
                 if (!date) return undefined;
                 const year = new Date(date).getFullYear();
@@ -677,7 +701,7 @@ export class MetadataService {
               }
               if (!seasonYear && cinemetaVideos?.length) {
                 for (const video of cinemetaVideos) {
-                  if (video.season !== seasonNumber || !video.released)
+                  if (video.season !== cinemetaSeason || !video.released)
                     continue;
                   const year = yearOf(video.released);
                   if (year && (seasonYear === undefined || year < seasonYear)) {
@@ -693,7 +717,7 @@ export class MetadataService {
               // request was made in says they mean.
               const cinemetaReleased = cinemetaVideos?.find(
                 (v) =>
-                  v.season === Number(id.season) && v.episode === episodeNumber
+                  v.season === cinemetaSeason && v.episode === cinemetaEpisode
               )?.released;
               const referenceAirDate =
                 // the request's own provider is authoritative
@@ -817,6 +841,7 @@ export class MetadataService {
               episodeAirDates: episodeFacts?.episodeAirDates,
               episodeAirDate: episodeFacts?.episodeAirDates?.[0],
               resolvedSeasonNumber: episodeFacts?.resolvedSeasonNumber,
+              resolvedEpisodeNumber: episodeFacts?.resolvedEpisodeNumber,
               resolvedSeasonFirstEpisode:
                 episodeFacts?.resolvedSeasonFirstEpisode,
               sceneTitles,

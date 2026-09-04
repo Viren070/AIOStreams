@@ -90,6 +90,14 @@ export abstract class BaseNabAddon<
     meta: SearchResultMetadata;
   }> {
     const forceIncludeSeasonEpInParams = ['StremThru'];
+    // Metadata can reconcile TMDB and TVDB season partitions by episode title.
+    // Use those source-facing numbers consistently for both native S/E params
+    // and fallback text queries, while preserving the original id elsewhere.
+    const effectiveParsedId: ParsedId = {
+      ...parsedId,
+      season: metadata.resolvedSeasonNumber?.toString() ?? parsedId.season,
+      episode: metadata.resolvedEpisodeNumber?.toString() ?? parsedId.episode,
+    };
     const start = Date.now();
     const queryParams: Record<string, string> = {};
     const queryLimit = createQueryLimit();
@@ -155,18 +163,18 @@ export abstract class BaseNabAddon<
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
         )) &&
-      parsedId.season
+      effectiveParsedId.season
     )
-      queryParams.season = parsedId.season.toString();
+      queryParams.season = effectiveParsedId.season.toString();
     if (
       ((!this.userData.forceQuerySearch &&
         searchCapabilities.supportedParams.includes('ep')) ||
         forceIncludeSeasonEpInParams.includes(
           capabilities.server.title || ''
         )) &&
-      parsedId.episode
+      effectiveParsedId.episode
     )
-      queryParams.ep = parsedId.episode.toString();
+      queryParams.ep = effectiveParsedId.episode.toString();
     if (
       !this.userData.forceQuerySearch &&
       searchCapabilities.supportedParams.includes('year') &&
@@ -227,7 +235,7 @@ export abstract class BaseNabAddon<
       searchCapabilities.supportedParams.includes('q') &&
       metadata.primaryTitle
     ) {
-      queries = this.buildQueries(parsedId, metadata, {
+      queries = this.buildQueries(effectiveParsedId, metadata, {
         // add year if it is not already in the query params
         addYear: !queryParams.year,
         // add season and episode if they are not already in the query params
