@@ -307,7 +307,6 @@ export async function runArrQueueCleanup(ownership: QueueOwnership): Promise<{
   result?: QueueCleanupResult;
 }> {
   if (!appConfig.arr.queueCleanup.enabled) {
-    logger.debug('queue cleanup pass skipped: turned off in settings');
     return { ok: true, message: 'disabled' };
   }
   const clients = arrClients();
