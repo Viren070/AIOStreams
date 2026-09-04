@@ -92,18 +92,34 @@ export function GetStartedCard({
         )}
       </div>
 
-      {!isSignedIn && (
-        <p className="text-xs text-gray-500">
-          Already have a configuration?{' '}
-          <button
-            type="button"
-            onClick={onSignIn}
-            className="text-[--brand] hover:underline"
-          >
-            Sign in
-          </button>{' '}
-          to load it.
-        </p>
+      {(hasConfig || !isSignedIn) && (
+        <div className="space-y-1 text-xs text-gray-500">
+          {hasConfig && (
+            <p>
+              <button
+                type="button"
+                onClick={onBrowseSetups}
+                className="text-[--brand] hover:underline"
+              >
+                Browse ready-made setups
+              </button>{' '}
+              to apply a new one, or re-apply one you already use.
+            </p>
+          )}
+          {!isSignedIn && (
+            <p>
+              Already have a configuration?{' '}
+              <button
+                type="button"
+                onClick={onSignIn}
+                className="text-[--brand] hover:underline"
+              >
+                Sign in
+              </button>{' '}
+              to load it.
+            </p>
+          )}
+        </div>
       )}
     </GlowCard>
   );
