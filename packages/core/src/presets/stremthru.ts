@@ -13,13 +13,16 @@ import {
 import { constants, ServiceId } from '../utils/index.js';
 import { Preset } from './preset.js';
 
+function encodeEmailPassword(credentials: any): string | undefined {
+  if (!credentials?.email || !credentials?.password) return undefined;
+  return `${credentials.email}:${credentials.password}`;
+}
+
 export const stremthruSpecialCases: Partial<
   Record<ServiceId, (credentials: any) => any>
 > = {
-  [constants.OFFCLOUD_SERVICE]: (credentials: any) =>
-    `${credentials.email}:${credentials.password}`,
-  [constants.PIKPAK_SERVICE]: (credentials: any) =>
-    `${credentials.email}:${credentials.password}`,
+  [constants.OFFCLOUD_SERVICE]: encodeEmailPassword,
+  [constants.PIKPAK_SERVICE]: encodeEmailPassword,
   [constants.STREMTHRU_NEWZ_SERVICE]: (credentials: any) => credentials,
 };
 
