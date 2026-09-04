@@ -91,7 +91,13 @@ export function parseLockResult<T>(json: string): T {
     const err = (ctor ? Object.create(ctor.prototype) : new Error()) as Error;
     for (const [k, v] of Object.entries(val)) {
       if (k === '__lockError' || k === 'className') continue;
-      (err as any)[k] = v;
+      // avoids throwing on getter-only accessors, e.g. DOMException.prototype.name
+      Object.defineProperty(err, k, {
+        value: v,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
     return err;
   });
