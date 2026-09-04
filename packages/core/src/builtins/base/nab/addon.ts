@@ -255,12 +255,59 @@ export abstract class BaseNabAddon<
       };
 
       results = await runQueries(primaryParams);
+
+      // The fallback decision belongs to the season/episode queries alone, so
+      // it is taken before the title-only pass can add anything.
       if (results.length === 0 && fallbackParams) {
         this.logger.debug(
           'No results for initial queries, retrying with alternate season/episode params',
           { season: queryParams.season, episode: queryParams.ep }
         );
         results = await runQueries(fallbackParams);
+      }
+
+      // A complete-series or multi-season pack carries neither a season nor an
+      // episode in its name, so every query above misses it: the season and
+      // episode are appended to the search term, or travel as params the
+      // indexer folds back into it. Repeat the search by title alone, with
+      // both stripped, and let the requested episode be picked out of the
+      // pack's file list afterwards.
+      if (
+        appConfig.builtins.scrape.seriesTitleOnlyQuery &&
+        parsedId.mediaType === 'series' &&
+        (parsedId.season || parsedId.episode)
+      ) {
+        const { season: _s, ep: _e, ...titleOnlyParams } = primaryParams;
+        const titleOnlyQueries = this.buildQueries(parsedId, metadata, {
+          addYear: false,
+          addSeasonEpisode: true,
+          titleOnly: true,
+          titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
+        });
+        this.logger.debug('Performing title-only queries', {
+          queries: titleOnlyQueries,
+        });
+        // This pass is opportunistic: a failure must never take down a search
+        // whose season/episode queries already succeeded.
+        const settled = await Promise.allSettled(
+          titleOnlyQueries.map((q) =>
+            queryLimit(() =>
+              this.fetchResults(searchFunction, { ...titleOnlyParams, q })
+            )
+          )
+        );
+        for (const outcome of settled) {
+          if (outcome.status === 'fulfilled') {
+            results = [...results, ...outcome.value];
+          } else {
+            this.logger.warn('Title-only query failed', {
+              error:
+                outcome.reason instanceof Error
+                  ? outcome.reason.message
+                  : String(outcome.reason),
+            });
+          }
+        }
       }
     } else {
       results = await this.fetchResults(searchFunction, primaryParams);
