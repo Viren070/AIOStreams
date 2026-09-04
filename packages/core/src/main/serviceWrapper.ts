@@ -23,6 +23,7 @@ import { isServiceWrapEligibleP2PStream } from '../streams/utils.js';
 import { parseTorrentTitleCached } from '../parser/title.js';
 import { PresetManager } from '../presets/presetManager.js';
 
+import { stremthruSpecialCases } from '../presets/stremthru.js';
 const logger = createLogger('serviceWrapper');
 
 export interface ServiceWrapResult {
@@ -602,16 +603,12 @@ export function getServiceCredential(service: {
   const creds = service.credentials;
   if (!creds) return undefined;
 
-  // Only need to handle torrent-based services.
-  switch (service.id) {
-    case constants.SEEDR_SERVICE:
-      return creds.encodedToken;
-    case constants.PIKPAK_SERVICE:
-      return JSON.stringify({
-        email: creds.email,
-        password: creds.password,
-      });
-    default:
-      return creds.apiKey;
-  }
+  // Service Wrap uses StremThru for torrent services, so reuse its credential
+  // encoding contract rather than maintaining a second representation here.
+  const specialCase =
+    stremthruSpecialCases[service.id as keyof typeof stremthruSpecialCases];
+  if (!specialCase) return creds.apiKey;
+
+  const specialCredential = specialCase(creds);
+  return typeof specialCredential === 'string' ? specialCredential : undefined;
 }
