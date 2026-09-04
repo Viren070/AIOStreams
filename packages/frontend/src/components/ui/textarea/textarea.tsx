@@ -92,7 +92,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         onValueChange?.(e.target.value);
         onChange?.(e);
       },
-      []
+      [onValueChange, onChange]
     );
 
     return (
