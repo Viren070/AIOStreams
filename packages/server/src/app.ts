@@ -48,6 +48,7 @@ import {
   knaben,
   eztv,
   therarbg,
+  thePirateBay,
   torrentGalaxy,
   seadex,
   easynews,
@@ -273,6 +274,7 @@ builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);
 builtinsRouter.use('/eztv', eztv);
 builtinsRouter.use('/therarbg', therarbg);
+builtinsRouter.use('/the-pirate-bay', thePirateBay);
 builtinsRouter.use('/torrent-galaxy', torrentGalaxy);
 builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
