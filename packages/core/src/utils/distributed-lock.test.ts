@@ -73,6 +73,16 @@ describe('distributed-lock error serialization', () => {
     assert.equal(revived.error.message, 'bad argument');
   });
 
+  test('a native class with a getter-only `name` (e.g. DOMException) round-trips without throwing', () => {
+    const err = new DOMException('The operation was aborted', 'TimeoutError');
+    const wire = stringifyLockResult({ error: err });
+    const revived = parseLockResult<{ error: Error }>(wire);
+
+    assert.ok(revived.error instanceof DOMException);
+    assert.equal(revived.error.name, 'TimeoutError');
+    assert.equal(revived.error.message, 'The operation was aborted');
+  });
+
   test('resolveErrorCtor resolves registered, native, and unresolvable names', () => {
     assert.equal(resolveErrorCtor('TestDebridError'), TestDebridError);
     assert.equal(resolveErrorCtor('TypeError'), TypeError);
