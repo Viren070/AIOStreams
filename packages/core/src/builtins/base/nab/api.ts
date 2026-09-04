@@ -13,6 +13,7 @@ import {
 import { config as appConfig } from '../../../config/index.js';
 import type { Logger } from '../../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../../utils/general.js';
+import { validateInfoHash } from '../../utils/debrid.js';
 
 // --- Generic Custom Error ---
 export class NabApiError extends Error {
@@ -258,6 +259,45 @@ export type NewznabSearchResultItem = z.infer<
 export type SearchResultItem<T extends 'torznab' | 'newznab'> =
   T extends 'torznab' ? TorznabSearchResultItem : NewznabSearchResultItem;
 
+function extractBtihFromMagnet(
+  magnet: string | number | boolean | undefined
+): string | undefined {
+  return validateInfoHash(
+    magnet
+      ?.toString()
+      ?.match(/(?:urn(?::|%3A)btih(?::|%3A))([a-f0-9]{40})/i)?.[1]
+  );
+}
+
+// https://torznab.github.io/spec-1.3-draft/revisions/1.0-Torznab-Torrent-Support.html
+const MAGNET_ENCLOSURE_TYPES = new Set([
+  'application/x-bittorrent',
+  'application/x-bittorrent;x-scheme-handler/magnet',
+]);
+
+function extractBtihFromEnclosures(
+  enclosures: TorznabSearchResultItem['enclosure']
+): string | undefined {
+  for (const e of enclosures) {
+    if (!MAGNET_ENCLOSURE_TYPES.has(e.type) || !e.url.includes('magnet:'))
+      continue;
+    const hash = extractBtihFromMagnet(e.url);
+    if (hash) return hash;
+  }
+  return undefined;
+}
+
+/** Pulls a usable infohash out of a torznab result, if one's there. */
+export function extractTorznabInfoHash(
+  result: TorznabSearchResultItem
+): string | undefined {
+  return (
+    validateInfoHash(result.torznab?.infohash?.toString()) ??
+    extractBtihFromMagnet(result.torznab?.magneturl) ??
+    extractBtihFromEnclosures(result.enclosure)
+  );
+}
+
 export type SearchResponse<T extends 'torznab' | 'newznab'> = {
   offset?: number;
   total?: number;
@@ -290,6 +330,8 @@ export type NabTestResult = {
   /** ID params actually usable per media type - movie-search/tv-search each advertise their own supportedParams, and one may support IDs while the other doesn't. */
   idSearchParams?: { movie: string[]; series: string[] };
   resultCount?: number;
+  /** torznab only; undefined if inconclusive */
+  missingInfoHash?: boolean;
   error?: { code?: number; message: string };
 };
 
@@ -533,10 +575,17 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
         { limit: 1 },
         NAB_TEST_TIMEOUT
       );
+      const missingInfoHash =
+        this.namespace === 'torznab' && response.results.length > 0
+          ? !response.results.some((r) =>
+              extractTorznabInfoHash(r as TorznabSearchResultItem)
+            )
+          : undefined;
       return {
         ok: true,
         ...details,
         resultCount: response.total ?? response.results.length,
+        missingInfoHash,
       };
     } catch (error) {
       return {
