@@ -403,6 +403,15 @@ export function useUsenetLive(enabled = true) {
   });
 }
 
+export function useUsenetGlance() {
+  return useQuery({
+    queryKey: [...ROOT, 'live', 'glance'] as const,
+    queryFn: () => api<LiveStats>('/dashboard/usenet/live'),
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });
+}
+
 /**
  * Wipe recorded rollups.
  */
