@@ -55,15 +55,26 @@ All of the NNTP streamers pull articles straight from your provider — the diff
 | **AIOStreams** (built-in engine)       | Streams over NNTP from your provider                 | Your AIOStreams instance  | Your own instance (self-hosted or a private [ElfHosted](#zero-setup-the-elfhosted-bundle) one), a provider, indexers |
 | **NzbDAV / AltMount / StremThru Newz** | Streams over NNTP from your provider                 | The tool's server         | A self-hosted tool, a provider, indexers                                                                             |
 | **Stremio NNTP**                       | Streams over NNTP from your provider                 | Inside the Stremio client | Stremio Desktop v5 or Android TV, a provider, indexers                                                               |
-| **TorBox**                             | Full download to TorBox first, then instant playback | TorBox's servers          | A TorBox Pro plan                                                                                                    |
+| **TorBox**                             | Full download to TorBox first, then instant playback | TorBox's servers          | A TorBox Pro plan, indexers                                                                                          |
 | **Easynews**                           | Direct HTTP from Easynews                            | Easynews' servers         | An Easynews subscription                                                                                             |
 
 <Callout type="info">
   **Which one?** If you run your own AIOStreams instance (or a private
   ElfHosted one), the **built-in engine** is the simplest full-control option —
-  no extra software to install. If you can't host anything, **TorBox Pro** or
-  **Easynews** work from any device, and **Stremio NNTP** works with just a
-  provider if you're on a supported Stremio client.
+  no extra software to install, any provider, any indexer, and the [fastest of
+  the lot](#the-built-in-engine-aiostreams). If you can't host anything:
+
+- **Easynews** is the only option that needs nothing but its own subscription —
+  no provider details, no indexers. In exchange it isn't true NNTP streaming:
+  results come from Easynews' own web search as direct HTTP downloads from
+  their servers, so you can't bring your own indexers to it. (The subscription
+  does include NNTP access, so Easynews can be the _provider_ for any of the
+  options above.)
+- **TorBox Pro** also plays on any device, but you bring your own indexers.
+- **Stremio NNTP** needs no hosting either, but still needs a provider and your
+  own indexers, only runs on two Stremio clients, and doesn't work with every
+  provider — see its [drawbacks](#stremio-nntp).
+
 </Callout>
 
 ## 2. Set Up Your Service
@@ -75,6 +86,8 @@ Jump straight to the service you picked. Every path ends the same way: once the 
 AIOStreams ships its own NNTP streaming engine: give it your provider details and it downloads, unpacks and serves releases as HTTP streams directly from your instance — no NzbDAV, AltMount or any other companion software.
 
 It appears in your configuration as the **AIOStreams** service (results tagged `AIO`), and requires your own instance — self-hosted, or a private [ElfHosted](#zero-setup-the-elfhosted-bundle) instance.
+
+It is also the fastest of these options: the public [usenet streaming benchmark](https://github.com/Viren070/nzb-streaming-benchmarks), which runs nine applications over the same corpus against a real provider, has AIOStreams first to the first byte and first to complete a seek.
 
 #### Dashboard Setup (once per instance)
 
@@ -156,6 +169,7 @@ The one NNTP option that needs no server at all: here, the tool that converts Us
 **Drawbacks:**
 
 - Limited to the two clients above.
+- Does not work with every provider.
 - Harder to debug — streaming happens entirely inside Stremio.
 - [Failover](#4-make-it-resilient-failover) cannot protect these streams, since playback never touches AIOStreams.
 
@@ -163,7 +177,7 @@ The one NNTP option that needs no server at all: here, the tool that converts Us
 
 TorBox works differently from the NNTP streamers: AIOStreams passes an NZB URL to TorBox, TorBox downloads the **entire release to their servers**, and once complete it becomes _cached_ — from then on it plays back instantly from TorBox, on any device. Usenet downloads on TorBox are generally fast and reliable compared to torrents.
 
-Usenet on TorBox requires their **Pro** plan, which also bundles internal indexers (via [TorBox Search](#torbox-search-caveats)) and [an NNTP server](#the-torbox-nntp-server) — so it can be a zero-hosting, all-in-one option.
+Usenet on TorBox requires their **Pro** plan, which also includes [an NNTP server](#the-torbox-nntp-server) — so a single subscription can cover both this and any of the NNTP options above.
 
 **Setup:**
 
@@ -171,15 +185,22 @@ Usenet on TorBox requires their **Pro** plan, which also bundles internal indexe
   <Step>Obtain a **TorBox Pro** account.</Step>
   <Step>In AIOStreams, go to **Services** and add your TorBox API key.</Step>
   <Step>
-    Add Usenet addons — TorBox Search for their internal indexers, or Newznab
-    and friends for your own.
+    [Add your indexers](#3-add-your-indexers) — their results play through
+    TorBox.
   </Step>
 </Steps>
 
+<Callout type="info">
+  TorBox's Search API — which powered the built-in **TorBox Search** addon and
+  its access to TorBox's internal indexers — has been shut down, and the addon
+  was removed in [v2.32](/changelog/v2.32). Usenet on TorBox now always uses
+  your own indexers.
+</Callout>
+
 <Callout type="warn">
-  When using your own indexers with TorBox (not their internal ones), results
-  appear uncached even if another TorBox user has already cached the same file.
-  Internal TorBox indexer results do show as cached when previously downloaded.
+  Usenet results always appear uncached, even if another TorBox user has
+  already cached the same file, so the first play of a release always waits for
+  the download. See [Cache and Play](#cache-and-play).
 </Callout>
 
 #### Cache and Play
@@ -193,24 +214,6 @@ Because TorBox must finish downloading before playback, an uncached result norma
 </Callout>
 
 (The setting also applies to uncached debrid downloads, but it shines with Usenet since downloads usually finish quickly.)
-
-#### TorBox Search Caveats
-
-TorBox's Search API returns both torrent and Usenet results. You can use it through the dedicated **TorBox Search** addon, or point the built-in **Newznab**/**Torznab** addons at its Newznab/Torznab endpoints. Two important caveats either way:
-
-<Callout type="warn">
-  **The TorBox Search API is IP-whitelisted** — it only responds to approved
-  IPs. In practice it will not work from a self-hosted AIOStreams instance;
-  you need to use one of the trusted public instances.
-</Callout>
-
-<Callout type="warn">
-  **TorBox Search Usenet results only work with the TorBox service.** The "NZB
-  URLs" it returns are not real NZB downloads — only TorBox can internally
-  resolve them and start a download. No other service or tool can fetch an NZB
-  from them, and that includes NNTP tools configured with TorBox's own NNTP
-  server.
-</Callout>
 
 #### The TorBox NNTP Server
 
@@ -413,13 +416,12 @@ Pre-configured, fully supported, available in 5 minutes — the same software st
 
 With a playback service in place, add addons to feed it results. AIOStreams provides several built-in addons that return Usenet results:
 
-| Addon               | Description                                                                                           |
-| ------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Newznab**         | Connect indexers directly via their API URL and key                                                   |
-| **NZBHydra2**       | Connect your NZBHydra2 instance                                                                       |
-| **Prowlarr**        | Query Prowlarr for both torrent and Usenet results                                                    |
-| **TorBox Search**   | Uses TorBox's internal indexers (torrents and Usenet) — IP-whitelisted, trusted public instances only |
-| **Easynews Search** | Search Easynews; results stream directly or serve as NZBs                                             |
+| Addon               | Description                                               |
+| ------------------- | --------------------------------------------------------- |
+| **Newznab**         | Connect indexers directly via their API URL and key       |
+| **NZBHydra2**       | Connect your NZBHydra2 instance                           |
+| **Prowlarr**        | Query Prowlarr for both torrent and Usenet results        |
+| **Easynews Search** | Search Easynews; results stream directly or serve as NZBs |
 
 These addons need at least one Usenet-capable service configured — each result is tagged with the service that will play it (e.g. `AIO`, `SN`, `TB`).
 
