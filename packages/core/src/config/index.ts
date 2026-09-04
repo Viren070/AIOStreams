@@ -30,6 +30,8 @@ import {
   oidcSchema,
   linkedAccountsSchema,
   communitySchema,
+  sharesSchema,
+  arrSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -56,6 +58,8 @@ export const runtimeSchemas = {
   oidc: oidcSchema,
   linkedAccounts: linkedAccountsSchema,
   community: communitySchema,
+  shares: sharesSchema,
+  arr: arrSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

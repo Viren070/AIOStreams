@@ -19,6 +19,8 @@ export interface AdmissionInput {
    */
   username: string;
   targetKey: string;
+  /** Opened through the operator's own share tree: no connection caps. */
+  share?: boolean;
   /** Sessions already serving bytes for this user, across all transports. */
   activeSessions: number;
   /** Sessions already serving bytes for everyone, across all transports. */
@@ -71,25 +73,27 @@ export function checkAdmission(input: AdmissionInput): AdmissionVerdict {
         };
   }
 
-  const connectionLimit = identified ? connectionLimitFor(input.username) : 0;
-  if (connectionLimit > 0 && input.activeSessions >= connectionLimit) {
-    return {
-      ok: false,
-      reason: 'connection_user',
-      message: `connection limit reached (${connectionLimit})`,
-    };
-  }
+  if (!input.share) {
+    const connectionLimit = identified ? connectionLimitFor(input.username) : 0;
+    if (connectionLimit > 0 && input.activeSessions >= connectionLimit) {
+      return {
+        ok: false,
+        reason: 'connection_user',
+        message: `connection limit reached (${connectionLimit})`,
+      };
+    }
 
-  const globalConnections = globalConnectionLimit();
-  if (
-    globalConnections > 0 &&
-    input.globalActiveSessions >= globalConnections
-  ) {
-    return {
-      ok: false,
-      reason: 'connection_global',
-      message: `the instance connection limit has been reached (${globalConnections})`,
-    };
+    const globalConnections = globalConnectionLimit();
+    if (
+      globalConnections > 0 &&
+      input.globalActiveSessions >= globalConnections
+    ) {
+      return {
+        ok: false,
+        reason: 'connection_global',
+        message: `the instance connection limit has been reached (${globalConnections})`,
+      };
+    }
   }
 
   const userLimit = identified ? userBandwidthLimit(input.username) : 0;
