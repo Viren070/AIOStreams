@@ -28,14 +28,6 @@ interface MenuTabsProps {
   revealOnChange?: boolean;
 }
 
-const COLS_CLASS: Record<number, string> = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-  5: 'grid-cols-5',
-};
-
 // Direction-aware slide: entering panel comes in from the side you're heading
 // towards, the exiting one leaves the opposite way. `custom` carries the sign.
 const panelVariants = {
@@ -51,7 +43,6 @@ export function MenuTabs({
   defaultMobileOpen = '',
   revealOnChange = false,
 }: MenuTabsProps) {
-  const n = tabs.length;
   const currentIndex = tabs.findIndex((t) => t.value === activeTab);
   const activeContent = currentIndex >= 0 ? tabs[currentIndex].content : null;
 
@@ -146,14 +137,12 @@ export function MenuTabs({
       {/* Desktop: Tab bar + animated content panel */}
       <div className="hidden sm:block">
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-          <TabsList
-            className={`grid w-full border-b border-[--border] ${COLS_CLASS[n] ?? 'grid-cols-4'}`}
-          >
+          <TabsList className="flex w-full border-b border-[--border] overflow-x-auto">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex items-center gap-1.5"
+                className="flex flex-1 basis-0 items-center gap-1.5"
               >
                 {tab.icon}
                 {tab.label}
