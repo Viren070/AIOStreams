@@ -19,6 +19,7 @@ import {
   TouchSensor,
   useSensor,
 } from '@dnd-kit/core';
+import { toast } from 'sonner';
 import { Button, IconButton } from '../../../ui/button';
 import { FiSettings, FiSearch } from 'react-icons/fi';
 import { TextInput } from '../../../ui/text-input';
@@ -26,7 +27,11 @@ import { cn } from '../../../ui/core/styling';
 import { Switch } from '../../../ui/switch';
 import { Modal } from '../../../ui/modal';
 import { Alert } from '../../../ui/alert';
-import TemplateOption from '../../../shared/template-option';
+import TemplateOption, {
+  HEALTH_CHECK_TEST_ENDPOINT,
+  verdictNeedsAttention,
+  type HealthCheckTestResult,
+} from '../../../shared/template-option';
 import MarkdownLite from '../../../shared/markdown-lite';
 import { StatusResponse, UserData } from '@aiostreams/core';
 
@@ -37,6 +42,9 @@ export function StreamServices() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalService, setModalService] = useState<ServiceId | null>(null);
   const [modalValues, setModalValues] = useState<Record<string, any>>({});
+  const [modalHealthCheckUrl, setModalHealthCheckUrl] = useState<
+    string | undefined
+  >(undefined);
   const [isDragging, setIsDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<
@@ -66,6 +74,7 @@ export function StreamServices() {
     setModalService(service);
     const svc = userData.services?.find((s) => s.id === service);
     setModalValues(svc?.credentials || {});
+    setModalHealthCheckUrl(svc?.healthCheckUrl);
     setModalOpen(true);
   };
 
@@ -73,14 +82,23 @@ export function StreamServices() {
     setModalOpen(false);
     setModalService(null);
     setModalValues({});
+    setModalHealthCheckUrl(undefined);
   };
 
-  const handleModalSubmit = (values: Record<string, any>) => {
+  const handleModalSubmit = (
+    values: Record<string, any>,
+    healthCheckUrl: string | undefined
+  ) => {
     setUserData((prev) => {
       const newUserData = { ...prev };
       newUserData.services = (newUserData.services ?? []).map((service) => {
         if (service.id === modalService) {
-          return { ...service, enabled: true, credentials: values };
+          return {
+            ...service,
+            enabled: true,
+            credentials: values,
+            healthCheckUrl: healthCheckUrl || undefined,
+          };
         }
         return service;
       });
@@ -351,6 +369,7 @@ export function StreamServices() {
         onOpenChange={setModalOpen}
         serviceId={modalService}
         values={modalValues}
+        healthCheckUrl={modalHealthCheckUrl}
         onSubmit={handleModalSubmit}
         onClose={handleModalClose}
       />
@@ -492,6 +511,7 @@ function ServiceModal({
   onOpenChange,
   serviceId,
   values,
+  healthCheckUrl,
   onSubmit,
   onClose,
 }: {
@@ -499,15 +519,59 @@ function ServiceModal({
   onOpenChange: (v: boolean) => void;
   serviceId: ServiceId | null;
   values: Record<string, any>;
-  onSubmit: (v: Record<string, any>) => void;
+  healthCheckUrl: string | undefined;
+  onSubmit: (
+    v: Record<string, any>,
+    healthCheckUrl: string | undefined
+  ) => void;
   onClose: () => void;
 }) {
   const { status } = useStatus();
   const [localValues, setLocalValues] = useState<Record<string, any>>({});
+  const [localHealthCheckUrl, setLocalHealthCheckUrl] = useState<
+    string | undefined
+  >(undefined);
+  const [verdict, setVerdict] = useState<HealthCheckTestResult | null>(null);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    if (open) setLocalValues(values);
-  }, [open, values]);
+    if (open) {
+      setLocalValues(values);
+      setLocalHealthCheckUrl(healthCheckUrl);
+      setVerdict(null);
+      setTesting(false);
+    }
+  }, [open, values, healthCheckUrl]);
+
+  const runHealthCheckTest = async () => {
+    if (!localHealthCheckUrl?.trim()) {
+      toast.error('Enter a URL before testing');
+      return;
+    }
+    setTesting(true);
+    setVerdict(null);
+    try {
+      const response = await fetch(HEALTH_CHECK_TEST_ENDPOINT, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: localHealthCheckUrl }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        throw new Error(
+          json.detail || json.error?.message || 'Could not run the test'
+        );
+      }
+      setVerdict(json.data as HealthCheckTestResult);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not run the test'
+      );
+    } finally {
+      setTesting(false);
+    }
+  };
 
   if (!status || !serviceId) return null;
   const meta = status.settings.services[serviceId]!;
@@ -523,7 +587,7 @@ function ServiceModal({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit(localValues);
+          onSubmit(localValues, localHealthCheckUrl);
         }}
       >
         {credentials.map((opt) => (
@@ -536,6 +600,52 @@ function ServiceModal({
             }
           />
         ))}
+        {meta.supportsHealthCheck && (
+          <div className="space-y-2">
+            <TemplateOption
+              option={{
+                id: 'healthCheckUrl',
+                name: 'Health Check URL',
+                description:
+                  'Skips this service while the given URL answers a 5xx. Any other response, a timeout or an unreachable host leaves it enabled. Must be a public http(s) address.',
+                type: 'url',
+                required: false,
+                emptyIsUndefined: true,
+              }}
+              value={localHealthCheckUrl}
+              onChange={(v) => {
+                // Any edit invalidates the previous verdict.
+                setVerdict(null);
+                setLocalHealthCheckUrl(v || undefined);
+              }}
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                size="sm"
+                intent="primary-outline"
+                loading={testing}
+                disabled={testing || !localHealthCheckUrl?.trim()}
+                onClick={runHealthCheckTest}
+              >
+                Test
+              </Button>
+              {verdict && (
+                <p
+                  className={
+                    verdictNeedsAttention(verdict)
+                      ? 'text-sm text-[--alert]'
+                      : 'text-sm text-[--muted]'
+                  }
+                >
+                  {verdict.status
+                    ? `${verdict.status} — ${verdict.reason}`
+                    : verdict.reason}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex gap-2">
           <Button
             type="button"

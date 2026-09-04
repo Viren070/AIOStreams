@@ -17,6 +17,7 @@ import {
   fromUrlSafeBase64,
   getSimpleTextHash,
   getTimeTakenSincePoint,
+  resolveHealthyNntp,
   SERVICE_DETAILS,
 } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
@@ -372,8 +373,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             Buffer.from(encodedNntpServers, 'base64').toString('utf-8')
           )
         );
+        // A server that will not accept a connection cannot serve articles, so
+        // it is left out rather than handed over to fail later. All of them
+        // failing leaves no servers, and the addons that need one are not built.
+        const reachable = await resolveHealthyNntp(nntpServers);
         // servers - array, a list of strings that each represent a connection to a NNTP (usenet) server (for nzbUrl) in the form of nntp(s)://{user}:{pass}@{nntpDomain}:{nntpPort}/{nntpConnections} (nntps = SSL; nntp = no encryption) (example: nntps://myuser:mypass@news.example.com/4)
-        servers = nntpServers.map(
+        servers = reachable.map(
           (s) =>
             `${s.ssl ? 'nntps' : 'nntp'}://${encodeURIComponent(
               s.username

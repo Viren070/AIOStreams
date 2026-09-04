@@ -70,6 +70,12 @@ export const rateLimitsSchema = {
     envPrefix: 'STATIC',
     label: 'static file',
   }),
+  healthCheckApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 10,
+    envPrefix: 'HEALTH_CHECK_API',
+    label: 'health check test',
+  }),
   userApi: rateLimit({
     windowDefault: 5,
     maxDefault: 5,

@@ -66,7 +66,19 @@ function getServiceCredentialForced(
   return appConfig.services.forcedCredentials[serviceId]?.[credentialId];
 }
 
-export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS {
+/**
+ * The service catalogue as the UI sees it. `supportsHealthCheck` is optional on
+ * the definition and materialised here, so the type says definitely-boolean and
+ * a consumer cannot read a missing value as false.
+ */
+export type EnvironmentServiceDetails = {
+  [K in constants.ServiceId]: Omit<
+    (typeof constants.SERVICE_DETAILS)[K],
+    'supportsHealthCheck'
+  > & { supportsHealthCheck: boolean };
+};
+
+export function getEnvironmentServiceDetails(): EnvironmentServiceDetails {
   return Object.fromEntries(
     Object.entries(constants.SERVICE_DETAILS)
       .filter(([id, _]) => !FeatureControl.disabledServices.has(id))
@@ -78,6 +90,10 @@ export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS
           shortName: service.shortName,
           knownNames: service.knownNames,
           signUpText: service.signUpText,
+          // Materialised here rather than passed through: the field is optional
+          // on the definition and undefined is falsy, so a straight copy would
+          // hide the control on every service that never declared it.
+          supportsHealthCheck: service.supportsHealthCheck ?? true,
           credentials: service.credentials.map((cred) => ({
             id: cred.id,
             name: cred.name,
@@ -101,7 +117,7 @@ export function getEnvironmentServiceDetails(): typeof constants.SERVICE_DETAILS
           })),
         },
       ])
-  ) as typeof constants.SERVICE_DETAILS;
+  ) as EnvironmentServiceDetails;
 }
 
 export interface ValidateConfigOptions {
@@ -1139,7 +1155,7 @@ function validatePreset(preset: PresetObject) {
   const presetMeta = PresetManager.fromId(preset.type)
     .METADATA as PresetMetadata;
 
-  const optionMetas = presetMeta.OPTIONS;
+  const optionMetas = PresetManager.optionsFor(presetMeta);
 
   if (presetMeta.DISABLED) {
     throw new Error(

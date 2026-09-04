@@ -100,6 +100,10 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
             // if no identifier is present, we can assume that the preset can only generate one addon at a time and so no
             // unique identifier is needed as the preset instance id is enough to identify the addon
             instanceId: `${preset.instanceId}${getSimpleTextHash(`${a.identifier ?? ''}`).slice(0, 4)}`,
+            // Stamped here rather than in each preset's transformer: it has no
+            // per-preset default to honour, so one place owns it and every
+            // preset gets it without eighty-four copies.
+            healthCheckUrl: preset.options.healthCheckUrl || undefined,
           })
         )
       );
@@ -140,6 +144,7 @@ export async function applyPresets(ctx: AIOStreamsContext): Promise<void> {
                 },
                 instanceId: `${preset.instanceId}${getSimpleTextHash(`servicewrap-${a.identifier ?? ''}`).slice(0, 4)}`,
                 serviceWrapped: true,
+                healthCheckUrl: preset.options.healthCheckUrl || undefined,
               })
             )
           );

@@ -481,6 +481,16 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
           )}
         </div>
       );
+    case 'health-check-url':
+      return (
+        <HealthCheckUrlInput
+          name={name}
+          description={description}
+          value={forcedValue ?? value ?? defaultValue}
+          onChange={onChange}
+          disabled={isDisabled}
+        />
+      );
     case 'url':
       return (
         <div>
@@ -682,6 +692,36 @@ interface NabEndpointValue {
   url?: string;
   apiKey?: string;
 }
+
+// The connection check opens a socket and, when the row asks for SSL, completes
+// the handshake. It does not log in, so a pass says the server is reachable and
+// says nothing about the username and password.
+export type HealthCause =
+  | 'server-error'
+  | 'answered'
+  | 'unsafe-address'
+  | 'no-time'
+  | 'unresolvable'
+  | 'bad-redirect'
+  | 'too-many-redirects'
+  | 'unreachable';
+
+export interface HealthCheckTestResult {
+  ok: boolean;
+  outcome: 'skipped' | 'enabled';
+  cause: HealthCause;
+  reason: string;
+  // The HTTP code when the check made a request. A connection check has none.
+  status?: number;
+}
+
+// An address that can never be probed is the user's to fix; so is an addon
+// being skipped right now. Everything else describes someone else's server.
+export function verdictNeedsAttention(verdict: HealthCheckTestResult): boolean {
+  return verdict.cause === 'unsafe-address' || verdict.outcome === 'skipped';
+}
+
+export const HEALTH_CHECK_TEST_ENDPOINT = '/api/v1/health-check/test';
 
 interface NabTestResult {
   ok: boolean;
@@ -933,6 +973,101 @@ export interface NNTPServersInputProps {
   disabled?: boolean;
 }
 
+// Modal is a Radix Dialog with no forceMount, so closing it unmounts this and
+// discards the verdict. Adding forceMount carries a verdict to the next addon.
+function HealthCheckUrlInput({
+  name,
+  description,
+  value,
+  onChange,
+  disabled,
+}: {
+  name: string;
+  description?: string;
+  value: string | undefined;
+  onChange: (value: string | undefined) => void;
+  disabled?: boolean;
+}) {
+  const [verdict, setVerdict] = useState<HealthCheckTestResult | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const runTest = async () => {
+    if (!value?.trim()) {
+      toast.error('Enter a URL before testing');
+      return;
+    }
+    setTesting(true);
+    setVerdict(null);
+    try {
+      const response = await fetch(HEALTH_CHECK_TEST_ENDPOINT, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: value }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        throw new Error(
+          json.detail || json.error?.message || 'Could not run the test'
+        );
+      }
+      setVerdict(json.data as HealthCheckTestResult);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not run the test'
+      );
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div>
+      <TextInput
+        label={name}
+        value={value ?? ''}
+        onValueChange={(next: string) => {
+          // Any edit invalidates the previous verdict.
+          setVerdict(null);
+          onChange(next || undefined);
+        }}
+        type="url"
+        disabled={disabled}
+      />
+      {description && (
+        <div className="text-xs text-[--muted] mt-1">
+          <MarkdownLite>{description}</MarkdownLite>
+        </div>
+      )}
+      <div className="flex items-center gap-3 mt-2">
+        <Button
+          type="button"
+          size="sm"
+          intent="primary-outline"
+          loading={testing}
+          disabled={disabled || testing || !value?.trim()}
+          onClick={runTest}
+        >
+          Test
+        </Button>
+        {verdict && (
+          <p
+            className={
+              verdictNeedsAttention(verdict)
+                ? 'text-sm text-[--alert]'
+                : 'text-sm text-[--muted]'
+            }
+          >
+            {verdict.status
+              ? `${verdict.status} — ${verdict.reason}`
+              : verdict.reason}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function NNTPServersInput({
   name,
   description,
@@ -942,11 +1077,21 @@ export function NNTPServersInput({
 }: NNTPServersInputProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [servers, setServers] = useState<NNTPServers>([]);
+  // Held beside the rows rather than on them: a verdict is not part of the
+  // saved config. Every handler that reorders or removes a row does the same to
+  // this, so a verdict cannot end up beside a server it was not taken from.
+  const [verdicts, setVerdicts] = useState<(HealthCheckTestResult | null)[]>(
+    []
+  );
+  const [testingIndex, setTestingIndex] = useState<number | null>(null);
 
   // Sync servers state when modal opens
   useEffect(() => {
     if (modalOpen) {
-      setServers(decodeServers(value));
+      const decoded = decodeServers(value);
+      setServers(decoded);
+      setVerdicts(decoded.map(() => null));
+      setTestingIndex(null);
     }
   }, [modalOpen, value]);
 
@@ -954,23 +1099,26 @@ export function NNTPServersInput({
 
   const handleAddServer = () => {
     setServers((prev) => [...prev, createEmptyServer()]);
+    setVerdicts((prev) => [...prev, null]);
   };
 
   const handleRemoveServer = (index: number) => {
     setServers((prev) => prev.filter((_, i) => i !== index));
+    setVerdicts((prev) => prev.filter((_, i) => i !== index));
+    setTestingIndex(null);
   };
 
   const handleMoveServer = (index: number, direction: 'up' | 'down') => {
-    setServers((prev) => {
-      const newServers = [...prev];
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= newServers.length) return prev;
-      [newServers[index], newServers[targetIndex]] = [
-        newServers[targetIndex],
-        newServers[index],
-      ];
-      return newServers;
-    });
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= servers.length) return;
+    const swap = <T,>(list: T[]): T[] => {
+      const next = [...list];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    };
+    setServers(swap);
+    setVerdicts(swap);
+    setTestingIndex(null);
   };
 
   const handleServerChange = (
@@ -983,6 +1131,9 @@ export function NNTPServersInput({
         i === index ? { ...server, [field]: fieldValue } : server
       )
     );
+    // Any edit invalidates the previous verdict: a pass beside a changed host
+    // reports on a server that was never tested.
+    setVerdicts((prev) => prev.map((v, i) => (i === index ? null : v)));
   };
 
   const handleSave = () => {
@@ -994,6 +1145,42 @@ export function NNTPServersInput({
 
   const handleCancel = () => {
     setModalOpen(false);
+  };
+
+  const runConnectionTest = async (index: number) => {
+    const server = servers[index];
+    if (!server?.host?.trim()) {
+      toast.error('Enter a host before testing');
+      return;
+    }
+    setTestingIndex(index);
+    setVerdicts((prev) => prev.map((v, i) => (i === index ? null : v)));
+    try {
+      const response = await fetch(HEALTH_CHECK_TEST_ENDPOINT, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: server.host,
+          port: server.port,
+          ssl: server.ssl,
+        }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        throw new Error(
+          json.detail || json.error?.message || 'Could not run the test'
+        );
+      }
+      const verdict = json.data as HealthCheckTestResult;
+      setVerdicts((prev) => prev.map((v, i) => (i === index ? verdict : v)));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not run the test'
+      );
+    } finally {
+      setTestingIndex(null);
+    }
   };
 
   return (
@@ -1123,6 +1310,36 @@ export function NNTPServersInput({
                     />
                   </div>
                 </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    intent="primary-outline"
+                    loading={testingIndex === index}
+                    disabled={disabled || testingIndex !== null}
+                    onClick={() => runConnectionTest(index)}
+                  >
+                    Test connection
+                  </Button>
+                  {verdicts[index] && (
+                    <p
+                      className={
+                        verdictNeedsAttention(verdicts[index]!)
+                          ? 'text-sm text-[--alert]'
+                          : 'text-sm text-[--muted]'
+                      }
+                    >
+                      {verdicts[index]!.status
+                        ? `${verdicts[index]!.status} — ${verdicts[index]!.reason}`
+                        : verdicts[index]!.reason}
+                    </p>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-[--muted]">
+                  Checks that the server accepts a connection. It does not sign
+                  in, so the username and password are not tested.
+                </p>
               </div>
             ))
           )}

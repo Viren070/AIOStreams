@@ -30,6 +30,25 @@ import { config as appConfig } from '../config/index.js';
 // timeout: z.number().min(1).optional(),
 // resources: ResourceList.optional(),
 
+// Opt-in rather than part of baseOptions: the option and the transformer line
+// that assigns it have to move together, and baseOptions supplies only the
+// definition. A preset that shows this without assigning it would offer a
+// control that gates nothing.
+export const healthCheckUrlOption: Option = {
+  id: 'healthCheckUrl',
+  name: 'Health Check URL',
+  description:
+    "Skips this addon while the given URL answers a 5xx. Any other response, including a timeout, leaves it enabled. Must be a public http(s) address; private and local addresses are refused. Use this for the addon's own backend. To skip a single provider when it goes down, set the health check on that service instead, under Services, so the addon keeps running on the others.",
+  // Its own type rather than 'url': this control is an input and a Test button,
+  // and the manifest override is a plain input. Sharing a type would leave the
+  // dispatch branching on an id inside a case that claims to handle both.
+  type: 'health-check-url',
+  required: false,
+  showInSimpleMode: false,
+  default: undefined,
+  emptyIsUndefined: true,
+};
+
 export const baseOptions = (
   name: string,
   resources: Resource[],
