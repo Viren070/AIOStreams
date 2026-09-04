@@ -199,6 +199,9 @@ export class UserRepository {
             config.parentConfig.password
           );
           config = mergeConfigs(parent, config);
+          // mergeConfigs starts from the child, so trust has to be carried
+          // over by hand, the way both save paths already do it.
+          config.trusted = parent.trusted || config.trusted;
           logger.info(
             `Merged parent config ${config.parentConfig!.uuid} for user ${uuid}`
           );
