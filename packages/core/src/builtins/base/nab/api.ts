@@ -479,6 +479,7 @@ export class BaseNabApi<N extends 'torznab' | 'newznab'> {
       searchCacheKey: cacheKey,
       bgCacheKey: `nab:${cacheKey}`,
       cacheTTL: appConfig.builtins.nab.searchCacheTtl,
+      emptyResultTTL: appConfig.builtins.nab.emptyResultCacheTtl,
       fetchFn: () =>
         this.request(
           searchFunction,
