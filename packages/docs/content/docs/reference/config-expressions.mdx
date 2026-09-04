@@ -111,7 +111,7 @@ The configure page always edits the **base** config, even when a variant is sele
 
 A variant can also decide for itself. Give it an **activation condition** and it applies whenever that condition matches the incoming request, with nothing added to the URL. One install serves a phone a different config from a TV.
 
-The condition is a [stream expression](/reference/stream-expressions) that evaluates to true or false:
+The condition is a [stream expression](/reference/stream-expressions) that evaluates to true or false, using a [limited set of functions](/reference/stream-expressions#variant-condition-functions):
 
 ```
 includes(userAgent, 'android')
