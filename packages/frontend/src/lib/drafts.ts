@@ -156,27 +156,20 @@ export function clearLocalDraft(uuid: DraftIdentity): void {
   safeRemove(localStorage, localKey(uuid));
 }
 
-// Boot identity may be signed-out, so a signed-in draft is found by scan, not key.
-export function readAnyLocalDraft(): Draft | null {
-  let newest: Draft | null = null;
+// Only the identity in hand is read, so other keys are swept on boot instead.
+export function pruneExpiredLocalDrafts(): void {
   try {
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (key?.startsWith(LOCAL_PREFIX)) keys.push(key);
-    }
-    for (const key of keys) {
+      if (!key?.startsWith(LOCAL_PREFIX)) continue;
       const draft = parse(safeGet(localStorage, key));
       if (!draft || Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) {
         safeRemove(localStorage, key);
-        continue;
       }
-      if (!newest || draft.savedAt > newest.savedAt) newest = draft;
     }
   } catch {
-    return null;
+    /* ignore */
   }
-  return newest;
 }
 
 function clearAllLocalDrafts(): void {
@@ -200,6 +193,16 @@ function clearAllLocalDrafts(): void {
 export function clearDrafts(uuid: DraftIdentity): void {
   clearSessionDraft();
   clearLocalDraft(uuid);
+}
+
+/**
+ * The draft held for one identity, freshest tier first. Drafts never cross
+ * identities: a configuration's work is only ever offered back to its uuid.
+ */
+export function readDraftFor(uuid: DraftIdentity): Draft | null {
+  const session = readSessionDraft();
+  if (session && session.uuid === uuid) return session;
+  return readLocalDraft(uuid);
 }
 
 /**
