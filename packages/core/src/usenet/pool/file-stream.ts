@@ -384,9 +384,11 @@ export class FileStream implements SeekableStream {
     // Deferred passthrough: do the (async) interpolation search, then wire up a
     // SegmentsStream. We use a PassThrough-like Readable that begins emitting
     // once the start segment is located.
+    let inner: SegmentsStream | undefined;
     const out = new Readable({
       read() {
-        /* pushed by the inner stream */
+        // Paused-mode consumers (async iterators) never emit 'resume'.
+        inner?.resume();
       },
     });
     if (signal) addAbortSignal(signal, out);
@@ -408,7 +410,7 @@ export class FileStream implements SeekableStream {
                   .filter((l) => l >= 0 && l < segments.length)
               )
             : undefined;
-        const inner = new SegmentsStream({
+        inner = new SegmentsStream({
           pool: this.pool,
           segments,
           nzbHash: this.nzbHash,
@@ -447,7 +449,8 @@ export class FileStream implements SeekableStream {
           slotBank: this.pool.slotBank,
           signal,
         });
-        inner.on('data', (chunk: Buffer) => {
+        const src = inner;
+        src.on('data', (chunk: Buffer) => {
           if (!firstByteSeen) {
             firstByteSeen = true;
             logger.debug(
@@ -460,12 +463,12 @@ export class FileStream implements SeekableStream {
               'range first byte'
             );
           }
-          if (!out.push(chunk)) inner.pause();
+          if (!out.push(chunk)) src.pause();
         });
-        inner.on('end', () => out.push(null));
-        inner.on('error', (err) => out.destroy(err));
-        out.on('resume', () => inner.resume());
-        const destroyInner = () => inner.destroy();
+        src.on('end', () => out.push(null));
+        src.on('error', (err) => out.destroy(err));
+        out.on('resume', () => src.resume());
+        const destroyInner = () => src.destroy();
         out.on('close', destroyInner);
       })
       .catch((err) =>
