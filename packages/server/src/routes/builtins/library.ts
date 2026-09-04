@@ -11,7 +11,7 @@ import {
   getSimpleTextHash,
 } from '@aiostreams/core';
 import { createLogger } from '@aiostreams/core';
-import { StaticFiles } from '../../app.js';
+import { StaticFiles } from '../../utils/static-errors.js';
 const router: Router = Router();
 
 const logger = createLogger('server');

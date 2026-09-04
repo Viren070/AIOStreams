@@ -30,7 +30,7 @@ import { pipeline } from 'stream/promises';
 import { Transform } from 'stream';
 import { requireAdmin } from '../../middlewares/auth.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
-import { StaticFiles } from '../../app.js';
+import { StaticFiles } from '../../utils/static-errors.js';
 
 const logger = createLogger('server');
 const router: Router = Router();
