@@ -33,6 +33,7 @@ export {
   KnabenAddon,
   EztvAddon,
   TheRARBGAddon,
+  ThePirateBayAddon,
   TorrentGalaxyAddon,
   SeaDexAddon,
   EasynewsSearchAddon,
