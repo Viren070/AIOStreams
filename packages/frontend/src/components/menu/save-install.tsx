@@ -38,6 +38,7 @@ import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
 import { PasswordInput } from '../ui/password-input';
 import { useMenu } from '@/context/menu';
+import { variantSelectionFromLocation } from '@/lib/manifest-url';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -1488,12 +1489,27 @@ function Content() {
   const importMenuModal = useDisclosure(false);
   const [filterCredentialsInExport, setFilterCredentialsInExport] =
     React.useState(true);
-  const [selectedVariants, setSelectedVariants] = React.useState<string[]>([]);
+
+  const selectionFromUrl = React.useMemo(
+    () =>
+      typeof window === 'undefined'
+        ? null
+        : variantSelectionFromLocation(
+            window.location.pathname,
+            window.location.search
+          ),
+    []
+  );
+  const [selectedVariants, setSelectedVariants] = React.useState<string[]>(
+    selectionFromUrl?.ids ?? []
+  );
   const [variantLocation, setVariantLocation] =
     React.useState<VariantSelectorLocation>(() =>
-      safeGetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY) === 'query'
-        ? 'query'
-        : 'path'
+      selectionFromUrl
+        ? selectionFromUrl.location
+        : safeGetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY) === 'query'
+          ? 'query'
+          : 'path'
     );
   React.useEffect(() => {
     safeSetLocalStorageItem(VARIANT_LOCATION_STORAGE_KEY, variantLocation);

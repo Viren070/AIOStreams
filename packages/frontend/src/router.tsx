@@ -117,6 +117,13 @@ const stremioConfigureAuthRoute = createRoute({
   component: ConfigureRoute,
 });
 
+const stremioConfigureVariantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/stremio/$uuid/$encryptedPassword/v/$variantSelector/configure',
+  beforeLoad: configureBeforeLoad,
+  component: ConfigureRoute,
+});
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
@@ -342,6 +349,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   stremioConfigureRoute,
   stremioConfigureAuthRoute,
+  stremioConfigureVariantRoute,
   loginRoute,
   oauthGdriveRoute,
   splashscreenRoute,
