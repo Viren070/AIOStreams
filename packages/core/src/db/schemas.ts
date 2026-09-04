@@ -895,7 +895,7 @@ export const UserDataSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       /** Which result kinds may appear as failover targets. Default ['usenet']. */
-      contentTypes: z.array(z.enum(['usenet', 'debrid'])).optional(),
+      contentTypes: z.array(z.enum(['usenet', 'debrid', 'http'])).optional(),
       /** Allow a click on one kind to fail over into a different kind. Default false. */
       allowCrossType: z.boolean().optional(),
       /** Max total failover attempts (after de-duplication) tried after the clicked item. */
@@ -1211,7 +1211,7 @@ export const ParsedStreamSchema = z.object({
     .array(
       z.object({
         url: z.string(),
-        type: z.enum(['usenet', 'debrid']),
+        type: z.enum(['usenet', 'debrid', 'http']),
         serviceId: z.string().optional(),
         filename: z.string().optional(),
         identity: z.string().optional(), // nzbUrl | infoHash | external host+path

@@ -7,7 +7,7 @@ import {
 } from '../utils/index.js';
 import StreamUtils, { shouldPassthroughStage } from './utils.js';
 import { shouldProxyStream } from './proxifier.js';
-import { isExternalDebridFailover } from '../main/play-chain.js';
+import { isExternalFailoverTarget } from '../main/play-chain.js';
 import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
 import { arrayMerge } from '../parser/merge.js';
 
@@ -75,8 +75,8 @@ class StreamDeduplicator {
     const start = Date.now();
 
     const merge = deduplicator.merge;
-    const failoverTypes: ('usenet' | 'debrid')[] = this.userData.failover
-      ?.contentTypes ?? ['usenet'];
+    const failoverTypes: ('usenet' | 'debrid' | 'http')[] =
+      this.userData.failover?.contentTypes ?? ['usenet'];
     const includeExternal =
       this.userData.failover?.includeExternalFailover ?? false;
 
@@ -490,7 +490,7 @@ class StreamDeduplicator {
     winner: ParsedStream,
     group: ParsedStream[],
     merge: MergeOptions,
-    failoverTypes: ('usenet' | 'debrid')[],
+    failoverTypes: ('usenet' | 'debrid' | 'http')[],
     includeExternal: boolean,
     tiebreakerCmp: TiebreakerCmp,
     libraryCmp: (a: ParsedStream, b: ParsedStream) => number
@@ -531,7 +531,7 @@ class StreamDeduplicator {
             kind: 'owned',
             proxied: shouldProxyStream(other, this.userData.proxy),
           };
-        } else if (includeExternal && isExternalDebridFailover(other)) {
+        } else if (includeExternal && isExternalFailoverTarget(other)) {
           let identity = other.url;
           try {
             const u = new URL(other.url);
@@ -539,7 +539,7 @@ class StreamDeduplicator {
           } catch {}
           entry = {
             url: other.url,
-            type: 'debrid',
+            type: other.type === 'http' ? 'http' : 'debrid',
             serviceId: other.service?.id,
             filename: other.filename,
             identity,
