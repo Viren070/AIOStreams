@@ -226,6 +226,8 @@ Before the built-in engine existed, streaming NNTP through AIOStreams meant self
 
 Like the built-in engine, these stream over NNTP straight from your provider — they mount NZBs as a virtual filesystem and expose a WebDAV server (or equivalent) that AIOStreams wraps into streamable URLs. The stream URL your player hits is served by the tool itself (unless you [proxy it through AIOStreams](#proxying-streams-through-aiostreams)). Choose one of these over the built-in engine if you already run it for other tooling, or want the Usenet machinery on a separate box from AIOStreams.
 
+[**InfiniDysk**](https://github.com/infinidysk/infinidysk) (the NzbDAV superfork) can also own search itself. Add the **InfiniDysk** marketplace preset and paste a Search Profile `manifest.json` URL. In that mode you do not add the InfiniDysk/NzbDAV service or duplicate those indexers as Newznab addons. AIOStreams still filters and sorts the returned streams and reports the final order back to InfiniDysk.
+
 <Callout type="info">
   For free self-hosting, follow the [Oracle VPS
   guides](https://guides.viren070.me/selfhosting) and the [Docker Compose
