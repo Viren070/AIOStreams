@@ -345,20 +345,6 @@ async function initialiseAuth() {
   await initialiseOidc();
 }
 
-/**
- * With the census hold off and no linked arr instance, a dead release can be
- * imported and nothing will ever condemn it to the arr: the hold is the only
- * pre-import gate, and repair needs an instance to talk to.
- */
-function warnUnprotectedArrHandoff() {
-  const u = appConfig.usenet;
-  if (u.sabnzbdApiEnabled && !u.arrWaitForCensus && !arrConfigured()) {
-    logger.warn(
-      'usenet.arrWaitForCensus is off and no arr instances are linked: a release the census fails after hand-off is imported anyway and never replaced'
-    );
-  }
-}
-
 async function start() {
   try {
     startMetricsHistory();
@@ -388,7 +374,6 @@ async function start() {
     );
     void requeueInterruptedInspects();
     await initialiseAuth();
-    warnUnprotectedArrHandoff();
     startAnalytics();
     await startNfsShare();
     await startFuseMount();
