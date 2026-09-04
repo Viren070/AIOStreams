@@ -124,11 +124,13 @@ export class NabTransformer {
   }
 
   /**
-   * Answer for the bare RSS query (`t=search` with nothing to search for).
+   * Answer for a bare query (nothing to search for), which clients issue to
+   * test an indexer. The category must intersect the client's configured
+   * categories or e.g. Sonarr fails the whole test, so the caller passes the
+   * one it derived from the request.
    */
-  rssPlaceholder(): NabFeed {
+  rssPlaceholder(category: number = CATEGORY_MOVIES): NabFeed {
     const title = `${this.addonName} supports ID based search only and has no RSS feed`;
-    const category = CATEGORY_MOVIES;
     const shared = {
       title,
       size: 0,
@@ -269,6 +271,19 @@ export class NabTransformer {
       attrs,
     };
   }
+}
+
+/**
+ * Category for the placeholder item of a bare test query: the first category
+ * the client asked for, else the natural one for the search function.
+ */
+export function nabPlaceholderCategory(t: string, cat?: string): number {
+  const requested = cat
+    ?.split(',')
+    .map((c) => Number.parseInt(c.trim(), 10))
+    .find((c) => Number.isFinite(c) && c > 0);
+  if (requested) return requested;
+  return t === 'tvsearch' ? CATEGORY_TV : CATEGORY_MOVIES;
 }
 
 /**
