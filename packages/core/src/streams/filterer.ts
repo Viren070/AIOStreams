@@ -794,17 +794,19 @@ class StreamFilterer {
         return true;
       }
 
-      // A release names its episode in its own language, so a mismatch only
-      // means something when that language is among the known names.
-      const specificLanguages = (stream.parsedFile?.languages ?? []).filter(
-        (language) => !NON_SPECIFIC_LANGUAGES.includes(language)
-      );
+      // A release names its episode in one of its languages, and which one is
+      // unknown, so a mismatch only means something when every language it
+      // carries has a known name to have been compared against. Languages
+      // that resolve to no code name nothing comparable and are skipped.
+      const comparableLanguages = (stream.parsedFile?.languages ?? [])
+        .filter((language) => !NON_SPECIFIC_LANGUAGES.includes(language))
+        .map((language) => languageToCode(language)?.toLowerCase())
+        .filter((code): code is string => !!code);
       const covered =
-        specificLanguages.length === 0 ||
-        specificLanguages.some((language) => {
-          const code = languageToCode(language)?.toLowerCase();
-          return code && expected.some((t) => t.language === code);
-        });
+        comparableLanguages.length === 0 ||
+        comparableLanguages.every((code) =>
+          expected.some((t) => t.language === code)
+        );
       if (!covered) {
         return undefined;
       }
