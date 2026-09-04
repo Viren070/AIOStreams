@@ -15,7 +15,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { fetchSettingsExport, type SettingsKey } from '../queries';
+import {
+  fetchSettingsExport,
+  type ManagedSettingsKey,
+  type SettingsKey,
+} from '../queries';
 import { ResetSettingsModal } from './reset-settings-modal';
 import { ImportEnvModal } from './import-env-modal';
 import { ImportSettingsModal } from './import-settings-modal';
@@ -34,6 +38,17 @@ export interface SettingsActionsScope {
   noun: string;
 }
 
+// A stored key that already holds its default resets to nothing, so it is not
+// counted as resettable; the modal explains the shortfall.
+const changed = (k: SettingsKey) =>
+  k.source === 'database' &&
+  (k.secret
+    ? k.secretSet
+    : JSON.stringify(k.value) !== JSON.stringify(k.default));
+
+const managedChanged = (m: ManagedSettingsKey) =>
+  m.source === 'database' && !m.isDefault;
+
 /**
  * Page-level actions menu rendered next to the settings page header. Hosts
  * destructive / cross-cutting operations (reset, env import, export) so we
@@ -41,15 +56,21 @@ export interface SettingsActionsScope {
  */
 export function SettingsActionsMenu({
   allKeys,
+  allManagedKeys,
   sectionKeys,
+  sectionManagedKeys,
   sectionLabel,
   invalidate,
   scope,
 }: {
   /** Full key set for the "Reset all settings" item. Omit to hide it. */
   allKeys?: SettingsKey[];
+  /** Editor-owned keys anywhere in the config, for the same item. */
+  allManagedKeys?: ManagedSettingsKey[];
   /** Keys in scope for this menu (drives the section reset + counts). */
   sectionKeys: SettingsKey[];
+  /** Editor-owned keys on this tab; resettable but never rendered as fields. */
+  sectionManagedKeys?: ManagedSettingsKey[];
   sectionLabel: string;
   /** Query keys to refetch after reset/import (defaults to the whole
    *  dashboard scope). */
@@ -66,12 +87,16 @@ export function SettingsActionsMenu({
   // Counts drive the disabled state so the menu honestly reflects what the
   // user can do right now.
   const sectionResettable = React.useMemo(
-    () => sectionKeys.filter((k) => k.source === 'database').length,
-    [sectionKeys]
+    () =>
+      sectionKeys.filter(changed).length +
+      (sectionManagedKeys ?? []).filter(managedChanged).length,
+    [sectionKeys, sectionManagedKeys]
   );
   const allResettable = React.useMemo(
-    () => (allKeys ?? []).filter((k) => k.source === 'database').length,
-    [allKeys]
+    () =>
+      (allKeys ?? []).filter(changed).length +
+      (allManagedKeys ?? []).filter(managedChanged).length,
+    [allKeys, allManagedKeys]
   );
   const envCandidates = React.useMemo(
     () => (allKeys ?? []).filter((k) => k.source === 'environment').length,
@@ -192,6 +217,7 @@ export function SettingsActionsMenu({
         scope={resetScope ?? 'section'}
         scopeLabel={resetScope === 'all' ? 'all settings' : sectionLabel}
         keys={resetScope === 'all' && allKeys ? allKeys : sectionKeys}
+        managed={resetScope === 'all' ? allManagedKeys : sectionManagedKeys}
         invalidate={invalidate}
       />
 

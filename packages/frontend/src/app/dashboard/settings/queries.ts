@@ -61,6 +61,19 @@ export interface SettingsKey {
   deprecated?: string;
 }
 
+/**
+ * A key owned by a bespoke editor (`SETTINGS_EDITORS`). It never renders as
+ * a field, so the payload carries no value, only whether it still matches
+ * its default, which is all the reset modal needs to offer it.
+ */
+export interface ManagedSettingsKey {
+  key: string;
+  label: string;
+  source: SettingsKey['source'];
+  requiresRestart: boolean;
+  isDefault: boolean;
+}
+
 /** Query key for the generic settings page. */
 export const SETTINGS_QUERY_KEY = ['dashboard', 'settings'] as const;
 const KEY = SETTINGS_QUERY_KEY;
@@ -70,7 +83,10 @@ const DASHBOARD_SCOPE = ['dashboard'] as const;
 export function useSettings(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: KEY,
-    queryFn: () => api<{ keys: SettingsKey[] }>('/dashboard/settings'),
+    queryFn: () =>
+      api<{ keys: SettingsKey[]; managed?: ManagedSettingsKey[] }>(
+        '/dashboard/settings'
+      ),
     staleTime: 10_000,
     enabled: opts?.enabled ?? true,
   });
@@ -146,6 +162,155 @@ export function useImportSettings(invalidate: QueryKey[] = [DASHBOARD_SCOPE]) {
       }),
     onSuccess: () =>
       invalidate.forEach((queryKey) => qc.invalidateQueries({ queryKey })),
+  });
+}
+
+// --- Shares: the FUSE mount is runtime state, not a setting -----------------
+
+export type FuseMountState =
+  | 'off'
+  | 'unavailable'
+  | 'mounting'
+  | 'mounted'
+  | 'unmounted'
+  | 'error';
+
+export interface FuseStatus {
+  enabled: boolean;
+  state: FuseMountState;
+  mountPath: string;
+  allowOther: boolean;
+  available: boolean;
+  reason?: string;
+  error?: string;
+  since?: number;
+  arrMountDir: string;
+  stats?: {
+    inodes: number;
+    openFiles: number;
+    pendingRequests: number;
+    requests: number;
+    errors: number;
+  };
+}
+
+export const FUSE_STATUS_QUERY_KEY = ['dashboard', 'shares', 'fuse'] as const;
+
+export function useFuseStatus(opts?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: FUSE_STATUS_QUERY_KEY,
+    queryFn: () => api<FuseStatus>('/dashboard/shares/fuse/status'),
+    refetchInterval: 5_000,
+    enabled: opts?.enabled ?? true,
+  });
+}
+
+export function useFuseMountAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (action: 'mount' | 'unmount') =>
+      api<FuseStatus>(`POST /dashboard/shares/fuse/${action}`),
+    onSuccess: (status) => qc.setQueryData(FUSE_STATUS_QUERY_KEY, status),
+  });
+}
+
+// --- Sonarr / Radarr instances (bespoke editor: the list holds API keys) ----
+
+/** Placeholder the server accepts in place of a stored API key. */
+export const ARR_SECRET_MASK = '__stored__';
+
+export interface MaskedArrInstance {
+  id: string;
+  name?: string;
+  type: 'sonarr' | 'radarr';
+  url: string;
+  hasApiKey: boolean;
+  enabled?: boolean;
+  categories?: string[];
+}
+
+export interface ArrTestResult {
+  ok: boolean;
+  version?: string;
+  appName?: string;
+  error?: string;
+}
+
+export const ARR_INSTANCES_QUERY_KEY = [
+  'dashboard',
+  'arr',
+  'instances',
+] as const;
+
+export function useArrInstances() {
+  return useQuery({
+    queryKey: ARR_INSTANCES_QUERY_KEY,
+    queryFn: () =>
+      api<{ instances: MaskedArrInstance[] }>('/dashboard/arr/instances'),
+    staleTime: 10_000,
+  });
+}
+
+export function useSaveArrInstances() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (instances: unknown[]) =>
+      api<{ instances: MaskedArrInstance[] }>('PUT /dashboard/arr/instances', {
+        body: { instances },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: DASHBOARD_SCOPE }),
+  });
+}
+
+export function useTestArrInstance() {
+  return useMutation({
+    mutationFn: (instance: Record<string, unknown>) =>
+      api<ArrTestResult>('POST /dashboard/arr/instances/test', {
+        body: instance,
+      }),
+  });
+}
+
+// --- Queue cleanup rules (the matchers are ours; the choices are the user's) -
+
+export type QueueCleanupAction =
+  | 'remove'
+  | 'blocklist'
+  | 'blocklist_search'
+  | 'import';
+
+export interface QueueCleanupRule {
+  id: string;
+  label: string;
+  phrase: string;
+  action: QueueCleanupAction;
+  enabled: boolean;
+  note?: string;
+}
+
+export const ARR_QUEUE_RULES_QUERY_KEY = [
+  'dashboard',
+  'arr',
+  'queue-rules',
+] as const;
+
+export function useQueueCleanupRules() {
+  return useQuery({
+    queryKey: ARR_QUEUE_RULES_QUERY_KEY,
+    queryFn: () =>
+      api<{ rules: QueueCleanupRule[] }>('/dashboard/arr/queue-rules'),
+    staleTime: 10_000,
+  });
+}
+
+export function useSaveQueueCleanupRules() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rules: { id: string; enabled: boolean; action: string }[]) =>
+      api<{ rules: QueueCleanupRule[] }>('PUT /dashboard/arr/queue-rules', {
+        body: { rules },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: DASHBOARD_SCOPE }),
   });
 }
 

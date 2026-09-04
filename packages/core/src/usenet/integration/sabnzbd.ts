@@ -8,9 +8,19 @@ import {
 import { DebridError } from '../../debrid/base.js';
 import { formatBytes } from '../../formatters/utils.js';
 import { createLogger } from '../../logging/logger.js';
-import { addUsenetNzb } from './library.js';
+import { posix } from 'node:path';
+import { appConfig } from '../../utils/index.js';
+import { addUsenetNzb, removeForArr } from './library.js';
 import { baseName, stripNzbExt, stripReleaseExt } from './naming.js';
 import { getUsenetProviders, getUsenetLiveStats } from './dashboard/index.js';
+import {
+  isCensusShadowLive,
+  censusShadowAgeMs,
+  censusShadowProgress,
+} from './census-shadow.js';
+import { arrConfigured } from '../../arr/index.js';
+import { completedJobPath } from './share-provider.js';
+import { nzoIdFor, hashFromNzoId } from './sabnzbd-ids.js';
 
 const logger = createLogger('usenet/sabnzbd');
 
@@ -28,7 +38,6 @@ const logger = createLogger('usenet/sabnzbd');
 /** Version reported to clients */
 export const SABNZBD_VERSION = '5.0.4';
 
-const NZO_PREFIX = 'SABnzbd_nzo_';
 const DAY_MS = 86_400_000;
 
 export interface SabnzbdRequest {
@@ -58,13 +67,8 @@ export interface SabnzbdResult {
 // Shared projection helpers
 // ---------------------------------------------------------------------------
 
-function toNzoId(hash: string): string {
-  return `${NZO_PREFIX}${hash}`;
-}
-
-function fromNzoId(id: string): string {
-  return id.startsWith(NZO_PREFIX) ? id.slice(NZO_PREFIX.length) : id;
-}
+const toNzoId = nzoIdFor;
+const fromNzoId = hashFromNzoId;
 
 type SabnzbdStatus = 'Queued' | 'Downloading' | 'Completed' | 'Failed';
 
@@ -82,6 +86,67 @@ function sabStatus(status: UsenetLibraryStatus): SabnzbdStatus {
     default:
       return 'Completed';
   }
+}
+
+/**
+ * An arr-added row whose import passed the quick inspect but whose census
+ * tail is still auditing: reported as downloading so the arr does not import
+ * a release the audit may yet fail.
+ */
+function pendingCensus(entry: UsenetLibraryEntry): boolean {
+  if (
+    !appConfig.usenet.arrWaitForCensus ||
+    entry.origin !== 'sabnzbd' ||
+    (entry.status !== 'available' && entry.status !== 'degraded') ||
+    !isCensusShadowLive(entry.nzbHash)
+  ) {
+    return false;
+  }
+  // Once a linked arr can repair a late failure, hand over after the hold
+  // timeout instead of the full census. Without one "condemn later" has no
+  // later, so the hold lasts as long as the audit does.
+  if (!arrConfigured()) return true;
+  const age = censusShadowAgeMs(entry.nzbHash) ?? 0;
+  return age < appConfig.usenet.arrCensusHoldTimeout * 1000;
+}
+
+function sabStatusFor(entry: UsenetLibraryEntry): SabnzbdStatus {
+  return pendingCensus(entry) ? 'Downloading' : sabStatus(entry.status);
+}
+
+function queuePercentage(entry: UsenetLibraryEntry): number {
+  if (!pendingCensus(entry)) return Math.round(entry.progress * 100);
+  const progress = censusShadowProgress(entry.nzbHash);
+  if (!progress || progress.total === 0) return 0;
+  return Math.min(99, Math.floor((100 * progress.sampled) / progress.total));
+}
+
+/**
+ * Where the arr finds completed downloads: the rclone mount as the arr sees
+ * it, plus the transport segment mirrored from the WebDAV tree.
+ */
+function arrPaths(): { mountDir: string; completeDir: string } {
+  const mountDir = appConfig.arr.mountDir.trim().replace(/[\\/]+$/, '');
+  return {
+    mountDir,
+    completeDir: mountDir ? posix.join(mountDir, 'usenet', 'completed') : '',
+  };
+}
+
+/** The history `storage` path: the job folder under the completed dir. */
+async function storageFor(entry: UsenetLibraryEntry): Promise<string> {
+  const { completeDir } = arrPaths();
+  if (!completeDir || entry.hiddenAt || sabStatusFor(entry) !== 'Completed') {
+    return '';
+  }
+  const job = await completedJobPath(entry);
+  return job ? posix.join(completeDir, job.category, job.job) : '';
+}
+
+function completedUnix(entry: UsenetLibraryEntry): number {
+  return entry.completedAt
+    ? Math.floor(entry.completedAt / 1000)
+    : toUnix(entry.lastUsedAt);
 }
 
 const toMb = (bytes: number): string => (bytes / 1_000_000).toFixed(2);
@@ -108,20 +173,21 @@ function entryName(entry: UsenetLibraryEntry): string {
 /** A `mode=queue` slot (active imports projected as in-flight downloads). */
 function queueSlot(entry: UsenetLibraryEntry, index: number) {
   const mb = entry.bytesTotal;
-  const mbLeft = Math.max(0, entry.bytesTotal - entry.bytesDone);
+  const percentage = queuePercentage(entry);
+  const mbLeft = Math.max(0, Math.round(mb * (1 - percentage / 100)));
   const ageDays = Math.max(
     0,
     Math.floor((Date.now() - new Date(entry.addedAt).getTime()) / DAY_MS)
   );
   return {
-    status: sabStatus(entry.status),
+    status: sabStatusFor(entry),
     index,
     nzo_id: toNzoId(entry.nzbHash),
     filename: entryName(entry),
     password: entry.password ?? '',
     cat: entry.category ?? '*',
     priority: 'Normal',
-    percentage: String(Math.round(entry.progress * 100)),
+    percentage: String(percentage),
     mb: toMb(mb),
     mbleft: toMb(mbLeft),
     mbmissing: '0.00',
@@ -138,26 +204,27 @@ function queueSlot(entry: UsenetLibraryEntry, index: number) {
 }
 
 /** A `mode=history` slot (available/failed imports). */
-function historySlot(entry: UsenetLibraryEntry) {
+async function historySlot(entry: UsenetLibraryEntry) {
   const name = entryName(entry);
   const bytes = entry.size ?? entry.bytesTotal;
+  const storage = await storageFor(entry);
   return {
     nzo_id: toNzoId(entry.nzbHash),
     name,
     nzb_name: `${name}.nzb`,
-    status: sabStatus(entry.status),
+    status: sabStatusFor(entry),
     bytes,
     size: humanSize(bytes),
     category: entry.category ?? '*',
     fail_message: entry.status === 'failed' ? (entry.failReason ?? '') : '',
     url: entry.nzbUrl ?? '',
     password: entry.password ?? '',
-    completed: toUnix(entry.lastUsedAt),
+    completed: completedUnix(entry),
     time_added: toUnix(entry.addedAt),
     download_time: Math.round((entry.importMs ?? 0) / 1000),
     postproc_time: 0,
-    storage: '',
-    path: '',
+    storage,
+    path: storage,
     stage_log: [] as unknown[],
     loaded: false,
     archive: false,
@@ -187,7 +254,7 @@ async function listEntries(
   const start = intParam(params.start, 0);
   const limit = intParam(params.limit, 0);
   const failedOnly = group === 'history' && params.failed_only === '1';
-  const { entries, total } = await UsenetLibraryRepository.list({
+  const listed = await UsenetLibraryRepository.list({
     group,
     statuses: failedOnly ? ['failed'] : undefined,
     search: params.search || undefined,
@@ -195,7 +262,22 @@ async function listEntries(
     offset: start,
     sort: group === 'active' ? 'added' : 'activity',
     dir: group === 'active' ? 'asc' : 'desc',
+    hidden: false,
   });
+  const total = listed.total;
+  let entries = listed.entries;
+  // Rows still under census audit sit in the queue, not the history.
+  if (group === 'history') {
+    entries = entries.filter((e) => !pendingCensus(e));
+  } else if (appConfig.usenet.arrWaitForCensus) {
+    const settled = await UsenetLibraryRepository.list({
+      statuses: ['available', 'degraded'],
+      origins: ['sabnzbd'],
+      hidden: false,
+      limit: 500,
+    });
+    entries = [...entries, ...settled.entries.filter(pendingCensus)];
+  }
   const cats = csv(params.cat ?? params.category);
   const nzoIds = csv(params.nzo_ids).map(fromNzoId);
   const nzoAliases = nzoIds.length
@@ -303,7 +385,7 @@ async function buildHistory(
         month_size: humanSize(sumBytes(rollups.month)),
         total_size: humanSize(sumBytes(rollups.total)),
         last_history_update: Math.floor(Date.now() / 1000),
-        slots: entries.map(historySlot),
+        slots: await Promise.all(entries.map(historySlot)),
         version: SABNZBD_VERSION,
       },
     },
@@ -327,13 +409,15 @@ async function addNzb(opts: {
     category,
     password: params.password || undefined,
     owner: opts.owner,
+    origin: 'sabnzbd',
   });
   return ok({ nzo_ids: [toNzoId(entry.nzbHash)] });
 }
 
 /**
  * Delete queue/history items. `value` is a CSV of nzo_ids, `all`, or (history)
- * `failed`; `search` narrows `all` the same way SABnzbd's purge does.
+ * `failed`; `search` narrows `all` the same way SABnzbd's purge does. An
+ * imported row is hidden rather than dropped (see {@link removeForArr}).
  */
 async function deleteEntries(
   group: 'active' | 'history',
@@ -347,6 +431,7 @@ async function deleteEntries(
       statuses: value === 'failed' ? ['failed'] : undefined,
       search: params.search || undefined,
       limit: 500,
+      hidden: false,
     });
     hashes = entries.map((e) => e.nzbHash);
   } else {
@@ -356,10 +441,11 @@ async function deleteEntries(
     // Delete by the canonical row key: a requested nzo_id may be an alias.
     hashes = [...new Set([...known.values()].map((e) => e.nzbHash))];
   }
+  const deleteFiles = params.del_files === '1';
   for (const hash of hashes) {
-    await UsenetLibraryRepository.delete(hash);
+    await removeForArr(hash, { deleteFiles });
   }
-  logger.info({ group, count: hashes.length }, 'sabnzbd delete');
+  logger.info({ group, count: hashes.length, deleteFiles }, 'sabnzbd delete');
   return ok({ nzo_ids: hashes.map(toNzoId) });
 }
 
@@ -377,6 +463,8 @@ async function retryEntries(
       category: entry.category,
       password: entry.password,
       owner,
+      origin: 'sabnzbd',
+      skipBlocklist: true,
     });
     retried.push(toNzoId(entry.nzbHash));
   }
@@ -426,6 +514,7 @@ async function allCategories(): Promise<string[]> {
 
 function buildGetConfig(req: SabnzbdRequest, cats: string[]): SabnzbdResult {
   const providers = getUsenetProviders();
+  const { mountDir, completeDir } = arrPaths();
   return {
     payload: {
       config: {
@@ -437,7 +526,10 @@ function buildGetConfig(req: SabnzbdRequest, cats: string[]): SabnzbdResult {
           password: '',
           api_key: req.apikey,
           nzb_key: req.apikey,
-          complete_dir: '',
+          complete_dir: completeDir,
+          download_dir: mountDir
+            ? posix.join(mountDir, 'usenet', 'incomplete')
+            : '',
           pre_check: 0,
           history_retention: '',
           history_retention_option: 'all',
@@ -448,12 +540,14 @@ function buildGetConfig(req: SabnzbdRequest, cats: string[]): SabnzbdResult {
         logging: {
           log_level: 1,
         },
+        // Category folders sit directly under complete_dir, as with SABnzbd's
+        // defaults; the arr appends `dir` to `complete_dir` itself.
         categories: cats.map((name, order) => ({
           name,
           order,
           pp: name === '*' ? '3' : '',
           script: name === '*' ? 'None' : 'Default',
-          dir: '',
+          dir: name === '*' ? '' : name,
           newzbin: '',
           priority: name === '*' ? 0 : -100,
         })),
@@ -505,6 +599,7 @@ function buildStatus(): SabnzbdResult {
         kbpersec: (live.currentBytesPerSec / 1000).toFixed(2),
         have_warnings: '0',
         warnings: [] as unknown[],
+        completedir: arrPaths().completeDir,
         folders: [] as string[],
         servers: providers.map((p) => {
           const poolInfo = poolById.get(p.id);

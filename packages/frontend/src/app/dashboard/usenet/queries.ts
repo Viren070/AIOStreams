@@ -7,7 +7,6 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { SettingsKey } from '../settings/queries';
 
 export type UsenetWindow = '24h' | '7d' | '30d' | 'all';
 
@@ -262,7 +261,53 @@ export interface LibraryEntry {
   password?: string;
   releaseKey?: string;
   blocked?: boolean;
+  origin: 'playback' | 'dashboard' | 'sabnzbd';
+  /** Earliest NZB post date, epoch seconds. */
+  postedAt?: number;
+  completedAt?: number;
+  lastCheckedAt?: number;
+  nextCheckAt?: number;
+  checkCount: number;
+  /** Set once an arr imported the entry and removed it from its queue. */
+  hiddenAt?: number;
+  /** Which arr grabbed this, and how replacing it has gone. */
+  arrLink?: ArrLink;
 }
+
+export type ArrRepairState =
+  | 'pending'
+  | 'blocklisted'
+  | 'searched'
+  | 'done'
+  | 'failed';
+
+export interface ArrRepair {
+  state: ArrRepairState;
+  reason: 'failed' | 'degraded';
+  attempts: number;
+  lastAt?: number;
+  nextAt: number;
+  lastError?: string;
+}
+
+export interface ArrLink {
+  instanceId: string;
+  downloadId: string;
+  grabId?: number;
+  parentId?: number;
+  linkedAt: number;
+  importedAt?: number;
+  importedPaths?: string[];
+  repair?: ArrRepair;
+}
+
+/** Outcomes `POST /dashboard/arr/repairs/:hash` can report. */
+export type RepairOutcome =
+  | 'repaired'
+  | 'already-handled'
+  | 'not-linked'
+  | 'deferred'
+  | 'failed';
 
 /**
  * Every blocklist key a library entry is known by: the portable `wd1:`
@@ -278,9 +323,7 @@ export function releaseBlocklistKeys(e: LibraryEntry): string[] {
 
 const ROOT = ['dashboard', 'usenet'] as const;
 
-/** Query key for the usenet engine settings; exported so the settings actions
- *  menu can invalidate it after a scoped reset/import. */
-export const USENET_SETTINGS_QUERY_KEY = [...ROOT, 'settings'] as const;
+const USENET_PERFORMANCE_PROFILES_QUERY_KEY = [...ROOT, 'settings'] as const;
 
 export type UsenetStatsResetTarget = 'providers' | 'indexers' | 'all';
 
@@ -417,8 +460,7 @@ export function useSpeedTestProvider() {
   });
 }
 
-// --- Engine settings (the bespoke usenet Settings tab) ----------------------
-
+// --- Performance profiles ----------------------------------------------------
 /** Concrete values a performance profile applies (matches core PERFORMANCE_PROFILES). */
 export interface UsenetProfilePreset {
   prefetchSegments: number;
@@ -427,28 +469,13 @@ export interface UsenetProfilePreset {
 }
 export type UsenetProfiles = Record<string, UsenetProfilePreset>;
 
-export function useUsenetSettings(opts?: { enabled?: boolean }) {
+export function useUsenetPerformanceProfiles(opts?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: USENET_SETTINGS_QUERY_KEY,
+    queryKey: USENET_PERFORMANCE_PROFILES_QUERY_KEY,
     queryFn: () =>
-      api<{ keys: SettingsKey[]; profiles: UsenetProfiles }>(
-        '/dashboard/usenet/settings'
-      ),
+      api<{ profiles: UsenetProfiles }>('/dashboard/usenet/settings'),
     staleTime: 10_000,
     enabled: opts?.enabled ?? true,
-  });
-}
-
-export function useSaveUsenetSettings() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (patch: Record<string, unknown>) =>
-      api<{ updated: string[]; requiresRestart: boolean }>(
-        'PATCH /dashboard/usenet/settings',
-        { body: patch }
-      ),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: USENET_SETTINGS_QUERY_KEY }),
   });
 }
 
@@ -658,6 +685,22 @@ export function useRequeueEntries() {
       api<RequeueResult>('POST /dashboard/usenet/library/requeue', {
         body: { hashes },
       }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...ROOT, 'library'] }),
+  });
+}
+
+/**
+ * Replace a dead release through the arr that grabbed it: the imported file
+ * record is removed and the grab marked failed, so the arr blocklists it and
+ * looks again. Safe to run twice: every step re-reads the arr's own state.
+ */
+export function useRepairEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (hash: string) =>
+      api<{ outcome: RepairOutcome }>(
+        `POST /dashboard/arr/repairs/${encodeURIComponent(hash)}`
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: [...ROOT, 'library'] }),
   });
 }

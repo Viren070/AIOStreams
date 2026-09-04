@@ -27,9 +27,11 @@ import {
   getMetricsHistory,
 } from '../../../utils/system-metrics.js';
 import usenetDashboard from './usenet.js';
+import arrDashboard from './arr.js';
 import blocklistDashboard from './blocklist.js';
 import streamsDashboard from './streams.js';
 import communityDashboard from './community.js';
+import sharesDashboard from './shares.js';
 
 const router: Router = Router();
 const logger = createLogger('dashboard');
@@ -39,6 +41,12 @@ router.use(requireAdmin);
 
 // Native usenet engine: stats, providers, library.
 router.use('/usenet', usenetDashboard);
+
+// Sonarr/Radarr instances and the replacement queue.
+router.use('/arr', arrDashboard);
+
+// Shares: the FUSE mount's runtime state and mount/unmount.
+router.use('/shares', sharesDashboard);
 
 // Release blocklist: sources, entries, overrides, import/export.
 router.use('/blocklist', blocklistDashboard);
@@ -209,7 +217,29 @@ router.get('/settings', (_req, res) => {
         secretSet,
       };
     });
-  res.status(200).json(createResponse({ success: true, data: { keys } }));
+  // Keys a bespoke editor owns are absent from `keys` above, but the reset
+  // modal still has to offer them. Their values can hold secrets, so ship only
+  // whether one currently differs from its default.
+  const managed = settingsStore.metadata
+    .filter((m) => hints[m.key]?.hidden)
+    .map((m) => {
+      let value: unknown;
+      try {
+        value = settingsStore.getEffectiveValue(m.key);
+      } catch {
+        value = m.default;
+      }
+      return {
+        key: m.key,
+        label: m.label,
+        source: m.source,
+        requiresRestart: m.requiresRestart,
+        isDefault: JSON.stringify(value) === JSON.stringify(m.default),
+      };
+    });
+  res
+    .status(200)
+    .json(createResponse({ success: true, data: { keys, managed } }));
 });
 
 // PATCH /dashboard/settings — { [dottedKey]: value }. Only changed keys.

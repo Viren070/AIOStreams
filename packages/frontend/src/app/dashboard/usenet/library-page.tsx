@@ -9,6 +9,7 @@ import {
   BiLinkAlt,
   BiInfoCircle,
   BiExport,
+  BiWrench,
   BiSelectMultiple,
   BiCheckboxChecked,
   BiCheckbox,
@@ -56,6 +57,7 @@ import {
   useBlockRelease,
   useUnblockRelease,
   useRequeueEntries,
+  useRepairEntry,
   useDeleteLibraryEntry,
   useDeleteAllLibraryEntries,
   useAddNzb,
@@ -315,6 +317,7 @@ function EntryActions({
   onBlock,
   onUnblock,
   onRequeue,
+  onRepair,
   onDelete,
 }: {
   entry: LibraryEntry;
@@ -323,6 +326,7 @@ function EntryActions({
   onBlock: (e: LibraryEntry) => void;
   onUnblock: (e: LibraryEntry) => void;
   onRequeue: (hashes: string[]) => void;
+  onRepair: (e: LibraryEntry) => void;
   onDelete: (hash: string) => void;
 }) {
   const playUrl = usePlayUrl();
@@ -415,6 +419,16 @@ function EntryActions({
             <BiExport />
             Export NZB
           </DropdownMenuItem>
+          {/* Only rows an arr grabbed can be replaced through one; the repair
+              itself is idempotent, so a finished one can be re-run. */}
+          {e.arrLink && (
+            <DropdownMenuItem onSelect={() => onRepair(e)}>
+              <BiWrench />
+              {e.arrLink.repair?.state === 'failed'
+                ? 'Retry repair'
+                : 'Replace via Sonarr/Radarr'}
+            </DropdownMenuItem>
+          )}
           {blocklistKeys.length > 0 && (
             <>
               <DropdownMenuSeparator />
@@ -461,6 +475,7 @@ function EntryCard({
   onBlock,
   onUnblock,
   onRequeue,
+  onRepair,
   onDelete,
 }: {
   entry: LibraryEntry;
@@ -473,6 +488,7 @@ function EntryCard({
   onBlock: (e: LibraryEntry) => void;
   onUnblock: (e: LibraryEntry) => void;
   onRequeue: (hashes: string[]) => void;
+  onRepair: (e: LibraryEntry) => void;
   onDelete: (hash: string) => void;
 }) {
   const e = entry;
@@ -483,6 +499,11 @@ function EntryCard({
       <span>
         {e.files.length} file{e.files.length === 1 ? '' : 's'}
       </span>
+      {e.origin === 'sabnzbd' && (
+        <span title="Added through the SABnzbd API (Sonarr, Radarr, NZBHydra, …)">
+          {e.hiddenAt ? 'sab · imported' : 'sab'}
+        </span>
+      )}
     </>
   );
   const cardClass = cn(
@@ -531,6 +552,7 @@ function EntryCard({
                 onBlock={onBlock}
                 onUnblock={onUnblock}
                 onRequeue={onRequeue}
+                onRepair={onRepair}
                 onDelete={onDelete}
               />
             </div>
@@ -583,6 +605,7 @@ function EntryCard({
             onBlock={onBlock}
             onUnblock={onUnblock}
             onRequeue={onRequeue}
+            onRepair={onRepair}
             onDelete={onDelete}
           />
         </div>
@@ -669,6 +692,7 @@ export function UsenetLibraryPage() {
   const block = useBlockRelease();
   const unblock = useUnblockRelease();
   const requeue = useRequeueEntries();
+  const repair = useRepairEntry();
   const pending = React.useRef<string[]>([]);
   const [blockTargets, setBlockTargets] = React.useState<{
     mode: 'block' | 'unblock';
@@ -788,6 +812,31 @@ export function UsenetLibraryPage() {
     }
     setBlockTargets({ mode: 'block', entries: targets });
     confirmBlock.open();
+  };
+
+  /**
+   * Ask the arr that grabbed this release to replace it. Outcomes are reported
+   * as-is rather than collapsed into success/failure: `deferred` and
+   * `not-linked` are neither, and the difference is what tells you whether to
+   * look at the arr or at the instance settings.
+   */
+  const onRepair = (e: LibraryEntry) => {
+    repair
+      .mutateAsync(e.nzbHash)
+      .then(({ outcome }) => {
+        if (outcome === 'repaired') {
+          toast.success('Release marked failed; the arr will replace it');
+        } else if (outcome === 'already-handled') {
+          toast.info('The arr had already failed this release');
+        } else if (outcome === 'not-linked') {
+          toast.error('No Sonarr/Radarr instance has a grab for this download');
+        } else if (outcome === 'deferred') {
+          toast.warning('Repair is backing off after an earlier error');
+        } else {
+          toast.error('Repair gave up; see the entry details');
+        }
+      })
+      .catch((err: any) => toast.error(err?.message ?? 'Repair failed'));
   };
 
   const onRequeue = (hashes: string[]) => {
@@ -1052,6 +1101,7 @@ export function UsenetLibraryPage() {
                   onBlock={onBlock}
                   onUnblock={onUnblock}
                   onRequeue={onRequeue}
+                  onRepair={onRepair}
                   onDelete={onDelete}
                 />
               ))}
