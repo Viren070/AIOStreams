@@ -13,6 +13,13 @@ import { z } from 'zod';
 
 const logger = createLogger('therarbg');
 
+enum TheRARBGCategory {
+  Movies = 'Movies',
+  TV = 'TV',
+  TVShows = 'TV shows',
+  Anime = 'Anime',
+}
+
 const TheRARBGSearchResultSchema = z
   .looseObject({
     n: z.string(), // name
@@ -70,17 +77,19 @@ class TheRARBGAPI {
   async search(options: {
     query: string;
     page?: number;
+    categories?: string[];
   }): Promise<TheRARBGSearchResponse> {
     const query = options.query;
     const page = options.page ?? 1;
-    const cacheKey = JSON.stringify({ query, page });
+    const categories = options.categories ?? [];
+    const cacheKey = JSON.stringify({ query, page, categories });
 
     return searchWithBackgroundRefresh({
       searchCache: this.searchCache,
       searchCacheKey: cacheKey,
       bgCacheKey: `therarbg:${cacheKey}`,
       cacheTTL: appConfig.builtins.therarbg.searchCacheTtl,
-      fetchFn: () => this.request(query, page),
+      fetchFn: () => this.request(query, page, categories),
       isEmptyResult: (result) => result.results.length === 0,
       logger,
     });
@@ -88,10 +97,12 @@ class TheRARBGAPI {
 
   private async request(
     query: string,
-    page: number
+    page: number,
+    categories: string[]
   ): Promise<TheRARBGSearchResponse> {
+    const categorySegments = categories.map((c) => `:category:${c}`).join('');
     const url = new URL(
-      `/get-posts/order:-a:keywords:${encodeURIComponent(query)}:format:json/`,
+      `/get-posts/order:-a${categorySegments}:keywords:${encodeURIComponent(query)}:format:json/`,
       getApiBaseUrl()
     );
     url.searchParams.set('page', page.toString());
@@ -138,5 +149,5 @@ class TheRARBGAPI {
   }
 }
 
-export { getApiBaseUrl as getTheRARBGUrl };
+export { TheRARBGCategory, getApiBaseUrl as getTheRARBGUrl };
 export default TheRARBGAPI;

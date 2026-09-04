@@ -5,7 +5,7 @@ import {
   getTimeTakenSincePoint,
   ParsedId,
 } from '../../utils/index.js';
-import TheRARBGAPI, { getTheRARBGUrl } from './api.js';
+import TheRARBGAPI, { TheRARBGCategory, getTheRARBGUrl } from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import { validateInfoHash } from '../utils/debrid.js';
 import { config as appConfig } from '../../config/index.js';
@@ -16,8 +16,6 @@ const logger = createLogger('therarbg');
 export const TheRARBGAddonConfigSchema = BaseDebridConfigSchema;
 
 export type TheRARBGAddonConfig = z.infer<typeof TheRARBGAddonConfigSchema>;
-
-const WHITELISTED_CATEGORIES = ['Movies', 'TV', 'Anime'];
 
 export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
   readonly id = 'therarbg';
@@ -55,7 +53,15 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
       return [];
     }
 
-    logger.info(`Performing TheRARBG search`, { queries });
+    const categories = [
+      ...(parsedId.mediaType === 'movie' ? [TheRARBGCategory.Movies] : []),
+      ...(parsedId.mediaType === 'series'
+        ? [TheRARBGCategory.TV, TheRARBGCategory.TVShows]
+        : []),
+      ...(metadata.isAnime ? [TheRARBGCategory.Anime] : []),
+    ];
+
+    logger.info(`Performing TheRARBG search`, { queries, categories });
 
     const searchPromises = queries.map((q) =>
       queryLimit(async () => {
@@ -65,6 +71,7 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
         const firstPageResponse = await this.api.search({
           query: q,
           page: 1,
+          categories,
         });
 
         const { total, pageSize } = firstPageResponse;
@@ -100,6 +107,7 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
           const { results } = await this.api.search({
             query: q,
             page: pageNum,
+            categories,
           });
           logger.debug(`Fetched page ${pageNum} for query "${q}"`, {
             newResults: results.length,
@@ -126,12 +134,9 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
       .flat()
       .filter(
         (result) =>
-          WHITELISTED_CATEGORIES.some(
-            (category) => result.category === category
-          ) ||
-          (metadata.imdbId && result.imdbId
-            ? result.imdbId === metadata.imdbId
-            : true)
+          !result.imdbId ||
+          !metadata.imdbId ||
+          result.imdbId === metadata.imdbId
       );
 
     const seenTorrents = new Set<string>();
