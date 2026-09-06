@@ -247,8 +247,62 @@ export class RarReader {
     for (const b of v0.blocks) this.addFile(b.file, b.fragment);
 
     let pendingFragments = 0;
+    let exactMiddleFiles = 0;
     let spanChecked = false;
     let vi = 1;
+
+    // Exact fragments for the middles [from, to) from one sampled middle:
+    // a split file's middles carry identical continuation headers and
+    // trailers, so the sample's head/tail lengths give every data run, and
+    // they must sum to the file's remaining bytes exactly.
+    const exactMiddlesFrom = (
+      sample: { vi: number; vp: VolumeParse },
+      file: ArchiveEntry,
+      from: number,
+      to: number,
+      needed: number
+    ): DataFragment[] | undefined => {
+      if (sample.vi <= from - 1 || sample.vi >= to) return undefined;
+      const b = sample.vp.blocks[0];
+      if (
+        !b ||
+        sample.vp.blocks.length !== 1 ||
+        b.file.first ||
+        b.file.last ||
+        b.file.name !== file.name
+      ) {
+        return undefined;
+      }
+      const r = ranges[sample.vi];
+      const headLen = b.fragment.offset - r.start;
+      const tailLen = r.end - (b.fragment.offset + b.fragment.length);
+      if (headLen <= 0 || tailLen < 0) return undefined;
+      const out: DataFragment[] = [];
+      let sum = 0;
+      for (let m = from; m < to; m++) {
+        const rm = ranges[m];
+        const length =
+          m === sample.vi
+            ? b.fragment.length
+            : rm.end - rm.start - headLen - tailLen;
+        if (length <= 0) return undefined;
+        out.push({ offset: rm.start + headLen, length });
+        sum += length;
+      }
+      if (sum !== needed) {
+        logger.debug(
+          {
+            name: file.name,
+            middles: to - from,
+            sampled: sample.vi,
+            residual: needed - sum,
+          },
+          'lazy parse: sampled middle geometry does not reproduce the file; keeping pending estimates'
+        );
+        return undefined;
+      }
+      return out;
+    };
     while (vi < ranges.length) {
       // Read via a method: addFile() mutates this.pending, but TS keeps the
       // property narrowed across method calls.
@@ -286,6 +340,23 @@ export class RarReader {
         remaining -= cap;
         V++;
       }
+      // Sample one strict middle alongside the boundary walk; with three or
+      // more predicted middles it stays a middle if the boundary moves by one.
+      const sampleVi = V - vi >= 3 ? vi + ((V - vi) >> 1) : undefined;
+      const samplePromise =
+        sampleVi === undefined
+          ? undefined
+          : walk(sampleVi).then(
+              (vp) => ({ vi: sampleVi, vp }),
+              (err: unknown) => {
+                // Structural verdicts still abandon the lazy parse; a
+                // transport failure only forfeits the sample.
+                if (err instanceof LazyAbortError) throw err;
+                return undefined;
+              }
+            );
+      // Awaited only after the boundary walk, which may abandon the parse first.
+      samplePromise?.catch(() => undefined);
       let boundary: VolumeParse | undefined;
       for (let attempts = 0; attempts < 4; attempts++) {
         const vp = await walk(V);
@@ -340,13 +411,24 @@ export class RarReader {
       const boundaryClosesFile = boundary.blocks[0].file.last;
       const finalFrag = boundary.blocks[0].fragment.length;
       const needed = file.size - have - finalFrag;
+      const sample = samplePromise ? await samplePromise : undefined;
       if (middles > 0) {
         if (boundaryClosesFile && needed <= 0) {
           throw new LazyAbortError(
             `${file.name}: non-positive middle span (${needed} bytes over ${middles} volumes)`
           );
         }
-        if (boundaryClosesFile) {
+        const exactMiddles =
+          boundaryClosesFile && sample
+            ? exactMiddlesFrom(sample, file, vi, V, needed)
+            : undefined;
+        if (exactMiddles) {
+          for (const f of exactMiddles) {
+            file.fragments.push(f);
+            file.packedSize += f.length;
+          }
+          exactMiddleFiles++;
+        } else if (boundaryClosesFile) {
           // Capacity estimate per middle, then SPREAD the residual across all
           // middles so the file's fragment sum equals its size. Estimates are
           // never served (resolve targeting only), but spreading keeps each
@@ -460,6 +542,7 @@ export class RarReader {
         volumes: ranges.length,
         walked,
         pendingFragments,
+        exactMiddleFiles,
         incomplete: this.entries.filter((e) => e.incomplete).length,
         entries: this.entries.map((e) => ({
           name: e.name,
