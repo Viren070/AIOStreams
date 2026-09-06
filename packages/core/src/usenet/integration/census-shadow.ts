@@ -168,6 +168,22 @@ export function isCensusShadowLive(nzbHash: string): boolean {
   return liveShadows.has(nzbHash);
 }
 
+/** Stop auditing an entry being removed; a cancelled run applies no verdict. */
+export function cancelCensusShadow(nzbHash: string): boolean {
+  const live = liveShadows.get(nzbHash);
+  if (!live) return false;
+  live.run.cancel();
+  liveShadows.delete(nzbHash);
+  return true;
+}
+
+/** Cancel every live shadow (library cleared). */
+export function cancelAllCensusShadows(): number {
+  let n = 0;
+  for (const [hash] of [...liveShadows]) if (cancelCensusShadow(hash)) n++;
+  return n;
+}
+
 /** How long this entry's shadow has been running, for the arr hold timeout. */
 export function censusShadowAgeMs(nzbHash: string): number | undefined {
   const live = liveShadows.get(nzbHash);

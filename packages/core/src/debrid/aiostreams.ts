@@ -20,6 +20,7 @@ import {
   encodeUsenetStreamToken,
   libraryEntryToDownload,
   addUsenetNzb,
+  deleteUsenetLibraryEntry,
   resolveFileList,
   selectStreamFile,
   toDebridFiles,
@@ -425,7 +426,7 @@ export class NativeUsenetService implements UsenetDebridService {
   async removeNzb(nzbId: string): Promise<void> {
     this.assertAuthorised();
     const resolved = await UsenetLibraryRepository.getResolved(nzbId);
-    await UsenetLibraryRepository.delete(resolved?.entry.nzbHash ?? nzbId);
+    await deleteUsenetLibraryEntry(resolved?.entry.nzbHash ?? nzbId);
   }
 
   /**
