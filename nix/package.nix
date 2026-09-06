@@ -57,6 +57,15 @@ pkgs.stdenv.mkDerivation {
     export HOME="$PWD"
     export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
+    # node-gyp otherwise targets whatever Node is running it — and nixpkgs'
+    # pnpm bundles its own Node, which is not necessarily ${nodejs}. That
+    # mismatch ships a native module built for the wrong NODE_MODULE_VERSION
+    # (seen with yencode: "compiled against ... 137 ... requires ... 127").
+    # Pin every node-gyp build to ${nodejs}'s headers/ABI, and never let
+    # prebuild-install substitute a mismatched prebuilt.
+    export npm_config_nodedir="${nodejs}"
+    export npm_config_build_from_source=true
+
     # pnpm self-reconciles against package.json's packageManager pin by
     # querying the npm registry for that exact release, which the offline
     # build sandbox can't reach. Drop the pin — nixpkgs' pnpm (already on
@@ -85,16 +94,22 @@ pkgs.stdenv.mkDerivation {
     # hand. `pnpm --dir <path> run install` (not a bare `node-gyp
     # rebuild`) reuses pnpm's own PATH/env setup for locating
     # node-gyp — a bare `node-gyp` isn't on PATH outside that.
+    # Rebuild every copy pnpm materialized (a patched dep like yencode also
+    # shows up as `yencode@1.2.4(patch_hash=...)`), wiping any stale build/
+    # left by the `pnpm install --force` above so node-gyp can't skip it.
     buildPnpmDep() {
-      local name="$1" nodeFile="$2"
-      local dir
-      dir=$(find node_modules/.pnpm -maxdepth 1 -iname "''${name}@*" -print -quit)
-      if [ -z "$dir" ]; then
-        echo "ERROR: $name not found under node_modules/.pnpm" >&2
+      local name="$1" nodeFile="$2" found=0 pkgdir
+      while IFS= read -r dir; do
+        pkgdir="$dir/node_modules/$name"
+        [ -d "$pkgdir" ] || continue
+        rm -rf "$pkgdir/build" "$pkgdir/prebuilds"
+        pnpm --dir "$pkgdir" run install
+        test -f "$pkgdir/$nodeFile" && found=1
+      done < <(find node_modules/.pnpm -maxdepth 1 -iname "''${name}@*")
+      if [ "$found" -ne 1 ]; then
+        echo "ERROR: $name not rebuilt under node_modules/.pnpm" >&2
         exit 1
       fi
-      pnpm --dir "$dir/node_modules/$name" run install
-      test -f "$dir/node_modules/$name/$nodeFile"
     }
     buildPnpmDep better-sqlite3 build/Release/better_sqlite3.node
     buildPnpmDep yencode build/Release/yencode.node
