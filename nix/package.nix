@@ -6,7 +6,15 @@
 
 let
   inherit (pkgs) lib;
-  nodejs = pkgs.nodejs_24 or pkgs.nodejs;
+  # Pinned to 22, not 24: better-sqlite3 12.x, when compiled from source
+  # (node-gyp) rather than from an upstream prebuilt, crashes at runtime on
+  # Node 24 during GC finalization of a Statement:
+  #   node::RemoveEnvironmentCleanupHook -> Assertion failed: (env) != nullptr
+  # The offline build sandbox forces the from-source path (prebuild-install
+  # can't reach the network), so the official node:24 Docker image is
+  # unaffected but this package is. Node 22 builds a working binary.
+  # Revert to nodejs_24 once better-sqlite3 is bumped past this fix.
+  nodejs = pkgs.nodejs_22 or pkgs.nodejs;
   pnpm = pkgs.pnpm_11 or pkgs.pnpm; # packageManager: pnpm@11
 
   # fetcherVersion 4 dumps the pnpm store as a SQLite SQL file; pnpmConfigHook
