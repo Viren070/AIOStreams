@@ -475,12 +475,18 @@ export async function inspectArchiveSets(
           if (sizeMismatch && !exact && memberFiles.some((f) => f?.inferred)) {
             throw sizeMismatch.error;
           }
+          // Persisted layouts carry the resolved sizes so a reopen never re-probes.
+          const resolvedSizes = vs.volumeRanges().map((r) => r.end - r.start);
           const inner = await listInnerRecursive(
             vs,
             entries,
             0,
             password,
-            { kind: set.kind, memberIndices: set.memberIndices, memberSizes },
+            {
+              kind: set.kind,
+              memberIndices: set.memberIndices,
+              memberSizes: resolvedSizes,
+            },
             [],
             parseConcurrency,
             opts.signal
