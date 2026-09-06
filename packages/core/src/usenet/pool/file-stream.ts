@@ -4,7 +4,12 @@ import { MultiProviderPool } from './multi-provider-pool.js';
 import { SegmentsStream } from './segments-stream.js';
 import { SegmentIntegrityError, isImplausibleYencFileSize } from './yenc.js';
 import { definitiveLossKind } from '../nntp/errors.js';
-import { CommandPriority, EngineOptions, NzbSegmentRef } from '../types.js';
+import {
+  CommandPriority,
+  EngineOptions,
+  NzbSegmentRef,
+  SegmentData,
+} from '../types.js';
 import type { HoleHooks } from '../holes.js';
 
 const logger = createLogger('usenet/file-stream');
@@ -20,6 +25,8 @@ export interface FileSource {
    * Critical for archive inspection, which opens one stream per volume.
    */
   knownSize?: number;
+  /** Size from the last segment's part range even when `=ybegin size=` looks plausible. */
+  exactSize?: boolean;
 }
 
 /**
@@ -182,7 +189,7 @@ export class FileStream implements SeekableStream {
       // size; prefer it over a (possibly bogus) `=ybegin size=`.
       this._size = firstEnd || first.fileSize || first.size;
       this.sizeExact = firstEnd > 0;
-    } else if (trustYencSize) {
+    } else if (trustYencSize && !this.source.exactSize) {
       // yEnc `=ybegin size=` is the exact total file size; no last fetch needed.
       this._size = first.fileSize!;
       this.sizeExact = true;
@@ -190,15 +197,26 @@ export class FileStream implements SeekableStream {
       // No (or implausible) yEnc size: fall back to the last segment's part end
       // (exact) or a ratio estimate.
       const lastIdx = segments.length - 1;
-      const lastShared = await this.pool.fetchSegmentShared(
-        segments[lastIdx],
-        this.nzbHash,
-        signal,
-        CommandPriority.High
-      );
-      const last = lastShared.data;
-      lastShared.release();
-      if (last.byteRange) {
+      let last: SegmentData | undefined;
+      try {
+        const lastShared = await this.pool.fetchSegmentShared(
+          segments[lastIdx],
+          this.nzbHash,
+          signal,
+          CommandPriority.High
+        );
+        last = lastShared.data;
+        lastShared.release();
+      } catch (err) {
+        // An exact re-probe keeps the yEnc size when the last article is gone.
+        if (!trustYencSize || definitiveLossKind(err) !== 'missing') {
+          throw err;
+        }
+      }
+      if (last === undefined) {
+        this._size = first.fileSize!;
+        this.sizeExact = true;
+      } else if (last.byteRange) {
         this.knownRanges.set(lastIdx, {
           begin: last.byteRange[0],
           end: last.byteRange[1],

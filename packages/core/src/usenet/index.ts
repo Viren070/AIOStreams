@@ -635,8 +635,16 @@ export class UsenetEngine {
     }, ARCHIVE_INSPECT_TIMEOUT_MS);
     timer.unref?.();
 
-    const opener: FileOpener = (index, knownSize, memo) =>
-      this.openFile(nzb, nzb.files[index], ac.signal, knownSize, memo);
+    const opener: FileOpener = (index, knownSize, memo, exact) =>
+      this.openFile(
+        nzb,
+        nzb.files[index],
+        ac.signal,
+        knownSize,
+        memo,
+        undefined,
+        exact
+      );
     try {
       // Only EXACT sizes may seed archive volume offsets: a placeholder
       // (encoded-size) value shifts every later volume's mapping and the
@@ -646,6 +654,7 @@ export class UsenetEngine {
         index: f.index,
         filename: f.filename,
         size: f.sizeExact ? f.size : undefined,
+        inferred: f.sizeInferred || undefined,
         segments: nzb.files[f.index]?.segments.length,
         firstSegmentNumber: nzb.files[f.index]?.segments[0]?.number,
       }));
@@ -1146,7 +1155,8 @@ export class UsenetEngine {
      * streams of the archive path never pad here; the window level owns
      * archive padding.
      */
-    holes?: { holeHooks?: HoleHooks; fileIndex: number }
+    holes?: { holeHooks?: HoleHooks; fileIndex: number },
+    exactSize?: boolean
   ): Promise<FileStream> {
     const stream = new FileStream(
       this.pool,
@@ -1154,6 +1164,7 @@ export class UsenetEngine {
         segments: file.segments,
         filename: file.filename,
         knownSize,
+        exactSize,
       },
       nzb.hash,
       this.options,

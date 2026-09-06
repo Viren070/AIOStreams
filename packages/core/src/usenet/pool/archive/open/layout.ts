@@ -21,7 +21,8 @@ import {
 export type FileOpener = (
   index: number,
   knownSize?: number,
-  memo?: SegmentMemo
+  memo?: SegmentMemo,
+  exact?: boolean
 ) => Promise<RandomAccess>;
 
 /**

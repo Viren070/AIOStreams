@@ -5,6 +5,16 @@
 import type { Rar5CryptInfo, RarCryptInfo } from '../crypto/rar-kdf.js';
 import type { DataFragment } from '../types.js';
 
+/** A volume's data runs past its claimed size, so the claim is too small. */
+export class VolumeSizeMismatchError extends Error {
+  constructor(claimedEnd: number, dataEnd: number) {
+    super(
+      `volume data runs ${dataEnd - claimedEnd} bytes past its claimed size`
+    );
+    this.name = 'VolumeSizeMismatchError';
+  }
+}
+
 /** A volume whose header walk failed during {@link RarReader.parse}. */
 export interface RarVolumeError {
   /** Index into the volumeRanges passed to the constructor. */

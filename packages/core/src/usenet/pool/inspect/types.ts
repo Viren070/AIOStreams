@@ -16,6 +16,8 @@ export interface NzbContentFile {
    * is ~3% high and MUST NOT be used for archive volume offset mapping.
    */
   sizeExact?: boolean;
+  /** Exact size inferred rather than read from this file; the archive parse verifies it. */
+  sizeInferred?: boolean;
   category: FileCategory;
   format?: string;
   streamable: boolean;
