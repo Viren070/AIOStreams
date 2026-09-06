@@ -145,7 +145,7 @@ const parsedNzbSweepTimer = setInterval(() => {
 parsedNzbSweepTimer.unref?.();
 
 function rememberParsedNzbAlias(hash: string, contentHash: string): void {
-  if (hash === contentHash) return;
+  if (!hash || hash === contentHash) return;
   parsedNzbAliases.delete(hash);
   parsedNzbAliases.set(hash, contentHash);
   while (parsedNzbAliases.size > PARSED_NZB_MAX_ALIASES) {
@@ -1072,7 +1072,8 @@ export async function addUsenetNzb(opts: {
   }
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    // Cached under the content hash so the first play does not re-parse the XML.
+    nzb = await parseNzbCached('', xml);
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, opts.url),
@@ -1345,7 +1346,7 @@ async function requeueEntry(
   const grabMs = Date.now() - fetchStart;
   let nzb: Nzb;
   try {
-    nzb = await parseNzb(xml);
+    nzb = await parseNzbCached(entry.nzbHash, xml);
   } catch (err) {
     recordGrabOutcome({
       indexer: indexerLabelFor(undefined, nzbUrl),
