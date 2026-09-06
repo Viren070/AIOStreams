@@ -36,6 +36,7 @@ import {
   groupArchiveSets,
   openArchiveInner,
   rebuildArchiveStream,
+  deserializeArchiveLayout,
   FileOpener,
   ArchiveStreamLayout,
   type ArchiveInnerEntry,
@@ -840,6 +841,47 @@ export class UsenetEngine {
         fileIndex,
       })
     );
+  }
+
+  /**
+   * Fetch the article a cold open of `target` waits on, through the open's
+   * own locate (a season-pack episode starts mid-volume). Fire-and-forget.
+   */
+  warmTarget(nzb: Nzb, target: { index?: number; layout?: unknown }): void {
+    let fileIndex = target.index;
+    let offset = 0;
+    let knownSize: number | undefined;
+    if (target.layout !== undefined) {
+      let layout: ArchiveStreamLayout | undefined;
+      try {
+        layout = deserializeArchiveLayout(target.layout);
+      } catch {
+        return;
+      }
+      // Nested sets and 7z entries carry no outer fragment to locate.
+      if (!layout || layout.nestedLevels.length > 0) return;
+      const first = layout.target.fragments?.[0];
+      if (!first) return;
+      let off = first.offset;
+      let vol = 0;
+      for (; vol < layout.memberSizes.length; vol++) {
+        const size = layout.memberSizes[vol];
+        if (size === undefined) return;
+        if (off < size) break;
+        off -= size;
+      }
+      if (vol >= layout.memberIndices.length) return;
+      fileIndex = layout.memberIndices[vol];
+      offset = off;
+      knownSize = layout.memberSizes[vol];
+    }
+    if (fileIndex === undefined) return;
+    const file = nzb.files[fileIndex];
+    if (!file || file.segments.length === 0) return;
+    this.touch();
+    void this.openFile(nzb, file, undefined, knownSize)
+      .then((stream) => stream.readAt(offset, 1))
+      .catch(() => undefined);
   }
 
   /**

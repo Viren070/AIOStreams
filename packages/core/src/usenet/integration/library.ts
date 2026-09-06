@@ -585,6 +585,7 @@ async function importNzb(
     }
 
     const best = playable.reduce((a, b) => (b.size > a.size ? b : a));
+    engine.warmTarget(nzb, { index: best.index, layout: best.layout });
     // Small damage the census confirmed within the blocking window: the entry
     // lands as degraded with its per-file hole map attached (playback
     // pre-pads).
