@@ -103,7 +103,8 @@ export interface SegmentFetcher {
     segment: NzbSegmentRef,
     providerId: string,
     signal?: AbortSignal,
-    onWireStart?: () => void
+    onWireStart?: () => void,
+    priority?: CommandPriority
   ): Promise<'ok' | 'not_found' | 'unreachable'>;
   /** Configured provider ids, in priority order. */
   providerIds(): string[];
@@ -483,14 +484,15 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     segment: NzbSegmentRef,
     providerId: string,
     signal?: AbortSignal,
-    onWireStart?: () => void
+    onWireStart?: () => void,
+    priority: CommandPriority = CommandPriority.Low
   ): Promise<'ok' | 'not_found' | 'unreachable'> {
     const pool = this.pools.find((p) => p.id === providerId);
     if (!pool) return 'unreachable';
     try {
       await awaitAbortable(
         pool.submit<number>({
-          priority: CommandPriority.Low,
+          priority,
           signal,
           run: async (conn) => {
             onWireStart?.();

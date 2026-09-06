@@ -62,6 +62,8 @@ interface Slot {
 
 /** Additive-increase step interval for the adaptive connection-limit throttle. */
 const THROTTLE_STEP_MS = 5_000;
+/** Share of the pool idle-class work may fill; the rest stays free for arrivals. */
+const IDLE_SHARE = 0.75;
 /** Keepalive DATE interval on otherwise-idle warm connections. */
 const KEEPALIVE_MS = 30_000;
 /** Backoff after a transient dial/connection failure before re-dialing. */
@@ -85,6 +87,8 @@ export class ProviderWorkerPool {
   private slots: Slot[];
   private prioQ: WorkRequest[] = [];
   private normalQ: WorkRequest[] = [];
+  private idleQ: WorkRequest[] = [];
+  private idleInFlight = 0;
   private state: ProviderState;
   private closed = false;
 
@@ -235,7 +239,7 @@ export class ProviderWorkerPool {
       if (req.signal) {
         const signal = req.signal;
         const onAbort = (): void => {
-          for (const q of [this.prioQ, this.normalQ]) {
+          for (const q of [this.prioQ, this.normalQ, this.idleQ]) {
             const i = q.indexOf(full as WorkRequest);
             if (i === -1) continue;
             q.splice(i, 1);
@@ -258,15 +262,34 @@ export class ProviderWorkerPool {
           reject(err);
         };
       }
-      (req.priority === CommandPriority.High ? this.prioQ : this.normalQ).push(
-        full as WorkRequest
-      );
+      const queue =
+        req.priority === CommandPriority.High
+          ? this.prioQ
+          : req.priority === CommandPriority.Idle
+            ? this.idleQ
+            : this.normalQ;
+      queue.push(full as WorkRequest);
       this.dispatch();
     });
   }
 
+  /** Connections idle work may hold now: the share, less non-idle work in flight or queued. */
+  private idleBudget(): number {
+    const nonIdle =
+      this.inFlightTotal() -
+      this.idleInFlight +
+      this.prioQ.length +
+      this.normalQ.length;
+    return Math.max(
+      0,
+      Math.floor(this.allowed * this.depth * IDLE_SHARE) - nonIdle
+    );
+  }
+
   private hasWork(): boolean {
-    return this.prioQ.length > 0 || this.normalQ.length > 0;
+    return (
+      this.prioQ.length > 0 || this.normalQ.length > 0 || this.idleQ.length > 0
+    );
   }
 
   private openConns(): number {
@@ -300,6 +323,9 @@ export class ProviderWorkerPool {
     }
     if (hasHigh) return this.prioQ.shift();
     if (hasLow) return this.normalQ.shift();
+    if (this.idleQ.length > 0 && this.idleInFlight < this.idleBudget()) {
+      return this.idleQ.shift();
+    }
     return undefined;
   }
 
@@ -346,7 +372,14 @@ export class ProviderWorkerPool {
     //    sockets at the provider (choking it / tripping its limit). Total
     //    connections are held to ⌈(in-flight + queued)/depth⌉ ≈ the real
     //    concurrency.
-    const queued = this.prioQ.length + this.normalQ.length;
+    // Idle work beyond its budget must not dial connections it cannot use.
+    const queued =
+      this.prioQ.length +
+      this.normalQ.length +
+      Math.min(
+        this.idleQ.length,
+        Math.max(0, this.idleBudget() - this.idleInFlight)
+      );
     if (queued === 0) return;
     const demand = this.inFlightTotal() + queued;
     const wantConns = Math.min(this.allowed, Math.ceil(demand / this.depth));
@@ -443,8 +476,11 @@ export class ProviderWorkerPool {
   private fireTransfer(slot: Slot, req: WorkRequest): void {
     const conn = slot.conn!;
     const started = Date.now();
+    const idle = req.priority === CommandPriority.Idle;
+    if (idle) this.idleInFlight++;
     req.run(conn).then(
       (res) => {
+        if (idle) this.idleInFlight--;
         const durationMs = Date.now() - started;
         slot.failures = 0;
         // Refresh staleness on real work so purge only reaps genuinely idle
@@ -457,7 +493,10 @@ export class ProviderWorkerPool {
         req.resolve({ ...res, durationMs });
         this.dispatch();
       },
-      (err) => this.onTransferError(slot, req, err)
+      (err) => {
+        if (idle) this.idleInFlight--;
+        this.onTransferError(slot, req, err);
+      }
     );
   }
 
@@ -568,9 +607,10 @@ export class ProviderWorkerPool {
   }
 
   private failAllQueued(err: NntpError): void {
-    const all = [...this.prioQ, ...this.normalQ];
+    const all = [...this.prioQ, ...this.normalQ, ...this.idleQ];
     this.prioQ = [];
     this.normalQ = [];
+    this.idleQ = [];
     for (const req of all) req.reject(err);
   }
 
@@ -625,7 +665,7 @@ export class ProviderWorkerPool {
       isBackup: this.isBackup,
       freeSlots: this.freeSlots,
       throughput: Math.round(this.throughputEwma * this.depth * 1000),
-      queued: this.prioQ.length + this.normalQ.length,
+      queued: this.prioQ.length + this.normalQ.length + this.idleQ.length,
       lastDialOkAt: this.lastDialOkAt || undefined,
       lastDialError: this.lastDialError,
     };

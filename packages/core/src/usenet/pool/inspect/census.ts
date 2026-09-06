@@ -348,7 +348,8 @@ export function startCensus(
           ref.seg.messageId,
           ac.signal,
           nzb.hash,
-          trusted
+          trusted,
+          CommandPriority.Idle
         )
       );
       if (!detail.answered) return 'unknown';
@@ -424,7 +425,12 @@ export function startCensus(
     for (const seg of samples) {
       if (ac.signal.aborted) break;
       const outcome = await gated(() =>
-        pool.probeBodyOnProvider(seg, providerId, ac.signal)
+        pool.probeBodyOnProvider(
+          seg,
+          providerId,
+          ac.signal,
+          CommandPriority.Idle
+        )
       ).catch(() => 'unreachable' as const);
       if (outcome === 'not_found') lied = true;
     }
@@ -526,7 +532,7 @@ export function startCensus(
       checked[flat] = 1;
       try {
         await gated(() =>
-          pool.fetchSegment(ref.seg, nzb.hash, ac.signal, CommandPriority.Low)
+          pool.fetchSegment(ref.seg, nzb.hash, ac.signal, CommandPriority.Idle)
         );
         if (!answered[flat]) {
           answered[flat] = 1;
