@@ -182,6 +182,35 @@ async function loadArchiveLayout(
   }
 }
 
+/**
+ * Fetch the article a first open of this file waits on, once the file to play
+ * is known: an import warms the entry's largest file, which in a pack is
+ * rarely the episode picked, and a library hit never runs an import at all.
+ */
+export function warmUsenetStreamTarget(target: {
+  nzb: string;
+  hash: string;
+  fileIndex?: number;
+  innerPath?: string;
+  providers: ProviderConfig[];
+  options: Partial<EngineOptions>;
+}): void {
+  void (async () => {
+    const nzb = await parseNzbCached(target.hash, await fetchNzb(target.nzb));
+    let layout: unknown;
+    if (target.innerPath) {
+      const entry = await UsenetLibraryRepository.get(target.hash);
+      layout = entry?.files.find((f) => f.path === target.innerPath)?.layout;
+      // Without a layout the open runs the archive parse, which no single
+      // article shortens.
+      if (layout === undefined) return;
+    }
+    usenetEngineRegistry
+      .get(target.providers, target.options)
+      .warmTarget(nzb, { index: target.fileIndex, layout });
+  })().catch(() => undefined);
+}
+
 /** Debounce for persisting lazy-resolution progress, keyed `${hash}:${path}`. */
 const layoutPatchTimers = new Map<string, NodeJS.Timeout>();
 const LAYOUT_PATCH_DEBOUNCE_MS = 2_000;

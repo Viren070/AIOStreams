@@ -23,6 +23,7 @@ import {
   deleteUsenetLibraryEntry,
   resolveFileList,
   selectStreamFile,
+  warmUsenetStreamTarget,
   toDebridFiles,
   shouldSkipDegraded,
   hasRecentStreamActivity,
@@ -350,6 +351,15 @@ export class NativeUsenetService implements UsenetDebridService {
       releaseKey: playbackInfo.releaseKey,
       indexer: playbackInfo.indexer,
       owner: this.owner,
+    });
+
+    warmUsenetStreamTarget({
+      nzb: playbackInfo.nzb,
+      hash: contentHash,
+      fileIndex: selected.index,
+      innerPath: selected.path,
+      providers,
+      options,
     });
 
     const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}`;
