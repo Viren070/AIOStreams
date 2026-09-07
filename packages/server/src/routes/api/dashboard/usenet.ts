@@ -257,7 +257,7 @@ router.get('/settings', (_req, res, next) => {
   }
 });
 
-// POST /dashboard/usenet/providers/test — dial + auth + DATE probe.
+// POST /dashboard/usenet/providers/test — dial + auth + reader probe.
 router.post('/providers/test', async (req, res, next) => {
   try {
     const result = await testUsenetProvider(

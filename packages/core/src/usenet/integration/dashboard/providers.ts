@@ -88,9 +88,9 @@ export async function saveUsenetProviders(
   usenetEngineRegistry.invalidate();
 }
 
-/** Test a single provider connection (dial + auth + DATE health probe).
+/** Test a single provider connection (dial + auth + reader health probe).
  *
- * `latencyMs` in the result measures only the DATE command round-trip after the
+ * `latencyMs` in the result measures only a no-payload STAT round-trip after the
  * connection (TCP/TLS/greeting/auth) is fully established, so it reflects the
  * true server responsiveness rather than including connection setup overhead. */
 export async function testUsenetProvider(
@@ -128,9 +128,9 @@ export async function testUsenetProvider(
       dialTimeoutMs: 15_000,
       idleConnectionMs: 60_000,
     });
-    // Measure only the DATE round-trip; connection setup is already done.
+    // Measure only the reader probe; connection setup is already done.
     const start = Date.now();
-    await conn.date(signal, 15_000);
+    await conn.probeReader(signal, 15_000);
     return { ok: true, latencyMs: Date.now() - start };
   } catch (err) {
     const code = err instanceof NntpError ? err.kind : 'unknown';
