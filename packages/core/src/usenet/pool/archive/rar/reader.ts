@@ -277,16 +277,21 @@ export class RarReader {
       const headLen = b.fragment.offset - r.start;
       const tailLen = r.end - (b.fragment.offset + b.fragment.length);
       if (headLen <= 0 || tailLen < 0) return undefined;
+      // RAR5 stores the volume number as a varint in the archive header: one
+      // byte longer from volume 128 on.
+      const numberBytes = (v: number): number =>
+        sample.vp.version === 5 ? (v < 128 ? 1 : v < 16384 ? 2 : 3) : 0;
       const out: DataFragment[] = [];
       let sum = 0;
       for (let m = from; m < to; m++) {
         const rm = ranges[m];
+        const head = headLen + numberBytes(m) - numberBytes(sample.vi);
         const length =
           m === sample.vi
             ? b.fragment.length
-            : rm.end - rm.start - headLen - tailLen;
+            : rm.end - rm.start - head - tailLen;
         if (length <= 0) return undefined;
-        out.push({ offset: rm.start + headLen, length });
+        out.push({ offset: rm.start + head, length });
         sum += length;
       }
       if (sum !== needed) {
