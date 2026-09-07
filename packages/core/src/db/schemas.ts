@@ -1171,6 +1171,9 @@ export type StreamResponse = z.infer<typeof StreamResponseSchema>;
 
 export type Stream = z.infer<typeof StreamSchema>;
 
+/** Best-to-worst provenance tiers for ParsedFile.mediaInfoQuality. */
+export const MEDIA_INFO_QUALITY_TIERS = ['probe', 'indexer', 'addon'] as const;
+
 export const ParsedFileSchema = z.object({
   releaseGroup: z.string().optional(),
   resolution: z.string().optional(),
@@ -1179,7 +1182,7 @@ export const ParsedFileSchema = z.object({
   audioChannels: z.array(z.string()),
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
-  mediaInfoQuality: z.enum(['probe', 'indexer', 'addon']).optional(),
+  mediaInfoQuality: z.enum(MEDIA_INFO_QUALITY_TIERS).optional(),
   languages: z.array(z.string()),
   subtitles: z.array(z.string()).optional(),
   subbed: z.boolean().optional(),
