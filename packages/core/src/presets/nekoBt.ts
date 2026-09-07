@@ -251,7 +251,7 @@ export class NekoBtPreset extends TorznabPreset {
         id: 'apiKey',
         name: 'API Key (Optional)',
         description:
-          'nekoBT API Key. You can find this in your nekoBT account settings.',
+          'nekoBT API Key. You can find this in your account settings at [nekoBT](https://nekobt.to).',
         type: 'password',
         required: false,
       },
