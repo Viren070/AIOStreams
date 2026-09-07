@@ -34,6 +34,7 @@ export {
   EztvAddon,
   TheRARBGAddon,
   ThePirateBayAddon,
+  TsukihimeAddon,
   TorrentGalaxyAddon,
   SeaDexAddon,
   EasynewsSearchAddon,
