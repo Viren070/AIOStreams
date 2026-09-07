@@ -172,7 +172,6 @@ export class SlotPool {
 }
 
 export interface OrderedParallelStreamOptions {
-  highWaterMark: number;
   /** Number of tasks to run (segments / windows). */
   totalTasks: number;
   /** Max tasks in flight at once. */
@@ -222,7 +221,7 @@ export abstract class OrderedParallelStream extends Readable {
   private ended = false;
 
   protected constructor(opts: OrderedParallelStreamOptions) {
-    super({ highWaterMark: Math.max(1, Math.ceil(opts.highWaterMark)) });
+    super({ highWaterMark: 8 * Math.max(1, Math.ceil(opts.taskBytes)) });
     this.totalTasks = opts.totalTasks;
     this.maxConcurrency = opts.maxConcurrency;
     this.taskBytes = Math.max(1, opts.taskBytes);
