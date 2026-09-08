@@ -56,6 +56,7 @@ import {
   grabErrorMessage,
 } from './grab-metrics.js';
 import { noteStreamActivity, pruneStreamActivity } from './damage-policy.js';
+import { condemnArrDownload } from './arr-bridge.js';
 
 const logger = createLogger('usenet/stream');
 
@@ -82,7 +83,10 @@ export interface OpenedUsenetStream {
 const USENET_LAST_MODIFIED = new Date('2024-01-01T00:00:00Z');
 
 /** Strong, stable ETag for a resolved stream at a known size. */
-function streamEtag(token: UsenetStreamToken, size: number): string {
+export function usenetStreamEtag(
+  token: UsenetStreamToken,
+  size: number
+): string {
   const digest = createHash('sha1')
     .update(streamSessionKey(token))
     .digest('hex')
@@ -176,6 +180,35 @@ async function loadArchiveLayout(
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Fetch the article a first open of this file waits on, once the file to play
+ * is known: an import warms the entry's largest file, which in a pack is
+ * rarely the episode picked, and a library hit never runs an import at all.
+ */
+export function warmUsenetStreamTarget(target: {
+  nzb: string;
+  hash: string;
+  fileIndex?: number;
+  innerPath?: string;
+  providers: ProviderConfig[];
+  options: Partial<EngineOptions>;
+}): void {
+  void (async () => {
+    const nzb = await parseNzbCached(target.hash, await fetchNzb(target.nzb));
+    let layout: unknown;
+    if (target.innerPath) {
+      const entry = await UsenetLibraryRepository.get(target.hash);
+      layout = entry?.files.find((f) => f.path === target.innerPath)?.layout;
+      // Without a layout the open runs the archive parse, which no single
+      // article shortens.
+      if (layout === undefined) return;
+    }
+    usenetEngineRegistry
+      .get(target.providers, target.options)
+      .warmTarget(nzb, { index: target.fileIndex, layout });
+  })().catch(() => undefined);
 }
 
 /** Debounce for persisting lazy-resolution progress, keyed `${hash}:${path}`. */
@@ -347,6 +380,7 @@ function holeHooksFor(
     ).catch(() => {});
     // Pad caps only trip on damage confirmed against every provider.
     markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
+    condemnArrDownload(hash, 'failed');
     // Drop the warm session so a player retry re-opens fresh and sees the
     // failed entry.
     streamSessions.delete(sessionKey);
@@ -565,6 +599,7 @@ async function getStreamSession(
           decoded.filename,
           friendly.code
         ).catch(() => {});
+        condemnArrDownload(hash, 'failed');
         // The release exists on usenet, but a compressed/solid/unsupported
         // archive is un-streamable for everyone (global); an all-provider
         // article miss is backbone-scoped evidence.
@@ -626,8 +661,7 @@ async function getStreamSession(
  * {@link Readable} for the requested half-open byte range `[start, end)`. The
  * server route handles HTTP concerns (Range parsing, headers).
  */
-export async function openNativeUsenetStream(opts: {
-  token: string;
+export interface OpenUsenetStreamOptions {
   start?: number;
   end?: number;
   /** Serve the last N bytes (`bytes=-N`); overrides start/end. */
@@ -635,7 +669,13 @@ export async function openNativeUsenetStream(opts: {
   signal?: AbortSignal;
   /** Client address, for stream accounting. */
   clientIp?: string;
-}): Promise<OpenedUsenetStream> {
+  /** Opened through the share tree (FUSE/NFS/WebDAV): no connection caps. */
+  share?: boolean;
+}
+
+export async function openNativeUsenetStream(
+  opts: OpenUsenetStreamOptions & { token: string }
+): Promise<OpenedUsenetStream> {
   opts.signal?.throwIfAborted();
   const decoded = decodeUsenetStreamToken(opts.token);
   if (!decoded) {
@@ -648,7 +688,18 @@ export async function openNativeUsenetStream(opts: {
       type: 'api_error',
     });
   }
+  return openUsenetStream(decoded, opts);
+}
 
+/**
+ * Open a stream for an already-decoded token. In-process callers (the WebDAV
+ * provider) build the token themselves and skip the encrypted round trip.
+ */
+export async function openUsenetStream(
+  decoded: UsenetStreamToken,
+  opts: OpenUsenetStreamOptions = {}
+): Promise<OpenedUsenetStream> {
+  opts.signal?.throwIfAborted();
   const { providers, options } = getUsenetEngineConfig();
   if (providers.length === 0) {
     throw new DebridError('no usenet providers are configured', {
@@ -680,6 +731,7 @@ export async function openNativeUsenetStream(opts: {
   const admitted = streamRegistry.open({
     transport: 'usenet',
     username: decoded.owner ?? '',
+    share: opts.share,
     clientIp: opts.clientIp,
     targetKey: usenetTargetKey(
       decoded.hash,
@@ -775,7 +827,7 @@ export async function openNativeUsenetStream(opts: {
     start,
     end,
     filename,
-    etag: streamEtag(decoded, size),
+    etag: usenetStreamEtag(decoded, size),
     lastModified: session.lastModified,
   };
 }

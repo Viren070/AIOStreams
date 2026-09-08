@@ -103,7 +103,8 @@ export interface SegmentFetcher {
     segment: NzbSegmentRef,
     providerId: string,
     signal?: AbortSignal,
-    onWireStart?: () => void
+    onWireStart?: () => void,
+    priority?: CommandPriority
   ): Promise<'ok' | 'not_found' | 'unreachable'>;
   /** Configured provider ids, in priority order. */
   providerIds(): string[];
@@ -290,12 +291,14 @@ export class LocalSegmentFetcher implements SegmentFetcher {
   private pools: ProviderWorkerPool[];
   /** Per-NZB provider-order hints (only consulted with >1 provider). */
   private affinity = new ProviderAffinity();
+  private readonly decodeOpts: { verifyCrc: boolean };
 
   constructor(
     providers: ProviderConfig[],
     private opts: EngineOptions,
     private stats: StatsSink
   ) {
+    this.decodeOpts = { verifyCrc: opts.verifyArticleCrc };
     const depthOf = (p: ProviderConfig): number =>
       Math.max(1, p.pipelineDepth ?? 1);
     this.pools = providers
@@ -348,7 +351,7 @@ export class LocalSegmentFetcher implements SegmentFetcher {
         }
         // Failover attempts run sequentially, so re-decoding a retry into the
         // same target is safe: only the resolving attempt's bytes survive.
-        const decoded = decodeArticle(raw, out?.());
+        const decoded = decodeArticle(raw, out?.(), this.decodeOpts);
         const data: SegmentData = {
           body: decoded.body,
           byteRange: decoded.byteRange,
@@ -481,14 +484,15 @@ export class LocalSegmentFetcher implements SegmentFetcher {
     segment: NzbSegmentRef,
     providerId: string,
     signal?: AbortSignal,
-    onWireStart?: () => void
+    onWireStart?: () => void,
+    priority: CommandPriority = CommandPriority.Low
   ): Promise<'ok' | 'not_found' | 'unreachable'> {
     const pool = this.pools.find((p) => p.id === providerId);
     if (!pool) return 'unreachable';
     try {
       await awaitAbortable(
         pool.submit<number>({
-          priority: CommandPriority.Low,
+          priority,
           signal,
           run: async (conn) => {
             onWireStart?.();
@@ -621,11 +625,16 @@ export class LocalSegmentFetcher implements SegmentFetcher {
           // ask the rest before giving up.
           undecodable.set(pool.id, err);
           if (nzbHash) this.affinity.record(nzbHash, pool.id, true, 'body');
+          this.stats.record({
+            type: 'segment_undecodable',
+            providerId: pool.id,
+          });
           logger.debug(
             {
               provider: pool.label,
               messageId: segment.messageId,
               code: err.code,
+              reason: err.message,
             },
             'segment undecodable on provider'
           );

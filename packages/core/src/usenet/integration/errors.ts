@@ -13,7 +13,7 @@ const ARCHIVE_REASONS: Record<ArchiveErrorCode, string> = {
   archive_solid: 'Archive is solid: not streamable',
   archive_nested: 'Nested archive (disabled)',
   archive_unsupported: 'Archive type not supported',
-  archive_no_video: 'No streamable video found in archive',
+  archive_no_video: 'No streamable media found in archive',
   archive_disabled: 'Archived results are disabled',
   archive_incomplete: 'Archive volumes missing or unreadable: not streamable',
 };
@@ -22,7 +22,7 @@ const ARCHIVE_REASONS: Record<ArchiveErrorCode, string> = {
  * Classify why an inspected NZB yielded no streamable files. Missing articles
  * (incomplete or removed on every provider) get a dedicated code + message so
  * the dashboard can distinguish "gone from usenet" from "present but not
- * streamable" (encrypted/compressed/solid archives, or simply no video).
+ * streamable" (encrypted/compressed/solid archives, or simply no media).
  */
 export function classifyNoStreamable(content: NzbContent): {
   reason: string;
@@ -41,15 +41,16 @@ export function classifyNoStreamable(content: NzbContent): {
       code: 'missing_on_providers',
     };
   }
-  // Articles present but not decodable (broken yEnc part headers, uuencode-era
-  // posts): name the real problem instead of "no streamable files".
+  // Articles present but not decodable (corrupt copies failing their checksum
+  // or size, broken yEnc part headers, uuencode-era posts): name the real
+  // problem instead of "no streamable files".
   const decodeFailed = content.files.filter(
     (f) => f.error === 'decode_failed'
   ).length;
   if (decodeFailed > 0 && decodeFailed * 2 >= total) {
     return {
       reason:
-        'Articles are malformed or not yEnc encoded: encoding not supported',
+        'Articles are corrupt, malformed or not yEnc encoded: cannot be decoded',
       code: 'unsupported_encoding',
     };
   }
@@ -81,7 +82,7 @@ export function classifyNoStreamable(content: NzbContent): {
     };
   }
   // Archive parsed cleanly but its contents can't be byte-range streamed
-  // (compressed/solid volumes, an unsupported archive type, or no video
+  // (compressed/solid volumes, an unsupported archive type, or no media
   // inside).
   const structural: ArchiveErrorCode[] = [
     'archive_compressed',

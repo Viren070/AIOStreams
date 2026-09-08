@@ -5,6 +5,8 @@ export interface VariantOption {
   id: string;
   name?: string;
   enabled?: boolean;
+  /** Present when the variant can also activate on its own. */
+  when?: string;
 }
 
 interface VariantPillsProps {
@@ -55,8 +57,16 @@ export function VariantPills({
           type="button"
           onClick={() => toggle(variant.id)}
           className={pill(value.includes(variant.id))}
+          title={
+            variant.when
+              ? 'Also applies on its own when its condition matches'
+              : undefined
+          }
         >
           {variant.name || variant.id}
+          {variant.when ? (
+            <span className="ml-1 opacity-60">auto</span>
+          ) : null}
         </button>
       ))}
     </div>

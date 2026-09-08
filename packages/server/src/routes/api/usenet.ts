@@ -1,65 +1,17 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import { pipeline } from 'stream/promises';
 import {
   createLogger,
   openNativeUsenetStream,
   DebridError,
 } from '@aiostreams/core';
-import { mapDebridErrorToStaticFile } from '../../app.js';
+import { mapDebridErrorToStaticFile } from '../../utils/static-errors.js';
+import { serveRangeStream } from '../../utils/range-stream.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 
 const logger = createLogger('server:usenet');
 const router: Router = Router();
 
 router.use(corsMiddleware);
-
-const MIME_BY_EXT: Record<string, string> = {
-  mkv: 'video/x-matroska',
-  mp4: 'video/mp4',
-  m4v: 'video/x-m4v',
-  avi: 'video/x-msvideo',
-  mov: 'video/quicktime',
-  webm: 'video/webm',
-  ts: 'video/mp2t',
-  wmv: 'video/x-ms-wmv',
-  flv: 'video/x-flv',
-  mpg: 'video/mpeg',
-  mpeg: 'video/mpeg',
-};
-
-function mimeForFilename(name: string): string {
-  const ext = name.split('.').pop()?.toLowerCase() ?? '';
-  return MIME_BY_EXT[ext] ?? 'application/octet-stream';
-}
-
-type RequestedRange =
-  | { start: number; endExclusive?: number; suffixLength?: undefined }
-  | { start?: undefined; endExclusive?: undefined; suffixLength: number };
-
-/**
- * Parse a single-range `Range` header. Returns `undefined` for no range or a
- * malformed/multi-range header, in which case the full file is served.
- * `endExclusive` is `undefined` for open-ended ranges (`bytes=START-`);
- * `suffixLength` is set for suffix ranges (`bytes=-N`, the last N bytes).
- */
-function parseRange(header: string | undefined): RequestedRange | undefined {
-  if (!header) return undefined;
-  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
-  if (!match) return undefined;
-  const [, rawStart, rawEnd] = match;
-  if (rawStart === '') {
-    if (rawEnd === '') return undefined;
-    return { suffixLength: Number(rawEnd) };
-  }
-  const start = Number(rawStart);
-  const endExclusive = rawEnd === '' ? undefined : Number(rawEnd) + 1;
-  return { start, endExclusive };
-}
-
-interface UsenetStreamParams {
-  token: string;
-  filename?: string;
-}
 
 /**
  * Byte-serving endpoint for native usenet streams. The token is an encrypted
@@ -70,127 +22,26 @@ interface UsenetStreamParams {
  */
 router.get(
   '/stream/:token{/:filename}',
-  async (
-    req: Request<UsenetStreamParams>,
-    res: Response,
-    next: NextFunction
-  ) => {
-    const { token } = req.params;
-    const requested = parseRange(req.headers.range);
-    const controller = new AbortController();
-    const onClose = () => controller.abort();
-    res.on('close', onClose);
-    const socket = req.socket;
-    socket.setKeepAlive(true, 60_000);
-
-    let opened: Awaited<ReturnType<typeof openNativeUsenetStream>> | undefined;
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = String(req.params.token);
+    const download = req.query.download !== undefined;
     try {
-      opened = await openNativeUsenetStream({
-        token,
-        start: requested?.start,
-        end: requested?.endExclusive,
-        suffixLength: requested?.suffixLength,
-        signal: controller.signal,
-        clientIp: req.requestIp || req.ip || req.socket.remoteAddress,
+      await serveRangeStream(req, res, {
+        open: (range, signal) =>
+          openNativeUsenetStream({
+            token,
+            start: range?.start,
+            end: range?.endExclusive,
+            suffixLength: range?.suffixLength,
+            signal,
+            clientIp: req.requestIp || req.ip || req.socket.remoteAddress,
+          }),
+        disposition: download ? 'attachment' : 'inline',
       });
-
-      const { size, start, end, stream, filename, etag, lastModified } = opened;
-
-      // set appropriate cache headers
-      res.setHeader('ETag', etag);
-      res.setHeader('Last-Modified', lastModified.toUTCString());
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('Accept-Ranges', 'bytes');
-
-      // Conditional GET: a re-request of the unchanged file with a matching
-      // If-None-Match is a cheap 304
-      const ifNoneMatch = req.headers['if-none-match'];
-      if (
-        ifNoneMatch &&
-        (ifNoneMatch === '*' ||
-          ifNoneMatch.split(',').some((t) => t.trim() === etag))
-      ) {
-        res.removeListener('close', onClose);
-        stream.destroy();
-        res.status(304).end();
-        return;
-      }
-
-      // Unsatisfiable range (includes `bytes=-0`, which resolves to start=size).
-      if (requested && start >= size) {
-        res.removeListener('close', onClose);
-        stream.destroy();
-        res.status(416).set('Content-Range', `bytes */${size}`).end();
-        return;
-      }
-
-      const disposition =
-        req.query.download !== undefined ? 'attachment' : 'inline';
-      res.setHeader('Content-Type', mimeForFilename(filename));
-      res.setHeader(
-        'Content-Disposition',
-        `${disposition}; filename="${encodeURIComponent(filename)}"`
-      );
-      res.setHeader('Content-Length', String(end - start));
-
-      if (requested) {
-        res.status(206);
-        res.setHeader('Content-Range', `bytes ${start}-${end - 1}/${size}`);
-      } else {
-        res.status(200);
-      }
-
-      logger.debug(
-        { filename, size, start, end, range: req.headers.range ?? null },
-        'serving native usenet stream'
-      );
-
-      if (req.method === 'HEAD') {
-        stream.destroy();
-        res.end();
-        return;
-      }
-
-      // A clean FIN is invisible to a player whose buffer is full.
-      stream.once('error', (err: NodeJS.ErrnoException) => {
-        if (
-          (err?.code === 'USENET_STREAM_REAPED' ||
-            err?.code === 'STREAM_STOPPED') &&
-          !socket.destroyed
-        ) {
-          socket.resetAndDestroy();
-        }
-      });
-
-      await pipeline(stream, res);
     } catch (err) {
-      if (opened && !opened.stream.destroyed) opened.stream.destroy();
-
-      const code = (err as NodeJS.ErrnoException)?.code;
-      const isClientDisconnect =
-        controller.signal.aborted ||
-        code === 'ERR_STREAM_PREMATURE_CLOSE' ||
-        code === 'ECONNRESET' ||
-        code === 'EPIPE' ||
-        code === 'ERR_STREAM_DESTROYED' ||
-        code === 'ABORT_ERR' ||
-        code === 'USENET_STREAM_REAPED' ||
-        code === 'STREAM_STOPPED';
-
-      if (isClientDisconnect) {
-        logger.debug({ code }, 'client disconnected from usenet stream');
-        return;
-      }
-
-      if (res.headersSent) {
-        logger.warn({ err }, 'usenet stream failed after headers sent');
-        res.destroy();
-        return;
-      }
-
       if (err instanceof DebridError) {
         logger.warn({ err }, 'usenet stream failed before any bytes were sent');
-        if (req.query.download !== undefined) {
+        if (download) {
           res.status(err.statusCode || 502).json({
             success: false,
             detail: err.message,
@@ -201,8 +52,6 @@ router.get(
         return;
       }
       next(err);
-    } finally {
-      res.removeListener('close', onClose);
     }
   }
 );

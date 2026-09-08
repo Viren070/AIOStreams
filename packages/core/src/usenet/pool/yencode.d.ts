@@ -44,6 +44,12 @@ declare module 'yencode' {
     stripDots?: boolean
   ): number;
 
+  /**
+   * CRC32 of `data` as a 4-byte big-endian Buffer (the yEnc wire order);
+   * `initial` chains a previous CRC.
+   */
+  export function crc32(data: Buffer, initial?: Buffer): Buffer;
+
   export interface FromPostProps {
     begin?: Record<string, string>;
     part?: Record<string, string>;

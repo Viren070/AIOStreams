@@ -1,6 +1,6 @@
 import React, { useDeferredValue, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { BiCloudDownload, BiCog } from 'react-icons/bi';
+import { BiCog } from 'react-icons/bi';
 import { NAV, SECTIONED } from '@/app/dashboard/nav';
 import {
   TAB_MANIFEST,
@@ -11,18 +11,13 @@ import {
   useSettings,
   type SettingsKey,
 } from '@/app/dashboard/settings/queries';
-import { useUsenetSettings } from '@/app/dashboard/usenet/queries';
 import { useDashboardCommandPalette } from '@/context/dashboard-command-palette';
 import { buildHaystack, parseQuery, scoreItem, type Haystack } from './scoring';
 import { CommandPaletteShell, type CommandPaletteResult } from './shell';
 
-/** Usenet engine settings are hidden from the generic settings page, so they resolve to a different route. */
-const USENET_SECTION = 'usenet';
-
 type Target =
   | { kind: 'page'; href: string }
-  | { kind: 'settings'; tab: string; field?: string }
-  | { kind: 'usenet-settings'; field?: string };
+  | { kind: 'settings'; tab: string; field?: string };
 
 interface Indexed {
   id: string;
@@ -72,26 +67,21 @@ function indexFields(keys: SettingsKey[]): Indexed[] {
   return keys.map((k) => {
     const parts = k.key.split('.');
     const section = parts[0];
-    const usenet = section === USENET_SECTION;
     const tabId = tabIdForKey(k.key);
     const tab = TAB_MANIFEST[tabId];
     const tabLabel = tab?.label ?? humanise(section);
     // Presets alone carries well over a hundred fields, so without the
     // subsection every result there would read the same.
     const subsection = parts.slice(1, -1).map(humanise).join(' → ');
-    const base = usenet ? 'Usenet → Settings' : `Settings → ${tabLabel}`;
+    const base = `Settings → ${tabLabel}`;
 
     return {
       id: `field-${k.key}`,
       label: k.label,
       trail: subsection ? `${base} → ${subsection}` : base,
       // The tab's own icon, so results from one area read as a block.
-      icon: React.createElement(
-        usenet ? BiCloudDownload : (tab?.icon ?? BiCog)
-      ),
-      target: usenet
-        ? { kind: 'usenet-settings', field: k.key }
-        : { kind: 'settings', tab: tabId, field: k.key },
+      icon: React.createElement(tab?.icon ?? BiCog),
+      target: { kind: 'settings', tab: tabId, field: k.key } as Target,
       // Searchable by section and subsection too, so "presets torrentio" finds
       // a field whose own label says neither.
       haystack: buildHaystack(
@@ -119,15 +109,10 @@ export function DashboardCommandPalette() {
 
   // Only fetched once the palette is opened
   const { data: settingsData } = useSettings({ enabled: isOpen });
-  const { data: usenetSettingsData } = useUsenetSettings({ enabled: isOpen });
 
   const fieldItems = useMemo(
-    () =>
-      indexFields([
-        ...(settingsData?.keys ?? []),
-        ...(usenetSettingsData?.keys ?? []),
-      ]),
-    [settingsData?.keys, usenetSettingsData?.keys]
+    () => indexFields(settingsData?.keys ?? []),
+    [settingsData?.keys]
   );
 
   const go = (target: Target) => {
@@ -142,13 +127,6 @@ export function DashboardCommandPalette() {
         navigate({
           to: '/dashboard/settings',
           search: { tab: target.tab, field: target.field },
-          resetScroll: false,
-        });
-        break;
-      case 'usenet-settings':
-        navigate({
-          to: '/dashboard/usenet/settings',
-          search: { field: target.field },
           resetScroll: false,
         });
         break;

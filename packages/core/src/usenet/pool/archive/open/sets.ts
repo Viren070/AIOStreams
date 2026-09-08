@@ -1,6 +1,10 @@
 import pLimit from 'p-limit';
 import { createLogger } from '../../../../logging/logger.js';
-import { detectFileType, FileCategory } from '../../file-type.js';
+import {
+  detectFileType,
+  isMediaCategory,
+  FileCategory,
+} from '../../file-type.js';
 import { RandomAccess } from '../random-access.js';
 import {
   ArchiveKind,
@@ -24,6 +28,7 @@ import {
   findArticleNotFound,
   cryptFailure,
 } from './parse.js';
+import { VolumeSizeMismatchError } from '../rar/types.js';
 import {
   MAX_NEST_DEPTH,
   groupNestedArchives,
@@ -177,7 +182,8 @@ const MAGIC_MAX_ENTRIES = 4;
 /**
  * Type the entries a filename can't.
  *
- * Skipped once a name-typed video is at least as large as the best candidate.
+ * Skipped once a name-typed media file is at least as large as the best
+ * candidate.
  */
 async function magicSamples(
   source: RandomAccess,
@@ -191,15 +197,15 @@ async function magicSamples(
       entries.map((e, index) => ({ index, filename: e.name }))
     ).flatMap((g) => g.members.map((m) => m.filename))
   );
-  let namedVideo = 0;
+  let namedMedia = 0;
   const candidates: ArchiveEntry[] = [];
   for (const e of entries) {
     if (e.isDir) continue;
     // Compressed/solid/undecryptable entries can neither be read here nor
     // streamed later, so they are no reason to skip and no use as a candidate.
     if (entryReason(e) !== undefined) continue;
-    if (detectFileType(NO_SAMPLE, e.name).category === 'video') {
-      namedVideo = Math.max(namedVideo, e.size);
+    if (isMediaCategory(detectFileType(NO_SAMPLE, e.name).category)) {
+      namedMedia = Math.max(namedMedia, e.size);
       continue;
     }
     if (e.size < MAGIC_MIN_SIZE) continue;
@@ -208,7 +214,7 @@ async function magicSamples(
     candidates.push(e);
   }
   candidates.sort((a, b) => b.size - a.size);
-  if (candidates.length === 0 || namedVideo >= candidates[0].size) return out;
+  if (candidates.length === 0 || namedMedia >= candidates[0].size) return out;
 
   await Promise.all(
     candidates.slice(0, MAGIC_MAX_ENTRIES).map(async (e) => {
@@ -412,10 +418,17 @@ export async function inspectArchiveSets(
           heads.slice(1, -1).some((h) => h === undefined) &&
           memberFiles.every((f) => f?.firstSegmentNumber === 1);
         const attempt = async (
-          memberSizes: (number | undefined)[]
+          memberSizes: (number | undefined)[],
+          exact = false
         ): Promise<ArchiveSetInfo> => {
           const lazy = lazyFor(memberSizes);
-          const vs = await openVolumeSet(set, opener, memberSizes, concurrency);
+          const vs = await openVolumeSet(
+            set,
+            opener,
+            memberSizes,
+            concurrency,
+            exact
+          );
           const archiveBytes = vs.size();
           let { entries, volumeErrors } = await parseArchiveEntries(
             vs,
@@ -454,12 +467,26 @@ export async function inspectArchiveSets(
               }
             ));
           }
+          // An inferred size the headers contradict would splice the next
+          // volume's bytes into this one: re-probe every inferred member.
+          const sizeMismatch = volumeErrors.find(
+            (v) => v.error instanceof VolumeSizeMismatchError
+          );
+          if (sizeMismatch && !exact && memberFiles.some((f) => f?.inferred)) {
+            throw sizeMismatch.error;
+          }
+          // Persisted layouts carry the resolved sizes so a reopen never re-probes.
+          const resolvedSizes = vs.volumeRanges().map((r) => r.end - r.start);
           const inner = await listInnerRecursive(
             vs,
             entries,
             0,
             password,
-            { kind: set.kind, memberIndices: set.memberIndices, memberSizes },
+            {
+              kind: set.kind,
+              memberIndices: set.memberIndices,
+              memberSizes: resolvedSizes,
+            },
             [],
             parseConcurrency,
             opts.signal
@@ -576,7 +603,8 @@ export async function inspectArchiveSets(
             );
             try {
               return await attempt(
-                memberFiles.map((f) => (f?.inferred ? undefined : f?.size))
+                memberFiles.map((f) => (f?.inferred ? undefined : f?.size)),
+                true
               );
             } catch (err2) {
               warn(err2, 'archive inspect failed');

@@ -4,6 +4,8 @@ import {
   settleMetricsHistory,
   stopMetricsHistory,
 } from './utils/system-metrics.js';
+import { startNfsShare, stopNfsShare } from './nfs.js';
+import { startFuseMount, stopFuseMount } from './fuse.js';
 
 import {
   Env,
@@ -19,6 +21,7 @@ import {
   SelAccess,
   AnimeDatabase,
   ConfigStartupError,
+  arrConfigured,
   ProwlarrAddon,
   TemplateManager,
   CommunityService,
@@ -37,6 +40,8 @@ import {
   instanceId,
   drainUsenetMetrics,
   pruneUsenetMetrics,
+  runLibraryRecheck,
+  runUsenetArrQueueCleanup,
   requeueInterruptedInspects,
   flushAllDiskCaches,
   ReleaseBlocklistRemoteService,
@@ -170,6 +175,40 @@ function registerUsenetTasks() {
       const n = await pruneUsenetMetrics(USENET_METRICS_RETENTION_DAYS);
       return { ok: true, message: `pruned ${n} metric rows` };
     },
+  });
+  TaskManager.register({
+    id: 'usenet-library-recheck',
+    label: 'Recheck usenet library',
+    description:
+      'Re-verifies library entries against your providers on a schedule keyed ' +
+      'to how old each post is, so a release taken down after it was added is ' +
+      'marked failed instead of staying playable on paper. Does nothing until ' +
+      'the recheck scope is turned on in the usenet settings.',
+    category: 'usenet',
+    kind: 'scheduled',
+    intervalMs: 5 * 60_000,
+    enabled: true,
+    destructive: false,
+    multiReplica: 'single',
+    // Scope is read at run time, so switching it on takes effect immediately.
+    run: async (ctx) => runLibraryRecheck({ signal: ctx?.signal }),
+  });
+  TaskManager.register({
+    id: 'arr-queue-cleanup',
+    label: 'Clean up stuck Sonarr/Radarr imports',
+    description:
+      'Looks through the queues of your Sonarr/Radarr instances for downloads ' +
+      'AIOStreams handed over that they could not import, and acts on the ' +
+      'reason they gave: replace a bad release, push an import through, or ' +
+      'clear a stale entry. Does nothing until queue cleanup is turned on in ' +
+      'the Sonarr/Radarr settings.',
+    category: 'usenet',
+    kind: 'scheduled',
+    intervalMs: 5 * 60_000,
+    enabled: true,
+    destructive: true,
+    multiReplica: 'single',
+    run: async () => runUsenetArrQueueCleanup(),
   });
 }
 
@@ -336,6 +375,8 @@ async function start() {
     void requeueInterruptedInspects();
     await initialiseAuth();
     startAnalytics();
+    await startNfsShare();
+    await startFuseMount();
     const server = app.listen(appConfig.bootstrap.port, (error) => {
       if (error) {
         logger.error('Failed to start server:', error);
@@ -356,6 +397,8 @@ async function start() {
 async function shutdown() {
   TaskManager.stopAll();
   stopMetricsHistory();
+  await stopFuseMount().catch(() => undefined);
+  await stopNfsShare().catch(() => undefined);
   // Write live sessions out so the next boot doesn't reclaim them as stale.
   streamRegistry.closeAll('stale');
   await flushStreamSessions().catch(() => undefined);

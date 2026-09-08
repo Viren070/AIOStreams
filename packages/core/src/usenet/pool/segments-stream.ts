@@ -68,7 +68,6 @@ export class SegmentsStream extends OrderedParallelStream {
   constructor(opts: SegmentsStreamOptions) {
     const maxWorkers = Math.max(1, opts.maxWorkers);
     super({
-      highWaterMark: opts.bufferSizeBytes,
       totalTasks: opts.segments.length,
       maxConcurrency: maxWorkers,
       taskBytes: opts.taskBytes,

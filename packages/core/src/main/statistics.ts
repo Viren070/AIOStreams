@@ -77,6 +77,22 @@ export function buildStatistics(
     );
   }
 
+  // Which variants shaped this response. Auto ones are invisible in the URL,
+  // so without this the only record of them is the server log.
+  if (
+    userData.statistics?.enabled &&
+    (userData.activeVariants?.length || userData.autoVariants?.length)
+  ) {
+    const lines = [
+      ...(userData.activeVariants ?? []).map((id) => `🧩 ${id}`),
+      ...(userData.autoVariants ?? []).map((id) => `🧩 ${id} (auto)`),
+    ];
+    statistics.push({
+      title: '🧩 Config Variants',
+      description: lines.join('\n'),
+    });
+  }
+
   // Forced digital release filter info stream - shown regardless of statistics settings
   if (
     (userData.digitalReleaseFilter?.showInfoOnFilter ?? true) &&

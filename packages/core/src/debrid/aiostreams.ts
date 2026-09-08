@@ -20,8 +20,10 @@ import {
   encodeUsenetStreamToken,
   libraryEntryToDownload,
   addUsenetNzb,
+  deleteUsenetLibraryEntry,
   resolveFileList,
   selectStreamFile,
+  warmUsenetStreamTarget,
   toDebridFiles,
   shouldSkipDegraded,
   hasRecentStreamActivity,
@@ -351,6 +353,15 @@ export class NativeUsenetService implements UsenetDebridService {
       owner: this.owner,
     });
 
+    warmUsenetStreamTarget({
+      nzb: playbackInfo.nzb,
+      hash: contentHash,
+      fileIndex: selected.index,
+      innerPath: selected.path,
+      providers,
+      options,
+    });
+
     const url = `${appConfig.bootstrap.baseUrl}/api/v1/usenet/stream/${token}`;
     logger.debug(
       {
@@ -425,7 +436,7 @@ export class NativeUsenetService implements UsenetDebridService {
   async removeNzb(nzbId: string): Promise<void> {
     this.assertAuthorised();
     const resolved = await UsenetLibraryRepository.getResolved(nzbId);
-    await UsenetLibraryRepository.delete(resolved?.entry.nzbHash ?? nzbId);
+    await deleteUsenetLibraryEntry(resolved?.entry.nzbHash ?? nzbId);
   }
 
   /**

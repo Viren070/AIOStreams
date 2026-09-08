@@ -9,6 +9,7 @@ import {
   renderNabFeedXml,
   renderNabCapsXml,
   nabCapsJson,
+  nabPlaceholderCategory,
   renderNabErrorXml,
   UserData,
   UserRepository,
@@ -19,10 +20,13 @@ import {
   config as appConfig,
   constants,
   createLogger,
-  applyVariants,
+  activateVariants,
+  logVariantNotes,
   parseVariantSelector,
+  recordClientAgent,
   VARIANT_QUERY_PARAM,
 } from '@aiostreams/core';
+import { buildVariantRequestContext } from '../../utils/variant-context.js';
 import { corsMiddleware } from '../../middlewares/cors.js';
 import { streamApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { syncUserDataUrls } from '../../utils/syncUserData.js';
@@ -60,15 +64,15 @@ type BuiltQuery =
       type: 'movie' | 'series';
       ctx: NabQueryContext;
     }
-  | { kind: 'rss' }
+  | { kind: 'rss'; category: number }
   | { kind: 'unsupported' };
 
 /**
  * Map a newznab/torznab query to a Stremio `(id, type)`. Only ID + season/ep
- * lookups are supported. `rss` is the bare feed request (`t=search` with nothing
- * to search for) that clients issue to test an indexer; `unsupported` is
- * anything else we can't turn into an ID (free-text `q`, or a series query
- * missing a season).
+ * lookups are supported. `rss` is a bare feed request (any search function
+ * with nothing to search for) that clients issue to test an indexer;
+ * `unsupported` is anything else we can't turn into an ID (free-text `q`, or
+ * a series query missing a season).
  */
 function buildQuery(t: string, p: Record<string, string>): BuiltQuery {
   const season = p.season?.trim();
@@ -89,8 +93,10 @@ function buildQuery(t: string, p: Record<string, string>): BuiltQuery {
     base = `tmdb:${tmdb}`;
   }
   if (!base) {
-    const bare = t === 'search' && !p.q?.trim() && !season && !ep;
-    return bare ? { kind: 'rss' } : { kind: 'unsupported' };
+    const bare = !p.q?.trim() && !season && !ep;
+    return bare
+      ? { kind: 'rss', category: nabPlaceholderCategory(t, p.cat) }
+      : { kind: 'unsupported' };
   }
 
   // Echoed back on every item, whichever id the lookup itself resolved against.
@@ -237,7 +243,9 @@ export function createNabRouter(namespace: NabNamespace): Router {
       sendFeed(
         res,
         xml,
-        new NabTransformer(namespace, serverTitle).rssPlaceholder()
+        new NabTransformer(namespace, serverTitle).rssPlaceholder(
+          built.category
+        )
       );
       return;
     }
@@ -251,8 +259,29 @@ export function createNabRouter(namespace: NabNamespace): Router {
       const selectedVariants = parseVariantSelector(
         req.query[VARIANT_QUERY_PARAM]
       );
-      if (selectedVariants.length) {
-        userData = applyVariants(userData, selectedVariants).userData;
+      const variantContext = {
+        ...buildVariantRequestContext(req, 'nab'),
+        type: built.type,
+        id: built.id,
+      };
+      void recordClientAgent(userData.uuid, variantContext.userAgent, 'nab');
+      const activation = await activateVariants(
+        userData,
+        selectedVariants,
+        variantContext
+      );
+      userData = activation.userData;
+      if (activation.applied.length) {
+        logger.info(
+          {
+            uuid: userData.uuid,
+            resource: 'nab',
+            variants: userData.activeVariants,
+            auto: activation.auto,
+          },
+          'serving request with config variants'
+        );
+        logVariantNotes(userData.uuid, activation);
       }
       userData = await syncUserDataUrls(userData);
       userData = await validateConfig(userData, {

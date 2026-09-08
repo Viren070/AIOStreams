@@ -17,10 +17,16 @@ import {
   type CelLimits,
 } from '../../../../../../../core/src/variants/language';
 import { CelEditor } from './cel-editor';
+import { ConditionTester } from './condition-tester';
 
 type Variant = NonNullable<UserData['variants']>[number];
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+
+const CONDITION_HELP =
+  'Optional. A true/false expression that makes this variant apply on its own, without ?v= in the URL. ' +
+  'Available: userAgent, resource, type, id, query(\'name\'), header(\'name\'), health(\'id\'), ' +
+  'includes(a, b) and matches(value, \'regex\'). Selecting the variant in the URL still applies it either way.';
 
 function nextVariantId(existing: Variant[]): string {
   if (!existing.some((v) => v.id === 'variant')) return 'variant';
@@ -74,6 +80,16 @@ export function Variants() {
         intent="info-basic"
         title="Variants are disabled"
         description="This instance has turned off config variants."
+      />
+    );
+  }
+
+  if (settings?.access === 'trusted' && !userData.trusted) {
+    return (
+      <Alert
+        intent="info-basic"
+        title="Variants are limited to trusted users"
+        description="This instance only lets trusted users define config variants. Ask the instance owner to add you."
       />
     );
   }
@@ -137,6 +153,10 @@ export function Variants() {
           title="No variants yet"
           description="Add one to serve a second, adjusted version of this configuration from the same UUID."
         />
+      )}
+
+      {variants.length > 0 && (
+        <ConditionTester variants={variants} healthChecks={userData.healthChecks} />
       )}
 
       <PreviewModal
@@ -222,6 +242,14 @@ function VariantCard({
           onValueChange={(value) => onChange({ name: value || undefined })}
         />
       </div>
+
+      <TextInput
+        label="Activate when"
+        help={CONDITION_HELP}
+        placeholder="includes(userAgent, 'android')"
+        value={variant.when ?? ''}
+        onValueChange={(value) => onChange({ when: value || undefined })}
+      />
 
       <CelEditor
         value={variant.script}

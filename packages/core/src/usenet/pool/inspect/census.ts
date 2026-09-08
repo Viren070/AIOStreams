@@ -99,6 +99,13 @@ export interface CensusOptions {
   signal?: AbortSignal;
   /** Engine-lifetime per-provider STAT trust state. */
   trust: StatTrustCache;
+  /**
+   * Stop emitting new spread positions after this many definitive answers.
+   * The emission order makes any prefix a uniform sample, so a capped run is
+   * a spot check; run measurement and re-probing of a found miss are
+   * unaffected.
+   */
+  maxSamples?: number;
 }
 
 export interface CensusSnapshot {
@@ -279,6 +286,9 @@ export function startCensus(
   const nextIndex = (): number | undefined => {
     const re = requeue.pop();
     if (re !== undefined) return re; // stays marked checked
+    if (opts.maxSamples !== undefined && sampled >= opts.maxSamples) {
+      return undefined;
+    }
     while (anchorCursor < anchors.length) {
       const a = anchors[anchorCursor++];
       if (!checked[a]) {
@@ -338,7 +348,8 @@ export function startCensus(
           ref.seg.messageId,
           ac.signal,
           nzb.hash,
-          trusted
+          trusted,
+          CommandPriority.Idle
         )
       );
       if (!detail.answered) return 'unknown';
@@ -414,7 +425,12 @@ export function startCensus(
     for (const seg of samples) {
       if (ac.signal.aborted) break;
       const outcome = await gated(() =>
-        pool.probeBodyOnProvider(seg, providerId, ac.signal)
+        pool.probeBodyOnProvider(
+          seg,
+          providerId,
+          ac.signal,
+          CommandPriority.Idle
+        )
       ).catch(() => 'unreachable' as const);
       if (outcome === 'not_found') lied = true;
     }
@@ -516,7 +532,7 @@ export function startCensus(
       checked[flat] = 1;
       try {
         await gated(() =>
-          pool.fetchSegment(ref.seg, nzb.hash, ac.signal, CommandPriority.Low)
+          pool.fetchSegment(ref.seg, nzb.hash, ac.signal, CommandPriority.Idle)
         );
         if (!answered[flat]) {
           answered[flat] = 1;

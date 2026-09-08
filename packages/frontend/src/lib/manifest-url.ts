@@ -33,14 +33,46 @@ export function buildManifestUrl({
   return `${prefix}${path}/manifest.json${query}`;
 }
 
+function splitVariantIds(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((id) => decodeURIComponent(id).trim())
+    .filter(Boolean);
+}
+
+/**
+ * The variant selection named by the URL currently open, in whichever form it
+ * uses.
+ *
+ * The path form wins when both appear.
+ */
+export function variantSelectionFromLocation(
+  pathname: string,
+  search: string
+): { ids: string[]; location: 'path' | 'query' } | null {
+  const path = /\/v\/([^/]+)\/configure\/?$/.exec(pathname);
+  if (path) {
+    const ids = splitVariantIds(path[1]);
+    if (ids.length) return { ids, location: 'path' };
+  }
+
+  let raw: string | null = null;
+  try {
+    raw = new URLSearchParams(search).get('v');
+  } catch {
+    raw = null;
+  }
+  if (raw) {
+    const ids = splitVariantIds(raw);
+    if (ids.length) return { ids, location: 'query' };
+  }
+  return null;
+}
+
 /** Recovers the variant selection from a URL so the editor can render it. */
 export function parseVariantIds(url: string): string[] {
   const path = /\/v\/([^/?]+)/.exec(url);
   const query = /[?&]v=([^&]+)/.exec(url);
   const raw = path?.[1] ?? query?.[1];
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map((id) => decodeURIComponent(id).trim())
-    .filter(Boolean);
+  return raw ? splitVariantIds(raw) : [];
 }

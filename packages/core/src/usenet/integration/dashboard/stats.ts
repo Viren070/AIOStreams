@@ -51,6 +51,7 @@ export interface UsenetProviderStatRow {
   bytes: number;
   errors: number;
   missing: number;
+  undecodable: number;
   avgLatencyMs: number | null;
   avgArticleMs: number;
   /** bytes / wall-clock busy seconds: the provider's average throughput. */
@@ -59,6 +60,8 @@ export interface UsenetProviderStatRow {
   errorRate: number;
   /** missing / (articles + missing): availability signal. */
   missRate: number;
+  /** undecodable / (articles + undecodable): corrupt-copy signal. */
+  undecodableRate: number;
   /** articles / total articles across providers in the window. */
   articleShare: number;
   /** Has recorded stats but is no longer configured. */
@@ -99,6 +102,7 @@ export interface UsenetThroughputPoint {
   bytes: number;
   errors: number;
   missing: number;
+  undecodable: number;
   /** Server response time; null when the bucket holds no samples. */
   avgLatencyMs: number | null;
   /** Aggregate download rate for the bucket: bytes / wall-clock active time. */
@@ -117,6 +121,7 @@ export interface UsenetStatsOverview {
     bytes: number;
     errors: number;
     missing: number;
+    undecodable: number;
     /** Server response time across providers; null when nothing was sampled. */
     avgLatencyMs: number | null;
     /** Mean whole-article fetch time, transfer included (not responsiveness). */
@@ -193,6 +198,7 @@ export async function drainUsenetMetrics(): Promise<number> {
           bytes: 0,
           errors: 0,
           missing: 0,
+          undecodable: 0,
           sumDurationMs: 0,
           wallClockMs: 0,
           sumTtfbMs: 0,
@@ -202,6 +208,7 @@ export async function drainUsenetMetrics(): Promise<number> {
       cur.bytes += d.bytes;
       cur.errors += d.errors;
       cur.missing += d.missing;
+      cur.undecodable += d.undecodable;
       cur.sumDurationMs += d.sumDurationMs;
       // Per-provider wall-clock busy time (union of in-flight fetches).
       cur.wallClockMs += d.wallClockMs;
@@ -417,6 +424,7 @@ export async function getUsenetStatsOverview(
     bytes: totalBytes,
     errors: summary.reduce((s, p) => s + p.errors, 0),
     missing: summary.reduce((s, p) => s + p.missing, 0),
+    undecodable: summary.reduce((s, p) => s + p.undecodable, 0),
     avgLatencyMs: avgLatency(
       summary.reduce((s, p) => s + p.sumTtfbMs, 0),
       totalTtfbSamples
@@ -447,6 +455,7 @@ export async function getUsenetStatsOverview(
     const articles = agg?.articles ?? 0;
     const errors = agg?.errors ?? 0;
     const missing = agg?.missing ?? 0;
+    const undecodable = agg?.undecodable ?? 0;
     return {
       id,
       name: cfg?.name,
@@ -468,6 +477,7 @@ export async function getUsenetStatsOverview(
       bytes: agg?.bytes ?? 0,
       errors,
       missing,
+      undecodable,
       avgLatencyMs: avgLatency(agg?.sumTtfbMs ?? 0, agg?.ttfbSamples ?? 0),
       avgArticleMs:
         articles > 0 ? Math.round((agg?.sumDurationMs ?? 0) / articles) : 0,
@@ -477,6 +487,8 @@ export async function getUsenetStatsOverview(
           : 0,
       errorRate: articles + errors > 0 ? errors / (articles + errors) : 0,
       missRate: articles + missing > 0 ? missing / (articles + missing) : 0,
+      undecodableRate:
+        articles + undecodable > 0 ? undecodable / (articles + undecodable) : 0,
       articleShare: totalArticles > 0 ? articles / totalArticles : 0,
     };
   });
@@ -522,6 +534,7 @@ export async function getUsenetStatsOverview(
     bytes: b.bytes,
     errors: b.errors,
     missing: b.missing,
+    undecodable: b.undecodable,
     avgLatencyMs: avgLatency(b.sumTtfbMs, b.ttfbSamples),
     avgBytesPerSec:
       b.wallClockMs > 0 ? Math.round(b.speedBytes / (b.wallClockMs / 1000)) : 0,

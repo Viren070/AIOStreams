@@ -164,8 +164,9 @@ export const metadataSchema = {
       manamiDb: {
         schema: seconds,
         default: 7 * 86400,
-        label: 'Manami offline DB refresh interval (s)',
-        description: 'Refresh interval for the Manami anime offline database.',
+        label: 'Anime offline DB refresh interval (s)',
+        description:
+          'Refresh interval for the anime offline database (cedya77 continuation of the Manami project).',
         env: 'ANIME_DB_MANAMI_DB_REFRESH_INTERVAL',
         requiresRestart: true,
         secret: false,

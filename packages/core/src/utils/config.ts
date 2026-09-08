@@ -28,7 +28,11 @@ import {
   APIError,
 } from './index.js';
 import { assertConfigAccessKey } from './auth.js';
-import { validateVariants } from '../variants/runtime.js';
+import {
+  knownHealthCheckIds,
+  validateConditionalActivation,
+  validateVariants,
+} from '../variants/runtime.js';
 import { parseSyncedUrl } from './sync.js';
 import { ZodError } from 'zod';
 import {
@@ -320,9 +324,15 @@ export async function validateConfig(
     };
   });
 
+  await validateConditionalActivation(
+    config,
+    options?.skipErrorsFromAddonsOrProxies
+  );
+  const healthIds = knownHealthCheckIds(config);
+
   if (config.groups?.groupings) {
     for (const group of config.groups.groupings) {
-      await validateGroup(group);
+      await validateGroup(group, healthIds);
     }
   }
 
@@ -332,7 +342,8 @@ export async function validateConfig(
         throw new Error('Missing condition');
       }
       await ExitConditionEvaluator.testEvaluate(
-        config.dynamicAddonFetching.condition
+        config.dynamicAddonFetching.condition,
+        healthIds
       );
     } catch (error) {
       throw new Error(`Invalid dynamic addon fetching condition: ${error}`);
@@ -350,7 +361,7 @@ export async function validateConfig(
 
   for (const expression of expressionsToValidate) {
     try {
-      await StreamSelector.testSelect(expression);
+      await StreamSelector.testSelect(expression, healthIds);
     } catch (error) {
       throw new Error(`Invalid stream expression: ${expression}: ${error}`);
     }
@@ -359,7 +370,7 @@ export async function validateConfig(
   // validate precache selector
   if (config.precacheSelector) {
     try {
-      await StreamSelector.testSelect(config.precacheSelector);
+      await StreamSelector.testSelect(config.precacheSelector, healthIds);
     } catch (error) {
       throw new Error(`Invalid precache selector: ${error}`);
     }
@@ -1159,7 +1170,7 @@ function validatePreset(preset: PresetObject) {
   }
 }
 
-async function validateGroup(group: Group) {
+async function validateGroup(group: Group, healthIds: string[] = []) {
   if (!group) {
     return;
   }
@@ -1172,7 +1183,10 @@ async function validateGroup(group: Group) {
   // we must be able to parse the condition
   let result;
   try {
-    result = await GroupConditionEvaluator.testEvaluate(group.condition);
+    result = await GroupConditionEvaluator.testEvaluate(
+      group.condition,
+      healthIds
+    );
   } catch (error: any) {
     throw new Error(
       `Your group condition - '${group.condition}' - is invalid: ${error.message}`
@@ -1496,7 +1510,7 @@ const BRANDING_FIELDS: (keyof UserData)[] = [
 // so a parent's would target fields the child lacks.
 // prettier-ignore
 const PERSONAL_FIELDS: (keyof UserData)[] = [
-  'appliedTemplates', 'variants',
+  'appliedTemplates', 'variants', 'healthChecks',
 ];
 
 /**

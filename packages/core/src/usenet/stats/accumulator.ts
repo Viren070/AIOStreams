@@ -19,6 +19,7 @@ interface DeltaCounters {
   bytes: number;
   errors: number;
   missing: number;
+  undecodable: number;
   sumDurationMs: number;
   /** Wall-clock busy ms (union of in-flight fetches), for avg throughput. */
   wallClockMs: number;
@@ -31,6 +32,7 @@ interface ProviderAccumulator {
   segmentsFetched: number;
   bytesDownloaded: number;
   missingSegments: number;
+  undecodableSegments: number;
   connectionErrors: number;
   /** Retained server-response-time samples (avg + p95 for the live snapshot). */
   latencies: number[];
@@ -50,6 +52,7 @@ function emptyAccumulator(): ProviderAccumulator {
     segmentsFetched: 0,
     bytesDownloaded: 0,
     missingSegments: 0,
+    undecodableSegments: 0,
     connectionErrors: 0,
     latencies: [],
     latencySamples: 0,
@@ -58,6 +61,7 @@ function emptyAccumulator(): ProviderAccumulator {
       bytes: 0,
       errors: 0,
       missing: 0,
+      undecodable: 0,
       sumDurationMs: 0,
       wallClockMs: 0,
       sumTtfbMs: 0,
@@ -198,6 +202,11 @@ export class StatsAccumulator {
       case 'segment_missing':
         acc.missingSegments++;
         acc.delta.missing++;
+        this.liveMeter.record({ errors: 1 });
+        break;
+      case 'segment_undecodable':
+        acc.undecodableSegments++;
+        acc.delta.undecodable++;
         this.liveMeter.record({ errors: 1 });
         break;
       case 'connection_error':
@@ -365,13 +374,21 @@ export class StatsAccumulator {
         acc.busyStart = now;
       }
       const d = acc.delta;
-      if (d.articles || d.bytes || d.errors || d.missing || d.ttfbSamples) {
+      if (
+        d.articles ||
+        d.bytes ||
+        d.errors ||
+        d.missing ||
+        d.undecodable ||
+        d.ttfbSamples
+      ) {
         out.push({ providerId, ...d, wallClockMs: busyMs });
         acc.delta = {
           articles: 0,
           bytes: 0,
           errors: 0,
           missing: 0,
+          undecodable: 0,
           sumDurationMs: 0,
           wallClockMs: 0,
           sumTtfbMs: 0,
@@ -405,12 +422,14 @@ export class StatsAccumulator {
               Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))
             ]
           : 0;
-      const attempts = acc.segmentsFetched + acc.missingSegments;
+      const attempts =
+        acc.segmentsFetched + acc.missingSegments + acc.undecodableSegments;
       out.push({
         providerId,
         segmentsFetched: acc.segmentsFetched,
         bytesDownloaded: acc.bytesDownloaded,
         missingSegments: acc.missingSegments,
+        undecodableSegments: acc.undecodableSegments,
         connectionErrors: acc.connectionErrors,
         avgLatencyMs: Math.round(avg),
         p95LatencyMs: Math.round(p95),

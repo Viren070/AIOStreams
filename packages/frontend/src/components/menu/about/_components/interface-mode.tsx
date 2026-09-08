@@ -13,13 +13,13 @@ export function InterfaceMode() {
         <p className="text-sm text-[--muted] mt-1">
           {mode === 'pro'
             ? 'Advanced is on: the Sorting page and all advanced options are shown.'
-            : 'Simple hides the Sorting page and the more advanced options. Switch to Advanced to see everything.'}
+            : 'Simple hides the Sorting page and the more advanced options.'}
         </p>
       </div>
       <ModeSwitch
         value={mode}
         onChange={setMode}
-        className="w-full sm:w-56 shrink-0"
+        className="w-full sm:w-48 sm:h-10 shrink-0"
       />
     </GlowCard>
   );

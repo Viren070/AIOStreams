@@ -269,8 +269,12 @@ export class DiskBackedCache<V> {
       this.disk.set(fileKey, { size: buf.length });
       this.addToMem(key, value, this.opts.sizeOf(value));
       return value;
-    } catch {
+    } catch (err) {
       // File vanished or is corrupt — drop the index entry.
+      logger.debug(
+        { name: this.opts.name, key, err: (err as Error)?.message },
+        'disk cache entry unreadable; dropped'
+      );
       this.dropDisk(fileKey);
       this.misses++;
       return undefined;

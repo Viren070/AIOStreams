@@ -1,7 +1,7 @@
 import { createLogger } from '../../../logging/logger.js';
 import { MultiProviderPool } from '../multi-provider-pool.js';
 import { type Par2Index, par2NameKey } from '../../par2/decode.js';
-import { Nzb } from '../../nzb/model.js';
+import { Nzb, NzbFile } from '../../nzb/model.js';
 import { isProbablyObfuscated } from '../../nzb/obfuscation.js';
 import {
   archiveBaseName,
@@ -36,6 +36,66 @@ const UNIFORM_SIZE_TOLERANCE = 0.01;
 
 /** Bound on the raced PAR2 index fetch; stays well under the inspect idle-abort. */
 const PAR2_INDEX_DEADLINE_MS = 10_000;
+
+// Equal volumes differ in encoded size only by yEnc escape noise (a few KB
+// at 50 MB); a shorter volume within this slack is caught by the parse.
+const SIBLING_ENCODED_TOLERANCE = 0.0003;
+const SIBLING_ENCODED_MIN_SLACK = 8 * 1024;
+const SIBLING_MAX_SAMPLES = 8;
+
+/**
+ * Exact sizes of probed volumes, so a same-shaped sibling (format, segment
+ * count, first-part length, encoded size within escape noise) skips its
+ * last-segment fetch: archivers cut every volume but the last to one size.
+ * Inferred sizes are flagged and the archive parse re-probes on mismatch.
+ */
+export class SiblingSizes {
+  private samples = new Map<
+    string,
+    Array<{ encoded: number; decoded: number }>
+  >();
+
+  private key(
+    file: NzbFile,
+    firstPartLen: number,
+    format: string | undefined
+  ): string {
+    return `${format ?? ''}:${file.segments.length}:${firstPartLen}`;
+  }
+
+  record(
+    file: NzbFile,
+    firstPartLen: number,
+    format: string | undefined,
+    decoded: number
+  ): void {
+    if (file.encodedSize <= 0 || decoded <= 0 || file.segments.length < 2)
+      return;
+    const k = this.key(file, firstPartLen, format);
+    let list = this.samples.get(k);
+    if (!list) this.samples.set(k, (list = []));
+    if (list.length < SIBLING_MAX_SAMPLES)
+      list.push({ encoded: file.encodedSize, decoded });
+  }
+
+  infer(
+    file: NzbFile,
+    firstPartLen: number,
+    format: string | undefined
+  ): number | undefined {
+    if (file.encodedSize <= 0 || file.segments.length < 2) return undefined;
+    const list = this.samples.get(this.key(file, firstPartLen, format));
+    if (!list) return undefined;
+    for (const s of list) {
+      const slack = Math.max(
+        SIBLING_ENCODED_MIN_SLACK,
+        s.encoded * SIBLING_ENCODED_TOLERANCE
+      );
+      if (Math.abs(s.encoded - file.encodedSize) <= slack) return s.decoded;
+    }
+    return undefined;
+  }
+}
 
 /** Resolves `undefined` (never rejects) if `p` has not settled within `ms`. */
 function withDeadline<T>(
@@ -101,6 +161,8 @@ export interface ProbePlan {
   wantPar2: boolean;
   /** Mid-pass re-grouping over recovered names: see the implementation. */
   dynamicRegroup(): void;
+  /** Exact sizes learned so far, for same-shaped sibling volumes. */
+  sizes: SiblingSizes;
 }
 
 /** Build the probe plan: split-7z skips, lazy-RAR sizing, PAR2 decisions. */
@@ -384,5 +446,6 @@ export async function buildProbePlan(
     par2: () => par2Promise ?? Promise.resolve(undefined),
     wantPar2,
     dynamicRegroup,
+    sizes: new SiblingSizes(),
   };
 }

@@ -1,10 +1,26 @@
 import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import type {
+  HealthCheck,
   UserData,
   Variant,
   VariantSelectorLocation,
 } from '../db/schemas.js';
+import { compileRegex } from '../utils/regex.js';
+import { RegexAccess } from '../utils/regex-access.js';
+import {
+  VariantConditionEvaluator,
+  referencedHealthIds,
+  referencedPatterns,
+  type ConditionResources,
+  type VariantRequestContext,
+} from './condition.js';
+import {
+  assertSafeHealthCheckUrl,
+  healthChecksEnabled,
+  resolveHealthResults,
+  type HealthResult,
+} from './health-checks.js';
 import {
   applyCelProgram,
   runCelProgram,
@@ -344,5 +360,328 @@ export function logVariantNotes(
     'applied config variants with notes'
   );
 }
+
+export interface VariantConditionOutcome {
+  id: string;
+  when: string;
+  matched: boolean;
+  error?: string;
+}
+
+export interface VariantActivation {
+  /** Ids whose condition matched, in definition order. */
+  matched: string[];
+  outcomes: VariantConditionOutcome[];
+}
+
+function conditionalVariants(userData: UserData): Variant[] {
+  if (!variantsEnabled(userData)) return [];
+  return (userData.variants ?? []).filter(
+    (variant) => variant.enabled !== false && variant.when?.trim()
+  );
+}
+
+async function prepareConditionResources(
+  userData: UserData,
+  variants: Variant[]
+): Promise<ConditionResources> {
+  const patterns = new Set<string>();
+  for (const variant of variants) {
+    try {
+      for (const pattern of referencedPatterns(variant.when!)) {
+        patterns.add(pattern);
+      }
+    } catch {
+      // A malformed call is reported when the condition is evaluated.
+    }
+  }
+
+  let regexAllowed = true;
+  if (patterns.size) {
+    regexAllowed = await RegexAccess.isRegexAllowed(userData, [...patterns]);
+  }
+
+  const regexes = new Map<string, RegExp>();
+  if (regexAllowed) {
+    for (const pattern of patterns) {
+      try {
+        regexes.set(pattern, await compileRegex(pattern));
+      } catch {
+        // Left unresolved; matches() reports it per condition.
+      }
+    }
+  }
+
+  return { health: userData.healthResults, regexes, regexAllowed };
+}
+
+/**
+ * Evaluates every conditional variant against the request. An expression that
+ * throws or returns a non-boolean counts as "no match": a broken condition must
+ * not take the request down with it.
+ */
+export async function evaluateVariantConditions(
+  userData: UserData,
+  context: VariantRequestContext
+): Promise<VariantActivation> {
+  const variants = conditionalVariants(userData);
+  if (!variants.length) return { matched: [], outcomes: [] };
+
+  const resources = await prepareConditionResources(userData, variants);
+  const evaluator = new VariantConditionEvaluator(context, resources);
+  const outcomes: VariantConditionOutcome[] = [];
+
+  for (const variant of variants) {
+    const id = variant.id.toLowerCase();
+    const when = variant.when!;
+    try {
+      const result = await evaluator.evaluate(when);
+      if (typeof result !== 'boolean') {
+        outcomes.push({
+          id,
+          when,
+          matched: false,
+          error: `expected a true or false result, got ${typeof result}`,
+        });
+        continue;
+      }
+      outcomes.push({ id, when, matched: result });
+    } catch (error: any) {
+      const message = error?.message ?? String(error);
+      logger.warn(
+        { uuid: userData.uuid, variant: id, err: message },
+        'variant condition could not be evaluated; treated as no match'
+      );
+      outcomes.push({ id, when, matched: false, error: message });
+    }
+  }
+
+  return {
+    matched: outcomes.filter((outcome) => outcome.matched).map((o) => o.id),
+    outcomes,
+  };
+}
+
+export interface ActivateVariantsResult extends ApplyVariantsResult {
+  /** Ids that applied because their own condition matched. */
+  auto: string[];
+}
+
+/**
+ * Resolves the variants for a request: those the URL selected, plus those whose
+ * condition matched. Auto matches apply first so an explicit selection wins
+ * where the two write to the same field.
+ */
+export async function activateVariants(
+  userData: UserData,
+  selected: string[],
+  context: VariantRequestContext
+): Promise<ActivateVariantsResult> {
+  if (userData.healthChecks?.length) {
+    userData.healthResults = await resolveHealthResults(userData);
+  }
+
+  const { matched } = await evaluateVariantConditions(userData, context);
+  const candidates = matched.filter((id) => !selected.includes(id));
+  const budget = Math.max(
+    appConfig.userLimits.variants.maxActive - selected.length,
+    0
+  );
+  const auto = candidates.slice(0, budget);
+  if (auto.length < candidates.length) {
+    logger.warn(
+      { uuid: userData.uuid, dropped: candidates.slice(budget) },
+      'not applying every matched variant: this instance limits how many combine'
+    );
+  }
+
+  const result = applyVariants(userData, [...auto, ...selected]);
+  if (!result.applied.length) return { ...result, auto: [] };
+
+  // applyVariants credits everything to activeVariants; split them back apart,
+  // since only an explicit selection belongs in the addon id and self URLs.
+  result.userData.activeVariants = result.applied.filter((id) =>
+    selected.includes(id)
+  );
+  result.userData.autoVariants = result.applied.filter((id) =>
+    auto.includes(id)
+  );
+  return { ...result, auto: result.userData.autoVariants };
+}
+
+/** Every expression-bearing field that may call `health()`. */
+function expressionFields(
+  userData: UserData
+): { label: string; value: string }[] {
+  const fields: { label: string; value: string }[] = [];
+  const push = (label: string, value?: string | null) => {
+    if (typeof value === 'string' && value.trim()) fields.push({ label, value });
+  };
+
+  for (const variant of userData.variants ?? []) {
+    push(`config variant "${variant.id}" condition`, variant.when);
+  }
+  for (const [index, group] of (userData.groups?.groupings ?? []).entries()) {
+    push(`group ${index + 1} condition`, group.condition);
+  }
+  push(
+    'dynamic addon fetching condition',
+    userData.dynamicAddonFetching?.condition
+  );
+  push('precache selector', userData.precacheSelector);
+  push('preload selector', userData.preloadStreams?.selector);
+
+  const lists = [
+    userData.excludedStreamExpressions,
+    userData.requiredStreamExpressions,
+    userData.preferredStreamExpressions,
+    userData.includedStreamExpressions,
+  ];
+  for (const list of lists) {
+    for (const item of list ?? []) {
+      push(
+        'stream expression',
+        typeof item === 'string' ? item : (item as any)?.expression
+      );
+    }
+  }
+  for (const item of userData.rankedStreamExpressions ?? []) {
+    push('ranked stream expression', (item as any)?.expression);
+  }
+  return fields;
+}
+
+/**
+ * Vets one health check on its own: what it is allowed to reach and whether its
+ * rules can be applied. Static only, so it is also safe to call before running
+ * a check on demand.
+ */
+export function validateHealthCheck(
+  userData: UserData,
+  check: HealthCheck
+): void {
+  if (!healthChecksEnabled(userData)) {
+    throw new Error('Health checks are not available on this instance.');
+  }
+  assertSafeHealthCheckUrl(check);
+
+  const method = check.method ?? 'GET';
+  if (
+    method === 'HEAD' &&
+    (check.expect?.bodyContains || check.expect?.jsonPath)
+  ) {
+    throw new Error(
+      `Health check "${check.id}" uses HEAD, which returns no body to match against.`
+    );
+  }
+}
+
+/**
+ * Save-time validation for health checks and variant conditions. Static only:
+ * it must not fetch, since `validateConfig` also runs on every request.
+ *
+ * `skipErrors` is that request path. Everything checked here is enforced again
+ * where it is used, so a request degrades (the variant does not activate, the
+ * check does not run) rather than failing outright when an operator tightens
+ * policy under a configuration that was already saved.
+ */
+export async function validateConditionalActivation(
+  userData: UserData,
+  skipErrors: boolean = false
+): Promise<void> {
+  if (skipErrors) return;
+
+  const checks = userData.healthChecks ?? [];
+  const limits = appConfig.userLimits.healthChecks;
+
+  if (checks.length) {
+    if (!healthChecksEnabled(userData)) {
+      throw new Error(
+        'Health checks are not available on this instance. Remove them to save this configuration.'
+      );
+    }
+    if (checks.length > limits.max) {
+      throw new Error(
+        `Too many health checks (${checks.length}); the maximum is ${limits.max}.`
+      );
+    }
+    for (const check of checks) {
+      validateHealthCheck(userData, check);
+    }
+  }
+
+  const knownChecks = new Set(checks.map((check) => check.id.toLowerCase()));
+
+  for (const { label, value } of expressionFields(userData)) {
+    let ids: string[];
+    try {
+      ids = referencedHealthIds(value);
+    } catch (error: any) {
+      throw new Error(`Your ${label} is invalid: ${error?.message ?? error}`);
+    }
+    for (const id of ids) {
+      if (!knownChecks.has(id)) {
+        throw new Error(
+          `Your ${label} refers to health check "${id}", which does not exist.`
+        );
+      }
+    }
+  }
+
+  for (const variant of conditionalVariants(userData)) {
+    const when = variant.when!;
+    let patterns: string[];
+    try {
+      patterns = referencedPatterns(when);
+    } catch (error: any) {
+      throw new Error(
+        `Config variant "${variant.id}" has an invalid condition: ${error?.message ?? error}`
+      );
+    }
+
+    if (patterns.length) {
+      const allowed = await RegexAccess.isRegexAllowed(userData, patterns);
+      if (!allowed) {
+        throw new Error(
+          `Config variant "${variant.id}" uses a regex in its condition, which is not permitted on this instance.`
+        );
+      }
+    }
+    const compiled = new Map<string, RegExp>();
+    for (const pattern of patterns) {
+      try {
+        compiled.set(pattern, await compileRegex(pattern));
+      } catch (error: any) {
+        throw new Error(
+          `Config variant "${variant.id}" has an invalid regex in its condition: ${error?.message ?? error}`
+        );
+      }
+    }
+
+    let result: unknown;
+    try {
+      result = await VariantConditionEvaluator.testEvaluate(when, {
+        healthIds: [...knownChecks],
+        patterns: compiled,
+      });
+    } catch (error: any) {
+      throw new Error(
+        `Config variant "${variant.id}" has an invalid condition - '${when}': ${error?.message ?? error}`
+      );
+    }
+    if (typeof result !== 'boolean') {
+      throw new Error(
+        `Config variant "${variant.id}" has an invalid condition - '${when}'. Expected it to evaluate to true or false, instead got '${typeof result}'.`
+      );
+    }
+  }
+}
+
+/** Health check ids defined by a configuration. */
+export function knownHealthCheckIds(userData: UserData): string[] {
+  return (userData.healthChecks ?? []).map((check) => check.id.toLowerCase());
+}
+
+export type { HealthResult, VariantRequestContext };
 
 export { DEFAULT_CEL_LIMITS };

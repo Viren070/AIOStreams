@@ -29,6 +29,23 @@ export type HolePosition =
   | { kind: 'unknown-size-master' }
   | { kind: 'desynced' };
 
+export type DesyncSite = 'invalid-id' | 'invalid-size' | 'unknown-size-leaf';
+
+/** Where and why the tracker lost alignment (kept for the first desync). */
+export interface DesyncInfo {
+  /** Absolute offset of the byte that could not be read as an element header. */
+  at: number;
+  site: DesyncSite;
+  /** Element id already parsed at the size / unknown-size sites. */
+  id?: number;
+  /** Master stack at that moment (copied). */
+  stack: MasterFrame[];
+  /** Hex of up to 16 bytes before `at`. */
+  before: string;
+  /** Hex of up to 48 bytes from `at`. */
+  bytes: string;
+}
+
 /** Max bytes an element header (ID vint + size vint) can occupy: 4 + 8. */
 const MAX_HEADER_BYTES = 12;
 
@@ -38,6 +55,7 @@ export class MatroskaTracker {
   private _pos = 0;
   private _synced: boolean;
   private _desynced = false;
+  private _desyncInfo: DesyncInfo | undefined;
   private stack: MasterFrame[] = [];
   /** Set while the cursor sits inside a leaf's payload (skipped by size). */
   private leaf: { id: number; payloadStart: number; end: number } | undefined;
@@ -60,6 +78,30 @@ export class MatroskaTracker {
 
   get desynced(): boolean {
     return this._desynced;
+  }
+
+  get desyncInfo(): DesyncInfo | undefined {
+    return this._desyncInfo;
+  }
+
+  /** Flip the sticky desync, keeping the first failure's context for the log. */
+  private desync(
+    site: DesyncSite,
+    work: Buffer,
+    i: number,
+    at: number,
+    id?: number
+  ): void {
+    this._desynced = true;
+    if (this._desyncInfo) return;
+    this._desyncInfo = {
+      at,
+      site,
+      id,
+      stack: this.stack.map((f) => ({ ...f })),
+      before: work.toString('hex', Math.max(0, i - 16), i),
+      bytes: work.toString('hex', i, Math.min(work.length, i + 48)),
+    };
   }
 
   /**
@@ -99,12 +141,12 @@ export class MatroskaTracker {
       }
       const idr = readElementId(work, i);
       if (!idr) {
-        this._desynced = true;
+        this.desync('invalid-id', work, i, absBase + i);
         break;
       }
       const szr = readElementSize(work, i + idr.len);
       if (!szr) {
-        this._desynced = true;
+        this.desync('invalid-size', work, i, absBase + i, idr.id);
         break;
       }
       const headerLen = idr.len + szr.len;
@@ -122,7 +164,7 @@ export class MatroskaTracker {
           i += headerLen;
           continue;
         }
-        this._desynced = true;
+        this.desync('unknown-size-leaf', work, i, absBase + i, idr.id);
         break;
       }
       const end = payloadStart + szr.size;
@@ -203,6 +245,7 @@ export class MatroskaTracker {
     this._pos = offset;
     this._synced = true;
     this._desynced = false;
+    this._desyncInfo = undefined;
     this.leaf = undefined;
     this.carry = Buffer.alloc(0);
     this.stack = [{ id: SEGMENT_ID, end: this.fileSize }];

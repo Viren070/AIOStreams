@@ -93,20 +93,23 @@ export const CheckboxGroup = React.forwardRef<
     controlledValue ?? defaultValue
   );
 
-  const handleUpdateValue = React.useCallback((v: string) => {
-    return (checked: boolean | 'indeterminate') => {
-      setValue((p) => {
-        const newArr =
-          checked === true
-            ? [...p, ...(p.includes(v) ? [] : [v])]
-            : checked === false
-              ? p.filter((v1) => v1 !== v)
-              : [...p];
-        onValueChange?.(newArr);
-        return newArr;
-      });
-    };
-  }, []);
+  const handleUpdateValue = React.useCallback(
+    (v: string) => {
+      return (checked: boolean | 'indeterminate') => {
+        setValue((p) => {
+          const newArr =
+            checked === true
+              ? [...p, ...(p.includes(v) ? [] : [v])]
+              : checked === false
+                ? p.filter((v1) => v1 !== v)
+                : [...p];
+          onValueChange?.(newArr);
+          return newArr;
+        });
+      };
+    },
+    [onValueChange]
+  );
 
   React.useEffect(() => {
     if (controlledValue !== undefined) {

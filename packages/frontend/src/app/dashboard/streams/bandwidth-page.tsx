@@ -11,17 +11,9 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/components/ui/core/styling';
 import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
 import { formatBytes, formatPercent } from '@/lib/format';
-import {
-  useBandwidth,
-  type BandwidthOverview,
-  type BandwidthWindow,
-} from './queries';
+import { useBandwidth, type BandwidthWindow } from './queries';
 import { SegmentedControl, displayUser } from './_components/shared';
-
-const DAY_MS = 86_400_000;
-
-/** Guard against an unexpected bucket width turning the fill into a long loop. */
-const MAX_BUCKETS = 400;
+import { UsageBar, bandwidthRows } from './_components/bandwidth';
 
 type ChartView = 'total' | 'user';
 
@@ -44,73 +36,6 @@ function windowOptions(
   ];
 }
 
-// Day buckets are floored against the epoch, so they are UTC days
-const dayFmt = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  timeZone: 'UTC',
-});
-const fullDayFmt = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeZone: 'UTC',
-});
-const fullTimeFmt = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
-
-/** Terse axis label; the tooltip carries the full date. */
-function bucketLabel(ms: number, bucketMs: number): string {
-  const d = new Date(ms);
-  if (bucketMs < DAY_MS) return `${String(d.getHours()).padStart(2, '0')}:00`;
-  return dayFmt.format(d);
-}
-
-function bucketTooltip(ms: number, bucketMs: number): string {
-  return bucketMs < DAY_MS
-    ? fullTimeFmt.format(new Date(ms))
-    : fullDayFmt.format(new Date(ms));
-}
-
-/**
- * Every bucket boundary in the window, empty ones included. The rollups only
- * hold buckets that saw traffic, so charting them directly draws a quiet
- * stretch as one step.
- */
-function windowBuckets(d: BandwidthOverview): number[] {
-  const width = d.bucketMs > 0 ? d.bucketMs : DAY_MS;
-  const first = Math.floor(d.sinceMs / width) * width;
-  const last = Math.floor(d.generatedAt / width) * width;
-  const out: number[] = [];
-  for (let t = first; t <= last && out.length < MAX_BUCKETS; t += width) {
-    out.push(t);
-  }
-  return out;
-}
-
-/** Usage against a cap, or a plain total when the cap is disabled. */
-function UsageBar({ used, limit }: { used: number; limit: number }) {
-  if (limit <= 0) {
-    return <span className="tabular-nums">{formatBytes(used)}</span>;
-  }
-  const ratio = Math.min(1, used / limit);
-  const tone =
-    ratio >= 1 ? 'bg-red-400' : ratio >= 0.85 ? 'bg-amber-500' : 'bg-brand';
-  return (
-    <div className="flex min-w-[160px] items-center gap-2">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[--subtle]">
-        <div
-          className={cn('h-full', tone)}
-          style={{ width: `${ratio * 100}%` }}
-        />
-      </div>
-      <span className="shrink-0 text-xs tabular-nums text-[--muted]">
-        {formatBytes(used)} / {formatBytes(limit)}
-      </span>
-    </div>
-  );
-}
-
 /**
  * Bytes served through this instance. A direct debrid link the client fetches
  * itself never passes through here, so these are egress totals rather than the
@@ -127,8 +52,6 @@ export function StreamsBandwidthPage() {
   // One row per bucket feeds both views, so switching does not move the ticks.
   const chart = React.useMemo(() => {
     if (!data) return { rows: [], userSeries: [] as Series[] };
-    const buckets = windowBuckets(data);
-    const total = new Map(data.series.map((b) => [b.bucketMs, b.bytes]));
     // Recharts keys into the datum, and a username is not a safe object key.
     const userSeries: Series[] = data.seriesByUser.map((u, i) => ({
       key: `u${i}`,
@@ -140,14 +63,9 @@ export function StreamsBandwidthPage() {
     const perUser = data.seriesByUser.map(
       (u) => new Map(u.series.map((b) => [b.bucketMs, b.bytes]))
     );
-    const rows = buckets.map((t) => {
-      const row: Record<string, string | number> = {
-        t: bucketLabel(t, data.bucketMs),
-        at: bucketTooltip(t, data.bucketMs),
-        bytes: total.get(t) ?? 0,
-      };
+    const rows = bandwidthRows(data).map((row) => {
       perUser.forEach((line, i) => {
-        row[`u${i}`] = line.get(t) ?? 0;
+        row[`u${i}`] = line.get(row.ms) ?? 0;
       });
       return row;
     });

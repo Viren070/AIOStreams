@@ -15,7 +15,8 @@ import {
   clearDrafts,
   isDraftOptOut,
   migrateLegacyDraft,
-  readAnyLocalDraft,
+  pruneExpiredLocalDrafts,
+  readDraftFor,
   readSessionDraft,
   setDraftOptOut,
   writeLocalDraft,
@@ -622,6 +623,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   // Only a same-tab reload restores silently; anything older is offered.
   const [boot] = React.useState(() => {
     migrateLegacyDraft(hasWork);
+    pruneExpiredLocalDrafts();
     const session = readSessionDraft();
     if (session && session.uuid === null) {
       try {
@@ -632,7 +634,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     }
     return {
       initial: DefaultUserData,
-      pending: session ?? readAnyLocalDraft(),
+      pending: readDraftFor(null),
     };
   });
 
@@ -669,6 +671,15 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     setUserData((prev) => applyStatusDefaults(prev, status));
     setBaselineReady(true);
   }, [status]);
+
+  // The identity is unknown at boot, so a configuration's draft is picked up
+  // once its uuid arrives, and is never offered to any other identity.
+  const draftIdentity = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (draftIdentity.current === uuid) return;
+    draftIdentity.current = uuid;
+    setPendingDraft(readDraftFor(uuid));
+  }, [uuid]);
 
   React.useEffect(() => {
     if (!baselineReady) return;
@@ -707,9 +718,7 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applicableDraft =
-    pendingDraft && (uuid === null || pendingDraft.uuid === uuid)
-      ? pendingDraft
-      : null;
+    pendingDraft && pendingDraft.uuid === uuid ? pendingDraft : null;
 
   const disableDrafts = React.useCallback(() => {
     setDraftOptOut();

@@ -16,6 +16,7 @@ const logger = createLogger('torrent-galaxy');
 enum TorrentGalaxyCategory {
   Movies = 'Movies',
   TV = 'TV',
+  TVShows = 'TV shows',
   Anime = 'Anime',
 }
 
@@ -72,6 +73,7 @@ type TorrentGalaxySearchResponse = z.infer<typeof TorrentGalaxySearchResponse>;
 const TorrentGalaxySearchOptions = z.object({
   query: z.string(),
   page: z.number().default(1),
+  categories: z.array(z.string()).default([]),
 });
 
 type TorrentGalaxySearchOptions = z.infer<typeof TorrentGalaxySearchOptions>;
@@ -109,7 +111,7 @@ class TorrentGalaxyAPI {
       cacheTTL: appConfig.builtins.torrentGalaxy.searchCacheTtl,
       fetchFn: () =>
         this.request<TorrentGalaxySearchResponse>(
-          `/get-posts/keywords:${encodeURIComponent(options.query)}:format:json`,
+          `/get-posts/keywords:${encodeURIComponent(options.query)}${options.categories.map((c) => `:category:${c}`).join('')}:format:json`,
           {
             schema: TorrentGalaxySearchResponse,
             timeout: appConfig.builtins.torrentGalaxy.searchTimeout,

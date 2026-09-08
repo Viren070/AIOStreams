@@ -160,15 +160,18 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
       controlledValue ?? defaultValue
     );
 
-    const handleOnValueChange = React.useCallback((value: string) => {
-      if (value === '__placeholder__') {
-        _setValue('');
-        onValueChange?.('');
-        return;
-      }
-      _setValue(value);
-      onValueChange?.(value);
-    }, []);
+    const handleOnValueChange = React.useCallback(
+      (value: string) => {
+        if (value === '__placeholder__') {
+          _setValue('');
+          onValueChange?.('');
+          return;
+        }
+        _setValue(value);
+        onValueChange?.(value);
+      },
+      [onValueChange]
+    );
 
     React.useEffect(() => {
       if (!defaultValue || !isFirst.current) {

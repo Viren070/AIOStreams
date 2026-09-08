@@ -150,10 +150,13 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     const weekStartOn =
       pickerOptions?.weekStartsOn ?? locale?.options?.weekStartsOn ?? 0;
 
-    const handleOnSelect = React.useCallback((date: Date | undefined) => {
-      setDate(date);
-      onValueChange?.(date);
-    }, []);
+    const handleOnSelect = React.useCallback(
+      (date: Date | undefined) => {
+        setDate(date);
+        onValueChange?.(date);
+      },
+      [onValueChange]
+    );
 
     React.useEffect(() => {
       if (!defaultValue || !isFirst.current) {

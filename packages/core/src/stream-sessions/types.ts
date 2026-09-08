@@ -27,6 +27,13 @@ export interface StreamOpenInput {
   transport: StreamTransport;
   /** Empty when the caller could not be identified; exempt from limits. */
   username: string;
+  /**
+   * Opened through the operator's own share tree (FUSE/NFS/WebDAV). Exempt
+   * from connection caps: those exist to stop one user hogging providers, and
+   * a media-server scan or season-pack import legitimately opens many files
+   * at once. Bans and bandwidth caps still apply.
+   */
+  share?: boolean;
   clientIp?: string;
   /** Stable identity of what is being streamed; also the block/ban subject. */
   targetKey: string;

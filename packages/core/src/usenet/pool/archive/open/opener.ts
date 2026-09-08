@@ -18,7 +18,7 @@ import {
   groupNestedArchives,
   buildNestedVolumeSet,
   entryReason,
-  pickBestVideo,
+  pickBestMedia,
 } from './nesting.js';
 
 const logger = createLogger('usenet/archive');
@@ -107,12 +107,12 @@ async function resolveInner(
   depth: number
 ): Promise<OpenedInner> {
   // 1. A real (non-archive) file at this level: an explicit path match, or the
-  //    largest video when auto-picking.
+  //    largest media file when auto-picking.
   const direct = innerPath
     ? entries.find(
         (e) => !e.isDir && e.name === innerPath && !archiveKindOf(e.name)
       )
-    : pickBestVideo(entries);
+    : pickBestMedia(entries);
   if (direct) {
     const reason = entryReason(direct);
     if (reason) {
@@ -167,6 +167,6 @@ async function resolveInner(
     'archive_no_video',
     innerPath
       ? `inner file not found in archive (${innerPath})`
-      : 'no streamable video in archive'
+      : 'no streamable media in archive'
   );
 }

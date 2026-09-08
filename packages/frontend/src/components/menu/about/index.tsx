@@ -90,10 +90,10 @@ function Content() {
 
   const featuredTemplates = React.useMemo(() => {
     const ids = (status?.settings?.featuredTemplateIds ?? []).slice(0, 2);
-    if (ids.length === 0) return loader.templates.slice(0, 2);
-    return ids
+    const picked = ids
       .map((id) => loader.templates.find((t) => t.metadata.id === id))
       .filter((t): t is Template => t !== undefined);
+    return picked.length > 0 ? picked : loader.templates.slice(0, 2);
   }, [status?.settings?.featuredTemplateIds, loader.templates]);
 
   React.useEffect(() => {

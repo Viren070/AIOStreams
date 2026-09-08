@@ -31,6 +31,8 @@ import {
   linkedAccountsSchema,
   communitySchema,
   remuxdbSchema,
+  sharesSchema,
+  arrSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -58,6 +60,8 @@ export const runtimeSchemas = {
   linkedAccounts: linkedAccountsSchema,
   community: communitySchema,
   remuxdb: remuxdbSchema,
+  shares: sharesSchema,
+  arr: arrSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

@@ -7,24 +7,21 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import {
-  BiBarChartAlt2,
-  BiChip,
-  BiCloudDownload,
-  BiCog,
-  BiData,
-  BiHistory,
-  BiPlayCircle,
-  BiTask,
-  BiTerminal,
-} from 'react-icons/bi';
+import { BiHistory, BiTerminal } from 'react-icons/bi';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/components/ui/core/styling';
 import { api } from '@/lib/api';
 import { useSystemStream } from '@/app/dashboard/system/use-system';
 import { formatDuration } from '@/lib/format';
-import { DashboardQueryBoundary } from '@/components/shared/dashboard-query-boundary';
+import { useUsenetGlance } from '@/app/dashboard/usenet/queries';
+import { useCommunityItems } from '@/app/dashboard/community/queries';
+import { ActiveStreamsCard } from './_components/active-streams-card';
+import { BandwidthCard } from './_components/bandwidth-card';
+import { SectionLinks } from './_components/section-links';
+import { SystemCard } from './_components/system-card';
+import { UsenetCard } from './_components/usenet-card';
+import { CardNote, OverviewCard } from './_components/overview-card';
 
 interface OverviewMetrics {
   totalUsers: number;
@@ -49,75 +46,21 @@ interface LogRecord {
   line: string;
 }
 
-const LINKS: Array<{
-  to: string;
-  label: string;
-  desc: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = [
-  {
-    to: '/dashboard/analytics',
-    label: 'Analytics',
-    desc: 'User & request trends',
-    icon: BiBarChartAlt2,
-  },
-  {
-    to: '/dashboard/streams',
-    label: 'Streams',
-    desc: 'Active, history & bandwidth',
-    icon: BiPlayCircle,
-  },
-  {
-    to: '/dashboard/usenet',
-    label: 'Usenet',
-    desc: 'Library, providers & stats',
-    icon: BiCloudDownload,
-  },
-  {
-    to: '/dashboard/tasks',
-    label: 'Tasks',
-    desc: 'Scheduled & manual work',
-    icon: BiTask,
-  },
-  {
-    to: '/dashboard/system',
-    label: 'System',
-    desc: 'CPU, memory, lifecycle',
-    icon: BiChip,
-  },
-  {
-    to: '/dashboard/logs',
-    label: 'Logs',
-    desc: 'Live log stream',
-    icon: BiTerminal,
-  },
-  {
-    to: '/dashboard/cache',
-    label: 'Cache',
-    desc: 'Cache stats & flush',
-    icon: BiData,
-  },
-  {
-    to: '/dashboard/settings',
-    label: 'Settings',
-    desc: 'Runtime configuration',
-    icon: BiCog,
-  },
-];
-
 function Stat({
   label,
   value,
   hint,
   intent,
+  className,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   intent?: 'ok' | 'warn' | 'err';
+  className?: string;
 }) {
   return (
-    <Card className="p-4">
+    <Card className={cn('p-4', className)}>
       <div className="text-xs uppercase tracking-wide text-[--muted]">
         {label}
       </div>
@@ -142,11 +85,6 @@ const rel = (ms: number | null): string => {
   if (diff < 0) return `in ${formatDuration(-diff)}`;
   return `${formatDuration(diff)} ago`;
 };
-
-function fmtUptime(s: number): string {
-  if (!s) return '0m';
-  return formatDuration(s);
-}
 
 /**
  * Pull the human-readable bits out of a pino NDJSON log line. The full Logs
@@ -191,6 +129,15 @@ export function DashboardHome() {
   });
   const { metrics } = useSystemStream();
 
+  // Only the count is wanted, so ask for the smallest page the API will serve.
+  const pending = useCommunityItems({ pending: true, limit: 1 });
+  const pendingCount = pending.data?.total ?? 0;
+
+  // An empty provider list means usenet isn't set up on this instance.
+  const usenet = useUsenetGlance();
+  const usenetData = usenet.data;
+  const showUsenet = (usenetData?.pool.providers.length ?? 0) > 0;
+
   const errRate24 = React.useMemo(() => {
     // Approximation: % of recent task runs in error state (we don't store
     // request error counts separately in the overview endpoint).
@@ -216,7 +163,12 @@ export function DashboardHome() {
       </div>
 
       {/* Top stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div
+        className={cn(
+          'grid grid-cols-2 gap-3',
+          pendingCount > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+        )}
+      >
         <Stat
           label="Users"
           value={overview.data?.totalUsers ?? '—'}
@@ -244,162 +196,114 @@ export function DashboardHome() {
             tasks.data ? `${tasks.data.tasks.length} tasks tracked` : undefined
           }
         />
+        {pendingCount > 0 && (
+          <Link
+            to="/dashboard/community/pending"
+            className="group col-span-2 block rounded-xl lg:col-span-1"
+          >
+            <Stat
+              label="Review queue"
+              value={pendingCount}
+              intent="warn"
+              hint="Community submissions waiting"
+              className="h-full transition-colors group-hover:border-[--muted]/40 group-hover:bg-[--subtle]/50"
+            />
+          </Link>
+        )}
       </div>
 
-      {/* Live status strip */}
-      {metrics && (
-        <Card className="p-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-[--muted]">uptime</span>
-            <span>{fmtUptime(metrics.process.uptimeSec)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[--muted]">CPU</span>
-            <span className="tabular-nums">{metrics.cpu.total}%</span>
-            {metrics.cpu.process != null && (
-              <span className="text-xs text-[--muted]">
-                (proc {metrics.cpu.process}%)
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[--muted]">memory</span>
-            <span className="tabular-nums">
-              {Math.round((metrics.memory.used / metrics.memory.total) * 100)}%
-            </span>
-          </div>
-          {metrics.lifecycleEnabled && (
-            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-              lifecycle enabled
-            </span>
-          )}
-        </Card>
-      )}
+      {metrics && <SystemCard metrics={metrics} />}
+
+      {/* What the instance is doing right now */}
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-3 sm:grid-cols-2',
+          showUsenet && 'xl:grid-cols-3'
+        )}
+      >
+        <ActiveStreamsCard />
+        <BandwidthCard />
+        {showUsenet && usenetData && <UsenetCard data={usenetData} />}
+      </div>
 
       {/* Activity / logs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <BiHistory /> Recent task runs
-            </h3>
-            <Link
-              to="/dashboard/tasks"
-              className="text-xs text-[--muted] hover:text-[--foreground]"
-            >
-              View all →
-            </Link>
-          </div>
-          <DashboardQueryBoundary
-            query={tasks}
-            errorTitle="Failed to load tasks"
-          >
-            {() =>
-              recentTasks.length === 0 ? (
-                <p className="text-xs text-[--muted] italic">
-                  No task runs yet.
-                </p>
-              ) : (
-                <ul className="space-y-1.5 text-sm">
-                  {recentTasks.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-center gap-2 justify-between"
-                    >
-                      <span className="truncate">{t.label}</span>
-                      <span className="flex items-center gap-2 text-xs text-[--muted]">
-                        <span
-                          className={cn(
-                            'inline-block w-2 h-2 rounded-full',
-                            t.lastStatus === 'ok' && 'bg-emerald-500',
-                            t.lastStatus === 'error' && 'bg-red-400',
-                            t.lastStatus === 'skipped' && 'bg-amber-500',
-                            !t.lastStatus && 'bg-[--muted]'
-                          )}
-                        />
-                        <span>{rel(t.lastRunAt)}</span>
-                        {t.lastDurationMs != null && (
-                          <span>· {t.lastDurationMs}ms</span>
-                        )}
+        <OverviewCard
+          to="/dashboard/tasks"
+          icon={BiHistory}
+          title="Recent task runs"
+        >
+          {tasks.isError ? (
+            <CardNote>Failed to load tasks.</CardNote>
+          ) : recentTasks.length === 0 ? (
+            <CardNote>No task runs yet.</CardNote>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {recentTasks.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-2 justify-between"
+                >
+                  <span className="truncate">{t.label}</span>
+                  <span className="flex items-center gap-2 text-xs text-[--muted]">
+                    <span
+                      className={cn(
+                        'inline-block w-2 h-2 rounded-full',
+                        t.lastStatus === 'ok' && 'bg-emerald-500',
+                        t.lastStatus === 'error' && 'bg-red-400',
+                        t.lastStatus === 'skipped' && 'bg-amber-500',
+                        !t.lastStatus && 'bg-[--muted]'
+                      )}
+                    />
+                    <span>{rel(t.lastRunAt)}</span>
+                    {t.lastDurationMs != null && (
+                      <span>· {t.lastDurationMs}ms</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </OverviewCard>
+
+        <OverviewCard
+          to="/dashboard/logs"
+          icon={BiTerminal}
+          title="Recent warnings & errors"
+        >
+          {recentLogs.isError ? (
+            <CardNote>Failed to load recent logs.</CardNote>
+          ) : !recentLogs.data?.logs.length ? (
+            <CardNote>No recent warnings.</CardNote>
+          ) : (
+            <ul className="space-y-1 text-xs">
+              {recentLogs.data.logs.slice(0, 8).map((r) => {
+                const parsed = parseLogLine(r.line);
+                return (
+                  <li key={r.seq} className="truncate" title={r.line}>
+                    <span
+                      className={cn(
+                        'inline-block w-1.5 h-1.5 rounded-full align-middle mr-1.5',
+                        parsed.level === 'error' || parsed.level === 'fatal'
+                          ? 'bg-red-400'
+                          : 'bg-amber-500'
+                      )}
+                    />
+                    {parsed.module && (
+                      <span className="text-[--muted-highlight] font-mono">
+                        [{parsed.module}]{' '}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              )
-            }
-          </DashboardQueryBoundary>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <BiTerminal /> Recent warnings & errors
-            </h3>
-            <Link
-              to="/dashboard/logs"
-              className="text-xs text-[--muted] hover:text-[--foreground]"
-            >
-              View all →
-            </Link>
-          </div>
-          <DashboardQueryBoundary
-            query={recentLogs}
-            errorTitle="Failed to load recent logs"
-          >
-            {(d) =>
-              !d.logs.length ? (
-                <p className="text-xs text-[--muted] italic">
-                  No recent warnings.
-                </p>
-              ) : (
-                <ul className="space-y-1 text-xs">
-                  {d.logs.slice(0, 8).map((r) => {
-                    const parsed = parseLogLine(r.line);
-                    return (
-                      <li key={r.seq} className="truncate" title={r.line}>
-                        <span
-                          className={cn(
-                            'inline-block w-1.5 h-1.5 rounded-full align-middle mr-1.5',
-                            parsed.level === 'error' || parsed.level === 'fatal'
-                              ? 'bg-red-400'
-                              : 'bg-amber-500'
-                          )}
-                        />
-                        {parsed.module && (
-                          <span className="text-[--muted-highlight] font-mono">
-                            [{parsed.module}]{' '}
-                          </span>
-                        )}
-                        <span className="text-[--foreground]">
-                          {parsed.msg}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )
-            }
-          </DashboardQueryBoundary>
-        </Card>
+                    )}
+                    <span className="text-[--foreground]">{parsed.msg}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </OverviewCard>
       </div>
 
-      {/* Quick links */}
-      <div>
-        <h3 className="text-sm font-semibold mb-3">Sections</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {LINKS.map(({ to, label, desc, icon: Icon }) => (
-            <Link key={to} to={to} className="block group">
-              <Card className="p-4 h-full transition-colors group-hover:border-brand/40 group-hover:bg-brand/5">
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon className="text-[--muted] group-hover:text-brand" />
-                  <span className="font-medium">{label}</span>
-                </div>
-                <p className="text-xs text-[--muted]">{desc}</p>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <SectionLinks />
     </PageWrapper>
   );
 }

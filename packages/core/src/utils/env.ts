@@ -269,7 +269,7 @@ export const Env = cleanEnv(process.env, {
   }),
   AIOSTREAMS_AUTH_PERMISSIONS: permissionsMap({
     default: new Map<string, Set<string>>(),
-    desc: 'Per-user permissions. Comma-separated `username=perm1|perm2` entries (valid permissions: admin, proxy, service, sabnzbd; or `none` for login-only with no permissions). Users not listed default to admin (a superset of all permissions). Supersedes the deprecated AIOSTREAMS_AUTH_ADMINS / AIOSTREAMS_AUTH_PROXY for any user listed here.',
+    desc: 'Per-user permissions. Comma-separated `username=perm1|perm2` entries (valid permissions: admin, proxy, service, sabnzbd, webdav; or `none` for login-only with no permissions). Users not listed default to admin (a superset of all permissions). Supersedes the deprecated AIOSTREAMS_AUTH_ADMINS / AIOSTREAMS_AUTH_PROXY for any user listed here.',
   }),
   SYSTEM_LIFECYCLE_ENABLED: bool({
     default: false,

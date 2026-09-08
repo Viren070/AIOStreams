@@ -96,13 +96,15 @@ export const DEFAULT_CEL_LIMITS: CelLimits = {
 };
 
 /**
- * Roots present in `FIELD_META` that must never be writable. `variants` in
- * particular, or one variant could rewrite another mid-composition.
+ * Roots present in `FIELD_META` that must never be writable. `variants`, or one
+ * variant could rewrite another mid-composition; `healthChecks`, or one could
+ * rewrite the checks that decide whether it activates in the first place.
  */
 export const DENIED_ROOT_KEYS: ReadonlySet<string> = new Set([
   'accessKey',
   'parentConfig',
   'variants',
+  'healthChecks',
 ]);
 
 const FORBIDDEN_KEYS: ReadonlySet<string> = new Set([

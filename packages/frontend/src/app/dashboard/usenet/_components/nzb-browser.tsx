@@ -33,12 +33,13 @@ function basename(f: LibraryFile): string {
 }
 
 /**
- * Order files within a folder predictably: videos first, then by category, then
+ * Order files within a folder predictably: media first, then by category, then
  * by filename. Persisted file lists come back in inspect order (archive set
  * order), which reads arbitrarily in the tree.
  */
 function sortFiles(files: LibraryFile[]): LibraryFile[] {
-  const rank = (f: LibraryFile) => (f.category === 'video' ? 0 : 1);
+  const rank = (f: LibraryFile) =>
+    f.category === 'video' || f.category === 'audio' ? 0 : 1;
   return [...files].sort(
     (a, b) =>
       rank(a) - rank(b) ||

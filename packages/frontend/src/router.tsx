@@ -25,7 +25,6 @@ import {
   UsenetLibraryPage,
   UsenetStatsPage,
   UsenetProvidersPage,
-  UsenetSettingsPage,
   CommunityLayout,
   CommunityPendingPage,
   CommunityPublishedPage,
@@ -114,6 +113,13 @@ const stremioConfigureRoute = createRoute({
 const stremioConfigureAuthRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/stremio/$uuid/$encryptedPassword/configure',
+  beforeLoad: configureBeforeLoad,
+  component: ConfigureRoute,
+});
+
+const stremioConfigureVariantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/stremio/$uuid/$encryptedPassword/v/$variantSelector/configure',
   beforeLoad: configureBeforeLoad,
   component: ConfigureRoute,
 });
@@ -331,25 +337,19 @@ const dashboardUsenetStatsRoute = createRoute({
   component: UsenetStatsPage,
 });
 
+// Provider accounts keep their own page: the editor is a substantial thing in
+// its own right (add / test / speed-test / order), not a settings field.
 const dashboardUsenetProvidersRoute = createRoute({
   getParentRoute: () => dashboardUsenetRoute,
   path: 'providers',
   component: UsenetProvidersPage,
 });
 
-const dashboardUsenetSettingsRoute = createRoute({
-  getParentRoute: () => dashboardUsenetRoute,
-  path: 'settings',
-  validateSearch: (search: Record<string, unknown>): { field?: string } => ({
-    field: optionalString(search.field),
-  }),
-  component: UsenetSettingsPage,
-});
-
 const routeTree = rootRoute.addChildren([
   indexRoute,
   stremioConfigureRoute,
   stremioConfigureAuthRoute,
+  stremioConfigureVariantRoute,
   loginRoute,
   oauthGdriveRoute,
   splashscreenRoute,
@@ -380,7 +380,6 @@ const routeTree = rootRoute.addChildren([
       dashboardUsenetLibraryRoute,
       dashboardUsenetStatsRoute,
       dashboardUsenetProvidersRoute,
-      dashboardUsenetSettingsRoute,
     ]),
     dashboardCommunityRoute.addChildren([
       dashboardCommunityIndexRoute,

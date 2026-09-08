@@ -470,7 +470,7 @@ function ProviderTable({
   }
   return (
     <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
-      <table className="w-full text-sm min-w-[720px]">
+      <table className="w-full text-sm min-w-[800px]">
         <thead className="text-[--muted] text-xs uppercase">
           <tr className="text-left border-b border-[--border]">
             <th className="py-2 pr-3">Provider</th>
@@ -486,6 +486,12 @@ function ProviderTable({
             </th>
             <th className="py-2 px-3 text-right">Errors</th>
             <th className="py-2 px-3 text-right">Missing</th>
+            <th
+              className="py-2 px-3 text-right"
+              title="Articles the provider delivered whose contents failed the checksum or size check. The fetch falls over to the next provider."
+            >
+              Unreadable
+            </th>
             <th className="py-2 pl-3 w-8" aria-label="Actions" />
           </tr>
         </thead>
@@ -569,6 +575,14 @@ function ProviderTable({
               </td>
               <td className="py-2 px-3 text-right tabular-nums text-[--muted]">
                 {formatPercent(p.missRate)}
+              </td>
+              <td
+                className={cn(
+                  'py-2 px-3 text-right tabular-nums',
+                  p.undecodableRate > 0 ? 'text-amber-400' : 'text-[--muted]'
+                )}
+              >
+                {formatPercent(p.undecodableRate)}
               </td>
               <td className="py-2 pl-3 text-right">
                 <Tooltip
@@ -913,6 +927,11 @@ function StatsSection({
               ? data.totals.errors / (data.totals.articles + data.totals.errors)
               : 0
           )}
+          hint={
+            data.totals.undecodable
+              ? `${formatCompact(data.totals.undecodable)} unreadable`
+              : ''
+          }
         />
       </div>
 

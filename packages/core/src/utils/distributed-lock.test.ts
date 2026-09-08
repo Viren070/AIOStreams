@@ -32,13 +32,27 @@ class UnregisteredError extends Error {
 
 describe('distributed-lock error serialization', () => {
   test('a registered class survives a value-shaped round-trip with prototype, message, and fields intact', () => {
-    const err = new TestDebridError('ACTIVE_LIMIT: too many downloads', 'STORE_LIMIT_EXCEEDED', 500);
-    const wire = stringifyLockResult({ value: { error: err, failedOver: true } });
-    const revived = parseLockResult<{ value: { error: Error; failedOver: boolean } }>(wire);
+    const err = new TestDebridError(
+      'ACTIVE_LIMIT: too many downloads',
+      'STORE_LIMIT_EXCEEDED',
+      500
+    );
+    const wire = stringifyLockResult({
+      value: { error: err, failedOver: true },
+    });
+    const revived = parseLockResult<{
+      value: { error: Error; failedOver: boolean };
+    }>(wire);
 
     assert.ok(revived.value.error instanceof TestDebridError);
-    assert.equal(revived.value.error.message, 'ACTIVE_LIMIT: too many downloads');
-    assert.equal((revived.value.error as TestDebridError).code, 'STORE_LIMIT_EXCEEDED');
+    assert.equal(
+      revived.value.error.message,
+      'ACTIVE_LIMIT: too many downloads'
+    );
+    assert.equal(
+      (revived.value.error as TestDebridError).code,
+      'STORE_LIMIT_EXCEEDED'
+    );
     assert.equal((revived.value.error as TestDebridError).statusCode, 500);
     assert.equal(revived.value.failedOver, true);
   });
@@ -71,6 +85,16 @@ describe('distributed-lock error serialization', () => {
 
     assert.ok(revived.error instanceof TypeError);
     assert.equal(revived.error.message, 'bad argument');
+  });
+
+  test('a native class with a getter-only `name` (e.g. DOMException) round-trips without throwing', () => {
+    const err = new DOMException('The operation was aborted', 'TimeoutError');
+    const wire = stringifyLockResult({ error: err });
+    const revived = parseLockResult<{ error: Error }>(wire);
+
+    assert.ok(revived.error instanceof DOMException);
+    assert.equal(revived.error.name, 'TimeoutError');
+    assert.equal(revived.error.message, 'The operation was aborted');
   });
 
   test('resolveErrorCtor resolves registered, native, and unresolvable names', () => {
@@ -124,7 +148,11 @@ describe('distributed-lock error serialization', () => {
   });
 
   test('plain, error-free values round-trip unchanged', () => {
-    const value = { url: 'https://example.com/stream', failedOver: false, label: 'A' };
+    const value = {
+      url: 'https://example.com/stream',
+      failedOver: false,
+      label: 'A',
+    };
     const wire = stringifyLockResult({ value });
     const revived = parseLockResult<{ value: typeof value }>(wire);
     assert.deepEqual(revived.value, value);

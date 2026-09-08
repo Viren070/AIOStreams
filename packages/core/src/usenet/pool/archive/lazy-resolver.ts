@@ -3,7 +3,9 @@ import { createLogger } from '../../../logging/logger.js';
 import { RandomAccess } from './random-access.js';
 import { DataFragment } from './types.js';
 import { walkVolume } from './rar/index.js';
+import type { VolumeParse } from './rar/types.js';
 import { NotStreamableError } from './errors.js';
+import { definitiveLossKind } from '../../nntp/errors.js';
 
 const logger = createLogger('usenet/lazy');
 
@@ -260,7 +262,26 @@ export class LazyFragmentResolver {
     // No password by invariant: encrypted sets never produce pending fragments
     // (the lazy parse bails for header-encrypted AND data-encrypted entries),
     // so a resolvable middle volume always has plaintext headers.
-    const vp = await walkVolume(this.source, { range, perVolume: true });
+    let vp: VolumeParse;
+    try {
+      vp = await walkVolume(this.source, { range, perVolume: true });
+    } catch (err) {
+      // A pending fragment survives its resolve failing, so a dead header
+      // article would be retried (and padded around) by every later read.
+      if (definitiveLossKind(err) === undefined) throw err;
+      const inferred = await this.inferFromSibling(volume, range);
+      if (!inferred) throw err;
+      logger.warn(
+        {
+          name: this.target.name,
+          volume,
+          sibling: inferred.sibling,
+          err: (err as Error).message,
+        },
+        'lazy resolve: volume header unreadable; fragment inferred from a sibling volume'
+      );
+      return inferred.fragment;
+    }
     if (vp.error) {
       // The bytes were read but carry no RAR marker: structural, not transient.
       throw this.poison(
@@ -317,6 +338,75 @@ export class LazyFragmentResolver {
       'resolved pending volume'
     );
     return { offset: frag.offset, length: frag.length };
+  }
+
+  /**
+   * Fragment of `volume` derived from a sibling middle volume: a split file's
+   * middles carry identical headers and trailers, so the sibling's lengths
+   * applied to this volume's range give its data run. First and last volumes
+   * are never used as the sibling.
+   */
+  private async inferFromSibling(
+    volume: number,
+    range: { start: number; end: number }
+  ): Promise<{ fragment: DataFragment; sibling: number } | undefined> {
+    const exact = new Map<number, DataFragment>();
+    for (let i = 1; i < this.table.length - 1; i++) {
+      const f = this.table[i];
+      if (f.pending !== undefined) continue;
+      const v = this.ranges.findIndex(
+        (r) => f.offset >= r.start && f.offset < r.end
+      );
+      if (v > 0) exact.set(v, f);
+    }
+    for (const [v, f] of this.resolvedByVolume) exact.set(v, f);
+    let geometry:
+      | { headerLen: number; trailerLen: number; sibling: number }
+      | undefined;
+    const nearest = [...exact.keys()].sort(
+      (a, b) => Math.abs(a - volume) - Math.abs(b - volume)
+    )[0];
+    if (nearest !== undefined) {
+      const f = exact.get(nearest)!;
+      const r = this.ranges[nearest];
+      geometry = {
+        headerLen: f.offset - r.start,
+        trailerLen: r.end - (f.offset + f.length),
+        sibling: nearest,
+      };
+    } else {
+      // Read a neighbour directly rather than through the single-flight map,
+      // which is already waiting on this resolve.
+      for (const v of [volume + 1, volume - 1]) {
+        const r = this.ranges[v];
+        if (!r) continue;
+        try {
+          const vp = await walkVolume(this.source, {
+            range: r,
+            perVolume: true,
+          });
+          const b = vp.blocks[0];
+          if (vp.error || !b || b.file.first || b.file.last) continue;
+          if (b.file.name !== this.target.name) continue;
+          geometry = {
+            headerLen: b.fragment.offset - r.start,
+            trailerLen: r.end - (b.fragment.offset + b.fragment.length),
+            sibling: v,
+          };
+          break;
+        } catch {
+          // Not fatal: try the other neighbour.
+        }
+      }
+    }
+    if (!geometry || geometry.headerLen < 0 || geometry.trailerLen < 0) {
+      return undefined;
+    }
+    const offset = range.start + geometry.headerLen;
+    const length =
+      range.end - range.start - geometry.headerLen - geometry.trailerLen;
+    if (length <= 0) return undefined;
+    return { fragment: { offset, length }, sibling: geometry.sibling };
   }
 
   /**

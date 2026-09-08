@@ -1,3 +1,5 @@
+import { hasConfigSessionCookie } from './api';
+
 export const DOCS_BASE_URL = 'https://docs.aiostreams.viren070.me';
 export const DOCS_CHANGELOG_URL = `${DOCS_BASE_URL}/changelog`;
 
@@ -139,6 +141,41 @@ export async function fetchReleasePage(page: number): Promise<ReleasePage> {
 }
 
 const LAST_SEEN_KEY = 'aiostreams-last-seen-version';
+
+/**
+ * Keys the SPA wrote before the last-seen record existed. `aiostreams-user-data`
+ * is deliberately absent: the draft migration deletes it during boot, before
+ * any of this can run.
+ */
+const EARLIER_VISIT_KEYS = [
+  'aiostreams-first-time',
+  'aiostreams-mode',
+  'aiostreams-template-inputs',
+  'aiostreams-custom-templates',
+];
+
+const CONFIGURE_URL =
+  /stremio\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/.*\/configure/;
+
+/**
+ * Whether this browser has been here on an older version. Every signal is
+ * readable on the first render, unlike the resolved config identity, which
+ * arrives from the session restore long after the decision has to be made.
+ */
+export function hasEarlierVisit(): boolean {
+  try {
+    if (hasConfigSessionCookie()) return true;
+    if (
+      typeof window !== 'undefined' &&
+      CONFIGURE_URL.test(window.location.pathname)
+    ) {
+      return true;
+    }
+    return EARLIER_VISIT_KEYS.some((key) => localStorage.getItem(key) !== null);
+  } catch {
+    return false;
+  }
+}
 
 export function getLastSeenVersion(): string | null {
   try {

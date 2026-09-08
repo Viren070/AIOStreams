@@ -516,13 +516,14 @@ export class MultiProviderPool {
     messageId: string,
     signal: AbortSignal | undefined,
     nzbHash?: string,
-    providerIds?: readonly string[]
+    providerIds?: readonly string[],
+    priority: CommandPriority = CommandPriority.Low
   ): Promise<StatDetail> {
     if (this.arena.has(messageId)) return { present: true, answered: true };
     return this.fetcher.statSegmentDetailed(
       messageId,
       nzbHash,
-      CommandPriority.Low,
+      priority,
       signal,
       providerIds
     );
@@ -536,19 +537,18 @@ export class MultiProviderPool {
   async probeBodyOnProvider(
     segment: NzbSegmentRef,
     providerId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    priority: CommandPriority = CommandPriority.Low
   ): Promise<'ok' | 'not_found' | 'unreachable'> {
-    const releaseGlobal = await this.globalDownloads.acquire(
-      CommandPriority.Low,
-      signal
-    );
+    const releaseGlobal = await this.globalDownloads.acquire(priority, signal);
     const wire = this.wireTracker();
     try {
       return await this.fetcher.probeBodyOnProvider(
         segment,
         providerId,
         signal,
-        wire.start
+        wire.start,
+        priority
       );
     } finally {
       wire.end();

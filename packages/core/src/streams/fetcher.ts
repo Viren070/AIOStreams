@@ -386,7 +386,8 @@ class StreamFetcher {
                 timeTaken,
                 queryType,
                 [...queriedAddons],
-                allAddons
+                allAddons,
+                this.userData.healthResults
               );
 
               const shouldExit = await evaluator.evaluate(condition);
@@ -560,7 +561,8 @@ class StreamFetcher {
             allStreams,
             previousGroupTimeTaken,
             totalTimeTaken,
-            queryType
+            queryType,
+            this.userData.healthResults
           );
           const shouldIncludeAndContinue = await evaluator.evaluate(
             group.condition
@@ -612,7 +614,8 @@ class StreamFetcher {
               allStreams,
               previousGroupTimeTaken,
               totalTimeTaken,
-              queryType
+              queryType,
+              this.userData.healthResults
             );
             const shouldFetch = await evaluator.evaluate(group.condition);
 

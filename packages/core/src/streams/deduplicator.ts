@@ -1,4 +1,8 @@
-import { ParsedStream, UserData } from '../db/schemas.js';
+import {
+  MEDIA_INFO_QUALITY_TIERS,
+  ParsedStream,
+  UserData,
+} from '../db/schemas.js';
 import {
   createLogger,
   DSU,
@@ -596,8 +600,9 @@ class StreamDeduplicator {
   }
 
   /**
-   * Accuracy-aware merge of parsed `languages`/`subtitles` plus actual subtitle
-   * tracks.
+   * Merge parsed `languages`/`subtitles` plus actual subtitle tracks from
+   * sources at the best mediaInfoQuality tier present, discarding lower
+   * tiers. If nobody has a tier, merges everything as a best effort.
    */
   private mergeLanguagesAndSubtitles(
     winner: ParsedStream,
@@ -605,12 +610,10 @@ class StreamDeduplicator {
     fields: readonly string[]
   ): void {
     const sources = [winner, ...others].filter((s) => s.parsedFile);
-    const accurate = sources.filter(
-      (s) =>
-        (s.parsedFile?.languages?.length ?? 0) > 0 &&
-        (s.parsedFile?.subtitles?.length ?? 0) > 0
-    );
-    const pool = accurate.length > 0 ? accurate : sources;
+    const bestTier = this.bestMediaInfoQualityTier(sources);
+    const pool = bestTier
+      ? sources.filter((s) => s.parsedFile?.mediaInfoQuality === bestTier)
+      : sources;
 
     if (winner.parsedFile) {
       if (fields.includes('languages')) {
@@ -624,6 +627,10 @@ class StreamDeduplicator {
           [],
           pool.flatMap((s) => s.parsedFile?.subtitles ?? [])
         );
+      }
+
+      if (bestTier && bestTier !== winner.parsedFile.mediaInfoQuality) {
+        winner.parsedFile.mediaInfoQuality = bestTier;
       }
     }
 
@@ -642,6 +649,26 @@ class StreamDeduplicator {
       }
       if (merged.length > 0) winner.subtitles = merged;
     }
+  }
+
+  /** Rank of a mediaInfoQuality tier; unranked (undefined) is the lowest rung. */
+  private mediaInfoQualityRank(q?: string): number {
+    const i = MEDIA_INFO_QUALITY_TIERS.indexOf(q as never);
+    return i === -1 ? MEDIA_INFO_QUALITY_TIERS.length : i;
+  }
+
+  /** Best mediaInfoQuality tier present among `sources`, if any. */
+  private bestMediaInfoQualityTier(
+    sources: ParsedStream[]
+  ): (typeof MEDIA_INFO_QUALITY_TIERS)[number] | undefined {
+    return sources.reduce<(typeof MEDIA_INFO_QUALITY_TIERS)[number] | undefined>(
+      (best, s) =>
+        this.mediaInfoQualityRank(s.parsedFile?.mediaInfoQuality) <
+        this.mediaInfoQualityRank(best)
+          ? s.parsedFile?.mediaInfoQuality
+          : best,
+      undefined
+    );
   }
 }
 

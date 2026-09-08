@@ -47,6 +47,26 @@ export class YencDecodeError extends Error {
   }
 }
 
+/**
+ * Decoded bytes disagree with their own metadata (declared part range, stored
+ * cache size). Not a provider verdict: `definitiveLossKind` ignores it, so a
+ * read fails instead of being padded.
+ */
+export class SegmentIntegrityError extends Error {
+  constructor(
+    message: string,
+    readonly messageId?: string
+  ) {
+    super(message);
+    this.name = 'SegmentIntegrityError';
+  }
+}
+
+export interface DecodeArticleOptions {
+  /** Check the `=yend` pcrc32/crc32. The size checks always run. */
+  verifyCrc?: boolean;
+}
+
 const CR = 0x0d;
 const LF = 0x0a;
 const EQ = 0x3d; // '='
@@ -54,18 +74,26 @@ const Y = 0x79; // 'y'
 const YBEGIN_CRLF = Buffer.from('\r\n=ybegin ');
 const YBEGIN_AT0 = Buffer.from('=ybegin ');
 const YEND_CRLF = Buffer.from('\r\n=yend');
+/** Cap on the `=yend` line scan; real ones are far shorter. */
+const YEND_LINE_CAP = 256;
+const YEND_SIZE_RE = /(?:^|\s)size=(\d+)/;
+const YEND_PCRC32_RE = /(?:^|\s)pcrc32=([0-9a-fA-F]{1,8})/;
+const YEND_CRC32_RE = /(?:^|\s)crc32=([0-9a-fA-F]{1,8})/;
+const YBEGIN_PART_RE = /(?:^|\s)part=\d+/;
 
 /**
  * Decode a complete article body (raw, possibly dot-stuffed NNTP payload) into
  * its yEnc-decoded bytes plus the part/file metadata we need for seeking.
  *
- * Parses only the `=ybegin`/`=ypart` header lines we actually consume, then
+ * Parses only the `=ybegin`/`=ypart`/`=yend` lines we actually consume, then
  * decodes the data region straight into one right-sized buffer via the native
- * `decodeTo`. This skips the two things `yencode.from_post` does per article that
- * nothing here uses: a full CRC32 pass over the decoded body, and a swarm of
- * short-lived JS objects (per-line strings, nested `props`, a `warnings` array).
- * Structural failures (no start / no end marker) still throw
- * {@link YencDecodeError}.
+ * `decodeTo`, skipping the short-lived JS objects `yencode.from_post` builds
+ * per article (per-line strings, nested `props`, a `warnings` array).
+ *
+ * The `=ypart` range must always match the decoded length, since both serve
+ * paths place bytes by it. `opts.verifyCrc` also checks the trailer's pcrc32
+ * (or crc32 on a single-part post), else its `size=`. Failures throw a
+ * non-terminal {@link YencDecodeError}, so the next provider is tried.
  *
  * @param raw the article body bytes as received from BODY (without the
  *   terminating `\r\n.\r\n`). Still dot-stuffed, so decoding strips dots.
@@ -74,7 +102,11 @@ const YEND_CRLF = Buffer.from('\r\n=yend');
  *   otherwise a fresh owned buffer is allocated. When used, the returned
  *   body is a view into it and the caller owns its lifetime.
  */
-export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
+export function decodeArticle(
+  raw: Buffer,
+  out?: Buffer,
+  opts?: DecodeArticleOptions
+): DecodedSegment {
   // Locate the `=ybegin ` line: usually at offset 0, otherwise after a CRLF
   // (real posts sometimes carry junk before the header).
   let pos: number;
@@ -99,6 +131,7 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
   let totalParts: number | undefined;
   let name: string | undefined;
   let byteRange: [number, number] | undefined;
+  let multipart = false;
 
   // Walk the header lines (`=ybegin`, optional `=ypart`, rarely more) until the
   // first line that does not start with `=y`, which is where the data begins.
@@ -115,8 +148,10 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
       fileSize = toInt(/(?:^|\s)size=(\d+)/.exec(line)?.[1]);
       totalParts = toInt(/(?:^|\s)total=(\d+)/.exec(line)?.[1]);
       name = /(?:^|\s)name=(.*)$/.exec(line)?.[1];
+      multipart = YBEGIN_PART_RE.test(line);
       first = false;
     } else if (line.startsWith('=ypart ')) {
+      multipart = true;
       const pb = toInt(/(?:^|\s)begin=(\d+)/.exec(line)?.[1]);
       const pe = toInt(/(?:^|\s)end=(\d+)/.exec(line)?.[1]);
       if (pb !== undefined && pe !== undefined) {
@@ -147,7 +182,61 @@ export function decodeArticle(raw: Buffer, out?: Buffer): DecodedSegment {
   const written = yencode.decodeTo(slice, dst, true);
   const body = dst.subarray(0, written);
 
+  if (byteRange !== undefined && byteRange[1] - byteRange[0] !== written) {
+    throw new YencDecodeError(
+      'size_mismatch',
+      `yEnc decode failed: size_mismatch (=ypart spans ${byteRange[1] - byteRange[0]} bytes, decoded ${written})`
+    );
+  }
+  verifyTrailer(raw, dataEnd + 2, body, multipart, opts?.verifyCrc === true);
+
   return { body, byteRange, fileSize, totalParts, name, size: written };
+}
+
+/**
+ * Check `body` against the `=yend` line at `at`: the pcrc32 (or, on a
+ * single-part post, crc32) when asked for and present, else `size=`.
+ */
+function verifyTrailer(
+  raw: Buffer,
+  at: number,
+  body: Buffer,
+  multipart: boolean,
+  verifyCrc: boolean
+): void {
+  let eol = raw.indexOf(LF, at);
+  if (eol < 0) eol = raw.length;
+  const lineEnd = eol > at && raw[eol - 1] === CR ? eol - 1 : eol;
+  const line = raw.toString(
+    'latin1',
+    at,
+    Math.min(lineEnd, at + YEND_LINE_CAP)
+  );
+  if (verifyCrc) {
+    // A bare crc32 covers the whole file, so it only describes this body on a
+    // single-part post. Compare numerically: some posters strip leading zeros.
+    const hex =
+      YEND_PCRC32_RE.exec(line)?.[1] ??
+      (multipart ? undefined : YEND_CRC32_RE.exec(line)?.[1]);
+    if (hex !== undefined) {
+      const expected = Number.parseInt(hex, 16);
+      const actual = yencode.crc32(body).readUInt32BE(0);
+      if (actual !== expected) {
+        throw new YencDecodeError(
+          'crc_mismatch',
+          `yEnc decode failed: crc_mismatch (trailer ${hex}, computed ${actual.toString(16).padStart(8, '0')})`
+        );
+      }
+      return;
+    }
+  }
+  const size = toInt(YEND_SIZE_RE.exec(line)?.[1]);
+  if (size !== undefined && size !== body.length) {
+    throw new YencDecodeError(
+      'size_mismatch',
+      `yEnc decode failed: size_mismatch (=yend size=${size}, decoded ${body.length})`
+    );
+  }
 }
 
 /**

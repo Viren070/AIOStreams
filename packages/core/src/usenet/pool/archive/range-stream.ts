@@ -85,7 +85,6 @@ export class ParallelRangeStream extends OrderedParallelStream {
     const prefetchWindows = Math.ceil(maxBufferedBytes / windowBytes);
     const span = end - start;
     super({
-      highWaterMark: Math.max(1, opts.maxBufferedBytes),
       totalTasks:
         span <= primeBytes
           ? Math.min(1, span)

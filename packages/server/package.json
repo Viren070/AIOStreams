@@ -13,6 +13,8 @@
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {
     "@aiostreams/core": "workspace:*",
+    "@viren070/fsmux": "^0.3.0",
+    "@viren070/fsmux-fuse": "^0.3.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.1",
     "multer": "^2.1.1",

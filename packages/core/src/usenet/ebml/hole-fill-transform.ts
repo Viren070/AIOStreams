@@ -196,9 +196,23 @@ export class MatroskaHoleFillTransform extends Transform {
   private fallback(reason: string): void {
     if (!this.loggedFallbacks.has(reason)) {
       this.loggedFallbacks.add(reason);
+      const d = this.tracker.desyncInfo;
       logger.warn(
-        { nzbHash: this.nzbHash, at: this.cursor, reason },
-        'hole-fill fallback to raw zeros'
+        {
+          nzbHash: this.nzbHash,
+          reason,
+          // End of the span being processed, not where alignment was lost.
+          chunkEnd: this.cursor,
+          desyncAt: d?.at,
+          desync: d && {
+            site: d.site,
+            id: d.id?.toString(16),
+            stack: d.stack.map((f) => ({ id: f.id.toString(16), end: f.end })),
+            before: d.before,
+            bytes: d.bytes,
+          },
+        },
+        'hole-fill fallback: serving bytes verbatim (holes stay raw zeros)'
       );
     }
     if (this.clusterScan) this.flushClusterScanVerbatim(reason);

@@ -15,6 +15,8 @@ export * from './debrid/index.js';
 export * from './usenet/integration/index.js';
 export * from './release-blocklist/index.js';
 export * from './stream-sessions/index.js';
+export * from './shares/index.js';
+export * from './arr/index.js';
 export * from './proxy/index.js';
 export * from './linked-accounts/index.js';
 export * from './community/index.js';
@@ -30,6 +32,8 @@ export {
   ProwlarrAddon,
   KnabenAddon,
   EztvAddon,
+  TheRARBGAddon,
+  ThePirateBayAddon,
   TorrentGalaxyAddon,
   SeaDexAddon,
   EasynewsSearchAddon,

@@ -23,6 +23,7 @@ export interface DashboardNavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  desc?: string;
 }
 
 /**
@@ -30,18 +31,78 @@ export interface DashboardNavItem {
  */
 export const NAV: DashboardNavItem[] = [
   { label: 'Overview', href: '/dashboard', icon: BiGridAlt },
-  { label: 'Analytics', href: '/dashboard/analytics', icon: BiBarChartAlt2 },
-  { label: 'Logs', href: '/dashboard/logs', icon: BiListUl },
-  { label: 'System', href: '/dashboard/system', icon: BiServer },
-  { label: 'Users', href: '/dashboard/users', icon: BiGroup },
-  { label: 'Tasks', href: '/dashboard/tasks', icon: BiTask },
-  { label: 'Cache', href: '/dashboard/cache', icon: BiData },
-  { label: 'Streams', href: '/dashboard/streams', icon: BiPlayCircle },
-  { label: 'Usenet', href: '/dashboard/usenet', icon: BiCloudDownload },
-  { label: 'Blocklists', href: '/dashboard/blocklist', icon: BiBlock },
-  { label: 'Community', href: '/dashboard/community', icon: BiShareAlt },
-  { label: 'Settings', href: '/dashboard/settings', icon: BiCog },
+  {
+    label: 'Analytics',
+    href: '/dashboard/analytics',
+    icon: BiBarChartAlt2,
+    desc: 'User & request trends',
+  },
+  {
+    label: 'Logs',
+    href: '/dashboard/logs',
+    icon: BiListUl,
+    desc: 'Live log stream',
+  },
+  {
+    label: 'System',
+    href: '/dashboard/system',
+    icon: BiServer,
+    desc: 'CPU, memory & lifecycle',
+  },
+  {
+    label: 'Users',
+    href: '/dashboard/users',
+    icon: BiGroup,
+    desc: 'Accounts & their configs',
+  },
+  {
+    label: 'Tasks',
+    href: '/dashboard/tasks',
+    icon: BiTask,
+    desc: 'Scheduled & manual work',
+  },
+  {
+    label: 'Cache',
+    href: '/dashboard/cache',
+    icon: BiData,
+    desc: 'Cache stats & flush',
+  },
+  {
+    label: 'Streams',
+    href: '/dashboard/streams',
+    icon: BiPlayCircle,
+    desc: 'Active, history & bandwidth',
+  },
+  {
+    label: 'Usenet',
+    href: '/dashboard/usenet',
+    icon: BiCloudDownload,
+    desc: 'Library, providers & stats',
+  },
+  {
+    label: 'Blocklists',
+    href: '/dashboard/blocklist',
+    icon: BiBlock,
+    desc: 'Sources, entries & publishing',
+  },
+  {
+    label: 'Community',
+    href: '/dashboard/community',
+    icon: BiShareAlt,
+    desc: 'Shared formatters & templates',
+  },
+  {
+    label: 'Settings',
+    href: '/dashboard/settings',
+    icon: BiCog,
+    desc: 'Runtime configuration',
+  },
 ];
+
+/** Typed as `string` so router link props don't try to match a literal path. */
+export function sectionHref(base: string, id: string): string {
+  return `${base}/${id}`;
+}
 
 /**
  * Nav items that expand into sub-sections, each a child route

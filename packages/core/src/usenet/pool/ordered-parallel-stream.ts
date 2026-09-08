@@ -4,6 +4,7 @@ import { definitiveLossKind } from '../nntp/errors.js';
 import type { HoleKind } from '../holes.js';
 import { roundSlotSize } from './slot-size.js';
 import type { SlotBank } from './slot-bank.js';
+import { SegmentIntegrityError } from './yenc.js';
 
 /**
  * Read-ahead budget floor, in tasks. Keeps the link busy until the first task
@@ -171,7 +172,6 @@ export class SlotPool {
 }
 
 export interface OrderedParallelStreamOptions {
-  highWaterMark: number;
   /** Number of tasks to run (segments / windows). */
   totalTasks: number;
   /** Max tasks in flight at once. */
@@ -221,7 +221,7 @@ export abstract class OrderedParallelStream extends Readable {
   private ended = false;
 
   protected constructor(opts: OrderedParallelStreamOptions) {
-    super({ highWaterMark: Math.max(1, Math.ceil(opts.highWaterMark)) });
+    super({ highWaterMark: 8 * Math.max(1, Math.ceil(opts.taskBytes)) });
     this.totalTasks = opts.totalTasks;
     this.maxConcurrency = opts.maxConcurrency;
     this.taskBytes = Math.max(1, opts.taskBytes);
@@ -288,7 +288,9 @@ export abstract class OrderedParallelStream extends Readable {
     }
     this.inflight--;
     if (this.shouldIgnoreTaskError(err)) return;
-    this.logger.debug(
+    // Corrupt bytes, not a flaky link: worth a warn.
+    const level = err instanceof SegmentIntegrityError ? 'warn' : 'debug';
+    this.logger[level](
       { ...this.logContext(idx), err },
       'ordered stream task failed; destroying stream'
     );

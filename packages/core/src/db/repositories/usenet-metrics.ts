@@ -8,6 +8,8 @@ export interface UsenetMetricDelta {
   bytes: number;
   errors: number;
   missing: number;
+  /** Delivered but failed decode / checksum / size verification. */
+  undecodable: number;
   sumDurationMs: number;
   wallClockMs: number;
   sumTtfbMs: number;
@@ -30,6 +32,8 @@ export interface UsenetProviderRollup {
   bytes: number;
   errors: number;
   missing: number;
+  /** Delivered but failed decode / checksum / size verification. */
+  undecodable: number;
   sumDurationMs: number;
   wallClockMs: number;
   /**
@@ -54,6 +58,8 @@ export interface UsenetMetricBucket {
   bytes: number;
   errors: number;
   missing: number;
+  /** Delivered but failed decode / checksum / size verification. */
+  undecodable: number;
   sumDurationMs: number;
   wallClockMs: number;
   /** Bytes from rows with wall-clock time (avg-speed numerator). */
@@ -69,6 +75,7 @@ interface RollupRow {
   bytes: number | string;
   errors: number | string;
   missing: number | string;
+  undecodable: number | string;
   sum_duration_ms: number | string;
   wall_clock_ms: number | string;
   speed_bytes: number | string;
@@ -117,20 +124,22 @@ export class UsenetMetricsRepository {
         !d.bytes &&
         !d.errors &&
         !d.missing &&
+        !d.undecodable &&
         !d.ttfbSamples
       ) {
         continue;
       }
       await db.exec(
         sql`INSERT INTO usenet_provider_metrics
-              (hour_ms, provider_id, articles, bytes_fetched, errors, missing, sum_duration_ms, wall_clock_ms, sum_ttfb_ms, ttfb_samples)
+              (hour_ms, provider_id, articles, bytes_fetched, errors, missing, undecodable, sum_duration_ms, wall_clock_ms, sum_ttfb_ms, ttfb_samples)
             VALUES
-              (${hourMs}, ${d.providerId}, ${d.articles}, ${d.bytes}, ${d.errors}, ${d.missing}, ${d.sumDurationMs}, ${d.wallClockMs}, ${d.sumTtfbMs}, ${d.ttfbSamples})
+              (${hourMs}, ${d.providerId}, ${d.articles}, ${d.bytes}, ${d.errors}, ${d.missing}, ${d.undecodable}, ${d.sumDurationMs}, ${d.wallClockMs}, ${d.sumTtfbMs}, ${d.ttfbSamples})
             ON CONFLICT(hour_ms, provider_id) DO UPDATE SET
               articles = usenet_provider_metrics.articles + EXCLUDED.articles,
               bytes_fetched = usenet_provider_metrics.bytes_fetched + EXCLUDED.bytes_fetched,
               errors = usenet_provider_metrics.errors + EXCLUDED.errors,
               missing = usenet_provider_metrics.missing + EXCLUDED.missing,
+              undecodable = usenet_provider_metrics.undecodable + EXCLUDED.undecodable,
               sum_duration_ms = usenet_provider_metrics.sum_duration_ms + EXCLUDED.sum_duration_ms,
               wall_clock_ms = usenet_provider_metrics.wall_clock_ms + EXCLUDED.wall_clock_ms,
               sum_ttfb_ms = usenet_provider_metrics.sum_ttfb_ms + EXCLUDED.sum_ttfb_ms,
@@ -149,6 +158,7 @@ export class UsenetMetricsRepository {
                  SUM(bytes_fetched) AS bytes,
                  SUM(errors) AS errors,
                  SUM(missing) AS missing,
+                 SUM(undecodable) AS undecodable,
                  SUM(sum_duration_ms) AS sum_duration_ms,
                  SUM(wall_clock_ms) AS wall_clock_ms,
                  SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes,
@@ -164,6 +174,7 @@ export class UsenetMetricsRepository {
       bytes: Number(r.bytes ?? 0),
       errors: Number(r.errors ?? 0),
       missing: Number(r.missing ?? 0),
+      undecodable: Number(r.undecodable ?? 0),
       sumDurationMs: Number(r.sum_duration_ms ?? 0),
       wallClockMs: Number(r.wall_clock_ms ?? 0),
       speedBytes: Number(r.speed_bytes ?? 0),
@@ -187,6 +198,7 @@ export class UsenetMetricsRepository {
                  SUM(bytes_fetched) AS bytes,
                  SUM(errors) AS errors,
                  SUM(missing) AS missing,
+                 SUM(undecodable) AS undecodable,
                  SUM(sum_duration_ms) AS sum_duration_ms,
                  SUM(wall_clock_ms) AS wall_clock_ms,
                  SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes,
@@ -213,6 +225,7 @@ export class UsenetMetricsRepository {
                  SUM(bytes_fetched) AS bytes,
                  SUM(errors) AS errors,
                  SUM(missing) AS missing,
+                 SUM(undecodable) AS undecodable,
                  SUM(sum_duration_ms) AS sum_duration_ms,
                  SUM(wall_clock_ms) AS wall_clock_ms,
                  SUM(CASE WHEN wall_clock_ms > 0 THEN bytes_fetched ELSE 0 END) AS speed_bytes,
@@ -281,6 +294,7 @@ function mapBucket(r: BucketRow): UsenetMetricBucket {
     bytes: Number(r.bytes ?? 0),
     errors: Number(r.errors ?? 0),
     missing: Number(r.missing ?? 0),
+    undecodable: Number(r.undecodable ?? 0),
     sumDurationMs: Number(r.sum_duration_ms ?? 0),
     wallClockMs: Number(r.wall_clock_ms ?? 0),
     speedBytes: Number(r.speed_bytes ?? 0),

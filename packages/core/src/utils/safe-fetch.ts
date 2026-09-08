@@ -7,11 +7,18 @@ export interface FetchRemoteOptions {
   maxBytes: number;
   timeoutMs: number;
   maxRedirects?: number;
+  method?: 'GET' | 'HEAD';
+  /** Skip the SSRF guard. Only for URLs an operator has opted in to. */
+  allowPrivateHosts?: boolean;
+  /** Defaults to true: a non-2xx response throws rather than being returned. */
+  throwOnHttpError?: boolean;
+  /** Defaults to true. When false the body is discarded and comes back empty. */
+  readBody?: boolean;
 }
 
 export type FetchRemoteResult =
   | { notModified: true }
-  | { notModified: false; body: Buffer; etag: string | null };
+  | { notModified: false; status: number; body: Buffer; etag: string | null };
 
 async function readBodyCapped(
   res: Response,
@@ -35,9 +42,9 @@ async function readBodyCapped(
 }
 
 /**
- * Fetch an operator-supplied URL with a size cap, following redirects by hand
- * so every hop is re-checked against the SSRF guard. Returns `notModified` on
- * a 304 when an etag was supplied.
+ * Fetch a URL with a size cap, following redirects by hand so every hop is
+ * re-checked against the SSRF guard, unless an operator has opted this URL out
+ * of it. Returns `notModified` on a 304 when an etag was supplied.
  */
 export async function fetchRemoteCapped(
   url: string,
@@ -46,13 +53,14 @@ export async function fetchRemoteCapped(
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
   let current = url;
   for (let hop = 0; hop <= maxRedirects; hop++) {
-    if (isUnsafeRemoteUrl(current)) {
+    if (!options.allowPrivateHosts && isUnsafeRemoteUrl(current)) {
       throw new Error('URL refused (unsafe scheme or private address)');
     }
     const headers: Record<string, string> = { Accept: '*/*' };
     if (options.etag && current === url)
       headers['If-None-Match'] = options.etag;
     const res = await fetch(current, {
+      method: options.method ?? 'GET',
       headers,
       redirect: 'manual',
       signal: AbortSignal.timeout(options.timeoutMs),
@@ -70,12 +78,22 @@ export async function fetchRemoteCapped(
       current = new URL(location, current).toString();
       continue;
     }
-    if (!res.ok) {
+    if (!res.ok && options.throwOnHttpError !== false) {
       await res.body?.cancel().catch(() => {});
       throw new Error(`HTTP ${res.status}`);
     }
-    const body = await readBodyCapped(res, options.maxBytes);
-    return { notModified: false, body, etag: res.headers.get('etag') };
+    let body: Buffer = Buffer.alloc(0);
+    if (options.readBody === false || options.method === 'HEAD') {
+      await res.body?.cancel().catch(() => {});
+    } else {
+      body = await readBodyCapped(res, options.maxBytes);
+    }
+    return {
+      notModified: false,
+      status: res.status,
+      body,
+      etag: res.headers.get('etag'),
+    };
   }
   throw new Error('too many redirects');
 }

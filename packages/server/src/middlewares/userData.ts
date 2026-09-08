@@ -11,13 +11,15 @@ import {
   Env,
   isConfigUuid,
   resolveConfigAlias,
-  applyVariants,
+  activateVariants,
+  recordClientAgent,
   resolveVariantSelector,
   logVariantNotes,
   VARIANT_QUERY_PARAM,
   VARIANT_PATH_PARAM,
 } from '@aiostreams/core';
 import { syncUserDataUrls } from '../utils/syncUserData.js';
+import { buildVariantRequestContext } from '../utils/variant-context.js';
 
 const logger = createLogger('server');
 
@@ -136,14 +138,24 @@ export const userDataMiddleware = async (
           req.params[VARIANT_PATH_PARAM],
           req.query[VARIANT_QUERY_PARAM]
         );
+        const context = buildVariantRequestContext(req, resource);
+        void recordClientAgent(uuid, context.userAgent, resource);
+        const result = await activateVariants(userData, selected, context);
+        userData = result.userData;
         if (selected.length) {
-          const result = applyVariants(userData, selected);
-          userData = result.userData;
           userData.variantSelectorLocation = location;
+        }
+        if (result.applied.length) {
           // Per request, so it is visible whether a client carries the
           // selector beyond the manifest.
           logger.info(
-            { uuid, resource, variants: result.applied, location },
+            {
+              uuid,
+              resource,
+              variants: userData.activeVariants,
+              auto: result.auto,
+              location: selected.length ? location : undefined,
+            },
             'serving request with config variants'
           );
           logVariantNotes(uuid, result);

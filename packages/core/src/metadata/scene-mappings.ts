@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { createLogger } from '../logging/logger.js';
-import { getDataFolder, makeRequest } from '../utils/index.js';
+import { getDataFolder, HEADER_PRESETS, makeRequest } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { BaseDataset } from '../builtins/base/dataset.js';
 
@@ -72,7 +72,7 @@ export class SceneMappingDataset extends BaseDataset {
       method: 'GET',
       timeout: 30000,
       headers: {
-        'User-Agent': appConfig.http.defaultUserAgent,
+        'User-Agent': HEADER_PRESETS.sonarr['User-Agent'],
         Accept: 'application/json',
       },
     });

@@ -9,6 +9,7 @@ import {
   docsEntryUrl,
   findDocsEntry,
   getLastSeenVersion,
+  hasEarlierVisit,
   setLastSeenVersion,
   versionJump,
 } from '@/lib/changelog';
@@ -40,8 +41,14 @@ export function InstanceUpdatedModal({
 
     const lastSeen = getLastSeenVersion();
     if (!lastSeen) {
-      // First visit: record where we are without interrupting.
-      setLastSeenVersion(version);
+      // No record predates the release that added it, so without this the
+      // release itself could never be announced to anyone already here.
+      if (hasEarlierVisit()) {
+        setShownFor(version);
+      } else {
+        // A genuinely new visitor is not interrupted.
+        setLastSeenVersion(version);
+      }
       return;
     }
     if (lastSeen === version) return;

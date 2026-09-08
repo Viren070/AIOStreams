@@ -16,6 +16,7 @@ export {
   type UsenetLibraryFile,
   type UsenetLibraryStatus,
   type UsenetLibrarySource,
+  type UsenetLibraryOrigin,
   type UsenetLibraryStatusGroup,
   type UsenetLibrarySort,
   type UsenetLibrarySortDir,

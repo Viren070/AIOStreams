@@ -149,6 +149,45 @@ function ReleaseKeysRow({ entry }: { entry: LibraryEntry }) {
 }
 
 /** A cleanly-laid-out details panel for a library entry (replaces card clutter). */
+/**
+ * What replacing this release through the arr has done so far. Only shown for
+ * rows an arr grabbed; `lastError` is the reason a repair stopped, which is
+ * otherwise invisible from the dashboard.
+ */
+function ArrRepairRow({ entry }: { entry: LibraryEntry }) {
+  const link = entry.arrLink;
+  if (!link) return null;
+  const repair = link.repair;
+  const label: Record<string, string> = {
+    pending: 'Queued',
+    blocklisted: 'Marked failed in the arr',
+    searched: 'Marked failed, replacement searched',
+    done: 'Done',
+    failed: 'Gave up',
+  };
+  return (
+    <Row
+      label="Arr repair"
+      value={
+        <div className="min-w-0">
+          <span>{repair ? label[repair.state] : 'Not needed'}</span>
+          {repair?.attempts ? (
+            <span className="text-[--muted]">
+              {' '}
+              · {repair.attempts} attempt{repair.attempts === 1 ? '' : 's'}
+            </span>
+          ) : null}
+          {repair?.lastError && (
+            <p className="text-xs text-red-400 break-words">
+              {repair.lastError}
+            </p>
+          )}
+        </div>
+      }
+    />
+  );
+}
+
 export function EntryInfoModal({
   entry,
   open,
@@ -184,6 +223,12 @@ export function EntryInfoModal({
         />
         <Row label="Source" value={e.source} />
         {e.owner && <Row label="Added by" value={e.owner} />}
+        {e.postedAt && (
+          <Row
+            label="Posted"
+            value={formatDateTime(new Date(e.postedAt * 1000).toISOString())}
+          />
+        )}
         <Row label="Added" value={formatDateTime(e.addedAt)} />
         <Row label="Last used" value={formatDateTime(e.lastUsedAt)} />
         {e.importMs != null && (
@@ -198,6 +243,7 @@ export function EntryInfoModal({
           }
           onCopy={() => copy(e.nzbHash, 'Hash')}
         />
+        <ArrRepairRow entry={e} />
         <ReleaseKeysRow entry={e} />
       </div>
     </Modal>
