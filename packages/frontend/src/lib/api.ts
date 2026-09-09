@@ -370,7 +370,6 @@ export async function updateUserConfig(
   });
 }
 
-
 export interface ClientAgent {
   userAgent: string;
   firstSeen: number;
@@ -400,7 +399,10 @@ export interface VariantEvaluation {
 
 /** The user agents seen on this configuration's stream and catalogue requests. */
 export async function loadClientAgents(uuid: string, password: string | null) {
-  return api<ClientAgent[]>('GET /user/client-agents', configAuth(uuid, password));
+  return api<ClientAgent[]>(
+    'GET /user/client-agents',
+    configAuth(uuid, password)
+  );
 }
 
 /** Ask the server which variant conditions match a hypothetical request. */
@@ -859,6 +861,66 @@ export async function fetchManifest(url: string): Promise<any> {
     );
   }
   return response.json();
+}
+
+export interface JellyfinInfo {
+  enabled: boolean;
+  serverUrl: string;
+  version: string;
+  maxVersions: number;
+  resolveOnOpen: 'always' | 'never' | 'user';
+}
+
+export async function getJellyfinInfo(credentials: Credentials) {
+  return api<JellyfinInfo>('GET /jellyfin/info', authed(credentials));
+}
+
+export interface PlaybackSink {
+  addon: string;
+  /** Absent for the account's own sinks. */
+  persona?: string;
+  status: 'connected' | 'auth_expired' | 'error';
+  lastPushAt: number | null;
+  lastError: string | null;
+}
+
+/** Health of the addons this configuration reports playback to. */
+export async function getPlaybackSinks(credentials: Credentials) {
+  return api<{ sinks: PlaybackSink[] }>(
+    'GET /jellyfin/playback-sinks',
+    authed(credentials)
+  );
+}
+
+/** Binds a Quick Connect code shown on a TV to this configuration. */
+export async function approveJellyfinQuickConnect(
+  credentials: Credentials,
+  code: string,
+  persona?: string
+) {
+  return api<{
+    approved: boolean;
+    device: { name: string; app: string; version: string };
+  }>('POST /jellyfin/quickconnect/approve', {
+    ...authed(credentials),
+    body: { code, ...(persona ? { persona } : {}) },
+  });
+}
+
+export interface QuickConnectPending {
+  device: { name: string; app: string; version: string };
+  requestedAt: string;
+}
+
+/** The device behind a code, before anything is bound to it. */
+export async function getJellyfinQuickConnectPending(
+  credentials: Credentials,
+  code: string
+) {
+  return api<QuickConnectPending>(
+    `GET /jellyfin/quickconnect/pending?code=${encodeURIComponent(code)}`,
+    authed(credentials)
+  );
 }
 
 export type {
