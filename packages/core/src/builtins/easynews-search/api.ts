@@ -755,7 +755,7 @@ export class EasynewsApi {
     let title: string;
     if (displayFn) {
       const cleaned = displayFn.trim();
-      const sanitized = cleaned.replace(/ - /g, '-').split(' ').join('.');
+      const sanitized = cleaned.split(' ').join('.');
       title = ext.startsWith('.')
         ? `${sanitized}${ext}`
         : `${sanitized}.${ext}`;
