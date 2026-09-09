@@ -84,7 +84,9 @@ export async function makeRequest(url: string, options: RequestOptions) {
 
   // block recursive requests
   const key = `${urlObj.toString()}-${options.forwardIp}`;
-  const currentCount = (await urlCount.get(key)) ?? 0;
+  const currentCount = options.ignoreRecursion
+    ? 0
+    : ((await urlCount.get(key)) ?? 0);
   if (
     currentCount > appConfig.recursion.thresholdLimit &&
     !options.ignoreRecursion
@@ -97,10 +99,12 @@ export async function makeRequest(url: string, options: RequestOptions) {
       `Possible recursive request to ${makeUrlLogSafe(urlObj.toString())}`
     );
   }
-  if (currentCount > 0) {
-    await urlCount.update(key, currentCount + 1);
-  } else {
-    await urlCount.set(key, 1, appConfig.recursion.thresholdWindow);
+  if (!options.ignoreRecursion) {
+    if (currentCount > 0) {
+      await urlCount.update(key, currentCount + 1);
+    } else {
+      await urlCount.set(key, 1, appConfig.recursion.thresholdWindow);
+    }
   }
 
   // One signal for the whole redirect chain.
