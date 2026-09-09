@@ -17,7 +17,7 @@ import {
 
 const logger = createLogger('failover');
 
-export type FailoverContentType = 'usenet' | 'debrid';
+export type FailoverContentType = 'usenet' | 'debrid' | 'http';
 
 /** One link in an ordered failover chain (an AIOStreams-owned playback URL). */
 export interface PlayChainItem {
@@ -128,14 +128,18 @@ function isOwnedPlayback(
 }
 
 /**
- * A non-owned addon debrid URL that may be used as a failover target. It must
- * be a `debrid` stream, not one of our own playback URLs, and live
+ * A non-owned addon URL that may be used as a failover target. It must be a
+ * `debrid` or `http` stream, not one of our own playback URLs, and live
  * on the source addon's own host (so probing only hits addon-owned endpoints).
  */
-export function isExternalDebridFailover(
+export function isExternalFailoverTarget(
   s: ParsedStream
 ): s is ParsedStream & { url: string } {
-  if (!s.url || s.type !== 'debrid' || s.url.includes(PLAYBACK_PATH_PREFIX)) {
+  if (
+    !s.url ||
+    (s.type !== 'debrid' && s.type !== 'http') ||
+    s.url.includes(PLAYBACK_PATH_PREFIX)
+  ) {
     return false;
   }
   try {
@@ -168,7 +172,7 @@ export async function buildPlayChain(
   const eligible = streams.filter(
     (s) =>
       isOwnedPlayback(s) ||
-      (opts.includeExternal && isExternalDebridFailover(s))
+      (opts.includeExternal && isExternalFailoverTarget(s))
   );
   if (eligible.length < 2) {
     logger.debug(
@@ -191,7 +195,11 @@ export async function buildPlayChain(
       }));
     return {
       url: s.url!,
-      type: (s.type === 'usenet' ? 'usenet' : 'debrid') as FailoverContentType,
+      type: (s.type === 'usenet'
+        ? 'usenet'
+        : s.type === 'http'
+          ? 'http'
+          : 'debrid') as FailoverContentType,
       serviceId: s.service?.id,
       filename: s.filename,
       proxied: shouldProxyStream(s, opts.proxyConfig),
