@@ -35,6 +35,12 @@ import { comparatorFunctions } from './engine/comparators.js';
  * SOFTWARE.
  */
 
+function trackTitles(tracks: { title?: string }[] | undefined): string[] {
+  return (tracks ?? [])
+    .map((track) => track.title)
+    .filter((title): title is string => !!title);
+}
+
 export interface FormatterConfig {
   name: string;
   description: string;
@@ -76,6 +82,8 @@ export interface ParseValue {
     uWedontknowwhatakilometeris: string[] | null;
     visualTags: string[] | null;
     audioTags: string[] | null;
+    audioTitles: string[];
+    subtitleTitles: string[];
     releaseGroup: string | null;
     regexMatched: string | null;
     rankedRegexMatched: string[];
@@ -558,6 +566,9 @@ export abstract class BaseFormatter {
         },
         visualTags: sortedVisualTags,
         audioTags: sortedAudioTags,
+        /* Track names, from media info only. */
+        audioTitles: trackTitles(stream.parsedFile?.audioTracks),
+        subtitleTitles: trackTitles(stream.parsedFile?.subtitleTracks),
         releaseGroup: stream.parsedFile?.releaseGroup || null,
         regexMatched:
           stream.regexMatched?.name || stream.rankedRegexesMatched?.[0] || null,
