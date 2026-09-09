@@ -112,7 +112,11 @@ function extractIndexerNames(url: string): string[] {
     /\/api\/v2\.0\/indexers\/([^/]+)\/results\//i
   );
   if (jackettMatch) {
-    return [decodeURIComponent(jackettMatch[1]).toLowerCase()];
+    try {
+      return [decodeURIComponent(jackettMatch[1]).toLowerCase()];
+    } catch {
+      return [];
+    }
   }
 
   // NZBHydra2: ?indexers=name1,name2,...
@@ -198,6 +202,61 @@ export function getTitleLanguagesForUrl(
   });
 
   return specs;
+}
+
+/**
+ * Returns the title limit to use when building scrape queries for the given URL.
+ * Per-indexer overrides use the same matching priority as title languages and
+ * fall back to BUILTIN_SCRAPE_TITLE_LIMIT when no override matches.
+ */
+export function getTitleLimitForUrl(url: string, addonId?: string): number {
+  const config = appConfig.builtins.scrape.titleLimits as
+    | Record<string, number>
+    | undefined;
+
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    hostname = url;
+  }
+
+  let limit: number | undefined;
+  let source = 'global fallback';
+
+  if (config !== undefined) {
+    const hasOverride = (key: string) =>
+      Object.prototype.hasOwnProperty.call(config, key);
+
+    if (hasOverride(hostname)) {
+      limit = config[hostname];
+      source = 'hostname match';
+    } else {
+      const indexerNames = extractIndexerNames(url);
+      const matchedIndexer = indexerNames.find((n) => hasOverride(n));
+      if (matchedIndexer) {
+        limit = config[matchedIndexer];
+        source = `indexer name match (${matchedIndexer})`;
+      } else if (addonId && hasOverride(addonId)) {
+        limit = config[addonId];
+        source = 'addon ID match';
+      } else if (hasOverride('*')) {
+        limit = config['*'];
+        source = 'wildcard (*)';
+      }
+    }
+  }
+
+  limit ??= appConfig.builtins.scrape.titleLimit;
+
+  logger.debug(`Title limit resolved`, {
+    hostname,
+    addonId,
+    limit,
+    source,
+  });
+
+  return limit;
 }
 
 export const bgRefreshCache = Cache.getInstance<string, number>(

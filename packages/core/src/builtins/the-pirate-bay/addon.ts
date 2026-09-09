@@ -4,7 +4,11 @@ import { createLogger, ParsedId } from '../../utils/index.js';
 import ThePirateBayAPI, { getThePirateBayUrl } from './api.js';
 import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import { validateInfoHash } from '../utils/debrid.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+  getTitleLimitForUrl,
+} from '../utils/general.js';
 
 const logger = createLogger('the-pirate-bay');
 
@@ -41,6 +45,7 @@ export class ThePirateBayAddon extends BaseDebridAddon<ThePirateBayAddonConfig> 
 
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(getThePirateBayUrl(), this.id),
+      titleLimit: getTitleLimitForUrl(getThePirateBayUrl(), this.id),
     });
     if (metadata.imdbId) {
       queries.push(metadata.imdbId);

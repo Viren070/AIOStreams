@@ -17,7 +17,11 @@ import {
   extractTrackersFromMagnet,
   validateInfoHash,
 } from '../utils/debrid.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+  getTitleLimitForUrl,
+} from '../utils/general.js';
 
 const logger = createLogger('knaben');
 
@@ -59,6 +63,7 @@ export class KnabenAddon extends BaseDebridAddon<KnabenAddonConfig> {
 
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(knabenApiUrl, this.id),
+      titleLimit: getTitleLimitForUrl(knabenApiUrl, this.id),
     });
 
     if (queries.length === 0) {
