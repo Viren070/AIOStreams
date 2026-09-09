@@ -21,12 +21,14 @@
     "proxy-addr": "^2.0.7",
     "rate-limit-redis": "^4.3.1",
     "undici": "^7.25.0",
+    "ws": "^8.21.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
     "@types/node": "^20.19.39",
-    "@types/proxy-addr": "^2.0.3"
+    "@types/proxy-addr": "^2.0.3",
+    "@types/ws": "^8.18.1"
   }
 }
