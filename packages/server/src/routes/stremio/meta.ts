@@ -40,7 +40,6 @@ router.get(
       logger.debug('Meta request received', {
         type,
         id,
-        userData: req.userData,
       });
 
       if (id.startsWith('aiostreamserror.')) {
