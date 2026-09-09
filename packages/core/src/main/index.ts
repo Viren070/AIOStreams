@@ -24,6 +24,10 @@ import {
   fetchManifests,
   buildResources,
 } from './setup.js';
+import {
+  resolvePlaybackSinks,
+  type ResolvedPlaybackSink,
+} from '../watch-state/handoff/index.js';
 import { getCatalog as _getCatalog } from './catalog.js';
 import {
   getStreams as _getStreams,
@@ -131,6 +135,11 @@ export class AIOStreams {
 
   public getAddon(instanceId: string): Addon | undefined {
     return this.ctx.addons.find((a) => a.instanceId === instanceId);
+  }
+
+  public getPlaybackSinks(): ResolvedPlaybackSink[] {
+    this.checkInitialised();
+    return resolvePlaybackSinks(this.ctx);
   }
 
   public async shouldStopAutoPlay(type: string, id: string) {

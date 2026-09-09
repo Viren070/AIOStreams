@@ -20,7 +20,12 @@ export type FetchRemoteResult =
   | { notModified: true }
   | { notModified: false; status: number; body: Buffer; etag: string | null };
 
-async function readBodyCapped(
+/**
+ * Reads a response body, refusing it above `maxBytes` on the declared length
+ * and again as the bytes arrive. Throws rather than truncating, so a caller
+ * cannot mistake a short read for a complete answer.
+ */
+export async function readBodyCapped(
   res: Response,
   maxBytes: number
 ): Promise<Buffer> {
