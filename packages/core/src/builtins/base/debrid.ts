@@ -473,6 +473,13 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       /** @deprecated Use titleLanguages instead. */
       useAllTitles?: boolean;
       titleLanguages?: string[];
+      /**
+       * Emit the titles alone, with no season, episode or year appended.
+       * Uses the same set as the season/episode queries, so the conflict
+       * disambiguation variants (`<title> <year>`, `<title> <country tag>`)
+       * are included where the metadata defines them.
+       */
+      titleOnly?: boolean;
     }
   ): string[] {
     const { addYear, addSeasonEpisode } = {
@@ -596,6 +603,15 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       const seriesTitles = variantTitles.length
         ? [...titles, ...variantTitles]
         : titles;
+
+      // Title alone, for releases that name no season or episode at all —
+      // complete-series and multi-season packs. Deliberately the same title
+      // set as the season/episode queries, disambiguation variants included:
+      // a pack is named like any other release of the same show.
+      if (options?.titleOnly) {
+        addQuery(titlePlaceholder, seriesTitles);
+        return queries;
+      }
 
       // season numbers are meaningless in release names when episodes are
       // numbered continuously across seasons
