@@ -243,6 +243,7 @@ export class StremThruService
           link: file.link,
           path: file.path,
           index: file.index,
+          videoHash: (file as any).video_hash,
         })),
         size: (result.data.files ?? []).reduce(
           (acc, file) => acc + file.size,
@@ -345,6 +346,7 @@ export class StremThruService
               size: file.size,
               index: file.index,
               mediaInfo: (file as any).media_info,
+              videoHash: (file as any).video_hash,
             };
           }),
         }));
@@ -644,6 +646,7 @@ export class StremThruService
           link: file.link,
           path: file.path,
           index: file.index,
+          videoHash: (file as any).video_hash,
         })),
       };
     } catch (error) {
