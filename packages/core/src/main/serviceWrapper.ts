@@ -458,6 +458,7 @@ async function buildDebridStreams(
         folderSize: result.size,
         filename: result.file.name ?? result.title ?? original?.filename,
         folderName: result.file.name ? result.title : original?.folderName,
+        videoHash: result.file.videoHash ?? original?.videoHash,
         torrent: {
           infoHash: result.hash,
           fileIdx: original?.torrent?.fileIdx ?? result.file.index,

@@ -177,6 +177,7 @@ const DebridFileSchema = z.object({
   size: z.number(),
   mimeType: z.string().optional(),
   mediaInfo: z.record(z.string(), z.unknown()).optional(),
+  videoHash: z.string().optional(),
   link: z.string().optional(),
   path: z.string().optional(),
   index: z.number().optional(),
