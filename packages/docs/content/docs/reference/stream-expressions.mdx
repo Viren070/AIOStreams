@@ -455,6 +455,24 @@ subtitles(streams, 'English')
 
 ---
 
+#### `subtitleTitle()` / `audioTitle()`
+
+Filter by the **name** of a probed track rather than its language. A release can
+carry several tracks in one language that only their names tell apart, such as
+`VFF` and `VFQ` French audio, a forced subtitle track, or an English `SDH` one.
+
+Keywords match on token boundaries and ignore case, exactly as `keyword()` does.
+A stream matches when any one of its tracks does. Only media info fills these in,
+so streams whose tracks were never probed never match.
+
+```
+subtitleTitle(streams, 'SDH')
+subtitleTitle(streams, 'dubtitle', 'signs')
+audioTitle(streams, 'VFQ')
+```
+
+---
+
 #### `seeders()`
 
 Filter by torrent seeder count.

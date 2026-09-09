@@ -862,6 +862,38 @@ export abstract class StreamExpressionEngine {
 
     this.parser.functions.subtitles = this.parser.functions.subtitle;
 
+    const trackTitleFilter = (
+      kind: 'audioTracks' | 'subtitleTracks',
+      label: string
+    ) =>
+      function (streams: ParsedStream[], ...keywords: string[]) {
+        if (!Array.isArray(streams) || streams.some((stream) => !stream.type)) {
+          throw new Error('Your streams input must be an array of streams');
+        } else if (
+          keywords.length === 0 ||
+          keywords.some((k) => typeof k !== 'string')
+        ) {
+          throw new Error(
+            `${label}: you must provide one or more keyword string parameters`
+          );
+        }
+        const pattern = formRegexFromKeywordsSync(keywords);
+        return streams.filter((stream) =>
+          (stream.parsedFile?.[kind] ?? []).some(
+            (track) => !!track.title && pattern.test(track.title)
+          )
+        );
+      };
+
+    this.parser.functions.subtitleTitle = trackTitleFilter(
+      'subtitleTracks',
+      'subtitleTitle'
+    );
+    this.parser.functions.audioTitle = trackTitleFilter(
+      'audioTracks',
+      'audioTitle'
+    );
+
     this.parser.functions.mediaInfoQuality = function (
       streams: ParsedStream[],
       ...qualities: string[]
