@@ -269,6 +269,36 @@ class StreamFilterer {
     );
   }
 
+  /**
+   * Request-scope resolution floor pass. filter() runs once per fetch
+   * batch (dynamic fetching / addon groups), so its adaptive-floor
+   * decision only sees that batch. After the fetcher merges every
+   * batch, this re-evaluates the requiredResolutions floor against the
+   * FULL request set and re-applies it: if any stream anywhere meets
+   * the floor, off-floor streams from earlier batches are dropped; if
+   * nothing meets it, everything is kept. No-op when the floor is
+   * unset; statistics counters are untouched (batches already counted).
+   */
+  public applyResolutionFloor(streams: ParsedStream[]): ParsedStream[] {
+    const required = this.userData.requiredResolutions;
+    if (!required || required.length === 0) return streams;
+    const anyMeetsFloor = streams.some((stream) =>
+      required.includes(
+        (stream.parsedFile?.resolution ||
+          'Unknown') as NonNullable<UserData['requiredResolutions']>[number]
+      )
+    );
+    if (anyMeetsFloor) {
+      return streams.filter((stream) =>
+        required.includes(
+          (stream.parsedFile?.resolution ||
+            'Unknown') as NonNullable<UserData['requiredResolutions']>[number]
+        )
+      );
+    }
+    return streams;
+  }
+
   public getFilterTimings(): FilterTimings {
     return {
       ...this.filterTimings,
@@ -1442,6 +1472,10 @@ class StreamFilterer {
           return undefined;
       }
     };
+    // Set once filterableStreams is known: when the resolution floor is
+    // adaptive and NOTHING in the result set meets it, the floor is dropped
+    // for this request so users see what exists instead of nothing.
+    let bypassRequiredResolutions = false;
 
     const shouldKeepStream = (stream: ParsedStream): boolean => {
       const file = stream.parsedFile;
@@ -1762,6 +1796,7 @@ class StreamFilterer {
       }
 
       if (
+        !bypassRequiredResolutions &&
         this.userData.requiredResolutions &&
         this.userData.requiredResolutions.length > 0 &&
         !this.userData.requiredResolutions.includes(
@@ -2397,6 +2432,28 @@ class StreamFilterer {
     const filterableStreams = streams.filter(
       (stream) => !includedWithoutPassthrough.some((s) => s.id === stream.id)
     );
+
+    if (
+      this.userData.adaptiveResolutionFloor &&
+      this.userData.requiredResolutions &&
+      this.userData.requiredResolutions.length > 0
+    ) {
+      const floorResolutions = this.userData.requiredResolutions;
+      const anyMeetsFloor = streams.some((stream) =>
+        floorResolutions!.includes(
+          (stream.parsedFile?.resolution ||
+            'Unknown') as NonNullable<
+            UserData['requiredResolutions']
+          >[number]
+        )
+      );
+      if (!anyMeetsFloor) {
+        bypassRequiredResolutions = true;
+        logger.info(
+          `No stream meets the required resolutions [${this.userData.requiredResolutions.join(', ')}]; adaptive floor dropped for this request`
+        );
+      }
+    }
 
     const hasAnyRegexFilter = !!(
       excludedRegexPatterns ||
