@@ -8,6 +8,7 @@ import type {
 } from './types.js';
 import { SqlFragment } from '../sql.js';
 import { DbError, classifyPgError } from '../errors.js';
+import { Env } from '../../utils/env.js';
 
 /**
  * Postgres `NOW() - amount * INTERVAL '1 unit'`. The unit is from a
@@ -70,6 +71,8 @@ export class PostgresDriver implements DbDriver {
   constructor(connectionString: string) {
     this.pool = new Pool({
       connectionString,
+
+      max: Env.DATABASE_POOL_SIZE,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
       keepAlive: true,
