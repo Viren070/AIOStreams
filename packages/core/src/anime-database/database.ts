@@ -399,4 +399,13 @@ export class AnimeDatabase {
     }
     return entry;
   }
+
+  public async hasSiblingRecords(
+    idType: IdType,
+    idValue: IdValue
+  ): Promise<boolean> {
+    if (this.disabled) return false;
+    const candidates = await AnimeRepository.findCandidates(idType, idValue);
+    return candidates.length > 1;
+  }
 }
