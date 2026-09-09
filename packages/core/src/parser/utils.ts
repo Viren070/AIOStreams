@@ -309,7 +309,7 @@ export function normaliseTitle(title: string) {
 export function cleanTitle(title: string, language?: string) {
   let cleaned = foldToAscii(title, language);
 
-  for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-', ';', ':']) {
+  for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-', ';', ':', '/', '\\', '|', '_']) {
     cleaned = cleaned.replaceAll(char, ' ');
   }
 
