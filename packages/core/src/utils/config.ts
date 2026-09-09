@@ -248,6 +248,36 @@ export async function validateConfig(
     }
   }
 
+  // A dangling link would degrade the user to the base config at sign-in.
+  const checkLinked = (who: string, linked: string[]) => {
+    if (linked.length > appConfig.userLimits.variants.maxActive) {
+      throw new Error(
+        `${who} links ${linked.length} variants, but the maximum is ${appConfig.userLimits.variants.maxActive}`
+      );
+    }
+    for (const id of linked) {
+      const variant = config.variants?.find((v) => v.id === id);
+      if (!variant) throw new Error(`${who} links to unknown variant "${id}"`);
+      if (variant.enabled === false) {
+        throw new Error(`${who} links to disabled variant "${id}"`);
+      }
+    }
+  };
+  const personas = config.jellyfin?.personas ?? [];
+  checkLinked('The primary user', config.jellyfin?.primary?.variants ?? []);
+  for (const persona of personas) {
+    checkLinked(`Persona "${persona.name}"`, persona.variants ?? []);
+  }
+  const primaryName = config.jellyfin?.primary?.name?.trim().toLowerCase();
+  if (
+    primaryName &&
+    personas.some((p) => p.name.trim().toLowerCase() === primaryName)
+  ) {
+    throw new Error(
+      `A persona and the primary user share the name "${config.jellyfin?.primary?.name}"`
+    );
+  }
+
   // validate max failover attempts against the server limit
   if (
     config.failover?.maxAttempts &&
@@ -1686,6 +1716,16 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
         );
       }
     }
+  }
+
+  // Personas key this config's own rows and name its own variants.
+  if (child.jellyfin?.personas) {
+    result.jellyfin = {
+      ...result.jellyfin,
+      personas: child.jellyfin.personas,
+    };
+  } else if (result.jellyfin?.personas) {
+    result.jellyfin = { ...result.jellyfin, personas: undefined };
   }
 
   return result;
