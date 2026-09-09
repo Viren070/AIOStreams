@@ -23,7 +23,8 @@ export type TaskCategory =
   | 'templates'
   | 'analytics'
   | 'usenet'
-  | 'community';
+  | 'community'
+  | 'jellyfin';
 
 export interface TaskContext {
   signal?: AbortSignal;

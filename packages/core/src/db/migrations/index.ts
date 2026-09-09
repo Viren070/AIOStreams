@@ -25,6 +25,9 @@ import { community } from './0024_community.js';
 import { configSessions } from './0025_config_sessions.js';
 import { usenetLibraryArr } from './0026_usenet_library_arr.js';
 import { usenetUndecodable } from './0027_usenet_undecodable.js';
+import { watchState } from './0028_watch_state.js';
+import { playbackHandoff } from './0029_playback_handoff.js';
+import { watchStateRebuild } from './0030_watch_state_rebuild.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -55,6 +58,9 @@ export const MIGRATIONS: readonly Migration[] = [
   configSessions,
   usenetLibraryArr,
   usenetUndecodable,
+  watchState,
+  playbackHandoff,
+  watchStateRebuild,
 ];
 
 export type { Migration } from './types.js';

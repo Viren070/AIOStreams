@@ -26,6 +26,8 @@ interface MenuTabsProps {
    * visible (only when it fits on screen).
    */
   revealOnChange?: boolean;
+  /** Passed to the tab bar; off inside a modal, which moves as it resizes. */
+  animated?: boolean;
 }
 
 // Direction-aware slide: entering panel comes in from the side you're heading
@@ -42,6 +44,7 @@ export function MenuTabs({
   onTabChange,
   defaultMobileOpen = '',
   revealOnChange = false,
+  animated = true,
 }: MenuTabsProps) {
   const currentIndex = tabs.findIndex((t) => t.value === activeTab);
   const activeContent = currentIndex >= 0 ? tabs[currentIndex].content : null;
@@ -136,7 +139,12 @@ export function MenuTabs({
 
       {/* Desktop: Tab bar + animated content panel */}
       <div className="hidden sm:block">
-        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={onTabChange}
+          animated={animated}
+          className="w-full"
+        >
           <TabsList className="flex w-full border-b border-[--border] overflow-x-auto">
             {tabs.map((tab) => (
               <TabsTrigger

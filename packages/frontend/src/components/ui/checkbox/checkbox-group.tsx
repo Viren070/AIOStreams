@@ -135,7 +135,10 @@ export const CheckboxGroup = React.forwardRef<
               error={basicFieldProps.error}
               className={itemClass}
               labelClass={itemLabelClass}
-              containerClass={itemContainerClass}
+              // Rows are a vertical stack, so they must not sit in a line box:
+              // the indicator only mounts when checked and an inline-flex row
+              // takes its baseline from it, resizing the row on every toggle.
+              containerClass={cn('flex w-fit', itemContainerClass)}
               checkIconClass={itemCheckIconClass}
               disabled={basicFieldProps.disabled || opt.disabled}
               readonly={basicFieldProps.readonly || opt.readonly}

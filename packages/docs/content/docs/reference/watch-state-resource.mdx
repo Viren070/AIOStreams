@@ -1,0 +1,307 @@
+---
+title: Watch State Resource
+description: How an addon exchanges watch state with AIOStreams, so a tracker can scrobble what was actually watched and fill Continue Watching from other devices.
+---
+
+Stremio reports playback to the Stremio API, never to addons, so an addon has no way to know
+whether a title was finished or abandoned a minute in.
+
+AIOStreams' Jellyfin clients report position every 5 to 10 seconds, along with pause, stop and
+mark-played. The **`watch_state` resource** exchanges that with any addon that asks for it, in both
+directions:
+
+| Half | Direction | What it carries |
+| --- | --- | --- |
+| `push` | AIOStreams → addon | playback events, so a tracker scrobbles what was really watched |
+| `pull` | addon → AIOStreams | what the tracker already knows, so Continue Watching and Next Up reflect other devices |
+
+An addon may implement either half on its own.
+
+<Callout type="info">
+  Only playback through the Jellyfin API produces push events. A stream played in Stremio reports
+  nothing at all.
+</Callout>
+
+## Declaring it
+
+Add `watch_state` to your `resources` and a root-level `watchState` object. Resource names are
+free-form strings in Stremio, and unknown manifest keys are ignored, so this stays a perfectly
+normal addon everywhere else.
+
+```json
+{
+  "id": "com.example.tracker",
+  "version": "1.2.0",
+  "name": "Example Tracker",
+  "types": ["movie", "series"],
+  "resources": [
+    "meta",
+    {
+      "name": "watch_state",
+      "types": ["movie", "series"],
+      "idPrefixes": ["tt", "tmdb:", "kitsu:"]
+    }
+  ],
+  "watchState": {
+    "version": 2,
+    "push": { "events": ["stop", "played", "unplayed"] },
+    "pull": { "items": true, "watched": true, "ttlSeconds": 300 }
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `types`, `idPrefixes` | On the resource entry. Filtering happens before anything is sent, so an anime tracker declaring `kitsu:` never hears about `tt` items. |
+| `watchState.version` | The contract version you implement. Currently `2`. |
+| `watchState.push.events` | The kinds you want. Omit the list to receive everything. Unknown kinds are ignored, so listing a future one is safe. |
+| `watchState.pull` | Omit it entirely if you have nothing to serve. `items` and `watched` say which halves of the response you populate; `ttlSeconds` is how long an answer may be reused. |
+
+The user's configuration is already in your addon URL, so that is the credential; there is no
+separate authentication and no header identifying the user.
+
+<Callout type="warn">
+  Declaring `pull` means AIOStreams may read that user's viewing history from you. Gate it on
+  whatever consent your addon already collects.
+</Callout>
+
+## Push: receiving events
+
+```http
+POST {addonBase}/watch_state/push/series/tt0903747:3:7.json
+Content-Type: application/json
+```
+
+```json
+{
+  "id": "e|tt0903747:3:7|stop|2680000",
+  "event": "stop",
+  "at": 1757441718,
+  "metaId": "tt0903747",
+  "videoId": "tt0903747:3:7",
+  "positionMs": 2680000,
+  "durationMs": 2820000,
+  "played": true,
+  "season": 3,
+  "episode": 7,
+  "ids": { "imdb": "tt0903747", "tmdb": "1396", "tvdb": "81189" }
+}
+```
+
+`{addonBase}` is your manifest URL minus `/manifest.json`, exactly as for every other resource,
+and the path id is the video id. `season` and `episode` are sent as fields as well, so you never
+have to parse an id grammar.
+
+| Event | When |
+| --- | --- |
+| `start` | Playback began, **or resumed from a pause**. It carries the position, so treat it as "playing from here". |
+| `pause` | The viewer paused. This is the event that puts a resume point on a tracker for another device to find. |
+| `stop` | Playback ended. `played` says whether it passed the watched threshold (90%). |
+| `played` | The user marked it watched. |
+| `unplayed` | The user cleared that. |
+
+There is no `unpause`: resuming sends `start` again. There is no periodic `progress` either, since
+a scrobble needs the stop and a tick every few seconds would be a request against your server for
+every viewer. Events fire **once per transition**, so holding pause for twenty minutes is one
+event, not two hundred.
+
+The interesting one is `stop` with `played: true`. That is the moment to write history; a `stop`
+with `played: false` is someone who did not finish.
+
+<Callout type="warn">
+  Always compute progress from `positionMs` and `durationMs` rather than assuming a position alone
+  is enough. If `durationMs` is ever absent, treat the progress as unknown — do not fall back to
+  zero, or every resume point lands at the start of the episode.
+</Callout>
+
+### Two id spaces
+
+`metaId` is the meta the video belongs to; `videoId` is the exact video that was played. They are
+often in the same space (`tt0903747` and `tt0903747:3:7`) but they do not have to be — a metadata
+addon may key a show on IMDb and its episodes on kitsu.
+
+```json
+{
+  "metaId": "tt13293588",
+  "videoId": "kitsu:42323:7",
+  "season": 1,
+  "episode": 7,
+  "ids": {
+    "imdb": "tt13293588",
+    "tmdb": "94664",
+    "tvdb": "371310",
+    "mal": "39535",
+    "kitsu": "42323",
+    "anilist": "108465",
+    "anidb": "14758"
+  }
+}
+```
+
+`ids` always describes the **show or film**, not the episode, and carries every id the metadata
+addon knew about, so a tracker can key on whichever it uses. Your declared `idPrefixes` are
+matched against either id, so declaring `tt` still reaches you when the videos are kitsu-spaced.
+
+Season and episode numbering is whatever the metadata addon used, which for an absolute-numbered
+show is not the broadcast numbering the same title carries elsewhere. `ids` plus `metaId` tell you
+which convention you are looking at.
+
+### Responding
+
+| Status | What AIOStreams does |
+| --- | --- |
+| `200`, `204` | Delivered. |
+| `401`, `403` | Marks your addon as needing a reconnect and pauses delivery, keeping the backlog. |
+| `429`, `5xx` | Retries with backoff, honouring `Retry-After`. |
+| other `4xx` | Drops that event. |
+
+Events are queued before the client's request returns and delivered by a background worker, so a
+slow or unreachable addon never delays anybody's playback. Failed deliveries retry over roughly a
+day (30 seconds, 2 minutes, 10 minutes, 1 hour, 6 hours).
+
+### Idempotency
+
+`id` is derived, not random, and is identical across retries. For `start`, `pause` and `stop` it
+ends in the **position**; for `played` and `unplayed`, which carry no position, it ends in the
+timestamp. **Deduplicate on `id`** if a duplicate scrobble would be visible to your users: some
+clients report one stop twice, in two different shapes.
+
+A position rather than a clock bucket matters — pausing and resuming inside the same minute are two
+real transitions, and a time-based key would collapse them into one.
+
+## Pull: serving your state
+
+```http
+GET {addonBase}/watch_state/pull.json?since=a1b2c3d4e5f6
+```
+
+```json
+{
+  "version": "9f2c7b1e4a0d3856",
+  "items": [
+    {
+      "type": "series",
+      "metaId": "tt0903747",
+      "videoId": "tt0903747:3:11",
+      "season": 3,
+      "episode": 11,
+      "progressPercent": 28.8,
+      "positionMs": 812160,
+      "durationMs": 2820000,
+      "played": false,
+      "at": 1788974000
+    }
+  ],
+  "watched": {
+    "movies": ["tt0111161"],
+    "episodes": ["tt0903747:3:09", "tt0903747:3:10"],
+    "counts": { "tt0903747": { "watched": 37, "total": 62 } },
+    "nextUp": [
+      {
+        "type": "series",
+        "metaId": "tt0903747",
+        "videoId": "tt0903747:3:12",
+        "season": 3,
+        "episode": 12,
+        "at": 1788974000
+      }
+    ]
+  }
+}
+```
+
+`items` is what is **in progress**; `watched` is the **watched library**. They are split that way
+because they cost very different amounts to produce: a paused-playback list is one small call, while
+a watched library is usually a full fan-out.
+
+| Field | Meaning |
+| --- | --- |
+| `items[]` | One row per video with a position or a played flag. Bounded, newest first. |
+| `watched.movies` | Base ids of finished films. |
+| `watched.episodes` | Video ids of finished episodes. |
+| `watched.counts` | Watched/total per show, keyed by **every id that show answers to**. Advisory: send `0` for a total you do not know, and expect a reader to treat it as unknown. |
+| `watched.nextUp` | Your own next-episode pointer, which may know about specials and unaired episodes in ways a naive "next number" does not. |
+
+Four rules, each of which will bite if ignored:
+
+**Return ids in the space your own metas publish.** If your `series` meta for a show is keyed on
+`kitsu:49002` and its videos are `kitsu:49002:11`, return those, whatever space the tracker answered
+in. This is the whole reason no id mapping is needed on the reading side.
+
+**At least one of `positionMs` or `progressPercent`.** `durationMs` is optional. Every tracker in
+this space stores a percentage, so demanding milliseconds would force you to resolve a runtime that
+the reader is about to resolve anyway.
+
+**`season: null` means absolute numbering.** It is not `season: 1` and not an omitted field, and a
+reader must not coerce it.
+
+**`version` gates `watched` only, and absent is not empty.** See below.
+
+### The `version` gate
+
+`version` is an opaque token describing your `watched` half. AIOStreams echoes the last one it saw
+back as `?since=`.
+
+- **`since` matches your current `version`** → omit `watched` entirely. Return `version` and `items`
+  and nothing else. This is what lets you skip the expensive read.
+- **`since` differs or is absent** → return `watched` as the **complete current set**. It is a full
+  replace, not a delta, which is the only way a title removed at the tracker can disappear.
+
+Derive `version` from whatever change signal your upstream publishes — a last-activities digest is
+the usual one. Do not derive it from a credential, and do not include a value that moves on every
+call, such as a server clock, or the gate never holds.
+
+<Callout type="warn">
+  **An omitted `watched` means "no information"; an empty one means "nothing has ever been
+  watched".** Because it is a full replace, returning an empty `watched` after a failed upstream
+  read tells AIOStreams to delete everything it imported from you. If you could not read your
+  source, omit the block.
+</Callout>
+
+`items` is never gated. It is small, it changes constantly, and most trackers publish no change
+signal for it at all, so it is returned on every call.
+
+### More than one provider
+
+`version` describes **your whole `watched` block**, not one upstream. If you read from several
+services, fold every one of their change signals into it — hash the digests together — so that a
+change at any of them invalidates the whole answer. A `version` derived from only one source will
+sit still while another changes, and the reader will never ask again.
+
+The safer alternative is to serve from **one** provider at a time, chosen by the user or by a fixed
+preference order. That also avoids a subtler problem: two trackers rarely agree, so merging them can
+leave a title reading as unwatched in the library while sitting part-played in Continue Watching. If
+you do pick one, include which one in the `version`, so that switching provider invalidates the
+previous answer.
+
+<Callout type="warn">
+  If you merge providers, a partial answer is destructive. `watched` is a full replace, so returning
+  the union with one source missing — because it errored or rate-limited — deletes every title only
+  that source knew about. Omit the block unless you can serve all of them.
+</Callout>
+
+<Callout type="info">
+  A tracker usually only holds a resume point while something is **paused or stopped** — resuming
+  clears it. So an empty `items` during active playback elsewhere is normal and correct.
+</Callout>
+
+## Enabling it
+
+The instance operator sets `WATCH_STATE_REPORT_ENABLED=true` for the push half and
+`WATCH_STATE_PULL_ENABLED=true` for the pull half; both are off by default and independent. After
+that, any addon in a configuration that declares the resource takes part, like any other resource;
+a user who does not want it unchecks **Watch State** in that addon's Resources option.
+
+## Upgrading from v1
+
+The v1 spelling still works, so an addon written against it keeps running unchanged:
+
+| v1 | v2 |
+| --- | --- |
+| resource `playback`, root key `playback` | resource `watch_state`, root key `watchState` |
+| `events` at the root of the block | `push.events` |
+| no read half | `pull` |
+| `POST {addonBase}/playback/{type}/{id}.json` | `POST {addonBase}/watch_state/push/{type}/{id}.json` |
+
+A root-level `events` array is still read as `push.events`, and an addon that declares no `pull`
+block is simply never read from.

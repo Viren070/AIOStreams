@@ -17,3 +17,4 @@ export { default as communityApi } from './community.js';
 export { default as authApi } from './auth/index.js';
 export { default as dashboardApi } from './dashboard/index.js';
 export { default as usenetApi } from './usenet.js';
+export { default as jellyfinApi } from './jellyfin.js';

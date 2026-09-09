@@ -71,6 +71,7 @@ Modifiers are chained with `::`:
 | ------------------------ | -------- | --------------------------------------------- |
 | `{stream.audioTags}`     | string[] | Audio tags (e.g. `Atmos`, `DTS-HD MA`, `DD+`) |
 | `{stream.audioChannels}` | string[] | Audio channels (e.g. `5.1`, `7.1`)            |
+| `{stream.audioTitles}`   | string[] | Names of the probed audio tracks (e.g. `VFF`, `Descriptive`) |
 
 #### Languages
 
@@ -98,6 +99,7 @@ Modifiers are chained with `::`:
 | `{stream.uSubtitleEmojis}`     | string[] | `uSubtitles` as emoji flags                                                                           |
 | `{stream.uSubtitleCodes}`      | string[] | `uSubtitles` as ISO 639 codes                                                                         |
 | `{stream.uSmallSubtitleCodes}` | string[] | `uSubtitles` as small-caps codes                                                                      |
+| `{stream.subtitleTitles}`      | string[] | Names of the probed subtitle tracks (e.g. `SDH`, `VFQ (Forced)`)                                      |
 | `{stream.subbed}`              | boolean  | Whether the release has subtitles                                                                     |
 
 <Callout type="info">

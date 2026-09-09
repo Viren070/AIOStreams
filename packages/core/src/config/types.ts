@@ -38,10 +38,16 @@ export interface RuntimeConfigUiOverride {
     | 'string'
     | 'enum'
     | 'list'
+    | 'multiEnum'
     | 'map'
     | 'boolOrList'
     | 'duration'
     | 'json';
+  /**
+   * For `multiEnum` - the order is itself the setting, so it renders as a
+   * reorderable list. No schema distinguishes an ordered list from a set.
+   */
+  orderable?: boolean;
   /** Minimum allowed value for `number` fields (default: 0). */
   min?: number;
   /** Maximum allowed value for `number` fields (default: unbounded). */

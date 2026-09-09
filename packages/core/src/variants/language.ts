@@ -107,6 +107,9 @@ export const DENIED_ROOT_KEYS: ReadonlySet<string> = new Set([
   'healthChecks',
 ]);
 
+/** Nested fields no variant may write: the persona list decides which variant applies. */
+export const DENIED_PATHS: ReadonlySet<string> = new Set(['jellyfin.personas']);
+
 const FORBIDDEN_KEYS: ReadonlySet<string> = new Set([
   '__proto__',
   'prototype',
@@ -527,7 +530,16 @@ function parsePath(s: Scanner, limits: CelLimits): CelPath {
   while (!s.eof) {
     if (s.peek() === '.') {
       s.advance();
-      segments.push({ kind: 'key', name: readIdent(s) });
+      const keyStart = s.pos;
+      const name = readIdent(s);
+      if (!segments.length && DENIED_PATHS.has(`${root}.${name}`)) {
+        s.fail(`"${root}.${name}" cannot be changed by a variant`, {
+          index: keyStart,
+          source: name,
+          category: 'denied-field',
+        });
+      }
+      segments.push({ kind: 'key', name });
     } else if (s.peek() === '[') {
       s.advance();
       s.skipTrivia();

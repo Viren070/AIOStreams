@@ -942,6 +942,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         videoSize: torrentOrNzb.file.size,
         filename: torrentOrNzb.file.name,
         folderSize: torrentOrNzb.size,
+        videoHash: torrentOrNzb.file.videoHash,
       },
       parsedMediaInfo: torrentOrNzb.parsedMediaInfo,
     };

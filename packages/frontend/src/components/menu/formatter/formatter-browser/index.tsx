@@ -172,7 +172,12 @@ export function FormatterBrowser({
       description="Pick a built-in formatter, one you saved, or one shared by the community. Previews use the sample from the preview panel."
       contentClass="max-w-5xl w-full"
     >
-      <MenuTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <MenuTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        animated={false}
+      />
     </Modal>
   );
 }

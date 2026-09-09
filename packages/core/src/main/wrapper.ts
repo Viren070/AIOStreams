@@ -468,6 +468,7 @@ export class Wrapper {
         id,
         headers: this.addon.headers,
         options: this.addon.preset.options,
+        extras,
       })
     );
   }

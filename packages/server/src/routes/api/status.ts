@@ -4,6 +4,7 @@ import {
   config as appConfig,
   getEnvironmentServiceDetails,
   PresetManager,
+  segmentsEnabled,
   SelAccess,
   UserRepository,
 } from '@aiostreams/core';
@@ -43,6 +44,14 @@ const statusInfo = async (): Promise<StatusResponse> => {
           : undefined,
       alternateDesign: appConfig.branding.alternateDesign,
       protected: appConfig.api.authRequired,
+      jellyfin: {
+        enabled: appConfig.jellyfin.enabled === true,
+        maxVersions: appConfig.jellyfin.maxVersions,
+        resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
+        maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
+        maxPersonas: appConfig.jellyfin.maxPersonas,
+        segments: segmentsEnabled(),
+      },
       community: {
         formatters: appConfig.community.formatters,
         templates: appConfig.community.templates,

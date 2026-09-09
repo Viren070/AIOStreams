@@ -160,4 +160,22 @@ export const rateLimitsSchema = {
     envPrefix: 'OIDC',
     label: 'SSO login',
   }),
+  jellyfinLogin: rateLimit({
+    windowDefault: 300,
+    maxDefault: 10,
+    envPrefix: 'JELLYFIN_LOGIN',
+    label: 'Jellyfin login',
+  }),
+  jellyfinApi: rateLimit({
+    windowDefault: 30,
+    maxDefault: 250,
+    envPrefix: 'JELLYFIN_API',
+    label: 'Jellyfin API',
+  }),
+  jellyfinImage: rateLimit({
+    windowDefault: 30,
+    maxDefault: 1200,
+    envPrefix: 'JELLYFIN_IMAGE',
+    label: 'Jellyfin image',
+  }),
 } as const satisfies RuntimeConfigSection;

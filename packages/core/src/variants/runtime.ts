@@ -213,6 +213,15 @@ export function applyVariants(
     applied.push(variant.id.toLowerCase());
   }
 
+  // Scripts cannot name this path, but `set jellyfin = ...` could still replace it.
+  if (userData.jellyfin?.personas) {
+    result.jellyfin = {
+      ...result.jellyfin,
+      personas: userData.jellyfin.personas,
+    };
+  } else if (result.jellyfin?.personas) {
+    result.jellyfin = { ...result.jellyfin, personas: undefined };
+  }
   result.activeVariants = applied;
   return { userData: result, applied, notes };
 }

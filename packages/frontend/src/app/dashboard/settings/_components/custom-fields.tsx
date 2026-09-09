@@ -7,6 +7,14 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Button, IconButton } from '@/components/ui/button';
 import { BasicField } from '@/components/ui/basic-field';
+import { CheckboxGroup } from '@/components/ui/checkbox';
+import {
+  ItemActions,
+  SortableList,
+  SortableRow,
+  rowActionsClass,
+  useSortableRows,
+} from '@/components/shared/sortable-rows';
 import { parseDuration, formatDurationMs } from '@/lib/format';
 import MarkdownLite from '@/components/shared/markdown-lite';
 import type { SettingsUiHint } from '../queries';
@@ -608,6 +616,85 @@ export function JsonField({ name, label, help, disabled }: CommonProps) {
           }
         }}
       />
+    </BasicField>
+  );
+}
+
+/**
+ * Editor for `multiEnum` config fields. An `orderable` field is a priority list,
+ * so it is dragged and the unpicked options sit underneath as buttons to add;
+ * otherwise the whole set is checkboxes.
+ */
+export function EnumListField({
+  name,
+  label,
+  help,
+  disabled,
+  options,
+  orderable,
+}: CommonProps & { options: string[]; orderable?: boolean }) {
+  const { control } = useFormContext();
+  const { field } = useController({ name, control });
+
+  const selected: string[] = React.useMemo(
+    () =>
+      Array.isArray(field.value)
+        ? field.value.filter((v) => options.includes(v))
+        : [],
+    [field.value, options]
+  );
+  const unselected = options.filter((o) => !selected.includes(o));
+  const rows = useSortableRows(selected, (next: string[]) =>
+    field.onChange(next)
+  );
+
+  if (!orderable) {
+    return (
+      <CheckboxGroup
+        label={label}
+        help={md(help)}
+        disabled={disabled}
+        options={options.map((o) => ({ value: o, label: o }))}
+        value={selected}
+        onValueChange={(value) => field.onChange(value)}
+      />
+    );
+  }
+
+  return (
+    <BasicField label={label} help={md(help)}>
+      <div className="space-y-2">
+        {selected.length === 0 && (
+          <p className="text-xs text-[--muted] italic">None selected.</p>
+        )}
+        <SortableList rows={rows}>
+          {selected.map((value, index) => (
+            <SortableRow key={rows.keyAt(index)} id={rows.keyAt(index)}>
+              <span className="flex-1 truncate text-sm">{value}</span>
+              <div className={rowActionsClass}>
+                <ItemActions rows={rows} index={index} />
+              </div>
+            </SortableRow>
+          ))}
+        </SortableList>
+        {unselected.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {unselected.map((value) => (
+              <Button
+                key={value}
+                size="sm"
+                intent="primary-subtle"
+                rounded
+                leftIcon={<BiPlus />}
+                disabled={disabled}
+                onClick={() => field.onChange([...selected, value])}
+              >
+                {value}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
     </BasicField>
   );
 }

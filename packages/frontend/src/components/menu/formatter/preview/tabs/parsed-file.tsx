@@ -26,7 +26,8 @@ type RowKind =
   | 'numberList'
   | 'enum'
   | 'enumList'
-  | 'bool';
+  | 'bool'
+  | 'trackTitles';
 
 type SetOverride = (
   key: keyof ParsedFile,
@@ -181,6 +182,20 @@ const COMMON_ROWS: readonly Row[] = [
 ];
 
 const ADVANCED_ROWS: readonly Row[] = [
+  {
+    key: 'audioTracks',
+    label: 'Audio track titles',
+    field: 'stream.audioTitles',
+    kind: 'trackTitles',
+    help: 'Only media info fills this in, e.g. VFF, VFQ, Descriptive',
+  },
+  {
+    key: 'subtitleTracks',
+    label: 'Subtitle track titles',
+    field: 'stream.subtitleTitles',
+    kind: 'trackTitles',
+    help: 'Only media info fills this in, e.g. SDH, VFQ (Forced)',
+  },
   { key: 'country', label: 'Country', field: 'stream.country', kind: 'text' },
   {
     key: 'episodeTitle',
@@ -287,6 +302,14 @@ function toText(value: unknown): string {
 
 function toList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
+}
+
+function trackTitlesToText(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value
+    .map((track) => (track as { title?: string } | null)?.title)
+    .filter((title): title is string => !!title)
+    .join(', ');
 }
 
 function ParsedFileRow({
@@ -401,6 +424,23 @@ function ParsedFileRow({
           value={toText(value)}
           placeholder="Not detected"
           onValueChange={(next) => setOverride(row.key, splitList(next ?? ''))}
+          className="w-full"
+        />
+      );
+      break;
+    case 'trackTitles':
+      control = (
+        <TextInput
+          label={label}
+          moreHelp={row.help ?? 'Comma separated'}
+          value={trackTitlesToText(value)}
+          placeholder="Not detected"
+          onValueChange={(next) =>
+            setOverride(
+              row.key,
+              splitList(next ?? '').map((title) => ({ title }))
+            )
+          }
           className="w-full"
         />
       );

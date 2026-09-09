@@ -1,5 +1,6 @@
 ﻿import type { DbDriver } from '../driver/types.js';
 import { createLogger } from '../../logging/logger.js';
+import { ConfigStartupError } from '../../config/settings-store.js';
 import { MIGRATIONS, type Migration } from './index.js';
 
 const logger = createLogger('database');
@@ -35,11 +36,35 @@ async function tableExists(driver: DbDriver, table: string): Promise<boolean> {
   return !!row && (row as { reg: unknown }).reg !== null;
 }
 
-async function getAppliedIds(driver: DbDriver): Promise<Set<number>> {
-  const rows = await driver.query<{ id: number | string }>(
-    `SELECT id FROM _migrations`
+async function getApplied(driver: DbDriver): Promise<Map<number, string>> {
+  const rows = await driver.query<{ id: number | string; name: string }>(
+    `SELECT id, name FROM _migrations`
   );
-  return new Set(rows.map((r) => Number(r.id)));
+  return new Map(rows.map((r) => [Number(r.id), String(r.name)]));
+}
+
+async function getAppliedIds(driver: DbDriver): Promise<Set<number>> {
+  return new Set((await getApplied(driver)).keys());
+}
+
+/** A name never changes once published, so a mismatch means a foreign build. */
+function assertNotForeign(applied: Map<number, string>): void {
+  const conflicts = MIGRATIONS.filter(
+    (m) => applied.has(m.id) && applied.get(m.id) !== m.name
+  );
+  if (!conflicts.length) return;
+
+  const detail = conflicts
+    .map(
+      (m) =>
+        `  ${m.id}: this build expects "${m.name}", found "${applied.get(m.id)}"`
+    )
+    .join('\n');
+  throw new ConfigStartupError(
+    'This database was migrated by a different build of AIOStreams and cannot ' +
+      `be used with this one:\n${detail}\n` +
+      'Point DATABASE_URI at a fresh database, or go back to the build that created it.'
+  );
 }
 
 async function withMigrationLock<T>(
@@ -113,7 +138,9 @@ export async function runMigrations(driver: DbDriver): Promise<void> {
   return withMigrationLock(driver, async () => {
     await ensureMigrationsTable(driver);
 
-    const applied = await getAppliedIds(driver);
+    const appliedRows = await getApplied(driver);
+    assertNotForeign(appliedRows);
+    const applied = new Set(appliedRows.keys());
 
     // v2 detection: if baseline isn't marked applied but the v2 tables
     // are already present, mark it applied without re-running.

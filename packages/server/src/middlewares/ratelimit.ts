@@ -162,7 +162,25 @@ const communityApiRateLimiter = lazyLimiter(
   'community-api'
 );
 
+const jellyfinLoginRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.jellyfinLogin,
+  'jellyfin-login'
+);
+
+const jellyfinApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.jellyfinApi,
+  'jellyfin-api'
+);
+
+const jellyfinImageRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.jellyfinImage,
+  'jellyfin-image'
+);
+
 export {
+  jellyfinLoginRateLimiter,
+  jellyfinApiRateLimiter,
+  jellyfinImageRateLimiter,
   userApiRateLimiter,
   userCreateRateLimiter,
   linkedAccountsRateLimiter,

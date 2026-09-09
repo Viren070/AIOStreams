@@ -4,6 +4,7 @@
     "stream-expressions",
     "config-expressions",
     "custom-formatter",
-    "templates"
+    "templates",
+    "watch-state-resource"
   ]
 }
