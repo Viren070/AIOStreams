@@ -403,11 +403,24 @@ export class StreamContext {
           seasonNumber = this.animeEntry.tmdb?.seasonNumber ?? seasonNumber;
           if (this.animeEntry.tmdb?.fromEpisode) {
             const fromEpisode = Number(this.animeEntry.tmdb.fromEpisode);
+            // Seasonless Kitsu/MAL IDs carry entry-local episodes. Recover the
+            // original coordinate before translating it, even when enrichment
+            // chose the same season with a different episode offset.
+            const requestParsedId = IdParser.parse(this.id, this.type);
+            const requestEpisode =
+              requestParsedId &&
+              !requestParsedId.season &&
+              requestParsedId.episode &&
+              ['kitsuId', 'malId'].includes(requestParsedId.type)
+                ? Number(requestParsedId.episode)
+                : undefined;
             if (
+              requestEpisode !== undefined ||
               seasonNumber !== originalSeason ||
               episodeNumber < fromEpisode
             ) {
-              episodeNumber = fromEpisode + episodeNumber - 1;
+              episodeNumber =
+                fromEpisode + (requestEpisode ?? episodeNumber) - 1;
             }
           }
           logger.debug(
