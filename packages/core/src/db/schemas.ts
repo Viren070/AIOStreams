@@ -1177,6 +1177,18 @@ export type Stream = z.infer<typeof StreamSchema>;
 /** Best-to-worst provenance tiers for ParsedFile.mediaInfoQuality. */
 export const MEDIA_INFO_QUALITY_TIERS = ['probe', 'indexer', 'addon'] as const;
 
+/** One probed audio or subtitle track; see ParsedMediaTrack in utils/media-info. */
+export const MediaTrackSchema = z.object({
+  lang: z.string().optional(),
+  codec: z.string().optional(),
+  title: z.string().optional(),
+  tag: z.string().optional(),
+  channels: z.string().optional(),
+  default: z.boolean().optional(),
+  forced: z.boolean().optional(),
+});
+export type MediaTrack = z.infer<typeof MediaTrackSchema>;
+
 export const ParsedFileSchema = z.object({
   releaseGroup: z.string().optional(),
   resolution: z.string().optional(),
@@ -1188,6 +1200,8 @@ export const ParsedFileSchema = z.object({
   mediaInfoQuality: z.enum(MEDIA_INFO_QUALITY_TIERS).optional(),
   languages: z.array(z.string()),
   subtitles: z.array(z.string()).optional(),
+  audioTracks: z.array(MediaTrackSchema).optional(),
+  subtitleTracks: z.array(MediaTrackSchema).optional(),
   subbed: z.boolean().optional(),
   dubbed: z.boolean().optional(),
   title: z.string().optional(),
