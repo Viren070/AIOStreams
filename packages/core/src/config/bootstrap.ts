@@ -14,6 +14,7 @@ export const bootstrap = {
   diskCacheDir: Env.DISK_CACHE_DIR,
   redisUri: Env.REDIS_URI,
   redisTimeout: Env.REDIS_TIMEOUT,
+  databasePoolSize: Env.DATABASE_POOL_SIZE,
   settingsRefreshInterval: Env.SETTINGS_REFRESH_INTERVAL,
   secretKey: Env.SECRET_KEY,
   auth: Env.AIOSTREAMS_AUTH,

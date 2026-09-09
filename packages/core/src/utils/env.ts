@@ -243,6 +243,10 @@ export const Env = cleanEnv(process.env, {
     default: 5000,
     desc: 'Redis timeout for the addon',
   }),
+  DATABASE_POOL_SIZE: num({
+    default: 10,
+    desc: 'Maximum PostgreSQL connections this instance opens. Request traffic, the background tasks and the watch-state import all draw from this pool, so an instance serving many clients wants more than the default. Ignored for SQLite, which has a single connection.',
+  }),
   SETTINGS_REFRESH_INTERVAL: num({
     default: 30,
     desc: 'How often (seconds) each instance polls the DB settings version and reloads runtime config if another instance changed it. Set 0 to disable (single-instance deployments).',
