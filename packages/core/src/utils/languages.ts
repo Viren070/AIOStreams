@@ -252,6 +252,28 @@ function computeLanguageCode(language: string): string | undefined {
   return selectedLang.iso_639_1?.toUpperCase();
 }
 
+/**
+ * Convert a language display name to a lower-case ISO 639-2 code ("por"),
+ * the form Jellyfin clients expect on media streams.
+ */
+export function languageToIso6392(language: string): string | undefined {
+  const needle = language.trim().toLowerCase();
+  if (!needle) return undefined;
+  const possible = FULL_LANGUAGE_MAPPING.filter(
+    (lang) =>
+      lang.english_name
+        .split(';')
+        .some((name) => name.split('(')[0].trim().toLowerCase() === needle) ||
+      lang.internal_english_name?.toLowerCase() === needle ||
+      lang.name.toLowerCase() === needle ||
+      lang.iso_639_1?.toLowerCase() === needle ||
+      lang.iso_639_2.toLowerCase() === needle
+  );
+  if (!possible.length) return undefined;
+  const selected = possible.find((lang) => lang.flag_priority) ?? possible[0];
+  return selected.iso_639_2.toLowerCase();
+}
+
 /** Convert an ISO 639-1 code (e.g. "pt") to a display name. */
 export function iso6391ToLanguage(code: string): string | undefined {
   const langs = FULL_LANGUAGE_MAPPING.filter(

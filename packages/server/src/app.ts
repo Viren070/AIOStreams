@@ -18,6 +18,7 @@ import {
   authApi,
   dashboardApi,
   usenetApi,
+  jellyfinApi,
   communityApi,
 } from './routes/api/index.js';
 import {
@@ -39,6 +40,7 @@ import sabnzbdRouter from './routes/api/sabnzbd.js';
 import publicBlocklistRouter from './routes/blocklist.js';
 import publicCommunityRouter from './routes/community.js';
 import webdavRouter from './routes/webdav.js';
+import { createJellyfinRouter } from './routes/jellyfin/index.js';
 import { createNabRouter } from './routes/api/nab.js';
 import {
   gdrive,
@@ -143,6 +145,7 @@ apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);
 apiRouter.use('/dashboard', dashboardApi);
 apiRouter.use('/usenet', usenetApi);
+apiRouter.use('/jellyfin', jellyfinApi);
 apiRouter.use('/sabnzbd', sabnzbdRouter);
 apiRouter.use('/newznab', createNabRouter('newznab'));
 apiRouter.use('/torznab', createNabRouter('torznab'));
@@ -232,6 +235,17 @@ app.use('/builtins', builtinsRouter);
 app.use('/blocklist', publicBlocklistRouter);
 app.use('/community', publicCommunityRouter);
 app.use('/webdav', webdavRouter);
+
+// A Jellyfin client stores the address it is given and builds its own URLs
+// from it, so a variant has to travel in the path rather than a query string.
+const jellyfinRouter = createJellyfinRouter();
+app.use(
+  `/jellyfin/:uuid/:encryptedPassword${VARIANT_PATH_ROUTE}`,
+  jellyfinRouter
+);
+app.use('/jellyfin/:uuid/:encryptedPassword', jellyfinRouter);
+app.use(`/jellyfin${VARIANT_PATH_ROUTE}`, jellyfinRouter);
+app.use('/jellyfin', jellyfinRouter);
 
 // Content-hashed build assets. These filenames change on every content
 // change, so they are immutable and safe to cache aggressively. Deliberately

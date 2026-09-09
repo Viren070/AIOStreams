@@ -32,6 +32,8 @@ import {
   communitySchema,
   sharesSchema,
   arrSchema,
+  jellyfinSchema,
+  watchStateSchema,
 } from './schema/index.js';
 
 export const runtimeSchemas = {
@@ -60,6 +62,8 @@ export const runtimeSchemas = {
   community: communitySchema,
   shares: sharesSchema,
   arr: arrSchema,
+  jellyfin: jellyfinSchema,
+  watchState: watchStateSchema,
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {

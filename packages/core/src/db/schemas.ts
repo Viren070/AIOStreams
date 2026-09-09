@@ -108,6 +108,96 @@ const Formatter = z.object({
     .optional(),
 });
 
+const CONFIG_UUID_SHAPE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A user a Jellyfin client can sign in as. Shares the configuration's credential. */
+const JellyfinPersonaSchema = z.object({
+  // Names the DB partition, so a rename must not touch it.
+  id: z
+    .string()
+    .regex(
+      /^[a-z0-9][a-z0-9_-]{0,31}$/,
+      'Persona id must be 1-32 characters: lowercase letters, digits, "-" or "_", starting with a letter or digit.'
+    ),
+  name: z.string().min(1).max(32),
+  avatar: z.string().url().max(2048).optional(),
+  /** Variants applied while this persona is signed in, in this order. */
+  variants: z.array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)).optional(),
+  /** `shared` reads and writes the account's rows, trackers included. */
+  history: z.enum(['own', 'shared']).default('own'),
+  /** Kept out of the picker; still usable by name. */
+  hidden: z.boolean().optional(),
+});
+
+export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
+
+/** Per-configuration settings for the Jellyfin-compatible API. */
+const JellyfinSettings = z.object({
+  /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
+  resolveOnOpen: z.boolean().optional(),
+  /** Versions offered per item; the instance setting caps it. */
+  maxVersions: z.number().int().min(1).max(50).optional(),
+  /** Offer skip markers, when the instance has them enabled at all. Default on. */
+  segments: z.boolean().optional(),
+  /** Which markers to offer. Absent means all of them. */
+  segmentTypes: z.array(z.enum(['Intro', 'Recap', 'Outro'])).optional(),
+  /** The configuration's own user: the history its trackers sync with. */
+  primary: z
+    .object({
+      name: z.string().min(1).max(32).optional(),
+      avatar: z.string().url().max(2048).optional(),
+      /** Variants applied while the primary user is signed in, in this order. */
+      variants: z
+        .array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/))
+        .optional(),
+    })
+    .optional(),
+  personas: z
+    .array(JellyfinPersonaSchema)
+    .superRefine((personas, ctx) => {
+      const max = config.jellyfin.maxPersonas;
+      if (personas.length > max) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            max === 0
+              ? 'This instance does not allow extra Jellyfin users.'
+              : `At most ${max} Jellyfin users per configuration.`,
+        });
+      }
+      const ids = new Set<string>();
+      const names = new Set<string>();
+      for (const persona of personas) {
+        if (ids.has(persona.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Duplicate persona id "${persona.id}".`,
+          });
+        }
+        ids.add(persona.id);
+        const name = persona.name.trim().toLowerCase();
+        if (names.has(name)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Duplicate persona name "${persona.name}".`,
+          });
+        }
+        names.add(name);
+        // A uuid-shaped name would shadow the configuration's own sign-in.
+        if (CONFIG_UUID_SHAPE.test(persona.name)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Persona name "${persona.name}" looks like a configuration id.`,
+          });
+        }
+      }
+    })
+    .optional(),
+});
+
+export type JellyfinSettings = z.infer<typeof JellyfinSettings>;
+
 const StreamProxyConfig = z.object({
   enabled: z.boolean().optional(),
   id: z.enum(constants.PROXY_SERVICES).optional(),
@@ -1011,6 +1101,7 @@ export const UserDataSchema = z.object({
       reconfigureService: z.boolean().optional(),
     })
     .optional(),
+  jellyfin: JellyfinSettings.optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;
@@ -1619,6 +1710,21 @@ const StatusResponseSchema = z.object({
     addonName: z.string(),
     customHtml: z.string().optional(),
     featuredTemplateIds: z.array(z.string()).optional(),
+    jellyfin: z
+      .object({
+        enabled: z.boolean(),
+        /** Cap on versions per item; a configuration may ask for fewer. */
+        maxVersions: z.number(),
+        /** `user` leaves the per-configuration switch free; the others force it. */
+        resolveOnOpen: z.enum(['always', 'never', 'user']),
+        /** How deep a client may page into one library. 0 = uncapped. */
+        maxCatalogItems: z.number(),
+        /** Extra users a configuration may add beyond its primary user. */
+        maxPersonas: z.number(),
+        /** Whether the instance offers skip markers at all. */
+        segments: z.boolean(),
+      })
+      .optional(),
     alternateDesign: z.boolean(),
     protected: z.boolean(),
     community: z.object({
