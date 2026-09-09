@@ -1556,6 +1556,10 @@ const RESOURCES = [
   WATCH_STATE_RESOURCE,
 ] as const;
 
+const SEGMENT_PROVIDERS = ['introdb', 'aniskip', 'animeskip'] as const;
+
+export type SegmentProviderId = (typeof SEGMENT_PROVIDERS)[number];
+
 export const RESOURCE_LABELS: Record<Resource, string> = {
   [STREAM_RESOURCE]: 'Stream',
   [SUBTITLES_RESOURCE]: 'Subtitles',
@@ -1764,6 +1768,7 @@ export {
   STREAM_TYPES,
   LANGUAGES,
   RESOURCES,
+  SEGMENT_PROVIDERS,
   STREAM_RESOURCE,
   SUBTITLES_RESOURCE,
   CATALOG_RESOURCE,
