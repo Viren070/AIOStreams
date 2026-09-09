@@ -187,6 +187,17 @@ export class DistributedLock {
       : this.withSqlLock(key, fn, options);
   }
 
+  /** Whether anyone is subscribed to a lock's completion channel. */
+  private async hasWaiters(channel: string): Promise<boolean> {
+    try {
+      const counts = await this.redis!.pubSubNumSub(channel);
+      return Number(Object.values(counts ?? {})[0] ?? 0) > 0;
+    } catch {
+      // Unknown means publish: a missed result is worse than a wasted one.
+      return true;
+    }
+  }
+
   private async withRedisLock<T>(
     key: string,
     fn: () => Promise<T>,
@@ -210,11 +221,18 @@ export class DistributedLock {
       let result: T;
       try {
         result = await fn();
-        const storedResult: StoredResult<T> = { value: result };
-        await this.redis!.publish(
-          doneChannel,
-          stringifyLockResult(storedResult)
-        );
+        /*
+         * Serialising the result is the expensive part, and with nothing
+         * waiting it is thrown away. A waiter that subscribes in the gap finds
+         * the key gone and runs the work itself.
+         */
+        if (await this.hasWaiters(doneChannel)) {
+          const storedResult: StoredResult<T> = { value: result };
+          await this.redis!.publish(
+            doneChannel,
+            stringifyLockResult(storedResult)
+          );
+        }
       } catch (e: any) {
         const errorResult: StoredResult<T> = { error: e };
         await this.redis!.publish(
@@ -270,10 +288,19 @@ export class DistributedLock {
           this.redis!.get(redisKey)
             .then((lockValue) => {
               if (lockValue === null) {
-                logger.warn(
-                  `Lock for key ${key} was released before subscription completed. Timing out.`
+                /*
+                 * The holder finished between the failed acquire and the
+                 * subscription, so nothing was published to wait for. Running
+                 * it here duplicates one request; failing loses the addon.
+                 */
+                logger.debug(
+                  `Lock for key ${key} was released before subscription completed; running it here.`
                 );
-                onTimeout();
+                cleanup();
+                fn().then(
+                  (result) => resolve({ result, cached: false }),
+                  reject
+                );
               }
             })
             .catch((err) => {
