@@ -267,11 +267,8 @@ export class StreamContext {
               totalEpisodesBeforeCurrentSeason += s.episodes;
             }
 
-            const calculated = totalEpisodesBeforeCurrentSeason + episodeNum;
-            // Only set if different from regular episode number
-            if (calculated !== episodeNum) {
-              relativeAbsoluteEpisode = calculated;
-            }
+            // See the matching computation in builtins/base/debrid.ts.
+            relativeAbsoluteEpisode = totalEpisodesBeforeCurrentSeason + episodeNum;
           }
 
           // Adjust for non-IMDB episodes if they exist.
