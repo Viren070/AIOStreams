@@ -71,6 +71,10 @@ export interface SearchMetadata extends TitleMetadata {
   episodeAirDate?: string;
   /** First episode number of the resolved season (>1 means continuous absolute numbering). */
   resolvedSeasonFirstEpisode?: number;
+  /** TVDB-facing season number resolved from the requested TMDB episode title. */
+  resolvedSeasonNumber?: number;
+  /** TVDB-facing episode number resolved from the requested TMDB episode title. */
+  resolvedEpisodeNumber?: number;
   /** Scene-mapping search titles, best (non-identity) first. */
   sceneTitles?: string[];
   titleConflicts?: TitleConflict[];
@@ -826,6 +830,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       isDateBased: metadata.isDateBased,
       airDates: metadata.episodeAirDates,
       episodeAirDate: metadata.episodeAirDate,
+      resolvedSeasonNumber: metadata.resolvedSeasonNumber,
+      resolvedEpisodeNumber: metadata.resolvedEpisodeNumber,
       resolvedSeasonFirstEpisode: metadata.resolvedSeasonFirstEpisode,
       sceneTitles: metadata.sceneTitles,
       country: metadata.country,
