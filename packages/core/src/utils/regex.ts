@@ -1,6 +1,7 @@
 import { Cache } from './cache.js';
 import { getSimpleTextHash } from './crypto.js';
 
+/* `memory` is required: a `RegExp` does not survive a JSON round trip. */
 const regexCache = Cache.getInstance<string, RegExp>(
   'regexCache',
   1_000,
