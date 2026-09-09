@@ -1523,6 +1523,9 @@ const SUBTITLES_RESOURCE = 'subtitles' as const;
 const CATALOG_RESOURCE = 'catalog' as const;
 const META_RESOURCE = 'meta' as const;
 const ADDON_CATALOG_RESOURCE = 'addon_catalog' as const;
+const WATCH_STATE_RESOURCE = 'watch_state' as const;
+/** Root manifest key for the resource, the way `catalog` has `catalogs`. */
+export const WATCH_STATE_MANIFEST_KEY = 'watchState' as const;
 
 export const MOVIE_TYPE = 'movie' as const;
 export const SERIES_TYPE = 'series' as const;
@@ -1552,6 +1555,7 @@ const RESOURCES = [
   CATALOG_RESOURCE,
   META_RESOURCE,
   ADDON_CATALOG_RESOURCE,
+  WATCH_STATE_RESOURCE,
 ] as const;
 
 export const RESOURCE_LABELS: Record<Resource, string> = {
@@ -1560,6 +1564,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   [CATALOG_RESOURCE]: 'Catalog',
   [META_RESOURCE]: 'Metadata',
   [ADDON_CATALOG_RESOURCE]: 'Addon Catalog',
+  [WATCH_STATE_RESOURCE]: 'Watch State',
 };
 
 // export const PRESET_CATEGORY_STREAMS = 'streams' as const;
@@ -1766,6 +1771,7 @@ export {
   CATALOG_RESOURCE,
   META_RESOURCE,
   ADDON_CATALOG_RESOURCE,
+  WATCH_STATE_RESOURCE,
   REALDEBRID_SERVICE,
   PREMIUMIZE_SERVICE,
   ALLDEBRID_SERVICE,
