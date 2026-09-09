@@ -251,6 +251,43 @@ export function reconcileParsedName(
   };
 }
 
+export function reconcileBareAnimeEpisode<
+  T extends {
+    title?: string;
+    seasons?: number[];
+    episodes?: number[];
+    seasonPack?: boolean;
+  },
+>(parsed: T, titles: string[], absoluteEpisodes: (number | undefined)[]): T {
+  if (!parsed.title || parsed.seasons?.length || parsed.episodes?.length) {
+    return parsed;
+  }
+
+  const match = parsed.title.match(/^(.+?)\s+(\d{1,4})(?:v\d+)?$/i);
+  if (!match) return parsed;
+
+  const episode = Number(match[2]);
+  if (
+    episode < 1 ||
+    !absoluteEpisodes.includes(episode) ||
+    (episode >= 1900 && episode <= 2099) ||
+    [240, 360, 480, 576, 720, 1080, 1440, 2160, 4320].includes(episode)
+  ) {
+    return parsed;
+  }
+
+  const index = getTitleIndex(titles);
+  const known = (index.normalised ??= new Set(titles.map(normaliseTitle)));
+  if (
+    known.has(normaliseTitle(parsed.title)) ||
+    !known.has(normaliseTitle(match[1]))
+  ) {
+    return parsed;
+  }
+
+  return { ...parsed, title: match[1], episodes: [episode], seasonPack: false };
+}
+
 export function preprocessTitle(
   parsedTitle: string,
   names: (string | undefined)[],
