@@ -141,6 +141,8 @@ export function mergeParsedFiles(
     ),
     languages: arrayMerge(folderParsed?.languages, fileParsed?.languages),
     subtitles: arrayMerge(folderParsed?.subtitles, fileParsed?.subtitles),
+    audioTracks: fileParsed?.audioTracks ?? folderParsed?.audioTracks,
+    subtitleTracks: fileParsed?.subtitleTracks ?? folderParsed?.subtitleTracks,
     subbed: fileParsed?.subbed || folderParsed?.subbed || false,
     dubbed: fileParsed?.dubbed || folderParsed?.dubbed || false,
     seasonPack,
