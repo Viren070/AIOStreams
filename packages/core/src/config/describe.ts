@@ -35,6 +35,7 @@ export type SettingsUiKind =
   | 'string'
   | 'enum'
   | 'list' // string[]
+  | 'multiEnum' // (fixed set)[] - several picked from known options
   | 'map' // Record<string, string|number|boolean>
   | 'boolOrList' // boolean | string[]
   | 'duration' // human-friendly duration string ⇄ numeric seconds
@@ -43,8 +44,10 @@ export type SettingsUiKind =
 
 export interface SettingsUiHint {
   kind: SettingsUiKind;
-  /** For `enum` - the allowed string values. */
+  /** For `enum` and `multiEnum` - the allowed string values. */
   options?: string[];
+  /** For `multiEnum` - render as a reorderable list. */
+  orderable?: boolean;
   /** For `map` - the value cell kind. */
   mapValueKind?:
     | 'string'
@@ -159,6 +162,10 @@ function classify(schema: AnyZod): SettingsUiHint {
   if (t === 'array') {
     const el = unwrap(def(s).element as AnyZod);
     if (el && typeOf(el) === 'string') return { kind: 'list' };
+    if (el && (typeOf(el) === 'enum' || typeOf(el) === 'literal')) {
+      const inner = classify(el);
+      if (inner.options) return { kind: 'multiEnum', options: inner.options };
+    }
     return { kind: 'json' };
   }
 
@@ -257,6 +264,7 @@ export function describeSettings(): Record<string, SettingsUiHint> {
       if (ui?.step !== undefined) hint.step = ui.step;
       if (ui?.options) hint.options = [...ui.options];
       if (ui?.hidden) hint.hidden = true;
+      if (ui?.orderable) hint.orderable = true;
       out[key] = hint;
     }
   }
