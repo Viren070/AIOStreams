@@ -5,6 +5,7 @@
   Env,
   maskSensitiveInfo,
   redactForLog,
+  formatDurationAsText,
 } from './index.js';
 import { config as appConfig } from '../config/index.js';
 import {
@@ -26,6 +27,12 @@ const urlCount = Cache.getInstance<string, number>(
   undefined,
   'memory'
 );
+// Per origin+pathname flag, set (with TTL = Retry-After) after a 429.
+const rateLimited = Cache.getInstance<string, true>(
+  'rate-limited',
+  undefined,
+  'memory'
+);
 
 export class PossibleRecursiveRequestError extends Error {
   constructor(message: string) {
@@ -33,6 +40,31 @@ export class PossibleRecursiveRequestError extends Error {
     this.name = 'PossibleRecursiveRequestError';
   }
 }
+
+export class RateLimitedError extends Error {
+  constructor(retryAfterSeconds: number) {
+    super(
+      `Too Many Requests (retry after ${formatDurationAsText(retryAfterSeconds)})`
+    );
+    this.name = 'RateLimitedError';
+  }
+}
+
+// Retry-After header (delay-seconds or HTTP-date) -> delay in seconds.
+export function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  if (/^\d+$/.test(value)) {
+    const seconds = Number(value);
+    return Number.isSafeInteger(seconds) ? seconds : undefined;
+  }
+  // Date.parse is lenient (accepts "+1", "1.5" etc) - real HTTP-dates have letters.
+  if (!/[a-zA-Z]/.test(value)) return undefined;
+  const date = Date.parse(value);
+  return Number.isNaN(date)
+    ? undefined
+    : Math.max(0, Math.ceil((date - Date.now()) / 1000));
+}
+
 export function makeUrlLogSafe(url: string) {
   // Long opaque path components are masked; credential query/fragment
   // params and userinfo passwords are stripped by the shared redaction pass.
@@ -73,6 +105,22 @@ export interface RequestOptions {
   rawOptions?: RequestInit;
 }
 
+function rateLimitKey(urlObj: URL): string {
+  return `${urlObj.origin}${urlObj.pathname}`;
+}
+
+async function throwIfRateLimited(urlObj: URL): Promise<void> {
+  const rlKey = rateLimitKey(urlObj);
+  if (await rateLimited.get(rlKey)) {
+    const ttl = await rateLimited.getTTL(rlKey);
+    logger.debug(
+      { url: makeUrlLogSafe(urlObj.toString()), ttl },
+      'skipping request, still rate limited'
+    );
+    throw new RateLimitedError(ttl);
+  }
+}
+
 export async function makeRequest(url: string, options: RequestOptions) {
   let urlObj = rewriteRequestUrl(new URL(url));
   const headers = new Headers(options.headers);
@@ -81,6 +129,10 @@ export async function makeRequest(url: string, options: RequestOptions) {
       headers.set(header, options.forwardIp);
     }
   }
+
+  // Checked before recursion accounting so an active cooldown isn't
+  // misreported as a possible recursive request.
+  await throwIfRateLimited(urlObj);
 
   // block recursive requests
   const key = `${urlObj.toString()}-${options.forwardIp}`;
@@ -112,6 +164,8 @@ export async function makeRequest(url: string, options: RequestOptions) {
   // Redirects are followed manually so the proxy ruleset, override headers,
   // URL rewrites and internal-secret handling are re-evaluated on every hop.
   for (let redirects = 0; ; redirects++) {
+    await throwIfRateLimited(urlObj);
+
     const { dispatcher, useProxy, proxyIndex } = resolveDispatcher(
       urlObj,
       options.context,
@@ -189,6 +243,16 @@ export async function makeRequest(url: string, options: RequestOptions) {
         logger.error({ cause }, 'fetch failed due to network error');
       }
       throw err;
+    }
+
+    if (response.status === 429) {
+      const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
+      if (retryAfter !== undefined) {
+        await response.body?.cancel().catch(() => {});
+        const seconds = Math.max(1, retryAfter);
+        await rateLimited.set(rateLimitKey(urlObj), true, seconds);
+        throw new RateLimitedError(seconds);
+      }
     }
 
     // Callers that set rawOptions.redirect handle redirects themselves.
