@@ -1053,6 +1053,37 @@ const AddonCatalogDefinitionSchema = z.object({
   name: z.string().min(1),
 });
 
+/**
+ * The root `watchState` key of an addon declaring the `watch_state` resource.
+ */
+/**
+ * The root `watchState` key. `push` is what we send an addon, `pull` what we
+ * read back from it; an addon may declare either or both. Parsed on its own and
+ * leniently, so a malformed block costs the capability and not the manifest.
+ */
+export const WatchStateCapabilitySchema = z.looseObject({
+  version: z.coerce.number().optional(),
+  push: z
+    .looseObject({
+      events: z.array(z.string()).optional(),
+      minIntervalMs: z.coerce.number().min(0).optional(),
+      bulk: z.boolean().optional(),
+    })
+    .optional(),
+  pull: z
+    .looseObject({
+      items: z.boolean().optional(),
+      watched: z.boolean().optional(),
+      ttlSeconds: z.coerce.number().min(0).optional(),
+    })
+    .optional(),
+  // v1 spelling: events sat at the root and meant the push half.
+  events: z.array(z.string()).optional(),
+  minProgressIntervalMs: z.coerce.number().min(0).optional(),
+});
+
+export type WatchStateCapability = z.infer<typeof WatchStateCapabilitySchema>;
+
 export const ManifestSchema = z
   .object({
     id: z.string().min(1),

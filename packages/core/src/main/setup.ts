@@ -449,6 +449,9 @@ export function buildResources(ctx: AIOStreamsContext): void {
         continue;
       }
 
+      // Consumed, not served: kept in supportedResources, out of the manifest.
+      if (resource.name === constants.WATCH_STATE_RESOURCE) continue;
+
       const existing = ctx.finalResources.find((r) => r.name === resource.name);
       if (existing) {
         existing.types = [...new Set([...existing.types, ...resource.types])];
