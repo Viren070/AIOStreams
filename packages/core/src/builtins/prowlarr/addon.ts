@@ -16,7 +16,11 @@ import {
   extractTrackersFromMagnet,
   validateInfoHash,
 } from '../utils/debrid.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+  getTitleLimitForUrl,
+} from '../utils/general.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
 
 export const ProwlarrAddonConfigSchema = BaseDebridConfigSchema.extend({
@@ -201,6 +205,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
 
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(this.userData.url, this.id),
+      titleLimit: getTitleLimitForUrl(this.userData.url, this.id),
     });
     if (queries.length === 0) {
       return [];
