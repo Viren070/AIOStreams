@@ -950,13 +950,14 @@ neither the environment variable nor a stored value is present.
 
 #### NAB
 
-| Environment Variable                 | UI Setting                          | Type     | Default                         | Description                                                      |
-| ------------------------------------ | ----------------------------------- | -------- | ------------------------------- | ---------------------------------------------------------------- |
-| `BUILTIN_NAB_SEARCH_TIMEOUT`         | NAB › Search Timeout                | number   | `30000`                         | Timeout for Newznab/Torznab search calls.                        |
-| `BUILTIN_NAB_SEARCH_CACHE_TTL`       | NAB › Search Cache TTL              | duration | `604800`                        | Cache TTL for Newznab/Torznab search results.                    |
-| `BUILTIN_NAB_CAPABILITIES_CACHE_TTL` | NAB › Capabilities Cache TTL        | duration | `1209600`                       | Cache TTL for Newznab/Torznab capabilities responses.            |
-| `BUILTIN_NAB_MAX_PAGES`              | NAB › Max Pages                     | number   | `5`                             | Maximum pages to fetch when paginating Newznab/Torznab results.  |
-| `ZYCLOPS_HEALTH_PROXY_ENDPOINT`      | NAB › Zyclops Health Proxy Endpoint | string   | `https://zyclops.elfhosted.com` | Base URL of the Zyclops health proxy used by the Newznab preset. |
+| Environment Variable                 | UI Setting                          | Type     | Default                         | Description                                                                                               |
+| ------------------------------------ | ----------------------------------- | -------- | ------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `BUILTIN_NAB_SEARCH_TIMEOUT`         | NAB › Search Timeout                | number   | `30000`                         | Timeout for Newznab/Torznab search calls.                                                                 |
+| `BUILTIN_NAB_SEARCH_CACHE_TTL`       | NAB › Search Cache TTL              | duration | `604800`                        | Cache TTL for Newznab/Torznab search results.                                                             |
+| `BUILTIN_NAB_EMPTY_RESULT_CACHE_TTL` | NAB › Empty Result Cache TTL        | duration | `1800`                          | Cache TTL for Newznab/Torznab searches that returned zero results. Set to 0 to never cache empty results. |
+| `BUILTIN_NAB_CAPABILITIES_CACHE_TTL` | NAB › Capabilities Cache TTL        | duration | `1209600`                       | Cache TTL for Newznab/Torznab capabilities responses.                                                     |
+| `BUILTIN_NAB_MAX_PAGES`              | NAB › Max Pages                     | number   | `5`                             | Maximum pages to fetch when paginating Newznab/Torznab results.                                           |
+| `ZYCLOPS_HEALTH_PROXY_ENDPOINT`      | NAB › Zyclops Health Proxy Endpoint | string   | `https://zyclops.elfhosted.com` | Base URL of the Zyclops health proxy used by the Newznab preset.                                          |
 
 #### Zilean
 

@@ -599,6 +599,17 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    emptyResultCacheTtl: {
+      schema: seconds,
+      default: 1800,
+      label: 'Newznab/Torznab empty result cache TTL (s)',
+      env: 'BUILTIN_NAB_EMPTY_RESULT_CACHE_TTL',
+      description:
+        'Cache TTL for Newznab/Torznab searches that returned zero results. ' +
+        'Set to 0 to never cache empty results.',
+      requiresRestart: false,
+      secret: false,
+    },
     capabilitiesCacheTtl: {
       schema: seconds,
       default: 14 * Day,
