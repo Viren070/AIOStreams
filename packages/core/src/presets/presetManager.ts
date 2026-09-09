@@ -71,6 +71,7 @@ import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
 import { TheRARBGPreset } from './therarbg.js';
 import { ThePirateBayPreset } from './thePirateBay.js';
+import { TsukihimePreset } from './tsukihime.js';
 import { BitmagnetPreset } from './bitmagnet.js';
 import { BrazucaTorrentsPreset } from './brazucaTorrents.js';
 import { SootioPreset } from './sootio.js';
@@ -103,6 +104,7 @@ let PRESET_LIST: string[] = [
   'eztv',
   'therarbg',
   'the-pirate-bay',
+  'tsukihime',
   'torrent-galaxy',
   'bitmagnet',
   'seadex',
@@ -335,6 +337,8 @@ export class PresetManager {
         return TheRARBGPreset;
       case 'the-pirate-bay':
         return ThePirateBayPreset;
+      case 'tsukihime':
+        return TsukihimePreset;
       case 'bitmagnet':
         return BitmagnetPreset;
       case 'seadex':
