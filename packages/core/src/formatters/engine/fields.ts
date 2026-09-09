@@ -39,6 +39,8 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'uWedontknowwhatakilometeris',
     'visualTags',
     'audioTags',
+    'audioTitles',
+    'subtitleTitles',
     'releaseGroup',
     'regexMatched',
     'rankedRegexMatched',
