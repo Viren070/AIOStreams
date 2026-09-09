@@ -55,6 +55,11 @@ export type TabsProps = React.ComponentPropsWithoutRef<
      * active state through `triggerClass`, which this cannot read.
      */
     indicatorClass?: string;
+    /**
+     * Off, the marker is the static active style. Needed inside anything that
+     * moves on reflow, such as a centred modal, or the slide replays each time.
+     */
+    animated?: boolean;
   };
 
 export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
@@ -66,6 +71,7 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
       contentClass,
       variant = 'underline',
       indicatorClass,
+      animated = true,
       value: valueProp,
       defaultValue,
       onValueChange,
@@ -93,8 +99,9 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
     // into each other.
     const uniqueId = React.useId();
     const layoutId = React.useMemo(
-      () => `tab-indicator-${uniqueId.replace(/:/g, '')}`,
-      [uniqueId]
+      () =>
+        animated ? `tab-indicator-${uniqueId.replace(/:/g, '')}` : undefined,
+      [uniqueId, animated]
     );
 
     return (
