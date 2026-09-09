@@ -256,6 +256,24 @@ export function BackgroundOptimization() {
           }}
         />
       </SettingsCard>
+
+      <SettingsCard
+        title="RemuxDB"
+        id="remuxDb"
+        description="Backfill probe data (audio/subtitle languages, channels, HDR, resolution) from RemuxDB."
+      >
+        <Switch
+          label="Enable"
+          side="right"
+          value={userData.remuxDb?.enabled ?? false}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              remuxDb: { ...prev.remuxDb, enabled: value },
+            }));
+          }}
+        />
+      </SettingsCard>
     </>
   );
 }

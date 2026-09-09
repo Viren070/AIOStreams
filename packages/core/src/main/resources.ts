@@ -17,6 +17,7 @@ import { FeatureControl } from '../utils/feature.js';
 import { StreamContext, StreamUtils } from '../streams/index.js';
 import { buildPlayChain, type FailoverContentType } from './play-chain.js';
 import { resolveServiceWrappedStreams } from './serviceWrapper.js';
+import { resolveRemuxDbMediaInfo } from '../remuxdb/wrap.js';
 import type { ServiceWrapServiceTiming } from './serviceWrapper.js';
 import type { PrecomputeSubTimings } from '../streams/precomputer.js';
 import { StreamSelector } from '../parser/streamExpression.js';
@@ -256,6 +257,7 @@ export async function processStreams(
     metaFilterMs: number;
     serviceWrapMs: number;
     serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+    remuxDbMs: number;
     filterMs: number;
     deduplicationMs: number;
     precomputeMs: number;
@@ -272,6 +274,7 @@ export async function processStreams(
   let metaFilterMs = 0;
   let serviceWrapMs = 0;
   let serviceWrapTimings: Record<string, ServiceWrapServiceTiming> | undefined;
+  let remuxDbMs = 0;
   let filterMs = 0;
   let deduplicationMs = 0;
   let precomputeMs = 0;
@@ -308,10 +311,16 @@ export async function processStreams(
     filterMs = Date.now() - filterStart;
   }
 
-  // The fetcher path already blocklist-filtered its streams; this pass only
-  // covers streams that appeared after it (meta requests and service
-  // wrapping), and runs before dedup for the same failover-variant reason.
+  // Fetcher path already did this; only meta/service-wrap streams bypass it.
   if (isMeta || resolvedResults.hasNewStreams) {
+    const remuxDbStart = Date.now();
+    processedStreams = await resolveRemuxDbMediaInfo(
+      processedStreams,
+      context,
+      ctx.userData
+    );
+    remuxDbMs = Date.now() - remuxDbStart;
+
     processedStreams = await ctx.filterer.filterBlocklisted(processedStreams);
   }
 
@@ -476,6 +485,7 @@ export async function processStreams(
       metaFilterMs,
       serviceWrapMs,
       serviceWrapTimings,
+      remuxDbMs,
       filterMs,
       deduplicationMs,
       precomputeMs,
@@ -721,6 +731,7 @@ export async function getStreams(
     errors,
     statistics: addonStatistics,
     dispositions,
+    remuxDbMs: fetcherRemuxDbMs,
   } = await ctx.fetcher.fetch(supportedAddons, context);
   const fetchMs = Date.now() - fetchStart;
 
@@ -785,6 +796,7 @@ export async function getStreams(
   );
   let finalStreams = processResults.streams;
   const pipelineTimings = processResults.timings;
+  pipelineTimings.remuxDbMs += fetcherRemuxDbMs;
   errors.push(...processResults.errors);
 
   if (FeatureControl.disabledStreamTypes.size > 0) {

@@ -2,6 +2,7 @@ export * from './base.js';
 export * from './builtin.js';
 export * from './mediaflow.js';
 export * from './stremthru.js';
+export * from './token.js';
 
 import { constants } from '../utils/index.js';
 import { BaseProxy } from './base.js';
