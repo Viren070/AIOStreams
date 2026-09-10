@@ -30,6 +30,10 @@ import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
+import {
+  getAnimeSeasonEpisodeMapping,
+  reconcileAnimeSeasonEpisode,
+} from '../parser/anime-season-episode.js';
 
 const logger = createLogger('filterer');
 
@@ -467,6 +471,37 @@ class StreamFilterer {
         );
         stream.parsedFile.title = reconciled.title;
         stream.parsedFile.year = reconciled.year;
+      }
+    }
+
+    const animeSeasonMapping =
+      isAnime &&
+      type === 'series' &&
+      !context.animeEntry?.imdb?.nonImdbEpisodes?.length
+        ? getAnimeSeasonEpisodeMapping(
+            Number(parsedId?.season),
+            Number(parsedId?.episode),
+            requestedMetadata
+          )
+        : undefined;
+    if (animeSeasonMapping) {
+      for (const stream of streams) {
+        if (!stream.parsedFile) continue;
+        const reconciled = reconcileAnimeSeasonEpisode(
+          stream.parsedFile,
+          stream.filename,
+          animeSeasonMapping
+        );
+        if (reconciled !== stream.parsedFile) {
+          logger.debug('Reconciled anime season/absolute episode filename', {
+            filename: stream.filename,
+            season: reconciled.seasons?.[0],
+            episode: reconciled.episodes?.[0],
+            absoluteEpisode:
+              reconciled.episodes![0] + animeSeasonMapping.offset,
+          });
+          stream.parsedFile = reconciled;
+        }
       }
     }
 
@@ -2231,6 +2266,22 @@ class StreamFilterer {
           const pad = (n: number) => n.toString().padStart(2, '0');
           const s = stream.parsedFile?.seasons;
           const e = stream.parsedFile?.episodes;
+          if (
+            isAnime &&
+            requestedMetadata?.absoluteEpisode &&
+            s?.includes(Number(parsedId?.season)) &&
+            e?.includes(requestedMetadata.absoluteEpisode)
+          ) {
+            logger.debug('Rejected anime season/absolute episode candidate', {
+              filename: stream.filename,
+              folderName: stream.folderName,
+              seasons: s,
+              episodes: e,
+              requestedEpisode: Number(parsedId?.episode),
+              absoluteEpisode: requestedMetadata.absoluteEpisode,
+              hasSeasonMapping: !!animeSeasonMapping,
+            });
+          }
           const formattedSeasonString = s?.length
             ? `S${pad(s[0])}${s.length > 1 ? `-${pad(s[s.length - 1])}` : ''}`
             : undefined;
