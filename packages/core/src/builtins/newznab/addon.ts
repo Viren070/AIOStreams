@@ -17,6 +17,7 @@ import {
   NabAddonConfig,
   parseNabParsedFileInfo,
 } from '../base/nab/addon.js';
+import { ageInHoursSince } from '../utils/general.js';
 import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 import type { BuiltinServiceId } from '../../utils/index.js';
 import type { Stream } from '../../db/index.js';
@@ -185,10 +186,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       if (typeof result.newznab?.usenetdate === 'string') {
         date = result.newznab.usenetdate;
       }
-      const age = Math.ceil(
-        Math.abs(new Date().getTime() - new Date(date).getTime()) /
-          (1000 * 60 * 60)
-      );
+      const age = ageInHoursSince(date);
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.newznab?.language,
         subtitleLanguages: result.newznab?.subs,
