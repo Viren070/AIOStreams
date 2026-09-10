@@ -262,6 +262,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
         title: result.title,
         size: result.size,
         indexer: result.indexer,
+        age: result.ageHours >= 0 ? Math.ceil(result.ageHours) : undefined,
         type: 'torrent',
       });
     }
@@ -287,7 +288,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       nzbs.push({
         hash,
         nzb: nzbUrl,
-        age: Math.ceil(result.age * 24),
+        age: result.ageHours >= 0 ? Math.ceil(result.ageHours) : undefined,
         title: result.title,
         size: result.size,
         indexer: result.indexer,
