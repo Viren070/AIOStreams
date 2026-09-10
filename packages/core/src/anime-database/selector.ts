@@ -43,12 +43,16 @@ function advertisedSeasonOf(r: AnimeRecord): number {
  *   - season >= 1: keep TV, plus non-TV cours advertising a season > 1, plus
  *     non-TV cours advertising exactly the requested season as long as no TV
  *     record claims that season too.
+ *   - IMDb lookups also retain records mapped to a positive IMDb season at
+ *     or before the request, so the scorer can resolve multi-season OVAs and
+ *     split cours before falling back to other providers' season numbers.
  *
  * Returns the original list if filtering would empty it.
  */
 export function filterCandidatesBySeasonType(
   candidates: AnimeRecord[],
-  season?: number
+  season?: number,
+  idType?: IdType
 ): AnimeRecord[] {
   if (candidates.length <= 1) return candidates;
   const tvClaimsSeason =
@@ -61,6 +65,17 @@ export function filterCandidatesBySeasonType(
     if (season === undefined) return r.type === AnimeType.MOVIE;
     if (season === 0) {
       return [AnimeType.SPECIAL, AnimeType.OVA, AnimeType.ONA].includes(r.type);
+    }
+    // A type label or another provider's season number must not discard an
+    // IMDb-mapped cour before the IMDb exact/range scorer can consider it.
+    // Season 0 describes specials, not the beginning of a regular-season run.
+    if (
+      idType === 'imdbId' &&
+      typeof r.imdb?.fromSeason === 'number' &&
+      r.imdb.fromSeason > 0 &&
+      r.imdb.fromSeason <= season
+    ) {
+      return true;
     }
     if (r.type !== AnimeType.TV) {
       const advertisedSeason = advertisedSeasonOf(r);
