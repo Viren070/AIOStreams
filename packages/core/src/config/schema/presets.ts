@@ -155,6 +155,13 @@ export const presetsSchema = {
       },
     },
   }),
+  torrentclaw: basicPreset({
+    label: 'TorrentClaw',
+    default: ['https://addon.torrentclaw.com/api/stremio'],
+    envBase: 'TORRENTCLAW_URL',
+    timeoutEnv: 'DEFAULT_TORRENTCLAW_TIMEOUT',
+    userAgentEnv: 'DEFAULT_TORRENTCLAW_USER_AGENT',
+  }),
   meteor: basicPreset({
     label: 'Meteor',
     default: ['https://meteorfortheweebs.midnightignite.me'],
