@@ -26,7 +26,7 @@ import {
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
-import { formatBitrate, formatBytes } from '../formatters/utils.js';
+import { formatBitrate, formatBytes, formatHours } from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
@@ -544,9 +544,23 @@ class StreamFilterer {
       });
     }
 
-    const applyDigitalReleaseFilter = (): boolean => {
+    const isDigitalReleaseExempt = (stream: ParsedStream): boolean => {
+      const config = this.userData.digitalReleaseFilter;
+      if (shouldPassthroughStage(stream, 'digitalRelease')) return true;
+      if (
+        config?.addons?.length &&
+        stream.addon.preset.id &&
+        !config.addons.includes(stream.addon.preset.id)
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const applyDigitalReleaseFilter = (stream?: ParsedStream): boolean => {
       const config = this.userData.digitalReleaseFilter;
       if (!config?.enabled) return true;
+      if (stream && isDigitalReleaseExempt(stream)) return true;
 
       // Preconditions: check content type is in scope
       const filterRequestTypes = config.requestTypes;
@@ -590,6 +604,18 @@ class StreamFilterer {
           : null;
       const daysSinceEpisode = epDate ? daysBetween(epDate, today) : null;
       const epLabel = `S${parsedId?.season}E${parsedId?.episode}`;
+
+      const referenceDateForAge = isSeries ? epDate : releaseDate;
+      const hoursSinceReference = referenceDateForAge
+        ? (today.getTime() - referenceDateForAge.getTime()) / (1000 * 60 * 60)
+        : null;
+      const streamPredatesRelease =
+        !!config.checkResultAge &&
+        !!stream &&
+        stream.age !== undefined &&
+        hoursSinceReference !== null &&
+        hoursSinceReference >= 0 &&
+        stream.age > hoursSinceReference + tolerance * 24;
 
       // Digital release dates (TMDB types 4-6: Digital, Physical, TV)
       const digitalDates = (releaseDates ?? []).filter(
@@ -644,6 +670,13 @@ class StreamFilterer {
         level?: 'debug' | 'info';
       };
       const rules: FilterRule[] = [
+        {
+          when: () => streamPredatesRelease,
+          allow: false,
+          level: 'info',
+          reason: () =>
+            `Result age (${formatHours(stream!.age!)}) predates ${isSeries ? `episode ${epLabel}` : `"${title}"`}'s ${isSeries ? 'air date' : 'release'} (${formatDate(referenceDateForAge!)})`,
+        },
         // General
         {
           when: () => daysSinceRelease < -tolerance,
@@ -1209,24 +1242,7 @@ class StreamFilterer {
     // Early digital release filter check - if it returns false, filter out streams
     // except those with passthrough for 'digitalRelease' stage or those from addons not in the filter list
     if (!applyDigitalReleaseFilter()) {
-      const digitalReleaseFilterAddons =
-        this.userData.digitalReleaseFilter?.addons;
-      const passthroughDigitalRelease = streams.filter((stream) => {
-        // Check if stream has passthrough for this stage
-        if (shouldPassthroughStage(stream, 'digitalRelease')) {
-          return true;
-        }
-        // If addons filter is set and stream is not from a filtered addon, bypass
-        if (
-          digitalReleaseFilterAddons &&
-          digitalReleaseFilterAddons.length > 0 &&
-          stream.addon.preset.id &&
-          !digitalReleaseFilterAddons.includes(stream.addon.preset.id)
-        ) {
-          return true;
-        }
-        return false;
-      });
+      const passthroughDigitalRelease = streams.filter(isDigitalReleaseExempt);
       const filteredCount = streams.length - passthroughDigitalRelease.length;
       if (filteredCount > 0) {
         this.filterStatistics.removed.noDigitalRelease.total = filteredCount;
@@ -1444,6 +1460,14 @@ class StreamFilterer {
     };
 
     const shouldKeepStream = (stream: ParsedStream): boolean => {
+      if (!applyDigitalReleaseFilter(stream)) {
+        this.incrementRemovalReason(
+          'noDigitalRelease',
+          'No digital release available'
+        );
+        return false;
+      }
+
       const file = stream.parsedFile;
 
       const isPendingServiceWrapResolution = isServiceWrapEligibleP2PStream(
