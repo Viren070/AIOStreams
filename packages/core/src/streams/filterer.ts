@@ -577,7 +577,7 @@ class StreamFilterer {
       }
       if (!['movie', 'series', 'anime'].includes(type)) return true;
 
-      const isSeries = type === 'series';
+      const isSeries = type === 'series' || type === 'anime';
 
       // Movies have no other date signal, so they still require this. Series
       // rely on the episode date below instead, with or without this one.
