@@ -500,7 +500,8 @@ export class MetadataService {
             };
 
             if (
-              !merged.nextAirDate &&
+              (!merged.nextAirDate ||
+                (this.config.preferredSources ?? []).includes('tmdbEpisode')) &&
               type === 'series' &&
               id.season &&
               id.episode
