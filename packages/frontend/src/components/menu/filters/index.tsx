@@ -4040,7 +4040,7 @@ function Content() {
                 <SettingsCard
                   id="digitalReleaseFilter"
                   title="Digital Release Filter"
-                  description="This will filter out all results for movies that are determined to not have a digital release."
+                  description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime)."
                 >
                   <Switch
                     label="Enabled"
