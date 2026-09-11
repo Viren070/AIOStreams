@@ -26,7 +26,11 @@ import {
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
-import { formatBitrate, formatBytes, formatHours } from '../formatters/utils.js';
+import {
+  formatBitrate,
+  formatBytes,
+  formatHours,
+} from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
@@ -573,11 +577,16 @@ class StreamFilterer {
       }
       if (!['movie', 'series', 'anime'].includes(type)) return true;
 
-      // Parse and validate release date (required for all subsequent rules)
+      const isSeries = type === 'series';
+
+      // Movies have no other date signal, so they still require this. Series
+      // rely on the episode date below instead, with or without this one.
       const releaseDate = requestedMetadata?.releaseDate
         ? new Date(requestedMetadata.releaseDate)
         : null;
-      if (!releaseDate || isNaN(releaseDate.getTime())) {
+      const validReleaseDate =
+        releaseDate && !isNaN(releaseDate.getTime()) ? releaseDate : null;
+      if (!isSeries && !validReleaseDate) {
         logger.debug(
           `[DigitalReleaseFilter] No valid release date for "${requestedMetadata?.title}", allowing`
         );
@@ -591,8 +600,9 @@ class StreamFilterer {
       const daysBetween = (from: Date, to: Date) =>
         Math.floor((to.getTime() - from.getTime()) / msPerDay);
       const title = requestedMetadata?.title;
-      const daysSinceRelease = daysBetween(releaseDate, today);
-      const isSeries = type === 'series' || type === 'anime';
+      const daysSinceRelease = validReleaseDate
+        ? daysBetween(validReleaseDate, today)
+        : NaN;
 
       // Episode air date (series/anime only)
       const epDateStr = isSeries
@@ -646,7 +656,7 @@ class StreamFilterer {
         });
 
       logger.debug(`[DigitalReleaseFilter] Evaluating "${title}"`, {
-        releaseDate: formatDate(releaseDate),
+        releaseDate: validReleaseDate ? formatDate(validReleaseDate) : 'N/A',
         daysSinceRelease,
         isSeries,
         episodeAirDate: epDate ? formatDate(epDate) : 'N/A',
