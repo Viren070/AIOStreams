@@ -381,7 +381,7 @@ export class AnimeDatabase {
     const candidates = await AnimeRepository.findCandidates(idType, idValue);
     let entry: AnimeEntry | null = null;
     if (candidates.length > 0) {
-      const filtered = filterCandidatesBySeasonType(candidates, season);
+      const filtered = filterCandidatesBySeasonType(candidates, season, idType);
       const chosen = selectBestRecord(
         filtered,
         idType,
