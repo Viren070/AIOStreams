@@ -15,7 +15,7 @@ export function resolvePreferredSources(
     metadataProvider?.[bucket] ?? metadataProvider?.global ?? 'default';
   switch (choice) {
     case 'tmdb':
-      return ['tmdb'];
+      return ['tmdb', 'tmdbEpisode'];
     case 'tvdb':
       return ['tvdb'];
     case 'imdb':
