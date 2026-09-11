@@ -480,7 +480,8 @@ export class MetadataService {
               getTmdbEpisode(id, animeEntry, merged.seasons ?? []);
 
             if (
-              !merged.nextAirDate &&
+              (!merged.nextAirDate ||
+                (this.config.preferredSources ?? []).includes('tmdbEpisode')) &&
               type === 'series' &&
               id.season &&
               id.episode
