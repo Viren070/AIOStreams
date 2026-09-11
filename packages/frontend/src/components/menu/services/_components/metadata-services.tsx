@@ -2,9 +2,24 @@ import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
 import { SettingsCard } from '../../../shared/settings-card';
 import { PasswordInput } from '../../../ui/password-input';
+import { Select } from '../../../ui/select';
 
 const INSTANCE_DEFAULT_PLACEHOLDER =
   'Provided by this instance (enter your own to override)';
+
+const METADATA_PROVIDER_OPTIONS = [
+  { label: 'Default', value: 'default' },
+  { label: 'TMDB', value: 'tmdb' },
+  { label: 'TVDB', value: 'tvdb' },
+  { label: 'IMDb', value: 'imdb' },
+];
+
+const METADATA_PROVIDER_BUCKETS = [
+  { key: 'global', label: 'Global' },
+  { key: 'movies', label: 'Movies' },
+  { key: 'series', label: 'Series' },
+  { key: 'anime', label: 'Anime' },
+] as const;
 
 export function MetadataServices() {
   const { status } = useStatus();
@@ -114,6 +129,38 @@ export function MetadataServices() {
             setUserData((prev) => ({ ...prev, tvdbApiKey: value }));
           }}
         />
+      </SettingsCard>
+
+      <SettingsCard
+        id="metadataProvider"
+        title="Metadata Provider Preference"
+        description="Controls which source (TMDB/TVDB/Cinemeta) wins when they disagree on a title's year, air dates, or episode numbering. Default reconciles them automatically; if your client's catalog/metadata addon numbers seasons differently (e.g. TVDB vs IMDb), matching that provider here keeps AIOStreams' search and filtering consistent with what you see. TMDB/TVDB need the matching API key above (Kitsu/MyAnimeList aren't used as metadata sources here, only for anime ID mapping)."
+      >
+        {METADATA_PROVIDER_BUCKETS.map(({ key, label }) => (
+          <Select
+            key={key}
+            label={label}
+            placeholder={key === 'global' ? undefined : 'Default (use Global)'}
+            value={
+              key === 'global'
+                ? (userData.metadataProvider?.global ?? 'default')
+                : (userData.metadataProvider?.[key] ?? '')
+            }
+            options={METADATA_PROVIDER_OPTIONS}
+            onValueChange={(value) => {
+              setUserData((prev) => ({
+                ...prev,
+                metadataProvider: {
+                  ...(prev.metadataProvider ?? { global: 'default' }),
+                  [key]:
+                    value === ''
+                      ? undefined
+                      : (value as 'default' | 'tmdb' | 'tvdb' | 'imdb'),
+                },
+              }));
+            }}
+          />
+        ))}
       </SettingsCard>
     </>
   );

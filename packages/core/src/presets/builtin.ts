@@ -283,6 +283,7 @@ export class BuiltinAddonPreset extends Preset {
       tmdbReadAccessToken: userData.tmdbAccessToken,
       tmdbApiKey: userData.tmdbApiKey,
       tvdbApiKey: userData.tvdbApiKey,
+      metadataProvider: userData.metadataProvider,
       services: services.map((service) => ({
         id: service,
         credential: this.getServiceCredential(service, userData),

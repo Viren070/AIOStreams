@@ -1486,6 +1486,8 @@ export const SORT_CRITERIA_DETAILS: Record<
 
 const SORT_DIRECTIONS = ['asc', 'desc'] as const;
 
+const METADATA_PROVIDERS = ['default', 'tmdb', 'tvdb', 'imdb'] as const;
+
 export const P2P_STREAM_TYPE = 'p2p' as const;
 export const LIVE_STREAM_TYPE = 'live' as const;
 export const STREMIO_USENET_STREAM_TYPE = 'stremio-usenet' as const;
@@ -1756,6 +1758,7 @@ export {
   PASSTHROUGH_STAGES,
   SORT_CRITERIA,
   SORT_DIRECTIONS,
+  METADATA_PROVIDERS,
   STREAM_TYPES,
   LANGUAGES,
   RESOURCES,

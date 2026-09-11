@@ -88,6 +88,15 @@ const SortCriterion = z.object({
 
 export type SortCriterion = z.infer<typeof SortCriterion>;
 
+export const MetadataProviderSchema = z.object({
+  global: z.enum(constants.METADATA_PROVIDERS).default('default'),
+  movies: z.enum(constants.METADATA_PROVIDERS).optional(),
+  series: z.enum(constants.METADATA_PROVIDERS).optional(),
+  anime: z.enum(constants.METADATA_PROVIDERS).optional(),
+});
+
+export type MetadataProviderPreference = z.infer<typeof MetadataProviderSchema>;
+
 const StreamTypes = z.enum(constants.STREAM_TYPES);
 const Languages = z.enum(constants.LANGUAGES);
 
@@ -885,6 +894,7 @@ export const UserDataSchema = z.object({
   tmdbAccessToken: z.string().optional(),
   tmdbApiKey: z.string().optional(),
   tvdbApiKey: z.string().optional(),
+  metadataProvider: MetadataProviderSchema.optional(),
   yearMatching: z
     .object({
       enabled: z.boolean().optional(),

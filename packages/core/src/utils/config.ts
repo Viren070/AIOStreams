@@ -1485,7 +1485,7 @@ const PROXY_FIELDS: (keyof UserData)[] = [
 
 // prettier-ignore
 const METADATA_FIELDS: (keyof UserData)[] = [
-  'tmdbApiKey', 'tmdbAccessToken', 'tvdbApiKey',
+  'tmdbApiKey', 'tmdbAccessToken', 'tvdbApiKey', 'metadataProvider',
   'rpdbApiKey', 'topPosterApiKey', 'aioratingsApiKey', 'aioratingsProfileId',
   'openposterdbApiKey', 'openposterdbUrl', 'openposterdbParameters', 'posterService',
   'usePosterRedirectApi', 'usePosterServiceForMeta',
