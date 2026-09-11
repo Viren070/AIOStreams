@@ -1,5 +1,6 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import { MetadataService } from '../metadata/service.js';
+import { resolvePreferredSources } from '../metadata/preference.js';
 import { Metadata } from '../metadata/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
 import {
@@ -192,6 +193,11 @@ export class StreamContext {
           tmdbAccessToken: this.userData.tmdbAccessToken,
           tmdbApiKey: this.userData.tmdbApiKey,
           tvdbApiKey: this.userData.tvdbApiKey,
+          preferredSources: resolvePreferredSources(
+            this.userData.metadataProvider,
+            this.type === 'movie' ? 'movie' : 'series',
+            this.isAnime
+          ),
         });
 
         const metadata = await service.getMetadata(

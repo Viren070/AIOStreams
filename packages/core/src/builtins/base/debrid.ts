@@ -2,6 +2,7 @@
   CacheAndPlaySchema,
   Manifest,
   Meta,
+  MetadataProviderSchema,
   NNTPServersSchema,
   Stream,
 } from '../../db/schemas.js';
@@ -44,6 +45,7 @@ import {
   isPredominantlyLatin,
 } from '../utils/general.js';
 import { MetadataService } from '../../metadata/service.js';
+import { resolvePreferredSources } from '../../metadata/preference.js';
 import { MetadataTitle, TitleConflict } from '../../metadata/utils.js';
 import { stripTitleDisambiguators } from '../../metadata/conflicts.js';
 import { countryToReleaseTag } from '../../utils/countries.js';
@@ -81,6 +83,7 @@ export const BaseDebridConfigSchema = z.object({
   tmdbApiKey: z.string().optional(),
   tmdbReadAccessToken: z.string().optional(),
   tvdbApiKey: z.string().optional(),
+  metadataProvider: MetadataProviderSchema.optional(),
   cacheAndPlay: CacheAndPlaySchema.optional(),
   autoRemoveDownloads: z.boolean().optional(),
   checkOwned: z.boolean().optional().default(true),
@@ -689,6 +692,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       tmdbAccessToken: this.userData.tmdbReadAccessToken,
       tmdbApiKey: this.userData.tmdbApiKey,
       tvdbApiKey: this.userData.tvdbApiKey,
+      preferredSources: resolvePreferredSources(
+        this.userData.metadataProvider,
+        type === 'movie' ? 'movie' : 'series',
+        !!animeEntry
+      ),
     }).getMetadata(parsedId, type === 'movie' ? 'movie' : 'series');
 
     // Calculate absolute episode if needed
