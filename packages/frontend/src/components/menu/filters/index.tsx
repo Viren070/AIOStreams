@@ -4101,6 +4101,22 @@ function Content() {
                     </div>
                   </div>
                   <p className="text-sm text-[--muted]">Tolerance in days</p>
+                  <Switch
+                    label="Also Check Result Age"
+                    side="right"
+                    disabled={!userData.digitalReleaseFilter?.enabled}
+                    value={userData.digitalReleaseFilter?.checkResultAge ?? false}
+                    moreHelp="Blocks results uploaded before the release/air date (beyond tolerance). Only works when a result's age is known."
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        digitalReleaseFilter: {
+                          ...prev.digitalReleaseFilter,
+                          checkResultAge: value,
+                        },
+                      }));
+                    }}
+                  />
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Combobox

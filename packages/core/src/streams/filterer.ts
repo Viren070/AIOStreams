@@ -26,7 +26,11 @@ import {
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
-import { formatBitrate, formatBytes } from '../formatters/utils.js';
+import {
+  formatBitrate,
+  formatBytes,
+  formatHours,
+} from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
@@ -544,9 +548,23 @@ class StreamFilterer {
       });
     }
 
-    const applyDigitalReleaseFilter = (): boolean => {
+    const isDigitalReleaseExempt = (stream: ParsedStream): boolean => {
+      const config = this.userData.digitalReleaseFilter;
+      if (shouldPassthroughStage(stream, 'digitalRelease')) return true;
+      if (
+        config?.addons?.length &&
+        stream.addon.preset.id &&
+        !config.addons.includes(stream.addon.preset.id)
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const applyDigitalReleaseFilter = (stream?: ParsedStream): boolean => {
       const config = this.userData.digitalReleaseFilter;
       if (!config?.enabled) return true;
+      if (stream && isDigitalReleaseExempt(stream)) return true;
 
       // Preconditions: check content type is in scope
       const filterRequestTypes = config.requestTypes;
@@ -559,11 +577,16 @@ class StreamFilterer {
       }
       if (!['movie', 'series', 'anime'].includes(type)) return true;
 
-      // Parse and validate release date (required for all subsequent rules)
+      const isSeries = type === 'series' || type === 'anime';
+
+      // Movies have no other date signal, so they still require this. Series
+      // rely on the episode date below instead, with or without this one.
       const releaseDate = requestedMetadata?.releaseDate
         ? new Date(requestedMetadata.releaseDate)
         : null;
-      if (!releaseDate || isNaN(releaseDate.getTime())) {
+      const validReleaseDate =
+        releaseDate && !isNaN(releaseDate.getTime()) ? releaseDate : null;
+      if (!isSeries && !validReleaseDate) {
         logger.debug(
           `[DigitalReleaseFilter] No valid release date for "${requestedMetadata?.title}", allowing`
         );
@@ -577,8 +600,9 @@ class StreamFilterer {
       const daysBetween = (from: Date, to: Date) =>
         Math.floor((to.getTime() - from.getTime()) / msPerDay);
       const title = requestedMetadata?.title;
-      const daysSinceRelease = daysBetween(releaseDate, today);
-      const isSeries = type === 'series' || type === 'anime';
+      const daysSinceRelease = validReleaseDate
+        ? daysBetween(validReleaseDate, today)
+        : NaN;
 
       // Episode air date (series/anime only)
       const epDateStr = isSeries
@@ -590,6 +614,18 @@ class StreamFilterer {
           : null;
       const daysSinceEpisode = epDate ? daysBetween(epDate, today) : null;
       const epLabel = `S${parsedId?.season}E${parsedId?.episode}`;
+
+      const referenceDateForAge = isSeries ? epDate : releaseDate;
+      const hoursSinceReference = referenceDateForAge
+        ? (today.getTime() - referenceDateForAge.getTime()) / (1000 * 60 * 60)
+        : null;
+      const streamPredatesRelease =
+        !!config.checkResultAge &&
+        !!stream &&
+        stream.age !== undefined &&
+        hoursSinceReference !== null &&
+        hoursSinceReference >= 0 &&
+        stream.age > hoursSinceReference + tolerance * 24;
 
       // Digital release dates (TMDB types 4-6: Digital, Physical, TV)
       const digitalDates = (releaseDates ?? []).filter(
@@ -620,7 +656,7 @@ class StreamFilterer {
         });
 
       logger.debug(`[DigitalReleaseFilter] Evaluating "${title}"`, {
-        releaseDate: formatDate(releaseDate),
+        releaseDate: validReleaseDate ? formatDate(validReleaseDate) : 'N/A',
         daysSinceRelease,
         isSeries,
         episodeAirDate: epDate ? formatDate(epDate) : 'N/A',
@@ -644,6 +680,13 @@ class StreamFilterer {
         level?: 'debug' | 'info';
       };
       const rules: FilterRule[] = [
+        {
+          when: () => streamPredatesRelease,
+          allow: false,
+          level: 'info',
+          reason: () =>
+            `Result age (${formatHours(stream!.age!)}) predates ${isSeries ? `episode ${epLabel}` : `"${title}"`}'s ${isSeries ? 'air date' : 'release'} (${formatDate(referenceDateForAge!)})`,
+        },
         // General
         {
           when: () => daysSinceRelease < -tolerance,
@@ -1209,24 +1252,7 @@ class StreamFilterer {
     // Early digital release filter check - if it returns false, filter out streams
     // except those with passthrough for 'digitalRelease' stage or those from addons not in the filter list
     if (!applyDigitalReleaseFilter()) {
-      const digitalReleaseFilterAddons =
-        this.userData.digitalReleaseFilter?.addons;
-      const passthroughDigitalRelease = streams.filter((stream) => {
-        // Check if stream has passthrough for this stage
-        if (shouldPassthroughStage(stream, 'digitalRelease')) {
-          return true;
-        }
-        // If addons filter is set and stream is not from a filtered addon, bypass
-        if (
-          digitalReleaseFilterAddons &&
-          digitalReleaseFilterAddons.length > 0 &&
-          stream.addon.preset.id &&
-          !digitalReleaseFilterAddons.includes(stream.addon.preset.id)
-        ) {
-          return true;
-        }
-        return false;
-      });
+      const passthroughDigitalRelease = streams.filter(isDigitalReleaseExempt);
       const filteredCount = streams.length - passthroughDigitalRelease.length;
       if (filteredCount > 0) {
         this.filterStatistics.removed.noDigitalRelease.total = filteredCount;
@@ -1444,6 +1470,14 @@ class StreamFilterer {
     };
 
     const shouldKeepStream = (stream: ParsedStream): boolean => {
+      if (!applyDigitalReleaseFilter(stream)) {
+        this.incrementRemovalReason(
+          'noDigitalRelease',
+          'No digital release available'
+        );
+        return false;
+      }
+
       const file = stream.parsedFile;
 
       const isPendingServiceWrapResolution = isServiceWrapEligibleP2PStream(
