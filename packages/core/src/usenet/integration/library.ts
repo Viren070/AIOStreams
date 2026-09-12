@@ -904,10 +904,19 @@ export async function clearUsenetLibrary(): Promise<void> {
   await UsenetLibraryRepository.clear();
 }
 
+/** Fold basename separators without dropping hashes, groups or numeric punctuation. */
+function normalisePlaybackBasename(filename: string): string {
+  return baseName(filename.replace(/\\/g, '/'))
+    .toLowerCase()
+    .replace(/(?<!\d)\.|\.(?!\d)/g, ' ')
+    .replace(/[_\s]+/g, ' ')
+    .trim();
+}
+
 /**
- * Pick the file to play. Honours an explicit `fileIndex`, short-circuits a
- * single-file NZB, and otherwise defers to the shared metadata-aware
- * {@link selectFileInTorrentOrNZB} scorer.
+ * Pick the file to play. Preserve a resolved `fileIndex` or `index`, then a
+ * unique clicked-basename match. Packs and ambiguous names defer to the shared
+ * metadata-aware {@link selectFileInTorrentOrNZB} scorer.
  */
 export async function selectStreamFile(
   playbackInfo: PlaybackInfo & { type: 'usenet' },
@@ -919,9 +928,29 @@ export async function selectStreamFile(
     const match = files.find((f) => f.index === playbackInfo.fileIndex);
     if (match) return match;
   }
+  // Builtins carry the selected file in `index`; -1 means the NZB had not
+  // been inspected yet, so only a real resolved-file index is authoritative.
+  if (
+    playbackInfo.index !== undefined &&
+    Number.isInteger(playbackInfo.index) &&
+    playbackInfo.index >= 0
+  ) {
+    const match = files.find((f) => f.index === playbackInfo.index);
+    if (match) return match;
+  }
   if (files.length === 1) return files[0];
 
   const title = playbackInfo.filename ?? filename;
+  const clickedBasename = normalisePlaybackBasename(title);
+  if (clickedBasename) {
+    const matches = files.filter(
+      (f) => f.name && normalisePlaybackBasename(f.name) === clickedBasename
+    );
+    // An unseen NZB can be named after one inner video even when the parser
+    // cannot extract its episode. Never guess between duplicate basenames.
+    if (matches.length === 1) return matches[0];
+  }
+
   const totalSize = files.reduce((s, f) => s + f.size, 0);
   const parsedFiles = new Map<string, ParsedResult>();
   for (const s of [title, ...files.map((f) => f.name ?? '')]) {
@@ -947,8 +976,7 @@ export async function selectStreamFile(
     nzbInfo,
     debridDownload,
     parsedFiles,
-    playbackInfo.metadata,
-    { chosenIndex: playbackInfo.fileIndex }
+    playbackInfo.metadata
   );
 }
 
