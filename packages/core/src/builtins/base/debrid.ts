@@ -464,6 +464,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     return [...resultStreams, ...errorStreams];
   }
 
+  /**
+   * Build deduplicated search queries from the selected titles and episode
+   * coordinates, prioritizing distinctive aliases when selection permits.
+   */
   protected buildQueries(
     parsedId: ParsedId,
     metadata: SearchMetadata,
@@ -480,7 +484,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       addSeasonEpisode: true,
       ...options,
     };
-    let queries: string[] = [];
+    const queries: string[] = [];
     if (!metadata.primaryTitle) {
       return [];
     }
@@ -520,19 +524,73 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         }
       }
       titles = [...selected];
-      // Always fall back to primary title if nothing matched
-      if (titles.length === 0) {
-        titles = [metadata.primaryTitle];
-      }
     } else if (options?.useAllTitles) {
       titles = (
         metadata.titlesWithLang ??
-        metadata.titles.map((title) => ({ title, language: undefined }))
+        (metadata.titles ?? []).map((title) => ({ title, language: undefined }))
       )
         .slice(0, appConfig.builtins.scrape.titleLimit)
         .map((t) => cleanTitle(t.title, t.language));
     } else {
       titles = [metadata.primaryTitle];
+    }
+
+    // Fall back for missing or empty alternative-title collections too.
+    if (titles.length === 0) titles = [metadata.primaryTitle];
+
+    // A colliding display name should not crowd out the original/scene name.
+    // Explicit language selections retain their existing meaning.
+    if (
+      parsedId.mediaType === 'series' &&
+      addSeasonEpisode &&
+      metadata.titleConflicts?.length &&
+      (!titleLangs?.length ||
+        titleLangs.some((lang) => lang === 'default' || lang === 'all'))
+    ) {
+      const primary = normaliseTitle(
+        cleanTitle(
+          stripTitleDisambiguators(
+            metadata.titles?.[0] ?? metadata.primaryTitle
+          )
+        )
+      );
+      /**
+       * Select a distinct alias with language-aware spelling and an allowed
+       * script, skipping excluded originals in favor of later romanizations.
+       */
+      const firstUsableAlternative = (candidates: MetadataTitle[]) =>
+        candidates
+          .map(({ title, language }) => cleanTitle(title, language))
+          .find(
+            (title) =>
+              title &&
+              normaliseTitle(title) !== primary &&
+              (!appConfig.builtins.scrape.latinQueriesOnly ||
+                isPredominantlyLatin(title))
+          );
+      const alternatives = [
+        firstUsableAlternative(
+          metadata.originalLanguage
+            ? (metadata.titlesWithLang ?? []).filter(
+                (t) => t.language === metadata.originalLanguage
+              )
+            : []
+        ),
+        firstUsableAlternative(
+          (metadata.sceneTitles ?? []).map((title) => ({ title }))
+        ),
+      ].filter((title): title is string => !!title);
+      if (alternatives.length) {
+        // Reserve room for the existing selection before adding a second
+        // alternative; two aliases must not displace the primary query.
+        // Explicit language selections can exceed the general title limit.
+        titles = [
+          ...new Set([alternatives[0], ...titles, ...alternatives.slice(1)]),
+        ].slice(
+          0,
+          Math.max(titles.length, appConfig.builtins.scrape.titleLimit)
+        );
+      }
     }
 
     // Drop non-Latin-script titles from queries
@@ -577,7 +635,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           ) {
             // year tagging is language-agnostic
             for (const title of titles.slice(0, 2)) {
-              addVariant(`${title} ${year}`);
+              if (title !== String(year) && !title.endsWith(` ${year}`)) {
+                addVariant(`${title} ${year}`);
+              }
             }
           }
           const tag = countryToReleaseTag(metadata.country);
@@ -593,9 +653,29 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           }
         }
       }
-      const seriesTitles = variantTitles.length
-        ? [...titles, ...variantTitles]
-        : titles;
+      // Date-based series can also be uploaded with SxxExx numbering. Use the
+      // same scene alias for both formats, rather than only for the date query.
+      const allowImplicitSceneAlias =
+        !titleLangs?.length ||
+        titleLangs.some((lang) => ['default', 'all', 'scene'].includes(lang));
+      const sceneAlias =
+        allowImplicitSceneAlias && metadata.isDateBased
+          ? metadata.sceneTitles
+              ?.map((title) => cleanTitle(title))
+              .find(
+                (title) =>
+                  title &&
+                  (!appConfig.builtins.scrape.latinQueriesOnly ||
+                    isPredominantlyLatin(title))
+              )
+          : undefined;
+      const seriesTitles = [
+        ...new Set([
+          ...(sceneAlias ? [sceneAlias] : []),
+          ...titles,
+          ...variantTitles,
+        ]),
+      ];
 
       // season numbers are meaningless in release names when episodes are
       // numbered continuously across seasons
@@ -646,17 +726,33 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       if (metadata.isDateBased && metadata.episodeAirDate) {
         const [yyyy, mm, dd] = metadata.episodeAirDate.split('-');
         if (yyyy && mm && dd) {
-          const sceneAlias = metadata.sceneTitles?.[0];
           const dateTitles = sceneAlias
-            ? [...new Set([cleanTitle(sceneAlias), ...titles])]
+            ? [...new Set([sceneAlias, ...titles])]
             : titles;
-          addQuery(`${titlePlaceholder} ${yyyy} ${mm} ${dd}`, dateTitles);
+          // Drop an existing year suffix only when its untagged form is a
+          // known alias and the date would immediately repeat that year.
+          const knownTitles = new Set(
+            (metadata.titles ?? []).map((title) =>
+              normaliseTitle(cleanTitle(stripTitleDisambiguators(title)))
+            )
+          );
+          addQuery(
+            `${titlePlaceholder} ${yyyy} ${mm} ${dd}`,
+            dateTitles.map((title) => {
+              const base = title.endsWith(` ${yyyy}`)
+                ? title.slice(0, -5)
+                : undefined;
+              return base && knownTitles.has(normaliseTitle(base))
+                ? base
+                : title;
+            })
+          );
         }
       }
     } else {
       addQuery(titlePlaceholder);
     }
-    return queries;
+    return [...new Set(queries)];
   }
 
   protected abstract _searchTorrents(

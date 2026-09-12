@@ -1802,7 +1802,7 @@ function Content() {
                     ]}
                     defaultValue="keep"
                     value={userData.titleMatching?.ambiguousResults}
-                    help="What to do with results that can't be told apart from a same-name series (reboots and country variants, e.g. The Office UK vs US). 'discard' keeps only results whose year, country tag or episode title confirms the requested series."
+                    help="What to do with results that share a title or known alias with another series. 'discard' requires a distinguishing year, country tag or matching episode title, including for the older show. Distinctive titles remain unaffected; ambiguous releases without identifying tags may be removed even when correct."
                     onValueChange={(value) => {
                       setUserData((prev) => ({
                         ...prev,
