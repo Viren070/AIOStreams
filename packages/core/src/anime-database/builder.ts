@@ -28,7 +28,7 @@ const MAPPING_FIELDS: Array<keyof AnimeEntryMappings> = [
 export function buildAnimeEntry(record: AnimeRecord): AnimeEntry {
   const mappings: AnimeEntryMappings = {};
   for (const field of MAPPING_FIELDS) {
-    const value = record.ids[field];
+    const value = record.ids?.[field];
     if (value !== undefined && value !== null) {
       (mappings as Record<string, unknown>)[field] = value;
     }
