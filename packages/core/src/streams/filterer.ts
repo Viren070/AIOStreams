@@ -30,6 +30,9 @@ import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
+import { isLocalEpisodeWrong } from '../anime-database/episode-titles.js';
+import { isSeasonAbsoluteEpisodePairWrong } from '../anime-database/episode-pairs.js';
+import { parseTorrentTitleCached } from '../parser/title.js';
 
 const logger = createLogger('filterer');
 
@@ -450,6 +453,7 @@ class StreamFilterer {
         year: requestedMetadata.year,
         hasGenres: !!requestedMetadata.genres?.length,
         originalLanguage: originalLanguage,
+        daysSinceRelease: context.toExpressionContext().daysSinceRelease,
       });
     }
 
@@ -1116,6 +1120,47 @@ class StreamFilterer {
         requestedMetadata?.episodeAirDates?.length
       ) {
         return requestedMetadata.episodeAirDates.includes(parsedDate);
+      }
+
+      if (
+        stream.parsedFile &&
+        isSeasonAbsoluteEpisodePairWrong(stream.filename, stream.parsedFile, {
+          season: requestedSeason,
+          episode: requestedEpisode,
+          absoluteEpisode: requestedMetadata?.absoluteEpisode,
+        })
+      )
+        return false;
+
+      if (
+        stream.parsedFile &&
+        isLocalEpisodeWrong(stream.parsedFile, {
+          season: requestedSeason,
+          episode: requestedEpisode,
+          absoluteEpisode: requestedMetadata?.absoluteEpisode,
+          relativeAbsoluteEpisode: requestedMetadata?.relativeAbsoluteEpisode,
+          localEpisodeTitles: requestedMetadata?.localEpisodeTitles,
+        })
+      ) {
+        const folder = stream.folderName
+          ? parseTorrentTitleCached(stream.folderName)
+          : undefined;
+        if (
+          !folder ||
+          isLocalEpisodeWrong(
+            stream.parsedFile,
+            {
+              season: requestedSeason,
+              episode: requestedEpisode,
+              absoluteEpisode: requestedMetadata?.absoluteEpisode,
+              relativeAbsoluteEpisode:
+                requestedMetadata?.relativeAbsoluteEpisode,
+              localEpisodeTitles: requestedMetadata?.localEpisodeTitles,
+            },
+            folder
+          )
+        )
+          return false;
       }
 
       let seasons = stream.parsedFile?.seasons;

@@ -27,6 +27,7 @@ import {
 } from '../../debrid/index.js';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
+import { isLocalEpisodeWrong } from '../../anime-database/episode-titles.js';
 import {
   preprocessTitle,
   normaliseTitle,
@@ -309,7 +310,14 @@ async function processTorrentsForDebridService(
         filteredSeason++;
         continue;
       }
-      if (isEpisodeWrong(parsedTorrent, metadata)) {
+      if (
+        isEpisodeWrong(
+          parsedTorrent,
+          metadata,
+          torrent.title ?? magnetCheckResult?.name
+        ) ||
+        isLocalEpisodeWrong(parsedTorrent, metadata)
+      ) {
         filteredEpisode++;
         continue;
       }
@@ -445,7 +453,10 @@ export async function processTorrentsForP2P(
       if (isSeasonWrong(parsedTorrent, metadata)) {
         continue;
       }
-      if (isEpisodeWrong(parsedTorrent, metadata)) {
+      if (
+        isEpisodeWrong(parsedTorrent, metadata, torrent.title) ||
+        isLocalEpisodeWrong(parsedTorrent, metadata)
+      ) {
         continue;
       }
     }
@@ -690,7 +701,14 @@ async function processNZBsForDebridService(
       if (isSeasonWrong(parsedNzb, metadata)) {
         continue;
       }
-      if (isEpisodeWrong(parsedNzb, metadata)) {
+      if (
+        isEpisodeWrong(
+          parsedNzb,
+          metadata,
+          nzb.title ?? nzbCheckResult?.name
+        ) ||
+        isLocalEpisodeWrong(parsedNzb, metadata)
+      ) {
         continue;
       }
     }
