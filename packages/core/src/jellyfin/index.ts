@@ -9,4 +9,5 @@ export * from './memo.js';
 export * from './auth.js';
 export * from './label.js';
 export * from './library.js';
+export * from './show-episodes.js';
 export * from './segments/index.js';

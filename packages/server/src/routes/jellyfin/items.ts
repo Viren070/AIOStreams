@@ -21,6 +21,10 @@ import {
   identityFor,
   itemKeyFor,
   placeholderMediaSource,
+  airedEpisodeRefs,
+  rememberedShowEpisodes,
+  showEpisodesOf,
+  withPlayedCounts,
   isMemoFresh,
   resolveByItem,
   resolveByMediaSource,
@@ -41,6 +45,7 @@ import {
   type PlaybackMemo,
   type WatchStateRow,
   type SeasonGroup,
+  type UserItemDataDto,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
 import type { JellyfinRequestContext } from './context.js';
@@ -77,12 +82,28 @@ export async function decodeForRequest(
   return decodeItemId(raw, { catalogs: engine.getCatalogs() ?? [] });
 }
 
+/** A show's aired episodes, from a meta this request already fetched or else the cache; never a new fetch. */
+async function airedEpisodesOf(
+  ctx: JellyfinRequestContext,
+  d: { t: string; i: string },
+  now: number
+): Promise<ContentRef[] | undefined> {
+  const pending = ctx.metas.get(`${d.t}|${d.i}`);
+  const meta = pending ? await pending : null;
+  const show = meta
+    ? showEpisodesOf(meta)
+    : await rememberedShowEpisodes(ctx.scope(), d.t, d.i);
+  return show ? airedEpisodeRefs(show, now) : undefined;
+}
+
 /** Batched user data for every content item in a list. */
 export async function attachUserData(
   ctx: JellyfinRequestContext,
   items: JellyfinItem[]
 ): Promise<JellyfinItem[]> {
   const keyed: { item: JellyfinItem; key: string; ref: ContentRef }[] = [];
+  const shows: Promise<ContentRef[] | undefined>[] = [];
+  const now = Date.now();
   for (const item of items) {
     const d = descriptorOf(item);
     if (
@@ -95,14 +116,33 @@ export async function attachUserData(
     )
       continue;
     keyed.push({ item, key: itemKeyOf(d), ref: contentRefOf(d) });
+    shows.push(
+      d.k === 'series' && item.Type === 'Series'
+        ? airedEpisodesOf(ctx, d, now)
+        : Promise.resolve(undefined)
+    );
   }
   if (!keyed.length) return items;
-  const rows = await watchRowsFor(
-    ctx.watch,
-    keyed.map((k) => k.ref)
-  );
-  for (const { item, key } of keyed) {
+  const episodes = await Promise.all(shows);
+  const rows = await watchRowsFor(ctx.watch, [
+    ...keyed.map((k) => k.ref),
+    ...episodes.flatMap((refs) => refs ?? []),
+  ]);
+  for (const [i, { item, key }] of keyed.entries()) {
     const row = rows.get(key);
+    const aired = episodes[i];
+    if (aired) {
+      const played = aired.filter((r) => rows.get(itemKeyFor(r))?.played);
+      item.UserData = withPlayedCounts(
+        {
+          ...(item.UserData as UserItemDataDto),
+          ...(row ? { IsFavorite: row.favorite } : {}),
+        },
+        played.length,
+        aired.length
+      );
+      continue;
+    }
     if (!row) continue;
     if (item.Type === 'Series' || item.Type === 'BoxSet') {
       item.UserData = {
