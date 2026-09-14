@@ -43,7 +43,7 @@ router.get(
     const provideSetting = appConfig.api.provideStreamData;
     const provideStreamData =
       provideSetting === null
-        ? (req.headers['user-agent']?.includes('AIOStreams/') ?? false)
+        ? (req.headers['user-agent']?.startsWith('AIO') ?? false)
         : typeof provideSetting === 'boolean'
           ? provideSetting
           : provideSetting.includes(req.requestIp || '');

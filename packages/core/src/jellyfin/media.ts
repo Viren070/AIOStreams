@@ -195,8 +195,24 @@ const STREAM_FLAGS = {
   IsExternal: false,
   IsInterlaced: false,
   IsHearingImpaired: false,
+  IsOriginal: false,
   SupportsExternalStream: false,
 };
+
+/* Jellyfin has no field for commentary, dubs or audio description, so the title carries them. */
+function trackFlagLabels(track: MediaTrack): string[] {
+  const title = track.title?.toLowerCase() ?? '';
+  return [
+    track.forced && 'Forced',
+    track.hearingImpaired && 'Hearing Impaired',
+    track.original && 'Original',
+    track.dub && 'Dub',
+    track.commentary && 'Commentary',
+    track.visualImpaired && 'Audio Description',
+  ].filter(
+    (label): label is string => !!label && !title.includes(label.toLowerCase())
+  );
+}
 
 function videoStream(
   pf: ParsedFile | undefined,
@@ -250,13 +266,15 @@ function audioStreams(
         Codec: track.codec ?? (tag ? AUDIO_CODEC[tag] : undefined),
         Language: track.lang ? languageToIso6392(track.lang) : undefined,
         DisplayTitle:
-          [track.lang, track.title, tag, channelTag]
+          [track.lang, track.title, tag, channelTag, ...trackFlagLabels(track)]
             .filter(Boolean)
             .join(' ') || 'Audio',
         Title: track.title,
         Channels: channelTag ? CHANNEL_COUNT[channelTag] : undefined,
         ChannelLayout: channelTag ? CHANNEL_LAYOUT[channelTag] : undefined,
         IsDefault: track.default ?? i === 0,
+        IsHearingImpaired: track.hearingImpaired ?? false,
+        IsOriginal: track.original ?? false,
         IsTextSubtitleStream: false,
       };
     });
@@ -312,10 +330,13 @@ function embeddedSubtitleStreams(
     Codec: track.codec,
     Language: track.lang ? languageToIso6392(track.lang) : undefined,
     DisplayTitle:
-      [track.lang, track.title].filter(Boolean).join(' - ') || 'Subtitle',
+      [track.lang, track.title, ...trackFlagLabels(track)]
+        .filter(Boolean)
+        .join(' - ') || 'Subtitle',
     Title: track.title,
     IsDefault: track.default ?? false,
     IsForced: track.forced ?? false,
+    IsHearingImpaired: track.hearingImpaired ?? false,
     IsTextSubtitleStream: true,
     DeliveryMethod: 'Embed',
   }));
