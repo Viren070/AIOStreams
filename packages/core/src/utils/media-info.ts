@@ -9,6 +9,11 @@ export interface ParsedMediaTrack {
   channels?: string;
   default?: boolean;
   forced?: boolean;
+  commentary?: boolean;
+  dub?: boolean;
+  original?: boolean;
+  hearingImpaired?: boolean;
+  visualImpaired?: boolean;
 }
 
 export interface ParsedMediaInfo {
@@ -37,6 +42,11 @@ type MediaInfoAudioTrack = {
   ch_layout?: unknown;
   ch?: unknown;
   default?: unknown;
+  commentary?: unknown;
+  dub?: unknown;
+  original?: unknown;
+  hearing_impaired?: unknown;
+  visual_impaired?: unknown;
 };
 
 type MediaInfoSubtitleTrack = {
@@ -45,6 +55,7 @@ type MediaInfoSubtitleTrack = {
   title?: unknown;
   default?: unknown;
   forced?: unknown;
+  hearing_impaired?: unknown;
 };
 
 type MediaInfoVideo = {
@@ -124,6 +135,11 @@ function normaliseTrack(
     ...(track.channels ? { channels: track.channels } : {}),
     ...(track.default ? { default: true } : {}),
     ...(track.forced ? { forced: true } : {}),
+    ...(track.commentary ? { commentary: true } : {}),
+    ...(track.dub ? { dub: true } : {}),
+    ...(track.original ? { original: true } : {}),
+    ...(track.hearingImpaired ? { hearingImpaired: true } : {}),
+    ...(track.visualImpaired ? { visualImpaired: true } : {}),
   };
   return Object.keys(out).length > 0 ? out : undefined;
 }
@@ -393,6 +409,11 @@ export function parseMediaInfo(
     tag: normaliseAudioTag(track.codec, track.profile),
     channels: normaliseAudioChannels(track),
     default: track.default === true,
+    commentary: track.commentary === true,
+    dub: track.dub === true,
+    original: track.original === true,
+    hearingImpaired: track.hearing_impaired === true,
+    visualImpaired: track.visual_impaired === true,
   }));
   const subtitleTrackList = subtitleTracks.map((track) => ({
     lang: normaliseLanguage(resolveTrackLang(track.lang, track.title)),
@@ -400,6 +421,7 @@ export function parseMediaInfo(
     title: asTrackText(track.title),
     default: track.default === true,
     forced: track.forced === true,
+    hearingImpaired: track.hearing_impaired === true,
   }));
 
   const visualTags = normaliseVisualTags(info.video);

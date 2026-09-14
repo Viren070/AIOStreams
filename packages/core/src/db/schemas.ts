@@ -1309,6 +1309,11 @@ export const MediaTrackSchema = z.object({
   channels: z.string().optional(),
   default: z.boolean().optional(),
   forced: z.boolean().optional(),
+  commentary: z.boolean().optional(),
+  dub: z.boolean().optional(),
+  original: z.boolean().optional(),
+  hearingImpaired: z.boolean().optional(),
+  visualImpaired: z.boolean().optional(),
 });
 export type MediaTrack = z.infer<typeof MediaTrackSchema>;
 
