@@ -875,21 +875,31 @@ export async function getJellyfinInfo(credentials: Credentials) {
   return api<JellyfinInfo>('GET /jellyfin/info', authed(credentials));
 }
 
-export interface PlaybackSink {
-  addon: string;
-  /** Absent for the account's own sinks. */
-  persona?: string;
-  status: 'connected' | 'auth_expired' | 'error';
-  lastPushAt: number | null;
-  lastError: string | null;
+export interface TrackerExchange {
+  lastAt: number | null;
+  error: string | null;
 }
 
-/** Health of the addons this configuration reports playback to. */
-export async function getPlaybackSinks(credentials: Credentials) {
-  return api<{ sinks: PlaybackSink[] }>(
-    'GET /jellyfin/playback-sinks',
-    authed(credentials)
-  );
+export interface WatchStateTracker {
+  addon: string;
+  /** Absent for the primary user's trackers. */
+  persona?: string;
+  status: 'connected' | 'auth_expired' | 'error';
+  /** Absent when the addon or the instance does not use that direction. */
+  push?: TrackerExchange;
+  pull?: TrackerExchange;
+}
+
+export interface WatchStateOverview {
+  /** Whether this instance sends and reads watch state at all. */
+  push: boolean;
+  pull: boolean;
+  trackers: WatchStateTracker[];
+}
+
+/** The trackers the saved configuration syncs watch state with. */
+export async function getWatchStateTrackers(credentials: Credentials) {
+  return api<WatchStateOverview>('GET /user/watch-state', authed(credentials));
 }
 
 /** Binds a Quick Connect code shown on a TV to this configuration. */

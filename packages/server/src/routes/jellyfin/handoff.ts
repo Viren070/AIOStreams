@@ -1,3 +1,4 @@
+import type { Request } from 'express';
 import {
   Cache,
   config as appConfig,
@@ -6,15 +7,21 @@ import {
   dispatchPlayback,
   ensurePlaybackSink,
   itemKeyFor,
+  PlaybackHandoffRepository,
   providerIdsFor,
   refreshSinkIfStale,
   type ContentRef,
   type JellyfinItem,
   type PlaybackEventKind,
   type ResolvedPlaybackSink,
+  type SinkStatus,
   type WatchStateRow,
 } from '@aiostreams/core';
-import type { JellyfinRequestContext } from './context.js';
+import {
+  contextFromCredentials,
+  personasOf,
+  type JellyfinRequestContext,
+} from './context.js';
 import { itemFromDescriptor } from './items.js';
 
 const logger = createLogger('jellyfin');
@@ -67,6 +74,87 @@ async function sinksFor(
   }
   await sinkCache.set(key, sinks, SINK_TTL_SECONDS).catch(() => undefined);
   return sinks;
+}
+
+interface TrackerExchange {
+  lastAt: number | null;
+  error: string | null;
+}
+
+export interface TrackerStatus {
+  addon: string;
+  /** Absent for the primary user's trackers. */
+  persona?: string;
+  status: SinkStatus;
+  /** Absent when the addon or this instance does not use that direction. */
+  push?: TrackerExchange;
+  pull?: TrackerExchange;
+}
+
+/**
+ * Every tracker the saved configuration syncs with, found the way playback
+ * finds them so an addon shows before its first exchange. A persona sharing the
+ * primary user's history has no trackers of its own to list.
+ */
+export async function listTrackers(
+  req: Request,
+  uuid: string,
+  encryptedPassword: string
+): Promise<TrackerStatus[] | null> {
+  const primary = await contextFromCredentials(req, uuid, encryptedPassword);
+  if (!primary) return null;
+  const personas = personasOf(primary.userData).filter(
+    (p) => p.history !== 'shared'
+  );
+  const contexts = [
+    primary,
+    ...(await Promise.all(
+      personas.map(async (p) => {
+        const ctx = await contextFromCredentials(
+          req,
+          uuid,
+          encryptedPassword,
+          p.id
+        );
+        // The same engine a persona's own would build, built once for all.
+        return ctx && { ...ctx, primaryEngine: primary.engine };
+      })
+    )),
+  ].filter((ctx) => ctx !== null);
+
+  const [resolved, rows] = await Promise.all([
+    Promise.all(contexts.map((ctx) => sinksFor(ctx))),
+    PlaybackHandoffRepository.listAllSinks(uuid),
+  ]);
+  const rowOf = new Map(
+    rows.map((row) => [`${row.persona}|${row.addonInstanceId}`, row])
+  );
+
+  const { reportEnabled, pullEnabled } = appConfig.watchState;
+  return contexts.flatMap((ctx, i) =>
+    resolved[i].flatMap((sink): TrackerStatus[] => {
+      const push = reportEnabled && sink.events.length > 0;
+      const pull = pullEnabled && sink.pullable;
+      if (!push && !pull) return [];
+      const row = rowOf.get(`${ctx.watch.persona}|${sink.instanceId}`);
+      return [
+        {
+          addon: sink.name,
+          persona: ctx.persona?.id,
+          status: row?.status ?? 'connected',
+          push: push
+            ? { lastAt: row?.lastPushAt ?? null, error: row?.lastError ?? null }
+            : undefined,
+          pull: pull
+            ? {
+                lastAt: row?.lastPullAt ?? null,
+                error: row?.lastPullError ?? null,
+              }
+            : undefined,
+        },
+      ];
+    })
+  );
 }
 
 /**
