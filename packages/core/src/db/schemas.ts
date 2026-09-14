@@ -1112,7 +1112,7 @@ export type UserData = z.infer<typeof UserDataSchema>;
 // longer creates tables.
 
 const strictManifestResourceSchema = z.object({
-  name: z.enum(constants.RESOURCES),
+  name: z.string(),
   types: z.array(z.string()),
   idPrefixes: z.array(z.string()).or(z.null()).optional(),
 });
