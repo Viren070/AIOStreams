@@ -342,6 +342,13 @@ export async function itemFromDescriptor(
     case 'movie':
     case 'series': {
       const meta = await getMetaLoose(ctx, d.t, d.i);
+      if (!meta && d.k === 'movie' && d.p) {
+        // A collection's movie may exist only as an entry in its parent.
+        const id = encodeItemId(d);
+        const r = await boxSetChildren(ctx, { t: d.t, i: d.p });
+        const child = r?.children.find((c) => c.Id === id);
+        if (child) return child;
+      }
       const base = meta
         ? { ...meta, id: d.i, type: d.t }
         : ({ id: d.i, type: d.t, name: d.i } as MetaPreview);
