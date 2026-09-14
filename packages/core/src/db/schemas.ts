@@ -1720,6 +1720,8 @@ const StatusResponseSchema = z.object({
         resolveOnOpen: z.enum(['always', 'never', 'user']),
         /** How deep a client may page into one library. 0 = uncapped. */
         maxCatalogItems: z.number(),
+        /** Catalogs shown as libraries, in the configuration's order. 0 = uncapped. */
+        maxLibraries: z.number(),
         /** Extra users a configuration may add beyond its primary user. */
         maxPersonas: z.number(),
         segments: z.object({

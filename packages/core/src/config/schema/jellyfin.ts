@@ -73,6 +73,17 @@ export const jellyfinSchema = {
     secret: false,
     ui: { min: 0 },
   },
+  maxLibraries: {
+    schema: z.number().int().min(0),
+    default: 20,
+    label: 'Max libraries per configuration',
+    description:
+      "How many of a configuration's catalogs appear as Jellyfin libraries, in the configuration's own catalog order. Most Jellyfin apps load every library's latest row at once when the home screen opens, so each library is another upstream request on every visit. Catalogs past the limit are not shown as libraries. 0 shows them all.",
+    env: 'JELLYFIN_MAX_LIBRARIES',
+    requiresRestart: false,
+    secret: false,
+    ui: { min: 0 },
+  },
   upcomingDays: {
     schema: z.number().int().min(1).max(365),
     default: 14,
