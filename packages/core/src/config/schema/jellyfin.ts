@@ -143,7 +143,7 @@ export const jellyfinSchema = {
       default: ['introdb', 'aniskip', 'pmdb'] as string[],
       label: 'Segment providers',
       description:
-        'Which databases to ask, best first: the first one to answer for a marker type wins it. **introdb** is IMDb-keyed and covers every series; **aniskip** is anime only and is the one provider that matches submissions against the real episode length; **animeskip** is anime only, needs a client id, and costs a whole-show fetch per episode; **pmdb** (PublicMetaDB) covers movies as well as series, and needs an API key from the instance or from each configuration, so it is skipped for a configuration that has neither.',
+        'Which databases to ask, best first. They are all asked at once, and for each marker type the highest one on this list that has it wins. **introdb** is IMDb-keyed and covers every series; **aniskip** is anime only and is the one provider that matches submissions against the real episode length; **animeskip** is anime only, needs a client id, and costs a whole-show fetch per episode; **pmdb** (PublicMetaDB) covers movies as well as series, and needs an API key from the instance or from each configuration, so it is skipped for a configuration that has neither.',
       env: 'JELLYFIN_SEGMENTS_PROVIDERS',
       requiresRestart: false,
       secret: false,
@@ -206,7 +206,7 @@ export const jellyfinSchema = {
       default: 5,
       label: 'Provider timeout',
       description:
-        'How long to wait for one provider. Providers are asked in parallel, so this bounds the whole lookup rather than each one adding up. The lookup runs when a client opens or plays an item and never blocks playback itself.',
+        'How long to wait for one provider. Providers are asked in parallel, so this bounds the whole lookup rather than each one adding up. A lookup stops waiting once the providers higher on the list have the markers asked for, but some apps wait for markers before they start playing, so a provider that has to time out can delay playback by this much.',
       env: 'JELLYFIN_SEGMENTS_TIMEOUT',
       requiresRestart: false,
       secret: false,

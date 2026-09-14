@@ -14,6 +14,7 @@ import { locate } from './playback.js';
 const router: Router = Router({ mergeParams: true });
 
 const TICKS_PER_MS = 10_000;
+const KNOWN_TYPES: SegmentType[] = ['Intro', 'Recap', 'Outro'];
 const EMPTY = { Items: [] as unknown[], TotalRecordCount: 0, StartIndex: 0 };
 
 /**
@@ -64,12 +65,24 @@ async function mediaSegments(req: Request, res: Response) {
 
   const allowed = allowedTypes(loc.ctx.userData);
   const requested = requestedTypes(req);
+  const wanted = (s: string) =>
+    (!allowed || allowed.has(s as SegmentType)) &&
+    (!requested || requested.has(s));
+  // Only types we can produce, or a request for Commercial waits on every provider.
+  const types = requested
+    ? KNOWN_TYPES.filter(wanted)
+    : allowed && [...allowed];
+  if (types?.length === 0) {
+    res.json(EMPTY);
+    return;
+  }
   const segments = (
-    await segmentsFor(lookup, { pmdbApiKey: loc.ctx.userData.pmdbApiKey })
-  ).filter(
-    (s: Segment) =>
-      (!allowed || allowed.has(s.type)) && (!requested || requested.has(s.type))
-  );
+    await segmentsFor(
+      lookup,
+      { pmdbApiKey: loc.ctx.userData.pmdbApiKey },
+      types ?? undefined
+    )
+  ).filter((s: Segment) => wanted(s.type));
 
   res.json({
     Items: segments.map((s) => ({
