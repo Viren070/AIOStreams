@@ -306,15 +306,16 @@ export function normaliseTitle(title: string) {
   );
 }
 
+/** Clean a metadata title for text search, preserving separator word boundaries. */
 export function cleanTitle(title: string, language?: string) {
   let cleaned = foldToAscii(title, language);
 
-  for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-', ';', ':']) {
+  for (const char of '♪♫★☆♡♥-;:/\\|_.,‐‑–—…：；／＼｜＿．') {
     cleaned = cleaned.replaceAll(char, ' ');
   }
 
   return cleaned
-    .replace(/&/g, 'and')
+    .replace(/&/g, ' ')
     .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalise spaces
     .toLowerCase()
