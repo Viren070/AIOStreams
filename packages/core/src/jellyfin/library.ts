@@ -207,7 +207,12 @@ export async function getCatalogPage(
     const res = await engine.getCatalog(catalog.type, catalog.id, extras);
     if (res.errors?.length) {
       logger.debug(
-        { catalog: catalogKey(catalog), errors: res.errors.length },
+        {
+          catalog: catalogKey(catalog),
+          errors: res.errors.map((e) =>
+            [e.title, e.description].filter(Boolean).join(': ')
+          ),
+        },
         'catalog page returned errors'
       );
     }
