@@ -112,10 +112,15 @@ async function locate(
   };
 }
 
+/* A client retrying a failed play must not rerun the pipeline against an addon that is failing. */
+const EMPTY_MEMO_REUSE_MS = 30_000;
+
 async function ensureMemo(loc: Located): Promise<PlaybackMemo | null> {
   if (loc.memo?.sources.length) return loc.memo;
   if (loc.descriptor.k !== 'movie' && loc.descriptor.k !== 'episode')
     return null;
+  if (loc.memo && Date.now() - loc.memo.createdAt < EMPTY_MEMO_REUSE_MS)
+    return loc.memo;
   return resolvePlayback(loc.ctx, loc.descriptor, { force: true });
 }
 
