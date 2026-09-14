@@ -85,6 +85,29 @@ export function defaultUserData(itemId: string): UserItemDataDto {
   };
 }
 
+/** Unaired episodes never count towards a played state, as in Jellyfin. */
+export function hasAired(
+  video: { released?: string | null },
+  now: number
+): boolean {
+  const at = video.released ? Date.parse(video.released) : NaN;
+  return !(at > now);
+}
+
+/** An empty count is not played: every episode is still to air. */
+export function withPlayedCounts(
+  base: UserItemDataDto,
+  played: number,
+  total: number
+): UserItemDataDto {
+  return {
+    ...base,
+    Played: total > 0 && played >= total,
+    UnplayedItemCount: total - played,
+    PlayedPercentage: total > 0 ? (played / total) * 100 : 0,
+  };
+}
+
 export function userDataFromRow(
   itemId: string,
   row: WatchStateRow | undefined,
@@ -467,13 +490,15 @@ export function buildSeason(
   if (typeof meta.background === 'string') images.Backdrop = meta.background;
   rememberImages(id, images);
 
+  const now = Date.now();
   let played = 0;
-  let unplayedCount = 0;
+  let counted = 0;
   for (const v of group.videos) {
+    if (!hasAired(v, now)) continue;
+    counted++;
     const row =
       playstates && episodeKeyOf ? playstates.get(episodeKeyOf(v)) : undefined;
     if (row?.played) played++;
-    else unplayedCount++;
   }
   const total = group.videos.length;
   const seriesTags = seriesItem.ImageTags as Record<string, string>;
@@ -494,12 +519,7 @@ export function buildSeason(
     ParentLogoImageTag: seriesTags?.Logo,
     PrimaryImageAspectRatio: 0.6666,
     ProductionYear: seriesItem.ProductionYear,
-    UserData: {
-      ...defaultUserData(id),
-      Played: total > 0 && played >= total,
-      UnplayedItemCount: unplayedCount,
-      PlayedPercentage: total > 0 ? (played / total) * 100 : 0,
-    },
+    UserData: withPlayedCounts(defaultUserData(id), played, counted),
     Path: `/aiostreams/${meta.type}/${meta.id}/${group.name}`,
     _aio: {
       descriptor: { k: 'season', t: meta.type, i: meta.id, s: group.season },

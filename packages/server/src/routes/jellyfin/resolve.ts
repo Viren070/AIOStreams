@@ -8,6 +8,7 @@ import {
   resolveMarkerId as markerIdFor,
   newPlaySessionId,
   parseRuntimeMs,
+  rememberShowEpisodes,
   labelFrom,
   isMemoFresh,
   resolveByItem,
@@ -54,7 +55,12 @@ async function fetchMetaLoose(
   for (const t of order) {
     try {
       const res = await engine.getMeta(t, id);
-      if (res.data) return res.data;
+      if (res.data) {
+        if (type !== 'movie' && res.data.videos?.length) {
+          rememberShowEpisodes(ctx.scope(), type, id, res.data);
+        }
+        return res.data;
+      }
     } catch (error) {
       logger.debug(
         {
