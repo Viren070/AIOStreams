@@ -86,6 +86,7 @@ export function buildAnimeEntry(record: AnimeRecord): AnimeEntry {
       seasonNumber: tvdbSeasonNumber,
       seasonId: tvdbSeasonId,
       fromEpisode: tvdbFromEpisode,
+      absoluteOrder: record.tvdb?.seasonNumber === 'a',
     },
     imdb: imdbBlock,
     fanart: fanartBlock,

@@ -61,6 +61,37 @@ function lookupOf(ref: ContentRef): Lookup | null {
   };
 }
 
+const ENTRY_NUMBERED: ParsedId['type'][] = ['kitsuId', 'malId', 'anilistId'];
+
+/**
+ * The anime-list ranges count AniDB episodes, which are the entry's own numbers
+ * only when the entry is the whole show in TVDB's absolute order.
+ */
+function tvdbEpisodeOf(
+  parsed: ParsedId,
+  entry: AnimeEntry
+): { season: number; episode: number } | null {
+  if (!entry.tvdb.absoluteOrder || !ENTRY_NUMBERED.includes(parsed.type)) {
+    return null;
+  }
+  const episode = Number(parsed.episode);
+  if (!Number.isInteger(episode)) return null;
+  const range = entry.episodeMappings?.find(
+    (m) =>
+      m.anidbSeason === 1 &&
+      m.start !== undefined &&
+      m.end !== undefined &&
+      episode >= m.start &&
+      episode <= m.end &&
+      m.tvdbSeason !== undefined &&
+      m.offset !== undefined
+  );
+  if (range?.tvdbSeason === undefined || range.offset === undefined) {
+    return null;
+  }
+  return { season: range.tvdbSeason, episode: episode + range.offset };
+}
+
 function matchKeyWith(
   ref: ContentRef,
   lookup: Lookup,
@@ -73,8 +104,14 @@ function matchKeyWith(
     return itemKeyFor({ ...ref, baseId: base, videoId: base });
   }
 
-  // Fills season and episode in place, applying any cour offset.
-  enrichParsedIdWithAnimeEntry(lookup.parsed, entry);
+  const placed = tvdbEpisodeOf(lookup.parsed, entry);
+  if (placed) {
+    lookup.parsed.season = String(placed.season);
+    lookup.parsed.episode = String(placed.episode);
+  } else {
+    // Fills season and episode in place, applying any cour offset.
+    enrichParsedIdWithAnimeEntry(lookup.parsed, entry);
+  }
   const episode = lookup.parsed.episode
     ? Number(lookup.parsed.episode)
     : ref.episode;
