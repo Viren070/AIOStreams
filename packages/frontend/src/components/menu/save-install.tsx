@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 import {
   Code2,
   CopyIcon,
+  Layers,
+  LibraryBig,
   Settings2,
   DownloadIcon,
   PlusIcon,
@@ -511,6 +513,82 @@ function VariantSelector({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function JellyfinPrimerFact({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-400/10 text-brand-400">
+        {icon}
+      </div>
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium text-white">{title}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** What a Jellyfin client will show, before the user connects one. */
+function JellyfinPrimer({
+  maxLibraries,
+  maxCatalogItems,
+}: {
+  maxLibraries: number;
+  maxCatalogItems: number;
+}) {
+  const limitNumber = (n: number) => (
+    <span className="font-medium tabular-nums text-gray-300">{n}</span>
+  );
+  return (
+    <div className="grid grid-cols-1 divide-y divide-gray-800 rounded-md border border-gray-800 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+      <JellyfinPrimerFact
+        icon={<LibraryBig className="h-4 w-4" />}
+        title="Catalogs become libraries"
+      >
+        <p className="text-xs text-gray-400">
+          In the order from the Catalogs page.
+        </p>
+        {(maxLibraries > 0 || maxCatalogItems > 0) && (
+          <p className="text-xs text-gray-500">
+            {maxLibraries > 0 ? (
+              <>
+                This instance shows your first {limitNumber(maxLibraries)}
+                {maxCatalogItems > 0 && (
+                  <>, up to {limitNumber(maxCatalogItems)} titles each</>
+                )}
+                .
+              </>
+            ) : (
+              <>
+                This instance lists up to {limitNumber(maxCatalogItems)} titles
+                in each.
+              </>
+            )}
+          </p>
+        )}
+      </JellyfinPrimerFact>
+      <JellyfinPrimerFact
+        icon={<Layers className="h-4 w-4" />}
+        title="Streams become versions"
+      >
+        <p className="text-xs text-gray-400">
+          Opening or playing a title searches your addons, as in Stremio.
+        </p>
+        <p className="text-xs text-gray-500">
+          Played directly; nothing is transcoded.
+        </p>
+      </JellyfinPrimerFact>
     </div>
   );
 }
@@ -2572,6 +2650,11 @@ function Content() {
                 label: 'Connect',
                 content: (
                   <div className="space-y-5">
+                    <JellyfinPrimer
+                      maxLibraries={jellyfin?.maxLibraries ?? 0}
+                      maxCatalogItems={jellyfin?.maxCatalogItems ?? 0}
+                    />
+
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-white">
                         Server address
@@ -2594,8 +2677,7 @@ function Content() {
                         </Button>
                       </div>
                       <p className="text-xs text-gray-500">
-                        Add this in any Jellyfin client. Playback is direct;
-                        nothing is transcoded.
+                        Add this as a server in any Jellyfin client.
                       </p>
                     </div>
 
@@ -2932,12 +3014,6 @@ function Content() {
                           )}
                       </div>
                     )}
-                    <p className="text-xs text-gray-500">
-                      Libraries are your catalogs, in the order from the
-                      Catalogs page.
-                      {!!jellyfin?.maxCatalogItems &&
-                        ` Clients can browse ${jellyfin.maxCatalogItems} items into each.`}
-                    </p>
                     {playbackSinks.length > 0 && (
                       <div className="space-y-2 border-t border-gray-800 pt-4">
                         <p className="text-sm font-medium text-white">
