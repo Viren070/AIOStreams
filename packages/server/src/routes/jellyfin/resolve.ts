@@ -81,7 +81,11 @@ export interface PlayTarget {
   type: string;
   videoId: string;
   runtimeMs?: number;
+  streams?: ParsedStream[];
 }
+
+type MetaVideo = NonNullable<ParsedMeta['videos']>[number] &
+  Record<string, unknown>;
 
 /**
  * Stream requests use the root type and the video's id; a movie may name its
@@ -94,22 +98,36 @@ export async function playTargetFor(
   if (d.k === 'episode') {
     const meta = await getMetaLoose(ctx, d.t, d.i).catch(() => null);
     const video = meta?.videos?.find((v) => v.id === d.v) as
-      | (Record<string, unknown> & { id: string })
+      | MetaVideo
       | undefined;
     return {
       type: d.t,
       videoId: d.v,
       runtimeMs:
         parseRuntimeMs(video?.runtime) ?? parseRuntimeMs(meta?.runtime),
+      streams: video?.streams ?? undefined,
     };
   }
   if (d.k === 'movie') {
-    const meta = await getMetaLoose(ctx, d.t, d.i).catch(() => null);
-    const hinted = meta?.behaviorHints?.defaultVideoId;
+    // A collection's movie is one of its parent's videos.
+    const meta = await getMetaLoose(ctx, d.t, d.p ?? d.i).catch(() => null);
+    const hinted = d.p ? undefined : meta?.behaviorHints?.defaultVideoId;
+    const videoId = typeof hinted === 'string' && hinted ? hinted : d.i;
+    const video = meta?.videos?.find((v) => v.id === videoId) as
+      | MetaVideo
+      | undefined;
+    const runtimeMs =
+      parseRuntimeMs(video?.runtime) ??
+      (d.p
+        ? parseRuntimeMs(
+            (await getMetaLoose(ctx, d.t, d.i).catch(() => null))?.runtime
+          )
+        : parseRuntimeMs(meta?.runtime));
     return {
       type: d.t,
-      videoId: typeof hinted === 'string' && hinted ? hinted : d.i,
-      runtimeMs: parseRuntimeMs(meta?.runtime),
+      videoId,
+      runtimeMs,
+      streams: video?.streams ?? undefined,
     };
   }
   return null;
@@ -177,9 +195,12 @@ async function resolveUncached(
   if (!target) return null;
 
   const engine = await ctx.engine();
-  const streamsRes = await engine.getStreams(target.videoId, target.type);
-  const playable = (streamsRes.data?.streams ?? []).filter(
-    isPlayable
+  const own = (target.streams ?? []).filter(isPlayable);
+  const streamsRes = own.length
+    ? undefined
+    : await engine.getStreams(target.videoId, target.type);
+  const playable = (
+    own.length ? own : (streamsRes?.data?.streams ?? []).filter(isPlayable)
   ) as ParsedStream[];
   const addonSubtitles: SubtitleTrack[] = [];
 
@@ -226,7 +247,7 @@ async function resolveUncached(
   };
   await writePlaybackMemo(memo, scope);
   if (!sources.length) {
-    const reason = (streamsRes.errors ?? [])
+    const reason = (streamsRes?.errors ?? [])
       .map((e) => [e.title, e.description].filter(Boolean).join(': '))
       .join('; ');
     logger.info(
