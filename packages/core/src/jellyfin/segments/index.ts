@@ -3,6 +3,10 @@ import type { AnimeEntry } from '../../anime-database/types.js';
 import { config as appConfig } from '../../config/index.js';
 import { IdMappingDataset } from '../../metadata/id-mappings.js';
 import { Cache } from '../../utils/cache.js';
+import {
+  DistributedLock,
+  requestLockType,
+} from '../../utils/distributed-lock.js';
 import type { SegmentProviderId } from '../../utils/constants.js';
 import { IdParser, type IdType } from '../../utils/id-parser.js';
 import { createLogger } from '../../logging/logger.js';
@@ -293,9 +297,37 @@ export function couldHaveSegments(
   return providersFor(lookup, credentials).length > 0;
 }
 
+/**
+ * A type is decided once the first provider in order that has it has answered,
+ * or once every provider has answered without it.
+ */
+function decided(
+  types: SegmentType[],
+  providers: SegmentProviderId[],
+  results: Map<SegmentProviderId, Segment[]>,
+  settled: Set<SegmentProviderId>,
+  runtimeMs?: number
+): boolean {
+  return types.every((type) => {
+    for (const id of providers) {
+      if (!settled.has(id)) return false;
+      if (
+        sanitise(results.get(id) ?? [], runtimeMs).some((s) => s.type === type)
+      )
+        return true;
+    }
+    return true;
+  });
+}
+
+/**
+ * With `types`, answers as soon as those are decided; slower providers keep
+ * running and fill the cache for the next lookup.
+ */
 export async function segmentsFor(
   lookup: SegmentLookup,
-  credentials?: SegmentCredentials
+  credentials?: SegmentCredentials,
+  types?: SegmentType[]
 ): Promise<Segment[]> {
   const providers = providersFor(lookup, credentials);
   if (!providers.length) return [];
@@ -309,40 +341,69 @@ export async function segmentsFor(
       if (cached) results.set(id, cached);
     })
   );
+  const settled = new Set(results.keys());
 
   const uncached = providers.filter((id) => !results.has(id));
   if (uncached.length) {
     await fillIds(lookup, uncached);
     const settings = appConfig.jellyfin.segments;
-    // Misses are cached so uncovered shows are not re-asked. Failures are not:
-    // one configuration's bad key must not blank a provider for the others.
-    await Promise.all(
-      uncached.map(async (id) => {
-        const provider = SEGMENT_PROVIDER_REGISTRY[id];
-        const ctx = contextFor(id, credentials);
-        try {
-          const segments = provider.supports(lookup, ctx)
-            ? await provider.fetch(lookup, ctx)
-            : [];
-          results.set(id, segments);
-          await cache
-            .set(
-              keys.get(id)!,
-              segments,
-              segments.length ? settings.ttl : settings.negativeTtl
-            )
-            .catch(() => undefined);
-        } catch (error) {
-          logger.debug(
-            {
-              provider: id,
-              err: error instanceof Error ? error.message : String(error),
-            },
-            'segment provider failed'
-          );
-        }
-      })
-    );
+    const fetches = uncached.map(async (id) => {
+      const provider = SEGMENT_PROVIDER_REGISTRY[id];
+      const ctx = contextFor(id, credentials);
+      const key = keys.get(id)!;
+      try {
+        const { result } = await DistributedLock.getInstance().withLock(
+          `jellyfin-segments:${key}`,
+          async () => {
+            const segments = provider.supports(lookup, ctx)
+              ? await provider.fetch(lookup, ctx)
+              : [];
+            // Misses are cached so uncovered shows are not re-asked. Failures
+            // are not: one configuration's bad key must not blank a provider
+            // for the others.
+            await cache
+              .set(
+                key,
+                segments,
+                segments.length ? settings.ttl : settings.negativeTtl
+              )
+              .catch(() => undefined);
+            return segments;
+          },
+          {
+            type: requestLockType(),
+            // A provider may make more than one request per lookup.
+            timeout: ctx.timeoutMs * 3,
+            ttl: ctx.timeoutMs * 3,
+          }
+        );
+        results.set(id, result);
+      } catch (error) {
+        logger.debug(
+          {
+            provider: id,
+            err: error instanceof Error ? error.message : String(error),
+          },
+          'segment provider failed'
+        );
+      } finally {
+        settled.add(id);
+      }
+    });
+    const all = Promise.all(fetches);
+    if (types?.length) {
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (decided(types, providers, results, settled, lookup.runtimeMs))
+            resolve();
+        };
+        check();
+        for (const fetch of fetches) void fetch.then(check);
+        void all.then(() => resolve());
+      });
+    } else {
+      await all;
+    }
   }
 
   return merge(results, providers, lookup.runtimeMs);
