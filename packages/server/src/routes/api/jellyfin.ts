@@ -6,7 +6,6 @@ import {
   constants,
   createLogger,
   encryptString,
-  PlaybackHandoffRepository,
   quickConnectAuthorize,
   quickConnectByCode,
   UserRepository,
@@ -232,45 +231,6 @@ router.get('/quickconnect/pending', async (req, res, next) => {
             version: entry.appVersion,
           },
           requestedAt: entry.dateAdded,
-        },
-      })
-    );
-  } catch (error) {
-    next(
-      error instanceof APIError
-        ? error
-        : new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR)
-    );
-  }
-});
-
-/* Health of the addons this configuration reports playback to. */
-router.get('/playback-sinks', async (req, res, next) => {
-  try {
-    if (!appConfig.watchState.reportEnabled) {
-      res.json(createResponse({ success: true, data: { sinks: [] } }));
-      return;
-    }
-    const creds = await resolveConfigCredentials(req, res, {
-      allowEncrypted: true,
-    });
-    if (!creds) {
-      next(new APIError(constants.ErrorCode.UNAUTHORIZED));
-      return;
-    }
-    await UserRepository.verifyUser(creds.uuid, creds.password);
-    const sinks = await PlaybackHandoffRepository.listAllSinks(creds.uuid);
-    res.json(
-      createResponse({
-        success: true,
-        data: {
-          sinks: sinks.map((sink) => ({
-            addon: sink.addonName ?? sink.addonInstanceId,
-            persona: sink.persona || undefined,
-            status: sink.status,
-            lastPushAt: sink.lastPushAt,
-            lastError: sink.lastError,
-          })),
         },
       })
     );

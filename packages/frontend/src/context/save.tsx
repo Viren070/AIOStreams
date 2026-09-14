@@ -11,7 +11,11 @@ import {
   type LinkedAccountPushAllResult,
 } from '@/lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { linkedAccountsQuery, LINKED_ACCOUNTS_QUERY_ROOT } from '@/lib/queries';
+import {
+  linkedAccountsQuery,
+  LINKED_ACCOUNTS_QUERY_ROOT,
+  WATCH_STATE_TRACKERS_QUERY_ROOT,
+} from '@/lib/queries';
 import { manifestFingerprint } from '../../../core/src/utils/manifest-fingerprint';
 import { computeUserDataDiff } from '../utils/diff/userData';
 import { toast } from 'sonner';
@@ -293,6 +297,9 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       try {
         await updateUserConfig(uuid, userData, password);
         setBaseline(userData);
+        void queryClient.invalidateQueries({
+          queryKey: WATCH_STATE_TRACKERS_QUERY_ROOT,
+        });
         if (!suppressSuccessToast) {
           toast.success('Configuration updated successfully');
         }
@@ -317,6 +324,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       setSelectedMenu,
       setUserData,
       setBaseline,
+      queryClient,
     ]
   );
 

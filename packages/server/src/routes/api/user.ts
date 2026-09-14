@@ -42,6 +42,7 @@ import {
   parseBasicAuthHeader,
   resolveConfigCredentials,
 } from '../../utils/basic-auth.js';
+import { listTrackers, type TrackerStatus } from '../jellyfin/handoff.js';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -644,6 +645,53 @@ router.get('/client-agents', async (req, res, next) => {
     await UserRepository.verifyUser(uuid, creds.password);
     const agents = await getClientAgents(uuid);
     res.status(200).json(createResponse({ success: true, data: agents }));
+  } catch (error) {
+    if (error instanceof APIError) {
+      next(error);
+      return;
+    }
+    logger.error(error);
+    next(new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR));
+  }
+});
+
+/** The trackers this configuration syncs watch state with, and how they last went. */
+router.get('/watch-state', async (req, res, next) => {
+  let creds;
+  try {
+    creds = await resolveConfigCredentials(req, res, { allowEncrypted: false });
+  } catch (error) {
+    next(error);
+    return;
+  }
+  if (!creds) {
+    next(
+      new APIError(
+        constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+        undefined,
+        'Authorization header (Basic) is required'
+      )
+    );
+    return;
+  }
+  const uuid = req.uuid || creds.uuid;
+
+  try {
+    await UserRepository.verifyUser(uuid, creds.password);
+    const jellyfin = appConfig.jellyfin.enabled === true;
+    const push = jellyfin && appConfig.watchState.reportEnabled;
+    const pull = jellyfin && appConfig.watchState.pullEnabled;
+    let trackers: TrackerStatus[] = [];
+    if (push || pull) {
+      const encrypted = encryptString(creds.password);
+      if (!encrypted.success || !encrypted.data) {
+        throw new APIError(constants.ErrorCode.ENCRYPTION_ERROR);
+      }
+      trackers = (await listTrackers(req, uuid, encrypted.data)) ?? [];
+    }
+    res
+      .status(200)
+      .json(createResponse({ success: true, data: { push, pull, trackers } }));
   } catch (error) {
     if (error instanceof APIError) {
       next(error);

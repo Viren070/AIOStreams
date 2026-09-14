@@ -8,12 +8,11 @@ import {
   changePassword,
   approveJellyfinQuickConnect,
   getJellyfinQuickConnectPending,
-  getPlaybackSinks,
   type QuickConnectPending,
   CreateUserResponse,
-  type PlaybackSink,
 } from '@/lib/api';
 import { JellyfinPersonas } from './jellyfin-personas';
+import { JellyfinTrackers } from './jellyfin-trackers';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@/components/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
@@ -1633,7 +1632,6 @@ function Content() {
   const [quickConnectPersona, setQuickConnectPersona] = React.useState('');
   const [approvingQuickConnect, setApprovingQuickConnect] =
     React.useState(false);
-  const [playbackSinks, setPlaybackSinks] = React.useState<PlaybackSink[]>([]);
   const aniyomiModal = useDisclosure(false);
   const nabIndexerModal = useDisclosure(false);
   const searchApiModal = useDisclosure(false);
@@ -1853,22 +1851,6 @@ function Content() {
       onError: () => toast.error('Failed to copy username'),
     });
   };
-  // Read-only: an addon receives events by declaring the resource.
-  React.useEffect(() => {
-    if (!jellyfinModal.isOpen || !uuid) return;
-    let cancelled = false;
-    getPlaybackSinks({ uuid, password: password || encryptedPassword || null })
-      .then((result) => {
-        if (!cancelled) setPlaybackSinks(result.sinks ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setPlaybackSinks([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [jellyfinModal.isOpen, uuid, password, encryptedPassword]);
-
   const jellyfinPersonas = userData.jellyfin?.personas ?? [];
   const jellyfinAccountName =
     userData.jellyfin?.primary?.name || userData.addonName || 'Primary user';
@@ -2835,6 +2817,11 @@ function Content() {
                 content: <JellyfinPersonas />,
               },
               {
+                value: 'trackers',
+                label: 'Trackers',
+                content: <JellyfinTrackers />,
+              },
+              {
                 value: 'playback',
                 label: 'Playback',
                 content: (
@@ -3012,54 +2999,6 @@ function Content() {
                               }
                             />
                           )}
-                      </div>
-                    )}
-                    {playbackSinks.length > 0 && (
-                      <div className="space-y-2 border-t border-gray-800 pt-4">
-                        <p className="text-sm font-medium text-white">
-                          Playback reporting
-                        </p>
-                        <ul className="space-y-1">
-                          {playbackSinks.map((sink) => (
-                            <li
-                              key={`${sink.persona ?? ''}|${sink.addon}`}
-                              className="flex items-center justify-between gap-3 text-xs"
-                            >
-                              <span className="truncate text-gray-300">
-                                {sink.addon}
-                                {sink.persona && (
-                                  <span className="text-gray-500">
-                                    {' '}
-                                    (
-                                    {jellyfinPersonas.find(
-                                      (p) => p.id === sink.persona
-                                    )?.name ?? sink.persona}
-                                    )
-                                  </span>
-                                )}
-                              </span>
-                              <span
-                                className={
-                                  sink.status === 'connected'
-                                    ? 'shrink-0 text-gray-500'
-                                    : 'shrink-0 text-[--orange]'
-                                }
-                              >
-                                {sink.status === 'connected'
-                                  ? sink.lastPushAt
-                                    ? `Last sent ${new Date(sink.lastPushAt).toLocaleString()}`
-                                    : 'Waiting for playback'
-                                  : sink.status === 'auth_expired'
-                                    ? 'Reconnect this addon'
-                                    : 'Not accepting events'}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="text-xs text-gray-500">
-                          Addons that asked to be told what you play, so a
-                          tracker records what you watched.
-                        </p>
                       </div>
                     )}
                   </div>

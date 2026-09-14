@@ -576,13 +576,14 @@ export function jfOptional(
 }
 
 /**
- * Builds a context from stored credentials, for anonymous routes that found a
- * memo. Always the account: these routes serve content and write no history.
+ * Builds a context from stored credentials, for routes with no Jellyfin token.
+ * The account unless a persona is named; null when that persona is gone.
  */
 export function contextFromCredentials(
   req: Request,
   uuid: string,
-  encryptedPassword: string
+  encryptedPassword: string,
+  personaKey = ''
 ): Promise<JellyfinRequestContext | null> {
   return buildContext(
     req,
@@ -596,6 +597,6 @@ export function contextFromCredentials(
       version: '0',
     },
     false,
-    ''
+    personaKey
   );
 }
