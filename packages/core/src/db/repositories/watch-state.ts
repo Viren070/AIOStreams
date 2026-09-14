@@ -334,6 +334,7 @@ export class WatchStateRepository {
           : 0;
     const setLastPlayed = patch.lastPlayedAt === undefined ? 0 : 1;
     const lastPlayed = patch.lastPlayedAt ?? null;
+    const sortAt = lastPlayed ?? now;
     const snapshot = patch.snapshot ? JSON.stringify(patch.snapshot) : null;
     const season = identity.season ?? null;
     const episode = identity.episode ?? null;
@@ -356,7 +357,7 @@ export class WatchStateRepository {
                   CASE WHEN ${incMode} > 0 THEN 1 ELSE 0 END,
                   COALESCE(${fav}, 0), ${lastPlayed}, ${now},
                   ${origin}, ${sinkId}, ${externalAt}, ${snapshot},
-                  COALESCE(${lastPlayed}, ${now}), ${identity.matchKey ?? null})
+                  ${sortAt}, ${identity.matchKey ?? null})
           ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
             kind = excluded.kind,
             media_type = excluded.media_type,
@@ -369,16 +370,16 @@ export class WatchStateRepository {
             duration_ms = COALESCE(${dur}, watch_state.duration_ms),
             played = COALESCE(${played}, watch_state.played),
             play_count = watch_state.play_count +
-              CASE ${incMode}
-                WHEN 1 THEN 1
-                WHEN 2 THEN CASE WHEN watch_state.played = 1 THEN 0 ELSE 1 END
+              CASE
+                WHEN ${incMode} = 1 THEN 1
+                WHEN ${incMode} = 2 AND watch_state.played <> 1 THEN 1
                 ELSE 0
               END,
             favorite = COALESCE(${fav}, watch_state.favorite),
             last_played_at = CASE WHEN ${setLastPlayed} = 1 THEN ${lastPlayed} ELSE watch_state.last_played_at END,
             -- Maintained on write so the shelves can order on a plain indexed
             -- column instead of a COALESCE the index cannot serve.
-            sort_at = CASE WHEN ${setLastPlayed} = 1 THEN COALESCE(${lastPlayed}, ${now}) ELSE ${now} END,
+            sort_at = excluded.sort_at,
             updated_at = excluded.updated_at,
             origin = excluded.origin,
             sink_id = excluded.sink_id,
@@ -408,7 +409,7 @@ export class WatchStateRepository {
       sinkId,
       externalAt,
       snapshot: patch.snapshot ?? null,
-      sortAt: lastPlayed ?? now,
+      sortAt,
     };
   }
 
