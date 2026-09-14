@@ -241,6 +241,27 @@ async function mapLimited<T, R>(
   return out;
 }
 
+const CATALOG_READ_AHEAD = 4;
+
+/**
+ * Reads results in order while the next few are already in flight, so a row
+ * that stops early starts at most a few fetches it never reads. `fetch` must
+ * not reject.
+ */
+function readAhead<R>(
+  count: number,
+  fetch: (index: number) => Promise<R>
+): (index: number) => Promise<R> {
+  const started = new Map<number, Promise<R>>();
+  return (index) => {
+    const end = Math.min(index + CATALOG_READ_AHEAD, count);
+    for (let i = index; i < end; i++) {
+      if (!started.has(i)) started.set(i, fetch(i));
+    }
+    return started.get(index)!;
+  };
+}
+
 async function itemsFromRows(
   ctx: JellyfinRequestContext,
   rows: WatchStateRow[]
@@ -560,15 +581,18 @@ async function handleItems(
   const items: JellyfinItem[] = [];
   let offset = 0;
   let more = false;
-  for (const view of views) {
+  const pageAt = readAhead(views.length, (i) =>
+    getCatalogPage(engine, views[i].catalog, {
+      startIndex: 0,
+      limit: Math.min(want - offset, 50),
+    }).catch(() => null)
+  );
+  for (const [i, view] of views.entries()) {
     if (items.length >= limit) {
       more = true;
       break;
     }
-    const page = await getCatalogPage(engine, view.catalog, {
-      startIndex: 0,
-      limit: Math.min(want - offset, 50),
-    }).catch(() => null);
+    const page = await pageAt(i);
     if (!page) continue;
     // Counted after the type filter, so StartIndex walks the row a client sees.
     const built = filterByType(
@@ -614,11 +638,14 @@ router.get(
     } else {
       const views = await viewsForTypes(ctx, await ctx.views(), types);
       const per = Math.max(4, Math.ceil(limit / Math.max(1, views.length)));
-      for (const view of views) {
-        const page = await getCatalogPage(engine, view.catalog, {
+      const pageAt = readAhead(views.length, (i) =>
+        getCatalogPage(engine, views[i].catalog, {
           startIndex: 0,
           limit: per,
-        }).catch(() => null);
+        }).catch(() => null)
+      );
+      for (const [i, view] of views.entries()) {
+        const page = await pageAt(i);
         if (page)
           items.push(
             // Filtered per catalog, or a mixed one spends its share on the
