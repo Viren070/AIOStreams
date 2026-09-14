@@ -3,7 +3,9 @@ import {
   config as appConfig,
   createFormatter,
   createLogger,
+  DistributedLock,
   encodeItemId,
+  requestLockType,
   isPlayable,
   resolveMarkerId as markerIdFor,
   newPlaySessionId,
@@ -122,6 +124,10 @@ function maxVersionsFor(ctx: JellyfinRequestContext): number {
 /**
  * Runs the stream pipeline once for an item and records everything the
  * anonymous routes need. Reuses a live memo unless `force` is set.
+ *
+ * Concurrent resolves of one item share a single run, across replicas when
+ * there is Redis: each run writes its own source list, and a client holding
+ * one list's ids must not be served from another's.
  */
 export async function resolvePlayback(
   ctx: JellyfinRequestContext,
@@ -136,6 +142,37 @@ export async function resolvePlayback(
     const existing = await resolveByItem(ctx.uuid, scope, itemId);
     if (existing && isMemoFresh(existing)) return existing;
   }
+
+  let ran = false;
+  let resolved: PlaybackMemo | null = null;
+  const run = async () => {
+    ran = true;
+    resolved = await resolveUncached(ctx, d, itemId, scope);
+    return true;
+  };
+  const wait = appConfig.userLimits.timeouts.maxTimeout + 10_000;
+  try {
+    const { cached } = await DistributedLock.getInstance().withLock(
+      `jellyfin-resolve:${ctx.uuid}|${scope}|${itemId}`,
+      run,
+      { type: requestLockType(), timeout: wait, ttl: wait }
+    );
+    if (!cached) return resolved;
+  } catch (error) {
+    if (ran) throw error;
+    // The shared run failed or never reported back, so try it here.
+    return resolveUncached(ctx, d, itemId, scope);
+  }
+  // The memo, not the lock, carries the result, so it is never published.
+  return (await resolveByItem(ctx.uuid, scope, itemId)) ?? null;
+}
+
+async function resolveUncached(
+  ctx: JellyfinRequestContext,
+  d: ContentDescriptor,
+  itemId: string,
+  scope: string
+): Promise<PlaybackMemo | null> {
   const target = await playTargetFor(ctx, d);
   if (!target) return null;
 
