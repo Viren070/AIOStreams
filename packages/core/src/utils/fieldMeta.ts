@@ -213,6 +213,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   tmdbApiKey: { label: 'TMDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'metadata', sectionId: 'tmdb' },
   tmdbAccessToken: { label: 'TMDB Access Token', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'metadata', sectionId : 'tmdb' },
   tvdbApiKey: { label: 'TVDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'metadata' },
+  pmdbApiKey: { label: 'PublicMetaDB API Key', group: 'metadata', type: 'scalar', menu: 'save-install', sectionId: 'jellyfin', keywords: ['pmdb', 'publicmetadb', 'skip intro', 'segments'] },
   rpdbApiKey: { label: 'RPDB API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   topPosterApiKey: { label: 'TopPoster API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },
   aioratingsApiKey: { label: 'AIOratings API Key', group: 'metadata', type: 'scalar', menu: 'services', subTab: 'posters' },

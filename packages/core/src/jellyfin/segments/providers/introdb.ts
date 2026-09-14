@@ -41,6 +41,7 @@ function msOf(ms: unknown, sec: unknown): number | null {
  */
 export const introDbProvider: SegmentProvider = {
   id: 'introdb',
+  name: 'IntroDB',
   defaultBaseUrl: 'https://api.introdb.app',
   kinds: ['episode'],
   idKeys: ['imdb'],

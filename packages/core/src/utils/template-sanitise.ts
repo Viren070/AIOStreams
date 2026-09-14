@@ -33,6 +33,7 @@ const TOP_LEVEL_SECRETS = [
   'tmdbAccessToken',
   'tmdbApiKey',
   'tvdbApiKey',
+  'pmdbApiKey',
   'rpdbApiKey',
   'topPosterApiKey',
   'aioratingsApiKey',

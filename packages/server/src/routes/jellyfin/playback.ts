@@ -140,8 +140,9 @@ function hasSegments(ctx: JellyfinRequestContext, memo: PlaybackMemo): boolean {
   if (!appConfig.jellyfin.segments.enabled) return false;
   if (ctx.userData.jellyfin?.segments === false) return false;
   const lookup = lookupFor(memo.descriptor, memo.runtimeMs);
-  if (!lookup || !couldHaveSegments(lookup)) return false;
-  void segmentsFor(lookup).catch(() => undefined);
+  const credentials = { pmdbApiKey: ctx.userData.pmdbApiKey };
+  if (!lookup || !couldHaveSegments(lookup, credentials)) return false;
+  void segmentsFor(lookup, credentials).catch(() => undefined);
   return true;
 }
 

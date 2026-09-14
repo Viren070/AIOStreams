@@ -1,5 +1,7 @@
 import { AnimeDatabase } from '../../anime-database/index.js';
+import type { AnimeEntry } from '../../anime-database/types.js';
 import { config as appConfig } from '../../config/index.js';
+import { IdMappingDataset } from '../../metadata/id-mappings.js';
 import { Cache } from '../../utils/cache.js';
 import type { SegmentProviderId } from '../../utils/constants.js';
 import { IdParser, type IdType } from '../../utils/id-parser.js';
@@ -9,8 +11,10 @@ import { SEGMENT_PROVIDER_REGISTRY } from './providers/index.js';
 import type {
   ProviderContext,
   Segment,
+  SegmentCredentials,
   SegmentIdKey,
   SegmentLookup,
+  SegmentProviderStatus,
   SegmentType,
 } from './types.js';
 
@@ -30,25 +34,20 @@ const ID_TYPES: [SegmentIdKey, IdType][] = [
   ['anidb', 'anidbId'],
 ];
 
-const cache = Cache.getInstance<string, Segment[]>('jellyfin-segments', 20_000);
+const ANIME_KEYS = new Set<SegmentIdKey>(['mal', 'kitsu', 'anilist', 'anidb']);
+
+const cache = Cache.getInstance<string, Segment[]>('jellyfin-segments', 40_000);
 
 /** Below this a client will not offer a skip anyway, so it is noise. */
 const MIN_SEGMENT_MS = 1000;
 
 /** Bumped when a provider changes what it returns, so old answers retire. */
-const KEY_VERSION = 'v1';
+const KEY_VERSION = 'v2';
 
-function enabledProviders(): SegmentProviderId[] {
-  const settings = appConfig.jellyfin.segments;
-  if (!settings.enabled) return [];
-  return settings.providers.filter((id) => SEGMENT_PROVIDER_REGISTRY[id]);
-}
-
-export function segmentsEnabled(): boolean {
-  return enabledProviders().length > 0;
-}
-
-function contextFor(id: SegmentProviderId): ProviderContext {
+function contextFor(
+  id: SegmentProviderId,
+  credentials: SegmentCredentials = {}
+): ProviderContext {
   const settings = appConfig.jellyfin.segments;
   return {
     baseUrl:
@@ -57,7 +56,42 @@ function contextFor(id: SegmentProviderId): ProviderContext {
     minConfidence: settings.minConfidence,
     minSubmissions: settings.minSubmissions,
     animeSkipClientId: settings.animeSkipClientId,
+    pmdbApiKey: credentials.pmdbApiKey || settings.pmdbApiKey,
   };
+}
+
+function activeProviders(
+  credentials?: SegmentCredentials
+): SegmentProviderId[] {
+  const settings = appConfig.jellyfin.segments;
+  if (!settings.enabled) return [];
+  return settings.providers.filter((id) => {
+    const provider = SEGMENT_PROVIDER_REGISTRY[id];
+    return (
+      !!provider && (provider.configured?.(contextFor(id, credentials)) ?? true)
+    );
+  });
+}
+
+/** Every provider some configuration could use, in the operator's order. */
+export function segmentProviders(): SegmentProviderStatus[] {
+  const settings = appConfig.jellyfin.segments;
+  if (!settings.enabled) return [];
+  return settings.providers.flatMap((id): SegmentProviderStatus[] => {
+    const provider = SEGMENT_PROVIDER_REGISTRY[id];
+    if (!provider) return [];
+    const entry = { id, name: provider.name };
+    if (!provider.configured) return [{ ...entry, key: 'none' }];
+    if (provider.configured(contextFor(id)))
+      return [{ ...entry, key: 'instance' }];
+    return provider.configurationKey
+      ? [{ ...entry, key: 'configuration' }]
+      : [];
+  });
+}
+
+export function segmentsEnabled(): boolean {
+  return segmentProviders().length > 0;
 }
 
 /**
@@ -74,42 +108,111 @@ function statedIds(
 }
 
 /**
- * Fills the id spaces the enabled providers need. The anime database resolves
- * per season, so a second cour keys as itself rather than as its first.
+ * Submissions keep the TMDB layout they were filed under, so a cour TMDB has
+ * folded into an earlier season is also tried at IMDb's season for it. Only in
+ * that shape: elsewhere IMDb's season can be a different cour on TMDB.
  */
-async function fillAnimeIds(
+function tmdbEpisodesOf(
+  entry: AnimeEntry,
+  lookup: SegmentLookup,
+  stated: SegmentIdKey
+): SegmentLookup['tmdbEpisodes'] {
+  const animeStated = ANIME_KEYS.has(stated);
+  const unknown = animeStated ? [] : undefined;
+  const tmdbSeason = entry.tmdb?.seasonNumber;
+  const imdb = entry.imdb;
+  if (typeof tmdbSeason !== 'number' || !lookup.episode) return unknown;
+
+  let inCour = lookup.episode;
+  if (!animeStated) {
+    if (stated !== 'imdb' || !imdb || imdb.seasonNumber !== lookup.season)
+      return unknown;
+    inCour = lookup.episode - (imdb.fromEpisode ?? 1) + 1;
+    if (inCour < 1) return unknown;
+  }
+
+  const tmdbFrom = entry.tmdb.fromEpisode ?? 1;
+  const out = [{ season: tmdbSeason, episode: tmdbFrom + inCour - 1 }];
+  if (
+    typeof imdb?.seasonNumber === 'number' &&
+    imdb.seasonNumber > tmdbSeason &&
+    tmdbFrom > 1
+  ) {
+    out.push({
+      season: imdb.seasonNumber,
+      episode: (imdb.fromEpisode ?? 1) + inCour - 1,
+    });
+  }
+  return out;
+}
+
+/** The anime database resolves per season, so a second cour keys as itself rather than as its first. */
+async function fillIds(
   lookup: SegmentLookup,
   providers: SegmentProviderId[]
 ): Promise<void> {
-  const wanted = new Set<SegmentIdKey>();
+  const needed = new Set<SegmentIdKey>();
   for (const id of providers) {
-    for (const key of SEGMENT_PROVIDER_REGISTRY[id].idKeys) {
-      if (!lookup.ids[key]) wanted.add(key);
-    }
+    for (const key of SEGMENT_PROVIDER_REGISTRY[id].idKeys) needed.add(key);
   }
-  if (!wanted.size) return;
+  const missing = () => [...needed].some((key) => !lookup.ids[key]);
+  const stated = ID_TYPES.find(([key]) => lookup.ids[key]);
+  if (!stated) return;
+  const animeStated = ANIME_KEYS.has(stated[0]);
+  const wantsTmdbNumbering =
+    needed.has('tmdb') && lookup.kind === 'episode' && stated[0] !== 'tmdb';
 
-  const known = ID_TYPES.find(([key]) => lookup.ids[key]);
-  if (!known) return;
+  const fromDataset = () => {
+    if (!lookup.ids.imdb || (lookup.ids.tmdb && lookup.ids.tvdb)) return;
+    try {
+      const mapped = IdMappingDataset.getInstance().resolve(
+        lookup.kind === 'movie' ? 'movie' : 'series',
+        { imdbId: lookup.ids.imdb }
+      );
+      if (mapped.tmdbId && !lookup.ids.tmdb)
+        lookup.ids.tmdb = String(mapped.tmdbId);
+      if (mapped.tvdbId && !lookup.ids.tvdb)
+        lookup.ids.tvdb = String(mapped.tvdbId);
+    } catch (error) {
+      logger.debug(
+        { err: error instanceof Error ? error.message : String(error) },
+        'segment id mapping failed'
+      );
+    }
+  };
+
+  fromDataset();
+  if (!missing() && !wantsTmdbNumbering) return;
+
   try {
     const entry = await AnimeDatabase.getInstance().getEntryById(
-      known[1],
-      lookup.ids[known[0]] as string,
+      stated[1],
+      lookup.ids[stated[0]] as string,
       lookup.season,
       lookup.episode
     );
-    if (!entry?.mappings) return;
-    for (const [key, idType] of ID_TYPES) {
-      if (lookup.ids[key]) continue;
-      const value = entry.mappings[idType];
-      if (value != null && value !== '') lookup.ids[key] = String(value);
+    if (entry?.mappings) {
+      for (const [key, idType] of ID_TYPES) {
+        if (lookup.ids[key]) continue;
+        const value = entry.mappings[idType];
+        if (value != null && value !== '') lookup.ids[key] = String(value);
+      }
+    }
+    if (wantsTmdbNumbering) {
+      lookup.tmdbEpisodes = entry
+        ? tmdbEpisodesOf(entry, lookup, stated[0])
+        : animeStated
+          ? []
+          : undefined;
     }
   } catch (error) {
     logger.debug(
       { err: error instanceof Error ? error.message : String(error) },
       'segment id lookup failed'
     );
+    if (animeStated && wantsTmdbNumbering) lookup.tmdbEpisodes = [];
   }
+  fromDataset();
 }
 
 export function lookupFor(
@@ -126,15 +229,10 @@ export function lookupFor(
   };
 }
 
-/*
- * Keyed on the ids and numbering, never on the item id, so the same episode
- * reached through two catalogs is one lookup. The provider list is in the key
- * so changing it takes effect without a flush; the runtime is not, because it
- * only narrows what a provider already returned.
- */
-function cacheKey(lookup: SegmentLookup, providers: SegmentProviderId[]) {
+/** Never on the item id, so one episode reached through two catalogs is one lookup. */
+function cacheKey(id: SegmentProviderId, lookup: SegmentLookup) {
   const ids = ID_TYPES.map(([key]) => lookup.ids[key] ?? '').join('|');
-  return `${KEY_VERSION}|${providers.join(',')}|${lookup.kind}|${ids}|${lookup.season ?? ''}|${lookup.episode ?? ''}`;
+  return `${KEY_VERSION}|${id}|${lookup.kind}|${ids}|${lookup.season ?? ''}|${lookup.episode ?? ''}`;
 }
 
 /**
@@ -163,76 +261,89 @@ function sanitise(segments: Segment[], runtimeMs?: number): Segment[] {
   return out;
 }
 
-/** First provider in the operator's order to answer for a type wins it. */
+/** First provider in the operator's order with a usable entry for a type wins it. */
 function merge(
   results: Map<SegmentProviderId, Segment[]>,
-  providers: SegmentProviderId[]
+  providers: SegmentProviderId[],
+  runtimeMs?: number
 ): Segment[] {
   const chosen = new Map<SegmentType, Segment>();
   for (const id of providers) {
-    for (const segment of results.get(id) ?? []) {
+    for (const segment of sanitise(results.get(id) ?? [], runtimeMs)) {
       if (!chosen.has(segment.type)) chosen.set(segment.type, segment);
     }
   }
   return [...chosen.values()].sort((a, b) => a.startMs - b.startMs);
 }
 
-/**
- * Whether anything enabled covers this kind of item, without touching the cache
- * or the network. `supports` cannot answer it: it needs ids resolved first.
- */
-export function couldHaveSegments(lookup: SegmentLookup): boolean {
-  return enabledProviders().some((id) =>
+function providersFor(
+  lookup: SegmentLookup,
+  credentials?: SegmentCredentials
+): SegmentProviderId[] {
+  return activeProviders(credentials).filter((id) =>
     SEGMENT_PROVIDER_REGISTRY[id].kinds.includes(lookup.kind)
   );
 }
 
-export async function segmentsFor(lookup: SegmentLookup): Promise<Segment[]> {
-  const providers = enabledProviders();
-  if (!providers.length || !couldHaveSegments(lookup)) return [];
+/** Answers before ids are resolved, which `supports` cannot. */
+export function couldHaveSegments(
+  lookup: SegmentLookup,
+  credentials?: SegmentCredentials
+): boolean {
+  return providersFor(lookup, credentials).length > 0;
+}
 
-  const key = cacheKey(lookup, providers);
-  const cached = await cache.get(key).catch(() => undefined);
-  if (cached) return sanitise(cached, lookup.runtimeMs);
+export async function segmentsFor(
+  lookup: SegmentLookup,
+  credentials?: SegmentCredentials
+): Promise<Segment[]> {
+  const providers = providersFor(lookup, credentials);
+  if (!providers.length) return [];
 
-  await fillAnimeIds(lookup, providers);
-
-  // Every provider is asked at once and merged by the operator's order, so one
-  // slow provider costs its timeout rather than the sum of them all.
-  const usable = providers.filter((id) =>
-    SEGMENT_PROVIDER_REGISTRY[id].supports(lookup, contextFor(id))
-  );
-  const settled = await Promise.allSettled(
-    usable.map((id) =>
-      SEGMENT_PROVIDER_REGISTRY[id].fetch(lookup, contextFor(id))
-    )
-  );
-
+  // Keys come from the stated ids, before filling adds any.
+  const keys = new Map(providers.map((id) => [id, cacheKey(id, lookup)]));
   const results = new Map<SegmentProviderId, Segment[]>();
-  settled.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      results.set(usable[i], result.value);
-    } else {
-      logger.debug(
-        {
-          provider: usable[i],
-          err:
-            result.reason instanceof Error
-              ? result.reason.message
-              : String(result.reason),
-        },
-        'segment provider failed'
-      );
-    }
-  });
+  await Promise.all(
+    providers.map(async (id) => {
+      const cached = await cache.get(keys.get(id)!).catch(() => undefined);
+      if (cached) results.set(id, cached);
+    })
+  );
 
-  const merged = merge(results, providers);
-  const settings = appConfig.jellyfin.segments;
-  // Misses are cached too: a provider that answers "nothing" rather than
-  // failing would otherwise be re-asked for every episode of every show it
-  // does not cover.
-  await cache
-    .set(key, merged, merged.length ? settings.ttl : settings.negativeTtl)
-    .catch(() => undefined);
-  return sanitise(merged, lookup.runtimeMs);
+  const uncached = providers.filter((id) => !results.has(id));
+  if (uncached.length) {
+    await fillIds(lookup, uncached);
+    const settings = appConfig.jellyfin.segments;
+    // Misses are cached so uncovered shows are not re-asked. Failures are not:
+    // one configuration's bad key must not blank a provider for the others.
+    await Promise.all(
+      uncached.map(async (id) => {
+        const provider = SEGMENT_PROVIDER_REGISTRY[id];
+        const ctx = contextFor(id, credentials);
+        try {
+          const segments = provider.supports(lookup, ctx)
+            ? await provider.fetch(lookup, ctx)
+            : [];
+          results.set(id, segments);
+          await cache
+            .set(
+              keys.get(id)!,
+              segments,
+              segments.length ? settings.ttl : settings.negativeTtl
+            )
+            .catch(() => undefined);
+        } catch (error) {
+          logger.debug(
+            {
+              provider: id,
+              err: error instanceof Error ? error.message : String(error),
+            },
+            'segment provider failed'
+          );
+        }
+      })
+    );
+  }
+
+  return merge(results, providers, lookup.runtimeMs);
 }

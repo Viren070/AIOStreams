@@ -1484,7 +1484,10 @@ function Content() {
   const jellyfin = status?.settings?.jellyfin;
   const jellyfinEnabled = jellyfin?.enabled ?? false;
   const jellyfinVersionCap = jellyfin?.maxVersions ?? 10;
-  const jellyfinSegmentsAvailable = jellyfin?.segments ?? false;
+  const jellyfinSegmentsAvailable = jellyfin?.segments.enabled ?? false;
+  const jellyfinSegmentProviders = jellyfin?.segments.providers ?? [];
+  const jellyfinPmdbKey =
+    jellyfinSegmentProviders.find((p) => p.id === 'pmdb')?.key ?? null;
   // `user` leaves the switch to the configuration; the others force it.
   const jellyfinResolveForced =
     jellyfin?.resolveOnOpen && jellyfin.resolveOnOpen !== 'user'
@@ -2847,6 +2850,86 @@ function Content() {
                             }
                           />
                         )}
+                        {(userData.jellyfin?.segments ?? true) &&
+                          jellyfinSegmentProviders.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-white">
+                                Sources
+                              </p>
+                              <ul className="space-y-1">
+                                {jellyfinSegmentProviders.map((provider) => {
+                                  const ownKey =
+                                    provider.id === 'pmdb' &&
+                                    !!userData.pmdbApiKey;
+                                  const missingKey =
+                                    provider.key === 'configuration' && !ownKey;
+                                  return (
+                                    <li
+                                      key={provider.id}
+                                      className="flex items-center justify-between gap-3 text-xs"
+                                    >
+                                      <span className="truncate text-gray-300">
+                                        {provider.name}
+                                      </span>
+                                      <span
+                                        className={
+                                          missingKey
+                                            ? 'shrink-0 text-[--orange]'
+                                            : 'shrink-0 text-gray-500'
+                                        }
+                                      >
+                                        {missingKey
+                                          ? 'Needs your key'
+                                          : ownKey
+                                            ? 'Using your key'
+                                            : 'Included'}
+                                      </span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                              <p className="text-xs text-gray-500">
+                                Asked in this order; the first with a marker for
+                                a type supplies it.
+                              </p>
+                            </div>
+                          )}
+                        {(userData.jellyfin?.segments ?? true) &&
+                          jellyfinPmdbKey && (
+                            <PasswordInput
+                              autoComplete="new-password"
+                              label="PublicMetaDB API Key"
+                              help={
+                                <span>
+                                  {jellyfinPmdbKey === 'instance'
+                                    ? 'This instance already asks PublicMetaDB for markers; your own key makes those lookups as your account instead. '
+                                    : 'Adds markers from PublicMetaDB, which also covers movies. '}
+                                  Create a key under Settings → API on{' '}
+                                  <a
+                                    href="https://publicmetadb.com"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[--brand] hover:underline"
+                                  >
+                                    publicmetadb.com
+                                  </a>
+                                  .
+                                </span>
+                              }
+                              placeholder={
+                                jellyfinPmdbKey === 'instance'
+                                  ? 'Provided by this instance (enter your own to override)'
+                                  : 'Enter your PublicMetaDB API key'
+                              }
+                              value={userData.pmdbApiKey}
+                              onValueChange={(value) =>
+                                setUserData((prev) => ({
+                                  ...prev,
+                                  pmdbApiKey: value || undefined,
+                                }))
+                              }
+                            />
+                          )}
                       </div>
                     )}
                     <p className="text-xs text-gray-500">

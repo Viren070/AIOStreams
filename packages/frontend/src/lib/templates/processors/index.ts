@@ -121,6 +121,7 @@ export const processTemplate = (
     'tmdbApiKey',
     'tmdbAccessToken',
     'tvdbApiKey',
+    'pmdbApiKey',
     'rpdbApiKey',
     'topPosterApiKey',
     'aioratingsApiKey',
@@ -137,6 +138,9 @@ export const processTemplate = (
     tmdbApiKey: !!status?.settings?.metadata?.tmdb?.apiKey,
     tmdbAccessToken: !!status?.settings?.metadata?.tmdb?.accessToken,
     tvdbApiKey: !!status?.settings?.metadata?.tvdb?.apiKey,
+    pmdbApiKey: status?.settings?.jellyfin?.segments.providers.some(
+      (p) => p.id === 'pmdb' && p.key === 'instance'
+    ),
   };
 
   topLevelFields.forEach((field) => {

@@ -103,6 +103,7 @@ async function query(
  */
 export const aniSkipProvider: SegmentProvider = {
   id: 'aniskip',
+  name: 'AniSkip',
   defaultBaseUrl: 'https://api.aniskip.com',
   kinds: ['episode'],
   idKeys: ['mal'],
