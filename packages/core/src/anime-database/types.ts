@@ -213,6 +213,7 @@ export interface AnimeEntry {
     seasonNumber: number | null;
     seasonId: number | null;
     fromEpisode?: number | null;
+    absoluteOrder?: boolean;
   };
   title?: string;
   animeSeason?: { season: AnimeSeason; year: number | null };
