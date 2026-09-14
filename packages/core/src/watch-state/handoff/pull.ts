@@ -156,6 +156,29 @@ function matchedIdentityFrom(
   return { ...identity, matchKey: matches.get(identity.itemKey) ?? null };
 }
 
+interface ImportResult {
+  written: number;
+  skipped: number;
+  touched: string[];
+  rekeyed: [string, string][];
+}
+
+/**
+ * An unchanged row is only touched, so a match key found after it was stored
+ * needs its own write.
+ */
+function staleMatchKeys(
+  existing: Map<string, WatchStateRow>,
+  matches: MatchKeys
+): [string, string][] {
+  const out: [string, string][] = [];
+  for (const [key, row] of existing) {
+    const match = matches.get(key);
+    if (match && match !== row.matchKey) out.push([key, match]);
+  }
+  return out;
+}
+
 /**
  * Must run before the import transaction opens: the anime database reads on its
  * own connection, which on SQLite is the one the transaction holds.
@@ -258,8 +281,9 @@ async function importItems(
   now: number,
   db: DbDriver,
   matches: MatchKeys
-): Promise<{ written: number; skipped: number; touched: string[] }> {
-  if (!items.length) return { written: 0, skipped: 0, touched: [] };
+): Promise<ImportResult> {
+  if (!items.length)
+    return { written: 0, skipped: 0, touched: [], rekeyed: [] };
 
   const keys = items.map((i) =>
     i.episode != null || splitVideoId(i.videoId).episode != null
@@ -332,7 +356,12 @@ async function importItems(
     });
   }
   await WatchStateRepository.upsertImports(scope, rows, db);
-  return { written: rows.length, skipped, touched };
+  return {
+    written: rows.length,
+    skipped,
+    touched,
+    rekeyed: staleMatchKeys(existingRows, matches),
+  };
 }
 
 async function importWatched(
@@ -342,7 +371,7 @@ async function importWatched(
   now: number,
   db: DbDriver,
   matches: MatchKeys
-): Promise<{ written: number; skipped: number; touched: string[] }> {
+): Promise<ImportResult> {
   const movies = watched.movies ?? [];
   const episodes = watched.episodes ?? [];
   const nextUp = watched.nextUp ?? [];
@@ -451,7 +480,12 @@ async function importWatched(
   }
 
   await WatchStateRepository.upsertImports(scope, rows, db);
-  return { written: rows.length, skipped, touched };
+  return {
+    written: rows.length,
+    skipped,
+    touched,
+    rekeyed: staleMatchKeys(existingRows, matches),
+  };
 }
 
 async function fetchState(sink: SinkRow): Promise<PlaybackStatePayload | null> {
@@ -542,7 +576,12 @@ export async function pullSink(
   if (!payload) return EMPTY;
 
   const scope = scopeOf(sink);
-  let items = { written: 0, skipped: 0, touched: [] as string[] };
+  let items: ImportResult = {
+    written: 0,
+    skipped: 0,
+    touched: [],
+    rekeyed: [],
+  };
   let watchedWritten = 0;
   let watchedSkipped = 0;
   let removed = 0;
@@ -571,6 +610,7 @@ export async function pullSink(
       now,
       tx
     );
+    await WatchStateRepository.setMatchKeys(scope, items.rekeyed, tx);
 
     // Always complete, so anything it stopped reporting goes now.
     removed = await WatchStateRepository.deleteStaleImports(
@@ -599,6 +639,7 @@ export async function pullSink(
         now,
         tx
       );
+      await WatchStateRepository.setMatchKeys(scope, res.rekeyed, tx);
       removed += await WatchStateRepository.deleteStaleImports(
         scope,
         sink.id,

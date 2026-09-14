@@ -1,6 +1,7 @@
 /**
  * A match key is an item's key under the preferred id the anime database gives
- * it. It is only ever looked up alongside a row's own key, never instead of it.
+ * it, or else under the IMDb id the id mappings give a TVDB or TMDB id. It is
+ * only ever looked up alongside a row's own key, never instead of it.
  */
 import { AnimeDatabase } from '../anime-database/index.js';
 import { enrichParsedIdWithAnimeEntry } from '../anime-database/enrich.js';
@@ -8,6 +9,8 @@ import type {
   AnimeEntry,
   AnimeEntryMappings,
 } from '../anime-database/types.js';
+import { IdMappingDataset } from '../metadata/id-mappings.js';
+import { config as appConfig } from '../config/index.js';
 import { IdParser, type ParsedId } from '../utils/id-parser.js';
 import { createLogger } from '../logging/logger.js';
 import {
@@ -89,6 +92,35 @@ function matchKeyWith(
   });
 }
 
+const MAPPED: Partial<Record<ParsedId['type'], 'tvdb' | 'tmdb'>> = {
+  thetvdbId: 'tvdb',
+  themoviedbId: 'tmdb',
+};
+
+/** The mappings name shows, not episodes, so numbers carry over unchanged. */
+function mappedMatchKey(ref: ContentRef, lookup: Lookup): string | null {
+  const provider = MAPPED[lookup.parsed.type];
+  if (!provider || !appConfig.metadata.idMappings.enabled) return null;
+  const base = IdMappingDataset.getInstance().imdbIdFor(
+    ref.kind === 'movie' ? 'movie' : 'series',
+    provider,
+    Number(lookup.parsed.value)
+  );
+  if (!base) return null;
+  if (ref.kind === 'movie') {
+    return itemKeyFor({ ...ref, baseId: base, videoId: base });
+  }
+  const { season, episode } = lookup;
+  if (season == null || episode == null) return null;
+  return itemKeyFor({
+    ...ref,
+    baseId: base,
+    season,
+    episode,
+    videoId: `${base}:${season}:${episode}`,
+  });
+}
+
 function logMiss(ref: ContentRef, error: unknown) {
   logger.debug(
     {
@@ -109,7 +141,7 @@ export async function matchKeyFor(ref: ContentRef): Promise<string | null> {
       lookup.season,
       lookup.episode
     );
-    return matchKeyWith(ref, lookup, entry);
+    return matchKeyWith(ref, lookup, entry) ?? mappedMatchKey(ref, lookup);
   } catch (error) {
     logMiss(ref, error);
     return null;
@@ -146,9 +178,9 @@ export async function matchKeysFor(
       const select = await selector;
       out.set(
         key,
-        select
+        (select
           ? matchKeyWith(ref, lookup, select(lookup.season, lookup.episode))
-          : null
+          : null) ?? mappedMatchKey(ref, lookup)
       );
     } catch (error) {
       logMiss(ref, error);

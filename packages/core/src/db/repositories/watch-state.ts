@@ -298,6 +298,24 @@ export class WatchStateRepository {
     }
   }
 
+  static async setMatchKeys(
+    scope: WatchScope,
+    pairs: [itemKey: string, matchKey: string][],
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    for (let i = 0; i < pairs.length; i += CHUNK) {
+      const slice = pairs.slice(i, i + CHUNK);
+      const cases = slice.map(
+        ([key, match]) => sql`WHEN ${key} THEN CAST(${match} AS TEXT)`
+      );
+      await db.exec(
+        sql`UPDATE watch_state SET match_key = CASE item_key ${join(cases, ' ')} END
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+               AND item_key IN (${join(slice.map(([key]) => sql`${key}`))})`
+      );
+    }
+  }
+
   static async upsert(
     scope: WatchScope,
     identity: WatchIdentity,

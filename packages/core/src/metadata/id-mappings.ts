@@ -21,6 +21,8 @@ interface TypeMaps {
   imdb: Int32Array;
   tvdb: Int32Array;
   tmdb: Int32Array;
+  /** Row numbers ordered by a provider column. */
+  order?: Partial<Record<'tvdb' | 'tmdb', Int32Array>>;
 }
 
 /** [imdbNum, tvdbId, tmdbId] as parsed from an upstream CSV; 0 means absent. */
@@ -67,6 +69,28 @@ function findRow(maps: TypeMaps, key: number): number {
     const mid = (lo + hi) >> 1;
     const v = maps.imdb[mid];
     if (v === key) return mid;
+    if (v < key) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}
+
+function orderBy(column: Int32Array): Int32Array {
+  let count = 0;
+  for (let i = 0; i < column.length; i++) if (column[i]) count++;
+  const order = new Int32Array(count);
+  for (let i = 0, j = 0; i < column.length; i++) if (column[i]) order[j++] = i;
+  return order.sort((a, b) => column[a] - column[b]);
+}
+
+/** Row holding `key` in `column`, or -1. `buildColumns` leaves no value twice. */
+function findRowBy(column: Int32Array, order: Int32Array, key: number): number {
+  let lo = 0;
+  let hi = order.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const v = column[order[mid]];
+    if (v === key) return order[mid];
     if (v < key) lo = mid + 1;
     else hi = mid - 1;
   }
@@ -317,5 +341,23 @@ export class IdMappingDataset extends BaseDataset {
     if (!ids.tvdbId && maps.tvdb[row]) out.tvdbId = maps.tvdb[row];
     if (!ids.tmdbId && maps.tmdb[row]) out.tmdbId = maps.tmdb[row];
     return out;
+  }
+
+  /**
+   * Each type and provider's ordering is built on its first lookup, 4 bytes per
+   * mapped row.
+   */
+  public imdbIdFor(
+    mediaType: 'movie' | 'series',
+    provider: 'tvdb' | 'tmdb',
+    id: number
+  ): string | undefined {
+    if (!Number.isInteger(id) || id <= 0) return undefined;
+    const maps = mediaType === 'movie' ? this.movie : this.tv;
+    if (!maps.imdb.length) return undefined;
+    const order = ((maps.order ??= {})[provider] ??= orderBy(maps[provider]));
+    const row = findRowBy(maps[provider], order, id);
+    if (row === -1) return undefined;
+    return `tt${String(maps.imdb[row]).padStart(7, '0')}`;
   }
 }
