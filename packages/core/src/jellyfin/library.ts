@@ -1,3 +1,4 @@
+import pLimit from 'p-limit';
 import { config as appConfig } from '../config/index.js';
 import type { MetaPreview, UserData } from '../db/schemas.js';
 import type { AIOStreams } from '../main/index.js';
@@ -97,6 +98,8 @@ const WALK_TRAIL_TTL = 300;
 
 /** Skip pages fetched at once once the page size is known. */
 const WALK_CONCURRENCY = 4;
+/** Searchable catalogs queried at once; search runs on every keystroke. */
+const SEARCH_CONCURRENCY = 4;
 
 function markFor(trail: WalkTrail, startIndex: number): WalkMark | undefined {
   let best: WalkMark | undefined;
@@ -415,9 +418,13 @@ export async function listViews(
     })
   );
 
-  const pending = sniffed.filter((s) => !s.types);
+  const max = appConfig.jellyfin.maxLibraries;
+  const pending: typeof sniffed = [];
   const out: ViewEntry[] = [];
-  for (const { catalog, types } of sniffed) {
+  for (const entry of sniffed) {
+    if (max > 0 && out.length >= max) break;
+    const { catalog, types } = entry;
+    if (!types) pending.push(entry);
     const kind = collectionTypeFor(catalog, types ?? []);
     if (kind === 'hidden') continue;
     out.push({
@@ -498,14 +505,17 @@ export async function searchCatalogs(
    * every searchable catalog, and the interleave below fills `limit` from that
    * breadth instead.
    */
+  const pool = pLimit(SEARCH_CONCURRENCY);
   const results = await Promise.allSettled(
     catalogs.map((c) =>
-      getCatalogPage(engine, c, {
-        startIndex: 0,
-        limit,
-        search: term,
-        singlePage: true,
-      })
+      pool(() =>
+        getCatalogPage(engine, c, {
+          startIndex: 0,
+          limit,
+          search: term,
+          singlePage: true,
+        })
+      )
     )
   );
   const lists = results.map((r) =>
