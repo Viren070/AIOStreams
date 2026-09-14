@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { byteSize } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 /**
@@ -281,7 +282,7 @@ export const watchStateSchema = {
     ui: { min: 0 },
   },
   pullMaxResponseBytes: {
-    schema: z.number().int().min(1024),
+    schema: byteSize,
     default: 5 * 1000 * 1000,
     label: 'Largest watch-state response',
     description:
@@ -289,7 +290,6 @@ export const watchStateSchema = {
     env: 'WATCH_STATE_PULL_MAX_RESPONSE_BYTES',
     requiresRestart: false,
     secret: false,
-    ui: { min: 1024 },
   },
   pullMaxItems: {
     schema: z.number().int().min(1),
