@@ -88,7 +88,7 @@ const EMPTY: PullOutcome = {
 /** Seconds or milliseconds; the contract says seconds but be forgiving. */
 function atMs(at: number | undefined, fallback: number): number {
   if (!at || !Number.isFinite(at)) return fallback;
-  return at > 1e11 ? at : at * 1000;
+  return Math.round(at > 1e11 ? at : at * 1000);
 }
 
 function episodeKeyOf(videoId: string): string {
@@ -101,12 +101,12 @@ function positionOf(
   existing: WatchStateRow | undefined
 ): { positionMs: number; durationMs: number } | null {
   const durationMs =
-    (item.durationMs && item.durationMs > 0 ? item.durationMs : 0) ||
+    Math.round(item.durationMs && item.durationMs > 0 ? item.durationMs : 0) ||
     existing?.durationMs ||
     0;
 
   if (item.positionMs != null && item.positionMs > 0) {
-    return { positionMs: item.positionMs, durationMs };
+    return { positionMs: Math.round(item.positionMs), durationMs };
   }
   if (item.progressPercent != null && item.progressPercent > 0) {
     if (durationMs <= 0) return null;
