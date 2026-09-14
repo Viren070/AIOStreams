@@ -103,6 +103,10 @@ export function parseLockResult<T>(json: string): T {
   });
 }
 
+export function requestLockType(): 'redis' | 'memory' {
+  return appConfig.bootstrap.redisUri ? 'redis' : 'memory';
+}
+
 export class DistributedLock {
   private static instance: DistributedLock;
   private redis: RedisClientType | null = null;
@@ -216,35 +220,35 @@ export class DistributedLock {
       return result === 'OK';
     };
 
+    const release = async () => {
+      if ((await this.redis!.get(redisKey)) === owner) {
+        logger.debug(`Releasing redis lock for key: ${key}`);
+        await this.redis!.del(redisKey);
+      }
+    };
+
     if (await acquireLock()) {
       logger.debug(`Redis lock acquired for key: ${key}`);
       let result: T;
       try {
         result = await fn();
-        /*
-         * Serialising the result is the expensive part, and with nothing
-         * waiting it is thrown away. A waiter that subscribes in the gap finds
-         * the key gone and runs the work itself.
-         */
-        if (await this.hasWaiters(doneChannel)) {
-          const storedResult: StoredResult<T> = { value: result };
-          await this.redis!.publish(
-            doneChannel,
-            stringifyLockResult(storedResult)
-          );
-        }
       } catch (e: any) {
+        await release();
         const errorResult: StoredResult<T> = { error: e };
         await this.redis!.publish(
           doneChannel,
           stringifyLockResult(errorResult)
         );
         throw e;
-      } finally {
-        if ((await this.redis!.get(redisKey)) === owner) {
-          logger.debug(`Releasing redis lock for key: ${key}`);
-          await this.redis!.del(redisKey);
-        }
+      }
+      await release();
+      // Serialising the result is the expensive part, and with nothing waiting it is thrown away.
+      if (await this.hasWaiters(doneChannel)) {
+        const storedResult: StoredResult<T> = { value: result };
+        await this.redis!.publish(
+          doneChannel,
+          stringifyLockResult(storedResult)
+        );
       }
       return { result, cached: false };
     }
@@ -255,7 +259,8 @@ export class DistributedLock {
 
       const cleanup = () => {
         clearTimeout(timeoutId);
-        this.subRedis!.unsubscribe(doneChannel).catch((e) =>
+        // Only this waiter's listener: others in this process may share the channel.
+        this.subRedis!.unsubscribe(doneChannel, subscriber).catch((e) =>
           logger.error(`Error during unsubscribe: ${e.message}`)
         );
       };
