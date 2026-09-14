@@ -54,6 +54,9 @@ export function buildTemplateFromUserData({
   if (userData.tvdbApiKey) {
     templateData.tvdbApiKey = '<template_placeholder>';
   }
+  if (userData.pmdbApiKey) {
+    templateData.pmdbApiKey = '<template_placeholder>';
+  }
   if (userData.rpdbApiKey) {
     templateData.rpdbApiKey = '<template_placeholder>';
   }

@@ -64,7 +64,9 @@ async function mediaSegments(req: Request, res: Response) {
 
   const allowed = allowedTypes(loc.ctx.userData);
   const requested = requestedTypes(req);
-  const segments = (await segmentsFor(lookup)).filter(
+  const segments = (
+    await segmentsFor(lookup, { pmdbApiKey: loc.ctx.userData.pmdbApiKey })
+  ).filter(
     (s: Segment) =>
       (!allowed || allowed.has(s.type)) && (!requested || requested.has(s.type))
   );

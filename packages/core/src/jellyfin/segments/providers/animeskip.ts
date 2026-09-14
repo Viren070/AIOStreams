@@ -168,16 +168,18 @@ function toSegments(episode: AnimeSkipEpisode): Segment[] {
 
 export const animeSkipProvider: SegmentProvider = {
   id: 'animeskip',
+  name: 'Anime Skip',
   defaultBaseUrl: 'https://api.anime-skip.com',
   kinds: ['episode'],
   idKeys: ['anilist'],
 
-  supports(lookup, ctx) {
+  configured(ctx) {
+    return !!ctx.animeSkipClientId;
+  },
+
+  supports(lookup) {
     return (
-      lookup.kind === 'episode' &&
-      !!lookup.ids.anilist &&
-      !!lookup.episode &&
-      !!ctx.animeSkipClientId
+      lookup.kind === 'episode' && !!lookup.ids.anilist && !!lookup.episode
     );
   },
 

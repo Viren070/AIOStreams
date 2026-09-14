@@ -129,10 +129,10 @@ export const jellyfinSchema = {
     },
     providers: {
       schema: z.array(z.enum(constants.SEGMENT_PROVIDERS)),
-      default: ['introdb', 'aniskip'] as string[],
+      default: ['introdb', 'aniskip', 'pmdb'] as string[],
       label: 'Segment providers',
       description:
-        'Which databases to ask, best first: the first one to answer for a marker type wins it. **introdb** is IMDb-keyed and covers everything; **aniskip** is anime only and is the one provider that matches submissions against the real episode length; **animeskip** is anime only, needs a client id, and costs a whole-show fetch per episode.',
+        'Which databases to ask, best first: the first one to answer for a marker type wins it. **introdb** is IMDb-keyed and covers every series; **aniskip** is anime only and is the one provider that matches submissions against the real episode length; **animeskip** is anime only, needs a client id, and costs a whole-show fetch per episode; **pmdb** (PublicMetaDB) covers movies as well as series, and needs an API key from the instance or from each configuration, so it is skipped for a configuration that has neither.',
       env: 'JELLYFIN_SEGMENTS_PROVIDERS',
       requiresRestart: false,
       secret: false,
@@ -145,6 +145,16 @@ export const jellyfinSchema = {
       description:
         'Anime Skip refuses requests without one and its public shared id is heavily rate limited, so get your own from an Anime Skip account. Leaving this empty disables that provider however it is ordered.',
       env: 'JELLYFIN_SEGMENTS_ANIME_SKIP_CLIENT_ID',
+      requiresRestart: false,
+      secret: true,
+    },
+    pmdbApiKey: {
+      schema: z.string(),
+      default: '',
+      label: 'PublicMetaDB API key',
+      description:
+        "Used for every configuration that has not entered its own key. PublicMetaDB rate limits by IP rather than by key, so a configuration's own key buys no extra headroom; it only means that configuration's lookups are made as its own account instead of yours. Leave this empty to offer PublicMetaDB only to configurations that bring a key.",
+      env: 'JELLYFIN_SEGMENTS_PMDB_API_KEY',
       requiresRestart: false,
       secret: true,
     },

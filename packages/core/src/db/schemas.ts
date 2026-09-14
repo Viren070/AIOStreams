@@ -976,6 +976,7 @@ export const UserDataSchema = z.object({
   tmdbAccessToken: z.string().optional(),
   tmdbApiKey: z.string().optional(),
   tvdbApiKey: z.string().optional(),
+  pmdbApiKey: z.string().optional(),
   yearMatching: z
     .object({
       enabled: z.boolean().optional(),
@@ -1724,8 +1725,17 @@ const StatusResponseSchema = z.object({
         maxCatalogItems: z.number(),
         /** Extra users a configuration may add beyond its primary user. */
         maxPersonas: z.number(),
-        /** Whether the instance offers skip markers at all. */
-        segments: z.boolean(),
+        segments: z.object({
+          enabled: z.boolean(),
+          /** In the operator's order; `configuration` needs the configuration's own key. */
+          providers: z.array(
+            z.object({
+              id: z.enum(constants.SEGMENT_PROVIDERS),
+              name: z.string(),
+              key: z.enum(['none', 'instance', 'configuration']),
+            })
+          ),
+        }),
       })
       .optional(),
     alternateDesign: z.boolean(),

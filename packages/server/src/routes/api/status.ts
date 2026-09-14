@@ -4,6 +4,7 @@ import {
   config as appConfig,
   getEnvironmentServiceDetails,
   PresetManager,
+  segmentProviders,
   segmentsEnabled,
   SelAccess,
   UserRepository,
@@ -50,7 +51,10 @@ const statusInfo = async (): Promise<StatusResponse> => {
         resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
         maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
         maxPersonas: appConfig.jellyfin.maxPersonas,
-        segments: segmentsEnabled(),
+        segments: {
+          enabled: segmentsEnabled(),
+          providers: segmentProviders(),
+        },
       },
       community: {
         formatters: appConfig.community.formatters,

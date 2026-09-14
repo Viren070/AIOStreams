@@ -966,7 +966,8 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
   | 'aioratingsProfileId'
   | 'openposterdbApiKey'
   | 'openposterdbUrl'
-  | 'openposterdbParameters',
+  | 'openposterdbParameters'
+  | 'pmdbApiKey',
   {
     name: string;
     description: string;
@@ -1021,6 +1022,11 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     name: 'OpenPosterDB Custom Parameters',
     description:
       'Optional query string (without the leading `?`) appended to every poster to customise it, e.g. `ratings_limit=2&badge_size=l&position=br`.',
+  },
+  pmdbApiKey: {
+    name: 'PublicMetaDB API Key',
+    description:
+      'Create one under Settings → API on [PublicMetaDB](https://publicmetadb.com). Used for skip intro and credits markers in the Jellyfin API.',
   },
 };
 
@@ -1558,7 +1564,7 @@ const RESOURCES = [
   WATCH_STATE_RESOURCE,
 ] as const;
 
-const SEGMENT_PROVIDERS = ['introdb', 'aniskip', 'animeskip'] as const;
+const SEGMENT_PROVIDERS = ['introdb', 'aniskip', 'animeskip', 'pmdb'] as const;
 
 export type SegmentProviderId = (typeof SEGMENT_PROVIDERS)[number];
 
