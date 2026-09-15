@@ -415,6 +415,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       episode: searchMetadata.episode,
       absoluteEpisode: searchMetadata.absoluteEpisode,
       relativeAbsoluteEpisode: searchMetadata.relativeAbsoluteEpisode,
+      animeEntryTitles: searchMetadata.animeEntryTitles,
       airDates: searchMetadata.airDates,
       isDateBased: searchMetadata.isDateBased,
     };
@@ -625,14 +626,13 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         );
       }
       if (
-        // if relative absolute exists and is different from absoluteEpisode and episode
-        metadata.relativeAbsoluteEpisode &&
-        [metadata.absoluteEpisode, parsedId.episode].every(
-          (v) => v !== metadata.relativeAbsoluteEpisode
-        )
+        // Search the anime-entry-relative episode when it differs from the
+        // parent show's absolute episode.
+        metadata.relativeAbsoluteEpisode !== undefined &&
+        metadata.relativeAbsoluteEpisode !== metadata.absoluteEpisode
       ) {
         addQuery(
-          `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode!.toString().padStart(2, '0')}`,
+          `${titlePlaceholder} ${metadata.relativeAbsoluteEpisode.toString().padStart(2, '0')}`,
           seriesTitles
         );
       }
@@ -669,6 +669,15 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     type: string
   ): Promise<SearchMetadata> {
     const start = Date.now();
+
+    // Preserve the anime-entry-local episode before MAL/Kitsu enrichment maps
+    // the request into the parent TV show's season/episode coordinates.
+    const requestedAnimeEpisode =
+      !parsedId.season &&
+      parsedId.episode &&
+      ['kitsuId', 'malId'].includes(parsedId.type)
+        ? Number(parsedId.episode)
+        : undefined;
 
     const animeEntry = await AnimeDatabase.getInstance().getEntryById(
       parsedId.type,
@@ -789,6 +798,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       }
     }
 
+    // A direct MAL/Kitsu request gives us an authoritative episode coordinate
+    // within the selected anime entry, even when it equals the parent absolute.
+    if (animeEntry && requestedAnimeEpisode !== undefined) {
+      relativeAbsoluteEpisode = requestedAnimeEpisode;
+    }
+
     // // Map IDs
     const imdbId =
       parsedId.type === 'imdbId'
@@ -812,6 +827,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       episode: parsedId.episode ? Number(parsedId.episode) : undefined,
       absoluteEpisode,
       relativeAbsoluteEpisode,
+      animeEntryTitles:
+        animeEntry && requestedAnimeEpisode !== undefined
+          ? [animeEntry.title, ...(animeEntry.synonyms ?? [])].filter(
+              (title): title is string => !!title
+            )
+          : undefined,
       year: metadata.year,
       seasonYear,
       imdbId,
