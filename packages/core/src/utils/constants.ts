@@ -267,6 +267,8 @@ export const DEFAULT_FAILOVER_INCLUDE_EXTERNAL = false;
 export const DEFAULT_FAILOVER_SAME_RELEASE_LIMIT = 2;
 /** Delay between launching same-release variant attempts (ms). 0 = no delay. */
 export const DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS = 0;
+/** Whether failover is restricted to same-release variants only (never a different release). */
+export const DEFAULT_FAILOVER_ONLY_SAME_RELEASE = false;
 
 /** Metadata fields the deduplicator can merge from discarded duplicates into the winner. */
 export const DEDUPLICATOR_MERGE_FIELDS = [
