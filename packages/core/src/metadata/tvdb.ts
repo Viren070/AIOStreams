@@ -171,6 +171,35 @@ const SeriesEpisodesResponseSchema = z.discriminatedUnion('status', [
   TVDBErrorSchema,
 ]);
 
+/** Complete default-order catalog used to rule out a conflicting series. */
+export interface TVDBEpisodeCatalog {
+  tvdbId: number;
+  title: string;
+  episodes: {
+    seasonNumber: number;
+    episodeNumber: number;
+    absoluteEpisodeNumber?: number | null;
+  }[];
+}
+
+const EpisodeCatalogResponseSchema = z.object({
+  status: z.literal('success'),
+  data: z.object({
+    series: z.object({ id: z.number(), name: z.string().optional() }),
+    episodes: z.array(
+      z.object({
+        seasonNumber: z.number().int().nonnegative(),
+        number: z.number().int().nonnegative(),
+        absoluteNumber: z.number().int().nonnegative().nullable().optional(),
+      })
+    ),
+  }),
+  links: z.object({
+    next: z.string().nullable(),
+    total_items: z.number().int().nonnegative(),
+  }),
+});
+
 const SearchResultSchema = z.looseObject({
   tvdb_id: z.string().optional(),
   name: z.string().optional(),
@@ -269,6 +298,19 @@ export class TVDBMetadata {
       logger.warn(
         `Failed to fetch TVDB episodes for series ${tvdbId} season ${seasonNumber}: ${error instanceof Error ? error.message : error}`
       );
+      return undefined;
+    }
+  }
+
+  /** Use the authenticated API when a keyless competitor lookup is unavailable. */
+  public async getEpisodeCatalog(
+    tvdbId: number
+  ): Promise<TVDBEpisodeCatalog | undefined> {
+    try {
+      await this.ensureToken();
+      return await this.api.getEpisodeCatalog(tvdbId);
+    } catch {
+      logger.debug('TVDB competitor episode catalog unavailable', { tvdbId });
       return undefined;
     }
   }
@@ -438,6 +480,9 @@ class TVDBApi {
   // Cache instances
   private readonly cache = {
     token: Cache.getInstance<string, string>('tvdb:token'),
+    episodeCatalog: Cache.getInstance<number, TVDBEpisodeCatalog>(
+      'tvdb:episodeCatalog:v1'
+    ),
     series: Cache.getInstance<number, z.infer<typeof SeriesResponseSchema>>(
       'tvdb:series'
     ),
@@ -553,6 +598,48 @@ class TVDBApi {
       },
       id,
       7 * 24 * 60 * 60 // 7 days
+    );
+  }
+
+  public async getEpisodeCatalog(id: number): Promise<TVDBEpisodeCatalog> {
+    return this.cache.episodeCatalog.wrap(
+      async () => {
+        const catalog: TVDBEpisodeCatalog = {
+          tvdbId: id,
+          title: '',
+          episodes: [],
+        };
+        for (let page = 0; page < 10; page++) {
+          const response = await this.request<
+            z.infer<typeof EpisodeCatalogResponseSchema>
+          >(`/series/${id}/episodes/default?page=${page}`, {
+            schema: EpisodeCatalogResponseSchema,
+            timeout: 5000,
+          });
+          if (response.data.series.id !== id)
+            throw new Error('Episode catalog identity mismatch');
+          catalog.title = response.data.series.name ?? '';
+          catalog.episodes.push(
+            ...response.data.episodes.map((episode) => ({
+              seasonNumber: episode.seasonNumber,
+              episodeNumber: episode.number,
+              // TVDB uses zero when no absolute number has been assigned.
+              absoluteEpisodeNumber: episode.absoluteNumber || undefined,
+            }))
+          );
+          if (!response.links.next) {
+            if (catalog.episodes.length !== response.links.total_items)
+              throw new Error('Incomplete episode catalog');
+            return catalog;
+          }
+          if (!response.data.episodes.length)
+            throw new Error('Empty intermediate episode page');
+        }
+        // A truncated catalog must never become evidence that a show is shorter.
+        throw new Error('Episode catalog pagination limit reached');
+      },
+      id,
+      24 * 60 * 60
     );
   }
 
