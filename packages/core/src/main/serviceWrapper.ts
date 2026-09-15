@@ -433,6 +433,14 @@ async function buildDebridStreams(
           result.file.name ?? result.title
         );
       }
+      const size =
+        result.file.index === -1 && original?.size !== undefined
+          ? original.size
+          : result.file.size;
+      const folderSize =
+        result.file.index === -1 && original?.folderSize !== undefined
+          ? original.folderSize
+          : result.size;
       const debridStream: ParsedStream = {
         ...(original ?? {
           id: `wrap-${result.hash}-${result.service?.id}`,
@@ -454,8 +462,8 @@ async function buildDebridStreams(
             }
           : undefined,
         library: result.service?.library,
-        size: result.file.size,
-        folderSize: result.size,
+        size,
+        folderSize,
         filename: result.file.name ?? result.title ?? original?.filename,
         folderName: result.file.name ? result.title : original?.folderName,
         torrent: {
