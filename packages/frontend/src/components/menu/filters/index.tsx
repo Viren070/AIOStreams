@@ -1802,7 +1802,7 @@ function Content() {
                     ]}
                     defaultValue="keep"
                     value={userData.titleMatching?.ambiguousResults}
-                    help="What to do with results that can't be told apart from a same-name series (reboots and country variants, e.g. The Office UK vs US). 'discard' keeps only results whose year, country tag or episode title confirms the requested series."
+                    help="What to do with results that share a title or known alias with another series. 'discard' requires distinguishing year, country or episode evidence, including for the older show. Matching episode numbers or a verified season can identify an untagged release when reliable metadata puts them beyond every competing series' known range. Distinctive titles remain unaffected; uncertain releases may still be removed even when correct."
                     onValueChange={(value) => {
                       setUserData((prev) => ({
                         ...prev,
@@ -2059,7 +2059,7 @@ function Content() {
                 <SettingsCard
                   id="seasonEpisodeMatching"
                   title="Season/Episode Matching"
-                  description="Any streams which don't specifically match the requested season/episode will be filtered out. You can optionally choose to only apply it to specific request types and addons"
+                  description="Any streams which don't specifically match the requested season/episode will be filtered out. Also excludes videos labelled with multiple episodes, including paired cartoon segments; packs containing separate episode files remain eligible. You can optionally choose to only apply it to specific request types and addons."
                 >
                   <Switch
                     label="Enabled"
