@@ -81,6 +81,7 @@ import { EasynewsSearchPreset } from './easynewsSearch.js';
 import { SeaDexPreset } from './seadex.js';
 import { StreamNZBPreset } from './streamnzb.js';
 import { DavexPreset } from './davex.js';
+import { InfiniDyskPreset } from './infinidysk.js';
 import { HdHubPreset } from './hdhub.js';
 import { BaguettioPreset } from './baguettio.js';
 import { Preset } from './index.js';
@@ -130,6 +131,7 @@ let PRESET_LIST: string[] = [
   'usenet-streamer',
   'streamnzb',
   'davex',
+  'infinidysk',
   'dmm-cast',
   'nuvio-streams',
   'webstreamr',
@@ -351,6 +353,8 @@ export class PresetManager {
         return StreamNZBPreset;
       case 'davex':
         return DavexPreset;
+      case 'infinidysk':
+        return InfiniDyskPreset;
       case 'hdhub':
         return HdHubPreset;
       case 'baguettio':
