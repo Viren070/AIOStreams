@@ -27,39 +27,49 @@ enum KnabenCategory {
   AnimeNonEnglishTranslated = 6008000,
 }
 
-const KnabenSearchHitSchema = z.looseObject({
+/** Every field Knaben returns, so `searchField`/`orderBy` stay unrestricted. */
+const KNABEN_HIT_FIELDS = [
+  'bytes',
+  'cachedOrigin',
+  'category',
+  'categoryId',
+  'date',
+  'details',
+  'hash',
+  'id',
+  'lastSeen',
+  'magnetUrl',
+  'link',
+  'peers',
+  'seeders',
+  'score',
+  'title',
+  'tracker',
+  'trackerId',
+  'virusDetection',
+] as const;
+
+// Strict, and only what the addon reads: the response was a passthrough
+// object, so every extra field Knaben adds got cached for a week as well.
+const KnabenSearchHitSchema = z.object({
   bytes: z.number(),
-  cachedOrigin: z.string(),
-  category: z.string(),
   categoryId: z.array(z.number()),
-  date: z.iso.datetime({ offset: true }),
-  details: z.url().nullable(),
   hash: z
     .string()
     .nullable()
     .transform((val) => (val ? val.toLowerCase() : null)),
-  id: z.string(),
   lastSeen: z.iso.datetime({ offset: true }).nullable(),
   magnetUrl: z.string().nullable(),
   link: z.url().nullable(),
-  peers: z.number(),
   seeders: z.number(),
-  score: z.number().nullable(),
   title: z.string(),
   tracker: z.string(),
-  trackerId: z.string(),
-  virusDetection: z.number(),
 });
 
 type KnabenSearchHit = z.infer<typeof KnabenSearchHitSchema>;
 
 const KnabenSearchResponse = z.object({
   hits: z.array(KnabenSearchHitSchema),
-  max_score: z.number().nullable(),
-  total: z.object({
-    relation: z.enum(['eq', 'gte', 'lte']),
-    value: z.number(),
-  }),
 });
 
 type KnabenSearchResponse = z.infer<typeof KnabenSearchResponse>;
@@ -74,9 +84,9 @@ const KnabenSearchOptions = z.object({
     ])
     .default('100%')
     .optional(),
-  searchField: z.keyof(KnabenSearchHitSchema).default('title').optional(),
+  searchField: z.enum(KNABEN_HIT_FIELDS).default('title').optional(),
   query: z.string(),
-  orderBy: z.keyof(KnabenSearchHitSchema).optional(),
+  orderBy: z.enum(KNABEN_HIT_FIELDS).optional(),
   orderDirection: z.enum(['asc', 'desc']).default('desc').optional(),
   categories: z.array(z.number()).optional(),
   from: z.number().default(0).optional(),

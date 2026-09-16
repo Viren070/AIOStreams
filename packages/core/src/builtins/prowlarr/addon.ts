@@ -69,7 +69,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       apiKey: appConfig.builtins.prowlarr.apiKey,
       timeout: 5000,
     });
-    const { data } = await api.indexers();
+    const data = await api.indexers();
     logger.debug(`Fetched ${data.length} preconfigured indexers`);
     let filterReasons: Map<string, number> = new Map();
 
@@ -134,8 +134,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
       availableIndexers = ProwlarrAddon.preconfiguredIndexers;
     } else {
       try {
-        const { data } = await this.api.indexers();
-        availableIndexers = data;
+        availableIndexers = await this.api.indexers();
       } catch (error) {
         if (error instanceof ProwlarrApiError) {
           throw new Error(
@@ -147,8 +146,8 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     }
 
     try {
-      const { data } = await this.api.tags();
-      chosenTags = data
+      const tags = await this.api.tags();
+      chosenTags = tags
         .filter((tag) => this.tags.includes(tag.label.toLowerCase()))
         .map((tag) => tag.id);
     } catch (error) {
@@ -209,7 +208,7 @@ export class ProwlarrAddon extends BaseDebridAddon<ProwlarrAddonConfig> {
     const searchPromises = queries.map((q) =>
       queryLimit(async () => {
         const start = Date.now();
-        const { data } = await this.api.search({
+        const data = await this.api.search({
           query: q,
           indexerIds: chosenIndexers.map((indexer) => indexer.id),
           type: 'search',

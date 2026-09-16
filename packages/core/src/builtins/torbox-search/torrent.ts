@@ -10,7 +10,6 @@ export interface Torrent {
   hash: string;
   // magnet?: string;
   title: string;
-  fileIdx?: number;
   size: number;
   indexer: string;
   age?: number;
@@ -19,8 +18,6 @@ export interface Torrent {
   sources: string[];
   nzb?: string;
   userSearch?: boolean;
-  cached?: boolean;
-  owned?: boolean;
 }
 
 export function convertDataToTorrents(
@@ -41,7 +38,5 @@ export function convertDataToTorrents(
     seeders:
       file.last_known_seeders !== -1 ? file.last_known_seeders : undefined,
     nzb: file.nzb ?? undefined,
-    cached: file.cached ?? undefined,
-    owned: file.owned ?? undefined,
   }));
 }

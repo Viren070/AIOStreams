@@ -22,32 +22,22 @@ enum TorrentGalaxyCategory {
 
 const TorrentGalaxySearchResultSchema = z
   .looseObject({
-    pk: z.string(), // post key
     n: z.string(), // name
     a: z.number(), // unix timestamp i.e. age
-    c: z.string(), // category e.g. Movies
     s: z.number(), // size
-    t: z.string().nullable(), // poster URL
     u: z.string(), // user
     se: z.number(), // seeders
-    le: z.number(), // leechers
     i: z.string().nullable(), // imdb id,
     h: z.string().transform((h) => h.toLowerCase()), // hash
-    tg: z.array(z.string()), // tags.
   })
   .transform((data) => ({
-    postKey: data.pk,
     name: data.n,
     age: data.a,
-    category: data.c,
     size: data.s,
-    posterUrl: data.t,
     user: data.u,
     seeders: data.se,
-    leechers: data.le,
     imdbId: data.i,
     hash: data.h,
-    tags: data.tg,
   }));
 
 type TorrentGalaxySearchResult = z.infer<
@@ -57,13 +47,11 @@ type TorrentGalaxySearchResult = z.infer<
 const TorrentGalaxySearchResponse = z
   .object({
     page_size: z.number(),
-    count: z.number(),
     total: z.number(),
     results: z.array(TorrentGalaxySearchResultSchema),
   })
   .transform((data) => ({
     pageSize: data.page_size,
-    count: data.count,
     total: data.total,
     results: data.results,
   }));

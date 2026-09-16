@@ -24,7 +24,6 @@ const TheRARBGSearchResultSchema = z
   .looseObject({
     n: z.string(), // name
     a: z.number(), // unix timestamp i.e. age
-    c: z.string(), // category e.g. Movies
     s: z.number(), // size
     u: z.string(), // user
     se: z.number(), // seeders
@@ -34,7 +33,6 @@ const TheRARBGSearchResultSchema = z
   .transform((data) => ({
     name: data.n,
     age: data.a,
-    category: data.c,
     size: data.s,
     user: data.u,
     seeders: data.se,
