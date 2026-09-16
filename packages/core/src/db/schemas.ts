@@ -997,6 +997,8 @@ export const UserDataSchema = z.object({
       sameReleaseLimit: z.number().min(0).optional(),
       /** Delay between launching same-release variant attempts (ms). Default 0. */
       duplicateStaggerMs: z.number().min(0).optional(),
+      /** When true, only try same-release variants — never fail over to a different release. Default false. */
+      onlySameReleaseFailover: z.boolean().optional(),
     })
     .optional(),
   serviceWrap: z

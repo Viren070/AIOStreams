@@ -248,6 +248,7 @@ export async function processStreams(
     includeExternalFailover?: boolean;
     sameReleaseLimit: number;
     duplicateStaggerMs: number;
+    onlySameReleaseFailover: boolean;
   }
 ): Promise<{
   streams: ParsedStream[];
@@ -350,6 +351,7 @@ export async function processStreams(
         includeExternal: failoverOpts.includeExternalFailover,
         sameReleaseLimit: failoverOpts.sameReleaseLimit,
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
+        onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
       userScopeKey(ctx.userData)
     ).catch((error) => {
@@ -385,6 +387,7 @@ export async function processStreams(
         includeExternal: failoverOpts.includeExternalFailover,
         sameReleaseLimit: failoverOpts.sameReleaseLimit,
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
+        onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
       userScopeKey(ctx.userData)
     ).catch((error) => {
@@ -418,6 +421,7 @@ export async function processStreams(
           includeExternal: failoverOpts.includeExternalFailover,
           sameReleaseLimit: failoverOpts.sameReleaseLimit,
           duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
+          onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
         },
         userScopeKey(ctx.userData)
       ).catch((error) => {
@@ -780,6 +784,9 @@ export async function getStreams(
           duplicateStaggerMs:
             ctx.userData.failover.duplicateStaggerMs ??
             constants.DEFAULT_FAILOVER_DUPLICATE_STAGGER_MS,
+          onlySameReleaseFailover:
+            ctx.userData.failover.onlySameReleaseFailover ??
+            constants.DEFAULT_FAILOVER_ONLY_SAME_RELEASE,
         }
       : undefined
   );

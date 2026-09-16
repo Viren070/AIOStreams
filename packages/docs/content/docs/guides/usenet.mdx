@@ -464,6 +464,7 @@ Stremio NNTP results are excluded — playback happens entirely inside Stremio. 
 - **Include External Addon Targets** — see above.
 - **Max Failover Attempts** — how many fallback results to try before giving up.
 - **Same-Release Failover Attempts** — see [below](#same-release-variants-deduplicator-merging).
+- **Only Same-Release Failover** — never fail over to a different release, even if same-release alternatives run out.
 - **Parallel Attempts** and its timing knobs (backup delay, preferred-item grace, …) — advanced: race several attempts and take the first healthy one.
 
 ### Same-Release Variants (Deduplicator Merging)
@@ -473,7 +474,7 @@ The deduplicator (**Filters → Deduplicator**) removes duplicate copies of the 
 - **Merge Duplicates** — rather than just discarding duplicates, their info is folded into the surviving result (e.g. a runtime that only one addon reported is kept on the winner).
 - **Harvest Failover Variants** — additionally retains the duplicates' playback URLs on the winner as _same-release_ failover targets: the same release from a different indexer or addon.
 
-With variants harvested, the **Same-Release Failover Attempts** setting (in the Failover card) controls how many alternative copies of the _same_ release are tried before failover moves on to a different release — often the ideal behaviour, since another indexer's NZB of the same release may be complete where the first wasn't.
+With variants harvested, the **Same-Release Failover Attempts** setting (in the Failover card) controls how many alternative copies of the _same_ release are tried before failover moves on to a different release — often the ideal behaviour, since another indexer's NZB of the same release may be complete where the first wasn't. Enable **Only Same-Release Failover** to skip that move-on step entirely.
 
 ### Failover Position
 
