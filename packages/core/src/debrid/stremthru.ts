@@ -18,6 +18,7 @@ import {
   removeDownloadOnAbort,
   parseFileNames,
   selectableFileNames,
+  selectableFiles,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -340,7 +341,7 @@ export class StremThruService
           size: Math.round(
             item.files.reduce((acc, file) => acc + file.size, 0)
           ),
-          files: item.files.map((file) => {
+          files: selectableFiles(item.files).map((file) => {
             return {
               name: file.name,
               size: file.size,
@@ -578,13 +579,15 @@ export class StremThruService
           size: item.files
             ? item.files.reduce((acc, file) => acc + file.size, 0)
             : undefined,
-          files: item.files?.map((file) => ({
-            name: file.name,
-            size: file.size,
-            index: file.index,
-            link: file.link,
-            path: file.path,
-          })),
+          files: item.files
+            ? selectableFiles(item.files).map((file) => ({
+                name: file.name,
+                size: file.size,
+                index: file.index,
+                link: file.link,
+                path: file.path,
+              }))
+            : undefined,
         }));
 
         newResults

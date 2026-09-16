@@ -390,6 +390,12 @@ export function selectableFileNames(
   return names;
 }
 
+/** Keeps one file when none are selectable, so nothing is still selected. */
+export function selectableFiles<T extends DebridFile>(files: T[]): T[] {
+  const kept = files.filter((file) => !isNotVideoFile(file));
+  return kept.length > 0 ? kept : files.slice(0, 1);
+}
+
 export async function selectFileInTorrentOrNZB(
   torrentOrNZB: Torrent | NZB,
   debridDownload: DebridDownload,
