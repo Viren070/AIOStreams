@@ -30,6 +30,7 @@ import {
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
 import { ParsedResult } from '@viren070/parse-torrent-title';
+import { parseTorrentTitleCached } from '../parser/title.js';
 
 const logger = createLogger('debrid');
 
@@ -363,6 +364,20 @@ export const isTitleWrongN = (
   }
   return false;
 };
+export async function parseFileNames(
+  names: Iterable<string>
+): Promise<Map<string, ParsedResult>> {
+  const parsed = new Map<string, ParsedResult>();
+  for (const name of names) {
+    if (parsed.has(name)) continue;
+    parsed.set(name, parseTorrentTitleCached(name));
+    if (parsed.size % 200 === 0) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  }
+  return parsed;
+}
+
 export async function selectFileInTorrentOrNZB(
   torrentOrNZB: Torrent | NZB,
   debridDownload: DebridDownload,

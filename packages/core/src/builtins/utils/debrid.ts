@@ -24,6 +24,7 @@ import {
   isUsenetDebridService,
   TitleMetadata,
   hashNzbUrl,
+  parseFileNames,
 } from '../../debrid/index.js';
 import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
@@ -333,14 +334,7 @@ async function processTorrentsForDebridService(
     }
   }
 
-  // Parse all file strings in one call
-  const allParsedFiles: ParsedResult[] = allFileStrings.map((string) =>
-    parseTorrentTitleCached(string)
-  );
-  const parsedFiles = new Map<string, ParsedResult>();
-  for (const [index, result] of allParsedFiles.entries()) {
-    parsedFiles.set(allFileStrings[index], result);
-  }
+  const parsedFiles = await parseFileNames(allFileStrings);
 
   for (const [title, parsed] of parsedTitlesMap.entries()) {
     parsedFiles.set(title, parsed);
@@ -463,13 +457,7 @@ export async function processTorrentsForP2P(
     }
   }
 
-  const allParsedFiles: ParsedResult[] = allFileStrings.map((string) =>
-    parseTorrentTitleCached(string)
-  );
-  const parsedFiles = new Map<string, ParsedResult>();
-  for (const [index, result] of allParsedFiles.entries()) {
-    parsedFiles.set(allFileStrings[index], result);
-  }
+  const parsedFiles = await parseFileNames(allFileStrings);
 
   for (const { torrent } of validTorrents) {
     let file: DebridFile | undefined;
@@ -709,13 +697,7 @@ async function processNZBsForDebridService(
     }
   }
 
-  const allParsedFiles: ParsedResult[] = allFileStrings.map((string) =>
-    parseTorrentTitleCached(string)
-  );
-  const parsedFiles = new Map<string, ParsedResult>();
-  for (const [index, result] of allParsedFiles.entries()) {
-    parsedFiles.set(allFileStrings[index], result);
-  }
+  const parsedFiles = await parseFileNames(allFileStrings);
 
   for (const [title, parsed] of parsedTitlesMap.entries()) {
     parsedFiles.set(title, parsed);
