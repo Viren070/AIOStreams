@@ -128,6 +128,19 @@ export class AIOStreams {
     return this.ctx.finalCatalogs;
   }
 
+  /** A catalog an addon declares, whether or not this configuration lists it. */
+  public findAddonCatalog(
+    type: string,
+    id: string
+  ): Manifest['catalogs'][number] | undefined {
+    this.checkInitialised();
+    const instanceId = id.split('.', 1)[0];
+    const catalog = this.ctx.manifests[instanceId]?.catalogs?.find(
+      (c) => `${instanceId}.${c.id}` === id && c.type === type
+    );
+    return catalog ? { ...catalog, id } : undefined;
+  }
+
   public getAddonCatalogs(): Manifest['addonCatalogs'] {
     this.checkInitialised();
     return this.ctx.finalAddonCatalogs;

@@ -1506,6 +1506,21 @@ const MetaPersonSchema = z.object({
 
 export type MetaPerson = z.infer<typeof MetaPersonSchema>;
 
+const CollectionSchema = z.object({
+  items: z.array(z.looseObject({ id: z.string(), type: z.string() })).nullish(),
+  sources: z
+    .array(
+      z.object({
+        /** Another addon's manifest id or URL; absent means the same addon. */
+        addonId: z.string().nullish(),
+        type: z.string(),
+        catalogId: z.string(),
+        genre: z.string().nullish(),
+      })
+    )
+    .nullish(),
+});
+
 /** Documented in `reference/addon-protocol/metadata`. */
 const metaExtensionFields = {
   ids: ExternalIdsSchema.nullish(),
@@ -1534,6 +1549,7 @@ const metaExtensionFields = {
       })
     )
     .nullish(),
+  collection: CollectionSchema.nullish(),
 };
 
 const MetaVideoSchema = z

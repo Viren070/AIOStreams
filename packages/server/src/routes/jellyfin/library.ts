@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from 'express';
 import {
   buildGenre,
+  catalogHasCollections,
+  collectionMembers,
   config as appConfig,
   contentItemType,
   encodeItemId,
@@ -20,6 +22,7 @@ import {
   type ContentKind,
   stripInternal,
   type JellyfinItem,
+  type MetaPreview,
   type ViewEntry,
   type WatchKind,
   type WatchStateRow,
@@ -39,6 +42,7 @@ import {
   boxSetChildren,
   decodeForRequest,
   isBoxsetCatalog,
+  isBoxsetEntry,
   episodesForSeries,
   itemForId,
   itemFromDescriptor,
@@ -58,6 +62,17 @@ function isKodi(ctx: JellyfinRequestContext): boolean {
 function typeFilter(req: Request): Set<string> | null {
   const types = qlist(req, 'IncludeItemTypes').map((t) => t.toLowerCase());
   return types.length ? new Set(types) : null;
+}
+
+function excludedTypes(req: Request): Set<string> {
+  return new Set(qlist(req, 'ExcludeItemTypes').map((t) => t.toLowerCase()));
+}
+
+function excludeTypes(req: Request, items: JellyfinItem[]): JellyfinItem[] {
+  const excluded = excludedTypes(req);
+  return excluded.size
+    ? items.filter((i) => !excluded.has(String(i.Type).toLowerCase()))
+    : items;
 }
 
 function filterByType(
@@ -117,8 +132,19 @@ async function viewsForTypes(
   const evidence = await Promise.all(
     views.map((v) => knownCatalogKinds(ctx.userData, v.catalog))
   );
+  const holdsCollections = boxsetOnly
+    ? await Promise.all(
+        views.map((v) => catalogHasCollections(ctx.userData, v.catalog))
+      )
+    : [];
   return views.filter((v, i) => {
-    if (boxsetOnly && !isBoxsetCatalog(v.catalog)) return false;
+    if (
+      boxsetOnly &&
+      v.collectionType !== 'boxsets' &&
+      !holdsCollections[i] &&
+      !isBoxsetCatalog(v.catalog)
+    )
+      return false;
     // A catalog not sniffed yet is crawled rather than silently dropped.
     const known = evidence[i];
     return !known || known.some((k) => kinds.includes(k));
@@ -149,6 +175,7 @@ function hasUserFilters(req: Request): boolean {
 function filterShape(req: Request, types: Set<string> | null): string {
   return [
     types ? [...types].sort().join(',') : '',
+    [...excludedTypes(req)].sort().join(','),
     qlist(req, 'Filters')
       .map((f) => f.toLowerCase())
       .sort()
@@ -156,6 +183,35 @@ function filterShape(req: Request, types: Set<string> | null): string {
     String(qb(req, 'IsPlayed') ?? ''),
     String(qb(req, 'IsFavorite') ?? ''),
   ].join('|');
+}
+
+/** Narrows each raw catalog page to the entries the request's filters keep. */
+function pageFilter(
+  req: Request,
+  ctx: JellyfinRequestContext,
+  types: Set<string> | null,
+  opts: {
+    parentId?: string;
+    catalog?: { type: string; id: string; name: string };
+  }
+): (previews: MetaPreview[]) => Promise<MetaPreview[]> {
+  const excluded = excludedTypes(req);
+  const userFiltered = hasUserFilters(req);
+  return async (previews) => {
+    const byType = previews.filter((p) => {
+      const type = contentItemType(
+        p.type,
+        isBoxsetEntry(p, opts.catalog)
+      ).toLowerCase();
+      return (!types || types.has(type)) && !excluded.has(type);
+    });
+    // UserData is only known once the item is built, so this page costs a
+    // watch-state lookup; the type filter above never does.
+    if (!byType.length || !userFiltered) return byType;
+    const built = await itemsFromPreviews(ctx, byType, opts);
+    const kept = new Set(applyUserFilters(req, built).map((i) => i.Id));
+    return byType.filter((_, i) => kept.has(built[i].Id));
+  };
 }
 
 function applyUserFilters(req: Request, items: JellyfinItem[]): JellyfinItem[] {
@@ -359,7 +415,12 @@ async function handleItems(
   const parent = parentId ? await decodeForRequest(ctx, parentId) : null;
   const pd = parent?.kind === 'descriptor' ? parent.descriptor : null;
 
-  if (pd?.k === 'series') {
+  // A collection meta is a BoxSet whatever type it is served as.
+  const collectionParent =
+    pd?.k === 'series'
+      ? !!(await getMetaLoose(ctx, pd.t, pd.i).catch(() => null))?.collection
+      : false;
+  if (pd?.k === 'series' && !collectionParent) {
     if (types?.has('episode') || recursive) {
       const r = await episodesForSeries(ctx, pd);
       const eps = applyUserFilters(req, r?.episodes ?? []);
@@ -399,13 +460,33 @@ async function handleItems(
     );
     return;
   }
-  if (pd?.k === 'boxset' || (pd?.k === 'movie' && !pd.p)) {
+  if (
+    pd?.k === 'boxset' ||
+    (pd?.k === 'movie' && !pd.p) ||
+    (pd?.k === 'series' && collectionParent)
+  ) {
+    const meta = await getMetaLoose(ctx, pd.t, pd.i).catch(() => null);
+    if (meta?.collection) {
+      const page = await collectionMembers(engine, meta, {
+        startIndex,
+        limit,
+        exactTotal: isKodi(ctx) && wantsTotal(req),
+        cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${pd.t}|${pd.i}`,
+        select: pageFilter(req, ctx, types, { parentId }),
+      });
+      const items = await itemsFromPreviews(ctx, page.items, { parentId });
+      send(req, res, applySort(req, items), page.total, startIndex);
+      return;
+    }
     const r = await boxSetChildren(ctx, pd);
-    const children = applyUserFilters(req, r?.children ?? []);
+    const children = excludeTypes(
+      req,
+      filterByType(applyUserFilters(req, r?.children ?? []), types)
+    );
     send(
       req,
       res,
-      children.slice(startIndex, startIndex + limit),
+      applySort(req, children.slice(startIndex, startIndex + limit)),
       children.length,
       startIndex
     );
@@ -502,8 +583,6 @@ async function handleItems(
       );
       return;
     }
-    const boxset = isBoxsetCatalog(catalog);
-    const userFiltered = hasUserFilters(req);
     const page = await getCatalogPage(engine, catalog, {
       startIndex,
       limit,
@@ -511,27 +590,7 @@ async function handleItems(
       search: searchTerm,
       exactTotal: isKodi(ctx) && wantsTotal(req),
       cursorKey: `${ctx.scope()}|${filterShape(req, types)}`,
-      select: async (previews) => {
-        const byType = types
-          ? previews.filter((p) =>
-              types.has(
-                contentItemType(
-                  p.type,
-                  boxset && p.type === 'movie'
-                ).toLowerCase()
-              )
-            )
-          : previews;
-        // UserData is only known once the item is built, so this page costs a
-        // watch-state lookup; the type filter above never does.
-        if (!byType.length || !userFiltered) return byType;
-        const built = await itemsFromPreviews(ctx, byType, {
-          parentId,
-          catalog,
-        });
-        const kept = new Set(applyUserFilters(req, built).map((i) => i.Id));
-        return byType.filter((_, i) => kept.has(built[i].Id));
-      },
+      select: pageFilter(req, ctx, types, { parentId, catalog }),
     });
     const items = await itemsFromPreviews(ctx, page.items, {
       parentId,

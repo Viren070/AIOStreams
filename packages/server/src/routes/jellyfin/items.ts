@@ -8,6 +8,7 @@ import {
   buildPerson,
   buildSeason,
   buildView,
+  collectionMembers,
   viewCollectionType,
   config as appConfig,
   contentDescriptor,
@@ -169,6 +170,26 @@ export function isBoxsetCatalog(
   );
 }
 
+/** A `collection` entry, or a movie in a catalog named for collections. */
+export function isBoxsetEntry(
+  preview: Pick<MetaPreview, 'type' | 'collection'>,
+  catalog?: { type: string; id: string; name: string }
+): boolean {
+  return (
+    !!preview.collection ||
+    (isBoxsetCatalog(catalog) && preview.type === 'movie')
+  );
+}
+
+/** A collection's `ChildCount`, when the meta alone says it. */
+function knownMemberCount(
+  meta: Pick<MetaPreview, 'collection'> & { videos?: unknown[] | null }
+): number | undefined {
+  if (!meta.collection) return meta.videos?.length;
+  if (!meta.collection.sources?.length) return meta.collection.items?.length;
+  return undefined;
+}
+
 export async function itemsFromPreviews(
   ctx: JellyfinRequestContext,
   previews: MetaPreview[],
@@ -177,11 +198,11 @@ export async function itemsFromPreviews(
     catalog?: { type: string; id: string; name: string };
   } = {}
 ): Promise<JellyfinItem[]> {
-  const boxset = isBoxsetCatalog(opts.catalog);
   const items = previews.map((p) =>
     buildContentItem(ctx.build, p, {
       parentId: opts.parentId,
-      boxset: boxset && p.type === 'movie',
+      boxset: isBoxsetEntry(p, opts.catalog),
+      childCount: p.collection ? knownMemberCount(p) : undefined,
       genreCatalog: opts.catalog
         ? { type: opts.catalog.type, id: opts.catalog.id }
         : undefined,
@@ -275,7 +296,10 @@ export async function episodesForSeries(
   return { meta, seriesItem, episodes };
 }
 
-/** Children of a movie-type meta that carries `videos` (a collection). */
+/**
+ * Every member of a `collection` meta, or a movie-type meta's `videos` as
+ * movies. Reads each source to its cap; a listing pages instead.
+ */
 export async function boxSetChildren(
   ctx: JellyfinRequestContext,
   d: { t: string; i: string }
@@ -285,6 +309,22 @@ export async function boxSetChildren(
   children: JellyfinItem[];
 } | null> {
   const meta = await getMetaLoose(ctx, d.t, d.i);
+  if (meta?.collection) {
+    const { items } = await collectionMembers(await ctx.engine(), meta, {
+      startIndex: 0,
+      limit: Infinity,
+      exactTotal: true,
+    });
+    const boxset = buildContentItem(
+      ctx.build,
+      { ...meta, type: d.t },
+      { boxset: true, childCount: items.length }
+    );
+    const children = await itemsFromPreviews(ctx, items, {
+      parentId: boxset.Id,
+    });
+    return { meta, boxset, children };
+  }
   if (!meta?.videos?.length) return null;
   const boxset = buildContentItem(
     ctx.build,
@@ -335,9 +375,14 @@ export async function itemFromDescriptor(
     case 'source':
       return null;
     case 'boxset': {
-      const r = await boxSetChildren(ctx, d);
-      if (!r) return null;
-      return attachUserData(ctx, [r.boxset]).then(([item]) => item);
+      const meta = await getMetaLoose(ctx, d.t, d.i);
+      if (!meta || (!meta.collection && !meta.videos?.length)) return null;
+      const item = buildContentItem(
+        ctx.build,
+        { ...meta, type: d.t },
+        { boxset: true, childCount: knownMemberCount(meta) }
+      );
+      return attachUserData(ctx, [item]).then(([built]) => built);
     }
     case 'movie':
     case 'series': {
@@ -353,12 +398,14 @@ export async function itemFromDescriptor(
         ? { ...meta, id: d.i, type: d.t }
         : ({ id: d.i, type: d.t, name: d.i } as MetaPreview);
       const asBoxset =
-        d.k === 'movie' && !d.p && (meta?.videos?.length ?? 0) > 1;
+        !(d.k === 'movie' && d.p) &&
+        (!!meta?.collection ||
+          (d.k === 'movie' && (meta?.videos?.length ?? 0) > 1));
       const item = buildContentItem(ctx.build, base, {
         playstate: opts.playstate,
         boxset: asBoxset,
         childCount: asBoxset
-          ? meta!.videos!.length
+          ? knownMemberCount(meta!)
           : d.k === 'series'
             ? meta?.videos?.length || undefined
             : undefined,

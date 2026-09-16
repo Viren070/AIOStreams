@@ -39,6 +39,7 @@ import { precacheCache } from './caches.js';
 import {
   applyPosterModifications,
   convertDiscoverDeepLinks,
+  withQualifiedCollection,
 } from './catalog.js';
 import {
   hmac,
@@ -1025,7 +1026,11 @@ export async function getMeta(
       'trying addon for meta resource'
     );
     try {
-      const meta = await new Wrapper(candidate.addon).getMeta(type, id);
+      const meta = withQualifiedCollection(
+        ctx,
+        candidate.instanceId,
+        await new Wrapper(candidate.addon).getMeta(type, id)
+      );
       logger.debug(
         { addon: candidate.addon.name, instanceId: candidate.instanceId },
         'successfully got meta from addon'

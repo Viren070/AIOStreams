@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import { config as appConfig } from '../config/index.js';
-import type { MetaPreview, UserData } from '../db/schemas.js';
+import type { Meta, MetaPreview, UserData } from '../db/schemas.js';
 import type { AIOStreams } from '../main/index.js';
 import { Cache } from '../utils/cache.js';
 import { createLogger } from '../logging/logger.js';
@@ -69,6 +69,8 @@ export interface CatalogPageOptions {
   select?: (page: MetaPreview[]) => MetaPreview[] | Promise<MetaPreview[]>;
   /** Scope for resuming the walk instead of restarting it. */
   cursorKey?: string;
+  /** Entry keys to skip as if the catalog never held them. */
+  exclude?: ReadonlySet<string>;
 }
 
 /** A page boundary the walk passed through. */
@@ -131,6 +133,8 @@ export interface CatalogPage {
   items: MetaPreview[];
   total: number;
   hasMore: boolean;
+  /** Keys of the entries read, complete once `hasMore` is false. */
+  keys: string[];
 }
 
 function buildExtras(
@@ -157,9 +161,9 @@ export async function getCatalogPage(
   opts: CatalogPageOptions
 ): Promise<CatalogPage> {
   if (opts.search && !isSearchable(catalog))
-    return { items: [], total: 0, hasMore: false };
+    return { items: [], total: 0, hasMore: false, keys: [] };
   if (opts.genre && !supportsExtra(catalog, 'genre'))
-    return { items: [], total: 0, hasMore: false };
+    return { items: [], total: 0, hasMore: false, keys: [] };
 
   const cap = appConfig.jellyfin.maxCatalogItems || Infinity;
   const canSkip = supportsExtra(catalog, 'skip');
@@ -250,11 +254,14 @@ export async function getCatalogPage(
       // whose StartIndex it does not overshoot, so it has to sit on a boundary.
       if (cursorKey) marks.push({ index: offset, skip: skips[i], read });
       const fresh: MetaPreview[] = [];
+      let novel = 0;
       for (const item of data) {
         if (!item?.id) continue;
         const key = `${item.type}|${item.id}`;
         if (seen.has(key)) continue;
         seen.add(key);
+        novel++;
+        if (opts.exclude?.has(key)) continue;
         seenKeys.push(key);
         fresh.push(item);
       }
@@ -266,7 +273,7 @@ export async function getCatalogPage(
       }
       skip = skips[i] + data.length;
       // Consecutive pages of nothing but repeats mean skip stopped advancing.
-      stalled = fresh.length ? 0 : stalled + 1;
+      stalled = novel ? 0 : stalled + 1;
       if (!canSkip || stalled >= 3) {
         exhausted = true;
         break;
@@ -292,7 +299,71 @@ export async function getCatalogPage(
   const total = done ? Math.min(offset, cap) : offset + opts.limit;
   if (cursorKey && marks.length)
     await saveTrail(cursorKey, { keys: seenKeys, marks, done });
-  return { items: out, total, hasMore: !done };
+  return { items: out, total, hasMore: !done, keys: seenKeys };
+}
+
+/**
+ * A page of a collection's members: listed items, then each source in turn, a
+ * title kept where it first appears. A source is read once those before it end.
+ */
+export async function collectionMembers(
+  engine: AIOStreams,
+  meta: Pick<Meta, 'collection'>,
+  opts: Pick<
+    CatalogPageOptions,
+    'startIndex' | 'limit' | 'exactTotal' | 'select' | 'cursorKey'
+  >
+): Promise<CatalogPage> {
+  const want = opts.startIndex + opts.limit;
+  const seen = new Set<string>();
+  const listed = ((meta.collection?.items ?? []) as MetaPreview[]).filter(
+    (entry) => {
+      const key = `${entry.type}|${entry.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }
+  );
+  const kept = opts.select ? await opts.select(listed) : listed;
+  const out = kept.slice(opts.startIndex, want);
+  let offset = kept.length;
+  const walked = new Set<string>();
+  for (const source of meta.collection?.sources ?? []) {
+    if (!opts.exactTotal && offset >= want)
+      return {
+        items: out,
+        total: offset + opts.limit,
+        hasMore: true,
+        keys: [],
+      };
+    const catalog = engine.findAddonCatalog(source.type, source.catalogId);
+    // A repeated source adds nothing and would share the first one's cursor.
+    const sourceKey = `${source.type}|${source.catalogId}|${source.genre ?? ''}`;
+    if (!catalog || walked.has(sourceKey)) continue;
+    walked.add(sourceKey);
+    const start = Math.max(0, opts.startIndex - offset);
+    const page = await getCatalogPage(engine, catalog, {
+      startIndex: start,
+      limit: Math.max(0, want - offset - start),
+      genre: source.genre ?? undefined,
+      exactTotal: opts.exactTotal,
+      select: opts.select,
+      cursorKey: opts.cursorKey,
+      exclude: seen,
+    }).catch(() => null);
+    if (!page) continue;
+    out.push(...page.items);
+    if (page.hasMore)
+      return {
+        items: out,
+        total: offset + page.total,
+        hasMore: true,
+        keys: [],
+      };
+    offset += page.total;
+    for (const key of page.keys) seen.add(key);
+  }
+  return { items: out, total: offset, hasMore: false, keys: [...seen] };
 }
 
 const viewTypeCache = Cache.getInstance<string, string[]>(
@@ -319,7 +390,13 @@ async function sniffEntryTypes(
       limit: 20,
       singlePage: true,
     });
-    const types = [...new Set(page.items.map((m) => m.type).filter(Boolean))];
+    const types = [
+      ...new Set(
+        page.items
+          .map((m) => (m.collection ? COLLECTION_ENTRY : m.type))
+          .filter(Boolean)
+      ),
+    ];
     await viewTypeCache.set(key, types, VIEW_TYPE_TTL);
   } catch (error) {
     // Left uncached so the next sweep retries instead of holding a failure.
@@ -357,6 +434,9 @@ function scheduleSniff(
   ).catch(() => undefined);
 }
 
+/** Stands in for a sniffed entry's type when the entry is a collection. */
+const COLLECTION_ENTRY = 'collection';
+
 export type ViewKind = CollectionType | 'mixed' | 'hidden';
 
 export function collectionTypeFor(
@@ -370,7 +450,8 @@ export function collectionTypeFor(
     `${catalog.type} ${catalog.id} ${catalog.name}`
   );
   if (playable.length) {
-    if (playable.every((t) => t === 'movie'))
+    if (playable.every((t) => t === COLLECTION_ENTRY)) return 'boxsets';
+    if (playable.every((t) => t === 'movie' || t === COLLECTION_ENTRY))
       return boxsets ? 'boxsets' : 'movies';
     if (playable.every((t) => t === 'series' || t === 'anime'))
       return 'tvshows';
@@ -455,8 +536,14 @@ export function findCatalog(
 export type ContentKind = 'movie' | 'series';
 
 /** The kind an entry becomes as an item: every non-movie type builds a Series. */
-export function entryKind(preview: Pick<MetaPreview, 'type'>): ContentKind {
-  return preview.type === 'movie' ? 'movie' : 'series';
+export function entryKind(
+  preview: Pick<MetaPreview, 'type' | 'collection'>
+): ContentKind {
+  return preview.type === 'movie' || preview.collection ? 'movie' : 'series';
+}
+
+function sniffedKind(type: string): ContentKind {
+  return type === COLLECTION_ENTRY ? 'movie' : entryKind({ type });
 }
 
 /** Entry types already sniffed for this catalog's view; never a fresh fetch. */
@@ -469,6 +556,14 @@ async function cachedEntryTypes(
     .catch(() => undefined);
 }
 
+export async function catalogHasCollections(
+  userData: UserData,
+  catalog: Catalog
+): Promise<boolean> {
+  const types = await cachedEntryTypes(userData, catalog);
+  return !!types?.includes(COLLECTION_ENTRY);
+}
+
 /** The kinds a catalog is known to yield, from the entry types sniffed for its view. */
 export async function knownCatalogKinds(
   userData: UserData,
@@ -476,7 +571,7 @@ export async function knownCatalogKinds(
 ): Promise<ContentKind[] | undefined> {
   const types = await cachedEntryTypes(userData, catalog);
   if (!types?.length) return undefined;
-  return [...new Set(types.map((t) => entryKind({ type: t })))];
+  return [...new Set(types.map(sniffedKind))];
 }
 
 export async function searchCatalogs(
@@ -499,10 +594,7 @@ export async function searchCatalogs(
     ? searchable
     : searchable.filter((c, i) => {
         const types = evidence[i];
-        return (
-          !types?.length ||
-          types.some((t) => wanted.has(entryKind({ type: t })))
-        );
+        return !types?.length || types.some((t) => wanted.has(sniffedKind(t)));
       });
   if (!catalogs.length) return [];
   /*
