@@ -82,6 +82,9 @@ const REGION_ALIASES: Record<string, string> = {
 const QUALIFIER_PATTERN = /^(.*\S)\s*\(([^()]+)\)$/;
 const MAX_INPUT_LENGTH = 64;
 
+const NORMALISED_LANGUAGE_CACHE = new Map<string, string | undefined>();
+const NORMALISED_LANGUAGE_CACHE_MAX = 1000;
+
 function toSupportedLanguage(
   entry: (typeof FULL_LANGUAGE_MAPPING)[number] | undefined
 ): string | undefined {
@@ -156,6 +159,21 @@ export function convertLangCodeToName(code: string): string | undefined {
  */
 export function normaliseLanguage(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
+  if (value.length > MAX_INPUT_LENGTH) return computeNormalisedLanguage(value);
+
+  const cached = NORMALISED_LANGUAGE_CACHE.get(value);
+  if (cached !== undefined || NORMALISED_LANGUAGE_CACHE.has(value)) {
+    return cached;
+  }
+  const result = computeNormalisedLanguage(value);
+  if (NORMALISED_LANGUAGE_CACHE.size >= NORMALISED_LANGUAGE_CACHE_MAX) {
+    NORMALISED_LANGUAGE_CACHE.clear();
+  }
+  NORMALISED_LANGUAGE_CACHE.set(value, result);
+  return result;
+}
+
+function computeNormalisedLanguage(value: string): string | undefined {
   let raw = value.trim();
   if (raw.length > MAX_INPUT_LENGTH) return undefined;
 
