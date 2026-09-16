@@ -6,6 +6,7 @@ import {
   Env,
   FULL_LANGUAGE_MAPPING,
   getLanguageDisplayName,
+  ServiceId,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import FileParser from './file.js';
@@ -23,6 +24,21 @@ import {
 } from './merge.js';
 
 const logger = createLogger('parser');
+
+let serviceRegexes: { id: ServiceId; regex: RegExp }[] | undefined;
+
+function getServiceRegexes(): { id: ServiceId; regex: RegExp }[] {
+  serviceRegexes ??= Object.values(constants.SERVICE_DETAILS).map(
+    (service) => ({
+      id: service.id,
+      regex: new RegExp(
+        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️📫+/|\\)\\]_.-]|$|\n)`,
+        'im'
+      ),
+    })
+  );
+  return serviceRegexes;
+}
 
 class StreamParser {
   private count = 0;
@@ -673,16 +689,10 @@ class StreamParser {
     string: string
   ): ParsedStream['service'] | undefined {
     const cleanString = string.replace(/web-?dl/i, '');
-    const services = constants.SERVICE_DETAILS;
     const cachedSymbols = ['⚡', '🚀', 'cached', '🌩️', '📫'];
     const uncachedSymbols = ['⏳', 'download', 'UNCACHED', '☁️'];
     let streamService: ParsedStream['service'] | undefined;
-    Object.values(services).forEach((service) => {
-      // for each service, generate a regexp which creates a regex with all known names separated by |
-      const regex = new RegExp(
-        `(^|(?<![^ |[(_\\/\\-.]))(${service.knownNames.join('|')})(?=[ ⬇️⏳⚡☁️🌩️📫+/|\\)\\]_.-]|$|\n)`,
-        'im'
-      );
+    getServiceRegexes().forEach(({ id, regex }) => {
       // check if the string contains the regex
       const match = cleanString.match(regex);
       if (match) {
@@ -702,7 +712,7 @@ class StreamParser {
         }
 
         streamService = {
-          id: service.id,
+          id,
           cached: cached,
         };
       }
