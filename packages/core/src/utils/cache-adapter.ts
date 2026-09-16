@@ -230,13 +230,17 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
   private static writeBuffer: Map<
     string,
-    { value: string | Buffer; ttl: number }
+    { value: string | Buffer; ttl: number; attempts?: number }
   > = new Map();
   private static flushInterval: NodeJS.Timeout | null = null;
   /** The flush in progress, so a `forceWrite` can wait for it rather than skip. */
   private static flushing: Promise<void> | null = null;
   private static batchSize: number = 100;
   private static flushIntervalTime: number = 2000;
+  private static retryAfter: number = 0;
+  private static maxFlushAttempts: number = 3;
+  private static maxBufferedWrites: number = 1000;
+  private static maxBufferedBytes: number = 32 * 1024 * 1024;
   private static clientRef: RedisClientType | null = null;
   private static timeoutRef: number = REDIS_TIMEOUT;
 
@@ -320,7 +324,10 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
     if (forceWrite) {
       await RedisCacheBackend.flushWriteBuffer();
     } else if (
-      RedisCacheBackend.writeBuffer.size >= RedisCacheBackend.batchSize
+      RedisCacheBackend.writeBuffer.size >= RedisCacheBackend.batchSize &&
+      (Date.now() >= RedisCacheBackend.retryAfter ||
+        RedisCacheBackend.writeBuffer.size >=
+          RedisCacheBackend.maxBufferedWrites)
     ) {
       void RedisCacheBackend.flushWriteBuffer().catch(() => undefined);
     }
@@ -362,24 +369,58 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
       pipeline.set(key, item.value, { EX: item.ttl });
     }
 
-    try {
-      await withTimeout(
-        async () => {
-          await pipeline.exec();
-        },
-        undefined,
-        {
-          timeout: RedisCacheBackend.timeoutRef,
-          shouldProceed: () => RedisCacheBackend.clientRef?.isOpen ?? false,
-          getContext: () => 'flushing Redis write buffer',
-        }
+    const flushed = await withTimeout(
+      async () => {
+        await pipeline.exec();
+        return true;
+      },
+      false,
+      {
+        timeout: RedisCacheBackend.timeoutRef,
+        shouldProceed: () => RedisCacheBackend.clientRef?.isOpen ?? false,
+        getContext: () => 'flushing Redis write buffer',
+      }
+    );
+    if (!flushed) {
+      RedisCacheBackend.requeue(bufferToFlush);
+      return;
+    }
+    logger.debug('Flushed Redis write buffer', {
+      items: bufferToFlush.size,
+      timeTaken: getTimeTakenSincePoint(start),
+    });
+  }
+
+  /** Size-triggered flushes wait for the interval, or retries burn out at once. */
+  private static requeue(batch: typeof RedisCacheBackend.writeBuffer): void {
+    RedisCacheBackend.retryAfter =
+      Date.now() + RedisCacheBackend.flushIntervalTime;
+    let bytes = 0;
+    for (const item of RedisCacheBackend.writeBuffer.values()) {
+      bytes += payloadBytes(item.value);
+    }
+    let dropped = 0;
+    for (const [key, item] of batch) {
+      if (RedisCacheBackend.writeBuffer.has(key)) continue;
+      const attempts = (item.attempts ?? 0) + 1;
+      const size = payloadBytes(item.value);
+      if (
+        attempts >= RedisCacheBackend.maxFlushAttempts ||
+        RedisCacheBackend.writeBuffer.size >=
+          RedisCacheBackend.maxBufferedWrites ||
+        bytes + size > RedisCacheBackend.maxBufferedBytes
+      ) {
+        dropped++;
+        continue;
+      }
+      RedisCacheBackend.writeBuffer.set(key, { ...item, attempts });
+      bytes += size;
+    }
+    if (dropped > 0) {
+      logger.warn(
+        { dropped },
+        'dropped redis cache writes after failed flushes'
       );
-      logger.debug('Flushed Redis write buffer', {
-        items: bufferToFlush.size,
-        timeTaken: getTimeTakenSincePoint(start),
-      });
-    } catch (err) {
-      logger.error(`Error flushing Redis write buffer: ${err}`);
     }
   }
 
@@ -411,11 +452,12 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
   async delete(key: K): Promise<boolean> {
     const redisKey = this.getKey(key);
+    const wasBuffered = RedisCacheBackend.writeBuffer.delete(redisKey);
 
     return withTimeout<boolean>(
       async () => {
         const result = await this.client.del(redisKey);
-        return result > 0;
+        return wasBuffered || result > 0;
       },
       false,
       {
