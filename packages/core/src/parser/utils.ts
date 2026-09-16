@@ -53,6 +53,8 @@ const asciiFoldMap: Record<string, string> = {
 };
 
 function foldToAscii(title: string, language?: string): string {
+  // every step below only rewrites non-ascii characters
+  if (!/[^\x00-\x7f]/.test(title)) return title;
   const digraphMap = language ? languageDigraphMaps[language] : undefined;
   return (
     digraphMap ? title.replace(/[ÄäÖöÜüÅå]/g, (c) => digraphMap[c] ?? c) : title
@@ -307,13 +309,8 @@ export function normaliseTitle(title: string) {
 }
 
 export function cleanTitle(title: string, language?: string) {
-  let cleaned = foldToAscii(title, language);
-
-  for (const char of ['♪', '♫', '★', '☆', '♡', '♥', '-', ';', ':']) {
-    cleaned = cleaned.replaceAll(char, ' ');
-  }
-
-  return cleaned
+  return foldToAscii(title, language)
+    .replace(/[♪♫★☆♡♥\-;:]/g, ' ')
     .replace(/&/g, 'and')
     .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalise spaces
