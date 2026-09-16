@@ -186,7 +186,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       if (typeof result.newznab?.usenetdate === 'string') {
         date = result.newznab.usenetdate;
       }
-      const age = ageInHoursSince(date);
+      const age = date ? ageInHoursSince(date) : undefined;
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.newznab?.language,
         subtitleLanguages: result.newznab?.subs,

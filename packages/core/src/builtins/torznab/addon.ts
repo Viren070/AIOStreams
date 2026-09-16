@@ -71,7 +71,7 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
         hash: infoHash,
         guid: result.guid,
         downloadUrl,
-        age: ageInHoursSince(result.pubDate),
+        age: result.pubDate ? ageInHoursSince(result.pubDate) : undefined,
         sources: result.torznab?.magneturl?.toString()
           ? extractTrackersFromMagnet(result.torznab.magneturl.toString())
           : [],

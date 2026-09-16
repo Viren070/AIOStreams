@@ -120,10 +120,12 @@ export abstract class BaseNabAddon<
       searchCapabilities,
     });
 
-    queryParams.limit =
-      this.userData.forceInitialLimit?.toString() ??
-      capabilities.limits?.max?.toString() ??
-      '10000';
+    queryParams.limit = String(
+      Math.min(
+        this.userData.forceInitialLimit ?? capabilities.limits?.max ?? 10000,
+        appConfig.builtins.nab.maxResults
+      )
+    );
 
     if (this.userData.forceQuerySearch) {
     } else if (
@@ -357,7 +359,7 @@ export abstract class BaseNabAddon<
     });
 
     const identity = (r: SearchResultItem<A['namespace']>): string =>
-      r.guid ?? r.enclosure?.[0]?.url ?? r.link ?? r.title;
+      r.guid ?? r.enclosure?.[0]?.url ?? r.title;
 
     // if both first and last items are duplicates, the page is likely a duplicate
     const areResultsDuplicate = (
