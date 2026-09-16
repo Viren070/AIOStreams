@@ -1492,6 +1492,50 @@ const MetaLinkSchema = z
   })
   .passthrough();
 
+const ExternalIdsSchema = z.record(
+  z.string(),
+  z.string().or(z.number()).nullable()
+);
+
+const MetaPersonSchema = z.object({
+  name: z.string(),
+  role: z.string(),
+  character: z.string().nullish(),
+  photo: z.string().nullish(),
+});
+
+export type MetaPerson = z.infer<typeof MetaPersonSchema>;
+
+/** Documented in `reference/addon-protocol/metadata`. */
+const metaExtensionFields = {
+  ids: ExternalIdsSchema.nullish(),
+  originalTitle: z.string().nullish(),
+  tagline: z.string().nullish(),
+  landscapePoster: z.string().nullish(),
+  people: z.array(MetaPersonSchema).nullish(),
+  certification: z.string().nullish(),
+  certificationLocal: z.string().nullish(),
+  criticRating: z.number().or(z.string()).nullish(),
+  studios: z.array(z.string()).nullish(),
+  networks: z.array(z.string()).nullish(),
+  countries: z.array(z.string()).nullish(),
+  tags: z.array(z.string()).nullish(),
+  endDate: z.string().nullish(),
+  airDays: z.array(z.string()).nullish(),
+  airTime: z.string().nullish(),
+  seasons: z
+    .array(
+      z.object({
+        season: z.number(),
+        name: z.string().nullish(),
+        overview: z.string().nullish(),
+        poster: z.string().nullish(),
+        released: z.string().nullish(),
+      })
+    )
+    .nullish(),
+};
+
 const MetaVideoSchema = z
   .object({
     id: z.string(),
@@ -1505,6 +1549,10 @@ const MetaVideoSchema = z
     season: z.number().or(z.null()).optional(),
     trailers: z.array(TrailerSchema).or(z.null()).optional(),
     overview: z.string().or(z.null()).optional(),
+    // The video's own ids and credits, never the show's.
+    ids: ExternalIdsSchema.nullish(),
+    rating: z.number().or(z.string()).nullish(),
+    people: z.array(MetaPersonSchema).nullish(),
   })
   .passthrough();
 
@@ -1538,6 +1586,7 @@ export const MetaPreviewSchema = z
     trailers: z.array(TrailerSchema).or(z.null()).optional(),
     links: z.array(MetaLinkSchema).or(z.null()).optional(),
     // released: z.string().datetime().optional(),
+    ...metaExtensionFields,
   })
   .passthrough();
 

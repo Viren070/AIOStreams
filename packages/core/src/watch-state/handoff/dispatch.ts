@@ -39,6 +39,7 @@ const ID_KEYS: Record<string, string> = {
   AniList: 'anilist',
   AniDB: 'anidb',
   Simkl: 'simkl',
+  Trakt: 'trakt',
 };
 
 export interface PlaybackEventInput {

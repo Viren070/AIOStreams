@@ -7,7 +7,9 @@ import {
   parseRuntimeMs,
   parseYear,
   readEnrichment,
+  readVideoEnrichment,
   toIso,
+  type EnrichedPerson,
   type Enrichment,
 } from './enrichment.js';
 import {
@@ -15,6 +17,7 @@ import {
   genreId,
   personId,
   resolveMarkerId,
+  studioId,
   viewId,
 } from './ids.js';
 import { imageTagsFor, rememberImages } from './images.js';
@@ -157,12 +160,39 @@ export function providerIdsFor(
   return out;
 }
 
-function externalUrls(providerIds: Record<string, string>) {
+function externalUrls(
+  providerIds: Record<string, string>,
+  kind: 'movie' | 'series' | 'episode'
+) {
   const urls: { Name: string; Url: string }[] = [];
   if (providerIds.Imdb)
     urls.push({
       Name: 'IMDb',
       Url: `https://www.imdb.com/title/${providerIds.Imdb}`,
+    });
+  // TMDB, TVDB and Trakt ids name a movie or a show; an episode's do not.
+  if (kind !== 'episode') {
+    const show = kind === 'series';
+    if (providerIds.Tmdb)
+      urls.push({
+        Name: 'TMDB',
+        Url: `https://www.themoviedb.org/${show ? 'tv' : 'movie'}/${providerIds.Tmdb}`,
+      });
+    if (providerIds.Tvdb)
+      urls.push({
+        Name: 'TheTVDB',
+        Url: `https://thetvdb.com/dereferrer/${show ? 'series' : 'movie'}/${providerIds.Tvdb}`,
+      });
+    if (providerIds.Trakt)
+      urls.push({
+        Name: 'Trakt',
+        Url: `https://trakt.tv/${show ? 'shows' : 'movies'}/${providerIds.Trakt}`,
+      });
+  }
+  if (providerIds.AniDB)
+    urls.push({
+      Name: 'AniDB',
+      Url: `https://anidb.net/anime/${providerIds.AniDB}`,
     });
   if (providerIds.MyAnimeList)
     urls.push({
@@ -189,6 +219,22 @@ export function sortNameFor(name: string): string {
     .normalize('NFKD')
     .replace(/\p{M}+/gu, '')
     .replace(/\d+/g, (digits) => digits.padStart(10, '0'));
+}
+
+function peopleDtos(people: EnrichedPerson[]) {
+  return people.map((p) => {
+    const pid = personId(p.name);
+    if (p.photo) rememberImages(pid, { Primary: p.photo });
+    return {
+      Name: p.name,
+      Id: pid,
+      Type: p.type,
+      Role: p.role,
+      PrimaryImageTag: p.photo
+        ? imageTagsFor({ Primary: p.photo }).ImageTags.Primary
+        : undefined,
+    };
+  });
 }
 
 function aspectRatioFor(shape: unknown): number {
@@ -347,15 +393,17 @@ export function buildContentItem(
   const genreCatalog = opts.genreCatalog;
   const item: JellyfinItem = {
     ...baseItem(ctx, id, name, jellyfinType, folder),
-    OriginalTitle: name,
+    OriginalTitle: enrichment.originalTitle ?? name,
     MediaType: jellyfinType === 'Movie' ? 'Video' : undefined,
     DateCreated: premiere ?? EPOCH_DATE,
     CanDownload: jellyfinType === 'Movie',
     Overview: (meta.description as string | undefined) ?? undefined,
+    Taglines: enrichment.tagline ? [enrichment.tagline] : [],
     ProductionYear: year,
     PremiereDate: premiere,
-    EndDate: enrichment.endDate,
+    EndDate: jellyfinType === 'Movie' ? undefined : enrichment.endDate,
     CommunityRating: imdbRatingOf(input),
+    CriticRating: enrichment.criticRating,
     OfficialRating: enrichment.certification,
     CustomRating: enrichment.customRating,
     RunTimeTicks: runtimeMs ? runtimeMs * TICKS_PER_MS : undefined,
@@ -373,21 +421,14 @@ export function buildContentItem(
           : genreId(meta.type, '', g),
       };
     }),
-    People: enrichment.people.map((p) => {
-      const pid = personId(p.name);
-      if (p.photo) rememberImages(pid, { Primary: p.photo });
-      return {
-        Name: p.name,
-        Id: pid,
-        Type: p.type,
-        Role: p.role,
-        PrimaryImageTag: p.photo
-          ? imageTagsFor({ Primary: p.photo }).ImageTags.Primary
-          : undefined,
-      };
-    }),
+    People: peopleDtos(enrichment.people),
+    Studios: enrichment.studios.map((s) => ({ Name: s, Id: studioId(s) })),
+    Tags: enrichment.tags,
     ProviderIds: providerIds,
-    ExternalUrls: externalUrls(providerIds),
+    ExternalUrls: externalUrls(
+      providerIds,
+      jellyfinType === 'Movie' ? 'movie' : 'series'
+    ),
     RemoteTrailers: enrichment.trailers,
     ...imageTagsFor(images),
     ParentId: opts.parentId,
@@ -398,9 +439,13 @@ export function buildContentItem(
     RecursiveItemCount: folder ? opts.childCount : undefined,
     UserData: userDataFromRow(id, opts.playstate, runtimeMs),
     Path: `/aiostreams/${meta.type}/${meta.id}/${name}${folder ? '' : PLAYABLE_EXT}`,
-    ProductionLocations: enrichment.country ? [enrichment.country] : [],
+    ProductionLocations: enrichment.countries,
     _aio: { descriptor, enrichment },
   };
+  if (jellyfinType === 'Series') {
+    if (enrichment.airDays.length) item.AirDays = enrichment.airDays;
+    if (enrichment.airTime) item.AirTime = enrichment.airTime;
+  }
   if (typeof meta.language === 'string')
     item.PreferredMetadataLanguage = meta.language;
   if (typeof meta.website === 'string') item.HomePageUrl = meta.website;
@@ -467,6 +512,12 @@ export function episodeDescriptor(
   };
 }
 
+function seasonDetailsOf(seriesItem: JellyfinItem, season: number) {
+  return (
+    seriesItem as { _aio?: { enrichment?: Enrichment } }
+  )._aio?.enrichment?.seasons.get(season);
+}
+
 export function buildSeason(
   ctx: ItemBuildContext,
   meta: ParsedMeta,
@@ -481,11 +532,9 @@ export function buildSeason(
     i: meta.id,
     s: group.season,
   });
-  const enrichment = (seriesItem as { _aio?: { enrichment?: Enrichment } })._aio
-    ?.enrichment;
+  const details = seasonDetailsOf(seriesItem, group.season);
   const images: ItemImages = {};
-  const seasonPoster = enrichment?.seasonPosters.get(group.season);
-  if (seasonPoster) images.Primary = seasonPoster;
+  if (details?.poster) images.Primary = details.poster;
   else if (typeof meta.poster === 'string') images.Primary = meta.poster;
   if (typeof meta.background === 'string') images.Backdrop = meta.background;
   rememberImages(id, images);
@@ -503,9 +552,11 @@ export function buildSeason(
   const total = group.videos.length;
   const seriesTags = seriesItem.ImageTags as Record<string, string>;
   return {
-    ...baseItem(ctx, id, group.name, 'Season', true),
+    ...baseItem(ctx, id, details?.name ?? group.name, 'Season', true),
     SortName: String(group.season).padStart(4, '0'),
     IndexNumber: group.season,
+    Overview: details?.overview,
+    PremiereDate: details?.premiere,
     SeriesId: seriesItem.Id,
     SeriesName: seriesItem.Name,
     ParentId: seriesItem.Id,
@@ -549,7 +600,8 @@ export function buildEpisode(
   if (typeof meta.background === 'string') images.Backdrop = meta.background;
   rememberImages(id, images);
 
-  const runtimeMs = parseRuntimeMs(v.runtime) ?? parseRuntimeMs(meta.runtime);
+  const extra = readVideoEnrichment(video);
+  const runtimeMs = extra.runtimeMs ?? parseRuntimeMs(meta.runtime);
   const premiere = toIso(video.released);
   const unaired =
     v.available === false ||
@@ -569,7 +621,7 @@ export function buildEpisode(
     SeriesId: seriesItem.Id,
     SeriesName: seriesItem.Name,
     SeasonId: seasonId,
-    SeasonName: group.name,
+    SeasonName: seasonDetailsOf(seriesItem, group.season)?.name ?? group.name,
     ParentId: seasonId,
     Overview: video.overview ?? undefined,
     PremiereDate: premiere,
@@ -589,8 +641,11 @@ export function buildEpisode(
     PrimaryImageAspectRatio: 1.7777,
     Genres: seriesItem.Genres,
     GenreItems: seriesItem.GenreItems,
-    CommunityRating: seriesItem.CommunityRating,
+    CommunityRating: extra.rating ?? seriesItem.CommunityRating,
     OfficialRating: seriesItem.OfficialRating,
+    People: peopleDtos(extra.people),
+    ProviderIds: extra.providerIds,
+    ExternalUrls: externalUrls(extra.providerIds, 'episode'),
     UserData: userDataFromRow(id, playstate, runtimeMs),
     Path: path,
     ...(unaired || !ctx.listVersions
@@ -646,7 +701,7 @@ export function buildBoxSetChild(
     ProductionYear: premiere ? new Date(premiere).getUTCFullYear() : undefined,
     RunTimeTicks: runtimeMs ? runtimeMs * TICKS_PER_MS : undefined,
     ProviderIds: providerIds,
-    ExternalUrls: externalUrls(providerIds),
+    ExternalUrls: externalUrls(providerIds, 'movie'),
     ...imageTagsFor(images),
     PrimaryImageAspectRatio: images.Primary ? 1.7777 : 0.6666,
     Genres: boxset.Genres,

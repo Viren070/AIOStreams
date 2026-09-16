@@ -14,7 +14,8 @@ const logger = createLogger('jellyfin');
 /*
  * 16-byte ids, rendered as 32 lowercase hex. Byte 0 says what follows:
  *   a1 packed content (kind, id type, media type, numeric id, season, episode)
- *   a2 view    a3 genre    a5 person    a6 media source    b2 hashed content
+ *   a2 view    a3 genre    a5 person    a6 media source    a7 studio
+ *   b2 hashed content
  * Packed ids need no storage. Views and genres are found by scanning the
  * config's catalogs, persons live in a cache, media sources in the playback
  * memo, and hashed content in a small durable table.
@@ -24,6 +25,8 @@ const MARK_VIEW = 0xa2;
 const MARK_GENRE = 0xa3;
 const MARK_PERSON = 0xa5;
 const MARK_SOURCE = 0xa6;
+/* Never decoded: a studio has nothing to browse. */
+const MARK_STUDIO = 0xa7;
 const MARK_HASHED = 0xb2;
 
 const KIND_CODES: Record<ContentDescriptor['k'], number> = {
@@ -291,6 +294,10 @@ export function personId(name: string): string {
     void personCache.set(id, name, PERSON_TTL).catch(() => undefined);
   }
   return id;
+}
+
+export function studioId(name: string): string {
+  return marked(MARK_STUDIO, `studio|${name.toLowerCase()}`);
 }
 
 export function mediaSourceId(uuid: string, identity: string): string {

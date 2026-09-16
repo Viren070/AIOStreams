@@ -158,16 +158,16 @@ export async function listTrackers(
 }
 
 /**
- * A tracker keys on the show. An episode item carries no `ProviderIds`, so the
- * series item supplies them; its meta is cached by the episode build.
+ * A tracker keys on the show, so an episode reports the series item's ids and
+ * never its own; the series meta is cached by the episode build.
  */
 async function idsFor(
   ctx: JellyfinRequestContext,
   ref: ContentRef,
   item?: JellyfinItem | null
 ): Promise<Record<string, string>> {
-  const own = (item?.ProviderIds as Record<string, string> | undefined) ?? {};
   if (ref.episode == null) {
+    const own = (item?.ProviderIds as Record<string, string> | undefined) ?? {};
     return Object.keys(own).length
       ? own
       : providerIdsFor({ id: ref.baseId, type: ref.type });
@@ -179,9 +179,8 @@ async function idsFor(
   }).catch(() => null);
   const parent =
     (series?.ProviderIds as Record<string, string> | undefined) ?? {};
-  const merged = { ...parent, ...own };
-  return Object.keys(merged).length
-    ? merged
+  return Object.keys(parent).length
+    ? parent
     : providerIdsFor({ id: ref.baseId, type: ref.type });
 }
 
