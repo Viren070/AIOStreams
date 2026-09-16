@@ -5,6 +5,6 @@
     "config-expressions",
     "custom-formatter",
     "templates",
-    "watch-state-resource"
+    "addon-protocol"
   ]
 }

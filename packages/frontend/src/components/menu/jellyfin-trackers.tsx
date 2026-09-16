@@ -10,7 +10,7 @@ import { DOCS_BASE_URL } from '@/lib/changelog';
 import { relativeTime } from '@/lib/format';
 import type { TrackerExchange, WatchStateTracker } from '@/lib/api';
 
-const RESOURCE_DOCS_URL = `${DOCS_BASE_URL}/reference/watch-state-resource`;
+const RESOURCE_DOCS_URL = `${DOCS_BASE_URL}/reference/addon-protocol/watch-state`;
 
 function EmptyState({
   title,
