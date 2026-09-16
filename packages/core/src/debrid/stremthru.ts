@@ -16,6 +16,8 @@ import {
   hashNzbUrl,
   buildResolveKey,
   removeDownloadOnAbort,
+  parseFileNames,
+  selectableFileNames,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -26,8 +28,6 @@ import {
   UsenetDebridService,
   DebridFailureCache,
 } from './base.js';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../parser/title.js';
 import assert from 'assert';
 
 const logger = createLogger('debrid:stremthru');
@@ -1094,16 +1094,9 @@ export class StremThruService
         private: playbackInfo.private,
       };
 
-      const allStrings: string[] = [];
-      allStrings.push(magnetDownload.name ?? '');
-      allStrings.push(...magnetDownload.files.map((file) => file.name ?? ''));
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(magnetDownload.name ?? '', magnetDownload.files)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       file = await selectFileInTorrentOrNZB(
         torrent,
@@ -1366,17 +1359,9 @@ export class StremThruService
         metadata: metadata,
         size: usenetDownload.size || 0,
       };
-      const allStrings: string[] = [];
-      allStrings.push(usenetDownload.name ?? '');
-      allStrings.push(...usenetDownload.files.map((f) => f.name ?? ''));
-
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(usenetDownload.name ?? '', usenetDownload.files)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       file = await selectFileInTorrentOrNZB(
         nzbInfo,

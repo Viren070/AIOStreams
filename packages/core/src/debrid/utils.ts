@@ -378,6 +378,18 @@ export async function parseFileNames(
   return parsed;
 }
 
+/** Selection never reads the parse of a file it skips. */
+export function selectableFileNames(
+  title: string,
+  files: DebridFile[]
+): string[] {
+  const names = [title];
+  for (const file of files) {
+    if (!isNotVideoFile(file)) names.push(file.name ?? '');
+  }
+  return names;
+}
+
 export async function selectFileInTorrentOrNZB(
   torrentOrNZB: Torrent | NZB,
   debridDownload: DebridDownload,

@@ -16,6 +16,8 @@ import {
   hashNzbUrl,
   buildResolveKey,
   removeDownloadOnAbort,
+  parseFileNames,
+  selectableFileNames,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -27,8 +29,6 @@ import {
   DebridFailureCache,
   convertStatusCodeToError,
 } from './base.js';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../parser/title.js';
 
 const logger = createLogger('debrid:torbox');
 
@@ -913,17 +913,9 @@ export class TorboxDebridService
         metadata: metadata,
         size: usenetDownload.size || 0,
       };
-      const allStrings: string[] = [];
-      allStrings.push(usenetDownload.name ?? '');
-      allStrings.push(...usenetDownload.files.map((file) => file.name ?? ''));
-
-      const parseResults: ParsedResult[] = allStrings.map((string) =>
-        parseTorrentTitleCached(string)
+      const parsedFiles = await parseFileNames(
+        selectableFileNames(usenetDownload.name ?? '', usenetDownload.files)
       );
-      const parsedFiles = new Map<string, ParsedResult>();
-      for (const [index, result] of parseResults.entries()) {
-        parsedFiles.set(allStrings[index], result);
-      }
 
       const file = await selectFileInTorrentOrNZB(
         nzbInfo,

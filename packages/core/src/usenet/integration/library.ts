@@ -1,7 +1,5 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { ParsedResult } from '@viren070/parse-torrent-title';
-import { parseTorrentTitleCached } from '../../parser/title.js';
 import {
   appConfig,
   downloadManager,
@@ -20,6 +18,8 @@ import {
   NZB,
   selectFileInTorrentOrNZB,
   hashNzbUrl,
+  parseFileNames,
+  selectableFileNames,
 } from '../../debrid/utils.js';
 import {
   ArticleNotFoundError,
@@ -923,10 +923,7 @@ export async function selectStreamFile(
 
   const title = playbackInfo.filename ?? filename;
   const totalSize = files.reduce((s, f) => s + f.size, 0);
-  const parsedFiles = new Map<string, ParsedResult>();
-  for (const s of [title, ...files.map((f) => f.name ?? '')]) {
-    if (!parsedFiles.has(s)) parsedFiles.set(s, parseTorrentTitleCached(s));
-  }
+  const parsedFiles = await parseFileNames(selectableFileNames(title, files));
 
   const nzbInfo: NZB = {
     type: 'usenet',
