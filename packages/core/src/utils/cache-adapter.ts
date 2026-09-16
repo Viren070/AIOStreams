@@ -1,5 +1,7 @@
 ﻿import { config as appConfig } from '../config/index.js';
-import { RedisClientType } from 'redis';
+import { RedisClientType, RESP_TYPES } from 'redis';
+import { zstdCompress, zstdDecompress } from 'node:zlib';
+import { promisify } from 'node:util';
 import { REDIS_PREFIX } from './index.js';
 import { createLogger } from '../logging/logger.js';
 import { getTimeTakenSincePoint } from './time.js';
@@ -12,13 +14,46 @@ const logger = createLogger('cache');
 
 const REDIS_TIMEOUT = appConfig.bootstrap.redisTimeout;
 
+const compress = promisify(zstdCompress);
+const decompress = promisify(zstdDecompress);
+
 /**
- * True when a serialised value is too large to be worth storing.
+ * JSON at or above this many bytes is stored compressed. Below it the saving
+ * does not pay for the round trip, and leaving small values as plain strings
+ * keeps the format readable by a version that predates compression.
  */
-function isOversized(serialised: string, prefix: string, key: string): boolean {
+const COMPRESS_THRESHOLD = 4096;
+/** zstd frame magic, little-endian: bytes 28 B5 2F FD. */
+const ZSTD_MAGIC = 0xfd2fb528;
+
+/** JSON.stringify never emits `(`, so the magic alone identifies the format. */
+const isCompressed = (raw: Buffer): boolean =>
+  raw.length >= 4 && raw.readUInt32LE(0) === ZSTD_MAGIC;
+
+async function encodeValue(value: unknown): Promise<string | Buffer> {
+  const json = JSON.stringify(value);
+  return json.length < COMPRESS_THRESHOLD
+    ? json
+    : compress(Buffer.from(json, 'utf8'));
+}
+
+async function decodeValue<V>(raw: Buffer): Promise<V> {
+  const json = isCompressed(raw) ? await decompress(raw) : raw;
+  return JSON.parse(json.toString('utf8')) as V;
+}
+
+const payloadBytes = (payload: string | Buffer): number =>
+  typeof payload === 'string'
+    ? Buffer.byteLength(payload, 'utf8')
+    : payload.length;
+
+/**
+ * True when a value is too large to be worth storing. `bytes` is what actually
+ * goes to the store, so on Redis that is the compressed size.
+ */
+function isOversized(bytes: number, prefix: string, key: string): boolean {
   const max = appConfig.resources.cache.maxValueBytes;
   if (!max) return false;
-  const bytes = Buffer.byteLength(serialised, 'utf8');
   if (bytes <= max) return false;
   logger.warn(
     { cache: prefix, key, bytes, max },
@@ -159,12 +194,16 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
 // Redis cache implementation with timeout handling
 export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   private client: RedisClientType;
+  /** Same connection, replies as Buffers so compressed values survive. */
+  private bufferClient: ReturnType<RedisClientType['withTypeMapping']>;
   private prefix: string;
   private maxSize: number;
   private timeout: number;
 
-  private static writeBuffer: Map<string, { value: any; ttl: number }> =
-    new Map();
+  private static writeBuffer: Map<
+    string,
+    { value: string | Buffer; ttl: number }
+  > = new Map();
   private static flushInterval: NodeJS.Timeout | null = null;
   /** The flush in progress, so a `forceWrite` can wait for it rather than skip. */
   private static flushing: Promise<void> | null = null;
@@ -180,6 +219,9 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
     timeout: number = REDIS_TIMEOUT
   ) {
     this.client = redisClient;
+    this.bufferClient = redisClient.withTypeMapping({
+      [RESP_TYPES.BLOB_STRING]: Buffer,
+    });
     this.prefix = prefix;
     this.maxSize = maxSize;
     this.timeout = timeout;
@@ -210,8 +252,8 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
     return withTimeout(
       async () => {
-        const data = await this.client.get(redisKey);
-        if (!data) return undefined;
+        const data = await this.bufferClient.get(redisKey);
+        if (!data || data.length === 0) return undefined;
 
         // Only a caller-supplied TTL can slide this: the stored value
         // carries no TTL of its own.
@@ -219,7 +261,7 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
           await this.client.expire(redisKey, updateTTL);
         }
 
-        return JSON.parse(data) as V;
+        return decodeValue<V>(data as Buffer);
       },
       undefined,
       {
@@ -238,10 +280,10 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
   ): Promise<void> {
     if (ttl === 0) return;
     const redisKey = this.getKey(key);
-    const serialised = JSON.stringify(value);
-    if (isOversized(serialised, this.prefix, String(key))) return;
+    const payload = await encodeValue(value);
+    if (isOversized(payloadBytes(payload), this.prefix, String(key))) return;
     RedisCacheBackend.writeBuffer.set(redisKey, {
-      value: serialised,
+      value: payload,
       ttl,
     });
 
@@ -315,8 +357,8 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
 
   async update(key: K, value: V): Promise<void> {
     const redisKey = this.getKey(key);
-    const serialised = JSON.stringify(value);
-    if (isOversized(serialised, this.prefix, String(key))) return;
+    const payload = await encodeValue(value);
+    if (isOversized(payloadBytes(payload), this.prefix, String(key))) return;
 
     await withTimeout(
       async () => {
@@ -325,7 +367,7 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
         if (ttl <= 0) return false; // Key doesn't exist or has no TTL
 
         // Update value but keep the same TTL
-        await this.client.set(redisKey, serialised, {
+        await this.client.set(redisKey, payload, {
           EX: ttl,
         });
         return true;
@@ -518,7 +560,8 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
       const now = Date.now();
       for (const [key, item] of bufferToFlush.entries()) {
         const serialised = JSON.stringify(item.value);
-        if (isOversized(serialised, 'sql', key)) continue;
+        if (isOversized(Buffer.byteLength(serialised, 'utf8'), 'sql', key))
+          continue;
         placeholders.push('(?, ?, ?)');
         values.push(key, serialised, now + item.ttl * 1000);
       }

@@ -211,7 +211,7 @@ export const resourcesSchema = {
       default: 2 * 1000 * 1000,
       label: 'Max cached value size',
       description:
-        'Largest single value written to the Redis or SQL cache (`0` disables the limit). Oversized entries are skipped rather than stored. A skipped entry is recomputed on each request, so raising this trades memory for CPU. Accepts plain bytes or `2MB`-style strings.',
+        'Largest single value written to the Redis or SQL cache (`0` disables the limit). On Redis this is the stored size, so values large enough to be compressed are measured after compression. Oversized entries are skipped rather than stored. A skipped entry is recomputed on each request, so raising this trades memory for CPU. Accepts plain bytes or `2MB`-style strings.',
       env: 'MAX_CACHE_VALUE_BYTES',
       requiresRestart: false,
       secret: false,
