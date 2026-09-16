@@ -348,6 +348,10 @@ export class Cache<K, V> {
     return this.backend.get(key, updateTTL);
   }
 
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    return this.backend.getMany(keys);
+  }
+
   /**
    * Set a value in the cache with a specific TTL
    * @param key The key to set the value for

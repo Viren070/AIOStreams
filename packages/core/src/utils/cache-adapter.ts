@@ -7,7 +7,7 @@ import { createLogger } from '../logging/logger.js';
 import { getTimeTakenSincePoint } from './time.js';
 import { getDb } from '../db/db.js';
 import type { DbDriver } from '../db/driver/types.js';
-import { sql } from '../db/sql.js';
+import { sql, join } from '../db/sql.js';
 import { withTimeout } from './general.js';
 
 const logger = createLogger('cache');
@@ -69,6 +69,7 @@ export interface CacheBackend<K, V> {
    * memory backend retains the original, so `true` slides nothing elsewhere.
    */
   get(key: K, updateTTL?: boolean | number): Promise<V | undefined>;
+  getMany(keys: K[]): Promise<(V | undefined)[]>;
   set(key: K, value: V, ttl: number, forceWrite?: boolean): Promise<void>;
   flush(): Promise<void>;
   delete(key: K): Promise<boolean>;
@@ -140,6 +141,10 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
       return structuredClone(item.value);
     }
     return undefined;
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    return Promise.all(keys.map((key) => this.get(key)));
   }
 
   async set(
@@ -300,6 +305,30 @@ export class RedisCacheBackend<K, V> implements CacheBackend<K, V> {
         timeout: this.timeout,
         shouldProceed: () => this.client.isOpen,
         getContext: () => `getting key ${String(key)} from Redis`,
+      }
+    );
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    if (keys.length === 0) return [];
+    return withTimeout<(V | undefined)[]>(
+      async () => {
+        const raws = (await this.bufferClient.mGet(
+          keys.map((key) => this.getKey(key))
+        )) as (Buffer | null)[];
+        return Promise.all(
+          raws.map((raw) =>
+            raw && raw.length > 0
+              ? decodeValue<V>(raw).catch(() => undefined)
+              : undefined
+          )
+        );
+      },
+      keys.map(() => undefined),
+      {
+        timeout: this.timeout,
+        shouldProceed: () => this.client.isOpen,
+        getContext: () => `getting ${keys.length} keys from Redis`,
       }
     );
   }
@@ -736,6 +765,44 @@ export class SQLCacheBackend<K, V> implements CacheBackend<K, V> {
     } catch (err) {
       logger.error(`Error getting key ${String(key)} from SQL cache: ${err}`);
       return undefined;
+    }
+  }
+
+  async getMany(keys: K[]): Promise<(V | undefined)[]> {
+    if (keys.length === 0) return [];
+    const sqlKeys = keys.map((key) => this.getKey(key));
+    const inList = (list: string[]) => join(list.map((key) => sql`${key}`));
+    const now = Date.now();
+
+    try {
+      const rows = await this.db.query<{
+        key: string;
+        value: string;
+        expires_at: number | string;
+      }>(
+        sql`SELECT key, value, expires_at FROM cache WHERE key IN (${inList(sqlKeys)})`
+      );
+
+      const found = new Map<string, V>();
+      const expired: string[] = [];
+      for (const row of rows) {
+        if (now > Number(row.expires_at)) expired.push(row.key);
+        else found.set(row.key, JSON.parse(row.value) as V);
+      }
+      if (expired.length > 0) {
+        await this.db.exec(
+          sql`DELETE FROM cache WHERE key IN (${inList(expired)})`
+        );
+      }
+      if (found.size > 0) {
+        await this.db.exec(
+          sql`UPDATE cache SET last_accessed = CURRENT_TIMESTAMP WHERE key IN (${inList([...found.keys()])})`
+        );
+      }
+      return sqlKeys.map((key) => found.get(key));
+    } catch (err) {
+      logger.error(`Error getting ${keys.length} keys from SQL cache: ${err}`);
+      return keys.map(() => undefined);
     }
   }
 

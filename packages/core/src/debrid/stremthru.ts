@@ -33,6 +33,8 @@ import assert from 'assert';
 
 const logger = createLogger('debrid:stremthru');
 
+const CHECK_CACHE_READ_BATCH = 500;
+
 function convertStremThruError(error: StremThruError): DebridError {
   return new DebridError(error.message, {
     statusCode: error.statusCode,
@@ -135,18 +137,35 @@ export class StremThruService
 
   //  Shared check cache helpers
 
+  private checkCacheKey(hash: string): string {
+    return `${this.serviceName}:${getSimpleTextHash(hash)}`;
+  }
+
   private async checkCacheGet(
     hash: string
   ): Promise<DebridDownload | undefined> {
-    return await StremThruService.checkCache.get(
-      `${this.serviceName}:${getSimpleTextHash(hash)}`
-    );
+    return await StremThruService.checkCache.get(this.checkCacheKey(hash));
+  }
+
+  private async checkCacheGetMany(
+    hashes: string[]
+  ): Promise<(DebridDownload | undefined)[]> {
+    const results: (DebridDownload | undefined)[] = [];
+    for (let i = 0; i < hashes.length; i += CHECK_CACHE_READ_BATCH) {
+      const batch = hashes.slice(i, i + CHECK_CACHE_READ_BATCH);
+      results.push(
+        ...(await StremThruService.checkCache.getMany(
+          batch.map((hash) => this.checkCacheKey(hash))
+        ))
+      );
+    }
+    return results;
   }
 
   private async checkCacheSet(debridDownload: DebridDownload): Promise<void> {
     try {
       await StremThruService.checkCache.set(
-        `${this.serviceName}:${getSimpleTextHash(debridDownload.hash!)}`,
+        this.checkCacheKey(debridDownload.hash!),
         debridDownload,
         appConfig.builtins.debrid.instantAvailabilityCacheTtl
       );
@@ -299,14 +318,15 @@ export class StremThruService
     const cachedResults: DebridDownload[] = [];
     let newResults: DebridDownload[] = [];
     const magnetsToCheck: string[] = [];
-    for (const magnet of magnets) {
-      const cached = await this.checkCacheGet(magnet);
-      if (cached) {
-        cachedResults.push(cached);
+    const cached = await this.checkCacheGetMany(magnets);
+    magnets.forEach((magnet, i) => {
+      const hit = cached[i];
+      if (hit) {
+        cachedResults.push(hit);
       } else {
         magnetsToCheck.push(magnet);
       }
-    }
+    });
 
     if (magnetsToCheck.length > 0) {
       const BATCH_SIZE = 500;
@@ -534,14 +554,16 @@ export class StremThruService
     const cachedResults: DebridDownload[] = [];
     const hashesToCheck: string[] = [];
 
-    for (const { hash } of nzbs as { hash: string }[]) {
-      const cached = await this.checkCacheGet(hash);
-      if (cached) {
-        cachedResults.push(cached);
+    const hashes = (nzbs as { hash: string }[]).map(({ hash }) => hash);
+    const cached = await this.checkCacheGetMany(hashes);
+    hashes.forEach((hash, i) => {
+      const hit = cached[i];
+      if (hit) {
+        cachedResults.push(hit);
       } else {
         hashesToCheck.push(hash);
       }
-    }
+    });
 
     let newResults: DebridDownload[] = [];
 
