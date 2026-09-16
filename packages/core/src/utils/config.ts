@@ -115,6 +115,24 @@ export interface ValidateConfigOptions {
   bypassManifestCache?: boolean;
 }
 
+// A test selection reads only the expression and the health ids, so a pass stays a pass.
+const passedStreamExpressions = new Set<string>();
+const PASSED_STREAM_EXPRESSIONS_MAX = 5000;
+
+async function testStreamExpression(
+  expression: string,
+  healthIds: string[]
+): Promise<void> {
+  const key = JSON.stringify([[...healthIds].sort(), expression]);
+  if (passedStreamExpressions.has(key)) return;
+  await StreamSelector.testSelect(expression, healthIds);
+  if (passedStreamExpressions.size >= PASSED_STREAM_EXPRESSIONS_MAX) {
+    const oldest = passedStreamExpressions.values().next().value;
+    if (oldest !== undefined) passedStreamExpressions.delete(oldest);
+  }
+  passedStreamExpressions.add(key);
+}
+
 export async function validateConfig(
   data: any,
   options?: ValidateConfigOptions
@@ -391,7 +409,7 @@ export async function validateConfig(
 
   for (const expression of expressionsToValidate) {
     try {
-      await StreamSelector.testSelect(expression, healthIds);
+      await testStreamExpression(expression, healthIds);
     } catch (error) {
       throw new Error(`Invalid stream expression: ${expression}: ${error}`);
     }
@@ -400,7 +418,7 @@ export async function validateConfig(
   // validate precache selector
   if (config.precacheSelector) {
     try {
-      await StreamSelector.testSelect(config.precacheSelector, healthIds);
+      await testStreamExpression(config.precacheSelector, healthIds);
     } catch (error) {
       throw new Error(`Invalid precache selector: ${error}`);
     }
