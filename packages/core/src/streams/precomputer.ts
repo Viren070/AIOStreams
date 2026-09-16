@@ -14,6 +14,8 @@ import { StreamContext } from './context.js';
 
 const logger = createLogger('precomputer');
 
+const RANKED_REGEX_SLICE_MS = 8;
+
 export interface PrecomputeSubTimings {
   /** Time spent computing preferred regex/keyword matches (per-stream). */
   preferredRegexMs: number;
@@ -234,24 +236,39 @@ class StreamPrecomputer {
       ? streams.filter((s) => !skipStreamIds.has(s.id))
       : streams;
 
+    const matches = new Map<
+      string,
+      { matched: string[]; totalScore: number }
+    >();
+    let sliceStart = performance.now();
     for (const stream of streamsToProcess) {
       if (!stream.filename) {
         continue;
       }
-      const matched: string[] = [];
-      let totalScore = 0;
-      for (const { regex, pattern, name, score } of regexes) {
-        if (
-          regex.test(stream.filename) ||
-          (stream.folderName && regex.test(stream.folderName))
-        ) {
-          if (name) matched.push(name);
-          totalScore += score;
+      const key = `${stream.filename}\u0000${stream.folderName ?? ''}`;
+      let match = matches.get(key);
+      if (!match) {
+        const matched: string[] = [];
+        let totalScore = 0;
+        for (const { regex, name, score } of regexes) {
+          if (
+            regex.test(stream.filename) ||
+            (stream.folderName && regex.test(stream.folderName))
+          ) {
+            if (name) matched.push(name);
+            totalScore += score;
+          }
+        }
+        match = { matched, totalScore };
+        matches.set(key, match);
+        if (performance.now() - sliceStart >= RANKED_REGEX_SLICE_MS) {
+          await new Promise((resolve) => setImmediate(resolve));
+          sliceStart = performance.now();
         }
       }
-      if (matched.length > 0) {
-        stream.rankedRegexesMatched = matched;
-        stream.regexScore = totalScore;
+      if (match.matched.length > 0) {
+        stream.rankedRegexesMatched = [...match.matched];
+        stream.regexScore = match.totalScore;
       }
     }
 
