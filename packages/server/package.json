@@ -27,7 +27,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
-    "@types/node": "^20.19.39",
+    "@types/node": "^24.13.5",
     "@types/proxy-addr": "^2.0.3",
     "@types/ws": "^8.18.1"
   }

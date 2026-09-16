@@ -44,7 +44,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.12",
     "@types/bytes": "^3.1.5",
-    "@types/node": "^20.19.39",
+    "@types/node": "^24.13.5",
     "@types/parse-torrent": "^5.8.8",
     "@types/pg": "^8.20.0",
     "@types/user-agents": "^1.0.4"
