@@ -83,9 +83,37 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
   private cache: Map<K, CacheItem<V>>;
   private maxSize: number;
 
+  private static instances: Set<MemoryCacheBackend<any, any>> = new Set();
+  private static sweepInterval: NodeJS.Timeout | null = null;
+  private static sweepIntervalTime: number = 60_000;
+  private static sweepYieldEvery: number = 5000;
+
   constructor(maxSize: number) {
     this.cache = new Map<K, CacheItem<V>>();
     this.maxSize = maxSize;
+    MemoryCacheBackend.instances.add(this);
+    MemoryCacheBackend.startSweepInterval();
+  }
+
+  private static startSweepInterval() {
+    if (MemoryCacheBackend.sweepInterval !== null) return;
+    MemoryCacheBackend.sweepInterval = setInterval(() => {
+      void MemoryCacheBackend.sweepExpired();
+    }, MemoryCacheBackend.sweepIntervalTime);
+    MemoryCacheBackend.sweepInterval.unref();
+  }
+
+  private static async sweepExpired(): Promise<void> {
+    const now = Date.now();
+    let visited = 0;
+    for (const backend of MemoryCacheBackend.instances) {
+      for (const [key, item] of backend.cache) {
+        if (now - item.createdAt > item.ttl) backend.cache.delete(key);
+        if (++visited % MemoryCacheBackend.sweepYieldEvery === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+      }
+    }
   }
 
   async get(
