@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getDb } from '../db.js';
 import { config as appConfig } from '../../config/index.js';
 import { deleteInBatches, type PruneResult } from '../prune.js';
-import { join, raw, sql } from '../sql.js';
+import { join, raw, sql, type SqlFragment } from '../sql.js';
 import type { WatchScope } from '../../watch-state/types.js';
 
 /** `error` is a run of permanent failures; `auth_expired` needs the user. */
@@ -148,6 +148,17 @@ const CHUNK = 200;
 const laneOf = (sinkId: string) =>
   sql`COALESCE((SELECT MIN(d.priority) FROM watch_deliveries d
                  WHERE d.sink_id = ${sinkId} AND d.status = 'pending'), 0)`;
+
+/** A turn that ran out with work queued goes behind new events, unless more was queued during it. */
+const BACKLOG_LANES = 2;
+const backlogLaneOf = (sinkId: string, claimedAt: number) =>
+  sql`${laneOf(sinkId)} + CASE WHEN EXISTS (
+         SELECT 1 FROM watch_deliveries d
+          WHERE d.sink_id = ${sinkId} AND d.status = 'pending'
+            AND d.created_at >= ${claimedAt})
+       THEN 0 ELSE ${raw(String(BACKLOG_LANES))} END`;
+
+const FRESH_SHARE = 0.5;
 
 function optionalNumber(v: number | string | null): number | null {
   return v == null ? null : Number(v);
@@ -466,23 +477,39 @@ export class PlaybackHandoffRepository {
     // Postgres re-runs the LIMIT subquery on a conflict; SQLite has one writer.
     const skipLocked =
       getDb().dialect === 'postgres' ? raw('FOR UPDATE SKIP LOCKED') : raw('');
-    await getDb().exec(
-      sql`UPDATE watch_sinks
-             SET delivery_claimed_by = ${token},
-                 delivery_claim_expires_at = ${now + leaseMs}
-           WHERE id IN (
-             SELECT id FROM watch_sinks
-              WHERE next_delivery_at IS NOT NULL
-                AND next_delivery_at <= ${now}
-                AND (delivery_claim_expires_at IS NULL
-                     OR delivery_claim_expires_at <= ${now})
-              ORDER BY delivery_lane ASC, next_delivery_at ASC
-              LIMIT ${limit} ${skipLocked}
-           )`
-    );
-    const rows = await getDb().query<DbSink>(
-      sql`SELECT * FROM watch_sinks WHERE delivery_claimed_by = ${token}`
-    );
+    // Newest half so a fresh event does not wait for every first turn, oldest
+    // half so a backlog still drains; one transaction so a failure leases nothing.
+    const rows = await getDb().tx(async (tx) => {
+      const claim = (order: SqlFragment, count: number, lane: SqlFragment) =>
+        tx.exec(
+          sql`UPDATE watch_sinks
+                 SET delivery_claimed_by = ${token},
+                     delivery_claim_expires_at = ${now + leaseMs}
+               WHERE id IN (
+                 SELECT id FROM watch_sinks
+                  WHERE next_delivery_at IS NOT NULL
+                    AND next_delivery_at <= ${now}
+                    AND (delivery_claim_expires_at IS NULL
+                         OR delivery_claim_expires_at <= ${now})
+                    ${lane}
+                  ORDER BY ${order}
+                  LIMIT ${count} ${skipLocked}
+               )`
+        );
+      const newest = await claim(
+        raw('next_delivery_at DESC'),
+        Math.ceil(limit * FRESH_SHARE),
+        raw('AND delivery_lane = 0')
+      );
+      await claim(
+        raw('delivery_lane ASC, next_delivery_at ASC'),
+        limit - (newest.rowCount ?? 0),
+        raw('')
+      );
+      return tx.query<DbSink>(
+        sql`SELECT * FROM watch_sinks WHERE delivery_claimed_by = ${token}`
+      );
+    });
     return rows.map(toSink);
   }
 
@@ -518,6 +545,9 @@ export class PlaybackHandoffRepository {
       lastPushAt?: number | null;
       error?: string | null;
       errorKind?: string | null;
+      /** The turn ended with work still queued. */
+      backlog?: boolean;
+      claimedAt?: number;
     }
   ): Promise<void> {
     const { now, notBefore } = opts;
@@ -534,7 +564,7 @@ export class PlaybackHandoffRepository {
                      FROM watch_deliveries d
                     WHERE d.sink_id = watch_sinks.id AND d.status = 'pending'
                  ),
-                 delivery_lane = ${laneOf(id)},
+                 delivery_lane = ${opts.backlog ? backlogLaneOf(id, opts.claimedAt ?? now) : laneOf(id)},
                  consecutive_failures = COALESCE(${opts.failures ?? null}, consecutive_failures),
                  status = COALESCE(${status}, status),
                  status_at = CASE WHEN CAST(${status} AS TEXT) IS NOT NULL AND ${status} <> status

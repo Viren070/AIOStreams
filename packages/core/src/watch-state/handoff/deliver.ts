@@ -91,6 +91,7 @@ async function deliverSink(
   lastPushAt?: number | null;
   error?: string | null;
   errorKind?: string | null;
+  backlog?: boolean;
 }> {
   const cfg = appConfig.watchState;
   const probeMs = sinkProbeMs();
@@ -98,13 +99,14 @@ async function deliverSink(
   let anyDelivered = false;
   let lastPushAt: number | null = null;
   // Served, so it waits behind addons that have not had a turn yet.
-  const served = () =>
+  const served = (backlog: boolean) =>
     attempted
       ? {
           notBefore: Date.now(),
           failures: 0,
           lastPushAt,
           status: 'connected' as SinkStatus,
+          backlog,
         }
       : { notBefore: 0 };
 
@@ -116,7 +118,7 @@ async function deliverSink(
     );
 
     for (const row of rows) {
-      if (Date.now() >= until) return served();
+      if (Date.now() >= until) return served(true);
       attempted = true;
       const outcome = await deliverOne(row);
       const at = Date.now();
@@ -182,10 +184,10 @@ async function deliverSink(
       );
     }
 
-    if (rows.length < cfg.deliveryRowsPerSink) break;
+    if (rows.length < cfg.deliveryRowsPerSink) return served(false);
   }
 
-  return served();
+  return served(true);
 }
 
 /**
@@ -252,57 +254,83 @@ export async function deliverPlaybackEvents(): Promise<{
     () => 0
   );
 
-  const token = `${TaskManager.instanceId}:${randomUUID()}`;
+  const runToken = `${TaskManager.instanceId}:${randomUUID()}`;
   const budgetMs = cfg.deliveryBudgetSeconds * 1000;
   // A pass stops at the budget, and only a request already in flight runs past it.
   const leaseMs = budgetMs + REQUEST_TIMEOUT_MS + 60_000;
-  const sinks = await PlaybackHandoffRepository.claimDeliverySinks(
-    token,
-    now,
-    leaseMs,
-    cfg.deliveryMaxSinksPerRun
-  );
-  if (!sinks.length) return counts;
-
   const deadline = now + budgetMs;
-  const workers = Math.min(cfg.deliveryConcurrency, sinks.length);
-  // Every claimed addon gets a turn: a deep queue cannot spend the whole run.
-  const sliceMs = Math.max(
-    budgetMs * MIN_SLICE_SHARE,
-    (budgetMs * workers) / sinks.length
-  );
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: workers }, async () => {
-      for (let i = next++; i < sinks.length; i = next++) {
-        const sink = sinks[i];
-        const until = Math.min(deadline, Date.now() + sliceMs);
-        // Released untouched past the budget, so they are due again at once.
-        const release =
-          Date.now() < deadline
-            ? await deliverSink(sink, until, counts).catch((error) => {
-                logger.warn(
-                  {
-                    sinkId: sink.id,
-                    err: error instanceof Error ? error.message : String(error),
-                  },
-                  'playback delivery pass failed'
-                );
-                return { notBefore: Date.now() + 60_000 };
-              })
-            : { notBefore: 0 };
-        await PlaybackHandoffRepository.releaseDeliverySink(sink.id, token, {
-          now: Date.now(),
-          ...release,
-        }).catch(() => undefined);
-      }
-    })
-  );
+  let claimed = 0;
+
+  // A single claim would cap the addons served per run.
+  for (let batch = 0; Date.now() < deadline; batch++) {
+    const token = `${runToken}:${batch}`;
+    const claimedAt = Date.now();
+    const sinks = await PlaybackHandoffRepository.claimDeliverySinks(
+      token,
+      claimedAt,
+      leaseMs,
+      cfg.deliveryMaxSinksPerRun
+    );
+    if (!sinks.length) break;
+    claimed += sinks.length;
+
+    const remainingMs = deadline - claimedAt;
+    const workers = Math.min(cfg.deliveryConcurrency, sinks.length);
+    // Every claimed addon gets a turn: a deep queue cannot spend the whole run.
+    const sliceMs = Math.max(
+      budgetMs * MIN_SLICE_SHARE,
+      (remainingMs * workers) / sinks.length
+    );
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: workers }, async () => {
+        for (let i = next++; i < sinks.length; i = next++) {
+          const sink = sinks[i];
+          const sliceEnd = Date.now() + sliceMs;
+          // Released untouched past the budget, so they are due again at once.
+          const release =
+            Date.now() < deadline
+              ? await deliverSink(
+                  sink,
+                  Math.min(deadline, sliceEnd),
+                  counts
+                ).catch((error) => {
+                  logger.warn(
+                    {
+                      sinkId: sink.id,
+                      err:
+                        error instanceof Error ? error.message : String(error),
+                    },
+                    'playback delivery pass failed'
+                  );
+                  return { notBefore: Date.now() + 60_000, backlog: false };
+                })
+              : { notBefore: 0, backlog: false };
+          await PlaybackHandoffRepository.releaseDeliverySink(sink.id, token, {
+            now: Date.now(),
+            claimedAt,
+            ...release,
+            // A turn cut short by the end of the run is not a backlog.
+            backlog: !!release.backlog && sliceEnd < deadline,
+          }).catch((error) =>
+            logger.warn(
+              {
+                sinkId: sink.id,
+                err: error instanceof Error ? error.message : String(error),
+              },
+              'failed to release a playback delivery sink'
+            )
+          );
+        }
+      })
+    );
+    if (sinks.length < cfg.deliveryMaxSinksPerRun) break;
+  }
 
   const { delivered, failed, retried } = counts;
   if (delivered || failed || retried)
     logger.debug(
-      { delivered, failed, retried, sinks: sinks.length },
+      { delivered, failed, retried, sinks: claimed },
       'playback deliveries run'
     );
   return counts;
