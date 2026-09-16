@@ -20,6 +20,7 @@ export {
 export {
   dispatchBulkMark,
   dispatchPlayback,
+  dispatchWatchlist,
   ensurePlaybackSink,
   type BulkMarkInput,
   type PlaybackEventInput,

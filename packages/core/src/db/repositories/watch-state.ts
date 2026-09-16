@@ -45,6 +45,9 @@ export interface WatchStateRow extends WatchIdentity {
   played: boolean;
   playCount: number;
   favorite: boolean;
+  /** The addon whose watchlist set `favorite`; null when set here. */
+  favoriteSinkId: string | null;
+  favoriteAt: number | null;
   lastPlayedAt: number | null;
   updatedAt: number;
   origin: WatchOrigin;
@@ -84,6 +87,8 @@ interface DbRow {
   played: number | string;
   play_count: number | string;
   favorite: number | string;
+  favorite_sink_id: string | null;
+  favorite_at: number | string | null;
   last_played_at: number | string | null;
   updated_at: number | string;
   origin: string;
@@ -127,6 +132,8 @@ function toRow(r: DbRow): WatchStateRow {
     played: Boolean(Number(r.played)),
     playCount: Number(r.play_count),
     favorite: Boolean(Number(r.favorite)),
+    favoriteSinkId: r.favorite_sink_id ?? null,
+    favoriteAt: optionalNumber(r.favorite_at ?? null),
     lastPlayedAt: optionalNumber(r.last_played_at),
     updatedAt: Number(r.updated_at),
     origin: (r.origin as WatchOrigin) ?? 'local',
@@ -326,6 +333,7 @@ export class WatchStateRepository {
     const dur = patch.durationMs ?? null;
     const played = patch.played == null ? null : patch.played ? 1 : 0;
     const fav = patch.favorite == null ? null : patch.favorite ? 1 : 0;
+    const setFav = fav == null ? 0 : 1;
     const incMode =
       patch.incrementPlayCount === 'if-unplayed'
         ? 2
@@ -348,14 +356,14 @@ export class WatchStateRepository {
       sql`INSERT INTO watch_state
             (uuid, persona, item_key, kind, media_type, base_id, season, episode,
              video_id, series_key, position_ms, duration_ms, played, play_count,
-             favorite, last_played_at, updated_at, origin, sink_id, external_at,
-             snapshot, sort_at, match_key)
+             favorite, favorite_at, last_played_at, updated_at, origin, sink_id,
+             external_at, snapshot, sort_at, match_key)
           VALUES (${scope.uuid}, ${scope.persona}, ${identity.itemKey},
                   ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
                   ${season}, ${episode}, ${videoId}, ${seriesKey},
                   COALESCE(${pos}, 0), COALESCE(${dur}, 0), COALESCE(${played}, 0),
                   CASE WHEN ${incMode} > 0 THEN 1 ELSE 0 END,
-                  COALESCE(${fav}, 0), ${lastPlayed}, ${now},
+                  COALESCE(${fav}, 0), ${setFav ? now : null}, ${lastPlayed}, ${now},
                   ${origin}, ${sinkId}, ${externalAt}, ${snapshot},
                   ${sortAt}, ${identity.matchKey ?? null})
           ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
@@ -376,6 +384,9 @@ export class WatchStateRepository {
                 ELSE 0
               END,
             favorite = COALESCE(${fav}, watch_state.favorite),
+            -- A toggle here takes the favourite over from any watchlist import.
+            favorite_sink_id = CASE WHEN ${setFav} = 1 THEN NULL ELSE watch_state.favorite_sink_id END,
+            favorite_at = CASE WHEN ${setFav} = 1 THEN excluded.favorite_at ELSE watch_state.favorite_at END,
             last_played_at = CASE WHEN ${setLastPlayed} = 1 THEN ${lastPlayed} ELSE watch_state.last_played_at END,
             -- Maintained on write so the shelves can order on a plain indexed
             -- column instead of a COALESCE the index cannot serve.
@@ -403,6 +414,8 @@ export class WatchStateRepository {
       played: !!played,
       playCount: incMode > 0 ? 1 : 0,
       favorite: !!fav,
+      favoriteSinkId: null,
+      favoriteAt: setFav ? now : null,
       lastPlayedAt: lastPlayed,
       updatedAt: now,
       origin,
@@ -475,7 +488,7 @@ export class WatchStateRepository {
       sql`SELECT * FROM watch_state
            WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
              AND favorite = 1
-           ORDER BY updated_at DESC
+           ORDER BY COALESCE(favorite_at, updated_at) DESC
            LIMIT 500`
     );
     return filterKinds(rows.map(toRow), kinds);
@@ -505,6 +518,75 @@ export class WatchStateRepository {
              AND series_key = ${seriesKey}`
     );
     return rows.map(toRow).filter((r) => r.episode != null);
+  }
+
+  /** An existing row only gains the favourite; a missing one is created as the addon's import. */
+  static async upsertWatchlist(
+    scope: WatchScope,
+    sinkId: string,
+    rows: { identity: WatchIdentity; at: number }[],
+    now: number,
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const values = rows.slice(i, i + CHUNK).map(
+        ({ identity, at }) =>
+          sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+            ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
+            ${identity.videoId ?? null}, ${identity.seriesKey ?? null}, 1,
+            ${sinkId}, ${at}, ${now},
+            ${now}, ${now}, 'import', ${sinkId}, ${at},
+            ${identity.matchKey ?? null})`
+      );
+      await db.exec(
+        sql`INSERT INTO watch_state
+              (uuid, persona, item_key, kind, media_type, base_id, video_id,
+               series_key, favorite, favorite_sink_id, favorite_at, favorite_seen_at,
+               updated_at, seen_at, origin, sink_id, sort_at, match_key)
+            VALUES ${join(values)}
+            ON CONFLICT(uuid, persona, item_key) DO UPDATE SET
+              favorite = 1,
+              favorite_sink_id = excluded.favorite_sink_id,
+              favorite_at = excluded.favorite_at,
+              favorite_seen_at = excluded.favorite_seen_at,
+              match_key = COALESCE(excluded.match_key, watch_state.match_key)`
+      );
+    }
+  }
+
+  static async touchWatchlist(
+    scope: WatchScope,
+    sinkId: string,
+    itemKeys: string[],
+    at: number,
+    db: DbDriver = getDb()
+  ): Promise<void> {
+    const wanted = [...new Set(itemKeys)];
+    for (let i = 0; i < wanted.length; i += CHUNK) {
+      await db.exec(
+        sql`UPDATE watch_state SET favorite_seen_at = ${at}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+               AND favorite_sink_id = ${sinkId}
+               AND item_key IN (${join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
+      );
+    }
+  }
+
+  /** Favourites an addon's watchlist set and no longer lists. */
+  static async clearStaleWatchlist(
+    scope: WatchScope,
+    sinkId: string,
+    before: number,
+    db: DbDriver = getDb()
+  ): Promise<number> {
+    const res = await db.exec(
+      sql`UPDATE watch_state
+             SET favorite = 0, favorite_sink_id = NULL, favorite_at = NULL
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND favorite = 1 AND favorite_sink_id = ${sinkId}
+             AND COALESCE(favorite_seen_at, 0) < ${before}`
+    );
+    return res.rowCount ?? 0;
   }
 
   /**

@@ -509,6 +509,7 @@ async function handleItems(
   // item came from, so only unscoped lists come from the provider; a scoped
   // request falls through to that catalog's page, where the filter is exact.
   if ((wantsFavorites || wantsPlayed || wantsResumable) && !parentId) {
+    refreshWatchState(ctx);
     const provider = getWatchStateProvider();
     const kinds = kindsFor(types);
     const rows = wantsFavorites

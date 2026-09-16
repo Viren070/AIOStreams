@@ -5,6 +5,7 @@ import {
   createLogger,
   dispatchBulkMark,
   dispatchPlayback,
+  dispatchWatchlist,
   ensurePlaybackSink,
   itemKeyFor,
   PlaybackHandoffRepository,
@@ -223,6 +224,35 @@ export async function reportPlayback(
         err: error instanceof Error ? error.message : String(error),
       },
       'failed to report playback to addons'
+    );
+  }
+}
+
+export async function reportWatchlist(
+  ctx: JellyfinRequestContext,
+  listed: boolean,
+  ref: ContentRef,
+  item?: JellyfinItem | null
+): Promise<void> {
+  if (!appConfig.watchState.reportEnabled) return;
+  if (ref.kind === 'episode') return;
+  try {
+    const sinks = await sinksFor(ctx);
+    if (!sinks.length) return;
+    await dispatchWatchlist(ctx.watch, sinks, {
+      kind: listed ? 'watchlisted' : 'unwatchlisted',
+      type: ref.type,
+      metaId: ref.baseId,
+      itemKey: itemKeyFor(ref),
+      providerIds: await idsFor(ctx, ref, item),
+    });
+  } catch (error) {
+    logger.warn(
+      {
+        listed,
+        err: error instanceof Error ? error.message : String(error),
+      },
+      'failed to report a watchlist change to addons'
     );
   }
 }

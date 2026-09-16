@@ -31,7 +31,7 @@ import {
   episodesForSeries,
   itemFromDescriptor,
 } from './items.js';
-import { reportBulkMark, reportPlayback } from './handoff.js';
+import { reportBulkMark, reportPlayback, reportWatchlist } from './handoff.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -407,11 +407,15 @@ async function setFavorite(
   favorite: boolean
 ) {
   const item = await itemFromDescriptor(ctx, d).catch(() => null);
+  const ref = contentRefOf(d);
   await getWatchStateProvider().record(ctx.watch, {
     type: favorite ? 'favorite' : 'unfavorite',
-    identity: await watchIdentityFor(contentRefOf(d)),
+    identity: await watchIdentityFor(ref),
     snapshot: snapshotOf(item),
   });
+  // Trackers keep watchlists of titles, not of episodes or collections.
+  if (item?.Type === 'Movie' || item?.Type === 'Series')
+    await reportWatchlist(ctx, favorite, ref, item);
 }
 
 const FAVORITE_PATHS = [

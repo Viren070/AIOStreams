@@ -18,7 +18,13 @@ import {
   type WatchIdentity,
   type WatchStateRow,
 } from '../../db/repositories/watch-state.js';
-import { scopeOf, seriesKeyOf, type WatchScope } from '../types.js';
+import {
+  identityFor,
+  itemKeyFor,
+  scopeOf,
+  seriesKeyOf,
+  type WatchScope,
+} from '../types.js';
 import { matchKeysFor } from '../canonical.js';
 import type { ContentRef } from '../types.js';
 
@@ -60,10 +66,17 @@ const StateWatchedSchema = z.looseObject({
   nextUp: z.array(StateNextUpSchema).optional(),
 });
 
+const StateWatchlistEntrySchema = z.looseObject({
+  type: z.string().min(1),
+  metaId: z.string().min(1),
+  at: z.number().optional(),
+});
+
 const PlaybackStateSchema = z.looseObject({
   version: z.string().optional(),
   items: z.array(StateItemSchema).optional(),
   watched: StateWatchedSchema.optional(),
+  watchlist: z.array(StateWatchlistEntrySchema).optional(),
 });
 
 export type PlaybackStatePayload = z.infer<typeof PlaybackStateSchema>;
@@ -73,6 +86,7 @@ export interface PullOutcome {
   unchanged: boolean;
   items: number;
   watched: number;
+  watchlist: number;
   removed: number;
   skipped: number;
 }
@@ -81,6 +95,7 @@ const EMPTY: PullOutcome = {
   unchanged: true,
   items: 0,
   watched: 0,
+  watchlist: 0,
   removed: 0,
   skipped: 0,
 };
@@ -184,7 +199,8 @@ function staleMatchKeys(
  * own connection, which on SQLite is the one the transaction holds.
  */
 async function matchKeysFrom(
-  payload: PlaybackStatePayload
+  payload: PlaybackStatePayload,
+  listed: Set<string>
 ): Promise<MatchKeys> {
   const refs: ContentRef[] = [];
   for (const item of payload.items ?? []) {
@@ -198,6 +214,11 @@ async function matchKeysFrom(
       episode: item.episode !== undefined ? item.episode : split.episode,
       videoId: item.videoId,
     });
+  }
+  for (const entry of payload.watchlist ?? []) {
+    const ref = watchlistRef(entry);
+    // Already imported, with its match key stored.
+    if (!listed.has(itemKeyFor(ref))) refs.push(ref);
   }
   for (const id of payload.watched?.movies ?? []) {
     refs.push({ kind: 'movie', type: 'movie', baseId: id, videoId: id });
@@ -488,6 +509,62 @@ async function importWatched(
   };
 }
 
+/** Every non-movie type is a show, as when browsed. */
+function watchlistRef(
+  entry: z.infer<typeof StateWatchlistEntrySchema>
+): ContentRef {
+  return entry.type === 'movie'
+    ? {
+        kind: 'movie',
+        type: entry.type,
+        baseId: entry.metaId,
+        videoId: entry.metaId,
+      }
+    : { kind: 'series', type: entry.type, baseId: entry.metaId };
+}
+
+/** A favourite toggled here inside the echo window, or set by another addon's watchlist, is left alone. */
+async function importWatchlist(
+  scope: WatchScope,
+  sink: SinkRow,
+  entries: z.infer<typeof StateWatchlistEntrySchema>[],
+  now: number,
+  db: DbDriver,
+  matches: MatchKeys
+): Promise<{ written: number; touched: string[] }> {
+  const identities = entries.map((entry) => {
+    const identity = identityFor(watchlistRef(entry));
+    return {
+      identity: {
+        ...identity,
+        matchKey: matches.get(identity.itemKey) ?? null,
+      },
+      at: atMs(entry.at, now),
+    };
+  });
+  const existing = await WatchStateRepository.getMany(
+    scope,
+    identities.map((i) => i.identity.itemKey),
+    db
+  );
+  const echoWindowMs = appConfig.watchState.echoWindowSeconds * 1000;
+  const rows: typeof identities = [];
+  const touched: string[] = [];
+  for (const row of identities) {
+    const held = existing.get(row.identity.itemKey);
+    if (held?.favoriteSinkId === sink.id && held.favorite) {
+      touched.push(row.identity.itemKey);
+      continue;
+    }
+    if (held?.favorite && held.favoriteSinkId) continue;
+    const toggledHere = held && !held.favoriteSinkId && held.favoriteAt != null;
+    if (toggledHere && now - held.favoriteAt! < echoWindowMs) continue;
+    rows.push(row);
+  }
+  await WatchStateRepository.upsertWatchlist(scope, sink.id, rows, now, db);
+  return { written: rows.length, touched };
+}
+
 async function fetchState(sink: SinkRow): Promise<PlaybackStatePayload | null> {
   if (!sink.pullUrl) return null;
   const url = new URL(sink.pullUrl);
@@ -521,6 +598,7 @@ async function fetchState(sink: SinkRow): Promise<PlaybackStatePayload | null> {
     ['items', parsed.data.items?.length ?? 0, cfg.pullMaxItems],
     ['movies', watched?.movies?.length ?? 0, cfg.pullMaxWatched],
     ['episodes', watched?.episodes?.length ?? 0, cfg.pullMaxWatched],
+    ['watchlist', parsed.data.watchlist?.length ?? 0, cfg.pullMaxWatched],
   ];
   for (const [what, got, max] of counts) {
     if (got > max) throw new Error(`${what} list of ${got} exceeds ${max}`);
@@ -584,6 +662,7 @@ export async function pullSink(
   };
   let watchedWritten = 0;
   let watchedSkipped = 0;
+  let watchlistWritten = 0;
   let removed = 0;
   const unchanged = !payload.watched;
 
@@ -592,7 +671,18 @@ export async function pullSink(
    * written but not yet marked seen. The fetch stays outside it: on SQLite a
    * transaction holds the single connection.
    */
-  const matches = await matchKeysFrom(payload);
+  const watchlistKeys = (payload.watchlist ?? []).map((entry) =>
+    itemKeyFor(watchlistRef(entry))
+  );
+  const held = watchlistKeys.length
+    ? await WatchStateRepository.getMany(scope, watchlistKeys)
+    : new Map<string, WatchStateRow>();
+  const listed = new Set(
+    [...held.values()]
+      .filter((row) => row.favorite && row.favoriteSinkId === sink.id)
+      .map((row) => row.itemKey)
+  );
+  const matches = await matchKeysFrom(payload, listed);
 
   await getDb().tx(async (tx) => {
     items = await importItems(
@@ -648,6 +738,32 @@ export async function pullSink(
         tx
       );
     }
+
+    // Complete when present, like `watched`.
+    if (payload.watchlist) {
+      const res = await importWatchlist(
+        scope,
+        sink,
+        payload.watchlist,
+        now,
+        tx,
+        matches
+      );
+      watchlistWritten = res.written;
+      await WatchStateRepository.touchWatchlist(
+        scope,
+        sink.id,
+        res.touched,
+        now,
+        tx
+      );
+      removed += await WatchStateRepository.clearStaleWatchlist(
+        scope,
+        sink.id,
+        now,
+        tx
+      );
+    }
   });
 
   await PlaybackHandoffRepository.finishPull(sink.id, token, {
@@ -662,10 +778,16 @@ export async function pullSink(
     unchanged,
     items: items.written,
     watched: watchedWritten,
+    watchlist: watchlistWritten,
     removed,
     skipped: items.skipped + watchedSkipped,
   };
-  if (outcome.items || outcome.watched || outcome.removed) {
+  if (
+    outcome.items ||
+    outcome.watched ||
+    outcome.watchlist ||
+    outcome.removed
+  ) {
     logger.debug({ addon: sink.addonName, ...outcome }, 'imported watch state');
   }
   return outcome;

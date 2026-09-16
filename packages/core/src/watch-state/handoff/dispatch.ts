@@ -10,7 +10,11 @@ import { getSimpleTextHash } from '../../utils/crypto.js';
 import type { IdType } from '../../utils/id-parser.js';
 import { sinkProbeMs } from './deliver.js';
 import { pullUrlFor, pushUrlFor, uniqueByAddress } from './resolve.js';
-import { SENDABLE_EVENTS, type PlaybackEventKind } from './capability.js';
+import {
+  PLAYBACK_EVENTS,
+  WATCHLIST_EVENTS,
+  type PlaybackEventKind,
+} from './capability.js';
 import type { AnimeEntryMappings } from '../../anime-database/types.js';
 import type { ResolvedPlaybackSink } from './resolve.js';
 import type { WatchScope } from '../types.js';
@@ -286,7 +290,10 @@ function replacesFor(
   switch (kind) {
     case 'played':
     case 'unplayed':
-      return SENDABLE_EVENTS;
+      return PLAYBACK_EVENTS;
+    case 'watchlisted':
+    case 'unwatchlisted':
+      return WATCHLIST_EVENTS;
     case 'start':
     case 'pause':
       return ['start', 'pause'];
@@ -483,9 +490,54 @@ export async function dispatchBulkMark(
           }),
           priority: BULK_LANE,
           covers: videos.map((v) => v.itemKey),
-          replaces: SENDABLE_EVENTS,
+          replaces: PLAYBACK_EVENTS,
         };
       });
     }
+  );
+}
+
+export interface WatchlistChangeInput {
+  kind: 'watchlisted' | 'unwatchlisted';
+  type: string;
+  metaId: string;
+  itemKey: string;
+  providerIds?: Record<string, string>;
+}
+
+export async function dispatchWatchlist(
+  scope: WatchScope,
+  sinks: ResolvedPlaybackSink[],
+  change: WatchlistChangeInput
+): Promise<void> {
+  if (!appConfig.watchState.reportEnabled || !sinks.length) return;
+
+  const at = Date.now();
+  const ids = await fillAnimeIds(externalIds(change.providerIds));
+  const idempotencyKey = `w|${change.itemKey}|${change.kind}|${at}`;
+
+  await queueToSinks(
+    scope,
+    sinks,
+    change.kind,
+    (sink) => matchesSink(sink, change.kind, change.type, [change.metaId]),
+    async (sink) => [
+      {
+        idempotencyKey,
+        event: change.kind,
+        itemKey: change.itemKey,
+        url: pushUrlFor(sink, change.type, change.metaId),
+        body: JSON.stringify({
+          id: idempotencyKey,
+          event: change.kind,
+          scope: change.itemKey.startsWith('m|') ? 'movie' : 'series',
+          at: Math.floor(at / 1000),
+          metaId: change.metaId,
+          ...(Object.keys(ids).length ? { ids } : {}),
+        }),
+        priority: SINGLE_LANE,
+        replaces: WATCHLIST_EVENTS,
+      },
+    ]
   );
 }

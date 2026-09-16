@@ -9,12 +9,20 @@ import {
 } from '../../db/schemas.js';
 
 /** Unpausing is another `start`, so there is no `unpause`. */
-export const SENDABLE_EVENTS = [
+export const PLAYBACK_EVENTS = [
   'start',
   'pause',
   'stop',
   'played',
   'unplayed',
+] as const;
+
+/** Sent only to an addon that lists them. */
+export const WATCHLIST_EVENTS = ['watchlisted', 'unwatchlisted'] as const;
+
+export const SENDABLE_EVENTS = [
+  ...PLAYBACK_EVENTS,
+  ...WATCHLIST_EVENTS,
 ] as const;
 
 export type PlaybackEventKind = (typeof SENDABLE_EVENTS)[number];
@@ -58,12 +66,14 @@ export function readWatchStateCapability(
 
   const events = [
     ...new Set<PlaybackEventKind>(
-      declared?.length ? declared.filter(isSendable) : SENDABLE_EVENTS
+      declared?.length ? declared.filter(isSendable) : PLAYBACK_EVENTS
     ),
   ];
 
   const pull = block?.pull;
-  const pullable = !!pull && (pull.items !== false || pull.watched !== false);
+  const pullable =
+    !!pull &&
+    (pull.items !== false || pull.watched !== false || pull.watchlist === true);
 
   if (!events.length && !pullable) return null;
 
