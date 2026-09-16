@@ -13,6 +13,7 @@ import {
   NabAddonConfig,
   parseNabParsedFileInfo,
 } from '../base/nab/addon.js';
+import { ageInHoursSince } from '../utils/general.js';
 
 const logger = createLogger('torznab');
 
@@ -70,6 +71,7 @@ export class TorznabAddon extends BaseNabAddon<NabAddonConfig, TorznabApi> {
         hash: infoHash,
         guid: result.guid,
         downloadUrl,
+        age: ageInHoursSince(result.pubDate),
         sources: result.torznab?.magneturl?.toString()
           ? extractTrackersFromMagnet(result.torznab.magneturl.toString())
           : [],

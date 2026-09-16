@@ -65,7 +65,7 @@ const ProwlarrApiIndexersListSchema = z.array(ProwlarrApiIndexerSchema);
 
 const ProwlarrApiSearchItemSchema = z.object({
   guid: z.string().optional(), // can sometimes be the raw magnet url
-  age: z.number(), // in days
+  ageHours: z.number(),
   size: z.number(),
   indexerId: z.number(),
   indexer: z.string(),
