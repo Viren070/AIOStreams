@@ -72,10 +72,7 @@ export {
   type ConfigSessionCredentials,
   type IssuedConfigSession,
 } from './repositories/config-sessions.js';
-export {
-  LinkedAccountRepository,
-  MAX_LINKED_ACCOUNTS_PER_USER,
-} from './repositories/linked-accounts.js';
+export { LinkedAccountRepository } from './repositories/linked-accounts.js';
 export {
   CommunityRepository,
   type CommunityItemInsert,

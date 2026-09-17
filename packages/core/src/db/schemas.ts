@@ -1947,6 +1947,7 @@ const StatusResponseSchema = z.object({
       maxFailoverAttempts: z.number(),
       maxParallelAttempts: z.number(),
       maxBackgroundPings: z.number(),
+      maxLinkedAccounts: z.number(),
     }),
   }),
 });

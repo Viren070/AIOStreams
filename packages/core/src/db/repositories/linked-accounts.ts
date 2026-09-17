@@ -18,8 +18,6 @@ import type {
 
 const logger = createLogger('linked-accounts');
 
-export const MAX_LINKED_ACCOUNTS_PER_USER = 10;
-
 const COLUMNS =
   'id, uuid, platform, label, identity, config, auto_push, last_synced_at, last_status, last_error, last_pushed_manifest_hash, created_at, updated_at';
 

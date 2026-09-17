@@ -180,6 +180,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxFailoverAttempts: appConfig.userLimits.maxFailoverAttempts,
         maxParallelAttempts: appConfig.userLimits.maxParallelAttempts,
         maxBackgroundPings: appConfig.userLimits.maxBackgroundPings,
+        maxLinkedAccounts: appConfig.linkedAccounts.maxPerUser,
       },
     },
   };
