@@ -223,7 +223,8 @@ A path starts with a configuration field and drills in.
 | `.name`         | An object property                             | `deduplicator.enabled`                |
 | `[0]`           | A list element by position                     | `sortCriteria.global[0]`              |
 | `[-1]`          | Counting back from the end                     | `sortCriteria.global[-1]`             |
-| `[*]`           | Every element                                  | `presets[*].options.timeout`          |
+| `[*]`           | Every element of a list                        | `presets[*].options.timeout`          |
+| `[*]`           | Every value of an object                       | `sortCriteria[*]`                     |
 | `[key=value]`   | Elements whose property equals a value         | `services[id=realdebrid]`             |
 | `[key!=value]`  | Elements whose property does not equal it      | `presets[type!=torrentio]`            |
 | `[key*=value]`  | Elements whose property contains the text      | `rankedRegexPatterns[name*="german"]` |
@@ -231,6 +232,8 @@ A path starts with a configuration field and drills in.
 | `[=value]`      | Plain list entries, comparing the entry itself | `excludedKeywords[="cam"]`            |
 
 A selector may match several elements, in which case the instruction applies to all of them: `disable presets[type=torrentio]` disables every Torrentio instance.
+
+`[*]` is the one segment that also walks an object, which is how a single instruction reaches all twelve sort lists: `add sortCriteria[*] { "key": "resolution", "direction": "desc" }` appends the same criterion to every one you have defined. The `[key=value]` selectors stay list-only, since an object's members are addressed by name.
 
 `=` and `!=` are exact and case-sensitive. `*=` and `!*=` are substring matches that ignore case.
 
@@ -414,6 +417,12 @@ set sortCriteria.global = [
   { "key": "streamExpressionScore", "direction": "desc" },
   { "key": "size", "direction": "desc" }
 ]
+```
+
+Or slot one criterion into second place in every sort list you have defined, leaving the rest of each list alone:
+
+```
+insert sortCriteria[*][1] = { "key": "resolution", "direction": "desc" }
 ```
 
 **Layering.** Either reference one variant from another:

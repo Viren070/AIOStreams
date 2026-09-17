@@ -1095,6 +1095,7 @@ function step(nodes: any[], segment: CelPathSegment, seed: any): any[] {
       }
       case 'all':
         if (Array.isArray(node)) out.push(...node);
+        else if (isPlainObject(node)) out.push(...Object.values(node));
         break;
       case 'filter':
         if (Array.isArray(node)) {
@@ -1142,6 +1143,10 @@ function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
       case 'all':
         if (Array.isArray(node)) {
           node.forEach((_, i) => targets.push({ container: node, key: i }));
+        } else if (isPlainObject(node)) {
+          for (const key of Object.keys(node)) {
+            targets.push({ container: node, key });
+          }
         }
         break;
       case 'filter':
