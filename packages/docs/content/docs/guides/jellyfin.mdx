@@ -11,6 +11,7 @@ AIOStreams can present your configuration as a **Jellyfin server**. You add it t
 | In AIOStreams                     | In a Jellyfin app                                       |
 | --------------------------------- | ------------------------------------------------------- |
 | Your catalogs                     | Libraries                                               |
+| Your metadata addons              | Titles, with their details, seasons and episodes        |
 | The streams found for a title     | Versions of that title                                  |
 | Your subtitle addons              | Subtitle tracks                                         |
 | Catalogs of collections           | A Collections library                                   |
@@ -18,6 +19,7 @@ AIOStreams can present your configuration as a **Jellyfin server**. You add it t
 
 ## Before you start
 
+- **Add catalog and metadata addons to AIOStreams.** A Jellyfin app only sees what your AIOStreams configuration provides, so it needs addons for all three jobs: catalogs to fill the libraries, metadata to describe each title, and streams to play it.
 - **Save your configuration.** A Jellyfin app signs in to a saved configuration.
 - **Pick an app.** Swiftfin, Findroid, Streamyfin, Jellyfin for Android TV, Jellyfin for Kodi and Infuse all work. The Jellyfin web interface is not included: the server address is an API for apps, not a website.
 - **Check the instance allows it.** It is on by default. If the **Jellyfin** card under **Save & Install** is greyed out, the instance owner has turned it off.
@@ -108,7 +110,7 @@ A title's versions are reused for a few minutes, so opening it and then playing 
 
 ### Skipping intros and credits
 
-If the instance owner has enabled it, the Playback tab has **Skip intro and credits**. Apps then get markers they can show a skip button for, and you can choose which markers to offer: intro, recap and credits. Whether the app skips automatically or asks first is a setting inside the app. The markers come from community databases, so on a differently cut copy of an episode they can be a few seconds out.
+Unless the instance owner has turned it off, the Playback tab has **Skip intro and credits**, on by default. Apps then get markers they can show a skip button for, and you can choose which markers to offer: intro, recap and credits. Whether the app skips automatically or asks first is a setting inside the app. The markers come from community databases, so on a differently cut copy of an episode they can be a few seconds out.
 
 ## Watch history
 
@@ -152,7 +154,7 @@ Jellyfin apps each use a different part of the server, so a few things vary:
 
 ## For instance owners
 
-The Jellyfin server and watch-state sync are on by default. The main settings are under **Dashboard → Settings**; see [environment variables](/configuration/environment-variables) for all of them.
+The Jellyfin server, skip markers and watch-state sync are on by default. The main settings are under **Dashboard → Settings**; see [environment variables](/configuration/environment-variables) for all of them.
 
 | Variable                         | Default | What it does                                                                                              |
 | -------------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
@@ -162,7 +164,7 @@ The Jellyfin server and watch-state sync are on by default. The main settings ar
 | `JELLYFIN_MAX_VERSIONS`          | `10`    | The most versions a configuration can ask for.                                                            |
 | `JELLYFIN_RESOLVE_ON_OPEN`       | `user`  | `always` or `never` force resolving on open for everyone; `user` leaves it to each configuration.         |
 | `JELLYFIN_MAX_PERSONAS`          | `20`    | Household users per configuration. `0` allows none.                                                       |
-| `JELLYFIN_SEGMENTS_ENABLED`      | `false` | Offers skip markers. It sends what is being played to the marker databases, so it is off by default.      |
+| `JELLYFIN_SEGMENTS_ENABLED`      | `true`  | Offers skip markers. It sends what is being played to the marker databases.                               |
 | `WATCH_STATE_REPORT_ENABLED`     | `true`  | Sends plays to tracker addons.                                                                            |
 | `WATCH_STATE_PULL_ENABLED`       | `true`  | Imports history from tracker addons.                                                                      |
 | `WATCH_STATE_ALLOW_PRIVATE_URLS` | `false` | Lets watch state reach addons on private addresses. Only enable it on an instance you trust the users of. |

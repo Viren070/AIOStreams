@@ -130,10 +130,10 @@ export const jellyfinSchema = {
   segments: {
     enabled: {
       schema: z.boolean(),
-      default: false,
+      default: true,
       label: 'Skip intro and credits',
       description:
-        "Offers clients intro, recap and credits markers so they can show a skip button. Off by default because it sends the id, season and episode of everything played to a third-party database. Timestamps are submitted against one release of an episode and yours may be cut differently, so a marker can be seconds out; whether a client skips automatically or asks first is that client's own setting, not ours.",
+        "Offers clients intro, recap and credits markers so they can show a skip button. It sends the id, season and episode of everything played to the providers below, so turn it off if that should stay private. Timestamps are submitted against one release of an episode and yours may be cut differently, so a marker can be seconds out; whether a client skips automatically or asks first is that client's own setting, not ours.",
       env: 'JELLYFIN_SEGMENTS_ENABLED',
       requiresRestart: false,
       secret: false,
