@@ -36,6 +36,10 @@ import {
 import { SceneMappingDataset } from './scene-mappings.js';
 import { IdMappingDataset } from './id-mappings.js';
 import { SkyhookMetadata } from './skyhook.js';
+import {
+  hasExternalEpisodeCoordinates,
+  mapExternalEpisodeToTmdb,
+} from '../anime-database/episode-coordinates.js';
 
 const logger = createLogger('metadata-service');
 
@@ -63,10 +67,16 @@ export class MetadataService {
     id: ParsedId,
     type: (typeof TYPES)[number]
   ): Promise<Metadata> {
+    // Older entries cache show-level dates and aliases chosen before external
+    // episode translation. Keep them separate from the corrected metadata.
+    const episodeCacheVersion =
+      type === 'series' && hasExternalEpisodeCoordinates(id)
+        ? ':external-episode-v1'
+        : '';
     return withRetry(
       async () => {
         const { result } = await this.lock.withLock(
-          `metadata:${id.mediaType}:${id.type}:${id.value}:${id.season ?? ''}:${id.episode ?? ''}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}`,
+          `metadata:${id.mediaType}:${id.type}:${id.value}:${id.season ?? ''}:${id.episode ?? ''}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}${episodeCacheVersion}`,
           async () => {
             const start = Date.now();
             // fill order is irrelevant; merge.ts decides what wins
@@ -475,6 +485,9 @@ export class MetadataService {
 
             // anime entries partition and renumber seasons
             const mapEpisodeForTmdb = () => {
+              const external =
+                animeEntry && mapExternalEpisodeToTmdb(id, animeEntry);
+              if (external) return external;
               let seasonNumber = Number(id.season);
               let episodeNumber = Number(id.episode);
               if (animeEntry) {
@@ -590,6 +603,7 @@ export class MetadataService {
             // anime) and release groups follow all of them, so collect all
             // that agree on which episode the request points at.
             let episodeTitles: MetadataTitle[] | undefined;
+            let animeEpisodeAirDate: string | undefined;
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
             if (type === 'series' && id.season && id.episode) {
@@ -705,6 +719,18 @@ export class MetadataService {
                 tvdbEp?.airDate ??
                 skyhookEp?.airDate ??
                 tmdbEp?.airDate;
+              // These episode lookups already resolved a date in the request's
+              // numbering scheme. Retain it even if TMDB has no episode yet.
+              if (
+                animeEntry &&
+                hasExternalEpisodeCoordinates(id) &&
+                referenceAirDate
+              ) {
+                const date = new Date(referenceAirDate);
+                if (!Number.isNaN(date.getTime())) {
+                  animeEpisodeAirDate = date.toISOString().slice(0, 10);
+                }
+              }
               const agreesWithRequest = (airDate?: string) => {
                 if (!referenceAirDate || !airDate) return true;
                 const ref = new Date(referenceAirDate).getTime();
@@ -815,7 +841,8 @@ export class MetadataService {
               lastAiredDate: merged.lastAiredDate,
               isDateBased: episodeFacts?.isDateBased || undefined,
               episodeAirDates: episodeFacts?.episodeAirDates,
-              episodeAirDate: episodeFacts?.episodeAirDates?.[0],
+              episodeAirDate:
+                animeEpisodeAirDate ?? episodeFacts?.episodeAirDates?.[0],
               resolvedSeasonNumber: episodeFacts?.resolvedSeasonNumber,
               resolvedSeasonFirstEpisode:
                 episodeFacts?.resolvedSeasonFirstEpisode,

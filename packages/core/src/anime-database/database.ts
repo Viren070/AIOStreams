@@ -36,6 +36,7 @@ import {
 import { mergeSources, type SourceBatch } from './merger.js';
 import { filterCandidatesBySeasonType, selectBestRecord } from './selector.js';
 import { buildAnimeEntry } from './builder.js';
+import { getEntryEpisodeTitles } from './episode-titles.js';
 
 const logger = createLogger('anime-database');
 
@@ -380,7 +381,44 @@ export class AnimeDatabase {
     }
 
     const candidates = await AnimeRepository.findCandidates(idType, idValue);
-    const entry = chooseEntry(candidates, idType, idValue, season, episode);
+    let entry: AnimeEntry | null = null;
+    if (candidates.length > 0) {
+      const filtered = filterCandidatesBySeasonType(candidates, season);
+      const chosen = selectBestRecord(
+        filtered,
+        idType,
+        idValue,
+        season,
+        episode
+      );
+      if (chosen) {
+        entry = buildAnimeEntry(chosen);
+        if (
+          season !== undefined &&
+          episode !== undefined &&
+          ['imdbId', 'thetvdbId', 'themoviedbId'].includes(idType)
+        ) {
+          // Parts can have separate IMDb IDs while sharing a TVDB/TMDB show.
+          // Check those local records too, including season-filtered candidates.
+          const related = await Promise.all(
+            (['imdbId', 'thetvdbId', 'themoviedbId'] as const)
+              .filter(
+                (key) =>
+                  key !== idType &&
+                  chosen.ids?.[key] != null &&
+                  chosen.ids?.[key] !== ''
+              )
+              .map((key) =>
+                AnimeRepository.findCandidates(key, chosen.ids[key]!)
+              )
+          );
+          entry.localEpisodeTitles = getEntryEpisodeTitles(chosen, [
+            ...candidates,
+            ...related.flat(),
+          ]);
+        }
+      }
+    }
 
     this.cache.set(key, entry);
     if (this.cache.size > CACHE_MAX_ENTRIES) {
