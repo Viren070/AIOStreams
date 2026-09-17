@@ -308,10 +308,10 @@ export function normaliseTitle(title: string) {
   );
 }
 
+/** Clean a metadata title for text search, preserving separator word boundaries. */
 export function cleanTitle(title: string, language?: string) {
   return foldToAscii(title, language)
-    .replace(/[♪♫★☆♡♥\-;:]/g, ' ')
-    .replace(/&/g, 'and')
+    .replace(/[♪♫★☆♡♥\-;:/\\|_.,‐‑–—…：；／＼｜＿．&]/g, ' ')
     .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalise spaces
     .toLowerCase()

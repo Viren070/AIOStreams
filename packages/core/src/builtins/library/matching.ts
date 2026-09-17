@@ -22,6 +22,17 @@ const logger = createLogger('library');
 const TITLE_MATCH_THRESHOLD = 0.85;
 
 /**
+ * Preserve existing library comparisons for punctuation and ampersands:
+ * S.W.A.T. matches SWAT, and Law & Order matches Law and Order. Search queries
+ * instead use spaces for these separators.
+ */
+function cleanLibraryTitle(title: string): string {
+  return cleanTitle(
+    title.replace(/[.,‐‑–—…：；／＼｜＿．]/gu, '').replaceAll('&', 'and')
+  );
+}
+
+/**
  * Matches title-based criteria against a download item name.
  */
 export function isItemMatch(
@@ -37,9 +48,9 @@ export function isItemMatch(
   );
 
   // Title match
-  const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
+  const cleanedTitles = metadata.titles.map(cleanLibraryTitle);
   if (
-    !titleMatch(cleanTitle(preprocessedTitle), cleanedTitles, {
+    !titleMatch(cleanLibraryTitle(preprocessedTitle), cleanedTitles, {
       threshold: TITLE_MATCH_THRESHOLD,
     })
   ) {
