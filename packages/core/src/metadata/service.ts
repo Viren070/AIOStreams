@@ -1,4 +1,4 @@
-﻿import { DistributedLock } from '../utils/distributed-lock.js';
+import { DistributedLock } from '../utils/distributed-lock.js';
 import {
   deduplicateTitles,
   Metadata,
@@ -74,7 +74,8 @@ export class MetadataService {
             let cinemetaVideos: CinemetaVideo[] | undefined;
 
             // Check anime database first
-            const animeEntry = await AnimeDatabase.getInstance().getEntryById(
+            const animeDb = AnimeDatabase.getInstance();
+            const animeEntry = await animeDb.getEntryById(
               id.type,
               id.value,
               id.season ? Number(id.season) : undefined,
@@ -121,6 +122,32 @@ export class MetadataService {
                 );
               }
             }
+
+            const suppressWholeShowAliases =
+              appConfig.metadata.animeDb.suppressSiblingAliases &&
+              !!animeEntry &&
+              (
+                await Promise.all([
+                  animeDb
+                    .hasSiblingRecords(id.type, id.value)
+                    .catch(() => false),
+                  tmdbId
+                    ? animeDb
+                        .hasSiblingRecords('themoviedbId', tmdbId)
+                        .catch(() => false)
+                    : false,
+                  tvdbId
+                    ? animeDb
+                        .hasSiblingRecords('thetvdbId', tvdbId)
+                        .catch(() => false)
+                    : false,
+                  imdbId
+                    ? animeDb
+                        .hasSiblingRecords('imdbId', imdbId)
+                        .catch(() => false)
+                    : false,
+                ])
+              ).some(Boolean);
 
             if (animeEntry) {
               const aliases: MetadataTitle[] = [];
@@ -420,7 +447,6 @@ export class MetadataService {
                 cinemeta.runtime =
                   minutes !== undefined && minutes <= 1 ? undefined : minutes;
               }
-
               contributions.cinemeta = cinemeta;
             } else if (imdbResult.status === 'rejected') {
               logger.warn(
@@ -445,7 +471,9 @@ export class MetadataService {
             }
 
             const mediaType = type === 'movie' ? 'movie' : 'series';
-            let merged = mergeMetadata(contributions, mediaType);
+            let merged = mergeMetadata(contributions, mediaType, {
+              suppressWholeShowAliases,
+            });
 
             // series only: movie results carry a year already
             let titleConflictsPromise: Promise<TitleConflict[]> | undefined;
@@ -779,7 +807,9 @@ export class MetadataService {
             }
 
             // re-merge: the episode and scene steps added contributions
-            merged = mergeMetadata(contributions, mediaType);
+            merged = mergeMetadata(contributions, mediaType, {
+              suppressWholeShowAliases,
+            });
 
             if (
               !merged.titles.length ||
