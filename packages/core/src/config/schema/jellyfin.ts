@@ -10,7 +10,7 @@ import type { RuntimeConfigSection } from '../types.js';
 export const jellyfinSchema = {
   enabled: {
     schema: z.boolean(),
-    default: false,
+    default: true,
     label: 'Enable Jellyfin API',
     description:
       'Presents every configuration as a Jellyfin server at /jellyfin. Clients sign in with the configuration UUID or alias and its password, approve a Quick Connect code from the configuration page, or use the pre-authenticated /jellyfin/<uuid>/<encryptedPassword> address.',

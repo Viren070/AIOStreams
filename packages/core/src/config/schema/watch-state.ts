@@ -11,7 +11,7 @@ import type { RuntimeConfigSection } from '../types.js';
 export const watchStateSchema = {
   reportEnabled: {
     schema: z.boolean(),
-    default: false,
+    default: true,
     label: 'Report playback to addons',
     description:
       'Sends playback events (started, paused, stopped with a watched decision, marked played or unplayed) to configured addons that declare the `watch_state` resource, so a tracker addon can scrobble what was actually watched instead of guessing from a subtitle request. Only Jellyfin clients produce these events; playback in Stremio reports nothing.',
@@ -21,7 +21,7 @@ export const watchStateSchema = {
   },
   pullEnabled: {
     schema: z.boolean(),
-    default: false,
+    default: true,
     label: 'Read watch state from addons',
     description:
       'Reads back what a tracker addon knows you have watched and how far into things you are, so Continue Watching and Next Up in a Jellyfin client reflect what you watched on other devices. Requires an addon that answers the `watch_state` resource; what it returns replaces what was imported from it before, and never overrides something you played here.',
