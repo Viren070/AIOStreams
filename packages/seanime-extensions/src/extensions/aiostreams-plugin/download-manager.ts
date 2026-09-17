@@ -105,7 +105,7 @@ export class DownloadManager {
     }
 
     // Initial state to webview so the button updates immediately
-    this.panel.channel.send('download-progress', {
+    this.panel.send('download-progress', {
       index,
       sessionId,
       status: 'downloading',
@@ -121,7 +121,7 @@ export class DownloadManager {
       const status = progress.status;
       record.percentage = percentage ?? 0;
 
-      this.panel.channel.send('download-progress', {
+      this.panel.send('download-progress', {
         index,
         sessionId,
         status,

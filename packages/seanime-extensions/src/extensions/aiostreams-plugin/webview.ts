@@ -113,6 +113,7 @@ html,body{height:100%;width:100%;overflow:hidden;background-color:transparent !i
 
 <script>
 var W=window.webview,rs=[],playIdx=-1,_d={timeTakenMs:null,animeLookupMs:null,searchMs:null,fromCache:false,errors:[],statistics:[],lookup:null,sessionId:''},dlState={},_lastEpisodeInfo='';
+function msg(v){if(typeof v!=='string')return v;try{return JSON.parse(v);}catch(e){return null;}}
 function esc(s){if(!s&&s!==0)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(ms){return ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';}
 function close_(){W.send('close',{});}
@@ -132,11 +133,12 @@ function openExt(i){
 function copyStream(i){var r=rs[i];if(!r)return;var t=r.url||r.magnetLink||r.externalUrl||'';if(t)W.send('copy-stream',{text:t});}
 function downloadStream(i){if(dlState[i]&&dlState[i].status==='downloading')return;W.send('download',{index:i});}
 W.on('play-error',function(d){
+  d=msg(d);
   var idx=d&&d.index!=null?d.index:playIdx;playIdx=-1;
   var b=document.getElementById('pb-'+idx);
   if(b){b.disabled=false;b.classList.remove('loading');}
 });
-W.on('download-progress',function(d){if(d&&d.index!=null&&d.sessionId===_d.sessionId){dlState[d.index]=d;updateDlBtn(d.index);}});
+W.on('download-progress',function(d){d=msg(d);if(d&&d.index!=null&&d.sessionId===_d.sessionId){dlState[d.index]=d;updateDlBtn(d.index);}});
 function openOverlay(){
   var html='';
   var lk=_d.lookup;
@@ -262,12 +264,13 @@ function render(s){
   R.innerHTML=html;R.style.display='block';
 }
 W.on('state',function(s){
+  s=msg(s);if(!s)return;
   var p=document.getElementById('panel');
   if(p) p.classList.remove('is-leaving');
   render(s);
 });
 W.on('close-anim',function(){var p=document.getElementById('panel');if(p)p.classList.add('is-leaving');});
-W.on('mobile-mode',function(m){var p=document.getElementById('panel');if(!p)return;if(m)p.classList.add('mobile');else p.classList.remove('mobile');});
+W.on('mobile-mode',function(m){m=msg(m);var p=document.getElementById('panel');if(!p)return;if(m)p.classList.add('mobile');else p.classList.remove('mobile');});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document.getElementById('overlay').classList.contains('open')){closeOverlay();}else{close_();}}});
 </script>
 </body>

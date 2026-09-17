@@ -93,7 +93,7 @@ function init() {
         ctx.toast.info('No previous results to show.');
         return;
       }
-      if (st.autoPlay) panel.wvState.set({ ...st, autoPlay: false });
+      if (st.autoPlay) panel.setState({ ...st, autoPlay: false });
       panel.show();
       tray.close();
     });
