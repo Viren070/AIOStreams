@@ -10,6 +10,7 @@ import { NZB, UnprocessedTorrent } from '../../debrid/utils.js';
 import { validateInfoHash } from '../utils/debrid.js';
 import { config as appConfig } from '../../config/index.js';
 import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import { getYearlessQueries } from '../utils/yearless.js';
 
 const logger = createLogger('therarbg');
 
@@ -42,14 +43,10 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
       return [];
     }
 
-    const queries = this.buildQueries(parsedId, metadata, {
+    const titleQueries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(getTheRARBGUrl(), this.id),
     });
-    if (metadata.imdbId) {
-      queries.push(metadata.imdbId);
-    }
-
-    if (queries.length === 0) {
+    if (titleQueries.length === 0 && !metadata.imdbId) {
       return [];
     }
 
@@ -61,83 +58,102 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
       ...(metadata.isAnime ? [TheRARBGCategory.Anime] : []),
     ];
 
-    logger.info(`Performing TheRARBG search`, { queries, categories });
+    const runQueries = async (queryList: string[]) =>
+      (
+        await Promise.all(
+          queryList.map((q) =>
+            queryLimit(async () => {
+              const start = Date.now();
+              logger.debug(`Fetching first page for query "${q}"`);
+              const firstPageResponse = await this.api.search({
+                query: q,
+                page: 1,
+                categories,
+              });
+              const { total, pageSize } = firstPageResponse;
+              let allResults = [...firstPageResponse.results];
+              const totalPages = Math.min(
+                Math.ceil(total / pageSize),
+                appConfig.builtins.therarbg.pageLimit
+              );
+              if (totalPages > 1) {
+                // page 1 was already fetched above
+                const pageNumbers = Array.from(
+                  { length: totalPages - 1 },
+                  (_, i) => i + 2
+                );
+                const remainingResults = await Promise.all(
+                  pageNumbers.map(async (pageNum) => {
+                    const { results } = await this.api.search({
+                      query: q,
+                      page: pageNum,
+                      categories,
+                    });
+                    return results;
+                  })
+                );
+                allResults.push(...remainingResults.flat());
+              }
+              logger.info(
+                `TheRARBG search for ${q} took ${getTimeTakenSincePoint(start)}`,
+                { results: allResults.length, pages: Math.max(totalPages, 1) }
+              );
+              return allResults;
+            })
+          )
+        )
+      ).flat();
 
-    const searchPromises = queries.map((q) =>
-      queryLimit(async () => {
-        const start = Date.now();
+    logger.info(`Performing TheRARBG search`, {
+      queries: titleQueries,
+      categories,
+    });
+    const [titleResults, imdbResults] = await Promise.all([
+      runQueries(titleQueries),
+      metadata.imdbId ? runQueries([metadata.imdbId]) : Promise.resolve([]),
+    ]);
 
-        logger.debug(`Fetching first page for query "${q}"`);
-        const firstPageResponse = await this.api.search({
-          query: q,
-          page: 1,
-          categories,
-        });
+    const matchesImdbId = (result: (typeof titleResults)[number]) =>
+      !result.imdbId || !metadata.imdbId || result.imdbId === metadata.imdbId;
 
-        const { total, pageSize } = firstPageResponse;
-        let allResults = [...firstPageResponse.results];
-
-        const totalPages = Math.min(
-          Math.ceil(total / pageSize),
-          appConfig.builtins.therarbg.pageLimit
-        );
-
-        if (totalPages <= 1) {
+    const yearlessFallback = appConfig.builtins.scrape.yearlessMovieFallback;
+    if (
+      parsedId.mediaType === 'movie' &&
+      metadata.year &&
+      yearlessFallback.enabled
+    ) {
+      const uniqueCount = new Set(
+        [...titleResults, ...imdbResults]
+          .filter(matchesImdbId)
+          .map((result) => validateInfoHash(result.hash))
+          .filter(Boolean)
+      ).size;
+      if (uniqueCount < yearlessFallback.resultThreshold) {
+        const yearlessQueries = getYearlessQueries(titleQueries, metadata.year);
+        if (yearlessQueries.length > 0) {
           logger.info(
-            `TheRARBG search for ${q} took ${getTimeTakenSincePoint(start)}`,
+            'Initial TheRARBG movie searches returned too few unique results; retrying without year',
             {
-              results: allResults.length,
-              pages: 1,
+              uniqueResults: uniqueCount,
+              threshold: yearlessFallback.resultThreshold,
+              queries: yearlessQueries,
             }
           );
-          return allResults;
-        }
-
-        // page 1 was already fetched above
-        const pageNumbers = Array.from(
-          { length: totalPages - 1 },
-          (_, i) => i + 2
-        );
-
-        logger.debug(
-          `Fetching ${pageNumbers.length} additional pages in parallel for query "${q}"`
-        );
-
-        const pagePromises = pageNumbers.map(async (pageNum) => {
-          const { results } = await this.api.search({
-            query: q,
-            page: pageNum,
-            categories,
-          });
-          logger.debug(`Fetched page ${pageNum} for query "${q}"`, {
-            newResults: results.length,
-          });
-          return results;
-        });
-
-        const remainingResults = await Promise.all(pagePromises);
-        allResults.push(...remainingResults.flat());
-
-        logger.info(
-          `TheRARBG search for ${q} took ${getTimeTakenSincePoint(start)}`,
-          {
-            results: allResults.length,
-            pages: totalPages,
+          try {
+            titleResults.push(...(await runQueries(yearlessQueries)));
+          } catch (error) {
+            logger.warn(
+              'Yearless movie fallback failed; keeping initial results',
+              {
+                error: error instanceof Error ? error.message : String(error),
+              }
+            );
           }
-        );
-        return allResults;
-      })
-    );
+        }
+      }
+    }
 
-    const allResults = await Promise.all(searchPromises);
-    const results = allResults
-      .flat()
-      .filter(
-        (result) =>
-          !result.imdbId ||
-          !metadata.imdbId ||
-          result.imdbId === metadata.imdbId
-      );
+    const results = [...titleResults, ...imdbResults].filter(matchesImdbId);
 
     const seenTorrents = new Set<string>();
     const torrents: UnprocessedTorrent[] = [];
@@ -154,19 +170,17 @@ export class TheRARBGAddon extends BaseDebridAddon<TheRARBGAddonConfig> {
         continue;
       }
       seenTorrents.add(hash);
-
       // convert unix timestamp to age in hours
       const age = Math.ceil(
         (Date.now() - result.age * 1000) / (1000 * 60 * 60)
       );
-
       torrents.push({
         hash,
         downloadUrl,
         sources: [],
         indexer: `TheRARBG | ${result.user}`,
         seeders: result.seeders,
-        age: age,
+        age,
         title: result.name,
         size: result.size,
         type: 'torrent',
