@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { byteSize } from './helpers.js';
+import { byteSize, seconds } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
 
 /**
@@ -51,15 +51,15 @@ export const watchStateSchema = {
     ui: { min: 0 },
   },
   deliveryIntervalSeconds: {
-    schema: z.number().int().min(10),
+    schema: seconds.pipe(z.number().min(10)),
     default: 60,
-    label: 'Delivery interval (seconds)',
+    label: 'Delivery interval',
     description:
       'How often queued playback events are delivered. Events are queued before the request that produced them returns, so an addon being down or slow never delays playback; this is how long a scrobble waits in the normal case.',
     env: 'WATCH_STATE_DELIVERY_INTERVAL',
     requiresRestart: true,
     secret: false,
-    ui: { min: 10 },
+    ui: { kind: 'duration' },
   },
   deliveryMaxAttempts: {
     schema: z.number().int().min(1).max(20),
@@ -84,37 +84,37 @@ export const watchStateSchema = {
     ui: { min: 1 },
   },
   pullIntervalSeconds: {
-    schema: z.number().int().min(60),
+    schema: seconds.pipe(z.number().min(60)),
     default: 1800,
-    label: 'Background read interval (seconds)',
+    label: 'Background read interval',
     description:
       'How often watch state is read from addons in the background. Each read sends back the last version the addon gave, so an addon whose state has not changed answers without touching its tracker; this is the pace of that check, not of a full re-read.',
     env: 'WATCH_STATE_PULL_INTERVAL',
     requiresRestart: true,
     secret: false,
-    ui: { min: 60 },
+    ui: { kind: 'duration' },
   },
   pullTtlSeconds: {
-    schema: z.number().int().min(0),
+    schema: seconds,
     default: 300,
-    label: 'Read on demand after (seconds)',
+    label: 'Read on demand after',
     description:
       'When a Jellyfin client asks for Continue Watching or Next Up and the last read is older than this, a fresh one is started in the background. The shelf is always answered from what is already stored, so a slow addon never delays it; the new state appears on the next refresh.',
     env: 'WATCH_STATE_PULL_TTL',
     requiresRestart: false,
     secret: false,
-    ui: { min: 0 },
+    ui: { kind: 'duration' },
   },
   echoWindowSeconds: {
-    schema: z.number().int().min(0),
+    schema: seconds,
     default: 600,
-    label: 'Echo window (seconds)',
+    label: 'Echo window',
     description:
       'How long something you played here is protected from being overwritten by reading it back. We report a watch to the addon, the addon writes it to a tracker, and the tracker stamps it a moment later than we did, so a plain "newer wins" rule would treat our own scrobble as fresh activity from another device. Nothing within this window is imported over.',
     env: 'WATCH_STATE_ECHO_WINDOW',
     requiresRestart: false,
     secret: false,
-    ui: { min: 0 },
+    ui: { kind: 'duration' },
   },
   retentionDays: {
     schema: z.number().int().min(1),
@@ -128,26 +128,26 @@ export const watchStateSchema = {
     ui: { min: 1 },
   },
   sessionIdleTimeout: {
-    schema: z.number().int().min(60),
+    schema: seconds.pipe(z.number().min(60)),
     default: 300,
-    label: 'Idle playback timeout (seconds)',
+    label: 'Idle playback timeout',
     description:
       'How long a playback may go without a report from the client before it is treated as over and stopped at the last position it sent. A client that crashes, loses its network or is force-quit never says it stopped, and without this the title would sit in Continue Watching for ever and never scrobble. Jellyfin itself uses 5 minutes. Paused clients keep reporting, so pausing does not trip it.',
     env: 'WATCH_STATE_SESSION_IDLE_TIMEOUT',
     requiresRestart: false,
     secret: false,
-    ui: { min: 60 },
+    ui: { kind: 'duration' },
   },
   sessionSweepIntervalSeconds: {
-    schema: z.number().int().min(15),
+    schema: seconds.pipe(z.number().min(15)),
     default: 60,
-    label: 'Idle playback check interval (seconds)',
+    label: 'Idle playback check interval',
     description:
       'How often playbacks are checked for having gone idle. Lower means an abandoned playback is closed sooner, at the cost of one small query per interval.',
     env: 'WATCH_STATE_SESSION_SWEEP_INTERVAL',
     requiresRestart: true,
     secret: false,
-    ui: { min: 15 },
+    ui: { kind: 'duration' },
   },
   deliveryMaxSinksPerRun: {
     schema: z.number().int().min(1),
@@ -183,15 +183,15 @@ export const watchStateSchema = {
     ui: { min: 1, max: 128 },
   },
   deliveryBudgetSeconds: {
-    schema: z.number().int().min(1),
+    schema: seconds.pipe(z.number().min(1)),
     default: 45,
-    label: 'Delivery run budget (seconds)',
+    label: 'Delivery run budget',
     description:
       'How long a delivery pass keeps taking on new addons before it stops and leaves the rest to the next one. Keeps a run from overlapping the next when many addons are timing out.',
     env: 'WATCH_STATE_DELIVERY_BUDGET',
     requiresRestart: false,
     secret: false,
-    ui: { min: 1 },
+    ui: { kind: 'duration' },
   },
   deliveryMaxPendingPerSink: {
     schema: z.number().int().min(1),
@@ -227,15 +227,15 @@ export const watchStateSchema = {
     ui: { min: 1 },
   },
   pullSweepIntervalSeconds: {
-    schema: z.number().int().min(10),
+    schema: seconds.pipe(z.number().min(10)),
     default: 60,
-    label: 'Read check interval (seconds)',
+    label: 'Read check interval',
     description:
       'How often this instance looks for addons due to be read from. Each addon is still read only once per the interval above; this is how finely that work is spread out.',
     env: 'WATCH_STATE_PULL_SWEEP_INTERVAL',
     requiresRestart: true,
     secret: false,
-    ui: { min: 10 },
+    ui: { kind: 'duration' },
   },
   pullMaxSinksPerRun: {
     schema: z.number().int().min(1),
@@ -260,15 +260,15 @@ export const watchStateSchema = {
     ui: { min: 1, max: 64 },
   },
   pullBudgetSeconds: {
-    schema: z.number().int().min(1),
+    schema: seconds.pipe(z.number().min(1)),
     default: 45,
-    label: 'Read run budget (seconds)',
+    label: 'Read run budget',
     description:
       'How long a read pass keeps taking on new addons before leaving the rest to the next one.',
     env: 'WATCH_STATE_PULL_BUDGET',
     requiresRestart: false,
     secret: false,
-    ui: { min: 1 },
+    ui: { kind: 'duration' },
   },
   pullActiveWithinHours: {
     schema: z.number().int().min(0),
@@ -314,15 +314,15 @@ export const watchStateSchema = {
     ui: { min: 1 },
   },
   progressFlushSeconds: {
-    schema: z.number().int().min(1),
+    schema: seconds.pipe(z.number().min(1)),
     default: 10,
-    label: 'Progress write interval (seconds)',
+    label: 'Progress write interval',
     description:
       'How long a playback position is held in memory before being written. Clients report every 5 to 10 seconds, so this coalesces those into one write; it is also how much position is lost if the instance is killed outright.',
     env: 'WATCH_STATE_PROGRESS_FLUSH_INTERVAL',
     requiresRestart: true,
     secret: false,
-    ui: { min: 1 },
+    ui: { kind: 'duration' },
   },
   progressBufferMax: {
     schema: z.number().int().min(100),
@@ -347,14 +347,14 @@ export const watchStateSchema = {
     ui: { min: 100 },
   },
   pruneBudgetSeconds: {
-    schema: z.number().int().min(1),
+    schema: seconds.pipe(z.number().min(1)),
     default: 60,
-    label: 'Prune budget (seconds)',
+    label: 'Prune budget',
     description:
       'How long one prune run spends deleting before stopping. Whatever is left is picked up by the next run.',
     env: 'WATCH_STATE_PRUNE_BUDGET',
     requiresRestart: false,
     secret: false,
-    ui: { min: 1 },
+    ui: { kind: 'duration' },
   },
 } as const satisfies RuntimeConfigSection;
