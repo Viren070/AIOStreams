@@ -1,6 +1,9 @@
+import { createHash } from 'crypto';
 import { Router, type Request } from 'express';
 import {
+  Cache,
   createLogger,
+  descriptorForWatchRow,
   encryptString,
   getSimpleTextHash,
   isConfigUuid,
@@ -9,9 +12,15 @@ import {
   quickConnectConsume,
   resolveConfigAlias,
   serverId as instanceServerId,
+  sessionKeyFor,
+  stripInternal,
+  TICKS_PER_MS,
+  WatchSessionRepository,
   type ClientInfo,
+  type JellyfinItem,
   type JellyfinPersona,
   type UserData,
+  type WatchSessionRow,
 } from '@aiostreams/core';
 import {
   jf,
@@ -20,9 +29,11 @@ import {
   personaById,
   personaByName,
   personasOf,
+  qs,
   resolveConfig,
   type JellyfinRequestContext,
 } from './context.js';
+import { itemFromDescriptor } from './items.js';
 import { serverName } from './system.js';
 
 const logger = createLogger('jellyfin');
@@ -140,6 +151,12 @@ export function userDto(
   };
 }
 
+function sessionId(client: ClientInfo, userId: string): string {
+  return createHash('md5')
+    .update(`${client.name}${client.deviceId}${userId}`)
+    .digest('hex');
+}
+
 export function sessionInfo(
   uuid: string,
   userData: Faced,
@@ -166,7 +183,7 @@ export function sessionInfo(
     },
     RemoteEndPoint: remoteIp ?? '',
     PlayableMediaTypes: ['Video'],
-    Id: `${userId}-${client.deviceId}`,
+    Id: sessionId(client, userId),
     UserId: userId,
     UserName: persona?.name ?? accountName(userData),
     Client: client.name,
@@ -432,12 +449,138 @@ router.post(
   })
 );
 
+const SESSIONS_LIMIT = 50;
+const NOW_PLAYING_TTL = 600;
+const NOW_PLAYING_MISS_TTL = 30;
+const NOW_PLAYING_OMIT = [
+  'MediaSources',
+  'MediaStreams',
+  'People',
+  'Tags',
+  'RemoteTrailers',
+  'UserData',
+];
+
+const nowPlayingCache = Cache.getInstance<
+  string,
+  JellyfinItem | { missing: true }
+>('jellyfin-now-playing', 5_000, 'memory');
+
+async function nowPlayingItem(
+  ctx: JellyfinRequestContext,
+  row: WatchSessionRow
+): Promise<JellyfinItem | null> {
+  const key = `${ctx.userId}|${ctx.scope()}|${row.itemKey}|${row.durationMs}`;
+  const hit = await nowPlayingCache.get(key);
+  if (hit) return 'missing' in hit ? null : hit;
+
+  const built = await itemFromDescriptor(ctx, descriptorForWatchRow(row)).catch(
+    () => null
+  );
+  if (!built) {
+    await nowPlayingCache.set(key, { missing: true }, NOW_PLAYING_MISS_TTL);
+    return null;
+  }
+  const item = stripInternal(built) as JellyfinItem & Record<string, unknown>;
+  for (const field of NOW_PLAYING_OMIT) delete item[field];
+  if (row.durationMs > 0)
+    item.RunTimeTicks = Math.round(row.durationMs) * TICKS_PER_MS;
+  await nowPlayingCache.set(key, item, NOW_PLAYING_TTL);
+  return item;
+}
+
+/** The caller's own session is the one this request is from, so it is active now. */
+async function sessionFromRow(
+  ctx: JellyfinRequestContext,
+  row: WatchSessionRow,
+  own: { remoteIp: string | undefined } | null
+) {
+  const client: ClientInfo = own
+    ? ctx.client
+    : {
+        name: row.client ?? '',
+        device: row.deviceName ?? row.client ?? '',
+        deviceId: row.deviceId ?? '',
+        version: row.appVersion ?? '',
+      };
+  const session = sessionInfo(
+    ctx.uuid,
+    ctx.userData,
+    ctx.persona,
+    client,
+    own?.remoteIp
+  );
+  const checkIn = new Date(row.lastCheckinAt).toISOString();
+  const playing = row.endedAt == null;
+  const item = playing ? await nowPlayingItem(ctx, row) : null;
+  return {
+    ...session,
+    LastActivityDate: own ? session.LastActivityDate : checkIn,
+    LastPlaybackCheckIn: checkIn,
+    ...(playing
+      ? {
+          PlayState: {
+            ...session.PlayState,
+            PositionTicks: Math.round(row.positionMs) * TICKS_PER_MS,
+            IsPaused: row.paused,
+          },
+        }
+      : {}),
+    ...(item ? { NowPlayingItem: item } : {}),
+  };
+}
+
+/*
+ * A non-administrator sees only their own sessions, and nobody here is one, so
+ * this is every client that has played under the caller's history.
+ */
 router.get(
   '/Sessions',
   jf(async (req, res, ctx) => {
-    res.json([
-      sessionInfo(ctx.uuid, ctx.userData, ctx.persona, ctx.client, req.userIp),
+    // lists only sessions that take remote control, and none here do.
+    if (qs(req, 'ControllableByUserId')) {
+      res.json([]);
+      return;
+    }
+    const within = Number(qs(req, 'ActiveWithinSeconds'));
+    const since = within > 0 ? Date.now() - within * 1000 : 0;
+    const deviceId = qs(req, 'DeviceId')?.toLowerCase();
+    const onDevice = (id: string | null) =>
+      !deviceId || id?.toLowerCase() === deviceId;
+
+    const ownKey = sessionKeyFor(ctx.client);
+    const rows = await WatchSessionRepository.listForScope(
+      ctx.watch,
+      SESSIONS_LIMIT
+    );
+    const ownRow =
+      rows.find((r) => r.sessionKey === ownKey) ??
+      (rows.length === SESSIONS_LIMIT
+        ? await WatchSessionRepository.get(ctx.watch, ownKey)
+        : null);
+    const others = rows.filter(
+      (r) =>
+        r.sessionKey !== ownKey &&
+        r.lastCheckinAt >= since &&
+        onDevice(r.deviceId)
+    );
+
+    const own = onDevice(ctx.client.deviceId)
+      ? ownRow
+        ? sessionFromRow(ctx, ownRow, { remoteIp: req.userIp })
+        : sessionInfo(
+            ctx.uuid,
+            ctx.userData,
+            ctx.persona,
+            ctx.client,
+            req.userIp
+          )
+      : null;
+    const sessions = await Promise.all([
+      ...(own ? [own] : []),
+      ...others.map((r) => sessionFromRow(ctx, r, null)),
     ]);
+    res.json(sessions);
   })
 );
 router.post(

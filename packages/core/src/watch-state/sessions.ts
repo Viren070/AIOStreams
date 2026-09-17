@@ -33,7 +33,12 @@ export function sessionKeyFor(client: {
 export interface SessionContext {
   scope: WatchScope;
   sessionKey: string;
-  client?: { name?: string; device?: string; deviceId?: string };
+  client?: {
+    name?: string;
+    device?: string;
+    deviceId?: string;
+    version?: string;
+  };
   playSessionId?: string;
 }
 
@@ -54,6 +59,8 @@ export async function openWatchSession(
     playSessionId: ctx.playSessionId ?? null,
     deviceId: ctx.client?.deviceId ?? null,
     client: ctx.client?.name ?? null,
+    deviceName: ctx.client?.device ?? null,
+    appVersion: ctx.client?.version ?? null,
     positionMs: opts.positionMs ?? 0,
     durationMs: opts.durationMs ?? 0,
     paused: opts.paused ?? false,

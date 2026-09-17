@@ -436,7 +436,12 @@ export function personaUserId(uuid: string, persona: string): string {
 }
 
 /** The Jellyfin item a watch-state row stands for. */
-export function descriptorForWatchRow(row: WatchStateRow): ContentDescriptor {
+export function descriptorForWatchRow(
+  row: Pick<
+    WatchStateRow,
+    'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId'
+  >
+): ContentDescriptor {
   if (row.episode != null) {
     return {
       k: 'episode',
