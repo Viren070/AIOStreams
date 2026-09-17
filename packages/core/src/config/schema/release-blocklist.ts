@@ -5,6 +5,16 @@ import type { RuntimeConfigSection } from '../types.js';
 const PUBLIC_EXPORT_UI = { hidden: true } as const;
 
 export const releaseBlocklistSchema = {
+  enabled: {
+    schema: z.boolean(),
+    default: true,
+    label: 'Enable release blocklist',
+    description:
+      'Filter out known-dead/fake releases and record local verdicts when a usenet download fails in a way that indicates the release itself is bad. Turning this off stops filtering, stops recording new local verdicts, and pauses syncing with remote/subscribed blocklists; existing entries are kept but ignored until re-enabled.',
+    env: 'RELEASE_BLOCKLIST_ENABLED',
+    requiresRestart: false,
+    secret: false,
+  },
   quorum: {
     schema: positiveInt.refine((n) => n <= 20, {
       message: 'Quorum must be between 1 and 20.',
