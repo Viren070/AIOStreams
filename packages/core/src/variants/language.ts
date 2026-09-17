@@ -46,6 +46,15 @@ export type CelStatement = {
   | { op: 'set' | 'merge'; path: CelPath; value: CelLiteral }
   | { op: 'unset' | 'clear' | 'enable' | 'disable'; path: CelPath }
   | { op: 'add' | 'prepend' | 'remove'; path: CelPath; values: CelLiteral[] }
+  | {
+      op: 'insert';
+      path: CelPath;
+      values: CelLiteral[];
+      /** Which side of the addressed entry the values land on. */
+      placement: 'before' | 'after';
+      /** How many places from it, counting the adjacent gap as one. */
+      count: number;
+    }
   | { op: 'useFormatter'; name: string }
   | { op: 'useVariant'; id: string }
 );
@@ -63,6 +72,7 @@ export type CelDiagnosticCategory =
   | 'denied-field'
   | 'limit'
   | 'no-match'
+  | 'ambiguous'
   | 'unknown-formatter'
   | 'unknown-variant';
 
@@ -130,10 +140,14 @@ const VERBS: ReadonlySet<string> = new Set([
   'add',
   'prepend',
   'remove',
+  'insert',
   'enable',
   'disable',
   'use',
 ]);
+
+/** Optional placement keywords between `insert` and its path. */
+const PLACEMENTS: ReadonlySet<string> = new Set(['before', 'after']);
 
 export const VARIANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
@@ -666,6 +680,48 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
       }
       return { op: keyword, path, values, index, line };
     }
+    case 'insert': {
+      let placement: 'before' | 'after' = 'before';
+      let count = 1;
+      const countStart = s.pos;
+      if (isDigit(s.peek())) {
+        count = readNumber(s);
+        if (!Number.isInteger(count) || count < 1) {
+          s.fail('an insert count must be a whole number of places, from 1', {
+            index: countStart,
+            source: s.src.slice(countStart, s.pos),
+          });
+        }
+        s.skipTrivia();
+      }
+      const word = peekIdent(s);
+      // A config root is never named `before` or `after`, so no lookahead.
+      if (word && PLACEMENTS.has(word)) {
+        s.advance(word.length);
+        placement = word as 'before' | 'after';
+        s.skipTrivia();
+      } else if (s.pos !== countStart) {
+        s.fail('a count needs "before" or "after" after it', {
+          index: countStart,
+          source: s.src.slice(countStart, s.pos),
+        });
+      }
+      const path = parsePath(s, limits);
+      if (path.segments[path.segments.length - 1]?.kind === 'all') {
+        s.fail('insert needs a single position, not "[*]"', {
+          index: path.index,
+          source: path.raw,
+        });
+      }
+      s.skipTrivia();
+      if (s.peek() !== '=') s.fail('expected "=" after the path in insert');
+      s.advance();
+      const values = parseValueList(s, limits);
+      if (values.length === 0) {
+        s.fail('insert requires at least one value', { index });
+      }
+      return { op: keyword, path, values, placement, count, index, line };
+    }
     default: {
       const kindStart = s.pos;
       const kind = readIdent(s);
@@ -810,6 +866,7 @@ export function tokenizeCel(src: string): CelToken[] {
   let atLineStart = true;
   let afterVerb = false;
   let afterDot = false;
+  let verb = '';
 
   const push = (kind: CelTokenKind, start: number, end: number) =>
     tokens.push({ kind, start, end });
@@ -853,7 +910,8 @@ export function tokenizeCel(src: string): CelToken[] {
       while (pos < src.length && /[0-9.eE+-]/.test(src[pos])) pos++;
       push('number', start, pos);
       atLineStart = false;
-      afterVerb = false;
+      // An insert count sits between the verb and its placement keyword.
+      if (verb !== 'insert') afterVerb = false;
       afterDot = false;
       continue;
     }
@@ -864,14 +922,16 @@ export function tokenizeCel(src: string): CelToken[] {
       if (LITERAL_KEYWORDS.has(word)) push('keyword', start, pos);
       else if (atLineStart && VERBS.has(word)) {
         push('verb', start, pos);
+        verb = word;
         afterVerb = true;
       } else if (afterVerb && !afterDot) {
-        push(
-          word === 'formatter' || word === 'variant' ? 'verb' : 'root',
-          start,
-          pos
-        );
-        afterVerb = word === 'formatter' || word === 'variant';
+        // Words that extend the verb rather than start the path.
+        const continuation =
+          word === 'formatter' ||
+          word === 'variant' ||
+          (verb === 'insert' && PLACEMENTS.has(word));
+        push(continuation ? 'verb' : 'root', start, pos);
+        afterVerb = continuation;
       } else {
         push('property', start, pos);
       }
@@ -1098,6 +1158,115 @@ function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
   return targets;
 }
 
+interface InsertPosition {
+  array: any[];
+  index: number;
+}
+
+type InsertResolution =
+  | {
+      kind: 'ok';
+      /** One per list the path reaches, in path order. */
+      positions: InsertPosition[];
+      /** Set when a list matched more entries than the one written to. */
+      ambiguity?: { count: number };
+    }
+  | { kind: 'no-match' }
+  | { kind: 'not-a-list' };
+
+/**
+ * Gaps, not elements: `n before` and `n after` are symmetric around the entry
+ * the path addressed, and the slot past the end is a position like any other.
+ */
+function gapFor(
+  anchor: number,
+  placement: 'before' | 'after',
+  count: number
+): number {
+  return placement === 'after' ? anchor + count : anchor - (count - 1);
+}
+
+/**
+ * Resolves a path to the positions an `insert` addresses: one per list it
+ * reaches, as `add` writes to every list. Separate from `resolveTargets`
+ * because a position is not an element, and may sit past the end.
+ */
+function resolveInsertion(
+  config: any,
+  path: CelPath,
+  placement: 'before' | 'after',
+  count: number
+): InsertResolution {
+  const segments: CelPathSegment[] = [
+    { kind: 'key', name: path.root },
+    ...path.segments,
+  ];
+  const last = segments[segments.length - 1];
+
+  let nodes: any[] = [config];
+  for (let i = 0; i < segments.length - 1; i++) {
+    const seed = segments[i + 1].kind === 'key' ? {} : [];
+    nodes = step(nodes, segments[i], seed);
+    if (nodes.length === 0) return { kind: 'no-match' };
+  }
+
+  let notAList = false;
+  let matched = 0;
+  const positions: InsertPosition[] = [];
+  for (const node of nodes) {
+    let array: any[];
+    let anchor: number;
+    let hits = 1;
+
+    if (last.kind === 'key') {
+      // The path names the list itself, so it anchors on the nearest end.
+      if (!isPlainObject(node)) continue;
+      let list = node[last.name];
+      if (list === undefined) {
+        list = [];
+        assign(node, last.name, list);
+      }
+      if (!Array.isArray(list)) {
+        notAList = true;
+        continue;
+      }
+      array = list;
+      anchor = placement === 'after' ? list.length - 1 : 0;
+    } else if (!Array.isArray(node)) {
+      notAList = true;
+      continue;
+    } else if (last.kind === 'index') {
+      array = node;
+      anchor = last.index < 0 ? node.length + last.index : last.index;
+    } else if (last.kind === 'filter') {
+      const indices: number[] = [];
+      node.forEach((element, i) => {
+        if (matchesFilter(element, last)) indices.push(i);
+      });
+      if (indices.length === 0) continue;
+      array = node;
+      anchor = indices[0];
+      hits = indices.length;
+    } else {
+      continue;
+    }
+
+    const index = gapFor(anchor, placement, count);
+    if (index < 0 || index > array.length) continue;
+    positions.push({ array, index });
+    matched += hits;
+  }
+
+  if (positions.length === 0) {
+    return notAList ? { kind: 'not-a-list' } : { kind: 'no-match' };
+  }
+  return {
+    kind: 'ok',
+    positions,
+    ambiguity: matched > positions.length ? { count: matched } : undefined,
+  };
+}
+
 /** Splices by descending index so earlier removals do not shift later ones. */
 function removeTargets(targets: Target[]): void {
   const byArray = new Map<any[], number[]>();
@@ -1215,6 +1384,54 @@ function runProgram(
         },
       };
       touchedRoots.add('formatter');
+      continue;
+    }
+
+    if (statement.op === 'insert') {
+      const resolution = resolveInsertion(
+        config,
+        statement.path,
+        statement.placement,
+        statement.count
+      );
+      if (resolution.kind === 'not-a-list') {
+        notes.push(
+          note(
+            statement,
+            `"${statement.path.raw}" is not a list, insert skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.kind === 'no-match') {
+        notes.push(
+          note(
+            statement,
+            `"${statement.path.raw}" matched no position, instruction skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.ambiguity) {
+        const where =
+          resolution.positions.length > 1
+            ? 'inserted at the first in each list'
+            : 'inserted at the first';
+        notes.push(
+          note(
+            statement,
+            `"${statement.path.raw}" matched ${resolution.ambiguity.count} entries, ${where}`,
+            'ambiguous'
+          )
+        );
+      }
+      for (const { array, index } of resolution.positions) {
+        // Cloned per list so the copies never share a reference.
+        array.splice(index, 0, ...statement.values.map(cloneLiteral));
+      }
+      touchedRoots.add(statement.path.root);
       continue;
     }
 

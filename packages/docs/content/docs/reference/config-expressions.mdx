@@ -190,6 +190,9 @@ merge deduplicator = {
 | `clear <path>`                     | Empty a list or object.                                                             |
 | `add <path> <value>, ...`          | Append to a list, skipping values already present. Creates the list if absent.      |
 | `prepend <path> <value>, ...`      | The same, inserted at the front.                                                    |
+| `insert <path> = <value>, ...`     | Insert at the position the path names. The value lands there and the rest shift down. |
+| `insert after <path> = <value>`    | The same, placed just past the addressed entry. `insert before` spells out the default. |
+| `insert <n> after <path> = <value>` | `n` places from the addressed entry: `2 after` leaves one entry in between. `before` counts backwards. |
 | `remove <path> <value>, ...`       | Remove matching values from a list.                                                 |
 | `remove <path>`                    | With no values, the path itself selects the elements to remove.                     |
 | `enable <path>` / `disable <path>` | Shorthand for `set <path>.enabled = true` / `false`.                                |
@@ -286,6 +289,52 @@ disable excludedStreamExpressions[0]
 
 <Callout type="info">
 `enable` and `disable` set an `enabled` property. `regexOverrides` and `selOverrides` use an inverted `disabled` flag instead, so for those write `set regexOverrides[name*="hdr"].disabled = true`.
+</Callout>
+
+---
+
+## Inserting at a position
+
+`add` and `prepend` reach the ends of a list. `insert` reaches everywhere else: the path names a position and the value lands there.
+
+```
+insert excludedStreamExpressions[5] = { "expression": "/*No 4K*/ resolution(streams, '2160p')", "enabled": true }
+```
+
+The new entry becomes number 5 and the one that was there moves down. `insert before` is the same instruction spelled out.
+
+Positions shift when you reorder the list, so anchor on a selector instead. `after` is usually the one you want, because it reads in the order the list runs:
+
+```
+insert after excludedStreamExpressions[expression*="Torbox Download Limit"] = {
+  "expression": "/*No 4K*/ resolution(streams, '2160p')",
+  "enabled": true
+}
+```
+
+Count further out when the neighbouring slot is not the place you mean. `1 after` is the slot next to the entry, `2 after` leaves one entry in between, and `before` counts the same way backwards. A count has to say which way it goes, so it always comes with one of the two keywords:
+
+```
+insert 2 after excludedStreamExpressions[expression*="Torbox Download Limit"] = { "expression": "/*No 4K*/ resolution(streams, '2160p')" }
+insert 3 before rankedStreamExpressions[expression*="4K bonus"] = { "expression": "visualTag(streams, 'HDR')", "score": 100 }
+```
+
+`[-1]` keeps the meaning it has everywhere else, the last entry, so the two ends are:
+
+```
+insert excludedKeywords[0] = "cam"          # the front, where prepend puts it
+insert after excludedKeywords[-1] = "cam"   # the end, where add puts it
+```
+
+Several values at once keep their order. Unlike `add`, nothing is skipped for being already present, which is what makes moving an entry work:
+
+```
+unset excludedKeywords[="cam"]
+insert excludedKeywords[0] = "cam"
+```
+
+<Callout type="info">
+An insert names one place per list. A path that reaches several lists, such as `presets[*].options.<list>`, writes one value into each of them, the way `add` does. Within a list, a selector that matches several entries uses the first and says so in the editor preview. A position that falls outside a list is skipped rather than clamped, and a trailing `[*]` is rejected.
 </Callout>
 
 ---
