@@ -1,6 +1,6 @@
 import { PARSE_REGEX } from './regex.js';
 import { ParsedFile } from '../db/schemas.js';
-import { parseTorrentTitleCached } from './title.js';
+import { parseTorrentTitleCached, decodeReleaseName } from './title.js';
 import { RESOLUTIONS } from '../utils/constants.js';
 import { mapLanguageCode, convertLangCodeToName } from '../utils/languages.js';
 
@@ -60,6 +60,7 @@ export function matchMultiplePatterns(
 class FileParser {
   static parse(filename: string): ParsedFile {
     const parsed = parseTorrentTitleCached(filename);
+    filename = decodeReleaseName(filename);
     const parsedTitle = parsed.title;
     // prevent the title from being parsed for info
     if (parsedTitle && parsedTitle.length > 4) {
