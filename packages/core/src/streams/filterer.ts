@@ -438,7 +438,7 @@ class StreamFilterer {
       await context.getMetadata();
     const releaseDates: ReleaseDate[] | undefined =
       await context.getReleaseDates();
-    const episodeAirDate: string | undefined =
+    const fallbackEpisodeAirDate: string | undefined =
       await context.getEpisodeAirDate();
     let originalLanguage = requestedMetadata?.originalLanguage
       ? iso6391ToLanguage(requestedMetadata.originalLanguage)
@@ -644,7 +644,8 @@ class StreamFilterer {
 
       // Episode air date (series/anime only)
       const epDateStr = isSeries
-        ? episodeAirDate ||
+        ? requestedMetadata?.preferredAirDate ||
+          fallbackEpisodeAirDate ||
           requestedMetadata?.episodeReleased ||
           requestedMetadata?.releaseDate
         : null;

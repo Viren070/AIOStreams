@@ -104,9 +104,11 @@ export interface Metadata {
   isDateBased?: boolean;
   /** Candidate local air dates ('YYYY-MM-DD') for the requested episode. Usually length 1. */
   episodeAirDates?: string[];
-  /** episodeAirDates[0], the highest-priority date. */
+  /** The user's configured metadataProvider source's air date, when one is set and it resolved. */
+  preferredAirDate?: string;
+  /** preferredAirDate, else episodeAirDates[0], else the request-numbered reference air date. */
   episodeAirDate?: string;
-  /** When the requested episode aired, as the request numbers it. */
+  /** When the requested episode aired, as the request numbers it. Undefined if sources disagree on the episode's air date. */
   episodeReleased?: string;
   /** The requested episode on TVDB, when TVDB numbers it differently. */
   tvdbSeason?: number;
