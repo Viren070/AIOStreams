@@ -10,7 +10,9 @@ export function getPreferences(): Context['preferences'] {
       prefetchNext: prefBool('prefetchNextEpisode', false),
     },
     cacheTtl: getCacheTtlMinutes(),
-    downloadLocation: resolveDownloadDir(),
+    downloadLocation: (
+      $getUserPreference('downloadLocation') ?? '$DOWNLOAD'
+    ).trim(),
     manifestUrl: getConfigureUrl(),
     triggers: {
       episodeTab: prefBool('showAnimeTab', true),
@@ -44,8 +46,10 @@ function getCacheTtlMinutes(): number {
   return isNaN(n) || n < 0 ? 30 : n;
 }
 
-function resolveDownloadDir(): string {
-  const pref = ($getUserPreference('downloadLocation') ?? '$DOWNLOAD').trim();
+// Only call this when downloading: the $osExtra directory helpers throw on
+// platforms Seanime has no user directories for (e.g. its Android and iOS
+// servers), which would stop the plugin from loading.
+export function resolveDownloadDir(pref: string): string {
   if (!pref) return $osExtra.downloadDir();
 
   const replacements: Array<[string, () => string]> = [
