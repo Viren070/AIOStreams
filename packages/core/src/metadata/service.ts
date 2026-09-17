@@ -582,6 +582,8 @@ export class MetadataService {
             let tvdbEpisode: number | undefined;
             let episodeYear: number | undefined;
             let seasonYear: number | undefined;
+            let referenceAirDate: string | undefined;
+            let preferredAirDate: string | undefined;
             if (type === 'series' && id.season && id.episode) {
               const seasonNumber =
                 episodeFacts?.resolvedSeasonNumber ?? Number(id.season);
@@ -675,10 +677,6 @@ export class MetadataService {
                   }
                 }
               }
-              episodeYear ??= yearOf(
-                tmdbEp?.airDate ?? tvdbEp?.airDate ?? skyhookEp?.airDate
-              );
-
               // (season, episode) numbers mean whatever the provider the
               // request was made in says they mean.
               const cinemetaReleased = cinemetaVideos?.find(
@@ -686,18 +684,24 @@ export class MetadataService {
                   v.season === Number(id.season) && v.episode === episodeNumber
               )?.released;
               const preferredSources = this.config.preferredSources ?? [];
-              const preferredAirDate = preferredSources
+              preferredAirDate = preferredSources
                 .map((s) =>
                   s === 'tmdb'
                     ? tmdbEp?.airDate
                     : s === 'tvdb'
                       ? tvdbEp?.airDate
                       : s === 'cinemeta'
-                        ? cinemetaReleased
+                        ? (cinemetaReleased ?? undefined)
                         : undefined
                 )
                 .find((d) => d !== undefined);
-              const referenceAirDate =
+              episodeYear ??= yearOf(
+                preferredAirDate ??
+                  tmdbEp?.airDate ??
+                  tvdbEp?.airDate ??
+                  skyhookEp?.airDate
+              );
+              referenceAirDate =
                 // an explicit user preference outranks the request-provider heuristic
                 preferredAirDate ??
                 // the request's own provider is authoritative
@@ -893,7 +897,11 @@ export class MetadataService {
               lastAiredDate: merged.lastAiredDate,
               isDateBased: episodeFacts?.isDateBased || undefined,
               episodeAirDates: episodeFacts?.episodeAirDates,
-              episodeAirDate: episodeFacts?.episodeAirDates?.[0],
+              preferredAirDate,
+              episodeAirDate:
+                preferredAirDate ??
+                episodeFacts?.episodeAirDates?.[0] ??
+                referenceAirDate,
               episodeReleased,
               tvdbSeason,
               tvdbEpisode,
