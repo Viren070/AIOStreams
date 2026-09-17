@@ -6,6 +6,7 @@ import {
   Env,
   makeRequest,
   encryptString,
+  signUnencryptedProxyToken,
   Cache,
   getSimpleTextHash,
   toUrlSafeBase64,
@@ -136,7 +137,15 @@ export class BuiltinProxy extends BaseProxy {
         streamData = toUrlSafeBase64(streamData);
       }
 
-      return `${appConfig.bootstrap.baseUrl}${constants.BUILTIN_PROXY_PATH_PREFIX}${encrypt ? 'e' : 'u'}.${authData}.${streamData}/${encodeURIComponent(stream.filename ?? '')}`;
+      // 'u' mode tokens carry an HMAC over their two segments so the server
+      // can tell a token it actually generated apart from one a holder of
+      // low-privilege 'proxy' credentials forged by hand (see
+      // signUnencryptedProxyToken for why this is required).
+      const signatureSegment = encrypt
+        ? ''
+        : `.${signUnencryptedProxyToken(authData, streamData)}`;
+
+      return `${appConfig.bootstrap.baseUrl}${constants.BUILTIN_PROXY_PATH_PREFIX}${encrypt ? 'e' : 'u'}.${authData}.${streamData}${signatureSegment}/${encodeURIComponent(stream.filename ?? '')}`;
     });
   }
 }

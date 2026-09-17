@@ -4,6 +4,8 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
+  timingSafeEqual,
   pbkdf2,
   randomUUID,
 } from 'crypto';
@@ -149,6 +151,41 @@ export function decryptString(data: string, secretKey?: Buffer): Response {
 
 export function getSimpleTextHash(text: string): string {
   return createHash('sha256').update(text).digest('hex');
+}
+
+/**
+ * HMAC-SHA256 signature over the two base64 segments of an unencrypted ('u'
+ * mode) proxy token, keyed by the server's own secret. 'u' mode skips AES
+ * encryption for speed, but its auth/data segments are otherwise just plain
+ * base64 that anyone can construct by hand — this signature is what stops a
+ * holder of low-privilege 'proxy' permission credentials from forging a
+ * token that points the server-side proxy fetch at an arbitrary (e.g.
+ * internal-network) URL instead of one this server actually generated.
+ */
+export function signUnencryptedProxyToken(
+  authData: string,
+  streamData: string,
+  secretKey?: Buffer
+): string {
+  const key = secretKey ?? Buffer.from(appConfig.bootstrap.secretKey, 'hex');
+  return createHmac('sha256', key)
+    .update(`${authData}.${streamData}`)
+    .digest('base64url');
+}
+
+export function verifyUnencryptedProxyToken(
+  authData: string,
+  streamData: string,
+  signature: string,
+  secretKey?: Buffer
+): boolean {
+  const expected = signUnencryptedProxyToken(authData, streamData, secretKey);
+  const expectedBuf = Buffer.from(expected);
+  const gotBuf = Buffer.from(signature);
+  if (expectedBuf.length !== gotBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(expectedBuf, gotBuf);
 }
 
 /**
