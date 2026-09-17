@@ -50,6 +50,7 @@ export interface FilterStatistics {
     episodeTitleMatching: Reason;
     excludeSeasonPacks: Reason;
     noDigitalRelease: Reason;
+    resultPredatesRelease: Reason;
     excludedStreamType: Reason;
     requiredStreamType: Reason;
     excludedResolution: Reason;
@@ -163,6 +164,7 @@ class StreamFilterer {
         episodeTitleMatching: { total: 0, details: {} },
         excludeSeasonPacks: { total: 0, details: {} },
         noDigitalRelease: { total: 0, details: {} },
+        resultPredatesRelease: { total: 0, details: {} },
         excludedStreamType: { total: 0, details: {} },
         requiredStreamType: { total: 0, details: {} },
         excludedResolution: { total: 0, details: {} },
@@ -1472,8 +1474,8 @@ class StreamFilterer {
     const shouldKeepStream = (stream: ParsedStream): boolean => {
       if (!applyDigitalReleaseFilter(stream)) {
         this.incrementRemovalReason(
-          'noDigitalRelease',
-          'No digital release available'
+          'resultPredatesRelease',
+          'Result age predates release/air date'
         );
         return false;
       }
