@@ -12,6 +12,7 @@ import {
 } from '@aiostreams/core';
 import { createLogger } from '@aiostreams/core';
 import { StaticFiles } from '../../utils/static-errors.js';
+import { rawExtras } from '../../utils/extras.js';
 const router: Router = Router();
 
 const logger = createLogger('server');
@@ -67,7 +68,8 @@ router.get(
     res: Response,
     next: NextFunction
   ) => {
-    const { encodedConfig, type, id, extras } = req.params;
+    const { encodedConfig, type, id } = req.params;
+    const extras = rawExtras(req);
 
     try {
       const addon = new LibraryAddon(

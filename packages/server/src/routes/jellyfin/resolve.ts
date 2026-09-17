@@ -268,7 +268,8 @@ function fileExtrasFor(record: MediaSourceRecord): string {
   const parts: string[] = [];
   if (record.videoHash) parts.push(`videoHash=${record.videoHash}`);
   if (record.size) parts.push(`videoSize=${record.size}`);
-  if (record.filename) parts.push(`filename=${record.filename}`);
+  if (record.filename)
+    parts.push(`filename=${encodeURIComponent(record.filename)}`);
   return parts.join('&');
 }
 

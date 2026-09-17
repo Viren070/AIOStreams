@@ -142,10 +142,10 @@ function buildExtras(
   opts: { genre?: string; search?: string; skip?: number }
 ): string | undefined {
   const parts: string[] = [];
-  if (opts.search) parts.push(`search=${opts.search.replace(/[&=]/g, ' ')}`);
+  if (opts.search) parts.push(`search=${encodeURIComponent(opts.search)}`);
   const genre =
     opts.genre ?? (opts.search ? undefined : requiredGenreDefault(c));
-  if (genre) parts.push(`genre=${genre.replace(/[&=]/g, ' ')}`);
+  if (genre) parts.push(`genre=${encodeURIComponent(genre)}`);
   if (opts.skip) parts.push(`skip=${opts.skip}`);
   return parts.length ? parts.join('&') : undefined;
 }
