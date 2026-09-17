@@ -373,6 +373,13 @@ neither the environment variable nor a stored value is present.
 | `COMMUNITY_API_RATE_LIMIT_WINDOW`       | Community API › Window       | number | `60`    | Sliding-window length (seconds) for the community API rate limiter. _(restart required)_           |
 | `COMMUNITY_API_RATE_LIMIT_MAX_REQUESTS` | Community API › Max Requests | number | `60`    | Maximum requests per IP within the window for the community API rate limiter. _(restart required)_ |
 
+#### Sync API
+
+| Environment Variable               | UI Setting              | Type   | Default | Description                                                                                           |
+| ---------------------------------- | ----------------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| `SYNC_API_RATE_LIMIT_WINDOW`       | Sync API › Window       | number | `60`    | Sliding-window length (seconds) for the sync resolve API rate limiter. _(restart required)_           |
+| `SYNC_API_RATE_LIMIT_MAX_REQUESTS` | Sync API › Max Requests | number | `20`    | Maximum requests per IP within the window for the sync resolve API rate limiter. _(restart required)_ |
+
 #### Login
 
 | Environment Variable            | UI Setting           | Type   | Default | Description                                                                                |
@@ -1242,9 +1249,10 @@ neither the environment variable nor a stored value is present.
 
 #### Sync
 
-| Environment Variable                | UI Setting              | Type     | Default | Description                                                                                             |
-| ----------------------------------- | ----------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------- |
-| `WHITELISTED_SYNC_REFRESH_INTERVAL` | Sync › Refresh Interval | duration | `86400` | How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h"). _(restart required)_ |
+| Environment Variable                | UI Setting                | Type     | Default | Description                                                                                                                                                                                                                                      |
+| ----------------------------------- | ------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `WHITELISTED_SYNC_REFRESH_INTERVAL` | Sync › Refresh Interval   | duration | `86400` | How often whitelisted regex/SEL sync URLs are refreshed (accepts e.g. "5m", "1h"). Also how long a URL only one user is allowed to use is cached for. _(restart required)_                                                                       |
+| `SYNC_ALLOW_PRIVATE_URLS`           | Sync › Allow Private Urls | boolean  | `false` | Let sync URLs point at private addresses. Anyone allowed to sync from their own URL can then probe your internal network, so only enable this on an instance you trust the users of. Whitelisted URLs you configure yourself are never affected. |
 
 #### Disabled
 

@@ -5,7 +5,7 @@ export * from '../logging/logger.js';
 export * from '../logging/redact.js';
 export * from './templates.js';
 export * from './feature.js';
-export * from './sync.js';
+export * from './sync/index.js';
 export * from './regex-access.js';
 export * from './sel-access.js';
 export * from './crypto.js';

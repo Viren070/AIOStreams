@@ -7,7 +7,7 @@ import { hmac } from '../analytics/index.js';
 import { DbError } from '../db/errors.js';
 import { CommunityRepository } from '../db/repositories/community.js';
 import { isTrustedUuid } from '../db/repositories/users.js';
-import { registerTemplateTrust } from '../utils/templates.js';
+import { registerCommunityTemplateTrust } from '../utils/templates.js';
 import type { Template } from '../db/schemas.js';
 import { validateCommunityPayload } from './validators/index.js';
 import { CommunityFederation } from './federation.js';
@@ -379,7 +379,7 @@ export class CommunityService {
       await CommunityRepository.setTrusted(id, opts.trusted);
     }
     const item = await this.require(id);
-    if (item.trusted) this.registerTrust(item);
+    if (item.trusted) await this.refreshTrust();
     return item;
   }
 
@@ -399,7 +399,7 @@ export class CommunityService {
       );
     }
     const updated = await CommunityRepository.promoteDraft(id);
-    if (updated?.trusted) this.registerTrust(updated);
+    if (updated?.trusted) await this.refreshTrust();
     return this.require(id);
   }
 
@@ -417,7 +417,10 @@ export class CommunityService {
   }
 
   static async remove(id: string): Promise<boolean> {
-    return CommunityRepository.remove(id);
+    const existing = await CommunityRepository.get(id);
+    const removed = await CommunityRepository.remove(id);
+    if (removed && existing?.trusted) await this.refreshTrust();
+    return removed;
   }
 
   static async setTrusted(
@@ -427,7 +430,7 @@ export class CommunityService {
     await this.require(id);
     await CommunityRepository.setTrusted(id, trusted);
     const item = await this.require(id);
-    if (trusted && item.status === 'approved') this.registerTrust(item);
+    await this.refreshTrust();
     return item;
   }
 
@@ -460,17 +463,25 @@ export class CommunityService {
 
   /** Approved templates an admin marked trusted join the regex/URL whitelists like data-dir templates. */
   static async registerTrustedOnBoot(): Promise<void> {
-    const items = await CommunityRepository.listTrusted('template');
-    if (items.length === 0) return;
-    registerTemplateTrust(items.map((item) => item.payload as Template));
-    logger.info(
-      { count: items.length },
-      'registered trusted community templates'
-    );
+    await this.refreshTrust();
   }
 
-  private static registerTrust(item: CommunityItem): void {
-    if (item.kind !== 'template') return;
-    registerTemplateTrust([item.payload as Template]);
+  /** The whole trusted set, since registration replaces rather than appends. */
+  private static async refreshTrust(): Promise<void> {
+    try {
+      const items = await CommunityRepository.listTrusted('template');
+      registerCommunityTemplateTrust(
+        items.map((item) => item.payload as Template)
+      );
+      logger.info(
+        { count: items.length },
+        'registered trusted community templates'
+      );
+    } catch (error: any) {
+      logger.error(
+        { error: error.message },
+        'failed to refresh trusted community templates'
+      );
+    }
   }
 }

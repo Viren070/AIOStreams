@@ -33,7 +33,7 @@ import {
   validateConditionalActivation,
   validateVariants,
 } from '../variants/runtime.js';
-import { parseSyncedUrl } from './sync.js';
+import { parseSyncedUrl } from './sync/index.js';
 import { ZodError } from 'zod';
 import {
   formatZodError as formatZodErrorImpl,
@@ -949,27 +949,32 @@ async function validateRegexes(config: UserData, skipErrors: boolean = false) {
 
   if (regexes.length === 0) return;
 
-  const regexAllowed = await RegexAccess.isRegexAllowed(config, regexes);
+  const permitted = await RegexAccess.resolvePermitted(
+    config,
+    RegexAccess.syncedUrlsOf(config)
+  );
+  const { allowed, denied } = RegexAccess.partitionPatterns(regexes, permitted);
 
-  if (!regexAllowed) {
+  if (denied.length > 0) {
     if (!skipErrors) {
-      const allowedPatterns = (await RegexAccess.allowedRegexPatterns())
-        .patterns;
-      const notAllowed = regexes.filter((r) => !allowedPatterns.includes(r));
-      if (notAllowed.length === regexes.length) {
+      if (denied.length === regexes.length) {
         throw new Error(
           'You do not have permission to use regex filters, please remove them from your config'
         );
       }
       throw new Error(
-        `You are only permitted to use specific regex patterns, you have ${notAllowed.length} / ${regexes.length} regexes that are not allowed. Please remove them from your config.`
+        `You are only permitted to use specific regex patterns, you have ${denied.length} / ${regexes.length} regexes that are not allowed. Please remove them from your config.`
       );
     }
-    return;
+    // Serve path: the permitted patterns still apply, the rest are dropped.
+    logger.warn(
+      { uuid: config.uuid, denied: denied.length, total: regexes.length },
+      'dropping regex patterns this config is no longer permitted to use'
+    );
   }
 
   await Promise.all(
-    regexes.map(async (regex) => {
+    allowed.map(async (regex) => {
       try {
         await compileRegex(regex);
       } catch (error: any) {
@@ -984,56 +989,28 @@ function validateSyncedRegexUrls(
   config: UserData,
   skipErrors: boolean = false
 ) {
-  const regexAccess = appConfig.userLimits.regex.access;
-  const isUnrestricted =
-    regexAccess === 'all' || (regexAccess === 'trusted' && config.trusted);
-
-  if (isUnrestricted) return;
-
-  const allowedUrls = RegexAccess.getAllowedUrls();
-  const urlsToCheck = [
-    ...(config.syncedIncludedRegexUrls || []),
-    ...(config.syncedExcludedRegexUrls || []),
-    ...(config.syncedRequiredRegexUrls || []),
-    ...(config.syncedPreferredRegexUrls || []),
-    ...(config.syncedRankedRegexUrls || []),
-  ];
-
-  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
-
-  if (invalidUrls.length > 0) {
-    if (!skipErrors) {
-      throw new Error(
-        `Forbidden URL(s) in regex configuration: ${invalidUrls.join(', ')}`
-      );
-    }
+  if (skipErrors) return;
+  const { denied } = RegexAccess.partition(
+    RegexAccess.syncedUrlsOf(config),
+    config
+  );
+  if (denied.length > 0) {
+    throw new Error(
+      `Forbidden URL(s) in regex configuration: ${denied.map((d) => d.url).join(', ')}`
+    );
   }
 }
 
 function validateSyncedSelUrls(config: UserData, skipErrors: boolean = false) {
-  const selAccess = appConfig.userLimits.sel.access;
-  const isUnrestricted =
-    selAccess === 'all' || (selAccess === 'trusted' && config.trusted);
-
-  if (isUnrestricted) return;
-
-  const allowedUrls = SelAccess.getAllowedUrls();
-  const urlsToCheck = [
-    ...(config.syncedIncludedStreamExpressionUrls || []),
-    ...(config.syncedExcludedStreamExpressionUrls || []),
-    ...(config.syncedRequiredStreamExpressionUrls || []),
-    ...(config.syncedPreferredStreamExpressionUrls || []),
-    ...(config.syncedRankedStreamExpressionUrls || []),
-  ];
-
-  const invalidUrls = urlsToCheck.filter((url) => !allowedUrls.includes(url));
-
-  if (invalidUrls.length > 0) {
-    if (!skipErrors) {
-      throw new Error(
-        `Forbidden URL(s) in stream expression sync configuration: ${invalidUrls.join(', ')}`
-      );
-    }
+  if (skipErrors) return;
+  const { denied } = SelAccess.partition(
+    SelAccess.syncedUrlsOf(config),
+    config
+  );
+  if (denied.length > 0) {
+    throw new Error(
+      `Forbidden URL(s) in stream expression sync configuration: ${denied.map((d) => d.url).join(', ')}`
+    );
   }
 }
 

@@ -403,14 +403,21 @@ class StreamFilterer {
     };
 
     const metadataStart = Date.now();
-    const isRegexAllowed = await RegexAccess.isRegexAllowed(this.userData, [
-      ...(this.userData.excludedRegexPatterns ?? []),
-      ...(this.userData.requiredRegexPatterns ?? []),
-      ...(this.userData.includedRegexPatterns ?? []),
-      ...(this.userData.preferredRegexPatterns ?? []).map(
-        (regex) => regex.pattern
-      ),
-    ]);
+    const permittedPatterns = await context.getPermittedPatterns();
+    const usablePatterns = (patterns: string[] | undefined) => {
+      if (!patterns?.length) return undefined;
+      const { allowed, denied } = RegexAccess.partitionPatterns(
+        patterns,
+        permittedPatterns
+      );
+      if (denied.length > 0) {
+        logger.warn(
+          { uuid: this.userData.uuid, denied: denied.length },
+          'skipping regex patterns this config is not permitted to use'
+        );
+      }
+      return allowed.length > 0 ? allowed : undefined;
+    };
 
     // Get metadata from context (already fetched in parallel with addon requests)
     const requestedMetadata: ExtendedMetadata | undefined =
@@ -1286,38 +1293,38 @@ class StreamFilterer {
     }
 
     const regexCompileStart = Date.now();
-    const excludedRegexPatterns =
-      isRegexAllowed &&
-      this.userData.excludedRegexPatterns &&
-      this.userData.excludedRegexPatterns.length > 0
-        ? await Promise.all(
-            this.userData.excludedRegexPatterns.map(
-              async (pattern) => await compileRegex(pattern)
-            )
+    const excludedRegexPatternsUsable = usablePatterns(
+      this.userData.excludedRegexPatterns
+    );
+    const excludedRegexPatterns = excludedRegexPatternsUsable
+      ? await Promise.all(
+          excludedRegexPatternsUsable.map(
+            async (pattern) => await compileRegex(pattern)
           )
-        : undefined;
+        )
+      : undefined;
 
-    const requiredRegexPatterns =
-      isRegexAllowed &&
-      this.userData.requiredRegexPatterns &&
-      this.userData.requiredRegexPatterns.length > 0
-        ? await Promise.all(
-            this.userData.requiredRegexPatterns.map(
-              async (pattern) => await compileRegex(pattern)
-            )
+    const requiredRegexPatternsUsable = usablePatterns(
+      this.userData.requiredRegexPatterns
+    );
+    const requiredRegexPatterns = requiredRegexPatternsUsable
+      ? await Promise.all(
+          requiredRegexPatternsUsable.map(
+            async (pattern) => await compileRegex(pattern)
           )
-        : undefined;
+        )
+      : undefined;
 
-    const includedRegexPatterns =
-      isRegexAllowed &&
-      this.userData.includedRegexPatterns &&
-      this.userData.includedRegexPatterns.length > 0
-        ? await Promise.all(
-            this.userData.includedRegexPatterns.map(
-              async (pattern) => await compileRegex(pattern)
-            )
+    const includedRegexPatternsUsable = usablePatterns(
+      this.userData.includedRegexPatterns
+    );
+    const includedRegexPatterns = includedRegexPatternsUsable
+      ? await Promise.all(
+          includedRegexPatternsUsable.map(
+            async (pattern) => await compileRegex(pattern)
           )
-        : undefined;
+        )
+      : undefined;
 
     const excludedKeywordsPattern =
       this.userData.excludedKeywords &&

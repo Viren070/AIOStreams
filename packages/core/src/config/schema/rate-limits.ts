@@ -148,6 +148,12 @@ export const rateLimitsSchema = {
     envPrefix: 'COMMUNITY_API',
     label: 'community API',
   }),
+  syncApi: rateLimit({
+    windowDefault: 60,
+    maxDefault: 20,
+    envPrefix: 'SYNC_API',
+    label: 'sync resolve API',
+  }),
   login: rateLimit({
     windowDefault: 300,
     maxDefault: 5,

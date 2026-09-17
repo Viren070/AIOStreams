@@ -7,9 +7,11 @@ import {
   AnimeEntry,
   IdParser,
   ParsedId,
+  RegexAccess,
   createLogger,
   getSeaDexInfoHashes,
   enrichParsedIdWithAnimeEntry,
+  type PermittedPatterns,
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
 import {
@@ -100,6 +102,8 @@ export class StreamContext {
   // Year within title (for year matching)
   // public readonly yearWithinTitle: string | undefined;
   // public readonly yearWithinTitleRegex: RegExp | undefined;
+
+  private _permittedPatterns: Promise<PermittedPatterns> | undefined;
 
   // User data reference
   private readonly userData: UserData;
@@ -502,6 +506,14 @@ export class StreamContext {
     this.startSeaDexFetch();
     this.startReleaseDatesFetch();
     this.startEpisodeDetailsFetch();
+  }
+
+  public getPermittedPatterns(): Promise<PermittedPatterns> {
+    this._permittedPatterns ??= RegexAccess.resolvePermitted(
+      this.userData,
+      RegexAccess.syncedUrlsOf(this.userData)
+    );
+    return this._permittedPatterns;
   }
 
   /**
