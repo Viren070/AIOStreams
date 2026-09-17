@@ -152,7 +152,8 @@ export class StreamFetcher {
       creds.baseUrl,
       creds.uuid,
       creds.encryptedPassword,
-      creds.variants
+      creds.variants,
+      (url, init) => this.ctx.fetch(url, init as $ui.FetchOptions)
     );
   }
 
