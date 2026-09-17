@@ -15,6 +15,11 @@ import { ParsedResult } from '@viren070/parse-torrent-title';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import { normaliseTitle } from '../../parser/utils.js';
 import { token_set_ratio } from 'fuzzball';
+import {
+  LibraryArtwork,
+  buildArtworkQuery,
+  resolveLibraryArtwork,
+} from './artwork.js';
 
 const logger = createLogger('library:catalog');
 
@@ -122,7 +127,8 @@ export async function fetchCatalog(
   sort: CatalogSort,
   sortDirection: 'asc' | 'desc',
   genre?: string,
-  search?: string
+  search?: string,
+  options: { showPosters?: boolean } = {}
 ): Promise<MetaPreview[]> {
   if (genre === Genre.ACTIONS) {
     if (skip > 0) {
@@ -206,7 +212,15 @@ export async function fetchCatalog(
   }
 
   const page = results.slice(skip, skip + CATALOG_PAGE_SIZE);
-  return page.map((entry) => createMetaPreview(entry));
+  const artwork =
+    options.showPosters !== false
+      ? await resolveLibraryArtwork(
+          page.map((entry) =>
+            buildArtworkQuery(entry.parsed, entry.parsedTitle)
+          )
+        )
+      : [];
+  return page.map((entry, i) => createMetaPreview(entry, artwork[i]));
 }
 
 export function parseExtras(extras?: string): {
@@ -396,7 +410,10 @@ function sortParsedItems(
   });
 }
 
-function createMetaPreview(entry: ParsedCatalogItem): MetaPreview {
+function createMetaPreview(
+  entry: ParsedCatalogItem,
+  artwork?: LibraryArtwork
+): MetaPreview {
   const { item, parsed } = entry;
   const descriptionParts: string[] = [];
 
@@ -413,7 +430,13 @@ function createMetaPreview(entry: ParsedCatalogItem): MetaPreview {
     type: 'library',
     name: item.name ?? 'Unknown',
     description: descriptionParts.join(' • '),
-    posterShape: 'landscape',
+    ...(artwork
+      ? {
+          poster: artwork.poster,
+          posterShape: 'poster',
+          imdb_id: artwork.imdbId,
+        }
+      : { posterShape: 'landscape' }),
   };
 }
 

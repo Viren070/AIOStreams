@@ -15,6 +15,11 @@ import { Meta } from '../../db/schemas.js';
 import { formatSmartBytes } from '../../formatters/utils.js';
 import { parseTorrentTitleCached } from '../../parser/title.js';
 import { LIBRARY_ID_PREFIX, buildLibraryId } from './catalog.js';
+import {
+  LibraryArtwork,
+  buildArtworkQuery,
+  resolveLibraryArtwork,
+} from './artwork.js';
 
 const logger = createLogger('library:meta');
 
@@ -100,7 +105,8 @@ export function buildMeta(
   id: string,
   item: DebridDownload,
   service: { id: BuiltinServiceId; credential: string },
-  itemType: 'torrent' | 'usenet'
+  itemType: 'torrent' | 'usenet',
+  artwork?: LibraryArtwork
 ): Meta {
   logger.debug({ item, id }, 'Building library meta for item');
   const { serviceId, itemId } = parseLibraryId(id);
@@ -143,12 +149,28 @@ export function buildMeta(
     name: item.name ?? 'Unknown',
     type: 'library',
     description: descriptionParts.join(' • '),
-    posterShape: 'landscape',
+    ...(artwork
+      ? { poster: artwork.poster, posterShape: 'poster' as const }
+      : { posterShape: 'landscape' as const }),
     videos,
     behaviorHints: {
       defaultVideoId: videos.length === 1 ? videos[0].id : undefined,
     },
   };
+}
+
+/**
+ * Looks up poster artwork for a single library item by its name.
+ */
+export async function resolveItemArtwork(
+  name: string | undefined
+): Promise<LibraryArtwork | undefined> {
+  if (!name) return undefined;
+  const parsed = parseTorrentTitleCached(name);
+  const [artwork] = await resolveLibraryArtwork([
+    buildArtworkQuery(parsed, parsed.title ?? name),
+  ]);
+  return artwork;
 }
 
 /**

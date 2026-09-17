@@ -135,6 +135,15 @@ export class LibraryPreset extends BuiltinAddonPreset {
         showInSimpleMode: false,
       },
       {
+        id: 'showPosters',
+        name: 'Show Posters',
+        description:
+          'Look up each library item on IMDb by its parsed title and show the matching poster in catalogs. Items that cannot be matched keep the plain landscape card. Setting an IMDb ID also lets catalog poster services (e.g. RPDB) apply to library items.',
+        type: 'boolean',
+        default: true,
+        showInSimpleMode: false,
+      },
+      {
         id: 'hideStreams',
         name: 'Hide Streams',
         description:
@@ -247,6 +256,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
       skipProcessing: options?.skipProcessing,
       showRefreshActions: options?.showRefreshActions,
       hideStreams: options?.hideStreams,
+      showPosters: options?.showPosters,
     };
     return `${appConfig.bootstrap.internalUrl}/builtins/library/${this.base64EncodeJSON(
       config,
