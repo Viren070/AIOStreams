@@ -52,6 +52,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
         maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
         maxLibraries: appConfig.jellyfin.maxLibraries,
         maxPersonas: appConfig.jellyfin.maxPersonas,
+        maxTrackers: appConfig.watchState.maxSinks,
         segments: {
           enabled: segmentsEnabled(),
           providers: segmentProviders(),

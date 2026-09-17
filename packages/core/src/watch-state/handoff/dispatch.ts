@@ -185,10 +185,12 @@ export async function ensurePlaybackSink(
   const hash = routingHashOf(sink);
   const now = Date.now();
 
+  // Writing a retired row revives it.
   const cached = sinkRows.get(key);
   if (
     cached &&
     cached.row.routingHash === hash &&
+    cached.row.retiredAt == null &&
     now - cached.at < SINK_ROW_TTL_MS
   ) {
     void touchActive(cached.row, now);
@@ -199,7 +201,7 @@ export async function ensurePlaybackSink(
     scope,
     sink.instanceId
   );
-  if (existing && existing.routingHash === hash) {
+  if (existing && existing.routingHash === hash && existing.retiredAt == null) {
     remember(key, existing, now);
     void touchActive(existing, now);
     return existing;
@@ -219,6 +221,35 @@ export async function ensurePlaybackSink(
   remember(key, row, now);
   void touchActive(row, now);
   return row;
+}
+
+/** Forgets remembered rows too, or reviving a retired sink would skip its write. */
+export async function retireUnusedSinks(
+  scope: WatchScope,
+  keep: readonly string[]
+): Promise<void> {
+  const prefix = `${scope.uuid}|${scope.persona}|`;
+  for (const key of sinkRows.keys()) {
+    if (key.startsWith(prefix) && !keep.includes(key.slice(prefix.length)))
+      sinkRows.delete(key);
+  }
+  await PlaybackHandoffRepository.retireSinksExcept(scope, keep, Date.now());
+}
+
+export async function retireOtherPersonaSinks(
+  uuid: string,
+  keepPersonaIds: readonly string[]
+): Promise<void> {
+  for (const key of sinkRows.keys()) {
+    const [owner, persona] = key.split('|');
+    if (owner === uuid && persona && !keepPersonaIds.includes(persona))
+      sinkRows.delete(key);
+  }
+  await PlaybackHandoffRepository.retireOtherPersonas(
+    uuid,
+    keepPersonaIds,
+    Date.now()
+  );
 }
 
 function remember(key: string, row: SinkRow, at: number): void {

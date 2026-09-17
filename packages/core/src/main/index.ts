@@ -155,6 +155,13 @@ export class AIOStreams {
     return resolvePlaybackSinks(this.ctx);
   }
 
+  /** Addons whose manifest failed to load. */
+  public getFailedAddons(): Addon[] {
+    return this.ctx.addonInitialisationErrors.flatMap(({ addon }) =>
+      'preset' in addon ? [addon] : []
+    );
+  }
+
   public async shouldStopAutoPlay(type: string, id: string) {
     if (
       !this.ctx.userData.areYouStillThere?.enabled ||

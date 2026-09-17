@@ -126,14 +126,15 @@ const JellyfinPersonaSchema = z.object({
   variants: z.array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)).optional(),
   /** `shared` reads and writes the account's rows, trackers included. */
   history: z.enum(['own', 'shared']).default('own'),
+  /** Preset ids of the trackers it syncs with; absent is automatic. */
+  trackers: z.array(z.string().min(1)).max(50).optional(),
   /** Kept out of the picker; still usable by name. */
   hidden: z.boolean().optional(),
 });
 
 export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
 
-/** Per-configuration settings for the Jellyfin-compatible API. */
-const JellyfinSettings = z.object({
+const JellyfinSettingsFields = z.object({
   /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
   resolveOnOpen: z.boolean().optional(),
   /** Versions offered per item; the instance setting caps it. */
@@ -151,6 +152,8 @@ const JellyfinSettings = z.object({
       variants: z
         .array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/))
         .optional(),
+      /** Preset ids of the trackers it syncs with; absent means all. */
+      trackers: z.array(z.string().min(1)).max(50).optional(),
     })
     .optional(),
   personas: z
@@ -194,6 +197,38 @@ const JellyfinSettings = z.object({
       }
     })
     .optional(),
+});
+
+/** Per-configuration settings for the Jellyfin-compatible API. */
+const JellyfinSettings = JellyfinSettingsFields.superRefine((settings, ctx) => {
+  // A tracker account belongs to one history, or two histories would mix.
+  const owners = new Map<string, string>();
+  const claim = (who: string, trackers: string[] | undefined) => {
+    for (const id of new Set(trackers ?? [])) {
+      const owner = owners.get(id);
+      if (owner) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Tracker "${id}" is selected for both ${owner} and ${who}.`,
+        });
+      } else {
+        owners.set(id, who);
+      }
+    }
+  };
+  claim('the primary user', settings.primary?.trackers);
+  for (const persona of settings.personas ?? []) {
+    if (persona.history === 'shared') {
+      if (persona.trackers) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${persona.name} shares the primary user's history, so it uses the primary user's trackers.`,
+        });
+      }
+      continue;
+    }
+    claim(persona.name, persona.trackers);
+  }
 });
 
 export type JellyfinSettings = z.infer<typeof JellyfinSettings>;
@@ -1798,6 +1833,8 @@ const StatusResponseSchema = z.object({
         maxLibraries: z.number(),
         /** Extra users a configuration may add beyond its primary user. */
         maxPersonas: z.number(),
+        /** Trackers one user syncs with at most. */
+        maxTrackers: z.number(),
         segments: z.object({
           enabled: z.boolean(),
           /** In the operator's order; `configuration` needs the configuration's own key. */

@@ -124,7 +124,7 @@ An addon that supports **Watch State** can act as a tracker. The **Trackers** ta
 - **Imports your history**: what the addon knows you watched elsewhere, including in Stremio, shows up in Continue Watching and Next Up.
 - If the addon supports a watchlist, your watchlist and your favourites stay in step.
 
-To stop an addon syncing, untick **Watch State** in that addon's **Resources** option and save. The instance owner can turn either direction off for everyone, in which case the tab says so.
+Each tracker syncs with one history. With several household users, choose which trackers each user syncs with in the **Users** tab (see [Choosing trackers](#choosing-trackers)). To stop an addon syncing for everyone, untick **Watch State** in that addon's **Resources** option and save. The instance owner can turn either direction off for everyone, in which case the tab says so.
 
 <Callout type="info">
   Without a tracker, AIOStreams only knows what you played in Jellyfin apps.
@@ -138,12 +138,22 @@ Building a tracker addon? See the [Watch State reference](/reference/addon-proto
 
 The **Users** tab adds users to your server, so everyone in a household can have their own profile in the app. They all sign in with the same configuration password.
 
-- **The primary user** is your configuration itself. Give it a name (your addon name by default) and an avatar. It is the history your trackers sync with.
+- **The primary user** is your configuration itself. Give it a name (your addon name by default) and an avatar.
 - **Each extra user** has a name, which is also what they type to sign in, and an optional avatar. You can hide a user from the sign-in picker; they can still sign in by name.
 - **History** is either **own**, a separate Continue Watching, or **shared** with the primary user. Sharing the history also shares its trackers.
-- **Variants** apply while that user is signed in, in the order picked, so a user can get, for example, a different set of filters or a different tracker addon.
+- **Variants** apply while that user is signed in, in the order picked, so a user can get, for example, a different set of filters.
 
 Removing a user keeps their watch history. Adding a user again under the same name gets it back.
+
+### Choosing trackers
+
+Each user with a history of its own can sync with its own tracker addons, for example a separate watch-history account per person. Add one tracker addon per account to your configuration, then turn on **Choose trackers** for each user and pick theirs.
+
+- A tracker belongs to one history at a time, so a tracker picked for one user can't be picked for another. Otherwise what one person watches would end up in the other's history.
+- Left off, the primary user syncs with every tracker addon, so none are free for other users. Choose the primary user's trackers first.
+- Left off for another user, it syncs only with a tracker addon that its variants add.
+- A tracker nobody picks is not used.
+- Moving a tracker to another user also brings along what it already recorded for the previous one.
 
 ## App differences
 
