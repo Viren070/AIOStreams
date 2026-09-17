@@ -32,6 +32,7 @@ import {
   itemFromDescriptor,
 } from './items.js';
 import { reportBulkMark, reportPlayback, reportWatchlist } from './handoff.js';
+import { pickSource } from './playback.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -96,14 +97,24 @@ function snapshotOf(item: JellyfinItem | null): WatchSnapshot | undefined {
   };
 }
 
+/** Jellyfin takes the runtime from the source being played, then the item. */
 async function durationFor(
   ctx: JellyfinRequestContext,
   d: ContentDescriptor,
   itemId: string,
-  item: JellyfinItem | null
+  item: JellyfinItem | null,
+  mediaSourceId: string | undefined
 ) {
   const memo = await resolveByItem(ctx.uuid, ctx.scope(), itemId);
-  if (memo?.runtimeMs) return memo.runtimeMs;
+  if (memo) {
+    // The first source carries the item's id rather than its own.
+    const source = pickSource(
+      memo,
+      mediaSourceId === itemId ? undefined : mediaSourceId
+    );
+    if (source?.durationMs && !source.live) return source.durationMs;
+    if (memo.runtimeMs) return memo.runtimeMs;
+  }
   return typeof item?.RunTimeTicks === 'number'
     ? item.RunTimeTicks / TICKS_PER_MS
     : undefined;
@@ -126,12 +137,23 @@ function playSessionIdOf(req: Request): string | undefined {
   return typeof v === 'string' && v ? v : undefined;
 }
 
+function mediaSourceIdOf(req: Request): string | undefined {
+  const v = bodyOf(req).MediaSourceId ?? qs(req, 'MediaSourceId');
+  return typeof v === 'string' && v
+    ? v.replace(/-/g, '').toLowerCase()
+    : undefined;
+}
+
 async function record(
   ctx: JellyfinRequestContext,
   rawId: string,
   type: 'start' | 'progress' | 'stop',
   positionMs: number | undefined,
-  opts: { paused?: boolean; playSessionId?: string } = {}
+  opts: {
+    paused?: boolean;
+    playSessionId?: string;
+    mediaSourceId?: string;
+  } = {}
 ): Promise<void> {
   const d = await descriptorFor(ctx, rawId);
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
@@ -145,7 +167,9 @@ async function record(
       ? null
       : await itemFromDescriptor(ctx, d).catch(() => null);
   const durationMs =
-    type === 'progress' ? undefined : await durationFor(ctx, d, rawId, item);
+    type === 'progress'
+      ? undefined
+      : await durationFor(ctx, d, rawId, item, opts.mediaSourceId);
   const event: WatchEvent = {
     type,
     identity,
@@ -228,7 +252,10 @@ router.post(
         id,
         'start',
         ticksToMs(bodyOf(req).PositionTicks ?? qs(req, 'PositionTicks')),
-        { playSessionId: playSessionIdOf(req) }
+        {
+          playSessionId: playSessionIdOf(req),
+          mediaSourceId: mediaSourceIdOf(req),
+        }
       );
     res.status(204).end();
   })
@@ -266,7 +293,8 @@ router.post(
         ctx,
         id,
         'stop',
-        ticksToMs(bodyOf(req).PositionTicks ?? qs(req, 'PositionTicks'))
+        ticksToMs(bodyOf(req).PositionTicks ?? qs(req, 'PositionTicks')),
+        { mediaSourceId: mediaSourceIdOf(req) }
       );
     res.status(204).end();
   })
@@ -275,7 +303,10 @@ router.delete(
   ['/PlayingItems/:itemId', '/Users/:userId/PlayingItems/:itemId'],
   jf(async (req, res, ctx) => {
     const id = idFrom(req);
-    if (id) await record(ctx, id, 'stop', ticksToMs(qs(req, 'PositionTicks')));
+    if (id)
+      await record(ctx, id, 'stop', ticksToMs(qs(req, 'PositionTicks')), {
+        mediaSourceId: mediaSourceIdOf(req),
+      });
     res.status(204).end();
   })
 );
