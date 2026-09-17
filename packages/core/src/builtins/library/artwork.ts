@@ -22,6 +22,8 @@ const SERIES_KINDS = new Set(['tvSeries', 'tvMiniSeries']);
 export interface LibraryArtwork {
   imdbId: string;
   poster: string;
+  title?: string;
+  year?: number;
 }
 
 export interface ArtworkQuery {
@@ -106,7 +108,12 @@ async function lookupArtwork(
     const results = await imdb.searchTitles(query.title);
     const match = pickArtworkMatch(results, query);
     const artwork = match?.poster
-      ? { imdbId: match.id, poster: match.poster }
+      ? {
+          imdbId: match.id,
+          poster: match.poster,
+          title: match.title,
+          year: match.year,
+        }
       : undefined;
     await artworkCache.set(
       key,

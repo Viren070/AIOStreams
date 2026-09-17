@@ -144,6 +144,20 @@ export class LibraryPreset extends BuiltinAddonPreset {
         showInSimpleMode: false,
       },
       {
+        id: 'nameFormat',
+        name: 'Name Format',
+        description:
+          'How library items are named in catalogs. "Release name" shows the raw torrent/NZB name. "Clean title" shows the title with its season/episode or year (e.g. "Rick and Morty S09E04"), using the matched IMDb title when posters are enabled, and moves the release name into the description.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        options: [
+          { value: 'release', label: 'Release name' },
+          { value: 'title', label: 'Clean title' },
+        ],
+        default: 'release',
+      },
+      {
         id: 'hideStreams',
         name: 'Hide Streams',
         description:
@@ -257,6 +271,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
       showRefreshActions: options?.showRefreshActions,
       hideStreams: options?.hideStreams,
       showPosters: options?.showPosters,
+      nameFormat: options?.nameFormat,
     };
     return `${appConfig.bootstrap.internalUrl}/builtins/library/${this.base64EncodeJSON(
       config,

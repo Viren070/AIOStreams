@@ -50,6 +50,7 @@ export const LibraryAddonConfigSchema = BaseDebridConfigSchema.extend({
   showRefreshActions: z.array(z.enum(['catalog', 'stream'])).optional(),
   hideStreams: z.boolean().default(false).optional(),
   showPosters: z.boolean().optional(),
+  nameFormat: z.enum(['release', 'title']).optional(),
 });
 export type LibraryAddonConfig = z.infer<typeof LibraryAddonConfigSchema>;
 
@@ -145,7 +146,10 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       sortDirection,
       genre,
       search,
-      { showPosters: this.userData.showPosters }
+      {
+        showPosters: this.userData.showPosters,
+        nameFormat: this.userData.nameFormat,
+      }
     );
   }
 
@@ -230,7 +234,14 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       this.userData.showPosters !== false
         ? await resolveItemArtwork(item.name)
         : undefined;
-    return buildMeta(id, item, service, narrowedItemType, artwork);
+    return buildMeta(
+      id,
+      item,
+      service,
+      narrowedItemType,
+      artwork,
+      this.userData.nameFormat
+    );
   }
 
   /**

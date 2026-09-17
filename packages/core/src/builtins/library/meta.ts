@@ -20,6 +20,7 @@ import {
   buildArtworkQuery,
   resolveLibraryArtwork,
 } from './artwork.js';
+import { LibraryNameFormat, formatLibraryItemName } from './naming.js';
 
 const logger = createLogger('library:meta');
 
@@ -106,7 +107,8 @@ export function buildMeta(
   item: DebridDownload,
   service: { id: BuiltinServiceId; credential: string },
   itemType: 'torrent' | 'usenet',
-  artwork?: LibraryArtwork
+  artwork?: LibraryArtwork,
+  nameFormat: LibraryNameFormat = 'release'
 ): Meta {
   logger.debug({ item, id }, 'Building library meta for item');
   const { serviceId, itemId } = parseLibraryId(id);
@@ -144,11 +146,18 @@ export function buildMeta(
     descriptionParts.push(`🖥️ ${parsed.resolution}`);
   }
 
+  const releaseName = item.name ?? 'Unknown';
+  const useTitle = nameFormat === 'title';
   return {
     id,
-    name: item.name ?? 'Unknown',
+    name: useTitle
+      ? formatLibraryItemName(parsed, releaseName, artwork)
+      : releaseName,
     type: 'library',
-    description: descriptionParts.join(' • '),
+    description: [
+      ...(useTitle ? [releaseName] : []),
+      descriptionParts.join(' • '),
+    ].join('\n'),
     ...(artwork
       ? { poster: artwork.poster, posterShape: 'poster' as const }
       : { posterShape: 'landscape' as const }),

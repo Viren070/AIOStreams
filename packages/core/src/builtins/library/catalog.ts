@@ -20,6 +20,7 @@ import {
   buildArtworkQuery,
   resolveLibraryArtwork,
 } from './artwork.js';
+import { LibraryNameFormat, formatLibraryItemName } from './naming.js';
 
 const logger = createLogger('library:catalog');
 
@@ -128,7 +129,7 @@ export async function fetchCatalog(
   sortDirection: 'asc' | 'desc',
   genre?: string,
   search?: string,
-  options: { showPosters?: boolean } = {}
+  options: { showPosters?: boolean; nameFormat?: LibraryNameFormat } = {}
 ): Promise<MetaPreview[]> {
   if (genre === Genre.ACTIONS) {
     if (skip > 0) {
@@ -220,7 +221,9 @@ export async function fetchCatalog(
           )
         )
       : [];
-  return page.map((entry, i) => createMetaPreview(entry, artwork[i]));
+  return page.map((entry, i) =>
+    createMetaPreview(entry, artwork[i], options.nameFormat)
+  );
 }
 
 export function parseExtras(extras?: string): {
@@ -412,7 +415,8 @@ function sortParsedItems(
 
 function createMetaPreview(
   entry: ParsedCatalogItem,
-  artwork?: LibraryArtwork
+  artwork?: LibraryArtwork,
+  nameFormat: LibraryNameFormat = 'release'
 ): MetaPreview {
   const { item, parsed } = entry;
   const descriptionParts: string[] = [];
@@ -425,11 +429,18 @@ function createMetaPreview(
   const typeIcon = item.itemType === 'torrent' ? '🧲' : '📰';
   descriptionParts.push(`${typeIcon} ${item.itemType}`);
 
+  const releaseName = item.name ?? 'Unknown';
+  const useTitle = nameFormat === 'title';
   return {
     id: buildLibraryId(item.serviceId, item.itemType, item.id),
     type: 'library',
-    name: item.name ?? 'Unknown',
-    description: descriptionParts.join(' • '),
+    name: useTitle
+      ? formatLibraryItemName(parsed, releaseName, artwork)
+      : releaseName,
+    description: [
+      ...(useTitle ? [releaseName] : []),
+      descriptionParts.join(' • '),
+    ].join('\n'),
     ...(artwork
       ? {
           poster: artwork.poster,
