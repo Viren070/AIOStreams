@@ -105,8 +105,7 @@ class FileParser {
       ]),
     ];
 
-    const releaseGroup =
-      filename.match(PARSE_REGEX.releaseGroup)?.[1] ?? parsed.group;
+    const releaseGroup = parsed.group;
     const title = parsedTitle;
     const year = parsed.year ? parsed.year.toString() : undefined;
     const country = parsed.country;

@@ -37,7 +37,6 @@ type PARSE_REGEX = {
     'Unknown' | 'Original'
   >;
   encodes: Omit<Record<(typeof constants.ENCODES)[number], RegExp>, 'Unknown'>;
-  releaseGroup: RegExp;
 };
 
 export const PARSE_REGEX: PARSE_REGEX = {
@@ -197,6 +196,4 @@ export const PARSE_REGEX: PARSE_REGEX = {
     Malay: createLanguageRegex('malay'),
     Latino: createLanguageRegex('latino|lat'),
   },
-  releaseGroup:
-    /-[. ]?(?!\d+$|S\d+|\d+x|ep?\d+|[^[]+]$)([^\-. []+[^\-. [)\]\d][^\-. [)\]]*)(?:\[[\w.-]+])?(?=\)|[.-]+\w{2,4}$|$)/i,
 };
