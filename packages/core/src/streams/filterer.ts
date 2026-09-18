@@ -25,6 +25,7 @@ import {
   titleMatchWithLang,
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
+import { withoutSeriesSubtitle } from '../parser/episode-title.js';
 import { partial_ratio } from 'fuzzball';
 import {
   formatBitrate,
@@ -836,11 +837,23 @@ class StreamFilterer {
       const expected = requestedMetadata?.episodeTitles;
       if (!parsedEpisodeTitle || !expected?.length) return undefined;
 
-      const result = titleMatchWithLang(
+      let result = titleMatchWithLang(
         normaliseTitle(parsedEpisodeTitle),
         expected,
         { threshold }
       );
+      if (!result.matched) {
+        const episodeTitle = withoutSeriesSubtitle(
+          parsedEpisodeTitle,
+          stream.parsedFile?.title,
+          requestedMetadata?.titles ?? []
+        );
+        if (episodeTitle !== parsedEpisodeTitle) {
+          result = titleMatchWithLang(normaliseTitle(episodeTitle), expected, {
+            threshold,
+          });
+        }
+      }
       if (result.matched) {
         inferLanguageFromMatch(stream, result.language, 'episodeTitle');
         return true;
