@@ -26,11 +26,7 @@ import {
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
-import {
-  formatBitrate,
-  formatBytes,
-  formatHours,
-} from '../formatters/utils.js';
+import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
 import { ReleaseDate } from '../metadata/tmdb.js';
 import { StreamContext, ExtendedMetadata } from './context.js';
@@ -570,10 +566,16 @@ class StreamFilterer {
       return false;
     };
 
-    const applyDigitalReleaseFilter = (stream?: ParsedStream): boolean => {
+    type DigitalReleaseVerdict =
+      | { allow: true }
+      | { allow: false; isResultAgeRule: boolean; reason: string };
+
+    const applyDigitalReleaseFilter = (
+      stream?: ParsedStream
+    ): DigitalReleaseVerdict => {
       const config = this.userData.digitalReleaseFilter;
-      if (!config?.enabled) return true;
-      if (stream && isDigitalReleaseExempt(stream)) return true;
+      if (!config?.enabled) return { allow: true };
+      if (stream && isDigitalReleaseExempt(stream)) return { allow: true };
 
       // Preconditions: check content type is in scope
       const filterRequestTypes = config.requestTypes;
@@ -582,9 +584,9 @@ class StreamFilterer {
         ((isAnime && !filterRequestTypes.includes('anime')) ||
           (!isAnime && !filterRequestTypes.includes(type)))
       ) {
-        return true;
+        return { allow: true };
       }
-      if (!['movie', 'series', 'anime'].includes(type)) return true;
+      if (!['movie', 'series', 'anime'].includes(type)) return { allow: true };
 
       const isSeries = type === 'series' || type === 'anime';
 
@@ -599,7 +601,7 @@ class StreamFilterer {
         logger.debug(
           `[DigitalReleaseFilter] No valid release date for "${requestedMetadata?.title}", allowing`
         );
-        return true;
+        return { allow: true };
       }
 
       // Precompute values referenced by rules
@@ -687,14 +689,16 @@ class StreamFilterer {
         allow: boolean;
         reason: () => string;
         level?: 'debug' | 'info';
+        isResultAgeRule?: boolean;
       };
       const rules: FilterRule[] = [
         {
           when: () => streamPredatesRelease,
           allow: false,
           level: 'info',
+          isResultAgeRule: true,
           reason: () =>
-            `Result age (${formatHours(stream!.age!)}) predates ${isSeries ? `episode ${epLabel}` : `"${title}"`}'s ${isSeries ? 'air date' : 'release'} (${formatDate(referenceDateForAge!)})`,
+            `Result predates ${isSeries ? `episode ${epLabel}'s air date` : `"${title}"'s release`} (${formatDate(referenceDateForAge!)})`,
         },
         // General
         {
@@ -773,15 +777,21 @@ class StreamFilterer {
 
       for (const rule of rules) {
         if (rule.when()) {
+          const reason = rule.reason();
           const action = rule.allow ? 'ALLOWING' : 'BLOCKING';
           logger[rule.level ?? 'debug'](
-            `[DigitalReleaseFilter] ${action} - ${rule.reason()}`
+            `[DigitalReleaseFilter] ${action} - ${reason}`
           );
-          return rule.allow;
+          if (rule.allow) return { allow: true };
+          return {
+            allow: false,
+            isResultAgeRule: !!rule.isResultAgeRule,
+            reason,
+          };
         }
       }
 
-      return true;
+      return { allow: true };
     };
 
     const NON_SPECIFIC_LANGUAGES = ['Unknown', 'Dual Audio', 'Multi', 'Dubbed'];
@@ -1260,13 +1270,14 @@ class StreamFilterer {
 
     // Early digital release filter check - if it returns false, filter out streams
     // except those with passthrough for 'digitalRelease' stage or those from addons not in the filter list
-    if (!applyDigitalReleaseFilter()) {
+    const bulkDigitalReleaseVerdict = applyDigitalReleaseFilter();
+    if (!bulkDigitalReleaseVerdict.allow) {
       const passthroughDigitalRelease = streams.filter(isDigitalReleaseExempt);
       const filteredCount = streams.length - passthroughDigitalRelease.length;
       if (filteredCount > 0) {
         this.filterStatistics.removed.noDigitalRelease.total = filteredCount;
         this.filterStatistics.removed.noDigitalRelease.details[
-          'No digital release available'
+          bulkDigitalReleaseVerdict.reason
         ] = filteredCount;
       }
       if (passthroughDigitalRelease.length > 0) {
@@ -1479,10 +1490,13 @@ class StreamFilterer {
     };
 
     const shouldKeepStream = (stream: ParsedStream): boolean => {
-      if (!applyDigitalReleaseFilter(stream)) {
+      const digitalReleaseVerdict = applyDigitalReleaseFilter(stream);
+      if (!digitalReleaseVerdict.allow) {
         this.incrementRemovalReason(
-          'resultPredatesRelease',
-          'Result age predates release/air date'
+          digitalReleaseVerdict.isResultAgeRule
+            ? 'resultPredatesRelease'
+            : 'noDigitalRelease',
+          digitalReleaseVerdict.reason
         );
         return false;
       }
