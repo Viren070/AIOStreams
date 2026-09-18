@@ -63,6 +63,7 @@ export function buildIndexerAliasIndex(
   map: Record<string, string> | undefined
 ): IndexerAliasIndex {
   const rules = new Map<string, string>();
+  const conflicting = new Set<string>();
   for (const [variant, canonical] of Object.entries(map ?? {})) {
     const from = fold(variant);
     const to = canonical.trim();
@@ -80,7 +81,22 @@ export function buildIndexerAliasIndex(
       );
       continue;
     }
+    // Rule keys are matched case-insensitively, so two keys differing only in
+    // case are one rule. Pointing them at different names is contradictory:
+    // keeping either would make the result depend on which was typed first.
+    const existing = rules.get(from);
+    if (existing !== undefined && existing !== to) {
+      conflicting.add(from);
+      continue;
+    }
     rules.set(from, to);
+  }
+  for (const key of conflicting) {
+    logger.warn(
+      { rule: key },
+      'indexer alias rule key is given more than one target; ignored'
+    );
+    rules.delete(key);
   }
 
   // Flatten the chains once, so a lookup is a single hit and a contradictory

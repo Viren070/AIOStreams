@@ -210,10 +210,16 @@ export class UsenetIndexerMetricsRepository {
     });
   }
 
-  /** Every label with a recorded rollup, for expanding a merged row to its members. */
+  /**
+   * Every label carrying a rollup or a last error, for expanding a merged row
+   * to its members. Both tables are read: a label whose rollups were pruned can
+   * still hold a last error, and a reset of its group has to clear that too.
+   */
   static async distinctIndexers(): Promise<string[]> {
     const rows = await getDb().query<{ indexer: string }>(
-      sql`SELECT DISTINCT indexer FROM usenet_indexer_metrics`
+      sql`SELECT indexer FROM usenet_indexer_metrics
+          UNION
+          SELECT indexer FROM usenet_indexer_last_error`
     );
     return rows.map((r) => r.indexer);
   }

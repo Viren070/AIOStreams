@@ -265,7 +265,7 @@ export const TAB_MANIFEST: Record<string, Omit<TabDef, 'section'>> = {
         note:
           'The Usenet dashboard counts grabs per indexer name. Different addons report different names for the same indexer, and grabs added through SABnzbd or an *arr are recorded under the NZB host instead — so one indexer can show up as several rows with split shares. ' +
           'Add a rule for each name you want merged: the left side is the name exactly as the Indexer performance table shows it, the right side the name to merge it into. Matching ignores casing, and nothing merges unless you add a rule. ' +
-          'Merging only changes how the recorded grabs are grouped for display, so removing a rule brings the original rows straight back.',
+          'Merging only changes how the recorded grabs are grouped for display, so removing a rule brings the original rows straight back. Resetting a merged row clears the stats for every name in that group.',
         keys: ['usenet.indexerAliases'],
       },
       {

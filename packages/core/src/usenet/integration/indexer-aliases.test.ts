@@ -102,6 +102,27 @@ describe('buildIndexerAliasIndex', () => {
     assert.equal(index.canonicalOf('Nzb.life'), 'Nzb.life');
   });
 
+  it('ignores a key given two different targets, whichever was typed first', () => {
+    // Keys match case-insensitively, so these are one rule with two answers.
+    // Honouring either would make the result depend on object key order.
+    for (const map of [
+      { DS: 'Alpha', ds: 'Beta' },
+      { ds: 'Beta', DS: 'Alpha' },
+    ]) {
+      const index = buildIndexerAliasIndex(map);
+      assert.equal(index.empty, true);
+      assert.equal(index.canonicalOf('DS'), 'DS');
+    }
+  });
+
+  it('keeps a key repeated with the same target', () => {
+    const index = buildIndexerAliasIndex({
+      DS: 'DrunkenSlug',
+      ds: 'DrunkenSlug',
+    });
+    assert.equal(index.canonicalOf('Ds'), 'DrunkenSlug');
+  });
+
   it('ignores blank keys and values', () => {
     const index = buildIndexerAliasIndex({ '  ': 'DrunkenSlug', Ds: '   ' });
     assert.equal(index.empty, true);
