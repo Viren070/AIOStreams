@@ -142,6 +142,12 @@ export class AStreamPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [HTTP_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason:
+          'Addon is offline. `stremiofr.com` now serves a domain registrar parking page.',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 

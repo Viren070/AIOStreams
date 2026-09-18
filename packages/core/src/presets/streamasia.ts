@@ -327,6 +327,11 @@ there is no need to provide these details here.
         constants.DEBRID_STREAM_TYPE,
       ],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason: 'Addon is offline and its developer has disappeared.',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 
