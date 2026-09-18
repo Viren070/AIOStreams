@@ -1202,6 +1202,34 @@ const AUDIO_TAGS = [
 
 const AUDIO_CHANNELS = ['2.0', '5.1', '6.1', '7.1', 'Unknown'] as const;
 
+const DEFAULT_REPOST_SUFFIXES = [
+  'RP',
+  '1',
+  'NZBGeek',
+  '[N-Z-B]',
+  'Obfuscated',
+  'Obfuscation',
+  'Scrambled',
+  'sample',
+  'Pre',
+  'postbot',
+  'xpost',
+  'Rakuv*',
+  'WhiteRev',
+  'BUYMORE',
+  'AsRequested',
+  'AlternativeToRequested',
+  'GEROV',
+  'Z0iDS3N',
+  'Chamele0n',
+  '4P',
+  '4Planet',
+  'AlteZachen',
+  'RePACKPOST',
+  'FTP',
+  'xpo',
+];
+
 // Passthrough stages that can be selectively bypassed
 const PASSTHROUGH_STAGES = [
   'filter', // bypass main filtering (shouldKeepStream)
@@ -1769,6 +1797,7 @@ export {
   VISUAL_TAGS,
   AUDIO_TAGS,
   AUDIO_CHANNELS,
+  DEFAULT_REPOST_SUFFIXES,
   ENCODES,
   PASSTHROUGH_STAGES,
   SORT_CRITERIA,
