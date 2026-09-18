@@ -6,6 +6,7 @@ import {
   Env,
   FULL_LANGUAGE_MAPPING,
   getLanguageDisplayName,
+  normaliseLanguage,
   ServiceId,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
@@ -605,6 +606,10 @@ class StreamParser {
         arrayMerge(folderParsed?.languages, fileParsed?.languages),
         this.getLanguages(stream, parsedStream)
       ),
+      subtitles: arrayMerge(
+        arrayMerge(folderParsed?.subtitles, fileParsed?.subtitles),
+        this.getSubtitles(stream, parsedStream)
+      ),
       ...this.getParsedFileMergeOverrides(stream, parsedStream),
     });
 
@@ -635,6 +640,23 @@ class StreamParser {
     ];
     return flags
       .map((flag) => convertFlagToLanguage(flag))
+      .filter((language) => language !== undefined);
+  }
+
+  /**
+   * Subtitle languages the addon says ship with the stream.
+   */
+  protected getSubtitles(
+    stream: Stream,
+    currentParsedStream: ParsedStream
+  ): string[] {
+    return [];
+  }
+
+  /** Languages of `stream.subtitles`, for presets whose attached subs ship with the release. */
+  protected attachedSubtitleLanguages(stream: Stream): string[] {
+    return (stream.subtitles ?? [])
+      .map((subtitle) => normaliseLanguage(subtitle.lang))
       .filter((language) => language !== undefined);
   }
 
