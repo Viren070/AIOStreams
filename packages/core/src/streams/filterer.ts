@@ -33,6 +33,18 @@ import { StreamContext, ExtendedMetadata } from './context.js';
 
 const logger = createLogger('filterer');
 
+const releaseDateFormat = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+
+const formatReleaseDate = (date: string | Date): string => {
+  const d = new Date(date);
+  return isNaN(d.getTime()) ? 'Invalid Date' : releaseDateFormat.format(d);
+};
+
 interface Reason {
   total: number;
   details: Record<string, number>;
@@ -566,16 +578,14 @@ class StreamFilterer {
       return false;
     };
 
+    type ResultAgeCheck = { maxAgeHours: number; reason: string };
     type DigitalReleaseVerdict =
-      | { allow: true }
-      | { allow: false; isResultAgeRule: boolean; reason: string };
+      | { allow: true; resultAgeCheck?: ResultAgeCheck }
+      | { allow: false; reason: string };
 
-    const applyDigitalReleaseFilter = (
-      stream?: ParsedStream
-    ): DigitalReleaseVerdict => {
+    const evaluateDigitalRelease = (): DigitalReleaseVerdict => {
       const config = this.userData.digitalReleaseFilter;
       if (!config?.enabled) return { allow: true };
-      if (stream && isDigitalReleaseExempt(stream)) return { allow: true };
 
       // Preconditions: check content type is in scope
       const filterRequestTypes = config.requestTypes;
@@ -626,17 +636,20 @@ class StreamFilterer {
       const daysSinceEpisode = epDate ? daysBetween(epDate, today) : null;
       const epLabel = `S${parsedId?.season}E${parsedId?.episode}`;
 
-      const referenceDateForAge = isSeries ? epDate : releaseDate;
+      const referenceDateForAge = isSeries ? epDate : validReleaseDate;
       const hoursSinceReference = referenceDateForAge
         ? (today.getTime() - referenceDateForAge.getTime()) / (1000 * 60 * 60)
         : null;
-      const streamPredatesRelease =
-        !!config.checkResultAge &&
-        !!stream &&
-        stream.age !== undefined &&
+      const resultAgeCheck: ResultAgeCheck | undefined =
+        config.checkResultAge &&
+        referenceDateForAge &&
         hoursSinceReference !== null &&
-        hoursSinceReference >= 0 &&
-        stream.age > hoursSinceReference + tolerance * 24;
+        hoursSinceReference >= 0
+          ? {
+              maxAgeHours: hoursSinceReference + tolerance * 24,
+              reason: `Result predates ${isSeries ? `episode ${epLabel}'s air date` : `"${title}"'s release`} (${formatReleaseDate(referenceDateForAge)})`,
+            }
+          : undefined;
 
       // Digital release dates (TMDB types 4-6: Digital, Physical, TV)
       const digitalDates = (releaseDates ?? []).filter(
@@ -659,25 +672,18 @@ class StreamFilterer {
               .sort((a, b) => a.daysUntil - b.daysUntil)[0]
           : null;
 
-      const formatDate = (dateStr: string | Date) =>
-        new Date(dateStr).toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        });
-
       logger.debug(`[DigitalReleaseFilter] Evaluating "${title}"`, {
-        releaseDate: validReleaseDate ? formatDate(validReleaseDate) : 'N/A',
+        releaseDate: validReleaseDate
+          ? formatReleaseDate(validReleaseDate)
+          : 'N/A',
         daysSinceRelease,
         isSeries,
-        episodeAirDate: epDate ? formatDate(epDate) : 'N/A',
+        episodeAirDate: epDate ? formatReleaseDate(epDate) : 'N/A',
         daysSinceEpisode: daysSinceEpisode ?? 'N/A',
-        digitalReleaseDates:
-          digitalDates.map((rd) => formatDate(rd.release_date)).join(', ') ||
-          'None',
+        digitalReleaseDates: digitalDates.length,
         pastDigitalRelease,
         closestFutureDigital: closestFutureDigital
-          ? `${formatDate(closestFutureDigital.date)} (${closestFutureDigital.daysUntil}d away)`
+          ? `${formatReleaseDate(closestFutureDigital.date)} (${closestFutureDigital.daysUntil}d away)`
           : 'None',
       });
 
@@ -689,17 +695,8 @@ class StreamFilterer {
         allow: boolean;
         reason: () => string;
         level?: 'debug' | 'info';
-        isResultAgeRule?: boolean;
       };
       const rules: FilterRule[] = [
-        {
-          when: () => streamPredatesRelease,
-          allow: false,
-          level: 'info',
-          isResultAgeRule: true,
-          reason: () =>
-            `Result predates ${isSeries ? `episode ${epLabel}'s air date` : `"${title}"'s release`} (${formatDate(referenceDateForAge!)})`,
-        },
         // General
         {
           when: () => daysSinceRelease < -tolerance,
@@ -761,7 +758,7 @@ class StreamFilterer {
           allow: false,
           level: 'info',
           reason: () =>
-            `"${title}" no digital release yet (closest: ${closestFutureDigital ? formatDate(closestFutureDigital.date) : 'None'}, ${closestFutureDigital?.daysUntil}d away)`,
+            `"${title}" no digital release yet (closest: ${closestFutureDigital ? formatReleaseDate(closestFutureDigital.date) : 'None'}, ${closestFutureDigital?.daysUntil}d away)`,
         },
         // Fallback
         {
@@ -782,16 +779,13 @@ class StreamFilterer {
           logger[rule.level ?? 'debug'](
             `[DigitalReleaseFilter] ${action} - ${reason}`
           );
-          if (rule.allow) return { allow: true };
-          return {
-            allow: false,
-            isResultAgeRule: !!rule.isResultAgeRule,
-            reason,
-          };
+          return rule.allow
+            ? { allow: true, resultAgeCheck }
+            : { allow: false, reason };
         }
       }
 
-      return { allow: true };
+      return { allow: true, resultAgeCheck };
     };
 
     const NON_SPECIFIC_LANGUAGES = ['Unknown', 'Dual Audio', 'Multi', 'Dubbed'];
@@ -1270,14 +1264,17 @@ class StreamFilterer {
 
     // Early digital release filter check - if it returns false, filter out streams
     // except those with passthrough for 'digitalRelease' stage or those from addons not in the filter list
-    const bulkDigitalReleaseVerdict = applyDigitalReleaseFilter();
-    if (!bulkDigitalReleaseVerdict.allow) {
+    const digitalReleaseVerdict = evaluateDigitalRelease();
+    const resultAgeCheck = digitalReleaseVerdict.allow
+      ? digitalReleaseVerdict.resultAgeCheck
+      : undefined;
+    if (!digitalReleaseVerdict.allow) {
       const passthroughDigitalRelease = streams.filter(isDigitalReleaseExempt);
       const filteredCount = streams.length - passthroughDigitalRelease.length;
       if (filteredCount > 0) {
         this.filterStatistics.removed.noDigitalRelease.total = filteredCount;
         this.filterStatistics.removed.noDigitalRelease.details[
-          bulkDigitalReleaseVerdict.reason
+          digitalReleaseVerdict.reason
         ] = filteredCount;
       }
       if (passthroughDigitalRelease.length > 0) {
@@ -1490,13 +1487,15 @@ class StreamFilterer {
     };
 
     const shouldKeepStream = (stream: ParsedStream): boolean => {
-      const digitalReleaseVerdict = applyDigitalReleaseFilter(stream);
-      if (!digitalReleaseVerdict.allow) {
+      if (
+        resultAgeCheck &&
+        stream.age !== undefined &&
+        stream.age > resultAgeCheck.maxAgeHours &&
+        !isDigitalReleaseExempt(stream)
+      ) {
         this.incrementRemovalReason(
-          digitalReleaseVerdict.isResultAgeRule
-            ? 'resultPredatesRelease'
-            : 'noDigitalRelease',
-          digitalReleaseVerdict.reason
+          'resultPredatesRelease',
+          resultAgeCheck.reason
         );
         return false;
       }
