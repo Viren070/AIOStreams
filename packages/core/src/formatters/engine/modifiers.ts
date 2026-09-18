@@ -14,7 +14,8 @@ import {
   languageToEmoji,
   normaliseLanguage,
 } from '../../utils/languages.js';
-import { substituteTools } from './sentinels.js';
+import { compileObjectFilter } from '../../utils/object-filter.js';
+import { sanitise, substituteTools } from './sentinels.js';
 
 /**
  * Modifier implementations, and the binding of a modifier's source text to a
@@ -82,6 +83,14 @@ function mapChars(value: string, from: string, to: string): string {
   }
   return [...value].map((char) => table.get(char) ?? char).join('');
 }
+
+export function isObjectList(value: unknown): value is object[] {
+  return (
+    Array.isArray(value) && typeof value[0] === 'object' && value[0] !== null
+  );
+}
+
+const OBJECT_LIST_MODIFIERS = new Set(['length', 'reverse']);
 
 const arrayGetOrDefault = (value: string[], index: number) =>
   value.length > 0 ? String(value[index]) : '';
@@ -210,7 +219,7 @@ export const prefixOperators = Object.keys(conditionalModifiers.prefix).sort(
 // ------------------------------------------------------------ argument parsing
 
 /** Pulls quoted arguments out of a call's argument list, in order. */
-function quotedArguments(inner: string): string[] {
+export function quotedArguments(inner: string): string[] {
   const args: string[] = [];
   const pattern = /"([^"]*)"|'([^']*)'/g;
   let match: RegExpExecArray | null;
@@ -302,6 +311,7 @@ function compileConditional(lower: string): CompiledModifier | undefined {
       // absent values are false without consulting the operator
       if (!exact.exists(value)) return false;
       if (isExact) return exact[lower as keyof typeof exact](value);
+      if (isObjectList(value)) return undefined;
 
       const arrayValue =
         Array.isArray(value) && value.every((item) => typeof item === 'string')
@@ -402,7 +412,9 @@ function compileParameterised(
           for (const target of targets) result = result.replaceAll(target, '');
           return result;
         }
-        if (Array.isArray(value)) return value.filter((v) => !args.includes(v));
+        if (Array.isArray(value) && !isObjectList(value)) {
+          return value.filter((v) => !args.includes(v));
+        }
         return undefined;
       };
     }
@@ -412,7 +424,37 @@ function compileParameterised(
       if (raw === undefined) return undefined;
       const separator = substituteTools(raw);
       return (value) =>
-        Array.isArray(value) ? value.join(separator) : undefined;
+        Array.isArray(value) && !isObjectList(value)
+          ? value.join(separator)
+          : undefined;
+    }
+
+    case 'where': {
+      let filter: ReturnType<typeof compileObjectFilter>;
+      try {
+        filter = compileObjectFilter(quotedArguments(inner));
+      } catch {
+        return () => undefined;
+      }
+      return (value) =>
+        Array.isArray(value) && (!value.length || isObjectList(value))
+          ? value.filter(filter)
+          : undefined;
+    }
+
+    case 'pluck': {
+      const key = unquote(inner);
+      if (key === undefined) return undefined;
+      return (value) => {
+        if (!Array.isArray(value)) return undefined;
+        if (value.length && !isObjectList(value)) return undefined;
+        const found = new Set<string>();
+        for (const item of value as Record<string, unknown>[]) {
+          const field = item[key];
+          if (typeof field === 'string' && field) found.add(sanitise(field));
+        }
+        return [...found];
+      };
     }
 
     case 'truncate': {
@@ -466,6 +508,7 @@ function compileParameterised(
       const set = new Set(options);
       return (value) => {
         if (value === null || value === undefined) return false;
+        if (isObjectList(value)) return undefined;
         if (Array.isArray(value)) {
           return value.some(
             (item) => typeof item === 'string' && set.has(item.toLowerCase())
@@ -505,6 +548,9 @@ function compilePlain(lower: string): CompiledModifier {
       return fn ? fn(value) : undefined;
     }
     if (Array.isArray(value)) {
+      if (isObjectList(value) && !OBJECT_LIST_MODIFIERS.has(lower)) {
+        return undefined;
+      }
       const fn = arrayModifiers[lower as keyof typeof arrayModifiers];
       return fn ? (fn as (v: any) => unknown)(value) : undefined;
     }

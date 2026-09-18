@@ -1,10 +1,11 @@
 import { ExpressionNode, GroupNode, OperandNode, TemplateNode } from './ast.js';
-import { parseTemplate } from './parser.js';
+import { eachTemplate, parseTemplate } from './parser.js';
 import {
   CompiledModifier,
   MAX_RENDER_LENGTH,
   ModifierContext,
   compileModifier,
+  isObjectList,
 } from './modifiers.js';
 import {
   NEW_LINE_SENTINEL,
@@ -37,6 +38,10 @@ const MAX_TEMPLATE_DEPTH = 5;
  */
 let renderBudget = MAX_RENDER_LENGTH;
 
+// an item can render nothing, so the length budget alone would not bound each()
+const MAX_EACH_RENDERS = 256;
+let eachBudget = MAX_EACH_RENDERS;
+
 /** Appends only while the budget lasts */
 function emit<TValue>(
   render: CompiledTemplate<TValue>,
@@ -64,13 +69,47 @@ interface PreparedOperand {
   modifiers: { source: string; apply: CompiledModifier }[];
 }
 
-function prepareOperand(node: OperandNode): PreparedOperand {
+function prepareOperand<TValue extends Record<string, any>>(
+  node: OperandNode,
+  hooks: CompileHooks<TValue>,
+  depth: number,
+  inEach: boolean
+): PreparedOperand {
   return {
     node,
     modifiers: node.modifiers.map((source) => ({
       source,
-      apply: compileModifier(source),
+      apply:
+        compileEach(source, hooks, depth, inEach) ?? compileModifier(source),
     })),
+  };
+}
+
+function compileEach<TValue extends Record<string, any>>(
+  source: string,
+  hooks: CompileHooks<TValue>,
+  depth: number,
+  inEach: boolean
+): CompiledModifier | undefined {
+  const template = eachTemplate(source);
+  if (!template) return undefined;
+  // nesting would multiply the work per level
+  if (inEach) return () => undefined;
+
+  const render = compileTemplate(template.content, hooks, depth + 1, true);
+  return (value, parseValue) => {
+    if (!Array.isArray(value)) return undefined;
+    if (value.length && !isObjectList(value)) return undefined;
+    const out: string[] = [];
+    let length = 0;
+    for (const track of value) {
+      if (eachBudget <= 0 || length >= MAX_RENDER_LENGTH) break;
+      eachBudget -= 1;
+      const text = render({ ...(parseValue as TValue), track } as TValue);
+      length += text.length;
+      if (/\S/.test(text)) out.push(text);
+    }
+    return out;
   };
 }
 
@@ -156,6 +195,12 @@ function resolveOperand<TValue extends Record<string, any>>(
     };
   }
 
+  if (isObjectList(result)) {
+    return {
+      error: `{unrenderable_list(${operand.node.section}.${operand.node.property})}`,
+    };
+  }
+
   return { result, present };
 }
 
@@ -228,7 +273,8 @@ function resolveExpression<TValue extends Record<string, any>>(
 function compileNode<TValue extends Record<string, any>>(
   node: TemplateNode,
   hooks: CompileHooks<TValue>,
-  depth: number
+  depth: number,
+  inEach: boolean
 ): CompiledTemplate<TValue> {
   if (node.kind === 'raw') {
     // resolved per literal, so a value containing a backslash-n is untouched
@@ -242,9 +288,11 @@ function compileNode<TValue extends Record<string, any>>(
     return () => sentinel;
   }
 
-  if (node.kind === 'group') return compileGroup(node, hooks, depth);
+  if (node.kind === 'group') return compileGroup(node, hooks, depth, inEach);
 
-  const operands = node.operands.map(prepareOperand);
+  const operands = node.operands.map((operand) =>
+    prepareOperand(operand, hooks, depth, inEach)
+  );
 
   if (!node.check) {
     return (parseValue) => {
@@ -253,12 +301,14 @@ function compileNode<TValue extends Record<string, any>>(
     };
   }
 
-  const whenTrue = compileTemplate(node.check.trueTemplate, hooks, depth + 1);
-  const whenFalse = compileTemplate(node.check.falseTemplate, hooks, depth + 1);
+  const branch = (template: string) =>
+    compileTemplate(template, hooks, depth + 1, inEach);
+  const whenTrue = branch(node.check.trueTemplate);
+  const whenFalse = branch(node.check.falseTemplate);
   const whenAbsent =
     node.check.absentTemplate === undefined
       ? undefined
-      : compileTemplate(node.check.absentTemplate, hooks, depth + 1);
+      : branch(node.check.absentTemplate);
 
   return (parseValue) => {
     const resolved = resolveExpression(node, operands, parseValue, hooks);
@@ -289,15 +339,18 @@ function isPresent(value: unknown): boolean {
 function compileGroup<TValue extends Record<string, any>>(
   node: GroupNode,
   hooks: CompileHooks<TValue>,
-  depth: number
+  depth: number,
+  inEach: boolean
 ): CompiledTemplate<TValue> {
   const parts = node.nodes.map((child) => ({
     node: child,
-    render: compileNode(child, hooks, depth),
+    render: compileNode(child, hooks, depth, inEach),
     // a check produces output either way, so it never suppresses the group
     operands:
       child.kind === 'expression' && !child.check
-        ? child.operands.map(prepareOperand)
+        ? child.operands.map((operand) =>
+            prepareOperand(operand, hooks, depth, inEach)
+          )
         : undefined,
   }));
 
@@ -329,7 +382,10 @@ export function evaluateExpression<TValue extends Record<string, any>>(
   parseValue: TValue,
   hooks: CompileHooks<TValue>
 ): Resolved {
-  const operands = node.operands.map(prepareOperand);
+  const operands = node.operands.map((operand) =>
+    prepareOperand(operand, hooks, 0, false)
+  );
+  eachBudget = MAX_EACH_RENDERS;
   return resolveExpression(node, operands, parseValue, hooks);
 }
 
@@ -337,7 +393,8 @@ export function evaluateExpression<TValue extends Record<string, any>>(
 export function compileTemplate<TValue extends Record<string, any>>(
   template: string,
   hooks: CompileHooks<TValue>,
-  depth = 0
+  depth = 0,
+  inEach = false
 ): CompiledTemplate<TValue> {
   if (depth > MAX_TEMPLATE_DEPTH) {
     hooks.onDepthExceeded?.(MAX_TEMPLATE_DEPTH);
@@ -350,7 +407,7 @@ export function compileTemplate<TValue extends Record<string, any>>(
   }
 
   const { nodes } = parseTemplate(source);
-  const compiled = nodes.map((node) => compileNode(node, hooks, depth));
+  const compiled = nodes.map((node) => compileNode(node, hooks, depth, inEach));
 
   const render: CompiledTemplate<TValue> =
     compiled.length === 1
@@ -366,6 +423,7 @@ export function compileTemplate<TValue extends Record<string, any>>(
   if (depth > 0) return render;
   return (parseValue) => {
     renderBudget = MAX_RENDER_LENGTH;
+    eachBudget = MAX_EACH_RENDERS;
     return render(parseValue);
   };
 }

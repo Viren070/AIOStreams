@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import * as constants from '../../../../../../../core/src/utils/constants';
 import { ParsedFile } from '../../../../../../../core/src/db/schemas';
 import { IconButton, Button } from '../../../../ui/button';
 import { TextInput } from '../../../../ui/text-input';
+import { Textarea } from '../../../../ui/textarea';
+import { cn } from '../../../../ui/core/styling';
 import { Select } from '../../../../ui/select';
 import { Combobox } from '../../../../ui/combobox';
 import {
@@ -27,7 +29,7 @@ type RowKind =
   | 'enum'
   | 'enumList'
   | 'bool'
-  | 'trackTitles';
+  | 'tracks';
 
 type SetOverride = (
   key: keyof ParsedFile,
@@ -184,17 +186,17 @@ const COMMON_ROWS: readonly Row[] = [
 const ADVANCED_ROWS: readonly Row[] = [
   {
     key: 'audioTracks',
-    label: 'Audio track titles',
-    field: 'stream.audioTitles',
-    kind: 'trackTitles',
-    help: 'Only media info fills this in, e.g. VFF, VFQ, Descriptive',
+    label: 'Audio tracks',
+    field: 'stream.audioTracks',
+    kind: 'tracks',
+    help: 'Only media info fills this in. A JSON array, e.g. [{"lang": "English", "codec": "truehd", "tag": "TrueHD", "channels": "7.1", "title": "Commentary", "commentary": true}]',
   },
   {
     key: 'subtitleTracks',
-    label: 'Subtitle track titles',
-    field: 'stream.subtitleTitles',
-    kind: 'trackTitles',
-    help: 'Only media info fills this in, e.g. SDH, VFQ (Forced)',
+    label: 'Subtitle tracks',
+    field: 'stream.subtitleTracks',
+    kind: 'tracks',
+    help: 'Only media info fills this in. A JSON array, e.g. [{"lang": "English", "codec": "subrip", "title": "SDH", "hearingImpaired": true}]',
   },
   { key: 'country', label: 'Country', field: 'stream.country', kind: 'text' },
   {
@@ -304,12 +306,75 @@ function toList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
 }
 
-function trackTitlesToText(value: unknown): string {
-  if (!Array.isArray(value)) return '';
-  return value
-    .map((track) => (track as { title?: string } | null)?.title)
-    .filter((title): title is string => !!title)
-    .join(', ');
+function tracksToText(value: unknown): string {
+  return Array.isArray(value) && value.length
+    ? JSON.stringify(value, null, 2)
+    : '';
+}
+
+function isTrackList(value: unknown): value is object[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (track) =>
+        typeof track === 'object' && track !== null && !Array.isArray(track)
+    )
+  );
+}
+
+function TracksInput({
+  label,
+  help,
+  value,
+  onChange,
+}: {
+  label: React.ReactNode;
+  help?: string;
+  value: unknown;
+  onChange: (tracks: unknown[]) => void;
+}) {
+  const text = tracksToText(value);
+  const [draft, setDraft] = useState(text);
+  const [error, setError] = useState<string>();
+  const applied = useRef(text);
+
+  // a reset or scenario change replaces the draft; our own edits do not
+  useEffect(() => {
+    if (text === applied.current) return;
+    applied.current = text;
+    setDraft(text);
+    setError(undefined);
+  }, [text]);
+
+  const edit = (next: string) => {
+    setDraft(next);
+    let json: unknown = [];
+    try {
+      json = next.trim() ? JSON.parse(next) : [];
+    } catch {
+      setError('Invalid JSON');
+      return;
+    }
+    if (!isTrackList(json)) {
+      setError('Expected an array of track objects');
+      return;
+    }
+    setError(undefined);
+    applied.current = tracksToText(json);
+    onChange(json);
+  };
+
+  return (
+    <Textarea
+      label={label}
+      moreHelp={help}
+      error={error}
+      value={draft}
+      placeholder="Not detected"
+      onValueChange={edit}
+      className="w-full font-mono text-xs"
+    />
+  );
 }
 
 function ParsedFileRow({
@@ -428,20 +493,13 @@ function ParsedFileRow({
         />
       );
       break;
-    case 'trackTitles':
+    case 'tracks':
       control = (
-        <TextInput
+        <TracksInput
           label={label}
-          moreHelp={row.help ?? 'Comma separated'}
-          value={trackTitlesToText(value)}
-          placeholder="Not detected"
-          onValueChange={(next) =>
-            setOverride(
-              row.key,
-              splitList(next ?? '').map((title) => ({ title }))
-            )
-          }
-          className="w-full"
+          help={row.help}
+          value={value}
+          onChange={(tracks) => setOverride(row.key, tracks)}
         />
       );
       break;
@@ -459,7 +517,12 @@ function ParsedFileRow({
   }
 
   return (
-    <div className="flex items-end gap-1.5">
+    <div
+      className={cn(
+        'flex items-end gap-1.5',
+        row.kind === 'tracks' && 'sm:col-span-3'
+      )}
+    >
       <div className="min-w-0 flex-1">{control}</div>
       <IconButton
         size="sm"

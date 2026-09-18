@@ -1,4 +1,4 @@
-﻿import type { ParsedStream, UserData } from '../db/schemas.js';
+﻿import type { MediaTrack, ParsedStream, UserData } from '../db/schemas.js';
 import * as constants from '../utils/constants.js';
 import { formatHours, makeSmall } from './utils.js';
 import { languageToCode, languageToEmoji } from '../utils/languages.js';
@@ -35,10 +35,28 @@ import { comparatorFunctions } from './engine/comparators.js';
  * SOFTWARE.
  */
 
-function trackTitles(tracks: { title?: string }[] | undefined): string[] {
-  return (tracks ?? [])
-    .map((track) => track.title)
-    .filter((title): title is string => !!title);
+type FormatterTrack = {
+  [K in keyof MediaTrack]-?: NonNullable<MediaTrack[K]> | null;
+};
+
+// stored tracks omit unset fields, which would read as unknown properties
+const TRACK_DEFAULTS: FormatterTrack = {
+  lang: null,
+  codec: null,
+  tag: null,
+  channels: null,
+  title: null,
+  default: false,
+  forced: false,
+  commentary: false,
+  dub: false,
+  original: false,
+  hearingImpaired: false,
+  visualImpaired: false,
+};
+
+function formatterTracks(tracks: MediaTrack[] | undefined): FormatterTrack[] {
+  return (tracks ?? []).map((track) => ({ ...TRACK_DEFAULTS, ...track }));
 }
 
 export interface FormatterConfig {
@@ -82,8 +100,8 @@ export interface ParseValue {
     uWedontknowwhatakilometeris: string[] | null;
     visualTags: string[] | null;
     audioTags: string[] | null;
-    audioTitles: string[];
-    subtitleTitles: string[];
+    audioTracks: FormatterTrack[];
+    subtitleTracks: FormatterTrack[];
     releaseGroup: string | null;
     regexMatched: string | null;
     rankedRegexMatched: string[];
@@ -171,6 +189,7 @@ export interface ParseValue {
     malId: number | null;
     hasSeaDex: boolean;
   };
+  track?: FormatterTrack;
   service?: {
     id: string | null;
     shortName: string | null;
@@ -566,9 +585,8 @@ export abstract class BaseFormatter {
         },
         visualTags: sortedVisualTags,
         audioTags: sortedAudioTags,
-        /* Track names, from media info only. */
-        audioTitles: trackTitles(stream.parsedFile?.audioTracks),
-        subtitleTitles: trackTitles(stream.parsedFile?.subtitleTracks),
+        audioTracks: formatterTracks(stream.parsedFile?.audioTracks),
+        subtitleTracks: formatterTracks(stream.parsedFile?.subtitleTracks),
         releaseGroup: stream.parsedFile?.releaseGroup || null,
         regexMatched:
           stream.regexMatched?.name || stream.rankedRegexesMatched?.[0] || null,
