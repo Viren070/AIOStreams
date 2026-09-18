@@ -59,6 +59,7 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'upscaled',
     'hasChapters',
     'network',
+    'site',
     'container',
     'extension',
     'indexer',

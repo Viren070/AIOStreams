@@ -135,6 +135,7 @@ class FileParser {
       unrated: parsed.unrated ?? false,
       upscaled: parsed.upscaled ?? false,
       network: parsed.network,
+      site: parsed.site,
       container: parsed.container,
       extension: parsed.extension,
       seasons: parsed.seasons,

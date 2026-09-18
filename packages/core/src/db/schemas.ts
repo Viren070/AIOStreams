@@ -1386,6 +1386,7 @@ export const ParsedFileSchema = z.object({
   unrated: z.boolean().optional(),
   upscaled: z.boolean().optional(),
   network: z.string().optional(),
+  site: z.string().optional(),
   container: z.string().optional(),
   extension: z.string().optional(),
   seasonPack: z.boolean().optional(),

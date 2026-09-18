@@ -226,6 +226,7 @@ const ADVANCED_ROWS: readonly Row[] = [
     help: 'Parsed but not exposed to templates',
   },
   { key: 'network', label: 'Network', field: 'stream.network', kind: 'text' },
+  { key: 'site', label: 'Site', field: 'stream.site', kind: 'text' },
   {
     key: 'container',
     label: 'Container',

@@ -121,6 +121,7 @@ export interface ParseValue {
     upscaled: boolean;
     hasChapters: boolean;
     network: string | null;
+    site: string | null;
     container: string | null;
     extension: string | null;
     indexer: string | null;
@@ -652,6 +653,7 @@ export abstract class BaseFormatter {
         upscaled: stream.parsedFile?.upscaled ?? false,
         hasChapters: stream.parsedFile?.hasChapters ?? false,
         network: stream.parsedFile?.network || null,
+        site: stream.parsedFile?.site || null,
         container: stream.parsedFile?.container || null,
         extension: stream.parsedFile?.extension || null,
         seadex: stream.seadex?.isSeadex ?? false,
