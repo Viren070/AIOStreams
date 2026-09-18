@@ -15,6 +15,11 @@ import {
   EngineOptions,
 } from '../../index.js';
 import { usenetEngineRegistry, getUsenetEngineConfig } from '../engine.js';
+import {
+  buildIndexerAliasIndex,
+  foldIndexerErrors,
+  foldIndexerRollups,
+} from '../indexer-aliases.js';
 
 export type UsenetStatsWindow = '24h' | '7d' | '30d' | 'all';
 
@@ -94,6 +99,8 @@ export interface UsenetIndexerStatRow {
   avgImportMs: number | null;
   /** Most recent grab-fetch error, regardless of window. */
   lastError?: { status?: number; message: string; atMs: number };
+  /** Recorded spellings folded into this row; absent when nothing was merged. */
+  mergedFrom?: string[];
 }
 
 export interface UsenetThroughputPoint {
@@ -278,6 +285,33 @@ async function flushBeforeDelete(): Promise<void> {
   }
 }
 
+/**
+ * Every recorded spelling that the merge rules fold into `canonical`.
+ *
+ * A merged row is shown under its canonical name, so a reset aimed at that name
+ * has to reach every spelling behind it — otherwise the eraser clears one and
+ * the dry run under-reports what it removed. Returns undefined when no rule is
+ * configured, so an unmerged install keeps the exact single-label scope it had
+ * before this existed, and never reads the settings store at all.
+ */
+async function expandMergedIndexer(
+  canonical: string
+): Promise<string[] | undefined> {
+  const aliasIndex = buildIndexerAliasIndex(
+    settingsStore.current.usenet?.indexerAliases
+  );
+  if (aliasIndex.empty) return undefined;
+  const recorded = await UsenetIndexerMetricsRepository.distinctIndexers();
+  return [
+    ...new Set([
+      ...recorded.filter(
+        (label) => aliasIndex.canonicalOf(label) === canonical
+      ),
+      canonical,
+    ]),
+  ];
+}
+
 /** Reset recorded rollups for one provider/indexer, or for all of them. */
 export async function resetUsenetStats(
   input: UsenetStatsResetInput
@@ -286,9 +320,18 @@ export async function resetUsenetStats(
   const touchesProviders = target === 'providers' || target === 'all';
   const touchesIndexers = target === 'indexers' || target === 'all';
   const providerScope = { providerId: id, sinceMs, untilMs };
-  const indexerScope = { indexer: id, sinceMs, untilMs };
 
   if (!dryRun) await flushBeforeDelete();
+
+  // Expanded after the flush, so a spelling whose only rows were still held in
+  // memory is in the member list rather than surviving the delete.
+  const indexerMembers =
+    touchesIndexers && id !== undefined
+      ? await expandMergedIndexer(id)
+      : undefined;
+  const indexerScope = indexerMembers
+    ? { indexers: indexerMembers, sinceMs, untilMs }
+    : { indexer: id, sinceMs, untilMs };
 
   const provider = touchesProviders
     ? await UsenetMetricsRepository.sumScope(providerScope)
@@ -307,8 +350,16 @@ export async function resetUsenetStats(
       await UsenetMetricsRepository.deleteScope(providerScope);
     if (touchesIndexers)
       await UsenetIndexerMetricsRepository.deleteScope(indexerScope);
-    if (clearsLastError)
-      lastErrorRows = await UsenetIndexerMetricsRepository.deleteLastError(id);
+    if (clearsLastError) {
+      if (indexerMembers) {
+        for (const member of indexerMembers)
+          lastErrorRows +=
+            await UsenetIndexerMetricsRepository.deleteLastError(member);
+      } else {
+        lastErrorRows =
+          await UsenetIndexerMetricsRepository.deleteLastError(id);
+      }
+    }
     logger.warn(
       {
         username,
@@ -496,13 +547,21 @@ export async function getUsenetStatsOverview(
   // Sort by usage desc, keeping configured-but-idle providers after active ones.
   providers.sort((a, b) => b.articles - a.articles || a.priority - b.priority);
 
-  const lastErrorByIndexer = new Map(indexerErrors.map((e) => [e.indexer, e]));
-  const totalGrabs = indexerSummary.reduce((s, i) => s + i.grabs, 0);
-  const indexers: UsenetIndexerStatRow[] = indexerSummary
+  // Folded here, on the rollups — the last shape still carrying sums and sample
+  // counts, so the means below stay exact. Folding any later could only average
+  // averages. `totalGrabs` is a sum of sums, so the shares still total 1.
+  const aliasIndex = buildIndexerAliasIndex(
+    settingsStore.current.usenet?.indexerAliases
+  );
+  const foldedSummary = foldIndexerRollups(indexerSummary, aliasIndex);
+  const lastErrorByIndexer = foldIndexerErrors(indexerErrors, aliasIndex);
+  const totalGrabs = foldedSummary.reduce((s, i) => s + i.grabs, 0);
+  const indexers: UsenetIndexerStatRow[] = foldedSummary
     .map((agg) => {
       const err = lastErrorByIndexer.get(agg.indexer);
       return {
         indexer: agg.indexer,
+        mergedFrom: agg.members.length > 1 ? agg.members : undefined,
         grabs: agg.grabs,
         ok: agg.ok,
         degraded: agg.degraded,

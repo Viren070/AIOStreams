@@ -67,6 +67,8 @@ interface RollupRow {
 /** An empty scope matches every row. */
 export interface UsenetIndexerScope {
   indexer?: string;
+  /** Every recorded spelling of one merged indexer. An empty list matches nothing. */
+  indexers?: string[];
   /** Inclusive lower bound on `hour_ms`. */
   sinceMs?: number;
   /** Exclusive upper bound on `hour_ms`. */
@@ -79,8 +81,20 @@ function hourFloor(ts: number): number {
   return ts - (ts % HOUR_MS);
 }
 
-function scopeWhere(s: UsenetIndexerScope): SqlFragment {
+/** Exported for the guard tests: an empty `indexers` list must match nothing. */
+export function scopeWhere(s: UsenetIndexerScope): SqlFragment {
   const parts: SqlFragment[] = [];
+  // Checked first and returned eagerly: an empty list must never fall through
+  // to the `1 = 1` catch-all below and turn a one-indexer reset into a wipe.
+  if (s.indexers !== undefined) {
+    if (s.indexers.length === 0) return sql`1 = 0`;
+    parts.push(
+      sql`indexer IN (${join(
+        s.indexers.map((i) => sql`${i}`),
+        ', '
+      )})`
+    );
+  }
   if (s.indexer !== undefined) parts.push(sql`indexer = ${s.indexer}`);
   if (s.sinceMs !== undefined) parts.push(sql`hour_ms >= ${s.sinceMs}`);
   if (s.untilMs !== undefined) parts.push(sql`hour_ms < ${s.untilMs}`);
@@ -194,6 +208,14 @@ export class UsenetIndexerMetricsRepository {
         importSamples: Number(r.import_samples ?? 0),
       };
     });
+  }
+
+  /** Every label with a recorded rollup, for expanding a merged row to its members. */
+  static async distinctIndexers(): Promise<string[]> {
+    const rows = await getDb().query<{ indexer: string }>(
+      sql`SELECT DISTINCT indexer FROM usenet_indexer_metrics`
+    );
+    return rows.map((r) => r.indexer);
   }
 
   /** Totals for a scope, for previewing what a reset would remove. */

@@ -162,6 +162,49 @@ const unitInterval = z
  * The service layer maps this section onto the engine's `ProviderConfig[]` and
  * `EngineOptions`; the engine itself never reads this or any UserData.
  */
+/**
+ * Accepts the stored record shape or the env form `Ds:DrunkenSlug,
+ * drunkenslug.com:DrunkenSlug`. Keys are indexer labels exactly as the stats
+ * table shows them; values the name to merge them into.
+ */
+const indexerAliases = z
+  .union([
+    z.record(z.string(), z.string()),
+    z.string().transform((value, ctx) => {
+      const trimmed = value.trim();
+      const out: Record<string, string> = {};
+      if (!trimmed) return out;
+      for (const pair of trimmed.split(',')) {
+        const entry = pair.trim();
+        if (!entry) continue;
+        // Split on the last colon, so a name containing one still parses.
+        const at = entry.lastIndexOf(':');
+        const variant = at === -1 ? '' : entry.slice(0, at).trim();
+        const canonical = at === -1 ? '' : entry.slice(at + 1).trim();
+        if (!variant || !canonical) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Invalid indexer merge rule "${entry}". Expected variant:canonical, e.g. Ds:DrunkenSlug.`,
+          });
+          return z.NEVER;
+        }
+        out[variant] = canonical;
+      }
+      return out;
+    }),
+  ])
+  .superRefine((map, ctx) => {
+    for (const [variant, canonical] of Object.entries(map)) {
+      if (!variant.trim() || !canonical.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'An indexer merge rule needs both the recorded name and the name to merge it into.',
+        });
+      }
+    }
+  });
+
 export const usenetSchema = {
   providers: {
     schema: z.array(providerConfigSchema),
@@ -551,6 +594,23 @@ export const usenetSchema = {
     requiresRestart: false,
     secret: false,
     ui: { kind: 'duration' as const },
+  },
+  indexerAliases: {
+    schema: indexerAliases,
+    default: {},
+    label: 'Indexer merge rules',
+    description:
+      'Merge indexer names that mean the same indexer, so the dashboard counts ' +
+      'them as one. Different addons report different names for the same ' +
+      'indexer, and grabs added through SABnzbd or an *arr are recorded under ' +
+      'the NZB host instead — which splits one indexer across several rows. ' +
+      'Each key is a name exactly as the Indexer performance table shows it, ' +
+      'and its value the name to merge it into (matching ignores casing). ' +
+      'Env form: `Ds:DrunkenSlug, drunkenslug.com:DrunkenSlug`.',
+    env: 'USENET_INDEXER_ALIASES',
+    requiresRestart: false,
+    secret: false,
+    ui: { kind: 'map', mapValueKind: 'string' },
   },
   recheck: {
     scope: {
