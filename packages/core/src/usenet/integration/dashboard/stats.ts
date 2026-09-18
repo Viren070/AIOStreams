@@ -301,13 +301,15 @@ async function expandMergedIndexer(
     settingsStore.current.usenet?.indexerAliases
   );
   if (aliasIndex.empty) return undefined;
+  // The dashboard sends the canonical name it displayed, but the endpoint takes
+  // any label: resolve it first, so a reset aimed at a member spelling clears
+  // the whole group rather than that one spelling.
+  const target = aliasIndex.canonicalOf(canonical);
   const recorded = await UsenetIndexerMetricsRepository.distinctIndexers();
   return [
     ...new Set([
-      ...recorded.filter(
-        (label) => aliasIndex.canonicalOf(label) === canonical
-      ),
-      canonical,
+      ...recorded.filter((label) => aliasIndex.canonicalOf(label) === target),
+      target,
     ]),
   ];
 }

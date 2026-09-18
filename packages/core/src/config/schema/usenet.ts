@@ -173,6 +173,10 @@ const indexerAliases = z
     z.string().transform((value, ctx) => {
       const trimmed = value.trim();
       const out: Record<string, string> = {};
+      // Names are matched without case downstream, so a key repeated under any
+      // spelling is one rule. Caught here because assigning into `out` would
+      // collapse an exact repeat before anything else could see the conflict.
+      const seen = new Map<string, string>();
       if (!trimmed) return out;
       for (const pair of trimmed.split(',')) {
         const entry = pair.trim();
@@ -188,6 +192,16 @@ const indexerAliases = z
           });
           return z.NEVER;
         }
+        const key = variant.toLowerCase();
+        const prior = seen.get(key);
+        if (prior !== undefined && prior !== canonical) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Conflicting indexer merge rules for "${variant}": "${prior}" and "${canonical}". Give each name one target.`,
+          });
+          return z.NEVER;
+        }
+        seen.set(key, canonical);
         out[variant] = canonical;
       }
       return out;
