@@ -288,6 +288,7 @@ function wrap(pinoInstance: PinoLogger): Logger {
         level in legacyLevelMap
           ? legacyLevelMap[level as keyof typeof legacyLevelMap]
           : (level as Level);
+      if (!pinoInstance.isLevelEnabled(target)) return;
       const { obj, msg } = normalizeArgs(args);
       deconflictReservedKeys(obj);
       deriveLatencyHuman(obj);
