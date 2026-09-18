@@ -302,6 +302,8 @@ A quoted value can be used wherever a field is expected, which is useful for pip
 | ---------------------------------- | -------------------------------------------------------------- |
 | `::upper`                          | Convert to UPPERCASE                                           |
 | `::lower`                          | Convert to lowercase                                           |
+| `::trim`                           | Remove leading and trailing whitespace                         |
+| `::trim('chars')`                  | Remove any of `chars` from both ends                           |
 | `::smallcaps`                      | Convert letters to ꜱᴍᴀʟʟ ᴄᴀᴘꜱ                                  |
 | `::subscript`                      | Convert digits to ₀₁₂₃₄₅₆₇₈₉                                   |
 | `::superscript`                    | Convert digits to ⁰¹²³⁴⁵⁶⁷⁸⁹                                   |
@@ -328,6 +330,12 @@ A quoted value can be used wherever a field is expected, which is useful for pip
 
 ```
 {stream.quality::translate('Bl','Яⅼ')}   ->  ЯⅼuRay
+```
+
+`::trim('chars')` strips any of the given characters from both ends, such as the separator left behind after removing the site from a filename:
+
+```
+{stream.filename::replace('{stream.site}','')::trim(' -')}   ->  Movie (2024) 1080p WEB-DL.mkv
 ```
 
 ### Number Modifiers

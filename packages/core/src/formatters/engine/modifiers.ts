@@ -49,6 +49,7 @@ const mapLanguages = (
 const stringModifiers = {
   upper: (value: string) => value.toUpperCase(),
   lower: (value: string) => value.toLowerCase(),
+  trim: (value: string) => value.trim(),
   title: (value: string) =>
     value
       .split(' ')
@@ -491,6 +492,21 @@ function compileParameterised(
       if (fallback === undefined) return undefined;
       return (value) =>
         conditionalModifiers.exact.exists(value) ? value : fallback;
+    }
+
+    case 'trim': {
+      const chars = unquote(inner);
+      if (chars === undefined) return undefined;
+      const strip = new Set(chars);
+      return (value) => {
+        if (typeof value !== 'string') return undefined;
+        const points = [...value];
+        let start = 0;
+        let end = points.length;
+        while (start < end && strip.has(points[start])) start += 1;
+        while (end > start && strip.has(points[end - 1])) end -= 1;
+        return points.slice(start, end).join('');
+      };
     }
 
     case 'translate': {

@@ -65,6 +65,7 @@ export const CALL_MODIFIERS: readonly (readonly [string, CallArgumentShape])[] =
     ['default', 'quoted'],
     ['in', 'loose'],
     ['translate', 'quotedPair'],
+    ['trim', 'quoted'],
     ['where', 'quotedList'],
     ['pluck', 'quoted'],
     ['each', 'template'],
