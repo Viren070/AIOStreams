@@ -49,7 +49,9 @@ export class SubRankerPreset extends Preset {
           'How many subtitles to return. 0 returns all of them. A short list is easier to use on clients that label every row identically.',
         default: 0,
         required: false,
-        constraints: { min: 0, max: 50 },
+        // No min: their schema requires min >= 1, and 0 is meaningful here
+        // (return everything), so only the upper bound is expressible.
+        constraints: { max: 50 },
       },
       {
         id: 'autoShift',
