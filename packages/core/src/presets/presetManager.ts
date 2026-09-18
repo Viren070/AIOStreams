@@ -41,6 +41,7 @@ import { USATVPreset } from './usaTv.js';
 import { USATVNextPreset } from './usaTvNext.js';
 import { ArgentinaTVPreset } from './argentinaTv.js';
 import { OpenSubtitlesV3PlusPreset } from './opensubtitles-v3-plus.js';
+import { SubRankerPreset } from './subranker.js';
 import { SubSourcePreset } from './subsource.js';
 import { SubDLPreset } from './subdl.js';
 import { AISearchPreset } from './aiSearch.js';
@@ -164,6 +165,7 @@ let PRESET_LIST: string[] = [
   'subdl',
   'subhero',
   'aiosubtitle',
+  'subranker',
   'ai-companion',
   'ai-search',
   'more-like-this',
@@ -283,6 +285,8 @@ export class PresetManager {
         return BrazucaTorrentsPreset;
       case 'opensubtitles-v3-plus':
         return OpenSubtitlesV3PlusPreset;
+      case 'subranker':
+        return SubRankerPreset;
       case 'subsource':
         return SubSourcePreset;
       case 'subdl':
