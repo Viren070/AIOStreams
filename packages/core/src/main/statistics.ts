@@ -98,10 +98,13 @@ export function buildStatistics(
     (userData.digitalReleaseFilter?.showInfoOnFilter ?? true) &&
     filterStats.removed.noDigitalRelease.total > 0
   ) {
+    const noDigitalReleaseReason = Object.keys(
+      filterStats.removed.noDigitalRelease.details
+    )[0];
     statistics.push({
       title: '📅 Digital Release Filter',
       description: [
-        `⚠️ There is no digital release available for this media yet.`,
+        `⚠️ ${noDigitalReleaseReason ?? 'There is no digital release available for this media yet.'}`,
         finalStreams.length > 0
           ? '🔎 There are still streams present, this may be\ndue to any passthrough that is configured (addon level, SEL etc.)'
           : '',
