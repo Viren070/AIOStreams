@@ -274,7 +274,7 @@ export async function getCatalogPage(
       skip = skips[i] + data.length;
       // Consecutive pages of nothing but repeats mean skip stopped advancing.
       stalled = novel ? 0 : stalled + 1;
-      if (!canSkip || stalled >= 3) {
+      if (!canSkip || opts.search || stalled >= 3) {
         exhausted = true;
         break;
       }
