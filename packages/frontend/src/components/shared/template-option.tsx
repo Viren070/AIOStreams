@@ -694,6 +694,7 @@ interface NabTestResult {
   searchModes?: string[];
   idSearchParams?: { movie: string[]; series: string[] };
   resultCount?: number;
+  missingInfoHash?: boolean;
   error?: { code?: number; message: string };
 }
 
@@ -890,11 +891,20 @@ function NabTestSummary({ result }: { result: NabTestResult }) {
   ].filter(Boolean);
 
   return (
-    <Alert
-      intent={'success-basic'}
-      title={`Connected to ${result.server?.title || 'the indexer'}`}
-      description={details.join(' · ')}
-    />
+    <div className="space-y-2">
+      <Alert
+        intent={'success-basic'}
+        title={`Connected to ${result.server?.title || 'the indexer'}`}
+        description={details.join(' · ')}
+      />
+      {result.missingInfoHash && (
+        <Alert
+          intent="warning-basic"
+          title="No hash in the sample result"
+          description="This indexer may need to download the torrent file for every result, which can affect performance or hit request limits. Consider lowering the results limit if you notice issues."
+        />
+      )}
+    </div>
   );
 }
 
