@@ -1,6 +1,7 @@
 import type { MediaTrack, ParsedFile, ParsedStream } from '../db/schemas.js';
 import { constants } from '../utils/index.js';
 import { languageToIso6392 } from '../utils/languages.js';
+import { subtitleLanguage } from './enrichment.js';
 import { mediaSourceId } from './ids.js';
 import {
   mergeSubtitleTracks,
@@ -342,6 +343,22 @@ function embeddedSubtitleStreams(
   }));
 }
 
+function externalSubtitleTitle(
+  sub: SubtitleTrack,
+  language: string | undefined
+): string {
+  const { title } = sub;
+  const named =
+    !!language && !!title?.toLowerCase().includes(language.toLowerCase());
+  return [
+    named ? undefined : (language ?? (title ? undefined : 'Unknown')),
+    title ?? 'External',
+    ...trackFlagLabels(sub),
+  ]
+    .filter(Boolean)
+    .join(' - ');
+}
+
 export interface MediaSourceBuildOptions {
   /** Id to emit; the first source of an item uses the item id. */
   id: string;
@@ -380,6 +397,7 @@ export function buildMediaStreams(
     const index = externalStart + i;
     const format = opts.subtitleFormat(subtitleExtensionOf(sub.url));
     const url = opts.subtitleUrl(index, format);
+    const language = subtitleLanguage(sub.lang);
     streams.push({
       Type: 'Subtitle',
       Index: index,
@@ -387,10 +405,12 @@ export function buildMediaStreams(
       IsExternal: true,
       SupportsExternalStream: true,
       Codec: subtitleCodecFor(format),
-      Language: languageToIso6392(sub.lang) ?? sub.lang.toLowerCase(),
-      DisplayTitle: `${sub.lang} (external)`,
-      Title: sub.lang,
+      Language: language.code,
+      DisplayTitle: externalSubtitleTitle(sub, language.name),
+      Title: sub.title,
       IsDefault: false,
+      IsForced: sub.forced ?? false,
+      IsHearingImpaired: sub.hearingImpaired ?? false,
       IsTextSubtitleStream: true,
       DeliveryMethod: 'External',
       DeliveryUrl: url,

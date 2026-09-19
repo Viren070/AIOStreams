@@ -1,7 +1,25 @@
 import type { ParsedStream, Subtitle } from '../db/schemas.js';
+import { readSubtitleEnrichment } from './enrichment.js';
 import type { DeviceProfile, SubtitleTrack } from './types.js';
 
 export type SubtitleFormat = 'vtt' | 'srt' | 'ass' | 'json';
+
+/* Memos hold every track, so flags are only stored when set. */
+function subtitleTrack(
+  s: Subtitle,
+  source: SubtitleTrack['source']
+): SubtitleTrack {
+  const { title, forced, hearingImpaired } = readSubtitleEnrichment(s);
+  return {
+    id: s.id,
+    url: s.url,
+    lang: s.lang,
+    source,
+    title,
+    forced: forced || undefined,
+    hearingImpaired: hearingImpaired || undefined,
+  };
+}
 
 /** Stream-attached subtitles first (release specific), then addon subtitles. */
 export function mergeSubtitleTracks(
@@ -15,20 +33,13 @@ export function mergeSubtitleTracks(
     seen.add(t.url);
     out.push(t);
   };
-  for (const s of stream?.subtitles ?? []) {
-    push({ id: s.id, url: s.url, lang: s.lang, source: 'stream' });
-  }
+  for (const s of stream?.subtitles ?? []) push(subtitleTrack(s, 'stream'));
   for (const s of addonSubtitles) push(s);
   return out;
 }
 
 export function addonSubtitleTracks(subs: Subtitle[]): SubtitleTrack[] {
-  return subs.map((s) => ({
-    id: s.id,
-    url: s.url,
-    lang: s.lang,
-    source: 'addon',
-  }));
+  return subs.map((s) => subtitleTrack(s, 'addon'));
 }
 
 /**
@@ -211,12 +222,22 @@ const VTT_TYPE = 'text/vtt; charset=utf-8';
 const SRT_TYPE = 'application/x-subrip; charset=utf-8';
 const ASS_TYPE = 'text/x-ssa; charset=utf-8';
 
+/* Upstream URLs often carry no extension or the wrong one, so the body decides. */
+function sniffFormat(body: string): string | undefined {
+  const head = body.slice(0, 512).replace(/^﻿/, '').trimStart();
+  if (head.startsWith('WEBVTT')) return 'vtt';
+  if (/^\[script info\]/i.test(head)) return 'ass';
+  if (/^\d+\s*\r?\n\s*\d{1,2}:\d{2}:\d{2},\d{1,3}\s*-->/.test(head))
+    return 'srt';
+  return undefined;
+}
+
 export function convertSubtitle(
   body: string,
   fromExt: string,
   to: SubtitleFormat
 ): { body: string; contentType: string } {
-  const from = fromExt.toLowerCase();
+  const from = sniffFormat(body) ?? fromExt.toLowerCase();
   const isAss = from === 'ass' || from === 'ssa';
   const textual = from === 'srt' || from === 'vtt' || from === 'sub';
   const cuesOf = () =>
