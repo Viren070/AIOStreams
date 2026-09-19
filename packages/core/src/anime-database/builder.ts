@@ -52,6 +52,7 @@ export function buildAnimeEntry(record: AnimeRecord): AnimeEntry {
       record.imdb.fromEpisode !== undefined ||
       record.imdb.nonImdbEpisodes)
       ? {
+          id: record.imdb.id,
           seasonNumber: record.imdb.fromSeason,
           fromEpisode: record.imdb.fromEpisode,
           nonImdbEpisodes: record.imdb.nonImdbEpisodes,

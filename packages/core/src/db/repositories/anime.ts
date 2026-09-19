@@ -125,6 +125,9 @@ function explode(records: readonly AnimeRecord[]) {
         rid: r.rid,
       });
     }
+    if (r.imdb?.id && r.imdb.id !== r.ids.imdbId) {
+      ids.push({ t: 'imdbId', v: r.imdb.id, rid: r.rid });
+    }
     if (r.synonyms) {
       r.synonyms.forEach((s, ord) => synonyms.push({ rid: r.rid, ord, s }));
     }

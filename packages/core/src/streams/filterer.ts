@@ -627,7 +627,9 @@ class StreamFilterer {
 
       // Episode air date (series/anime only)
       const epDateStr = isSeries
-        ? episodeAirDate || requestedMetadata?.releaseDate
+        ? episodeAirDate ||
+          requestedMetadata?.episodeReleased ||
+          requestedMetadata?.releaseDate
         : null;
       const epDate =
         epDateStr && !isNaN(new Date(epDateStr).getTime())
@@ -1244,6 +1246,20 @@ class StreamFilterer {
           (!seasons?.length || seasons[0] === 1)
         ) {
           // allow if relative absolute episode (AniDB episode) matches AND (no season OR season is 1)
+        } else if (
+          isAnime &&
+          requestedMetadata?.absoluteEpisode &&
+          stream.parsedFile.episodes.includes(
+            requestedMetadata.absoluteEpisode
+          ) &&
+          seasons?.length === 1 &&
+          seasons[0] === requestedSeason &&
+          requestedMetadata.absoluteEpisode >
+            (requestedMetadata.seasons?.find(
+              (s) => s.season_number === requestedSeason
+            )?.episode_count ?? Infinity)
+        ) {
+          // an absolute number under the right season, too high to be season-relative
         } else {
           return false;
         }
