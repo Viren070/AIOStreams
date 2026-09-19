@@ -285,8 +285,13 @@ export function buildView(
 ): JellyfinItem {
   const id = viewId(catalog.type, catalog.id);
   const item = baseItem(ctx, id, catalog.name, 'CollectionFolder', true);
+  const images: ItemImages = {};
+  if (catalog.poster) images.Primary = catalog.poster;
+  if (catalog.background) images.Backdrop = catalog.background;
+  rememberImages(id, images);
   return {
     ...item,
+    ...imageTagsFor(images),
     ...(collectionType ? { CollectionType: collectionType } : {}),
     DisplayPreferencesId: id,
     ChildCount: 0,

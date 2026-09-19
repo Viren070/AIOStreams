@@ -1,10 +1,11 @@
 ---
 title: Metadata
-description: Extra meta, catalog entry and video fields AIOStreams reads, and what each one shows in a Jellyfin client.
+description: Extra meta, catalog entry, video and manifest catalog fields AIOStreams reads, and what each one shows in a Jellyfin client.
 ---
 
-These fields sit alongside the Stremio ones on a catalog entry, a meta, or a video. Put them on
-catalog entries too where you can: lists are built without opening each title.
+These fields sit alongside the Stremio ones on a catalog entry, a meta, a video, or a catalog in
+your manifest. Put them on catalog entries too where you can: lists are built without opening each
+title.
 
 ## Meta and catalog entry fields
 
@@ -62,6 +63,19 @@ These go on entries in a meta's `videos`.
 
 A video's `ids` are the episode's own. A [watch state](/reference/addon-protocol/watch-state) event
 for an episode always carries the show's ids instead.
+
+## Catalog fields
+
+These go on a catalog in your manifest's `catalogs`, which is a library in Jellyfin.
+
+| Field        | Shape     | Shown in Jellyfin as   |
+| ------------ | --------- | ---------------------- |
+| `poster`     | image URL | The library's tile     |
+| `background` | image URL | The library's backdrop |
+
+```json
+{ "type": "movie", "id": "netflix", "name": "Netflix", "poster": "https://…", "background": "https://…" }
+```
 
 ## Ids
 

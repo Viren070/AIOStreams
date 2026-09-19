@@ -25,6 +25,9 @@ export interface SubtitleTrack {
   url: string;
   lang: string;
   source: 'stream' | 'addon';
+  title?: string;
+  forced?: boolean;
+  hearingImpaired?: boolean;
 }
 
 /** Additive extension object for AIOStreams-aware clients. */

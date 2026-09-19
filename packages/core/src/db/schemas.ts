@@ -1205,6 +1205,8 @@ const ManifestCatalogSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   extra: z.array(ManifestExtraSchema).optional(),
+  poster: z.string().nullish(),
+  background: z.string().nullish(),
 });
 
 const AddonCatalogDefinitionSchema = z.object({
