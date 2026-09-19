@@ -360,7 +360,9 @@ For fields the user should fill in themselves after loading:
 | `"<required_template_placeholder>"` | Same as above                |
 | `"<optional_template_placeholder>"` | Optional — can be left blank |
 
-The frontend highlights unfilled placeholder values after the template is applied.
+A placeholder can go in any string field of the config, including nested addon options. Each one becomes an input in the credentials step, typed after the field it replaces: password fields are masked, URL fields take a URL, anything else is plain text. Placeholders inside `__switch` or `__value` are picked up after the template's options resolve them.
+
+Service credentials are always asked for per selected service, so leave `services[].credentials` empty rather than using a placeholder there.
 
 ---
 

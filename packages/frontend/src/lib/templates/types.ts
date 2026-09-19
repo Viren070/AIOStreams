@@ -13,6 +13,7 @@ export const formatZodError = (error: ZodError) => {
 export const ALLOWED_INPUT_TYPES = [
   'string',
   'password',
+  'url',
   'custom-nntp-servers',
 ] as const satisfies readonly Option['type'][];
 

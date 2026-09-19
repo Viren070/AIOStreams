@@ -145,8 +145,9 @@ function InputRenderer({
 }: InputRendererProps) {
   return (
     <div>
-      {type === 'string' ? (
+      {type === 'string' || type === 'url' ? (
         <TextInput
+          type={type === 'url' ? 'url' : 'text'}
           value={value}
           onValueChange={onValueChange}
           label={label}
