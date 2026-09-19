@@ -542,9 +542,11 @@ function JellyfinPrimerFact({
 function JellyfinPrimer({
   maxLibraries,
   maxCatalogItems,
+  maxVersions,
 }: {
   maxLibraries: number;
   maxCatalogItems: number;
+  maxVersions: number;
 }) {
   const limitNumber = (n: number) => (
     <span className="font-medium tabular-nums text-gray-300">{n}</span>
@@ -585,7 +587,8 @@ function JellyfinPrimer({
           Opening or playing a title searches your addons, as in Stremio.
         </p>
         <p className="text-xs text-gray-500">
-          Played directly; nothing is transcoded.
+          Up to {limitNumber(maxVersions)} per title, in your sort order. Played
+          directly; nothing is transcoded.
         </p>
       </JellyfinPrimerFact>
     </div>
@@ -2635,6 +2638,10 @@ function Content() {
                     <JellyfinPrimer
                       maxLibraries={jellyfin?.maxLibraries ?? 0}
                       maxCatalogItems={jellyfin?.maxCatalogItems ?? 0}
+                      maxVersions={Math.min(
+                        userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
+                        jellyfinVersionCap
+                      )}
                     />
 
                     <div className="space-y-2">
