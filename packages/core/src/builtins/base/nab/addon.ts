@@ -23,6 +23,7 @@ import {
   getTitleLanguagesForUrl,
   titleContainsAirDate,
 } from '../../utils/general.js';
+import { getYearlessQueries } from '../../utils/yearless.js';
 
 /**
  * Parse a comma-separated language string from a newznab/torznab attribute
@@ -31,7 +32,9 @@ import {
 export function parseNabLanguages(
   value: string | number | boolean | undefined
 ): string[] {
-  if (typeof value !== 'string' || !value) return [];
+  if (typeof value !== 'string' || !value) {
+    return [];
+  }
 
   const seen = new Set<string>();
   return value
@@ -245,10 +248,13 @@ export abstract class BaseNabAddon<
     }
     let results: SearchResultItem<A['namespace']>[] = [];
     if (queries.length > 0) {
-      const runQueries = (params: Record<string, string>) => {
-        this.logger.debug('Performing queries', { queries });
+      const runQueries = (
+        params: Record<string, string>,
+        queryList: string[] = queries
+      ) => {
+        this.logger.debug('Performing queries', { queries: queryList });
         return Promise.all(
-          queries.map((q) =>
+          queryList.map((q) =>
             queryLimit(() =>
               this.fetchResults(searchFunction, { ...params, q })
             )
@@ -263,6 +269,51 @@ export abstract class BaseNabAddon<
           { season: queryParams.season, episode: queryParams.ep }
         );
         results = await runQueries(fallbackParams);
+      }
+
+      const yearlessFallback = appConfig.builtins.scrape.yearlessMovieFallback;
+      if (
+        parsedId.mediaType === 'movie' &&
+        metadata.year &&
+        yearlessFallback.enabled
+      ) {
+        const resultIdentity = (r: SearchResultItem<A['namespace']>) =>
+          r.guid ?? r.enclosure?.[0]?.url ?? r.title;
+        const uniqueCount = new Set(results.map(resultIdentity)).size;
+        if (uniqueCount < yearlessFallback.resultThreshold) {
+          let yearlessParams = primaryParams;
+          let yearlessQueries = queries;
+
+          if (primaryParams.year) {
+            const { year: _year, ...paramsWithoutYear } = primaryParams;
+            yearlessParams = paramsWithoutYear;
+          } else {
+            yearlessQueries = getYearlessQueries(queries, metadata.year);
+          }
+
+          if (yearlessQueries.length > 0) {
+            this.logger.info(
+              'Year-constrained movie search returned too few unique results; retrying without year',
+              {
+                uniqueResults: uniqueCount,
+                threshold: yearlessFallback.resultThreshold,
+                queries: yearlessQueries,
+              }
+            );
+            try {
+              results.push(
+                ...(await runQueries(yearlessParams, yearlessQueries))
+              );
+            } catch (error) {
+              this.logger.warn(
+                'Yearless movie fallback failed; keeping initial results',
+                {
+                  error: error instanceof Error ? error.message : String(error),
+                }
+              );
+            }
+          }
+        }
       }
     } else {
       results = await this.fetchResults(searchFunction, primaryParams);
@@ -301,7 +352,7 @@ export abstract class BaseNabAddon<
       }
     );
     return {
-      results: results,
+      results,
       meta: {
         searchType,
         capabilities,
@@ -396,7 +447,7 @@ export abstract class BaseNabAddon<
       const remainingResults = total - (initialOffset + limit);
       if (remainingResults > 0) {
         const additionalPages = Math.ceil(remainingResults / limit);
-        const pagesToFetch = Math.min(additionalPages, maxPages - 1); // -1 because we already fetched first page
+        const pagesToFetch = Math.min(additionalPages, maxPages - 1);
 
         if (pagesToFetch > 0) {
           this.logger.debug('Fetching additional pages with known total', {
