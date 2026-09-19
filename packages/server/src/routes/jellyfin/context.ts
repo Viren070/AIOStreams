@@ -28,6 +28,7 @@ import {
   decryptString,
   type ClientInfo,
   type ItemBuildContext,
+  type JellyfinApiKey,
   type JellyfinPersona,
   listViews,
   type ParsedMeta,
@@ -47,6 +48,8 @@ export interface JellyfinRequestContext {
   userId: string;
   /** Who is signed in; null for the account. */
   persona: JellyfinPersona | null;
+  /** Set for API-key requests, which act for any user the URL names. */
+  apiKey: JellyfinApiKey | null;
   /** The history in use: the account's when the persona shares it. */
   watch: WatchScope;
   serverId: string;
@@ -324,6 +327,29 @@ function wantsListVersions(req: Request, client: ClientInfo): boolean {
   return /infuse/i.test(`${client.name} ${req.get('user-agent') ?? ''}`);
 }
 
+function urlUserId(req: Request): string | undefined {
+  const fromPath = /^\/Users\/([0-9a-f-]{32,36})(?:\/|$)/i.exec(req.path)?.[1];
+  const raw = fromPath ?? qs(req, 'userId');
+  return raw ? raw.replace(/-/g, '').toLowerCase() : undefined;
+}
+
+/** Null for the primary user, undefined when the id is nobody's. */
+function userForId(
+  uuid: string,
+  userData: UserData,
+  userId: string
+): JellyfinPersona | null | undefined {
+  if (userId === personaUserId(uuid, '')) return null;
+  return personasOf(userData).find((p) => personaUserId(uuid, p.id) === userId);
+}
+
+interface ApiKeyClaim {
+  id: string;
+  userId?: string;
+}
+
+const UNKNOWN_USER = 'unknown-user';
+
 async function buildContext(
   req: Request,
   uuid: string,
@@ -331,17 +357,31 @@ async function buildContext(
   token: string | undefined,
   client: ClientInfo,
   preAuthenticated: boolean,
-  personaKey: string
-): Promise<JellyfinRequestContext | null> {
+  personaKey: string,
+  keyClaim?: ApiKeyClaim
+): Promise<JellyfinRequestContext | typeof UNKNOWN_USER | null> {
   const entry = await resolveConfigEntry(uuid, encryptedPassword);
   if (!entry) return null;
   let userData = entry.userData;
   userData.ip = req.userIp;
   const baseUserData = userData;
 
-  // A token naming a persona that no longer exists is no longer valid.
-  const persona = personaKey ? personaById(userData, personaKey) : null;
-  if (personaKey && !persona) return null;
+  let apiKey: JellyfinApiKey | null = null;
+  let persona: JellyfinPersona | null;
+  if (keyClaim) {
+    apiKey =
+      userData.jellyfin?.apiKeys?.find((k) => k.id === keyClaim.id) ?? null;
+    if (!apiKey) return null;
+    const named = keyClaim.userId
+      ? userForId(uuid, userData, keyClaim.userId)
+      : null;
+    if (named === undefined) return UNKNOWN_USER;
+    persona = named;
+  } else {
+    // A token naming a persona that no longer exists is no longer valid.
+    persona = personaKey ? personaById(userData, personaKey) : null;
+    if (personaKey && !persona) return null;
+  }
   const primaryVariants = userData.jellyfin?.primary?.variants ?? [];
   const variantContext = buildVariantRequestContext(req, 'jellyfin');
 
@@ -410,6 +450,7 @@ async function buildContext(
     userData: finalUserData,
     userId,
     persona,
+    apiKey,
     watch,
     serverId: serverIdValue,
     baseUrl,
@@ -479,8 +520,8 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    // A token minted for another configuration lends it no persona.
-    const personaKey = payload && payload.u === uuid ? (payload.k ?? '') : '';
+    // A token minted for another configuration lends it no persona or key.
+    const ownToken = payload && payload.u === uuid ? payload : null;
     const ctx = await buildContext(
       req,
       uuid,
@@ -488,8 +529,13 @@ export const jellyfinContext: RequestHandler = async (req, res, next) => {
       token,
       client,
       preAuthenticated,
-      personaKey
+      ownToken?.k ?? '',
+      ownToken?.a ? { id: ownToken.a, userId: urlUserId(req) } : undefined
     );
+    if (ctx === UNKNOWN_USER) {
+      res.status(404).json({ Message: 'User not found' });
+      return;
+    }
     if (!ctx) {
       if (isAnonymousOk(req.path)) {
         req.jfClient = client;
@@ -579,13 +625,13 @@ export function jfOptional(
  * Builds a context from stored credentials, for routes with no Jellyfin token.
  * The account unless a persona is named; null when that persona is gone.
  */
-export function contextFromCredentials(
+export async function contextFromCredentials(
   req: Request,
   uuid: string,
   encryptedPassword: string,
   personaKey = ''
 ): Promise<JellyfinRequestContext | null> {
-  return buildContext(
+  const ctx = await buildContext(
     req,
     uuid,
     encryptedPassword,
@@ -599,4 +645,5 @@ export function contextFromCredentials(
     false,
     personaKey
   );
+  return ctx === UNKNOWN_USER ? null : ctx;
 }

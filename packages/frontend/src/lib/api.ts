@@ -925,6 +925,16 @@ export async function approveJellyfinQuickConnect(
   });
 }
 
+export async function getJellyfinApiKeyToken(
+  credentials: Credentials,
+  id: string
+) {
+  return api<{ token: string }>('POST /jellyfin/api-keys/token', {
+    ...authed(credentials),
+    body: { id },
+  });
+}
+
 export interface QuickConnectPending {
   device: { name: string; app: string; version: string };
   requestedAt: string;

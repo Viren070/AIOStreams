@@ -127,6 +127,7 @@ function sessionOf(
   return {
     scope: ctx.watch,
     sessionKey: sessionKeyFor(ctx.client),
+    user: ctx.persona?.id ?? '',
     client: ctx.client,
     playSessionId,
   };

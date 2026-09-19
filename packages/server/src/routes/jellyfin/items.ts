@@ -519,6 +519,8 @@ export async function nextUpForSeries(
 }
 
 function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
+  // An API key looks items up and never plays them.
+  if (ctx.apiKey) return false;
   switch (appConfig.jellyfin.resolveOnOpen) {
     case 'always':
       return true;

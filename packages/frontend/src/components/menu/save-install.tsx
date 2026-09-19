@@ -11,6 +11,7 @@ import {
   type QuickConnectPending,
   CreateUserResponse,
 } from '@/lib/api';
+import { JellyfinApiKeys } from './jellyfin-api-keys';
 import { JellyfinPersonas } from './jellyfin-personas';
 import { JellyfinTrackers } from './jellyfin-trackers';
 import { PageWrapper } from '@/components/shared/page-wrapper';
@@ -20,6 +21,7 @@ import { toast } from 'sonner';
 import {
   Code2,
   CopyIcon,
+  KeyRound,
   Layers,
   LibraryBig,
   Settings2,
@@ -1623,6 +1625,7 @@ function Content() {
   const seanimeModal = useDisclosure(false);
   const stremioCustomSourceModal = useDisclosure(false);
   const jellyfinModal = useDisclosure(false);
+  const jellyfinApiKeysModal = useDisclosure(false);
   const [jellyfinTab, setJellyfinTab] = React.useState('connect');
   const [quickConnectCode, setQuickConnectCode] = React.useState('');
   const [quickConnectPending, setQuickConnectPending] =
@@ -2814,6 +2817,38 @@ function Content() {
                           </div>
                         </div>
                       )}
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-white">
+                          API keys
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Let other tools use this server&apos;s API without
+                          your password.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        intent="gray-outline"
+                        rounded
+                        className="w-full shrink-0 sm:w-auto"
+                        leftIcon={<KeyRound className="h-4 w-4" />}
+                        onClick={jellyfinApiKeysModal.open}
+                      >
+                        Manage
+                        {userData.jellyfin?.apiKeys?.length
+                          ? ` (${userData.jellyfin.apiKeys.length})`
+                          : ''}
+                      </Button>
+                      <Modal
+                        open={jellyfinApiKeysModal.isOpen}
+                        onOpenChange={jellyfinApiKeysModal.toggle}
+                        title="API keys"
+                      >
+                        <JellyfinApiKeys serverUrl={jellyfinServerUrl} />
+                      </Modal>
                     </div>
                   </div>
                 ),

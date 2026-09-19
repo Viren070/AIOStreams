@@ -155,6 +155,23 @@ Each user with a history of its own can sync with its own tracker addons, for ex
 - A tracker nobody picks is not used.
 - Moving a tracker to another user also brings along what it already recorded for the previous one.
 
+## API keys
+
+A tool that uses the Jellyfin API, such as a dashboard or a script, can connect with an API key instead of your password. Open **API keys** at the bottom of the **Connect** tab:
+
+1. Name the key and select **Create key**.
+2. Save your configuration.
+3. Select **Copy key**, and give it to the tool with the same server address your apps use.
+
+A key acts as the server's administrator. It sees every user of your configuration: what each is watching now, their watch history, and your libraries. Revoke a key and save to cut a tool off; it stops working within 30 seconds. Changing your configuration password stops every key, so copy them again afterwards.
+
+What a tool can't get from AIOStreams:
+
+- **Addresses and locations.** AIOStreams does not record where anyone watches from, so rules built on IP addresses, such as account-sharing detection, have nothing to go on.
+- **Stopping a stream or sending a message.** Apps can't be controlled remotely.
+- **Transcoding and quality details.** Everything plays directly, and the stream details are not reported.
+- **Every title.** Each library lists at most `JELLYFIN_MAX_CATALOG_ITEMS` titles, and episodes are listed per show, not per library.
+
 ## App differences
 
 Jellyfin apps each use a different part of the server, so a few things vary:

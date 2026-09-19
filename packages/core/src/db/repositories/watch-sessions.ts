@@ -11,6 +11,8 @@ import type { WatchScope } from '../../watch-state/types.js';
 export interface WatchSessionRow {
   uuid: string;
   persona: string;
+  /** Who was signed in; a shared-history persona shares the account's scope. */
+  userPersona: string | null;
   sessionKey: string;
   itemKey: string;
   kind: WatchKind;
@@ -33,6 +35,7 @@ export interface WatchSessionRow {
 }
 
 export interface WatchSessionUpsert {
+  userPersona?: string | null;
   itemKey: string;
   kind: WatchKind;
   mediaType: string;
@@ -53,6 +56,7 @@ export interface WatchSessionUpsert {
 interface DbRow {
   uuid: string;
   persona: string;
+  user_persona: string | null;
   session_key: string;
   item_key: string;
   kind: string;
@@ -83,6 +87,7 @@ function toRow(r: DbRow): WatchSessionRow {
   return {
     uuid: r.uuid,
     persona: r.persona,
+    userPersona: r.user_persona ?? null,
     sessionKey: r.session_key,
     itemKey: r.item_key,
     kind: r.kind as WatchKind,
@@ -127,11 +132,12 @@ export class WatchSessionRepository {
     const now = Date.now();
     await getDb().exec(
       sql`INSERT INTO watch_sessions
-            (uuid, persona, session_key, item_key, kind, media_type, base_id,
-             season, episode, video_id, play_session_id, device_id, client,
-             device_name, app_version, position_ms, duration_ms, paused,
-             started_at, last_checkin_at, ended_at)
+            (uuid, persona, session_key, user_persona, item_key, kind,
+             media_type, base_id, season, episode, video_id, play_session_id,
+             device_id, client, device_name, app_version, position_ms,
+             duration_ms, paused, started_at, last_checkin_at, ended_at)
           VALUES (${scope.uuid}, ${scope.persona}, ${sessionKey},
+                  ${input.userPersona ?? null},
                   ${input.itemKey}, ${input.kind}, ${input.mediaType},
                   ${input.baseId}, ${input.season ?? null},
                   ${input.episode ?? null}, ${input.videoId ?? null},
@@ -141,6 +147,7 @@ export class WatchSessionRepository {
                   ${input.durationMs ?? 0}, ${input.paused ? 1 : 0},
                   ${now}, ${now}, NULL)
           ON CONFLICT(uuid, persona, session_key) DO UPDATE SET
+            user_persona = excluded.user_persona,
             item_key = excluded.item_key,
             kind = excluded.kind,
             media_type = excluded.media_type,
@@ -207,6 +214,19 @@ export class WatchSessionRepository {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_sessions
            WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           ORDER BY last_checkin_at DESC
+           LIMIT ${limit}`
+    );
+    return rows.map(toRow);
+  }
+
+  static async listForUuid(
+    uuid: string,
+    limit: number
+  ): Promise<WatchSessionRow[]> {
+    const rows = await getDb().query<DbRow>(
+      sql`SELECT * FROM watch_sessions
+           WHERE uuid = ${uuid}
            ORDER BY last_checkin_at DESC
            LIMIT ${limit}`
     );

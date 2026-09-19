@@ -134,6 +134,17 @@ const JellyfinPersonaSchema = z.object({
 
 export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
 
+/** No secret is stored: a key's token carries the credential itself. */
+const JellyfinApiKeySchema = z.object({
+  id: z.string().regex(/^[a-z0-9]{8,32}$/),
+  name: z.string().trim().min(1).max(64),
+  createdAt: z.string().max(64),
+});
+
+export type JellyfinApiKey = z.infer<typeof JellyfinApiKeySchema>;
+
+const MAX_JELLYFIN_API_KEYS = 10;
+
 const JellyfinSettingsFields = z.object({
   /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
   resolveOnOpen: z.boolean().optional(),
@@ -194,6 +205,25 @@ const JellyfinSettingsFields = z.object({
             message: `Persona name "${persona.name}" looks like a configuration id.`,
           });
         }
+      }
+    })
+    .optional(),
+  apiKeys: z
+    .array(JellyfinApiKeySchema)
+    .max(
+      MAX_JELLYFIN_API_KEYS,
+      `At most ${MAX_JELLYFIN_API_KEYS} API keys per configuration.`
+    )
+    .superRefine((keys, ctx) => {
+      const ids = new Set<string>();
+      for (const key of keys) {
+        if (ids.has(key.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Duplicate API key id "${key.id}".`,
+          });
+        }
+        ids.add(key.id);
       }
     })
     .optional(),
