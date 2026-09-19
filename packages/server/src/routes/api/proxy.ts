@@ -3,10 +3,10 @@ import {
   APIError,
   constants,
   createLogger,
-  decryptString,
+  decodeProxyToken,
+  ProxyDataSchema,
   resolveOverrideHeaders,
   appConfig,
-  fromUrlSafeBase64,
   getTimeTakenSincePoint,
   makeUrlLogSafe,
   rewriteRequestUrl,
@@ -124,15 +124,6 @@ const ProxyAuthSchema = z.object({
   password: z.string(),
 });
 
-const ProxyDataSchema = z.object({
-  url: z.url(),
-  filename: z.string().optional(),
-  type: z.enum(['nzb', 'stream']).optional(),
-  // These are optional, as we'll be forwarding client headers
-  requestHeaders: z.record(z.string(), z.string()).optional(),
-  responseHeaders: z.record(z.string(), z.string()).optional(),
-});
-
 type ProxyAuth = z.infer<typeof ProxyAuthSchema>;
 type ProxyData = z.infer<typeof ProxyDataSchema>;
 
@@ -145,35 +136,8 @@ function decodeAndAuthorizeRequest(
   encryptedAuthAndData: string,
   requestId: string
 ): { auth: ProxyAuth; data: ProxyData } {
-  const parts = encryptedAuthAndData.split('.');
-  let encodedAuth: string;
-  let encodedData: string;
-  let encodeMode: 'e' | 'u';
-  if (parts.length === 2) {
-    encodeMode = 'e';
-    [encodedAuth, encodedData] = parts;
-  } else if (parts.length === 3) {
-    encodeMode = parts[0] as 'e' | 'u';
-    [, encodedAuth, encodedData] = parts;
-  } else {
-    throw new APIError(
-      constants.ErrorCode.BAD_REQUEST,
-      undefined,
-      'Invalid encrypted auth and data'
-    );
-  }
-
-  let rawAuth: string | undefined;
-  let rawData: string | undefined;
-  if (encodeMode === 'e') {
-    rawAuth = decryptString(encodedAuth).data ?? undefined;
-    rawData = decryptString(encodedData).data ?? undefined;
-  } else {
-    rawAuth = fromUrlSafeBase64(encodedAuth);
-    rawData = fromUrlSafeBase64(encodedData);
-  }
-
-  if (!rawData || !rawAuth) {
+  const decoded = decodeProxyToken(encryptedAuthAndData);
+  if (!decoded) {
     logger.error(`[${requestId}] Decryption failed`);
     throw new APIError(
       constants.ErrorCode.ENCRYPTION_ERROR,
@@ -182,8 +146,8 @@ function decodeAndAuthorizeRequest(
     );
   }
 
-  const data = ProxyDataSchema.parse(JSON.parse(rawData));
-  const auth = ProxyAuthSchema.parse(JSON.parse(rawAuth));
+  const data = ProxyDataSchema.parse(JSON.parse(decoded.rawData));
+  const auth = ProxyAuthSchema.parse(JSON.parse(decoded.rawAuth));
 
   if (!validateCredentials(auth.username, auth.password)) {
     logger.warn(`[${requestId}] Authentication failed`, {

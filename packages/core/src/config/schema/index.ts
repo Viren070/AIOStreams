@@ -25,3 +25,4 @@ export { sharesSchema } from './shares.js';
 export { arrSchema, arrInstanceSchema } from './arr.js';
 export { jellyfinSchema } from './jellyfin.js';
 export { watchStateSchema } from './watch-state.js';
+export { remuxdbSchema } from './remuxdb.js';
