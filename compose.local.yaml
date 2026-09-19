@@ -1,0 +1,15 @@
+# Local production build of the cross-season resolver fork.
+# Copy .env.example to .env and set BASE_URL plus a persistent SECRET_KEY.
+services:
+  aiostreams:
+    build:
+      context: .
+    image: aiostreams-season-resolver:local
+    container_name: aiostreams-season-resolver
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${AIO_BIND_IP:-127.0.0.1}:3000:3000"
+    volumes:
+      - ./data:/app/data
