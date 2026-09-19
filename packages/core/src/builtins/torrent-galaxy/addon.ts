@@ -19,7 +19,11 @@ import {
   validateInfoHash,
 } from '../utils/debrid.js';
 import { config as appConfig } from '../../config/index.js';
-import { createQueryLimit, getTitleLanguagesForUrl } from '../utils/general.js';
+import {
+  createQueryLimit,
+  getTitleLanguagesForUrl,
+  getTitleLimitForUrl,
+} from '../utils/general.js';
 
 const logger = createLogger('torrent-galaxy');
 
@@ -56,6 +60,7 @@ export class TorrentGalaxyAddon extends BaseDebridAddon<TorrentGalaxyAddonConfig
 
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(getTorrentGalaxyUrl(), this.id),
+      titleLimit: getTitleLimitForUrl(getTorrentGalaxyUrl(), this.id),
     });
     if (metadata.imdbId) {
       queries.push(metadata.imdbId);
