@@ -145,6 +145,16 @@ function foldEntry(record: AnimeRecord, entry: SourceEntry): void {
     [IdType, IdValue | undefined]
   >) {
     if (v === undefined || v === null || v === ('' as unknown)) continue;
+    if (k === 'imdbId' && record.ids.imdbId && record.ids.imdbId !== v) {
+      const hasIncomingHints =
+        entry.imdb && Object.values(entry.imdb).some((hint) => hint != null);
+      // Keep IMDb hints paired with the show they describe. A show-level ID
+      // from another source must not reassign a cour's season/episode mapping.
+      if (record.imdb && !hasIncomingHints) continue;
+      // A replacement mapping belongs to a different show; do not inherit
+      // omitted offsets, titles or episode exclusions from the previous one.
+      delete record.imdb;
+    }
     // Last-writer-wins per field; sources later in the registry win.
     record.ids[k] = v;
   }
