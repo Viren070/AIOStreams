@@ -411,7 +411,7 @@ function chooseEntry(
 ): AnimeEntry | null {
   if (!candidates.length) return null;
   const chosen = selectBestRecord(
-    filterCandidatesBySeasonType(candidates, season),
+    filterCandidatesBySeasonType(candidates, season, idType),
     idType,
     idValue,
     season,
