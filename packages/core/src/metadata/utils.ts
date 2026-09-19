@@ -110,6 +110,8 @@ export interface Metadata {
   resolvedSeasonNumber?: number;
   /** First episode number of the resolved season (>1 means continuous absolute numbering). */
   resolvedSeasonFirstEpisode?: number;
+  /** Season number under the other (year vs. ordinal) convention, when it differs. */
+  alternateSeasonNumber?: number;
   /** Scene-mapping search titles for this series, best (non-identity) first. */
   sceneTitles?: string[];
 }

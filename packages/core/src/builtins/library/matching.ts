@@ -62,9 +62,15 @@ export function isItemMatch(
       return metadata.airDates.includes(parsedDate);
     }
 
-    // If the item has season info, check it matches
+    // If the item has season info, check it matches (either season convention)
     if (parsed.seasons && parsed.seasons.length > 0 && season !== undefined) {
-      if (!parsed.seasons.includes(season)) {
+      if (
+        !parsed.seasons.includes(season) &&
+        !(
+          metadata.alternateSeasonNumber !== undefined &&
+          parsed.seasons.includes(metadata.alternateSeasonNumber)
+        )
+      ) {
         return false;
       }
     }
