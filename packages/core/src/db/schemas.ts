@@ -1549,7 +1549,7 @@ export type ParsedStreams = z.infer<typeof ParsedStreams>;
 const TrailerSchema = z
   .object({
     source: z.string().min(1),
-    type: z.enum(['Trailer', 'Clip', 'Teaser']),
+    type: z.string(),
   })
   .passthrough();
 
