@@ -96,8 +96,11 @@ jobs:
           context: .
           file: ./Dockerfile
           outputs: type=image,name=ghcr.io/viren070/aiostreams,push-by-digest=true,name-canonical=true
-          cache-from: type=gha,scope=${{ matrix.suffix }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
+          # Trust separation: dev/PR builds must never share cache scopes with
+          # the deployment workflow, so poisoned cache data cannot flow into
+          # production images.
+          cache-from: type=gha,scope=dev-${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=dev-${{ matrix.suffix }}
 
       - name: Export digest
         run: echo "${{ steps.build.outputs.digest }}" > "/tmp/${{ matrix.suffix }}"
