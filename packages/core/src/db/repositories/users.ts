@@ -55,9 +55,9 @@ interface ConfigKeyEntry {
   key: string;
 }
 
-const CONFIG_KEY_CACHE_TTL = 30 * 60;
+const CONFIG_KEY_CACHE_TTL = 24 * 60 * 60;
 
-const configKeyCache = Cache.getInstance<string, string>('config-key', 5000);
+const configKeyCache = Cache.getInstance<string, string>('config-key', 50000);
 
 let trustedUuidsSource: string | null | undefined;
 let trustedUuidPatterns: RegExp[] = [];
