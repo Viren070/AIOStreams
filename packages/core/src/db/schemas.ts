@@ -1267,6 +1267,7 @@ export const ManifestSchema = z
         p2p: z.boolean().optional(),
         configurable: z.boolean().optional(),
         configurationRequired: z.boolean().optional(),
+        epgProvider: z.boolean().optional(),
       })
       .optional(),
     // not part of the manifest scheme, but needed for stremio-addons.net
@@ -1561,6 +1562,15 @@ const MetaLinkSchema = z
   })
   .passthrough();
 
+/** A certification a programme carries. */
+const ContentRatingSchema = z
+  .object({
+    value: z.string(),
+    system: z.string().nullish(),
+    icon: z.string().nullish(),
+  })
+  .passthrough();
+
 const ExternalIdsSchema = z.record(
   z.string(),
   z.string().or(z.number()).nullable()
@@ -1638,6 +1648,15 @@ const MetaVideoSchema = z
     ids: ExternalIdsSchema.nullish(),
     rating: z.number().or(z.string()).nullish(),
     people: z.array(MetaPersonSchema).nullish(),
+    startTime: z.string().nullish(),
+    endTime: z.string().nullish(),
+    runtime: z.string().nullish(),
+    releaseInfo: z.string().nullish(),
+    genres: z.array(z.string()).nullish(),
+    cast: z.array(z.string()).nullish(),
+    directors: z.array(z.string()).nullish(),
+    links: z.array(MetaLinkSchema).nullish(),
+    ratings: z.array(ContentRatingSchema).nullish(),
   })
   .passthrough();
 
@@ -1689,6 +1708,7 @@ export const MetaSchema = MetaPreviewSchema.extend({
     .object({
       defaultVideoId: z.string().or(z.null()).optional(),
       hasScheduledVideo: z.boolean().nullable().optional(),
+      hasScheduledVideos: z.boolean().nullable().optional(),
     })
     .passthrough()
     .optional(),
@@ -1728,6 +1748,7 @@ export const ExtrasSchema = z
     skip: z.coerce.number().optional(),
     genre: z.string().optional(),
     search: z.string().optional(),
+    date: z.string().optional(),
     filename: z.string().optional(),
     videoHash: z.string().optional(),
     videoSize: z.coerce.number().optional(),
