@@ -27,7 +27,8 @@ const TITLE_MATCH_THRESHOLD = 0.85;
 export function isItemMatch(
   itemName: string,
   metadata: SearchMetadata,
-  parsedId: ParsedId
+  parsedId: ParsedId,
+  cleanedTitles: string[] = metadata.titles.map((title) => cleanTitle(title))
 ): boolean {
   const parsed = parseTorrentTitleCached(itemName);
   const preprocessedTitle = preprocessTitle(
@@ -37,7 +38,6 @@ export function isItemMatch(
   );
 
   // Title match
-  const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
   if (
     !titleMatch(cleanTitle(preprocessedTitle), cleanedTitles, {
       threshold: TITLE_MATCH_THRESHOLD,
@@ -101,12 +101,13 @@ export function matchTorrents(
   sourceServiceId?: BuiltinServiceId
 ): UnprocessedTorrent[] {
   const results: UnprocessedTorrent[] = [];
+  const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
 
   for (const item of items) {
     if (!item.name || !item.hash) continue;
     if (item.status !== 'cached' && item.status !== 'downloaded') continue;
 
-    if (!isItemMatch(item.name, metadata, parsedId)) continue;
+    if (!isItemMatch(item.name, metadata, parsedId, cleanedTitles)) continue;
 
     results.push({
       type: 'torrent',
@@ -131,12 +132,13 @@ export function matchNzbs(
   sourceServiceId?: BuiltinServiceId
 ): NZB[] {
   const results: NZB[] = [];
+  const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
 
   for (const item of items) {
     if (!item.name) continue;
     if (item.status !== 'cached' && item.status !== 'downloaded') continue;
 
-    if (!isItemMatch(item.name, metadata, parsedId)) continue;
+    if (!isItemMatch(item.name, metadata, parsedId, cleanedTitles)) continue;
 
     results.push({
       type: 'usenet',

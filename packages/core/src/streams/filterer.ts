@@ -161,6 +161,8 @@ class StreamFilterer {
   /** Ids of streams that survived filter() only through an included stream
    *  expression, pending re-evaluation on the aggregated set. */
   private expressionRescuedIds = new Set<string>();
+  /** filter() runs many times per request; the title caches key on identity. */
+  private requestedTitleStrings = new WeakMap<ExtendedMetadata, string[]>();
 
   constructor(userData: UserData) {
     this.userData = userData;
@@ -474,8 +476,14 @@ class StreamFilterer {
       });
     }
 
-    const requestedTitleStrings =
-      requestedMetadata?.titles?.map((t) => t.title) ?? [];
+    let requestedTitleStrings: string[] = [];
+    if (requestedMetadata) {
+      requestedTitleStrings =
+        this.requestedTitleStrings.get(requestedMetadata) ??
+        requestedMetadata.titles?.map((t) => t.title) ??
+        [];
+      this.requestedTitleStrings.set(requestedMetadata, requestedTitleStrings);
+    }
 
     if (requestedTitleStrings.length) {
       for (const stream of streams) {
@@ -869,12 +877,13 @@ class StreamFilterer {
       return false;
     };
 
+    const titleMatchingOptions = {
+      mode: 'exact',
+      similarityThreshold: 0.85,
+      ...(this.userData.titleMatching ?? {}),
+    };
+
     const performTitleMatch = (stream: ParsedStream) => {
-      const titleMatchingOptions = {
-        mode: 'exact',
-        similarityThreshold: 0.85,
-        ...(this.userData.titleMatching ?? {}),
-      };
       if (!titleMatchingOptions || !titleMatchingOptions.enabled) {
         return true;
       }
