@@ -15,9 +15,13 @@ import {
   allModifierNames,
   prefixOperators,
   quotedArguments,
+  referenceArguments,
 } from './modifiers.js';
 import { comparatorNames } from './comparators.js';
-import { compileObjectFilter } from '../../utils/object-filter.js';
+import {
+  compileObjectFilter,
+  objectFilterReferences,
+} from '../../utils/object-filter.js';
 
 /**
  * Single-pass template parser. Linear in template length with a bounded stack,
@@ -57,6 +61,7 @@ export const CALL_MODIFIERS: readonly (readonly [string, CallArgumentShape])[] =
   [
     ['replace', 'replaceArgs'],
     ['remove', 'loose'],
+    ['keep', 'loose'],
     ['join', 'quoted'],
     ['truncate', 'digits'],
     ['slice', 'digitsOrPair'],
@@ -214,6 +219,14 @@ function nestedDiagnostics(
   return out;
 }
 
+/** Modifiers whose arguments may name a field, as `{section.property}`. */
+const REFERENCE_MODIFIERS: ReadonlySet<string> = new Set([
+  'where',
+  'in',
+  'keep',
+  'remove',
+]);
+
 /** `where`, `pluck`, `each` and `track.*` parse anywhere but only work in place. */
 function operandDiagnostics(
   node: ExpressionNode,
@@ -268,6 +281,30 @@ function operandDiagnostics(
       const name = (
         open === -1 ? modifier : modifier.slice(0, open)
       ).toLowerCase();
+
+      if (open !== -1 && REFERENCE_MODIFIERS.has(name)) {
+        const inner = modifier.slice(open + 1, -1);
+        // `where`'s references sit inside its quoted conditions
+        const references =
+          name === 'where'
+            ? objectFilterReferences(quotedArguments(inner))
+            : referenceArguments(inner);
+        for (const reference of references) {
+          const [section, property] = reference.split('.');
+          if (canonicaliseField(section, property)) continue;
+          const suggestion = suggestField(section, property)[0];
+          out.push({
+            ...at(
+              modifierAt,
+              modifier,
+              'unknown-field',
+              `\`::${name}\`: unknown field \`${reference}\``
+            ),
+            ...(suggestion ? { suggestion } : {}),
+          });
+        }
+      }
+
       if (name !== 'where' && name !== 'pluck' && name !== 'each') {
         if (name !== 'slice' && name !== 'reverse') isList = false;
         continue;
@@ -465,10 +502,30 @@ function skipSpaces(scanner: Scanner): void {
  * The argument may itself contain parentheses, as in `remove('DV (Disk)')`, so
  * it ends at the last `)` in range rather than the first.
  */
+const LOOSE_REFERENCE =
+  /^\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*\}$/;
+
 function scanLooseArgument(scanner: Scanner): boolean {
   let lastParen = -1;
   while (!scanner.atEnd) {
     const char = scanner.peek()!;
+    // a quoted argument is literal, braces and parens included
+    if (char === "'" || char === '"') {
+      const close = scanner.input.indexOf(char, scanner.pos + 1);
+      if (close !== -1) {
+        scanner.pos = close + 1;
+        continue;
+      }
+    }
+    // a reference's braces must not end the argument list, but anything else
+    // brace-shaped still does, so an unclosed `{` cannot run away
+    if (char === '{') {
+      const close = scanner.input.indexOf('}', scanner.pos);
+      const span = close === -1 ? '' : scanner.slice(scanner.pos, close + 1);
+      if (!LOOSE_REFERENCE.test(span)) break;
+      scanner.pos = close + 1;
+      continue;
+    }
     if (char === '}' || char === '[' || char === ']') break;
     if (char === ':' && scanner.peek(1) === ':') break;
     if (char === ')') lastParen = scanner.pos;

@@ -21,6 +21,8 @@ export type CompiledTemplate<TValue> = (value: TValue) => string;
 export interface CompileHooks<TValue> {
   /** resolves `{config.addonName}` used as replace()'s search key */
   resolveVariable(source: string, parseValue: TValue): string | undefined;
+  /** resolves `{user.languages}` used as a list argument */
+  resolveValues(source: string, parseValue: TValue): string[] | undefined;
   /** `and`, `or`, ... */
   comparators: Record<string, (a: unknown, b: unknown) => unknown>;
   /** textual macros expanded before parsing */
@@ -113,15 +115,23 @@ function compileEach<TValue extends Record<string, any>>(
   };
 }
 
+function modifierContext<TValue extends Record<string, any>>(
+  parseValue: TValue,
+  hooks: CompileHooks<TValue>
+): ModifierContext {
+  return {
+    resolveVariable: (source) => hooks.resolveVariable(source, parseValue),
+    resolveValues: (source) => hooks.resolveValues(source, parseValue),
+  };
+}
+
 function resolveOperand<TValue extends Record<string, any>>(
   operand: PreparedOperand,
   parseValue: TValue,
   hooks: CompileHooks<TValue>
 ): Resolved {
   if (operand.node.literal !== undefined) {
-    const ctx: ModifierContext = {
-      resolveVariable: (source) => hooks.resolveVariable(source, parseValue),
-    };
+    const ctx: ModifierContext = modifierContext(parseValue, hooks);
     let value: unknown = operand.node.literal;
     for (const { apply } of operand.modifiers) {
       const next = apply(value, parseValue, ctx);
@@ -147,9 +157,7 @@ function resolveOperand<TValue extends Record<string, any>>(
     };
   }
 
-  const ctx: ModifierContext = {
-    resolveVariable: (source) => hooks.resolveVariable(source, parseValue),
-  };
+  const ctx: ModifierContext = modifierContext(parseValue, hooks);
 
   // Scrub sentinels as the value enters, so stream data can never forge a
   // layout directive. Anything a modifier adds afterwards is template-authored

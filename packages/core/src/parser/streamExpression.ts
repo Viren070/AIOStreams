@@ -880,7 +880,7 @@ export abstract class StreamExpressionEngine {
           throw new Error(`${label}: ${(error as Error).message}`);
         }
         return streams.filter((stream) =>
-          (stream.parsedFile?.[key] ?? []).some(matches)
+          (stream.parsedFile?.[key] ?? []).some((track) => matches(track))
         );
       };
 

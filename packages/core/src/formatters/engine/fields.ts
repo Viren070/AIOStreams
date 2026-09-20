@@ -128,6 +128,19 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'malId',
     'hasSeaDex',
   ],
+  user: [
+    'languages',
+    'subtitles',
+    'resolutions',
+    'qualities',
+    'visualTags',
+    'audioTags',
+    'audioChannels',
+    'encodes',
+    'streamTypes',
+    'releaseGroups',
+    'keywords',
+  ],
   /** only set inside `each(...)` */
   track: [
     'lang',

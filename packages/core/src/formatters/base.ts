@@ -3,6 +3,7 @@ import * as constants from '../utils/constants.js';
 import { formatHours, makeSmall } from './utils.js';
 import { languageToCode, languageToEmoji } from '../utils/languages.js';
 import { compileTemplate as engineCompileTemplate } from './engine/compile.js';
+import { canonicaliseField } from './engine/fields.js';
 import { NEW_LINE_SENTINEL, REMOVE_LINE_SENTINEL } from './engine/sentinels.js';
 import { comparatorFunctions } from './engine/comparators.js';
 
@@ -190,6 +191,19 @@ export interface ParseValue {
     malId: number | null;
     hasSeaDex: boolean;
   };
+  user?: {
+    languages: string[];
+    subtitles: string[];
+    resolutions: string[];
+    qualities: string[];
+    visualTags: string[];
+    audioTags: string[];
+    audioChannels: string[];
+    encodes: string[];
+    streamTypes: string[];
+    releaseGroups: string[];
+    keywords: string[];
+  };
   track?: FormatterTrack;
   service?: {
     id: string | null;
@@ -206,6 +220,15 @@ export interface ParseValue {
     json: string | null;
     jsonf: string | null;
   };
+}
+
+/** Reads a `section.property` path off the parse value. */
+function readField(source: string, parseValue: unknown): unknown {
+  const [section, property] = source.trim().split('.');
+  if (!section || !property) return undefined;
+  const canonical = canonicaliseField(section, property);
+  if (!canonical) return undefined;
+  return (parseValue as any)?.[canonical[0]]?.[canonical[1]];
 }
 
 /**
@@ -361,6 +384,10 @@ export abstract class BaseFormatter {
       ];
     };
 
+    const uniqueFieldValues = (field: string): string[] => [
+      ...new Set(getFieldValues(field)),
+    ];
+
     const sortByUserPreference = <T extends string>(
       items: T[] | undefined,
       userPrefs: string[]
@@ -497,6 +524,23 @@ export abstract class BaseFormatter {
           : userSpecifiedLanguages
       )
     );
+    // Original is resolved above, so these compare against stream values as-is
+    const userLists = memo(() => ({
+      languages: userSpecifiedLanguages,
+      subtitles: userSpecifiedSubtitles.length
+        ? userSpecifiedSubtitles
+        : userSpecifiedLanguages,
+      resolutions: uniqueFieldValues('resolutions'),
+      qualities: uniqueFieldValues('qualities'),
+      visualTags: uniqueFieldValues('visualTags'),
+      audioTags: uniqueFieldValues('audioTags'),
+      audioChannels: uniqueFieldValues('audioChannels'),
+      encodes: uniqueFieldValues('encodes'),
+      streamTypes: uniqueFieldValues('streamTypes'),
+      releaseGroups: uniqueFieldValues('releaseGroups'),
+      keywords: uniqueFieldValues('keywords'),
+    }));
+
     const sortedAudioChannels = sortByUserPreference(
       stream.parsedFile?.audioChannels,
       getFieldValues('audioChannels')
@@ -512,6 +556,9 @@ export abstract class BaseFormatter {
 
     const formattedAge = stream.age ? formatHours(stream.age) : null;
     const parseValue: ParseValue = {
+      get user() {
+        return userLists();
+      },
       config: {
         addonName:
           this.userData.addonName ||
@@ -772,10 +819,15 @@ export abstract class BaseFormatter {
   private compileWithEngine(str: string): CompiledParseFunction {
     return engineCompileTemplate<ParseValue>(str, {
       resolveVariable: (source, parseValue) => {
-        // only used for replace({section.property}, 'x')
-        const [section, property] = source.split('.');
-        const value = (parseValue as any)?.[section]?.[property];
+        const value = readField(source, parseValue);
         return value == null ? undefined : String(value);
+      },
+      resolveValues: (source, parseValue) => {
+        const value = readField(source, parseValue);
+        if (value == null) return undefined;
+        return Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === 'string')
+          : [String(value)];
       },
       comparators: comparatorFunctions,
       onDepthExceeded: (max) =>
