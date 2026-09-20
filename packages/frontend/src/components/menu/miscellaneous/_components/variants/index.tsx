@@ -45,7 +45,7 @@ export function Variants() {
   const limits: CelLimits = useMemo(
     () => ({
       maxScriptLength: settings?.maxScriptLength ?? 4000,
-      maxInstructions: settings?.maxInstructions ?? 100,
+      maxTotalInstructions: settings?.maxTotalInstructions ?? 5000,
       maxValueDepth: settings?.maxValueDepth ?? 10,
       maxPathSegments: settings?.maxPathSegments ?? 12,
       maxPathMatches: settings?.maxPathMatches ?? 200,

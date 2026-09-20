@@ -394,14 +394,6 @@ async function buildContext(
     const own = persona ? (persona.variants ?? []) : primaryVariants;
     const linked = own.filter((id) => !fromUrl.includes(id));
     const selected = [...linked, ...fromUrl];
-    const maxActive = appConfig.userLimits.variants.maxActive;
-    if (selected.length > maxActive) {
-      logger.warn(
-        { uuid, persona: persona?.id, dropped: selected.slice(maxActive) },
-        'too many variants for one request, dropping the last'
-      );
-      selected.length = maxActive;
-    }
     const result = await activateVariants(userData, selected, variantContext);
     userData = result.userData;
     if (fromUrl.length) userData.variantSelectorLocation = location;

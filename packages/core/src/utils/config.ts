@@ -268,9 +268,9 @@ export async function validateConfig(
 
   // A dangling link would degrade the user to the base config at sign-in.
   const checkLinked = (who: string, linked: string[]) => {
-    if (linked.length > appConfig.userLimits.variants.maxActive) {
+    if (linked.length > appConfig.userLimits.variants.max) {
       throw new Error(
-        `${who} links ${linked.length} variants, but the maximum is ${appConfig.userLimits.variants.maxActive}`
+        `${who} links ${linked.length} variants, but the maximum is ${appConfig.userLimits.variants.max}`
       );
     }
     for (const id of linked) {

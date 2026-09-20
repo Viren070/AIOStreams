@@ -97,7 +97,7 @@ Comma-separate to combine. They apply left to right, so later instructions win:
 .../v/phone,rd2/manifest.json
 ```
 
-An unknown or disabled id is an error, surfaced as an error stream, rather than a silent fall back to the base config.
+An unknown or disabled id is an error, surfaced as an error stream, rather than a silent fall back to the base config. Ids are not case-sensitive and repeats are ignored.
 
 The selector also works on ChillLink and the Seanime extension URLs.
 
@@ -109,7 +109,7 @@ The configure page always edits the **base** config, even when a variant is sele
 
 ## Conditional activation
 
-A variant can also decide for itself. Give it an **activation condition** and it applies whenever that condition matches the incoming request, with nothing added to the URL. One install serves a phone a different config from a TV.
+A variant can also decide for itself. Give it an **activation condition** and it applies whenever that condition matches the incoming request, with nothing added to the URL: one install serves a phone a different config from a TV. Conditions are checked on every request, whichever link it arrived on, so a match applies on top of whatever that link selected.
 
 The condition is a [stream expression](/reference/stream-expressions) that evaluates to true or false, using a [limited set of functions](/reference/stream-expressions#variant-condition-functions):
 
@@ -117,7 +117,11 @@ The condition is a [stream expression](/reference/stream-expressions) that evalu
 includes(userAgent, 'android')
 ```
 
-Selecting a variant in the URL still applies it, condition or not. Where both happen, matched variants apply first and the URL's selection wins on anything they both write to.
+Naming a variant in the URL applies it whether or not its condition matches. [What applies, in what order](#what-applies-in-what-order) covers the case where both happen.
+
+<Callout type="warn">
+Selecting a conditional variant applies it to every request, not only those its condition matches. A "Real-Debrid down" variant picked on the install page keeps Real-Debrid disabled.
+</Callout>
 
 ### What a condition can read
 
@@ -163,6 +167,28 @@ Every check a configuration defines is resolved once per request, so one request
 - **A condition that fails counts as no match.** A broken expression, an unreachable check, a typo: the variant does not apply and the request is served as it otherwise would be. Only a variant named in the URL is an error when it cannot be applied.
 - **Automatic variants do not change your addon id.** They share the install URL, which is the point. They are still part of the cache key, so two clients on one URL never see each other's results.
 - **The manifest could be cached by your client**, and Stremio syncs installs between devices, so a condition works best on things the manifest does not describe: filters, sorting, formatting, proxying and which service a stream is played through. Writing to `presets`, `services`, `catalogModifications` or `mergedCatalogs` changes which catalogues and resources the addon offers, and `addonName`, `addonLogo`, `addonBackground` and `addonDescription` change how it presents itself. Those are still served correctly on every request, but a client that cached the manifest at install time may keep showing what it saw then.
+
+---
+
+## What applies, in what order
+
+Several variants can apply to one request: every one you selected, and every one whose condition matched. They are layered onto a single copy of your configuration, in this order:
+
+1. Variants whose **condition matched**, in the order they are listed in **Miscellaneous → Variants**.
+2. Variants **named in the URL**, left to right.
+
+Inside a script, instructions run top to bottom, and `use variant` runs that variant's instructions at the point it appears. The last write to a field wins, so `set` replaces whatever an earlier variant put there, while `add`, `remove` and `insert` build on it. Prefer those in a variant meant to combine with others.
+
+| Request                                        | Applies                                     |
+| ---------------------------------------------- | ------------------------------------------- |
+| `/v/phone,rd2`                                 | `phone`, then `rd2`                         |
+| No selector, `phone` and `rd-down` both match  | whichever is listed first, then the other   |
+| `/v/no-dv` while `rd-down` matches             | `rd-down`, then `no-dv`                     |
+| `/v/rd-down` while `rd-down` also matches      | once only, in its position in the URL       |
+
+A request may run 5000 instructions across everything it applies, including those `use variant` reaches. One that runs out stops there and says so.
+
+A variant that `use variant` pulls in runs again even if it already applied on its own. Most instructions land the same way twice, so this is usually invisible.
 
 ---
 
@@ -432,7 +458,7 @@ use variant phone
 add excludedVisualTags "3D"
 ```
 
-or keep them independent and combine at install time with `/v/phone,no3d`.
+or keep them independent and combine at install time with `/v/phone,no3d`. Either way, [order decides](#what-applies-in-what-order) which one wins where both write to the same field.
 
 ---
 
@@ -446,9 +472,7 @@ Operators can tune these; defaults shown.
 | Variants per config             | 10       | `MAX_VARIANTS`                                   |
 | Characters per script           | 4000     | `MAX_VARIANT_SCRIPT_LENGTH`                      |
 | Characters across all scripts   | 20000    | `MAX_VARIANT_TOTAL_SCRIPT_CHARACTERS`            |
-| Instructions per script         | 100      | `MAX_VARIANT_INSTRUCTIONS`                       |
-| Variants per request            | 4        | `MAX_ACTIVE_VARIANTS`                            |
-| `use variant` nesting depth     | 5        | `MAX_VARIANT_DEPTH`                              |
+| Instructions run per request    | 5000     | `MAX_VARIANT_TOTAL_INSTRUCTIONS`                 |
 | Elements one instruction writes | 200      | `MAX_VARIANT_PATH_MATCHES`                       |
 | Health checks: availability     | everyone | `HEALTH_CHECK_ACCESS` (`all`, `trusted`, `none`) |
 | Health checks per config        | 5        | `MAX_HEALTH_CHECKS`                              |

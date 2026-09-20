@@ -283,32 +283,13 @@ export const userLimitsSchema = {
       requiresRestart: false,
       secret: false,
     },
-    maxInstructions: {
+    maxTotalInstructions: {
       schema: positiveInt,
-      default: 100,
-      label: 'Max variant instructions',
-      description: 'Maximum number of instructions in a single variant script.',
-      env: 'MAX_VARIANT_INSTRUCTIONS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxActive: {
-      schema: positiveInt,
-      default: 4,
-      label: 'Max active variants',
+      default: 5000,
+      label: 'Max variant instructions per request',
       description:
-        'Maximum number of variants that may be combined on a single request.',
-      env: 'MAX_ACTIVE_VARIANTS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxDepth: {
-      schema: positiveInt,
-      default: 5,
-      label: 'Max variant nesting depth',
-      description:
-        'Maximum depth a variant may nest others through "use variant".',
-      env: 'MAX_VARIANT_DEPTH',
+        'Maximum number of instructions all the variants on one request may run in total, including those reached through "use variant". Anything past it is skipped.',
+      env: 'MAX_VARIANT_TOTAL_INSTRUCTIONS',
       requiresRestart: false,
       secret: false,
     },
