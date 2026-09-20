@@ -5,6 +5,7 @@ import {
   createFormatter,
   createLogger,
   DistributedLock,
+  hasProgrammeVideos,
   encodeItemId,
   requestLockType,
   isPlayable,
@@ -61,7 +62,11 @@ async function fetchMetaLoose(
     try {
       const res = await engine.getMeta(t, id);
       if (res.data) {
-        if (type !== 'movie' && res.data.videos?.length) {
+        if (
+          type !== 'movie' &&
+          res.data.videos?.length &&
+          !hasProgrammeVideos(res.data)
+        ) {
           rememberShowEpisodes(ctx.scope(), type, id, res.data);
         }
         return res.data;
@@ -219,6 +224,11 @@ export async function resolvePlayback(
   return (await resolveByItem(ctx.uuid, scope, itemId)) ?? null;
 }
 
+/** Live by the content when the url says nothing: a channel, or a schedule. */
+function isLiveContent(type: string, meta: ParsedMeta | null): boolean {
+  return type === 'tv' || type === 'channel' || hasProgrammeVideos(meta);
+}
+
 async function resolveUncached(
   ctx: JellyfinRequestContext,
   d: ContentDescriptor,
@@ -229,6 +239,17 @@ async function resolveUncached(
   if (!target) return null;
 
   const engine = await ctx.engine();
+  const liveContent = isLiveContent(
+    target.type,
+    await getMetaLoose(ctx, d.t, d.k === 'movie' ? (d.p ?? d.i) : d.i).catch(
+      () => null
+    )
+  );
+  /* Copied, not marked in place: the pipeline result is cached and shared. */
+  const asLive = (stream: ParsedStream): ParsedStream =>
+    liveContent && stream.type !== 'live'
+      ? { ...stream, type: constants.LIVE_STREAM_TYPE }
+      : stream;
   const inline = (target.streams ?? []) as ParsedStream[];
   const ownPlayable = inline.filter(isPlayable);
   const streamsRes = ownPlayable.length
@@ -259,7 +280,8 @@ async function resolveUncached(
   const top = playable.slice(0, maxVersionsFor(ctx));
 
   const sources: MediaSourceRecord[] = [];
-  for (const stream of top) {
+  for (const raw of top) {
+    const stream = asLive(raw);
     const formatted = await format(stream);
     sources.push(
       sourceRecordFrom(
