@@ -156,7 +156,9 @@ class StreamFilterer {
   private userData: UserData;
   private filterStatistics: FilterStatistics;
   private filterTimings: FilterTimings;
-  /** When true, statistic recording is a no-op (shadow evaluations). */
+  /** When true, statistic recording is a no-op (shadow evaluations).
+   *  filter() can run concurrently on one instance, so it may only be held
+   *  across synchronous code. Async callers take an explicit parameter. */
   private suppressStatistics = false;
   /** Ids of streams that survived filter() only through an included stream
    *  expression, pending re-evaluation on the aggregated set. */
@@ -2601,7 +2603,8 @@ class StreamFilterer {
 
   public async applyIncludedStreamExpressions(
     streams: ParsedStream[],
-    context: StreamContext
+    context: StreamContext,
+    suppressStatistics = false
   ): Promise<ParsedStream[]> {
     const expressionContext = context.toExpressionContext();
     const selector = new StreamSelector(expressionContext);
@@ -2617,7 +2620,7 @@ class StreamFilterer {
         typeof item === 'string' ? { expression: item, enabled: true } : item;
       if (!enabled) continue;
       const selectedStreams = await selector.select(streams, expression);
-      if (!this.suppressStatistics) {
+      if (!suppressStatistics) {
         this.filterStatistics.included.streamExpression.total +=
           selectedStreams.length;
         const displayCondition = this.getDisplayCondition(expression);
@@ -2650,19 +2653,17 @@ class StreamFilterer {
       return streams;
     }
     let globallyIncluded: ParsedStream[];
-    this.suppressStatistics = true;
     try {
       globallyIncluded = await this.applyIncludedStreamExpressions(
         streams,
-        context
+        context,
+        true
       );
     } catch (error) {
       logger.error(
         `Failed to re-evaluate included stream expressions on the full result set: ${error instanceof Error ? error.message : String(error)}`
       );
       return streams;
-    } finally {
-      this.suppressStatistics = false;
     }
     const globallyIncludedIds = new Set(globallyIncluded.map((s) => s.id));
     const keptStreams = streams.filter((stream) => {
