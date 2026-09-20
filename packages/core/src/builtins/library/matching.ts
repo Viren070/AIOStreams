@@ -21,6 +21,9 @@ const logger = createLogger('library');
 
 const TITLE_MATCH_THRESHOLD = 0.85;
 
+/** Scans yield every slice, so the logged matchTime is wall time, not CPU time. */
+const MATCH_SLICE_MS = 8;
+
 /**
  * Matches title-based criteria against a download item name.
  */
@@ -94,16 +97,21 @@ export function isItemMatch(
   return true;
 }
 
-export function matchTorrents(
+export async function matchTorrents(
   items: DebridDownload[],
   metadata: SearchMetadata,
   parsedId: ParsedId,
   sourceServiceId?: BuiltinServiceId
-): UnprocessedTorrent[] {
+): Promise<UnprocessedTorrent[]> {
   const results: UnprocessedTorrent[] = [];
   const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
+  let sliceStart = performance.now();
 
   for (const item of items) {
+    if (performance.now() - sliceStart >= MATCH_SLICE_MS) {
+      await new Promise((resolve) => setImmediate(resolve));
+      sliceStart = performance.now();
+    }
     if (!item.name || !item.hash) continue;
     if (item.status !== 'cached' && item.status !== 'downloaded') continue;
 
@@ -125,16 +133,21 @@ export function matchTorrents(
   return results;
 }
 
-export function matchNzbs(
+export async function matchNzbs(
   items: DebridDownload[],
   metadata: SearchMetadata,
   parsedId: ParsedId,
   sourceServiceId?: BuiltinServiceId
-): NZB[] {
+): Promise<NZB[]> {
   const results: NZB[] = [];
   const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
+  let sliceStart = performance.now();
 
   for (const item of items) {
+    if (performance.now() - sliceStart >= MATCH_SLICE_MS) {
+      await new Promise((resolve) => setImmediate(resolve));
+      sliceStart = performance.now();
+    }
     if (!item.name) continue;
     if (item.status !== 'cached' && item.status !== 'downloaded') continue;
 
@@ -177,7 +190,12 @@ export async function searchTorrents(
       const items = await debridService.listMagnets();
       const searchTime = getTimeTakenSincePoint(start);
       start = Date.now();
-      const matched = matchTorrents(items, metadata, parsedId, service.id);
+      const matched = await matchTorrents(
+        items,
+        metadata,
+        parsedId,
+        service.id
+      );
       logger.info(`Matched torrents from service library`, {
         serviceId: service.id,
         totalItems: items.length,
@@ -229,7 +247,7 @@ export async function searchNzbs(
       const items = await debridService.listNzbs();
       const searchTime = getTimeTakenSincePoint(start);
       start = Date.now();
-      const matched = matchNzbs(items, metadata, parsedId, service.id);
+      const matched = await matchNzbs(items, metadata, parsedId, service.id);
       const matchTime = getTimeTakenSincePoint(start);
       logger.info(`Matched NZBs from service library`, {
         serviceId: service.id,
