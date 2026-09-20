@@ -525,12 +525,19 @@ class StreamParser {
     return undefined;
   }
 
+  /** An HLS playlist, whatever query string the url carries. */
+  protected isHlsUrl(url: string | null | undefined): boolean {
+    if (!url) return false;
+    const path = url.split('#')[0].split('?')[0];
+    return /\.m3u8?$/i.test(path);
+  }
+
   protected getStreamType(
     stream: Stream,
     service: ParsedStream['service'],
     currentParsedStream: ParsedStream
   ): ParsedStream['type'] {
-    if (stream.url?.endsWith('.m3u8')) {
+    if (this.isHlsUrl(stream.url)) {
       return 'live';
     }
 
