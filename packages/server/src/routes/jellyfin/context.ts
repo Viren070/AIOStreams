@@ -129,6 +129,7 @@ async function loadConfig(
   userData.ip = undefined;
   userData = await syncUserDataUrls(userData);
   userData = await validateConfig(userData, {
+    skipVariantValidation: true,
     skipErrorsFromAddonsOrProxies: true,
     decryptValues: true,
   });

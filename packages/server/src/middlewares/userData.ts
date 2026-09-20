@@ -184,6 +184,7 @@ export const userDataMiddleware = async (
 
       try {
         userData = await validateConfig(userData, {
+          skipVariantValidation: true,
           skipErrorsFromAddonsOrProxies: true,
           decryptValues: true,
         });
