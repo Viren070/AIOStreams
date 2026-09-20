@@ -33,6 +33,8 @@ import { StreamContext, ExtendedMetadata } from './context.js';
 
 const logger = createLogger('filterer');
 
+const FILTER_SLICE_MS = 8;
+
 const releaseDateFormat = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
   month: 'short',
@@ -488,7 +490,12 @@ class StreamFilterer {
     }
 
     if (requestedTitleStrings.length) {
+      let reconcileSliceStart = performance.now();
       for (const stream of streams) {
+        if (performance.now() - reconcileSliceStart >= FILTER_SLICE_MS) {
+          await new Promise((resolve) => setImmediate(resolve));
+          reconcileSliceStart = performance.now();
+        }
         if (!stream.parsedFile?.title) continue;
         const reconciled = reconcileParsedName(
           stream.parsedFile,
@@ -2532,7 +2539,15 @@ class StreamFilterer {
     }
 
     const filterPassStart = Date.now();
-    const filteredStreams = filterableStreams.filter(shouldKeepStream);
+    const filteredStreams: ParsedStream[] = [];
+    let filterSliceStart = performance.now();
+    for (const stream of filterableStreams) {
+      if (performance.now() - filterSliceStart >= FILTER_SLICE_MS) {
+        await new Promise((resolve) => setImmediate(resolve));
+        filterSliceStart = performance.now();
+      }
+      if (shouldKeepStream(stream)) filteredStreams.push(stream);
+    }
     filterPassMs = Date.now() - filterPassStart;
 
     // Included streams skip the filter pass, so shadow-evaluate them (without
