@@ -72,7 +72,7 @@ export const userLimitsSchema = {
   },
   maxFormatterTemplateLength: {
     schema: positiveInt,
-    default: 5000,
+    default: 15000,
     label: 'Max formatter template length',
     description:
       'Maximum length (characters) of a single formatter template string. Enforced during config validation.',

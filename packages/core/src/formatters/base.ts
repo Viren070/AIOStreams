@@ -231,6 +231,12 @@ function readField(source: string, parseValue: unknown): unknown {
   return (parseValue as any)?.[canonical[0]]?.[canonical[1]];
 }
 
+interface CachedTemplate {
+  compiled: CompiledParseFunction;
+  chars: number;
+  uses: number;
+}
+
 /**
  * Pre-compiled function that takes ParseValue and returns formatted string
  */
@@ -300,25 +306,71 @@ export abstract class BaseFormatter {
     );
   }
 
-  private static compiledTemplates = new Map<string, CompiledParseFunction>();
-  private static readonly MAX_CACHED_TEMPLATES = 200;
+  /**
+   * Compiled templates, least-recently-used first. Budgeted by source length
+   * because a compiled template costs roughly 40 bytes of heap per character.
+   */
+  private static compiledTemplates = new Map<string, CachedTemplate>();
+  private static cachedTemplateChars = 0;
+  /** ~40 MiB of compiled templates, whatever the per-template limit is. */
+  private static readonly MAX_CACHED_TEMPLATE_CHARS = 1_000_000;
+  private static readonly EVICTION_SAMPLE = 16;
 
   private async getCompiledTemplate(
     template: string
   ): Promise<CompiledParseFunction> {
-    const cached = BaseFormatter.compiledTemplates.get(template);
-    if (cached) return cached;
+    const cache = BaseFormatter.compiledTemplates;
+    const cached = cache.get(template);
+    if (cached) {
+      cached.uses += 1;
+      // re-inserting moves it to the end, so it is evicted last
+      cache.delete(template);
+      cache.set(template, cached);
+      return cached.compiled;
+    }
 
     const compiled = await this.compileTemplate(template);
 
-    // templates are user-supplied, so the map is bounded
-    if (
-      BaseFormatter.compiledTemplates.size >= BaseFormatter.MAX_CACHED_TEMPLATES
-    ) {
-      BaseFormatter.compiledTemplates.clear();
+    if (template.length > BaseFormatter.MAX_CACHED_TEMPLATE_CHARS) {
+      return compiled;
     }
-    BaseFormatter.compiledTemplates.set(template, compiled);
+
+    cache.set(template, { compiled, chars: template.length, uses: 1 });
+    BaseFormatter.cachedTemplateChars += template.length;
+    while (
+      BaseFormatter.cachedTemplateChars >
+      BaseFormatter.MAX_CACHED_TEMPLATE_CHARS
+    ) {
+      if (!BaseFormatter.evictOne()) break;
+    }
     return compiled;
+  }
+
+  /**
+   * Least-used of the oldest few, so one-off configurations cannot push out a
+   * shared template. Surviving a scan costs a use, which ages out stale ones.
+   */
+  private static evictOne(): boolean {
+    const cache = BaseFormatter.compiledTemplates;
+    const sample: [string, CachedTemplate][] = [];
+    for (const entry of cache) {
+      sample.push(entry);
+      if (sample.length >= BaseFormatter.EVICTION_SAMPLE) break;
+    }
+    if (!sample.length) return false;
+
+    // strict `<` leaves ties with the oldest, where the walk started
+    let [victimKey, victim] = sample[0];
+    for (const [key, entry] of sample) {
+      if (entry.uses < victim.uses) [victimKey, victim] = [key, entry];
+    }
+    for (const [key, entry] of sample) {
+      if (key !== victimKey && entry.uses > 1) entry.uses -= 1;
+    }
+
+    cache.delete(victimKey);
+    BaseFormatter.cachedTemplateChars -= victim.chars;
+    return true;
   }
 
   public async format(
