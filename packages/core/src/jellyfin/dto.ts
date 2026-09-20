@@ -337,14 +337,50 @@ export interface ContentBuildOptions {
   childCount?: number;
   /** Which catalog's genre ids to point genre chips at. */
   genreCatalog?: { type: string; id: string };
+  /** Plays on its own rather than opening a video list. */
+  leaf?: boolean;
+}
+
+export function defaultVideoIdOf(entry: unknown): string | undefined {
+  const hints = (entry as { behaviorHints?: { defaultVideoId?: unknown } })
+    ?.behaviorHints;
+  const id = hints?.defaultVideoId;
+  return typeof id === 'string' && id ? id : undefined;
+}
+
+/**
+ * Videos that are a broadcast schedule rather than episodes. Not the
+ * `hasScheduledVideos` hint, which ordinary shows with dated episodes set too.
+ */
+export function hasProgrammeVideos(
+  meta: Pick<Meta, 'videos'> | null | undefined
+): boolean {
+  const videos = meta?.videos ?? [];
+  return videos.length > 0 && videos.every((v) => !!v.startTime);
+}
+
+/**
+ * Whether an entry plays on its own, the way Stremio decides it: the
+ * `defaultVideoId` hint wins, then a meta with no videos is itself the video.
+ * A list only has previews, so `leafTypes` carries that second answer.
+ */
+export function isLeafEntry(
+  entry: { type: string; collection?: unknown },
+  leafTypes?: ReadonlySet<string>
+): boolean {
+  if (entry.collection) return false;
+  if (entry.type === 'movie') return true;
+  if (defaultVideoIdOf(entry)) return true;
+  return !!leafTypes?.has(entry.type);
 }
 
 export function contentDescriptor(
   meta: { id: string; type: string },
-  boxset = false
+  boxset = false,
+  leaf = meta.type === 'movie'
 ): ContentDescriptor {
   if (boxset) return { k: 'boxset', t: meta.type, i: meta.id };
-  return meta.type === 'movie'
+  return leaf
     ? { k: 'movie', t: meta.type, i: meta.id }
     : { k: 'series', t: meta.type, i: meta.id };
 }
@@ -352,10 +388,11 @@ export function contentDescriptor(
 /** The `Type` a catalog entry carries as a list item. */
 export function contentItemType(
   type: string,
-  boxset = false
+  boxset = false,
+  leaf = type === 'movie'
 ): 'Movie' | 'Series' | 'BoxSet' {
   if (boxset) return 'BoxSet';
-  return type === 'movie' ? 'Movie' : 'Series';
+  return leaf ? 'Movie' : 'Series';
 }
 
 /**
@@ -370,13 +407,19 @@ export function buildContentItem(
   opts: ContentBuildOptions = {}
 ): JellyfinItem {
   const meta = input as AnyMeta;
+  const leaf = opts.leaf ?? meta.type === 'movie';
   const descriptor = contentDescriptor(
     { id: meta.id, type: meta.type },
-    opts.boxset
+    opts.boxset,
+    leaf
   );
   const id = encodeItemId(descriptor);
   const enrichment = readEnrichment(input);
-  const jellyfinType = contentItemType(meta.type, descriptor.k === 'boxset');
+  const jellyfinType = contentItemType(
+    meta.type,
+    descriptor.k === 'boxset',
+    leaf
+  );
   const folder = jellyfinType !== 'Movie';
   const name = (meta.name as string | undefined) ?? meta.id;
   const genres = genresFrom(input);

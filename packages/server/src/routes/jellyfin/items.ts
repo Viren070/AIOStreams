@@ -19,7 +19,9 @@ import {
   episodeDescriptor,
   findCatalog,
   groupSeasons,
+  hasProgrammeVideos,
   identityFor,
+  isLeafEntry,
   itemKeyFor,
   placeholderMediaSource,
   playableSources,
@@ -200,10 +202,12 @@ export async function itemsFromPreviews(
     catalog?: { type: string; id: string; name: string };
   } = {}
 ): Promise<JellyfinItem[]> {
+  const leafTypes = await ctx.leafTypes();
   const items = previews.map((p) =>
     buildContentItem(ctx.build, p, {
       parentId: opts.parentId,
       boxset: isBoxsetEntry(p, opts.catalog),
+      leaf: isLeafEntry(p, leafTypes),
       childCount: p.collection ? knownMemberCount(p) : undefined,
       genreCatalog: opts.catalog
         ? { type: opts.catalog.type, id: opts.catalog.id }
@@ -327,7 +331,7 @@ export async function boxSetChildren(
     });
     return { meta, boxset, children };
   }
-  if (!meta?.videos?.length) return null;
+  if (!meta?.videos?.length || hasProgrammeVideos(meta)) return null;
   const boxset = buildContentItem(
     ctx.build,
     { ...meta, type: d.t },
@@ -402,10 +406,13 @@ export async function itemFromDescriptor(
       const asBoxset =
         !(d.k === 'movie' && d.p) &&
         (!!meta?.collection ||
-          (d.k === 'movie' && (meta?.videos?.length ?? 0) > 1));
+          (d.k === 'movie' &&
+            (meta?.videos?.length ?? 0) > 1 &&
+            !hasProgrammeVideos(meta)));
       const item = buildContentItem(ctx.build, base, {
         playstate: opts.playstate,
         boxset: asBoxset,
+        leaf: d.k === 'movie',
         childCount: asBoxset
           ? knownMemberCount(meta!)
           : d.k === 'series'
