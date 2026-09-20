@@ -1,6 +1,7 @@
 import {
   addonSubtitleTracks,
   config as appConfig,
+  constants,
   createFormatter,
   createLogger,
   DistributedLock,
@@ -9,7 +10,9 @@ import {
   isPlayable,
   resolveMarkerId as markerIdFor,
   newPlaySessionId,
+  noticeRecordFrom,
   parseRuntimeMs,
+  playableSources,
   rememberShowEpisodes,
   labelFrom,
   isMemoFresh,
@@ -139,6 +142,37 @@ function maxVersionsFor(ctx: JellyfinRequestContext): number {
   return Math.max(1, Math.min(cap, wanted));
 }
 
+const NOTICE_TYPES: string[] = [
+  constants.EXTERNAL_STREAM_TYPE,
+  constants.INFO_STREAM_TYPE,
+];
+
+/**
+ * Streams with nothing to play but something to say. A link that repeats a
+ * stream already in the list is left out; it would only be that stream again.
+ */
+function noticeStreamsOf(
+  all: ParsedStream[],
+  playable: ParsedStream[]
+): ParsedStream[] {
+  const playableUrls = new Set(
+    playable.map((stream) => stream.url).filter(Boolean)
+  );
+  return all.filter(
+    (stream) =>
+      !isPlayable(stream) &&
+      NOTICE_TYPES.includes(stream.type) &&
+      !(stream.externalUrl && playableUrls.has(stream.externalUrl))
+  );
+}
+
+function showErrors(ctx: JellyfinRequestContext): boolean {
+  return (
+    !ctx.userData.hideErrors &&
+    !ctx.userData.hideErrorsForResources?.includes('stream')
+  );
+}
+
 /**
  * Runs the stream pipeline once for an item and records everything the
  * anonymous routes need. Reuses a live memo unless `force` is set.
@@ -195,32 +229,38 @@ async function resolveUncached(
   if (!target) return null;
 
   const engine = await ctx.engine();
-  const own = (target.streams ?? []).filter(isPlayable);
-  const streamsRes = own.length
+  const inline = (target.streams ?? []) as ParsedStream[];
+  const ownPlayable = inline.filter(isPlayable);
+  const streamsRes = ownPlayable.length
     ? undefined
     : await engine.getStreams(target.videoId, target.type);
-  const playable = (
-    own.length ? own : (streamsRes?.data?.streams ?? []).filter(isPlayable)
+  const all = (
+    ownPlayable.length ? inline : (streamsRes?.data?.streams ?? [])
   ) as ParsedStream[];
+  const playable = all.filter(isPlayable);
   const addonSubtitles: SubtitleTrack[] = [];
 
   const streamContext = engine.getStreamContext();
   const formatter = streamContext
     ? createFormatter(streamContext.toFormatterContext(playable))
     : null;
+  const format = async (stream: ParsedStream) => {
+    const fallback = {
+      name: stream.originalName || stream.addon.name,
+      description: stream.originalDescription || '',
+    };
+    if (!formatter || stream.addon.formatPassthrough) return fallback;
+    try {
+      return await formatter.format(stream);
+    } catch {
+      return fallback;
+    }
+  };
   const top = playable.slice(0, maxVersionsFor(ctx));
 
   const sources: MediaSourceRecord[] = [];
   for (const stream of top) {
-    let formatted = {
-      name: stream.originalName || stream.addon.name,
-      description: stream.originalDescription || '',
-    };
-    if (formatter && !stream.addon.formatPassthrough) {
-      try {
-        formatted = await formatter.format(stream);
-      } catch {}
-    }
+    const formatted = await format(stream);
     sources.push(
       sourceRecordFrom(
         ctx.uuid,
@@ -230,6 +270,49 @@ async function resolveUncached(
         addonSubtitles
       )
     );
+  }
+
+  /* Last and outside the version cap: the first source is what a client plays
+   * when it is given no choice. */
+  const notice = (
+    label: string,
+    type: string,
+    text: { name: string; description: string },
+    addon = ''
+  ) =>
+    sources.push(
+      noticeRecordFrom(ctx.uuid, `notice|${itemId}|${sources.length}`, label, {
+        ...text,
+        addon,
+        type,
+      })
+    );
+
+  for (const stream of noticeStreamsOf(all, playable)) {
+    const formatted = await format(stream);
+    notice(
+      labelFrom(formatted, stream),
+      stream.type,
+      formatted,
+      stream.addon?.name ?? ''
+    );
+  }
+  if (showErrors(ctx)) {
+    for (const error of streamsRes?.errors ?? []) {
+      const text = {
+        name: error.title || appConfig.branding.addonName,
+        description: error.description || 'Unknown error',
+      };
+      notice(labelFrom(text), constants.ERROR_STREAM_TYPE, text);
+    }
+  }
+  for (const statistic of streamsRes?.data?.statistics ?? []) {
+    if (!statistic.forced && !ctx.userData.statistics?.enabled) continue;
+    const text = {
+      name: statistic.title,
+      description: statistic.description,
+    };
+    notice(labelFrom(text), constants.STATISTIC_STREAM_TYPE, text);
   }
 
   const memo: PlaybackMemo = {
@@ -246,7 +329,7 @@ async function resolveUncached(
     createdAt: Date.now(),
   };
   await writePlaybackMemo(memo, scope);
-  if (!sources.length) {
+  if (!playableSources(sources).length) {
     const reason = (streamsRes?.errors ?? [])
       .map((e) => [e.title, e.description].filter(Boolean).join(': '))
       .join('; ');
@@ -281,7 +364,7 @@ export async function enrichSourceSubtitles(
   const record =
     (msid ? memo.sources.find((s) => s.msid === msid) : undefined) ??
     memo.sources[0];
-  if (!record || record.subtitlesEnriched) return;
+  if (!record || record.notice || record.subtitlesEnriched) return;
   const extras = fileExtrasFor(record);
 
   const engine = await ctx.engine();

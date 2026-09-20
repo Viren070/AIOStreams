@@ -22,6 +22,7 @@ import {
   identityFor,
   itemKeyFor,
   placeholderMediaSource,
+  playableSources,
   airedEpisodeRefs,
   rememberedShowEpisodes,
   showEpisodesOf,
@@ -49,6 +50,7 @@ import {
   type UserItemDataDto,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
+import { StaticFiles } from '../../utils/static-errors.js';
 import type { JellyfinRequestContext } from './context.js';
 import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
 
@@ -536,6 +538,13 @@ export function subtitleUrlFor(req: Request, itemId: string, msid: string) {
     `${req.baseUrl}/Videos/${itemId}/${msid}/Subtitles/${index}/0/Stream.${format}`;
 }
 
+export function nothingToPlayPath(
+  req: Request,
+  ctx: JellyfinRequestContext
+): string {
+  return `${ctx.baseUrl.replace(req.baseUrl, '')}/static/${StaticFiles.NO_MATCHING_FILE}`;
+}
+
 /** MediaSources for an item, from a memo; the first source carries `firstId`. */
 export function mediaSourcesFrom(
   req: Request,
@@ -568,6 +577,7 @@ export function mediaSourcesFrom(
       runtimeMs: memo.runtimeMs,
       includeExtension: true,
       hasSegments: opts.hasSegments,
+      noticePath: nothingToPlayPath(req, ctx),
     })
   );
 }
@@ -578,7 +588,7 @@ export function placeholderSources(
   itemId: string,
   resolved: boolean
 ): JellyfinMediaSource[] {
-  const path = `${ctx.baseUrl.replace(req.baseUrl, '')}/static/no_matching_file.mp4`;
+  const path = nothingToPlayPath(req, ctx);
   if (resolved) {
     return [placeholderMediaSource(itemId, 'No streams found', path)];
   }
@@ -616,8 +626,13 @@ export async function detailItem(
   item.EnableMediaSourceDisplay = true;
 
   const existing = await resolveByItem(ctx.uuid, ctx.scope(), encodeItemId(d));
+  /* A memo that only carries notices is not a result, so it is resolved again. */
   const reusable =
-    existing?.sources.length && isMemoFresh(existing) ? existing : null;
+    existing &&
+    playableSources(existing.sources).length &&
+    isMemoFresh(existing)
+      ? existing
+      : null;
   const shouldResolve =
     opts.resolve !== false && (opts.forceResolve || resolveOnOpen(ctx));
   const resolveNow = async () => {

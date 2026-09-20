@@ -70,6 +70,8 @@ export interface MediaSourceRecord {
   subtitlesEnriched?: boolean;
   videoHash?: string;
   live: boolean;
+  /** Carries text only: an addon notice, a pipeline error or a statistic. */
+  notice?: boolean;
   extension: AiostreamsSourceExtension;
 }
 

@@ -45,11 +45,12 @@ export function defaultLabel(stream: ParsedStream): string {
 /** The name a client shows in its version picker: the formatter's whole output. */
 export function labelFrom(
   formatted: { name: string; description: string },
-  stream: ParsedStream
+  stream?: ParsedStream
 ): string {
   const label = [formatted.name, formatted.description]
     .map((part) => part.trim())
     .filter(Boolean)
     .join('\n');
-  return label || defaultLabel(stream);
+  if (label) return label;
+  return stream ? defaultLabel(stream) : 'Stream';
 }
