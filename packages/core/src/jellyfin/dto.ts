@@ -359,19 +359,30 @@ export function hasProgrammeVideos(
   return videos.length > 0 && videos.every((v) => !!v.startTime);
 }
 
+/** What a request knows about which types play on their own. */
+export interface LeafEvidence {
+  /** Types a sweep has decided, whichever way it decided them. */
+  decided: ReadonlySet<string>;
+  /** Of those, the ones that play. */
+  leaves: ReadonlySet<string>;
+  /** Stands in until a sweep decides. */
+  guess?: (entry: { id: string; type: string }) => boolean;
+}
+
 /**
  * Whether an entry plays on its own, the way Stremio decides it: the
  * `defaultVideoId` hint wins, then a meta with no videos is itself the video.
- * A list only has previews, so `leafTypes` carries that second answer.
+ * A list only has previews, so the evidence answers that second question.
  */
 export function isLeafEntry(
-  entry: { type: string; collection?: unknown },
-  leafTypes?: ReadonlySet<string>
+  entry: { id: string; type: string; collection?: unknown },
+  evidence?: LeafEvidence
 ): boolean {
   if (entry.collection) return false;
   if (entry.type === 'movie') return true;
   if (defaultVideoIdOf(entry)) return true;
-  return !!leafTypes?.has(entry.type);
+  if (evidence?.decided.has(entry.type)) return evidence.leaves.has(entry.type);
+  return evidence?.guess?.(entry) ?? false;
 }
 
 export function contentDescriptor(
@@ -516,8 +527,17 @@ export interface SeasonGroup {
 }
 
 /** Groups `videos[]` by season; unnumbered videos become episode 1..n of season 1. */
-export function groupSeasons(meta: ParsedMeta): SeasonGroup[] {
+export function groupSeasons(
+  meta: ParsedMeta,
+  /** Stand in for a meta with no videos, whose id is its own video. */
+  synthesise = false
+): SeasonGroup[] {
   const videos = [...(meta.videos ?? [])];
+  if (!videos.length && synthesise)
+    videos.push({
+      id: defaultVideoIdOf(meta) ?? meta.id,
+      title: meta.name ?? meta.id,
+    });
   const groups = new Map<number, SeasonGroup>();
   const numbered = videos.some((v) => typeof v.episode === 'number');
   videos.forEach((v, idx) => {

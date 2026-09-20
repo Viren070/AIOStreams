@@ -202,12 +202,12 @@ export async function itemsFromPreviews(
     catalog?: { type: string; id: string; name: string };
   } = {}
 ): Promise<JellyfinItem[]> {
-  const leafTypes = await ctx.leafTypes();
+  const evidence = await ctx.leafEvidence();
   const items = previews.map((p) =>
     buildContentItem(ctx.build, p, {
       parentId: opts.parentId,
       boxset: isBoxsetEntry(p, opts.catalog),
-      leaf: isLeafEntry(p, leafTypes),
+      leaf: isLeafEntry(p, evidence),
       childCount: p.collection ? knownMemberCount(p) : undefined,
       genreCatalog: opts.catalog
         ? { type: opts.catalog.type, id: opts.catalog.id }
@@ -258,7 +258,7 @@ export async function seasonsForSeries(
   const meta = await getMetaLoose(ctx, d.t, d.i);
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
-  const groups = groupSeasons(meta);
+  const groups = groupSeasons(meta, true);
   const states = await watchRowsFor(
     ctx.watch,
     groups.flatMap((g) => g.videos.map((v) => episodeRef(meta, g, v)))
@@ -283,7 +283,7 @@ export async function episodesForSeries(
   const meta = await getMetaLoose(ctx, d.t, d.i);
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
-  const groups = groupSeasons(meta).filter(
+  const groups = groupSeasons(meta, true).filter(
     (g) => season == null || g.season === season
   );
   const pairs = groups.flatMap((g) => g.videos.map((v) => ({ g, v })));
@@ -431,7 +431,7 @@ export async function itemFromDescriptor(
       const meta = await getMetaLoose(ctx, d.t, d.i);
       if (!meta) return null;
       const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
-      const groups = groupSeasons(meta);
+      const groups = groupSeasons(meta, true);
       let found: {
         group: SeasonGroup;
         video: SeasonGroup['videos'][number];

@@ -199,12 +199,12 @@ function pageFilter(
   const excluded = excludedTypes(req);
   const userFiltered = hasUserFilters(req);
   return async (previews) => {
-    const leafTypes = await ctx.leafTypes();
+    const evidence = await ctx.leafEvidence();
     const byType = previews.filter((p) => {
       const type = contentItemType(
         p.type,
         isBoxsetEntry(p, opts.catalog),
-        isLeafEntry(p, leafTypes)
+        isLeafEntry(p, evidence)
       ).toLowerCase();
       return (!types || types.has(type)) && !excluded.has(type);
     });

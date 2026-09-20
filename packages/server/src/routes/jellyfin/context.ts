@@ -31,7 +31,9 @@ import {
   type JellyfinApiKey,
   type JellyfinPersona,
   exposedCatalogs,
-  leafTypesFor,
+  guessLeaf,
+  leafEvidenceFor,
+  type LeafEvidence,
   listViews,
   type ParsedMeta,
   type ViewEntry,
@@ -70,8 +72,8 @@ export interface JellyfinRequestContext {
   metas: Map<string, Promise<ParsedMeta | null>>;
   /** The libraries, resolved once per request; one cache read per catalog. */
   views(): Promise<ViewEntry[]>;
-  /** Types whose entries play on their own. */
-  leafTypes(): Promise<ReadonlySet<string>>;
+  /** Which types play on their own, and a guess for the ones not yet swept. */
+  leafEvidence(): Promise<LeafEvidence>;
 }
 
 /*
@@ -418,17 +420,19 @@ async function buildContext(
   let primaryEngine: Promise<AIOStreams> | null = null;
   let scope: string | null = null;
   let views: Promise<ViewEntry[]> | null = null;
-  let leafTypes: Promise<ReadonlySet<string>> | null = null;
+  let leafEvidence: Promise<LeafEvidence> | null = null;
   const finalUserData = userData;
   const engineOf = (data: UserData) =>
     new AIOStreams(data, { skipFailedAddons: true }).initialise();
   const getEngine = () => (engine ??= engineOf(finalUserData));
   const getViews = () =>
     (views ??= getEngine().then((e) => listViews(e, finalUserData)));
-  const getLeafTypes = () =>
-    (leafTypes ??= getEngine().then((e) =>
-      leafTypesFor(finalUserData, exposedCatalogs(e))
-    ));
+  const getLeafEvidence = () =>
+    (leafEvidence ??= getEngine().then(async (engine) => ({
+      ...(await leafEvidenceFor(finalUserData, exposedCatalogs(engine))),
+      guess: (entry: { id: string; type: string }) =>
+        guessLeaf(entry, (type, id) => engine.canGetMeta(type, id)),
+    })));
   const getPrimaryEngine = () => {
     if (!persona) return getEngine();
     return (primaryEngine ??= activateVariants(
@@ -475,7 +479,7 @@ async function buildContext(
     primaryEngine: getPrimaryEngine,
     metas: new Map(),
     views: getViews,
-    leafTypes: getLeafTypes,
+    leafEvidence: getLeafEvidence,
     scope: () => (scope ??= memoScope(finalUserData, entry.updatedAt)),
   };
 }

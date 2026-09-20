@@ -7,6 +7,7 @@ import { createLogger } from '../logging/logger.js';
 import { userScopeKey } from '../utils/user-scope.js';
 import { viewId } from './ids.js';
 import { hasProgrammeVideos, isLeafEntry } from './dto.js';
+import type { LeafEvidence } from './dto.js';
 import type { Catalog, CollectionType } from './dto.js';
 
 const logger = createLogger('jellyfin');
@@ -379,7 +380,14 @@ const viewEvidenceCache = Cache.getInstance<string, ViewEvidence>(
   'jellyfin-view-evidence',
   20_000
 );
-const VIEW_TYPE_TTL = 6 * 60 * 60;
+/* The answer is a property of the type, so catalogs sharing one only pay once. */
+const leafTypeCache = Cache.getInstance<string, boolean>(
+  'jellyfin-leaf-type',
+  20_000
+);
+/** Probes in flight, so one sweep asks about a type once. */
+const probing = new Map<string, Promise<boolean>>();
+const VIEW_TYPE_TTL = 24 * 60 * 60;
 const SNIFF_CONCURRENCY = 4;
 /** Metas read per unknown type before its entries are called leaves. */
 const LEAF_SAMPLES = 3;
@@ -396,7 +404,7 @@ function viewTypeKey(userData: UserData, catalog: Catalog): string {
  * Whether every sampled meta of this type plays on its own. One catalog can
  * hold both shapes, so a single sample that opens a video list settles it.
  */
-async function typeIsLeaf(
+async function probeType(
   engine: AIOStreams,
   type: string,
   samples: MetaPreview[]
@@ -411,8 +419,30 @@ async function typeIsLeaf(
   return true;
 }
 
+async function typeIsLeaf(
+  engine: AIOStreams,
+  userData: UserData,
+  type: string,
+  samples: MetaPreview[]
+): Promise<boolean> {
+  const key = `${userScopeKey(userData)}|${type}`;
+  const known = await leafTypeCache.get(key).catch(() => undefined);
+  if (known !== undefined) return known;
+  let pending = probing.get(key);
+  if (!pending) {
+    pending = probeType(engine, type, samples).finally(() =>
+      probing.delete(key)
+    );
+    probing.set(key, pending);
+  }
+  const leaf = await pending;
+  await leafTypeCache.set(key, leaf, VIEW_TYPE_TTL).catch(() => undefined);
+  return leaf;
+}
+
 async function sniffEntryTypes(
   engine: AIOStreams,
+  userData: UserData,
   key: string,
   catalog: Catalog
 ): Promise<void> {
@@ -435,7 +465,7 @@ async function sniffEntryTypes(
       const samples = page.items
         .filter((m) => !m.collection && m.type === type)
         .slice(0, LEAF_SAMPLES);
-      if (await typeIsLeaf(engine, type, samples)) leaves.push(type);
+      if (await typeIsLeaf(engine, userData, type, samples)) leaves.push(type);
     }
     await viewEvidenceCache.set(key, { types, leaves }, VIEW_TYPE_TTL);
   } catch (error) {
@@ -456,6 +486,7 @@ async function sniffEntryTypes(
  */
 function scheduleSniff(
   engine: AIOStreams,
+  userData: UserData,
   pending: { key: string; catalog: Catalog }[]
 ): void {
   const todo = pending.filter((p) => !sniffing.has(p.key));
@@ -465,7 +496,7 @@ function scheduleSniff(
   const worker = async () => {
     while (cursor < todo.length) {
       const { key, catalog } = todo[cursor++];
-      await sniffEntryTypes(engine, key, catalog);
+      await sniffEntryTypes(engine, userData, key, catalog);
       sniffing.delete(key);
     }
   };
@@ -553,7 +584,7 @@ export async function listViews(
       collectionType: kind === 'mixed' ? undefined : kind,
     });
   }
-  scheduleSniff(engine, pending);
+  scheduleSniff(engine, userData, pending);
   return out;
 }
 
@@ -571,17 +602,20 @@ export type ContentKind = 'movie' | 'series';
 
 /** The kind an entry becomes as an item: a leaf plays, everything else opens. */
 export function entryKind(
-  preview: Pick<MetaPreview, 'type' | 'collection'>,
-  leafTypes?: ReadonlySet<string>
+  preview: Pick<MetaPreview, 'id' | 'type' | 'collection'>,
+  evidence?: LeafEvidence
 ): ContentKind {
   if (preview.collection) return 'movie';
-  return isLeafEntry(preview, leafTypes) ? 'movie' : 'series';
+  return isLeafEntry(preview, evidence) ? 'movie' : 'series';
 }
 
 function sniffedKind(type: string, leaves: string[]): ContentKind {
   return type === COLLECTION_ENTRY
     ? 'movie'
-    : entryKind({ type }, new Set(leaves));
+    : entryKind(
+        { id: '', type },
+        { decided: new Set([type]), leaves: new Set(leaves) }
+      );
 }
 
 /** What a sweep already learned about this catalog; never a fresh fetch. */
@@ -594,15 +628,30 @@ async function cachedEvidence(
     .catch(() => undefined);
 }
 
-/** Types across these catalogs whose entries play on their own. */
-export async function leafTypesFor(
+/** What the sweeps have decided across these catalogs. */
+export async function leafEvidenceFor(
   userData: UserData,
   catalogs: Catalog[]
-): Promise<Set<string>> {
+): Promise<Pick<LeafEvidence, 'decided' | 'leaves'>> {
   const evidence = await Promise.all(
     catalogs.map((c) => cachedEvidence(userData, c))
   );
-  return new Set(evidence.flatMap((e) => e?.leaves ?? []));
+  return {
+    decided: new Set(evidence.flatMap((e) => e?.types ?? [])),
+    leaves: new Set(evidence.flatMap((e) => e?.leaves ?? [])),
+  };
+}
+
+/**
+ * Until a sweep decides: an entry no addon in this configuration can open a
+ * meta for is its own video, and a channel plays rather than opens.
+ */
+export function guessLeaf(
+  entry: { id: string; type: string },
+  canGetMeta: (type: string, id: string) => boolean
+): boolean {
+  if (entry.type === 'tv' || entry.type === 'channel') return true;
+  return !canGetMeta(entry.type, entry.id);
 }
 
 export async function catalogHasCollections(
@@ -640,7 +689,10 @@ export async function searchCatalogs(
   const evidence = userData
     ? await Promise.all(searchable.map((c) => cachedEvidence(userData, c)))
     : [];
-  const leafTypes = new Set(evidence.flatMap((e) => e?.leaves ?? []));
+  const leafEvidence: LeafEvidence = {
+    decided: new Set(evidence.flatMap((e) => e?.types ?? [])),
+    leaves: new Set(evidence.flatMap((e) => e?.leaves ?? [])),
+  };
   const catalogs = !wanted
     ? searchable
     : searchable.filter((c, i) => {
@@ -672,7 +724,7 @@ export async function searchCatalogs(
   const lists = results.map((r) =>
     r.status === 'fulfilled'
       ? r.value.items.filter(
-          (i) => !wanted || wanted.has(entryKind(i, leafTypes))
+          (i) => !wanted || wanted.has(entryKind(i, leafEvidence))
         )
       : []
   );
