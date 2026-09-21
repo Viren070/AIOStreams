@@ -15,6 +15,7 @@ import {
   enrichParsedIdWithAnimeEntry,
   formatZodError,
   fromUrlSafeBase64,
+  getEnrichedImdbId,
   getSimpleTextHash,
   getTimeTakenSincePoint,
   SERVICE_DETAILS,
@@ -798,7 +799,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const imdbId =
       parsedId.type === 'imdbId'
         ? parsedId.value.toString()
-        : animeEntry?.mappings?.imdbId?.toString();
+        : getEnrichedImdbId(parsedId, animeEntry);
     // const tmdbId =
     //   parsedId.type === 'themoviedbId'
     //     ? parsedId.value.toString()

@@ -1,0 +1,44 @@
+---
+title: Subtitles
+description: Subtitle fields AIOStreams reads, and how each subtitle shows in a Jellyfin client.
+---
+
+Jellyfin clients list every subtitle as one track with a title, and can mark a track as forced or
+for the hearing impaired. These fields fill that in. They work on the `subtitles` resource and on
+subtitles attached to a stream.
+
+| Field             | Shape                                    | Shown in Jellyfin as                                          |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------------- |
+| `lang`            | ISO 639-2 code or a language name        | The track's language                                          |
+| `label`           | string, a standard Stremio field         | The track's title, after the language                         |
+| `forced`          | boolean, only the foreign-language lines | Forced; clients pick these when the audio is in your language |
+| `hearingImpaired` | boolean, SDH or closed captions          | Hearing impaired, and the SDH badge on clients that show one  |
+
+Put the release the subtitle was timed for in `label`. With a list of subtitles in one language, it
+is what tells the viewer which one will sync.
+
+Without `label`, anything in `lang` besides the language becomes the title, so `"Chinese 2"` shows
+as a second Chinese track. Without `forced` or `hearingImpaired`, a title reading "Forced", "SDH"
+or "[HI]" sets them.
+
+`url` can serve SRT, WebVTT or ASS whatever its extension, and AIOStreams converts it to the format
+the client asks for. ASS keeps its styling only when the `url` ends in `.ass`; otherwise clients
+get its text without the styling.
+
+## Example
+
+```json
+{
+  "subtitles": [
+    {
+      "id": "1952382875",
+      "url": "https://…/1952382875.srt",
+      "lang": "eng",
+      "label": "Inception.2010.1080p.BluRay.x264-SPARKS",
+      "hearingImpaired": true
+    }
+  ]
+}
+```
+
+This shows as `English - Inception.2010.1080p.BluRay.x264-SPARKS - Hearing Impaired`.

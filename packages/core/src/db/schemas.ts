@@ -134,6 +134,17 @@ const JellyfinPersonaSchema = z.object({
 
 export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
 
+/** No secret is stored: a key's token carries the credential itself. */
+const JellyfinApiKeySchema = z.object({
+  id: z.string().regex(/^[a-z0-9]{8,32}$/),
+  name: z.string().trim().min(1).max(64),
+  createdAt: z.string().max(64),
+});
+
+export type JellyfinApiKey = z.infer<typeof JellyfinApiKeySchema>;
+
+const MAX_JELLYFIN_API_KEYS = 10;
+
 const JellyfinSettingsFields = z.object({
   /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
   resolveOnOpen: z.boolean().optional(),
@@ -194,6 +205,25 @@ const JellyfinSettingsFields = z.object({
             message: `Persona name "${persona.name}" looks like a configuration id.`,
           });
         }
+      }
+    })
+    .optional(),
+  apiKeys: z
+    .array(JellyfinApiKeySchema)
+    .max(
+      MAX_JELLYFIN_API_KEYS,
+      `At most ${MAX_JELLYFIN_API_KEYS} API keys per configuration.`
+    )
+    .superRefine((keys, ctx) => {
+      const ids = new Set<string>();
+      for (const key of keys) {
+        if (ids.has(key.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Duplicate API key id "${key.id}".`,
+          });
+        }
+        ids.add(key.id);
       }
     })
     .optional(),
@@ -1175,6 +1205,8 @@ const ManifestCatalogSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   extra: z.array(ManifestExtraSchema).optional(),
+  poster: z.string().nullish(),
+  background: z.string().nullish(),
 });
 
 const AddonCatalogDefinitionSchema = z.object({
@@ -1235,6 +1267,7 @@ export const ManifestSchema = z
         p2p: z.boolean().optional(),
         configurable: z.boolean().optional(),
         configurationRequired: z.boolean().optional(),
+        epgProvider: z.boolean().optional(),
       })
       .optional(),
     // not part of the manifest scheme, but needed for stremio-addons.net
@@ -1386,6 +1419,7 @@ export const ParsedFileSchema = z.object({
   unrated: z.boolean().optional(),
   upscaled: z.boolean().optional(),
   network: z.string().optional(),
+  site: z.string().optional(),
   container: z.string().optional(),
   extension: z.string().optional(),
   seasonPack: z.boolean().optional(),
@@ -1516,7 +1550,7 @@ export type ParsedStreams = z.infer<typeof ParsedStreams>;
 const TrailerSchema = z
   .object({
     source: z.string().min(1),
-    type: z.enum(['Trailer', 'Clip', 'Teaser']),
+    type: z.string(),
   })
   .passthrough();
 
@@ -1525,6 +1559,15 @@ const MetaLinkSchema = z
     name: z.string().min(1),
     category: z.string().min(1),
     url: z.string().url().or(z.string().startsWith('stremio:///')),
+  })
+  .passthrough();
+
+/** A certification a programme carries. */
+const ContentRatingSchema = z
+  .object({
+    value: z.string(),
+    system: z.string().nullish(),
+    icon: z.string().nullish(),
   })
   .passthrough();
 
@@ -1605,6 +1648,15 @@ const MetaVideoSchema = z
     ids: ExternalIdsSchema.nullish(),
     rating: z.number().or(z.string()).nullish(),
     people: z.array(MetaPersonSchema).nullish(),
+    startTime: z.string().nullish(),
+    endTime: z.string().nullish(),
+    runtime: z.string().nullish(),
+    releaseInfo: z.string().nullish(),
+    genres: z.array(z.string()).nullish(),
+    cast: z.array(z.string()).nullish(),
+    directors: z.array(z.string()).nullish(),
+    links: z.array(MetaLinkSchema).nullish(),
+    ratings: z.array(ContentRatingSchema).nullish(),
   })
   .passthrough();
 
@@ -1656,6 +1708,7 @@ export const MetaSchema = MetaPreviewSchema.extend({
     .object({
       defaultVideoId: z.string().or(z.null()).optional(),
       hasScheduledVideo: z.boolean().nullable().optional(),
+      hasScheduledVideos: z.boolean().nullable().optional(),
     })
     .passthrough()
     .optional(),
@@ -1695,6 +1748,7 @@ export const ExtrasSchema = z
     skip: z.coerce.number().optional(),
     genre: z.string().optional(),
     search: z.string().optional(),
+    date: z.string().optional(),
     filename: z.string().optional(),
     videoHash: z.string().optional(),
     videoSize: z.coerce.number().optional(),
@@ -1875,8 +1929,7 @@ const StatusResponseSchema = z.object({
       access: z.enum(['none', 'trusted', 'all']),
       max: z.number(),
       maxScriptLength: z.number(),
-      maxInstructions: z.number(),
-      maxActive: z.number(),
+      maxTotalInstructions: z.number(),
       maxValueDepth: z.number(),
       maxPathSegments: z.number(),
       maxPathMatches: z.number(),

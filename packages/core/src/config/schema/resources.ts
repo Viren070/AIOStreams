@@ -2,11 +2,13 @@ import { z } from 'zod';
 import {
   byteSize,
   cacheTtlMap,
+  commaSeparatedList,
   nonNegativeInt,
   positiveInt,
   seconds,
 } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
+import { DEFAULT_REPOST_SUFFIXES } from '../../utils/constants.js';
 
 const optionalPositiveInt = z.union([z.number().int().positive(), z.null()]);
 const ttlField = cacheTtlMap;
@@ -77,6 +79,16 @@ export const resourcesSchema = {
     description:
       'Origin-level rewrites applied to stream URLs returned to clients. JSON object of `{origin: replacement}` URLs.',
     env: 'STREAM_URL_MAPPINGS',
+    requiresRestart: false,
+    secret: false,
+  },
+  repostSuffixes: {
+    schema: commaSeparatedList,
+    default: DEFAULT_REPOST_SUFFIXES,
+    label: 'Repost suffixes',
+    description:
+      'Tags that reposters and indexers add after the release group, such as `-FTP` or `-AsRequested`. They are ignored when parsing file and folder names, so the real release group is found. End an entry with `*` to match anything that starts with it, e.g. `Rakuv*`.',
+    env: 'REPOST_SUFFIXES',
     requiresRestart: false,
     secret: false,
   },

@@ -82,6 +82,7 @@ import { SeaDexPreset } from './seadex.js';
 import { StreamNZBPreset } from './streamnzb.js';
 import { DavexPreset } from './davex.js';
 import { HdHubPreset } from './hdhub.js';
+import { PenguPlayPreset } from './penguplay.js';
 import { BaguettioPreset } from './baguettio.js';
 import { Preset } from './index.js';
 
@@ -131,6 +132,7 @@ let PRESET_LIST: string[] = [
   'streamnzb',
   'davex',
   'dmm-cast',
+  'penguplay',
   'nuvio-streams',
   'webstreamr',
   'hdhub',
@@ -245,6 +247,8 @@ export class PresetManager {
         return FKStreamPreset;
       case 'flix-streams':
         return FlixStreamsPreset;
+      case 'penguplay':
+        return PenguPlayPreset;
       case 'anime-kitsu':
         return AnimeKitsuPreset;
       case 'nuvio-streams':

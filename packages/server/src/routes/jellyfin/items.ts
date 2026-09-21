@@ -19,9 +19,12 @@ import {
   episodeDescriptor,
   findCatalog,
   groupSeasons,
+  hasProgrammeVideos,
   identityFor,
+  isLeafEntry,
   itemKeyFor,
   placeholderMediaSource,
+  playableSources,
   airedEpisodeRefs,
   rememberedShowEpisodes,
   showEpisodesOf,
@@ -49,6 +52,7 @@ import {
   type UserItemDataDto,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
+import { StaticFiles } from '../../utils/static-errors.js';
 import type { JellyfinRequestContext } from './context.js';
 import { getMetaLoose, resolveMarkerId, resolvePlayback } from './resolve.js';
 
@@ -198,10 +202,12 @@ export async function itemsFromPreviews(
     catalog?: { type: string; id: string; name: string };
   } = {}
 ): Promise<JellyfinItem[]> {
+  const evidence = await ctx.leafEvidence();
   const items = previews.map((p) =>
     buildContentItem(ctx.build, p, {
       parentId: opts.parentId,
       boxset: isBoxsetEntry(p, opts.catalog),
+      leaf: isLeafEntry(p, evidence),
       childCount: p.collection ? knownMemberCount(p) : undefined,
       genreCatalog: opts.catalog
         ? { type: opts.catalog.type, id: opts.catalog.id }
@@ -252,7 +258,7 @@ export async function seasonsForSeries(
   const meta = await getMetaLoose(ctx, d.t, d.i);
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
-  const groups = groupSeasons(meta);
+  const groups = groupSeasons(meta, true);
   const states = await watchRowsFor(
     ctx.watch,
     groups.flatMap((g) => g.videos.map((v) => episodeRef(meta, g, v)))
@@ -277,7 +283,7 @@ export async function episodesForSeries(
   const meta = await getMetaLoose(ctx, d.t, d.i);
   if (!meta) return null;
   const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
-  const groups = groupSeasons(meta).filter(
+  const groups = groupSeasons(meta, true).filter(
     (g) => season == null || g.season === season
   );
   const pairs = groups.flatMap((g) => g.videos.map((v) => ({ g, v })));
@@ -325,7 +331,7 @@ export async function boxSetChildren(
     });
     return { meta, boxset, children };
   }
-  if (!meta?.videos?.length) return null;
+  if (!meta?.videos?.length || hasProgrammeVideos(meta)) return null;
   const boxset = buildContentItem(
     ctx.build,
     { ...meta, type: d.t },
@@ -400,10 +406,13 @@ export async function itemFromDescriptor(
       const asBoxset =
         !(d.k === 'movie' && d.p) &&
         (!!meta?.collection ||
-          (d.k === 'movie' && (meta?.videos?.length ?? 0) > 1));
+          (d.k === 'movie' &&
+            (meta?.videos?.length ?? 0) > 1 &&
+            !hasProgrammeVideos(meta)));
       const item = buildContentItem(ctx.build, base, {
         playstate: opts.playstate,
         boxset: asBoxset,
+        leaf: d.k === 'movie',
         childCount: asBoxset
           ? knownMemberCount(meta!)
           : d.k === 'series'
@@ -422,7 +431,7 @@ export async function itemFromDescriptor(
       const meta = await getMetaLoose(ctx, d.t, d.i);
       if (!meta) return null;
       const seriesItem = buildContentItem(ctx.build, { ...meta, type: d.t });
-      const groups = groupSeasons(meta);
+      const groups = groupSeasons(meta, true);
       let found: {
         group: SeasonGroup;
         video: SeasonGroup['videos'][number];
@@ -519,6 +528,8 @@ export async function nextUpForSeries(
 }
 
 function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
+  // An API key looks items up and never plays them.
+  if (ctx.apiKey) return false;
   switch (appConfig.jellyfin.resolveOnOpen) {
     case 'always':
       return true;
@@ -532,6 +543,13 @@ function resolveOnOpen(ctx: JellyfinRequestContext): boolean {
 export function subtitleUrlFor(req: Request, itemId: string, msid: string) {
   return (index: number, format: string) =>
     `${req.baseUrl}/Videos/${itemId}/${msid}/Subtitles/${index}/0/Stream.${format}`;
+}
+
+export function nothingToPlayPath(
+  req: Request,
+  ctx: JellyfinRequestContext
+): string {
+  return `${ctx.baseUrl.replace(req.baseUrl, '')}/static/${StaticFiles.NO_MATCHING_FILE}`;
 }
 
 /** MediaSources for an item, from a memo; the first source carries `firstId`. */
@@ -566,6 +584,7 @@ export function mediaSourcesFrom(
       runtimeMs: memo.runtimeMs,
       includeExtension: true,
       hasSegments: opts.hasSegments,
+      noticePath: nothingToPlayPath(req, ctx),
     })
   );
 }
@@ -576,7 +595,7 @@ export function placeholderSources(
   itemId: string,
   resolved: boolean
 ): JellyfinMediaSource[] {
-  const path = `${ctx.baseUrl.replace(req.baseUrl, '')}/static/no_matching_file.mp4`;
+  const path = nothingToPlayPath(req, ctx);
   if (resolved) {
     return [placeholderMediaSource(itemId, 'No streams found', path)];
   }
@@ -614,8 +633,13 @@ export async function detailItem(
   item.EnableMediaSourceDisplay = true;
 
   const existing = await resolveByItem(ctx.uuid, ctx.scope(), encodeItemId(d));
+  /* A memo that only carries notices is not a result, so it is resolved again. */
   const reusable =
-    existing?.sources.length && isMemoFresh(existing) ? existing : null;
+    existing &&
+    playableSources(existing.sources).length &&
+    isMemoFresh(existing)
+      ? existing
+      : null;
   const shouldResolve =
     opts.resolve !== false && (opts.forceResolve || resolveOnOpen(ctx));
   const resolveNow = async () => {

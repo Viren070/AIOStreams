@@ -59,10 +59,10 @@ export function userConfiguration() {
   };
 }
 
-export function userPolicy() {
+export function userPolicy(opts: { admin?: boolean; hidden?: boolean } = {}) {
   return {
-    IsAdministrator: false,
-    IsHidden: false,
+    IsAdministrator: opts.admin ?? false,
+    IsHidden: opts.hidden ?? false,
     EnableCollectionManagement: false,
     EnableSubtitleManagement: false,
     EnableLyricManagement: false,
@@ -123,13 +123,15 @@ function avatarTag(avatar: string | undefined): string | undefined {
 /**
  * `pickable` rows come from the pre-authenticated address, which already
  * proved the credential, so a client signs in with one tap and no password.
+ * `forKey` rows make the primary user the administrator an API key acts as.
  */
 export function userDto(
   uuid: string,
   userData: Faced,
   persona: JellyfinPersona | null,
-  pickable = false
+  opts: { pickable?: boolean; forKey?: boolean } = {}
 ) {
+  const pickable = opts.pickable ?? false;
   const now = new Date().toISOString();
   const tag = avatarTag(
     persona ? persona.avatar : userData.jellyfin?.primary?.avatar
@@ -147,7 +149,9 @@ export function userDto(
     LastLoginDate: now,
     LastActivityDate: now,
     Configuration: userConfiguration(),
-    Policy: userPolicy(),
+    Policy: opts.forKey
+      ? userPolicy({ admin: !persona, hidden: persona?.hidden })
+      : userPolicy(),
   };
 }
 
@@ -235,12 +239,16 @@ async function authenticationResult(
 }
 
 /** Every user of one configuration, the account first. */
-function allUsers(uuid: string, userData: UserData, pickable = false) {
+function allUsers(
+  uuid: string,
+  userData: UserData,
+  opts: { pickable?: boolean; forKey?: boolean } = {}
+) {
   return [
-    userDto(uuid, userData, null, pickable),
+    userDto(uuid, userData, null, opts),
     ...personasOf(userData)
-      .filter((p) => !p.hidden)
-      .map((p) => userDto(uuid, userData, p, pickable)),
+      .filter((p) => opts.forKey || !p.hidden)
+      .map((p) => userDto(uuid, userData, p, opts)),
   ];
 }
 
@@ -266,7 +274,7 @@ router.get(
   '/Users/Public',
   jfOptional(async (req, res, ctx) => {
     if (ctx?.preAuthenticated) {
-      res.json(allUsers(ctx.uuid, ctx.userData, true));
+      res.json(allUsers(ctx.uuid, ctx.userData, { pickable: true }));
       return;
     }
     // No configuration to list for, and an empty list is what makes a client
@@ -402,16 +410,20 @@ router.post(
 router.get(
   '/Users/Me',
   jf(async (_req, res, ctx) => {
+    if (ctx.apiKey) {
+      res.status(400).json({ Message: 'API keys have no user' });
+      return;
+    }
     res.json(userDto(ctx.uuid, ctx.userData, ctx.persona));
   })
 );
 router.get(
   '/Users',
   jf(async (_req, res, ctx) => {
-    res.json(allUsers(ctx.uuid, ctx.userData));
+    res.json(allUsers(ctx.uuid, ctx.userData, { forKey: !!ctx.apiKey }));
   })
 );
-/* Read only: the signed-in persona is the token's, never the id in the URL. */
+/* Read only: a user token's persona is its own, never the id in the URL. */
 router.get(
   '/Users/:userId',
   jf(async (req, res, ctx) => {
@@ -422,7 +434,9 @@ router.get(
         : (personasOf(ctx.userData).find(
             (p) => personaUserId(ctx.uuid, p.id) === wanted
           ) ?? ctx.persona);
-    res.json(userDto(ctx.uuid, ctx.userData, persona));
+    res.json(
+      userDto(ctx.uuid, ctx.userData, persona, { forKey: !!ctx.apiKey })
+    );
   })
 );
 router.get(
@@ -493,6 +507,7 @@ async function nowPlayingItem(
 async function sessionFromRow(
   ctx: JellyfinRequestContext,
   row: WatchSessionRow,
+  user: JellyfinPersona | null,
   own: { remoteIp: string | undefined } | null
 ) {
   const client: ClientInfo = own
@@ -506,7 +521,7 @@ async function sessionFromRow(
   const session = sessionInfo(
     ctx.uuid,
     ctx.userData,
-    ctx.persona,
+    user,
     client,
     own?.remoteIp
   );
@@ -531,8 +546,8 @@ async function sessionFromRow(
 }
 
 /*
- * A non-administrator sees only their own sessions, and nobody here is one, so
- * this is every client that has played under the caller's history.
+ * A non-administrator sees only their own sessions, so a user token gets the
+ * clients of its history. An API key is the administrator and sees them all.
  */
 router.get(
   '/Sessions',
@@ -547,6 +562,23 @@ router.get(
     const deviceId = qs(req, 'DeviceId')?.toLowerCase();
     const onDevice = (id: string | null) =>
       !deviceId || id?.toLowerCase() === deviceId;
+
+    if (ctx.apiKey) {
+      const rows = await WatchSessionRepository.listForUuid(
+        ctx.uuid,
+        SESSIONS_LIMIT
+      );
+      const sessions = [];
+      for (const row of rows) {
+        if (row.lastCheckinAt < since || !onDevice(row.deviceId)) continue;
+        const userKey = row.userPersona ?? row.persona;
+        const user = userKey ? personaById(ctx.userData, userKey) : null;
+        if (userKey && !user) continue;
+        sessions.push(sessionFromRow(ctx, row, user, null));
+      }
+      res.json(await Promise.all(sessions));
+      return;
+    }
 
     const ownKey = sessionKeyFor(ctx.client);
     const rows = await WatchSessionRepository.listForScope(
@@ -567,7 +599,7 @@ router.get(
 
     const own = onDevice(ctx.client.deviceId)
       ? ownRow
-        ? sessionFromRow(ctx, ownRow, { remoteIp: req.userIp })
+        ? sessionFromRow(ctx, ownRow, ctx.persona, { remoteIp: req.userIp })
         : sessionInfo(
             ctx.uuid,
             ctx.userData,
@@ -578,7 +610,7 @@ router.get(
       : null;
     const sessions = await Promise.all([
       ...(own ? [own] : []),
-      ...others.map((r) => sessionFromRow(ctx, r, null)),
+      ...others.map((r) => sessionFromRow(ctx, r, ctx.persona, null)),
     ]);
     res.json(sessions);
   })

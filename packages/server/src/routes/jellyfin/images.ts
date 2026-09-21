@@ -70,6 +70,7 @@ async function imageUrlFor(
   if (!decoded || decoded.kind !== 'descriptor') return null;
   const d = decoded.descriptor;
   if (
+    d.k !== 'view' &&
     d.k !== 'movie' &&
     d.k !== 'series' &&
     d.k !== 'boxset' &&
@@ -90,7 +91,7 @@ async function imageUrlFor(
       );
     }
   }
-  return metahubFor(d, type);
+  return d.k === 'view' ? null : metahubFor(d, type);
 }
 
 /**

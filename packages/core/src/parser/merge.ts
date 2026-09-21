@@ -131,6 +131,7 @@ export function mergeParsedFiles(
     unrated: fileParsed?.unrated || folderParsed?.unrated,
     upscaled: fileParsed?.upscaled || folderParsed?.upscaled,
     network: fileParsed?.network || folderParsed?.network,
+    site: fileParsed?.site || folderParsed?.site,
     container: fileParsed?.container || folderParsed?.container,
     extension: fileParsed?.extension || folderParsed?.extension,
     visualTags: arrayMerge(folderParsed?.visualTags, fileParsed?.visualTags),

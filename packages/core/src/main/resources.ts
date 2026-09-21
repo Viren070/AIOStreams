@@ -154,7 +154,7 @@ function getAddonsForResource(
  *  1. Addons with a matching idPrefix (tried first, errors are reported)
  *  2. Addons with general type support and no idPrefixes (fallback, errors are silently skipped)
  */
-function getMetaCandidates(
+export function getMetaCandidates(
   ctx: Pick<AIOStreamsContext, 'supportedResources' | 'addons'>,
   type: string,
   id: string

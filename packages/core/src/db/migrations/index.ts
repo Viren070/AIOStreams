@@ -35,6 +35,7 @@ import { watchSinkLane } from './0034_watch_sink_lane.js';
 import { watchStateWatchlist } from './0035_watch_state_watchlist.js';
 import { watchSessionDevice } from './0036_watch_session_device.js';
 import { watchSinkRetired } from './0037_watch_sink_retired.js';
+import { watchSessionUser } from './0038_watch_session_user.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -75,6 +76,7 @@ export const MIGRATIONS: readonly Migration[] = [
   watchStateWatchlist,
   watchSessionDevice,
   watchSinkRetired,
+  watchSessionUser,
 ];
 
 export type { Migration } from './types.js';

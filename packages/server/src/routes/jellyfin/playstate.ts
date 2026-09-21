@@ -97,6 +97,23 @@ function snapshotOf(item: JellyfinItem | null): WatchSnapshot | undefined {
   };
 }
 
+/** A channel has no position worth keeping, so live playback writes no history. */
+async function playingLive(
+  ctx: JellyfinRequestContext,
+  itemId: string,
+  mediaSourceId: string | undefined
+): Promise<boolean> {
+  const memo = await resolveByItem(ctx.uuid, ctx.scope(), itemId).catch(
+    () => null
+  );
+  if (!memo) return false;
+  const source = pickSource(
+    memo,
+    mediaSourceId === itemId ? undefined : mediaSourceId
+  );
+  return !!source?.live;
+}
+
 /** Jellyfin takes the runtime from the source being played, then the item. */
 async function durationFor(
   ctx: JellyfinRequestContext,
@@ -127,6 +144,7 @@ function sessionOf(
   return {
     scope: ctx.watch,
     sessionKey: sessionKeyFor(ctx.client),
+    user: ctx.persona?.id ?? '',
     client: ctx.client,
     playSessionId,
   };
@@ -157,6 +175,16 @@ async function record(
 ): Promise<void> {
   const d = await descriptorFor(ctx, rawId);
   if (!d || (d.k !== 'movie' && d.k !== 'episode')) return;
+  if (await playingLive(ctx, rawId, opts.mediaSourceId)) {
+    // The session still tracks what is on; only the history is skipped.
+    const session = sessionOf(ctx, opts.playSessionId);
+    if (type === 'start')
+      await openWatchSession(session, contentRefOf(d), { positionMs });
+    else if (type === 'stop') await closeWatchSession(session);
+    else
+      await checkInWatchSession(session, { positionMs, paused: opts.paused });
+    return;
+  }
   const ref = contentRefOf(d);
   const identity = await watchIdentityFor(ref);
   const session = sessionOf(ctx, opts.playSessionId);

@@ -124,6 +124,12 @@ export class SubHeroPreset extends Preset {
       SUPPORTED_STREAM_TYPES: [],
       SUPPORTED_RESOURCES: supportedResources,
       CATEGORY: constants.PresetCategory.SUBTITLES,
+      DISABLED: {
+        reason:
+          'Addon is offline. Its host has been returning a Cloudflare 521 for a long time.',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 

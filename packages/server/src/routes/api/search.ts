@@ -149,6 +149,7 @@ router.get(
       userData = await syncUserDataUrls(userData);
       try {
         userData = await validateConfig(userData, {
+          skipVariantValidation: true,
           skipErrorsFromAddonsOrProxies: true,
           decryptValues: true,
         });

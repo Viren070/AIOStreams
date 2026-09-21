@@ -167,12 +167,21 @@ async function fillIds(
     needed.has('tmdb') && lookup.kind === 'episode' && stated[0] !== 'tmdb';
 
   const fromDataset = () => {
-    if (!lookup.ids.imdb || (lookup.ids.tmdb && lookup.ids.tvdb)) return;
+    const mediaType = lookup.kind === 'movie' ? 'movie' : 'series';
     try {
-      const mapped = IdMappingDataset.getInstance().resolve(
-        lookup.kind === 'movie' ? 'movie' : 'series',
-        { imdbId: lookup.ids.imdb }
-      );
+      // Movies only: an episode's TMDB numbering is not IMDb's.
+      if (!lookup.ids.imdb && lookup.ids.tmdb && lookup.kind === 'movie') {
+        const imdb = IdMappingDataset.getInstance().imdbIdFor(
+          'movie',
+          'tmdb',
+          Number(lookup.ids.tmdb)
+        );
+        if (imdb) lookup.ids.imdb = imdb;
+      }
+      if (!lookup.ids.imdb || (lookup.ids.tmdb && lookup.ids.tvdb)) return;
+      const mapped = IdMappingDataset.getInstance().resolve(mediaType, {
+        imdbId: lookup.ids.imdb,
+      });
       if (mapped.tmdbId && !lookup.ids.tmdb)
         lookup.ids.tmdb = String(mapped.tmdbId);
       if (mapped.tvdbId && !lookup.ids.tvdb)

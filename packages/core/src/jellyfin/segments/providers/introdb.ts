@@ -21,13 +21,19 @@ interface IntroDbResponse {
   intro?: IntroDbSegment | null;
   recap?: IntroDbSegment | null;
   outro?: IntroDbSegment | null;
+  post_credits?: IntroDbSegment | null;
 }
 
-const FIELDS: [keyof IntroDbResponse, SegmentType][] = [
+type Field = 'intro' | 'recap' | 'outro';
+
+const EPISODE_FIELDS: [Field, SegmentType][] = [
   ['intro', 'Intro'],
   ['recap', 'Recap'],
   ['outro', 'Outro'],
 ];
+
+/** Movies only define end credits; stray intro rows sit inside the credits. */
+const MOVIE_FIELDS: [Field, SegmentType][] = [['outro', 'Outro']];
 
 function msOf(ms: unknown, sec: unknown): number | null {
   if (typeof ms === 'number' && Number.isFinite(ms)) return ms;
@@ -36,31 +42,33 @@ function msOf(ms: unknown, sec: unknown): number | null {
 }
 
 /**
- * IMDb-keyed, episodes only: omitting season or episode is a 400, and an unknown
- * show answers 200 with null fields rather than an error.
+ * IMDb-keyed. Episodes need season and episode (a 400 without), movies need
+ * `is_movie`. An unknown title answers 200 with null fields rather than an error.
  */
 export const introDbProvider: SegmentProvider = {
   id: 'introdb',
   name: 'IntroDB',
   defaultBaseUrl: 'https://api.introdb.app',
-  kinds: ['episode'],
+  kinds: ['episode', 'movie'],
   idKeys: ['imdb'],
 
   supports(lookup) {
+    if (!lookup.ids.imdb) return false;
     return (
-      lookup.kind === 'episode' &&
-      !!lookup.ids.imdb &&
-      lookup.season != null &&
-      lookup.episode != null
+      lookup.kind === 'movie' ||
+      (lookup.season != null && lookup.episode != null)
     );
   },
 
   async fetch(lookup: SegmentLookup, ctx: ProviderContext) {
-    const params = new URLSearchParams({
-      imdb_id: String(lookup.ids.imdb),
-      season: String(lookup.season),
-      episode: String(lookup.episode),
-    });
+    const movie = lookup.kind === 'movie';
+    const params = new URLSearchParams({ imdb_id: String(lookup.ids.imdb) });
+    if (movie) {
+      params.set('is_movie', 'true');
+    } else {
+      params.set('season', String(lookup.season));
+      params.set('episode', String(lookup.episode));
+    }
     const response = await makeRequest(
       `${ctx.baseUrl.replace(/\/+$/, '')}/segments?${params}`,
       {
@@ -73,14 +81,26 @@ export const introDbProvider: SegmentProvider = {
     );
     if (!response.ok) return [];
     const body = (await response.json()) as IntroDbResponse;
+    const stingerMs = msOf(
+      body?.post_credits?.start_ms,
+      body?.post_credits?.start_sec
+    );
 
     const out: Segment[] = [];
-    for (const [field, type] of FIELDS) {
+    for (const [field, type] of movie ? MOVIE_FIELDS : EPISODE_FIELDS) {
       const raw = body?.[field];
       if (!raw) continue;
       const startMs = msOf(raw.start_ms, raw.start_sec);
-      const endMs = msOf(raw.end_ms, raw.end_sec);
+      let endMs = msOf(raw.end_ms, raw.end_sec);
       if (startMs === null || endMs === null) continue;
+      // Skipping the credits must land on a mid-credits scene, not past it.
+      if (
+        type === 'Outro' &&
+        stingerMs !== null &&
+        stingerMs > startMs &&
+        stingerMs < endMs
+      )
+        endMs = stingerMs;
       // Agreement, not accuracy: never which release was being watched.
       if (
         typeof raw.confidence === 'number' &&
