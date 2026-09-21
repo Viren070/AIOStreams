@@ -107,6 +107,11 @@ const NEWZNAB_INDEXERS: {
     value: 'https://www.usenet-crawler.com/api',
     apiKeyUrl: 'https://www.usenet-crawler.com/profile',
   },
+  {
+    label: 'SquareEyed',
+    value: 'https://squareeyed.org/api',
+    apiKeyUrl: 'https://squareeyed.org/profile',
+  },
 ];
 
 export class NewznabPreset extends BuiltinAddonPreset {
