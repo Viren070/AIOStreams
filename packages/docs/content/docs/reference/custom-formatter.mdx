@@ -118,6 +118,12 @@ Modifiers are chained with `::`:
 
 </Callout>
 
+#### Media info
+
+| Variable                    | Type   | Description                                                                                                              |
+| ---------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `{stream.mediaInfoQuality}` | string | Confidence tier for how the stream's media info (languages, subtitles, audio, etc.) was determined: `probe` (ffprobe-derived, e.g. StremThru), `indexer`, or `addon` |
+
 #### Tracks
 
 `{stream.audioTracks}` and `{stream.subtitleTracks}` list a stream's probed tracks. Only media info fills them in, so they are empty for streams that were never probed. A track list can't be printed directly: narrow it with `::where`, then either take one field from every track with `::pluck`, or render each track with `::each`. See [Object list modifiers](#object-list-modifiers).
