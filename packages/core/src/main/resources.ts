@@ -17,6 +17,7 @@ import { FeatureControl } from '../utils/feature.js';
 import { StreamContext, StreamUtils } from '../streams/index.js';
 import { buildPlayChain, type FailoverContentType } from './play-chain.js';
 import { resolveServiceWrappedStreams } from './serviceWrapper.js';
+import { resolveRemuxDbMediaInfo } from '../remuxdb/wrap.js';
 import type { ServiceWrapServiceTiming } from './serviceWrapper.js';
 import type { PrecomputeSubTimings } from '../streams/precomputer.js';
 import { StreamSelector } from '../parser/streamExpression.js';
@@ -258,6 +259,7 @@ export async function processStreams(
     metaFilterMs: number;
     serviceWrapMs: number;
     serviceWrapTimings?: Record<string, ServiceWrapServiceTiming>;
+    remuxDbMs: number;
     filterMs: number;
     deduplicationMs: number;
     precomputeMs: number;
@@ -274,6 +276,7 @@ export async function processStreams(
   let metaFilterMs = 0;
   let serviceWrapMs = 0;
   let serviceWrapTimings: Record<string, ServiceWrapServiceTiming> | undefined;
+  let remuxDbMs = 0;
   let filterMs = 0;
   let deduplicationMs = 0;
   let precomputeMs = 0;
@@ -282,8 +285,15 @@ export async function processStreams(
   let limitMs = 0;
   let selMs = 0;
 
+  const withRemuxDb = async (streams: ParsedStream[]) => {
+    const start = Date.now();
+    await resolveRemuxDbMediaInfo(streams, context, ctx.userData);
+    remuxDbMs += Date.now() - start;
+  };
+
   if (isMeta) {
     await ctx.precomputer.precomputeSeaDexOnly(processedStreams, context);
+    await withRemuxDb(processedStreams);
     const metaFilterStart = Date.now();
     processedStreams = await ctx.filterer.filter(processedStreams, context);
     metaFilterMs = Date.now() - metaFilterStart;
@@ -305,6 +315,9 @@ export async function processStreams(
   }
 
   if (resolvedResults.hasNewStreams) {
+    await withRemuxDb(
+      processedStreams.filter((s) => !preServiceWrapIds.has(s.id))
+    );
     const filterStart = Date.now();
     processedStreams = await ctx.filterer.filter(processedStreams, context);
     filterMs = Date.now() - filterStart;
@@ -481,6 +494,7 @@ export async function processStreams(
       metaFilterMs,
       serviceWrapMs,
       serviceWrapTimings,
+      remuxDbMs,
       filterMs,
       deduplicationMs,
       precomputeMs,
@@ -726,6 +740,7 @@ export async function getStreams(
     errors,
     statistics: addonStatistics,
     dispositions,
+    remuxDbMs: fetcherRemuxDbMs,
   } = await ctx.fetcher.fetch(supportedAddons, context);
   const fetchMs = Date.now() - fetchStart;
 
@@ -793,6 +808,7 @@ export async function getStreams(
   );
   let finalStreams = processResults.streams;
   const pipelineTimings = processResults.timings;
+  pipelineTimings.remuxDbMs += fetcherRemuxDbMs;
   errors.push(...processResults.errors);
 
   if (FeatureControl.disabledStreamTypes.size > 0) {

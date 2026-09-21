@@ -78,6 +78,7 @@ const ACRONYMS: Record<string, string> = {
   tmdb: 'TMDB',
   tvdb: 'TVDB',
   rpdb: 'RPDB',
+  remuxdb: 'RemuxDB',
   oauth: 'OAuth',
   oidc: 'OIDC',
   sso: 'SSO',

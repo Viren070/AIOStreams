@@ -1171,6 +1171,11 @@ export const UserDataSchema = z.object({
     })
     .optional(),
   jellyfin: JellyfinSettings.optional(),
+  remuxDb: z
+    .object({
+      enabled: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export type UserData = z.infer<typeof UserDataSchema>;
@@ -1950,6 +1955,7 @@ const StatusResponseSchema = z.object({
       tmdb: z.object({ accessToken: z.boolean(), apiKey: z.boolean() }),
       tvdb: z.object({ apiKey: z.boolean() }),
     }),
+    remuxdb: z.object({ enabled: z.boolean() }),
     /** Global analytics master switch (false = no events written anywhere). */
     analyticsEnabled: z.boolean(),
     /** Per-user analytics (configure-page Stats tab) enabled state. */
