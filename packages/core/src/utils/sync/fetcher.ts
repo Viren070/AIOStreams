@@ -87,45 +87,37 @@ export class SyncFetcher<T extends Record<string, any>> {
   private async fetchOnce(url: string): Promise<T[]> {
     logger.debug({ type: this.config.cacheKey, url }, 'fetching from URL');
 
-    try {
-      const response = await makeRequest(url, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 5000,
-      });
+    const response = await makeRequest(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 5000,
+    });
 
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status} ${response.statusText} during sync of ${url}`
-        );
-      }
-
-      const data = await response.json();
-
-      // Try parsing as array of items first
-      const arrayResult = z.array(this.config.itemSchema).safeParse(data);
-      if (arrayResult.success) {
-        return arrayResult.data as T[];
-      }
-
-      // Try parsing as { values: string[] }
-      const valuesResult = z
-        .object({ values: z.array(z.string()) })
-        .safeParse(data);
-      if (valuesResult.success) {
-        return valuesResult.data.values.map(
-          (v) => this.config.convertValue(v) as T
-        );
-      }
-
-      throw new Error(this.formatMismatch(data));
-    } catch (error: any) {
-      logger.error(
-        { url, type: this.config.cacheKey, error: error.message },
-        'failed to fetch from URL'
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText} during sync of ${url}`
       );
-      throw error;
     }
+
+    const data = await response.json();
+
+    // Try parsing as array of items first
+    const arrayResult = z.array(this.config.itemSchema).safeParse(data);
+    if (arrayResult.success) {
+      return arrayResult.data as T[];
+    }
+
+    // Try parsing as { values: string[] }
+    const valuesResult = z
+      .object({ values: z.array(z.string()) })
+      .safeParse(data);
+    if (valuesResult.success) {
+      return valuesResult.data.values.map(
+        (v) => this.config.convertValue(v) as T
+      );
+    }
+
+    throw new Error(this.formatMismatch(data));
   }
 
   /** Format mismatch detection: give helpful error messages. */
