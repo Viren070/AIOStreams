@@ -1091,6 +1091,7 @@ function AddonListItem({
               src={logo}
               alt={presetMetadata?.NAME || ''}
               className="absolute inset-0 w-full h-full object-contain rounded-md"
+              referrerPolicy="no-referrer"
             />
           ) : presetMetadata?.ID === 'custom' ? (
             <PlusIcon className="w-full h-full object-contain text-[--brand]" />
