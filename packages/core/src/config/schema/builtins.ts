@@ -1188,6 +1188,15 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    storageUrl: {
+      schema: urlString,
+      default: 'https://storage.tsukihime.org',
+      label: 'TsukiHime storage URL',
+      env: 'BUILTIN_TSUKIHIME_STORAGE_URL',
+      description: 'Base URL that TsukiHime NZB files are served from.',
+      requiresRestart: false,
+      secret: false,
+    },
     defaultTimeout: {
       schema: optionalPositiveInt,
       default: null,

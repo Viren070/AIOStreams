@@ -15,6 +15,7 @@ const logger = createLogger('tsukihime');
 
 const TsukihimeTorrentSchema = z
   .looseObject({
+    id: z.number(),
     name: z.string(),
     btih: z.string().transform((h) => h.toLowerCase()),
     totalsize: z.number(),
@@ -22,8 +23,11 @@ const TsukihimeTorrentSchema = z
     group: z.object({ name: z.string() }).nullable().optional(),
     audiolangs: z.array(z.string()).optional(),
     sublangs: z.array(z.string()).optional(),
+    has_nzb: z.number().optional(),
+    animetosho: z.boolean().optional(),
   })
   .transform((data) => ({
+    id: data.id,
     name: data.name,
     hash: data.btih,
     size: data.totalsize,
@@ -31,6 +35,8 @@ const TsukihimeTorrentSchema = z
     group: data.group?.name,
     audioLangs: data.audiolangs,
     subLangs: data.sublangs,
+    // imported AnimeTosho entries report an NZB that storage doesn't have
+    hasNzb: data.has_nzb === 1 && data.animetosho !== true,
   }));
 
 const TsukihimeTorrentsResponseSchema = z
@@ -55,6 +61,13 @@ const TsukihimeAnimeSchema = z.looseObject({ id: z.number() });
 
 const getApiBaseUrl = () => appConfig.builtins.tsukihime.url;
 
+// not .nzb.gz, which is gzipped and rejected as an NZB
+const getNzbUrl = (torrent: TsukihimeTorrent) =>
+  new URL(
+    `/nzbs/${torrent.id}/${encodeURIComponent(torrent.name)}.nzb`,
+    appConfig.builtins.tsukihime.storageUrl
+  ).toString();
+
 class TsukihimeAPI {
   private headers: Record<string, string>;
 
@@ -75,7 +88,6 @@ class TsukihimeAPI {
     };
   }
 
-  /** Resolves TsukiHime's internal anime id from a MAL, AniDB or AniList id. */
   async getAnimeId(
     idType: 'mal' | 'anidb' | 'anilist',
     id: number
@@ -98,8 +110,7 @@ class TsukihimeAPI {
             headers: this.headers,
             timeout,
           });
-          // 404 = confirmed no mapping (cache briefly); anything else is
-          // transient and must not be cached.
+          // only a 404 is a real miss; other failures must not be cached
           if (response.status === 404) {
             await this.animeIdCache.set(cacheKey, null, 3600);
             return null;
@@ -208,6 +219,6 @@ class TsukihimeAPI {
   }
 }
 
-export { getApiBaseUrl as getTsukihimeUrl };
+export { getApiBaseUrl as getTsukihimeUrl, getNzbUrl as getTsukihimeNzbUrl };
 export type { TsukihimeTorrent, TsukihimeTorrentsResponse };
 export default TsukihimeAPI;

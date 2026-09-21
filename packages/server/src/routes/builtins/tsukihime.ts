@@ -3,7 +3,7 @@ import { TsukihimeAddon, fromUrlSafeBase64 } from '@aiostreams/core';
 const router: Router = Router();
 
 interface TsukihimeManifestParams {
-  encodedConfig?: string; // optional
+  encodedConfig?: string;
 }
 
 router.get(
@@ -29,7 +29,7 @@ router.get(
 );
 
 interface TsukihimeStreamParams {
-  encodedConfig?: string; // optional
+  encodedConfig?: string;
   type: string;
   id: string;
 }

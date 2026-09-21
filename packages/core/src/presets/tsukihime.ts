@@ -6,6 +6,14 @@ import { TorznabPreset } from './torznab.js';
 export class TsukihimePreset extends TorznabPreset {
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
+    const supportedServices = [
+      ...StremThruPreset.supportedServices,
+      constants.NZBDAV_SERVICE,
+      constants.ALTMOUNT_SERVICE,
+      constants.STREMIO_NNTP_SERVICE,
+      constants.STREMTHRU_NEWZ_SERVICE,
+      constants.AIOSTREAMS_SERVICE,
+    ] as constants.ServiceId[];
     const options: Option[] = [
       {
         id: 'name',
@@ -38,7 +46,7 @@ export class TsukihimePreset extends TorznabPreset {
         type: 'multi-select',
         required: false,
         showInSimpleMode: false,
-        options: StremThruPreset.supportedServices.map((service) => ({
+        options: supportedServices.map((service) => ({
           value: service,
           label: constants.SERVICE_DETAILS[service].name,
         })),
@@ -76,11 +84,14 @@ export class TsukihimePreset extends TorznabPreset {
         appConfig.builtins.tsukihime.defaultTimeout ??
         appConfig.presets.defaultTimeout,
       USER_AGENT: appConfig.http.defaultUserAgent,
-      SUPPORTED_SERVICES: StremThruPreset.supportedServices,
+      SUPPORTED_SERVICES: supportedServices,
       DESCRIPTION:
-        'An anime-only public torrent indexer via the TsukiHime API, resolving releases by MAL/AniDB id with a text-search fallback.',
+        'An anime-only public torrent indexer via the TsukiHime API, resolving releases by MAL/AniDB id with a text-search fallback. NZBs for its own uploads are sent to your usenet services; TorBox always gets the torrent.',
       OPTIONS: options,
-      SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
+      SUPPORTED_STREAM_TYPES: [
+        constants.DEBRID_STREAM_TYPE,
+        constants.USENET_STREAM_TYPE,
+      ],
       SUPPORTED_RESOURCES: supportedResources,
       BUILTIN: true,
       CATEGORY: constants.PresetCategory.STREAMS,

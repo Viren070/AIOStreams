@@ -180,7 +180,9 @@ export class TorznabPreset extends BuiltinAddonPreset {
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION: 'An addon to get debrid results from a Torznab endpoint.',
       OPTIONS: options,
-      SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
+      SUPPORTED_STREAM_TYPES: [
+        constants.DEBRID_STREAM_TYPE,
+      ] as constants.StreamType[],
       SUPPORTED_RESOURCES: supportedResources,
       BUILTIN: true,
     };
