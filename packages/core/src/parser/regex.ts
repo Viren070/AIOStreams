@@ -6,7 +6,10 @@
 // import { FakeVisualTag } from '../utils/constants';
 import { constants } from '../utils/index.js';
 const createRegex = (pattern: string): RegExp =>
-  new RegExp(`(?<![^\\s\\[(_\\-.,])(${pattern})(?=[\\s\\)\\]_.\\-,]|$)`, 'i');
+  new RegExp(
+    `(?<![^\\s\\[(_\\-.,])(${pattern})(?=[\\s\\[(\\)\\]_.\\-,]|$)`,
+    'i'
+  );
 
 const createLanguageRegex = (pattern: string): RegExp =>
   createRegex(`${pattern}(?![ .\\-_]?sub(title)?s?)`);
@@ -110,7 +113,7 @@ export const PARSE_REGEX: PARSE_REGEX = {
     'DTS-HD': createRegex('dts[ .\\-_]?hd(?![ .\\-_]?ma)'),
     'DTS-ES': createRegex('dts[ .\\-_]?es'),
     DTS: createRegex(
-      'dts(?![ .\\-:_]?(x(?=[\\s\\)\\]_.\\-,]|$)|hd[ .\\-_]?(ma)?|es))'
+      'dts(?![ .\\-:_]?(x(?=[\\s\\[(\\)\\]_.\\-,]|$)|hd[ .\\-_]?(ma)?|es))'
     ),
     TrueHD: createRegex('true[ .\\-_]?hd'),
     PCM: createRegex('l?pcm'),

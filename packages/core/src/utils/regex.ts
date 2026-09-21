@@ -48,7 +48,7 @@ export function buildKeywordRegexPattern(keywords: string[]): string {
   return `/(?:^|(?<![^ \\[(_\\-.]))(${keywords
     .map((filter) => filter.replace(/[-[\]{}()*+?.,\\^$]/g, '\\$&'))
     .map((filter) => filter.replace(/\s/g, '[\\s.\\-_]?'))
-    .join('|')})(?=[ \\)\\]_.-]|$)/i`;
+    .join('|')})(?=[ \\[(\\)\\]_.-]|$)/i`;
 }
 
 export async function formRegexFromKeywords(
