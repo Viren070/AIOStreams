@@ -7,9 +7,12 @@ import {
   AnimeEntry,
   IdParser,
   ParsedId,
+  RegexAccess,
   createLogger,
   getSeaDexInfoHashes,
   enrichParsedIdWithAnimeEntry,
+  getTmdbEpisode,
+  type PermittedPatterns,
 } from '../utils/index.js';
 import { SeaDexResult } from '../utils/seadex.js';
 import {
@@ -100,6 +103,8 @@ export class StreamContext {
   // Year within title (for year matching)
   // public readonly yearWithinTitle: string | undefined;
   // public readonly yearWithinTitleRegex: RegExp | undefined;
+
+  private _permittedPatterns: Promise<PermittedPatterns> | undefined;
 
   // User data reference
   private readonly userData: UserData;
@@ -400,16 +405,11 @@ export class StreamContext {
         let seasonNumber = originalSeason;
         let episodeNumber = Number(this.parsedId.episode);
         if (this.isAnime && this.animeEntry) {
-          seasonNumber = this.animeEntry.tmdb?.seasonNumber ?? seasonNumber;
-          if (this.animeEntry.tmdb?.fromEpisode) {
-            const fromEpisode = Number(this.animeEntry.tmdb.fromEpisode);
-            if (
-              seasonNumber !== originalSeason ||
-              episodeNumber < fromEpisode
-            ) {
-              episodeNumber = fromEpisode + episodeNumber - 1;
-            }
-          }
+          ({ seasonNumber, episodeNumber } = getTmdbEpisode(
+            this.parsedId,
+            this.animeEntry,
+            metadata.seasons ?? []
+          ));
           logger.debug(
             {
               originalSeason,
@@ -502,6 +502,14 @@ export class StreamContext {
     this.startSeaDexFetch();
     this.startReleaseDatesFetch();
     this.startEpisodeDetailsFetch();
+  }
+
+  public getPermittedPatterns(): Promise<PermittedPatterns> {
+    this._permittedPatterns ??= RegexAccess.resolvePermitted(
+      this.userData,
+      RegexAccess.syncedUrlsOf(this.userData)
+    );
+    return this._permittedPatterns;
   }
 
   /**
@@ -606,8 +614,12 @@ export class StreamContext {
   }
 
   private computeAgeInDays(): number | undefined {
-    if (this.type === 'series' && this._episodeDetails?.airDate) {
-      return this.getDaysSince(this._episodeDetails.airDate);
+    const episodeDate =
+      this.type === 'series'
+        ? this._episodeDetails?.airDate || this._metadata?.episodeReleased
+        : undefined;
+    if (episodeDate) {
+      return this.getDaysSince(episodeDate);
     } else if (this._metadata?.releaseDate) {
       return this.getDaysSince(this._metadata.releaseDate);
     }

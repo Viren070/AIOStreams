@@ -66,6 +66,7 @@ import {
   staticRateLimiter,
   linkedAccountsRateLimiter,
   communityApiRateLimiter,
+  syncApiRateLimiter,
   internalMiddleware,
   stremioStreamRateLimiter,
   stremioManifestRateLimiter,
@@ -139,7 +140,7 @@ apiRouter.use(
 apiRouter.use('/anime', animeApi);
 apiRouter.use('/proxy', proxyApi);
 apiRouter.use('/templates', templatesApi);
-apiRouter.use('/sync', syncApi);
+apiRouter.use('/sync', syncApiRateLimiter, syncApi);
 apiRouter.use('/linked-accounts', linkedAccountsRateLimiter, linkedAccountsApi);
 apiRouter.use('/community', communityApiRateLimiter, communityApi);
 apiRouter.use('/auth', authApi);

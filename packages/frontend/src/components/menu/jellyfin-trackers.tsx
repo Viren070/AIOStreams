@@ -224,7 +224,8 @@ export function JellyfinTrackers() {
         ))}
       </ul>
       <p className="text-xs text-gray-500">
-        From your saved configuration. To stop an addon syncing, untick Watch
+        From your saved configuration. To choose which trackers each user syncs
+        with, edit them under Users. To stop an addon syncing, untick Watch
         State in its Resources option.
       </p>
     </div>

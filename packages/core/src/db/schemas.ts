@@ -126,14 +126,26 @@ const JellyfinPersonaSchema = z.object({
   variants: z.array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)).optional(),
   /** `shared` reads and writes the account's rows, trackers included. */
   history: z.enum(['own', 'shared']).default('own'),
+  /** Preset ids of the trackers it syncs with; absent is automatic. */
+  trackers: z.array(z.string().min(1)).max(50).optional(),
   /** Kept out of the picker; still usable by name. */
   hidden: z.boolean().optional(),
 });
 
 export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
 
-/** Per-configuration settings for the Jellyfin-compatible API. */
-const JellyfinSettings = z.object({
+/** No secret is stored: a key's token carries the credential itself. */
+const JellyfinApiKeySchema = z.object({
+  id: z.string().regex(/^[a-z0-9]{8,32}$/),
+  name: z.string().trim().min(1).max(64),
+  createdAt: z.string().max(64),
+});
+
+export type JellyfinApiKey = z.infer<typeof JellyfinApiKeySchema>;
+
+const MAX_JELLYFIN_API_KEYS = 10;
+
+const JellyfinSettingsFields = z.object({
   /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
   resolveOnOpen: z.boolean().optional(),
   /** Versions offered per item; the instance setting caps it. */
@@ -151,6 +163,8 @@ const JellyfinSettings = z.object({
       variants: z
         .array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/))
         .optional(),
+      /** Preset ids of the trackers it syncs with; absent means all. */
+      trackers: z.array(z.string().min(1)).max(50).optional(),
     })
     .optional(),
   personas: z
@@ -194,6 +208,57 @@ const JellyfinSettings = z.object({
       }
     })
     .optional(),
+  apiKeys: z
+    .array(JellyfinApiKeySchema)
+    .max(
+      MAX_JELLYFIN_API_KEYS,
+      `At most ${MAX_JELLYFIN_API_KEYS} API keys per configuration.`
+    )
+    .superRefine((keys, ctx) => {
+      const ids = new Set<string>();
+      for (const key of keys) {
+        if (ids.has(key.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Duplicate API key id "${key.id}".`,
+          });
+        }
+        ids.add(key.id);
+      }
+    })
+    .optional(),
+});
+
+/** Per-configuration settings for the Jellyfin-compatible API. */
+const JellyfinSettings = JellyfinSettingsFields.superRefine((settings, ctx) => {
+  // A tracker account belongs to one history, or two histories would mix.
+  const owners = new Map<string, string>();
+  const claim = (who: string, trackers: string[] | undefined) => {
+    for (const id of new Set(trackers ?? [])) {
+      const owner = owners.get(id);
+      if (owner) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Tracker "${id}" is selected for both ${owner} and ${who}.`,
+        });
+      } else {
+        owners.set(id, who);
+      }
+    }
+  };
+  claim('the primary user', settings.primary?.trackers);
+  for (const persona of settings.personas ?? []) {
+    if (persona.history === 'shared') {
+      if (persona.trackers) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${persona.name} shares the primary user's history, so it uses the primary user's trackers.`,
+        });
+      }
+      continue;
+    }
+    claim(persona.name, persona.trackers);
+  }
 });
 
 export type JellyfinSettings = z.infer<typeof JellyfinSettings>;
@@ -1146,6 +1211,8 @@ const ManifestCatalogSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   extra: z.array(ManifestExtraSchema).optional(),
+  poster: z.string().nullish(),
+  background: z.string().nullish(),
 });
 
 const AddonCatalogDefinitionSchema = z.object({
@@ -1206,6 +1273,7 @@ export const ManifestSchema = z
         p2p: z.boolean().optional(),
         configurable: z.boolean().optional(),
         configurationRequired: z.boolean().optional(),
+        epgProvider: z.boolean().optional(),
       })
       .optional(),
     // not part of the manifest scheme, but needed for stremio-addons.net
@@ -1357,6 +1425,7 @@ export const ParsedFileSchema = z.object({
   unrated: z.boolean().optional(),
   upscaled: z.boolean().optional(),
   network: z.string().optional(),
+  site: z.string().optional(),
   container: z.string().optional(),
   extension: z.string().optional(),
   seasonPack: z.boolean().optional(),
@@ -1487,7 +1556,7 @@ export type ParsedStreams = z.infer<typeof ParsedStreams>;
 const TrailerSchema = z
   .object({
     source: z.string().min(1),
-    type: z.enum(['Trailer', 'Clip', 'Teaser']),
+    type: z.string(),
   })
   .passthrough();
 
@@ -1496,6 +1565,15 @@ const MetaLinkSchema = z
     name: z.string().min(1),
     category: z.string().min(1),
     url: z.string().url().or(z.string().startsWith('stremio:///')),
+  })
+  .passthrough();
+
+/** A certification a programme carries. */
+const ContentRatingSchema = z
+  .object({
+    value: z.string(),
+    system: z.string().nullish(),
+    icon: z.string().nullish(),
   })
   .passthrough();
 
@@ -1576,6 +1654,15 @@ const MetaVideoSchema = z
     ids: ExternalIdsSchema.nullish(),
     rating: z.number().or(z.string()).nullish(),
     people: z.array(MetaPersonSchema).nullish(),
+    startTime: z.string().nullish(),
+    endTime: z.string().nullish(),
+    runtime: z.string().nullish(),
+    releaseInfo: z.string().nullish(),
+    genres: z.array(z.string()).nullish(),
+    cast: z.array(z.string()).nullish(),
+    directors: z.array(z.string()).nullish(),
+    links: z.array(MetaLinkSchema).nullish(),
+    ratings: z.array(ContentRatingSchema).nullish(),
   })
   .passthrough();
 
@@ -1627,6 +1714,7 @@ export const MetaSchema = MetaPreviewSchema.extend({
     .object({
       defaultVideoId: z.string().or(z.null()).optional(),
       hasScheduledVideo: z.boolean().nullable().optional(),
+      hasScheduledVideos: z.boolean().nullable().optional(),
     })
     .passthrough()
     .optional(),
@@ -1666,6 +1754,7 @@ export const ExtrasSchema = z
     skip: z.coerce.number().optional(),
     genre: z.string().optional(),
     search: z.string().optional(),
+    date: z.string().optional(),
     filename: z.string().optional(),
     videoHash: z.string().optional(),
     videoSize: z.coerce.number().optional(),
@@ -1804,6 +1893,8 @@ const StatusResponseSchema = z.object({
         maxLibraries: z.number(),
         /** Extra users a configuration may add beyond its primary user. */
         maxPersonas: z.number(),
+        /** Trackers one user syncs with at most. */
+        maxTrackers: z.number(),
         segments: z.object({
           enabled: z.boolean(),
           /** In the operator's order; `configuration` needs the configuration's own key. */
@@ -1844,8 +1935,7 @@ const StatusResponseSchema = z.object({
       access: z.enum(['none', 'trusted', 'all']),
       max: z.number(),
       maxScriptLength: z.number(),
-      maxInstructions: z.number(),
-      maxActive: z.number(),
+      maxTotalInstructions: z.number(),
       maxValueDepth: z.number(),
       maxPathSegments: z.number(),
       maxPathMatches: z.number(),
@@ -1916,6 +2006,7 @@ const StatusResponseSchema = z.object({
       maxFailoverAttempts: z.number(),
       maxParallelAttempts: z.number(),
       maxBackgroundPings: z.number(),
+      maxLinkedAccounts: z.number(),
     }),
   }),
 });

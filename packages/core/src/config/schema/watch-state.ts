@@ -44,7 +44,7 @@ export const watchStateSchema = {
     default: 3,
     label: 'Max addons exchanged with',
     description:
-      'How many addons one configuration may exchange watch state with. A fan-out cap, not a permission: every addon that declares the resource is eligible, this bounds how many requests one play can turn into. 0 disables the exchange.',
+      'How many addons each Jellyfin user may exchange watch state with. A fan-out cap, not a permission: every addon that declares the resource is eligible, this bounds how many requests one play can turn into. 0 disables the exchange.',
     env: 'WATCH_STATE_MAX_SINKS',
     requiresRestart: false,
     secret: false,

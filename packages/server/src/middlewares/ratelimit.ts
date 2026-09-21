@@ -194,6 +194,11 @@ const communityApiRateLimiter = lazyLimiter(
   'community-api'
 );
 
+const syncApiRateLimiter = lazyLimiter(
+  () => appConfig.rateLimits.syncApi,
+  'sync-api'
+);
+
 const jellyfinLoginRateLimiter = lazyLimiter(
   () => appConfig.rateLimits.jellyfinLogin,
   'jellyfin-login'
@@ -217,6 +222,7 @@ export {
   userCreateRateLimiter,
   linkedAccountsRateLimiter,
   communityApiRateLimiter,
+  syncApiRateLimiter,
   streamApiRateLimiter,
   formatApiRateLimiter,
   catalogApiRateLimiter,

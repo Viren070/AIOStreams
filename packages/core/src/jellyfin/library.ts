@@ -6,6 +6,8 @@ import { Cache } from '../utils/cache.js';
 import { createLogger } from '../logging/logger.js';
 import { userScopeKey } from '../utils/user-scope.js';
 import { viewId } from './ids.js';
+import { hasProgrammeVideos, isLeafEntry } from './dto.js';
+import type { LeafEvidence } from './dto.js';
 import type { Catalog, CollectionType } from './dto.js';
 
 const logger = createLogger('jellyfin');
@@ -274,7 +276,7 @@ export async function getCatalogPage(
       skip = skips[i] + data.length;
       // Consecutive pages of nothing but repeats mean skip stopped advancing.
       stalled = novel ? 0 : stalled + 1;
-      if (!canSkip || stalled >= 3) {
+      if (!canSkip || opts.search || stalled >= 3) {
         exhausted = true;
         break;
       }
@@ -366,12 +368,31 @@ export async function collectionMembers(
   return { items: out, total: offset, hasMore: false, keys: [...seen] };
 }
 
-const viewTypeCache = Cache.getInstance<string, string[]>(
-  'jellyfin-views',
+/** What a sweep learned about a catalog. */
+interface ViewEvidence {
+  /** Entry types on its first page; `collection` stands in for a collection. */
+  types: string[];
+  /** Of those, the types whose metas play on their own. */
+  leaves: string[];
+}
+
+const viewEvidenceCache = Cache.getInstance<string, ViewEvidence>(
+  'jellyfin-view-evidence',
   20_000
 );
-const VIEW_TYPE_TTL = 6 * 60 * 60;
+/* The answer is a property of the type, so catalogs sharing one only pay once. */
+const leafTypeCache = Cache.getInstance<string, boolean>(
+  'jellyfin-leaf-type',
+  20_000
+);
+/** Probes in flight, so one sweep asks about a type once. */
+const probing = new Map<string, Promise<boolean>>();
+const VIEW_TYPE_TTL = 24 * 60 * 60;
 const SNIFF_CONCURRENCY = 4;
+/** Metas read per unknown type before its entries are called leaves. */
+const LEAF_SAMPLES = 3;
+/** Types whose structure the protocol already fixes, so never sampled. */
+const STRUCTURED_TYPES = new Set(['movie', 'series', 'anime']);
 /** Keys in flight, so a burst of view requests starts one sweep, not many. */
 const sniffing = new Set<string>();
 
@@ -379,8 +400,49 @@ function viewTypeKey(userData: UserData, catalog: Catalog): string {
   return `${userScopeKey(userData)}|${catalogKey(catalog)}`;
 }
 
+/**
+ * Whether every sampled meta of this type plays on its own. One catalog can
+ * hold both shapes, so a single sample that opens a video list settles it.
+ */
+async function probeType(
+  engine: AIOStreams,
+  type: string,
+  samples: MetaPreview[]
+): Promise<boolean> {
+  if (!samples.length) return false;
+  for (const sample of samples) {
+    const meta = (await engine.getMeta(type, sample.id)).data;
+    // Nothing to open, so the entry is the video.
+    if (!meta) continue;
+    if (meta.videos?.length && !hasProgrammeVideos(meta)) return false;
+  }
+  return true;
+}
+
+async function typeIsLeaf(
+  engine: AIOStreams,
+  userData: UserData,
+  type: string,
+  samples: MetaPreview[]
+): Promise<boolean> {
+  const key = `${userScopeKey(userData)}|${type}`;
+  const known = await leafTypeCache.get(key).catch(() => undefined);
+  if (known !== undefined) return known;
+  let pending = probing.get(key);
+  if (!pending) {
+    pending = probeType(engine, type, samples).finally(() =>
+      probing.delete(key)
+    );
+    probing.set(key, pending);
+  }
+  const leaf = await pending;
+  await leafTypeCache.set(key, leaf, VIEW_TYPE_TTL).catch(() => undefined);
+  return leaf;
+}
+
 async function sniffEntryTypes(
   engine: AIOStreams,
+  userData: UserData,
   key: string,
   catalog: Catalog
 ): Promise<void> {
@@ -397,7 +459,15 @@ async function sniffEntryTypes(
           .filter(Boolean)
       ),
     ];
-    await viewTypeCache.set(key, types, VIEW_TYPE_TTL);
+    const leaves: string[] = [];
+    for (const type of types) {
+      if (type === COLLECTION_ENTRY || STRUCTURED_TYPES.has(type)) continue;
+      const samples = page.items
+        .filter((m) => !m.collection && m.type === type)
+        .slice(0, LEAF_SAMPLES);
+      if (await typeIsLeaf(engine, userData, type, samples)) leaves.push(type);
+    }
+    await viewEvidenceCache.set(key, { types, leaves }, VIEW_TYPE_TTL);
   } catch (error) {
     // Left uncached so the next sweep retries instead of holding a failure.
     logger.debug(
@@ -416,6 +486,7 @@ async function sniffEntryTypes(
  */
 function scheduleSniff(
   engine: AIOStreams,
+  userData: UserData,
   pending: { key: string; catalog: Catalog }[]
 ): void {
   const todo = pending.filter((p) => !sniffing.has(p.key));
@@ -425,7 +496,7 @@ function scheduleSniff(
   const worker = async () => {
     while (cursor < todo.length) {
       const { key, catalog } = todo[cursor++];
-      await sniffEntryTypes(engine, key, catalog);
+      await sniffEntryTypes(engine, userData, key, catalog);
       sniffing.delete(key);
     }
   };
@@ -437,15 +508,13 @@ function scheduleSniff(
 /** Stands in for a sniffed entry's type when the entry is a collection. */
 const COLLECTION_ENTRY = 'collection';
 
-export type ViewKind = CollectionType | 'mixed' | 'hidden';
+export type ViewKind = CollectionType | 'mixed';
 
 export function collectionTypeFor(
   catalog: Catalog,
   entryTypes: string[]
 ): ViewKind {
-  const set = new Set(entryTypes);
-  const playable = [...set].filter((t) => t !== 'tv' && t !== 'channel');
-  if (set.size && !playable.length) return 'hidden';
+  const playable = [...new Set(entryTypes)];
   const boxsets = /collection/i.test(
     `${catalog.type} ${catalog.id} ${catalog.name}`
   );
@@ -465,9 +534,6 @@ export function collectionTypeFor(
     case 'series':
     case 'anime':
       return 'tvshows';
-    case 'tv':
-    case 'channel':
-      return 'hidden';
     default:
       return 'mixed';
   }
@@ -479,7 +545,7 @@ export function viewCollectionType(
   entryTypes: string[]
 ): CollectionType | undefined {
   const kind = collectionTypeFor(catalog, entryTypes);
-  return kind === 'mixed' || kind === 'hidden' ? undefined : kind;
+  return kind === 'mixed' ? undefined : kind;
 }
 
 export interface ViewEntry {
@@ -499,7 +565,7 @@ export async function listViews(
       return {
         key,
         catalog,
-        types: await viewTypeCache.get(key).catch(() => undefined),
+        evidence: await viewEvidenceCache.get(key).catch(() => undefined),
       };
     })
   );
@@ -509,17 +575,16 @@ export async function listViews(
   const out: ViewEntry[] = [];
   for (const entry of sniffed) {
     if (max > 0 && out.length >= max) break;
-    const { catalog, types } = entry;
-    if (!types) pending.push(entry);
-    const kind = collectionTypeFor(catalog, types ?? []);
-    if (kind === 'hidden') continue;
+    const { catalog, evidence } = entry;
+    if (!evidence) pending.push(entry);
+    const kind = collectionTypeFor(catalog, evidence?.types ?? []);
     out.push({
       id: viewId(catalog.type, catalog.id),
       catalog,
       collectionType: kind === 'mixed' ? undefined : kind,
     });
   }
-  scheduleSniff(engine, pending);
+  scheduleSniff(engine, userData, pending);
   return out;
 }
 
@@ -535,33 +600,66 @@ export function findCatalog(
 
 export type ContentKind = 'movie' | 'series';
 
-/** The kind an entry becomes as an item: every non-movie type builds a Series. */
+/** The kind an entry becomes as an item: a leaf plays, everything else opens. */
 export function entryKind(
-  preview: Pick<MetaPreview, 'type' | 'collection'>
+  preview: Pick<MetaPreview, 'id' | 'type' | 'collection'>,
+  evidence?: LeafEvidence
 ): ContentKind {
-  return preview.type === 'movie' || preview.collection ? 'movie' : 'series';
+  if (preview.collection) return 'movie';
+  return isLeafEntry(preview, evidence) ? 'movie' : 'series';
 }
 
-function sniffedKind(type: string): ContentKind {
-  return type === COLLECTION_ENTRY ? 'movie' : entryKind({ type });
+function sniffedKind(type: string, leaves: string[]): ContentKind {
+  return type === COLLECTION_ENTRY
+    ? 'movie'
+    : entryKind(
+        { id: '', type },
+        { decided: new Set([type]), leaves: new Set(leaves) }
+      );
 }
 
-/** Entry types already sniffed for this catalog's view; never a fresh fetch. */
-async function cachedEntryTypes(
+/** What a sweep already learned about this catalog; never a fresh fetch. */
+async function cachedEvidence(
   userData: UserData,
   catalog: Catalog
-): Promise<string[] | undefined> {
-  return viewTypeCache
+): Promise<ViewEvidence | undefined> {
+  return viewEvidenceCache
     .get(viewTypeKey(userData, catalog))
     .catch(() => undefined);
+}
+
+/** What the sweeps have decided across these catalogs. */
+export async function leafEvidenceFor(
+  userData: UserData,
+  catalogs: Catalog[]
+): Promise<Pick<LeafEvidence, 'decided' | 'leaves'>> {
+  const evidence = await Promise.all(
+    catalogs.map((c) => cachedEvidence(userData, c))
+  );
+  return {
+    decided: new Set(evidence.flatMap((e) => e?.types ?? [])),
+    leaves: new Set(evidence.flatMap((e) => e?.leaves ?? [])),
+  };
+}
+
+/**
+ * Until a sweep decides: an entry no addon in this configuration can open a
+ * meta for is its own video, and a channel plays rather than opens.
+ */
+export function guessLeaf(
+  entry: { id: string; type: string },
+  canGetMeta: (type: string, id: string) => boolean
+): boolean {
+  if (entry.type === 'tv' || entry.type === 'channel') return true;
+  return !canGetMeta(entry.type, entry.id);
 }
 
 export async function catalogHasCollections(
   userData: UserData,
   catalog: Catalog
 ): Promise<boolean> {
-  const types = await cachedEntryTypes(userData, catalog);
-  return !!types?.includes(COLLECTION_ENTRY);
+  const evidence = await cachedEvidence(userData, catalog);
+  return !!evidence?.types.includes(COLLECTION_ENTRY);
 }
 
 /** The kinds a catalog is known to yield, from the entry types sniffed for its view. */
@@ -569,9 +667,11 @@ export async function knownCatalogKinds(
   userData: UserData,
   catalog: Catalog
 ): Promise<ContentKind[] | undefined> {
-  const types = await cachedEntryTypes(userData, catalog);
-  if (!types?.length) return undefined;
-  return [...new Set(types.map(sniffedKind))];
+  const evidence = await cachedEvidence(userData, catalog);
+  if (!evidence?.types.length) return undefined;
+  return [
+    ...new Set(evidence.types.map((t) => sniffedKind(t, evidence.leaves))),
+  ];
 }
 
 export async function searchCatalogs(
@@ -586,15 +686,21 @@ export async function searchCatalogs(
   const searchable = ((engine.getCatalogs() ?? []) as Catalog[]).filter(
     isSearchable
   );
-  const evidence =
-    wanted && userData
-      ? await Promise.all(searchable.map((c) => cachedEntryTypes(userData, c)))
-      : [];
+  const evidence = userData
+    ? await Promise.all(searchable.map((c) => cachedEvidence(userData, c)))
+    : [];
+  const leafEvidence: LeafEvidence = {
+    decided: new Set(evidence.flatMap((e) => e?.types ?? [])),
+    leaves: new Set(evidence.flatMap((e) => e?.leaves ?? [])),
+  };
   const catalogs = !wanted
     ? searchable
     : searchable.filter((c, i) => {
-        const types = evidence[i];
-        return !types?.length || types.some((t) => wanted.has(sniffedKind(t)));
+        const types = evidence[i]?.types;
+        return (
+          !types?.length ||
+          types.some((t) => wanted.has(sniffedKind(t, evidence[i]!.leaves)))
+        );
       });
   if (!catalogs.length) return [];
   /*
@@ -617,7 +723,9 @@ export async function searchCatalogs(
   );
   const lists = results.map((r) =>
     r.status === 'fulfilled'
-      ? r.value.items.filter((i) => !wanted || wanted.has(entryKind(i)))
+      ? r.value.items.filter(
+          (i) => !wanted || wanted.has(entryKind(i, leafEvidence))
+        )
       : []
   );
   const seen = new Set<string>();

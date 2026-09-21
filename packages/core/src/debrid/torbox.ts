@@ -173,6 +173,7 @@ export class TorboxDebridService
     this.maxWaitTime = options?.maxWaitTime ?? Time.Minute * 2;
     this.torboxApi = new TorboxApi({
       token: config.token,
+      timeoutMs: 30000,
     });
 
     this.stremthru = new StremThruService({

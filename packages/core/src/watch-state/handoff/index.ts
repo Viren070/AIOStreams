@@ -22,6 +22,8 @@ export {
   dispatchPlayback,
   dispatchWatchlist,
   ensurePlaybackSink,
+  retireOtherPersonaSinks,
+  retireUnusedSinks,
   type BulkMarkInput,
   type PlaybackEventInput,
 } from './dispatch.js';

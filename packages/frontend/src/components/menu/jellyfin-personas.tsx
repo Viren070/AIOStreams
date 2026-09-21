@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useUserData } from '@/context/userData';
 import { useStatus } from '@/context/status';
-import { VariantPills } from '../shared/variant-pills';
+import { watchStateTrackersQuery } from '@/lib/queries';
+import type { WatchStateTrackerOption } from '@/lib/api';
+import { cn } from '@/components/ui/core/styling';
+import { pill, VariantPills } from '../shared/variant-pills';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -24,6 +28,7 @@ const UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Fallback until the status call lands; the instance cap is the real bound. */
 const DEFAULT_MAX_PERSONAS = 20;
+const NO_TRACKER_OPTIONS: WatchStateTrackerOption[] = [];
 
 /**
  * The id keys the user's history, so it is minted once from the name and never
@@ -46,6 +51,11 @@ const sameName = (a: string, b: string) =>
 
 function variantsLabel(ids: string[] | undefined): string {
   return ids?.length ? `Variants ${ids.join(', ')}` : 'Base config';
+}
+
+function trackersLabel(ids: string[]): string {
+  if (!ids.length) return 'no trackers';
+  return ids.length === 1 ? '1 tracker' : `${ids.length} trackers`;
 }
 
 function Avatar({ name, avatar }: { name: string; avatar?: string }) {
@@ -125,12 +135,116 @@ function VariantsField({
   );
 }
 
+interface TrackerChoice extends WatchStateTrackerOption {
+  takenBy?: string;
+}
+
+/** `undefined` is Automatic; an empty list syncs with no trackers. */
+function TrackersField({
+  choices,
+  value,
+  onChange,
+  automatic,
+  note,
+  loading,
+  maxTrackers,
+}: {
+  choices: TrackerChoice[];
+  value: string[] | undefined;
+  onChange: (value: string[] | undefined) => void;
+  automatic: string;
+  note?: string;
+  loading: boolean;
+  maxTrackers?: number;
+}) {
+  const toggle = (id: string) => {
+    const current = value ?? [];
+    onChange(
+      current.includes(id) ? current.filter((v) => v !== id) : [...current, id]
+    );
+  };
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium">Trackers</p>
+      <p className="text-xs text-[--muted]">
+        {!value
+          ? automatic
+          : value.length
+            ? 'Syncs only with the tracker addons picked.'
+            : 'Syncs with no trackers.'}
+      </p>
+      {loading ? (
+        <p className="text-xs text-[--muted]">Loading tracker addons…</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className={pill(value === undefined)}
+          >
+            Automatic
+          </button>
+          {choices.map((choice) => {
+            const selected = !!value?.includes(choice.presetId);
+            return (
+              <button
+                key={choice.presetId}
+                type="button"
+                disabled={!selected && !!choice.takenBy}
+                onClick={() => toggle(choice.presetId)}
+                className={cn(
+                  pill(selected),
+                  'disabled:cursor-not-allowed disabled:opacity-50'
+                )}
+                title={
+                  choice.takenBy
+                    ? `${choice.takenBy} syncs with this tracker`
+                    : undefined
+                }
+              >
+                {choice.addon}
+                {choice.takenBy && (
+                  <span className="ml-1 opacity-60">{choice.takenBy}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {note && <p className="text-xs text-[--muted]">{note}</p>}
+      {maxTrackers !== undefined && value && value.length > maxTrackers && (
+        <p className="text-xs text-[--orange]">
+          This instance syncs each user with at most {maxTrackers} trackers, so
+          only {maxTrackers} of these are used.
+        </p>
+      )}
+      <p className="text-xs text-[--muted]">
+        A tracker syncs with one history at a time, and moving it to another
+        user brings along what it already recorded.{' '}
+        {!loading && !choices.length
+          ? 'No tracker addons in your saved configuration yet; add one and save.'
+          : 'Added a tracker addon? Save, and it shows here.'}
+      </p>
+    </div>
+  );
+}
+
 /** Jellyfin clients show these as users of the server. */
 export function JellyfinPersonas() {
-  const { userData, setUserData } = useUserData();
+  const { userData, setUserData, uuid, password } = useUserData();
+  const credentials = React.useMemo(
+    () => (uuid ? { uuid, password } : null),
+    [uuid, password]
+  );
+  const trackerQuery = useQuery(watchStateTrackersQuery(credentials));
+  const trackerSync =
+    !trackerQuery.data || trackerQuery.data.push || trackerQuery.data.pull;
+  const trackerOptions = trackerQuery.data?.available ?? NO_TRACKER_OPTIONS;
+  const trackersLoading = !!credentials && trackerQuery.isPending;
   const { status } = useStatus();
   const maxPersonas =
     status?.settings?.jellyfin?.maxPersonas ?? DEFAULT_MAX_PERSONAS;
+  const maxTrackers = status?.settings?.jellyfin?.maxTrackers;
   const personas = userData.jellyfin?.personas ?? [];
   const primary = userData.jellyfin?.primary;
   const primaryName = primary?.name || userData.addonName || 'Primary user';
@@ -146,6 +260,37 @@ export function JellyfinPersonas() {
   const [draft, setDraft] = useState<Persona | null>(null);
   const [primaryDraft, setPrimaryDraft] = useState<Primary | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<number | null>(null);
+
+  /** Other users' trackers; `automatic` adds an automatic primary user's. */
+  const takenFor = (index: number | null, automatic: boolean) => {
+    const taken = new Map<string, string>();
+    if (index !== null) {
+      const held = primary?.trackers
+        ? primary.trackers
+        : automatic
+          ? trackerOptions.filter((o) => o.user === '').map((o) => o.presetId)
+          : [];
+      for (const id of held) taken.set(id, primaryName);
+    }
+    personas.forEach((persona, i) => {
+      if (i === index || persona.history === 'shared') return;
+      for (const id of persona.trackers ?? [])
+        if (!taken.has(id)) taken.set(id, persona.name);
+    });
+    return taken;
+  };
+
+  const choicesFor = (user: string, taken: Map<string, string>) => {
+    const own = trackerOptions.filter((o) => o.user === user);
+    // A user not saved yet can pick what the primary user can.
+    const options = own.length
+      ? own
+      : trackerOptions.filter((o) => o.user === '');
+    return options.map((o) => ({ ...o, takenBy: taken.get(o.presetId) }));
+  };
+
+  const addonName = (presetId: string) =>
+    trackerOptions.find((o) => o.presetId === presetId)?.addon ?? presetId;
 
   const patch = (values: Partial<JellyfinSettings>) =>
     setUserData((prev) => ({
@@ -190,6 +335,15 @@ export function JellyfinPersonas() {
       toast.error('A linked variant no longer exists or is disabled.');
       return;
     }
+    const trackers = draft.history === 'shared' ? undefined : draft.trackers;
+    const taken = takenFor(editing, false);
+    const clash = trackers?.find((id) => taken.has(id));
+    if (clash) {
+      toast.error(
+        `${taken.get(clash)} already syncs with ${addonName(clash)}.`
+      );
+      return;
+    }
     const next = [...personas];
     const value: Persona = {
       ...draft,
@@ -197,6 +351,7 @@ export function JellyfinPersonas() {
       name,
       avatar: draft.avatar?.trim() || undefined,
       variants: draft.variants?.length ? draft.variants : undefined,
+      trackers,
       hidden: draft.hidden || undefined,
     };
     if (editing !== null && editing < personas.length) next[editing] = value;
@@ -212,12 +367,29 @@ export function JellyfinPersonas() {
       toast.error('Another user already has this name.');
       return;
     }
+    const taken = takenFor(null, false);
+    const clash = primaryDraft.trackers?.find((id) => taken.has(id));
+    if (clash) {
+      toast.error(
+        `${taken.get(clash)} already syncs with ${addonName(clash)}.`
+      );
+      return;
+    }
+    if (
+      !primaryDraft.trackers &&
+      personas.some((p) => p.history !== 'shared' && p.trackers?.length)
+    ) {
+      toast.warning(
+        'Trackers picked for other users stay unused while the primary user syncs with every tracker.'
+      );
+    }
     const value: Primary = {
       name: name || undefined,
       avatar: primaryDraft.avatar?.trim() || undefined,
       variants: primaryDraft.variants?.length
         ? primaryDraft.variants
         : undefined,
+      trackers: primaryDraft.trackers,
     };
     patch({ primary: Object.values(value).some(Boolean) ? value : undefined });
     setPrimaryDraft(null);
@@ -256,14 +428,16 @@ export function JellyfinPersonas() {
       <p className="text-xs text-gray-400">
         Shown as users of the server. Everyone signs in with this
         configuration&apos;s password. The primary user is this configuration
-        itself, and the history your trackers sync with.
+        itself; each other user can keep a history and trackers of its own.
       </p>
 
       <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
         <UserRow
           name={primaryName}
           avatar={primary?.avatar}
-          summary={`Primary user · ${variantsLabel(primary?.variants)} · syncs with your trackers`}
+          summary={`Primary user · ${variantsLabel(primary?.variants)} · ${
+            primary?.trackers ? trackersLabel(primary.trackers) : 'all trackers'
+          }`}
           onEdit={() => setPrimaryDraft({ ...primary })}
         />
         {personas.map((persona, index) => (
@@ -276,6 +450,9 @@ export function JellyfinPersonas() {
               persona.history === 'shared'
                 ? "shares the primary user's history"
                 : 'own history',
+              persona.history !== 'shared' && persona.trackers
+                ? trackersLabel(persona.trackers)
+                : null,
               persona.hidden ? 'hidden from the picker' : null,
             ]
               .filter(Boolean)
@@ -342,6 +519,18 @@ export function JellyfinPersonas() {
                 })
               }
             />
+            {trackerSync && (
+              <TrackersField
+                choices={choicesFor('', takenFor(null, true))}
+                value={primaryDraft.trackers}
+                onChange={(trackers) =>
+                  setPrimaryDraft({ ...primaryDraft, trackers })
+                }
+                automatic="Syncs with every tracker addon."
+                loading={trackersLoading}
+                maxTrackers={maxTrackers}
+              />
+            )}
             <TextInput
               label="Avatar URL"
               help="Optional. Shown on the sign-in picker."
@@ -380,10 +569,14 @@ export function JellyfinPersonas() {
             <Select
               label="History"
               help="Own: a separate Continue Watching. Shared: the primary user's."
-              moreHelp="With its own history, a user reports to a tracker only if its variants swap in a different tracker addon. Sharing the primary user's history means sharing its trackers too."
+              moreHelp="Sharing the primary user's history means sharing its trackers too. With its own history, a user syncs with the trackers chosen for it."
               value={draft.history}
               onValueChange={(value) =>
-                setDraft({ ...draft, history: value as Persona['history'] })
+                setDraft({
+                  ...draft,
+                  history: value as Persona['history'],
+                  trackers: value === 'shared' ? undefined : draft.trackers,
+                })
               }
               options={[
                 { label: 'Own', value: 'own' },
@@ -401,6 +594,22 @@ export function JellyfinPersonas() {
                 })
               }
             />
+
+            {trackerSync && draft.history !== 'shared' && (
+              <TrackersField
+                choices={choicesFor(draft.id, takenFor(editing, true))}
+                value={draft.trackers}
+                onChange={(trackers) => setDraft({ ...draft, trackers })}
+                automatic="Syncs only with a tracker addon its variants add."
+                note={
+                  primary?.trackers
+                    ? undefined
+                    : 'The primary user syncs with every tracker. Choose its trackers to free the rest.'
+                }
+                loading={trackersLoading}
+                maxTrackers={maxTrackers}
+              />
+            )}
 
             <TextInput
               label="Avatar URL"

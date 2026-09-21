@@ -33,7 +33,14 @@ export function sessionKeyFor(client: {
 export interface SessionContext {
   scope: WatchScope;
   sessionKey: string;
-  client?: { name?: string; device?: string; deviceId?: string };
+  /** The signed-in persona, empty for the primary user. */
+  user?: string;
+  client?: {
+    name?: string;
+    device?: string;
+    deviceId?: string;
+    version?: string;
+  };
   playSessionId?: string;
 }
 
@@ -44,6 +51,7 @@ export async function openWatchSession(
 ): Promise<void> {
   const identity = await watchIdentityFor(ref);
   await WatchSessionRepository.open(ctx.scope, ctx.sessionKey, {
+    userPersona: ctx.user ?? null,
     itemKey: identity.itemKey,
     kind: identity.kind,
     mediaType: identity.mediaType,
@@ -54,6 +62,8 @@ export async function openWatchSession(
     playSessionId: ctx.playSessionId ?? null,
     deviceId: ctx.client?.deviceId ?? null,
     client: ctx.client?.name ?? null,
+    deviceName: ctx.client?.device ?? null,
+    appVersion: ctx.client?.version ?? null,
     positionMs: opts.positionMs ?? 0,
     durationMs: opts.durationMs ?? 0,
     paused: opts.paused ?? false,

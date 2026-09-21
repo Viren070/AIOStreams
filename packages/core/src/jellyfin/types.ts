@@ -25,6 +25,9 @@ export interface SubtitleTrack {
   url: string;
   lang: string;
   source: 'stream' | 'addon';
+  title?: string;
+  forced?: boolean;
+  hearingImpaired?: boolean;
 }
 
 /** Additive extension object for AIOStreams-aware clients. */
@@ -67,6 +70,8 @@ export interface MediaSourceRecord {
   subtitlesEnriched?: boolean;
   videoHash?: string;
   live: boolean;
+  /** Carries text only: an addon notice, a pipeline error or a statistic. */
+  notice?: boolean;
   extension: AiostreamsSourceExtension;
 }
 

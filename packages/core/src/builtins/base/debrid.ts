@@ -15,6 +15,7 @@ import {
   enrichParsedIdWithAnimeEntry,
   formatZodError,
   fromUrlSafeBase64,
+  getEnrichedImdbId,
   getSimpleTextHash,
   getTimeTakenSincePoint,
   SERVICE_DETAILS,
@@ -37,7 +38,11 @@ import {
   fileInfoStore,
   FileInfo,
 } from '../../debrid/index.js';
-import { processTorrents, processNZBs } from '../utils/debrid.js';
+import {
+  processTorrents,
+  processNZBs,
+  filterUnprocessedTorrentsPreDownload,
+} from '../utils/debrid.js';
 import {
   calculateAbsoluteEpisode,
   isNonAnimeAbsoluteEligible,
@@ -256,8 +261,9 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       ];
     }
 
-    const torrentsToDownload = torrentResults.filter(
-      (t) => !t.hash && t.downloadUrl
+    const torrentsToDownload = filterUnprocessedTorrentsPreDownload(
+      torrentResults.filter((t) => !t.hash && t.downloadUrl),
+      searchMetadata
     );
     torrentResults = torrentResults.filter((t) => t.hash);
     if (torrentsToDownload.length > 0) {
@@ -793,7 +799,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     const imdbId =
       parsedId.type === 'imdbId'
         ? parsedId.value.toString()
-        : animeEntry?.mappings?.imdbId?.toString();
+        : getEnrichedImdbId(parsedId, animeEntry);
     // const tmdbId =
     //   parsedId.type === 'themoviedbId'
     //     ? parsedId.value.toString()

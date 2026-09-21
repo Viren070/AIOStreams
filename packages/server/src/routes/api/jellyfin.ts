@@ -6,6 +6,7 @@ import {
   constants,
   createLogger,
   encryptString,
+  mintToken,
   quickConnectAuthorize,
   quickConnectByCode,
   UserRepository,
@@ -231,6 +232,78 @@ router.get('/quickconnect/pending', async (req, res, next) => {
             version: entry.appVersion,
           },
           requestedAt: entry.dateAdded,
+        },
+      })
+    );
+  } catch (error) {
+    next(
+      error instanceof APIError
+        ? error
+        : new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR)
+    );
+  }
+});
+
+const apiKeyBody = z.object({ id: z.string().regex(/^[a-z0-9]{8,32}$/) });
+
+router.post('/api-keys/token', async (req, res, next) => {
+  try {
+    if (!appConfig.jellyfin.enabled) {
+      next(
+        new APIError(
+          constants.ErrorCode.FORBIDDEN,
+          undefined,
+          'Jellyfin API is disabled'
+        )
+      );
+      return;
+    }
+    const parsed = apiKeyBody.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      next(
+        new APIError(
+          constants.ErrorCode.MISSING_REQUIRED_FIELDS,
+          undefined,
+          'A key id is required'
+        )
+      );
+      return;
+    }
+    const creds = await resolveConfigCredentials(req, res, {
+      allowEncrypted: true,
+    });
+    if (!creds) {
+      next(new APIError(constants.ErrorCode.UNAUTHORIZED));
+      return;
+    }
+    await UserRepository.verifyUser(creds.uuid, creds.password);
+    const config = await UserRepository.getUser(creds.uuid, creds.password);
+    const saved = config?.jellyfin?.apiKeys?.some(
+      (k) => k.id === parsed.data.id
+    );
+    if (!saved) {
+      res.status(404).json(
+        createResponse({
+          success: false,
+          detail: 'Save your configuration to activate this key',
+        })
+      );
+      return;
+    }
+    const enc = encryptString(creds.password);
+    if (!enc.success || !enc.data) {
+      next(new APIError(constants.ErrorCode.ENCRYPTION_ERROR));
+      return;
+    }
+    logger.info(
+      { uuid: creds.uuid, key: parsed.data.id },
+      'jellyfin api key token issued'
+    );
+    res.json(
+      createResponse({
+        success: true,
+        data: {
+          token: mintToken({ u: creds.uuid, p: enc.data, a: parsed.data.id }),
         },
       })
     );

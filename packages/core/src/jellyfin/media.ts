@@ -1,6 +1,7 @@
 import type { MediaTrack, ParsedFile, ParsedStream } from '../db/schemas.js';
 import { constants } from '../utils/index.js';
 import { languageToIso6392 } from '../utils/languages.js';
+import { subtitleLanguage } from './enrichment.js';
 import { mediaSourceId } from './ids.js';
 import {
   mergeSubtitleTracks,
@@ -190,6 +191,39 @@ export function sourceRecordFrom(
   };
 }
 
+export function noticeRecordFrom(
+  uuid: string,
+  identity: string,
+  label: string,
+  extension: Pick<
+    AiostreamsSourceExtension,
+    'name' | 'description' | 'addon' | 'type'
+  >
+): MediaSourceRecord {
+  return {
+    msid: mediaSourceId(uuid, identity),
+    url: '',
+    container: 'mp4',
+    label,
+    subtitles: [],
+    live: false,
+    notice: true,
+    extension: {
+      ...extension,
+      visualTags: [],
+      audioTags: [],
+      audioChannels: [],
+      languages: [],
+    },
+  };
+}
+
+export function playableSources(
+  sources: MediaSourceRecord[]
+): MediaSourceRecord[] {
+  return sources.filter((source) => !source.notice);
+}
+
 const STREAM_FLAGS = {
   IsForced: false,
   IsExternal: false,
@@ -342,6 +376,22 @@ function embeddedSubtitleStreams(
   }));
 }
 
+function externalSubtitleTitle(
+  sub: SubtitleTrack,
+  language: string | undefined
+): string {
+  const { title } = sub;
+  const named =
+    !!language && !!title?.toLowerCase().includes(language.toLowerCase());
+  return [
+    named ? undefined : (language ?? (title ? undefined : 'Unknown')),
+    title ?? 'External',
+    ...trackFlagLabels(sub),
+  ]
+    .filter(Boolean)
+    .join(' - ');
+}
+
 export interface MediaSourceBuildOptions {
   /** Id to emit; the first source of an item uses the item id. */
   id: string;
@@ -352,6 +402,8 @@ export interface MediaSourceBuildOptions {
   runtimeMs?: number;
   includeExtension: boolean;
   hasSegments?: boolean;
+  /** Where a notice source points, having nothing of its own. */
+  noticePath?: string;
 }
 
 /**
@@ -380,6 +432,7 @@ export function buildMediaStreams(
     const index = externalStart + i;
     const format = opts.subtitleFormat(subtitleExtensionOf(sub.url));
     const url = opts.subtitleUrl(index, format);
+    const language = subtitleLanguage(sub.lang);
     streams.push({
       Type: 'Subtitle',
       Index: index,
@@ -387,10 +440,12 @@ export function buildMediaStreams(
       IsExternal: true,
       SupportsExternalStream: true,
       Codec: subtitleCodecFor(format),
-      Language: languageToIso6392(sub.lang) ?? sub.lang.toLowerCase(),
-      DisplayTitle: `${sub.lang} (external)`,
-      Title: sub.lang,
+      Language: language.code,
+      DisplayTitle: externalSubtitleTitle(sub, language.name),
+      Title: sub.title,
       IsDefault: false,
+      IsForced: sub.forced ?? false,
+      IsHearingImpaired: sub.hearingImpaired ?? false,
       IsTextSubtitleStream: true,
       DeliveryMethod: 'External',
       DeliveryUrl: url,
@@ -427,6 +482,15 @@ export function buildMediaSource(
   record: MediaSourceRecord,
   opts: MediaSourceBuildOptions
 ): JellyfinMediaSource {
+  if (record.notice) {
+    const notice = placeholderMediaSource(
+      opts.id,
+      record.label,
+      opts.noticePath ?? ''
+    );
+    if (opts.includeExtension) notice.aiostreams = record.extension;
+    return notice;
+  }
   const mediaStreams = buildMediaStreams(record, opts);
   const audioIndex = mediaStreams.findIndex((s) => s.Type === 'Audio');
   const durationMs = record.live

@@ -13,6 +13,8 @@ export interface TokenPayload {
   d?: string;
   /** Persona id; absent on tokens minted before personas existed. */
   k?: string;
+  /** API key id; the token then acts for every user. */
+  a?: string;
   iat: number;
 }
 

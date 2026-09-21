@@ -890,11 +890,19 @@ export interface WatchStateTracker {
   pull?: TrackerExchange;
 }
 
+export interface WatchStateTrackerOption {
+  /** Empty for the primary user, otherwise the persona id. */
+  user: string;
+  presetId: string;
+  addon: string;
+}
+
 export interface WatchStateOverview {
   /** Whether this instance sends and reads watch state at all. */
   push: boolean;
   pull: boolean;
   trackers: WatchStateTracker[];
+  available: WatchStateTrackerOption[];
 }
 
 /** The trackers the saved configuration syncs watch state with. */
@@ -914,6 +922,16 @@ export async function approveJellyfinQuickConnect(
   }>('POST /jellyfin/quickconnect/approve', {
     ...authed(credentials),
     body: { code, ...(persona ? { persona } : {}) },
+  });
+}
+
+export async function getJellyfinApiKeyToken(
+  credentials: Credentials,
+  id: string
+) {
+  return api<{ token: string }>('POST /jellyfin/api-keys/token', {
+    ...authed(credentials),
+    body: { id },
   });
 }
 

@@ -73,7 +73,12 @@ export const watchStateTrackersQuery = (credentials: Credentials | null) =>
     queryFn: (): Promise<WatchStateOverview> =>
       credentials
         ? getWatchStateTrackers(credentials)
-        : Promise.resolve({ push: false, pull: false, trackers: [] }),
+        : Promise.resolve({
+            push: false,
+            pull: false,
+            trackers: [],
+            available: [],
+          }),
     enabled: !!credentials,
     staleTime: 30_000,
     retry: false,

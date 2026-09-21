@@ -11,6 +11,8 @@ import type { WatchScope } from '../../watch-state/types.js';
 export interface WatchSessionRow {
   uuid: string;
   persona: string;
+  /** Who was signed in; a shared-history persona shares the account's scope. */
+  userPersona: string | null;
   sessionKey: string;
   itemKey: string;
   kind: WatchKind;
@@ -22,6 +24,8 @@ export interface WatchSessionRow {
   playSessionId: string | null;
   deviceId: string | null;
   client: string | null;
+  deviceName: string | null;
+  appVersion: string | null;
   positionMs: number;
   durationMs: number;
   paused: boolean;
@@ -31,6 +35,7 @@ export interface WatchSessionRow {
 }
 
 export interface WatchSessionUpsert {
+  userPersona?: string | null;
   itemKey: string;
   kind: WatchKind;
   mediaType: string;
@@ -41,6 +46,8 @@ export interface WatchSessionUpsert {
   playSessionId?: string | null;
   deviceId?: string | null;
   client?: string | null;
+  deviceName?: string | null;
+  appVersion?: string | null;
   positionMs?: number;
   durationMs?: number;
   paused?: boolean;
@@ -49,6 +56,7 @@ export interface WatchSessionUpsert {
 interface DbRow {
   uuid: string;
   persona: string;
+  user_persona: string | null;
   session_key: string;
   item_key: string;
   kind: string;
@@ -60,6 +68,8 @@ interface DbRow {
   play_session_id: string | null;
   device_id: string | null;
   client: string | null;
+  device_name: string | null;
+  app_version: string | null;
   position_ms: number | string;
   duration_ms: number | string;
   paused: number | string;
@@ -77,6 +87,7 @@ function toRow(r: DbRow): WatchSessionRow {
   return {
     uuid: r.uuid,
     persona: r.persona,
+    userPersona: r.user_persona ?? null,
     sessionKey: r.session_key,
     itemKey: r.item_key,
     kind: r.kind as WatchKind,
@@ -88,6 +99,8 @@ function toRow(r: DbRow): WatchSessionRow {
     playSessionId: r.play_session_id,
     deviceId: r.device_id,
     client: r.client,
+    deviceName: r.device_name ?? null,
+    appVersion: r.app_version ?? null,
     positionMs: Number(r.position_ms),
     durationMs: Number(r.duration_ms),
     paused: Boolean(Number(r.paused)),
@@ -119,19 +132,22 @@ export class WatchSessionRepository {
     const now = Date.now();
     await getDb().exec(
       sql`INSERT INTO watch_sessions
-            (uuid, persona, session_key, item_key, kind, media_type, base_id,
-             season, episode, video_id, play_session_id, device_id, client,
-             position_ms, duration_ms, paused, started_at, last_checkin_at,
-             ended_at)
+            (uuid, persona, session_key, user_persona, item_key, kind,
+             media_type, base_id, season, episode, video_id, play_session_id,
+             device_id, client, device_name, app_version, position_ms,
+             duration_ms, paused, started_at, last_checkin_at, ended_at)
           VALUES (${scope.uuid}, ${scope.persona}, ${sessionKey},
+                  ${input.userPersona ?? null},
                   ${input.itemKey}, ${input.kind}, ${input.mediaType},
                   ${input.baseId}, ${input.season ?? null},
                   ${input.episode ?? null}, ${input.videoId ?? null},
                   ${input.playSessionId ?? null}, ${input.deviceId ?? null},
-                  ${input.client ?? null}, ${input.positionMs ?? 0},
+                  ${input.client ?? null}, ${input.deviceName ?? null},
+                  ${input.appVersion ?? null}, ${input.positionMs ?? 0},
                   ${input.durationMs ?? 0}, ${input.paused ? 1 : 0},
                   ${now}, ${now}, NULL)
           ON CONFLICT(uuid, persona, session_key) DO UPDATE SET
+            user_persona = excluded.user_persona,
             item_key = excluded.item_key,
             kind = excluded.kind,
             media_type = excluded.media_type,
@@ -142,6 +158,8 @@ export class WatchSessionRepository {
             play_session_id = COALESCE(excluded.play_session_id, watch_sessions.play_session_id),
             device_id = COALESCE(excluded.device_id, watch_sessions.device_id),
             client = COALESCE(excluded.client, watch_sessions.client),
+            device_name = COALESCE(excluded.device_name, watch_sessions.device_name),
+            app_version = COALESCE(excluded.app_version, watch_sessions.app_version),
             position_ms = excluded.position_ms,
             duration_ms = CASE WHEN excluded.duration_ms > 0
                                THEN excluded.duration_ms ELSE watch_sessions.duration_ms END,
@@ -186,6 +204,33 @@ export class WatchSessionRepository {
            WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
              AND session_key = ${sessionKey}`
     );
+  }
+
+  /** One scope's sessions, open and recently closed, most recent first. */
+  static async listForScope(
+    scope: WatchScope,
+    limit: number
+  ): Promise<WatchSessionRow[]> {
+    const rows = await getDb().query<DbRow>(
+      sql`SELECT * FROM watch_sessions
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           ORDER BY last_checkin_at DESC
+           LIMIT ${limit}`
+    );
+    return rows.map(toRow);
+  }
+
+  static async listForUuid(
+    uuid: string,
+    limit: number
+  ): Promise<WatchSessionRow[]> {
+    const rows = await getDb().query<DbRow>(
+      sql`SELECT * FROM watch_sessions
+           WHERE uuid = ${uuid}
+           ORDER BY last_checkin_at DESC
+           LIMIT ${limit}`
+    );
+    return rows.map(toRow);
   }
 
   /** Open sessions that have not checked in since `before`. */

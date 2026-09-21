@@ -22,4 +22,15 @@ export const linkedAccountsSchema = {
     requiresRestart: false,
     secret: false,
   },
+  maxPerUser: {
+    schema: z.number().int().min(1),
+    default: 10,
+    label: 'Max linked accounts per configuration',
+    description:
+      'How many accounts a single configuration may link. Links already over the limit are kept, but no new ones can be added until some are removed.',
+    env: 'LINKED_ACCOUNTS_MAX_PER_USER',
+    requiresRestart: false,
+    secret: false,
+    ui: { min: 1 },
+  },
 } as const satisfies RuntimeConfigSection;

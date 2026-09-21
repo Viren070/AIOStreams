@@ -52,6 +52,8 @@ export interface SinkRow {
   pullClaimedBy: string | null;
   pullClaimExpiresAt: number | null;
   pullFailures: number;
+  /** Set while no user syncs with it; background reads and idle stops skip it. */
+  retiredAt: number | null;
 }
 
 export interface DeliveryRow {
@@ -119,6 +121,7 @@ interface DbSink {
   pull_claimed_by: string | null;
   pull_claim_expires_at: number | string | null;
   pull_failures: number | string;
+  retired_at: number | string | null;
   [k: string]: unknown;
 }
 
@@ -207,6 +210,7 @@ function toSink(r: DbSink): SinkRow {
     pullClaimedBy: r.pull_claimed_by ?? null,
     pullClaimExpiresAt: optionalNumber(r.pull_claim_expires_at),
     pullFailures: Number(r.pull_failures ?? 0),
+    retiredAt: optionalNumber(r.retired_at ?? null),
   };
 }
 
@@ -303,6 +307,7 @@ export class PlaybackHandoffRepository {
             types = excluded.types,
             id_prefixes = excluded.id_prefixes,
             routing_hash = excluded.routing_hash,
+            retired_at = NULL,
             next_pull_at = CASE
               WHEN excluded.pull_url IS NULL THEN NULL
               WHEN watch_sinks.pull_url IS NULL THEN 0
@@ -322,9 +327,42 @@ export class PlaybackHandoffRepository {
     const rows = await getDb().query<DbSink>(
       sql`SELECT * FROM watch_sinks
            WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND retired_at IS NULL
            ORDER BY addon_name, addon_instance_id`
     );
     return rows.map(toSink);
+  }
+
+  static async retireSinksExcept(
+    scope: WatchScope,
+    keepInstanceIds: readonly string[],
+    now: number
+  ): Promise<number> {
+    const keep = keepInstanceIds.length
+      ? sql`AND addon_instance_id NOT IN (${join(keepInstanceIds.map((id) => sql`${id}`))})`
+      : raw('');
+    const res = await getDb().exec(
+      sql`UPDATE watch_sinks SET retired_at = ${now}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             AND retired_at IS NULL ${keep}`
+    );
+    return res.rowCount ?? 0;
+  }
+
+  static async retireOtherPersonas(
+    uuid: string,
+    keepPersonaIds: readonly string[],
+    now: number
+  ): Promise<number> {
+    const keep = keepPersonaIds.length
+      ? sql`AND persona NOT IN (${join(keepPersonaIds.map((id) => sql`${id}`))})`
+      : raw('');
+    const res = await getDb().exec(
+      sql`UPDATE watch_sinks SET retired_at = ${now}
+           WHERE uuid = ${uuid} AND persona <> ''
+             AND retired_at IS NULL ${keep}`
+    );
+    return res.rowCount ?? 0;
   }
 
   /** Every persona's sinks, for the configuration's own diagnostics. */
@@ -703,6 +741,7 @@ export class PlaybackHandoffRepository {
               WHERE next_pull_at IS NOT NULL
                 AND next_pull_at <= ${now}
                 AND active_at >= ${activeSince}
+                AND retired_at IS NULL
                 AND (pull_claim_expires_at IS NULL
                      OR pull_claim_expires_at <= ${now})
               ORDER BY next_pull_at ASC

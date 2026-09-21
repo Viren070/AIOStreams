@@ -2,6 +2,7 @@ import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../utils/index.js';
 import type { ParsedId } from '../utils/id-parser.js';
 import type { AnimeEntry } from '../anime-database/types.js';
+import { getEnrichedImdbId } from '../anime-database/enrich.js';
 import { IdMappingDataset } from './id-mappings.js';
 
 const logger = createLogger('id-resolution');
@@ -27,7 +28,7 @@ export function resolveCrossProviderIds(
   let imdbId =
     parsedId.type === 'imdbId'
       ? parsedId.value.toString()
-      : animeEntry?.mappings?.imdbId?.toString();
+      : getEnrichedImdbId(parsedId, animeEntry);
   let tvdbId =
     parsedId.type === 'thetvdbId'
       ? Number(parsedId.value)

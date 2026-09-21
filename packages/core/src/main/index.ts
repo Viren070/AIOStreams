@@ -32,6 +32,7 @@ import { getCatalog as _getCatalog } from './catalog.js';
 import {
   getStreams as _getStreams,
   getMeta as _getMeta,
+  getMetaCandidates,
   getSubtitles as _getSubtitles,
   getAddonCatalog as _getAddonCatalog,
 } from './resources.js';
@@ -123,6 +124,12 @@ export class AIOStreams {
     return this.ctx.finalResources;
   }
 
+  /** Whether any addon in this configuration could answer a meta request. */
+  public canGetMeta(type: string, id: string): boolean {
+    this.checkInitialised();
+    return getMetaCandidates(this.ctx, type, id).length > 0;
+  }
+
   public getCatalogs(): Manifest['catalogs'] {
     this.checkInitialised();
     return this.ctx.finalCatalogs;
@@ -153,6 +160,13 @@ export class AIOStreams {
   public getPlaybackSinks(): ResolvedPlaybackSink[] {
     this.checkInitialised();
     return resolvePlaybackSinks(this.ctx);
+  }
+
+  /** Addons whose manifest failed to load. */
+  public getFailedAddons(): Addon[] {
+    return this.ctx.addonInitialisationErrors.flatMap(({ addon }) =>
+      'preset' in addon ? [addon] : []
+    );
   }
 
   public async shouldStopAutoPlay(type: string, id: string) {

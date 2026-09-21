@@ -285,6 +285,7 @@ export function createNabRouter(namespace: NabNamespace): Router {
       }
       userData = await syncUserDataUrls(userData);
       userData = await validateConfig(userData, {
+        skipVariantValidation: true,
         skipErrorsFromAddonsOrProxies: true,
         decryptValues: true,
       });

@@ -58,7 +58,7 @@ import {
   cancelAllCensusShadows,
   type CensusOutcome,
 } from './census-shadow.js';
-import { verifyEntryContentAndMark } from './verify-content.js';
+import { CONTENT_MISMATCH, verifyImportContent } from './verify-content.js';
 import {
   classifyNoStreamable,
   classifyAvailability,
@@ -584,6 +584,17 @@ async function importNzb(
       });
     }
 
+    if (
+      (await verifyImportContent(engine, nzb, playable, jobSignal)) === 'bad'
+    ) {
+      const { code, reason } = CONTENT_MISMATCH;
+      content.census?.cancel();
+      recordOnce('failed', { errorCode: code });
+      throw await failImport(nzbHash, name, reason, code, {
+        reasonCode: code,
+      });
+    }
+
     const best = playable.reduce((a, b) => (b.size > a.size ? b : a));
     engine.warmTarget(nzb, { index: best.index, layout: best.layout });
     // Small damage the census confirmed within the blocking window: the entry
@@ -631,7 +642,6 @@ async function importNzb(
       engine,
       releaseKey: spec.releaseKey,
       onSettled: async (outcome) => {
-        if (outcome !== 'failed') await verifyEntryContentAndMark(nzbHash);
         if (origin === 'sabnzbd') {
           await handleArrCensusSettled(nzbHash, outcome);
         }

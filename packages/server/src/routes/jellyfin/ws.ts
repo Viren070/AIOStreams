@@ -54,6 +54,8 @@ async function authenticateUpgrade(url: string): Promise<SocketUser | null> {
   let personaKey = '';
   if (apiKey) {
     const payload = readToken(apiKey);
+    // Nothing here pushes sessions; a tool polls /Sessions once its socket fails.
+    if (payload?.a) return null;
     if (payload) {
       resolved = await resolveConfigFor(payload.u, payload.p);
       personaKey = payload.k ?? '';

@@ -3,7 +3,15 @@ import type {
   MetaPerson,
   MetaPreview,
   ParsedMeta,
+  Subtitle,
 } from '../db/schemas.js';
+import {
+  iso6391ToLanguage,
+  iso6392ToIso6391,
+  languageToIso6392,
+  normaliseLangCode,
+  normaliseLanguage,
+} from '../utils/languages.js';
 
 export interface EnrichedPerson {
   name: string;
@@ -51,6 +59,20 @@ export interface VideoEnrichment {
   rating?: number;
   runtimeMs?: number;
   people: EnrichedPerson[];
+}
+
+export interface SubtitleEnrichment {
+  title?: string;
+  forced: boolean;
+  hearingImpaired: boolean;
+}
+
+export interface SubtitleLanguage {
+  /** ISO 639-2 */
+  code?: string;
+  name?: string;
+  /** `lang` names the language and nothing else. */
+  exact: boolean;
 }
 
 type AnyMeta = (MetaPreview | Meta) & Record<string, unknown>;
@@ -435,6 +457,110 @@ export function readVideoEnrichment(
     rating: upTo(10, video.rating),
     runtimeMs: parseRuntimeMs(video.runtime),
     people: declaredPeople(video.people),
+  };
+}
+
+/* Codes some subtitle sources use that are not ISO 639. */
+const SUBTITLE_LANG_ALIASES: Record<string, string> = {
+  pob: 'pt-br',
+  zht: 'zh-tw',
+  spn: 'es-419',
+};
+
+function languageOf(text: string): Omit<SubtitleLanguage, 'exact'> | null {
+  const value = SUBTITLE_LANG_ALIASES[text.toLowerCase()] ?? text;
+  const name = normaliseLanguage(value);
+  const code = languageToIso6392(name ?? normaliseLangCode(value));
+  if (!code) return null;
+  const iso1 = iso6392ToIso6391(code);
+  return { code, name: name ?? (iso1 && iso6391ToLanguage(iso1)) ?? code };
+}
+
+function withoutMarks(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}+/gu, '');
+}
+
+function languageIn(text: string): Omit<SubtitleLanguage, 'exact'> | null {
+  return languageOf(text) ?? languageOf(withoutMarks(text));
+}
+
+const SUBTITLE_LANGUAGE_CACHE = new Map<string, SubtitleLanguage>();
+
+/** `lang` is a code or a name, sometimes among other words. */
+export function subtitleLanguage(lang: string): SubtitleLanguage {
+  const cached = SUBTITLE_LANGUAGE_CACHE.get(lang);
+  if (cached) return cached;
+  if (/^\s*(und|mul)\s*$/i.test(lang)) return { exact: true };
+  const whole = languageIn(lang.trim());
+  let result: SubtitleLanguage = { ...whole, exact: !!whole };
+  if (!whole) {
+    for (const word of lang.split(/[^\p{L}\p{M}]+/u)) {
+      const found = word.length >= 4 ? languageIn(word) : null;
+      if (found) {
+        result = { ...found, exact: false };
+        break;
+      }
+    }
+  }
+  if (SUBTITLE_LANGUAGE_CACHE.size >= 1000) SUBTITLE_LANGUAGE_CACHE.clear();
+  SUBTITLE_LANGUAGE_CACHE.set(lang, result);
+  return result;
+}
+
+const SUBTITLE_EXTENSION = /(?:\.(?:srt|vtt|ass|ssa|sub|smi|txt))+$/i;
+/* A year, an episode or a resolution tells a release name from an opaque file name. */
+const RELEASE_HINT = /\b(?:19|20)\d{2}\b|\bS\d{1,2}E\d{1,3}\b|\b\d{3,4}p\b/i;
+
+function withoutExtension(name: unknown): string | undefined {
+  return str(str(name)?.replace(SUBTITLE_EXTENSION, ''));
+}
+
+/** An id of the form `[tags]Release_N`. */
+function releaseFromId(id: string): string | undefined {
+  const m = /^((?:\[[^\]]*\])*)(.+)_\d+$/.exec(id);
+  if (!m || !(m[1] || /[.\s-]/.test(m[2]))) return undefined;
+  return m[1] ? `${m[1]} ${m[2]}` : m[2];
+}
+
+function releaseFromUrl(url: string): string | undefined {
+  try {
+    const file = decodeURIComponent(new URL(url).pathname.split('/').pop()!);
+    const name = withoutExtension(file);
+    return name && name !== file && RELEASE_HINT.test(name) ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const HEARING_IMPAIRED_CUES = [
+  /\bsdh\b/i,
+  /hearing[\s._-]?impaired/i,
+  /\[(?:hi|cc)\]/i,
+  /(?:^|[\s._\-(])(?:HI|CC)(?:$|[\s._\-)])/,
+];
+
+/** Subtitle fields (`reference/addon-protocol/subtitles`); a documented name wins over a fallback. */
+export function readSubtitleEnrichment(input: Subtitle): SubtitleEnrichment {
+  const sub = input as Subtitle & AnyObject;
+  const language = subtitleLanguage(sub.lang);
+  const title =
+    str(sub.label) ??
+    str(sub.title) ??
+    withoutExtension(sub.subtitleFileName) ??
+    releaseFromId(sub.id) ??
+    releaseFromUrl(sub.url) ??
+    (language.exact
+      ? undefined
+      : str(sub.lang.replace(/^[\s.\-_:|]+|[\s.\-_:|]+$/g, '')));
+  const cues = [title, sub.lang].join(' ');
+  return {
+    title,
+    forced:
+      typeof sub.forced === 'boolean' ? sub.forced : /\bforced\b/i.test(cues),
+    hearingImpaired:
+      typeof sub.hearingImpaired === 'boolean'
+        ? sub.hearingImpaired
+        : HEARING_IMPAIRED_CUES.some((re) => re.test(cues)),
   };
 }
 

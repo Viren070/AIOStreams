@@ -15,6 +15,8 @@ const logger = createLogger('playback-handoff');
 
 export interface ResolvedPlaybackSink {
   instanceId: string;
+  /** Users pick trackers by preset. */
+  presetId?: string;
   name: string;
   /** Manifest URL minus `/manifest.json`. */
   baseUrl: string;
@@ -74,9 +76,9 @@ export function resolvePlaybackSinks(
   if (!appConfig.watchState.reportEnabled && !appConfig.watchState.pullEnabled)
     return [];
 
+  // Uncapped: `maxSinks` applies to each user's picked set.
   const sinks: ResolvedPlaybackSink[] = [];
   for (const addon of src.addons) {
-    if (sinks.length >= max) break;
     const instanceId = addon.instanceId;
     if (!instanceId || addon.enabled === false) continue;
 
@@ -116,6 +118,7 @@ export function resolvePlaybackSinks(
 
     sinks.push({
       instanceId,
+      presetId: addon.preset.id,
       name: addon.name,
       baseUrl,
       query: manifestUrl.search,

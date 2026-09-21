@@ -4,6 +4,7 @@ import {
   createLogger,
   lookupFor,
   couldHaveSegments,
+  playableSources,
   resolveByItem,
   segmentsFor,
   resolveByMediaSource,
@@ -24,6 +25,7 @@ import {
 import {
   decodeForRequest,
   mediaSourcesFrom,
+  nothingToPlayPath,
   placeholderSources,
 } from './items.js';
 import { enrichSourceSubtitles, resolvePlayback } from './resolve.js';
@@ -116,7 +118,7 @@ async function locate(
 const EMPTY_MEMO_REUSE_MS = 30_000;
 
 async function ensureMemo(loc: Located): Promise<PlaybackMemo | null> {
-  if (loc.memo?.sources.length) return loc.memo;
+  if (loc.memo && playableSources(loc.memo.sources).length) return loc.memo;
   if (loc.descriptor.k !== 'movie' && loc.descriptor.k !== 'episode')
     return null;
   if (loc.memo && Date.now() - loc.memo.createdAt < EMPTY_MEMO_REUSE_MS)
@@ -196,7 +198,10 @@ async function streamHandler(req: Request, res: Response) {
     return;
   }
   res.setHeader('Cache-Control', 'no-store');
-  res.redirect(302, source.url);
+  res.redirect(
+    302,
+    source.notice ? nothingToPlayPath(req, loc.ctx) : source.url
+  );
 }
 
 const STREAM_PATHS = [

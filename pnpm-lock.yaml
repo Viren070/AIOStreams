@@ -43,8 +43,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0
       '@viren070/parse-torrent-title':
-        specifier: ^0.8.8
-        version: 0.8.8
+        specifier: ^0.9.1
+        version: 0.9.1
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -3335,8 +3335,8 @@ packages:
     resolution: {integrity: sha512-SlyO69NTIhEstVSBeXP2IqlWJ+llmHJidEOANckqA4ZRAiNRrRCTURPDRGccP+47fSUMURaB03GbE5OitoYYRQ==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
 
-  '@viren070/parse-torrent-title@0.8.8':
-    resolution: {integrity: sha512-yFXnN2QU310+CH6zPjjBXl6QduqSYZcHmyTeA3EgrDdBBT3xnlWsxu6Ve7iImB+DGEOUZ+DeA9mOwzU9oKULNQ==}
+  '@viren070/parse-torrent-title@0.9.1':
+    resolution: {integrity: sha512-0G8qDLmC0yCvrNyqr5n7prDsFMEBNECCwB4TGeQqIfDQmTiPWqtlfx078liKBr5IcwHCuAQAVi+xwHYo5zuaFw==}
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -9837,7 +9837,7 @@ snapshots:
 
   '@viren070/fsmux@0.3.0': {}
 
-  '@viren070/parse-torrent-title@0.8.8': {}
+  '@viren070/parse-torrent-title@0.9.1': {}
 
   '@vitest/expect@2.1.9':
     dependencies:

@@ -154,6 +154,12 @@ export class StreamFusionPreset extends Preset {
         constants.P2P_STREAM_TYPE,
       ],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason:
+          'Addon is offline. `stremiofr.com` now serves a domain registrar parking page. StreamFusion Reborn is a separate fork; paste its install URL into a Custom addon to use it.',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 

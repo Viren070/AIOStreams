@@ -285,8 +285,13 @@ export function buildView(
 ): JellyfinItem {
   const id = viewId(catalog.type, catalog.id);
   const item = baseItem(ctx, id, catalog.name, 'CollectionFolder', true);
+  const images: ItemImages = {};
+  if (catalog.poster) images.Primary = catalog.poster;
+  if (catalog.background) images.Backdrop = catalog.background;
+  rememberImages(id, images);
   return {
     ...item,
+    ...imageTagsFor(images),
     ...(collectionType ? { CollectionType: collectionType } : {}),
     DisplayPreferencesId: id,
     ChildCount: 0,
@@ -332,14 +337,61 @@ export interface ContentBuildOptions {
   childCount?: number;
   /** Which catalog's genre ids to point genre chips at. */
   genreCatalog?: { type: string; id: string };
+  /** Plays on its own rather than opening a video list. */
+  leaf?: boolean;
+}
+
+export function defaultVideoIdOf(entry: unknown): string | undefined {
+  const hints = (entry as { behaviorHints?: { defaultVideoId?: unknown } })
+    ?.behaviorHints;
+  const id = hints?.defaultVideoId;
+  return typeof id === 'string' && id ? id : undefined;
+}
+
+/**
+ * Videos that are a broadcast schedule rather than episodes. Not the
+ * `hasScheduledVideos` hint, which ordinary shows with dated episodes set too.
+ */
+export function hasProgrammeVideos(
+  meta: Pick<Meta, 'videos'> | null | undefined
+): boolean {
+  const videos = meta?.videos ?? [];
+  return videos.length > 0 && videos.every((v) => !!v.startTime);
+}
+
+/** What a request knows about which types play on their own. */
+export interface LeafEvidence {
+  /** Types a sweep has decided, whichever way it decided them. */
+  decided: ReadonlySet<string>;
+  /** Of those, the ones that play. */
+  leaves: ReadonlySet<string>;
+  /** Stands in until a sweep decides. */
+  guess?: (entry: { id: string; type: string }) => boolean;
+}
+
+/**
+ * Whether an entry plays on its own, the way Stremio decides it: the
+ * `defaultVideoId` hint wins, then a meta with no videos is itself the video.
+ * A list only has previews, so the evidence answers that second question.
+ */
+export function isLeafEntry(
+  entry: { id: string; type: string; collection?: unknown },
+  evidence?: LeafEvidence
+): boolean {
+  if (entry.collection) return false;
+  if (entry.type === 'movie') return true;
+  if (defaultVideoIdOf(entry)) return true;
+  if (evidence?.decided.has(entry.type)) return evidence.leaves.has(entry.type);
+  return evidence?.guess?.(entry) ?? false;
 }
 
 export function contentDescriptor(
   meta: { id: string; type: string },
-  boxset = false
+  boxset = false,
+  leaf = meta.type === 'movie'
 ): ContentDescriptor {
   if (boxset) return { k: 'boxset', t: meta.type, i: meta.id };
-  return meta.type === 'movie'
+  return leaf
     ? { k: 'movie', t: meta.type, i: meta.id }
     : { k: 'series', t: meta.type, i: meta.id };
 }
@@ -347,10 +399,11 @@ export function contentDescriptor(
 /** The `Type` a catalog entry carries as a list item. */
 export function contentItemType(
   type: string,
-  boxset = false
+  boxset = false,
+  leaf = type === 'movie'
 ): 'Movie' | 'Series' | 'BoxSet' {
   if (boxset) return 'BoxSet';
-  return type === 'movie' ? 'Movie' : 'Series';
+  return leaf ? 'Movie' : 'Series';
 }
 
 /**
@@ -365,13 +418,19 @@ export function buildContentItem(
   opts: ContentBuildOptions = {}
 ): JellyfinItem {
   const meta = input as AnyMeta;
+  const leaf = opts.leaf ?? meta.type === 'movie';
   const descriptor = contentDescriptor(
     { id: meta.id, type: meta.type },
-    opts.boxset
+    opts.boxset,
+    leaf
   );
   const id = encodeItemId(descriptor);
   const enrichment = readEnrichment(input);
-  const jellyfinType = contentItemType(meta.type, descriptor.k === 'boxset');
+  const jellyfinType = contentItemType(
+    meta.type,
+    descriptor.k === 'boxset',
+    leaf
+  );
   const folder = jellyfinType !== 'Movie';
   const name = (meta.name as string | undefined) ?? meta.id;
   const genres = genresFrom(input);
@@ -468,8 +527,17 @@ export interface SeasonGroup {
 }
 
 /** Groups `videos[]` by season; unnumbered videos become episode 1..n of season 1. */
-export function groupSeasons(meta: ParsedMeta): SeasonGroup[] {
+export function groupSeasons(
+  meta: ParsedMeta,
+  /** Stand in for a meta with no videos, whose id is its own video. */
+  synthesise = false
+): SeasonGroup[] {
   const videos = [...(meta.videos ?? [])];
+  if (!videos.length && synthesise)
+    videos.push({
+      id: defaultVideoIdOf(meta) ?? meta.id,
+      title: meta.name ?? meta.id,
+    });
   const groups = new Map<number, SeasonGroup>();
   const numbered = videos.some((v) => typeof v.episode === 'number');
   videos.forEach((v, idx) => {

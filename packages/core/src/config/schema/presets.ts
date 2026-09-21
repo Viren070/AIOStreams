@@ -458,7 +458,7 @@ export const presetsSchema = {
   }),
   webstreamr: basicPreset({
     label: 'WebStreamr',
-    default: ['https://webstreamr.hayd.uk'],
+    default: ['https://87d6a6ef6b58-webstreamrmbg.baby-beamup.club'],
     envBase: 'WEBSTREAMR_URL',
     timeoutEnv: 'DEFAULT_WEBSTREAMR_TIMEOUT',
     userAgentEnv: 'DEFAULT_WEBSTREAMR_USER_AGENT',

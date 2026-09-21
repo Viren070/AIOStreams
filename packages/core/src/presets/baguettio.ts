@@ -176,6 +176,12 @@ export class BaguettioPreset extends Preset {
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,
+      DISABLED: {
+        reason:
+          'Addon has been shut down. Its maintainers permanently closed the servers and all services, as announced on r/Stremio_France.',
+        removed: true,
+        disabled: true,
+      },
     };
   }
 

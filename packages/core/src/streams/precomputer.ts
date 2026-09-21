@@ -104,10 +104,12 @@ class StreamPrecomputer {
     // this is the optimal order so that regexMatched can be used in RSE/PSE and streamExpressionScore and regexScore can be used in PSE
     const preferredRegexMs = await this.precomputePreferredRegexMatches(
       streams,
+      context,
       skipPerStreamIds
     );
     const rankedRegexMs = await this.precomputeRankedRegexPatterns(
       streams,
+      context,
       skipPerStreamIds
     );
     const rankedSELMs = await this.precomputeRankedStreamExpressions(
@@ -218,6 +220,7 @@ class StreamPrecomputer {
 
   private async precomputeRankedRegexPatterns(
     streams: ParsedStream[],
+    context: StreamContext,
     skipStreamIds?: Set<string>
   ): Promise<number> {
     if (!this.userData.rankedRegexPatterns?.length || streams.length === 0) {
@@ -225,11 +228,21 @@ class StreamPrecomputer {
     }
     const start = Date.now();
 
+    const permitted = await context.getPermittedPatterns();
+    const entries = RegexAccess.partitionPatterns(
+      this.userData.rankedRegexPatterns.map((entry) => entry.pattern),
+      permitted
+    );
+    if (entries.allowed.length === 0) return Date.now() - start;
+    const usable = new Set(entries.allowed);
+
     const regexes = await Promise.all(
-      this.userData.rankedRegexPatterns.map(async (entry) => ({
-        ...entry,
-        regex: await compileRegex(entry.pattern),
-      }))
+      this.userData.rankedRegexPatterns
+        .filter((entry) => usable.has(entry.pattern))
+        .map(async (entry) => ({
+          ...entry,
+          regex: await compileRegex(entry.pattern),
+        }))
     );
 
     const streamsToProcess = skipStreamIds
@@ -375,26 +388,31 @@ class StreamPrecomputer {
    */
   private async precomputePreferredRegexMatches(
     streams: ParsedStream[],
+    context: StreamContext,
     skipStreamIds?: Set<string>
   ): Promise<number> {
     const start = Date.now();
-    const preferredRegexPatterns =
-      (await RegexAccess.isRegexAllowed(
-        this.userData,
-        this.userData.preferredRegexPatterns?.map(
-          (pattern) => pattern.pattern
-        ) ?? []
-      )) && this.userData.preferredRegexPatterns
-        ? await Promise.all(
-            this.userData.preferredRegexPatterns.map(async (pattern) => {
-              return {
-                name: pattern.name,
-                negate: parseRegex(pattern.pattern).flags.includes('n'),
-                pattern: await compileRegex(pattern.pattern),
-              };
-            })
-          )
-        : undefined;
+    const permitted = await context.getPermittedPatterns();
+    const usable = new Set(
+      RegexAccess.partitionPatterns(
+        this.userData.preferredRegexPatterns?.map((p) => p.pattern) ?? [],
+        permitted
+      ).allowed
+    );
+    const entries = (this.userData.preferredRegexPatterns ?? []).filter((p) =>
+      usable.has(p.pattern)
+    );
+    const preferredRegexPatterns = entries.length
+      ? await Promise.all(
+          entries.map(async (pattern) => {
+            return {
+              name: pattern.name,
+              negate: parseRegex(pattern.pattern).flags.includes('n'),
+              pattern: await compileRegex(pattern.pattern),
+            };
+          })
+        )
+      : undefined;
     const preferredKeywordsPatterns = this.userData.preferredKeywords
       ? await formRegexFromKeywords(this.userData.preferredKeywords)
       : undefined;

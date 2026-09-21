@@ -409,13 +409,34 @@ function chooseEntry(
   season?: number,
   episode?: number
 ): AnimeEntry | null {
+  if (idType === 'imdbId') {
+    const imdbId = String(idValue);
+    if (!season) {
+      // specials numbering differs everywhere, so hints can't place records there
+      candidates = candidates.filter((r) => String(r.ids.imdbId) === imdbId);
+    } else {
+      // another show's hints only apply when that show is the only one hinted
+      const hinted = new Set(candidates.map((r) => r.imdb?.id).filter(Boolean));
+      if (hinted.has(imdbId) || hinted.size > 1) {
+        candidates = candidates.map((r) =>
+          r.imdb?.id && r.imdb.id !== imdbId ? { ...r, imdb: undefined } : r
+        );
+      }
+    }
+  }
   if (!candidates.length) return null;
   const chosen = selectBestRecord(
-    filterCandidatesBySeasonType(candidates, season),
+    filterCandidatesBySeasonType(candidates, season, idType),
     idType,
     idValue,
     season,
     episode
   );
-  return chosen ? buildAnimeEntry(chosen) : null;
+  if (!chosen) return null;
+  const entry = buildAnimeEntry(chosen);
+  // match keys follow this id, so a hint-found entry must not carry another
+  if (idType === 'imdbId') {
+    entry.mappings = { ...entry.mappings, imdbId: String(idValue) };
+  }
+  return entry;
 }

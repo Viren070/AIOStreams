@@ -1,4 +1,5 @@
 import { gunzipSync } from 'node:zlib';
+import { config } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import { ReleaseBlocklistRepository } from '../db/repositories/release-blocklist.js';
 import type { BlocklistSource } from './types.js';
@@ -99,6 +100,9 @@ export class ReleaseBlocklistRemoteService {
 
   /** Refresh every enabled remote source whose refresh interval has elapsed. */
   static async refreshDue(): Promise<{ ok: boolean; message: string }> {
+    if (!config.releaseBlocklist.enabled) {
+      return { ok: true, message: 'release blocklist disabled' };
+    }
     const sources = await ReleaseBlocklistRepository.getSources();
     const now = nowSeconds();
     const due = sources.filter(

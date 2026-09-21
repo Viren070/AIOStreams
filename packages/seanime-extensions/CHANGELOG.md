@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.2](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.10.1...seanime-extensions-v0.10.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* **seanime-extensions/plugin:** load on Android and iOS servers ([99a5f47](https://github.com/Viren070/AIOStreams/commit/99a5f479395238ddf52a8f99ed571660de944fee))
+* **seanime-extensions/plugin:** show results when not logged in to AniList ([743aa81](https://github.com/Viren070/AIOStreams/commit/743aa813fabf8b6c1e873d0e1be68996717519dc))
+* **seanime-extensions/plugin:** use ctx.fetch to prevent VM panics ([208e840](https://github.com/Viren070/AIOStreams/commit/208e84067a54bb9204f247d6468d7653b75016c0))
+
 ## [0.10.1](https://github.com/Viren070/AIOStreams/compare/seanime-extensions-v0.10.0...seanime-extensions-v0.10.1) (2026-08-10)
 
 

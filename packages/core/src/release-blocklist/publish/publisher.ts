@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
+import { config } from '../../config/index.js';
 import { createLogger } from '../../logging/logger.js';
 import { ReleaseBlocklistRepository } from '../../db/repositories/release-blocklist.js';
 import { ReleaseBlocklistPublishRepository } from '../../db/repositories/release-blocklist-publish.js';
@@ -213,6 +214,9 @@ export class ReleaseBlocklistPublishService {
 
   /** Push every enabled target whose interval has elapsed. */
   static async publishDue(): Promise<{ ok: boolean; message: string }> {
+    if (!config.releaseBlocklist.enabled) {
+      return { ok: true, message: 'release blocklist disabled' };
+    }
     const due = await ReleaseBlocklistPublishRepository.getDue(nowSeconds());
     if (due.length === 0) {
       return { ok: true, message: 'no targets due' };

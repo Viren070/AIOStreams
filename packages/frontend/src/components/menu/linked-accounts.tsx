@@ -139,6 +139,9 @@ export function LinkedAccountsSection({
   };
 
   const hasAccounts = (accounts?.length ?? 0) > 0;
+  const maxAccounts = status?.settings?.limits?.maxLinkedAccounts;
+  const atLimit =
+    maxAccounts !== undefined && (accounts?.length ?? 0) >= maxAccounts;
 
   return (
     <div id="linked-accounts">
@@ -172,9 +175,13 @@ export function LinkedAccountsSection({
           <button
             type="button"
             onClick={linkModal.open}
-            className="group flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-700 p-3 text-sm text-gray-400 transition-colors hover:border-brand-400 hover:text-brand-400"
+            disabled={atLimit}
+            className="group flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-700 p-3 text-sm text-gray-400 transition-colors enabled:hover:border-brand-400 enabled:hover:text-brand-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <LuLink2 className="h-4 w-4" /> Link another account
+            <LuLink2 className="h-4 w-4" />
+            {atLimit
+              ? `Limit of ${maxAccounts} linked accounts reached`
+              : 'Link another account'}
           </button>
         </div>
       ) : (

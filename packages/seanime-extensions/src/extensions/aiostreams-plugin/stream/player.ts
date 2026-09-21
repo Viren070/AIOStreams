@@ -66,7 +66,7 @@ export class StreamPlayer {
 
   private clearAutoPlay(): void {
     const st = this.panel.wvState.get();
-    if (st.autoPlay) this.panel.wvState.set({ ...st, autoPlay: false });
+    if (st.autoPlay) this.panel.setState({ ...st, autoPlay: false });
   }
 
   private playUrl(
