@@ -88,9 +88,9 @@ const NEWZNAB_INDEXERS: {
   },
   { label: 'NZBStars', value: 'https://nzbstars.com/api' },
   {
-    label: 'Treasure Maps (formerly SceneNZBs)',
-    value: 'https://treasure-maps.com/api',
-    apiKeyUrl: 'https://treasure-maps.com/account',
+    label: 'SquareEyed',
+    value: 'https://squareeyed.org/api',
+    apiKeyUrl: 'https://squareeyed.org/profile',
   },
   {
     label: 'Tabula Rasa',
@@ -103,14 +103,14 @@ const NEWZNAB_INDEXERS: {
     apiKeyUrl: 'https://torbox.app/settings?section=account',
   },
   {
+    label: 'Treasure Maps (formerly SceneNZBs)',
+    value: 'https://treasure-maps.com/api',
+    apiKeyUrl: 'https://treasure-maps.com/account',
+  },
+  {
     label: 'Usenet Crawler',
     value: 'https://www.usenet-crawler.com/api',
     apiKeyUrl: 'https://www.usenet-crawler.com/profile',
-  },
-  {
-    label: 'SquareEyed',
-    value: 'https://squareeyed.org/api',
-    apiKeyUrl: 'https://squareeyed.org/profile',
   },
 ];
 
